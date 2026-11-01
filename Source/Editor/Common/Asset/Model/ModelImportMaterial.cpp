@@ -111,7 +111,29 @@ namespace sw::editor
         return false;
     }
 
-    void ModelImportMaterial::populateMaterialSections( ModelImportUtil::MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult )
+    bool ModelImportMaterial::readSectionPbrMaterials( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    {
+        inoutResult._listPbrMaterial.clear();
+        bool bAnyTextured = false;
+        for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count; ++materialIndex )
+        {
+            const cgltf_material& material = data.materials[materialIndex];
+            bAnyTextured                   = bAnyTextured || ( material.has_pbr_metallic_roughness != 0 && material.pbr_metallic_roughness.base_color_texture.texture != nullptr );
+        }
+        if ( data.materials_count < 2 || bAnyTextured == false )
+            return true;
+        inoutResult._listPbrMaterial.resize( data.materials_count );
+        for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count; ++materialIndex )
+        {
+            const cgltf_material& material = data.materials[materialIndex];
+            const string          rawName  = material.name != nullptr && material.name[0] != '\0' ? string( material.name ) : formatToString( "material%#", static_cast<uint64>( materialIndex ) );
+            if ( readPbrMaterialValues( material, rawName, sourcePath, inoutResult._listPbrMaterial[materialIndex] ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    void ModelImportMaterial::populateMaterialSections( ModelImportUtil::MergedMesh& inoutBody, const cgltf_data& data, const vector<string>& listMaterialName, ModelImportResult& inoutResult )
     {
         // 1인칭 본(머리) 아래 본 — Auto 메시는 이 본에 가중치가 있는 꼭짓점을 가진 삼각형을 3인칭 전용으로 나눈다(UniVRM 과 같다).
         const Skeleton& skeleton = inoutResult._skeleton;
@@ -132,7 +154,7 @@ namespace sw::editor
         for ( size_t triangle = 0; triangle < triangleCount; ++triangle )
         {
             const cgltf_material* pMaterial = inoutBody._listTriangleMaterial[triangle];
-            if ( pMaterial == nullptr || static_cast<size_t>( pMaterial - data.materials ) >= listToon.size() )
+            if ( pMaterial == nullptr || static_cast<size_t>( pMaterial - data.materials ) >= listMaterialName.size() )
             {
                 ++noMaterialCount;
                 continue;
@@ -148,7 +170,7 @@ namespace sw::editor
             listKey[triangle] = static_cast<uint32>( pMaterial - data.materials ) * kVisibilityCount + static_cast<uint32>( visibility );
         }
         if ( noMaterialCount > 0 )
-            SW_LOG_WARNING_ID( "ModelImporter.VRMModelTrianglesNo", "VRM model: %# triangles have no material - no mesh section draws them", noMaterialCount );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMModelTrianglesNo", "Model with material sections: %# triangles have no material - no mesh section draws them", noMaterialCount );
 
         // 열쇠 순서로 삼각형을 다시 놓고(안정 정렬 — 같은 묶음 안의 원본 순서를 지킨 뒤 묶음마다 최적화한다), 구간 표를 만든다.
         vector<uint32> listOrder( triangleCount );
@@ -190,11 +212,11 @@ namespace sw::editor
             const uint32               materialIndex = key / kVisibilityCount;
             const MeshPersonVisibility visibility    = static_cast<MeshPersonVisibility>( key % kVisibilityCount );
             ModelImportSection         section{};
-            section._material = listToon[materialIndex];
-            auto stemIt       = mapMaterialStem.find( materialIndex );
+            section._materialIndex = materialIndex;
+            auto stemIt            = mapMaterialStem.find( materialIndex );
             if ( stemIt == mapMaterialStem.end() )
             {
-                const string baseStem = ModelImportUtil::makeFileStem( section._material._name );
+                const string baseStem = ModelImportUtil::makeFileStem( listMaterialName[materialIndex] );
                 stemIt                = mapMaterialStem.emplace( materialIndex, ModelImportUtil::makeNumberedStem( baseStem, mapStemUse[baseStem]++ ) ).first;
             }
             section._fileStem         = stemIt->second;
@@ -215,8 +237,8 @@ namespace sw::editor
         vector<uint8> listUsed( data.textures_count, SW_FALSE );
         for ( const ModelImportSection& section : inoutResult._listSection )
         {
-            for ( const int32 textureIndex : { section._material._baseColorTexture, section._material._shadeTexture, section._material._emissiveTexture,
-                                               section._material._matcapTexture } )
+            const ToonMaterialDesc& toon = inoutResult._listToonMaterial[section._materialIndex];
+            for ( const int32 textureIndex : { toon._baseColorTexture, toon._shadeTexture, toon._emissiveTexture, toon._matcapTexture } )
             {
                 if ( 0 <= textureIndex && static_cast<cgltf_size>( textureIndex ) < data.textures_count )
                     listUsed[static_cast<size_t>( textureIndex )] = SW_TRUE;
@@ -253,6 +275,20 @@ namespace sw::editor
     {
         if ( result._listSection.empty() )
             return true;
+        if ( result._listPbrMaterial.empty() == false )
+        {
+            vector<string> listWrittenStem;
+            for ( const ModelImportSection& section : result._listSection )
+            {
+                if ( VectorUtil::contains( listWrittenStem, section._fileStem ) )
+                    continue;
+                listWrittenStem.push_back( section._fileStem );
+                if ( writePbrMaterialFile( assetPaths, result._listPbrMaterial[section._materialIndex], section._fileStem, sourcePath, sideFolder ) == false )
+                    return false;
+            }
+            SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath, result._listSection.size(), listWrittenStem.size() );
+            return true;
+        }
         const string   rawTextureFolder = makeRawTextureFolder( sourcePath );
         vector<string> listTexturePath( result._listTexture.size() );
         for ( size_t textureIndex = 0; textureIndex < result._listTexture.size(); ++textureIndex )
@@ -289,7 +325,7 @@ namespace sw::editor
             if ( std::find( listWrittenStem.begin(), listWrittenStem.end(), section._fileStem ) != listWrittenStem.end() )
                 continue;
             listWrittenStem.push_back( section._fileStem );
-            const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath, pDefaultAssets->_toonMaterialTemplate );
+            const string materialText = VrmMaterialImporter::makeMaterialXML( result._listToonMaterial[section._materialIndex], listTexturePath, pDefaultAssets->_toonMaterialTemplate );
             const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), section._fileStem + ".material" );
             const bool   bWritten     = materialText.empty() == false && FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, materialText );
             if ( bWritten == false )
@@ -357,17 +393,18 @@ namespace sw::editor
         }
         if ( pMaterial == nullptr )
             return true;
-        if ( data.materials_count > 1 )
-            SW_LOG_WARNING_ID( "ModelImport.MultipleMaterials", "glTF '%#' has %# materials - a static mesh takes one, the first textured one ('%#') is imported", sourcePath, data.materials_count,
-                               pMaterial->name != nullptr ? pMaterial->name : "" );
-        const cgltf_pbr_metallic_roughness& pbr     = pMaterial->pbr_metallic_roughness;
-        ModelImportPbrMaterial&             outPbr  = inoutResult._pbrMaterial;
-        const string                        rawName = pMaterial->name != nullptr && pMaterial->name[0] != '\0' ? string( pMaterial->name ) : string( "material" );
-        outPbr._name                                = ModelImportUtil::makeFileStem( rawName.c_str() );
-        outPbr._baseColor                           = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
-        outPbr._metallic                            = pbr.metallic_factor;
-        outPbr._roughness                           = pbr.roughness_factor;
-        auto readTexture                            = [&]( const cgltf_texture* pTexture, ModelImportTexture& outTexture, const utf8* pSuffix )
+        const string rawName = pMaterial->name != nullptr && pMaterial->name[0] != '\0' ? string( pMaterial->name ) : string( "material" );
+        return readPbrMaterialValues( *pMaterial, rawName, sourcePath, inoutResult._pbrMaterial );
+    }
+
+    bool ModelImportMaterial::readPbrMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPbrMaterial& outPbr )
+    {
+        const cgltf_pbr_metallic_roughness& pbr = material.pbr_metallic_roughness;
+        outPbr._name                            = ModelImportUtil::makeFileStem( rawName.c_str() );
+        outPbr._baseColor                       = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
+        outPbr._metallic                        = pbr.metallic_factor;
+        outPbr._roughness                       = pbr.roughness_factor;
+        auto readTexture                        = [&]( const cgltf_texture* pTexture, ModelImportTexture& outTexture, const utf8* pSuffix )
         {
             if ( pTexture == nullptr || pTexture->image == nullptr )
                 return true;
@@ -375,13 +412,13 @@ namespace sw::editor
             return readImageBytes( *pTexture->image, sourcePath, outTexture );
         };
         const cgltf_texture* pORM = pbr.metallic_roughness_texture.texture;
-        if ( readTexture( pbr.base_color_texture.texture, outPbr._albedo, "_albedo" ) == false || readTexture( pMaterial->normal_texture.texture, outPbr._normal, "_normal" ) == false ||
+        if ( readTexture( pbr.base_color_texture.texture, outPbr._albedo, "_albedo" ) == false || readTexture( material.normal_texture.texture, outPbr._normal, "_normal" ) == false ||
              readTexture( pORM, outPbr._orm, "_orm" ) == false )
             return false;
-        outPbr._normalScale           = pMaterial->normal_texture.texture != nullptr ? pMaterial->normal_texture.scale : 1.0f;
-        const cgltf_texture* pAO      = pMaterial->occlusion_texture.texture;
+        outPbr._normalScale           = material.normal_texture.texture != nullptr ? material.normal_texture.scale : 1.0f;
+        const cgltf_texture* pAO      = material.occlusion_texture.texture;
         const bool           bSameORM = pAO != nullptr && pORM != nullptr && pAO->image == pORM->image;
-        outPbr._occlusionStrength     = bSameORM ? pMaterial->occlusion_texture.scale : 0.0f;
+        outPbr._occlusionStrength     = bSameORM ? material.occlusion_texture.scale : 0.0f;
         if ( pAO != nullptr && bSameORM == false )
             SW_LOG_WARNING_ID( "ModelImporter.GlTFOcclusionTextureNot", "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath );
         outPbr._bPresent = SW_TRUE;
@@ -393,6 +430,11 @@ namespace sw::editor
         const ModelImportPbrMaterial& pbr = result._pbrMaterial;
         if ( pbr._bPresent == SW_FALSE )
             return true;
+        return writePbrMaterialFile( assetPaths, pbr, pbr._name, sourcePath, sideFolder );
+    }
+
+    bool ModelImportMaterial::writePbrMaterialFile( const AssetPaths& assetPaths, const ModelImportPbrMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder )
+    {
         const string rawTextureFolder = makeRawTextureFolder( sourcePath );
         if ( rawTextureFolder.empty() )
         {
@@ -444,7 +486,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate2", "glTF '%#': the PBR material template is not a material", sourcePath );
             return false;
         }
-        root.setAttribute( "name", string_view( pbr._name ) );
+        root.setAttribute( "name", fileStem );
         // 견본에 없는 프로퍼티는 조용히 건너뛰지 않는다 — 견본과 이 표가 어긋나면 값이 기본값으로 남은 머티리얼이 나온다.
         bool bMissingProperty = false;
         auto setAttribute     = [&]( string_view name, const utf8* pAttribute, const string& value )
@@ -471,7 +513,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
             return false;
         }
-        const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), pbr._name + ".material" );
+        const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
         const bool   bWritten     = FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, document.saveToString() );
         if ( bWritten == false || ModelImportUtil::writeImportedMeta( assetPaths, materialPath ) == false )
         {

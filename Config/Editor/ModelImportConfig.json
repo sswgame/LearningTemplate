@@ -14,6 +14,15 @@
       "name": "KayKit_Characters",
       "include_patterns": ["*/common/models_raw/kaykit/**"],
       "exclude_patterns": ["*/common/models_raw/kaykit/skeleton_minion.glb"],
+      "material_sections": false,
+      "animation_codec": "acl",
+      "animation_sample_rate": 30,
+      "animation_precision": 0.0001,
+      "animation_shell_distance": 0.1
+    },
+    {
+      "name": "Quaternius_Characters",
+      "include_patterns": ["*/common/models_raw/quaternius/**"],
       "animation_codec": "acl",
       "animation_sample_rate": 30,
       "animation_precision": 0.0001,
@@ -22,6 +31,7 @@
     {
       "name": "KayKit_SkeletonMinionLOD",
       "include_patterns": ["*/common/models_raw/kaykit/skeleton_minion.glb"],
+      "material_sections": false,
       "animation_codec": "acl",
       "animation_sample_rate": 30,
       "animation_precision": 0.0001,

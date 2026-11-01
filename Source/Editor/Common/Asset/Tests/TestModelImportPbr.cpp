@@ -62,7 +62,6 @@ SW_TEST_CASE( ModelImportPbrTest, ReadsFirstTexturedMaterialWithResolvedImagePat
     SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
 
     ModelImportResult result;
-    SW_EXPECT_LOG( "ModelImport.MultipleMaterials" ); // 앞의 텍스처 없는 머티리얼을 건너뛴다 — 정적 메시는 하나만 받는다
     SW_REQUIRE_TRUE( ModelImportMaterial::readPbrMaterial( *parsed._pData, sourcePath, result ) );
     const ModelImportPbrMaterial& pbr = result._pbrMaterial;
     SW_REQUIRE_TRUE( pbr._bPresent == SW_TRUE );
@@ -95,7 +94,6 @@ SW_TEST_CASE( ModelImportPbrTest, OcclusionPackedInORMKeepsStrength )
     SW_REQUIRE_TRUE( parseScanLikeGltf( root, true, parsed, sourcePath ) );
 
     ModelImportResult result;
-    SW_EXPECT_LOG( "ModelImport.MultipleMaterials" ); // 앞의 텍스처 없는 머티리얼을 건너뛴다 — 정적 메시는 하나만 받는다
     SW_REQUIRE_TRUE( ModelImportMaterial::readPbrMaterial( *parsed._pData, sourcePath, result ) );
     SW_EXPECT_NEAR( 0.5f, result._pbrMaterial._occlusionStrength, 1e-6f );
 
@@ -114,7 +112,6 @@ SW_TEST_CASE( ModelImportPbrTest, MissingImageFileFails )
     SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::joinPath( root, "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) );
 
     ModelImportResult result;
-    SW_EXPECT_LOG( "ModelImport.MultipleMaterials" ); // 앞의 텍스처 없는 머티리얼을 건너뛴다 — 정적 메시는 하나만 받는다
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ModelImport.ImageFileMissing" );
     SW_EXPECT_FALSE( ModelImportMaterial::readPbrMaterial( *parsed._pData, sourcePath, result ) );

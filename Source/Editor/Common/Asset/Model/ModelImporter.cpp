@@ -221,10 +221,10 @@ namespace sw::editor
 
             /**
              * @brief 스킨드 모델을 읽습니다. 모든 스킨이 한 스켈레톤을 쓰며, 관절 노드가 같으면 한 본입니다.
-             * @param listToon VRM 이면 glTF 머티리얼마다의 툰 머티리얼입니다. 본 메시를 머티리얼 구간으로도 나눕니다.
+             * @param listSectionMaterialName 구간을 나누는 glTF 머티리얼마다의 이름입니다(VRM · 머티리얼이 여럿인 텍스처 glTF). 본 메시를 머티리얼 구간으로도 나눕니다.
              */
             [[nodiscard]] static bool readSkinnedModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const ModelImportRule& rule, string_view sourcePath,
-                                                        const vector<ToonMaterialDesc>& listToon, ModelImportResult& outResult )
+                                                        const vector<string>& listSectionMaterialName, ModelImportResult& outResult )
             {
                 unordered_map<const cgltf_node*, int32> mapJointBone;
                 vector<float4x4>                        listRootParent;
@@ -238,7 +238,8 @@ namespace sw::editor
 
                 // 노드를 순회하며 메시를 나눈다. 이 스킨을 쓰는 메시는 몸, 관절 아래의 스킨 없는 메시는 부착, 그 밖의 스킨 없는 메시는 몸(루트 본에 가중치 1)이다.
                 ModelImportUtil::MergedMesh body;
-                body._bBakeMaterialColor = listToon.empty();
+                const bool                  bSections = listSectionMaterialName.empty() == false;
+                body._bBakeMaterialColor              = bSections == false; // 구간 머티리얼이 색 계수를 가진다 — 정점에도 구우면 두 번 곱한다
                 vector<const cgltf_node*>     listStack( listRoot.rbegin(), listRoot.rend() );
                 unordered_map<string, uint32> mapStemUse;
                 float32                       arrIdentity[16]{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
@@ -284,11 +285,11 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinButNo", "glTF '%#' has a skin but no triangles bound to it", sourcePath );
                     return false;
                 }
-                if ( listToon.empty() == false )
+                if ( bSections )
                 {
-                    // VRM — 본 메시 한 벌에 (머티리얼, 1인칭 가시성) 구간을 둔다. 구간마다 순서를 최적화했으므로 그 순서대로 펼친다.
-                    ModelImportMaterial::populateMaterialSections( body, data, listToon, outResult );
-                    if ( ModelImportMaterial::collectSectionTextures( data, sourcePath, outResult ) == false )
+                    // 본 메시 한 벌에 (머티리얼, 1인칭 가시성) 구간을 둔다. 구간마다 순서를 최적화했으므로 그 순서대로 펼친다.
+                    ModelImportMaterial::populateMaterialSections( body, data, listSectionMaterialName, outResult );
+                    if ( outResult._listToonMaterial.empty() == false && ModelImportMaterial::collectSectionTextures( data, sourcePath, outResult ) == false )
                         return false;
                     ModelImportGeometry::expandTrianglesInOrder( body, boneCount, outResult._mesh );
                     outResult._mesh._listSection = ModelImportVrm::makeMeshSections( outResult._listSection );
@@ -305,7 +306,7 @@ namespace sw::editor
                     if ( ModelImportGeometry::makeLODLevels( body, rule, sourcePath, boneCount, outResult._mesh._listLOD ) == false )
                         return false;
                 }
-                if ( rule._listLOD.empty() == false && listToon.empty() == false )
+                if ( rule._listLOD.empty() == false && bSections )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsImport", "glTF '%#' has material sections - import rule '%#' asks for mesh LODs, which only meshes without sections take", sourcePath, rule._name.c_str() );
                     return false;
@@ -482,7 +483,7 @@ namespace sw::editor
             }
 
             /** @brief 스킨이 있는 모델을 읽습니다. 규칙의 이동 · 재중심이나 LOD 는 스킨드 모델에 맞지 않아 거절합니다. 읽었으면 아바타에 없는 본을 경고합니다. */
-            [[nodiscard]] static bool readSkinnedAsset( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<ToonMaterialDesc>& listToon, const ModelImportRule& rule,
+            [[nodiscard]] static bool readSkinnedAsset( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<string>& listSectionMaterialName, const ModelImportRule& rule,
                                                         string_view sourcePath, ModelImportResult& outResult )
             {
                 const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
@@ -491,18 +492,22 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinnedImportRule", "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
                     return false;
                 }
-                if ( readSkinnedModel( data, listRoot, rule, sourcePath, listToon, outResult ) == false )
+                if ( readSkinnedModel( data, listRoot, rule, sourcePath, listSectionMaterialName, outResult ) == false )
                     return false;
                 ModelImportVrm::warnMissingAvatarBones( outResult, sourcePath );
                 return true;
             }
 
-            /** @brief 스킨 없는 정적 모델을 읽습니다 — 장면 루트마다 메시를 합치고 규칙을 적용해 구간(VRM) 또는 LOD 단계를 만든다. */
-            [[nodiscard]] static bool readStaticModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<ToonMaterialDesc>& listToon, const ModelImportRule& rule,
-                                                       string_view sourcePath, ModelImportResult& outResult )
+            /**
+             * @brief 스킨 없는 정적 모델을 읽습니다 — 장면 루트마다 메시를 합치고 규칙을 적용해 머티리얼 구간 또는 LOD 단계를 만든다.
+             * @param listSectionMaterialName 구간을 나누는 glTF 머티리얼마다의 이름입니다(VRM · 머티리얼이 여럿인 텍스처 glTF). 비면 구간 없는 메시다.
+             */
+            [[nodiscard]] static bool readStaticModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<string>& listSectionMaterialName,
+                                                       const ModelImportRule& rule, string_view sourcePath, ModelImportResult& outResult )
             {
+                const bool                  bSections = listSectionMaterialName.empty() == false;
                 ModelImportUtil::MergedMesh merged;
-                merged._bBakeMaterialColor = listToon.empty();
+                merged._bBakeMaterialColor = bSections == false; // 구간 머티리얼이 색 계수를 가진다 — 정점에도 구우면 두 번 곱한다
                 for ( const cgltf_node* pRoot : listRoot )
                 {
                     if ( ModelImportGeometry::appendNode( *pRoot, merged ) == false )
@@ -520,22 +525,22 @@ namespace sw::editor
                     return false;
                 }
                 // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePbrMaterial`).
-                if ( listToon.empty() && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
+                if ( bSections == false && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
                     return false;
 
                 ModelImportGeometry::applyRule( rule, merged );
                 // LOD 는 구간 · 모프 없는 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
-                const bool bLODUnsupported = rule._listLOD.empty() == false && ( listToon.empty() == false || merged._listMorphName.empty() == false );
+                const bool bLODUnsupported = rule._listLOD.empty() == false && ( bSections || merged._listMorphName.empty() == false );
                 if ( bLODUnsupported )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsMorph", "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
                                      rule._name.c_str() );
                     return false;
                 }
-                if ( listToon.empty() == false )
+                if ( bSections )
                 {
-                    ModelImportMaterial::populateMaterialSections( merged, data, listToon, outResult );
-                    if ( ModelImportMaterial::collectSectionTextures( data, sourcePath, outResult ) == false )
+                    ModelImportMaterial::populateMaterialSections( merged, data, listSectionMaterialName, outResult );
+                    if ( outResult._listToonMaterial.empty() == false && ModelImportMaterial::collectSectionTextures( data, sourcePath, outResult ) == false )
                         return false;
                     ModelImportGeometry::expandTrianglesInOrder( merged, 0, outResult._mesh );
                     outResult._mesh._listSection = ModelImportVrm::makeMeshSections( outResult._listSection );
@@ -716,13 +721,26 @@ namespace sw::editor
 
         vector<const cgltf_node*> listRoot;
         ModelImportGeometry::collectSceneRoots( data, listRoot );
-        vector<ToonMaterialDesc> listToon;
-        if ( ModelImportMaterial::readToonMaterials( data, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false || ModelImportVrm::readVrmAvatar( data, sourcePath, outResult ) == false )
+        if ( ModelImportMaterial::readToonMaterials( data, sourcePath, outResult._listToonMaterial, outResult._listIgnoredMaterialKey ) == false ||
+             ModelImportVrm::readVrmAvatar( data, sourcePath, outResult ) == false )
             return false;
+        const bool bPbrSections = outResult._listToonMaterial.empty() && rule._bMaterialSections == SW_TRUE;
+        if ( bPbrSections && ModelImportMaterial::readSectionPbrMaterials( data, sourcePath, outResult ) == false )
+            return false;
+        // 구간을 나누는 머티리얼 표(툰 또는 PBR)의 이름 — 비어 있으면 구간 없는 메시다.
+        vector<string> listSectionMaterialName;
+        for ( const ToonMaterialDesc& toon : outResult._listToonMaterial )
+        {
+            listSectionMaterialName.push_back( toon._name );
+        }
+        for ( const ModelImportPbrMaterial& pbr : outResult._listPbrMaterial )
+        {
+            listSectionMaterialName.push_back( pbr._name );
+        }
 
         if ( data.skins_count > 0 )
-            return Internal::readSkinnedAsset( data, listRoot, listToon, rule, sourcePath, outResult );
-        return Internal::readStaticModel( data, listRoot, listToon, rule, sourcePath, outResult );
+            return Internal::readSkinnedAsset( data, listRoot, listSectionMaterialName, rule, sourcePath, outResult );
+        return Internal::readStaticModel( data, listRoot, listSectionMaterialName, rule, sourcePath, outResult );
     }
 
     bool ModelImporter::transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh )
@@ -780,15 +798,17 @@ namespace sw::editor
             return false;
         if ( Internal::writeFractureAsset( result, rule, sourcePath, outputPath ) == false )
             return false;
+        const string stem = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
         if ( result._bSkinned == SW_FALSE )
         {
+            if ( ModelImportVrm::writeSectionPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
+                return false;
             SW_LOG_INFO_ID( "ModelImporter.ImportedModelTriangles", "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
             return true;
         }
 
         if ( Internal::writeAttachments( assetPaths, result, sideFolder ) == false )
             return false;
-        const string                      stem         = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
         const string                      skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
         const std::optional<AbsolutePath> skeletonFile = FileUtil::requireAbsolutePath( skeletonPath );
         if ( skeletonFile.has_value() == false || result._skeleton.saveToFile( *skeletonFile ) == false )
@@ -798,7 +818,7 @@ namespace sw::editor
         }
         if ( ModelImportVrm::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
             return false;
-        if ( ModelImportVrm::writeCharacterPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
+        if ( ModelImportVrm::writeSectionPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
             return false;
         [[maybe_unused]] uint64 rawByteTotal        = 0;
         [[maybe_unused]] uint64 compressedByteTotal = 0;

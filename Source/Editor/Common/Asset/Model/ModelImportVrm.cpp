@@ -214,12 +214,13 @@ namespace sw::editor
         return listMeshSection;
     }
 
-    bool ModelImportVrm::writeCharacterPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeSectionPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
-        if ( result._listSection.empty() || result._bSkinned == SW_FALSE )
+        if ( result._listSection.empty() )
             return true;
-        auto resourceOf = [&]( string_view extension )
+        const bool bSkinned   = result._bSkinned != SW_FALSE;
+        auto       resourceOf = [&]( string_view extension )
         { return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
         auto materialOf = [&]( const ModelImportSection& section )
         { return assetPaths.toAssetID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), section._fileStem + ".material" ) ); };
@@ -237,18 +238,21 @@ namespace sw::editor
         gameObject.appendAttribute( "_bActive", "true" );
         const XMLNode listComponent = gameObject.appendChild( "_listComponent" );
 
-        // 주 컴포넌트(스켈레탈 메시)가 첫 구간을 그리고, 나머지 구간은 같은 메시 객체를 빌려 그린다(MeshSectionComponent). 구간 컴포넌트는 주 컴포넌트에 붙어 따라 움직인다.
-        const ModelImportSection& first        = result._listSection.front();
-        const XMLNode             skeletalMesh = Internal::appendComponent( listComponent, "SkeletalMeshComponent" );
-        skeletalMesh.appendAttribute( "_meshID", string_view{ meshID } );
-        skeletalMesh.appendAttribute( "_materialPath", string_view{ materialOf( first ) } );
-        skeletalMesh.appendAttribute( "_sectionName", string_view{ first._sectionName } );
-        skeletalMesh.appendAttribute( "_skeletonPath", string_view{ skeletonPath } );
+        // 주 컴포넌트(스킨드는 스켈레탈 메시, 아니면 메시)가 첫 구간을 그리고, 나머지 구간은 같은 메시 객체를 빌려 그린다(MeshSectionComponent). 구간 컴포넌트는 주 컴포넌트에 붙어 따라 움직인다.
+        const utf8*               pMainType = bSkinned ? "SkeletalMeshComponent" : "MeshComponent";
+        const string              mainRef   = string( pMainType ) + "#0";
+        const ModelImportSection& first     = result._listSection.front();
+        const XMLNode             mainMesh  = Internal::appendComponent( listComponent, pMainType );
+        mainMesh.appendAttribute( "_meshID", string_view{ meshID } );
+        mainMesh.appendAttribute( "_materialPath", string_view{ materialOf( first ) } );
+        mainMesh.appendAttribute( "_sectionName", string_view{ first._sectionName } );
+        if ( bSkinned )
+            mainMesh.appendAttribute( "_skeletonPath", string_view{ skeletonPath } );
         for ( size_t index = 1; index < result._listSection.size(); ++index )
         {
             const ModelImportSection& section     = result._listSection[index];
             const XMLNode             meshSection = Internal::appendComponent( listComponent, "MeshSectionComponent" );
-            meshSection.appendAttribute( "_attachComponent", "SkeletalMeshComponent#0" );
+            meshSection.appendAttribute( "_attachComponent", string_view{ mainRef } );
             meshSection.appendAttribute( "_materialPath", string_view{ materialOf( section ) } );
             meshSection.appendAttribute( "_sectionName", string_view{ section._sectionName } );
         }
@@ -261,10 +265,10 @@ namespace sw::editor
         const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && ModelImportUtil::writeImportedMeta( assetPaths, prefabPath );
         if ( bWritten == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write character prefab %#", prefabPath.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write section prefab %#", prefabPath.c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "ModelImporter.ModelCharacterPrefabSections", "Model '%#': character prefab with %# sections -> %#", meshPath, result._listSection.size(), prefabPath.c_str() );
+        SW_LOG_INFO_ID( "ModelImporter.ModelCharacterPrefabSections", "Model '%#': prefab with %# sections -> %#", meshPath, result._listSection.size(), prefabPath.c_str() );
         return true;
     }
 

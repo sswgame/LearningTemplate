@@ -37,12 +37,21 @@ namespace sw::editor
                                                      vector<string>& outListIgnored );
 
         /**
-         * @brief 합친 메시의 삼각형을 (머티리얼, 1인칭 가시성) 묶음마다 이어 놓고 구간 표를 만듭니다. 메시는 한 벌이다 — 구간은 그 메시의 정점 범위다(`MeshSection`).
-         * @details 1인칭 가시성은 VRM firstPerson 의 glTF 메시마다 값이다. Auto(적지 않은 메시 포함)는 UniVRM 과 같이 1인칭 본(머리) 아래 본에 가중치가 있는
-         *          꼭짓점을 하나라도 가진 삼각형을 3인칭 전용으로, 나머지를 둘 다로 나눈다. 묶음 안의 순서는 정점 캐시 · 오버드로 최적화를 묶음마다 따로 한다.
-         *          삼각형이 없는 묶음은 빠진다. 구간 이름은 머티리얼 파일 이름이고, 가시성이 둘 다가 아니면 `_tp` · `_fp` 를 붙인다.
+         * @brief 일반 glTF(VRM 아님)에 머티리얼이 여럿이고 그중 기본색 텍스처가 있는 것이 있으면 모든 머티리얼을 @p inoutResult 의 `_listPbrMaterial` 에 읽습니다(glTF 순서).
+         * @details 그런 모델은 머티리얼마다 구간이 된다(언리얼 · 유니티 · Godot 의 머티리얼 슬롯 · 서브메시 · 서피스와 같다 — 첫 머티리얼만 쓰면 나머지 면이 엉뚱한 텍스처로 그려진다).
+         *          텍스처 없는 머티리얼만 여럿이면 지금처럼 색을 정점에 구운 메시 하나다(구간 없음). 이름은 glTF 이름(없으면 `material<번호>`)의 파일 이름 꼴이다.
+         * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다.
          */
-        static void populateMaterialSections( ModelImportUtil::MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult );
+        [[nodiscard]] static bool readSectionPbrMaterials( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
+
+        /**
+         * @brief 합친 메시의 삼각형을 (머티리얼, 1인칭 가시성) 묶음마다 이어 놓고 구간 표를 만듭니다. 메시는 한 벌이다 — 구간은 그 메시의 정점 범위다(`MeshSection`).
+         * @param listMaterialName glTF 머티리얼마다의 이름입니다(툰 · PBR 머티리얼 표의 이름). 이 표 밖의 머티리얼을 쓰는 삼각형은 어느 구간에도 들지 않는다.
+         * @details 1인칭 가시성은 VRM firstPerson 의 glTF 메시마다 값이다. Auto(적지 않은 메시 포함)는 UniVRM 과 같이 1인칭 본(머리) 아래 본에 가중치가 있는
+         *          꼭짓점을 하나라도 가진 삼각형을 3인칭 전용으로, 나머지를 둘 다로 나눈다(VRM 이 아니면 아바타가 비어 모두 둘 다다). 묶음 안의 순서는 정점 캐시 ·
+         *          오버드로 최적화를 묶음마다 따로 한다. 삼각형이 없는 묶음은 빠진다. 구간 이름은 머티리얼 파일 이름이고, 가시성이 둘 다가 아니면 `_tp` · `_fp` 를 붙인다.
+         */
+        static void populateMaterialSections( ModelImportUtil::MergedMesh& inoutBody, const cgltf_data& data, const vector<string>& listMaterialName, ModelImportResult& inoutResult );
 
         /** @brief glTF 메시의 VRM 1인칭 가시성을 찾습니다. 적지 않은 메시(와 nullptr)는 Auto 입니다. 이름은 아바타 임포터가 쓴 규칙(makeMeshName)과 같습니다. */
         [[nodiscard]] static VrmFirstPersonMode findFirstPersonMode( const cgltf_data& data, const VrmAvatarDef& avatar, const cgltf_mesh* pMesh );
@@ -58,8 +67,9 @@ namespace sw::editor
         [[nodiscard]] static bool collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
 
         /**
-         * @brief VRM 의 머티리얼 구간의 툰 머티리얼과 그 텍스처 원본을 씁니다. 구간 자체는 본 메시(`<y>.mesh`)의 `SECT` 덩어리다 — 구간 메시를 따로 쓰지 않는다.
-         * @details 머티리얼은 `<옆 폴더>/materials/<머티리얼>.material` 에 쓴다(엔진 툰 머티리얼이 틀이다). 같은 머티리얼의 구간 여럿(1인칭 가시성이 다른)은 파일 하나를 쓴다.
+         * @brief 머티리얼 구간의 머티리얼(VRM 은 툰, 일반 glTF 는 PBR)과 그 텍스처 원본을 씁니다. 구간 자체는 본 메시(`<y>.mesh`)의 `SECT` 덩어리다 — 구간 메시를 따로 쓰지 않는다.
+         * @details 머티리얼은 `<옆 폴더>/materials/<머티리얼>.material` 에 쓴다(엔진 툰 · PBR 머티리얼이 틀이다). 같은 머티리얼의 구간 여럿(1인칭 가시성이 다른)은 파일 하나를 쓴다.
+         *          PBR 구간의 텍스처는 `writePbrMaterial` 과 같은 규칙이다. 아래는 툰 구간의 규칙이다.
          *          텍스처 원본(내장 이미지 바이트 그대로)은 `<x>/textures_raw/<y>/<이미지>.png` 에 꺼내 두며, 바이트가 같으면 건드리지 않는다.
          *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 `<x>/textures/<y>/<이미지>.dds` 를 가리킨다.
          *          원본은 텍스처 임포트의 스탬프가 지킨다.
@@ -68,7 +78,7 @@ namespace sw::editor
 
         /**
          * @brief 일반 glTF 의 첫 금속도 · 거칠기 머티리얼(기본색 텍스처가 있는 것)을 읽어 @p inoutResult 의 `_pbrMaterial` 에 담습니다. 없으면 아무것도 하지 않습니다.
-         * @details 머티리얼이 여럿이면 첫 것만 쓴다(구간 없는 정적 메시라 머티리얼 하나다) — 나머지는 경고로 알린다.
+         * @details 구간 없는 메시의 머티리얼이다 — 텍스처 머티리얼이 있는데 머티리얼이 여럿인 모델은 구간으로 나뉘어(`readSectionPbrMaterials`) 여기에 오지 않는다.
          * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] static bool readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
@@ -77,6 +87,10 @@ namespace sw::editor
          * @details 텍스처 이름 꼬리가 텍스처 임포트 규칙을 고른다(`_normal` → BC5 선형, `_orm` → 선형). 머티리얼은 엔진 PBR 견본(`EngineDefaultAssets::_pbrMaterialTemplate`)에 값을 채운다.
          */
         [[nodiscard]] static bool writePbrMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
+        /** @brief glTF 머티리얼 하나를 PBR 머티리얼 값으로 읽습니다(@p rawName 이 머티리얼 · 텍스처 파일 이름의 바탕이다). 바깥 이미지 파일을 못 읽으면 false 입니다. */
+        [[nodiscard]] static bool readPbrMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPbrMaterial& outPbr );
+        /** @brief PBR 머티리얼 하나의 텍스처 원본과 머티리얼 파일(`<옆 폴더>/materials/<@p fileStem>.material`)을 씁니다(`writePbrMaterial` 의 몸). */
+        [[nodiscard]] static bool writePbrMaterialFile( const AssetPaths& assetPaths, const ModelImportPbrMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder );
         /** @brief glTF 이미지 하나의 원본 바이트를 읽습니다(내장은 그대로, 바깥 파일은 원본 옆에서). 바깥 파일을 못 읽으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool readImageBytes( const cgltf_image& image, string_view sourcePath, ModelImportTexture& outTexture );
 
