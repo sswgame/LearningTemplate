@@ -174,23 +174,23 @@ namespace sw
         PROPERTY( Category = "Body", Tooltip = "Draw the pose interpolated between the last two physics steps" )
         bool _bInterpolate;
 
-        RigidBodySocketPhysics                 _socketPhysics;
-        PhysicsBodyHandle                      _body;
-        PhysicsBodyCommand<PhysicsDimension3D> _command;
-        mutable SpinLock                       _commandLock;
-        uint64                                 _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
-        float3                                 _previousPosition;
-        float3                                 _currentPosition;
-        float3                                 _worldScale; ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
-        float3                                 _kinematicStartPosition;
-        float3                                 _kinematicTargetPosition;
-        float3                                 _lastLinearVelocity;
-        float3                                 _lastAngularVelocity;
-        quaternion                             _previousRotation;
-        quaternion                             _currentRotation;
-        quaternion                             _kinematicStartRotation;
-        quaternion                             _kinematicTargetRotation;
-        PhysicsBodyType                        _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                   _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
+        RigidBodySocketPhysics                          _socketPhysics;
+        PhysicsBodyHandle                               _body;
+        mutable SpinLock                                _commandLock; ///< 아무 스레드의 입력(`addForce` …) → 물리 스텝의 꺼내기를 지킨다 — 다른 물리 컴포넌트와 같은 규약(검사는 `SW_GUARDED_BY`)
+        PhysicsBodyCommand<PhysicsDimension3D> _command SW_GUARDED_BY( _commandLock );
+        uint64                                          _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
+        float3                                          _previousPosition;
+        float3                                          _currentPosition;
+        float3                                          _worldScale; ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
+        float3                                          _kinematicStartPosition;
+        float3                                          _kinematicTargetPosition;
+        float3                                          _lastLinearVelocity;
+        float3                                          _lastAngularVelocity;
+        quaternion                                      _previousRotation;
+        quaternion                                      _currentRotation;
+        quaternion                                      _kinematicStartRotation;
+        quaternion                                      _kinematicTargetRotation;
+        PhysicsBodyType                                 _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        bool                                            _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
     };
 } // namespace sw

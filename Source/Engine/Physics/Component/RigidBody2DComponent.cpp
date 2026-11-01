@@ -43,8 +43,8 @@ namespace sw
         , _bLockRotation{ false }
         , _bInterpolate{ true }
         , _body{}
-        , _command{}
         , _commandLock{}
+        , _command{}
         , _movedStep{ 0 }
         , _previousPosition{}
         , _currentPosition{}

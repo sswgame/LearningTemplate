@@ -12,6 +12,7 @@
 #include "Editor/Panels/RenderTarget/Model/RenderTargetViewUtil.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 
 // `vector<RenderTargetInfo>` 와 `RenderTargetReadback` 을 멤버로 가지므로 완전한 타입이 필요하다. 전방 선언으로는 안 된다.
 
@@ -91,6 +92,8 @@ namespace sw::editor
         void syncSnapshot();
         /** @brief 스냅샷으로 미리보기 RGBA8 텍스처를 다시 만듭니다. */
         void rebuildSnapshotTexture();
+        /** @brief 엔진이 스냅샷 텍스처를 올렸으면 ImGui 에 등록합니다(그릴 때마다 부른다). */
+        void adoptSnapshotTextureIfReady();
         /** @brief 스냅샷 미리보기 텍스처와 그 ImGui 등록을 해제합니다. */
         void releaseSnapshotTexture( IRHIDevice* pRHIDevice );
         /** @brief 그려진 미리보기 위에서 마우스가 가리키는 픽셀 값을 읽어 툴팁으로 보여 줍니다. */
@@ -114,8 +117,13 @@ namespace sw::editor
         RenderTargetViewSettings _viewSettings;
         /** @brief 선택한 타깃을 CPU 로 읽은 마지막 결과입니다. `_texture` 가 선택한 타깃과 다르면 쓰지 않습니다. */
         RenderTargetReadback _snapshot;
-        /** @brief 스냅샷으로 만든 미리보기 RGBA8 텍스처입니다. 이 패널이 소유합니다. */
-        uint64 _snapshotTexture;
+        /**
+         * @brief 스냅샷으로 만든 미리보기 RGBA8 이미지의 엔진 CPU 텍스처(`cpu/editor/…`) 경로와 로드 핸들입니다. GPU 자원은 엔진이 렌더 쪽에서 올린다 —
+         *        에디터는 RHI 를 부르지 않는다(유니티 `Texture2D.SetPixels` · `Apply` 와 같은 자리). 예전에는 패널이 팩터리로 만들고 올렸다.
+         */
+        string        _snapshotPath;
+        TextureHandle _snapshotHandle;
+        uint32        _snapshotSerial;
         /** @brief 그 텍스처의 ImGui 등록 id 입니다. */
         void* _pSnapshotTextureID;
         /** @brief 미리보기 이미지를 만들 때 쓴 깊이 범위입니다. 회색 0 ~ 1 에 대응합니다. */

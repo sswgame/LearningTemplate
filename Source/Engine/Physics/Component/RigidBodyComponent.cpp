@@ -57,8 +57,8 @@ namespace sw
         , _bInterpolate{ true }
         , _socketPhysics{ *this }
         , _body{}
-        , _command{}
         , _commandLock{}
+        , _command{}
         , _movedStep{ 0 }
         , _previousPosition{}
         , _currentPosition{}

@@ -30,15 +30,17 @@
    - 에셋 종류 색 · 아이콘(등록 매크로의 RGBA) · 컴포넌트 분류 색을 테마 키(`Asset.*` · `Component.*`)로, 크기 리터럴(`GetFontSize() * N` 23 곳)을 `Layout.*` 수치로.
    - 아이콘 이름 → 글리프 표(`EditorIconGlyphs`)를 데이터로(아이콘 글꼴 교체 = 표 교체), 시간대 표(`TimeZoneUtil`)를 데이터 파일로.
    - `Saved/Test/<pid>/` 단위 테스트 쓰기 폴더가 실행마다 남아 수백 개다 — 끝나면 지우거나 한 폴더를 다시 쓴다.
-6. **전면 리팩토링을 동작 기준으로 다시** (사용자 지시 — "리팩토링에서 발견됐어야 할 문제"). 앞선 점검은 이름 겹침 · include 층 · 큰 파일만 봐서
-   스레드 소유 결함과 "이름이 다른 같은 일"을 놓쳤다(StructureRefactor 9 절). 고치기 전에 먼저 지도를 만든다 — 새 클래스 · 장치를 만들지 않고 기존 길을 넓힌다.
-   1. **소유 지도**: 객체마다 고치는 스레드(게임 · 렌더 · 워커), GPU 핸들을 가진 CPU 객체(`Mesh` · `Texture2D` · 입자 · 지형 — `Material` 과 같은 한 몸 모양인지),
-      `FrameRenderer` 인스턴스의 소유자, 디바이스 프레임 · 컨텍스트를 만지는 호출자. 결과를 StructureRefactor 9 절 표로.
-   2. **같은 일 지도**: 하는 일(씬 → 패킷, 패킷 → 타깃, 에셋 도착 · 등장, 읽기 · 되읽기)로 묶어 두 곳 이상이면 한 곳으로. 끝낸 것: 캡처 준비 판정(`CaptureReadiness`),
-      씬 하나 채우기(`RenderPacketSceneCollector::fillSceneView`), 시나리오 사건 세기(로그 id). 남은 어림: 에디터 자체 테스트의 고정 프레임(`EditorSelfTest` 워밍업 5,
-      `EditorSelfTestCases` · `EditorSelfTestDevTools` 의 `kSettleFrameCount` 3) — 조건(도킹 적용 · 탭 앞으로 옴 · 한 번 그려짐)으로.
-   3. **렌더러 셋으로 가르기**(언리얼 `FSceneRenderer` / `FScene` / `FSceneViewState`): `FrameRenderer` 가 렌더러(그래프 · PSO) · 씬 GPU 데이터(GPUScene) · 뷰 기록을 한 몸에
-      들어 씬마다 인스턴스를 늘린다(하위 렌더러 목록 `_listScenePreviewRenderer`). 씬 GPU 데이터를 씬 키별 객체로, 렌더러는 하나로.
+6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
+   끝낸 경계는 StructureRefactor 9 절(GPU 자원은 프록시 / 한 번 만들기 / 게시, 스레드 경계 표). 끝낸 경계: 머티리얼 · 메시 · 텍스처 · 에디터 텍스처 · 오디오 ·
+   애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:
+   1. **렌더러 셋으로 가르기 — 다음 세션 첫 일**(언리얼 `FScene` / `FSceneRenderer` / `FSceneViewState`). 지금 `FrameRenderer` 는 씬 GPU 데이터와 렌더러 장치를 한 몸에 들고
+      화면 밖 씬마다 통째로 하나씩 늘린다(`_listScenePreviewRenderer`, 역할을 `_bScenePreview` 분기 다섯 곳으로 가른다 — 한 클래스가 플래그로 두 역할).
+      계획: `FrameRenderState` 를 둘로 — 씬 키마다 `SceneRenderData`(`_gpuScene` · `_mainView` · `_listExtraView` · `_lightBuffer` · `_deform` · `_probeUpdater` ·
+      `_particleRenderer` · 프레임 빛 · 하늘), 렌더러 하나(`_graph` · `_passCbRing` · `_gpuPassTimeline` · `_canvasRenderer` · PSO · 파이프라인). 패킷의 `_sceneKey` 로 씬 데이터를 고르고
+      (`_state._gpuScene` 같은 참조 약 166 곳이 `scene()` 을 거친다), 하위 렌더러 목록과 `_bScenePreview` 분기를 지운다. 파이프라인이 다른 씬(캡처의 디퍼드)은 파이프라인 키로 렌더러를 고른다.
+   2. **시나리오 고정 대기를 조건으로**: 에디터 입력 앞 `<Wait frames>` 784 곳(98 파일)은 한꺼번에 지우면 진다(2026-11-01 시도 — 앞 단계의 비동기 일을 기다리던 것이 섞였다).
+      시나리오마다 무엇을 기다리는지 보고 `WaitUntil`(감시 값)로 바꾼다. 입력 단계가 스스로 기다리는 것(대상 위젯 · 키보드 초점)과 겹치는 것만 지운다.
+   3. **자동 생성 로그 id 다듬기**: `<영역>.Message` · `.Frame` 같은 이름 54 곳(서식이 `"%#"` · `"[Scenario] %#"` 뿐인 줄) — 사건 이름으로.
    4. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
       같은 3185 프레임에 dx11 40 초 · dx12 78 초 · gl 111 초). timeline 줄을 모아 어디서 시간이 드는지 재고(기다림 · 단계 재설정 · 기동), 프레임 고정 진행 · 단계 묶기 · 백엔드별 슬롯을 판단한다.
 

@@ -16,7 +16,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
 {
@@ -32,13 +32,15 @@ namespace sw::editor
     /** @brief 에디터가 소유하는 뷰 렌더 타깃 하나입니다. 씬 뷰와 게임 뷰가 각각 하나씩 가집니다. 호스트는 프레임마다 핸들만 조회합니다(`ImGuiEditor::getSceneViewport`, `getGameViewport`). */
     struct EditorViewTarget
     {
-        uint64 _renderTarget{ 0 };
-        void*  _pTextureID{ nullptr };
-        uint32 _width{ 0 };
-        uint32 _height{ 0 };
-        int32  _windowX{ 0 };       ///< 이번 프레임에 이미지 왼쪽 위가 놓인 주 창 클라이언트 픽셀(`markViewDrawn`). 호스트가 포인터를 뷰 픽셀로 옮긴다
-        int32  _windowY{ 0 };       ///< 위와 같습니다(세로)
-        uint8  _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다). 프레임을 시작할 때 지운다
+        TextureHandle _texture{};         ///< 엔진 렌더 텍스처(`rendertarget/editor/…`)의 로드 핸들 — 참조를 쥔다. GPU 자원은 엔진이 렌더 쪽에서 만든다
+        string        _texturePath{};     ///< 그 렌더 텍스처의 경로(크기마다 새 경로)
+        uint64        _renderTarget{ 0 }; ///< 렌더 텍스처가 GPU 에 올라간 뒤의 핸들(그 전에는 0 — 호스트에 알리지도 그리지도 않는다)
+        void*         _pTextureID{ nullptr };
+        uint32        _width{ 0 };
+        uint32        _height{ 0 };
+        int32         _windowX{ 0 };       ///< 이번 프레임에 이미지 왼쪽 위가 놓인 주 창 클라이언트 픽셀(`markViewDrawn`). 호스트가 포인터를 뷰 픽셀로 옮긴다
+        int32         _windowY{ 0 };       ///< 위와 같습니다(세로)
+        uint8         _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다). 프레임을 시작할 때 지운다
     };
 } // namespace sw::editor
 
@@ -75,11 +77,6 @@ namespace sw::editor
         void        setRHIDevice( IRHIDevice* pDevice ) { _pRHIDevice = pDevice; }
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
         void        setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
-        /**
-         * @brief 에디터 패널이 보일 RGBA8 이미지(@p width x @p height, 빈틈없는 행)를 렌더 스레드에서 만들어 올리고 핸들을 돌려줍니다. 실패하면 0 입니다.
-         * @details 에디터의 GPU 텍스처는 모두 이 객체가 렌더 스레드 명령으로 만든다(뷰 타깃 · 패널 이미지 - `ensureTargetSize` 머리 주석). 해제는 그리기 해제 큐에 맡긴다.
-         */
-        RHITextureHandle createImageTexture( uint32 width, uint32 height, const vector<uint8>& rgbaBytes );
         /** @brief ImGui 렌더러 백엔드를 반환합니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr 입니다. */
         IImGuiRendererBackend* getRendererBackend() const { return _pRendererBackend; }
 
@@ -153,30 +150,17 @@ namespace sw::editor
         /** @brief 뷰 렌더 타깃 하나를 놓습니다. */
         void destroyTarget( EditorViewTarget& view );
         /**
-         * @brief 뷰 렌더 타깃 하나를 그 크기로 (다시) 만듭니다.
-         * @details 만들기와 첫 색 채우기는 렌더 스레드 명령으로 한다(`RenderThread::executeAndWait`) — GPU 자원은 렌더 쪽이 만든다(언리얼 렌더 타깃 리소스가 렌더 명령으로
-         *          `InitResource` 하는 것과 같다). 예전에는 에디터 스레드가 팩터리를 직접 불러, GL 처럼 컨텍스트가 렌더 스레드에 묶인 백엔드에서 컨텍스트를 다퉜다.
+         * @brief 뷰 렌더 타깃 하나를 그 크기로 (다시) 요청하고, 엔진이 GPU 에 올렸으면 핸들을 받아 ImGui 에 등록합니다(프레임마다 부른다).
+         * @details 에디터는 GPU 자원을 만들지 않는다 — 엔진의 렌더 텍스처(`TextureCache` 의 `rendertarget/` 경로, 언리얼 `UTextureRenderTarget2D`)를 크기를 알리고 빌린다.
+         *          만들기는 엔진이 렌더 쪽 로드 펌프에서 한다. 예전에는 에디터 스레드가 RHI 팩터리로 직접 만들고 색을 채웠다(GL 컨텍스트를 다퉜다).
          */
         void ensureTargetSize( EditorViewTarget& view, uint32 width, uint32 height );
-        /** @brief (렌더 스레드) `_pendingCreate` 의 설명대로 텍스처를 만들고 채웁니다(픽셀이 있으면 올리고, 없으면 클리어 색). 결과 핸들은 `_pendingCreate._texture` 에 둡니다. */
-        void createTextureOnRenderThread( IRHIDevice& device );
-        /** @brief `_pendingCreate` 를 렌더 스레드 명령으로 실행하고 만든 핸들을 돌려줍니다. 렌더 스레드가 없거나 실패하면 0 입니다(이유는 로그에 남는다). */
-        RHITextureHandle runPendingCreate();
         /** @brief 미리보기 타깃을 찾습니다(고칠 수 있게). 없으면 nullptr 입니다. */
         EditorPreviewViewTarget* findPreviewTargetMutable( uint32 id );
 
     private:
-        /** @brief 렌더 스레드 명령으로 넘기는 텍스처 만들기 한 건입니다(에디터 스레드가 채우고, 끝날 때까지 기다리는 명령 안에서 렌더 스레드가 결과를 적는다). */
-        struct PendingTargetCreate
-        {
-            uint32               _width{ 0 };
-            uint32               _height{ 0 };
-            float4               _clearColor{};
-            const vector<uint8>* _pRGBABytes{ nullptr }; ///< 있으면 셰이더 읽기 전용 이미지로 올린다(없으면 렌더 타깃을 클리어 색으로 채운다)
-            RHITextureHandle     _texture{ 0 };
-        };
-        PendingTargetCreate             _pendingCreate{};
-        IRHIDevice*                     _pRHIDevice{ nullptr };       ///< 렌더 타깃을 만드는 디바이스(셸이 알린다)
+        uint32                          _nextTargetSerial{ 1 };       ///< 렌더 텍스처 경로의 번호(타깃 · 크기마다 새 경로)
+        IRHIDevice*                     _pRHIDevice{ nullptr };       ///< 렌더 텍스처를 요청할 디바이스(셸이 알린다)
         IImGuiRendererBackend*          _pRendererBackend{ nullptr }; ///< 렌더 타깃을 ImGui 텍스처로 등록하는 백엔드(셸이 알린다)
         EditorViewTarget                _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )]{};
         vector<EditorPreviewViewTarget> _listPreviewTarget{}; ///< 툴 창의 미리보기 타깃(`allocatePreviewTarget`)

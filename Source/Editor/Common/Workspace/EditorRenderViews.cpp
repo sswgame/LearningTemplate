@@ -3,44 +3,13 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
-#include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/RenderThreadSubsystem.h"
-
-namespace sw::editor
-{
-    namespace
-    {
-        struct EditorRenderViewsInternal
-        {
-            /** @brief R8G8B8A8_UNORM 텍스처 전체를 한 색으로 업로드합니다. 업로드한 텍스처는 셰이더 읽기 상태입니다. */
-            static bool fillTextureWithColor( IRHIResourceFactory& resource, RHITextureHandle texture, uint32 width, uint32 height, const float4& color )
-            {
-                // 메모리에서 R · G · B · A 순서가 되도록 낮은 바이트부터 채운다(엔진은 리틀 엔디언 64 비트만 빌드한다).
-                const uint32 packedColor = static_cast<uint32>( toUnorm8( color._x ) ) | ( static_cast<uint32>( toUnorm8( color._y ) ) << 8 ) |
-                                           ( static_cast<uint32>( toUnorm8( color._z ) ) << 16 ) | ( static_cast<uint32>( toUnorm8( color._w ) ) << 24 );
-                const vector<uint32> listPixel( static_cast<size_t>( width ) * height, packedColor );
-
-                RHITextureUploadDesc upload{};
-                upload._pData     = listPixel.data();
-                upload._sizeBytes = static_cast<uint32>( listPixel.size() * sizeof( uint32 ) );
-                upload._mipLevels = 1;
-                return RHITransferUtil::uploadTexture2DAndWait( resource, texture, upload );
-            }
-
-            static uint8 toUnorm8( float32 value ) { return static_cast<uint8>( MathUtil::round( MathUtil::saturate( value ) * 255.0f ) ); }
-        };
-    } // namespace
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -174,118 +143,46 @@ namespace sw::editor
             _pRendererBackend->unregisterTexture( view._pTextureID );
             view._pTextureID = nullptr;
         }
-
-        const bool bCanReleaseRenderTarget = view._renderTarget != 0 && _pRHIDevice != nullptr && _pRHIDevice->getResourceFactory() != nullptr;
-        if ( bCanReleaseRenderTarget )
+        // 줄 서 있는 패킷이 이 렌더 타깃에 그리고, 이미 낸 draw 스냅샷이 그것을 샘플링한다 — 참조(로드 핸들)는 그리기 해제 큐에 맡겨 그 프레임들 뒤에 놓는다.
+        // 마지막 참조가 사라지면 엔진이 GPU 자원을 놓는다. 그릴 쪽(렌더러 백엔드)이 없으면 지금 놓는다.
+        if ( view._texture.isValid() && _pRendererBackend != nullptr )
         {
-            // 줄 서 있는 패킷이 이 렌더 타깃에 그리고, 이미 낸 draw 스냅샷이 그것을 샘플링한다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의
-            // GPU 완료 뒤에 부순다. 렌더러 백엔드가 없으면(그릴 쪽이 없다) 곧바로 부순다.
-            IRHIResourceFactory*   pResource    = _pRHIDevice->getResourceFactory();
-            const RHITextureHandle renderTarget = view._renderTarget;
-            if ( _pRendererBackend != nullptr )
-            {
-                _pRendererBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pResource, renderTarget]()
-                { pResource->destroyTexture( renderTarget ); } ) );
-            }
-            else
-            {
-                // 이 분기는 에디터(게임) 스레드가 부른다. 렌더 스레드가 기록 중일 수 있어 직접 부수지 않고 기록 밖으로 미룬다(`IRHIDevice::releaseHandle`).
-                _pRHIDevice->releaseHandle( RHIHandleKind::Texture, renderTarget );
-            }
-            view._renderTarget = 0;
+            auto pHold = sw::make_shared<TextureHandle>( std::move( view._texture ) );
+            _pRendererBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pHold]()
+            { *pHold = TextureHandle{}; } ) );
         }
-
-        view._width  = 0;
-        view._height = 0;
-    }
-
-    RHITextureHandle EditorRenderViews::runPendingCreate()
-    {
-        const RenderThreadSubsystem* const pRenderThreads = editor::findSubsystem<RenderThreadSubsystem>();
-        RenderThread* const                pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
-        if ( pRenderThread == nullptr )
-        {
-            SW_LOG_ERROR_ONCE_ID( "EditorRenderViews.NoRenderThread", "An editor texture (%#x%#) was not created - there is no render thread to create it on", _pendingCreate._width,
-                                  _pendingCreate._height );
-            return 0;
-        }
-        const bool             bRan    = pRenderThread->executeAndWait( SW_DELEGATE_METHOD( RenderCommandDelegate, &EditorRenderViews::createTextureOnRenderThread, this ) );
-        const RHITextureHandle texture = bRan ? _pendingCreate._texture : 0;
-        _pendingCreate                 = PendingTargetCreate{}; // 픽셀 포인터를 남기지 않는다
-        return texture;
-    }
-
-    RHITextureHandle EditorRenderViews::createImageTexture( uint32 width, uint32 height, const vector<uint8>& rgbaBytes )
-    {
-        if ( width == 0 || height == 0 || rgbaBytes.size() < static_cast<size_t>( width ) * height * 4u )
-            return 0;
-        _pendingCreate             = PendingTargetCreate{};
-        _pendingCreate._width      = width;
-        _pendingCreate._height     = height;
-        _pendingCreate._pRGBABytes = &rgbaBytes;
-        return runPendingCreate();
-    }
-
-    void EditorRenderViews::createTextureOnRenderThread( IRHIDevice& device )
-    {
-        IRHIResourceFactory* const pFactory = device.getResourceFactory();
-        if ( pFactory == nullptr )
-            return;
-        const bool     bImage = _pendingCreate._pRGBABytes != nullptr;
-        RHITextureDesc rtDesc{};
-        rtDesc._width             = _pendingCreate._width;
-        rtDesc._height            = _pendingCreate._height;
-        rtDesc._format            = RHIFormat::R8G8B8A8_UNORM;
-        rtDesc._bIsRenderTarget   = bImage ? SW_FALSE : SW_TRUE;
-        rtDesc._bIsShaderResource = SW_TRUE;
-        rtDesc._mipLevels         = 1;
-        rtDesc._clearColor        = _pendingCreate._clearColor;
-        _pendingCreate._texture   = pFactory->createTexture2D( rtDesc );
-        if ( _pendingCreate._texture == 0 )
-            return;
-        if ( bImage )
-        {
-            RHITextureUploadDesc upload{};
-            upload._pData     = _pendingCreate._pRGBABytes->data();
-            upload._sizeBytes = static_cast<uint32>( _pendingCreate._pRGBABytes->size() );
-            upload._mipLevels = 1;
-            if ( RHITransferUtil::uploadTexture2DAndWait( *pFactory, _pendingCreate._texture, upload ) == false )
-            {
-                SW_LOG_WARNING_ID( "EditorRenderViews.ImageUploadFailed", "Editor image texture %#x%# could not be uploaded", rtDesc._width, rtDesc._height );
-                pFactory->destroyTexture( _pendingCreate._texture ); // 아무도 아직 보지 않았다 - 그 자리에서 부순다
-                _pendingCreate._texture = 0;
-            }
-            return;
-        }
-        // 이번 프레임의 draw 스냅샷이 새 텍스처를 그리는데, 그 스냅샷은 이 렌더 타깃에 그릴 패킷보다 먼저 줄 선 패킷이 그릴 수 있다. 렌더러가 아직
-        // 쓰지 않은 텍스처를 샘플링하지 않도록 클리어 색으로 채워 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다).
-        // 닫혀 있다 열린 패널의 첫 프레임도 이 색이다(그 뷰는 보이는 동안만 그린다).
-        if ( EditorRenderViewsInternal::fillTextureWithColor( *pFactory, _pendingCreate._texture, rtDesc._width, rtDesc._height, _pendingCreate._clearColor ) == false )
-            SW_LOG_WARNING_ID( "EditorRenderViews.ViewTargetXCould", "View target %#x%# could not be cleared before its first frame", rtDesc._width, rtDesc._height );
+        view._texture      = TextureHandle{};
+        view._texturePath  = string{};
+        view._renderTarget = 0;
+        view._width        = 0;
+        view._height       = 0;
     }
 
     void EditorRenderViews::ensureTargetSize( EditorViewTarget& view, uint32 width, uint32 height )
     {
-        if ( width == 0 || height == 0 )
+        if ( width == 0 || height == 0 || _pRHIDevice == nullptr )
             return;
-        const bool bRenderTargetUpToDate = width == view._width && height == view._height && view._renderTarget != 0;
-        if ( bRenderTargetUpToDate )
+        TextureCache& textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        if ( width != view._width || height != view._height || view._texture.isValid() == false )
+        {
+            destroyTarget( view );
+            view._texturePath = formatToString( "%#editor/view%#", TextureCache::kRenderTargetPrefix, _nextTargetSerial++ );
+            textures.declareRenderTarget( view._texturePath, width, height );
+            view._texture = textures.request( view._texturePath, _pRHIDevice, AssetLoadStart::Async );
+            view._width   = width;
+            view._height  = height;
+            if ( view._texture.isValid() == false )
+            {
+                SW_LOG_ERROR_ID( "EditorRenderViews.RequestFailed", "View target %#x%# could not be requested ('%#')", width, height, view._texturePath.c_str() );
+                return;
+            }
+        }
+        if ( view._renderTarget != 0 || view._texture.isReady() == false )
+            return; // 이미 받았거나, 엔진이 아직 올리지 않았다(다음 프레임에 다시 본다)
+        const Texture2D* pTexture = textures.find( view._texturePath );
+        if ( pTexture == nullptr || pTexture->isRHIValid() == false )
             return;
-        if ( _pRHIDevice == nullptr || _pRHIDevice->getResourceFactory() == nullptr )
-            return;
-        destroyTarget( view );
-
-        // editortooldefaults.json 의 _clearColor 를 쓴다(값을 여기 박아 두면 설정 파일이 조용히 무시된다).
-        _pendingCreate             = PendingTargetCreate{};
-        _pendingCreate._width      = width;
-        _pendingCreate._height     = height;
-        _pendingCreate._clearColor = editor::getEditorToolDefaults()._clearColor;
-        view._renderTarget         = runPendingCreate();
-        if ( view._renderTarget == 0 )
-            return;
-
-        view._width  = width;
-        view._height = height;
+        view._renderTarget = pTexture->getHandle();
         if ( _pRendererBackend != nullptr )
             view._pTextureID = _pRendererBackend->registerTexture( view._renderTarget );
     }

@@ -68,12 +68,10 @@ namespace sw::editor
         IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
         if ( entry._pTextureID != nullptr && pBackend != nullptr )
             pBackend->unregisterTexture( entry._pTextureID );
-        entry._pTextureID                = nullptr;
-        TextureCache* pTextures          = EditorThumbnailCacheInternal::findTextureCache();
-        const bool    bReleasableTexture = entry._textureHandle != 0 && pTextures != nullptr && pDevice != nullptr;
-        if ( bReleasableTexture )
-            pTextures->release( entry._assetID, pDevice );
+        entry._pTextureID    = nullptr;
+        entry._pBlock        = nullptr; // 쥔 참조를 놓는다 — 마지막이면 엔진이 텍스처를 놓는다
         entry._textureHandle = 0;
+        (void)pDevice;
     }
 
     void EditorThumbnailCache::clear()
@@ -164,15 +162,10 @@ namespace sw::editor
 
     void EditorThumbnailCache::finishLoads( IRHIDevice* pDevice )
     {
-        uint32 uploadedCount = 0;
         for ( size_t loadingIndex = 0; loadingIndex < _listLoading.size(); )
         {
-            TextureLoadBlock& block = *_listLoading[loadingIndex]._pBlock;
-            // 워커가 읽기를 마친 로드는 여기서 올린다 — 이 스레드가 디바이스를 쓰는 스레드다(예전 `acquire` 와 같은 자리). 다른 스레드가 이미 집었으면 false 다.
-            const bool bMayUpload = block.getState() == AssetLoadState::Loading && uploadedCount < kMaxUploadsPerUpdate;
-            if ( bMayUpload && block.runCompletionIfPending() )
-                ++uploadedCount;
-
+            const TextureLoadBlock& block = *_listLoading[loadingIndex]._pBlock;
+            // 올리기는 렌더 쪽 로드 펌프가 한다 — 여기서는 끝났는지만 본다.
             const AssetLoadState state = block.getState();
             if ( state == AssetLoadState::Loading )
             {
@@ -180,39 +173,33 @@ namespace sw::editor
                 continue;
             }
             const string assetID = _listLoading[loadingIndex]._assetID;
-            if ( state == AssetLoadState::Failed || adoptReady( assetID, pDevice ) == false )
+            if ( state == AssetLoadState::Failed || adoptReady( assetID, _listLoading[loadingIndex]._pBlock ) == false )
                 recordFailure( assetID );
             else
                 _uniqueKnownID.erase( assetID ); // 항목이 생겼다 — 이후엔 항목 목록이 답한다. 쫓겨나면 다시 예약할 수 있게 비운다
-            // 핸들 몫의 참조는 지우며 놓인다 — `adoptReady` 가 우리 몫을 따로 쥐었으므로 항목은 남는다.
+            // 로드 목록에서 지워도 항목이 블록을 쥐었으므로(`adoptReady`) 참조는 남는다.
             _listLoading.erase( _listLoading.begin() + static_cast<std::ptrdiff_t>( loadingIndex ) );
         }
     }
 
-    bool EditorThumbnailCache::adoptReady( const string& assetID, IRHIDevice* pDevice )
+    bool EditorThumbnailCache::adoptReady( const string& assetID, const shared_ptr<TextureLoadBlock>& pBlock )
     {
-        TextureCache&          textures = EditorThumbnailCacheInternal::requireTextureCache();
+        const TextureCache&    textures = EditorThumbnailCacheInternal::requireTextureCache();
         IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
-        // 준비된 텍스처라 읽지 않는다(캐시 적중) — 핸들이 살아 있는 동안 참조를 하나 더 세어 해제를 `releaseEntry` 의 `release` 짝으로 맞춘다.
-        Texture2D* pTexture           = textures.acquire( assetID, pDevice );
-        const bool bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
+        // 끝난 로드가 참조를 쥐고 있다 — 다시 빌리지 않고(`acquire` 는 디바이스 스레드의 일) 그 블록을 항목이 쥔다.
+        const Texture2D* pTexture           = textures.find( assetID );
+        const bool       bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
         if ( bThumbnailUnusable )
-        {
-            if ( pTexture != nullptr )
-                textures.release( assetID, pDevice );
             return false;
-        }
 
         Entry entry{};
         entry._assetID       = assetID;
+        entry._pBlock        = pBlock;
         entry._textureHandle = pTexture->getHandle();
         entry._pTextureID    = pBackend->registerTexture( entry._textureHandle );
         entry._lastUsedFrame = _frame;
         if ( entry._pTextureID == nullptr )
-        {
-            textures.release( assetID, pDevice );
             return false;
-        }
         _listEntry.push_back( std::move( entry ) );
         return true;
     }

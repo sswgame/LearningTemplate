@@ -36,8 +36,6 @@ namespace sw::editor
         static constexpr uint32 kCapacity = 64;
         /** @brief 한 번에 워커에 맡겨 두는 읽기 수의 상한입니다. 폴더를 열어 수백 장이 예약돼도 워커 큐를 채우지 않게, 나머지는 예약에 둡니다. */
         static constexpr uint32 kMaxLoading = 8;
-        /** @brief `update` 한 번에 UI 스레드가 GPU 에 올리는 썸네일 수의 상한입니다(디코드는 이미 워커에서 끝났다). */
-        static constexpr uint32 kMaxUploadsPerUpdate = 2;
 
         EditorThumbnailCache();
         ~EditorThumbnailCache();
@@ -63,10 +61,11 @@ namespace sw::editor
         /** @brief 썸네일 하나입니다. */
         struct Entry
         {
-            string _assetID;
-            void*  _pTextureID{ nullptr };
-            uint64 _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
-            uint64 _lastUsedFrame{ 0 };
+            string                       _assetID;
+            shared_ptr<TextureLoadBlock> _pBlock; ///< 끝난 로드 — 텍스처 참조 하나를 쥔다(놓으면 엔진이 참조를 놓는다)
+            void*                        _pTextureID{ nullptr };
+            uint64                       _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
+            uint64                       _lastUsedFrame{ 0 };
         };
 
         /** @brief 워커에서 읽는 중인 썸네일 하나입니다. 핸들이 로드를 살려 둡니다(블록은 에셋이 준비된 뒤 참조 하나를 쥔다). */
@@ -80,10 +79,13 @@ namespace sw::editor
         static void releaseEntry( Entry& entry, IRHIDevice* pDevice );
         /** @brief 예약한 경로를 상한(`kMaxLoading`)까지 워커에 맡깁니다. 요청할 수 없는 경로는 실패 목록에 둡니다. */
         void startLoads( IRHIDevice* pDevice );
-        /** @brief 읽는 중인 로드를 보아, 워커가 읽기를 마친 것은 올리고(`kMaxUploadsPerUpdate`) 끝난 것은 등록하거나 실패 목록에 둡니다. */
+        /**
+         * @brief 읽는 중인 로드를 보아 끝난 것은 등록하거나 실패 목록에 둡니다. GPU 업로드는 엔진의 렌더 쪽 로드 펌프가 한다(`TextureCache::completePendingLoads`).
+         * @details 예전에는 UI 스레드가 업로드를 마무리했다(`runCompletionIfPending`) — 에디터가 디바이스를 쓰는 스레드 노릇을 했다(GL 컨텍스트를 다퉜다).
+         */
         void finishLoads( IRHIDevice* pDevice );
-        /** @brief 준비된 텍스처 하나를 참조를 쥐고 ImGui 에 등록합니다. 못 쓰는 텍스처면 false 이고 아무것도 쥐지 않습니다. */
-        bool adoptReady( const string& assetID, IRHIDevice* pDevice );
+        /** @brief 끝난 로드 @p pBlock(참조를 쥔다)의 텍스처를 ImGui 에 등록합니다. 못 쓰는 텍스처면 false 이고 아무것도 쥐지 않습니다. 디바이스를 쓰지 않는다. */
+        bool adoptReady( const string& assetID, const shared_ptr<TextureLoadBlock>& pBlock );
         /** @brief 이번 프레임에 쓰지 않은 것 가운데 오래된 것부터 용량까지 놓습니다. */
         void evictOverCapacity( IRHIDevice* pDevice );
 

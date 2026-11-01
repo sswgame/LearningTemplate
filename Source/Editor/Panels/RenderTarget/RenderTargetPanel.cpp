@@ -17,9 +17,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -52,7 +52,9 @@ namespace sw::editor
         , _previewZoom{ 0.0f } // 0 = 창에 맞춤
         , _viewSettings{}
         , _snapshot{}
-        , _snapshotTexture{ 0 }
+        , _snapshotPath{}
+        , _snapshotHandle{}
+        , _snapshotSerial{ 0 }
         , _pSnapshotTextureID{ nullptr }
         , _snapshotDepthRange{ 0.0f, 1.0f }
         , _probedPixel{}
@@ -87,33 +89,37 @@ namespace sw::editor
         return pSelected != nullptr && pSelected->_bDepth != SW_FALSE;
     }
 
-    void RenderTargetPanel::releaseSnapshotTexture( IRHIDevice* pRHIDevice )
+    void RenderTargetPanel::releaseSnapshotTexture( IRHIDevice* /*pRHIDevice*/ )
     {
         EditorContext*         pContext = editor::findSubsystem<EditorContext>();
         IImGuiRendererBackend* pBackend = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
-        IRHIDevice*            pDevice  = pRHIDevice != nullptr ? pRHIDevice : ( pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr );
         if ( _pSnapshotTextureID != nullptr && pBackend != nullptr )
             pBackend->unregisterTexture( _pSnapshotTextureID );
         _pSnapshotTextureID = nullptr;
-
-        const bool bCanReleaseSnapshot = _snapshotTexture != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
-        if ( bCanReleaseSnapshot )
+        if ( _snapshotPath.empty() )
+            return;
+        // 이미 낸 draw 스냅샷이 이 텍스처를 그릴 수 있다 — 참조(로드 핸들)는 그리기 해제 큐에 맡겨 그 프레임들 뒤에 놓고, 마지막 참조가 사라지면 엔진이 GPU 자원을 놓는다.
+        if ( _snapshotHandle.isValid() && pBackend != nullptr )
         {
-            // 이미 낸 draw 스냅샷이 이 텍스처를 그릴 수 있다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의 GPU 완료 뒤에 부순다.
-            IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
-            const RHITextureHandle texture   = _snapshotTexture;
-            if ( pBackend != nullptr )
-            {
-                pBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pResource, texture]()
-                { pResource->destroyTexture( texture ); } ) );
-            }
-            else
-            {
-                // 이 분기는 에디터(게임) 스레드가 부른다. 렌더 스레드가 기록 중일 수 있어 직접 부수지 않고 기록 밖으로 미룬다(`IRHIDevice::releaseHandle`).
-                pDevice->releaseHandle( RHIHandleKind::Texture, texture );
-            }
+            auto pHold = sw::make_shared<TextureHandle>( std::move( _snapshotHandle ) );
+            pBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pHold]()
+            { *pHold = TextureHandle{}; } ) );
         }
-        _snapshotTexture = 0;
+        _snapshotHandle = TextureHandle{};
+        if ( AssetManager* pAssets = editor::findSubsystem<AssetManager>() )
+            pAssets->getAssetCache<TextureCache>().releaseCPUTexture( _snapshotPath );
+        _snapshotPath.clear();
+    }
+
+    void RenderTargetPanel::adoptSnapshotTextureIfReady()
+    {
+        if ( _pSnapshotTextureID != nullptr || _snapshotHandle.isReady() == false )
+            return;
+        EditorRenderViews& renderViews = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
+        const Texture2D*   pTexture    = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>().find( _snapshotPath );
+        if ( pTexture == nullptr || pTexture->isRHIValid() == false || renderViews.getRendererBackend() == nullptr )
+            return;
+        _pSnapshotTextureID = renderViews.getRendererBackend()->registerTexture( pTexture->getHandle() );
     }
 
     void RenderTargetPanel::releasePreviewTexture()
@@ -222,18 +228,20 @@ namespace sw::editor
             return;
         _snapshotDepthRange = float2{ image._depthLow, image._depthHigh };
 
-        EditorRenderViews& renderViews           = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
-        IRHIDevice*        pDevice               = renderViews.getRHIDevice();
-        const bool         bCannotUploadSnapshot = pDevice == nullptr || pDevice->getResourceFactory() == nullptr || renderViews.getRendererBackend() == nullptr;
-        if ( bCannotUploadSnapshot )
+        IRHIDevice* const pDevice = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().getRHIDevice();
+        if ( pDevice == nullptr )
             return;
-
-        // 스냅샷마다 새 텍스처를 만든다. 쓰던 것에 다시 업로드하면 아직 그것을 그리는 프레임과 겹친다(옛 것은 해제 큐가 그 뒤에 부순다).
-        // 만들기 · 올리기는 렌더 스레드가 한다(`EditorRenderViews::createImageTexture` - 에디터 GPU 텍스처의 한 길).
-        _snapshotTexture = renderViews.createImageTexture( image._width, image._height, image._byte );
-        if ( _snapshotTexture == 0 )
+        // 스냅샷마다 새 경로다. 쓰던 것에 다시 올리면 아직 그것을 그리는 프레임과 겹친다(옛 것은 위 해제가 그 프레임들 뒤에 놓는다).
+        TextureCache& textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        _snapshotPath          = formatToString( "%#editor/rendertargetpreview%#", TextureCache::kCPUTexturePrefix, ++_snapshotSerial );
+        if ( textures.createCPUTexture( _snapshotPath, image._width, image._height, std::move( image._byte ) ) == false )
+        {
+            SW_LOG_WARNING_ID( "RenderTargetPanel.RenderTargetPreviewX", "Render target preview %#x%# could not be made ('%#')", image._width, image._height, _snapshotPath.c_str() );
+            _snapshotPath.clear();
             return;
-        _pSnapshotTextureID = renderViews.getRendererBackend()->registerTexture( _snapshotTexture );
+        }
+        _snapshotHandle = textures.request( _snapshotPath, pDevice, AssetLoadStart::Async );
+        adoptSnapshotTextureIfReady();
     }
 
     void RenderTargetPanel::drawToolbar()
@@ -439,8 +447,9 @@ namespace sw::editor
         }
 
         // 색 그대로(RGBA)는 GPU 텍스처를 그대로 보인다(매 프레임 최신). 깊이 · 채널 하나는 CPU 스냅샷으로 만든 이미지다.
-        const bool bLive      = ( bDepth == false ) && ( _viewSettings._channel == RenderTargetChannel::RGBA );
-        void*      pTextureID = bLive ? _pPreviewTextureID : _pSnapshotTextureID;
+        const bool bLive = ( bDepth == false ) && ( _viewSettings._channel == RenderTargetChannel::RGBA );
+        adoptSnapshotTextureIfReady();
+        void* pTextureID = bLive ? _pPreviewTextureID : _pSnapshotTextureID;
         if ( pTextureID == nullptr )
         {
             if ( bLive )
