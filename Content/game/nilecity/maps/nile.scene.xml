@@ -426,16 +426,22 @@
 					               _bActive="true"
 					               _localPosition="-3,0,-36"
 					               _localRotation="0,0,0"
-					               _localScale="1,1,1"
+					               _localScale="0.1095,0.1095,0.1095"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/nilecity/models/tree_large.mesh"
-					               _materialPath="game/nilecity/materials/nature.material"
+					               _meshID="common/models/quaternius/nature/commontree_5.mesh"
+					               _materialPath="common/models/quaternius/nature/commontree_5/materials/bark_normaltree.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
-					               _bVisible="true" />
+					               _bVisible="true"
+					               _sectionName="bark_normaltree" />
+					<MeshSectionComponent _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="MeshComponent#0"
+					                      _materialPath="common/models/quaternius/nature/commontree_5/materials/leaves_normaltree.material"
+					                      _sectionName="leaves_normaltree" />
 				</_listComponent>
 			</GameObject>
 		</entity>

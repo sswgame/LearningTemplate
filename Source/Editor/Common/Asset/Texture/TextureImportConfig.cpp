@@ -27,6 +27,7 @@ namespace sw::editor
             {         "swizzle",   "string",      "RGBA",                                                                                                                    "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
             {   "generate_mips",     "bool",      "true",                                                                                                                                                               "밉맵을 만든다"},
             {            "srgb",     "bool",      "true",                                                                                                                       "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
+            {  "quick_compress",     "bool",     "false",                                                          "BC7 을 빠른 프로필(모드 6 하나 — DirectXTex BC7_QUICK)로 압축한다. 기본 압축은 2K 한 장에 수십 분이라 큰 팩에 쓴다"},
             {    "invert_green",     "bool",     "false",                                                                                                                                 "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
             {"include_patterns", "string[]",          "",                           "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시). `/` 없으면 파일 이름에, 있으면 경로 마디에 맞춘다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다"},
             {"exclude_patterns", "string[]",          "",                                                                                                                                  "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
@@ -247,16 +248,18 @@ namespace sw::editor
         bool       bGenerateMips = inoutRule._bGenerateMips != SW_FALSE;
         bool       bSRGB         = inoutRule._bSRGB != SW_FALSE;
         bool       bInvertGreen  = inoutRule._bInvertGreen != SW_FALSE;
+        bool       bQuick        = inoutRule._bQuickCompress != SW_FALSE;
         const bool bFlagsRead    = jsonValue.readOptionalInto( "generate_mips", bGenerateMips ) && jsonValue.readOptionalInto( "srgb", bSRGB ) &&
-                                jsonValue.readOptionalInto( "invert_green", bInvertGreen );
+                                jsonValue.readOptionalInto( "invert_green", bInvertGreen ) && jsonValue.readOptionalInto( "quick_compress", bQuick );
         if ( bFlagsRead == false )
         {
-            SW_LOG_ERROR_ID( "TextureImportConfig.GenerateMipsSrgbInvert", "%#: generate_mips, srgb and invert_green must be booleans", context );
+            SW_LOG_ERROR_ID( "TextureImportConfig.GenerateMipsSrgbInvert", "%#: generate_mips, srgb, invert_green and quick_compress must be booleans", context );
             return false;
         }
-        inoutRule._bGenerateMips = bGenerateMips ? SW_TRUE : SW_FALSE;
-        inoutRule._bSRGB         = bSRGB ? SW_TRUE : SW_FALSE;
-        inoutRule._bInvertGreen  = bInvertGreen ? SW_TRUE : SW_FALSE;
+        inoutRule._bGenerateMips  = bGenerateMips ? SW_TRUE : SW_FALSE;
+        inoutRule._bSRGB          = bSRGB ? SW_TRUE : SW_FALSE;
+        inoutRule._bInvertGreen   = bInvertGreen ? SW_TRUE : SW_FALSE;
+        inoutRule._bQuickCompress = bQuick ? SW_TRUE : SW_FALSE;
 
         inoutRule._filter.parse( jsonValue );
         return true;

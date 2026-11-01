@@ -35,6 +35,8 @@
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -508,7 +510,7 @@ namespace sw::editor
                 const bool                  bSections = listSectionMaterialName.empty() == false;
                 ModelImportUtil::MergedMesh merged;
                 // 머티리얼(구간 머티리얼 · 텍스처 PBR 머티리얼 하나)이 색 계수를 가지면 정점에 굽지 않는다 — 두 번 곱한다
-                merged._bBakeMaterialColor = bSections == false && ModelImportMaterial::findTexturedPbrMaterial( data ) == nullptr;
+                merged._bBakeMaterialColor = bSections == false && ( rule._bImportMaterials == SW_FALSE || ModelImportMaterial::findTexturedPbrMaterial( data ) == nullptr );
                 for ( const cgltf_node* pRoot : listRoot )
                 {
                     if ( ModelImportGeometry::appendNode( *pRoot, merged ) == false )
@@ -526,7 +528,7 @@ namespace sw::editor
                     return false;
                 }
                 // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePbrMaterial`).
-                if ( bSections == false && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
+                if ( bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
                     return false;
 
                 ModelImportGeometry::applyRule( rule, merged );
@@ -725,7 +727,7 @@ namespace sw::editor
         if ( ModelImportMaterial::readToonMaterials( data, sourcePath, outResult._listToonMaterial, outResult._listIgnoredMaterialKey ) == false ||
              ModelImportVrm::readVrmAvatar( data, sourcePath, outResult ) == false )
             return false;
-        const bool bPbrSections = outResult._listToonMaterial.empty() && rule._bMaterialSections == SW_TRUE;
+        const bool bPbrSections = outResult._listToonMaterial.empty() && rule._bImportMaterials == SW_TRUE && rule._bMaterialSections == SW_TRUE;
         if ( bPbrSections && ModelImportMaterial::readSectionPbrMaterials( data, sourcePath, outResult ) == false )
             return false;
         // 구간을 나누는 머티리얼 표(툰 또는 PBR)의 이름 — 비어 있으면 구간 없는 메시다.
@@ -899,11 +901,22 @@ namespace sw::editor
         const string animationText = rule.makeAnimationHashText();
         hash                       = HashUtil::computeStringHash64( animationText.c_str(), animationText.size(), false, hash );
         // VRM 이면 아바타 파일 형식 버전도 섞는다. 그 형식만 바뀌었을 때 VRM 원본만 다시 임포트하게 한다(임포터 버전을 올리면 모든 모델이 어긋난다).
-        if ( ModelImportVrm::containsVrmExtension( bytes ) )
+        const bool bVrm = ModelImportVrm::containsVrmExtension( bytes );
+        if ( bVrm )
         {
             const string avatarText = formatToString( "avatar=%#", VrmAvatarImporter::kVersion );
             hash                    = HashUtil::computeStringHash64( avatarText.c_str(), avatarText.size(), false, hash );
         }
+        // 모델 옆 머티리얼을 찍어 내는 견본(VRM 은 툰, 그 밖은 PBR)도 섞는다 — 견본에 프로퍼티 · 스위치를 더하면 이미 쓴 머티리얼도 다시 써야 한다.
+        const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
+        string                                templateText;
+        if ( pDefaultAssets == nullptr ||
+             AssetIO::readTextAsset( AssetID{ ( bVrm ? pDefaultAssets->_toonMaterialTemplate : pDefaultAssets->_pbrMaterialTemplate ).get() }, templateText ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModelImporter.MaterialTemplateUnreadable", "Model '%#': the material template could not be read - the import stamp cannot be computed", sourcePath );
+            return 0;
+        }
+        hash                      = HashUtil::computeStringHash64( templateText.c_str(), templateText.size(), false, hash );
         const string fractureText = rule.makeFractureHashText();
         if ( fractureText.empty() == false )
         {

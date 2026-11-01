@@ -2,7 +2,7 @@
 
 | 파일 | 원본 | 라이선스 |
 |------|------|----------|
-| `models_raw/*_*.glb` | Kenney "Nature Kit" 2.1 (<https://kenney.nl/assets/nature-kit>) — 선인장 둘(`cactus_short` · `cactus_tall`) · 바위 넷(`rock_large_a` · `rock_large_b` · `rock_small_a` · `rock_tall_a`) · 울타리 넷(`fence_simple` · `fence_corner` · `fence_gate` · `fence_planks`). 묶음 <https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip> (SHA-256 `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d`) 의 `Models/GLTF format/<원본 이름>.glb` | CC0 1.0 |
+| `models_raw/*_*.glb` | Kenney "Nature Kit" 2.1 (<https://kenney.nl/assets/nature-kit>) — 선인장 둘(`cactus_short` · `cactus_tall`) · 울타리 둘(`fence_corner` · `fence_gate`) — 바위 · 곧은 울타리는 공용 Quaternius 모델로 바꿨다. 묶음 <https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip> (SHA-256 `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d`) 의 `Models/GLTF format/<원본 이름>.glb` | CC0 1.0 |
 | `models_raw/horse.glb` | Quaternius "Farm Animals" (<https://opengameart.org/content/lowpoly-animated-farm-animal-pack>)의 `FBX/Horse.fbx` 를 FBX2glTF 0.13.1 로 glTF 변환 — 클립 `Idle` · `Walk` · `WalkSlow` · `Run` · `Jump` · `Death` | CC0 1.0 |
 
 - 라이선스 근거: 묶음의 `License.txt` 원문 "License: (Creative Commons Zero, CC0)".

@@ -11,6 +11,11 @@
       "translation": [-2.0, 0.0, -1.5]
     },
     {
+      "name": "Shooter3D_KayKitDungeon",
+      "include_patterns": ["*/shooter3d/models_raw/kaykit_dungeon/**"],
+      "import_materials": false
+    },
+    {
       "name": "KayKit_Characters",
       "include_patterns": ["*/common/models_raw/kaykit/**"],
       "exclude_patterns": ["*/common/models_raw/kaykit/skeleton_minion.glb"],

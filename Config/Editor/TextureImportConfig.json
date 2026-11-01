@@ -81,7 +81,22 @@
       "name": "Roughness_Maps",
       "inherits": "Base_Default",
       "include_patterns": ["*_rough.*", "*_roughness.*"],
+      "exclude_paths": ["quaternius/"],
       "srgb": false
+    },
+    {
+      "name": "Quaternius_Roughness",
+      "inherits": "Base_Default",
+      "include_patterns": ["*/textures_raw/quaternius/**/*_roughness.*"],
+      "srgb": false,
+      "quick_compress": true
+    },
+    {
+      "name": "Quaternius_Color",
+      "inherits": "Base_Default",
+      "include_patterns": ["*/textures_raw/quaternius/**"],
+      "exclude_patterns": ["*_normal.*", "*_orm.*", "*_roughness.*"],
+      "quick_compress": true
     },
     {
       "name": "UI_Textures",

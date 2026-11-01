@@ -88,10 +88,11 @@ namespace sw::editor
         AssetImportPathFilter  _filter;
         TextureImportFormat    _format;
         TextureSwizzle         _swizzle;
-        uint8                  _bGenerateMips : 1;
-        uint8                  _bSRGB         : 1;
-        uint8                  _bInvertGreen  : 1;
-        [[maybe_unused]] uint8 _reserved      : 5;
+        uint8                  _bGenerateMips  : 1;
+        uint8                  _bSRGB          : 1;
+        uint8                  _bInvertGreen   : 1;
+        uint8                  _bQuickCompress : 1; ///< BC7 빠른 프로필(quick_compress)
+        [[maybe_unused]] uint8 _reserved       : 4;
 
         TextureImportRule()
             : _name{}
@@ -102,6 +103,7 @@ namespace sw::editor
             , _bGenerateMips{ SW_TRUE }
             , _bSRGB{ SW_TRUE }
             , _bInvertGreen{ SW_FALSE }
+            , _bQuickCompress{ SW_FALSE }
             , _reserved{ 0 }
         {
         }

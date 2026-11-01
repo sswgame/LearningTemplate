@@ -73,8 +73,9 @@ namespace sw::editor
                 HRESULT               _result{ S_OK };
             };
 
-            Band*       _pBand{ nullptr };
-            DXGI_FORMAT _format{ DXGI_FORMAT_UNKNOWN };
+            Band*                       _pBand{ nullptr };
+            DXGI_FORMAT                 _format{ DXGI_FORMAT_UNKNOWN };
+            DirectX::TEX_COMPRESS_FLAGS _flags{ DirectX::TEX_COMPRESS_DEFAULT };
 
             void run( uint32 start, uint32 end )
             {
@@ -88,7 +89,7 @@ namespace sw::editor
                     slice.pixels                 = source.pixels + source.rowPitch * band._firstRow;
 
                     DirectX::ScratchImage compressed;
-                    band._result = DirectX::Compress( slice, _format, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed );
+                    band._result = DirectX::Compress( slice, _format, _flags, DirectX::TEX_THRESHOLD_DEFAULT, compressed );
                     if ( FAILED( band._result ) )
                         continue;
 
@@ -109,13 +110,14 @@ namespace sw::editor
              * @param pTaskManager 띠를 나눠 돌릴 작업 시스템입니다. nullptr 이면(테스트 하니스 · 서비스 연결 전) 현재 스레드가 띠를 차례로 압축합니다.
              *                     워커에서도 불리므로 이 안에서 에디터 서비스를 찾지 않고 부른 쪽이 제출 시점에 찾은 것을 받습니다.
              */
-            [[nodiscard]] static HRESULT compress( const DirectX::ScratchImage& mipChain, DXGI_FORMAT format, TaskManager* pTaskManager, DirectX::ScratchImage& outImage )
+            [[nodiscard]] static HRESULT compress( const DirectX::ScratchImage& mipChain, DXGI_FORMAT format, DirectX::TEX_COMPRESS_FLAGS flags, TaskManager* pTaskManager,
+                                                   DirectX::ScratchImage& outImage )
             {
                 const DirectX::TexMetadata& metadata           = mipChain.GetMetadata();
                 const bool                  bNotPlainTexture2D = metadata.dimension != DirectX::TEX_DIMENSION_TEXTURE2D || metadata.arraySize != 1 || metadata.depth != 1;
                 if ( bNotPlainTexture2D )
                 {
-                    return DirectX::Compress( mipChain.GetImages(), mipChain.GetImageCount(), metadata, format, DirectX::TEX_COMPRESS_DEFAULT,
+                    return DirectX::Compress( mipChain.GetImages(), mipChain.GetImageCount(), metadata, format, flags,
                                               DirectX::TEX_THRESHOLD_DEFAULT, outImage );
                 }
                 HRESULT hr = outImage.Initialize2D( format, metadata.width, metadata.height, 1, metadata.mipLevels );
@@ -145,6 +147,7 @@ namespace sw::editor
                 BandCompressJob job;
                 job._pBand  = listBand.data();
                 job._format = format;
+                job._flags  = flags;
                 // 작업 시스템이 없으면(테스트 하니스, 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다. 결과 바이트는 같다.
                 const uint32                bandCount = static_cast<uint32>( listBand.size() );
                 const ParallelBlockDelegate body      = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJob::run, &job );
@@ -207,13 +210,19 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 규칙의 압축 플래그입니다 — quick_compress 면 BC7 을 빠른 프로필(모드 6 하나)로 압축한다(블록마다 독립이라 띠 나누기와 같은 바이트다). */
+        [[nodiscard]] DirectX::TEX_COMPRESS_FLAGS compressFlagsInternal( const TextureImportRule& rule )
+        {
+            return rule._bQuickCompress == SW_TRUE ? DirectX::TEX_COMPRESS_BC7_QUICK : DirectX::TEX_COMPRESS_DEFAULT;
+        }
+
         /**
          * @brief 원본 한 장에서 밉 체인을 만들고(`bGenerateMips` 가 아니면 한 장 그대로) @p targetFormat 으로 압축하거나 변환해 @p outFinalImage 에 담습니다.
          * @details 8비트 경로와 HDR 경로가 함께 씁니다. WIC 필터는 Windows 에만 있고 결과가 OS 구현에 따라 달라집니다. 임포트된 DDS 를 커밋하고 그 해시를
          *          스탬프에 기록하므로, 어디서 임포트하든 같은 바이트가 나오는 DirectXTex 자체 필터만 씁니다. 실패하면 단계와 HRESULT 를 남기고 false 입니다.
          */
-        [[nodiscard]] bool encodeTextureMipsInternal( const DirectX::Image& baseImage, bool bGenerateMips, DXGI_FORMAT targetFormat, string_view sourcePath,
-                                                      TaskManager* pTaskManager, DirectX::ScratchImage& outFinalImage )
+        [[nodiscard]] bool encodeTextureMipsInternal( const DirectX::Image& baseImage, bool bGenerateMips, DXGI_FORMAT targetFormat, DirectX::TEX_COMPRESS_FLAGS compressFlags,
+                                                      string_view sourcePath, TaskManager* pTaskManager, DirectX::ScratchImage& outFinalImage )
         {
             constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
 
@@ -228,7 +237,7 @@ namespace sw::editor
 
             if ( DirectX::IsCompressed( targetFormat ) )
             {
-                hr = BandCompressJob::compress( mipChain, targetFormat, pTaskManager, outFinalImage );
+                hr = BandCompressJob::compress( mipChain, targetFormat, compressFlags, pTaskManager, outFinalImage );
                 if ( FAILED( hr ) )
                 {
                     SW_LOG_ERROR_ID( "TextureImporter.DirectXCompressFailedHr", "DirectX::Compress failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
@@ -279,7 +288,7 @@ namespace sw::editor
                 return false;
             }
             DirectX::ScratchImage finalImage;
-            if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, pTaskManager, finalImage ) == false )
+            if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, compressFlagsInternal( rule ), sourcePath, pTaskManager, finalImage ) == false )
                 return false;
             // Radiance RGBE 는 알파 없는 RGB 세 채널이다.
             constexpr uint32 kHDRSourceChannelCount = 3;
@@ -455,7 +464,7 @@ namespace sw::editor
 
         // 3) 밉맵(켜져 있으면)과 4) 압축 또는 포맷 변환
         DirectX::ScratchImage finalImage;
-        if ( encodeTextureMipsInternal( baseImage, rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, pTaskManager, finalImage ) == false )
+        if ( encodeTextureMipsInternal( baseImage, rule._bGenerateMips == SW_TRUE, targetFormat, compressFlagsInternal( rule ), sourcePath, pTaskManager, finalImage ) == false )
             return false;
 
         // 5) DDS 파일로 저장한다
@@ -557,6 +566,8 @@ namespace sw::editor
                                static_cast<uint32>( layout._arrSourceChannel[2] ), static_cast<uint32>( layout._arrSourceChannel[3] ),
                                static_cast<uint32>( layout._bForceOpaqueAlpha ), static_cast<uint32>( rule._bGenerateMips ), static_cast<uint32>( rule._bSRGB ),
                                static_cast<uint32>( rule._bInvertGreen ) );
+        if ( rule._bQuickCompress == SW_TRUE )
+            ruleText.append( ";quick=1" ); // 끈 값(기본)은 섞지 않는다 — 이 칸이 생기기 전의 스탬프가 그대로 맞는다
 
         const uint64 contentHash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         return HashUtil::computeStringHash64( ruleText.c_str(), ruleText.size(), false, contentHash );

@@ -2,7 +2,7 @@
 
 | 폴더 | 원본 | 라이선스 |
 |------|------|----------|
-| `models_raw/*.glb` · `textures_raw/coaster_colormap.png` | Kenney "Coaster Kit" (<https://kenney.nl/assets/coaster-kit>) — 강철 레일 · 열차 · 승강장 · 기둥 · 매점 · 길 · 입구 · 나무 · 벤치 · 휴지통 · 꽃 | CC0 1.0 |
+| `models_raw/*.glb` · `textures_raw/coaster_colormap.png` | Kenney "Coaster Kit" (<https://kenney.nl/assets/coaster-kit>) — 강철 레일 · 열차 · 승강장 · 기둥 · 매점 · 길 · 입구 · 나무 · 휴지통 · 꽃 | CC0 1.0 |
 | `sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_001` · `error_001` · `select_001` | CC0 1.0 |
 
 - 원본은 `models_raw/` · `textures_raw/` 에 그대로 두고, 엔진이 읽는 `models/*.mesh` · `textures/*.dds` 는 `App --import-models` ·

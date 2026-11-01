@@ -2,7 +2,7 @@
 
 | 폴더 | 원본 | 라이선스 |
 |------|------|----------|
-| `models_raw/*.glb` · `textures_raw/dungeon_colormap.png` | Kenney "Mini Dungeon" (<https://kenney.nl/assets/mini-dungeon>) — 사람 · 오크 · 바닥 · 벽 · 기둥 · 깃발 · 상자 · 물약 · 동전 · 바위 · 함정 | CC0 1.0 |
+| `models_raw/*.glb` · `textures_raw/dungeon_colormap.png` | Kenney "Mini Dungeon" (<https://kenney.nl/assets/mini-dungeon>) — 사람 · 오크 · 바닥 · 벽 · 기둥 · 함정 | CC0 1.0 |
 | `sounds/impact_punch_*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `impactPunch_medium_000` · `impactPunch_heavy_000` | CC0 1.0 |
 | `sounds/error_004.ogg` · `sounds/maximize_001.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) | CC0 1.0 |
 

@@ -121,17 +121,23 @@
 					<MeshComponent _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="16,0,-31.5"
-					               _localRotation="0,-1.5707964,0"
-					               _localScale="2,2,2"
+					               _localRotation="0,-1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/themepark/models/bench.mesh"
-					               _materialPath="game/themepark/materials/palette.material"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
-					               _bVisible="true" />
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="MeshComponent#0"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -181,17 +187,23 @@
 					<MeshComponent _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="24,0,-31.5"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="2,2,2"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/themepark/models/bench.mesh"
-					               _materialPath="game/themepark/materials/palette.material"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
-					               _bVisible="true" />
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="MeshComponent#0"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -241,17 +253,23 @@
 					<MeshComponent _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="16,0,-26.5"
-					               _localRotation="0,-1.5707964,0"
-					               _localScale="2,2,2"
+					               _localRotation="0,-1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/themepark/models/bench.mesh"
-					               _materialPath="game/themepark/materials/palette.material"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
-					               _bVisible="true" />
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="MeshComponent#0"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -301,17 +319,23 @@
 					<MeshComponent _componentName="MeshComponent"
 					               _bActive="true"
 					               _localPosition="24,0,-26.5"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="2,2,2"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1.8435,1.8435,1.8435"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
-					               _meshID="game/themepark/models/bench.mesh"
-					               _materialPath="game/themepark/materials/palette.material"
+					               _meshID="common/models/quaternius/props/bench.mesh"
+					               _materialPath="common/models/quaternius/props/bench/materials/mi_trim_furniture.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
-					               _bVisible="true" />
+					               _bVisible="true"
+					               _sectionName="mi_trim_furniture" />
+					<MeshSectionComponent _componentName="MeshSectionComponent"
+					                      _bActive="true"
+					                      _attachComponent="MeshComponent#0"
+					                      _materialPath="common/models/quaternius/props/bench/materials/mi_trim_metal.material"
+					                      _sectionName="mi_trim_metal" />
 				</_listComponent>
 			</GameObject>
 		</entity>
