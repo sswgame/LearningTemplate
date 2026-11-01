@@ -39,7 +39,7 @@ endfunction()
 # 체인 항목 하나 — 시나리오 모두를 백엔드마다 한 프로세스로. 모듈 리로드(이름 `*modulereload`)는 코드 이미지를 갈아 끼우므로 맨 뒤에 둔다 — 그 단계가 무엇을 남겨도 다른 단계에 닿지 않는다.
 # 첫 단계의 `<Launch>` 는 명령줄로 준다(게임이 기동하며 그 값을 읽는다). 다음 단계의 값은 세션이 단계를 시작할 때 건다. ARGS 는 App 에 더 줄 인자(`-game=` · `-EnableEditor` …)다.
 function(sw_addScenarioChain testName stageSeconds)
-	cmake_parse_arguments(PARSE_ARGV 2 arg "" "" "SCENARIOS;ARGS")
+	cmake_parse_arguments(PARSE_ARGV 2 arg "" "SLOTS" "SCENARIOS;ARGS")
 	set(listScenario ${arg_SCENARIOS})
 	if(NOT listScenario)
 		return()
@@ -53,12 +53,20 @@ function(sw_addScenarioChain testName stageSeconds)
 	list(GET listScenario 0 firstPath)
 	sw_readScenarioLaunch("${firstPath}" listLaunchArgument)
 	list(JOIN listScenario "," scenarioList)
-	math(EXPR chainTimeout "${stageSeconds} * ${stageCount}")
+	# SLOTS: 동시에 도는 백엔드 수(`-scenario-backend-slots`). 비우면 모두 함께. 슬롯이 적으면 자식이 차례로 돌아 시한 · 쓰는 코어도 그만큼이다.
+	set(slotCount ${swScenarioBackendCount})
+	set(listSlotArgument "")
+	if(arg_SLOTS)
+		set(slotCount ${arg_SLOTS})
+		set(listSlotArgument -scenario-backend-slots=${arg_SLOTS})
+	endif()
+	math(EXPR waveCount "(${swScenarioBackendCount} + ${slotCount} - 1) / ${slotCount}")
+	math(EXPR chainTimeout "${stageSeconds} * ${stageCount} * ${waveCount}")
 	add_test(NAME ${testName}
-		COMMAND $<TARGET_FILE:App> ${arg_ARGS} -scenario=${scenarioList} -scenario-keep-going -scenario-backends=all -unattended
+		COMMAND $<TARGET_FILE:App> ${arg_ARGS} -scenario=${scenarioList} -scenario-keep-going -scenario-backends=all ${listSlotArgument} -unattended
 			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${testName}.log ${listLaunchArgument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(${testName} PROPERTIES LABELS hostgpu TIMEOUT ${chainTimeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${swScenarioBackendCount})
+	set_tests_properties(${testName} PROPERTIES LABELS hostgpu TIMEOUT ${chainTimeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${slotCount})
 	message(STATUS "[Scenario] ${testName}: ${stageCount} scenario(s)")
 endfunction()
 
@@ -94,6 +102,7 @@ if(swActiveGameTarget)
 	list(PREPEND listBuiltGame ${SW_ACTIVE_GAME})
 endif()
 
+set(swSequentialScenarioPacks shooter3d) # 백엔드를 차례로 돌릴 게임 팩 체인(아래 `Scenario.<팩>`)
 foreach(game IN LISTS listBuiltGame)
 	sw_requireJSONValue(gamePackRoot "${CMAKE_SOURCE_DIR}/${SW_DIR_RUNTIME_GAME_PRESET}/${game}.json" _packRoot) # `game/<팩>`
 	get_filename_component(pack "${gamePackRoot}" NAME)
@@ -109,7 +118,13 @@ foreach(game IN LISTS listBuiltGame)
 		list(APPEND listChainGlob "${swScenarioRoot}/engine/automation/*.scenario.xml")
 	endif()
 	file(GLOB listScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS ${listChainGlob})
-	sw_addScenarioChain(Scenario.${pack} 300 SCENARIOS ${listScenario} ARGS ${gameArgument})
+	# GPU 가 무거운 체인은 백엔드를 차례로 돌린다 — 넷을 함께 돌려도 빨라지지 않고(Shooter3D 225 초 대 차례로 227 초) 프레임만 7 → 100 ms 로 느려져
+	# 시한(crowd 150 초)에 닿고 골든이 흔들렸다(2026-11-02 측정, NEXT 6.2). 다른 체인은 함께 도는 편이 기동을 겹쳐 빠르다.
+	set(swChainSlot "")
+	if(pack IN_LIST swSequentialScenarioPacks)
+		set(swChainSlot SLOTS 1)
+	endif()
+	sw_addScenarioChain(Scenario.${pack} 300 ${swChainSlot} SCENARIOS ${listScenario} ARGS ${gameArgument})
 
 	# 쇼케이스 — 쇼케이스 씬 하나를 정해진 시각에 찍는 시나리오. 게임 체인과 같은 길(백엔드 넷)이되 제 씬 · 제 골든(`showcase/golden/`)을 두는 묶음이라 따로 항목이 된다.
 	file(GLOB listShowcaseScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${automationDir}/showcase/*.scenario.xml")

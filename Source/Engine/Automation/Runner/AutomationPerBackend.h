@@ -31,6 +31,7 @@ namespace sw
         uint32         _windowHeight{ 0 };
         int32          _splitOffset{ -1 };        ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
         bool           _bSplitScenarios{ false }; ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`)
+        int32          _slotCount{ 0 };           ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
     };
 
     /** @struct AutomationBackendRecords @brief 한 시나리오를 한 백엔드에서 돌린 기록 줄(자식 보고의 `records[]`, 적은 순서)입니다. */

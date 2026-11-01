@@ -33,8 +33,6 @@
    애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:
    1. **시나리오 고정 대기를 조건으로**: 에디터 입력 앞 `<Wait frames>` 784 곳(98 파일)은 한꺼번에 지우면 진다(2026-11-01 시도 — 앞 단계의 비동기 일을 기다리던 것이 섞였다).
       시나리오마다 무엇을 기다리는지 보고 `WaitUntil`(감시 값)로 바꾼다. 입력 단계가 스스로 기다리는 것(대상 위젯 · 키보드 초점)과 겹치는 것만 지운다.
-   2. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
-      같은 3185 프레임에 dx11 40 초 · dx12 78 초 · gl 111 초). timeline 줄을 모아 어디서 시간이 드는지 재고(기다림 · 단계 재설정 · 기동), 프레임 고정 진행 · 단계 묶기 · 백엔드별 슬롯을 판단한다.
 
 ### 1. 진행 중 (2026-11-01)
 
@@ -46,7 +44,7 @@
 
 | 일 | 내용 |
 |---|---|
-| 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지. 머티리얼 PSO 를 만드는 중인 프레임은 이제 자리 잡음에서 뺀다(`Assets.Pending`) — 남는 흔들림만 본다. Debug `Scenario.empty` dx12 의 `game.empty.useroptions` 가 한 번 `colorvision.ppm` 캡처를 남기지 않고 졌다(2026-11-01, 다음 실행은 통과) — 캡처 단계가 파일을 쓰기 전에 판정이 읽는지 |
+| 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 셋 다 Shooter3D 체인이고 그 체인은 이제 백엔드를 차례로 돈다(프레임 100 ms 부하가 사라졌다, Test/README "어디서 시간이 드는가"), 남는지 본다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지. 머티리얼 PSO 를 만드는 중인 프레임은 이제 자리 잡음에서 뺀다(`Assets.Pending`) — 남는 흔들림만 본다. Debug `Scenario.empty` dx12 의 `game.empty.useroptions` 가 한 번 `colorvision.ppm` 캡처를 남기지 않고 졌다(2026-11-01, 다음 실행은 통과) — 캡처 단계가 파일을 쓰기 전에 판정이 읽는지 |
 | 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release)가 돌린다 — 매칭 규칙은 채웠다, 나머지(계정 · 채팅 · 경제 · 순위 · 라이브옵스 · 우편 · 서버 목록)는 `MemoryServiceDatabase` 로 저장 규칙부터. 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
 | 벽시계 한도와 부하 | 그물은 이제 조건 대기의 제 시한을 덮는다(`computeWallLimitSeconds`). 남은 것: 백엔드 교체가 많은 시나리오(flowterrain 의 교체 7 번이 혼자서도 19 초)의 교체 시간 자체를 줄인다 |
 

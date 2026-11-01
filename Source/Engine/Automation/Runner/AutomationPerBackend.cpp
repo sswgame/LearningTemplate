@@ -66,13 +66,16 @@ namespace sw
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */
             struct Child
             {
-                string  _backend{};
-                string  _logPath{};
-                string  _reportPath{};
-                Process _process{};
-                thread  _drainThread{};
-                int32   _exitCode{ -1 };
-                bool    _bLaunched{ false };
+                string         _backend{};
+                string         _logPath{};
+                string         _reportPath{};
+                ProcessCommand _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
+                Process        _process{};
+                thread         _drainThread{};
+                Deadline       _killDeadline = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
+                int32          _exitCode{ -1 };
+                bool           _bLaunched{ false };
+                bool           _bPending{ false }; ///< 아직 띄우지 않았다(맡은 시나리오가 있다)
             };
 
             /** @brief 인자 한 줄의 키(앞 하이픈 · `=` 뒤를 뗀 것)입니다. */
@@ -247,7 +250,7 @@ namespace sw
     vector<string> AutomationPerBackend::filterPassThroughArguments( const vector<string>& listOriginalArgument )
     {
         using Internal                                   = AutomationPerBackendInternal;
-        static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_BACKEND_SPLIT, CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, CommandLineArgument::SCENARIO_REPORT,
+        static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_BACKEND_SPLIT, CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, CommandLineArgument::SCENARIO_BACKEND_SLOTS, CommandLineArgument::SCENARIO_REPORT,
                                                              CommandLineArgument::LOG_FILE };
         vector<string>                       listArgument;
         for ( const string& argument : listOriginalArgument )
@@ -389,49 +392,79 @@ namespace sw
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 
             const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
-            const ProcessCommand              command    = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
-            pChild->_bLaunched                           = pChild->_process.launch( command );
-            if ( pChild->_bLaunched == false )
-                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot2", "[Scenario] per-backend: could not launch %#", command.toCommandLine().c_str() );
-            else
-            {
-                SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendStartedLog", "[Scenario] per-backend: %# started (log %#)", backend.c_str(), pChild->_logPath.c_str() );
-                Process* pProcess    = &pChild->_process;
-                pChild->_drainThread = thread( [pProcess]()
-                {
-                    string line;
-                    while ( pProcess->readOutputLine( line ) )
-                    {
-                    } // 자식의 로그는 제 파일에 있다 — 콘솔 줄은 버린다
-                } );
-            }
+            pChild->_command                             = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
+            pChild->_bPending                            = true;
             listChild.push_back( std::move( pChild ) );
         }
 
         // 프로세스 시한 — 자식 안의 감시(행 보고)가 먼저 닿고, 그래도 끝나지 않은 자식만 여기서 죽인다. 부모가 기다리기만 하면 멈춘 자식 하나에 CTest 시한이
         // 부모만 죽이고 자식은 고아로 남는다(Windows 는 부모가 죽어도 자식을 거두지 않는다).
-        // 시한은 단계마다다 — 체인(`-scenario=a,b,c`)은 단계 수만큼 길다.
+        // 시한은 단계마다이고 자식을 띄운 때부터 센다 — 체인(`-scenario=a,b,c`)은 단계 수만큼 길고, 슬롯을 기다린 시간은 넣지 않는다.
         const int64 stageCount = MathUtil::max<int64>( 1, static_cast<int64>( AutomationScenarioChain::splitList( options._scenarioPath ).size() ) );
         // shortcut: 단계 예산(`SwapBackend` 15 초씩)으로 늘어난 벽시계 상한은 보지 않는다 — 단계 하나뿐인 자식에서 교체가 둘 이상이면 감시보다 이 시한이 먼저 닿을 수 있다.
         //           교체가 많은 시나리오를 혼자 도는 항목으로 등록할 때 부모도 시나리오를 읽어 상한 합으로 바꾼다.
-        const int64    killSeconds  = static_cast<int64>( AutomationTimeLimits::kProcessKillSeconds ) * stageCount;
-        const Deadline killDeadline = Deadline::afterMilliseconds( killSeconds * 1000 );
-        int32          firstFailure = 0;
-        bool           bAnyPassed   = false;
+        const int64  killSeconds = static_cast<int64>( AutomationTimeLimits::kProcessKillSeconds ) * stageCount;
+        const size_t slotCount   = options._slotCount > 0 ? static_cast<size_t>( options._slotCount ) : listChild.size();
+        const auto   launchChild = [&]( Internal::Child& child )
+        {
+            child._bPending     = false;
+            child._killDeadline = Deadline::afterMilliseconds( killSeconds * 1000 );
+            child._bLaunched    = child._process.launch( child._command );
+            if ( child._bLaunched == false )
+            {
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot2", "[Scenario] per-backend: could not launch %#", child._command.toCommandLine().c_str() );
+                return;
+            }
+            SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendStartedLog", "[Scenario] per-backend: %# started (log %#)", child._backend.c_str(), child._logPath.c_str() );
+            Process* pProcess  = &child._process;
+            child._drainThread = thread( [pProcess]()
+            {
+                string line;
+                while ( pProcess->readOutputLine( line ) )
+                {
+                } // 자식의 로그는 제 파일에 있다 — 콘솔 줄은 버린다
+            } );
+        };
+        const auto finishChild = [&]( Internal::Child& child )
+        {
+            const bool bKilled = child._process.isRunning() && child._process.terminate( getAutomationExitCode( AutomationOutcome::TimedOut ) );
+            if ( bKilled )
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# did not finish within %# s - killed", child._backend.c_str(), killSeconds );
+            child._exitCode = child._process.waitForExit();
+            if ( bKilled )
+                child._exitCode = getAutomationExitCode( AutomationOutcome::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
+            child._drainThread.join();
+            child._bLaunched = false;
+        };
+        // 슬롯 안에서 띄우고, 끝나거나 시한이 지난 자식을 거두며 다음을 띄운다(쿠킹 표 순서).
+        while ( true )
+        {
+            size_t runningCount = 0;
+            for ( unique_ptr<Internal::Child>& pChild : listChild )
+            {
+                if ( pChild->_bLaunched && ( pChild->_process.isRunning() == false || pChild->_killDeadline.isExpired() ) )
+                    finishChild( *pChild );
+                runningCount += pChild->_bLaunched ? 1 : 0;
+            }
+            for ( unique_ptr<Internal::Child>& pChild : listChild )
+            {
+                if ( pChild->_bPending && runningCount < slotCount )
+                {
+                    launchChild( *pChild );
+                    runningCount += pChild->_bLaunched ? 1 : 0;
+                }
+            }
+            const bool bAnyPending = std::any_of( listChild.begin(), listChild.end(), []( const unique_ptr<Internal::Child>& pChild )
+            { return pChild->_bPending; } );
+            if ( runningCount == 0 && bAnyPending == false )
+                break;
+            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 50 * constant::time::kNanosecondsPerMillisecond );
+        }
+
+        int32 firstFailure = 0;
+        bool  bAnyPassed   = false;
         for ( unique_ptr<Internal::Child>& pChild : listChild )
         {
-            if ( pChild->_bLaunched )
-            {
-                while ( pChild->_process.isRunning() && killDeadline.isExpired() == false )
-                    MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 50 * constant::time::kNanosecondsPerMillisecond );
-                const bool bKilled = pChild->_process.isRunning() && pChild->_process.terminate( getAutomationExitCode( AutomationOutcome::TimedOut ) );
-                if ( bKilled )
-                    SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# did not finish within %# s - killed", pChild->_backend.c_str(), killSeconds );
-                pChild->_exitCode = pChild->_process.waitForExit();
-                if ( bKilled )
-                    pChild->_exitCode = getAutomationExitCode( AutomationOutcome::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
-                pChild->_drainThread.join();
-            }
             const bool bSkipped = Internal::isSkip( pChild->_exitCode );
             bAnyPassed          = bAnyPassed || pChild->_exitCode == 0;
             if ( pChild->_exitCode != 0 && bSkipped == false && firstFailure == 0 )
