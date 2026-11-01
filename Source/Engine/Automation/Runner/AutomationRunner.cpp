@@ -200,6 +200,7 @@ namespace sw
                         static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
         if ( _scenario.getInputMode() == VirtualInputMode::Mixed )
             SW_LOG_WARNING_ID( "Automation.UsesMixedInputDo", "[Scenario] %# uses mixed input - do not touch the keyboard or mouse while it runs", _scenario.getName().c_str() );
+        _judge.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다 — 위의 실행기 자신의 안내는 빼고
         startHangWatchdog();
     }
 
@@ -260,7 +261,10 @@ namespace sw
         _wallLimitSeconds = computeWallLimitSeconds();
         const bool bReady = skipIfThisBuildCannotRun() == false && prepareScratchFolders();
         if ( bReady )
+        {
+            _judge.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다
             startHangWatchdog();
+        }
         return bReady;
     }
 

@@ -42,6 +42,11 @@ namespace sw
         void setFrameIndex( uint32 frameIndex ) { _logCapture.setFrameIndex( frameIndex ); }
         /** @brief 로그 수집을 멈춥니다. */
         void stopLogCapture() { _logCapture.stop(); }
+        /**
+         * @brief 로그 줄 잡기를 시작합니다(이미 시작했으면 그대로). 실행기가 시나리오를 읽은 직후에 부른다 — 시작 조건을 기다리는 동안(시작 씬 로드 · 텍스처 업로드)의
+         *        오류도 이 시나리오의 줄이다. 시작할 때(`prepare`)부터 잡으면 그 구간의 줄이 어느 창에도 들지 않아 사라졌다(HarvestValley 꽃 텍스처의 D3D11 생성 실패).
+         */
+        void startLogCapture() { _logCapture.start(); }
 
         /** @brief 실패 한 줄을 적습니다(시나리오는 계속 진행하고 끝에서 Failed 가 됩니다). */
         void addFailure( const AutomationStep& step, string_view message );
