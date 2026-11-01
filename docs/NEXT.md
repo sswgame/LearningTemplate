@@ -30,6 +30,19 @@
    - 에셋 종류 색 · 아이콘(등록 매크로의 RGBA) · 컴포넌트 분류 색을 테마 키(`Asset.*` · `Component.*`)로, 크기 리터럴(`GetFontSize() * N` 23 곳)을 `Layout.*` 수치로.
    - 아이콘 이름 → 글리프 표(`EditorIconGlyphs`)를 데이터로(아이콘 글꼴 교체 = 표 교체), 시간대 표(`TimeZoneUtil`)를 데이터 파일로.
    - `Saved/Test/<pid>/` 단위 테스트 쓰기 폴더가 실행마다 남아 수백 개다 — 끝나면 지우거나 한 폴더를 다시 쓴다.
+6. **전면 리팩토링을 동작 기준으로 다시** (사용자 지시 — "리팩토링에서 발견됐어야 할 문제"). 앞선 점검은 이름 겹침 · include 층 · 큰 파일만 봐서
+   스레드 소유 결함과 "이름이 다른 같은 일"을 놓쳤다(StructureRefactor 9 절). 고치기 전에 먼저 지도를 만든다 — 새 클래스 · 장치를 만들지 않고 기존 길을 넓힌다.
+   1. **소유 지도**: 객체마다 고치는 스레드(게임 · 렌더 · 워커), GPU 핸들을 가진 CPU 객체(`Mesh` · `Texture2D` · 입자 · 지형 — `Material` 과 같은 한 몸 모양인지),
+      `FrameRenderer` 인스턴스의 소유자, 디바이스 프레임 · 컨텍스트를 만지는 호출자. 결과를 StructureRefactor 9 절 표로.
+   2. **같은 일 지도**: 하는 일(씬 → 패킷, 패킷 → 타깃, 에셋 도착 · 등장, 읽기 · 되읽기)로 묶어 두 곳 이상이면 한 곳으로. 예: 주 패킷 채우기(`RenderPacketSceneCollector`)와
+      `RenderPacketSceneFill` 은 아직 둘이다(주 패킷은 추가 뷰 · 정렬 축 · LOD 뷰가 더 있다).
+   3. **렌더러 셋으로 가르기**(언리얼 `FSceneRenderer` / `FScene` / `FSceneViewState`): `FrameRenderer` 가 렌더러(그래프 · PSO) · 씬 GPU 데이터(GPUScene) · 뷰 기록을 한 몸에
+      들어 씬마다 인스턴스를 늘린다(하위 렌더러 목록 `_listScenePreviewRenderer`). 씬 GPU 데이터를 씬 키별 객체로, 렌더러는 하나로.
+   4. **DX11 화면 밖 결함**: 하위 렌더러(미리보기 · 캡처)가 DX11 에서 메시를 그리지 않는다 — 패킷에 인스턴스 1 · 배치 1, 디버그 레이어 오류 없음, 출력은 지운 색을 톤맵한
+      값(27,33,39). `-gv_vertexPool=0` · `-gv_gpuUploadQueue=0` · `-gv_gpuCulling=0` · 렌더 스레드 토글로 안 바뀐다. 재현: `App --render-portraits=common/prefabs/blaster_a.prefab.xml
+      -gv_rhiBackend=DirectX11`. `Bake.Portraits` 는 기본 백엔드(DX12)만 돈다 — 고치면 네 백엔드로.
+   5. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
+      같은 3185 프레임에 dx11 40 초 · dx12 78 초 · gl 111 초). timeline 줄을 모아 어디서 시간이 드는지 재고(기다림 · 단계 재설정 · 기동), 프레임 고정 진행 · 단계 묶기 · 백엔드별 슬롯을 판단한다.
 
 ### 1. 진행 중 (2026-11-01)
 

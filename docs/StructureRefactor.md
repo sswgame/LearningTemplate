@@ -234,3 +234,12 @@
 - ScheduleSystem 빌린 서비스 → `Services` 묶음 하나. 경로 · 자리 제공자는 생성자부터 기본 제공자를 가리켜 null 이 없다.
 - 에디터 콘솔 명령 모음(`EditorDevCommands.cpp`) → 기능의 명령 파일 옆(언리얼 Exec 명령이 그 시스템에 있는 것과 같다). 남은 진단 도구 폴더는 `Commands/Diagnostics/` — `/Dev/` 는 빌드 규칙에서 "배포가 짓지 않는 단위" 라는 뜻이다.
 - cpp · 헤더 짝: 짝 없는 cpp 는 스스로 등록(탭 · 서버 서비스 · 데이터 종류 · 자동화 단계 · 명령), 플랫폼 · 라이브러리 · 형식별 구현, 모듈 진입점만 남았다. 하나만 include 하던 pimpl 헤더(`MaterialCacheImpl.h` · `TextureCacheImpl.h`)는 cpp 안으로, 빈 cpp(`TypedHandleTestComponent.cpp`)는 지웠다.
+
+## 9. 점검 방법의 빈틈 — 동작 기준 (2026-11-01)
+
+- **놓친 것**: `Material` 을 두 스레드가 고치는 모양(렌더 스레드 초기화 · 인스턴스 `updateRHI`), 게임 스레드의 직접 그리기(`FrameRenderer::execute( scene )`)가 패킷 경로 · 미리보기와
+  같은 일을 세 번 하던 것, 테스트 없는 초상화 굽기의 결함 셋(메시 도착 · 등장 디더 · 창 백버퍼 읽기).
+- **근본 원인(한 줄)**: 7 · 8 절 점검은 글자(함수 이름 겹침 · include 층 · 파일 크기)만 봤다 — 스레드 소유는 형식에 없어 보이지 않았고, 같은 일은 이름이 달라 겹침 검사에 걸리지 않았고, 실행되지 않는 길은 결함이 드러나지 않았다.
+- **바꾼 형식**: 머티리얼은 게임 스레드 객체 + 렌더 프록시(`MaterialRenderProxy`), 다른 스레드의 렌더 일은 `RenderThread::executeAndWait`, 디바이스 프레임(`beginFrame` · `endFrame`) ·
+  `GPUScene` · 프록시 진입은 렌더 스레드 역할을 확인한다(Debug). 화면 밖 그리기는 `FrameRenderer::executeOffscreenPacket` 한 길.
+- **점검에 더할 축**: 소유 지도(객체 → 스레드, 렌더러 인스턴스 → 소유자, 디바이스 호출자), 일 지도(하는 일로 묶은 함수들), 명령줄 도구마다 ctest. 진행은 NEXT 0-6.
