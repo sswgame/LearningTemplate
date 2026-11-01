@@ -608,20 +608,15 @@ namespace sw::test
         }
 
         const uint32 baseSeed = Internal::pickSeed( options._seed );
-        // 쓰기 폴더는 이 실행만의 새 폴더다 - 만들기가 곧 자리 잡기(`reserveUniquePath`)라 겹치지 않는다. 예전에는 `<프로세스 id>` 폴더를 그대로 썼는데,
-        // Windows 가 프로세스 id 를 다시 쓰므로 옛 실행이 남긴 같은 번호 폴더(옛 형식 쿠킹 기록)를 이어 써 케이스가 순서에 따라 졌다.
+        // 쓰기 폴더는 이 실행만의 이름이다(`<프로세스 id>-<시작 시각 ns>`) — Windows 가 프로세스 id 를 다시 써도 옛 실행의 폴더를 이어 쓰지 않는다.
+        // 미리 만들지 않는다: 케이스가 처음 쓸 때 만든다(`makeScratchPath`). 그래서 쓰기 폴더를 안 쓰고 끝나는 실행(일부러 멈추는 자식 프로세스)이 빈 폴더를 남기지 않는다.
         string baseRoot;
         if ( FileUtil::makeAbsolutePath( options._scratchRoot.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test" ) : options._scratchRoot, baseRoot ) == false )
         {
             Internal::writeLine( "[  ERROR   ] the scratch folder cannot be made absolute - no case runs" );
             return false;
         }
-        const string scratchRoot = FileUtil::reserveUniquePath( FileUtil::joinPath( baseRoot, to_string( Process::getCurrentProcessID() ) ), {}, true );
-        if ( scratchRoot.empty() )
-        {
-            Internal::writeLine( "[  ERROR   ] the scratch folder cannot be reserved - no case runs" );
-            return false;
-        }
+        const string scratchRoot = FileUtil::joinPath( baseRoot, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
         Subscription logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
         thread       watchThread;
         if ( Process::isDebuggerPresent() == false )
@@ -732,8 +727,14 @@ namespace sw::test
             Internal::writeLine( string( "[ SNAPSHOT ] updated " ) + path );
         }
 
-        // 보고는 늘 쓴다 — 주지 않으면 이 실행의 폴더(프로세스마다 다르다)에 쓴다. 다음 실행 · 나란한 실행이 덮어쓰지 않는다.
-        const string reportPath = options._reportPath.empty() ? FileUtil::joinPath( scratchRoot, "report.json" ) : options._reportPath;
+        // 모두 통과한 실행의 쓰기 폴더는 지운다 — 남기면 실행마다 쌓였다(`Saved/Test` 아래 수백 개). 실패한 실행은 들여다보도록 남기고 보고도 그 안에 쓴다(언리얼 자동화의 실패 산출물).
+        // 보고 경로를 준 실행(`--test-report`)은 늘 그 경로에 쓴다.
+        const bool bKeepScratch = failedCount > 0;
+        if ( bKeepScratch == false && FileUtil::removeDirectory( scratchRoot ) == false )
+            Internal::writeLine( "[ WARNING  ] the scratch folder could not be removed: " + scratchRoot );
+        const string reportPath = options._reportPath.empty() == false ? options._reportPath : bKeepScratch ? FileUtil::joinPath( scratchRoot, "report.json" )
+                                                                                                            : string{};
+        if ( reportPath.empty() == false )
         {
             string report = "{\n  \"seed\": " + to_string( baseSeed ) + ",\n  \"filter\": \"" + Internal::escapeJSON( options._filter ) + "\",\n  \"selectedCount\": " +
                             to_string( listCase.size() ) + ",\n  \"runCount\": " + to_string( ranCount ) + ",\n  \"failedCount\": " + to_string( failedCount ) +
