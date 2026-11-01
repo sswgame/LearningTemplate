@@ -3,6 +3,7 @@
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 
 #include "Core/Concurrency/StopToken.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -19,6 +20,8 @@ namespace sw
         {
             /** @brief 정리 규칙 파일(프로젝트 루트 기준)입니다 — 무엇을 몇 개 남길지는 데이터가 정한다. */
             static constexpr const utf8* kConfigFile = "Config/Dev/SavedRetention.json";
+            /** @brief 지우려고 차지한 더미의 이름 머리입니다(`claimed-<프로세스>-<시각>-<번호>`). */
+            static constexpr const utf8* kClaimPrefix = "claimed-";
 
             /** @brief 폴더 하나의 보존 규칙입니다. `_bPerChild` 면 그 아래 폴더마다(시나리오마다) 따로 센다. */
             struct Rule
@@ -153,11 +156,21 @@ namespace sw
                 if ( moved > 0 )
                     SW_LOG_INFO_ID( "SavedRetention.Pruned", "Saved: moved %# old run output(s) aside to delete (%#)", moved, kConfigFile );
                 // 버릴 자리를 통째로 지운다 — 앞 실행이 덜 지운 것도 함께. 종료가 멈추라 하면 그만두고 다음 기동이 잇는다.
+                // 나란히 뜬 다른 프로세스(넷 플레이의 서버 · 클라이언트, ctest 의 백엔드 넷)도 같은 자리를 비운다 — 둘이 한 더미를 함께 지우면 한쪽이 "비어 있지 않음" 으로 진다.
+                // 그래서 이름을 바꿔 차지한 더미만 지운다(같은 더미를 두 프로세스가 바꾸면 하나만 이긴다). 남이 차지한 더미는 오래된 것(그 프로세스가 지우다 죽었다)만 다시 차지한다.
+                const string claimPrefix = string( kClaimPrefix ) + to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) + "-";
+                uint32       claimCount  = 0;
                 for ( const Entry& pile : listNewestFirst( trashRoot ) )
                 {
                     if ( stopToken.isStopRequested() )
                         return;
-                    (void)FileUtil::removeDirectory( pile._path );
+                    const bool bClaimedRecently = StringUtil::startsWith( FileUtil::getFileNamePart( pile._path ), kClaimPrefix ) && nowTicks - pile._writeTicks < minAgeTicks;
+                    if ( bClaimedRecently )
+                        continue;
+                    const string claimedPath = FileUtil::joinPath( trashRoot, claimPrefix + to_string( claimCount++ ) );
+                    if ( FileUtil::renamePath( pile._path, claimedPath ) == false )
+                        continue; // 다른 프로세스가 먼저 차지했다(또는 아직 채우는 중이다) — 그쪽이 지운다
+                    (void)FileUtil::removeDirectory( claimedPath );
                 }
             }
         };
