@@ -15,7 +15,7 @@
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"

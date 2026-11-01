@@ -19,7 +19,7 @@
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>

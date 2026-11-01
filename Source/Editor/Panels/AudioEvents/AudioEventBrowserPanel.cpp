@@ -22,7 +22,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>

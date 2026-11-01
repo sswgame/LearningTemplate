@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 

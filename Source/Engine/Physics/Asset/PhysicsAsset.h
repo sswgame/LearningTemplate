@@ -28,7 +28,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"

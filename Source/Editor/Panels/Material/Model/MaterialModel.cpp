@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Localization/LocText.h"

@@ -33,7 +33,7 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 namespace sw
 {

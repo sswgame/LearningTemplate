@@ -20,7 +20,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 namespace sw
 {

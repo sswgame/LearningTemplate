@@ -18,7 +18,7 @@
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 namespace sw
 {

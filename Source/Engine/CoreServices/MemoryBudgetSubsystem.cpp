@@ -5,9 +5,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/CoreServices/ContentRootSubsystem.h"
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
-#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

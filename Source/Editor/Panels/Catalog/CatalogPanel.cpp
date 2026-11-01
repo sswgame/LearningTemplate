@@ -20,8 +20,8 @@
 
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/FileSystem/AssetID.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetPaths.h"
 
 #include <imgui.h>
 

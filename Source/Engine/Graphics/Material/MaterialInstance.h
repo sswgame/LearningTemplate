@@ -6,7 +6,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"

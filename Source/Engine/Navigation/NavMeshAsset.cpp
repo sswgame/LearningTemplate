@@ -11,7 +11,7 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"

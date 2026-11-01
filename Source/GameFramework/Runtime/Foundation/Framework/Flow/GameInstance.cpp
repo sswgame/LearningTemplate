@@ -7,7 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"

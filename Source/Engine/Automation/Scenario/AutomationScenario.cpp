@@ -13,9 +13,9 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
-#include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
-#include "Engine/FileSystem/Pack/PackManager.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

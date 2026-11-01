@@ -8,7 +8,7 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Asset/AssetMeta.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 #include <shared_mutex>
 

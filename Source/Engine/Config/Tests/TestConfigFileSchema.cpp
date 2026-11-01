@@ -12,7 +12,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/Server/ServerConfig.h"
-#include "Engine/FileSystem/Pack/PackConfig.h"
+#include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

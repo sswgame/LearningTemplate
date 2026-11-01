@@ -12,7 +12,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"

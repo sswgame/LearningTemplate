@@ -12,8 +12,8 @@
 
 #include "Engine/Asset/AssetMeta.h"
 #include "Engine/Asset/Cook/CookStore.h"
-#include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
 

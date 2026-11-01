@@ -18,9 +18,9 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/FileSystem/AssetPaths.h"
-#include "Engine/FileSystem/Pack/PackManager.h"
-#include "Engine/FileSystem/Pack/PackPatchTrustSource.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/Pack/PackManager.h"
+#include "Engine/Content/Pack/PackPatchTrustSource.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

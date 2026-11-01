@@ -7,7 +7,7 @@
 #include "Core/Math/BitUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 
 namespace sw
 {

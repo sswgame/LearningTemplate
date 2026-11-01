@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"

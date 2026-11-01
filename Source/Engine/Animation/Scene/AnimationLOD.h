@@ -12,7 +12,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/LOD/LODView.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

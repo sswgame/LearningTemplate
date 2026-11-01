@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/EditSnapshotHistory.h"

@@ -9,7 +9,7 @@
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 #include "sw/config/ConfigConstants.h"

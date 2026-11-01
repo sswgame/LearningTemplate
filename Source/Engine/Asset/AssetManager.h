@@ -27,7 +27,7 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
-#include "Engine/FileSystem/ContentSource.h"
+#include "Engine/Content/ContentSource.h"
 
 namespace sw
 {

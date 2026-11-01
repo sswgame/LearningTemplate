@@ -11,7 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 

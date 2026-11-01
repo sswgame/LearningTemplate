@@ -20,7 +20,7 @@
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"

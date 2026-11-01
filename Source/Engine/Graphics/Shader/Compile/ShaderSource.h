@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 #include <optional>
 

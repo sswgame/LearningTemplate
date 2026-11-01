@@ -7,7 +7,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Window/Linux/LinuxWindowBackend.h"
 #include "Engine/Window/Linux/Wayland/WaylandSplashWindow.h"
 #include "Engine/Window/Linux/X11SplashWindow.h"

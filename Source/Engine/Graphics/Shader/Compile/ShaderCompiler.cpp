@@ -13,7 +13,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/fixed_string.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"

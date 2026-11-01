@@ -15,7 +15,7 @@
 
 #include "Engine/Asset/AssetMeta.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

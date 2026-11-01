@@ -21,8 +21,8 @@
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
-#include "Engine/FileSystem/ContentHash.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"

@@ -11,9 +11,9 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Content/AssetID.h"
 #include "Engine/EngineFrameHookList.h"
 #include "Engine/EngineStartupExtension.h"
-#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"

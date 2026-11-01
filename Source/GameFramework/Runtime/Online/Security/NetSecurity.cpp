@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"

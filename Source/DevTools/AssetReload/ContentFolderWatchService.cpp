@@ -7,7 +7,7 @@
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
 #include "DevTools/FileWatch/IFileWatcher.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

@@ -13,7 +13,7 @@
 
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 namespace sw
 {

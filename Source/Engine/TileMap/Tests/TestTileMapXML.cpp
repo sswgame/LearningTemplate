@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/TileMap/TileMapXML.h"
 
 namespace

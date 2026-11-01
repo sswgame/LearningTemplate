@@ -17,7 +17,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 
 #include <optional>

@@ -5,8 +5,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/FileSystem/AssetID.h"
-#include "Engine/FileSystem/Tests/ScopedScratchDomain.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/CurrencyUtil.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"

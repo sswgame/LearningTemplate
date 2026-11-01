@@ -6,7 +6,7 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/Tests/ScopedScratchDomain.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"

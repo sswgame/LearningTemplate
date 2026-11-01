@@ -28,7 +28,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Asset/Cache/IAssetCache.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

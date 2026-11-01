@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Serialization/ByteStream.h"
 
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 
 namespace sw
 {

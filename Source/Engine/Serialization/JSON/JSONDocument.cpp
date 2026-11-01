@@ -8,7 +8,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 
 #include <nlohmann/json.hpp>
 

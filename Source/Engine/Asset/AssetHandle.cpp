@@ -7,7 +7,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/FileSystem/CookJob.h"
+#include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 

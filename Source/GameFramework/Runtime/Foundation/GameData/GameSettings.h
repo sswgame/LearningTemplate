@@ -8,7 +8,7 @@
 #include "Core/Foundation/Macros.h"
 
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 

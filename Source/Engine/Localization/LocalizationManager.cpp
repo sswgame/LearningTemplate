@@ -11,7 +11,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/PseudoLocalizer.h"

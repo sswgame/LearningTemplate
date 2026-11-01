@@ -4,9 +4,9 @@
 
 #include "Core/Foundation/BuildInfo.h"
 
-#include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
-#include "Engine/FileSystem/Pack/PackConfig.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionMacros.h"

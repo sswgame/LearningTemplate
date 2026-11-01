@@ -9,8 +9,8 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
-#include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

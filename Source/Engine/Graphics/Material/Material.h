@@ -13,7 +13,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"

@@ -22,7 +22,7 @@
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 

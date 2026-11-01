@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"

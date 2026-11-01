@@ -17,7 +17,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
-#include "Engine/FileSystem/CookJob.h"
+#include "Engine/Content/CookJob.h"
 
 namespace sw
 {

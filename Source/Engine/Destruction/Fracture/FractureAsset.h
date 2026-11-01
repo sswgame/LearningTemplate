@@ -16,8 +16,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Content/AssetID.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
-#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 

@@ -16,8 +16,8 @@
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
-#include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

@@ -15,7 +15,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetMeta.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 
 namespace sw::editor
 {

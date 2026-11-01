@@ -13,7 +13,7 @@
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/SystemFontLocator.h"
 

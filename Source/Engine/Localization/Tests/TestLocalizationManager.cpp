@@ -7,7 +7,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/FileSystem/Tests/ScopedScratchDomain.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationDocuments.h"

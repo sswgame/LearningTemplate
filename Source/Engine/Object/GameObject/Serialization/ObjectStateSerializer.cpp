@@ -8,7 +8,7 @@
 #include "Core/Serialization/ByteStream.h"
 #include "Core/UUID/UUID.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/MissingComponent.h"

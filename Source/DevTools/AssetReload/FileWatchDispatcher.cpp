@@ -7,7 +7,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

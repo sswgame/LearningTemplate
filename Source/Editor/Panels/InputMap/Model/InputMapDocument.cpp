@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"

@@ -10,7 +10,7 @@
 
 #include "DevTools/DevToolsAPI.h"
 
-#include "Engine/FileSystem/ContentFolderWatch.h"
+#include "Engine/Content/ContentFolderWatch.h"
 
 namespace sw
 {

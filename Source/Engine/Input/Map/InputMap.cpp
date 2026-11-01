@@ -6,7 +6,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"

@@ -7,7 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw

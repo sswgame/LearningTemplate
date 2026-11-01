@@ -26,7 +26,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 
 namespace sw

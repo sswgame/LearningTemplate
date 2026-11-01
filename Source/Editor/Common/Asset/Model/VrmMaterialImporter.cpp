@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

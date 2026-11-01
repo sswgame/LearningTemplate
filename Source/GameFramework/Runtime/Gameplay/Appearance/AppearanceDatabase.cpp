@@ -10,7 +10,7 @@
 
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitTables.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

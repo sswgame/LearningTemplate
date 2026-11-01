@@ -20,7 +20,7 @@
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioTypes.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 
 namespace sw
 {

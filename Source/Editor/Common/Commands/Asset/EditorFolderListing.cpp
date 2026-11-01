@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 
 namespace sw::editor

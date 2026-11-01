@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 
 namespace sw
 {

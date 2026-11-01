@@ -27,7 +27,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"

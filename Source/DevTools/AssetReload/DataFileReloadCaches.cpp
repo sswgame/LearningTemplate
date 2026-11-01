@@ -11,7 +11,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 

@@ -17,7 +17,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"

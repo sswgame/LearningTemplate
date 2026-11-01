@@ -9,7 +9,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/Component/NavAgentCrowdSync.h"
 #include "Engine/Navigation/Component/NavGeometryCollector.h"

@@ -18,7 +18,7 @@
 
 #include "Engine/2D/SpriteComponent.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

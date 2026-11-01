@@ -27,7 +27,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"

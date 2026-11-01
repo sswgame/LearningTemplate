@@ -32,7 +32,7 @@
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"

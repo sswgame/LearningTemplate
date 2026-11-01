@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/PackCooker.h"
-#include "Engine/FileSystem/Pack/PackConfig.h"
+#include "Engine/Content/Pack/PackConfig.h"
 
 using namespace sw;
 

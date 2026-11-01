@@ -8,7 +8,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 
 namespace sw
 {

@@ -14,7 +14,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw

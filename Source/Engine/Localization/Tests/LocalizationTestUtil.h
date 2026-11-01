@@ -11,7 +11,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

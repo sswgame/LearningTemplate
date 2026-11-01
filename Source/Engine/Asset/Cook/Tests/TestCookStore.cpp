@@ -5,8 +5,8 @@
 
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Asset/Cook/CookStore.h"
-#include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/CookJob.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/CookJob.h"
 
 // CookStoreTest — 쿠킹 출력 하나를 기록(.cookrec)과 DDC 로 만드는 저장소: 입력이 그대로면 굽지 않고 다시 쓰고, 입력 · 쿠커 버전이 바뀌면 다시 굽고,
 // 입력을 기록하지 않은 작업은 실패, 요청에서 빠진 옛 출력만 지운다. 쿠커는 가짜다 — 입력 파일을 디스크 입구(`AssetIO::readBinaryFile`)로 읽어 접두어를 붙여 쓴다(nogpu).

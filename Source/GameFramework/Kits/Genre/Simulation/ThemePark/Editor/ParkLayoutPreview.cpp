@@ -11,7 +11,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"

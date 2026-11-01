@@ -11,7 +11,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
-#include "Engine/FileSystem/AssetID.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
 
 namespace sw

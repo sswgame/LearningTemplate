@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

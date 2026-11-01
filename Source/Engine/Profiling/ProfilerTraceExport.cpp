@@ -24,7 +24,7 @@
 
     #include "Engine/Foundation/EngineServices.h"
     #include "Engine/Profiling/FrameProfiler.h"
-    #include "Engine/FileSystem/AssetPaths.h"
+    #include "Engine/Content/AssetPaths.h"
     #include "Engine/Serialization/JSON/JSONDocument.h"
     #include "Engine/Serialization/JSON/JSONWriter.h"
 

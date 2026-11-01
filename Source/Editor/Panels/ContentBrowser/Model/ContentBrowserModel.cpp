@@ -21,7 +21,7 @@
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Content/AssetPaths.h"
 
 namespace sw::editor
 {
