@@ -7,6 +7,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Foundation/StateHashBuilder.h"
@@ -77,50 +78,26 @@ namespace sw
             }
         };
 
-        /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 농장 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
-        const FarmDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
+        [[nodiscard]] bool readFarmerX( const FarmDirectorComponent& director, float64& outValue )
         {
-            const FarmDirectorComponent* pFound = nullptr;
-            if ( pManager != nullptr )
-            {
-                pManager->forEachComponentOfType<FarmDirectorComponent>( [&pFound]( const FarmDirectorComponent* pDirector )
-                {
-                    if ( pFound == nullptr )
-                        pFound = pDirector;
-                } );
-            }
-            return pFound;
-        }
-
-        [[nodiscard]] bool readFarmerX( const GameObjectManager* pManager, float64& outValue )
-        {
-            const FarmDirectorComponent* pDirector = findProbeDirector( pManager );
-            if ( pDirector == nullptr )
-                return false;
-            outValue = static_cast<float64>( pDirector->getPlayerPosition()._x );
+            outValue = static_cast<float64>( director.getPlayerPosition()._x );
             return true;
         }
 
-        [[nodiscard]] bool readFarmerTool( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] bool readFarmerTool( const FarmDirectorComponent& director, float64& outValue )
         {
-            const FarmDirectorComponent* pDirector = findProbeDirector( pManager );
-            if ( pDirector == nullptr )
-                return false;
-            outValue = static_cast<float64>( pDirector->getTool() );
+            outValue = static_cast<float64>( director.getTool() );
             return true;
         }
 
-        [[nodiscard]] bool readTilledCount( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] bool readTilledCount( const FarmDirectorComponent& director, float64& outValue )
         {
-            const FarmDirectorComponent* pDirector = findProbeDirector( pManager );
-            if ( pDirector == nullptr )
-                return false;
             int32 tilledCount = 0;
             for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
             {
                 for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
                 {
-                    const FarmTile* pTile = pDirector->getField().findTile( x, y );
+                    const FarmTile* pTile = director.getField().findTile( x, y );
                     tilledCount += pTile != nullptr && pTile->_bTilled != SW_FALSE ? 1 : 0;
                 }
             }
@@ -128,21 +105,15 @@ namespace sw
             return true;
         }
 
-        [[nodiscard]] bool readCropCount( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] bool readCropCount( const FarmDirectorComponent& director, float64& outValue )
         {
-            const FarmDirectorComponent* pDirector = findProbeDirector( pManager );
-            if ( pDirector == nullptr )
-                return false;
-            outValue = pDirector->getField().getCropCount();
+            outValue = director.getField().getCropCount();
             return true;
         }
 
-        [[nodiscard]] bool readFarmerControllerKind( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] bool readFarmerControllerKind( const FarmDirectorComponent& director, float64& outValue )
         {
-            const FarmDirectorComponent* pDirector = findProbeDirector( pManager );
-            if ( pDirector == nullptr )
-                return false;
-            outValue = pDirector->isFarmerDrivenByAI() ? 1.0 : 0.0;
+            outValue = director.isFarmerDrivenByAI() ? 1.0 : 0.0;
             return true;
         }
     } // namespace
@@ -154,11 +125,11 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The auto farmer AI controller possesses the farmer" );
 
-    SW_AUTOMATION_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", &readFarmerX );
-    SW_AUTOMATION_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", &readFarmerTool );
-    SW_AUTOMATION_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", &readTilledCount );
-    SW_AUTOMATION_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", &readCropCount );
-    SW_AUTOMATION_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", &readFarmerControllerKind );
+    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", FarmDirectorComponent, &readFarmerX );
+    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmDirectorComponent, &readFarmerTool );
+    SW_AUTOMATION_COMPONENT_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", FarmDirectorComponent, &readTilledCount );
+    SW_AUTOMATION_COMPONENT_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", FarmDirectorComponent, &readCropCount );
+    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", FarmDirectorComponent, &readFarmerControllerKind );
 } // namespace sw
 
 namespace sw

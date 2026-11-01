@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -43,65 +44,39 @@ namespace sw
             static constexpr const utf8* kEventPlayerFell = "PlayerFell";
             static constexpr const utf8* kEventEnemyFell  = "EnemyFell";
 
-            /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 아레나 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
-            static const ArenaDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
+            [[nodiscard]] static bool readPlayerX( const ArenaDirectorComponent& director, float64& outValue )
             {
-                const ArenaDirectorComponent* pFound = nullptr;
-                if ( pManager != nullptr )
-                {
-                    pManager->forEachComponentOfType<ArenaDirectorComponent>( [&pFound]( const ArenaDirectorComponent* pDirector )
-                    {
-                        if ( pFound == nullptr )
-                            pFound = pDirector;
-                    } );
-                }
-                return pFound;
-            }
-
-            [[nodiscard]] static bool readPlayerX( const GameObjectManager* pManager, float64& outValue )
-            {
-                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
-                float3                        position{};
-                if ( pDirector == nullptr || pDirector->findUnitPosition( pDirector->getPlayerObject(), position ) == false )
+                float3 position{};
+                if ( director.findUnitPosition( director.getPlayerObject(), position ) == false )
                     return false;
                 outValue = static_cast<float64>( position._x );
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerZ( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readPlayerZ( const ArenaDirectorComponent& director, float64& outValue )
             {
-                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
-                float3                        position{};
-                if ( pDirector == nullptr || pDirector->findUnitPosition( pDirector->getPlayerObject(), position ) == false )
+                float3 position{};
+                if ( director.findUnitPosition( director.getPlayerObject(), position ) == false )
                     return false;
                 outValue = static_cast<float64>( position._z );
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerShotCount( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readPlayerShotCount( const ArenaDirectorComponent& director, float64& outValue )
             {
-                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue = pDirector->getPlayerShotCount();
+                outValue = director.getPlayerShotCount();
                 return true;
             }
 
-            [[nodiscard]] static bool readKillCount( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readKillCount( const ArenaDirectorComponent& director, float64& outValue )
             {
-                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue = pDirector->getKillCount();
+                outValue = director.getKillCount();
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerControllerKind( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readPlayerControllerKind( const ArenaDirectorComponent& director, float64& outValue )
             {
-                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue = pDirector->isPlayerDrivenByAI() ? 1.0 : 0.0;
+                outValue = director.isPlayerDrivenByAI() ? 1.0 : 0.0;
                 return true;
             }
         };
@@ -114,12 +89,11 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The auto battle AI controller possesses the player" );
 
-    SW_AUTOMATION_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", &ArenaDirectorComponentInternal::readPlayerX );
-    SW_AUTOMATION_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", &ArenaDirectorComponentInternal::readPlayerZ );
-    SW_AUTOMATION_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", &ArenaDirectorComponentInternal::readPlayerShotCount );
-    SW_AUTOMATION_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", &ArenaDirectorComponentInternal::readKillCount );
-    SW_AUTOMATION_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI",
-                         &ArenaDirectorComponentInternal::readPlayerControllerKind );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerX );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerZ );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerShotCount );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readKillCount );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerControllerKind );
 } // namespace sw
 
 namespace sw

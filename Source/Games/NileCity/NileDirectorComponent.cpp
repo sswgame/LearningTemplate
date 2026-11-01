@@ -7,6 +7,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -63,45 +64,21 @@ namespace sw
                 return pMesh;
             }
 
-            /** @brief 활성 씬의 첫 나일 디렉터입니다(감시 값). */
-            static const NileDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
+            [[nodiscard]] static bool readPopulation( const NileDirectorComponent& director, float64& outValue )
             {
-                const NileDirectorComponent* pFound = nullptr;
-                if ( pManager != nullptr )
-                {
-                    pManager->forEachComponentOfType<NileDirectorComponent>( [&pFound]( const NileDirectorComponent* pDirector )
-                    {
-                        if ( pFound == nullptr )
-                            pFound = pDirector;
-                    } );
-                }
-                return pFound;
-            }
-
-            [[nodiscard]] static bool readPopulation( const GameObjectManager* pManager, float64& outValue )
-            {
-                const NileDirectorComponent* pDirector = findProbeDirector( pManager );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pDirector->getPopulation() );
+                outValue = static_cast<float64>( director.getPopulation() );
                 return true;
             }
 
-            [[nodiscard]] static bool readMoney( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readMoney( const NileDirectorComponent& director, float64& outValue )
             {
-                const NileDirectorComponent* pDirector = findProbeDirector( pManager );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pDirector->getMoney() );
+                outValue = static_cast<float64>( director.getMoney() );
                 return true;
             }
 
-            [[nodiscard]] static bool readMonth( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readMonth( const NileDirectorComponent& director, float64& outValue )
             {
-                const NileDirectorComponent* pDirector = findProbeDirector( pManager );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pDirector->getMonthCount() );
+                outValue = static_cast<float64>( director.getMonthCount() );
                 return true;
             }
         };
@@ -114,9 +91,9 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_nileAutoPlay, "NileCity", "Build and run the city from the auto plan" );
 
-    SW_AUTOMATION_WATCH( nilePopulation, "Nile.Population", "Population of the city", &NileDirectorComponentInternal::readPopulation );
-    SW_AUTOMATION_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", &NileDirectorComponentInternal::readMoney );
-    SW_AUTOMATION_WATCH( nileMonth, "Nile.Month", "Months the city has run", &NileDirectorComponentInternal::readMonth );
+    SW_AUTOMATION_COMPONENT_WATCH( nilePopulation, "Nile.Population", "Population of the city", NileDirectorComponent, &NileDirectorComponentInternal::readPopulation );
+    SW_AUTOMATION_COMPONENT_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", NileDirectorComponent, &NileDirectorComponentInternal::readMoney );
+    SW_AUTOMATION_COMPONENT_WATCH( nileMonth, "Nile.Month", "Months the city has run", NileDirectorComponent, &NileDirectorComponentInternal::readMonth );
 } // namespace sw
 
 namespace sw

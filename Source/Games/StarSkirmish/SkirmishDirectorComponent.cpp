@@ -8,6 +8,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -71,52 +72,34 @@ namespace sw
             }
         };
 
-        /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
-        const SkirmishDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
-        {
-            const SkirmishDirectorComponent* pFound = nullptr;
-            if ( pManager != nullptr )
-            {
-                pManager->forEachComponentOfType<SkirmishDirectorComponent>( [&pFound]( const SkirmishDirectorComponent* pDirector )
-                {
-                    if ( pFound == nullptr )
-                        pFound = pDirector;
-                } );
-            }
-            return pFound;
-        }
-
         /** @brief 선택한 유닛 중 @p bMoveOnly 면 앞 명령이 이동인 것만 셉니다. */
-        [[nodiscard]] bool countSelected( const GameObjectManager* pManager, bool bMoveOnly, float64& outValue )
+        [[nodiscard]] bool countSelected( const SkirmishDirectorComponent& director, bool bMoveOnly, float64& outValue )
         {
-            const SkirmishDirectorComponent* pDirector = findProbeDirector( pManager );
-            if ( pDirector == nullptr )
-                return false;
             int32 count = 0;
-            pDirector->getWorld().forEachUnit( [pDirector, bMoveOnly, &count]( const RTSUnit& unit )
+            director.getWorld().forEachUnit( [&director, bMoveOnly, &count]( const RTSUnit& unit )
             {
                 const RTSOrder* pOrder = unit.findOrder();
-                if ( pDirector->isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RTSOrderType::Move ) ) )
+                if ( director.isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RTSOrderType::Move ) ) )
                     ++count;
             } );
             outValue = static_cast<float64>( count );
             return true;
         }
 
-        [[nodiscard]] bool readSelectedCount( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] bool readSelectedCount( const SkirmishDirectorComponent& director, float64& outValue )
         {
-            return countSelected( pManager, false, outValue );
+            return countSelected( director, false, outValue );
         }
 
-        [[nodiscard]] bool readSelectedMovingCount( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] bool readSelectedMovingCount( const SkirmishDirectorComponent& director, float64& outValue )
         {
-            return countSelected( pManager, true, outValue );
+            return countSelected( director, true, outValue );
         }
 
         /** @brief 감시 값 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
         [[nodiscard]] bool readAITask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const SkirmishDirectorComponent* pDirector = findProbeDirector( query._pManager );
+            const SkirmishDirectorComponent* pDirector = AutomationComponentWatch::findFirst<SkirmishDirectorComponent>( query._pManager );
             int32                            player    = -1;
             if ( pDirector == nullptr || StringUtil::parseInt( query._key, player ) == false )
             {
@@ -142,8 +125,8 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_skirmishAutoPlay, 0, "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_skirmishAutoPlay, "StarSkirmish", "Both players are AI" );
 
-    SW_AUTOMATION_WATCH( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", &readSelectedCount );
-    SW_AUTOMATION_WATCH( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", &readSelectedMovingCount );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", SkirmishDirectorComponent, &readSelectedCount );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", SkirmishDirectorComponent, &readSelectedMovingCount );
     SW_AUTOMATION_QUERY_WATCH( skirmishAITask, "Skirmish.AITask", "Active behavior tree task of the AI commander playing player key (0 or 1)", &readAITask, false, true );
 } // namespace sw
 
