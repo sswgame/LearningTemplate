@@ -36,7 +36,7 @@ namespace
                            { "bufferView": 1, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 0, 1 ] } ],
             "images": [ { "uri": "../textures_raw/pair/wood.png", "mimeType": "image/png" } ],
             "textures": [ { "source": 0 } ],
-            "materials": [ { "name": "Wood")" ) +
+            "materials": [ { "name": "Wood", "alphaMode": "MASK", "alphaCutoff": 0.3, "doubleSided": true)" ) +
                             texture + R"( }, { "name": "Stone", "pbrMetallicRoughness": { "baseColorFactor": [ 0.5, 0.5, 0.5, 1 ] } } ],
             "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 }, "material": 0 }, { "attributes": { "POSITION": 1 }, "material": 1 } ] } ] })";
         outSourcePath = FileUtil::joinPath( modelFolder, "pair.gltf" );
@@ -59,6 +59,10 @@ SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSectio
     SW_REQUIRE_EQUAL( size_t{ 2 }, result._listPbrMaterial.size() );
     SW_EXPECT_EQUAL( string( "wood" ), result._listPbrMaterial[0]._name );
     SW_EXPECT_EQUAL( string( "wood_albedo" ), result._listPbrMaterial[0]._albedo._fileStem );
+    SW_EXPECT_TRUE( result._listPbrMaterial[0]._bAlphaCutoff == SW_TRUE ); // alphaMode MASK — 잎 · 꽃이 네모로 그려지지 않는다
+    SW_EXPECT_NEAR( 0.3f, result._listPbrMaterial[0]._alphaCutoff, 1e-6f );
+    SW_EXPECT_TRUE( result._listPbrMaterial[0]._bTwoSided == SW_TRUE );
+    SW_EXPECT_TRUE( result._listPbrMaterial[1]._bAlphaCutoff == SW_FALSE );
     SW_EXPECT_NEAR( 0.5f, result._listPbrMaterial[1]._baseColor._x, 1e-6f );
     SW_EXPECT_TRUE( result._pbrMaterial._bPresent == SW_FALSE ); // 구간 없는 메시의 머티리얼은 쓰지 않는다
     SW_REQUIRE_EQUAL( size_t{ 2 }, result._listSection.size() );

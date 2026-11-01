@@ -5,6 +5,7 @@
  *          ORM 맵은 glTF 배치다 — R 가림(AO) · G 거칠기 · B 금속도. 거칠기 · 금속도는 맵 × 머티리얼 값(glTF 의 factor)이다.
  *          `_worldTileSize` 가 0 보다 크면 메시 UV 대신 월드 좌표를 축 정렬로 투영한다(그 길이 m 마다 한 번 반복) — 늘린 큐브 · 평면(바닥 · 벽)이 늘어나지 않고 타일링된다
  *          (언리얼 WorldAlignedTexture 와 같은 생각, 축 하나만 골라 섞지는 않는다).
+ *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(glTF alphaMode MASK — 잎 · 꽃) · `MATERIAL_TWO_SIDED`(glTF doubleSided — 컬링은 PSO 변형이 끄고 뒷면 노멀은 뼈대가 뒤집는다).
  *          shortcut: 가림은 알베도에 곱한다 — 직접광도 조금 어두워진다. G버퍼에 가림 칸이 생기면 간접광(앰비언트 · 프로브)에만 곱한다.
  */
 #include "lighting.hlsli"
@@ -18,15 +19,12 @@ SW_MATERIAL_BEGIN
     float  _normalScale;
     float  _occlusionStrength;
     float  _worldTileSize;
+    float  _alphaCutoff; // MATERIAL_ALPHA_CUTOFF 일 때 이 값보다 작은 알파를 버린다(glTF alphaMode MASK 의 alphaCutoff)
     uint   _albedoMap;
     uint   _normalMap;
     uint   _ormMap;
 }
 SW_MATERIAL_END
-
-#if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "pbr_lit.hlsl has no alpha cutoff property — add one to the material struct and fill it in computeMaterialSurface"
-#endif
 
 #define SW_MATERIAL_CUSTOM_LIGHTING
 #define SW_MATERIAL_DEFAULT_VARYINGS
@@ -89,6 +87,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
 #endif
     surface._roughness = saturate( orm.g * context._material._roughness );
     surface._metallic  = saturate( orm.b * context._material._metallic );
+    surface.setAlphaCutoff( context._material._alphaCutoff ); // 알파 컷오프 머티리얼만 싣는다 — 깊이 · 본 패스가 같은 값으로 오린다
     return surface;
 }
 

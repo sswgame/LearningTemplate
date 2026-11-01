@@ -82,6 +82,8 @@ namespace sw::editor
          * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] static bool readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
+        /** @brief 기본색 텍스처가 있는 첫 금속도 · 거칠기 머티리얼입니다(구간 없는 메시가 PBR 머티리얼로 옮기는 것). 없으면 nullptr 입니다. */
+        [[nodiscard]] static const cgltf_material* findTexturedPbrMaterial( const cgltf_data& data );
         /**
          * @brief 읽은 PBR 머티리얼의 텍스처 원본(`<x>/textures_raw/<y>/<이름>_albedo|_normal|_orm.<확장자>`)과 머티리얼(`<옆 폴더>/materials/<이름>.material`)을 씁니다.
          * @details 텍스처 이름 꼬리가 텍스처 임포트 규칙을 고른다(`_normal` → BC5 선형, `_orm` → 선형). 머티리얼은 엔진 PBR 견본(`EngineDefaultAssets::_pbrMaterialTemplate`)에 값을 채운다.

@@ -80,7 +80,7 @@
     {
       "name": "Roughness_Maps",
       "inherits": "Base_Default",
-      "include_patterns": ["*_rough.*"],
+      "include_patterns": ["*_rough.*", "*_roughness.*"],
       "srgb": false
     },
     {

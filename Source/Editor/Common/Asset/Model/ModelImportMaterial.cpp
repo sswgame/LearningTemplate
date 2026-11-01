@@ -382,15 +382,20 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportMaterial::readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    const cgltf_material* ModelImportMaterial::findTexturedPbrMaterial( const cgltf_data& data )
     {
-        const cgltf_material* pMaterial = nullptr;
-        for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count && pMaterial == nullptr; ++materialIndex )
+        for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count; ++materialIndex )
         {
             const cgltf_material& material = data.materials[materialIndex];
             if ( material.has_pbr_metallic_roughness != 0 && material.pbr_metallic_roughness.base_color_texture.texture != nullptr )
-                pMaterial = &material;
+                return &material;
         }
+        return nullptr;
+    }
+
+    bool ModelImportMaterial::readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    {
+        const cgltf_material* pMaterial = findTexturedPbrMaterial( data );
         if ( pMaterial == nullptr )
             return true;
         const string rawName = pMaterial->name != nullptr && pMaterial->name[0] != '\0' ? string( pMaterial->name ) : string( "material" );
@@ -421,6 +426,11 @@ namespace sw::editor
         outPbr._occlusionStrength     = bSameORM ? material.occlusion_texture.scale : 0.0f;
         if ( pAO != nullptr && bSameORM == false )
             SW_LOG_WARNING_ID( "ModelImporter.GlTFOcclusionTextureNot", "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath );
+        outPbr._bAlphaCutoff = material.alpha_mode == cgltf_alpha_mode_mask ? SW_TRUE : SW_FALSE;
+        outPbr._alphaCutoff  = material.alpha_cutoff;
+        outPbr._bTwoSided    = material.double_sided != 0 ? SW_TRUE : SW_FALSE;
+        if ( material.alpha_mode == cgltf_alpha_mode_blend )
+            SW_LOG_WARNING_ID( "ModelImporter.GlTFBlendAlphaOpaque", "glTF '%#': material '%#' is alphaMode BLEND - the PBR material is opaque (no translucent PBR permutation)", sourcePath, outPbr._name.c_str() );
         outPbr._bPresent = SW_TRUE;
         return true;
     }
@@ -505,12 +515,31 @@ namespace sw::editor
         setAttribute( "_metallic", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._metallic ) );
         setAttribute( "_normalScale", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._normalScale ) );
         setAttribute( "_occlusionStrength", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._occlusionStrength ) );
+        setAttribute( "_alphaCutoff", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._alphaCutoff ) );
         setAttribute( "_albedoMap", "assetPath", albedoPath );
         setAttribute( "_normalMap", "assetPath", normalPath );
         setAttribute( "_ormMap", "assetPath", ormPath );
+        // 정적 스위치는 glTF 머티리얼이 정한 값이다(툰 머티리얼 쓰기와 같은 규칙 — 견본에 없는 스위치면 멈춘다).
+        const XMLNode switches  = root.findChild( "_permutations" ).findChild( "_staticSwitches" );
+        auto          setSwitch = [&]( string_view name, uint8 bEnabled )
+        {
+            XMLNode item = switches.isValid() ? switches.findChild( "item" ) : XMLNode{};
+            while ( item.isValid() && item.getAttributeText( "name" ) != name )
+            {
+                item = item.findNextSibling( "item" );
+            }
+            if ( item.isValid() == false )
+            {
+                bMissingProperty = true;
+                return;
+            }
+            item.setAttribute( "bEnabled", bEnabled == SW_TRUE ? "1" : "0" );
+        };
+        setSwitch( "AlphaCutoff", pbr._bAlphaCutoff );
+        setSwitch( "TwoSided", pbr._bTwoSided );
         if ( bMissingProperty )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property or switch the importer fills", sourcePath );
             return false;
         }
         const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );

@@ -507,7 +507,8 @@ namespace sw::editor
             {
                 const bool                  bSections = listSectionMaterialName.empty() == false;
                 ModelImportUtil::MergedMesh merged;
-                merged._bBakeMaterialColor = bSections == false; // 구간 머티리얼이 색 계수를 가진다 — 정점에도 구우면 두 번 곱한다
+                // 머티리얼(구간 머티리얼 · 텍스처 PBR 머티리얼 하나)이 색 계수를 가지면 정점에 굽지 않는다 — 두 번 곱한다
+                merged._bBakeMaterialColor = bSections == false && ModelImportMaterial::findTexturedPbrMaterial( data ) == nullptr;
                 for ( const cgltf_node* pRoot : listRoot )
                 {
                     if ( ModelImportGeometry::appendNode( *pRoot, merged ) == false )

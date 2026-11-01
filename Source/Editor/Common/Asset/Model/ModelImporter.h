@@ -109,6 +109,9 @@ namespace sw::editor
         float32            _roughness{ 1.0f };
         float32            _normalScale{ 1.0f };
         float32            _occlusionStrength{ 1.0f };
+        float32            _alphaCutoff{ 0.5f };      ///< glTF alphaCutoff(명세 기본 0.5) — `_bAlphaCutoff` 일 때만 쓴다
+        uint8              _bAlphaCutoff{ SW_FALSE }; ///< glTF alphaMode MASK(잎 · 꽃) — 머티리얼의 AlphaCutoff 스위치
+        uint8              _bTwoSided{ SW_FALSE };    ///< glTF doubleSided — 머티리얼의 TwoSided 스위치
         ModelImportTexture _albedo;
         ModelImportTexture _normal;
         ModelImportTexture _orm;
