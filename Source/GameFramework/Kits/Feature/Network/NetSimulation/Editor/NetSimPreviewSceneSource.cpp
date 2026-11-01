@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimPreviewSceneSource.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/NetSimPreviewSceneSource.h"
 
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

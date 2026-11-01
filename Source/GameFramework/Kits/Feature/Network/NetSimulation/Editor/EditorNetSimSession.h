@@ -15,8 +15,8 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/NetSimPreviewSceneSource.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
-#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimPreviewSceneSource.h"
 
 namespace sw::editor
 {
