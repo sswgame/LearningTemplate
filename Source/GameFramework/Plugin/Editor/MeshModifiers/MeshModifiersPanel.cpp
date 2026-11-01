@@ -244,7 +244,7 @@ namespace sw::editor
 namespace sw::editor
 {
     MeshModifiersPanel::MeshModifiersPanel()
-        : IEditorPanel( false )
+        : IEditorDocumentPanel( false )
         , _model{}
         , _curveState{}
     {

@@ -38,7 +38,7 @@ namespace sw::editor
             const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel );
             if ( pPanel == nullptr )
                 return false;
-            outValue = pPanel->isDocumentDirty() ? 1.0 : 0.0;
+            outValue = pPanel->hasUnsavedDocument() ? 1.0 : 0.0;
             return true;
         }
 

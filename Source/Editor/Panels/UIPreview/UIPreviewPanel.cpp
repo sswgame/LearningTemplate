@@ -291,7 +291,7 @@ namespace sw::editor
                          &UIPreviewPanelInternal::readLanguageIndex );
 
     UIPreviewPanel::UIPreviewPanel()
-        : IEditorPanel( false )
+        : IEditorDocumentPanel( false )
         , _model{ getEditorToolDefaults()._uiPreviewDocument } // 처음 여는 문서 — 원본은 editortooldefaults.json
         , _grid{}
         , _paletteFilter{}

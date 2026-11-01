@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
@@ -13,11 +14,13 @@ namespace sw::editor
     void IEditorPanel::draw()
     {
         EditorChrome::setNextPanelSize( getInitialPanelSize() );
-        syncDocumentDirty();
+        IEditorDocumentPanel* const pDocument = asDocumentPanel();
+        if ( pDocument != nullptr )
+            pDocument->syncDocumentDirty();
 
         // 미저장 표시는 파생의 getPanelFlags() 재정의와 무관하게 항상 붙는다.
         EditorPanelFlags panelFlags = getPanelFlags();
-        if ( _bDocumentDirty )
+        if ( hasUnsavedDocument() )
             panelFlags |= EditorPanelFlags::UnsavedDocument;
 
         const bool bVisible = EditorChrome::beginPanel( getPanelTitle(), getOpenFlagAddress(), panelFlags );
@@ -39,17 +42,23 @@ namespace sw::editor
         EditorChrome::endPanel();
 
         // 창 밖에서 그린다 — 접힌 창은 내용을 그리지 않지만 확인은 떠야 한다.
-        if ( _bConfirmClose )
-            drawCloseConfirm();
+        if ( pDocument != nullptr && pDocument->isCloseConfirmPending() )
+            pDocument->drawCloseConfirm();
     }
 
-    void IEditorPanel::drawCloseConfirm()
+    bool IEditorPanel::hasUnsavedDocument() const
     {
-        constexpr const utf8* kPopupID = "##UnsavedPanelClose";
-        ImGui::PushID( this ); // 확인이 여러 패널에 동시에 걸릴 수 있다(최대화 · 레이아웃 불러오기)
-        if ( ImGui::IsPopupOpen( kPopupID ) == false )
-            EditorInputGUI::openPopup( kPopupID );
-        applyCloseChoice( EditorWidgets::drawUnsavedChangesModal( kPopupID, "This document has unsaved changes. Close anyway?" ) );
-        ImGui::PopID();
+        const IEditorDocumentPanel* const pDocument = asDocumentPanel();
+        return pDocument != nullptr && pDocument->isDocumentDirty();
+    }
+
+    void IEditorPanel::requestClose()
+    {
+        if ( _bOpen == false )
+            return;
+        IEditorDocumentPanel* const pDocument = asDocumentPanel();
+        if ( pDocument != nullptr && pDocument->beginCloseConfirmIfNeeded() )
+            return;
+        closeNow();
     }
 } // namespace sw::editor

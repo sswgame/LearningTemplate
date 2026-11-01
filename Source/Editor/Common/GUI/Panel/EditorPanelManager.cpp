@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 namespace sw::editor
@@ -130,7 +131,7 @@ namespace sw::editor
                 continue;
             if ( entry._pInstance != nullptr )
             {
-                if ( entry._pInstance->isDocumentDirty() )
+                if ( entry._pInstance->hasUnsavedDocument() )
                     SW_LOG_WARNING_ID( "EditorPanelManager.PanelUnsavedEditsDiscarded", "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
                 if ( entry._pInstance->isOpen() )
                     _listRememberedOpenID.push_back( entry._id );
@@ -271,9 +272,10 @@ namespace sw::editor
         {
             if ( entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
                 continue;
-            if ( entry._pInstance->isWindowFocused() == false )
+            IEditorDocumentPanel* const pDocument = entry._pInstance->asDocumentPanel();
+            if ( pDocument == nullptr || entry._pInstance->isWindowFocused() == false )
                 continue;
-            if ( entry._pInstance->trySaveDirtyDocument() )
+            if ( pDocument->trySaveDirtyDocument() )
                 return true;
         }
         return false;
@@ -284,11 +286,10 @@ namespace sw::editor
         bool bAllOk{ true };
         for ( const EditorPanelEntry& entry : _listPanel )
         {
-            if ( entry._pInstance == nullptr )
+            IEditorDocumentPanel* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
+            if ( pDocument == nullptr || pDocument->isDocumentDirty() == false )
                 continue;
-            if ( entry._pInstance->isDocumentDirty() == false )
-                continue;
-            if ( entry._pInstance->trySaveDirtyDocument() == false )
+            if ( pDocument->trySaveDirtyDocument() == false )
                 bAllOk = false;
         }
         return bAllOk;
@@ -299,9 +300,7 @@ namespace sw::editor
         uint32 count{ 0 };
         for ( const EditorPanelEntry& entry : _listPanel )
         {
-            if ( entry._pInstance == nullptr )
-                continue;
-            if ( entry._pInstance->isDocumentDirty() )
+            if ( entry._pInstance != nullptr && entry._pInstance->hasUnsavedDocument() )
                 ++count;
         }
         return count;
@@ -311,9 +310,9 @@ namespace sw::editor
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
-            if ( entry._pInstance == nullptr )
-                continue;
-            entry._pInstance->discardDirtyDocument();
+            IEditorDocumentPanel* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
+            if ( pDocument != nullptr )
+                pDocument->discardDirtyDocument();
         }
     }
 } // namespace sw::editor

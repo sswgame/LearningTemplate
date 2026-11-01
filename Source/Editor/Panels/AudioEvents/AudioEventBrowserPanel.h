@@ -8,7 +8,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
@@ -34,7 +34,7 @@ namespace sw::editor
      *          (`IAudioService` 의 라이브러리 다시 읽기)가 바꾼다 — 창은 엔진 사본을 직접 고치지 않는다(오디오 스레드가 설명자를 참조한다).
      *          재생 중 인스턴스와 보이스 수는 오디오 스레드가 블록마다 게시한 사본이다.
      */
-    class AudioEventBrowserPanel final : public IEditorPanel
+    class AudioEventBrowserPanel final : public IEditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

@@ -97,7 +97,7 @@ namespace sw::editor
 namespace sw::editor
 {
     CatalogPanel::CatalogPanel()
-        : IEditorPanel( false )
+        : IEditorDocumentPanel( false )
         , _filter{}
         , _listFile{}
         , _listWarning{}

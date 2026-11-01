@@ -125,7 +125,7 @@ namespace sw::editor
     } // namespace
 
     InputMapPanel::InputMapPanel()
-        : IEditorPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
+        : IEditorDocumentPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
         , _document{}
         , _newActionName{ "" }
         , _arrActionFilter{}

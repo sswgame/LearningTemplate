@@ -60,7 +60,7 @@ namespace sw::editor
 namespace sw::editor
 {
     AudioEventBrowserPanel::AudioEventBrowserPanel()
-        : IEditorPanel( false )
+        : IEditorDocumentPanel( false )
         , _editLibrary{}
         , _grid{}
         , _libraryGrid{}

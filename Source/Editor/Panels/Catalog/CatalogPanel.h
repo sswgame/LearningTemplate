@@ -12,7 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
@@ -22,7 +22,7 @@ namespace sw::editor
      * @class CatalogPanel
      * @brief 카탈로그 파일 목록과 테이블 편집, 저장 · 검증을 한 창에 모은 에디터 창입니다.
      */
-    class CatalogPanel final : public IEditorPanel
+    class CatalogPanel final : public IEditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

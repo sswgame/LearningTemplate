@@ -37,7 +37,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( DataTablePanel, DataTablePanel::kPanelID, EditorPanelCategory::Tool, 1700 );
 
     DataTablePanel::DataTablePanel()
-        : IEditorPanel{ false }
+        : IEditorDocumentPanel{ false }
         , _model{}
         , _localizationFilter{}
         , _newKeyBuffer{}

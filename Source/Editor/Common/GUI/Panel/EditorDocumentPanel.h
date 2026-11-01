@@ -12,7 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
@@ -24,7 +24,7 @@ namespace sw::editor
      * @details 닫기 확인(Save / Don't Save / Cancel)은 `IEditorPanel::requestClose` 가 문서 패널이 아닌 패널과 함께 한다. 저장하지 않고 닫으면
      *          `revertDocument` 로 편집을 버린다(기본은 `reloadDocument`).
      */
-    class SW_EDITOR_API EditorDocumentPanel : public IEditorPanel
+    class SW_EDITOR_API EditorDocumentPanel : public IEditorDocumentPanel
     {
     public:
         bool            isToolPanel() const override { return true; }

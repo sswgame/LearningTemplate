@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewModel.h"
 
@@ -46,7 +46,7 @@ namespace sw::editor
      *          상태 · 명령(문서 · 화면 · 보기 설정 · 고름 · 입력 흉내 · 애니메이션 · 되돌리기 · 저장)은 모델(`UIPreviewModel`, ImGui 없음)이 갖고, 이 패널은 ImGui 로 그리고
      *          입력을 모델 명령으로 옮기며 ImGui 텍스처 등록만 직접 든다(뷰).
      */
-    class UIPreviewPanel : public IEditorPanel
+    class UIPreviewPanel : public IEditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

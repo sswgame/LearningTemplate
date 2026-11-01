@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
 #include "Editor/Panels/DataTable/Model/DataTableModel.h"
 
@@ -20,7 +20,7 @@ namespace sw::editor
      * @details 번역 칸의 색이 상태입니다 — 주황은 원문이 바뀐 뒤의 번역(낡음), 노랑은 검토 표시, 빨강 테두리 글은 최대 길이를 넘은 번역입니다.
      *          저장하면 실행 중인 게임이 그 프로젝트를 다시 읽습니다.
      */
-    class DataTablePanel : public IEditorPanel
+    class DataTablePanel : public IEditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */

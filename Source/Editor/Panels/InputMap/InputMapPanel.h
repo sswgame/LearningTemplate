@@ -7,7 +7,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Panels/InputMap/Model/InputMapDocument.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw::editor
      * @brief 액션, 레이어, 바인딩, 트리거, 모디파이어를 시각적으로 편집하고, 입력 장치 상태를 실시간으로 보여 주는 에디터 패널입니다.
      * @details 상태와 명령은 `InputMapDocument`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 입력칸 · 문서 dirty 만 든다.
      */
-    class InputMapPanel : public IEditorPanel
+    class InputMapPanel : public IEditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
