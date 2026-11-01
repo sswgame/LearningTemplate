@@ -287,10 +287,10 @@ namespace sw
         markRenderStateDirty();
     }
 
-    bool MeshComponent::findDrawSection( uint32& outFirstVertex, uint32& outVertexCount ) const
+    bool MeshComponent::findDrawSection( uint32& outFirstIndex, uint32& outIndexCount ) const
     {
-        outFirstVertex = 0;
-        outVertexCount = 0;
+        outFirstIndex = 0;
+        outIndexCount = 0;
         if ( _sectionName.empty() )
         {
             // LOD 는 구간 없는 메시에만 있다(`Mesh::setLODs`). 메시가 제자리에서 다시 읽혀 단계가 줄었으면 가장 낮은 단계를 그린다.
@@ -300,8 +300,8 @@ namespace sw
             if ( bDrawsLowerLOD )
             {
                 const MeshLOD& lod = _mesh->getLODs()[MathUtil::min( static_cast<size_t>( _lodIndex ), lodCount ) - 1];
-                outFirstVertex     = lod._firstVertex;
-                outVertexCount     = lod._vertexCount;
+                outFirstIndex      = lod._firstIndex;
+                outIndexCount      = lod._indexCount;
             }
             return true;
         }
@@ -309,9 +309,9 @@ namespace sw
         if ( sectionIndex < 0 )
             return false;
         const MeshSection& section = _mesh->getSections()[static_cast<size_t>( sectionIndex )];
-        outFirstVertex             = section._firstVertex;
-        outVertexCount             = section._vertexCount;
-        return section._vertexCount > 0; // 빈 구간(조립이 덮인 삼각형을 모두 뺐다)은 그리지 않는다 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
+        outFirstIndex              = section._firstIndex;
+        outIndexCount              = section._indexCount;
+        return section._indexCount > 0; // 빈 구간(조립이 덮인 삼각형을 모두 뺐다)은 그리지 않는다 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
     }
 
     void MeshComponent::validateSectionName() const

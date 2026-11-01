@@ -149,12 +149,11 @@ namespace sw::editor
         }
         ImGui::Text( "Drawing LOD %u of %u", subject.getLODIndex(), lodCount );
 
-        // 흐름은 LOD 0 뒤에 낮은 단계 정점이 이어진 것이다 — 인덱스 없는 삼각형 목록이라 정점 수 / 3 이 삼각형 수다.
-        ImGui::BulletText( "LOD 0  %u vertices  %u triangles", pMesh->getVertexCount(), pMesh->getVertexCount() / 3u );
+        ImGui::BulletText( "LOD 0  %u vertices  %u triangles", pMesh->getVertexCount(), pMesh->getIndexCount() / 3u );
         uint32 lod = 1;
         for ( const MeshLOD& level : pMesh->getLODs() )
         {
-            ImGui::BulletText( "LOD %u  %u vertices  %u triangles  from screen size %.3f", lod, level._vertexCount, level._vertexCount / 3u, level._screenSize );
+            ImGui::BulletText( "LOD %u  %u vertices  %u triangles  from screen size %.3f", lod, level._vertexCount, level._indexCount / 3u, level._screenSize );
             ++lod;
         }
         if ( lodCount == 1 )

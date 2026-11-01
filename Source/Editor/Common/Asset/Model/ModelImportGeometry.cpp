@@ -600,6 +600,8 @@ namespace sw::editor
                     outData._listSkinVertex.push_back( makeSkinVertex( *pCorner ) );
             }
         }
+        // 아직 꼭짓점마다 풀어 쓴다(면 노멀) — 고유 정점 용접은 StructureRefactor 10 의 임포터 단계다.
+        outData._listIndex     = Mesh::makeTriangleListIndices( static_cast<uint32>( outData._listVertex.size() ) );
         outData._skinBoneCount = skinBoneCount;
 
         // 모프 타깃 — 풀어 쓴 정점마다(삼각형 꼭짓점 순서) 차이가 있는 것만 싣는다. 얼굴 타깃은 메시의 작은 일부만 옮긴다.
@@ -652,6 +654,7 @@ namespace sw::editor
             expandTrianglesInOrder( simplified, skinBoneCount, expanded );
             MeshLODLevel level{};
             level._listVertex     = std::move( expanded._listVertex );
+            level._listIndex      = std::move( expanded._listIndex );
             level._listSkinVertex = std::move( expanded._listSkinVertex );
             level._screenSize     = lodRule._screenSize;
             SW_LOG_INFO_ID( "ModelImporter.GlTFLODTrianglesError", "glTF '%#': LOD %# has %# of %# triangles (error %#)", sourcePath, lodIndex + 1, indexCount / 3, sourceIndexCount / 3, resultError );

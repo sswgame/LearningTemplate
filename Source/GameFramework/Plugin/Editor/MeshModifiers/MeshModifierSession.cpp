@@ -651,6 +651,7 @@ namespace sw::editor
 
         MeshAssetData baked{};
         baked._listVertex     = MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, mesh );
+        baked._listIndex      = _sourceData._listIndex;
         baked._listSkinVertex = _sourceData._listSkinVertex;
         baked._skinBoneCount  = _sourceData._skinBoneCount;
         if ( _sourceData._listMorphTarget.empty() == false )

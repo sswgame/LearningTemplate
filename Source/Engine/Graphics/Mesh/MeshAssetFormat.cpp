@@ -128,10 +128,10 @@ namespace sw
              * @brief 정점 배열을 씁니다. 탄젠트는 받은 값이 아니라 기준(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
              * @details LOD 단계는 단계마다 따로 부른다 — 탄젠트를 묶는 이웃은 같은 단계의 삼각형뿐이다.
              */
-            static void appendVertices( vector<uint8>& outBytes, const vector<RHIVertex>& listSource, const UvBounds& uvBounds )
+            static void appendVertices( vector<uint8>& outBytes, const vector<RHIVertex>& listSource, const vector<uint32>& listIndex, const UvBounds& uvBounds )
             {
                 vector<RHIVertex> listVertex = listSource;
-                Mesh::computeTangents( listVertex );
+                Mesh::computeTangents( listVertex, listIndex );
                 // 정점 하나(32 바이트): 위치 float32 3 · 노멀 옥타헤드럴 4 · 탄젠트 옥타헤드럴 4 · UV unorm16x2 4 · 색 unorm8x4 4 · 플래그 uint32 4.
                 for ( const RHIVertex& vertex : listVertex )
                 {
@@ -153,7 +153,32 @@ namespace sw
                 }
             }
 
-            /** @brief 낮은 상세 단계 덩어리(`LODS`)를 씁니다 — 단계 수, 단계마다 임계값 · 정점 수 · 정점. 단계가 없으면 쓰지 않습니다. */
+            /** @brief 인덱스(uint32)를 씁니다. */
+            static void appendIndices( vector<uint8>& outBytes, const vector<uint32>& listIndex )
+            {
+                for ( const uint32 index : listIndex )
+                {
+                    LittleEndianUtil::appendUint32( outBytes, index );
+                }
+            }
+
+            /** @brief 인덱스 @p indexCount 개를 읽어 @p pCursor 를 옮깁니다. 삼각형이 아니거나 번호가 @p vertexCount 를 넘으면 false 입니다. */
+            [[nodiscard]] static bool readIndices( const uint8*& pCursor, uint32 indexCount, uint32 vertexCount, vector<uint32>& outListIndex )
+            {
+                if ( indexCount == 0 || indexCount % 3 != 0 )
+                    return false;
+                outListIndex.resize( indexCount );
+                for ( uint32& index : outListIndex )
+                {
+                    index = LittleEndianUtil::readUint32( pCursor );
+                    pCursor += sizeof( uint32 );
+                    if ( index >= vertexCount )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief 낮은 상세 단계 덩어리(`LODS`)를 씁니다 — 단계 수, 단계마다 임계값 · 정점 수 · 인덱스 수 · 정점 · 인덱스. 단계가 없으면 쓰지 않습니다. */
             static void appendLODChunk( vector<uint8>& outBytes, const vector<MeshLODLevel>& listLevel, const UvBounds& uvBounds )
             {
                 if ( listLevel.empty() )
@@ -164,7 +189,9 @@ namespace sw
                 {
                     LittleEndianUtil::appendFloat32( outBytes, level._screenSize );
                     LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( level._listVertex.size() ) );
-                    appendVertices( outBytes, level._listVertex, uvBounds );
+                    LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( level._listIndex.size() ) );
+                    appendVertices( outBytes, level._listVertex, level._listIndex, uvBounds );
+                    appendIndices( outBytes, level._listIndex );
                 }
                 finishChunk( outBytes, lengthOffset );
             }
@@ -181,15 +208,17 @@ namespace sw
                 pChunk += 4;
                 for ( uint32 levelIndex = 0; levelIndex < levelCount; ++levelIndex )
                 {
-                    if ( pChunkEnd - pChunk < 8 )
+                    if ( pChunkEnd - pChunk < 12 )
                         return false;
                     MeshLODLevel level{};
                     level._screenSize        = LittleEndianUtil::readFloat32( pChunk );
                     const uint32 vertexCount = LittleEndianUtil::readUint32( pChunk + 4 );
-                    pChunk += 8;
-                    if ( static_cast<uint64>( pChunkEnd - pChunk ) < static_cast<uint64>( vertexCount ) * MeshAssetFormat::kVertexSize )
+                    const uint32 indexCount  = LittleEndianUtil::readUint32( pChunk + 8 );
+                    pChunk += 12;
+                    const uint64 bodySize = static_cast<uint64>( vertexCount ) * MeshAssetFormat::kVertexSize + static_cast<uint64>( indexCount ) * sizeof( uint32 );
+                    if ( static_cast<uint64>( pChunkEnd - pChunk ) < bodySize )
                         return false;
-                    if ( readVertices( pChunk, vertexCount, uvBounds, level._listVertex ) == false )
+                    if ( readVertices( pChunk, vertexCount, uvBounds, level._listVertex ) == false || readIndices( pChunk, indexCount, vertexCount, level._listIndex ) == false )
                         return false;
                     outListLevel.push_back( std::move( level ) );
                 }
@@ -278,7 +307,7 @@ namespace sw
                 }
             }
 
-            /** @brief 구간 덩어리(`SECT`)를 씁니다 — 구간 수, 구간마다 이름 길이 · 이름 · 첫 정점 · 정점 수 · 시점 가시성. 구간이 없으면 쓰지 않습니다. */
+            /** @brief 구간 덩어리(`SECT`)를 씁니다 — 구간 수, 구간마다 이름 길이 · 이름 · 첫 인덱스 · 인덱스 수 · 시점 가시성. 구간이 없으면 쓰지 않습니다. */
             static void appendSectionChunk( vector<uint8>& outBytes, const vector<MeshSection>& listSection )
             {
                 if ( listSection.empty() )
@@ -290,15 +319,15 @@ namespace sw
                     const string_view name = section._name.c_str();
                     LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
                     outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( name.data() ), reinterpret_cast<const uint8*>( name.data() ) + name.size() );
-                    LittleEndianUtil::appendUint32( outBytes, section._firstVertex );
-                    LittleEndianUtil::appendUint32( outBytes, section._vertexCount );
+                    LittleEndianUtil::appendUint32( outBytes, section._firstIndex );
+                    LittleEndianUtil::appendUint32( outBytes, section._indexCount );
                     LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( section._personVisibility ) );
                 }
                 finishChunk( outBytes, lengthOffset );
             }
 
             /** @brief 구간 덩어리 내용을 읽습니다. 길이 · 범위 · 가시성 값이 맞지 않으면 false 입니다(범위와 이름 중복은 `Mesh::setSections` 가 다시 본다). */
-            [[nodiscard]] static bool readSectionChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 vertexCount, vector<MeshSection>& outListSection )
+            [[nodiscard]] static bool readSectionChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 indexCount, vector<MeshSection>& outListSection )
             {
                 if ( pChunkEnd - pChunk < 4 )
                     return false;
@@ -314,12 +343,12 @@ namespace sw
                     MeshSection section{};
                     section._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
                     pChunk += 4 + nameLength;
-                    section._firstVertex    = LittleEndianUtil::readUint32( pChunk );
-                    section._vertexCount    = LittleEndianUtil::readUint32( pChunk + 4 );
+                    section._firstIndex     = LittleEndianUtil::readUint32( pChunk );
+                    section._indexCount     = LittleEndianUtil::readUint32( pChunk + 4 );
                     const uint32 visibility = LittleEndianUtil::readUint32( pChunk + 8 );
                     pChunk += 12;
-                    const bool bValidSection = visibility < static_cast<uint32>( MeshPersonVisibility::Count ) && section._firstVertex <= vertexCount &&
-                                               section._vertexCount <= vertexCount - section._firstVertex;
+                    const bool bValidSection = visibility < static_cast<uint32>( MeshPersonVisibility::Count ) && section._firstIndex <= indexCount &&
+                                               section._indexCount <= indexCount - section._firstIndex;
                     if ( bValidSection == false )
                         return false;
                     section._personVisibility = static_cast<MeshPersonVisibility>( visibility );
@@ -331,7 +360,7 @@ namespace sw
             // 파일의 정점은 압축 배치이고 메모리의 `RHIVertex`(float32 16 개)와 크기가 다르다 — 배치를 바꾸면 `kVersion` 을 올리고 모델을 다시 임포트한다.
             static_assert( MeshAssetFormat::kVertexSize == 3 * sizeof( float32 ) + 2 * sizeof( OctahedralNormal ) + sizeof( unorm16x2 ) + sizeof( unorm8x4 ) + sizeof( uint32 ),
                            "kVertexSize must match the packed layout (position, normal, tangent, uv, color, flags)" );
-            static_assert( MeshAssetFormat::kHeaderSize == 24 + sizeof( UvBounds ), "kHeaderSize must hold the fixed fields and the UV bounds" );
+            static_assert( MeshAssetFormat::kHeaderSize == 28 + sizeof( UvBounds ), "kHeaderSize must hold the fixed fields and the UV bounds" );
             static_assert( MeshAssetFormat::kSkinVertexSize == 4 * sizeof( uint16 ) + 4 * sizeof( float32 ), "kSkinVertexSize must match the skin layout" );
 
             /** @brief 원점에서 가장 먼 정점까지의 거리입니다(`Mesh::getBoundingRadius` 와 같은 정의). */
@@ -456,7 +485,7 @@ namespace sw
             }
 
             /** @brief 정점 · 스킨 뒤의 선택 덩어리를 모두 읽습니다. 모르는 이름 · 길이가 맞지 않는 덩어리는 깨진 파일로 보고 false 입니다. */
-            [[nodiscard]] static bool readOptionalChunks( const uint8* pCursor, const uint8* pEnd, uint32 vertexCount, const UvBounds& uvBounds, MeshAssetData& ioData )
+            [[nodiscard]] static bool readOptionalChunks( const uint8* pCursor, const uint8* pEnd, uint32 vertexCount, uint32 indexCount, const UvBounds& uvBounds, MeshAssetData& ioData )
             {
                 while ( pCursor < pEnd )
                 {
@@ -500,7 +529,7 @@ namespace sw
                     }
                     if ( bSection )
                     {
-                        if ( readSectionChunk( pChunk, pChunkEnd, vertexCount, ioData._listSection ) == false )
+                        if ( readSectionChunk( pChunk, pChunkEnd, indexCount, ioData._listSection ) == false )
                         {
                             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedSection", "Mesh asset has a malformed section chunk" );
                             return false;
@@ -534,13 +563,14 @@ namespace sw
         const uint32 skinBoneCount = bSkin ? data._skinBoneCount : 0u;
         const size_t skinByteCount = bSkin ? data._listSkinVertex.size() * kSkinVertexSize : 0u;
         outBytes.clear();
-        outBytes.reserve( kHeaderSize + data._listVertex.size() * kVertexSize + skinByteCount );
+        outBytes.reserve( kHeaderSize + data._listVertex.size() * kVertexSize + skinByteCount + data._listIndex.size() * sizeof( uint32 ) );
         for ( const uint8 magic : MeshAssetFormatInternal::kArrMagic )
         {
             outBytes.push_back( magic );
         }
         LittleEndianUtil::appendUint32( outBytes, kVersion );
         LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listVertex.size() ) );
+        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listIndex.size() ) );
         LittleEndianUtil::appendUint32( outBytes, kVertexSize );
         LittleEndianUtil::appendFloat32( outBytes, MeshAssetFormatInternal::computeBoundingRadius( data._listVertex ) );
         LittleEndianUtil::appendUint32( outBytes, skinBoneCount );
@@ -548,7 +578,7 @@ namespace sw
         const MeshAssetFormatInternal::UvBounds uvBounds = MeshAssetFormatInternal::computeUvBounds( data._listVertex, data._listLOD );
         MeshAssetFormatInternal::appendUvBounds( outBytes, uvBounds );
 
-        MeshAssetFormatInternal::appendVertices( outBytes, data._listVertex, uvBounds );
+        MeshAssetFormatInternal::appendVertices( outBytes, data._listVertex, data._listIndex, uvBounds );
         if ( bSkin )
         {
             for ( const MeshSkinVertex& skin : data._listSkinVertex )
@@ -563,6 +593,7 @@ namespace sw
                 }
             }
         }
+        MeshAssetFormatInternal::appendIndices( outBytes, data._listIndex );
         // 선택 덩어리 — 모프 타깃(있을 때). 길이는 내용을 다 쓴 뒤 채운다.
         if ( data._listMorphTarget.empty() == false )
         {
@@ -606,6 +637,7 @@ namespace sw
     {
         MeshAssetData data{};
         data._listVertex = listVertex;
+        data._listIndex  = Mesh::makeTriangleListIndices( static_cast<uint32>( listVertex.size() ) );
         makeBytes( data, outBytes );
     }
 
@@ -626,23 +658,26 @@ namespace sw
 
         const uint32  version        = LittleEndianUtil::readUint32( pData + 4 );
         const uint32  vertexCount    = LittleEndianUtil::readUint32( pData + 8 );
-        const uint32  vertexSize     = LittleEndianUtil::readUint32( pData + 12 );
-        const float32 boundingRadius = LittleEndianUtil::readFloat32( pData + 16 );
-        const uint32  skinBoneCount  = LittleEndianUtil::readUint32( pData + 20 );
+        const uint32  indexCount     = LittleEndianUtil::readUint32( pData + 12 );
+        const uint32  vertexSize     = LittleEndianUtil::readUint32( pData + 16 );
+        const float32 boundingRadius = LittleEndianUtil::readFloat32( pData + 20 );
+        const uint32  skinBoneCount  = LittleEndianUtil::readUint32( pData + 24 );
         if ( version != kVersion || vertexSize != kVertexSize )
         {
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetVersionVertex", "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
             return false;
         }
 
-        const bool bWholeTriangles = vertexCount > 0 && vertexCount % 3 == 0;
+        const bool bWholeTriangles = vertexCount > 0 && indexCount > 0 && indexCount % 3 == 0;
         // 정점 수 × 크기를 64 비트로 셈한다 — 깨진 머리의 큰 정점 수가 32 비트로 넘쳐 작은 파일과 "맞아" 보이지 않게 한다.
         const uint64 skinSize     = skinBoneCount > 0 ? static_cast<uint64>( vertexCount ) * kSkinVertexSize : 0u;
-        const uint64 expectedSize = static_cast<uint64>( kHeaderSize ) + static_cast<uint64>( vertexCount ) * kVertexSize + skinSize;
-        // 정점 · 스킨 뒤의 남은 바이트는 선택 덩어리다(아래에서 하나씩 읽는다). 모자라면 깨진 파일이다.
+        const uint64 indexSize    = static_cast<uint64>( indexCount ) * sizeof( uint32 );
+        const uint64 expectedSize = static_cast<uint64>( kHeaderSize ) + static_cast<uint64>( vertexCount ) * kVertexSize + skinSize + indexSize;
+        // 정점 · 스킨 · 인덱스 뒤의 남은 바이트는 선택 덩어리다(아래에서 하나씩 읽는다). 모자라면 깨진 파일이다.
         if ( bWholeTriangles == false || expectedSize > static_cast<uint64>( size ) )
         {
-            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetDeclaresVertices", "Mesh asset declares %# vertices but holds %# bytes (expected %#)", vertexCount, size, expectedSize );
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetDeclaresVertices", "Mesh asset declares %# vertices and %# indices but holds %# bytes (expected %#)", vertexCount, indexCount, size,
+                               expectedSize );
             return false;
         }
         if ( MathUtil::isFinite( boundingRadius ) == false || boundingRadius < 0.0f )
@@ -652,7 +687,7 @@ namespace sw
         }
 
         Internal::UvBounds uvBounds{};
-        if ( Internal::readUvBounds( pData + 24, uvBounds ) == false )
+        if ( Internal::readUvBounds( pData + 28, uvBounds ) == false )
         {
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidUV", "Mesh asset has invalid UV bounds" );
             return false;
@@ -666,7 +701,12 @@ namespace sw
             bRead                  = Internal::readSkinVertices( pCursor, vertexCount, skinBoneCount, outData._listSkinVertex );
             outData._skinBoneCount = skinBoneCount;
         }
-        bRead = bRead && Internal::readOptionalChunks( pCursor, pData + size, vertexCount, uvBounds, outData );
+        if ( bRead && Internal::readIndices( pCursor, indexCount, vertexCount, outData._listIndex ) == false )
+        {
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetIndexOutOfRange", "Mesh asset has an index past its %# vertices - re-import the model", vertexCount );
+            bRead = false;
+        }
+        bRead = bRead && Internal::readOptionalChunks( pCursor, pData + size, vertexCount, indexCount, uvBounds, outData );
         if ( bRead == false )
         {
             outData = MeshAssetData{};
@@ -698,6 +738,7 @@ namespace sw
     {
         MeshAssetData data{};
         data._listVertex = listVertex;
+        data._listIndex  = Mesh::makeTriangleListIndices( static_cast<uint32>( listVertex.size() ) );
         return saveToFile( absPath, data );
     }
 

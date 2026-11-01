@@ -162,7 +162,7 @@ namespace sw
                 }
             }
 
-            /** @brief 구간을 새 정점 번호로 옮깁니다 — 원본 범위에서 남은 정점의 첫 번호와 수입니다. */
+            /** @brief 구간을 새 정점 번호로 옮깁니다 — 원본 범위에서 남은 정점의 첫 번호와 수입니다(메시가 삼각형 목록이라 인덱스 범위가 곧 정점 범위다 — StructureRefactor 10 의 CPU 소비자 단계가 인덱스로 바꾼다). */
             static vector<MeshSection> remapSections( const Mesh& source, const vector<uint32>& listNewIndex )
             {
                 const uint32        vertexCount = source.getVertexCount();
@@ -170,18 +170,18 @@ namespace sw
                 listSection.reserve( source.getSections().size() );
                 for ( const MeshSection& section : source.getSections() )
                 {
-                    MeshSection baked  = section;
-                    baked._firstVertex = 0;
-                    baked._vertexCount = 0;
-                    bool bFirstFound   = false;
-                    for ( uint32 vertexIndex = section._firstVertex; vertexIndex < section._firstVertex + section._vertexCount && vertexIndex < vertexCount; ++vertexIndex )
+                    MeshSection baked = section;
+                    baked._firstIndex = 0;
+                    baked._indexCount = 0;
+                    bool bFirstFound  = false;
+                    for ( uint32 vertexIndex = section._firstIndex; vertexIndex < section._firstIndex + section._indexCount && vertexIndex < vertexCount; ++vertexIndex )
                     {
                         if ( listNewIndex[vertexIndex] == constant::invalid_index::kUint32 )
                             continue;
                         if ( bFirstFound == false )
-                            baked._firstVertex = listNewIndex[vertexIndex];
+                            baked._firstIndex = listNewIndex[vertexIndex];
                         bFirstFound = true;
-                        ++baked._vertexCount;
+                        ++baked._indexCount;
                     }
                     listSection.push_back( baked );
                 }
@@ -508,8 +508,8 @@ namespace sw
         for ( const hashed_string& group : listGroup )
         {
             MeshSection section;
-            section._name        = group;
-            section._firstVertex = static_cast<uint32>( listVertex.size() );
+            section._name       = group;
+            section._firstIndex = static_cast<uint32>( listVertex.size() ); // 병합 결과가 삼각형 목록이라 인덱스 번호가 곧 정점 번호다
             for ( size_t partIndex = 0; partIndex < partCount; ++partIndex )
             {
                 if ( listPartGroup[partIndex] != group )
@@ -522,7 +522,7 @@ namespace sw
                     listSkin.insert( listSkin.end(), mesh.getSkinVertices().begin(), mesh.getSkinVertices().end() );
                 Internal::mergeMorphTargets( mesh, firstVertex, listTarget );
             }
-            section._vertexCount = static_cast<uint32>( listVertex.size() ) - section._firstVertex;
+            section._indexCount = static_cast<uint32>( listVertex.size() ) - section._firstIndex;
             listSection.push_back( section );
         }
         if ( listVertex.empty() )

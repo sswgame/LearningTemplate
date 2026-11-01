@@ -175,11 +175,11 @@ namespace sw
         void          setSectionName( hashed_string sectionName );
         hashed_string getSectionName() const { return _sectionName; }
         /**
-         * @brief 그릴 정점 범위입니다. 구간 이름이 비면 (0, 0)(메시 전체 = LOD 0)이고 true, 메시에 그 구간이 없거나 구간이 비었으면 false(그리지 않는다)입니다.
-         *        LOD 단계(`setLODIndex`)가 1 이상이면 그 단계의 범위(`Mesh::getLODs`, 그릴 정점 흐름 기준)입니다.
+         * @brief 그릴 인덱스 범위입니다. 구간 이름이 비면 (0, 0)(메시 전체 = LOD 0)이고 true, 메시에 그 구간이 없거나 구간이 비었으면 false(그리지 않는다)입니다.
+         *        LOD 단계(`setLODIndex`)가 1 이상이면 그 단계의 범위(`Mesh::getLODs`, 그릴 인덱스 흐름 기준)입니다.
          * @details 렌더 수집(`GPUSceneBuilder::fillCandidateFromPrimitive`)이 워커에서 부르므로 로그를 남기지 않는다 — 오류는 `resolveRenderAssets` 가 남긴다.
          */
-        [[nodiscard]] bool findDrawSection( uint32& outFirstVertex, uint32& outVertexCount ) const;
+        [[nodiscard]] bool findDrawSection( uint32& outFirstIndex, uint32& outIndexCount ) const;
         /**
          * @brief 그릴 LOD 단계를 정합니다(0 = 원본). 메시의 단계 수를 넘으면 가장 낮은 단계입니다. 바뀌면 렌더 상태를 더티로 표시합니다(저장하지 않는 런타임 값).
          * @details 단계는 메시 LOD 고르기(`MeshLODSystem`)가 화면 크기로 정한다. 단계가 하나뿐인 메시에는 뜻이 없다.

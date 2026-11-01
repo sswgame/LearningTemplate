@@ -209,6 +209,7 @@ namespace sw::editor
         listMeshSection.reserve( listSection.size() );
         for ( const ModelImportSection& section : listSection )
         {
+            // 임포트 메시가 삼각형 목록(인덱스 0..n-1)이라 정점 범위가 곧 인덱스 범위다.
             listMeshSection.push_back( MeshSection{ hashed_string( section._sectionName ), section._firstVertex, section._vertexCount, section._personVisibility } );
         }
         return listMeshSection;

@@ -103,9 +103,9 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::createSkinInstance( const Mesh& source )
     {
-        shared_ptr<Mesh>  instance   = create();
-        vector<RHIVertex> listVertex = source._listVertex;
-        instance->setVerticesWithTangents( std::move( listVertex ) );
+        shared_ptr<Mesh> instance = create();
+        // 원본에서 이미 검사한 정점 · 인덱스라 그대로 맞는다.
+        (void)instance->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
         instance->setSkin( source._listSkinVertex, source._skinBoneCount );
         instance->setMorphTargets( source._listMorphTarget );
         // 구간은 원본에서 이미 검사했다 — 같은 정점이라 그대로 맞는다.
@@ -113,6 +113,7 @@ namespace sw
         // 낮은 단계도 원본과 같은 정점 · 스킨이다(스킨 데이터 번호를 나누는 사본이 같은 구간을 그린다). `setSkin` 이 뗀 단계를 그대로 다시 건다.
         instance->_listLOD           = source._listLOD;
         instance->_listLODVertex     = source._listLODVertex;
+        instance->_listLODIndex      = source._listLODIndex;
         instance->_listLODSkinVertex = source._listLODSkinVertex;
         // 정점과 스킨이 원본과 같다. 모프 풀이 원본 데이터를 한 번만 업로드하도록 번호를 공유한다(setVertices 와 setSkin 이 지운 뒤에 적는다).
         instance->_sharedSkinDataID = source.getSkinDataID();
@@ -121,9 +122,8 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::createRigidSkinSource( const Mesh& source )
     {
-        shared_ptr<Mesh>  rigid      = create();
-        vector<RHIVertex> listVertex = source._listVertex;
-        rigid->setVerticesWithTangents( std::move( listVertex ) );
+        shared_ptr<Mesh> rigid = create();
+        (void)rigid->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
         // 기본 영향이 본 0 에 가중치 1 이다(`MeshSkinVertex`).
         rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), 1u );
         rigid->setMorphTargets( source._listMorphTarget );
@@ -144,23 +144,66 @@ namespace sw
 
     void Mesh::setVerticesWithTangents( vector<RHIVertex>&& listVertex )
     {
+        vector<uint32> listIndex = makeTriangleListIndices( static_cast<uint32>( listVertex.size() ) );
+        // 번호가 모두 정점 안이라 검사가 지지 않는다(마지막 덜 찬 삼각형은 인덱스가 없다).
+        (void)setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) );
+    }
+
+    bool Mesh::setGeometry( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex )
+    {
+        computeTangents( listVertex, listIndex );
+        return setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) );
+    }
+
+    bool Mesh::setGeometryWithTangents( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex )
+    {
         releaseVertexBuffer();
-        _listVertex = std::move( listVertex );
         // 낮은 단계는 옛 LOD 0 에서 만든 것이다 — 정점이 바뀌면 맞지 않으므로 뗀다(읽기는 정점 뒤에 `setLODs` 로 다시 건다).
+        clearLODs();
+        _contentID               = allocateContentID();
+        _sharedSkinDataID        = 0;
+        const uint32 vertexCount = static_cast<uint32>( listVertex.size() );
+        bool         bValid      = listIndex.size() % 3 == 0;
+        for ( size_t index = 0; bValid && index < listIndex.size(); ++index )
+        {
+            bValid = listIndex[index] < vertexCount;
+        }
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "Mesh.MeshIndicesOutOfRange", "Mesh indices (%#) are not whole triangles or name a vertex past %# - the mesh is empty", listIndex.size(), vertexCount );
+            _listVertex.clear();
+            _listIndex.clear();
+            refreshBoundingRadius();
+            return false;
+        }
+        _listVertex = std::move( listVertex );
+        _listIndex  = std::move( listIndex );
+        refreshBoundingRadius();
+        return true;
+    }
+
+    vector<uint32> Mesh::makeTriangleListIndices( uint32 vertexCount )
+    {
+        vector<uint32> listIndex( vertexCount - vertexCount % 3 );
+        for ( uint32 index = 0; index < listIndex.size(); ++index )
+        {
+            listIndex[index] = index;
+        }
+        return listIndex;
+    }
+
+    void Mesh::clearLODs()
+    {
         _listLOD.clear();
         _listLODVertex.clear();
+        _listLODIndex.clear();
         _listLODSkinVertex.clear();
-        _contentID        = allocateContentID();
-        _sharedSkinDataID = 0;
-        refreshBoundingRadius();
     }
 
     bool Mesh::setLODs( vector<MeshLODLevel> listLevel )
     {
         releaseVertexBuffer();
-        _listLOD.clear();
-        _listLODVertex.clear();
-        _listLODSkinVertex.clear();
+        clearLODs();
         _contentID = allocateContentID();
         if ( listLevel.empty() )
             return true;
@@ -173,12 +216,18 @@ namespace sw
         const bool bSkinned           = hasSkin();
         float32    previousScreenSize = 1.0f;
         uint32     firstVertex        = getVertexCount();
+        uint32     firstIndex         = getIndexCount();
         for ( size_t levelIndex = 0; levelIndex < listLevel.size(); ++levelIndex )
         {
             const MeshLODLevel& level       = listLevel[levelIndex];
             const uint32        vertexCount = static_cast<uint32>( level._listVertex.size() );
-            const bool          bTriangles  = vertexCount > 0 && vertexCount % 3 == 0;
-            const bool          bThreshold  = MathUtil::isFinite( level._screenSize ) && 0.0f < level._screenSize && level._screenSize < previousScreenSize;
+            const uint32        indexCount  = static_cast<uint32>( level._listIndex.size() );
+            bool                bTriangles  = vertexCount > 0 && indexCount > 0 && indexCount % 3 == 0;
+            for ( size_t index = 0; bTriangles && index < level._listIndex.size(); ++index )
+            {
+                bTriangles = level._listIndex[index] < vertexCount;
+            }
+            const bool bThreshold = MathUtil::isFinite( level._screenSize ) && 0.0f < level._screenSize && level._screenSize < previousScreenSize;
             // 스킨드 메시의 단계는 정점마다 스킨이 있고 뼈 번호가 스켈레톤 안이어야 하며, 스킨 없는 메시의 단계는 스킨이 없어야 한다.
             bool bSkinMatches = bSkinned ? level._listSkinVertex.size() == level._listVertex.size() : level._listSkinVertex.empty();
             for ( size_t skinIndex = 0; bSkinMatches && skinIndex < level._listSkinVertex.size(); ++skinIndex )
@@ -191,17 +240,22 @@ namespace sw
             const bool bShapeOk = bTriangles && bThreshold;
             if ( bShapeOk == false || bSkinMatches == false )
             {
-                SW_LOG_ERROR_ID( "Mesh.MeshLODVerticesScreen", "Mesh LOD %# has %# vertices and screen size %# - it needs whole triangles, a threshold below %# and (skinned meshes) one in-range skin per vertex - the mesh keeps LOD 0 only",
-                                 levelIndex + 1, vertexCount, level._screenSize, previousScreenSize );
-                _listLOD.clear();
-                _listLODVertex.clear();
-                _listLODSkinVertex.clear();
+                SW_LOG_ERROR_ID( "Mesh.MeshLODVerticesScreen",
+                                 "Mesh LOD %# has %# vertices, %# indices and screen size %# - it needs whole in-range triangles, a threshold below %# and (skinned meshes) one in-range skin per vertex - the mesh keeps LOD 0 only",
+                                 levelIndex + 1, vertexCount, indexCount, level._screenSize, previousScreenSize );
+                clearLODs();
                 return false;
             }
-            _listLOD.push_back( MeshLOD{ firstVertex, vertexCount, level._screenSize } );
+            _listLOD.push_back( MeshLOD{ firstIndex, indexCount, firstVertex, vertexCount, level._screenSize } );
             _listLODVertex.insert( _listLODVertex.end(), level._listVertex.begin(), level._listVertex.end() );
+            // 단계의 번호는 그 단계 정점 안이다 — 정점 흐름 번호로 옮겨 싣는다(드로우의 baseVertex 가 0 이다).
+            for ( const uint32 index : level._listIndex )
+            {
+                _listLODIndex.push_back( firstVertex + index );
+            }
             _listLODSkinVertex.insert( _listLODSkinVertex.end(), level._listSkinVertex.begin(), level._listSkinVertex.end() );
             firstVertex += vertexCount;
+            firstIndex += indexCount;
             previousScreenSize = level._screenSize;
         }
         return true;
@@ -222,18 +276,27 @@ namespace sw
 
     void Mesh::computeTangents( vector<RHIVertex>& inoutListVertex )
     {
+        computeTangents( inoutListVertex, makeTriangleListIndices( static_cast<uint32>( inoutListVertex.size() ) ) );
+    }
+
+    void Mesh::computeTangents( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex )
+    {
         const uint32   vertexCount = static_cast<uint32>( inoutListVertex.size() );
+        const uint32   indexCount  = static_cast<uint32>( listIndex.size() );
         vector<float3> listTangent( vertexCount, float3{} );
         vector<float3> listBitangent( vertexCount, float3{} );
 
         // 1) 면마다 UV 기울기 → 탄젠트 · 바이탄젠트(정규화)를 모서리 각도로 가중해 그 정점에 더한다.
-        for ( uint32 triangleStart = 0; triangleStart + 2 < vertexCount; triangleStart += 3 )
+        for ( uint32 triangleStart = 0; triangleStart + 2 < indexCount; triangleStart += 3 )
         {
+            const uint32 arrCorner[3] = { listIndex[triangleStart], listIndex[triangleStart + 1], listIndex[triangleStart + 2] };
+            if ( arrCorner[0] >= vertexCount || arrCorner[1] >= vertexCount || arrCorner[2] >= vertexCount )
+                continue; // 범위 밖 번호는 `setGeometry` 가 거절한다 — 여기서는 읽지 않기만 한다
             float3 arrPosition[3];
             float2 arrUv[3];
             for ( uint32 corner = 0; corner < 3; ++corner )
             {
-                const RHIVertex& vertex = inoutListVertex[triangleStart + corner];
+                const RHIVertex& vertex = inoutListVertex[arrCorner[corner]];
                 arrPosition[corner]     = float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
                 arrUv[corner]           = float2{ vertex._arrUv[0], vertex._arrUv[1] };
             }
@@ -260,12 +323,12 @@ namespace sw
                 const float3  toNext = arrPosition[( corner + 1 ) % 3] - arrPosition[corner];
                 const float3  toPrev = arrPosition[( corner + 2 ) % 3] - arrPosition[corner];
                 const float32 angle  = MeshInternal::computeCornerAngle( toNext, toPrev );
-                listTangent[triangleStart + corner] += unitTangent * angle;
-                listBitangent[triangleStart + corner] += unitBitangent * angle;
+                listTangent[arrCorner[corner]] += unitTangent * angle;
+                listBitangent[arrCorner[corner]] += unitBitangent * angle;
             }
         }
 
-        // 2) 위치 · 노멀 · UV 가 비트까지 같은 정점끼리 묶어 합친다(인덱스 없는 삼각형 목록이라 이웃 면의 같은 정점이 따로 있다).
+        // 2) 위치 · 노멀 · UV 가 비트까지 같은 정점끼리 묶어 합친다(삼각형 목록 정점이나 색 · 스킨만 다른 정점은 이웃 면의 같은 정점이 따로 있다).
         vector<uint32> listOrder( vertexCount );
         for ( uint32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
         {
@@ -306,16 +369,14 @@ namespace sw
         _listSkinVertex     = bMatches ? std::move( listSkinVertex ) : vector<MeshSkinVertex>{};
         _skinBoneCount      = bMatches ? boneCount : 0u;
         // 낮은 단계는 옛 스킨(뼈 번호 · 있고 없음)에 맞춘 것이다 — 스킨을 바꾸면 뗀다(읽기는 스킨 뒤에 `setLODs` 로 다시 건다).
-        _listLOD.clear();
-        _listLODVertex.clear();
-        _listLODSkinVertex.clear();
+        clearLODs();
         _contentID        = allocateContentID();
         _sharedSkinDataID = 0;
     }
 
     bool Mesh::setSections( vector<MeshSection> listSection )
     {
-        const uint32 vertexCount = getVertexCount();
+        const uint32 indexCount = getIndexCount();
         if ( listSection.empty() == false && _listLOD.empty() == false )
         {
             SW_LOG_ERROR_ID( "Mesh.MeshLODsSectionsNot", "Mesh has LODs - sections are not supported with LODs (setLODs), the mesh has no sections" );
@@ -325,8 +386,8 @@ namespace sw
         for ( size_t index = 0; index < listSection.size(); ++index )
         {
             const MeshSection& section    = listSection[index];
-            const bool         bInRange   = section._firstVertex <= vertexCount && section._vertexCount <= vertexCount - section._firstVertex;
-            const bool         bTriangles = section._firstVertex % 3 == 0 && section._vertexCount % 3 == 0;
+            const bool         bInRange   = section._firstIndex <= indexCount && section._indexCount <= indexCount - section._firstIndex;
+            const bool         bTriangles = section._firstIndex % 3 == 0 && section._indexCount % 3 == 0;
             bool               bUnique    = section._name.empty() == false && section._personVisibility < MeshPersonVisibility::Count;
             for ( size_t other = 0; bUnique && other < index; ++other )
             {
@@ -335,8 +396,8 @@ namespace sw
             const bool bValidSection = bInRange && bTriangles && bUnique;
             if ( bValidSection == false )
             {
-                SW_LOG_ERROR_ID( "Mesh.MeshSectionDoesNot", "Mesh section '%#' [%#, +%#) does not fit %# vertices, is not whole triangles, or repeats a name - the mesh has no sections", section._name.c_str(),
-                                 section._firstVertex, section._vertexCount, vertexCount );
+                SW_LOG_ERROR_ID( "Mesh.MeshSectionDoesNot", "Mesh section '%#' [%#, +%#) does not fit %# indices, is not whole triangles, or repeats a name - the mesh has no sections", section._name.c_str(),
+                                 section._firstIndex, section._indexCount, indexCount );
                 _listSection.clear();
                 return false;
             }

@@ -342,6 +342,7 @@ namespace sw
         if ( pMeshComp->isVisibleInCurrentPerson() == false )
             return false;
         // 그릴 구간 — 구간 이름이 메시에 없으면 그리지 않는다(컴포넌트가 오류를 남긴다). 이름이 없으면 메시 전체(수 0).
+        // 컴포넌트는 인덱스 범위를 준다 — GPU 인덱스 풀(StructureRefactor 10)까지는 생산자가 모두 삼각형 목록(인덱스 0..n-1)이라 정점 범위와 같다.
         if ( pMeshComp->findDrawSection( candidate._sectionFirstVertex, candidate._sectionVertexCount ) == false )
             return false;
 

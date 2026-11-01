@@ -98,15 +98,16 @@ namespace sw
         bool           bLoaded = MeshAssetFormat::loadFromAsset( MeshCacheInternal::toAssetID( path ), data );
         if ( bLoaded )
         {
-            loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
+            loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listIndex.size() * sizeof( uint32 ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
             shared_ptr<Mesh> loaded = Mesh::create();
-            loaded->setVerticesWithTangents( std::move( data._listVertex ) );
+            // 읽기가 인덱스 범위를 이미 봤다 — 실패는 깨진 파일 하나뿐이고 아래 판정이 함께 진다.
+            bLoaded = loaded->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
             if ( data._skinBoneCount > 0 )
                 loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
             if ( data._listMorphTarget.empty() == false )
                 loaded->setMorphTargets( std::move( data._listMorphTarget ) );
             // 구간 · LOD 가 정점과 맞지 않으면 파일이 깨진 것이다 — 구간 · LOD 없는 메시로 두지 않고 읽기 실패로 알린다.
-            bLoaded = loaded->setSections( std::move( data._listSection ) ) && loaded->setLODs( std::move( data._listLOD ) );
+            bLoaded = bLoaded && loaded->setSections( std::move( data._listSection ) ) && loaded->setLODs( std::move( data._listLOD ) );
             if ( bLoaded )
             {
                 loadScope.setSucceeded();
@@ -257,10 +258,10 @@ namespace sw
         IRHIDevice* const pDevice = MeshCacheInternal::getState()._pBoundDevice.load( std::memory_order_acquire );
         if ( pDevice != nullptr )
             pDevice->waitIdle( RHIWaitIdleReason::HotReload );
-        live->setVerticesWithTangents( std::move( data._listVertex ) );
+        const bool bGeometry = live->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
         live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
         live->setMorphTargets( std::move( data._listMorphTarget ) );
-        return live->setSections( std::move( data._listSection ) ) && live->setLODs( std::move( data._listLOD ) );
+        return bGeometry && live->setSections( std::move( data._listSection ) ) && live->setLODs( std::move( data._listLOD ) );
     }
 
     void MeshCache::bindDevice( IRHIDevice* pDevice )

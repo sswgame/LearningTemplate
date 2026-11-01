@@ -810,7 +810,7 @@ namespace sw::editor
         {
             if ( ModelImportVrm::writeSectionPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
                 return false;
-            SW_LOG_INFO_ID( "ModelImporter.ImportedModelTriangles", "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
+            SW_LOG_INFO_ID( "ModelImporter.ImportedModelTriangles", "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listIndex.size() / 3 );
             return true;
         }
 
@@ -832,7 +832,7 @@ namespace sw::editor
         if ( Internal::writeClips( result, rule, sideFolder, rawByteTotal, compressedByteTotal ) == false )
             return false;
         SW_LOG_INFO_ID( "ModelImporter.ImportedSkinnedModelTriangles", "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath, outputPath,
-                        result._mesh._listVertex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
+                        result._mesh._listIndex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
                         compressedByteTotal );
         return true;
     }

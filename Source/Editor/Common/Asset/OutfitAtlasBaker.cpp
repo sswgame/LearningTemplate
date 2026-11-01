@@ -125,6 +125,7 @@ namespace sw::editor
             {
                 MeshAssetData data;
                 data._listVertex      = mesh.getVertices();
+                data._listIndex       = mesh.getIndices();
                 data._listSkinVertex  = mesh.getSkinVertices();
                 data._listMorphTarget = mesh.getMorphTargets();
                 data._listSection     = mesh.getSections();

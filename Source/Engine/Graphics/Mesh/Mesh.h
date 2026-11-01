@@ -64,15 +64,15 @@ namespace sw
 
     /**
      * @struct MeshSection
-     * @brief 메시의 구간 하나입니다 — 정점 범위(인덱스 없는 삼각형 목록이라 3 의 배수)와 이름, 시점 가시성입니다.
+     * @brief 메시의 구간 하나입니다 — 인덱스 범위(삼각형 단위라 3 의 배수)와 이름, 시점 가시성입니다.
      * @details 머티리얼은 구간마다 다르다. 구간을 그리는 컴포넌트(`MeshComponent::_sectionName`)가 머티리얼을 갖고, 같은 메시 객체를 나눠 써서 스킨 · 모프 결과도
      *          한 벌이다(언리얼 Skeletal Mesh 의 Section, 유니티 Mesh 의 SubMesh 에 해당한다). 구간이 없는 메시는 전체가 구간 하나다.
      */
     struct MeshSection
     {
         hashed_string        _name;
-        uint32               _firstVertex{ 0 };
-        uint32               _vertexCount{ 0 };
+        uint32               _firstIndex{ 0 };
+        uint32               _indexCount{ 0 };
         MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
     };
 } // namespace sw
@@ -81,13 +81,14 @@ namespace sw
 {
     /**
      * @struct MeshLODLevel
-     * @brief 메시의 낮은 상세 단계(LOD 1 이상) 하나의 저작 형태입니다 — 그 단계의 삼각형 목록과, 이 단계로 넘어가는 화면 크기 임계값입니다.
+     * @brief 메시의 낮은 상세 단계(LOD 1 이상) 하나의 저작 형태입니다 — 그 단계의 고유 정점 · 인덱스(번호는 이 단계 정점 안)와, 이 단계로 넘어가는 화면 크기 임계값입니다.
      * @details 화면 크기는 경계 구의 화면 높이 비율이다(`LODViewUtil::computeScreenSize` 와 같은 값). 화면 크기가 임계값보다 작아지면 이 단계 이상을 그린다.
      *          모델 임포트가 단순화로 만들고(`ModelImporter`, 비율 · 임계값은 임포트 규칙 데이터) `.mesh` 의 `LODS` 덩어리에 싣는다.
      */
     struct MeshLODLevel
     {
         vector<RHIVertex> _listVertex;
+        vector<uint32>    _listIndex;
         float32           _screenSize{ 0.0f };
         /// @brief 스킨드 메시의 단계면 정점마다의 본 영향(`_listVertex` 와 길이가 같다). 스킨 없는 메시의 단계는 비어 있다. `.mesh` 의 `LSKN` 덩어리에 싣는다.
         vector<MeshSkinVertex> _listSkinVertex{};
@@ -98,11 +99,14 @@ namespace sw
 {
     /**
      * @struct MeshLOD
-     * @brief 그릴 정점 흐름 안에서 LOD 단계 하나의 범위입니다. 흐름은 LOD 0(`Mesh::getVertices`) 뒤에 낮은 단계 정점(`Mesh::getLODVertices`)이 이어진 것입니다.
+     * @brief 그릴 흐름 안에서 LOD 단계 하나의 범위입니다. 정점 흐름은 LOD 0(`Mesh::getVertices`) 뒤에 낮은 단계 정점(`Mesh::getLODVertices`)이,
+     *        인덱스 흐름은 LOD 0(`Mesh::getIndices`) 뒤에 낮은 단계 인덱스(`Mesh::getLODIndices` — 값은 정점 흐름 번호)가 이어진 것입니다.
      */
     struct MeshLOD
     {
-        uint32  _firstVertex{ 0 };
+        uint32  _firstIndex{ 0 };
+        uint32  _indexCount{ 0 };
+        uint32  _firstVertex{ 0 }; ///< 이 단계 정점의 정점 흐름 안 시작(스키닝 · 미리보기가 센다)
         uint32  _vertexCount{ 0 };
         float32 _screenSize{ 0.0f }; ///< 이 단계로 넘어가는 화면 크기 임계값(`MeshLODLevel::_screenSize`)
     };
@@ -125,7 +129,8 @@ namespace sw
 {
     /**
      * @class Mesh
-     * @brief 삼각형 리스트 메시입니다(정점은 위치, 노멀, UV, 색). initRHI() 로 올린 GPU 정점 버퍼를 소유합니다.
+     * @brief 인덱스 삼각형 메시입니다 — 고유 정점(위치, 노멀, UV, 색)과 삼각형마다 정점 번호 셋(uint32)입니다. initRHI() 로 올린 GPU 정점 버퍼를 소유합니다.
+     * @details 언리얼 · 유니티 · Godot 과 같이 모든 메시가 인덱스를 가진다(색인 없는 모드는 없다). 구간 · LOD 는 인덱스 범위이고, 스킨 · 모프 · VAT 는 고유 정점 번호다.
      */
     class SW_API Mesh final : public RHIRenderResource
     {
@@ -181,7 +186,14 @@ namespace sw
         static shared_ptr<Mesh> createRigidSkinSource( const Mesh& source );
 
         /**
-         * @brief CPU 정점 배열을 설정합니다. 탄젠트는 받은 값을 버리고 `computeTangents` 로 다시 구합니다.
+         * @brief 고유 정점과 인덱스를 설정합니다. 탄젠트는 받은 값을 버리고 `computeTangents` 로 다시 구합니다.
+         * @details 인덱스 수가 3 의 배수이고 번호가 정점 수보다 작아야 한다 — 아니면 오류를 남기고 메시를 비운 채 false 다.
+         */
+        [[nodiscard]] bool setGeometry( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex );
+        /** @brief 탄젠트가 이미 들어 있는 고유 정점과 인덱스를 그대로 설정합니다(`.mesh` 를 읽은 값, 다른 메시의 사본). 검사는 `setGeometry` 와 같습니다. */
+        [[nodiscard]] bool setGeometryWithTangents( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex );
+        /**
+         * @brief 삼각형 목록 정점(정점 셋이 삼각형 하나, 공유 정점 없음)을 설정합니다 — 인덱스는 0..n-1 입니다. 탄젠트는 `computeTangents` 로 다시 구합니다.
          * @details 탄젠트는 위치 · 노멀 · UV 에서 나오는 값이라(경계 반지름처럼) 메시가 정한다. 정점을 만드는 쪽(도형 · 지형 · 물 · 잘린 조각 · 테스트)은
          *          탄젠트를 채우지 않아도 되고, 채우지 않은 정점이 0 탄젠트로 그려지는 일이 없다. 이미 구한 탄젠트(`.mesh`)는 `setVerticesWithTangents` 로 넣는다.
          */
@@ -193,14 +205,22 @@ namespace sw
          */
         void setVerticesWithTangents( vector<RHIVertex>&& listVertex );
         /**
-         * @brief 삼각형 목록 정점의 탄젠트(`RHIVertex::_arrTangent`)를 위치 · 노멀 · UV 로 구합니다. 기준은 이 함수 하나입니다(런타임 · 임포트 · `.mesh` 쓰기).
+         * @brief 인덱스 삼각형의 탄젠트(`RHIVertex::_arrTangent`)를 위치 · 노멀 · UV 로 구합니다. 기준은 이 함수 하나입니다(런타임 · 임포트 · `.mesh` 쓰기).
          * @details MikkTSpace 와 같은 규약이다 — 면마다 UV 기울기에서 탄젠트 · 바이탄젠트를 구해 모서리 각도로 가중하고, 위치 · 노멀 · UV 가 비트까지 같은 정점끼리
          *          (손잡이가 같은 면끼리만) 모아 더한 뒤 노멀에 직교화한다. W 는 바이탄젠트 부호(cross( N, T ) 와 면의 바이탄젠트가 같은 쪽이면 +1)다.
          *          UV 가 퇴화해(면적 0) 기울기가 없는 정점은 노멀에 수직이고 +X 에 가장 가까운 방향을 받는다(노멀이 X 축이면 +Z). 셰이더의 노멀 맵은 평평한 맵에서 노멀을 그대로 낸다.
          */
+        static void computeTangents( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex );
+        /** @brief 삼각형 목록 정점(인덱스 0..n-1)의 탄젠트를 구합니다. */
         static void computeTangents( vector<RHIVertex>& inoutListVertex );
-        /** @brief CPU 정점 배열입니다. `setVertices` 와 짝을 이루며, GPU 업로드 뒤에도 원본은 여기 남습니다. */
+        /** @brief 삼각형 목록(정점 셋이 삼각형 하나)의 인덱스 0..@p vertexCount-1 입니다. */
+        static vector<uint32> makeTriangleListIndices( uint32 vertexCount );
+        /** @brief CPU 고유 정점 배열입니다. GPU 업로드 뒤에도 원본은 여기 남습니다. */
         const vector<RHIVertex>& getVertices() const { return _listVertex; }
+        /** @brief 삼각형마다 정점 번호 셋입니다(LOD 0). */
+        const vector<uint32>& getIndices() const { return _listIndex; }
+        /** @brief LOD 0 의 인덱스 수입니다(삼각형 수 × 3). */
+        uint32 getIndexCount() const { return static_cast<uint32>( _listIndex.size() ); }
 
         /**
          * @brief 이 메시의 정점을 GPU 가 변형해도 되는지 표시합니다(기본은 꺼짐).
@@ -256,8 +276,8 @@ namespace sw
          */
         void setMorphTargets( vector<MeshMorphTarget> listTarget );
         /**
-         * @brief 구간을 설정합니다. 구간은 정점 범위 안이고 3 의 배수이며 이름이 겹치지 않아야 합니다 — 아니면 오류를 남기고 구간을 비운 채 false 입니다.
-         *        정점이 0 인 구간은 이름은 있되 그릴 것이 없는 구간입니다(외형 조립이 덮인 삼각형을 모두 뺀 구간 — 그 구간 컴포넌트는 아무것도 그리지 않는다).
+         * @brief 구간을 설정합니다. 구간은 인덱스 범위 안이고 3 의 배수이며 이름이 겹치지 않아야 합니다 — 아니면 오류를 남기고 구간을 비운 채 false 입니다.
+         *        인덱스가 0 인 구간은 이름은 있되 그릴 것이 없는 구간입니다(외형 조립이 덮인 삼각형을 모두 뺀 구간 — 그 구간 컴포넌트는 아무것도 그리지 않는다).
          * @details 내용 번호는 바꾸지 않는다(정점이 그대로라 정점 · 모프 풀을 다시 올릴 이유가 없다). 그리는 범위는 배치 키라 다음 수집이 다시 나눈다.
          */
         [[nodiscard]] bool setSections( vector<MeshSection> listSection );
@@ -265,23 +285,27 @@ namespace sw
         const vector<MeshSection>& getSections() const { return _listSection; }
         /**
          * @brief 낮은 상세 단계(LOD 1 이상)를 설정합니다. 정점은 탄젠트가 든 값이어야 합니다(`.mesh` 를 읽은 값 — 쓰기가 단계마다 `computeTangents` 로 구했다).
-         * @details 단계마다 정점 수가 0 이 아닌 3 의 배수이고, 임계값은 (0, 1) 안에서 단계가 낮아질수록 작아야 한다. 모프 타깃 · 구간 · 정점 애니메이션이 있는 메시는
+         * @details 단계마다 정점이 있고 인덱스 수가 0 이 아닌 3 의 배수이며 번호가 그 단계 정점 안이고, 임계값은 (0, 1) 안에서 단계가 낮아질수록 작아야 한다. 모프 타깃 · 구간 · 정점 애니메이션이 있는 메시는
          *          LOD 를 받지 않는다. 스킨드 메시는 받는다 — 단계마다 스킨 정점(`MeshLODLevel::_listSkinVertex`)이 정점과 같은 길이로 오고 뼈 번호가 `getSkinBoneCount` 안이어야 하며,
          *          스킨 없는 메시의 단계는 스킨이 없어야 한다(그래서 **스킨을 먼저 설정**한다 — `setSkin` 은 LOD 를 뗀다). GPU 스키닝은 LOD 0 뒤의 낮은 단계 정점도 변형한다.
          *          어기면 오류를 남기고 LOD 를 비운 채 false 입니다. 빈 목록은 LOD 를 뗀다.
          *          CPU 정점(`getVertices`)은 LOD 0 그대로다 — 물리 · 내비 · 피킹은 LOD 를 보지 않는다. 내용 번호가 바뀐다(정점 풀이 다시 올린다).
          */
         [[nodiscard]] bool setLODs( vector<MeshLODLevel> listLevel );
-        /** @brief LOD 1 이상의 범위입니다(그릴 정점 흐름 기준). 비면 LOD 0 하나입니다. */
+        /** @brief LOD 1 이상의 범위입니다(그릴 흐름 기준). 비면 LOD 0 하나입니다. */
         const vector<MeshLOD>& getLODs() const { return _listLOD; }
         /** @brief LOD 단계 수입니다(LOD 0 포함, 1 이상). */
         uint32 getLODCount() const { return 1u + static_cast<uint32>( _listLOD.size() ); }
         /** @brief LOD 1 이상의 정점을 단계 순서로 이은 것입니다. GPU 업로드가 LOD 0 뒤에 붙입니다. */
         const vector<RHIVertex>& getLODVertices() const { return _listLODVertex; }
+        /** @brief LOD 1 이상의 인덱스를 단계 순서로 이은 것입니다. 값은 정점 흐름(LOD 0 뒤에 낮은 단계 정점) 번호입니다. */
+        const vector<uint32>& getLODIndices() const { return _listLODIndex; }
         /** @brief LOD 1 이상 정점의 본 영향을 `getLODVertices` 와 같은 순서로 이은 것입니다. 스킨드 메시만 가지며 아니면 비어 있습니다. GPU 스키닝이 LOD 0 의 스킨 뒤에 붙입니다. */
         const vector<MeshSkinVertex>& getLODSkinVertices() const { return _listLODSkinVertex; }
         /** @brief 그릴 정점 흐름의 길이입니다(LOD 0 + 낮은 단계). 정점 풀 · 정점 버퍼가 이만큼 올린다. */
         uint32 getDrawVertexCount() const { return static_cast<uint32>( _listVertex.size() + _listLODVertex.size() ); }
+        /** @brief 그릴 인덱스 흐름의 길이입니다(LOD 0 + 낮은 단계). */
+        uint32 getDrawIndexCount() const { return static_cast<uint32>( _listIndex.size() + _listLODIndex.size() ); }
         /** @brief 화면 크기 @p screenSize 에 맞는 LOD 단계입니다 — 임계값이 화면 크기보다 큰 단계의 수(0 이면 LOD 0)입니다. */
         uint32 selectLOD( float32 screenSize ) const;
         /** @brief 이름의 구간 번호입니다. 없으면 -1 입니다. */
@@ -343,8 +367,12 @@ namespace sw
         static uint64 allocateContentID();
         /** @brief 정점에서 경계 반지름을 다시 구합니다. */
         void refreshBoundingRadius();
+        /** @brief 낮은 단계를 뗍니다(정점 · 스킨이 바뀌어 옛 단계가 맞지 않을 때). */
+        void clearLODs();
 
         vector<RHIVertex> _listVertex;
+        /// @brief getIndices 를 참고하세요. 수는 3 의 배수이고 번호는 `_listVertex` 안입니다.
+        vector<uint32> _listIndex;
         /// @brief setSkin 을 참고하세요. 비어 있거나 `_listVertex` 와 길이가 같습니다.
         vector<MeshSkinVertex> _listSkinVertex;
         /// @brief 스켈레톤 본 수입니다. 0이면 스킨이 없습니다.
@@ -356,6 +384,7 @@ namespace sw
         /// @brief setLODs 를 참고하세요. LOD 1 이상의 범위(그릴 정점 흐름 기준)와 그 정점입니다.
         vector<MeshLOD>        _listLOD;
         vector<RHIVertex>      _listLODVertex;
+        vector<uint32>         _listLODIndex;
         vector<MeshSkinVertex> _listLODSkinVertex;
         /// @brief `createSkinInstance` 사본이 공유하는 원본의 스킨 데이터 번호입니다. 0이면 자기 내용 번호를 씁니다(정점이나 스킨을 바꾸면 0으로 돌아갑니다).
         uint64 _sharedSkinDataID{ 0 };
