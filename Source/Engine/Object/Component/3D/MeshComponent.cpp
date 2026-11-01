@@ -229,11 +229,20 @@ namespace sw
         }
         if ( _appearanceRate == 0.0f )
             return false;
-        _appearance = MathUtil::clamp( _appearance + _appearanceRate * deltaSeconds, 0.0f, 1.0f );
         markRenderStateDirty();
-        const bool bRampDone = _appearance <= 0.0f || _appearance >= 1.0f;
+        return stepAppearanceRamp( _appearance, _appearanceRate, deltaSeconds );
+    }
+
+    bool MeshComponent::stepAppearanceRamp( float32& inoutAppearance, float32& inoutRate, float32 deltaSeconds )
+    {
+        if ( inoutRate == 0.0f )
+            return false;
+        inoutAppearance = MathUtil::clamp( inoutAppearance + inoutRate * deltaSeconds, 0.0f, 1.0f );
+        // 끝은 램프 방향의 끝 값이다. 방향 없이 "0 이하 또는 1 이상" 으로 보면 0 에서 오르기 시작한 램프가 시간 0 인 걸음(텔레포트 직후 · 멈춘 프레임)에서
+        // 바로 끝나 등장 비율 0 으로 굳었다 — 플레이어 몸이 그림자만 남고 보이지 않았다.
+        const bool bRampDone = inoutRate > 0.0f ? inoutAppearance >= 1.0f : inoutAppearance <= 0.0f;
         if ( bRampDone )
-            _appearanceRate = 0.0f;
+            inoutRate = 0.0f;
         return bRampDone == false;
     }
 

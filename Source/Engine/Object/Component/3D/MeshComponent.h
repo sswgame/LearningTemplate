@@ -215,6 +215,11 @@ namespace sw
         void onTeleported() override;
         /** @brief 사라지기가 끝났으면(등장 비율 0, 진행 없음) true 입니다. */
         bool isFullyDisappeared() const { return _appearance <= 0.0f && _appearanceRate == 0.0f && _bAwaitingAppearance == SW_FALSE; }
+        /**
+         * @brief 등장 램프를 한 걸음 나아갑니다(비율 0 ~ 1, 속도는 초당). 램프 방향의 끝(오르면 1, 내리면 0)에 닿으면 속도를 0 으로 두고 false, 아직이면 true 입니다.
+         * @details 시간 0 인 걸음은 아무 것도 끝내지 않는다 — 텔레포트 직후 · 멈춘 프레임에 0 에서 오르기 시작한 램프가 끝난 것으로 굳으면 메시가 영영 보이지 않는다.
+         */
+        static bool stepAppearanceRamp( float32& inoutAppearance, float32& inoutRate, float32 deltaSeconds );
         /** @brief 등장 · 사라지기 시간(초) 기본값입니다. 컴포넌트마다 `_appearSeconds` 로 바꿉니다(0 이면 바로). */
         static constexpr float32 kDefaultAppearSeconds = 0.4f;
 
