@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
@@ -14,6 +15,8 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorFontSetup.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -89,13 +92,21 @@ namespace sw::editor
                 return counts;
             }
 
-            /** @brief 레벨 보기 토글 칩 하나("이름 (줄 수)")를 그립니다. @p pMark 가 있으면 시나리오용 레이블을 남깁니다. */
-            static void drawLevelChip( bool& inoutEnabled, const utf8* pName, size_t count, const Color& color, const utf8* pTooltip, const utf8* pMark )
+            /**
+             * @brief 레벨 보기 토글 칩 하나("이름 (줄 수)")를 그립니다. @p pMark 가 있으면 시나리오용 레이블을 남깁니다.
+             * @param pSignalColor 글자를 칠할 신호색(오류 · 경고가 있을 때만). nullptr 이면 본문 색이다 — 0 건 · 정보 줄은 신호가 아니다.
+             */
+            static void drawLevelChip( bool& inoutEnabled, const utf8* pName, size_t count, const Color* pSignalColor, const utf8* pTooltip, const utf8* pMark )
             {
                 fixed_string<constant::kMaxBuffer32> label;
                 formatstring( label.data(), label.capacity(), "%# (%#)", pName, static_cast<uint64>( count ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
-                if ( EditorWidgets::drawToggleButton( label.c_str(), inoutEnabled, color ) )
+                if ( pSignalColor != nullptr )
+                    EditorThemeUtil::pushTextColor( *pSignalColor );
+                const bool bClicked = EditorWidgets::drawToggleButton( label.c_str(), inoutEnabled );
+                if ( pSignalColor != nullptr )
+                    EditorThemeUtil::popTextColor();
+                if ( bClicked )
                     inoutEnabled = ( inoutEnabled == false );
                 if ( pMark != nullptr )
                     EditorSelfTestMarks::note( pMark );
@@ -366,45 +377,74 @@ namespace sw::editor
         EditorSelfTestMarks::note( "console.clear" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Clear" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Auto-scroll" ) );
-        ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
-
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Collapse" ) );
-        if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
+        if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE ) )
             _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
         EditorSelfTestMarks::note( "console.collapse" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
-
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear on Play" ) );
-        if ( EditorWidgets::drawToggleButton( "Clear on Play", _bClearOnPlay == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
-            _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
-
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Error Pause" ) );
-        if ( EditorWidgets::drawToggleButton( "Error Pause", _bErrorPause == SW_TRUE, EditorThemeUtil::getErrorColor() ) )
-            _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
     }
 
     void ConsolePanel::drawLevelChips( const LevelCounts& counts )
     {
-        constexpr Color kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
-
-        // 0 건이면 경고색을 쓰지 않는다. 걸러 보이는 중이라는 뜻만 강조색으로 보인다(빨간 "Error (0)" 은 문제가 있다고 읽힌다).
-        const Color& errorChip = counts._error > 0 ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getAccentColor();
-        const Color& warnChip  = counts._warning > 0 ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getAccentColor();
-        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[0], "Error", counts._error, errorChip, SW_LOCKEY( "EditorConsole", "ShowErrors" ), nullptr );
-        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[1], "Warning", counts._warning, warnChip, SW_LOCKEY( "EditorConsole", "ShowWarnings" ), nullptr );
-        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[2], "Info", counts._info, EditorThemeUtil::getSuccessColor(), SW_LOCKEY( "EditorConsole", "ShowInfo" ), "console.level.info" );
-        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[3], "Trace", counts._trace, kTraceChip, SW_LOCKEY( "EditorConsole", "ShowTrace" ), nullptr );
+        // 신호색은 오류 · 경고가 실제로 있을 때 글자에만 — 0 건이면 본문 색이다(빨간 "Error (0)" 은 문제가 있다고 읽힌다).
+        const Color* pErrorSignal   = counts._error > 0 ? &EditorThemeUtil::getErrorColor() : nullptr;
+        const Color* pWarningSignal = counts._warning > 0 ? &EditorThemeUtil::getWarningColor() : nullptr;
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[0], "Error", counts._error, pErrorSignal, SW_LOCKEY( "EditorConsole", "ShowErrors" ), nullptr );
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[1], "Warning", counts._warning, pWarningSignal, SW_LOCKEY( "EditorConsole", "ShowWarnings" ), nullptr );
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[2], "Info", counts._info, nullptr, SW_LOCKEY( "EditorConsole", "ShowInfo" ), "console.level.info" );
+        ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[3], "Trace", counts._trace, nullptr, SW_LOCKEY( "EditorConsole", "ShowTrace" ), nullptr );
     }
 
     void ConsolePanel::drawToolbarCommands()
     {
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Copy All" ) );
-        if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
+        // 한 줄 툴바: 자주 쓰는 것(지우기 · 접기 · 레벨 · 검색 · 태그)만 밖에 두고 가끔 켜는 설정과 내보내기는 옵션 메뉴로 — 언리얼 Output Log 의 Filters · Settings 와 같은 나눔.
+        // 예전에는 단추 열하나가 두 줄로 접혀 검색 칸이 셋째 줄로 밀렸다.
+        fixed_string<constant::kMaxBuffer32> tagLabel;
+        if ( _tagFilter.getHiddenCount() > 0 )
+            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags (-%u)", _tagFilter.getHiddenCount() );
+        else
+            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
+        const ImGuiStyle& style         = ImGui::GetStyle();
+        const float32     trailing      = EditorChrome::measureSmallButton( tagLabel.c_str() ) + ImGui::GetFrameHeight() + style.ItemSpacing.x * 2.0f;
+        const float32     minSearch     = ImGui::GetFontSize() * 10.0f;
+        const float32     sameLineWidth = EditorChrome::getRemainingLineWidth() - trailing;
+        const bool        bSameLine     = sameLineWidth >= minSearch;
+        if ( bSameLine )
+            ImGui::SameLine();
+        const float32 searchWidth = bSameLine ? sameLineWidth : ImGui::GetContentRegionAvail().x - trailing;
+        EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCKEY( "EditorConsole", "FilterHint" ), MathUtil::max( searchWidth, minSearch ), false );
+        EditorSelfTestMarks::note( "console.filter" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "FilterTooltip" ) );
+
+        ImGui::SameLine();
+        if ( ImGui::Button( tagLabel.c_str() ) )
+            EditorInputGUI::openPopup( "##LogTagFilter" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "TagFilter" ) );
+        drawTagFilterPopup();
+
+        ImGui::SameLine();
+        if ( ImGui::Button( editoricon::kSettings, ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
+            EditorInputGUI::openPopup( "##ConsoleOptions" );
+        EditorSelfTestMarks::note( "console.options" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Options" ) );
+        drawOptionsPopup();
+    }
+
+    void ConsolePanel::drawOptionsPopup()
+    {
+        if ( ImGui::BeginPopup( "##ConsoleOptions" ) == false )
+            return;
+        ImGui::MenuItem( "Auto-scroll", nullptr, &_bAutoScroll );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
+        if ( ImGui::MenuItem( "Clear on Play", nullptr, _bClearOnPlay == SW_TRUE ) )
+            _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
+        if ( ImGui::MenuItem( "Pause on Error", nullptr, _bErrorPause == SW_TRUE ) )
+            _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
+        ImGui::Separator();
+        if ( ImGui::MenuItem( "Copy Visible Lines", nullptr, false, _listVisible.empty() == false ) )
         {
             string allLogs;
             for ( const LogEntry* pEntry : _listVisible )
@@ -415,26 +455,10 @@ namespace sw::editor
             ImGui::SetClipboardText( allLogs.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "CopyAll" ) );
-
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Open Log File" ) );
-        if ( ImGui::Button( "Open Log File" ) )
+        if ( ImGui::MenuItem( "Open Log File" ) )
             showLogFileInExplorer();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "OpenLogFile" ) );
-
-        ImGui::SameLine();
-        fixed_string<constant::kMaxBuffer32> tagLabel;
-        if ( _tagFilter.getHiddenCount() > 0 )
-            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags (-%u)", _tagFilter.getHiddenCount() );
-        else
-            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
-        if ( ImGui::Button( tagLabel.c_str() ) )
-            EditorInputGUI::openPopup( "##LogTagFilter" );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "TagFilter" ) );
-        drawTagFilterPopup();
-
-        EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCKEY( "EditorConsole", "FilterHint" ), -1.0f, false );
-        EditorSelfTestMarks::note( "console.filter" );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "FilterTooltip" ) );
+        ImGui::EndPopup();
     }
 
     void ConsolePanel::drawLogList( bool bNewLogs )
@@ -460,6 +484,8 @@ namespace sw::editor
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorConsole", "AllLevelsHidden" ) );
         }
 
+        // 로그 줄은 고정폭이다 — 시각 · 태그 열이 줄마다 맞아야 읽힌다(본문 UI 는 그로테스크). 줄 높이도 이 글꼴로 잰다.
+        EditorFontSetup::pushMonoFont();
         // 맨 아래에 붙어 있을 때만 새 로그를 따라간다 — 값은 지난 프레임 배치 기준이다(스크롤은 다음 Begin 에 적용된다).
         const float32 lineHeight = ImGui::GetTextLineHeightWithSpacing();
         const bool    bAtBottom  = ConsoleLogRows::isScrolledToBottom( ImGui::GetScrollY(), ImGui::GetScrollMaxY(), lineHeight * 0.5f );
@@ -494,6 +520,7 @@ namespace sw::editor
         if ( _bAutoScroll && ( bScrollRequested || ( bNewLogs && bAtBottom ) ) )
             ImGui::SetScrollHereY( 1.0f );
         _bScrollToEnd = SW_FALSE;
+        EditorFontSetup::popMonoFont();
 
         EditorChrome::endSection();
 

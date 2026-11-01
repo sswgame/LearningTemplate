@@ -196,6 +196,11 @@ namespace sw::editor
          * @details 도구 줄이 창보다 길면 오른쪽 항목이 창 밖에 놓여 누를 수 없다(좁은 창 · 넓은 도크 · 기본 배치 변경). 사람도 시나리오도 닿을 수 있어야 한다.
          */
         static void sameLineIfFits( float32 itemWidth );
+        /**
+         * @brief 앞 항목과 같은 줄에 이어 놓을 때 남는 폭입니다(창 오른쪽 안쪽 여백까지). `sameLineIfFits` 와 같은 끝을 쓴다.
+         * @details `GetContentRegionAvail` 은 다음 줄 기준이라 같은 줄에 늘이는 항목(검색 칸)이 창 밖으로 넘쳤다.
+         */
+        [[nodiscard]] static float32 getRemainingLineWidth();
         /** @brief 메인 뷰포트의 위치와 크기를 얻습니다. */
         [[nodiscard]] static bool tryGetMainViewportRect( float2& outPos, float2& outSize );
 

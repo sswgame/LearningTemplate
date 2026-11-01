@@ -246,7 +246,7 @@ namespace sw::editor
                     return;
                 ImGui::SameLine();
                 const bool bOn = GameAutoplay::isOn();
-                if ( EditorWidgets::drawToggleButton( "Auto", bOn, EditorThemeUtil::getSuccessColor() ) )
+                if ( EditorWidgets::drawToggleButton( "Auto", bOn ) )
                     (void)GameAutoplay::setOn( bOn == false ); // 등록은 위에서 확인했다
                 const string tooltip = SW_LOCKEYFORMAT( "EdCommon", "AutoplayToggle", TextArgumentList().addText( "game", pActive->_pGameName ).addText( "description", pActive->_pDescription ).addText( "variable", pActive->_pVariableName ) );
                 EditorWidgets::drawTooltip( tooltip.c_str() );

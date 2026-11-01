@@ -301,8 +301,8 @@ namespace sw::editor
             {
                 // 1) 눈 아이콘은 에디터에서만 숨긴다. 저장, 되돌리기, 게임 동작에 남지 않는다(언리얼과 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
                 const bool bVisible = pObj->isRenderHidden() == false;
-                if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
-                                                          SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
+                if ( EditorWidgets::drawRowIconToggle( "##visible", bVisible, true, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
+                                                       SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
                     EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
                 if ( EditorSelfTestMarks::isEnabled() )
@@ -310,8 +310,8 @@ namespace sw::editor
                 ImGui::SameLine();
                 // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
                 const bool bLocked = pContext->getSubsystem<EditorWorkspace>().isObjectLocked( objectID );
-                if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
-                                                          SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
+                if ( EditorWidgets::drawRowIconToggle( "##lock", bLocked, false, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
+                                                       SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
                     pContext->getSubsystem<EditorWorkspace>().setObjectLocked( objectID, bLocked == false );
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );

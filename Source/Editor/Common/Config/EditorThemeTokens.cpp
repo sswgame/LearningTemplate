@@ -50,6 +50,7 @@ namespace sw::editor
                 {"_selectionOutline", &EditorThemeColorDef::_selectionOutline, &EditorThemeConfig::_selectionOutline},
                 {       "_highlight",        &EditorThemeColorDef::_highlight,        &EditorThemeConfig::_highlight},
                 {  "_toggleInactive",   &EditorThemeColorDef::_toggleInactive,   &EditorThemeConfig::_toggleInactive},
+                {    "_toggleActive",     &EditorThemeColorDef::_toggleActive,     &EditorThemeConfig::_toggleActive},
                 {           "_axisX",            &EditorThemeColorDef::_axisX,            &EditorThemeConfig::_axisX},
                 {           "_axisY",            &EditorThemeColorDef::_axisY,            &EditorThemeConfig::_axisY},
                 {           "_axisZ",            &EditorThemeColorDef::_axisZ,            &EditorThemeConfig::_axisZ},

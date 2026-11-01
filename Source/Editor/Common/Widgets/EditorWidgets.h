@@ -60,10 +60,10 @@ namespace sw::editor
         static void drawGizmoOperationControls( const utf8* pMarkScope, bool bVertical = false );
 
         /**
-         * @brief 활성과 비활성에 따라 색이 바뀌는 토글 및 필터 칩 버튼을 그립니다. 클릭되면 true 를 반환합니다.
+         * @brief 토글 · 필터 칩 버튼을 그립니다. 클릭되면 true 를 반환합니다.
+         * @details 켜짐은 중립 한 단계(`_toggleActive`)다 — 단추마다 색을 받던 겹쳐 쓰기를 없앴다(초록 "Collapse" · 빨간 "Error Pause" 처럼 크롬이 신호색을 띠어
+         *          진짜 신호 — 오류 수 — 와 구분되지 않았다). 뜻이 있는 색은 글자(데이터)에 둔다.
          */
-        static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor );
-        /** @brief 켜진 색이 테마 강조색인 토글입니다. */
         static bool drawToggleButton( const utf8* pLabel, bool bActive );
         /**
          * @brief 켬/끔 아이콘 버튼(정사각, 한 줄 높이)을 그립니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn 과 @p pTooltipOff 중 하나입니다.
@@ -71,6 +71,13 @@ namespace sw::editor
          */
         static bool drawToggleIconButton( const utf8* pID, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
                                           const utf8* pTooltipOff );
+        /**
+         * @brief 목록 행 안의 켬/끔 아이콘(눈 · 자물쇠)입니다 — 테두리 · 바탕 없이 아이콘만, 호버에만 옅은 바탕이 보인다. 눌렸으면 true 입니다.
+         * @details 기본 상태(@p bOn == @p bDefaultOn)이면 흐린 글자색이라 행 이름이 먼저 읽히고, 기본에서 벗어난 행(숨김 · 잠금)만 본문 색으로 드러난다
+         *          (앱 화면 규칙: 행마다 상자에 든 아이콘을 되풀이하지 않는다 — 언리얼 Outliner · 유니티 Hierarchy 도 호버 · 바뀐 행에서만 보인다).
+         */
+        static bool drawRowIconToggle( const utf8* pID, bool bOn, bool bDefaultOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
+                                       const utf8* pTooltipOff );
         /**
          * @brief 켜진 상태를 색으로 보여 주는 아이콘 버튼(정사각, 한 줄 높이)을 그립니다. 눌렸으면 true 입니다. 상태는 호출하는 쪽이 바꿉니다.
          * @details 기즈모 모드나 뷰포트 토글처럼 켜졌는지가 색으로 보여야 할 때 쓴다. 툴팁은 @p pTooltip 이다.

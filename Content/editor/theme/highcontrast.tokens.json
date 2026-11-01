@@ -21,6 +21,7 @@
         "_selectionOutline": "#FF9E26F2",
         "_highlight": "#FFC83C",
         "_toggleInactive": "#737373",
+        "_toggleActive": "#FFFFFF40",
         "_axisX": "#D94040",
         "_axisY": "#4CBF59",
         "_axisZ": "#408CF2",

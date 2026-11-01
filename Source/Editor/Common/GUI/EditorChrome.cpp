@@ -191,10 +191,15 @@ namespace sw::editor
 
     void EditorChrome::sameLineIfFits( float32 itemWidth )
     {
+        if ( itemWidth <= getRemainingLineWidth() )
+            ImGui::SameLine();
+    }
+
+    float32 EditorChrome::getRemainingLineWidth()
+    {
         const ImGuiStyle& style = ImGui::GetStyle();
         const float32     limit = ImGui::GetWindowPos().x + ImGui::GetWindowWidth() - style.WindowPadding.x;
-        if ( ImGui::GetItemRectMax().x + style.ItemSpacing.x + itemWidth <= limit )
-            ImGui::SameLine();
+        return limit - ( ImGui::GetItemRectMax().x + style.ItemSpacing.x );
     }
 
     void EditorChrome::setNextWindowExtent( const EditorTextExtent& extent, bool bAlways )

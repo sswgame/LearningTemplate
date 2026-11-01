@@ -47,7 +47,9 @@ namespace sw::editor
         float4 _clearColor{}; ///< 씬 뷰 · 게임 뷰 렌더 타깃 클리어 색
 
         PROPERTY( Required )
-        vector<string> _listBaseFont{}; ///< 라틴 글꼴 후보 — 에디터 팩 `fonts/` → OS 글꼴 폴더 순으로 앞의 것부터 찾는다. 하나도 없으면 에디터가 서지 않는다
+        vector<string> _listBaseFont{}; ///< 라틴 본문 글꼴 후보(그로테스크) — 에디터 팩 `fonts/` → OS 글꼴 폴더 순으로 앞의 것부터 찾는다. 하나도 없으면 에디터가 서지 않는다
+        PROPERTY( Required )
+        vector<string> _listMonoFont{}; ///< 고정폭 글꼴 후보 — 로그 · 콘솔 줄에만 쓴다(열이 맞아야 읽히는 글). 찾는 순서 · 없을 때는 위와 같다
         PROPERTY( Required )
         vector<string> _listKoreanFont{}; ///< 한글 글꼴 후보(병합) — 찾는 순서는 위와 같다. 하나도 없으면 에디터가 서지 않는다
 

@@ -17,10 +17,10 @@ namespace sw
         struct WaylandTextPainterInternal
         {
             /**
-             * @brief 라틴 고정폭 글꼴 후보(시스템 글꼴 폴더의 파일 이름, 앞의 것부터 찾는다). `Config/Editor/editortooldefaults.json` 의 `_listBaseFont`(에디터 ImGui 가 쓰는 같은 후보)와 같은 이름이다 —
+             * @brief 라틴 본문 글꼴 후보(시스템 글꼴 폴더의 파일 이름, 앞의 것부터 찾는다). `Config/Editor/editortooldefaults.json` 의 `_listBaseFont`(에디터 ImGui 가 쓰는 같은 후보)의 리눅스 이름이다 —
              *        에디터 설정은 에디터 DLL 의 것이라 엔진 창 계층이 읽지 못해 여기에 이름만 따로 둔다. 후보가 바뀌면 둘을 함께 고친다.
              */
-            static constexpr string_view kLatinFonts[] = { "DejaVuSansMono.ttf", "LiberationMono-Regular.ttf", "NotoSansMono-Regular.ttf", "UbuntuMono-R.ttf", "FreeMono.ttf" };
+            static constexpr string_view kLatinFonts[] = { "NotoSans-Regular.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf", "Ubuntu-R.ttf", "FreeSans.ttf" };
             /** @brief 한글 · 일본어 글꼴 후보입니다(`_listKoreanFont` 의 리눅스 이름). 없으면 그 글자는 건너뛴다. */
             static constexpr string_view kFallbackFonts[] = { "NotoSansCJK-Regular.ttc", "NotoSansCJKkr-Regular.otf", "NotoSansKR-Regular.otf", "NanumGothic.ttf", "NanumBarunGothic.ttf", "DroidSansFallbackFull.ttf" };
             /** @brief 윤곽 둘레로 거리값을 담는 픽셀 수입니다(덮임 비율을 구하는 데 1 픽셀이면 된다). */

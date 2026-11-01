@@ -109,8 +109,10 @@ namespace sw::editor
         static const Color& getSelectionOutlineColor();
         /** @brief 2D 미리보기 · 그래프에서 고른 셀 · 지금 프레임을 짚는 색입니다. */
         static const Color& getHighlightColor();
-        /** @brief 꺼진 토글 단추 색입니다(켜진 것은 강조색). */
+        /** @brief 꺼진 토글 단추 색입니다. */
         static const Color& getToggleInactiveColor();
+        /** @brief 켜진 토글 단추 색입니다 — 중립 한 단계다. 강조색은 데이터와 선택 하나에만 쓴다(앱 화면 규칙: 크롬에 색을 칠하지 않는다). */
+        static const Color& getToggleActiveColor();
         static const Color& getAxisXColor();
         static const Color& getAxisYColor();
         static const Color& getAxisZColor();

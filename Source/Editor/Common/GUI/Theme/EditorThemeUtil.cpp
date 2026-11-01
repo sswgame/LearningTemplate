@@ -10,6 +10,7 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -110,6 +111,16 @@ namespace sw::editor
             }
 
             /**
+             * @brief 호버 · 누름 상태의 한 단계입니다 — 어두운 바탕은 밝게, 밝은 바탕은 어둡게 옮긴다(흰 프레임을 밝히면 그대로라 상태가 보이지 않는다).
+             * @details 상태는 밝기로 보인다. 강조색으로 칠하지 않는다(앱 화면 규칙: 색은 데이터와 선택에만 — 언리얼 5 · Godot 4 의 다크 테마도 호버가 회색 단계다).
+             */
+            static ImVec4 stepTone( const Color& color, float32 amount, float32 alpha = 1.0f )
+            {
+                const float32 luminance = 0.2126f * color._r + 0.7152f * color._g + 0.0722f * color._b;
+                return adjustBrightness( color, luminance < 0.5f ? 1.0f + amount : 1.0f - amount * 0.25f, alpha );
+            }
+
+            /**
              * @brief 스타일의 크기 항목을 ImGui 기본(96 DPI)으로 되돌립니다. 색과 글꼴 크기, 배율은 그대로 둡니다.
              * @details `ScaleAllSizes` 는 테마가 기록하지 않는 크기(도킹 구분선, 창 테두리 호버 여백, 창 최소 크기 등)까지 곱한다. 기본값에서 다시
              *          시작하지 않으면 테마를 적용할 때마다 배율이 거듭 곱해져, 150 % 모니터에서 몇 번만 반복해도 구분선의 호버 여백이 옆 패널의 클릭을 가로챈다.
@@ -181,8 +192,8 @@ namespace sw::editor
                 const float32 dpiScale = getSubsystem<EditorTheme>().getDPIScale();
                 if ( dpiScale != 1.0f )
                     style.ScaleAllSizes( dpiScale );
-                // 글자 크기도 토큰이다. ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
-                style.FontSizeBase = config._typography._fontSize;
+                // 글자 크기도 토큰이다(em px). ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
+                style.FontSizeBase = EditorFontSetup::toBaseFontSize( config._typography._fontSize );
             }
 
             /** @brief 2 단계: 컬러 팔레트를 스타일에 씁니다. 상태(호버 · 활성)는 토큰에서 밝기와 알파로 만듭니다. */
@@ -211,8 +222,8 @@ namespace sw::editor
 
                 // 입력 프레임
                 pColors[ImGuiCol_FrameBg]        = EditorThemeInternal::toImVec4( frmBg, 1.0f );
-                pColors[ImGuiCol_FrameBgHovered] = EditorThemeInternal::adjustBrightness( frmBg, 1.25f, 1.0f );
-                pColors[ImGuiCol_FrameBgActive]  = EditorThemeInternal::adjustBrightness( frmBg, 1.45f, 1.0f );
+                pColors[ImGuiCol_FrameBgHovered] = EditorThemeInternal::stepTone( frmBg, 0.25f );
+                pColors[ImGuiCol_FrameBgActive]  = EditorThemeInternal::stepTone( frmBg, 0.45f );
 
                 // 타이틀바
                 pColors[ImGuiCol_TitleBg]          = EditorThemeInternal::adjustBrightness( winBg, 0.9f, 1.0f );
@@ -226,18 +237,18 @@ namespace sw::editor
                 pColors[ImGuiCol_ScrollbarGrabActive]  = EditorThemeInternal::toImVec4( accent, 0.9f );
 
                 // 버튼
-                pColors[ImGuiCol_Button]        = EditorThemeInternal::adjustBrightness( frmBg, 1.1f, 1.0f );
-                pColors[ImGuiCol_ButtonHovered] = EditorThemeInternal::toImVec4( accent, 0.85f );
-                pColors[ImGuiCol_ButtonActive]  = EditorThemeInternal::adjustBrightness( accent, 1.15f, 1.0f );
+                pColors[ImGuiCol_Button]        = EditorThemeInternal::stepTone( frmBg, 0.1f );
+                pColors[ImGuiCol_ButtonHovered] = EditorThemeInternal::stepTone( frmBg, 0.4f );
+                pColors[ImGuiCol_ButtonActive]  = EditorThemeInternal::stepTone( frmBg, 0.65f );
 
                 // 헤더
                 pColors[ImGuiCol_Header]        = EditorThemeInternal::toImVec4( headerBg, 1.0f );
-                pColors[ImGuiCol_HeaderHovered] = EditorThemeInternal::toImVec4( accent, 0.75f );
-                pColors[ImGuiCol_HeaderActive]  = EditorThemeInternal::toImVec4( accent, 0.95f );
+                pColors[ImGuiCol_HeaderHovered] = EditorThemeInternal::stepTone( headerBg, 0.25f );
+                pColors[ImGuiCol_HeaderActive]  = EditorThemeInternal::stepTone( headerBg, 0.45f );
 
                 // 탭 & 도킹
                 pColors[ImGuiCol_Tab]                = EditorThemeInternal::adjustBrightness( winBg, 0.95f, 1.0f );
-                pColors[ImGuiCol_TabHovered]         = EditorThemeInternal::toImVec4( accent, 0.80f );
+                pColors[ImGuiCol_TabHovered]         = EditorThemeInternal::stepTone( panBg, 0.3f );
                 pColors[ImGuiCol_TabActive]          = EditorThemeInternal::toImVec4( panBg, 1.0f );
                 pColors[ImGuiCol_TabUnfocused]       = EditorThemeInternal::adjustBrightness( winBg, 0.80f, 1.0f );
                 pColors[ImGuiCol_TabUnfocusedActive] = EditorThemeInternal::adjustBrightness( panBg, 0.90f, 1.0f );
@@ -472,6 +483,11 @@ namespace sw::editor
     const Color& EditorThemeUtil::getToggleInactiveColor()
     {
         return EditorThemeInternal::activeTheme()._toggleInactive;
+    }
+
+    const Color& EditorThemeUtil::getToggleActiveColor()
+    {
+        return EditorThemeInternal::activeTheme()._toggleActive;
     }
 
     const Color& EditorThemeUtil::getAxisXColor()

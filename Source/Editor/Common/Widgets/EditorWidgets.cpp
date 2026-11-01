@@ -252,12 +252,7 @@ namespace sw::editor
 
     bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive )
     {
-        return drawToggleButton( pLabel, bActive, EditorThemeUtil::getAccentColor() );
-    }
-
-    bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor )
-    {
-        const Color& color = bActive ? activeColor : EditorThemeUtil::getToggleInactiveColor();
+        const Color& color = bActive ? EditorThemeUtil::getToggleActiveColor() : EditorThemeUtil::getToggleInactiveColor();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
         const bool bClicked = ImGui::Button( pLabel );
         ImGui::PopStyleColor();
@@ -268,10 +263,7 @@ namespace sw::editor
     {
         const float32 side = ImGui::GetFrameHeight();
         if ( bActive )
-        {
-            const Color& accent = EditorThemeUtil::getAccentColor();
-            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( accent.withAlpha( 0.85f ) ) );
-        }
+            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorThemeUtil::getToggleActiveColor() ) );
         ImGui::PushID( pID );
         const bool bPressed = ImGui::Button( pIcon, ImVec2{ side, side } );
         ImGui::PopID();
@@ -290,6 +282,22 @@ namespace sw::editor
         ImGui::PopID();
         if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
             ImGui::SetTooltip( "%s", bOn ? pTooltipOn : pTooltipOff );
+        return bPressed;
+    }
+
+    bool EditorWidgets::drawRowIconToggle( const utf8* pID, bool bOn, bool bDefaultOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
+                                           const utf8* pTooltipOff )
+    {
+        const bool bDefault = bOn == bDefaultOn;
+        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+        if ( bDefault )
+            EditorThemeUtil::pushTextColor( EditorThemeUtil::getTextMutedColor() );
+        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+        const bool bPressed = drawToggleIconButton( pID, bOn, pIconOn, pIconOff, pTooltipOn, pTooltipOff );
+        ImGui::PopStyleVar();
+        if ( bDefault )
+            EditorThemeUtil::popTextColor();
+        ImGui::PopStyleColor();
         return bPressed;
     }
 

@@ -44,6 +44,7 @@ namespace sw::editor
         Color _selectionOutline{};
         Color _highlight{};
         Color _toggleInactive{};
+        Color _toggleActive{};
         Color _axisX{};
         Color _axisY{};
         Color _axisZ{};

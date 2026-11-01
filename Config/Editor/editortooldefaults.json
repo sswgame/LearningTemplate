@@ -4,10 +4,17 @@
     "_editorInputMap": "editor/input/editor.input.xml",
     "_clearColor": "0.12,0.15,0.18,1.0",
     "_listBaseFont": [
+        "segoeui.ttf",
+        "NotoSans-Regular.ttf",
+        "DejaVuSans.ttf",
+        "LiberationSans-Regular.ttf",
+        "Ubuntu-R.ttf",
+        "FreeSans.ttf"
+    ],
+    "_listMonoFont": [
         "consola.ttf",
         "Consolas.ttf",
         "DejaVuSansMono.ttf",
-        "DejaVuSansMono-Bold.ttf",
         "LiberationMono-Regular.ttf",
         "NotoSansMono-Regular.ttf",
         "UbuntuMono-R.ttf",

@@ -66,6 +66,8 @@ namespace sw::editor
         PROPERTY()
         string _toggleInactive{}; ///< 꺼진 토글 단추
         PROPERTY()
+        string _toggleActive{}; ///< 켜진 토글 단추 — 강조색이 아닌 중립 한 단계(강조색은 데이터와 선택에만)
+        PROPERTY()
         string _axisX{};
         PROPERTY()
         string _axisY{};

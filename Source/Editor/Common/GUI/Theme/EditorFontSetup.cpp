@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/Text/SystemFontLocator.h"
 
 #include <imgui.h>
@@ -76,6 +77,40 @@ namespace sw::editor
             /**
              * @brief 우선순위 순서로 나열된 폰트 파일명 목록 중 가장 먼저 존재하는 폰트의 절대 경로를 반환합니다.
              */
+            /** @brief `apply` 가 만든 글꼴과 em 비입니다(글꼴은 ImGui 아틀라스가 소유한다). */
+            struct FontState
+            {
+                ImFont* _pMonoFont{ nullptr };
+                float32 _baseEmRatio{ 0.0f }; ///< 본문 글꼴의 (어센더 - 디센더) / em
+                float32 _monoEmRatio{ 0.0f }; ///< 고정폭 글꼴의 (어센더 - 디센더) / em
+            };
+            static FontState& state()
+            {
+                static FontState s_state;
+                return s_state;
+            }
+
+            /** @brief 글꼴 파일의 (어센더 - 디센더) / em 입니다 — ImGui FreeType 로더가 크기를 맞추는 높이다. 읽지 못하면 오류를 남기고 false 다. */
+            [[nodiscard]] static bool readEmRatio( const string& path, float32& outRatio )
+            {
+                vector<uint8> bytes;
+                if ( FileUtil::readFile( path, bytes ) == false )
+                    return false;
+                IFontRasterizer& rasterizer = editor::getSubsystem<FontService>().getRasterizer();
+                const FontFaceID face       = rasterizer.loadFace( std::move( bytes ), 0, path );
+                FontFaceMetrics  metrics{};
+                const bool       bRead = face != kInvalidFontFaceID && rasterizer.findFaceMetrics( face, metrics );
+                if ( face != kInvalidFontFaceID )
+                    rasterizer.unloadFace( face );
+                outRatio = metrics._ascender - metrics._descender;
+                if ( bRead == false || outRatio <= 0.0f )
+                {
+                    SW_LOG_ERROR( "Font %# has no usable ascender/descender metrics", path.c_str() );
+                    return false;
+                }
+                return true;
+            }
+
             static string resolveFontFile( const vector<string>& listFileName )
             {
                 for ( const string& name : listFileName )
@@ -112,17 +147,26 @@ namespace sw::editor
             return false;
         // 후보가 데이터다. 하나도 없으면 ImGui 기본 글꼴로 대신하지 않고 멈춘다 — 대신하면 한글 · 아이콘이 빈 상자로 그려져도 원인이 로그 한 줄에 묻힌다.
         const string basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
+        const string monoPath   = EditorFontSetupInternal::resolveFontFile( data._listMonoFont );
         const string koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
         const string iconPath   = EditorFontSetupInternal::resolveFontFile( EditorPaths::kIconFontFileName );
         if ( basePath.empty() )
             SW_LOG_ERROR( "No base font from editortooldefaults.json _listBaseFont exists under editor/fonts or the OS font folders" );
+        if ( monoPath.empty() )
+            SW_LOG_ERROR( "No monospace font from editortooldefaults.json _listMonoFont exists under editor/fonts or the OS font folders" );
         if ( koreanPath.empty() )
             SW_LOG_ERROR( "No Korean font from editortooldefaults.json _listKoreanFont exists under editor/fonts or the OS font folders" );
         if ( iconPath.empty() )
             SW_LOG_ERROR( "Editor icon font '%#' not found under editor/fonts", EditorPaths::kIconFontFileName );
-        const bool bFontMissing = basePath.empty() || koreanPath.empty() || iconPath.empty();
+        const bool bFontMissing = basePath.empty() || monoPath.empty() || koreanPath.empty() || iconPath.empty();
         if ( bFontMissing )
             return false;
+        EditorFontSetupInternal::FontState& fontState = EditorFontSetupInternal::state();
+        if ( EditorFontSetupInternal::readEmRatio( basePath, fontState._baseEmRatio ) == false ||
+             EditorFontSetupInternal::readEmRatio( monoPath, fontState._monoEmRatio ) == false )
+            return false;
+        const float32 baseSize = fontSize * fontState._baseEmRatio;
+        const float32 monoSize = fontSize * fontState._monoEmRatio;
 
         ImFont* pBaseFont{ nullptr };
         BLOCK( "Base Font" )
@@ -131,8 +175,8 @@ namespace sw::editor
             baseConfig.OversampleH = 1;
             baseConfig.OversampleV = 1;
             // 명시적 크기가 필요하다. MergeMode 는 명시 크기를 쓴다.
-            baseConfig.SizePixels = fontSize;
-            pBaseFont             = io.Fonts->AddFontFromFileTTF( basePath.c_str(), fontSize, &baseConfig, io.Fonts->GetGlyphRangesDefault() );
+            baseConfig.SizePixels = baseSize;
+            pBaseFont             = io.Fonts->AddFontFromFileTTF( basePath.c_str(), baseSize, &baseConfig, io.Fonts->GetGlyphRangesDefault() );
             if ( pBaseFont == nullptr )
             {
                 SW_LOG_ERROR( "Base font %# could not be loaded", basePath.c_str() );
@@ -148,23 +192,63 @@ namespace sw::editor
             mergeConfig.OversampleH = 2;
             mergeConfig.OversampleV = 1;
             mergeConfig.PixelSnapH  = true;
-            io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), fontSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
+            io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), baseSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
             SW_LOG_TRACE( "Merged Korean glyphs from: %#", koreanPath.c_str() );
         }
 
-        BLOCK( "Editor icon font" )
+        auto mergeIcons = [&]( float32 size )
         {
             // ImWchar 가 16 비트일 때만 헤더의 범위 배열을 그대로 넘길 수 있다(IMGUI_USE_WCHAR32 를 켜면 이 단언이 알려 준다).
             static_assert( sizeof( ImWchar ) == sizeof( editoricon::kArrGlyphRange[0] ), "editor icon glyph range must match ImWchar" );
-            const float32 iconFontSize = fontSize * iconScale;
+            const float32 iconFontSize = size * iconScale;
             ImFontConfig  iconConfig{};
             iconConfig.MergeMode        = true;
             iconConfig.PixelSnapH       = true;
             iconConfig.GlyphMinAdvanceX = iconFontSize;
             io.Fonts->AddFontFromFileTTF( iconPath.c_str(), iconFontSize, &iconConfig, reinterpret_cast<const ImWchar*>( editoricon::kArrGlyphRange ) );
+        };
+        mergeIcons( baseSize );
+
+        BLOCK( "Monospace font" )
+        {
+            // 로그 줄에도 한글 · 아이콘이 있다 — 본문과 같은 병합을 고정폭 글꼴에 한 번 더 한다.
+            ImFontConfig monoConfig{};
+            monoConfig.SizePixels = monoSize;
+            ImFont* pMonoFont     = io.Fonts->AddFontFromFileTTF( monoPath.c_str(), monoSize, &monoConfig, io.Fonts->GetGlyphRangesDefault() );
+            if ( pMonoFont == nullptr )
+            {
+                SW_LOG_ERROR( "Monospace font %# could not be loaded", monoPath.c_str() );
+                return false;
+            }
+            ImFontConfig mergeConfig{};
+            mergeConfig.MergeMode  = true;
+            mergeConfig.PixelSnapH = true;
+            io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), monoSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
+            mergeIcons( monoSize );
+            fontState._pMonoFont = pMonoFont;
         }
 
         io.FontDefault = pBaseFont;
         return true;
+    }
+
+    float32 EditorFontSetup::toBaseFontSize( float32 emSize )
+    {
+        const float32 ratio = EditorFontSetupInternal::state()._baseEmRatio;
+        SW_ASSERT( ratio > 0.0f ); // EditorFontSetup::apply 가 먼저 돈다(에디터 기동이 글꼴 → 테마 순)
+        return emSize * ratio;
+    }
+
+    void EditorFontSetup::pushMonoFont()
+    {
+        const EditorFontSetupInternal::FontState& fontState = EditorFontSetupInternal::state();
+        SW_ASSERT( fontState._pMonoFont != nullptr ); // EditorFontSetup::apply 가 먼저 돈다
+        // 지금 크기(본문 글꼴 단위)를 em 으로 되돌려 고정폭 글꼴 단위로 다시 곱한다 — 두 글꼴의 em 이 같아진다.
+        ImGui::PushFont( fontState._pMonoFont, ImGui::GetStyle().FontSizeBase / fontState._baseEmRatio * fontState._monoEmRatio );
+    }
+
+    void EditorFontSetup::popMonoFont()
+    {
+        ImGui::PopFont();
     }
 } // namespace sw::editor

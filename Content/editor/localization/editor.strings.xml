@@ -1387,6 +1387,12 @@
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorConsole.Options"
+		       source="Log options: auto-scroll, clear on Play, pause on error, copy and open the log file">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorConsole.ShowErrors" source="Toggle showing Error-level logs">
 			<origins>
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
