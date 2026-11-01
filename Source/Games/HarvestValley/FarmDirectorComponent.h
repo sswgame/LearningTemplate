@@ -4,7 +4,7 @@
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 밭, 달력, 인벤토리, 작물 카탈로그의 규칙은 키트(`GF_Farming`)가 맡는다.
  *          이 컴포넌트는 "농부가 어디 서서 무엇을 하는가"의 규칙과 타일의 모습(프리팹)을 어디에 스폰하는지를 안다. 농부가 **무엇을 누르는가는 농부 폰의 의도**
  *          (`PawnComponent`. 플레이어 조종자 또는 `FarmAutoFarmerAIComponent` 가 낸다)이고, 디렉터는 입력 맵을 읽지 않는다. 모습을 매 프레임 맞추는 일은 뷰 컴포넌트
- *          (`FarmSoilComponent`, `FarmCropComponent`, `FarmerComponent`, `FarmTargetComponent`, `FarmSunComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
+ *          (`FarmSoilComponent`, `FarmCropComponent`, `FarmerComponent`, `FarmTargetComponent`, 해는 Runtime `DaylightComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
  *
  *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 카메라 리그의 초점을 넣으며, 뷰와 리그는 `PostUpdate` 에서 읽는다.
  *          틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리, 효과음은 베이스 `GameDirectorComponent` 가 맡는다.
@@ -113,10 +113,16 @@ namespace sw
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         /** @brief 공유 시계의 시각(0~24)입니다. 디렉터가 틱마다 옮겨 적으며, 뷰는 PostUpdate 에서 이것만 읽습니다. */
-        float32          getHourOfDay() const { return _hourOfDay; }
-        const FarmField& getField() const { return _field; }
-        const float3&    getPlayerPosition() const { return _playerPosition; }
-        bool             isRaining() const { return _bRaining == SW_TRUE; }
+        float32            getHourOfDay() const { return _hourOfDay; }
+        const FarmField&   getField() const { return _field; }
+        const float3&      getPlayerPosition() const { return _playerPosition; }
+        bool               isRaining() const { return _bRaining == SW_TRUE; }
+        [[nodiscard]] bool readDaylight( float32& outHourOfDay, bool& outbPrecipitating ) const override
+        {
+            outHourOfDay      = _hourOfDay;
+            outbPrecipitating = isRaining();
+            return true;
+        }
 
         // ---- 자동 농부(조종자)가 읽는 것. 틱 밖(조종 시스템의 판단)에서 읽는다 ----
         /** @brief 농부가 바라보는 방향(네 방향 단위 벡터)입니다. */

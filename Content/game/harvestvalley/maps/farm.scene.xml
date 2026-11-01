@@ -52,7 +52,7 @@
 					                           _shadowReceiverMinHeight="-1"
 					                           _shadowReceiverMaxHeight="8"
 					                           _bCastShadow="true" />
-					<FarmSunComponent _componentName="FarmSunComponent"
+					<DaylightComponent _componentName="DaylightComponent"
 					                  _bActive="true"
 					                  _director="35"
 					                  _rainDimming="0.55"

@@ -74,6 +74,16 @@ namespace sw
          * @details 런타임 타입 정보(RTTI)를 끄고 빌드해 컴포넌트를 인터페이스로 캐스트할 수 없어 가상 함수로 묻는다.
          */
         virtual const IBehaviorTreeDebugSource* findBehaviorTreeDebugSource() const { return nullptr; }
+        /**
+         * @brief 판에 하루의 시각이 있는 디렉터가 재정의해 지금 시각(0~24)과 강수를 답합니다. 시각이 없는 판은 false 입니다.
+         * @details 방향광을 해처럼 움직이는 `DaylightComponent` 가 묻는다 — 시각을 쥔 쪽은 디렉터라(게임마다 달력이 다르다) 같은 RTTI 없는 가상 함수로 묻는다.
+         */
+        [[nodiscard]] virtual bool readDaylight( float32& outHourOfDay, bool& outbPrecipitating ) const
+        {
+            (void)outHourOfDay;
+            (void)outbPrecipitating;
+            return false;
+        }
 
         /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부르며, 첫 값은 `StateArchiveUtil::writeHeader` 가 쓰는 표와 버전입니다. */
         virtual void writeState( Archive& outArchive ) const = 0;
