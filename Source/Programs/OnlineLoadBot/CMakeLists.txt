@@ -50,6 +50,7 @@ set_target_properties(OnlineLoadBotCore PROPERTIES
 )
 
 # 올리는 순서 = 의존 순서: GameFramework → 키트(런타임 키트 다음에 같은 기능의 서버 키트 — 위 목록 순서) → 봇 모듈.
+set_property(GLOBAL PROPERTY SW_LOADBOT_KITS ${swLoadBotKit}) # 온라인 키트 단위 테스트(`UnitTests.OnlineKits`, Test/CMakeLists.txt)가 이 키트들의 Tests/ 를 넘긴다
 set(swLoadBotModuleList GameFramework ${swLoadBotKit} OnlineLoadBotCore)
 list(JOIN swLoadBotModuleList "\",\"" swLoadBotModuleText)
 

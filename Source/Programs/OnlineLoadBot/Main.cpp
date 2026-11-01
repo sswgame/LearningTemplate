@@ -88,9 +88,15 @@ namespace sw
                 return true;
             }
 
-            /** @brief 봇 모듈의 진입점을 봇 인자(@p listBotArgument, 맨 앞은 프로그램 이름)로 부릅니다(`initialize` 뒤에만). */
+            /**
+             * @brief 봇 모듈의 진입점을 봇 인자(@p listBotArgument, 맨 앞은 프로그램 이름)로 부릅니다(`initialize` 뒤에만).
+             * @details 엔진이 헤드리스 작업(단위 테스트 `-test` 등)을 했으면 봇을 돌리지 않고 그 결과로 끝낸다 — 전용 서버(`ServerApp`)와 같다.
+             *          온라인 키트를 싣는 호스트가 이 실행 파일뿐이라 그 키트들의 단위 테스트(`UnitTests.OnlineKits`)가 여기서 돈다.
+             */
             [[nodiscard]] int32 runBot( vector<utf8*>& listBotArgument )
             {
+                if ( _engine.isHeadless() )
+                    return _engine.didHeadlessTaskFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
                 const auto pfnRun = reinterpret_cast<PFN_RunOnlineLoadBot>( ModuleLibraryUtil::getDynamicSymbol( _pBotModule, LoadBotModuleEntry::kEntrySymbol ) );
                 if ( pfnRun == nullptr )
                 {

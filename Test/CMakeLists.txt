@@ -119,6 +119,27 @@ if(TARGET OnlineLoadBot)
 			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/OnlineLoadBot.localServer.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(OnlineLoadBot.localServer PROPERTIES LABELS nogpu TIMEOUT 120)
+
+	# 온라인 키트(클라이언트 · 서버 쌍)의 단위 테스트 — 그 키트를 싣는 게임이 없어 `UnitTests.<게임>` 에 들지 않는다. 봇이 키트를 모두 싣으므로 엔진 인자(대시 하나)로
+	# 테스트만 돌린다(`OnlineLoadBot` 의 `runBot` 이 헤드리스 결과로 끝낸다). `Tests/` 가 있는 키트 폴더만 넘긴다(빈 실행은 실패다).
+	get_property(listLoadBotKit GLOBAL PROPERTY SW_LOADBOT_KITS)
+	set(listOnlineKitTestFolder "")
+	foreach(swKit IN LISTS listLoadBotKit)
+		get_target_property(swKitFolder ${swKit} SOURCE_DIR)
+		file(GLOB_RECURSE listOnlineKitTest "${swKitFolder}/*/Tests/*.cpp" "${swKitFolder}/Tests/*.cpp")
+		if(listOnlineKitTest)
+			file(RELATIVE_PATH swKitRelative "${CMAKE_SOURCE_DIR}" "${swKitFolder}")
+			list(APPEND listOnlineKitTestFolder "${swKitRelative}/")
+		endif()
+	endforeach()
+	if(listOnlineKitTestFolder)
+		list(JOIN listOnlineKitTestFolder "," swOnlineKitTestSource)
+		add_test(NAME UnitTests.OnlineKits
+			COMMAND $<TARGET_FILE:OnlineLoadBot> -test -unattended -test-source=${swOnlineKitTestSource}
+				-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.OnlineKits.log
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(UnitTests.OnlineKits PROPERTIES LABELS nogpu TIMEOUT 300)
+	endif()
 endif()
 
 add_subdirectory(Scenario)
