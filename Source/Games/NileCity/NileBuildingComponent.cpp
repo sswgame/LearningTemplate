@@ -24,7 +24,7 @@ namespace sw
 
             static constexpr const utf8* kArrHouseModel[] = { "building_type_h", "building_type_a", "building_type_g", "building_type_c",
                                                               "building_type_e", "building_type_f", "building_type_b", "building_type_d" };
-            static constexpr const utf8* kArrOtherModel[] = { "fence_low", "tree_large", "planter" };
+            static constexpr const utf8* kArrOtherModel[] = { "fence_low", "planter" };
 
             static float32 computeBlockHeight( const CityBuildingDef& def, int32 level, bool bInhabited )
             {
@@ -109,9 +109,9 @@ namespace sw
             }
             case CityBuildingKind::Decoration:
             {
-                if ( def._id == hashed_string( "garden" ) )
-                    return "tree_large";
-                return def._id == hashed_string( "plaza" ) ? "planter" : nullptr;
+                // 정원 · 광장은 화분 — 나일 소품(Kenney, 공용 colormap 머티리얼 하나)만 받는다. 나무(`tree_large`)는 원본을 Quaternius 로 바꾸며 지웠다(6c0f091a53).
+                const bool bPlanted = def._id == hashed_string( "garden" ) || def._id == hashed_string( "plaza" );
+                return bPlanted ? "planter" : nullptr;
             }
         }
         return nullptr;
