@@ -544,7 +544,7 @@ namespace sw::editor
         ImGui::EndPopup();
     }
 
-    void ContentBrowserPanel::shutdown( IRHIDevice* /*pDevice*/ )
+    void ContentBrowserPanel::shutdown()
     {
         _thumbnailCache.clear();
     }

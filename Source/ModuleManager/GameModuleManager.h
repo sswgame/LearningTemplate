@@ -126,7 +126,7 @@ namespace sw
          */
         [[nodiscard]] bool loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
         /**
-         * @brief 전용 서버로 게임 인스턴스를 만듭니다. 창, RHI, 렌더 스레드, 에디터가 없고 게임은 `initialize( nullptr, nullptr )` 를 받습니다.
+         * @brief 전용 서버로 게임 인스턴스를 만듭니다. 창, RHI, 렌더 스레드, 에디터가 없고 게임은 `initialize( nullptr )`(창 없음)를 받습니다.
          * @details 모듈 콜백, 핫 리로드(Dev), 상태 보존은 App 과 같습니다.
          */
         [[nodiscard]] bool initializeDedicatedServer( LiveReloadManager* pLiveReloadManager );

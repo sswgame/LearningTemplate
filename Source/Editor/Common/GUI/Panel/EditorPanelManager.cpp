@@ -113,10 +113,10 @@ namespace sw::editor
     {
         clear();
         _syncedGeneration = kNotSynced;
-        syncWithRegistry( nullptr );
+        syncWithRegistry();
     }
 
-    void EditorPanelManager::syncWithRegistry( IRHIDevice* pRHIDevice )
+    void EditorPanelManager::syncWithRegistry()
     {
         using PanelRegistry                         = EditorExtensionRegistry<EditorPanelRegistration>;
         const EditorExtensionRegistrationList& list = PanelRegistry::getList();
@@ -136,7 +136,7 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "EditorPanelManager.PanelUnsavedEditsDiscarded", "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
                 if ( entry._pInstance->isOpen() )
                     _listRememberedOpenID.push_back( entry._id );
-                entry._pInstance->shutdown( pRHIDevice );
+                entry._pInstance->shutdown();
             }
             _listPanel.erase( _listPanel.begin() + static_cast<ptrdiff_t>( index ) );
         }
@@ -177,17 +177,17 @@ namespace sw::editor
         _listPanel = std::move( listSorted );
     }
 
-    uint32 EditorPanelManager::resetOptionalPanels( IRHIDevice* pRHIDevice )
+    uint32 EditorPanelManager::resetOptionalPanels()
     {
-        return resetPanels( pRHIDevice, false );
+        return resetPanels( false );
     }
 
-    uint32 EditorPanelManager::resetAllPanels( IRHIDevice* pRHIDevice )
+    uint32 EditorPanelManager::resetAllPanels()
     {
-        return resetPanels( pRHIDevice, true );
+        return resetPanels( true );
     }
 
-    uint32 EditorPanelManager::resetPanels( IRHIDevice* pRHIDevice, bool bIncludeCore )
+    uint32 EditorPanelManager::resetPanels( bool bIncludeCore )
     {
         uint32 resetCount{ 0 };
         for ( EditorPanelEntry& entry : _listPanel )
@@ -200,7 +200,7 @@ namespace sw::editor
                 entry._pInstance->setOpen( bOpenAfterReset );
                 continue;
             }
-            entry._pInstance->shutdown( pRHIDevice );
+            entry._pInstance->shutdown();
             entry._pInstance = entry._pRegistration->_pCreate();
             if ( entry._pInstance != nullptr )
                 entry._pInstance->setOpen( bOpenAfterReset );
@@ -258,12 +258,12 @@ namespace sw::editor
         }
     }
 
-    void EditorPanelManager::shutdownAllPanels( IRHIDevice* pRHIDevice )
+    void EditorPanelManager::shutdownAllPanels()
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             if ( entry._pInstance != nullptr )
-                entry._pInstance->shutdown( pRHIDevice );
+                entry._pInstance->shutdown();
         }
     }
 

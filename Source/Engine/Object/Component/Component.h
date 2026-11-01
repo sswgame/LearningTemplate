@@ -383,6 +383,16 @@ namespace sw
          */
         virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
         /**
+         * @brief 아직 등록하지 않았으면 `onRegister` 를 부르고 "등록됨" 으로 기록합니다(게임 스레드). 직접 부르지 말고 매니저(`GameObjectManager::registerComponent`)를 거친다.
+         * @details 씬을 짓는 배치(`Scene::instantiate`) 안에서는 매니저가 배치 끝까지 미룬다 — 비동기 로드는 씬을 받는 게임 스레드까지(언리얼: 로딩 스레드는
+         *          직렬화만, `OnRegister` · `PostLoad` 는 게임 스레드). 훅은 늘 게임 스레드에서 돈다.
+         */
+        void dispatchRegister( GameObjectManager& manager );
+        /** @brief 등록했으면 `onUnregister` 를 부르고 "등록됨" 을 지웁니다. 등록하기 전에 해체되면(미룬 등록을 받기 전에 씬을 버림) 아무것도 하지 않습니다. */
+        void dispatchUnregister( GameObjectManager& manager );
+        /** @brief `onRegister` 가 불렸고 `onUnregister` 는 아직 불리지 않았으면 true 입니다. */
+        bool isRegistered() const { return _bRegistered == SW_TRUE; }
+        /**
          * @brief 소유 GameObject 에서 떨어지기 직전에 불립니다. 등록(`onRegister`) 한 번마다 **정확히 한 번** 불립니다.
          * @details 해체는 `GameObjectManager::destroyComponentInstance` 하나를 거치므로 구현이 멱등일 필요는 없다.
          */
@@ -562,7 +572,14 @@ namespace sw
          * @brief 소유 매니저가 구조 변경을 막고 있으면(컴포넌트 틱 중) @p func 를 틱 직후 구조 변경 큐로 미루고 true 를 반환합니다. 아니면 false 입니다.
          * @details 핸들로 다시 찾으므로 그 사이에 파괴돼도 안전하다. 틱 설정(그룹, 틱 여부, 서브틱)이 `GameObject` 의 setName, addTag 와 같은 규칙을 따른다.
          */
-        bool                  deferIfStructureFrozen( Delegate<void( Component& )> func );
+        bool deferIfStructureFrozen( Delegate<void( Component& )> func );
+        /**
+         * @brief 붙는 순간 엔진의 장부(트랜스폼 계층 · 매니저 연결)에 넣습니다(`GameObject::attachCreatedComponent`). 미루지 않는다 — 장부는 객체 데이터다.
+         * @details 언리얼의 `AttachParent` · 상대 트랜스폼이 로드 때 채워지고 `OnRegister` 가 나중에 월드에 넣는 것과 같은 나눔이다. `SceneComponent` 만 쓰고 `final` 로 막는다.
+         */
+        virtual void bindToManager( GameObjectManager& manager ) { (void)manager; }
+        /** @brief `bindToManager` 의 짝입니다(해체 한 곳 `GameObjectStore` 가 `dispatchUnregister` 뒤에 부른다). */
+        virtual void          unbindFromManager( GameObjectManager& manager ) { (void)manager; }
         static atomic<uint64> _s_nextComponentID; ///< ID 생성 카운터
 
     protected:
@@ -593,7 +610,8 @@ namespace sw
         uint8        _bCanEverTick      : 1;
         uint8        _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
         uint8        _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
-        uint8        _reservedFlags     : 5;
+        uint8        _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
+        uint8        _reservedFlags     : 4;
         /**
          * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.

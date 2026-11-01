@@ -756,7 +756,7 @@ namespace sw::editor
             (void)EditorLogCommands::openInIde( location ); // 실패는 openInIde 가 경고로 남긴다
     }
 
-    void ConsolePanel::shutdown( IRHIDevice* /*rhiDevice*/ )
+    void ConsolePanel::shutdown()
     {
         _logListenerSubscription.reset();
     }

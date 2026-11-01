@@ -29,7 +29,7 @@ namespace sw::editor
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
         /** @brief 아틀라스 이미지를 해제합니다. */
-        void shutdown( IRHIDevice* pRHIDevice ) override;
+        void shutdown() override;
 
     private:
         /** @brief 아틀라스 경로 입력, 불러오기 · 저장 단추입니다. */

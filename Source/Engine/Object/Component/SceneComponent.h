@@ -83,11 +83,6 @@ namespace sw
         /** @brief 로컬 TRS PROPERTY 가 바뀌면 월드 캐시를 더티로 표시합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
 
-        /** @brief 부모가 없으면 루트 SceneComponent 캐시에 자기를 넣습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 루트 SceneComponent 캐시에서 자기를 제거합니다. */
-        void onUnregister( GameObjectManager& manager ) override;
-
         /**
          * @brief 월드 행렬이 실제로 다시 계산된 직후 불립니다.
          * @details 트랜스폼이 바뀐 컴포넌트를 정확히 한 번 알려 주는 지점이다. 플러시, 지연 합성(`getWorldMatrix` 등), 틱 뒤 적용,
@@ -255,6 +250,10 @@ namespace sw
         void setTransformPrimitiveIndex( uint32 primitiveIndex );
 
     private:
+        /** @brief 매니저를 잡고, 부모가 없으면 루트 SceneComponent 캐시에 자기를 넣습니다(붙는 순간 — `Component::bindToManager`). */
+        void bindToManager( GameObjectManager& manager ) final;
+        /** @brief 루트 SceneComponent 캐시에서 자기를 빼고 매니저를 놓습니다. */
+        void unbindFromManager( GameObjectManager& manager ) final;
         /** @brief 매니저가 병렬 틱 중(트랜스폼 읽기 전용)이면 true 입니다. 이때 세터는 바로 쓰지 않고 틱 뒤에 적용합니다. */
         bool isInParallelTick() const;
         /**
@@ -352,7 +351,7 @@ namespace sw
         static constexpr uint32 kNotInList = constant::invalid_index::kUint32;
         uint32                  _dirtyRootIndex;
         /**
-         * @brief 이 컴포넌트가 속한 매니저입니다. 등록할 때 받아 둡니다.
+         * @brief 이 컴포넌트가 속한 매니저입니다. 붙을 때 받아 둡니다(`bindToManager`).
          * @details 언리얼 컴포넌트가 등록할 때 `GetWorld()` 를 잡아 두는 것과 같다.
          *          씬에 붙지 않았으면 nullptr 이고, 그때는 지연 없이 바로 반영하는 경로를 탄다.
          */

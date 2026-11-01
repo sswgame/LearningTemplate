@@ -83,7 +83,7 @@ namespace sw::editor
     void EditorSubsystemSet::syncExtensionRegistrations( EditorContext& context )
     {
         context.getSubsystem<EditorExtensionSubsystems>().syncWithRegistry(); // 패널이 그리기 전에 찾을 수 있게 먼저
-        context.getSubsystem<EditorPanelManager>().syncWithRegistry( context.getSubsystem<EditorRenderViews>().getRHIDevice() );
+        context.getSubsystem<EditorPanelManager>().syncWithRegistry();
         context.getSubsystem<EditorPopupManager>().syncWithRegistry();
         context.getSubsystem<InspectorComponentManager>().syncWithRegistry();
         context.getSubsystem<InspectorPropertyManager>().syncWithRegistry();

@@ -31,7 +31,7 @@ namespace sw::editor
         /** @brief 처음 열 때의 크기입니다(96 DPI 기준). */
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 27.0f ); }
         /** @brief 도는 패키징을 끝냅니다(모듈이 언로드되기 전). */
-        void shutdown( IRHIDevice* pDevice ) override;
+        void shutdown() override;
 
         /** @brief 지금 패키징 상태입니다(감시 값 `Editor.PackagingState`). */
         PackagingState getState() const { return _model.getState(); }

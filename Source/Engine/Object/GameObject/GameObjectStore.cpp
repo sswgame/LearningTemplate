@@ -423,7 +423,8 @@ namespace sw
         // 소멸자 호출 전이어야 가상 디스패치가 유효하다. 시작했던 컴포넌트는 여기서 끝낸다. 분리, 비우기, 지연 파괴, 모듈 언로드가
         // 모두 이 한 곳을 지나므로 onEndPlay 가 빠지는 경로가 없다(모듈 코드가 아직 로드되어 있는 시점이다).
         pComp->dispatchEndPlay();
-        pComp->onUnregister( *_pManager );
+        pComp->dispatchUnregister( *_pManager ); // 미룬 등록을 받기 전에 해체되면(씬을 버림) 부르지 않는다
+        pComp->unbindFromManager( *_pManager );
         pComp->onDestroy();
         pComp->setOwner( nullptr );
 

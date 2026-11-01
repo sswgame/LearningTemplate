@@ -30,7 +30,7 @@ namespace sw::editor
                 outListName.insert( outListName.end(), std::begin( s_arrName ), std::end( s_arrName ) );
             }
 
-            void drawSection( Component* pComponent, IRHIDevice* /*pRHIDevice*/ ) override
+            void drawSection( Component* pComponent ) override
             {
                 auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
                 ImGui::SeparatorText( "Camera" );

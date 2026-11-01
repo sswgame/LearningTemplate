@@ -32,15 +32,26 @@ namespace sw::editor
     /** @brief 에디터가 소유하는 뷰 렌더 타깃 하나입니다. 씬 뷰와 게임 뷰가 각각 하나씩 가집니다. 호스트는 프레임마다 핸들만 조회합니다(`ImGuiEditor::getSceneViewport`, `getGameViewport`). */
     struct EditorViewTarget
     {
-        TextureHandle _texture{};         ///< 엔진 렌더 텍스처(`rendertarget/editor/…`)의 로드 핸들 — 참조를 쥔다. GPU 자원은 엔진이 렌더 쪽에서 만든다
-        string        _texturePath{};     ///< 그 렌더 텍스처의 경로(크기마다 새 경로)
-        uint64        _renderTarget{ 0 }; ///< 렌더 텍스처가 GPU 에 올라간 뒤의 핸들(그 전에는 0 — 호스트에 알리지도 그리지도 않는다)
+        // 지금 그리는 타깃 — 엔진 렌더 텍스처(`rendertarget/editor/…`)의 로드 핸들(참조를 쥔다)과 GPU 에 올라간 뒤의 핸들. GPU 자원은 엔진이 렌더 쪽에서 만든다
+        TextureHandle _texture{};
+        string        _texturePath{};
+        uint64        _renderTarget{ 0 }; ///< 0 이면 아직 그릴 타깃이 없다(호스트에 알리지도 그리지도 않는다)
         void*         _pTextureID{ nullptr };
-        uint32        _width{ 0 };
+        uint32        _width{ 0 }; ///< 지금 그리는 타깃의 크기
         uint32        _height{ 0 };
+        // 크기를 바꾸는 중이면 새 타깃 — 준비될 때까지 지금 타깃을 계속 그리고, 준비되면 바꿔 끼운다(언리얼 `ResizeTarget` 과 같다).
+        // 예전에는 옛 타깃을 먼저 버려, 그 사이 미리보기가 패킷에서 빠지고 하위 렌더러가 통째로 내려갔다가 다시 섰다.
+        TextureHandle _pendingTexture{};
+        string        _pendingPath{};
+        uint32        _pendingWidth{ 0 };
+        uint32        _pendingHeight{ 0 };
         int32         _windowX{ 0 };       ///< 이번 프레임에 이미지 왼쪽 위가 놓인 주 창 클라이언트 픽셀(`markViewDrawn`). 호스트가 포인터를 뷰 픽셀로 옮긴다
         int32         _windowY{ 0 };       ///< 위와 같습니다(세로)
         uint8         _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다). 프레임을 시작할 때 지운다
+
+        /** @brief 마지막으로 요청한 크기입니다(바꾸는 중이면 새 크기). 크기 비교는 이것으로 한다. */
+        uint32 getRequestedWidth() const { return _pendingTexture.isValid() ? _pendingWidth : _width; }
+        uint32 getRequestedHeight() const { return _pendingTexture.isValid() ? _pendingHeight : _height; }
     };
 } // namespace sw::editor
 
@@ -147,8 +158,10 @@ namespace sw::editor
         bool isAnimationRequested() const { return _bAnimationRequested == SW_TRUE; }
 
     private:
-        /** @brief 뷰 렌더 타깃 하나를 놓습니다. */
+        /** @brief 뷰 렌더 타깃 하나를 놓습니다(지금 것과 바꾸는 중인 것 모두). */
         void destroyTarget( EditorViewTarget& view );
+        /** @brief 지금 그리는 타깃만 놓습니다(그리기 해제 큐가 이미 낸 프레임들 뒤로 미룬다). */
+        void releaseCurrent( EditorViewTarget& view );
         /**
          * @brief 뷰 렌더 타깃 하나를 그 크기로 (다시) 요청하고, 엔진이 GPU 에 올렸으면 핸들을 받아 ImGui 에 등록합니다(프레임마다 부른다).
          * @details 에디터는 GPU 자원을 만들지 않는다 — 엔진의 렌더 텍스처(`TextureCache` 의 `rendertarget/` 경로, 언리얼 `UTextureRenderTarget2D`)를 크기를 알리고 빌린다.

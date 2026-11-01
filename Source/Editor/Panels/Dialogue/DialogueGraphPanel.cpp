@@ -90,7 +90,7 @@ namespace sw::editor
         _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Graph", "FlowPin" ) } ); // 흐름 핀 하나
     }
 
-    void DialogueGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void DialogueGraphPanel::shutdown()
     {
         _nodeGraph.shutdown();
     }

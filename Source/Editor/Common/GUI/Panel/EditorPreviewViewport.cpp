@@ -191,7 +191,7 @@ namespace sw::editor
         const uint32                   targetWidth  = static_cast<uint32>( size._x );
         const uint32                   targetHeight = static_cast<uint32>( size._y );
         const EditorPreviewViewTarget* pTarget      = views.findPreviewTarget( _targetID );
-        if ( pTarget != nullptr && EditorViewTargetUtil::needsResize( pTarget->_target._width, pTarget->_target._height, targetWidth, targetHeight ) )
+        if ( pTarget != nullptr && EditorViewTargetUtil::needsResize( pTarget->_target.getRequestedWidth(), pTarget->_target.getRequestedHeight(), targetWidth, targetHeight ) )
             views.ensurePreviewTargetSize( _targetID, targetWidth, targetHeight );
         pTarget = views.findPreviewTarget( _targetID );
         if ( pTarget == nullptr || pTarget->_target._pTextureID == nullptr )

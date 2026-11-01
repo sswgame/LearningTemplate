@@ -63,7 +63,7 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 36.0f ); }
         bool             isToolPanel() const override { return true; }
         /** @brief 미리보기 화면을 닫고 ImGui 텍스처를 놓습니다. */
-        void shutdown( IRHIDevice* pRHIDevice ) override;
+        void shutdown() override;
 
         /** @brief 마지막으로 그린 프레임의 값입니다(자동화 감시 값). */
         const UIPreviewProbe& getProbe() const { return _model.getProbe(); }

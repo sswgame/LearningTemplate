@@ -360,6 +360,29 @@ namespace sw
         }
     }
 
+    bool SocketSet::validateReferences( const SocketKindTable& kinds, CharacterIssueList* pOutIssues ) const
+    {
+        bool bValid = true;
+        for ( const SocketDef& socket : _listSocket )
+        {
+            if ( socket._kind.empty() == false && kinds.hasKind( socket._kind ) == false )
+            {
+                bValid = false;
+                if ( pOutIssues != nullptr )
+                    pOutIssues->add( "Character.SocketKindUnknown", string( "socket '" ) + socket._name.c_str() + "' has unknown kind '" + socket._kind.c_str() + "'" );
+            }
+            for ( const hashed_string& fallback : socket._listFallback )
+            {
+                if ( findSocket( fallback ) != nullptr )
+                    continue;
+                bValid = false;
+                if ( pOutIssues != nullptr )
+                    pOutIssues->add( "Character.SocketFallbackUnknown", string( "socket '" ) + socket._name.c_str() + "' has unknown fallback '" + fallback.c_str() + "'" );
+            }
+        }
+        return bValid;
+    }
+
     bool SocketSet::validateBones( const CharacterBoneArray& bones, CharacterIssueList* pOutIssues ) const
     {
         bool bValid = true;

@@ -135,9 +135,7 @@ namespace sw::editor
 
         if ( isDocumentLoadFailed() == false ) // 읽지 못한 효과는 걸지 않는다
             _model.syncEffect( getPreviewScene(), getLoadedAssetPath() );
-        const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = VFXPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
-        const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
+        const float2 viewSize = computeViewportFillSize( VFXPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "vfx.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );

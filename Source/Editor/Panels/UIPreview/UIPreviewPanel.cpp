@@ -328,7 +328,7 @@ namespace sw::editor
             clearDocumentDirty();
     }
 
-    void UIPreviewPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void UIPreviewPanel::shutdown()
     {
         releaseTexture();
         _model.shutdown();

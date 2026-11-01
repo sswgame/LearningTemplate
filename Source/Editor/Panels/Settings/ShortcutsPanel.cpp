@@ -181,7 +181,7 @@ namespace sw::editor
         ImGui::PopID();
     }
 
-    void ShortcutsPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void ShortcutsPanel::shutdown()
     {
         finishCapture();
     }

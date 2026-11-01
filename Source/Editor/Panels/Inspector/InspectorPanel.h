@@ -31,7 +31,6 @@ namespace sw
 
     class Component;
     class GameObject;
-    class IRHIDevice;
     class TaskArgs;
 } // namespace sw
 
@@ -90,7 +89,7 @@ namespace sw::editor
         /** @brief GameObject 헤더(이름 등)를 그립니다. */
         void drawGameObjectHeader( GameObject* pObj );
         /** @brief 컴포넌트 섹션을 그립니다. */
-        void drawComponentSection( Component* pComp, IRHIDevice* pRHIDevice );
+        void drawComponentSection( Component* pComp );
         /**
          * @brief 맨 위 Favorites 구역을 그립니다. 오브젝트와 그 컴포넌트의 즐겨찾기 프로퍼티를 타입마다 모아 보입니다. 즐겨찾기가 없으면 그리지 않습니다.
          * @details 언리얼 Details 의 Favorites 에 해당한다. 다중 선택에서는 주 선택 오브젝트 기준이다.

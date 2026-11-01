@@ -33,7 +33,7 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Preferences"; }
         bool        isToolPanel() const override { return true; }
         void        drawContent() override;
-        void        shutdown( IRHIDevice* pRHIDevice ) override;
+        void        shutdown() override;
 
         /** @brief 지난 프레임 목록에 보인 섹션 수입니다(감시 값 `Editor.PreferencesVisibleSections`). */
         static uint32 getVisibleSectionCount();

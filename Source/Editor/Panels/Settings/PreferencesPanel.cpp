@@ -103,7 +103,7 @@ namespace sw::editor
         _model.savePendingChanges( false );
     }
 
-    void PreferencesPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void PreferencesPanel::shutdown()
     {
         _model.savePendingChanges( true );
     }

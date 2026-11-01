@@ -37,11 +37,11 @@
       화면 밖 씬마다 통째로 하나씩 늘린다(`_listScenePreviewRenderer`, 역할을 `_bScenePreview` 분기 다섯 곳으로 가른다 — 한 클래스가 플래그로 두 역할).
       계획: `FrameRenderState` 를 둘로 — 씬 키마다 `SceneRenderData`(`_gpuScene` · `_mainView` · `_listExtraView` · `_lightBuffer` · `_deform` · `_probeUpdater` ·
       `_particleRenderer` · 프레임 빛 · 하늘), 렌더러 하나(`_graph` · `_passCbRing` · `_gpuPassTimeline` · `_canvasRenderer` · PSO · 파이프라인). 패킷의 `_sceneKey` 로 씬 데이터를 고르고
-      (`_state._gpuScene` 같은 참조 약 166 곳이 `scene()` 을 거친다), 하위 렌더러 목록과 `_bScenePreview` 분기를 지운다. 파이프라인이 다른 씬(캡처의 디퍼드)은 파이프라인 키로 렌더러를 고른다.
-   2. **게임 스레드 · 에디터 API 에서 디바이스 인자 지우기**(언리얼 `UTexture` · `UMaterial` 게임 스레드 API 에는 RHI 인자가 없다): `TextureCache` · `MaterialCache` 의
-      `request` · `acquire` · `release` · `reload` 가 `IRHIDevice*` 를 받아, 에디터 패널(`IEditorPanel::shutdown(IRHIDevice*)` 를 모든 패널이 받는다) · 인스펙터
-      (`drawSection( comp, device )`) · 게임(`IGame::initialize( window, device )`)까지 디바이스가 관통한다. 캐시가 엔진이 붙인 디바이스를 쥐고(`bindDevice`) 게임 스레드
-      API 는 경로만 받는다. 렌더 쪽 펌프(`completePendingLoads` 등)는 그대로 디바이스를 받는다.
+      (`_state._gpuScene` 같은 참조 약 166 곳이 `scene()` 을 거친다), 하위 렌더러 목록과 `_bScenePreview` 분기를 지운다. 씬 데이터의 수명은 씬 키의 수명(미리보기 씬이 사라질 때)에 묶는다 —
+      지금은 "이번 프레임 패킷에 없으면 내린다"(`retireScenePreviews`)라 탭을 가리거나 한 프레임만 빠져도 파이프라인 · 그래프를 처음부터 다시 짓는다(언리얼 `FSceneViewState` 는 뷰 객체 수명). 파이프라인이 다른 씬(캡처의 디퍼드)은 파이프라인 키로 렌더러를 고른다.
+   2. **게임 스레드 API 에서 디바이스 인자 지우기 — 남은 것**(언리얼 `UTexture` · `UMaterial` 게임 스레드 API 에는 RHI 인자가 없다). 끝: 텍스처 `request` · `release`,
+      에디터 패널 · 인스펙터 · 썸네일 · 게임 ABI(`GameAPI::initialize`, 모듈 ABI v10). 남음: `MaterialCache::acquire` · `reload` 와 `IAssetCache::reload( assetID, device )`
+      (캐시 8 개의 다시 읽기 인터페이스) — 캐시가 엔진이 붙인 디바이스를 쥐고(`TextureCache::bindDevice` 와 같다) 인자를 지운다.
    3. **시나리오 고정 대기를 조건으로**: 에디터 입력 앞 `<Wait frames>` 784 곳(98 파일)은 한꺼번에 지우면 진다(2026-11-01 시도 — 앞 단계의 비동기 일을 기다리던 것이 섞였다).
       시나리오마다 무엇을 기다리는지 보고 `WaitUntil`(감시 값)로 바꾼다. 입력 단계가 스스로 기다리는 것(대상 위젯 · 키보드 초점)과 겹치는 것만 지운다.
    4. **자동 생성 로그 id 다듬기**: `<영역>.Message` · `.Frame` 같은 이름 54 곳(서식이 `"%#"` · `"[Scenario] %#"` 뿐인 줄) — 사건 이름으로.

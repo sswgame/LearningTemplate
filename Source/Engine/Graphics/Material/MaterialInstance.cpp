@@ -58,8 +58,9 @@ namespace sw
 
             /**
              * @brief 부모의 매개변수 모양(셰이더 타입)이 쓰려는 값의 모양과 맞는지 봅니다. 어긋나면 로그 id 와 함께 false 입니다.
-             * @details float4 글("0.5 0 0 0")을 스칼라(Float/Range)에 쓰면 패킹이 못 읽는 글로 거절하므로 쓰는 시점에 막는다. 부모에 없는 이름은
-             *          다른 변형이 쓸 수 있어 통과시킨다.
+             * @details float4 글("0.5 0 0 0")을 스칼라(Float/Range)에 쓰면 패킹이 못 읽는 글로 거절한다. 부모에 없는 이름은 다른 변형이 쓸 수 있어 통과시킨다.
+             *          쓸 때가 아니라 렌더 사본을 만들 때(`rebuildRenderData`, 게임 스레드, 부모 초기화 뒤) 본다 — 부모의 속성 목록은 디바이스 초기화가 채우고
+             *          맞추므로 쓸 때 읽으면 비어 있거나(검사가 조용히 빠진다) 비동기 씬 로드 워커에서 게임 스레드의 초기화와 겹친다(언리얼 MID 도 쓸 때는 이름 · 값만 둔다).
              */
             [[nodiscard]] static bool acceptsShape( const Material* pParent, hashed_string name, bool bScalar )
             {
@@ -242,6 +243,7 @@ namespace sw
         // 부모 바이트가 비었으면(레이아웃 오류 — 오류는 부모가 남겼다) 빈 사본이다. 렌더 스레드는 빈 바이트를 올리지 않는다.
         if ( data->_bytes.empty() == false )
         {
+            dropShapeMismatchedOverrides();
             for ( const auto& [name, valueText] : _listValueOverride )
             {
                 _pParentMaterial->packNamedValueIntoBuffer( name, valueText, data->_bytes );
@@ -260,6 +262,30 @@ namespace sw
         }
         fillTextureSlots( data->_arrTextureSRV, shaderslot::kMaterialTextureCount );
         _renderData = std::move( data );
+    }
+
+    void MaterialInstance::dropShapeMismatchedOverrides()
+    {
+        // 어긋난 값은 한 번 알리고 버린다(쓸 때 거절하던 것과 같은 결과) — 남겨 두면 사본을 만들 때마다 다시 알린다.
+        const auto drop = [this]( auto& listOverride, bool bScalar )
+        {
+            for ( size_t i = listOverride.size(); i-- > 0; )
+            {
+                const hashed_string name = listOverride[i].first;
+                if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, bScalar ) )
+                    continue;
+                listOverride.erase( listOverride.begin() + static_cast<std::ptrdiff_t>( i ) );
+                for ( size_t j = 0; j < _listValueOverride.size(); ++j )
+                {
+                    if ( _listValueOverride[j].first != name )
+                        continue;
+                    _listValueOverride.erase( _listValueOverride.begin() + static_cast<std::ptrdiff_t>( j ) );
+                    break;
+                }
+            }
+        };
+        drop( _listScalarOverride, true );
+        drop( _listVectorOverride, false );
     }
 
     bool MaterialInstance::syncTextureOverrides( IRHIDevice* pRHI )
@@ -410,8 +436,6 @@ namespace sw
 
     void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
     {
-        if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, true ) == false )
-            return;
         MaterialInstanceInternal::insertOrAssign( _listScalarOverride, name, value );
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, to_string( value ) );
         _bGPUDirty = SW_TRUE;
@@ -419,8 +443,6 @@ namespace sw
 
     void MaterialInstance::setVectorParameter( hashed_string name, const float4& value )
     {
-        if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, false ) == false )
-            return;
         const array<float32, 4> val = { value._x, value._y, value._z, value._w };
         MaterialInstanceInternal::insertOrAssign( _listVectorOverride, name, val );
         StringBuilder<constant::buffer::kMax64> sb;

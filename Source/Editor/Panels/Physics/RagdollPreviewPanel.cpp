@@ -218,9 +218,7 @@ namespace sw::editor
         (void)ImGui::Checkbox( "Joints", &_model.editDrawJoints() );
         drawBodyTable( pRagdoll );
 
-        const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
-        const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
+        const float2 viewSize = computeViewportFillSize( RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         drawOverlay( pRagdoll );
         EditorSelfTestMarks::note( "ragdoll.previewScene" );

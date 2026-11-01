@@ -184,6 +184,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Scene );
         Scene* const pScene = scene.get();
+        pScene->finishHeldRegistration(); // 워커에서 지은 씬의 등록 · 로드 뒤 처리(게임 스레드) — 기본값 걸기 · 카메라 고르기가 레지스트리를 본다
         // 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
         if ( _pRHIDevice != nullptr && pScene->initialize( _pRHIDevice ) == false )
             SW_LOG_WARNING_ID( "SceneManager.SceneCouldNotAcquire", "Scene '%#' could not acquire its default material", pScene->getName() );
@@ -373,6 +374,7 @@ namespace sw
             ScopedTimer instantiateTimer{ "Scene.load.instantiate" };
             newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name, slot->_services );
             newScene->setSourcePath( pathStr );
+            newScene->holdRegistration(); // 훅은 씬을 받는 게임 스레드가 부른다(`adoptScene`)
             const bool bInstantiated = newScene->instantiate( doc, slot->_stop.getToken() );
             if ( bInstantiated == false && slot->_stop.isStopRequested() == false ) // 종료 신호로 멈춘 것은 실패가 아니다
                 SW_LOG_WARNING_ID( "SceneManager.CouldNotInstantiated", "[SceneLoad] '%#' could not be instantiated", pathStr );

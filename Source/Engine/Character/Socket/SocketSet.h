@@ -171,6 +171,12 @@ namespace sw
          */
         bool validateBones( const CharacterBoneArray& bones, CharacterIssueList* pOutIssues ) const;
         /**
+         * @brief 소켓의 종류가 @p kinds 에 있고 대체 소켓(`_listFallback`)이 이 에셋에 있는지 검사합니다. 없으면 문제를 @p pOutIssues 에 추가하고 false 를 반환합니다.
+         * @details 소켓 검사는 이 함수와 `validateBones` 두 개가 전부다 — 에디터(캐릭터 에디터 Sockets 탭)도 이것을 부른다. 예전에는 에디터가 같은 검사를 따로 적어
+         *          규칙이 어긋나면 한쪽만 "unknown" 을 냈다.
+         */
+        bool validateReferences( const SocketKindTable& kinds, CharacterIssueList* pOutIssues ) const;
+        /**
          * @brief 항목의 유닛 공간 변환을 본 변환에서 계산합니다(부모 본, 가상 본, 루트).
          * @return 부모를 찾지 못하면 false 입니다.
          */

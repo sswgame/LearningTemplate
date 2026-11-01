@@ -123,9 +123,7 @@ namespace sw::editor
             drawLODTable( *pSubject );
         _model.applyLODChoice( getPreviewScene() );
 
-        const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = MeshPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
-        const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
+        const float2 viewSize = computeViewportFillSize( MeshPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "mesh.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );

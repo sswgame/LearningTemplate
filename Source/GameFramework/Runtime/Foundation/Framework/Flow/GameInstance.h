@@ -51,7 +51,7 @@ namespace sw
          *          사운드 이벤트 라이브러리(`_audioEvents`)도 `onInitialize` 앞에 올리고 `shutdown` 이 내린다. 적었는데 못 읽거나 `onInitialize` 가 false 면 false 다
          *          (필수 데이터 — `loadRequiredData` — 를 못 읽은 게임은 뜨지 않는다).
          */
-        [[nodiscard]] bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) final;
+        [[nodiscard]] bool initialize( IWindow* pWindow ) final;
         /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
         /**
@@ -197,7 +197,6 @@ namespace sw
 
         GamePackConfig _packConfig; ///< 팩 루트와 gamesettings
         IWindow*       _pWindow;    ///< 호스트 윈도우 (App 이 소유)
-        IRHIDevice*    _pRHIDevice; ///< 활성 RHI 디바이스
 
     private:
         /** @brief 세이브 슬롯 이름(비면 기본 슬롯)을 정합니다. 없거나 슬롯 이름 규칙을 어기면 오류를 남기고 false 입니다. */

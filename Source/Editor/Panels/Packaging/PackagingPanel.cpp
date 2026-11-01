@@ -70,7 +70,7 @@ namespace sw::editor
     {
     }
 
-    void PackagingPanel::shutdown( IRHIDevice* /*pDevice*/ )
+    void PackagingPanel::shutdown()
     {
         _model.cancelAndWait();
     }

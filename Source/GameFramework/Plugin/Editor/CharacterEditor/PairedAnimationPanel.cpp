@@ -89,9 +89,7 @@ namespace sw::editor
             drawNotifyRows();
 
         syncPreviewRoles();
-        const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = PairedAnimationPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
-        const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
+        const float2 viewSize = computeViewportFillSize( PairedAnimationPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, _gizmo.hasMouse() );
         _gizmo.draw( *this );
         EditorSelfTestMarks::note( "pairedanim.previewScene" );

@@ -370,7 +370,9 @@ namespace sw
     bool EditorModuleManager::createEditorInstance()
     {
         SW_MEMORY_SCOPE( Editor );
-        const bool bCreated   = ModuleInstanceUtil::createInstance( _editorAPI, _editor, getWindow(), getRHI(), true, "Editor" );
+        const auto initializeEditor = [this]( void* pHandle )
+        { return _editorAPI.initialize( pHandle, getWindow(), getRHI() != nullptr && getRHI()->hasDevice() ? &getRHI()->getDevice() : nullptr ); };
+        const bool bCreated   = ModuleInstanceUtil::createInstance( _editorAPI, _editor, initializeEditor, getRHI(), true, "Editor" );
         _bFreshEditorInstance = bCreated ? SW_TRUE : SW_FALSE;
         return bCreated;
     }

@@ -6,6 +6,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/CharacterIssue.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
+
 namespace sw::editor
 {
     namespace
@@ -87,24 +90,21 @@ namespace sw::editor
 
     bool SocketEditModel::validate( vector<string>& outListIssue ) const
     {
-        const size_t issueCountBefore = outListIssue.size();
-        const bool   bCheckKind       = _kinds.getKinds().empty() == false;
-        const bool   bCheckBone       = _listBoneName.empty() == false;
-        for ( const SocketDef& socket : _sockets.getSockets() )
+        // 검사는 엔진의 두 함수가 정한다(`SocketSet::validateReferences` · `validateBones`) — 게임이 읽을 때와 같은 규칙이다. 종류 표 · 스켈레톤을 아직 못 받았으면 그 검사는 하지 않는다.
+        CharacterIssueList issues;
+        if ( _kinds.getKinds().empty() == false )
+            (void)_sockets.validateReferences( _kinds, &issues );
+        if ( _listBoneName.empty() == false )
         {
-            const bool bKindToCheck = bCheckKind && socket._kind.empty() == false;
-            if ( bKindToCheck && _kinds.hasKind( socket._kind ) == false )
-                outListIssue.push_back( string( "Socket '" ) + socket._name.c_str() + "' has unknown kind '" + socket._kind.c_str() + "'" );
-            const bool bParentToCheck = bCheckBone && socket._parent.empty() == false;
-            if ( bParentToCheck && isParentAllowed( socket._parent ) == false )
-                outListIssue.push_back( string( "Socket '" ) + socket._name.c_str() + "' has unknown parent '" + socket._parent.c_str() + "'" );
-            for ( const hashed_string& fallback : socket._listFallback )
-            {
-                if ( _sockets.findSocket( fallback ) == nullptr )
-                    outListIssue.push_back( string( "Socket '" ) + socket._name.c_str() + "' has unknown fallback '" + fallback.c_str() + "'" );
-            }
+            CharacterBoneArray bones;
+            bones._listName = _listBoneName; // 이름만 본다(`CharacterBoneArray::findBone`)
+            (void)_sockets.validateBones( bones, &issues );
         }
-        return outListIssue.size() == issueCountBefore;
+        for ( const CharacterIssue& issue : issues.getIssues() )
+        {
+            outListIssue.push_back( issue._text );
+        }
+        return issues.getIssues().empty();
     }
 
     bool SocketEditModel::addSocket( const hashed_string& name, const hashed_string& parent, const hashed_string& kind, string& outError )

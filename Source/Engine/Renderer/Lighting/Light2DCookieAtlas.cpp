@@ -113,7 +113,7 @@ namespace sw
                     _bOverflowReported = SW_TRUE;
                     continue;
                 }
-                const Texture2D* pTexture = pCache->acquire( cookie._texturePath.c_str(), pDevice );
+                const Texture2D* pTexture = pCache->acquire( cookie._texturePath.c_str() );
                 if ( pTexture == nullptr )
                 {
                     SW_LOG_ERROR_ID( "Light2DCookieAtlas.DLightCookieCould", "2D light cookie '%#' could not be loaded - that light draws without its cookie", cookie._texturePath.c_str() );

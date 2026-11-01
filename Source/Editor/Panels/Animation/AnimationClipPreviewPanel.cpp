@@ -128,9 +128,7 @@ namespace sw::editor
             _model.syncBody( getPreviewScene(), getLoadedAssetPath() );
         drawClipInfo();
 
-        const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = AnimationClipPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
-        const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
+        const float2 viewSize = computeViewportFillSize( AnimationClipPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "clip.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );

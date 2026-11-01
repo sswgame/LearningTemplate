@@ -71,10 +71,10 @@ namespace sw::editor
         _viewSettings._farPlane  = CameraComponent::kDefaultFarZ;
     }
 
-    void RenderTargetPanel::shutdown( IRHIDevice* pRHIDevice )
+    void RenderTargetPanel::shutdown()
     {
         releasePreviewTexture();
-        releaseSnapshotTexture( pRHIDevice );
+        releaseSnapshotTexture();
     }
 
     bool RenderTargetPanel::hasSnapshot() const
@@ -89,7 +89,7 @@ namespace sw::editor
         return pSelected != nullptr && pSelected->_bDepth != SW_FALSE;
     }
 
-    void RenderTargetPanel::releaseSnapshotTexture( IRHIDevice* /*pRHIDevice*/ )
+    void RenderTargetPanel::releaseSnapshotTexture()
     {
         EditorContext*         pContext = editor::findSubsystem<EditorContext>();
         IImGuiRendererBackend* pBackend = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
@@ -218,7 +218,7 @@ namespace sw::editor
     void RenderTargetPanel::rebuildSnapshotTexture()
     {
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
-        releaseSnapshotTexture( nullptr );
+        releaseSnapshotTexture();
         if ( pSelected == nullptr || hasSnapshot() == false )
             return;
 

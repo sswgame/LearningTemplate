@@ -64,7 +64,7 @@ namespace sw::editor
         /** @brief 로그 줄의 우클릭 메뉴(IDE 열기 · 복사)입니다. */
         void drawLogRowContextMenu( const LogEntry& entry );
         /** @brief Logger 구독을 해제합니다. */
-        void shutdown( IRHIDevice* pRHIDevice ) override;
+        void shutdown() override;
 
         /** @brief 태그(카테고리) 필터입니다. */
         EditorLogTagFilter& getTagFilter() { return _tagFilter; }

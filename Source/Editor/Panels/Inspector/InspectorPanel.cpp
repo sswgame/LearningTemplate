@@ -42,7 +42,6 @@
 #include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -436,7 +435,6 @@ namespace sw::editor
     void InspectorPanel::drawComponentList( GameObject* pObj, EditorWorkspace& workspace )
     {
         ImGui::SeparatorText( "Components" );
-        IRHIDevice* pRHIDevice = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().getRHIDevice();
         // 복사한다. 아래 루프가 컴포넌트를 제거할 수 있어 원본을 순회할 수 없다.
         const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )
@@ -475,7 +473,7 @@ namespace sw::editor
 
                 drawComponentContextMenu( pComp );
 
-                drawComponentSection( pComp, pRHIDevice );
+                drawComponentSection( pComp );
                 EditorWidgets::endComponentCard();
             }
             if ( bActive != bWasActive )
@@ -618,7 +616,7 @@ namespace sw::editor
         }
     }
 
-    void InspectorPanel::drawComponentSection( Component* pComp, IRHIDevice* pRHIDevice )
+    void InspectorPanel::drawComponentSection( Component* pComp )
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
@@ -644,7 +642,7 @@ namespace sw::editor
             // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
             // 영역이 위젯마다 `trackPOD` 를 호출하지 않아도 된다.
             ImGui::BeginGroup();
-            pInspector->drawSection( pComp, pRHIDevice );
+            pInspector->drawSection( pComp );
             ImGui::EndGroup();
             InspectorPropertyUndo::trackLastItem( pTypeInfo->getDisplayName() );
             pInspector->collectDrawnProperties( listDrawnName );
@@ -657,7 +655,7 @@ namespace sw::editor
 
         for ( IInspectorComponent* pInspector : listInspector )
         {
-            pInspector->drawFooter( pComp, pRHIDevice );
+            pInspector->drawFooter( pComp );
         }
     }
 } // namespace sw::editor

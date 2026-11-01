@@ -23,7 +23,7 @@ namespace sw::editor
         class SpriteComponentInspector final : public IInspectorComponent
         {
         public:
-            void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRHIDevice*/ ) override
+            void drawFooter( Component* /*pComponent*/ ) override
             {
                 if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
                     editor::getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( EditorAssetType{ SpriteClipAsset::kAssetType } );

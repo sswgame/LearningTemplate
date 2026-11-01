@@ -13,7 +13,6 @@
 
 namespace sw
 {
-    class IRHIDevice;
 } // namespace sw
 
 namespace sw::editor
@@ -59,7 +58,7 @@ namespace sw::editor
         /** @brief 패널 크롬을 열고 drawContent() 를 호출합니다. */
         void draw();
         /** @brief 패널을 종료할 때 리소스를 정리합니다. */
-        virtual void shutdown( IRHIDevice* /*rhiDevice*/ ) {}
+        virtual void shutdown() {}
         /** @brief 도구 패널이면 true 입니다. 도구 패널은 닫힌 채, 핵심 패널은 열린 채 시작합니다. */
         virtual bool isToolPanel() const { return false; }
         /** @brief 기본 배치에서 붙을 영역입니다. 기본은 떠 있는 창입니다. */

@@ -478,7 +478,9 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Game );
         // RHI 를 받은 호스트(App)는 디바이스가 있어야 만든다. 전용 서버는 RHI 가 없고 게임을 디바이스 없이 만든다.
-        return ModuleInstanceUtil::createInstance( _gameAPI, _game, _pWindow, _pRHI, _pRHI != nullptr, "Game" );
+        const auto initializeGame = [this]( void* pHandle )
+        { return _gameAPI.initialize( pHandle, _pWindow ); };
+        return ModuleInstanceUtil::createInstance( _gameAPI, _game, initializeGame, _pRHI, _pRHI != nullptr, "Game" );
     }
 
     // ----------------------------------------------------------------------------------------------------------------------

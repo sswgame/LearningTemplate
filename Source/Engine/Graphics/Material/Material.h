@@ -196,7 +196,7 @@ namespace sw
         /** @brief 이 머티리얼이 쓰는 텍스처의 에셋 경로(경로가 있는 텍스처 프로퍼티)를 @p outListPath 끝에 덧붙입니다. 빌렸는지와 상관없이 데이터가 가리키는 경로다(텍스처 밉 요청 우선순위가 쓴다). */
         void collectTexturePaths( vector<string>& outListPath ) const;
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
-        void releaseTextureAssets( IRHIDevice* pRHI );
+        void releaseTextureAssets();
         /**
          * @brief 빌린 텍스처가 다시 업로드되었거나(`TextureCache::reload`) 비동기 로드가 끝났으면 새 SRV 인덱스를 받아 다시 패킹합니다.
          * @details 로드 중인 텍스처 자리는 로드 중 텍스처(`EngineDefaultAssets::_loadingTexture`)를 샘플하다가, 준비되면 진짜로, 실패하면 누락 텍스처(마젠타)로 바꾼다.

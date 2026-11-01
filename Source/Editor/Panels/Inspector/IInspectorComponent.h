@@ -12,7 +12,6 @@
 namespace sw
 {
     class Component;
-    class IRHIDevice;
 } // namespace sw
 
 namespace sw::editor
@@ -34,12 +33,12 @@ namespace sw::editor
         virtual void drawHeader( Component* /*pComponent*/ ) {}
 
         /** @brief 이 타입 단계의 구역을 그립니다(반사 프로퍼티 앞). 반사 프로퍼티를 통째로 감추지 않습니다. */
-        virtual void drawSection( Component* /*pComponent*/, IRHIDevice* /*pRHIDevice*/ ) {}
+        virtual void drawSection( Component* /*pComponent*/ ) {}
 
         /** @brief `drawSection` 이 직접 그리는 반사 프로퍼티 이름입니다. 인스펙터는 이것들을 반사 칸에서 빼고 그립니다. */
         virtual void collectDrawnProperties( vector<hashed_string>& /*outListName*/ ) const {}
 
         /** @brief 기본 프로퍼티 뒤에 푸터 UI 를 그립니다. */
-        virtual void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRHIDevice*/ ) {}
+        virtual void drawFooter( Component* /*pComponent*/ ) {}
     };
 } // namespace sw::editor

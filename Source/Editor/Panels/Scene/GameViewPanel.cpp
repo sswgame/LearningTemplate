@@ -110,7 +110,7 @@ namespace sw::editor
         if ( width > 1 && height > 1 )
         {
             const EditorViewTarget& view = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
-            if ( EditorViewTargetUtil::needsResize( view._width, view._height, width, height ) )
+            if ( EditorViewTargetUtil::needsResize( view.getRequestedWidth(), view.getRequestedHeight(), width, height ) )
                 editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Game, width, height );
         }
         // 레터박스 — 남는 쪽은 비워 둔다. 이미지는 RT 크기 그대로(늘이지 않는다).

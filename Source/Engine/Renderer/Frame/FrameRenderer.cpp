@@ -1068,7 +1068,7 @@ namespace sw
                 textures.release( view._outputPath.view() );
             textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
             // 렌더 타깃은 읽을 파일이 없어 기다림이 이 스레드의 GPU 생성뿐이라 동기로 둔다(`CanvasTextureLeases::prepareTargets` 와 같다).
-            view._pOutputTexture = textures.acquire( request._renderTexture.view(), _pDevice );
+            view._pOutputTexture = textures.acquire( request._renderTexture.view() );
             view._outputPath     = request._renderTexture;
         }
         if ( bRenderTexture )

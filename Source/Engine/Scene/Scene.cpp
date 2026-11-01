@@ -555,8 +555,37 @@ namespace sw
         }
     }
 
+    void Scene::holdRegistration()
+    {
+        if ( _objectManager == nullptr || _bRegistrationHeld )
+            return;
+        _objectManager->beginDeferredRegistration();
+        _bRegistrationHeld = true;
+    }
+
+    void Scene::finishHeldRegistration()
+    {
+        if ( _bRegistrationHeld == false )
+            return;
+        _bRegistrationHeld = false;
+        _objectManager->endDeferredRegistration();
+    }
+
     bool Scene::instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, bool bStreamingCell, vector<uint64>* pOutListObjectID, const StopToken& stopToken )
     {
+        // 배치가 끝날 때까지 등록 · 로드 뒤 처리를 미룬다 — 값을 다 읽고 연결한 뒤 등록한다(쥔 미루기가 있으면 그것이 받을 때까지 더 미룬다).
+        struct DeferredRegistrationScope
+        {
+            GameObjectManager& _manager;
+            explicit DeferredRegistrationScope( GameObjectManager& manager )
+                : _manager{ manager }
+            {
+                _manager.beginDeferredRegistration();
+            }
+            ~DeferredRegistrationScope() { _manager.endDeferredRegistration(); }
+            DeferredRegistrationScope( const DeferredRegistrationScope& )            = delete;
+            DeferredRegistrationScope& operator=( const DeferredRegistrationScope& ) = delete;
+        } deferScope{ *_objectManager };
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 해석할 수 있다. 엔티티를 모두 하나의 배치로 읽고 끝에서 연결한다. 부착은 부모를
         // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 의미가 있는 값이라 배치 안에서만 해석한다). 이름으로 찾으면 이름이 겹친
         // 엔티티(병합)에서 자식이 앞의 것에 붙는다.

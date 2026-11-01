@@ -202,6 +202,19 @@ namespace sw
          */
         uint64 getUpdateSerial() const { return _updateSerial; }
 
+        /**
+         * @brief 컴포넌트 등록(`onRegister`) · 로드 뒤 처리(`onPostLoad`)를 `endDeferredRegistration` 까지 미룹니다(중첩 가능). 씬을 짓는 배치(`Scene::instantiate`)가 씁니다.
+         * @details 언리얼처럼 로딩 쪽은 생성 · 직렬화만 하고 훅은 게임 스레드에서 돈다 — 비동기 로드는 워커에서 지은 씬을 받는 게임 스레드가 끝낸다(`Scene::finishHeldRegistration`).
+         *          예전에는 워커가 훅을 불러, 공유 에셋(머티리얼)을 만지는 훅이 게임 스레드의 초기화와 겹쳤다. 동기 로드도 같은 순서(값 읽기 → 등록 → 로드 뒤 처리)다.
+         */
+        void beginDeferredRegistration() { ++_deferredRegistrationDepth; }
+        /** @brief `beginDeferredRegistration` 의 짝입니다. 바깥 짝이면 미룬 등록을 붙은 순서로, 이어 미룬 로드 뒤 처리를 부릅니다(게임 스레드). */
+        void endDeferredRegistration();
+        /** @brief 막 붙은 컴포넌트를 등록합니다(`GameObject::attachCreatedComponent`). 미루는 중이면 줄에 세웁니다. */
+        void registerComponent( Component& comp );
+        /** @brief 값을 다 읽은 컴포넌트의 `onPostLoad` 를 부릅니다(`ObjectStateBatch`). 미루는 중이면 줄에 세웁니다. */
+        void postLoadComponent( Component& comp );
+
         /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
         bool hasBegunPlay() const { return _store.hasBegunPlay(); }
         /**
@@ -640,5 +653,10 @@ namespace sw
         uint64 _updateSerial;
         /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */
         bool _bPhysicsStepEnabled;
+        /** @brief `beginDeferredRegistration` 의 중첩 깊이입니다. 0 이 아니면 등록 · 로드 뒤 처리를 줄에 세웁니다. */
+        uint32 _deferredRegistrationDepth;
+        /** @brief 미룬 등록 · 로드 뒤 처리입니다(붙은 순서). 핸들로 들어 그 사이 해체돼도 안전합니다. */
+        vector<ComponentHandle> _listDeferredRegister;
+        vector<ComponentHandle> _listDeferredPostLoad;
     };
 } // namespace sw

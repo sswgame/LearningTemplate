@@ -104,6 +104,13 @@ namespace sw
         void setName( string_view name ) { _name = name; }
         /** @brief 마지막 로드/저장 경로를 설정합니다. */
         void setSourcePath( string_view path ) { _sourcePath = path; }
+        /**
+         * @brief 다음 `instantiate` 의 등록 · 로드 뒤 처리를 `finishHeldRegistration` 까지 쥡니다. 워커에서 짓는 비동기 로드가 짓기 전에 부릅니다.
+         * @details 훅(`onRegister` · `onPostLoad`)은 게임 스레드에서만 돈다 — 씬을 받는 쪽(`SceneManager::adoptScene`)이 끝낸다.
+         */
+        void holdRegistration();
+        /** @brief 쥔 등록이 있으면 부릅니다(게임 스레드). 없으면 아무것도 하지 않습니다. */
+        void finishHeldRegistration();
         /** @brief 활성 게임 카메라를 직접 고릅니다. 그 카메라가 살아 있고 켜져 있는 동안 레지스트리의 선택보다 먼저입니다(nullptr 이면 해제). */
         void setActiveGameCamera( CameraComponent* pCamera );
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
@@ -183,8 +190,9 @@ namespace sw
          * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
          */
         mutable ObjectSavedIDMap               _mapObjectIDToFileID;
-        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity; ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
-        TComponentHandle<CameraComponent>      _activeGameCamera;     ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
-        TComponentHandle<CameraComponent>      _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라
+        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;       ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
+        bool                                   _bRegistrationHeld{ false }; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
+        TComponentHandle<CameraComponent>      _activeGameCamera;           ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        TComponentHandle<CameraComponent>      _gameCameraOverride;         ///< `setActiveGameCamera` 로 직접 고른 카메라
     };
 } // namespace sw

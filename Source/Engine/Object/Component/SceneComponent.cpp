@@ -74,19 +74,17 @@ namespace sw
         markTransformDirty();
     }
 
-    void SceneComponent::onRegister( GameObjectManager& manager )
+    void SceneComponent::bindToManager( GameObjectManager& manager )
     {
-        Component::onRegister( manager );
         _pManager = &manager;
         if ( getParent() == nullptr )
             manager.registerRootSceneComponent( this );
     }
 
-    void SceneComponent::onUnregister( GameObjectManager& manager )
+    void SceneComponent::unbindFromManager( GameObjectManager& manager )
     {
         manager.unregisterRootSceneComponent( this );
         _pManager = nullptr;
-        Component::onUnregister( manager );
     }
 
     void SceneComponent::onPropertyChanged( hashed_string propertyName )

@@ -25,7 +25,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel: 수명 주기와 UI 렌더링
         // ------------------------------------------------------------------------------
-        void shutdown( IRHIDevice* pRHIDevice ) override;
+        void shutdown() override;
         /** @brief 대화 노드 그래프 UI 를 그립니다. */
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;

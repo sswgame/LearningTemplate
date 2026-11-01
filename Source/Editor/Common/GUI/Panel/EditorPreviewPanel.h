@@ -46,7 +46,7 @@ namespace sw::editor
     public:
         ~EditorPreviewPanel() override;
 
-        void shutdown( IRHIDevice* pRHIDevice ) override;
+        void shutdown() override;
 
         /** @brief 미리보기 씬입니다. 아직 그린 적이 없으면 nullptr 입니다. */
         Scene* getPreviewScene() const { return _viewport.getScene(); }
@@ -94,6 +94,12 @@ namespace sw::editor
          * @param bOrbitBlocked 기즈모가 마우스를 가졌으면 true 입니다(`EditorPreviewGizmo::hasMouse`). 기즈모를 쓰지 않는 창은 false 입니다.
          */
         void drawPreviewViewport( const float2& size, bool bOrbitBlocked );
+        /**
+         * @brief 패널의 남은 공간을 채우는 뷰포트 크기입니다(높이는 @p minHeight 이상). 폭은 세로 스크롤바가 있든 없든 같다 — 늘 스크롤바 자리를 뺀다.
+         * @details 최소 높이로 넘치면 스크롤바가 생겨 폭이 줄고, 줄어든 폭에서는 넘치지 않아 스크롤바가 사라지는 되먹임이 있었다(프레임마다 폭이 스크롤바 폭만큼
+         *          오가며 렌더 타깃을 다시 만들었다). 미리보기 패널마다 같은 세 줄을 따로 적던 것을 이 한 곳으로 모았다.
+         */
+        float2 computeViewportFillSize( float32 minHeight ) const;
         /**
          * @brief 창 Undo 스택이 늘었거나 줄었으면 문서를 dirty 로 표시합니다. 미리보기 씬의 편집은 모두 이 스택을 거치므로 파생 창이 따로 알릴 필요가 없습니다.
          * @details 편집 기록을 스택 밖(편집 모델)에도 두는 파생 창은 재정의해 그 상태를 더하고, 이 함수를 꼭 부른다(스택의 편집을 놓치지 않는다).

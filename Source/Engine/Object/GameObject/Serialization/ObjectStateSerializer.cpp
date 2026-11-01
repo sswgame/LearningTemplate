@@ -770,7 +770,12 @@ namespace sw
                 continue;
             for ( Component* pComp : entry._pObject->getComponents() )
             {
-                if ( pComp != nullptr && pComp->isPendingDestroy() == false )
+                if ( pComp == nullptr || pComp->isPendingDestroy() )
+                    continue;
+                GameObjectManager* pManager = entry._pObject->getManager();
+                if ( pManager != nullptr )
+                    pManager->postLoadComponent( *pComp ); // 씬을 짓는 배치 안이면 등록과 함께 배치 끝까지 미룬다
+                else
                     pComp->onPostLoad();
             }
         }

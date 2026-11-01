@@ -140,6 +140,8 @@ namespace sw
         void syncDescOverrides() const;
         /** @brief 부모 바이트에 덮어쓰기를 패킹하고 텍스처 슬롯을 채운 새 사본을 만듭니다(`getRenderBinding`). */
         void rebuildRenderData( IRHIDevice* pDevice );
+        /** @brief 부모의 매개변수 모양과 어긋난 스칼라 · 벡터 덮어쓰기를 알리고 지웁니다(`rebuildRenderData` 가 부모 초기화 뒤 게임 스레드에서 부른다). */
+        void dropShapeMismatchedOverrides();
         /**
          * @brief 이 인스턴스로 그릴 때의 텍스처 슬롯(DX11 과 GL 의 t16..)에 바인딩할 SRV 를 채웁니다. 부모의 슬롯 위에 덮어쓴 텍스처를 적용합니다.
          * @details 슬롯 바인딩 백엔드는 배치마다 슬롯을 바인딩하고, 인스턴스가 있는 배치는 그 인스턴스의 것이다(합치기는 네이티브 bindless 에서만 켜진다).

@@ -434,7 +434,7 @@ namespace sw
         return TextureHandle{ std::move( pBlock ) };
     }
 
-    Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
+    Texture2D* TextureCache::acquire( string_view relativePath )
     {
         const TextureHandle handle = request( relativePath, AssetLoadStart::OnCallingThread );
         // 기다림이 계약이다 — `acquire` 는 포인터를 바로 돌려주는 동기 API 이고, 기다리지 않을 호출자는 `request` 핸들을 들고 뒤 프레임에 본다.

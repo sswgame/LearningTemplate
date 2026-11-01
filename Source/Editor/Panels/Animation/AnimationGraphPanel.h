@@ -29,7 +29,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
-        void shutdown( IRHIDevice* pRHIDevice ) override;
+        void shutdown() override;
         /** @brief 애니메이션 그래프 UI 를 그립니다. */
         void drawDocumentContent() override;
         /** @brief 노드 추가, 저장, 줌 툴바를 그립니다. */

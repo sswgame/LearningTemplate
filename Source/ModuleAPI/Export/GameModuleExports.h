@@ -31,52 +31,52 @@ namespace sw
 // 문법이 깨진다. 검사기는 인자를 식으로 가정한다. 매크로 본문은 줄 연결이라 중간에
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
-#define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                                                                                \
-    extern "C" SW_MODULE_API uint32 getGameModuleABIVersion()                                                                                                                                                \
-    {                                                                                                                                                                                                        \
-        return sw::kModuleABIVersion;                                                                                                                                                                        \
-    }                                                                                                                                                                                                        \
-    extern "C" SW_MODULE_API const utf8* getGameModuleABIStamp()                                                                                                                                             \
-    {                                                                                                                                                                                                        \
-        return sw::kModuleABIStamp;                                                                                                                                                                          \
-    }                                                                                                                                                                                                        \
-    extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI )                                                                                                                                      \
-    {                                                                                                                                                                                                        \
-        if ( pOutAPI == nullptr )                                                                                                                                                                            \
-            return false;                                                                                                                                                                                    \
-        pOutAPI->create     = []() -> sw::GameHandle { return sw::make_unique<GameClass>().release(); };                                                                                                     \
-        pOutAPI->destroy    = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                                                                                       \
-        pOutAPI->initialize = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool                                                                    \
-        { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::initialize, static_cast<sw::IWindow*>( windowHandle ), static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); }; \
-        pOutAPI->shutdown    = []( sw::GameHandle gameHandle ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::shutdown ); };                                                          \
-        pOutAPI->update      = []( sw::GameHandle gameHandle, float32 deltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::update, deltaTime ); };                              \
-        pOutAPI->fixedUpdate = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::fixedUpdate, fixedDeltaTime ); };               \
-        pOutAPI->bindService = []( const sw::ISubsystemLocator* pService )                                                                                                                                   \
-        {                                                                                                                                                                                                    \
-            if ( pService != nullptr )                                                                                                                                                                       \
-                sw::game::bindGameService( *pService );                                                                                                                                                      \
-            else                                                                                                                                                                                             \
-                sw::game::unbindGameService();                                                                                                                                                               \
-        };                                                                                                                                                                                                   \
-        pOutAPI->serializeState = []( sw::GameHandle gameHandle, const sw::StateBufferSink* pSink ) -> bool                                                                                                  \
-        {                                                                                                                                                                                                    \
-            GameClass* pGame    = static_cast<GameClass*>( gameHandle );                                                                                                                                     \
-            const bool bHasSink = pSink != nullptr && pSink->allocate != nullptr;                                                                                                                            \
-            if ( pGame == nullptr || bHasSink == false )                                                                                                                                                     \
-                return false;                                                                                                                                                                                \
-            sw::vector<uint8> bytes;                                                                                                                                                                         \
-            if ( pGame->serializeState( bytes ) == false )                                                                                                                                                   \
-                return false;                                                                                                                                                                                \
-            if ( bytes.empty() )                                                                                                                                                                             \
-                return true;                                                                                                                                                                                 \
-            void* pBuffer = pSink->allocate( pSink->_pContext, static_cast<uint32>( bytes.size() ) );                                                                                                        \
-            if ( pBuffer == nullptr )                                                                                                                                                                        \
-                return false;                                                                                                                                                                                \
-            sw::Memory::copy( pBuffer, bytes.data(), bytes.size() );                                                                                                                                         \
-            return true;                                                                                                                                                                                     \
-        };                                                                                                                                                                                                   \
-        pOutAPI->deserializeState = []( sw::GameHandle gameHandle, const void* pInBuffer, uint32 bufferSize ) -> bool                                                                                        \
-        { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::deserializeState, pInBuffer, bufferSize ); };                                                                \
-        return true;                                                                                                                                                                                         \
+#define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                                                                  \
+    extern "C" SW_MODULE_API uint32 getGameModuleABIVersion()                                                                                                                                  \
+    {                                                                                                                                                                                          \
+        return sw::kModuleABIVersion;                                                                                                                                                          \
+    }                                                                                                                                                                                          \
+    extern "C" SW_MODULE_API const utf8* getGameModuleABIStamp()                                                                                                                               \
+    {                                                                                                                                                                                          \
+        return sw::kModuleABIStamp;                                                                                                                                                            \
+    }                                                                                                                                                                                          \
+    extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI )                                                                                                                        \
+    {                                                                                                                                                                                          \
+        if ( pOutAPI == nullptr )                                                                                                                                                              \
+            return false;                                                                                                                                                                      \
+        pOutAPI->create     = []() -> sw::GameHandle { return sw::make_unique<GameClass>().release(); };                                                                                       \
+        pOutAPI->destroy    = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                                                                         \
+        pOutAPI->initialize = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle ) -> bool                                                                                           \
+        { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::initialize, static_cast<sw::IWindow*>( windowHandle ) ); };                                    \
+        pOutAPI->shutdown    = []( sw::GameHandle gameHandle ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::shutdown ); };                                            \
+        pOutAPI->update      = []( sw::GameHandle gameHandle, float32 deltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::update, deltaTime ); };                \
+        pOutAPI->fixedUpdate = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::fixedUpdate, fixedDeltaTime ); }; \
+        pOutAPI->bindService = []( const sw::ISubsystemLocator* pService )                                                                                                                     \
+        {                                                                                                                                                                                      \
+            if ( pService != nullptr )                                                                                                                                                         \
+                sw::game::bindGameService( *pService );                                                                                                                                        \
+            else                                                                                                                                                                               \
+                sw::game::unbindGameService();                                                                                                                                                 \
+        };                                                                                                                                                                                     \
+        pOutAPI->serializeState = []( sw::GameHandle gameHandle, const sw::StateBufferSink* pSink ) -> bool                                                                                    \
+        {                                                                                                                                                                                      \
+            GameClass* pGame    = static_cast<GameClass*>( gameHandle );                                                                                                                       \
+            const bool bHasSink = pSink != nullptr && pSink->allocate != nullptr;                                                                                                              \
+            if ( pGame == nullptr || bHasSink == false )                                                                                                                                       \
+                return false;                                                                                                                                                                  \
+            sw::vector<uint8> bytes;                                                                                                                                                           \
+            if ( pGame->serializeState( bytes ) == false )                                                                                                                                     \
+                return false;                                                                                                                                                                  \
+            if ( bytes.empty() )                                                                                                                                                               \
+                return true;                                                                                                                                                                   \
+            void* pBuffer = pSink->allocate( pSink->_pContext, static_cast<uint32>( bytes.size() ) );                                                                                          \
+            if ( pBuffer == nullptr )                                                                                                                                                          \
+                return false;                                                                                                                                                                  \
+            sw::Memory::copy( pBuffer, bytes.data(), bytes.size() );                                                                                                                           \
+            return true;                                                                                                                                                                       \
+        };                                                                                                                                                                                     \
+        pOutAPI->deserializeState = []( sw::GameHandle gameHandle, const void* pInBuffer, uint32 bufferSize ) -> bool                                                                          \
+        { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::deserializeState, pInBuffer, bufferSize ); };                                                  \
+        return true;                                                                                                                                                                           \
     }
 // NOLINTEND(bugprone-macro-parentheses)

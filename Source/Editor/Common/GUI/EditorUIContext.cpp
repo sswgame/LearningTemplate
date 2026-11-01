@@ -113,7 +113,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.empty() == false || pContext == nullptr )
                     return false;
-                const uint32 resetCount = pContext->getSubsystem<EditorPanelManager>().resetOptionalPanels( pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
+                const uint32 resetCount = pContext->getSubsystem<EditorPanelManager>().resetOptionalPanels();
                 outReply                = formatToString( "reset %# optional panel(s)", resetCount );
                 return true;
             }

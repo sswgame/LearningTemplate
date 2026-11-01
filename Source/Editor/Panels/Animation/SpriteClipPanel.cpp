@@ -220,7 +220,7 @@ namespace sw::editor
             notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
     }
 
-    void SpriteClipPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void SpriteClipPanel::shutdown()
     {
         _atlasThumbnail.clear();
     }

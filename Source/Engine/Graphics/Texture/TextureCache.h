@@ -81,7 +81,7 @@ namespace sw
          *          **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
          *          맵이 원소를 옮겨도 주소가 그대로입니다). 같은 경로를 동시에 원한 스레드는 같은 로드를 기다려 받습니다.
          */
-        Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
+        Texture2D* acquire( string_view relativePath );
         /**
          * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 끝낸(bindless 에 등록해 공개한) 수를 반환합니다.
          * @details 업로드는 세 단계다(RHIAsyncUploads U8) — 워커 읽기 → 이 함수가 `beginUpload`(텍스처 생성 · 제출, 기다리지 않는다) → 이후 프레임의 이 함수가 `finishUpload`

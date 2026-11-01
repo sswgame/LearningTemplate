@@ -27,6 +27,7 @@ namespace sw
         , _bCanEverTick{ SW_TRUE }
         , _bIsSceneComponent{ SW_FALSE }
         , _bHasBegunPlay{ SW_FALSE }
+        , _bRegistered{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _poolEntrySlot{ kNotInPoolEntry }
         , _listSubTick{}
@@ -49,6 +50,22 @@ namespace sw
 
     void Component::onEndPlay()
     {
+    }
+
+    void Component::dispatchRegister( GameObjectManager& manager )
+    {
+        if ( _bRegistered == SW_TRUE )
+            return;
+        _bRegistered = SW_TRUE;
+        onRegister( manager );
+    }
+
+    void Component::dispatchUnregister( GameObjectManager& manager )
+    {
+        if ( _bRegistered == SW_FALSE )
+            return;
+        _bRegistered = SW_FALSE;
+        onUnregister( manager );
     }
 
     void Component::dispatchBeginPlay()

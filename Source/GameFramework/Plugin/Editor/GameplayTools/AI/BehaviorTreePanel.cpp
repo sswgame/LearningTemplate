@@ -130,7 +130,7 @@ namespace sw::editor
         _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
     }
 
-    void BehaviorTreePanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void BehaviorTreePanel::shutdown()
     {
         _nodeGraph.shutdown();
     }

@@ -76,7 +76,7 @@ namespace sw::editor
             const uint32            targetWidth  = static_cast<uint32>( size.x );
             const uint32            targetHeight = static_cast<uint32>( size.y );
             const EditorViewTarget& view         = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
-            if ( EditorViewTargetUtil::needsResize( view._width, view._height, targetWidth, targetHeight ) )
+            if ( EditorViewTargetUtil::needsResize( view.getRequestedWidth(), view.getRequestedHeight(), targetWidth, targetHeight ) )
                 editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
         }
         // 이 패널이 보이는 프레임만 씬 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다).

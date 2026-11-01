@@ -37,15 +37,15 @@ namespace sw
     /** @brief SWGame 이 exportGameAPI 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
     struct GameAPI
     {
-        GameHandle ( *create )(){ nullptr };                                                                /**< @brief 게임 인스턴스를 생성합니다. */
-        void ( *destroy )( GameHandle game ){ nullptr };                                                    /**< @brief 게임 인스턴스를 파괴합니다. */
-        bool ( *initialize )( GameHandle game, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr }; /**< @brief 윈도우 및 RHI 디바이스로 게임을 초기화합니다. */
-        void ( *shutdown )( GameHandle game ){ nullptr };                                                   /**< @brief 게임을 종료합니다. */
-        void ( *update )( GameHandle game, float32 deltaTime ){ nullptr };                                  /**< @brief 프레임 업데이트를 수행합니다. */
-        void ( *fixedUpdate )( GameHandle game, float32 fixedDeltaTime ){ nullptr };                        /**< @brief 고정 프레임 업데이트를 수행합니다. */
-        void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                              /**< @brief 호스트 서비스 범위를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */
-        bool ( *serializeState )( GameHandle game, const StateBufferSink* pSink ){ nullptr };               /**< @brief 게임 상태를 한 번 직렬화해 @p pSink 가 준 버퍼에 씁니다. 구현이 지원하는 범위만 복원됩니다. */
-        bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr };       /**< @brief 버퍼에서 게임 상태를 복원합니다. */
+        GameHandle ( *create )(){ nullptr };                                                          /**< @brief 게임 인스턴스를 생성합니다. */
+        void ( *destroy )( GameHandle game ){ nullptr };                                              /**< @brief 게임 인스턴스를 파괴합니다. */
+        bool ( *initialize )( GameHandle game, WindowHandle window ){ nullptr };                      /**< @brief 윈도우로 게임을 초기화합니다(디바이스는 받지 않는다 — 엔진이 붙인다). */
+        void ( *shutdown )( GameHandle game ){ nullptr };                                             /**< @brief 게임을 종료합니다. */
+        void ( *update )( GameHandle game, float32 deltaTime ){ nullptr };                            /**< @brief 프레임 업데이트를 수행합니다. */
+        void ( *fixedUpdate )( GameHandle game, float32 fixedDeltaTime ){ nullptr };                  /**< @brief 고정 프레임 업데이트를 수행합니다. */
+        void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                        /**< @brief 호스트 서비스 범위를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */
+        bool ( *serializeState )( GameHandle game, const StateBufferSink* pSink ){ nullptr };         /**< @brief 게임 상태를 한 번 직렬화해 @p pSink 가 준 버퍼에 씁니다. 구현이 지원하는 범위만 복원됩니다. */
+        bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr }; /**< @brief 버퍼에서 게임 상태를 복원합니다. */
     };
 
     /** @brief SWGame 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportGameAPI). */

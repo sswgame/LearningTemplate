@@ -196,7 +196,7 @@ namespace sw
                     load.reset();
                 }
                 borrowedPath = bLoading ? engine::getSubsystem<EngineDefaultAssets>()._loadingTexture.get() : engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
-                pTexture     = textures.acquire( borrowedPath, pRHI );
+                pTexture     = textures.acquire( borrowedPath );
                 if ( pTexture == nullptr )
                 {
                     // 로드 중 텍스처와 체커는 엔진 필수 데이터다. 그것마저 없으면 흰색으로 그리지 않고 머티리얼 초기화가 실패한다.
@@ -273,7 +273,7 @@ namespace sw
                              _listAcquiredTexturePath[ordinal].c_str(), load.getError().c_str() );
             load.reset();
             borrowed = engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
-            if ( textures.acquire( borrowed, _pRHIDevice ) == nullptr )
+            if ( textures.acquire( borrowed ) == nullptr )
             {
                 // 체커는 엔진 필수 데이터다 — 못 읽으면 로드 중 텍스처를 그대로 둔다(오류는 남았다).
                 SW_LOG_ERROR_ID( "Material.MaterialMissingTextureChecker", "Material '%#': the missing-texture checker '%#' could not be loaded either", _desc._name.c_str(), borrowed.c_str() );
@@ -303,7 +303,7 @@ namespace sw
         }
     }
 
-    void Material::releaseTextureAssets( IRHIDevice* pRHI )
+    void Material::releaseTextureAssets()
     {
         if ( _listAcquiredTexturePath.empty() )
             return;
@@ -355,7 +355,7 @@ namespace sw
         // 주의: `releaseRHI` 와 이 함수는 같은 상태를 남겨야 한다. 목록이 남은 채 `initRHI` 가 오면 `resolveTextureAssets` 가
         // 목록에 **덧붙여** `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를
         // t16..t31 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로 남는다.
-        releaseTextureAssets( nullptr );
+        releaseTextureAssets();
         // 상수 버퍼는 프록시의 것이다 — 프록시가 같은 통보를 받는다.
         _pRHIDevice = nullptr;
         setInitState( MaterialInitState::NotRequested );
@@ -368,7 +368,7 @@ namespace sw
         if ( bDeviceNotMine )
             return;
 
-        releaseTextureAssets( pRHI );
+        releaseTextureAssets();
         // 상수 버퍼는 프록시의 것이다 — 프록시가 같은 통보를 받는다.
         _pRHIDevice = nullptr;
         setInitState( MaterialInitState::NotRequested );

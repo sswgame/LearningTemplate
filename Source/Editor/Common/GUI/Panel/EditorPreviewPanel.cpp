@@ -56,7 +56,7 @@ namespace sw::editor
         _viewport.shutdown();
     }
 
-    void EditorPreviewPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void EditorPreviewPanel::shutdown()
     {
         applyWindowFocus( false );
         resetPreviewEdits();
@@ -102,6 +102,14 @@ namespace sw::editor
             }
         }
         applyWindowFocus( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
+    }
+
+    float2 EditorPreviewPanel::computeViewportFillSize( float32 minHeight ) const
+    {
+        const ImVec2  available  = ImGui::GetContentRegionAvail();
+        const bool    bScrollbar = ImGui::GetScrollMaxY() > 0.0f; // 이 창에 지금 세로 스크롤바가 있다 — 그 폭은 이미 빠졌다
+        const float32 width      = available.x - ( bScrollbar ? 0.0f : ImGui::GetStyle().ScrollbarSize );
+        return float2{ width > 1.0f ? width : 1.0f, available.y > minHeight ? available.y : minHeight };
     }
 
     void EditorPreviewPanel::drawPreviewViewport( const float2& size, bool bOrbitBlocked )

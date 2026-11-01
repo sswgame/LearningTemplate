@@ -107,7 +107,7 @@ namespace sw::editor
     {
     }
 
-    void GimmickGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void GimmickGraphPanel::shutdown()
     {
         _nodeGraph.shutdown();
     }

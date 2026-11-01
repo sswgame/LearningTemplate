@@ -144,6 +144,9 @@ namespace sw
         , _bRunningFrameSystems{ false }
         , _updateSerial{ 0 }
         , _bPhysicsStepEnabled{ true }
+        , _deferredRegistrationDepth{ 0 }
+        , _listDeferredRegister{}
+        , _listDeferredPostLoad{}
     {
         // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`). 씬 범위가 소유하고 의존 순서로 세운다.
         const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
@@ -583,5 +586,46 @@ namespace sw
     void GameObjectManager::unregisterRootSceneComponent( SceneComponent* pComp )
     {
         _transformHierarchy.unregisterRoot( pComp );
+    }
+
+    void GameObjectManager::registerComponent( Component& comp )
+    {
+        if ( _deferredRegistrationDepth != 0 )
+            _listDeferredRegister.push_back( comp.getHandle() );
+        else
+            comp.dispatchRegister( *this );
+    }
+
+    void GameObjectManager::postLoadComponent( Component& comp )
+    {
+        if ( _deferredRegistrationDepth != 0 )
+            _listDeferredPostLoad.push_back( comp.getHandle() );
+        else
+            comp.onPostLoad();
+    }
+
+    void GameObjectManager::endDeferredRegistration()
+    {
+        SW_ASSERT( _deferredRegistrationDepth != 0 );
+        if ( --_deferredRegistrationDepth != 0 )
+            return;
+        // shortcut: 한 번에 모두 부른다 — 큰 씬에서 받는 프레임이 길면 언리얼처럼 프레임마다 나눠 등록한다(`LevelStreamingComponentsRegistrationGranularity`).
+        // 등록을 모두 끝낸 뒤 로드 뒤 처리를 부른다 — 바로 붙이던 때와 같이 `onPostLoad` 가 같은 배치의 다른 컴포넌트가 등록된 뒤를 본다.
+        vector<ComponentHandle> listRegister;
+        vector<ComponentHandle> listPostLoad;
+        listRegister.swap( _listDeferredRegister );
+        listPostLoad.swap( _listDeferredPostLoad );
+        for ( const ComponentHandle handle : listRegister )
+        {
+            Component* pComp = resolveComponent( handle );
+            if ( pComp != nullptr && pComp->isPendingDestroy() == false ) // 받기 전에 파괴가 정해졌다 — 등록하지 않으므로 해체도 해제를 부르지 않는다
+                pComp->dispatchRegister( *this );
+        }
+        for ( const ComponentHandle handle : listPostLoad )
+        {
+            Component* pComp = resolveComponent( handle );
+            if ( pComp != nullptr && pComp->isPendingDestroy() == false )
+                pComp->onPostLoad();
+        }
     }
 } // namespace sw

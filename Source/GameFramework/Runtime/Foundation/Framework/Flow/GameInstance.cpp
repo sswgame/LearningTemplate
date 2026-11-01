@@ -45,7 +45,6 @@ namespace sw
     GameInstance::GameInstance()
         : _packConfig{}
         , _pWindow{ nullptr }
-        , _pRHIDevice{ nullptr }
         , _stateSnapshot{}
         , _gameScope{}
         , _loadedAudioEvents{}
@@ -104,13 +103,12 @@ namespace sw
         return true;
     }
 
-    bool GameInstance::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
+    bool GameInstance::initialize( IWindow* pWindow )
     {
         // 필수 엔진 서비스가 없으면 아무것도 걸기 전에 멈춘다. 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 그 자리에서 게임 창구로 찾는다.
         if ( checkEngineServices( pWindow ) == false )
             return false;
-        _pWindow    = pWindow;
-        _pRHIDevice = pRHIDevice;
+        _pWindow = pWindow;
         configurePackConfig( _packConfig );
         const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
         if ( pGameConfig == nullptr )
@@ -181,8 +179,7 @@ namespace sw
         if ( GameNetSession* pNetSession = game::findSubsystem<GameNetSession>() )
             pNetSession->getConnectSecurity().setProvider( nullptr );
         detachGameScope();
-        _pWindow    = nullptr;
-        _pRHIDevice = nullptr;
+        _pWindow = nullptr;
     }
 
     bool GameInstance::loadGameSettings()

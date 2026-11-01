@@ -732,7 +732,7 @@ namespace sw::editor
         _pUICapture->releaseRHI( _pRHIDevice );
         _pUICapture = nullptr;
         _editorContext->getSubsystem<EditorRenderViews>().destroyViewTargets();
-        _editorContext->getSubsystem<EditorPanelManager>().shutdownAllPanels( nullptr );
+        _editorContext->getSubsystem<EditorPanelManager>().shutdownAllPanels();
         _editorContext->getSubsystem<EditorPanelManager>().clear();
         _editorContext->shutdown();
         _editorContext.reset();

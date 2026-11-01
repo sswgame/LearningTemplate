@@ -139,7 +139,7 @@ namespace sw::editor
         return count;
     }
 
-    void EditorRenderViews::destroyTarget( EditorViewTarget& view )
+    void EditorRenderViews::releaseCurrent( EditorViewTarget& view )
     {
         if ( view._pTextureID != nullptr && _pRendererBackend != nullptr )
         {
@@ -161,36 +161,50 @@ namespace sw::editor
         view._height       = 0;
     }
 
+    void EditorRenderViews::destroyTarget( EditorViewTarget& view )
+    {
+        releaseCurrent( view );
+        view._pendingTexture = TextureHandle{}; // 아무도 그리지 않았다 — 바로 놓는다
+        view._pendingPath    = string{};
+        view._pendingWidth   = 0;
+        view._pendingHeight  = 0;
+    }
+
     void EditorRenderViews::ensureTargetSize( EditorViewTarget& view, uint32 width, uint32 height )
     {
         if ( width == 0 || height == 0 || _pRHIDevice == nullptr )
             return;
-        TextureCache& textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-        if ( width != view._width || height != view._height || view._texture.isValid() == false )
+        const bool bAlreadyRequested = width == view.getRequestedWidth() && height == view.getRequestedHeight() && ( view._texture.isValid() || view._pendingTexture.isValid() );
+        if ( bAlreadyRequested == false )
         {
-            destroyTarget( view );
-            view._texturePath = formatToString( "%#editor/view%#", TextureCache::kRenderTargetPrefix, _nextTargetSerial++ );
-            textures.declareRenderTarget( view._texturePath, width, height );
-            view._texture = textures.request( view._texturePath, AssetLoadStart::Async );
-            view._width   = width;
-            view._height  = height;
-            if ( view._texture.isValid() == false )
-            {
-                SW_LOG_ERROR_ID( "EditorRenderViews.RequestFailed", "View target %#x%# could not be requested ('%#')", width, height, view._texturePath.c_str() );
-                return;
-            }
+            // 새 크기는 바꾸는 중인 칸에 요청한다 — 지금 타깃은 새 것이 준비될 때까지 그대로 그린다.
+            TextureCache& textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+            view._pendingPath      = formatToString( "%#editor/view%#", TextureCache::kRenderTargetPrefix, _nextTargetSerial++ );
+            textures.declareRenderTarget( view._pendingPath, width, height );
+            view._pendingTexture = textures.request( view._pendingPath, AssetLoadStart::Async );
+            view._pendingWidth   = width;
+            view._pendingHeight  = height;
+            if ( view._pendingTexture.isValid() == false )
+                SW_LOG_ERROR_ID( "EditorRenderViews.RequestFailed", "View target %#x%# could not be requested ('%#')", width, height, view._pendingPath.c_str() );
         }
         adoptIfReady( view );
     }
 
     void EditorRenderViews::adoptIfReady( EditorViewTarget& view )
     {
-        if ( view._renderTarget != 0 || view._texture.isReady() == false )
-            return; // 이미 받았거나, 엔진이 아직 올리지 않았다(다음 프레임에 다시 본다)
-        const Texture2D* pTexture = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>().find( view._texturePath );
+        if ( view._pendingTexture.isReady() == false )
+            return; // 바꿀 것이 없거나, 엔진이 아직 올리지 않았다(다음 프레임에 다시 본다)
+        const Texture2D* pTexture = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>().find( view._pendingPath );
         if ( pTexture == nullptr || pTexture->isRHIValid() == false )
             return;
-        view._renderTarget = pTexture->getHandle();
+        releaseCurrent( view );
+        view._texture        = std::move( view._pendingTexture );
+        view._texturePath    = std::move( view._pendingPath );
+        view._width          = view._pendingWidth;
+        view._height         = view._pendingHeight;
+        view._pendingTexture = TextureHandle{};
+        view._pendingPath    = string{};
+        view._renderTarget   = pTexture->getHandle();
         if ( _pRendererBackend != nullptr )
             view._pTextureID = _pRendererBackend->registerTexture( view._renderTarget );
     }

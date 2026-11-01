@@ -388,7 +388,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "AddDataLayerTip" ) );
     }
 
-    void TileMapPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void TileMapPanel::shutdown()
     {
         _atlasThumbnail.clear();
     }

@@ -24,7 +24,7 @@
 namespace sw
 {
     /** @brief `GameAPI`/`EditorAPI` 표의 모양이 바뀔 때마다 올립니다. */
-    inline constexpr uint32 kModuleABIVersion = 9;
+    inline constexpr uint32 kModuleABIVersion = 10;
 
     /**
      * @brief 표의 지문입니다. 버전과 함께 바꿉니다.
@@ -37,8 +37,9 @@ namespace sw
      *        v7: `GameAPI::serializeState` 가 크기 묻기 대신 호스트 할당 싱크(`StateBufferSink`)를 받음(직렬화 한 번).
      *        v8: `EditorAPI::getGameViewport` · `getSceneViewport` 가 `HostViewTarget` 하나를 채움(창 안 자리가 더해져 게임 뷰의 런타임 UI 가 포인터를 받는다).
      *        v9: `EditorAPI::getRedrawReasons` 를 더하고(에디터가 조용하면 앱 루프가 잔다) 재정의하는 패널이 없던 `EditorAPI::preRender` 를 지움(EditorAPI 19항목).
+     *        v10: `GameAPI::initialize` 가 RHI 디바이스를 받지 않음 — 게임은 디바이스를 쓰지 않는다(렌더 자원은 엔진이 붙은 디바이스로 만든다).
      */
-    inline constexpr auto kModuleABIStamp = "module-abi-v9-2026-10";
+    inline constexpr auto kModuleABIStamp = "module-abi-v10-2026-11-game-init-no-device";
 
     using PFN_GetModuleAbiVersion = uint32 ( * )();
     using PFN_GetModuleABIStamp   = const utf8* (*)();

@@ -86,11 +86,11 @@ namespace sw
 
         /**
          * @brief 바인딩한 API 표로 인스턴스를 만들고 초기화합니다(에디터 · 게임 공통). 실패하면 만든 것을 부수고 핸들을 비웁니다.
-         * @note @p bRequireDevice 면 **디바이스가 없을 때 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는
+         * @p initialize 는 핸들 하나를 받아 그 모듈 종류의 초기화를 부릅니다(인자가 종류마다 다르다). @note @p bRequireDevice 면 **디바이스가 없을 때 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는
          *       길이고, 만들어 봐야 초기화가 실패할 것이 정해져 있습니다. 전용 서버의 게임은 디바이스 없이(nullptr) 만듭니다.
          */
-        template <typename TAPI>
-        [[nodiscard]] static bool createInstance( const TAPI& api, void*& pOutHandle, IWindow* pWindow, RHI* pRHI, bool bRequireDevice, const utf8* pModuleLabel )
+        template <typename TAPI, typename TInitialize>
+        [[nodiscard]] static bool createInstance( const TAPI& api, void*& pOutHandle, const TInitialize& initialize, RHI* pRHI, bool bRequireDevice, const utf8* pModuleLabel )
         {
             pOutHandle            = nullptr;
             const bool bHasDevice = pRHI != nullptr && pRHI->hasDevice();
@@ -107,7 +107,7 @@ namespace sw
                 return false;
             }
 
-            if ( api.initialize( pOutHandle, pWindow, bHasDevice ? &pRHI->getDevice() : nullptr ) == false )
+            if ( initialize( pOutHandle ) == false ) // 초기화 인자는 모듈 종류마다 다르다(게임은 창만, 에디터는 창과 디바이스) — 부르는 쪽이 정한다
             {
                 SW_LOG_ERROR_ID( "ModuleInstanceUtil.FailedInitializeInstance", "Failed to initialize %# instance", pModuleLabel );
                 if ( api.destroy != nullptr )

@@ -41,7 +41,7 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return kPanelTitle; }
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 37.0f ); }
-        void               shutdown( IRHIDevice* pRHIDevice ) override;
+        void               shutdown() override;
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 

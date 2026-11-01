@@ -41,7 +41,7 @@ namespace sw::editor
         /** @brief 소스 트리, 브레드크럼, 애셋 타일/리스트를 그립니다. */
         void drawContent() override;
         /** @brief 썸네일 캐시가 가진 텍스처와 ImGui 등록을 해제합니다. */
-        void shutdown( IRHIDevice* pDevice ) override;
+        void shutdown() override;
 
         // ------------------------------------------------------------------------------
         // 1-1) 삭제와 테스트용 함수. 우클릭 Delete 는 requestDeleteAsset, 확인 모달, confirmDeleteAsset 순서로 진행한다. 자체 테스트도 같은 경로를 부른다
