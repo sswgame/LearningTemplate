@@ -674,7 +674,7 @@ namespace sw
             fe.flagIf( typeInfo._bAbstract, "info._bAbstract" );
             fe.flagIf( typeInfo._bStatic, "info._bStatic" );
             // 컴포넌트 생성 함수는 타입 줄의 칸이다(언리얼 `UClass` 의 생성자 칸과 같은 자리). 이름으로 만드는 길은 이 칸만 본다.
-            fe.flagIf( typeInfo.requiresComponentFactory(), "info._addComponent", "&::sw::GameObject::addComponentTo<" + typeInfo._fullyQualifiedName + ">" );
+            fe.flagIf( typeInfo.requiresComponentFactory(), "info._addComponent", "&::sw::GameObject::addComponentForReflection<" + typeInfo._fullyQualifiedName + ">" );
             if ( typeInfo._validate.empty() == false )
             {
                 fe.linef( "info._pValidate = []( const void* pInstance, ::sw::ValidationContext& context ) { static_cast<%#*>( const_cast<void*>( pInstance ) )->%#( context ); };",

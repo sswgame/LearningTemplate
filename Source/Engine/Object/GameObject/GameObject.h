@@ -225,6 +225,12 @@ namespace sw
                 return nullptr;
             return pOwner->addComponent<T>();
         }
+        /** @brief 리플렉션 표의 생성 칸(`TypeInfo::_addComponent`, 불투명 형식)이 가리키는 연결 함수입니다. 코드젠만 씁니다. */
+        template <typename T>
+        static void* addComponentForReflection( void* pOwner )
+        {
+            return addComponentTo<T>( static_cast<GameObject*>( pOwner ) );
+        }
 
         /** @brief 소유한 Component 개수입니다. 삭제 예정(pending-destroy)은 제외합니다. */
         size_t getComponentCount() const;

@@ -348,7 +348,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "GameObjectManager.TypeCannotCreatedComponent", "Type '%#' cannot be created as a component (abstract, not a component, or its module was unloaded)", typeName.c_str() );
             return nullptr;
         }
-        return pType->_addComponent( pGameObject );
+        return static_cast<Component*>( pType->_addComponent( pGameObject ) );
     }
 
     vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames()

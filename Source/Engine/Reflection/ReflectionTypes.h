@@ -31,9 +31,6 @@ namespace sw
     /** @brief 필드 이름 꼴 범위 경계(`PROPERTY( Min = "-_halfSize" )`)를 인스턴스에서 읽는 함수 타입입니다. 생성 코드가 이 함수를 만듭니다(`PropertyMetadata::_pReadMinRange`). */
     using PropertyRangeReadFunction = float64 ( * )( const void* pInstance );
 
-    class Component;
-    class GameObject;
-
     /// @brief 함수의 네트워크 역할입니다. 목록은 PredefinedFunctionNetRole.xxx 에 있습니다.
     enum class FunctionNetRole : uint8
     {
@@ -887,13 +884,13 @@ namespace sw
         /** @brief `$ctor` 로 placement new 한 인스턴스를 소멸시킵니다. 없으면 nullptr 입니다. */
         void ( *_destroyInstance )( void* ) = nullptr;
         /**
-         * @brief 이 타입의 컴포넌트를 @p pOwner 에 붙여 만드는 함수입니다(`GameObject::addComponentTo<T>`). 만들 수 있는 컴포넌트 타입이 아니면 nullptr 입니다.
+         * @brief 이 타입의 컴포넌트를 @p pOwner(`GameObject*`)에 붙여 만들고 그 `Component*` 를 돌려주는 함수입니다(`GameObject::addComponentForReflection<T>`). 만들 수 있는 컴포넌트 타입이 아니면 nullptr 입니다.
          * @details 언리얼의 `UClass` 가 리플렉션 정보와 생성 함수(`ClassConstructor`)를 함께 가지는 것과 같다. 이름으로 컴포넌트를 만드는 경로
          *          (`GameObjectManager::addComponentByName` 이고, 씬 로드, 프리팹 로드, 에디터가 쓴다)는 이 함수 하나를 본다.
          *          코드젠이 추상이 아닌 컴포넌트 타입마다 채운다. 모듈 코드를 가리키므로 모듈을 해제할 때(`clearContent`) 비우고,
          *          같은 FQN 을 다시 등록하면 새 이미지의 주소로 덮어쓴다.
          */
-        Component* ( *_addComponent )( GameObject* pOwner );
+        void* ( *_addComponent )( void* pOwner ); // 불투명하다 — 리플렉션(1 층)은 Object 층(5 층)의 형식을 모른다. 부르는 쪽(Object 층)이 형을 되돌린다
         /** @brief `REFLECT( Validate = fn )` 의 타입 검증 함수입니다. 없으면 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다. */
         ReflectValidateFunction _pValidate;
         /**
