@@ -84,6 +84,14 @@ namespace sw
             return true;
         }
 
+        /** @brief 새 라이브러리로 리로드해도 되는지(ABI 가 맞고 API 표에 만들기 · 부수기가 있는지) 봅니다 — 리로드 전 검사(에디터 · 게임 공통). */
+        template <typename TAPI, typename TExportFn>
+        [[nodiscard]] static bool isLibraryUsable( void* pLibraryModule, const ModuleAPISymbols& symbols )
+        {
+            TAPI api{};
+            return exportAPIFromLibrary<TAPI, TExportFn>( pLibraryModule, symbols, api ) && api.create != nullptr && api.destroy != nullptr;
+        }
+
         /**
          * @brief 바인딩한 API 표로 인스턴스를 만들고 초기화합니다(에디터 · 게임 공통). 실패하면 만든 것을 부수고 핸들을 비웁니다.
          * @p initialize 는 핸들 하나를 받아 그 모듈 종류의 초기화를 부릅니다(인자가 종류마다 다르다). @note @p bRequireDevice 면 **디바이스가 없을 때 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는

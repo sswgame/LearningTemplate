@@ -239,10 +239,7 @@ namespace sw
 
     bool GameModuleManager::isGameLibraryUsable( void* pLibraryModule ) const
     {
-        GameAPI api{};
-        if ( ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( pLibraryModule, getModuleSymbols(), api ) == false )
-            return false;
-        return api.create != nullptr && api.destroy != nullptr;
+        return ModuleInstanceUtil::isLibraryUsable<GameAPI, PFN_ExportGameAPI>( pLibraryModule, getModuleSymbols() );
     }
 
     // ======================================================================

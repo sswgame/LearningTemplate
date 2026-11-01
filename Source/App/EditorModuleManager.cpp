@@ -240,10 +240,7 @@ namespace sw
 
     bool EditorModuleManager::isEditorImageUsable( void* pLibraryModule ) const
     {
-        EditorAPI api{};
-        if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), api ) == false )
-            return false;
-        return api.create != nullptr && api.destroy != nullptr;
+        return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols() );
     }
 
     void EditorModuleManager::onEditorReloadFault( uint32 faultCode )
