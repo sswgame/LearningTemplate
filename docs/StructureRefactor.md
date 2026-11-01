@@ -172,7 +172,7 @@
 | 5 | 같은 일 둘(R8) | `to_chars` 감싸기 다섯 · `to_string` 몸체 둘(실패하면 `formatstring` 폴백) | `StringUtil::appendNumber` 하나 | 끝 |
 | 6 | 같은 일 둘(R8) | 소켓 주소 변환 셋(`PlatformSocketUtil` · IOCP · epoll), 초 → 나노초 식 아홉 | `NativeSocketAddress`(소켓 구현 파일 전용 헤더), `MonotonicClock::secondsToNanoseconds` | 끝(Linux 는 문법만 — Windows 빌드가 epoll 을 짓지 않는다) |
 | 7 | 같은 일 둘(R8) | 내비 `toFloat3` 둘(Core `float3( const float32* )` 있음), Rig `computeAngleBetween`(= `quaternion::getAngleBetween`), Telemetry `countLines` 둘 | Core 함수로, `StringUtil::countChar` | 끝 |
-| 8 | 층 역류 | `IAssetCache` 리로드 함수가 `IRHIDevice*`(2 층 → 4 층)를 받는다 — 디바이스를 안 쓰는 캐시도 받는다 | 남김: 일부러 고른 모양이다(캐시가 디바이스를 들고 있으면 백엔드 교체 뒤 죽은 포인터 — 머리말). 바꾸면 리로드 문맥 형식(`AssetReloadContext`)을 그래픽 층이 채우는 확장점으로 | 남김 |
+| 8 | 층 역류 | `IAssetCache` 리로드 함수가 `IRHIDevice*`(2 층 → 4 층)를 받았다 | **끝(2026-11-01)** — 리로드 함수 · 캐시 여덟의 `reload` 는 에셋 id 만 받고, GPU 자원을 가진 캐시(텍스처 · 머티리얼 · 메시)는 `SceneRHISubsystem` 이 붙이고 떼는 디바이스(`bindDevice`)를 쓴다(백엔드 교체 때 떼고 다시 붙여 죽은 포인터가 없다) | 끝 |
 | 9 | 층 역류 | `ReflectionTypes::_addComponent`(1 층이 `Component*` · `GameObject*` 를 안다), `FixedLayout` 의 `friend class NetMessageChannel`(1 층 → 6 층) | 남김: 리플렉션 등록 매크로 전체가 닿는다 — 불투명 생성자(`void* (*)( void* )`) + Object 층 부속 표로 따로 한 단계 | 다음 |
 | 10 | 한 층 두 모델 | 바이트 스트림 둘: Engine `BinaryStreamWriter/Reader` · Core `ByteWriter/Reader`, `RawAnimationCodec` 도 호스트 순서 | **끝** — Core `ByteWriter/Reader` 하나(가변 정수 · 길이 붙은 글/바이트 · POD · 자리 덮어쓰기를 더하고, POD 복사는 `__BYTE_ORDER__` static_assert 로 LE 호스트만), Engine 쪽 삭제 | 끝 |
 | 11 | 게이트 없음 | Core 티어(`CoreLayers.toml`)는 낮은/높은 둘로만 지어 티어 사이 역류를 빌드가 막지 않았다 | 일부 **끝** — 낮은 부분에 높은 티어 헤더의 `#error` 껍데기(낮은 티어 폴더의 `Tests/` 는 높은 쪽). 남은 것: 높은 티어 사이(Log · String · File …) — 티어마다 부분을 지으면 pch 가 는다 | 다음 |
