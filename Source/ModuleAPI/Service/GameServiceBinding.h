@@ -5,12 +5,24 @@
  *          `Export/GameModuleExports.h` 의 진입점 매크로가 이 선언만 보고 부르므로 ModuleAPI 는 GameFramework 를 include 하지 않습니다.
  */
 #pragma once
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "ModuleAPI/Export/GameFrameworkAPI.h"
-
-/** @brief 게임 서비스 함수의 내보내기 매크로입니다. GameFramework 와 같은 규칙이라 `SW_GF_API` 를 그대로 쓴다. */
-#define SW_GAMESERVICE_API SW_GF_API
+/**
+ * @brief 게임 서비스 함수의 내보내기 매크로입니다. 정의를 가진 이미지(GameFramework)는 빌드가 `SW_GAMESERVICE_EXPORTS` 를, 쓰는 쪽은 `SW_GAMESERVICE_IMPORTS` 를 받는다
+ *        (`sw_configureDLLExports` 의 GF 줄) — 계약 층은 그 이미지의 이름을 모른다.
+ */
+#if defined( SW_PLATFORM_WINDOWS )
+    #if defined( SW_GAMESERVICE_EXPORTS )
+        #define SW_GAMESERVICE_API __declspec( dllexport )
+    #elif defined( SW_GAMESERVICE_IMPORTS )
+        #define SW_GAMESERVICE_API __declspec( dllimport )
+    #else
+        #define SW_GAMESERVICE_API
+    #endif
+#else
+    #define SW_GAMESERVICE_API __attribute__( ( visibility( "default" ) ) )
+#endif
 
 namespace sw
 {

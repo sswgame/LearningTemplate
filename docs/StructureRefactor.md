@@ -211,7 +211,7 @@
 | 15 | 런타임 키트에 편집기 기능 | `NetSimulation` 의 `NetSimPreviewSceneSource` · `NetSimGameRegistry` | **끝(2026-11-01)** — 미리보기 씬 빌려주기(`NetSimPreviewSceneSource`)는 키트 `Editor/` 로(쓰는 곳이 한 프로세스 재생 탭뿐). `NetSimGameRegistry` 는 게임(Shooter3D)이 런타임에 등록하는 자리라 런타임에 둔다 | 끝 |
 | 16 | 큰 패널 · 정적 모음(SRP) | CharacterEditorPanel 1389 줄(일 8) · ContentBrowser 1174 · UIPreview 1169 + 모델 941 · ProfilerPanel 1120(도구 6) · InputMapPanel 1015(도구 6), 정적 모음 `ModelImportUtil` 78 · `EditorThemeUtil` 54 · `EditorPlaySession` 39 · `EditorWidgets` 35 | 남김 — 탭 · 도구 단위로 파일과 모델을 나눈다(빌드 시간 항목과 함께) | |
 | 17 | 큰 인터페이스 | ModuleAPI `EditorAPI` 함수 칸 22, `IEditor` 순수 가상 16(수명 · 프레임 · 입력 · 뷰포트 · 플레이 다섯 역할) | 남김 — C-ABI 판이 바뀌므로 #6 과 함께 | |
-| 18 | 층 역류 | ModuleAPI 의 `Export/GameFrameworkAPI.h`(`SW_GF_API` · `SW_KIT_API`) — 계약 층이 위층 이름을 안다 | 남김 — 내보내기 매크로를 GameFramework 쪽 헤더로. 키트 · 게임 수백 파일의 include 가 따라간다 | |
+| 18 | 층 역류 | ModuleAPI 의 `Export/GameFrameworkAPI.h`(`SW_GF_API` · `SW_KIT_API`) — 계약 층이 위층 이름을 알았다 | **끝(2026-11-01)** — 매크로 정의는 `GameFramework/GameFrameworkExports.h` 로. 계약 층에서 쓰던 곳은 게임 서비스 선언 하나뿐이라 그 매크로(`SW_GAMESERVICE_API`)는 자기 빌드 정의(`SW_GAMESERVICE_EXPORTS` / `IMPORTS`, GF 줄이 준다)로 선다. 키트 · 게임은 원래 `GameFrameworkExports.h` 를 거쳐 받아 include 가 따라가지 않았다 | 끝 |
 | 19 | 위젯 우회 | 검색 칸 `InputTextWithHint` 직접, 애셋 경로 글 입력 | **끝(2026-11-01)** — 검색 칸 직접 그리기는 남지 않았다. 캐릭터 편집기의 경로 칸 넷(소켓 · 골격 · 기준 포즈 · 외형 항목)은 `EditorWidgets::drawAssetPathField`(글 입력 + 콘텐츠 브라우저 끌어 놓기, 소켓은 `.sockets.xml` 만), 라벨이 붙은 경로 칸(스프라이트 클립 아틀라스 · 타일맵 경로 `.tilemap.xml`)은 라벨 열(`drawPropertyRowLabel`) + 같은 위젯 | 끝 |
 | 20 | Core · Engine 쪽(다른 작업자) | `normalizeOr` 넷(키트) → Core 수학, `SceneNetLink` 찾기 여섯 → Engine 정적 함수, Server 명령 해석 셋 | 보고만 | |
 
