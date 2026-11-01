@@ -30,7 +30,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -350,16 +350,16 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 렌더 스레드에 살아 있는 미리보기 씬 렌더러 수입니다(창 하나에 하나). 창을 닫은 다음 렌더 프레임에 줄어듭니다. 렌더러가 없으면 false 입니다. */
+        /** @brief 렌더 스레드에 살아 있는 화면 밖 씬 렌더러 수입니다(미리보기 씬 하나에 하나). 그 씬이 사라진 다음 렌더 프레임에 줄어듭니다. 서브시스템이 없으면 false 입니다. */
         [[nodiscard]] bool readScenePreviewRenderers( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
-            if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
+            const OffscreenSceneRenderers* pRenderers = editor::findSubsystem<OffscreenSceneRenderers>();
+            if ( pRenderers == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchScenePreviewRenderersFrameRendererMissing", "[Scenario] watch ScenePreviewRenderers: FrameRenderer is missing" );
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchScenePreviewRenderersFrameRendererMissing", "[Scenario] watch ScenePreviewRenderers: OffscreenSceneRenderers is missing" );
                 return false;
             }
-            outValue = static_cast<float64>( pRenderer->getScenePreviewRendererCount() );
+            outValue = static_cast<float64>( pRenderers->getCount() );
             return true;
         }
     } // namespace

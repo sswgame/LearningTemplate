@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 
@@ -112,6 +113,8 @@ namespace sw
 
     void SceneCapture::releaseOnRenderThread( IRHIDevice& device )
     {
+        if ( OffscreenSceneRenderers* const pOffscreen = _pRenderThread->getOffscreenRenderers() )
+            pOffscreen->retire( _sceneKey ); // 캡처가 끝났다 — 이 캡처의 씬 렌더러를 내린다(씬 키는 캡처마다 새것이다)
         _outputTarget->releaseRHI( &device );
         _outputTarget.reset();
     }
@@ -126,7 +129,8 @@ namespace sw
         }
         _job._packet._outputRenderTarget = _outputTarget->getHandle();
         device.beginFrame();
-        FrameRenderer* const pRenderer = _pRenderThread->getFrameRenderer()->executeOffscreenPacket( &device, _job._packet, request._clearColor, _pipelinePath );
+        OffscreenSceneRenderers* const pOffscreen = _pRenderThread->getOffscreenRenderers();
+        FrameRenderer* const           pRenderer  = pOffscreen != nullptr ? pOffscreen->execute( *_pRenderThread->getFrameRenderer(), &device, _job._packet, request._clearColor, _pipelinePath ) : nullptr;
         device.endFrame( false, false );
         device.waitIdle( RHIWaitIdleReason::Capture );
         if ( pRenderer == nullptr )

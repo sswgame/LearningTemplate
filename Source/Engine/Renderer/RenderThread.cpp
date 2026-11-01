@@ -25,6 +25,7 @@
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/ScreenshotRequestQueue.h"
 
 namespace sw
@@ -198,6 +199,7 @@ namespace sw
     RenderThread::RenderThread()
         : _pDevice{ nullptr }
         , _pFrameRenderer{ nullptr }
+        , _pOffscreenRenderers{ nullptr }
         , _presentHook{}
         , _postPresentHook{}
         , _beginFrameHook{}
@@ -721,19 +723,22 @@ namespace sw
         uint32                                         pendingCount = 0;
         arrPending[pendingCount++]                                  = ScenePendingWork{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
 
-        // 미리보기 씬(에디터 툴 창)은 씬마다 하위 렌더러로 자기 타깃에 그린다(`FrameRenderer::executeOffscreenPacket` — 캡처와 같은 길).
-        const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && pFrameStream != nullptr;
+        // 미리보기 씬(에디터 툴 창)은 씬마다의 렌더러로 자기 타깃에 그린다(`OffscreenSceneRenderers` — 캡처와 같은 길). 사라진 씬의 렌더러는 그 씬과 함께 내린다.
+        const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && _pOffscreenRenderers != nullptr && pFrameStream != nullptr;
         if ( bCanDrawPreviews )
         {
             SW_PROFILE_SCOPE( "RT.ScenePreviews" );
             for ( uint32 previewIndex = 0; previewIndex < packet._scenePreviewCount && pendingCount < arrPending.size(); ++previewIndex )
             {
                 RenderFramePacket&   preview   = *packet._listScenePreview[previewIndex];
-                FrameRenderer* const pRenderer = _pFrameRenderer->executeOffscreenPacket( _pDevice, preview, preview._clearColor );
+                FrameRenderer* const pRenderer = _pOffscreenRenderers->execute( *_pFrameRenderer, _pDevice, preview, preview._clearColor );
                 // 실패는 렌더러가 로그로 남기고 타깃은 클리어 색으로 남는다 — 기다려도 나아지지 않으니 남은 일로 세지 않는다
                 arrPending[pendingCount++] = ScenePendingWork{ preview._sceneKey, pRenderer != nullptr ? pRenderer->getLastPendingPSOBatchCount() : 0u };
             }
-            _pFrameRenderer->retireScenePreviews( packet );
+            for ( const uint32 sceneKey : packet._listRetiredSceneKey )
+            {
+                _pOffscreenRenderers->retire( sceneKey );
+            }
         }
         ScopedLock<mutex> lock{ _scenePendingMutex };
         _arrScenePending   = arrPending;

@@ -63,10 +63,15 @@ namespace sw
         /**
          * @brief 이번 프레임에 그릴 미리보기 씬 패킷입니다(앞 `_scenePreviewCount` 개만 유효). 패킷마다 씬 하나, 스냅샷 하나, 출력 타깃 하나입니다.
          * @details 저장소는 남깁니다. 링을 돌며 다시 채우므로 미리보기 패킷의 스냅샷과 라이트 목록이 프레임마다 새로 할당되지 않습니다.
-         *          렌더 스레드는 씬 키(`_sceneKey`)마다 따로 둔 렌더러로 그립니다(`FrameRenderer::executeOffscreenPacket`). 미리보기 패킷 안의 이 목록은 항상 비어 있습니다.
+         *          렌더 스레드는 씬 키(`_sceneKey`)마다 따로 둔 렌더러로 그립니다(`OffscreenSceneRenderers`). 미리보기 패킷 안의 이 목록은 항상 비어 있습니다.
          */
         vector<unique_ptr<RenderFramePacket>> _listScenePreview;
         uint32                                _scenePreviewCount;
+        /**
+         * @brief 지난 패킷 뒤에 사라진 미리보기 씬의 키입니다. 렌더 스레드가 그 씬의 렌더러를 내린다(`OffscreenSceneRenderers::retire`).
+         * @details 렌더러의 수명은 씬의 수명이다 — 창을 가리거나 닫아 이번 프레임에 그리지 않을 뿐인 씬의 렌더러(파이프라인 · 그래프 · 트랜지언트)는 남긴다(언리얼 `FScene`).
+         */
+        vector<uint32> _listRetiredSceneKey;
         /** @brief 이 패킷이 그리는 씬의 키입니다. 0(`kInvalidSceneKey`)이면 활성 씬(주 패킷), 아니면 미리보기 씬입니다. */
         uint32           _sceneKey;
         RHITextureHandle _outputRenderTarget; ///< 주 출력의 오프스크린 RT(에디터 게임 뷰, 씬 뷰만 보일 때는 씬 뷰). 0 = 백버퍼 경로
@@ -109,6 +114,7 @@ namespace sw
             , _screenshotPath{}
             , _listScenePreview{}
             , _scenePreviewCount{ 0 }
+            , _listRetiredSceneKey{}
             , _sceneKey{ 0 }
             , _outputRenderTarget{ 0 }
             , _viewportWidth{ 0 }
@@ -162,7 +168,8 @@ namespace sw
             _canvas.clear();
             _mainView = RenderViewSettings{};
             _screenshotPath.clear();
-            _scenePreviewCount  = 0;
+            _scenePreviewCount = 0;
+            _listRetiredSceneKey.clear();
             _sceneKey           = 0;
             _outputRenderTarget = 0;
             _viewportWidth      = 0;

@@ -32,6 +32,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RenderThread.FailedAttachRenderThread", "Failed to attach RenderThread!" );
             return SubsystemInitResult::Failed;
         }
+        _renderThread->setOffscreenRenderers( &_frameRendererSubsystem.getOffscreenRenderers() );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -39,6 +40,7 @@ namespace sw
     {
         _renderThread->waitIdle( RHIWaitIdleReason::Shutdown );
         _renderThread->stop();
+        _renderThread->setOffscreenRenderers( nullptr );
     }
 
     span<const utf8* const> RenderThreadSubsystem::getSubsystemDependencies() const

@@ -7,6 +7,7 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
+#include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
 
@@ -57,6 +58,7 @@ namespace sw
         if ( pRenderThread != nullptr )
             pRenderThread->waitIdle( RHIWaitIdleReason::HotReload );
         _frameRendererSubsystem.getFrameRenderer().onShaderRecompiled( shaderPath, result );
+        _frameRendererSubsystem.getOffscreenRenderers().onShaderRecompiled( shaderPath, result ); // 주 렌더러가 함께 쓰는 PSO 캐시를 다시 채운 뒤다
     }
 
     span<const utf8* const> LiveShaderSubsystem::getSubsystemDependencies() const

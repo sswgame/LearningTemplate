@@ -120,6 +120,12 @@ namespace sw
         /** @brief 디바이스, TaskManager, 파이프라인 XML 로 초기화합니다. */
         [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
                                        string_view pipelineXMLPath = {} );
+        /**
+         * @brief 화면 밖 씬(미리보기 · 캡처) 하나를 그리는 렌더러로 초기화합니다(`OffscreenSceneRenderers` 가 만든다).
+         * @details @p mainRenderer 의 TaskManager 를 쓰고, @p pipelinePath 가 비면 그 파이프라인과 PSO 저장소를 함께 쓴다(같은 파이프라인이면 PSO 가 같다).
+         *          프로파일러 보고 · 렌더 타깃 목록 공개 · 모듈 확장 · 고정 PSO 미리 만들기는 하지 않는다(주 렌더러의 것을 덮지 않게).
+         */
+        [[nodiscard]] bool initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath );
         /** @brief 핫패스에서 쓰는 TaskManager 를 연결합니다. */
         void bindServices( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
@@ -141,24 +147,6 @@ namespace sw
          *          3D 내용을 실은 채 주 시점이 없으면 오류로 한 번 알립니다. 주 시점은 `RenderFramePacket::setMainView` 로 싣습니다.
          */
         [[nodiscard]] bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
-        /**
-         * @brief 화면 밖 패킷(미리보기 씬 · 캡처)을 그 (씬 키, 파이프라인)의 하위 렌더러로 패킷의 출력 타깃(`_outputRenderTarget`)에 그립니다(렌더 스레드).
-         * @details 출력 타깃을 열고(@p clearColor 로 지운다) 그린 뒤 셰이더 읽기 상태로 둔다 — 미리보기와 캡처가 이 한 길을 쓴다.
-         *          **씬마다 하위 렌더러 하나**를 둔다 — GPUScene(인스턴스 · 배치 · 컬링 산출물) · 트랜지언트 · 패스 상수가 씬별이라 메인 씬과 섞이지 않는다.
-         *          언리얼에서 미리보기 월드 · 씬 캡처가 자기 `FScene` 과 뷰로 같은 장면 렌더러를 타는 자리다(렌더러 종류를 늘리지 않는다).
-         *          하위 렌더러는 프로파일러 · 렌더 타깃 목록 공개 · Present 캡처 · 모듈 확장을 하지 않는다(주 렌더러의 것을 덮지 않게).
-         *          @p pipelinePath 가 비면 주 렌더러의 파이프라인이고 PSO 저장소를 함께 쓴다(같은 파이프라인이면 PSO 가 같다). 다른 파이프라인은 저장소를 따로 둔다.
-         * @return 그린 하위 렌더러입니다(캡처가 그 첨부를 읽는다). 그리지 못하면 nullptr 입니다(이유는 로그에 남는다).
-         */
-        FrameRenderer* executeOffscreenPacket( IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, string_view pipelinePath = {} );
-        /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 하위 렌더러를 내립니다(창을 닫았거나 가렸다 · 끝난 캡처). 미리보기 패킷을 다 그린 뒤 부릅니다. */
-        void retireScenePreviews( const RenderFramePacket& mainPacket );
-        /**
-         * @brief 지금 살아 있는 미리보기 씬 렌더러 수입니다(진단, 테스트, 자동화 감시 값 `Editor.ScenePreviewRenderers`).
-         * @details 렌더 스레드가 렌더러를 세우고 내릴 때 공개하는 값이라 어느 스레드에서 읽어도 된다. 창을 닫으면 다음 렌더 프레임에 줄어든다(`retireScenePreviews`).
-         */
-        uint32 getScenePreviewRendererCount() const { return _scenePreviewRendererCount.load(); }
-
         // ------------------------------------------------------------------------------
         // 3) 조회
         // ------------------------------------------------------------------------------
@@ -441,26 +429,13 @@ namespace sw
          *          언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스를 더하고 실행하는 자리다.
          */
         FramePassExecutor _passExecutor;
-        /** @brief (씬 키, 파이프라인)의 하위 렌더러를 찾고, 없으면 만듭니다(`executeOffscreenPacket`). 만들지 못하면 nullptr 입니다(이유는 로그에 남는다). */
-        FrameRenderer* findOrCreateOffscreenRenderer( IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath );
-        /** @brief 화면 밖 씬 하나(미리보기 · 캡처)를 그리는 하위 렌더러입니다(`executeOffscreenPacket`). (씬 키, 파이프라인)으로 찾습니다. */
-        struct ScenePreviewRenderer
-        {
-            unique_ptr<FrameRenderer> _renderer;
-            string                    _pipelinePath; ///< 비면 주 렌더러의 파이프라인
-            uint32                    _sceneKey{ 0 };
-        };
-        /// @brief 미리보기 씬마다의 렌더러입니다. 주 렌더러가 소유하고 `shutdown` 이 함께 내립니다(디바이스가 살아 있을 때).
-        vector<ScenePreviewRenderer> _listScenePreviewRenderer;
-        string                       _statusMessage;
+        string            _statusMessage;
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
-        /// @brief `_listScenePreviewRenderer` 의 크기를 렌더 스레드가 공개한 값입니다. 다른 스레드(자동화 감시 값)는 목록 대신 이것을 읽습니다.
-        atomic<uint32>      _scenePreviewRendererCount;
         FrameRendererStatus _status;
         uint8               _bCallbacksBound            : 1;
         uint8               _bPassResourcesReady        : 1;
-        uint8               _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
+        uint8               _bScenePreview              : 1; ///< 화면 밖 씬 렌더러다(`initializeOffscreen`) — 프로파일러 보고 · 렌더 타깃 공개 · 모듈 확장 · 고정 PSO 미리 만들기를 하지 않는다
         uint8               _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.

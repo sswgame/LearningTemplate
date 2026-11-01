@@ -54,6 +54,7 @@
 #if defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
+    #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
     #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
@@ -201,7 +202,8 @@ namespace sw::engine
             }
             FrameRendererSubsystem& frameRendererSubsystem = startup.emplaceSubsystem<FrameRendererSubsystem>( std::move( frameRenderer ), rhiSubsystem );
             parts._pFrameRendererSubsystem                 = &frameRendererSubsystem;
-            (void)startup.bind( &frameRendererSubsystem.getFrameRenderer() ); // 새 범위 — 겹치지 않는다
+            (void)startup.bind( &frameRendererSubsystem.getFrameRenderer() );      // 새 범위 — 겹치지 않는다
+            (void)startup.bind( &frameRendererSubsystem.getOffscreenRenderers() ); // 화면 밖 씬 렌더러(진단 감시 값이 수를 읽는다)
             parts._pRenderThread = &startup.emplaceSubsystem<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem );
             startup.emplaceSubsystem<SceneRHISubsystem>( rhiSubsystem );
         }

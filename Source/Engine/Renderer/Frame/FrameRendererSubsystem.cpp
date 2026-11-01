@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -25,17 +26,20 @@ namespace sw
 
     FrameRendererSubsystem::FrameRendererSubsystem( unique_ptr<FrameRenderer> frameRenderer, const RHISubsystem& rhiSubsystem )
         : _frameRenderer{ std::move( frameRenderer ) }
+        , _offscreenRenderers{ nullptr }
         , _packetBuilder{ nullptr }
         , _rhiSubsystem{ rhiSubsystem }
     {
         SW_MEMORY_SCOPE( RenderCPU );
-        _packetBuilder = make_unique<RenderPacketBuilder>();
+        _packetBuilder      = make_unique<RenderPacketBuilder>();
+        _offscreenRenderers = make_unique<OffscreenSceneRenderers>();
     }
 
     FrameRendererSubsystem::~FrameRendererSubsystem()
     {
         _packetBuilder->destroy();
         _packetBuilder.reset();
+        _offscreenRenderers.reset();
         _frameRenderer.reset();
     }
 
@@ -70,6 +74,8 @@ namespace sw
             if ( RenderThread* const pRenderThread = pRenderThreads->findRenderThread() )
                 pRenderThread->waitIdle( RHIWaitIdleReason::PipelineSwitch );
         }
+        // 화면 밖 렌더러는 옛 파이프라인으로 지었고 PSO 캐시를 함께 쓴다 — 내리고 다음 그리기가 새 파이프라인으로 다시 짓는다.
+        _offscreenRenderers->shutdown();
         if ( _frameRenderer->selectPipeline() == false )
             SW_LOG_ERROR_ID( "FrameRenderer.ChangedButPipelineCould", "%# changed to '%#' but the pipeline could not be selected - %#", pVariable->_name.c_str(), pVariable->getValueAsString().c_str(),
                              _frameRenderer->getStatusMessage().c_str() );
@@ -88,6 +94,7 @@ namespace sw
             }
         }
         _packetBuilder->shutdown();
+        _offscreenRenderers->shutdown(); // 주 렌더러의 PSO 캐시를 빌려 쓴다 — 먼저 내린다
         _frameRenderer->shutdown();
     }
 

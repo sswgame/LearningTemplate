@@ -39,7 +39,7 @@
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<ExpectLog id="Renderer.OffscreenStarted" atLeast="1"/>
 	<ExpectLog id="PreviewViewport.Screenshot" atLeast="1"/>
-	<!-- ② 닫고 다시 연다 — 새 미리보기 렌더러에서도 하늘이 칠해진다 -->
+	<!-- ② 닫고 다시 연다 — 렌더러를 다시 짓지 않고(씬이 살아 있다) 하늘이 그대로 칠해진다 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.close material"/>
 	<Wait frames="20"/>
@@ -60,7 +60,7 @@
 	<Variable name="gv_editorPreviewScreenshot" value="{out}/previewsky_reopen.ppm"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<ExpectLog id="Renderer.OffscreenStarted" atLeast="2"/>
+	<ExpectLog id="Renderer.OffscreenStarted" count="1"/>
 	<ExpectLog id="PreviewViewport.Screenshot" atLeast="2"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.close material"/>

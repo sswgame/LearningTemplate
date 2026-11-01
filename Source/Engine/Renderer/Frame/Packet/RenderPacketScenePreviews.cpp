@@ -55,12 +55,9 @@ namespace sw
     void RenderPacketScenePreviews::populate( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager, GPUUploadQueue* pUploadQueue )
     {
         packet._scenePreviewCount = 0;
+        packet._listRetiredSceneKey.clear();
         if ( _pDevice == nullptr )
             return; // 기동 단계가 디바이스를 주기 전이다(`initialize`)
-        for ( ScenePreviewEntry& entry : _listEntry )
-        {
-            entry._bSeen = SW_FALSE;
-        }
 
         const uint32 requestCount = MathUtil::min( views._sceneViewCount, kMaxHostSceneView );
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
@@ -79,8 +76,7 @@ namespace sw
             preview._sceneKey   = request._sceneKey;
             preview._frameIndex = packet._frameIndex;
 
-            ScenePreviewEntry& entry = getOrCreateEntry( request._sceneKey );
-            entry._bSeen             = SW_TRUE;
+            ScenePreviewEntry&  entry = getOrCreateEntry( request._sceneKey );
             RenderSceneViewDesc view{};
             view._settings           = request._settings;
             view._viewProj           = request._viewProj;
@@ -91,12 +87,13 @@ namespace sw
             entry._collector->fillSceneView( preview, *pScene, view, pUploadQueue );
         }
 
-        // 요청이 끊긴 씬(창을 닫았거나 가렸다)의 채우기를 내린다 — 머티리얼 · 인스턴스 소유를 놓는다.
+        // 사라진 씬의 채우기를 내리고(머티리얼 · 인스턴스 소유를 놓는다) 렌더 스레드에 그 씬의 렌더러를 내리게 한다. 요청만 끊긴 씬(창을 가렸다)은 남긴다 — 다시 보일 때 다시 짓지 않는다.
         for ( size_t index = _listEntry.size(); index > 0; --index )
         {
             ScenePreviewEntry& entry = _listEntry[index - 1];
-            if ( entry._bSeen == SW_TRUE )
+            if ( sceneManager.findPreviewScene( entry._sceneKey ) != nullptr )
                 continue;
+            packet._listRetiredSceneKey.push_back( entry._sceneKey );
             entry._collector->shutdown();
             _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }

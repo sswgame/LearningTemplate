@@ -1,7 +1,7 @@
 /**
  * @file SceneCapture.h
  * @brief 씬 하나를 화면 밖 타깃에 몇 장 그리고 GPU 에서 읽어 오는 요청 실행기입니다(초상화 · 반사 프로브 굽기가 함께 쓴다). 렌더러가 아니다.
- * @details 렌더러 종류를 늘리지 않는다 — 그리기는 주 렌더러의 하위 렌더러가 한다(`FrameRenderer::executeOffscreenPacket`, 미리보기 씬과 같은 길). 언리얼의
+ * @details 렌더러 종류를 늘리지 않는다 — 그리기는 화면 밖 씬 렌더러가 한다(`OffscreenSceneRenderers`, 미리보기 씬과 같은 길). 언리얼의
  *          씬 캡처가 자기 뷰 · 렌더 타깃으로 같은 장면 렌더러를 타는 것과 같다.
  *          스레드는 언리얼 렌더 명령과 같이 나눈다. 씬 → 패킷(`RenderPacketSceneCollector::fillSceneView` — 주 화면 · 미리보기와 같은 객체)은 게임 스레드가 짓고, 그리기 · 읽기는 렌더 스레드가 명령으로 실행한다
  *          (`RenderThread::executeAndWait`). 렌더 스레드에서 도는 일은 `...OnRenderThread` 멤버 함수뿐이고, 스레드를 넘는 값은 일감(`_job`) 하나에 모은다 —
@@ -59,7 +59,7 @@ namespace sw
 
         /**
          * @brief @p renderThread 의 주 렌더러로 @p pipelinePath 파이프라인을 쓰도록 정합니다. 렌더 스레드에 디바이스 · 렌더러가 없으면 false 입니다.
-         * @details 하위 렌더러는 첫 `capture` 에서 렌더 스레드가 만들고, 다음 주 프레임에 주 렌더러가 내린다(`FrameRenderer::retireScenePreviews`).
+         * @details 이 캡처의 씬 렌더러는 첫 `capture` 에서 렌더 스레드가 만들고(`OffscreenSceneRenderers`), `shutdown` 이 내린다.
          */
         [[nodiscard]] bool initialize( RenderThread& renderThread, string_view pipelinePath );
         /** @brief 출력 타깃을 렌더 스레드에서 놓습니다. */

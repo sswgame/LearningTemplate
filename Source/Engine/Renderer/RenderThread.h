@@ -21,6 +21,7 @@
 namespace sw
 {
     class FrameRenderer;
+    class OffscreenSceneRenderers;
     class IRHICommandContext;
     class IRHIDevice;
     class Scene;
@@ -98,8 +99,12 @@ namespace sw
         bool isBound() const { return _pDevice != nullptr; }
         /** @brief 붙은 디바이스입니다(없으면 nullptr). 렌더 쪽 일은 이 디바이스로 `executeAndWait` 안에서 한다. */
         IRHIDevice* getDevice() const { return _pDevice; }
-        /** @brief 패킷을 그리는 주 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다(화면 밖 패킷: `FrameRenderer::executeOffscreenPacket`). */
+        /** @brief 패킷을 그리는 주 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다. */
         FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
+        /** @brief 화면 밖 씬(미리보기 · 캡처)마다의 렌더러를 붙이거나(nullptr 로) 뗍니다. 소유는 `FrameRendererSubsystem` 이다. 붙지 않으면 미리보기를 그리지 않는다. */
+        void setOffscreenRenderers( OffscreenSceneRenderers* pOffscreenRenderers ) { _pOffscreenRenderers = pOffscreenRenderers; }
+        /** @brief 화면 밖 씬 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다. */
+        OffscreenSceneRenderers* getOffscreenRenderers() const { return _pOffscreenRenderers; }
         /**
          * @brief 지난 프레임에 씬 키 @p sceneKey(0 = 주 화면, 미리보기 씬 키)를 그린 렌더러가 머티리얼 PSO 를 아직 만드는 중이라 빠뜨린 배치 묶음 수를 @p outCount 에 담습니다.
          * @details 지난 프레임에 그 씬을 그리지 않았으면 false 입니다. 어느 스레드에서 불러도 됩니다(캡처 준비 판정 `CaptureReadiness`).
@@ -192,15 +197,16 @@ namespace sw
         static void drainPacketsThunk( void* pContext );
 
     private:
-        IRHIDevice*            _pDevice;
-        FrameRenderer*         _pFrameRenderer;
-        PresentHookDelegate    _presentHook;
-        PresentHookDelegate    _postPresentHook;
-        BeginFrameHookDelegate _beginFrameHook;
-        sw::thread             _thread;
-        atomic<bool>           _bRunning;
-        StopSource             _stop;          ///< 렌더 스레드를 멈추라는 신호(다시 시작하면 새 원천으로 바꾼다)
-        atomic<bool>           _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
+        IRHIDevice*              _pDevice;
+        FrameRenderer*           _pFrameRenderer;
+        OffscreenSceneRenderers* _pOffscreenRenderers;
+        PresentHookDelegate      _presentHook;
+        PresentHookDelegate      _postPresentHook;
+        BeginFrameHookDelegate   _beginFrameHook;
+        sw::thread               _thread;
+        atomic<bool>             _bRunning;
+        StopSource               _stop;          ///< 렌더 스레드를 멈추라는 신호(다시 시작하면 새 원천으로 바꾼다)
+        atomic<bool>             _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         bool         _bLastImmediateSubmit;
         uint8        _bScreenshotTaken;                ///< -gv_screenshot 은 한 장만 찍는다.

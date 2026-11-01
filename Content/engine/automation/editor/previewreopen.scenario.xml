@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 미리보기 창을 연 채 여닫기를 반복한다(다중 월드 6절 5번: 미리보기 렌더러 내리기의 GPU 안전).
-  창이 닫히면 메인 패킷에서 그 씬의 뷰 요청이 사라지고, 렌더 스레드의 FrameRenderer::retireScenePreviews 가 그 씬의 렌더러를 FrameRenderer::shutdown 으로 바로 내린다.
-  디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대는 경로라서, 이미 낸 프레임이 쓰는 자원을 지금 파괴하면 여기서 터진다(DX12 장치 제거 · Vulkan 장치 손실 · 검증 레이어 오류).
-  창을 다시 열면 같은 씬 키로 새 렌더러가 선다(로그 id Renderer.OffscreenStarted 줄). 렌더러 수는 감시 값 Editor.ScenePreviewRenderers 가 렌더 스레드의 값을 읽는다 -
-  닫을 때마다 그 수가 줄고(differsFrom) 다시 열면 닫기 전 수로 돌아오며(sameAs), 끝에서 시작 전 수(baseline)로 돌아온다. 시작 줄의 수(ExpectLog atLeast)도 함께 센다.
-  PSO 는 주 렌더러의 캐시를 함께 쓰므로(FrameRenderer::_pPSOCache) 미리보기 렌더러를 내려도 PSO 는 남는다 - 다시 열 때 PSO 를 다시 만들지 않는다.
+  렌더러의 수명은 미리보기 씬의 수명이다(언리얼 FScene) - 창을 닫거나 가려도 창이 쥔 씬이 살아 있으면 렌더 스레드의 OffscreenSceneRenderers 가 그 렌더러를 남기고,
+  다시 열 때 파이프라인 · 그래프 · 트랜지언트를 다시 짓지 않는다. 씬이 사라질 때(패킷의 _listRetiredSceneKey) 내린다.
+  닫을 때마다 렌더러 수가 그대로이고(sameAs), 창마다 시작 줄(로그 id Renderer.OffscreenStarted)은 한 번이다(ExpectLog count). 끝에서 두 창의 렌더러 둘이 남는다.
   ① 머티리얼 창(id material): 빨간 테스트 머티리얼을 열어 구 미리보기가 그려지게 한 뒤(프레임 수 감시 값이 오른다) 닫기 8 번, 닫아 둔 지 20 프레임 뒤 다시 열고 프레임이 다시 오르는 것을 기다린 뒤 닫는다.
   ② 프리팹 창(id prefab_window): 콘텐츠 브라우저 더블클릭으로 연 뒤 같은 식으로 8 번. 이 창에는 프레임 수 감시 값이 없어 열림 감시 값(Editor.PanelOpen)과 고정 프레임으로 기다린다.
   머티리얼 창 1/8 은 포커스를 쥔 채 닫아, 초점 씬 · Undo 스택이 메인 씬으로 돌아오는지(Editor.ToolFocusIsMain)도 본다.
@@ -56,7 +54,7 @@
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Expect watch="Editor.ToolFocusIsMain" equals="1"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -71,7 +69,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -86,7 +84,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -101,7 +99,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -116,7 +114,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -131,7 +129,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -146,7 +144,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -161,17 +159,17 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
-	<!-- 머티리얼 창 반복이 끝났다 — 처음 하나 + 다시 연 8 개의 렌더러가 섰어야 한다. 렌더러가 안 내려갔으면 새로 서지 않아 줄이 모자란다 -->
+	<!-- 머티리얼 창 반복이 끝났다 — 렌더러는 처음 하나뿐이다(닫아도 씬이 살아 있어 렌더러를 남기고, 다시 열 때 다시 짓지 않는다) -->
 	<Wait frames="28"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<ExpectLog id="Renderer.OffscreenStarted" atLeast="9"/>
+	<ExpectLog id="Renderer.OffscreenStarted" count="1"/>
 	<DevCommand line="panel.close material"/>
 	<!-- ② 프리팹 창: 콘텐츠 브라우저에서 더블클릭으로 연다 -->
 	<Wait frames="10"/>
@@ -194,7 +192,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -208,7 +206,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -222,7 +220,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -236,7 +234,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -250,7 +248,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -264,7 +262,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -278,7 +276,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -292,7 +290,7 @@
 	<Wait frames="2"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Editor.ScenePreviewRenderers" differsFrom="renderers" timeoutFrames="30"/>
+	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<Wait frames="17"/>
 	<DevCommand line="panel.focus prefab_window"/>
 	<Wait frames="1"/>
@@ -302,13 +300,13 @@
 	<!-- ③ 마지막: 프리팹 창을 닫고도 에디터가 정상이다 -->
 	<Wait frames="28"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<ExpectLog id="Renderer.OffscreenStarted" atLeast="18"/>
+	<ExpectLog id="Renderer.OffscreenStarted" count="2"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus scene_view"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
-	<Expect watch="Editor.ScenePreviewRenderers" sameAs="baseline"/>
+	<Expect watch="Editor.ScenePreviewRenderers" equals="2"/>
 	<EditorClick mark="hierarchy.filter"/>
 	<CaptureEditorUI file="previewreopen/final.png"/>
 	<Wait frames="5"/>

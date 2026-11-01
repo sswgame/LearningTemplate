@@ -96,9 +96,7 @@ namespace sw
         , _lastPendingPSOBatchCount{ 0 }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
         , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture }
-        , _listScenePreviewRenderer{}
         , _statusMessage{}
-        , _scenePreviewRendererCount{ 0 }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
@@ -232,14 +230,6 @@ namespace sw
         // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
-        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다. 그 렌더러들은 이 렌더러의 PSO 캐시를 빌려 쓰므로
-        // 캐시를 놓는 `releasePassResources` 보다 먼저여야 한다.
-        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
-        {
-            preview._renderer->shutdown();
-        }
-        _listScenePreviewRenderer.clear();
-        _scenePreviewRendererCount.store( 0 );
         _state._graph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _state._gpuScene.releaseGPU( _pDevice );
@@ -817,13 +807,6 @@ namespace sw
         ensurePassResources();
         ensureTransientResources();
         _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
-
-        // 미리보기 씬 렌더러는 주 렌더러의 PSO 캐시를 함께 쓴다. 주 렌더러가 캐시를 다시 채운 **뒤에** 자기 몫(레이아웃을 가리키는 폴백 버퍼 표,
-        // 바인딩 캐시, 패스 콜백)을 다시 만들어야 새 PSO 를 집는다.
-        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
-        {
-            preview._renderer->onShaderRecompiled( shaderPath, result );
-        }
     }
 
     void FrameRenderer::ensureTransientResources( uint32 overrideWidth, uint32 overrideHeight )
@@ -1287,75 +1270,12 @@ namespace sw
         return static_cast<RenderViewMode>( _sceneViewMode.load( std::memory_order_relaxed ) );
     }
 
-    FrameRenderer* FrameRenderer::executeOffscreenPacket( IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, string_view pipelinePath )
+    bool FrameRenderer::initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath )
     {
-        const bool          bCanRender       = isReady() && pDevice != nullptr && packet._bValid == SW_TRUE;
-        const bool          bIsOffscreenView = packet._sceneKey != 0 && packet._outputRenderTarget != 0;
-        IRHICommandContext* pFrameStream     = pDevice != nullptr ? pDevice->getFrameStreamContext() : nullptr;
-        if ( bCanRender == false || bIsOffscreenView == false || pFrameStream == nullptr )
-            return nullptr;
-
-        // 타깃의 열기 · 읽기 전환은 게임 뷰(`RenderThread::executeFrameBody`)와 같은 규칙이다. 그리지 못해도 타깃은 지운 색 · 읽기 상태로 남는다.
-        const RHITextureHandle outputTarget = packet._outputRenderTarget;
-        RHIRenderPassBeginInfo outputPass{};
-        outputPass._bBindColor        = SW_TRUE;
-        outputPass._colorTargetCount  = 1;
-        outputPass._arrColorTarget[0] = outputTarget;
-        outputPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-        outputPass._arrClearColor[0]  = clearColor;
-        pFrameStream->beginRenderPass( outputPass );
-        FrameRenderer* const pRenderer = findOrCreateOffscreenRenderer( pDevice, packet._sceneKey, pipelinePath );
-        const bool           bDrew     = pRenderer != nullptr && pRenderer->executePacket( pDevice, packet ); // 보기 모드는 패킷의 뷰 설정이 정한다
-        pFrameStream->prepareTextureForShaderRead( outputTarget );
-        return bDrew ? pRenderer : nullptr;
-    }
-
-    FrameRenderer* FrameRenderer::findOrCreateOffscreenRenderer( IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath )
-    {
-        const bool        bMainPipeline = pipelinePath.empty() || pipelinePath == _pipelinePath;
-        const string_view keyPath       = bMainPipeline ? string_view{} : pipelinePath;
-        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
-        {
-            if ( preview._sceneKey == sceneKey && preview._pipelinePath == keyPath )
-                return preview._renderer.get();
-        }
         // 계측과 공개를 끄는 표시와 PSO 저장소는 initialize 앞에 둔다(파이프라인 로드가 공개를 부른다). 저장소는 같은 파이프라인일 때만 함께 쓴다.
-        ScenePreviewRenderer created;
-        created._renderer                 = make_unique<FrameRenderer>();
-        created._renderer->_bScenePreview = SW_TRUE;
-        if ( bMainPipeline )
-            created._renderer->_psoManager.shareCacheOf( _psoManager );
-        created._sceneKey        = sceneKey;
-        created._pipelinePath    = string( keyPath );
-        const string& createPath = bMainPipeline ? _pipelinePath : created._pipelinePath;
-        if ( created._renderer->initialize( pDevice, _state._pTaskManager, createPath ) == false )
-        {
-            SW_LOG_ERROR_ID( "FrameRenderer.OffscreenRendererSceneKey", "Offscreen renderer for scene key %# ('%#') could not start: %#", sceneKey, createPath.c_str(), created._renderer->getStatusMessage() );
-            return nullptr;
-        }
-        SW_LOG_INFO_ID( "Renderer.OffscreenStarted", "Offscreen renderer started for scene key %# ('%#')", sceneKey, createPath.c_str() );
-        FrameRenderer* const pRenderer = created._renderer.get();
-        _listScenePreviewRenderer.push_back( std::move( created ) );
-        _scenePreviewRendererCount.store( static_cast<uint32>( _listScenePreviewRenderer.size() ) );
-        return pRenderer;
-    }
-
-    void FrameRenderer::retireScenePreviews( const RenderFramePacket& mainPacket )
-    {
-        for ( size_t index = _listScenePreviewRenderer.size(); index > 0; --index )
-        {
-            ScenePreviewRenderer& preview = _listScenePreviewRenderer[index - 1];
-            bool                  bAlive  = false;
-            for ( uint32 previewIndex = 0; previewIndex < mainPacket._scenePreviewCount; ++previewIndex )
-            {
-                bAlive = bAlive || mainPacket._listScenePreview[previewIndex]->_sceneKey == preview._sceneKey;
-            }
-            if ( bAlive )
-                continue;
-            // 디바이스의 해제는 GPU 완료 뒤로 미뤄진다. 이미 낸 프레임이 쓰는 자원을 지금 파괴하지 않는다(파일 머리 주석).
-            preview._renderer->shutdown();
-            _listScenePreviewRenderer.erase( _listScenePreviewRenderer.begin() + static_cast<ptrdiff_t>( index - 1 ) );
-        }
-        _scenePreviewRendererCount.store( static_cast<uint32>( _listScenePreviewRenderer.size() ) );
+        _bScenePreview = SW_TRUE;
+        if ( pipelinePath.empty() )
+            _psoManager.shareCacheOf( mainRenderer._psoManager );
+        return initialize( pDevice, mainRenderer._state._pTaskManager, pipelinePath.empty() ? string_view{ mainRenderer._pipelinePath } : pipelinePath );
     }
 } // namespace sw

@@ -12,6 +12,7 @@
 namespace sw
 {
     class FrameRenderer;
+    class OffscreenSceneRenderers;
     struct GlobalVariableInfo;
     class RenderPacketBuilder;
     class RHISubsystem;
@@ -40,15 +41,18 @@ namespace sw
         SubsystemHostMask          getSubsystemHost() const override;
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
-        FrameRenderer&       getFrameRenderer() const { return *_frameRenderer; }
-        RenderPacketBuilder& getPacketBuilder() const { return *_packetBuilder; }
+        FrameRenderer& getFrameRenderer() const { return *_frameRenderer; }
+        /** @brief 화면 밖 씬(미리보기 · 캡처)마다의 렌더러입니다. 주 렌더러의 PSO 캐시를 빌려 쓰므로 주 렌더러보다 먼저 내린다. 렌더 스레드 객체다. */
+        OffscreenSceneRenderers& getOffscreenRenderers() const { return *_offscreenRenderers; }
+        RenderPacketBuilder&     getPacketBuilder() const { return *_packetBuilder; }
 
     private:
         /** @brief 파이프라인을 고르는 변수(`gv_renderPipeline` · `gv_deferredShading`)가 바뀌면 렌더 스레드를 재우고 다시 고릅니다. */
         void onPipelineVariableChanged( GlobalVariableInfo* pVariable );
 
-        unique_ptr<FrameRenderer>       _frameRenderer;
-        unique_ptr<RenderPacketBuilder> _packetBuilder;
-        const RHISubsystem&             _rhiSubsystem;
+        unique_ptr<FrameRenderer>           _frameRenderer;
+        unique_ptr<OffscreenSceneRenderers> _offscreenRenderers;
+        unique_ptr<RenderPacketBuilder>     _packetBuilder;
+        const RHISubsystem&                 _rhiSubsystem;
     };
 } // namespace sw
