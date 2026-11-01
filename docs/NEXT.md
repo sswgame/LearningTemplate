@@ -53,12 +53,6 @@
 | 벽시계 한도와 부하 | 그물은 이제 조건 대기의 제 시한을 덮는다(`computeWallLimitSeconds`). 남은 것: 백엔드 교체가 많은 시나리오(flowterrain 의 교체 7 번이 혼자서도 19 초)의 교체 시간 자체를 줄인다 |
 | id 없는 경고 · 오류 | 테스트가 밟는 경로마다 `SW_LOG_*_ID` 를 붙였지만 다른 로더에 더 남았다 — 같은 모양 |
 
-### 4. 구조 개편 남은 것 ([StructureRefactor](StructureRefactor.md))
-
-| 주제 | 남은 것 (2026-10-31) |
-|---|---|
-| T8 | Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유. Dev + 자동화 끔 구성은 Editor 가 실행기를 include 해 깨질 것 |
-
 ### 5. 그 뒤
 
 - Linux 실제 빌드 · 테스트(X11 · Wayland · ALSA · epoll 은 Windows 가 짓지 않는다 — CI 후보).

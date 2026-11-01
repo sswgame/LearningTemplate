@@ -99,6 +99,7 @@
   - `LocalizationManager` 의 가짜 언어 숨김 둘 · `UIBindingSet` 의 배포 전용 경고 · `SplashWindow`(에디터 도메인 에셋) · `DiagnosticsSubsystem`(Core 할당 헤더 스위치를 따른다) — 모두 `build::kShipping` 으로 옮겼다(가짜 언어 · 스플래시 · 진단 · 모듈 구성 · UI 폴 경고 · 배포 평문 포트).
   - `GameNetSession` 의 배포 평문 공개 포트 거절 — 개발 허용은 `DevOnlineExtension` 에 올릴 개발 대체물이다(키트 등록표 차례에 함께).
   - 스위치를 정의하는 자리(`ContentSource.h` · `AnimationRewind.h` · `ProfilerBackend.h` · `ModuleCatalog::getCurrentConfiguration`)와 플랫폼 백엔드 파일의 `SW_WITH_CLIENT_CODE`(Engine 이 `sw_filterPlatformSources` 를 쓰지 않는다 — 위 결정)는 대상이 아니다. `SW_PROFILER_TRACE_ENABLED`(ServerApp 1)는 그대로다.
+- **끝(2026-11-01)**: Engine 의 `SW_SHIPPING` 은 32 곳 — 리플렉션 메타데이터(툴팁 · 문서 필드)를 배포에서 빼는 자리와 배포 전용 정의 몇 곳뿐이다. 언리얼 `WITH_METADATA` · `WITH_EDITORONLY_DATA` 와 같은 자리라 유지한다(데이터 배치가 구성마다 다르다 — 빌드 단위로 가를 것이 아니다). 모듈 컴파일러는 `IModuleCompiler` 뒤(배포는 nullptr), 자동화 실행기는 엔진 밖에서 include 하지 않는다. 배포의 게임 모듈 타입은 종료가 뗀다(`GameModuleManager::shutdown`).
 
 ### T9. 생성 계약 · 도구 (R8 · R6)
 - **타입 → 모듈 판정 넷**(파서의 경로 글자 `module_rules` — 런타임이 덮어써 버려지는 데이터, 런타임 `_activeModuleName`, `ContentModules.py` 정규식 — 주석 · 템플릿의 REFLECT 도 셈, CMake 대상)을 하나로: CMake 가 `--module <이름>` 을 넘기고 파서가 대상마다 `ReflectedTypes.list`(FQN · 모듈)를 낸다. `ContentModules` 검사는 정규식을 버리고 이 목록을 읽는 빌드 단계로.
