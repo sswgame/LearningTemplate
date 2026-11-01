@@ -15,12 +15,15 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus multiplayer"/>
+	<Wait frames="20"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="up"/>
 	<!-- 시작: 게임 목록의 첫 게임(본보기)이 클라이언트 둘로 선다. 첫 클라이언트가 입력 초점을 받는다 -->
 	<Wait frames="12"/>
 	<Expect watch="Editor.NetSimRunning" equals="0"/>
 	<EditorClick mark="multiplayer.inprocess.start" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.inprocess.start" state="up"/>
 	<Wait frames="12"/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="120"/>
@@ -55,6 +58,7 @@
 	<CaptureEditorUI file="netsim/moved.png"/>
 	<!-- 클라이언트 2 의 뷰포트를 눌러 초점을 옮긴다 — W 를 누르면 아바타 2 만 앞으로 간다 -->
 	<EditorClick mark="multiplayer.inprocess.world2" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.inprocess.world2" state="up"/>
 	<WaitUntil watch="Editor.NetSimInputFocus" equals="2" timeoutFrames="60"/>
 	<Tap slot="Key.W" hold="20"/>
@@ -70,6 +74,7 @@
 	<CaptureEditorUI file="netsim/focus2.png"/>
 	<!-- 멈춤: 세션이 내려가고 감시 값이 값을 내지 않는다 -->
 	<EditorClick mark="multiplayer.inprocess.stop" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.inprocess.stop" state="up"/>
 	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
 	<Pass/>

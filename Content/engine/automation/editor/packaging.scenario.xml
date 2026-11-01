@@ -14,11 +14,17 @@
 	<Wait frames="30"/>
 	<Expect watch="Editor.PackagingState" equals="0"/>
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<Wait frames="5"/>
 	<EditorClick mark="packaging.skipBuild" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="packaging.skipBuild" state="up"/>
+	<Wait frames="7"/>
 	<EditorClick mark="packaging.skipCook" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="packaging.skipCook" state="up"/>
+	<Wait frames="7"/>
 	<EditorClick mark="packaging.package" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="packaging.package" state="up"/>
 	<WaitUntil watch="Editor.PackagingState" equals="1" timeoutFrames="60"/>
 	<Wait frames="10"/>

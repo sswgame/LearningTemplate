@@ -32,7 +32,7 @@ namespace sw
         float4  _backgroundColor{ 0.10f, 0.11f, 0.13f, 1.0f };
     };
 
-    /** @brief GPU 에서 읽은 초상화 한 장입니다(계약 포맷 RGBA8, 행 사이에 빈틈이 있을 수 있다). RGBA 로 옮기기는 `PortraitStudio::makeRGBA8` 이 한다. */
+    /** @brief GPU 에서 읽은 초상화 한 장입니다(계약 포맷 RGBA8, 행 사이에 빈틈이 있을 수 있다). RGBA 로 옮기기는 다른 캡처와 같은 `RenderTargetImageFile::unpackRGBA8` 이 한다. */
     struct PortraitCapture
     {
         vector<uint8> _bytes{};
@@ -76,10 +76,6 @@ namespace sw
          * @details 카메라는 대상의 경계 구(메시마다 로컬 경계 상자를 월드로 옮긴 것을 모두 덮는 구)를 시야각에 맞춰 물러납니다. 대상 크기가 달라도 같은 화면 비율입니다.
          */
         [[nodiscard]] bool renderPrefab( const PortraitRequest& request, PortraitCapture& outCapture );
-        /**
-         * @brief 읽은 한 장을 행 사이에 빈틈 없는 RGBA8(위 행부터, 알파 255)로 옮깁니다. GPU · 씬을 쓰지 않아 아무 스레드에서 불러도 된다(워커 - `PortraitBatchUtil`).
-         */
-        static void makeRGBA8( const PortraitCapture& capture, vector<uint8>& outRGBABytes );
 
     private:
         SceneCapture        _capture;  ///< 그리기 · 읽기(렌더 스레드 명령)

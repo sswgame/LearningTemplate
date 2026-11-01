@@ -47,6 +47,7 @@
 	<DevCommand line="editor.theme light"/>
 	<WaitUntil watch="Editor.ThemeName" is="light" timeoutFrames="60"/>
 	<DevCommand line="editor editor.themeSettings"/>
+	<Wait frames="15"/>
 	<EditorClick mark="theme.swatch.violet"/>
 	<WaitUntil watch="Editor.AccentColor" equals="10902002" timeoutFrames="60"/>
 	<Expect watch="Editor.ThemeName" is="light"/>

@@ -19,6 +19,7 @@
 	<PostWindowMessage message="WM_KILLFOCUS"/>
 	<Wait frames="2"/>
 	<PostWindowMessage message="WM_SETFOCUS"/>
+	<Wait frames="20"/>
 	<EditorKey key="D" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
 	<Wait frames="8"/>

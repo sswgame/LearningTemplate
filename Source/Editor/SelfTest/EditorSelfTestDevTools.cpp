@@ -513,7 +513,6 @@ namespace sw::editor
 
             static EditorSelfTestStep runGameViewHidesEditorOverlays( EditorSelfTestContext& context )
             {
-                constexpr uint32     kSettleFrameCount    = 3; // 탭이 앞으로 오고 선택한 오브젝트가 한 번 그려지는 데 걸리는 프레임 수
                 GameObjectManager*   pManager             = editor::getActiveObjectManager();
                 const GameViewPanel* pPanel               = openGameView( context );
                 CameraComponent*     pCamera              = EditorCamera::find( editor::getActiveScene() );
@@ -534,7 +533,7 @@ namespace sw::editor
                 const EditorViewTarget& view        = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
                 int32                   vertexCount = 0;
                 const bool              bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
-                if ( ( bImage == false || stepIndex < kSettleFrameCount ) && stepIndex < kMaxWaitFrame )
+                if ( bImage == false && stepIndex < kMaxWaitFrame ) // 이미지가 이 프레임에 그려졌다는 것이 조건이다(프레임 수를 어림하지 않는다)
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bImage, "the game view image was not drawn while its tab was in front" );
                 (void)context.expect( editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ), "the game view did not mark itself drawn" );
@@ -562,16 +561,15 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runGameViewPointerOriginReachesTheGame( EditorSelfTestContext& context )
             {
-                constexpr uint32     kSettleFrameCount = 3; // 탭이 앞으로 오고 이미지 자리가 엔진 프레임에 한 번 닿는 데 걸리는 프레임 수
-                const GameViewPanel* pPanel            = openGameView( context );
-                EditorContext&       editorContext     = editor::getSubsystem<EditorContext>();
-                const UISystem&      uiSystem          = editor::getSubsystem<UISystem>();
-                const InputManager&  input             = editor::getSubsystem<InputManager>();
+                const GameViewPanel* pPanel        = openGameView( context );
+                EditorContext&       editorContext = editor::getSubsystem<EditorContext>();
+                const UISystem&      uiSystem      = editor::getSubsystem<UISystem>();
+                const InputManager&  input         = editor::getSubsystem<InputManager>();
                 if ( pPanel == nullptr )
                     return EditorSelfTestStep::Done;
                 const uint32 stepIndex = context.getStepIndex();
                 const bool   bDrawn    = editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
-                if ( ( bDrawn == false || stepIndex < kSettleFrameCount ) && stepIndex < kMaxWaitFrame )
+                if ( bDrawn == false && stepIndex < kMaxWaitFrame ) // 그려졌다는 것이 조건이다(프레임 수를 어림하지 않는다)
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bDrawn, "the game view was not drawn while its tab was in front" );
 

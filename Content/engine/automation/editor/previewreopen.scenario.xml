@@ -32,8 +32,11 @@
 	<!-- ① 머티리얼 창: 문서를 열어 구 미리보기가 그려지게 한다 -->
 	<Wait frames="10"/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
+	<Wait frames="30"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
@@ -176,7 +179,9 @@
 	<DevCommand line="panel.focus content_browser"/>
 	<Wait frames="15"/>
 	<DevCommand line="content.open game/empty/prefabs"/>
+	<Wait frames="20"/>
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
+	<Wait frames="2"/>
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
 	<Wait frames="8"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>

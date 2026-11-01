@@ -12,8 +12,11 @@
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus content_browser"/>
 	<!-- 검색 칸을 비운다 — 콘텐츠 브라우저는 핵심 패널이라 체인 초기화가 다시 만들지 않으므로, 앞 시나리오(contentbrowser)가 남긴 검색어가 타일을 거른다 -->
+	<Wait frames="5"/>
 	<EditorClick mark="contentBrowser.search"/>
+	<Wait frames="5"/>
 	<EditorKey key="Ctrl+A"/>
+	<Wait frames="3"/>
 	<EditorKey key="Backspace"/>
 	<Wait frames="7"/>
 	<DevCommand line="content.open engine/textures"/>

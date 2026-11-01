@@ -21,8 +21,11 @@
 	<!-- ① 문서를 열어 구 미리보기가 그려지게 한 뒤 타깃을 저장한다 -->
 	<Wait frames="20"/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
+	<Wait frames="30"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
@@ -39,8 +42,11 @@
 	<!-- ② 닫고 다시 연다 — 새 미리보기 렌더러에서도 하늘이 칠해진다 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.close material"/>
+	<Wait frames="20"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>

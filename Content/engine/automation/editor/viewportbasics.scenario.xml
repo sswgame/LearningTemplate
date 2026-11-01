@@ -13,25 +13,36 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="25"/>
 	<DevCommand line="select.type MeshComponent"/>
+	<Wait frames="10"/>
 	<EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="down"/>
 	<WaitUntil watch="Editor.SelectionOutlineBoxes" atLeast="1" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchPanel" value="hierarchy"/>
+	<Wait frames="5"/>
 	<EditorKey key="E"/>
 	<WaitUntil watch="Editor.GizmoOperation" equals="1" timeoutFrames="60"/>
+	<Wait frames="5"/>
 	<EditorKey key="R"/>
 	<WaitUntil watch="Editor.GizmoOperation" equals="2" timeoutFrames="60"/>
+	<Wait frames="5"/>
 	<EditorKey key="Q"/>
 	<WaitUntil watch="Editor.GizmoOperation" equals="0" timeoutFrames="60"/>
+	<Wait frames="5"/>
 	<EditorKey key="Keypad7"/>
 	<WaitUntil watch="Editor.SceneViewOrthographic" equals="1" timeoutFrames="60"/>
+	<Wait frames="5"/>
 	<EditorKey key="Keypad5"/>
 	<WaitUntil watch="Editor.SceneViewOrthographic" equals="0" timeoutFrames="60"/>
+	<Wait frames="5"/>
 	<EditorKey key="Shift+Space"/>
 	<WaitUntil watch="Editor.SceneViewMaximized" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
+	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="2" state="up"/>
+	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="down"/>
+	<Wait frames="10"/>
 	<EditorKey key="Shift+Space"/>
+	<Wait frames="5"/>
 	<EditorClick mark="toolbar.play" button="2" state="up"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.SceneViewMaximized" equals="0"/>

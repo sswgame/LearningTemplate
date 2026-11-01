@@ -29,10 +29,13 @@
 	<!-- ① 키 입력: Quick Open 으로 머티리얼을 연다 — 유휴 중에 친 키가 그대로 문서를 연다 -->
 	<Wait frames="4"/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
+	<Wait frames="5"/>
 	<EditorKey key="Ctrl+P"/>
 	<Wait frames="1"/>
 	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Wait frames="14"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
@@ -42,9 +45,11 @@
 	<Wait frames="5"/>
 	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
 	<!-- ② 마우스 이동: 유휴 중의 이동이 바로 깨운다 -->
+	<Wait frames="10"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.30,0.50"/>
 	<Wait frames="1"/>
 	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Wait frames="1"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.60,0.50"/>
 	<Wait frames="8"/>
 	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>

@@ -13,7 +13,9 @@
 	<Wait frames="5"/>
 	<DevCommand line="notify.reveal /tmp/reveal/shot.png"/>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<Wait frames="10"/>
 	<EditorClick mark="notification.showInExplorer" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="notification.showInExplorer" state="up"/>
 	<WaitUntil watch="Editor.ExplorerLaunchCount" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.ExplorerCommandWellFormed" equals="1"/>

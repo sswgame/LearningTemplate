@@ -20,6 +20,7 @@
 	<DevCommand line="layout.reset"/>
 	<WaitUntil watch="Editor.SceneViewDrawn" equals="1" timeoutFrames="105"/>
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
+	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas"/>
 	<!-- 기본 배치의 아래 도크는 글자 높이의 배수라 Output Log 내용 영역에 글자 줄이 8줄 넘게 든다(첫 화면에서 로그가 한두 줄만 보이던 결함) -->
 	<Wait frames="5"/>

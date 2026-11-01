@@ -27,6 +27,7 @@
 	<!-- ② 에디터 카메라를 옆으로 3 m 남짓 옮긴다(오른쪽 단추 + D) -->
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="D" state="down"/>
+	<Wait frames="42"/>
 	<EditorKey key="D" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
 	<Wait frames="8"/>
@@ -41,6 +42,7 @@
 	<Wait frames="5"/>
 	<ExpectImage file="gameview.ppm" golden="gameview"/>
 	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->
+	<Wait frames="5"/>
 	<EditorClick mark="toolbar.play"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="120"/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
@@ -52,6 +54,7 @@
 	<Expect watch="Editor.GameViewRequested" equals="0"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="D" state="down"/>
+	<Wait frames="42"/>
 	<EditorKey key="D" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
 	<Wait frames="8"/>

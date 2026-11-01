@@ -39,17 +39,19 @@ namespace sw
         const size_t separator = line.find( LogLineFormatInternal::kMessageSeparator, levelEnd );
         if ( separator == string_view::npos )
             return false;
-        const string_view header = line.substr( levelEnd, separator - levelEnd );
-        outLine._message         = line.substr( separator + LogLineFormatInternal::kMessageSeparator.size() );
-        outLine._id              = string_view{};
-        const size_t idOpen      = header.find( LogIDTag::kOpen );
-        if ( idOpen != string_view::npos )
+        // id 꼬리표 `[id:영역.사건] ` 는 구분 뒤 본문 맨 앞에 붙는다(`AsyncLogSink::formatLine`).
+        string_view body = line.substr( separator + LogLineFormatInternal::kMessageSeparator.size() );
+        outLine._id      = string_view{};
+        if ( body.substr( 0, LogIDTag::kOpenLength ) == LogIDTag::kOpen )
         {
-            const size_t idStart = idOpen + LogIDTag::kOpenLength;
-            const size_t idClose = header.find( ']', idStart );
+            const size_t idClose = body.find( LogIDTag::kClose, LogIDTag::kOpenLength );
             if ( idClose != string_view::npos )
-                outLine._id = header.substr( idStart, idClose - idStart );
+            {
+                outLine._id = body.substr( LogIDTag::kOpenLength, idClose - LogIDTag::kOpenLength );
+                body        = body.substr( idClose + LogIDTag::kCloseLength );
+            }
         }
+        outLine._message = body;
         return true;
     }
 } // namespace sw

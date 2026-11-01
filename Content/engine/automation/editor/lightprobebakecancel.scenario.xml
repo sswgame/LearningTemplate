@@ -29,7 +29,9 @@
 	<Wait frames="10"/>
 	<CaptureEditorUI file="lightprobebakecancel/baking.png"/>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<Wait frames="5"/>
 	<EditorClick mark="statusBar.lightProbeBakeCancel" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="statusBar.lightProbeBakeCancel" state="up"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.LightProbeBakeRunning" equals="0" timeoutFrames="600"/>

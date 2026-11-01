@@ -14,10 +14,14 @@
 	<Wait frames="20"/>
 	<Expect watch="Editor.ContentGameRootCount" equals="1"/>
 	<!-- 체크박스는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<Wait frames="5"/>
 	<EditorClick mark="contentBrowser.allPacks" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.allPacks" state="up"/>
 	<WaitUntil watch="Editor.ContentGameRootCount" atLeast="2" timeoutFrames="60"/>
+	<Wait frames="5"/>
 	<EditorClick mark="contentBrowser.allPacks" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.allPacks" state="up"/>
 	<WaitUntil watch="Editor.ContentGameRootCount" equals="1" timeoutFrames="60"/>
 	<!-- 역색인은 워커가 Resource/ 를 훑어 만든다 -->
@@ -26,11 +30,17 @@
 	<!-- 폴더로 가서 검색으로 그 메시만 남긴다(도킹 칸이 낮아 타일 한 줄만 보인다) -->
 	<Wait frames="5"/>
 	<DevCommand line="content.open game/empty/models"/>
+	<Wait frames="10"/>
 	<EditorClick mark="contentBrowser.search"/>
+	<Wait frames="5"/>
 	<EditorText value="crate_medium.mesh"/>
+	<Wait frames="20"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="up"/>
+	<Wait frames="12"/>
 	<EditorClick mark="menu.asset.findReferences" state="down"/>
+	<Wait frames="3"/>
 	<EditorClick mark="menu.asset.findReferences" state="up"/>
 	<WaitUntil watch="Editor.ReferenceResultCount" atLeast="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="references.png"/>

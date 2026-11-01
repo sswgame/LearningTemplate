@@ -260,7 +260,23 @@ namespace sw::editor
                 vector<NodeShare> _listShare;
                 uint32            _originalWidth{ 0 };
                 uint32            _originalHeight{ 0 };
+                uint32            _phase{ 0 };          ///< 0 = 넓게 요청, 1 = 넓은 크기 확인 뒤 좁게, 2 = 좁은 크기 확인 뒤 되돌림, 3 = 원래 크기 확인
+                uint32            _phaseStartStep{ 0 }; ///< 지금 단계를 시작한 단계 번호(자리 잡기 시한을 센다)
             };
+
+            /**
+             * @brief 창 크기 바꾸기가 에디터에 다 닿았으면 true 입니다 — 주 뷰포트 크기가 창 클라이언트 크기와 같고 주 도크스페이스가 그 크기로 갱신됐다.
+             * @details 크기 통보 → 다음 NewFrame 의 DisplaySize → 도크 갱신 순서로 반영된다. 예전에는 단계마다 3 프레임을 어림해 기다렸다.
+             */
+            static bool isWindowSizeApplied( const IWindow& window )
+            {
+                const ImGuiViewport* pMain  = ImGui::GetMainViewport();
+                const ImGuiDockNode* pRoot  = findMainDockspace();
+                const float32        width  = static_cast<float32>( window.getWidth() );
+                const float32        height = static_cast<float32>( window.getHeight() );
+                return pRoot != nullptr && isNear( pMain->Size.x, width, 1.0f ) && isNear( pMain->Size.y, height, 1.0f ) && isNear( pRoot->Size.x, pMain->WorkSize.x, 1.0f ) &&
+                       isNear( pRoot->Size.y, pMain->WorkSize.y, 1.0f );
+            }
 
             /** @brief 메인 뷰포트를 덮는 도크스페이스의 루트 노드입니다. 없으면 nullptr 입니다. */
             static const ImGuiDockNode* findMainDockspace()
@@ -352,11 +368,11 @@ namespace sw::editor
 
             static EditorSelfTestStep runDockFollowsWindowSize( EditorSelfTestContext& context )
             {
-                constexpr uint32 kSettleFrameCount = 3; // 크기 통보, 다음 NewFrame 의 DisplaySize, 도크 갱신 순서로 반영된다
-                constexpr uint32 kWideWidth        = 1600;
-                constexpr uint32 kWideHeight       = 900;
-                constexpr uint32 kNarrowWidth      = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
-                constexpr uint32 kNarrowHeight     = 360;
+                constexpr uint32 kMaxSettleSteps = 60; // 크기 바꾸기가 닿기를 기다리는 시한(단계)
+                constexpr uint32 kWideWidth      = 1600;
+                constexpr uint32 kWideHeight     = 900;
+                constexpr uint32 kNarrowWidth    = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
+                constexpr uint32 kNarrowHeight   = 360;
 
                 MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
                 IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
@@ -372,13 +388,19 @@ namespace sw::editor
                     (void)context.expect( pWindow->setDisplayMode( WindowDisplayMode::Windowed, kWideWidth, kWideHeight ), "this platform cannot resize the window" );
                     return EditorSelfTestStep::Continue;
                 }
-                if ( stepIndex == kSettleFrameCount )
+                // 단계마다 크기 바꾸기가 다 닿을 때까지 기다린다(프레임 수를 어림하지 않는다). 시한을 넘기면 실패로 적고 다음 단계로 간다.
+                if ( isWindowSizeApplied( *pWindow ) == false && stepIndex - probe._phaseStartStep < kMaxSettleSteps )
+                    return EditorSelfTestStep::Continue;
+                (void)context.expect( isWindowSizeApplied( *pWindow ), "the window size did not reach the editor viewport and dockspace" );
+                probe._phaseStartStep = stepIndex;
+                ++probe._phase;
+                if ( probe._phase == 1 )
                 {
                     expectDockFitsViewport( context, *pWindow, false );
                     (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, kNarrowWidth, kNarrowHeight );
                     return EditorSelfTestStep::Continue;
                 }
-                if ( stepIndex == kSettleFrameCount * 2 )
+                if ( probe._phase == 2 )
                 {
                     expectDockFitsViewport( context, *pWindow, true );
                     expectTransformBarStaysInSceneView( context );
@@ -389,8 +411,6 @@ namespace sw::editor
                     (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, probe._originalWidth, probe._originalHeight );
                     return EditorSelfTestStep::Continue;
                 }
-                if ( stepIndex < kSettleFrameCount * 3 )
-                    return EditorSelfTestStep::Continue;
 
                 expectDockFitsViewport( context, *pWindow, true ); // 원래 크기로 돌려도 비율이 그대로여야 한다
                 return EditorSelfTestStep::Done;

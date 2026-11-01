@@ -11,6 +11,7 @@
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Renderer/Capture/PortraitStudio.h"
+#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 
 namespace sw
 {
@@ -32,8 +33,17 @@ namespace sw
                     for ( uint32 index = start; index < end; ++index )
                     {
                         const PortraitCapture& capture = _pCapture[index];
-                        vector<uint8>          rgbaBytes;
-                        PortraitStudio::makeRGBA8( capture, rgbaBytes );
+                        // 행 간격을 풀어 빈틈없는 RGBA8(알파 255)로 — 스크린샷 · 에디터 UI 캡처와 같은 풀기다
+                        RHITextureMipSpan layout{};
+                        layout._width    = capture._width;
+                        layout._height   = capture._height;
+                        layout._rowBytes = capture._rowBytes;
+                        vector<uint8> rgbaBytes;
+                        if ( RenderTargetImageFile::unpackRGBA8( capture._bytes, layout, constant::render::kOffscreenColorFormat, rgbaBytes ) == false )
+                        {
+                            _pWritten[index] = 0;
+                            continue;
+                        }
                         const bool bDDS  = ImageFileWriter::writeDDSRGBA8( _pBase[index] + ".dds", rgbaBytes, capture._width, capture._height );
                         const bool bPNG  = ImageFileWriter::writePNGRGBA8( _pBase[index] + ".png", rgbaBytes, capture._width, capture._height );
                         _pWritten[index] = bDDS && bPNG ? 1 : 0;

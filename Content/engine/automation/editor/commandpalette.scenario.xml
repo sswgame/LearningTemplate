@@ -5,8 +5,11 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/commandpalette.scenario.xml -unattended
 -->
 <Scenario name="editor.commandpalette" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<Wait frames="60"/>
 	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
 	<EditorText value="Self Test Ping"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="20"/>
 	<ExpectLog id="SelfTest.RegistrationRan" count="1"/>

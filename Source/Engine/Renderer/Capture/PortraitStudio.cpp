@@ -194,7 +194,7 @@ namespace sw
         }
         outCapture._bytes               = std::move( result._bytes );
         const RHITextureMipSpan& layout = result._layout;
-        // 옮기기 · 쓰기는 여기서 하지 않는다 - GPU 가 없어도 되는 CPU · IO 일이라 부른 쪽이 워커에 맡긴다(`makeRGBA8`).
+        // 옮기기 · 쓰기는 여기서 하지 않는다 - GPU 가 없어도 되는 CPU · IO 일이라 부른 쪽이 워커에 맡긴다(`RenderTargetImageFile::unpackRGBA8`).
         outCapture._width    = layout._width;
         outCapture._height   = layout._height;
         outCapture._rowBytes = layout._rowBytes;
@@ -205,22 +205,5 @@ namespace sw
             return false;
         }
         return true;
-    }
-
-    void PortraitStudio::makeRGBA8( const PortraitCapture& capture, vector<uint8>& outRGBABytes )
-    {
-        // 캡처는 계약 포맷(RGBA8)이고 행 바이트가 너비 × 4 보다 클 수 있다. 빈틈없이 옮긴다.
-        const size_t rowBytes = static_cast<size_t>( capture._width ) * 4u;
-        SW_ASSERT( capture._bytes.size() >= static_cast<size_t>( capture._height ) * capture._rowBytes );
-        outRGBABytes.resize( rowBytes * capture._height );
-        for ( uint32 row = 0; row < capture._height; ++row )
-        {
-            Memory::copy( outRGBABytes.data() + static_cast<size_t>( row ) * rowBytes, capture._bytes.data() + static_cast<size_t>( row ) * capture._rowBytes, rowBytes );
-        }
-        // 알파는 불투명으로 설정한다. 캡처의 알파는 셰이더마다 달라 썸네일에서 의미가 없다.
-        for ( size_t index = 3; index < outRGBABytes.size(); index += 4 )
-        {
-            outRGBABytes[index] = 255;
-        }
     }
 } // namespace sw
