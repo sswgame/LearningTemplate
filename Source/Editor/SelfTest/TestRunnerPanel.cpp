@@ -136,8 +136,7 @@ namespace sw::editor
     {
         using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
         ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDPIScale() );
-        ImGui::InputTextWithHint( "##SelfTestFilter", "Filter tests...", _arrFilter, sizeof( _arrFilter ) );
-        EditorSelfTestMarks::note( "testRunner.filter" );
+        (void)EditorWidgets::drawHintField( "##SelfTestFilter", _arrFilter, sizeof( _arrFilter ), "Filter tests...", "testRunner.filter" );
         const string_view filter( _arrFilter );
 
         // 고른 것 · 맞는 것 모두를 패턴(쉼표로 이은 id)으로 만든다 — 실행기는 패턴만 받는다.

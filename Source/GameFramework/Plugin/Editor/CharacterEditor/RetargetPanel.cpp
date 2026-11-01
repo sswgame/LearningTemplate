@@ -319,8 +319,7 @@ namespace sw::editor
     void RetargetPanel::drawNewDocumentRow()
     {
         EditorChrome::setNextItemWidthColumns( 48.0f );
-        ImGui::InputTextWithHint( "##NewRetargetPath", "<resource id>.retarget.xml", _newDocumentPath.data(), _newDocumentPath.max_size() );
-        EditorSelfTestMarks::note( "retarget.newPath" );
+        (void)EditorWidgets::drawHintField( "##NewRetargetPath", _newDocumentPath.data(), _newDocumentPath.max_size(), "<resource id>.retarget.xml", "retarget.newPath" );
         ImGui::SameLine();
         const bool bPathValid = acceptsDocumentPath( string_view( _newDocumentPath.c_str() ) );
         ImGui::BeginDisabled( bPathValid == false );
@@ -335,13 +334,9 @@ namespace sw::editor
     {
         const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDPIScale();
         ImGui::SetNextItemWidth( fieldWidth );
-        ImGui::InputTextWithHint( "Source skeleton", "*.skeleton.xml", _sourceSkeleton.data(), _sourceSkeleton.max_size() );
-        const bool bSourceDone = ImGui::IsItemDeactivatedAfterEdit();
-        EditorSelfTestMarks::note( "retarget.sourceSkeleton" );
+        const bool bSourceDone = EditorWidgets::drawAssetPathField( "Source skeleton", _sourceSkeleton.data(), _sourceSkeleton.max_size(), "*.skeleton.xml", ".skeleton.xml", "retarget.sourceSkeleton" )._bDeactivatedAfterEdit;
         ImGui::SetNextItemWidth( fieldWidth );
-        ImGui::InputTextWithHint( "Target skeleton", "*.skeleton.xml", _targetSkeleton.data(), _targetSkeleton.max_size() );
-        const bool bTargetDone = ImGui::IsItemDeactivatedAfterEdit();
-        EditorSelfTestMarks::note( "retarget.targetSkeleton" );
+        const bool bTargetDone = EditorWidgets::drawAssetPathField( "Target skeleton", _targetSkeleton.data(), _targetSkeleton.max_size(), "*.skeleton.xml", ".skeleton.xml", "retarget.targetSkeleton" )._bDeactivatedAfterEdit;
         if ( bSourceDone || bTargetDone )
         {
             _profile.setSkeletonPaths( _sourceSkeleton.c_str(), _targetSkeleton.c_str() );

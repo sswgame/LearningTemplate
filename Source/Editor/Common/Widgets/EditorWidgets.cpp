@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -451,6 +452,40 @@ namespace sw::editor
         const ImVec2 size( -1.0f, ImGui::GetTextLineHeight() * static_cast<float32>( lineCount ) + ImGui::GetStyle().FramePadding.y * 2.0f );
         return ImGui::InputTextMultiline( pLabel != nullptr ? pLabel : "##text", text.data(), text.capacity() + 1, size, ImGuiInputTextFlags_CallbackResize,
                                           &EditorWidgetsInternal::resizeStringCallback, &text );
+    }
+
+    EditorWidgets::HintFieldResult EditorWidgets::drawHintField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, const utf8* pMark,
+                                                                 bool bSubmitOnEnter )
+    {
+        HintFieldResult result;
+        if ( pBuffer == nullptr || bufferBytes == 0 )
+            return result;
+        const bool bEnter             = ImGui::InputTextWithHint( pID, pHint != nullptr ? pHint : "", pBuffer, bufferBytes,
+                                                      bSubmitOnEnter ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_None );
+        result._bSubmitted            = bSubmitOnEnter && bEnter;
+        result._bChanged              = ImGui::IsItemEdited();
+        result._bDeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+        if ( pMark != nullptr )
+            EditorSelfTestMarks::note( pMark );
+        return result;
+    }
+
+    EditorWidgets::HintFieldResult EditorWidgets::drawAssetPathField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, const utf8* pExpectedExt,
+                                                                      const utf8* pMark )
+    {
+        HintFieldResult result = drawHintField( pID, pBuffer, bufferBytes, pHint, nullptr );
+        string          droppedPath;
+        const bool      bDropped = pBuffer != nullptr && acceptAssetDrop( droppedPath ) &&
+                              ( StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( droppedPath, pExpectedExt ) ) && droppedPath.size() < bufferBytes;
+        if ( bDropped )
+        {
+            Memory::copy( pBuffer, droppedPath.c_str(), droppedPath.size() + 1 );
+            result._bChanged              = true;
+            result._bDeactivatedAfterEdit = true;
+        }
+        if ( pMark != nullptr )
+            EditorSelfTestMarks::note( pMark );
+        return result;
     }
 
     bool EditorWidgets::drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt, float32 labelWidth )

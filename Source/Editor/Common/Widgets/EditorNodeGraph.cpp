@@ -9,6 +9,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -132,9 +133,7 @@ namespace sw::editor
             if ( ImGui::IsWindowAppearing() )
                 ImGui::SetKeyboardFocusHere();
             EditorChrome::setNextItemWidthColumns( 29.0f );
-            const bool bEnter = ImGui::InputTextWithHint( "##addNodeSearch", SW_LOCKEY( "EdCommon", "SearchNodesHint" ), _addNodeFilter.data(), _addNodeFilter.capacity(),
-                                                          ImGuiInputTextFlags_EnterReturnsTrue );
-            EditorSelfTestMarks::note( ( _markScope + ".addNode.search" ).c_str() );
+            const bool     bEnter = EditorWidgets::drawHintField( "##addNodeSearch", _addNodeFilter, SW_LOCKEY( "EdCommon", "SearchNodesHint" ), ( _markScope + ".addNode.search" ).c_str(), true )._bSubmitted;
             vector<uint32> listIndex;
             EditorNodeGraphRules::filterNodeKinds( listKind, _addNodeFilter.c_str(), listIndex );
             const utf8* pLastCategory = nullptr;

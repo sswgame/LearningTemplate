@@ -148,6 +148,35 @@ namespace sw::editor
         /** @brief `drawTextField` 의 여러 줄 버전입니다(`PROPERTY( Multiline )`). 높이는 @p lineCount 줄만큼이고 폭은 남은 폭 전부입니다. */
         static bool drawTextFieldMultiline( const utf8* pLabel, string& text, uint32 lineCount = 4 );
 
+        /** @brief 힌트 글 입력 칸 하나의 결과입니다. */
+        struct HintFieldResult
+        {
+            bool _bChanged{ false };              ///< 이번 프레임에 글이 바뀌었다(끌어 놓기 포함)
+            bool _bSubmitted{ false };            ///< Enter 로 냈다(`bSubmitOnEnter` 일 때만)
+            bool _bDeactivatedAfterEdit{ false }; ///< 고친 뒤 칸을 떠났거나 끌어 놓았다(그때 적용하는 칸)
+        };
+        /**
+         * @brief 힌트가 있는 한 줄 입력 칸을 그립니다(검색 팝업 · 새 경로 · 주소). 폭은 부르는 쪽이 `SetNextItemWidth` 로 정합니다.
+         * @details @p pMark 가 있으면 입력 칸 자리에 자체 시험 표시(`EditorSelfTestMarks::note`)를 남긴다 — 위젯이 단추를 덧붙여도 표시가 칸에 붙는다.
+         *          패널마다 `InputTextWithHint` 와 표시를 손으로 이으면 표시가 다른 항목에 붙거나 Enter 판정이 갈렸다.
+         */
+        static HintFieldResult drawHintField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, const utf8* pMark, bool bSubmitOnEnter = false );
+        template <uint32 N>
+        static HintFieldResult drawHintField( const utf8* pID, fixed_string<N>& str, const utf8* pHint, const utf8* pMark, bool bSubmitOnEnter = false )
+        {
+            return drawHintField( pID, str.data(), str.capacity(), pHint, pMark, bSubmitOnEnter );
+        }
+        /**
+         * @brief 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어 놓는 경로 칸입니다(`drawHintField` + 끌어 놓기). @p pExpectedExt 에 맞는 애셋만 받습니다(`drawAssetSlot` 과 같은 거르개).
+         * @details 끌어 놓기만 받는 `drawAssetSlot` 과 달리 글로 칠 수 있다 — 시나리오가 경로를 치는 칸(골격 · 미리보기 프리팹 · 클립)이 쓴다.
+         */
+        static HintFieldResult drawAssetPathField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, const utf8* pExpectedExt, const utf8* pMark );
+        template <uint32 N>
+        static HintFieldResult drawAssetPathField( const utf8* pID, fixed_string<N>& str, const utf8* pHint, const utf8* pExpectedExt, const utf8* pMark )
+        {
+            return drawAssetPathField( pID, str.data(), str.capacity(), pHint, pExpectedExt, pMark );
+        }
+
         /**
          * @brief 애셋 경로 표시, 드래그앤드롭 수신(Payload), 클리어/찾아보기 버튼을 지원하는 애셋 슬롯을 그립니다.
          * @param pExpectedExt 받을 확장자 목록입니다. 쉼표 또는 공백으로 나눕니다(`".png,.jpg,.tga"`). nullptr 이나 빈 문자열이면 모두 받습니다(`EditorAssetFilter`).

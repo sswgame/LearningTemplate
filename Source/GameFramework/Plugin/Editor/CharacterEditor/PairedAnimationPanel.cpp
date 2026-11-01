@@ -241,8 +241,8 @@ namespace sw::editor
 
             RoleSlot& slot = _listSlot[roleIndex];
             ImGui::SetNextItemWidth( -1.0f );
-            ImGui::InputTextWithHint( "##Prefab", "Preview prefab (resource id, not saved)", slot._prefabPath.data(), slot._prefabPath.max_size() );
-            EditorSelfTestMarks::note( ( string( "pairedanim.role." ) + role._name.c_str() + ".prefab" ).c_str() );
+            (void)EditorWidgets::drawAssetPathField( "##Prefab", slot._prefabPath.data(), slot._prefabPath.max_size(), "Preview prefab (resource id, not saved)", ".prefab.xml,.prefab.json",
+                                                     ( string( "pairedanim.role." ) + role._name.c_str() + ".prefab" ).c_str() );
 
             if ( role._bAnchor == false )
             {

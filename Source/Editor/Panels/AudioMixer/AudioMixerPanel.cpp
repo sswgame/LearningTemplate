@@ -135,8 +135,7 @@ namespace sw::editor
         ImGui::TextUnformatted( "Clip" );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 32.0f );
-        (void)ImGui::InputTextWithHint( "##AudioMixerClip", "audio/sample.wav", _clipPath.data(), _clipPath.capacity() );
-        EditorSelfTestMarks::note( "audiomixer.clipPath" );
+        (void)EditorWidgets::drawAssetPathField( "##AudioMixerClip", _clipPath, "audio/sample.wav", ".wav,.ogg", "audiomixer.clipPath" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play Clip" ) ) );
         ImGui::BeginDisabled( _clipPath.empty() );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play Clip" ) ) )

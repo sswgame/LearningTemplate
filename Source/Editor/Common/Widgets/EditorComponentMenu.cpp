@@ -40,9 +40,8 @@ namespace sw::editor
         if ( bFocusSearch )
             ImGui::SetKeyboardFocusHere();
         EditorChrome::setNextItemWidthColumns( 24.0f );
-        const bool   bEnter = ImGui::InputTextWithHint( "##compSearch", SW_LOCKEY( "EdCommon", "SearchHint" ), search.data(), search.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
-        const string markPrefix{ pMarkPrefix };
-        EditorSelfTestMarks::note( ( markPrefix + ".search" ).c_str() );
+        const string           markPrefix{ pMarkPrefix };
+        const bool             bEnter = EditorWidgets::drawHintField( "##compSearch", search.data(), search.capacity(), SW_LOCKEY( "EdCommon", "SearchHint" ), ( markPrefix + ".search" ).c_str(), true )._bSubmitted;
         const EditorListFilter compFilter{ search.c_str() };
         const bool             bHasFilter = compFilter.isActive();
 

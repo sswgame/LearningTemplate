@@ -165,9 +165,7 @@ namespace sw::editor
                     if ( ImGui::IsWindowAppearing() )
                         ImGui::SetKeyboardFocusHere();
                     EditorChrome::setNextItemWidthColumns( 43.0f );
-                    const bool bEnter = ImGui::InputTextWithHint( "##pickerSearch", SW_LOCKEY( "EditorInspector", "SearchAssetsHint" ), picker._search.data(), picker._search.capacity(),
-                                                                  ImGuiInputTextFlags_EnterReturnsTrue );
-                    EditorSelfTestMarks::note( "inspector.assetPicker.search" );
+                    const bool             bEnter = EditorWidgets::drawHintField( "##pickerSearch", picker._search, SW_LOCKEY( "EditorInspector", "SearchAssetsHint" ), "inspector.assetPicker.search", true )._bSubmitted;
                     const EditorListFilter filter{ picker._search.c_str() };
                     uint32                 shownCount{ 0 };
                     ImGui::BeginChild( "##pickerList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 43.0f, 14.0f ) ) );
