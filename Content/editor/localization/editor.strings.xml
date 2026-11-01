@@ -284,19 +284,19 @@
 		</entry>
 		<entry key="EdCommon.NotifyBugReportFailed" source="The bug report could not be saved (see the log)">
 			<origins>
-				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
+				<item>Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp</item>
 				<item>Source/Editor/Panels/BugReport/Model/BugReportModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyBugReportSaved" source="Bug report saved">
 			<origins>
-				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
+				<item>Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp</item>
 				<item>Source/Editor/Panels/BugReport/Model/BugReportModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyBugReportTitle" source="Bug report">
 			<origins>
-				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
+				<item>Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp</item>
 				<item>Source/Editor/Panels/BugReport/Model/BugReportModel.cpp</item>
 			</origins>
 		</entry>
