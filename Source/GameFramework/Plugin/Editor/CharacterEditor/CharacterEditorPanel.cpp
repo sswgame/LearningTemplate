@@ -26,6 +26,7 @@
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -724,7 +725,7 @@ namespace sw::editor
     {
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
-        ImGui::InputText( "##SocketPath", paths._socketPath.data(), paths._socketPath.max_size() );
+        (void)EditorWidgets::drawAssetPathField( "##SocketPath", paths._socketPath, "sockets file", SocketSet::kExtension, nullptr ); // 콘텐츠 브라우저에서 끌어 놓을 수 있다
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
         if ( ImGui::Button( "Load" ) )
             reloadDocument(); // 경로 칸의 소켓 파일을 다시 읽는다 — 읽음 · 못 읽음 표시와 미저장 기준은 문서 계약이 맞춘다
@@ -871,14 +872,14 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
         BonePoseEditModel&    pose  = _document.getPoseModel();
-        ImGui::InputText( "##SkeletonPath", paths._skeletonPath.data(), paths._skeletonPath.max_size() );
+        (void)EditorWidgets::drawAssetPathField( "##SkeletonPath", paths._skeletonPath, "skeleton", nullptr, nullptr );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load skeleton" ) );
         if ( ImGui::Button( "Load skeleton" ) )
             _document.loadSkeleton();
         EditorSelfTestMarks::note( "charactereditor.loadSkeleton" );
 
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
-        ImGui::InputText( "##RefPosePath", paths._refPosePath.data(), paths._refPosePath.max_size() );
+        (void)EditorWidgets::drawAssetPathField( "##RefPosePath", paths._refPosePath, "reference pose", nullptr, nullptr );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load pose" ) );
         if ( ImGui::Button( "Load pose" ) )
             _document.loadReferencePose();
@@ -1030,7 +1031,7 @@ namespace sw::editor
         const AppearanceDatabase& database = _document.getDatabase();
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
-        ImGui::InputText( "##ItemsPath", paths._itemsPath.data(), paths._itemsPath.max_size() );
+        (void)EditorWidgets::drawAssetPathField( "##ItemsPath", paths._itemsPath, "appearance items", nullptr, nullptr );
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##AppearanceFolder", paths._appearanceFolder.data(), paths._appearanceFolder.max_size() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load data" ) );
