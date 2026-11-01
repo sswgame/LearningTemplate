@@ -248,9 +248,13 @@
   |---|---|---|---|
   | `Material` | 게임 스레드(객체) · 렌더 스레드(`MaterialRenderProxy`) | 둘로 나뉨(형식) | 끝 |
   | `Texture2D` | 디바이스 스레드가 만들고 렌더 스레드가 스트리밍으로 바꿔 끼움 | 다른 스레드가 읽는 핸들 · SRV 는 원자값, 역할은 함수 머리에 | 유지 |
-  | `Mesh` | 게임 스레드 · 워커(`GPUUploadQueue::flush`)와 렌더 스레드(`GPUScene` 풀 밖 메시, GL) 둘 다 `initRHI` | 약속으로만 겹치지 않음 — 패킷 넘기기 전에 만든다, 정점은 제자리에서 바꾸지 않는다 | 남음: 만드는 쪽을 하나로(렌더 스레드 명령 또는 업로드 큐만)하거나 Debug 역할 확인 |
+  | `Mesh` | 게임 스레드 · 워커(`GPUUploadQueue::flush`) 또는 렌더 스레드(GL · 큐 끔 · 큐 없는 캡처 · 동적 메시) | 만드는 쪽은 스냅샷마다 하나(`GPUSceneSnapshot::_bMeshesCreatedBeforeHandoff`) | 끝 |
   | 캡처 · 미리보기 하위 렌더러 | 렌더 스레드만(`executeOffscreenPacket`) | 렌더 스레드 명령 | 끝 |
   | 씬 → 패킷 채우기 | 게임 스레드, 씬마다 `RenderPacketSceneCollector` 하나 | 한 벌 | 끝 |
+- **GPU 자원 판단 기준**(언리얼 · 유니티 · Godot 비교): GPU 자원은 렌더 쪽이 소유하고 만들고 지우는 길은 하나다. 게임 스레드가 쥐는 모양은 데이터가 바뀌는지로 고른다.
+  게임 스레드가 GPU 자원이 생긴 뒤에도 값을 바꾼다 → **렌더 프록시**(렌더 쪽 사본, `Material` / `MaterialRenderProxy` = 언리얼 `FMaterialRenderProxy`).
+  바꾸지 않는다(바뀌면 새 객체) → **한 번 만들기**(만드는 쪽 하나, `Mesh` = 언리얼 `FStaticMeshRenderData` + `BeginInitResource`).
+  렌더 쪽이 핸들을 바꿔 끼운다(스트리밍) → **게시**(원자값 핸들 · SRV, 게임 스레드는 읽기만, `Texture2D` = 언리얼 `FTextureReference`). 잠금으로 두 생성자를 덮지 않는다.
 - **같은 일 지도(끝낸 것)**: 캡처 준비 판정(`CaptureReadiness`), 씬 하나 채우기(`fillSceneView`), 읽은 픽셀 풀기(`RenderTargetImageFile::unpackRGBA8` — 초상화의 `makeRGBA8` 삭제),
   로그 줄 모양 쓰기 · 읽기(`LogLineFormat`), 로그 사건 세기(모든 줄에 id — id 없는 매크로 삭제).
 - **점검에 더할 축**: 소유 지도(객체 → 스레드, 렌더러 인스턴스 → 소유자, 디바이스 호출자), 일 지도(하는 일로 묶은 함수들), 명령줄 도구마다 ctest. 진행은 NEXT 0-6.

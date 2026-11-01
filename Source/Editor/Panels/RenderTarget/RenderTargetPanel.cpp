@@ -229,27 +229,10 @@ namespace sw::editor
             return;
 
         // 스냅샷마다 새 텍스처를 만든다. 쓰던 것에 다시 업로드하면 아직 그것을 그리는 프레임과 겹친다(옛 것은 해제 큐가 그 뒤에 부순다).
-        RHITextureDesc desc{};
-        desc._width                    = image._width;
-        desc._height                   = image._height;
-        desc._format                   = RHIFormat::R8G8B8A8_UNORM;
-        desc._bIsShaderResource        = SW_TRUE;
-        desc._mipLevels                = 1;
-        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
-        _snapshotTexture               = pResource->createTexture2D( desc );
+        // 만들기 · 올리기는 렌더 스레드가 한다(`EditorRenderViews::createImageTexture` - 에디터 GPU 텍스처의 한 길).
+        _snapshotTexture = renderViews.createImageTexture( image._width, image._height, image._byte );
         if ( _snapshotTexture == 0 )
             return;
-
-        RHITextureUploadDesc upload{};
-        upload._pData     = image._byte.data();
-        upload._sizeBytes = static_cast<uint32>( image._byte.size() );
-        upload._mipLevels = 1;
-        if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, _snapshotTexture, upload ) == false )
-        {
-            SW_LOG_WARNING_ID( "RenderTargetPanel.RenderTargetPreviewX", "Render target preview %#x%# could not be uploaded", image._width, image._height );
-            releaseSnapshotTexture( pDevice );
-            return;
-        }
         _pSnapshotTextureID = renderViews.getRendererBackend()->registerTexture( _snapshotTexture );
     }
 

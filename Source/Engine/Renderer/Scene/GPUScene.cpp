@@ -205,7 +205,19 @@ namespace sw
             }
             // 풀 밖(풀을 껐거나 못 든 메시) — 자기 정점 버퍼로 그린다. 구간의 첫 정점부터.
             batch._firstVertex = batch._sectionFirstVertex;
-            if ( batch._mesh != nullptr && batch._mesh->initRHI( pDevice ) )
+            if ( batch._mesh == nullptr )
+                continue;
+            // 만드는 쪽은 하나다 — 게임 스레드가 넘기기 전에 만든 스냅샷이면(동적 메시 밖) 여기서 다시 만들지 않는다. 없으면 그 쪽이 실패했다(그쪽이 이미 알렸다).
+            const bool bCreatedBeforeHandoff = _snapshot._bMeshesCreatedBeforeHandoff == SW_TRUE && batch._mesh->isDynamic() == false;
+            if ( bCreatedBeforeHandoff )
+            {
+                if ( batch._mesh->isRHIValid() )
+                    batch._vertexBuffer = batch._mesh->getVertexBuffer();
+                else
+                    SW_LOG_ERROR_ONCE_ID( "GPUScene.MeshNotCreatedBeforeHandoff", "A mesh in the snapshot has no vertex buffer although the upload queue owns its creation - it is not drawn" );
+                continue;
+            }
+            if ( batch._mesh->initRHI( pDevice ) )
                 batch._vertexBuffer = batch._mesh->getVertexBuffer();
         }
     }

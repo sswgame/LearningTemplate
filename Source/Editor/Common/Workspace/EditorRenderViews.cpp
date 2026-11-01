@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -12,6 +13,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Renderer/RenderThread.h"
+#include "Engine/Renderer/RenderThreadSubsystem.h"
 
 namespace sw::editor
 {
@@ -196,6 +199,71 @@ namespace sw::editor
         view._height = 0;
     }
 
+    RHITextureHandle EditorRenderViews::runPendingCreate()
+    {
+        const RenderThreadSubsystem* const pRenderThreads = editor::findSubsystem<RenderThreadSubsystem>();
+        RenderThread* const                pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
+        if ( pRenderThread == nullptr )
+        {
+            SW_LOG_ERROR_ONCE_ID( "EditorRenderViews.NoRenderThread", "An editor texture (%#x%#) was not created - there is no render thread to create it on", _pendingCreate._width,
+                                  _pendingCreate._height );
+            return 0;
+        }
+        const bool             bRan    = pRenderThread->executeAndWait( SW_DELEGATE_METHOD( RenderCommandDelegate, &EditorRenderViews::createTextureOnRenderThread, this ) );
+        const RHITextureHandle texture = bRan ? _pendingCreate._texture : 0;
+        _pendingCreate                 = PendingTargetCreate{}; // 픽셀 포인터를 남기지 않는다
+        return texture;
+    }
+
+    RHITextureHandle EditorRenderViews::createImageTexture( uint32 width, uint32 height, const vector<uint8>& rgbaBytes )
+    {
+        if ( width == 0 || height == 0 || rgbaBytes.size() < static_cast<size_t>( width ) * height * 4u )
+            return 0;
+        _pendingCreate             = PendingTargetCreate{};
+        _pendingCreate._width      = width;
+        _pendingCreate._height     = height;
+        _pendingCreate._pRGBABytes = &rgbaBytes;
+        return runPendingCreate();
+    }
+
+    void EditorRenderViews::createTextureOnRenderThread( IRHIDevice& device )
+    {
+        IRHIResourceFactory* const pFactory = device.getResourceFactory();
+        if ( pFactory == nullptr )
+            return;
+        const bool     bImage = _pendingCreate._pRGBABytes != nullptr;
+        RHITextureDesc rtDesc{};
+        rtDesc._width             = _pendingCreate._width;
+        rtDesc._height            = _pendingCreate._height;
+        rtDesc._format            = RHIFormat::R8G8B8A8_UNORM;
+        rtDesc._bIsRenderTarget   = bImage ? SW_FALSE : SW_TRUE;
+        rtDesc._bIsShaderResource = SW_TRUE;
+        rtDesc._mipLevels         = 1;
+        rtDesc._clearColor        = _pendingCreate._clearColor;
+        _pendingCreate._texture   = pFactory->createTexture2D( rtDesc );
+        if ( _pendingCreate._texture == 0 )
+            return;
+        if ( bImage )
+        {
+            RHITextureUploadDesc upload{};
+            upload._pData     = _pendingCreate._pRGBABytes->data();
+            upload._sizeBytes = static_cast<uint32>( _pendingCreate._pRGBABytes->size() );
+            upload._mipLevels = 1;
+            if ( RHITransferUtil::uploadTexture2DAndWait( *pFactory, _pendingCreate._texture, upload ) == false )
+            {
+                SW_LOG_WARNING_ID( "EditorRenderViews.ImageUploadFailed", "Editor image texture %#x%# could not be uploaded", rtDesc._width, rtDesc._height );
+                pFactory->destroyTexture( _pendingCreate._texture ); // 아무도 아직 보지 않았다 - 그 자리에서 부순다
+                _pendingCreate._texture = 0;
+            }
+            return;
+        }
+        // 이번 프레임의 draw 스냅샷이 새 텍스처를 그리는데, 그 스냅샷은 이 렌더 타깃에 그릴 패킷보다 먼저 줄 선 패킷이 그릴 수 있다. 렌더러가 아직
+        // 쓰지 않은 텍스처를 샘플링하지 않도록 클리어 색으로 채워 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다).
+        // 닫혀 있다 열린 패널의 첫 프레임도 이 색이다(그 뷰는 보이는 동안만 그린다).
+        if ( EditorRenderViewsInternal::fillTextureWithColor( *pFactory, _pendingCreate._texture, rtDesc._width, rtDesc._height, _pendingCreate._clearColor ) == false )
+            SW_LOG_WARNING_ID( "EditorRenderViews.ViewTargetXCould", "View target %#x%# could not be cleared before its first frame", rtDesc._width, rtDesc._height );
+    }
+
     void EditorRenderViews::ensureTargetSize( EditorViewTarget& view, uint32 width, uint32 height )
     {
         if ( width == 0 || height == 0 )
@@ -205,30 +273,16 @@ namespace sw::editor
             return;
         if ( _pRHIDevice == nullptr || _pRHIDevice->getResourceFactory() == nullptr )
             return;
-
         destroyTarget( view );
 
         // editortooldefaults.json 의 _clearColor 를 쓴다(값을 여기 박아 두면 설정 파일이 조용히 무시된다).
-        const float4 viewClearColor = editor::getEditorToolDefaults()._clearColor;
-
-        RHITextureDesc rtDesc{};
-        rtDesc._width             = width;
-        rtDesc._height            = height;
-        rtDesc._format            = RHIFormat::R8G8B8A8_UNORM;
-        rtDesc._bIsRenderTarget   = SW_TRUE;
-        rtDesc._bIsShaderResource = SW_TRUE;
-        rtDesc._mipLevels         = 1;
-        rtDesc._clearColor        = viewClearColor;
-
-        view._renderTarget = _pRHIDevice->getResourceFactory()->createTexture2D( rtDesc );
+        _pendingCreate             = PendingTargetCreate{};
+        _pendingCreate._width      = width;
+        _pendingCreate._height     = height;
+        _pendingCreate._clearColor = editor::getEditorToolDefaults()._clearColor;
+        view._renderTarget         = runPendingCreate();
         if ( view._renderTarget == 0 )
             return;
-
-        // 이번 프레임의 draw 스냅샷이 새 텍스처를 그리는데, 그 스냅샷은 이 렌더 타깃에 그릴 패킷보다 먼저 줄 선 패킷이 그릴 수 있다. 렌더러가 아직
-        // 쓰지 않은 텍스처를 샘플링하지 않도록 클리어 색으로 채워 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다).
-        // 닫혀 있다 열린 패널의 첫 프레임도 이 색이다(그 뷰는 보이는 동안만 그린다).
-        if ( EditorRenderViewsInternal::fillTextureWithColor( *_pRHIDevice->getResourceFactory(), view._renderTarget, width, height, viewClearColor ) == false )
-            SW_LOG_WARNING_ID( "EditorRenderViews.ViewTargetXCould", "View target %#x%# could not be cleared before its first frame", width, height );
 
         view._width  = width;
         view._height = height;

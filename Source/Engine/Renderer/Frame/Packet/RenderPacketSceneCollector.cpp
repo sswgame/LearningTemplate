@@ -190,6 +190,7 @@ namespace sw
 
         SW_PROFILE_SCOPE( "GT.Packet.export" );
         _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
+        packet._gpuScene._bMeshesCreatedBeforeHandoff = ( pUploadQueue != nullptr && pUploadQueue->createsMeshes() ) ? SW_TRUE : SW_FALSE;
     }
 
     void RenderPacketSceneCollector::resolveMarkerInstanceSlots( RenderFramePacket& packet, const UISystem* pUISystem, const Scene* pActiveScene ) const

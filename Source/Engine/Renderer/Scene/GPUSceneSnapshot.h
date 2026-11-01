@@ -487,6 +487,12 @@ namespace sw
         /// @brief 마지막 populateFromScene 이 내용을 바꿨는지 나타냅니다. RT 는 0이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCPUDirty{ SW_TRUE };
         /**
+         * @brief 1이면 이 스냅샷의 메시(동적 메시 밖)는 게임 스레드가 넘기기 전에 만들었다(`GPUUploadQueue::createsMeshes`) — 렌더 스레드는 다시 만들지 않는다.
+         * @details 메시 하나를 만드는 쪽은 하나다(언리얼 `BeginInitResource` 가 한 번만 들어가는 것과 같은 자리). 0이면(GL · 큐를 끈 구성 · 큐 없는 화면 밖 캡처) 렌더 스레드가 만든다.
+         *          예전에는 두 쪽이 모두 `Mesh::initRHI` 를 불렀고, 게임 스레드 생성이 실패한 메시는 두 스레드가 함께 다시 시도할 수 있었다.
+         */
+        uint8 _bMeshesCreatedBeforeHandoff{ SW_FALSE };
+        /**
          * @brief 1이면 인스턴스 배열 **전체**가 바뀌었고, 0이면 `_listDirtyInstanceRun` 만 바뀌었습니다.
          * @details 전체 재구축은 1이고, 물체만 움직인 프레임은 0이다. 버퍼를 새로 만든 프레임도 받는 쪽이
          *          전체로 취급해야 한다. 새 버퍼에는 아직 아무것도 없기 때문이다.

@@ -39,6 +39,11 @@ namespace sw
                         pDevice->getBackendName() );
     }
 
+    bool GPUUploadQueue::createsMeshes() const
+    {
+        return _bParallel == SW_TRUE && _pDevice != nullptr && gv_gpuUploadQueue;
+    }
+
     void GPUUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
     {
         // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다. 렌더 스레드가 그 프레임의 업로드(`GPUScene` 의 `initRHI`)에서 만든다.
