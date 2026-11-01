@@ -95,7 +95,7 @@ namespace sw
      *            필드가 있으면 실패한다. 언리얼 쿠킹 패키지가 버전(`FPackageFileSummary` 의 버전)이 다르면 로드를
      *            거절하는 것과 같다. 오브젝트 상태처럼 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다
      *            (`SerializeContext::setAllowUnknownProperties`, 그때 바이너리도 `Ignore`). 버전이 다르면 그래도 거절한다.
-     *          고정하는 테스트: `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`.
+     *          고정하는 테스트: `SchemaMigrateTest.OrphanPolicyDropsWithAWarningOrRejects`.
      */
     enum class SchemaOrphanPolicy : uint8
     {

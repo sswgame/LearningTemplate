@@ -16,7 +16,7 @@
 
 // SerializerUtilTest · SchemaMigrateTest · DataPathTest — 직렬화 공통 도우미: 값 텍스트 왕복 · 범위 밖 정수 거절 · 키 철자 일치 · 모르는 이름 · 비트필드 한 칸만 쓰기 ·
 // 페이로드 끝까지 읽기 · 선언 범위(경계 포함) · 선언 기본값, 판 정확 일치(옛 판은 이관하지 않고 거절) · orphan 정책(텍스트는 버리고 알림, 바이너리는 거절) ·
-// 값으로만 옮기는 강제 변환(스칼라 · 다른 enum · 글 blob) · 기록 타입 이름 찾기, 데이터 경로 칸(읽지 않은 칸 · 앞뒤 공백 · 빈 글은 비움)(nogpu).
+// 값으로만 옮기는 강제 변환(스칼라 · 다른 enum · 글 blob · 비트필드는 그 비트만) · 스크래치 인스턴스 · 기록 타입 이름 찾기, 데이터 경로 칸(읽지 않은 칸 · 앞뒤 공백 · 빈 글은 비움)(nogpu).
 
 using namespace sw;
 
@@ -311,6 +311,38 @@ SW_TEST_CASE( SchemaMigrateTest, CoercedBinaryPayloadMovesTheValue )
     SW_REQUIRE_TRUE( tryCoerceBinaryPayload( MutableValueAddress{ &asInt }, hashed_string( "int32" ), textBlob.data(), textBlob.size(), context ) == FieldReadResult::Read );
     SW_EXPECT_EQUAL( 42, asInt );
     SW_EXPECT_TRUE( tryCoerceBinaryPayload( MutableValueAddress{ &asInt }, hashed_string( "int32" ), nullptr, 0, context ) == FieldReadResult::FieldFailed );
+}
+
+/** @brief [SchemaMigrateTest] 형식이 바뀐 비트필드 칸은 그 비트만 쓴다 — 같은 바이트의 이웃 비트가 지워지지 않고, 옮기지 못하면 비트도 그대로다 */
+SW_TEST_CASE( SchemaMigrateTest, CoercedBitFieldWritesOnlyItsBit )
+{
+    const PropertyInfo& second = getSampleProperty( "_bSecond" );
+    SerializerSample    sample;
+    sample._bFirst = 1;
+
+    const vector<uint8> one = toBytes( int32( 1 ) );
+    SW_REQUIRE_TRUE( tryCoercePropertyBinary( second, MutableObjectAddress{ &sample }, one.data(), one.size(), getContext(), hashed_string( "int32" ), kCurrentBinaryWireVersion ) ==
+                     FieldReadResult::Read );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( sample._bFirst ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( sample._bSecond ) );
+
+    const vector<uint8> textBlob = makeTextBlob( "maybe" );
+    SW_EXPECT_TRUE( tryCoercePropertyBinary( second, MutableObjectAddress{ &sample }, textBlob.data(), textBlob.size(), getContext(), hashed_string( "string" ),
+                                             kCurrentBinaryWireVersion ) == FieldReadResult::FieldFailed );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( sample._bFirst ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( sample._bSecond ) );
+}
+
+/** @brief [SchemaMigrateTest] 스크래치 인스턴스는 기본 생성된 값으로 서고(글 칸은 빈 글), 짝을 맞춰 파괴된다 */
+SW_TEST_CASE( SchemaMigrateTest, ScratchInstanceStartsDefaultAndIsDestroyed )
+{
+    vector<uint8> listStorage;
+    void*         pScratch = createScratchInstance( getSampleType(), listStorage );
+    SW_REQUIRE_NOT_NULL( pScratch );
+    const SerializerSample& scratch = *static_cast<const SerializerSample*>( pScratch );
+    SW_EXPECT_TRUE( scratch._name.empty() );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( scratch._bFirst ) );
+    destroyScratchInstance( pScratch, getSampleType() );
 }
 
 /** @brief [SchemaMigrateTest] 다른 enum 으로 적힌 값은 열거자 이름으로 옮긴다 — 글 칸은 이름을 받고, 이름 해시가 수로 읽히지 않는다 */

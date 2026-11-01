@@ -29,7 +29,6 @@
    - 에디터 코드의 영어 화면 글 약 500 줄(`ImGui::Text( "…" )` 등)을 `SW_LOCKEY` + `editor.strings.xml` 로 — 창 UX 를 고칠 때 그 창 것을 함께 옮긴다.
    - 에셋 종류 색 · 아이콘(등록 매크로의 RGBA) · 컴포넌트 분류 색을 테마 키(`Asset.*` · `Component.*`)로, 크기 리터럴(`GetFontSize() * N` 23 곳)을 `Layout.*` 수치로.
    - 아이콘 이름 → 글리프 표(`EditorIconGlyphs`)를 데이터로(아이콘 글꼴 교체 = 표 교체), 시간대 표(`TimeZoneUtil`)를 데이터 파일로.
-   - `Saved/Test/<pid>/` 단위 테스트 쓰기 폴더가 실행마다 남아 수백 개다 — 끝나면 지우거나 한 폴더를 다시 쓴다.
 6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
    끝낸 경계는 StructureRefactor 9 절(GPU 자원은 프록시 / 한 번 만들기 / 게시, 스레드 경계 표). 끝낸 경계: 머티리얼 · 메시 · 텍스처 · 에디터 텍스처 · 오디오 ·
    애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:
@@ -49,7 +48,7 @@
 | 일 | 내용 |
 |---|---|
 | 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지. 머티리얼 PSO 를 만드는 중인 프레임은 이제 자리 잡음에서 뺀다(`Assets.Pending`) — 남는 흔들림만 본다 |
-| 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄, Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다 |
+| 남은 단위 테스트 | Kits 의 `none` 줄. 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
 | 벽시계 한도와 부하 | 그물은 이제 조건 대기의 제 시한을 덮는다(`computeWallLimitSeconds`). 남은 것: 백엔드 교체가 많은 시나리오(flowterrain 의 교체 7 번이 혼자서도 19 초)의 교체 시간 자체를 줄인다 |
 | id 없는 경고 · 오류 | 테스트가 밟는 경로마다 `SW_LOG_*_ID` 를 붙였지만 다른 로더에 더 남았다 — 같은 모양 |
 
@@ -61,6 +60,5 @@
 
 - 빌드 속도: `MaterialPanel` · `PrefabPanel`(각 50 초대, Release)을 `-ftime-trace` 로 나눈다.
 - 시나리오 범용화: 재생기 · 판정 층을 나눌 때 `AutomationSession`(이미 `ISubsystem` + `IScenarioPlayer`)에 인터페이스를 더 붙이지 않고 재생기를 별도 객체로. 시퀀서 이벤트 트랙이 시나리오를 부르는 쪽, 액션 단위 녹화 · 리플레이(고스트 · 킬캠). 단계 등록은 키트 · 게임이 아직 0.
-- 리로드: 배포 `IAssetCache` 에 reload 가 없게 — 리로드는 DevTools 빌드 단위의 리로더 객체가 캐시를 참조해 공개 API(무효화 · 다시 요청)로 한다(구성, 캐시에 인터페이스를 더 붙이지 않는다 — 캐시 8 개가 다중 상속이 된다). `IAssetCache` 는 이름은 `I*` 인데 상태(`_stats`)를 가진 기반이다 — 이름을 내용대로(`AssetCacheBase` 등).
 - 창 바둑판 간격의 창 틀 두께가 Win32 대략 값이다(`AutomationPerBackend`) — 플랫폼 창 틀 API 가 생기면.
 - 전용 서버 종료 때 태그별 증가 진단(Game 약 0.5 KB) 출처.
