@@ -370,7 +370,12 @@ namespace sw
                 const AutomationStepHold          hold          = pRegistration != nullptr && pRegistration->_pHold != nullptr ? pRegistration->_pHold( *this, step, input )
                                                                                                                                : AutomationStepHold::Run;
                 if ( hold == AutomationStepHold::Hold )
+                {
+                    // 붙잡은 단계가 지금 자리다 — 시한 초과 줄 · 크래시 문맥이 앞서 돈 단계가 아니라 기다리는 단계를 가리키게 한다.
+                    _run._currentStepKind   = step._kind;
+                    _run._currentStepNumber = step._orderInFile;
                     break;
+                }
                 ++_run._nextStepIndex;
                 _wallProfile.closeWait( step._kind, step._orderInFile, _run._frameIndex ); // 앞서 쌓인 고정 대기 · 조건 대기를 이 단계 앞의 대기로 닫는다
                 if ( hold == AutomationStepHold::Skip )
@@ -479,12 +484,19 @@ namespace sw
     {
         // 단계 하나가 몇 초씩 드는 종류(백엔드 교체 — 디바이스 · 모듈 · 씬을 다시 세운다)는 그 수만큼 상한을 늘린다. 고정 상한이면 교체가 많은 시나리오만
         // 부하가 걸린 기계에서 넘었고, 숫자를 올리면 교체가 없는 시나리오의 행 감지까지 늦어진다(언리얼 Gauntlet 도 테스트마다 MaxDuration 을 따로 둔다).
+        // 조건 대기(`timeoutFrames` · `timeoutSeconds`)는 제 시한이 판정한다 — 그 시한만큼(시뮬레이션 초, 실시간 이상으로 도는 기준)을 더해 바깥 그물이 먼저 끝내지 않게 한다.
+        // 더하지 않으면 정당하게 긴 대기(게임 상태를 기다리는 시나리오)가 부하 걸린 기계에서 "wall-clock limit" 으로만 졌다(프레임 시한의 "바깥 < 안쪽 대기 합" 과 같은 모양).
         float32 limitSeconds = _scenario.getWallTimeoutSeconds();
         for ( const AutomationStep& step : _scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration != nullptr )
                 limitSeconds += pRegistration->_wallSeconds;
+            const bool                              bDeclaresWait = step.findAttribute( "timeoutFrames" ) != nullptr || step.findAttribute( "timeoutSeconds" ) != nullptr;
+            AutomationStepArgsUtil::WaitTimeoutArgs timeout;
+            string                                  error;
+            if ( bDeclaresWait && AutomationStepArgsUtil::parseWaitTimeout( step, timeout, error ) )
+                limitSeconds += timeout._bSeconds ? timeout._timeoutSeconds : static_cast<float32>( timeout._timeoutFrames ) * _scenario.getFixedDelta();
         }
         return limitSeconds;
     }

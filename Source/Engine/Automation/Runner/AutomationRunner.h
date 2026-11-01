@@ -244,7 +244,7 @@ namespace sw
         GameObjectManager*       _pObjectManagerOverride;   ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
         InputManager*            _pInputManager;            ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
         int64                    _startedUnixMs;            ///< 시작 시각의 유닉스 밀리초(보고용)
-        float32                  _wallLimitSeconds;         ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산(`computeWallLimitSeconds`)
+        float32                  _wallLimitSeconds;         ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산 + 조건 대기의 제 시한(`computeWallLimitSeconds`)
         string                   _startScenePath;           ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
         TaskFuture<Scene*>       _startSceneLoad;           ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationOutcome        _result;
