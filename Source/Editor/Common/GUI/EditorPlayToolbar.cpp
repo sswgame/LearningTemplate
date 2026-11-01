@@ -7,7 +7,7 @@
 
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"

@@ -6,12 +6,12 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorInputGUI.h"

@@ -10,7 +10,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"

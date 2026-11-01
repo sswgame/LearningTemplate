@@ -5,11 +5,11 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"

@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"

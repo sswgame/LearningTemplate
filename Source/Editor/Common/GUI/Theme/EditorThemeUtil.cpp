@@ -7,11 +7,11 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -416,34 +416,6 @@ namespace sw::editor
     Color EditorThemeUtil::getViewportHoverColor()
     {
         return Color::lerp( SW_THEMECOLOR( "Base", "Accent" ), SW_THEMECOLOR( "Base", "Text" ), EditorThemeInternal::kHoverWhiten ).withAlpha( EditorThemeInternal::kHoverAlpha );
-    }
-
-    const utf8* EditorIconUtil::findGlyph( const hashed_string& name )
-    {
-        EditorTheme&                theme = getSubsystem<EditorTheme>();
-        const EditorIconGlyphTable& table = theme.getIconTable();
-        if ( const utf8* pGlyph = table.findGlyph( name ) )
-            return pGlyph;
-        static const hashed_string s_missingName{ EditorIconGlyphTable::kMissingIconName };
-        const utf8* const          pMissing = table.findGlyph( s_missingName );
-        if ( theme.markMissingKey( name ) )
-        {
-            if ( pMissing == nullptr )
-                SW_LOG_ERROR_ID( "EditorIcon.TableNotLoaded", "Editor icon '%#' was asked for before the icon table was read (EditorFontSetup) - a static table must hold the name, not the glyph", name.c_str() );
-            else
-                SW_LOG_ERROR_ID( "EditorIcon.UnknownName", "Editor icon '%#' is not in the icon table (editor/fonts/sweditoricons.glyphs.xml)", name.c_str() );
-        }
-        return pMissing != nullptr ? pMissing : "?";
-    }
-
-    const utf8* EditorIconUtil::findGlyphByName( const utf8* pName )
-    {
-        return pName != nullptr ? findGlyph( hashed_string{ pName } ) : nullptr;
-    }
-
-    bool EditorIconUtil::hasIcon( string_view name )
-    {
-        return getSubsystem<EditorTheme>().getIconTable().findGlyph( hashed_string{ name } ) != nullptr;
     }
 
     const Color& EditorThemeUtil::findColor( const hashed_string& key )

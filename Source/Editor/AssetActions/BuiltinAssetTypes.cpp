@@ -6,8 +6,8 @@
 #include "pch.h"
 
 #include "Editor/Common/Asset/Texture/HeightfieldImporter.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Animation/AnimationClip.h"

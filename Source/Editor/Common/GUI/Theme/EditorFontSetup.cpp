@@ -6,11 +6,11 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Content/AssetPaths.h"

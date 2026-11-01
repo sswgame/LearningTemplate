@@ -3,8 +3,8 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
-#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 
