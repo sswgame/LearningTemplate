@@ -226,10 +226,10 @@ namespace sw
         , _bAssembleScheduled{ SW_FALSE }
         , _bStarted{ SW_FALSE }
         , _bMeshAssemblyPending{ SW_FALSE }
-        , _bMeshApplyQueued{ SW_FALSE }
         , _bMeshAssembled{ SW_FALSE }
         , _bProportionTask{ SW_FALSE }
         , _bMeshMerged{ SW_FALSE }
+        , _bMeshApplyQueued{ SW_FALSE }
         , _reserved{ 0 }
         , _mergedBodySection{}
         , _surface{}
