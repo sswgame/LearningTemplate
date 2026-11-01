@@ -39,7 +39,9 @@ namespace sw
                            RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
+        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                  uint32 countBufferOffset = 0 ) override;
+        void drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void beginEventMarker( const utf8* pName ) override;
         void writeBreadcrumb( uint32 markerID ) override;
@@ -71,7 +73,14 @@ namespace sw
          * @details 메시 정점 버퍼가 설정되어 있으면 그 VAO 로, 아니면 디바이스 기본 VAO 로 그립니다. 인스턴스가 하나면 `glDrawArrays`,
          *          둘 이상이면 `glDrawArraysInstanced` 를 부릅니다(언리얼 OpenGL RHI 의 `RHIDrawPrimitive` 와 같은 분기입니다).
          */
-        void                   drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex );
+        void drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex );
+        /**
+         * @brief 인덱스 드로우(`drawIndexedInstanced` · `drawIndexedIndirect`)가 함께 쓰는 준비 — 프로그램 · 메시 VAO · 인덱스 버퍼를 건다.
+         * @return 메시 정점이나 인덱스 버퍼가 없으면(부서졌으면 진단을 남기고) false 이고 그리지 않는다.
+         */
+        [[nodiscard]] bool bindIndexedMeshForDraw( uint32& outMode, uint32& outIndexType );
+        /** @brief `bindIndexedMeshForDraw` 가 건 VAO · 버퍼를 뗍니다. */
+        void                   unbindIndexedMesh();
         OpenGLRHIDevice* const _pDevice; ///< 생성자에서 받는다
         /// @brief 이 컨텍스트가 갱신하는 기록 상태입니다.
         OpenGLRecordingState* _pState;

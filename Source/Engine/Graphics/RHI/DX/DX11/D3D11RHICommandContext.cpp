@@ -626,9 +626,23 @@ namespace sw
         }
     }
 
-    void D3D11RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void D3D11RHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
-        if ( _pContext == nullptr || argumentBuffer == 0 )
+        const bool bNothingToDraw = _pContext == nullptr || indexCount == 0 || instanceCount == 0;
+        if ( bNothingToDraw )
+            return;
+        if ( bindGraphicsPipelineForDraw() == false )
+            return;
+        _pContext->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
+    }
+
+    void D3D11RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                      uint32 countBufferOffset )
+    {
+        // D3D11 에는 멀티 드로우도 개수 버퍼도 없다 — 커맨드마다 한 번씩(`drawIndirect` 와 같다).
+        (void)countBuffer;
+        (void)countBufferOffset;
+        if ( _pContext == nullptr || argumentBuffer == 0 || drawCount == 0 )
             return;
 
         ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
@@ -639,7 +653,10 @@ namespace sw
         if ( bindGraphicsPipelineForDraw() == false )
             return;
 
-        _pContext->DrawIndexedInstancedIndirect( pBuf, argumentBufferOffset );
+        for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+        {
+            _pContext->DrawIndexedInstancedIndirect( pBuf, argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ) );
+        }
     }
 
     void D3D11RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )

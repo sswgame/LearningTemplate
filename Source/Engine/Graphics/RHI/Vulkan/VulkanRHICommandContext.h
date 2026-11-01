@@ -52,7 +52,9 @@ namespace sw
                            RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
+        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                  uint32 countBufferOffset = 0 ) override;
+        void drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void beginEventMarker( const utf8* pName ) override;
         void writeBreadcrumb( uint32 markerID ) override;
@@ -92,6 +94,8 @@ namespace sw
 
         /** @brief 메시 VB(없으면 풀스크린 정점 버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 설정합니다. 모든 드로우 진입점이 이것을 쓰고, false(설정한 메시 VB 가 파괴됨, 또는 커맨드 버퍼 없음)면 드로우를 버립니다. */
         [[nodiscard]] bool bindMeshVertexBufferForDraw();
+        /** @brief 인덱스 드로우가 함께 쓰는 준비 — 파이프라인 · 메시 정점 · 인덱스 버퍼를 건다. 인덱스 버퍼가 없거나 커맨드 버퍼가 없으면 false(그리지 않는다). */
+        [[nodiscard]] bool bindIndexedMeshForDraw();
 
         VulkanRHIDevice* _pDevice;
         /// @brief 이 컨텍스트가 기록할 버퍼입니다. nullptr 이면 디바이스가 지금 연 버퍼를 따라갑니다.

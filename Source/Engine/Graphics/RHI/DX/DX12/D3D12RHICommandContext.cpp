@@ -703,9 +703,24 @@ namespace sw
         commandListForRecord()->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }
 
-    void D3D12RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void D3D12RHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
-        const bool bCannotDrawIndexedIndirect = _pCmdList == nullptr || _pDevice->_drawIndexedCommandSignature == nullptr || argumentBuffer == 0;
+        const bool bNothingToDraw = _pCmdList == nullptr || indexCount == 0 || instanceCount == 0 || _pState->_boundIndexBuffer == 0;
+        if ( bNothingToDraw )
+            return;
+        if ( flushSlotTables( false ) == false )
+            return;
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
+        bindBoundIndexBuffer();
+        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
+    }
+
+    void D3D12RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                      uint32 countBufferOffset )
+    {
+        const bool bCannotDrawIndexedIndirect = _pCmdList == nullptr || _pDevice->_drawIndexedCommandSignature == nullptr || argumentBuffer == 0 || drawCount == 0;
         if ( bCannotDrawIndexedIndirect )
             return;
         if ( _pState->_boundIndexBuffer == 0 )
@@ -723,7 +738,10 @@ namespace sw
             return;
         bindBoundIndexBuffer();
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        commandListForRecord()->ExecuteIndirect( _pDevice->_drawIndexedCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
+        // 개수 버퍼가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한) — `drawIndirect` 와 같다.
+        ID3D12Resource* pCountResource = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
+        commandListForRecord()->ExecuteIndirect( _pDevice->_drawIndexedCommandSignature.Get(), drawCount, pArgs, argumentBufferOffset, pCountResource,
+                                                 ( pCountResource != nullptr ) ? countBufferOffset : 0 );
     }
 
     void D3D12RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )

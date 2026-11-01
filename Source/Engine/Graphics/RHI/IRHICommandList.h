@@ -73,6 +73,12 @@ namespace sw
          */
         virtual void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) = 0;
         virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 )                         = 0;
+        /**
+         * @brief 건 인덱스 버퍼(`setIndexBuffer`)로 삼각형 리스트를 인스턴싱으로 그립니다.
+         * @param startIndex 인덱스 버퍼 안의 첫 인덱스 자리입니다.
+         * @param baseVertex 인덱스마다 더하는 정점 자리입니다(정점 풀에 여러 메시가 이어 놓였을 때 메시의 첫 정점).
+         */
+        virtual void drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) = 0;
 
         // ------------------------------------------------------------------------------
         // 4) 컴퓨트: PSO, 디스패치, 루트 상수, UAV
@@ -239,11 +245,14 @@ namespace sw
          */
         virtual void uavBarrier( RHIBufferHandle buffer ) = 0;
         /**
-         * @brief 인덱스 버퍼를 쓰는 드로우를 GPU 가 기록해 둔 인자로 한 번 발행합니다.
-         * @param argumentBuffer `RHIDrawIndexedIndirectCommand` 하나입니다. 위와 같은 이유로 그 구조체가 레이아웃 기준입니다.
+         * @brief 인덱스 버퍼를 쓰는 드로우를 GPU 가 기록해 둔 인자로 발행합니다(`drawIndirect` 와 같은 모양 — 여러 개 · 개수 버퍼).
+         * @param argumentBuffer `RHIDrawIndexedIndirectCommand` 가 이어 놓인 버퍼입니다. 위와 같은 이유로 그 구조체가 레이아웃 기준입니다.
          * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.
+         * @param drawCount 그릴 커맨드 수(개수 버퍼가 있으면 상한)입니다.
+         * @param countBuffer 실제 개수를 GPU 가 기록해 두는 버퍼입니다(0 이면 drawCount 그대로). 지원하지 않는 백엔드는 drawCount 를 쓴다.
          */
-        virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
+        virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                          uint32 countBufferOffset = 0 ) = 0;
         // ------------------------------------------------------------------------------
         // 7) GPU 디버그 마커
         // ------------------------------------------------------------------------------

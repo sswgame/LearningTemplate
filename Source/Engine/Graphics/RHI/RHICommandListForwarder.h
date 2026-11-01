@@ -45,6 +45,10 @@ namespace sw
         {
             _pContext->setIndexBuffer( buffer, indexStride, offset );
         }
+        void drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override
+        {
+            _pContext->drawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
+        }
         void setComputePipelineState( RHIPipelineStateHandle pso ) override { _pContext->setComputePipelineState( pso ); }
         void dispatchCompute( uint32 x, uint32 y, uint32 z ) override { _pContext->dispatchCompute( x, y, z ); }
         void uavBarrier( RHIBufferHandle buffer ) override { _pContext->uavBarrier( buffer ); }
@@ -83,9 +87,10 @@ namespace sw
         }
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override { _pContext->transitionBuffer( buffer, newState ); }
         void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override { _pContext->copyBufferToReadback( source, readback, sizeBytes ); }
-        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
+        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                  uint32 countBufferOffset = 0 ) override
         {
-            _pContext->drawIndexedIndirect( argumentBuffer, argumentBufferOffset );
+            _pContext->drawIndexedIndirect( argumentBuffer, argumentBufferOffset, drawCount, countBuffer, countBufferOffset );
         }
         void beginEventMarker( const utf8* pName ) override { _pContext->beginEventMarker( pName ); }
         void endEventMarker() override { _pContext->endEventMarker(); }

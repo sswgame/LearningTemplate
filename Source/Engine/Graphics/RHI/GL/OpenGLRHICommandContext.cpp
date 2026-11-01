@@ -833,51 +833,82 @@ namespace sw
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
     }
 
-    void OpenGLRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    bool OpenGLRHICommandContext::bindIndexedMeshForDraw( uint32& outMode, uint32& outIndexType )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
-            return;
-
         GLuint program{ 0 };
-        GLenum mode{ GL_TRIANGLES };
-        resolveDrawProgram( program, mode );
-
+        outMode = GL_TRIANGLES;
+        resolveDrawProgram( program, outMode );
         glUseProgram( program );
-
         const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
         const GLuint ibo = _pDevice->resolveGlBuffer( _pState->_boundIndexBuffer );
-        // 건 메시 버퍼가 부서졌으면 드로우를 버린다(다른 드로우 진입점 · 세 백엔드와 같다).
+        // 건 메시 버퍼가 부서졌으면 드로우를 버린다(다른 드로우 진입점 · 세 백엔드와 같다). 인덱스 드로우는 메시 정점 · 인덱스 버퍼가 둘 다 있어야 한다.
         if ( vbo == 0 && _pState->_boundMeshVb != 0 )
         {
             RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
-            return;
+            return false;
         }
-
-        if ( vbo != 0 && _pDevice->_meshVao != 0 )
-        {
-            bindMeshVaoAttribs( vbo );
-            if ( ibo != 0 )
-                glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
-        }
-
-        GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
-        if ( buf != 0 && glad_glDrawElementsIndirect != nullptr )
-        {
-            const GLenum indexType = ( _pState->_boundIndexStride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
-            glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
-            glDrawElementsIndirect( mode, indexType, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) ) );
-            glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
-        }
-
-        if ( vbo != 0 && _pDevice->_meshVao != 0 )
-        {
-            glBindVertexArray( 0 );
-            glBindBuffer( GL_ARRAY_BUFFER, 0 );
-            if ( ibo != 0 )
-                glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
-        }
+        if ( vbo == 0 || ibo == 0 || _pDevice->_meshVao == 0 )
+            return false;
+        bindMeshVaoAttribs( vbo );
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
+        outIndexType = ( _pState->_boundIndexStride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+        return true;
     }
 
+    void OpenGLRHICommandContext::unbindIndexedMesh()
+    {
+        glBindVertexArray( 0 );
+        glBindBuffer( GL_ARRAY_BUFFER, 0 );
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+    }
+
+    void OpenGLRHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
+    {
+        // startInstance 는 drawInstanced 와 같이 무시한다(인스턴스 자리가 필요한 씬 드로우는 인스턴스 슬롯 스트림을 쓴다).
+        (void)startInstance;
+        const bool bNothingToDraw = _pDevice->_bInitialized == SW_FALSE || indexCount == 0 || instanceCount == 0;
+        GLenum     mode{ GL_TRIANGLES };
+        GLenum     indexType{ GL_UNSIGNED_INT };
+        if ( bNothingToDraw || bindIndexedMeshForDraw( mode, indexType ) == false )
+            return;
+        const uint32 indexBytes = ( indexType == GL_UNSIGNED_SHORT ) ? 2u : 4u;
+        const void*  pOffset    = reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundIndexOffset + startIndex * indexBytes ) );
+        glDrawElementsInstancedBaseVertex( mode, static_cast<GLsizei>( indexCount ), indexType, pOffset, static_cast<GLsizei>( instanceCount ), static_cast<GLint>( baseVertex ) );
+        unbindIndexedMesh();
+    }
+
+    void OpenGLRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                       uint32 countBufferOffset )
+    {
+        const GLuint buf = _pDevice->_bInitialized != SW_FALSE && argumentBuffer != 0 ? _pDevice->resolveGlBuffer( argumentBuffer ) : 0u;
+        GLenum       mode{ GL_TRIANGLES };
+        GLenum       indexType{ GL_UNSIGNED_INT };
+        if ( buf == 0 || drawCount == 0 || bindIndexedMeshForDraw( mode, indexType ) == false )
+            return;
+        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
+        constexpr GLsizei stride  = sizeof( RHIDrawIndexedIndirectCommand );
+        const void*       pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) );
+        // drawIndirect 와 같은 순서 — 개수 버퍼(4.6) → 멀티(4.3) → 하나씩.
+        if ( countBuffer != 0 && glad_glMultiDrawElementsIndirectCount != nullptr )
+        {
+            const GLuint count = _pDevice->resolveGlBuffer( countBuffer );
+            if ( count != 0 )
+                glBindBuffer( GL_PARAMETER_BUFFER, count );
+            glMultiDrawElementsIndirectCount( mode, indexType, pOffset, static_cast<GLintptr>( countBufferOffset ), static_cast<GLsizei>( drawCount ), stride );
+            glBindBuffer( GL_PARAMETER_BUFFER, 0 );
+        }
+        else if ( drawCount > 1 && glad_glMultiDrawElementsIndirect != nullptr )
+            glMultiDrawElementsIndirect( mode, indexType, pOffset, static_cast<GLsizei>( drawCount ), stride );
+        else if ( glad_glDrawElementsIndirect != nullptr )
+        {
+            for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+            {
+                glDrawElementsIndirect( mode, indexType, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset + commandIndex * stride ) ) );
+            }
+        }
+        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
+        unbindIndexedMesh();
+    }
     void OpenGLRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )

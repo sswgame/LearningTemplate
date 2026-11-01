@@ -50,6 +50,7 @@ namespace sw::test
         void draw( uint32, uint32 ) override {}
         void drawInstanced( uint32, uint32, uint32, uint32 ) override {}
         void setIndexBuffer( RHIBufferHandle, uint32, uint32 ) override {}
+        void drawIndexedInstanced( uint32, uint32, uint32, int32, uint32 ) override {}
         void setComputePipelineState( RHIPipelineStateHandle ) override {}
         void dispatchCompute( uint32, uint32, uint32 ) override {}
         void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
@@ -70,7 +71,7 @@ namespace sw::test
         void transitionBuffer( RHIBufferHandle, RHIBufferState ) override {}
         void copyBufferToReadback( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void uavBarrier( RHIBufferHandle ) override {}
-        void drawIndexedIndirect( RHIBufferHandle, uint32 ) override {}
+        void drawIndexedIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void beginEventMarker( const utf8* ) override {}
         void endEventMarker() override {}
         void writeBreadcrumb( uint32 ) override {}

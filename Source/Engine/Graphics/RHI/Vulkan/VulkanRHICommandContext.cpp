@@ -947,30 +947,61 @@ namespace sw
         vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, destOffsetIn32BitValues * 4, count * 4, pData );
     }
 
-    void VulkanRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    bool VulkanRHICommandContext::bindIndexedMeshForDraw()
     {
-        VkCommandBuffer                            cmd   = commandBuffer();
-        const VulkanRHIDevice::VulkanBufferRecord* pArgs = _pDevice->resolveAllocatedBuffer( argumentBuffer );
-        const VulkanRHIDevice::VulkanBufferRecord* pIb   = _pDevice->resolveAllocatedBuffer( _pState->_boundIndexBuffer );
-        const bool                                 bValidArgs =
-            ( cmd != VK_NULL_HANDLE && pArgs != nullptr && pIb != nullptr && pArgs->_buffer != VK_NULL_HANDLE && pIb->_buffer != VK_NULL_HANDLE );
-        if ( bValidArgs == false )
-            return;
-
+        VkCommandBuffer                            cmd = commandBuffer();
+        const VulkanRHIDevice::VulkanBufferRecord* pIb = _pDevice->resolveAllocatedBuffer( _pState->_boundIndexBuffer );
+        if ( cmd == VK_NULL_HANDLE || pIb == nullptr || pIb->_buffer == VK_NULL_HANDLE )
+            return false;
         if ( bindActiveGraphicsPipeline() == false )
-            return;
-
+            return false;
         // 바인딩 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 주의: 바인딩 0 만 직접 걸면
-        // 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸을 때 정의되지 않은 값을 읽는다
-        // (엔진에서 부르는 곳이 없어 RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 만 이 경로를 지킨다).
+        // 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸을 때 정의되지 않은 값을 읽는다.
         if ( bindMeshVertexBufferForDraw() == false )
-            return;
-
+            return false;
         const VkIndexType indexType = ( _pState->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
         vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pState->_boundIndexOffset, indexType );
-        vkCmdDrawIndexedIndirect( cmd, pArgs->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndexedIndirectCommand ) );
+        return true;
     }
 
+    void VulkanRHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
+    {
+        const bool bNothingToDraw = _pDevice->_pipelineLayout == VK_NULL_HANDLE || indexCount == 0 || instanceCount == 0;
+        if ( bNothingToDraw || bindIndexedMeshForDraw() == false )
+            return;
+        vkCmdDrawIndexed( commandBuffer(), indexCount, instanceCount, startIndex, baseVertex, startInstance );
+    }
+
+    void VulkanRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                       uint32 countBufferOffset )
+    {
+        const VulkanRHIDevice::VulkanBufferRecord* pArgs          = _pDevice->resolveAllocatedBuffer( argumentBuffer );
+        const bool                                 bNothingToDraw = pArgs == nullptr || pArgs->_buffer == VK_NULL_HANDLE || drawCount == 0;
+        if ( bNothingToDraw || bindIndexedMeshForDraw() == false )
+            return;
+        VkCommandBuffer  cmd    = commandBuffer();
+        constexpr uint32 stride = sizeof( VkDrawIndexedIndirectCommand );
+        static_assert( sizeof( VkDrawIndexedIndirectCommand ) == sizeof( RHIDrawIndexedIndirectCommand ), "the indexed indirect layout must match Vulkan's" );
+        // drawIndirect 와 같은 순서 — 개수 버퍼 → 멀티 → 하나씩.
+        if ( countBuffer != 0 && _pDevice->_bDrawIndirectCount != 0 )
+        {
+            const VulkanRHIDevice::VulkanBufferRecord* pCountRecord = _pDevice->resolveAllocatedBuffer( countBuffer );
+            if ( pCountRecord != nullptr && pCountRecord->_buffer != VK_NULL_HANDLE )
+            {
+                vkCmdDrawIndexedIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRecord->_buffer, countBufferOffset, drawCount, stride );
+                return;
+            }
+        }
+        if ( drawCount == 1 || _pDevice->_bMultiDrawIndirect != SW_FALSE )
+        {
+            vkCmdDrawIndexedIndirect( cmd, pArgs->_buffer, argumentBufferOffset, drawCount, stride );
+            return;
+        }
+        for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+        {
+            vkCmdDrawIndexedIndirect( cmd, pArgs->_buffer, argumentBufferOffset + commandIndex * stride, 1, stride );
+        }
+    }
     void VulkanRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         VkCommandBuffer                            cmd     = commandBuffer();

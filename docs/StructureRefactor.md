@@ -267,3 +267,19 @@
 - **같은 일 지도(끝낸 것)**: 캡처 준비 판정(`CaptureReadiness`), 씬 하나 채우기(`fillSceneView`), 읽은 픽셀 풀기(`RenderTargetImageFile::unpackRGBA8` — 초상화의 `makeRGBA8` 삭제),
   로그 줄 모양 쓰기 · 읽기(`LogLineFormat`), 로그 사건 세기(모든 줄에 id — id 없는 매크로 삭제).
 - **점검에 더할 축**: 소유 지도(객체 → 스레드, 렌더러 인스턴스 → 소유자, 디바이스 호출자), 일 지도(하는 일로 묶은 함수들), 명령줄 도구마다 ctest. 진행은 NEXT 0-6.
+
+## 10. 메시 인덱스 버퍼 (2026-11-02 — 사용자 지시 "인덱스 버퍼 추가")
+
+까닭: 메시가 색인 없는 정점 흐름(삼각형마다 정점 셋)이라 스키닝 · 정점 셰이더 · 업로드가 고유 정점의 약 3 배를 돈다. 농장 측정에서 캐릭터 하나가 GPU 0.6 ms(스키닝 컴퓨트가 대부분)였다.
+언리얼 · 유니티 · Godot 은 모두 고유 정점 + 인덱스(16/32 비트)이고 구간 · LOD 는 인덱스 범위다. 이중 모드(색인 있음 · 없음)는 두지 않는다 — 모든 메시가 색인을 가진다(내장 도형 · 스프라이트 · 절차 메시 포함).
+
+| 층 | 바꿀 것 |
+|---|---|
+| 데이터 | `Mesh` · `MeshAssetData` 에 `_listIndex`(uint32), 구간 · LOD 는 `_firstIndex` · `_indexCount`, 모프 델타 · 스킨 · VAT 는 고유 정점 번호. 메시 형식 판 올림(옛 `.mesh` 는 재임포트) |
+| 임포트 | `ModelImportGeometry::expandTriangles*` 를 고유 정점 + 인덱스로(이미 용접한 `MergedMesh` 가 있다), 파쇄 조각 · LOD 단순화(meshopt 는 원래 인덱스 입력) |
+| CPU 소비자 | 삼각형을 `i*3` 정점으로 읽는 곳(약 18 파일 — Character/Fit · Dismemberment · Appearance · MeshModifiers · Fracture · Mesh 패널 · 충돌 · 내비 굽기)을 `Mesh::getTriangle` 한 길로 |
+| GPU | `GPUMeshVertexPool` 옆에 인덱스 풀, 간접 인자를 `RHIDrawIndexedIndirectCommand`(baseVertex)로, GPU 컬링 · 멀티 드로우 병합 경로, 스키닝 컴퓨트는 고유 정점 수만큼 |
+| RHI | `drawIndexedInstanced` · 여러 개 `drawIndexedIndirect`(DX12 커맨드 시그니처 · VK `vkCmdDrawIndexedIndirect` · GL `glMultiDrawElementsIndirect` · DX11 반복) |
+| 확인 | 모든 골든(정점 순서가 같으면 그림이 같아야 한다 — 차이는 버그로 본다), 농장 · 군중 측정(캐릭터당 GPU 를 다시 잰다) |
+
+순서: RHI(네 백엔드) → 데이터 · 형식 → CPU 소비자 → 임포터 → GPU 풀 · 인자 · 스키닝 → 골든 · 측정. 단계마다 빌드가 서는 상태로 커밋한다.
