@@ -51,6 +51,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _cultureTable; ///< 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`)
         PROPERTY( Required )
+        DataPath _timeZoneTable; ///< 시간대 표 — IANA 이름 → 표준 오프셋 · 일광 절약 규칙(`LocalizationManager::findTimeZone`)
+        PROPERTY( Required )
         DataPath _localizationProject; ///< 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트
         PROPERTY( Required )
         DataPath _fontCatalog; ///< 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontService`)

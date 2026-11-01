@@ -10,6 +10,7 @@
                      _userSettingsSchema="engine/settings/engine.settings.xml"
                      _telemetrySchema="engine/telemetry/engine.telemetry.xml"
                      _cultureTable="engine/localization/engine.cultures.xml"
+                     _timeZoneTable="engine/localization/timezones.xml"
                      _localizationProject="engine/localization/engine.locproject.xml"
                      _fontCatalog="engine/fonts/fontcatalog.xml"
                      _uiScaleSettings="engine/ui/uiscale.xml"

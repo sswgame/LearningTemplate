@@ -21,6 +21,8 @@
 
 namespace sw
 {
+    struct TimeZoneInfo;
+
     /** @brief 인자 값의 종류입니다. */
     enum class TextArgumentKind : uint8
     {
@@ -60,10 +62,10 @@ namespace sw
         TextArgumentList& addDecimal( string_view name, float64 value );
         TextArgumentList& addDateTime( string_view name, const TextDateTime& value );
         /**
-         * @brief UTC 유닉스 시각(밀리초)을 @p zoneName 시간대의 날짜 · 시각 인자로 넣습니다(`WallClock::nowUnixMilliseconds()` 를 그대로 받는다).
-         * @details 표에 없는 시간대 이름(`TimeZoneUtil::findZone`)은 UTC 로 씁니다.
+         * @brief UTC 유닉스 시각(밀리초)을 @p zone 시간대의 날짜 · 시각 인자로 넣습니다(`WallClock::nowUnixMilliseconds()` 를 그대로 받는다).
+         * @details 시간대는 부르는 쪽이 표에서 찾는다(`LocalizationManager::findTimeZone`) — 없는 이름을 UTC 로 바꿔 쓰지 않는다.
          */
-        TextArgumentList& addUnixTime( string_view name, int64 unixMilliseconds, string_view zoneName );
+        TextArgumentList& addUnixTime( string_view name, int64 unixMilliseconds, const TimeZoneInfo& zone );
 
         /** @brief 그 이름의 인자입니다(없으면 nullptr). */
         const TextArgument* findArgument( string_view name ) const;

@@ -23,6 +23,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Localization/TimeZoneUtil.h"
 #include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw
@@ -95,6 +96,10 @@ namespace sw
         [[nodiscard]] bool loadCultureTableXML( string_view xmlText );
         /** @brief @p culture 의 형식 데이터를 값으로 반환합니다(없으면 부모, 끝까지 없으면 기본값). */
         CultureInfo resolveCulture( string_view culture ) const;
+        /** @brief 시간대 표(`TimeZoneTable`)를 읽어 바꿉니다. 실패하면 오류를 남기고 false 이며 지금 표는 그대로입니다. */
+        [[nodiscard]] bool loadTimeZoneTable( const AssetID& assetID );
+        /** @brief 이름(IANA, 대소문자 구분)의 시간대를 @p outZone 에 복사합니다. 표에 없으면 false 이고 @p outZone 은 그대로입니다. */
+        [[nodiscard]] bool findTimeZone( string_view zoneName, TimeZoneInfo& outZone ) const;
 
         /**
          * @brief 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
@@ -251,6 +256,7 @@ namespace sw
         string _currentLanguage                                         SW_GUARDED_BY( _mutex );
         string _fallbackLanguage                                        SW_GUARDED_BY( _mutex );
         CultureTable _cultureTable                                      SW_GUARDED_BY( _mutex );
+        TimeZoneTable _timeZoneTable                                    SW_GUARDED_BY( _mutex );
         CultureInfo _currentCulture                                     SW_GUARDED_BY( _mutex ); ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
         vector<MountedProject> _listProject                             SW_GUARDED_BY( _mutex );
         map<string, TranslationTable> _mapLooseTable                    SW_GUARDED_BY( _mutex );

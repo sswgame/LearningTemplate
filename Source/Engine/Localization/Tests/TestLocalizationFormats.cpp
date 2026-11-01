@@ -1,7 +1,8 @@
-// 현지화 형식 — 서수(selectordinal) 규칙, 통화 형식 · 소수 자리, 시간대 변환 · 일광 절약 경계 · 오프셋 글, 이진 번역 표(locres)의 왕복과 깨진 바이트 거절(nogpu).
+// 현지화 형식 — 서수(selectordinal) 규칙, 통화 형식 · 소수 자리, 시간대 표 검증 · 시간대 변환 · 일광 절약 경계 · 오프셋 글, 이진 번역 표(locres)의 왕복과 깨진 바이트 거절(nogpu).
 // 문화권은 엔진 표(`engine/localization/engine.cultures.xml`)에서 읽는다. 복수형 · select · 숫자의 기본 해석은 `TextFormatterTest` 가 본다.
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -24,6 +25,15 @@ namespace
         {
             static sw::CultureTable s_table;
             static const bool       s_bLoaded = s_table.loadFromAsset( sw::AssetID{ "engine/localization/engine.cultures.xml" } );
+            SW_EXPECT_TRUE( s_bLoaded );
+            return s_table;
+        }
+
+        /** @brief 엔진 시간대 표입니다(`EngineDefaultAssets::_timeZoneTable` 과 같은 파일). */
+        static const sw::TimeZoneTable& getTimeZones()
+        {
+            static sw::TimeZoneTable s_table;
+            static const bool        s_bLoaded = s_table.loadFromAsset( sw::AssetID{ "engine/localization/timezones.xml" } );
             SW_EXPECT_TRUE( s_bLoaded );
             return s_table;
         }
@@ -60,7 +70,7 @@ namespace
 
         static int32 offsetAt( const utf8* pZone, int64 unixSeconds )
         {
-            const sw::TimeZoneInfo* pInfo = sw::TimeZoneUtil::findZone( pZone );
+            const sw::TimeZoneInfo* pInfo = LocalizationFormatsTestInternal::getTimeZones().findZone( pZone );
             return pInfo != nullptr ? sw::TimeZoneUtil::computeOffsetMinutes( unixSeconds, *pInfo ) : -9999;
         }
     };
@@ -157,9 +167,9 @@ SW_TEST_CASE( CurrencyFormatTest, SkeletonOverridesCultureCurrency )
  */
 SW_TEST_CASE( TimeZoneTest, FixedOffsetConversion )
 {
-    const sw::TimeZoneInfo* pSeoul   = sw::TimeZoneUtil::findZone( "Asia/Seoul" );
-    const sw::TimeZoneInfo* pKolkata = sw::TimeZoneUtil::findZone( "Asia/Kolkata" );
-    const sw::TimeZoneInfo* pUTC     = sw::TimeZoneUtil::findZone( "UTC" );
+    const sw::TimeZoneInfo* pSeoul   = LocalizationFormatsTestInternal::getTimeZones().findZone( "Asia/Seoul" );
+    const sw::TimeZoneInfo* pKolkata = LocalizationFormatsTestInternal::getTimeZones().findZone( "Asia/Kolkata" );
+    const sw::TimeZoneInfo* pUTC     = LocalizationFormatsTestInternal::getTimeZones().findZone( "UTC" );
     SW_REQUIRE_NOT_NULL( pSeoul );
     SW_REQUIRE_NOT_NULL( pKolkata );
     SW_REQUIRE_NOT_NULL( pUTC );
@@ -178,8 +188,42 @@ SW_TEST_CASE( TimeZoneTest, FixedOffsetConversion )
     SW_EXPECT_EQUAL( uint8( 2 ), kolkata._hour ); // 20:30 + 5:30 = 02:00
     SW_EXPECT_EQUAL( uint8( 0 ), kolkata._minute );
 
-    SW_EXPECT_NULL( sw::TimeZoneUtil::findZone( "Mars/Olympus" ) );
+    SW_EXPECT_NULL( LocalizationFormatsTestInternal::getTimeZones().findZone( "Mars/Olympus" ) );
     SW_EXPECT_EQUAL( utc, sw::TimeZoneUtil::computeUnixSeconds( sw::TimeZoneUtil::convertUnixMilliseconds( utc * 1000, *pUTC ) ) );
+}
+
+/**
+ * @brief [TimeZoneTest] 시간대 표는 이름이 겹치거나 UTC 가 없거나 칸이 빠지면 읽지 않고(표는 빈 채), 관리자는 표에 없는 이름을 UTC 로 바꾸지 않는다
+ */
+SW_TEST_CASE( TimeZoneTest, TableRejectsBadRowsAndUnknownNamesAreNotFound )
+{
+    const sw::test::ScopedScratchDomain domain;
+    const sw::string&                   folder     = domain.getFolder();
+    const auto                          writeTable = [&folder]( const utf8* pFileName, sw::string_view rows ) -> sw::AssetID
+    {
+        const sw::string path = folder + "/" + pFileName;
+        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, "<TimeZoneTable><_listZone>" + sw::string( rows ) + "</_listZone></TimeZoneTable>" ) );
+        return sw::test::ScopedScratchDomain::toID( path );
+    };
+    const sw::string utcRow = R"(<TimeZoneInfo _name="UTC" _standardOffsetMinutes="0" _daylightRule="None" />)";
+
+    sw::TimeZoneTable table;
+    SW_EXPECT_LOG( "TimeZoneTable.DuplicateName" );
+    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "duplicate.xml", utcRow + utcRow ) ) );
+    SW_EXPECT_NULL( table.findZone( "UTC" ) );
+    SW_EXPECT_LOG( "TimeZoneTable.MissingUTC" );
+    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "noutc.xml", R"(<TimeZoneInfo _name="Asia/Seoul" _standardOffsetMinutes="540" _daylightRule="None" />)" ) ) );
+    SW_EXPECT_LOG( "Xml.MissingRequired" );
+    SW_EXPECT_LOG( "TimeZoneTable.CannotRead" );
+    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "missing.xml", R"(<TimeZoneInfo _name="UTC" _daylightRule="None" />)" ) ) );
+
+    sw::LocalizationManager localization;
+    SW_REQUIRE_TRUE( localization.loadTimeZoneTable( sw::AssetID{ "engine/localization/timezones.xml" } ) );
+    sw::TimeZoneInfo zone;
+    SW_REQUIRE_TRUE( localization.findTimeZone( "Asia/Kolkata", zone ) );
+    SW_EXPECT_EQUAL( int16( 330 ), zone._standardOffsetMinutes );
+    SW_EXPECT_FALSE( localization.findTimeZone( "Mars/Olympus", zone ) );
+    SW_EXPECT_EQUAL( sw::string( "Asia/Kolkata" ), zone._name ); // 못 찾으면 그대로
 }
 
 /**
@@ -187,7 +231,7 @@ SW_TEST_CASE( TimeZoneTest, FixedOffsetConversion )
  */
 SW_TEST_CASE( TimeZoneTest, NegativeUnixTimeFloors )
 {
-    const sw::TimeZoneInfo* pUTC = sw::TimeZoneUtil::findZone( "UTC" );
+    const sw::TimeZoneInfo* pUTC = LocalizationFormatsTestInternal::getTimeZones().findZone( "UTC" );
     SW_REQUIRE_NOT_NULL( pUTC );
     const sw::TextDateTime value = sw::TimeZoneUtil::convertUnixMilliseconds( -1, *pUTC );
     SW_EXPECT_EQUAL( 1969, value._year );
@@ -210,7 +254,7 @@ SW_TEST_CASE( TimeZoneTest, UnitedStatesDaylightSavingBoundaries )
     SW_EXPECT_EQUAL( -420, Internal::offsetAt( "America/Los_Angeles", Internal::makeUnixSeconds( 2026, 7, 4, 16, 0, 0 ) ) ); // 여름 -480 + 60
     SW_EXPECT_EQUAL( -480, Internal::offsetAt( "America/Los_Angeles", Internal::makeUnixSeconds( 2026, 1, 15, 16, 0, 0 ) ) );
 
-    const sw::TimeZoneInfo* pNewYork = sw::TimeZoneUtil::findZone( "America/New_York" );
+    const sw::TimeZoneInfo* pNewYork = LocalizationFormatsTestInternal::getTimeZones().findZone( "America/New_York" );
     SW_REQUIRE_NOT_NULL( pNewYork );
     const sw::TextDateTime summer = sw::TimeZoneUtil::convertUnixMilliseconds( Internal::makeUnixSeconds( 2026, 7, 4, 16, 0, 0 ) * 1000, *pNewYork );
     SW_EXPECT_EQUAL( uint8( 12 ), summer._hour );
@@ -242,17 +286,15 @@ SW_TEST_CASE( TimeZoneTest, OffsetTextAndFormatterIntegration )
     SW_EXPECT_EQUAL( sw::string( "UTC-3" ), sw::TimeZoneUtil::formatOffset( -180, false ) );
     SW_EXPECT_EQUAL( sw::string( "UTC+09:00" ), sw::TimeZoneUtil::formatOffset( 540, true ) );
 
+    const sw::TimeZoneInfo* pSeoul = Internal::getTimeZones().findZone( "Asia/Seoul" );
+    SW_REQUIRE_NOT_NULL( pSeoul );
     const int64      utc   = Internal::makeUnixSeconds( 2026, 10, 4, 4, 5, 9 ) * 1000;
-    const sw::string zoned = Internal::format( "en", "{d, time, long}", sw::TextArgumentList().addUnixTime( "d", utc, "Asia/Seoul" ) );
+    const sw::string zoned = Internal::format( "en", "{d, time, long}", sw::TextArgumentList().addUnixTime( "d", utc, *pSeoul ) );
     SW_EXPECT_TRUE( zoned.find( "1:05:09" ) != sw::string::npos ); // 04:05:09Z → 13:05:09 서울
     SW_EXPECT_TRUE( zoned.find( "UTC+9" ) != sw::string::npos );
 
-    const sw::string plain = Internal::format( "en", "{d, time, medium}", sw::TextArgumentList().addUnixTime( "d", utc, "Asia/Seoul" ) );
+    const sw::string plain = Internal::format( "en", "{d, time, medium}", sw::TextArgumentList().addUnixTime( "d", utc, *pSeoul ) );
     SW_EXPECT_TRUE( plain.find( "UTC" ) == sw::string::npos ); // medium 은 오프셋을 붙이지 않는다
-
-    const sw::string unknown = Internal::format( "en", "{d, time, long}", sw::TextArgumentList().addUnixTime( "d", utc, "Mars/Olympus" ) );
-    SW_EXPECT_TRUE( unknown.find( "4:05:09" ) != sw::string::npos ); // 모르는 시간대는 UTC
-    SW_EXPECT_TRUE( unknown.find( "UTC" ) != sw::string::npos );
 
     const sw::CultureInfo* pEnglish = Internal::getCultures().findCulture( "en" );
     SW_REQUIRE_NOT_NULL( pEnglish );

@@ -150,6 +150,26 @@ namespace sw
         return pCulture != nullptr ? *pCulture : CultureInfo{};
     }
 
+    bool LocalizationManager::loadTimeZoneTable( const AssetID& assetID )
+    {
+        TimeZoneTable loaded;
+        if ( loaded.loadFromAsset( assetID ) == false )
+            return false;
+        UniqueLock<shared_mutex> lock{ _mutex };
+        _timeZoneTable = std::move( loaded );
+        return true;
+    }
+
+    bool LocalizationManager::findTimeZone( string_view zoneName, TimeZoneInfo& outZone ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        const TimeZoneInfo*            pZone = _timeZoneTable.findZone( zoneName );
+        if ( pZone == nullptr )
+            return false;
+        outZone = *pZone;
+        return true;
+    }
+
     bool LocalizationManager::readProject( const AssetID& assetID, MountedProject& outProject )
     {
         const string_view projectPath = assetID.view();
@@ -300,6 +320,7 @@ namespace sw
         if ( &source == this )
             return;
         CultureTable                  cultureTable;
+        TimeZoneTable                 timeZoneTable;
         vector<MountedProject>        listProject;
         map<string, TranslationTable> mapLooseTable;
         string                        currentLanguage;
@@ -307,6 +328,7 @@ namespace sw
         {
             ScopedSharedLock<shared_mutex> lock{ source._mutex };
             cultureTable     = source._cultureTable;
+            timeZoneTable    = source._timeZoneTable;
             listProject      = source._listProject;
             mapLooseTable    = source._mapLooseTable;
             currentLanguage  = source._currentLanguage;
@@ -317,6 +339,7 @@ namespace sw
             UniqueLock<shared_mutex> lock{ _mutex };
             oldLanguage       = _currentLanguage;
             _cultureTable     = std::move( cultureTable );
+            _timeZoneTable    = std::move( timeZoneTable );
             _listProject      = std::move( listProject );
             _mapLooseTable    = std::move( mapLooseTable );
             _currentLanguage  = currentLanguage;

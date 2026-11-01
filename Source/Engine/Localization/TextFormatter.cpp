@@ -594,12 +594,9 @@ namespace sw
         return *this;
     }
 
-    TextArgumentList& TextArgumentList::addUnixTime( string_view name, int64 unixMilliseconds, string_view zoneName )
+    TextArgumentList& TextArgumentList::addUnixTime( string_view name, int64 unixMilliseconds, const TimeZoneInfo& zone )
     {
-        const TimeZoneInfo* pZone = TimeZoneUtil::findZone( zoneName );
-        if ( pZone == nullptr )
-            pZone = TimeZoneUtil::findZone( "UTC" );
-        return addDateTime( name, TimeZoneUtil::convertUnixMilliseconds( unixMilliseconds, *pZone ) );
+        return addDateTime( name, TimeZoneUtil::convertUnixMilliseconds( unixMilliseconds, zone ) );
     }
 
     const TextArgument* TextArgumentList::findArgument( string_view name ) const

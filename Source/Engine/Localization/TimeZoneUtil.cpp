@@ -2,6 +2,10 @@
 
 #include "Engine/Localization/TimeZoneUtil.h"
 
+#include "Core/Container/VectorUtil.h"
+
+#include "Engine/Serialization/Format/XMLSerializer.h"
+
 namespace sw
 {
     namespace
@@ -9,27 +13,6 @@ namespace sw
         struct TimeZoneUtilInternal
         {
             static constexpr int32 kDaylightShiftMinutes = 60;
-
-            static constexpr TimeZoneInfo kArrZone[] = {
-                {                "UTC",    0,         DaylightRule::None},
-                {            "Etc/UTC",    0,         DaylightRule::None},
-                {         "Asia/Seoul",  540,         DaylightRule::None},
-                {         "Asia/Tokyo",  540,         DaylightRule::None},
-                {      "Asia/Shanghai",  480,         DaylightRule::None},
-                {        "Asia/Taipei",  480,         DaylightRule::None},
-                {       "Asia/Kolkata",  330,         DaylightRule::None},
-                {        "Asia/Riyadh",  180,         DaylightRule::None},
-                {      "Europe/London",    0,       DaylightRule::Europe},
-                {      "Europe/Berlin",   60,       DaylightRule::Europe},
-                {       "Europe/Paris",   60,       DaylightRule::Europe},
-                {      "Europe/Madrid",   60,       DaylightRule::Europe},
-                {      "Europe/Warsaw",   60,       DaylightRule::Europe},
-                {      "Europe/Moscow",  180,         DaylightRule::None},
-                {   "America/New_York", -300, DaylightRule::UnitedStates},
-                {    "America/Chicago", -360, DaylightRule::UnitedStates},
-                {     "America/Denver", -420, DaylightRule::UnitedStates},
-                {"America/Los_Angeles", -480, DaylightRule::UnitedStates},
-            };
 
             /** @brief 내림 나눗셈입니다(C++ 의 `/` 는 0 쪽으로 자른다). */
             static int64 floorDivide( int64 value, int64 divisor )
@@ -119,14 +102,50 @@ namespace sw
 
 namespace sw
 {
-    const TimeZoneInfo* TimeZoneUtil::findZone( string_view zoneName )
+    bool TimeZoneTable::loadFromAsset( const AssetID& assetID )
     {
-        for ( const TimeZoneInfo& zone : TimeZoneUtilInternal::kArrZone )
+        *this = TimeZoneTable{};
+        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            if ( zoneName == zone._pName )
-                return &zone;
+            SW_LOG_ERROR_ID( "TimeZoneTable.CannotRead", "[Localization] Time zone table could not be read or holds unknown keys: %#", assetID.view() );
+            return false;
         }
-        return nullptr;
+        if ( validate() == false )
+        {
+            *this = TimeZoneTable{};
+            return false;
+        }
+        return true;
+    }
+
+    bool TimeZoneTable::validate() const
+    {
+        bool bValid = true;
+        for ( size_t index = 0; index < _listZone.size(); ++index )
+        {
+            const string& name = _listZone[index]._name;
+            if ( name.empty() )
+            {
+                SW_LOG_ERROR_ID( "TimeZoneTable.EmptyName", "[Localization] Time zone #%# has an empty name", index );
+                bValid = false;
+            }
+            else if ( findZone( name ) != &_listZone[index] )
+            {
+                SW_LOG_ERROR_ID( "TimeZoneTable.DuplicateName", "[Localization] Time zone '%#' is listed twice", name.c_str() );
+                bValid = false;
+            }
+        }
+        if ( findZone( "UTC" ) == nullptr )
+        {
+            SW_LOG_ERROR_ID( "TimeZoneTable.MissingUTC", "[Localization] Time zone table has no 'UTC' row" );
+            bValid = false;
+        }
+        return bValid;
+    }
+
+    const TimeZoneInfo* TimeZoneTable::findZone( string_view zoneName ) const
+    {
+        return VectorUtil::findBy<&TimeZoneInfo::_name>( _listZone, zoneName );
     }
 
     int32 TimeZoneUtil::computeOffsetMinutes( int64 unixSeconds, const TimeZoneInfo& zone )

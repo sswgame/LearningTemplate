@@ -1,0 +1,23 @@
+<!-- 시간대 표(TimeZoneTable) — IANA 이름 → 표준 오프셋(분) · 일광 절약 규칙(None · UnitedStates · Europe). 이름은 겹치지 않고 UTC 가 있어야 한다. -->
+<TimeZoneTable>
+	<_listZone>
+		<TimeZoneInfo _name="UTC" _standardOffsetMinutes="0" _daylightRule="None" />
+		<TimeZoneInfo _name="Etc/UTC" _standardOffsetMinutes="0" _daylightRule="None" />
+		<TimeZoneInfo _name="Asia/Seoul" _standardOffsetMinutes="540" _daylightRule="None" />
+		<TimeZoneInfo _name="Asia/Tokyo" _standardOffsetMinutes="540" _daylightRule="None" />
+		<TimeZoneInfo _name="Asia/Shanghai" _standardOffsetMinutes="480" _daylightRule="None" />
+		<TimeZoneInfo _name="Asia/Taipei" _standardOffsetMinutes="480" _daylightRule="None" />
+		<TimeZoneInfo _name="Asia/Kolkata" _standardOffsetMinutes="330" _daylightRule="None" />
+		<TimeZoneInfo _name="Asia/Riyadh" _standardOffsetMinutes="180" _daylightRule="None" />
+		<TimeZoneInfo _name="Europe/London" _standardOffsetMinutes="0" _daylightRule="Europe" />
+		<TimeZoneInfo _name="Europe/Berlin" _standardOffsetMinutes="60" _daylightRule="Europe" />
+		<TimeZoneInfo _name="Europe/Paris" _standardOffsetMinutes="60" _daylightRule="Europe" />
+		<TimeZoneInfo _name="Europe/Madrid" _standardOffsetMinutes="60" _daylightRule="Europe" />
+		<TimeZoneInfo _name="Europe/Warsaw" _standardOffsetMinutes="60" _daylightRule="Europe" />
+		<TimeZoneInfo _name="Europe/Moscow" _standardOffsetMinutes="180" _daylightRule="None" />
+		<TimeZoneInfo _name="America/New_York" _standardOffsetMinutes="-300" _daylightRule="UnitedStates" />
+		<TimeZoneInfo _name="America/Chicago" _standardOffsetMinutes="-360" _daylightRule="UnitedStates" />
+		<TimeZoneInfo _name="America/Denver" _standardOffsetMinutes="-420" _daylightRule="UnitedStates" />
+		<TimeZoneInfo _name="America/Los_Angeles" _standardOffsetMinutes="-480" _daylightRule="UnitedStates" />
+	</_listZone>
+</TimeZoneTable>
