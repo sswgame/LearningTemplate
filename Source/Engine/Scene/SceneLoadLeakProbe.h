@@ -27,8 +27,6 @@ namespace sw
     class SW_API SceneLoadLeakProbe
     {
     public:
-        static constexpr uint32 kSettleFrames = 3; ///< 빈 씬으로 바꾼 뒤 지연 해제(스트리밍 · 업로드 완료)를 기다리는 프레임 수
-
         SceneLoadLeakProbe();
 
         /**
@@ -48,7 +46,7 @@ namespace sw
         {
             Idle,
             Loading,  ///< 씬 로드 요청이 끝나기를 기다린다(대조 회차는 건너뛴다)
-            Settling, ///< 빈 씬으로 바꾼 뒤 @c kSettleFrames 프레임을 기다린다
+            Settling, ///< 빈 씬으로 바꾼 뒤 지연 해제가 다 돌 프레임(`SceneLoadLeakProbeInternal::kSettleFrames`)을 기다린다
         };
 
         /** @brief 회차 하나를 시작합니다 — 창을 열고(대조 회차가 아니면) 로드를 요청합니다. */

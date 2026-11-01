@@ -48,9 +48,9 @@ namespace sw
             // 시한 상수(기다리는 프레임 · 초)는 `AutomationTimeLimits` 한 곳에 있다.
             /**
              * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
-             *        그 스냅샷이 렌더 큐(깊이 2)를 지나야 화면에 나온다.
+             *        그 스냅샷이 렌더 큐를 지나야 화면에 나온다 — 씬 빌드 한 프레임 + 큐 깊이(어림한 수가 아니라 큐 깊이에서 나온다).
              */
-            static constexpr uint32 kAssetSettleTrailFrames = 3;
+            static constexpr uint32 kAssetSettleTrailFrames = 1u + constant::render::kRenderFrameQueueDepth;
 
             // --- 단계 인자: 검사 함수와 준비 · 실행 함수가 같은 읽기(`parse*`) 하나를 쓴다 -----------------------------------------
             //     검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앤다. 실행 때 읽기가 실패하면(핫 리로드로 바뀐 단계) 버리지 않고 오류로 끝낸다.

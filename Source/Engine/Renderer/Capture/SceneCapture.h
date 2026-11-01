@@ -3,7 +3,7 @@
  * @brief 씬 하나를 화면 밖 타깃에 몇 장 그리고 GPU 에서 읽어 오는 요청 실행기입니다(초상화 · 반사 프로브 굽기가 함께 쓴다). 렌더러가 아니다.
  * @details 렌더러 종류를 늘리지 않는다 — 그리기는 주 렌더러의 하위 렌더러가 한다(`FrameRenderer::executeOffscreenPacket`, 미리보기 씬과 같은 길). 언리얼의
  *          씬 캡처가 자기 뷰 · 렌더 타깃으로 같은 장면 렌더러를 타는 것과 같다.
- *          스레드는 언리얼 렌더 명령과 같이 나눈다. 씬 → 패킷(`RenderPacketSceneFill`)은 게임 스레드가 짓고, 그리기 · 읽기는 렌더 스레드가 명령으로 실행한다
+ *          스레드는 언리얼 렌더 명령과 같이 나눈다. 씬 → 패킷(`RenderPacketSceneCollector::fillSceneView` — 주 화면 · 미리보기와 같은 객체)은 게임 스레드가 짓고, 그리기 · 읽기는 렌더 스레드가 명령으로 실행한다
  *          (`RenderThread::executeAndWait`). 렌더 스레드에서 도는 일은 `...OnRenderThread` 멤버 함수뿐이고, 스레드를 넘는 값은 일감(`_job`) 하나에 모은다 —
  *          게임 스레드는 명령이 끝날 때까지 기다리므로 일감을 두 스레드가 동시에 만지지 않는다.
  *          예전에는 캡처마다 게임 스레드가 렌더 스레드를 세우고 컨텍스트를 빼앗아 자기 렌더러로 직접 그렸고(`FrameRenderer::execute( scene )`), 출력은 주 렌더러와
@@ -19,7 +19,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
-#include "Engine/Renderer/Frame/Packet/RenderPacketSceneFill.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h"
 
 namespace sw
 {
@@ -94,11 +94,11 @@ namespace sw
         /** @brief (렌더 스레드) 요청 크기의 출력 타깃(RGBA8)을 갖춥니다. 크기가 다르면 다시 만든다. */
         [[nodiscard]] bool ensureOutputTarget( IRHIDevice& device, uint32 width, uint32 height );
 
-        RenderThread*         _pRenderThread;
-        string                _pipelinePath;
-        unique_ptr<Texture2D> _outputTarget; ///< 렌더 스레드 객체 — 출력(Present 결과)이 그려지는 곳
-        RenderPacketSceneFill _fill;         ///< 씬 → 패킷(게임 스레드)
-        RenderJob             _job;
-        uint32                _sceneKey; ///< 하위 렌더러를 고르는 씬 키(미리보기 씬 키와 겹치지 않는 공간)
+        RenderThread*              _pRenderThread;
+        string                     _pipelinePath;
+        unique_ptr<Texture2D>      _outputTarget; ///< 렌더 스레드 객체 — 출력(Present 결과)이 그려지는 곳
+        RenderPacketSceneCollector _scene;        ///< 씬 → 패킷(게임 스레드). 캡처마다 스냅샷을 놓는다(`capture` 끝)
+        RenderJob                  _job;
+        uint32                     _sceneKey; ///< 하위 렌더러를 고르는 씬 키(미리보기 씬 키와 겹치지 않는 공간)
     };
 } // namespace sw

@@ -12,7 +12,6 @@
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
@@ -42,7 +41,7 @@ namespace sw
         : _pRenderThread{ nullptr }
         , _pipelinePath{}
         , _outputTarget{ nullptr }
-        , _fill{}
+        , _scene{}
         , _job{}
         , _sceneKey{ 0 }
     {
@@ -62,8 +61,9 @@ namespace sw
             return false;
         }
         _pRenderThread = &renderThread;
-        _pipelinePath  = string( pipelinePath );
-        _sceneKey      = SceneCaptureInternal::allocateSceneKey();
+        _scene.initialize( *renderThread.getDevice() ); // 배치 합치기는 주 화면 · 미리보기와 같은 규칙(디바이스가 정한다)
+        _pipelinePath = string( pipelinePath );
+        _sceneKey     = SceneCaptureInternal::allocateSceneKey();
         return true;
     }
 
@@ -86,9 +86,6 @@ namespace sw
         outResult = SceneCaptureResult{};
         if ( _pRenderThread == nullptr )
             return false;
-        // 빌더는 이 캡처의 것이다(빌더의 재구축 판단 캐시가 씬 · 시점별이다). 배치 합치기는 주 · 미리보기 빌더와 같은 규칙(디바이스가 정한다).
-        GPUSceneBuilder builder;
-        builder.setMergeBatchesAcrossMaterials( getDevice()->supportsNativeBindlessSampling() );
         _job._request             = request;
         _job._bSucceeded          = true;
         _job._bRead               = false;
@@ -104,14 +101,14 @@ namespace sw
                 break;
             }
             _job._packet.resetForFrame();
-            _fill.fill( _job._packet, scene, request._view, builder, nullptr );
+            _scene.fillSceneView( _job._packet, scene, request._view, nullptr );
             _job._packet._sceneKey = _sceneKey;
             _job._bReadNow         = CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ) == 0;
             const bool bRan        = _pRenderThread->executeAndWait( SW_DELEGATE_METHOD( RenderCommandDelegate, &SceneCapture::renderFrameOnRenderThread, this ) );
             _job._bSucceeded       = bRan && _job._bSucceeded;
         }
         _job._pResult = nullptr;
-        builder.clear(); // 씬의 소유(메시 · 머티리얼)를 여기서 놓는다 — 씬보다 먼저 사라지는 쪽이 놓아야 한다
+        _scene.shutdown(); // 씬의 소유(메시 · 머티리얼)를 여기서 놓는다 — 씬보다 먼저 사라지는 쪽이 놓아야 한다
         return _job._bSucceeded;
     }
 

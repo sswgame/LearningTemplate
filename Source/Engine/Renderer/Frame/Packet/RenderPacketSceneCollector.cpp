@@ -47,7 +47,7 @@ namespace sw
 
     RenderPacketSceneCollector::~RenderPacketSceneCollector() = default;
 
-    bool RenderPacketSceneCollector::initialize( IRHIDevice& device )
+    void RenderPacketSceneCollector::initialize( IRHIDevice& device )
     {
         if ( _gpuSceneBuilder == nullptr )
             _gpuSceneBuilder = make_unique<GPUSceneBuilder>();
@@ -57,7 +57,6 @@ namespace sw
         // GPU 인스턴스 LOD 는 컬링 컴퓨트가 단계를 고르므로 GPU 컬링 능력이 있는 백엔드만이다(DX11 은 CPU 단계 선택이 남는다).
         _bGPUInstanceLODCapable = device.getCapabilities()._bGPUCulling != SW_FALSE;
         _gpuSceneBuilder->setMergeBatchesAcrossMaterials( bMergeBatchesAcrossMaterials );
-        return bMergeBatchesAcrossMaterials;
     }
 
     void RenderPacketSceneCollector::shutdown()
@@ -154,7 +153,30 @@ namespace sw
     {
         _gpuSceneBuilder->setGPUInstanceLODEnabled( _bGPUInstanceLODCapable && gv_gpuInstanceLod );
         _gpuSceneBuilder->setGPUInstanceLODCrossfadeSeconds( gv_lodCrossfadeSeconds );
-        _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
+        buildSnapshot( packet, pActiveScene, pUploadQueue );
+    }
+
+    void RenderPacketSceneCollector::fillSceneView( RenderFramePacket& outPacket, Scene& scene, const RenderSceneViewDesc& view, GPUUploadQueue* pUploadQueue )
+    {
+        outPacket._bValid             = SW_TRUE;
+        outPacket._outputRenderTarget = view._outputRenderTarget;
+        outPacket._viewportWidth      = view._width;
+        outPacket._viewportHeight     = view._height;
+        outPacket._mainView           = view._settings;
+        outPacket.setMainView( view._viewProj, view._cameraPos );
+        // 주 화면과 같은 단계다(`RenderPacketBuilder::populateScene`). 안개는 카메라 컴포넌트가 아니라 시점 위치로 고른다.
+        const RenderPacketKeyLights lights   = collectLights( outPacket, scene );
+        const GameObjectManager*    pObjects = scene.getObjectManager();
+        outPacket._bHasFog                   = ( pObjects != nullptr && FogComponent::findFog( *pObjects, outPacket._cameraPos, outPacket._fog ) ) ? SW_TRUE : SW_FALSE;
+        populateShadows( outPacket, lights );
+        updateLODViews( outPacket, scene );
+        _gpuSceneBuilder->setGPUInstanceLODEnabled( false );
+        buildSnapshot( outPacket, &scene, pUploadQueue );
+    }
+
+    void RenderPacketSceneCollector::buildSnapshot( RenderFramePacket& packet, Scene* pScene, GPUUploadQueue* pUploadQueue )
+    {
+        _gpuSceneBuilder->populateFromScene( pScene, packet._cameraPos );
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
         _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );
 

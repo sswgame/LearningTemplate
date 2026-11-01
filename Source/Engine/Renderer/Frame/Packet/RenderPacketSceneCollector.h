@@ -1,16 +1,20 @@
 /**
  * @file Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h
- * @brief 활성 씬의 내용을 패킷에 싣습니다(게임 스레드). 주 광원 · 라이트 · 하늘 · 안개 · 그림자 배치, 애니메이션 LOD · 메시 LOD 의 뷰, GPUScene 스냅샷입니다.
- * @details `RenderPacketBuilder` 가 값으로 소유합니다. 렌더 스레드는 씬을 보지 못하므로(패킷이 유일한 통로) 씬에서 읽을 것은 여기서 패킷에 담습니다.
- *          언리얼 `FScene` 의 게임 스레드 쪽 갱신(프리미티브 · 라이트 등록을 렌더 스레드에 넘기기)에 해당합니다.
+ * @brief 씬 하나의 내용을 패킷에 싣습니다(게임 스레드). 주 광원 · 라이트 · 하늘 · 안개 · 그림자 배치, 애니메이션 LOD · 메시 LOD 의 뷰, GPUScene 스냅샷입니다.
+ * @details 씬마다 하나씩 둔다 — 주 화면은 `RenderPacketBuilder`, 미리보기 씬은 `RenderPacketScenePreviews`, 화면 밖 캡처는 `SceneCapture` 가 소유한다(스냅샷 빌더의 재구축 판단 캐시가 씬별이다).
+ *          렌더 스레드는 씬을 보지 못하므로(패킷이 유일한 통로) 씬에서 읽을 것은 여기서 패킷에 담습니다. 언리얼 `FScene` 의 게임 스레드 쪽 갱신에 해당합니다.
+ *          예전에는 미리보기 · 캡처의 채우기(`RenderPacketSceneFill`)가 같은 단계를 따로 적어 서로 갈라질 수 있었다 — 단계는 여기 한 벌이다.
  */
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 
 namespace sw
 {
@@ -23,6 +27,17 @@ namespace sw
     class IRHIDevice;
     class Scene;
     class UISystem;
+
+    /** @brief 씬 패킷 하나가 보는 시점과 출력입니다(미리보기 · 화면 밖 캡처 — `RenderPacketSceneCollector::fillSceneView`). */
+    struct RenderSceneViewDesc
+    {
+        RenderViewSettings _settings{};
+        float4x4           _viewProj{};
+        float3             _cameraPos{};
+        RHITextureHandle   _outputRenderTarget{ 0 }; ///< 0 이면 렌더러의 기본 출력(백버퍼 · Present 캡처)
+        uint32             _width{ 0 };
+        uint32             _height{ 0 };
+    };
 
     /** @brief 씬에서 고른 방향광 둘입니다 — 키라이트(방향 · 색 · 앰비언트의 출처)와 그림자 맵을 가져가는 빛(`Scene::findShadowCastingDirectionalLight`). */
     struct RenderPacketKeyLights
@@ -48,11 +63,8 @@ namespace sw
         RenderPacketSceneCollector( const RenderPacketSceneCollector& )            = delete;
         RenderPacketSceneCollector& operator=( const RenderPacketSceneCollector& ) = delete;
 
-        /**
-         * @brief 스냅샷 빌더가 없으면 만들고, 디바이스에 매인 설정(배치 합치기, GPU 인스턴스 LOD 능력)을 @p device 로 정합니다.
-         * @return 머티리얼이 달라도 배치를 합치는지입니다(미리보기 빌더에도 같은 값을 준다).
-         */
-        bool initialize( IRHIDevice& device );
+        /** @brief 스냅샷 빌더가 없으면 만들고, 디바이스에 매인 설정(배치 합치기, GPU 인스턴스 LOD 능력)을 @p device 로 정합니다. */
+        void initialize( IRHIDevice& device );
         /** @brief 스냅샷 빌더가 보관한 머티리얼과 인스턴스를 놓습니다. **디바이스가 살아 있을 때** 부릅니다. */
         void shutdown();
         /** @brief 스냅샷 빌더를 없앱니다. */
@@ -84,19 +96,28 @@ namespace sw
         /** @brief GPUScene 을 씬에서 채우고 추가 뷰의 투명 순서 · GPU 업로드 요청(@p pUploadQueue 가 있으면)을 만든 뒤 CPU 스냅샷을 패킷에 내보냅니다. */
         void populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene, GPUUploadQueue* pUploadQueue );
         /**
+         * @brief @p scene 을 @p view 하나로 본 패킷을 채웁니다(미리보기 씬 · 화면 밖 캡처) — 주 화면과 같은 단계(빛 · 안개 · 그림자 · LOD 뷰 · 스냅샷)를 차례로 부른다.
+         * @details 패킷을 비우지 않는다(부르는 쪽이 `resetForFrame` 하고 씬 키 · 프레임 번호를 적는다). 추가 뷰 · 캔버스는 주 화면에만 있다.
+         *          GPU 인스턴스 LOD 는 끈다 — 단계 전환의 크로스페이드가 시간을 흘려야 끝나는데, 화면 밖 캡처는 시간을 흘리지 않는다.
+         */
+        void fillSceneView( RenderFramePacket& outPacket, Scene& scene, const RenderSceneViewDesc& view, GPUUploadQueue* pUploadQueue );
+        /**
          * @brief 패킷의 GPU 투영 마커(`CanvasFrameData::_listMarker`) 중 활성 씬의 메시에 붙은 것에 GPUScene 인스턴스 칸을 풉니다(스냅샷 · 캔버스를 채운 뒤).
          * @details 마커가 속한 관리자가 활성 씬의 것이 아니거나 칸을 못 찾으면 기록은 월드 점을 쓴다(`_instanceSlot` 이 비어 있다).
          */
         void resolveMarkerInstanceSlots( RenderFramePacket& packet, const UISystem* pUISystem, const Scene* pActiveScene ) const;
 
     private:
+        /** @brief 스냅샷을 짓고(추가 뷰의 투명 순서 포함) 업로드를 요청한 뒤 패킷에 내보냅니다. 인스턴스 LOD 설정은 부르는 쪽이 먼저 정한다. */
+        void buildSnapshot( RenderFramePacket& packet, Scene* pScene, GPUUploadQueue* pUploadQueue );
+
         /** @brief GT 쪽 씬 스냅샷 빌더입니다. populateFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. */
         unique_ptr<GPUSceneBuilder> _gpuSceneBuilder;
         /** @brief 애니메이션 LOD · 메시 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
         vector<LODView> _listLODView;
         /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
         vector<uint32> _listShadowLightIndex;
-        /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). 미리보기 빌더는 쓰지 않는다. */
+        /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). `fillSceneView` 는 쓰지 않는다. */
         bool _bGPUInstanceLODCapable;
     };
 } // namespace sw

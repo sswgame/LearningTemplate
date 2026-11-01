@@ -23,14 +23,14 @@ namespace sw
 
     void RenderPacketBuilder::initialize( IRHIDevice& device, TaskManager* pTaskManager )
     {
-        const bool bMergeBatchesAcrossMaterials = _scene.initialize( device );
+        _scene.initialize( device );
         if ( _packetScratch == nullptr )
             _packetScratch = make_unique<RenderFramePacket>();
         if ( _gpuUploadQueue == nullptr )
             _gpuUploadQueue = make_unique<GPUUploadQueue>();
         _views.initialize();
-        // 미리보기 빌더도 주 빌더와 같은 배치 합치기를 쓴다(디바이스가 정한다).
-        _previews.setMergeBatchesAcrossMaterials( bMergeBatchesAcrossMaterials );
+        // 미리보기 씬도 주 화면과 같은 디바이스 규칙(배치 합치기)으로 채운다.
+        _previews.initialize( device );
         _gpuUploadQueue->bindDevice( &device, pTaskManager );
     }
 

@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -15,6 +16,11 @@ namespace sw
         struct SceneLoadLeakProbeInternal
         {
             static constexpr const utf8* kEmptySceneName = "LeakProbeEmpty";
+            /**
+             * @brief 빈 씬으로 바꾼 뒤 재기 전에 기다리는 프레임 수입니다 — 옛 씬의 마지막 패킷이 렌더 큐를 지나고(큐 깊이) GPU 해제 지연이 다 도는 수다.
+             *        예전 3 은 어림이었다(해제 지연 하나만으로도 3 이라 큐에 남은 패킷이 든 자원은 아직 살아 있었다).
+             */
+            static constexpr uint32 kSettleFrames = constant::render::kRenderFrameQueueDepth + constant::render::kGPUReleaseFrameLatency;
         };
     } // namespace
 
@@ -70,7 +76,7 @@ namespace sw
         _verdict = LeakCurveVerdict{};
         SW_LOG_INFO( "Scene leak probe: '%#', 1 control round + %# warmup + %# measured rounds", _scenePath, LeakCurveCriteria::kDefaultWarmupRounds, measuredRounds );
         _phase        = Phase::Settling; // `update` 의 첫 호출이 대조 회차를 연다
-        _settleFrames = kSettleFrames;
+        _settleFrames = SceneLoadLeakProbeInternal::kSettleFrames;
         return true;
     }
 
@@ -100,7 +106,7 @@ namespace sw
             }
             case Phase::Settling:
             {
-                if ( ++_settleFrames < kSettleFrames )
+                if ( ++_settleFrames < SceneLoadLeakProbeInternal::kSettleFrames )
                     break;
                 // 처음 호출(`start` 직후)은 아직 열린 창이 없어 회차를 연다. 그 뒤에는 열린 창을 닫는다.
                 MemoryProfiler* pProfiler = engine::findSubsystem<MemoryProfiler>();
@@ -170,7 +176,7 @@ namespace sw
             return;
         }
         ++_round;
-        _settleFrames = kSettleFrames; // 다음 프레임에 `update` 가 회차를 연다(열린 창이 없으니 `beginRound` 로 간다)
+        _settleFrames = SceneLoadLeakProbeInternal::kSettleFrames; // 다음 프레임에 `update` 가 회차를 연다(열린 창이 없으니 `beginRound` 로 간다)
         _phase        = Phase::Settling;
     }
 

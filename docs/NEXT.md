@@ -34,8 +34,9 @@
    스레드 소유 결함과 "이름이 다른 같은 일"을 놓쳤다(StructureRefactor 9 절). 고치기 전에 먼저 지도를 만든다 — 새 클래스 · 장치를 만들지 않고 기존 길을 넓힌다.
    1. **소유 지도**: 객체마다 고치는 스레드(게임 · 렌더 · 워커), GPU 핸들을 가진 CPU 객체(`Mesh` · `Texture2D` · 입자 · 지형 — `Material` 과 같은 한 몸 모양인지),
       `FrameRenderer` 인스턴스의 소유자, 디바이스 프레임 · 컨텍스트를 만지는 호출자. 결과를 StructureRefactor 9 절 표로.
-   2. **같은 일 지도**: 하는 일(씬 → 패킷, 패킷 → 타깃, 에셋 도착 · 등장, 읽기 · 되읽기)로 묶어 두 곳 이상이면 한 곳으로. 예: 주 패킷 채우기(`RenderPacketSceneCollector`)와
-      `RenderPacketSceneFill` 은 아직 둘이다(주 패킷은 추가 뷰 · 정렬 축 · LOD 뷰가 더 있다).
+   2. **같은 일 지도**: 하는 일(씬 → 패킷, 패킷 → 타깃, 에셋 도착 · 등장, 읽기 · 되읽기)로 묶어 두 곳 이상이면 한 곳으로. 끝낸 것: 캡처 준비 판정(`CaptureReadiness`),
+      씬 하나 채우기(`RenderPacketSceneCollector::fillSceneView`), 시나리오 사건 세기(로그 id). 남은 어림: 에디터 자체 테스트의 고정 프레임(`EditorSelfTest` 워밍업 5,
+      `EditorSelfTestCases` · `EditorSelfTestDevTools` 의 `kSettleFrameCount` 3) — 조건(도킹 적용 · 탭 앞으로 옴 · 한 번 그려짐)으로.
    3. **렌더러 셋으로 가르기**(언리얼 `FSceneRenderer` / `FScene` / `FSceneViewState`): `FrameRenderer` 가 렌더러(그래프 · PSO) · 씬 GPU 데이터(GPUScene) · 뷰 기록을 한 몸에
       들어 씬마다 인스턴스를 늘린다(하위 렌더러 목록 `_listScenePreviewRenderer`). 씬 GPU 데이터를 씬 키별 객체로, 렌더러는 하나로.
    4. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
@@ -55,7 +56,6 @@
 | 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄, Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다 |
 | 벽시계 한도와 부하 | 다른 빌드가 CPU 를 쓰는 동안 `wallTimeoutSeconds` 150 초를 넘는 시나리오가 있다(flowterrain 의 백엔드 교체 7 번이 혼자서도 19 초). 통합 ctest 는 빌드 없이 돌리고, 교체 시간을 줄이거나 한도를 교체 수에 맞춘다 |
 | 바깥 시한 < 안쪽 대기 합 | 바깥 `timeoutFrames` 가 고정 대기와 `WaitUntil` 시한의 합보다 작은 시나리오가 45 개다(예: shooter3d cctvmonitor 1800 < 2135). 조건이 늦게 서면 crowd 처럼 덜 구체적인 "timeoutFrames reached" 로 진다 — 바깥 시한이 조건 대기 프레임을 세지 않게 하거나 읽을 때 거절(`AutomationStepValidation`) |
-| 편집기 UI 자리 잡기 대기 | `EditorClick` 앞 고정 대기 262 곳 — 입력 단계가 "대상 표시 사각형이 두 프레임 같을 때까지" 붙잡게 하면 한꺼번에 지울 수 있다 |
 | id 없는 경고 · 오류 | 테스트가 밟는 경로마다 `SW_LOG_*_ID` 를 붙였지만 다른 로더에 더 남았다 — 같은 모양 |
 
 ### 3. 프레임 밖으로 뺄 일 (TaskManager)
