@@ -64,7 +64,7 @@
 
 | 주제 | 남은 것 (2026-10-31) |
 |---|---|
-| T8 | Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유, 배포의 모듈 해제(`unregisterModuleTypes`) 없음 → `ElementRuleTable` · `InteractionCatalog` 캐시가 남았다는 경고 둘. Dev + 자동화 끔 구성은 Editor 가 실행기를 include 해 깨질 것 |
+| T8 | Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유. Dev + 자동화 끔 구성은 Editor 가 실행기를 include 해 깨질 것 |
 | T6 | 에디터 사용자 외형 프리셋 · 썸네일을 슬롯으로(에디터 쪽 저장소 주인), `AccountDeviceSecret` 을 `GameLocalStore` 와 맞춤 |
 
 ### 5. 그 뒤
