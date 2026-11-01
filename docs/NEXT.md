@@ -21,9 +21,13 @@
 1. 코드 전체를 다시 훑어 SOLID · 프로젝트 구성(층 · 책임 · 의존 방향 · 폴더)을 전면적으로 고친다 — StructureRefactor 7 · 8 절의 "남김" · "다음" 줄 포함(아래 1 절).
 2. 확인한 상태(Debug 빌드 · 단위 · ctest, Release 빌드 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
-4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). 경로(`pbr_lit` · glTF PBR 임포트 · 월드 타일링)와 Shooter3D 경기장 · 메시 벤치(`-gv_stressTestScanProps`)는 했다.
-   남은 것: 캐릭터(KayKit 기사 · 해골 — 리그 · 클립 · 망토 사슬 · 소켓이 이 뼈대에 묶였다. 후보는 CC0 사람형 베이스 + 클립 리타깃), 무기(Kenney 블래스터), 다른 게임 맵(Empty 쇼케이스 · ThemePark · HarvestValley …)의 바닥 · 벽 · 소품.
-   캐릭터 후보 Quaternius Universal Base Characters · Universal Animation Library(둘 다 CC0, itch.io 무료판 Standard)는 스크립트 내려받기가 봇 차단으로 막혔다 — 사용자가 내려받아 `Content/common/models_raw/quaternius/` 에 zip 을 두면 이어서 한다.
+4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
+   `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
+   - **캐릭터 비용(먼저)**: 캐릭터당 GPU 약 0.6 ms(농장 측정 — 스키닝 컴퓨트가 대부분)라 200 명이면 120 ms 다. 까닭 셋 — 메시가 색인 없는 정점 흐름이라 스키닝이 삼각형 × 3 정점을 돈다(언리얼 · 유니티는 색인 정점을 한 번),
+     몸 · 옷 · 머리 부품마다 따로 스키닝한다(병합 `MeshMerger` 는 구간 있는 메시를 받지 않는다), 구간 메시에는 LOD 가 없다. 색인 정점 · 구간 메시 병합 · 구간 LOD 를 넣고 군중(`AnimationCrowd` · VAT)으로 200 명을 잰다.
+   - Shooter3D 몸을 KayKit 에서 UBC 로(리그 `player_body.rig.xml` · 1인칭 숨김 칸 · 망토 사슬 · 무기 소켓을 UBC 뼈로, 해골은 Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총.
+   - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
+   - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
    - 창마다 UX 2차: `editor/uiaudit.scenario.xml` 캡처 38 장 중 이번에 본 것은 인스펙터 · 콘텐츠 브라우저 · 프로파일러 · 환경설정 · 입력 맵 · 머티리얼 · 프로젝트 · 사용자 설정뿐이다. 나머지 30 장(그래프 · 시퀀서 · 데이터 표 · 멀티플레이 · 캐릭터 에디터 …)을 같은 눈으로 본다.
    - 에디터 코드의 영어 화면 글 약 500 줄(`ImGui::Text( "…" )` 등)을 `SW_LOCKEY` + `editor.strings.xml` 로 — 창 UX 를 고칠 때 그 창 것을 함께 옮긴다.
