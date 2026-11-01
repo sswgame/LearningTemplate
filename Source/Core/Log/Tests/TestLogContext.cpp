@@ -127,8 +127,8 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
     const string& plain  = pCapture->_listFormatted[0];
     const string& tagged = pCapture->_listFormatted[1];
-    SW_EXPECT_TRUE_MSG( plain.find( "[Test] [Probe] [Info] - plain line\n" ) != string::npos, plain.c_str() ); // 문맥 없는 줄은 예전 형식 그대로
-    SW_EXPECT_TRUE_MSG( tagged.find( "[Test] [Probe] [Info] [trace=0123456789abcdef0000000000000001 acct=0000000000000042] - context line\n" ) != string::npos,
+    SW_EXPECT_TRUE_MSG( plain.find( "[Test] [Info] - plain line\n" ) != string::npos, plain.c_str() ); // 문맥 없는 줄은 예전 형식 그대로
+    SW_EXPECT_TRUE_MSG( tagged.find( "[Test] [Info] [trace=0123456789abcdef0000000000000001 acct=0000000000000042] - context line\n" ) != string::npos,
                         tagged.c_str() );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( entryCapture._listEntry.size() ) );
     SW_EXPECT_TRUE( entryCapture._listEntry[0]._context.isEmpty() );
@@ -178,10 +178,10 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
     const string& both    = pCapture->_listFormatted[1];
     const string& frame   = pCapture->_listFormatted[2];
     const string& cleared = pCapture->_listFormatted[3];
-    SW_EXPECT_TRUE_MSG( first.find( "[Test] [Probe] [Info] [tick=0] - first tick\n" ) != string::npos, first.c_str() );
-    SW_EXPECT_TRUE_MSG( both.find( "[Test] [Probe] [Info] [tick=1234] [acct=0000000000000042] - tick and context\n" ) != string::npos, both.c_str() );
-    SW_EXPECT_TRUE_MSG( frame.find( "[Test] [Probe] [Info] [frame=77] - listen frame\n" ) != string::npos, frame.c_str() );
-    SW_EXPECT_TRUE_MSG( cleared.find( "[Test] [Probe] [Info] - cleared\n" ) != string::npos, cleared.c_str() );
+    SW_EXPECT_TRUE_MSG( first.find( "[Test] [Info] [tick=0] - first tick\n" ) != string::npos, first.c_str() );
+    SW_EXPECT_TRUE_MSG( both.find( "[Test] [Info] [tick=1234] [acct=0000000000000042] - tick and context\n" ) != string::npos, both.c_str() );
+    SW_EXPECT_TRUE_MSG( frame.find( "[Test] [Info] [frame=77] - listen frame\n" ) != string::npos, frame.c_str() );
+    SW_EXPECT_TRUE_MSG( cleared.find( "[Test] [Info] - cleared\n" ) != string::npos, cleared.c_str() );
 }
 
 /**
