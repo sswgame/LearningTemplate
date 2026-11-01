@@ -127,7 +127,7 @@ namespace sw::editor
                 HWND hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( pVp ) );
                 if ( hWnd == nullptr )
                 {
-                    SW_LOG_ERROR( "The ImGui Vulkan viewport surface needs a Win32 viewport window with a handle" );
+                    SW_LOG_ERROR_ID( "ImGuiVulkan.ImGuiVulkanViewportSurface", "The ImGui Vulkan viewport surface needs a Win32 viewport window with a handle" );
                     return static_cast<int32>( VK_ERROR_INITIALIZATION_FAILED );
                 }
                 VkWin32SurfaceCreateInfoKHR create_info = {};
@@ -143,7 +143,7 @@ namespace sw::editor
                 X11SurfaceHandles x11Surface;
                 if ( IImGuiPlatformBackend::tryGetViewportX11Surface( pVp, x11Surface ) == false )
                 {
-                    SW_LOG_ERROR( "The ImGui Vulkan viewport surface needs an X11 viewport window with a display connection (a Wayland viewport is not supported)" );
+                    SW_LOG_ERROR_ID( "ImGuiVulkan.ImGuiVulkanViewportSurface2", "The ImGui Vulkan viewport surface needs an X11 viewport window with a display connection (a Wayland viewport is not supported)" );
                     return static_cast<int32>( VK_ERROR_INITIALIZATION_FAILED );
                 }
                 Display*           pDpy   = static_cast<Display*>( x11Surface._pDisplay );
@@ -205,7 +205,7 @@ namespace sw::editor
         VkDescriptorPool pImguiDescriptorPool = VK_NULL_HANDLE;
         if ( ImGuiVulkanRendererBackendInternal::createDescriptorPool( _pDevice.get(), &pImguiDescriptorPool ) == false )
         {
-            SW_LOG_ERROR( "Failed to create Vulkan descriptor pool for ImGui" );
+            SW_LOG_ERROR_ID( "ImGuiVulkan.FailedCreateVulkanDescriptor", "Failed to create Vulkan descriptor pool for ImGui" );
             return false;
         }
         _pImguiDescriptorPool.set( pImguiDescriptorPool );
@@ -216,7 +216,7 @@ namespace sw::editor
         VkSampler           pSampler    = VK_NULL_HANDLE;
         if ( vkCreateSampler( _pDevice.get(), &samplerInfo, nullptr, &pSampler ) != VK_SUCCESS )
         {
-            SW_LOG_ERROR( "Failed to create Vulkan sampler for ImGui textures" );
+            SW_LOG_ERROR_ID( "ImGuiVulkan.FailedCreateVulkanSampler", "Failed to create Vulkan sampler for ImGui textures" );
             return false;
         }
         _pSampler.set( pSampler );
@@ -328,7 +328,7 @@ namespace sw::editor
         void* pImageViewPtr = _pRHIDevice->tryGetNativeTexturePointer( RHIBackend::Vulkan, texture );
         if ( pImageViewPtr == nullptr )
         {
-            SW_LOG_ERROR( "Failed to resolve VkImageView for RHI handle %#", texture );
+            SW_LOG_ERROR_ID( "ImGuiVulkan.FailedResolveVkImageViewRHI", "Failed to resolve VkImageView for RHI handle %#", texture );
             return nullptr;
         }
 

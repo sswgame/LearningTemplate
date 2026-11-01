@@ -424,7 +424,7 @@ namespace sw
             return &_settings._listMaterial.front(); // 이름을 적지 않은 것은 "첫 재질" 이라는 선언이다
         const PhysicsMaterialDef* pMaterial = _settings.findMaterial( wanted );
         if ( pMaterial == nullptr )
-            SW_LOG_ERROR( "Unknown physics material '%#' - the shape is not created", wanted.c_str() ); // 적은 이름이 틀리면 다른 재질로 만들지 않는다
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.UnknownPhysicsMaterialShape", "Unknown physics material '%#' - the shape is not created", wanted.c_str() ); // 적은 이름이 틀리면 다른 재질로 만들지 않는다
         return pMaterial;
     }
 
@@ -472,7 +472,7 @@ namespace sw
         void* const  pUserData = Box2DUtil::toUserData( handle );
         if ( shape._listPoint.size() < 4 )
         {
-            SW_LOG_ERROR( "A chain shape needs at least 4 points (Box2D)" );
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.ChainShapeNeedsLeast", "A chain shape needs at least 4 points (Box2D)" );
             return false;
         }
         vector<b2Vec2> listPoint;
@@ -567,7 +567,7 @@ namespace sw
                 const b2Hull hull       = b2ComputeHull( listPoint.data(), pointCount );
                 if ( hull.count == 0 )
                 {
-                    SW_LOG_ERROR( "A polygon shape has no valid convex hull (needs 3..8 points that are not collinear)" );
+                    SW_LOG_ERROR_ID( "Box2DPhysicsScene.PolygonShapeNoValid", "A polygon shape has no valid convex hull (needs 3..8 points that are not collinear)" );
                     return false;
                 }
                 const b2Polygon polygon = b2MakeOffsetPolygon( &hull, center, rotation );
@@ -600,7 +600,7 @@ namespace sw
     {
         if ( listChild.empty() )
         {
-            SW_LOG_ERROR( "createCompoundShape: no child shapes" );
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.CreateCompoundShapeNoChildShapes", "createCompoundShape: no child shapes" );
             return PhysicsShapeHandle{};
         }
         // Box2D 바디는 셰이프를 여럿 붙일 수 있으므로 자식 서술자를 이어 붙인다. 재질을 지정하지 않은 자식 셰이프에는 그 자식의 재질을 적어 둔다.
@@ -610,7 +610,7 @@ namespace sw
             const ShapeRecord* pChild = _shapes.get( child.getSlot() );
             if ( pChild == nullptr )
             {
-                SW_LOG_ERROR( "createCompoundShape: a child shape handle is stale" );
+                SW_LOG_ERROR_ID( "Box2DPhysicsScene.CreateCompoundShapeChildShapeHandle", "createCompoundShape: a child shape handle is stale" );
                 return PhysicsShapeHandle{};
             }
             for ( PhysicsShapeDesc2D shape : *pChild->_pListShape )
@@ -659,7 +659,7 @@ namespace sw
             const ShapeRecord* pShapeRecord = _shapes.get( desc._sharedShape.getSlot() );
             if ( pShapeRecord == nullptr )
             {
-                SW_LOG_ERROR( "createBody: the shared shape handle is stale" );
+                SW_LOG_ERROR_ID( "Box2DPhysicsScene.CreateBodySharedShapeHandle", "createBody: the shared shape handle is stale" );
                 return handle;
             }
             pListShape = pShapeRecord->_pListShape;
@@ -672,7 +672,7 @@ namespace sw
         }
         if ( pListShape->empty() )
         {
-            SW_LOG_ERROR( "A physics body needs at least one shape" );
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.PhysicsBodyNeedsLeast", "A physics body needs at least one shape" );
             return handle;
         }
 
@@ -1115,14 +1115,14 @@ namespace sw
     {
         if ( supportsJoint( desc._type ) == false )
         {
-            SW_LOG_ERROR( "createJoint: 2D physics has no Cone joint - use Hinge" );
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.CreateJointDPhysicsNo", "createJoint: 2D physics has no Cone joint - use Hinge" );
             return PhysicsJointHandle{};
         }
         const BodyRecord* pRecordA = findBody( desc._bodyA );
         const BodyRecord* pRecordB = desc._bodyB.isValid() ? findBody( desc._bodyB ) : nullptr;
         if ( pRecordA == nullptr || ( desc._bodyB.isValid() && pRecordB == nullptr ) )
         {
-            SW_LOG_ERROR( "createJoint: a body handle is stale" );
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.CreateJointBodyHandleStale", "createJoint: a body handle is stale" );
             return PhysicsJointHandle{};
         }
         const b2BodyId bodyIDA        = pRecordA->_bodyID;
@@ -1216,8 +1216,8 @@ namespace sw
         (void)targetRotationA;
         (void)targetRotationB;
         (void)maxTorque;
-        SW_LOG_ERROR( "driveJointToRotation drives Cone joints, which 2D physics does not have (joint slot %#) - use setJointMotor on the revolute joint",
-                      joint.getSlot().index() );
+        SW_LOG_ERROR_ID( "Box2DPhysicsScene.DriveJointToRotationDrivesConeJoints", "driveJointToRotation drives Cone joints, which 2D physics does not have (joint slot %#) - use setJointMotor on the revolute joint",
+                         joint.getSlot().index() );
     }
 
     float32 Box2DPhysicsScene::getJointPosition( PhysicsJointHandle joint ) const
@@ -1384,7 +1384,7 @@ namespace sw
         b2ShapeProxy proxy{};
         if ( Box2DPhysicsSceneInternal::makeProxy( shape, position, rotation, proxy ) == false )
         {
-            SW_LOG_ERROR( "shapeCast: a chain cannot be cast" );
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.ShapeCastChainCannotCast", "shapeCast: a chain cannot be cast" );
             return false;
         }
         b2QueryFilter queryFilter = b2DefaultQueryFilter();
@@ -1424,7 +1424,7 @@ namespace sw
         b2ShapeProxy proxy{};
         if ( Box2DPhysicsSceneInternal::makeProxy( shape, position, rotation, proxy ) == false )
         {
-            SW_LOG_ERROR( "shapeCastAll: a chain cannot be cast" );
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.ShapeCastAllChainCannotCast", "shapeCastAll: a chain cannot be cast" );
             return 0;
         }
         b2QueryFilter queryFilter                            = b2DefaultQueryFilter();

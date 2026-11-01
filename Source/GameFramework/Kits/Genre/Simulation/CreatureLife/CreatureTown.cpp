@@ -144,7 +144,7 @@ namespace sw
     {
         if ( width < 1 || height < 1 )
         {
-            SW_LOG_ERROR( "CreatureTown: refused town size %#x%# (needs >= 1 in both)", width, height );
+            SW_LOG_ERROR_ID( "CreatureTown.CreatureTownRefusedTownSize", "CreatureTown: refused town size %#x%# (needs >= 1 in both)", width, height );
             return false;
         }
         _pCatalog    = pCatalog;
@@ -325,7 +325,7 @@ namespace sw
         if ( progressedCount > 0 )
         {
             if ( inventory.removeItem( itemID, count ) == false )
-                SW_LOG_WARNING( "inventory lost '%#' between hasItem and removeItem", itemID.c_str() );
+                SW_LOG_WARNING_ID( "CreatureTown.InventoryLostBetweenHasItem", "inventory lost '%#' between hasItem and removeItem", itemID.c_str() );
         }
         collectCompletedRequests();
         return progressedCount;

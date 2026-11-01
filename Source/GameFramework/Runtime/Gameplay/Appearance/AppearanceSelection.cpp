@@ -225,13 +225,13 @@ namespace sw
                 entry._fallbackItem  = fallback;
                 entry._reason        = reason;
                 outReport._listSlotFallback.push_back( entry );
-                SW_LOG_WARNING( "Appearance slot '%#': '%#' %# - using '%#'", slot.c_str(), requested.c_str(), getEnumName( reason ), fallback.c_str() );
+                SW_LOG_WARNING_ID( "AppearanceSelection.AppearanceSlotUsing", "Appearance slot '%#': '%#' %# - using '%#'", slot.c_str(), requested.c_str(), getEnumName( reason ), fallback.c_str() );
             }
 
             static void addDropped( AppearanceSelectionReport& outReport, const hashed_string& name )
             {
                 outReport._listDroppedParameter.push_back( name );
-                SW_LOG_WARNING( "Appearance value '%#' no longer exists - dropped", name.c_str() );
+                SW_LOG_WARNING_ID( "AppearanceSelection.AppearanceValueNoLonger", "Appearance value '%#' no longer exists - dropped", name.c_str() );
             }
 
             /** @brief 아이템 인스턴스 값을 보이는 외형의 스키마로 걸러 냅니다. */
@@ -306,7 +306,7 @@ namespace sw
         if ( selection._basePresetID.empty() == false && bBaseKnown == false )
         {
             outReport._bUnknownBasePreset = SW_TRUE;
-            SW_LOG_WARNING( "Appearance base preset '%#' no longer exists - applying on top of the current look", selection._basePresetID.c_str() );
+            SW_LOG_WARNING_ID( "AppearanceSelection.AppearanceBasePresetNo", "Appearance base preset '%#' no longer exists - applying on top of the current look", selection._basePresetID.c_str() );
             baseSpec = current;
         }
         outSpec = selection.isPartial() ? current : baseSpec;

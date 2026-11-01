@@ -14,7 +14,7 @@ namespace sw::editor
     bool EditorTheme::importChangedTokenFile( const AssetPaths& /*assetPaths*/, [[maybe_unused]] string_view relativePath ) // 배포본은 로그가 없다
     {
         editor::getSubsystem<EditorTheme>().markTokensChanged();
-        SW_LOG_INFO( "Theme tokens changed: %#", string{ relativePath }.c_str() );
+        SW_LOG_INFO_ID( "EditorTheme.ThemeTokensChanged", "Theme tokens changed: %#", string{ relativePath }.c_str() );
         return true;
     }
 } // namespace sw::editor

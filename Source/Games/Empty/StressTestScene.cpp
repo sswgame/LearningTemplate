@@ -442,7 +442,7 @@ namespace sw
         _settings = StressTestSceneSettings{};
         if ( ReflectedXMLFile::loadDesc( AssetID{ kBenchSettingsPath }, _settings ) == false )
         {
-            SW_LOG_ERROR( "[Bench] Failed to read %#, not setting up the bench.", kBenchSettingsPath );
+            SW_LOG_ERROR_ID( "StressTestScene.FailedReadNotSetting", "[Bench] Failed to read %#, not setting up the bench.", kBenchSettingsPath );
             return false;
         }
 
@@ -499,9 +499,9 @@ namespace sw
 
         // **만든 수와 정리한 수가 같아야 합니다.** 리로드와 백엔드 교체는 despawn 과 spawn 을 한 쌍으로
         // 실행하는데, 정리되지 않은 오브젝트는 그때마다 한 벌씩 쌓여서 다음 측정을 오염시킵니다.
-        SW_LOG_INFO( "[Bench] Cleaned up %# objects (cubes %#, others %#).",
-                     removedCount, static_cast<uint32>( _listBenchMesh.size() ),
-                     static_cast<uint32>( _listBenchExtra.size() ) );
+        SW_LOG_INFO_ID( "StressTestScene.CleanedUpObjectsCubes", "[Bench] Cleaned up %# objects (cubes %#, others %#).",
+                        removedCount, static_cast<uint32>( _listBenchMesh.size() ),
+                        static_cast<uint32>( _listBenchExtra.size() ) );
         _listBenchMesh.clear();
         _listInstanceBatch.clear(); // 소멸자가 레지스트리에서 빠진다
         _instanceCubeCount = 0;
@@ -529,7 +529,7 @@ namespace sw
             pScene = pSceneManager->createEmptyActiveScene( "StressTestScene" );
         if ( pScene == nullptr )
         {
-            SW_LOG_ERROR( "[Bench] Failed to create the scene." );
+            SW_LOG_ERROR_ID( "StressTestScene.FailedCreateScene", "[Bench] Failed to create the scene." );
             return nullptr;
         }
         pScene->pickActiveGameCamera();
@@ -548,7 +548,7 @@ namespace sw
             shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeID, PrimitiveVertexColor::Diagnostic );
             if ( variant == nullptr )
             {
-                SW_LOG_ERROR( "[Bench] Failed to create shape '%#'.", pShapeID );
+                SW_LOG_ERROR_ID( "StressTestScene.FailedCreateShape", "[Bench] Failed to create shape '%#'.", pShapeID );
                 return false;
             }
             // GPU 모프는 옵트인입니다. 유니티의 vertexBufferTarget 옵트인에 해당합니다. 켠 메시만 풀에 들어갑니다.
@@ -564,7 +564,7 @@ namespace sw
         _listMeshVariant.clear();
         if ( _settings._listScanProp.empty() )
         {
-            SW_LOG_ERROR( "[Bench] -gv_stressTestScanProps=1 but the bench settings list no scan props (_listScanProp)." );
+            SW_LOG_ERROR_ID( "StressTestScene.GvStressTestScanPropsButBench", "[Bench] -gv_stressTestScanProps=1 but the bench settings list no scan props (_listScanProp)." );
             return false;
         }
         for ( const StressTestScanProp& prop : _settings._listScanProp )
@@ -573,7 +573,7 @@ namespace sw
             MeshVariant variant{ MeshCache::acquire( prop._mesh ), prop._material };
             if ( variant._mesh == nullptr || AssetIO::hasAsset( AssetID{ prop._material.c_str() } ) == false )
             {
-                SW_LOG_ERROR( "[Bench] Failed to read scan prop %# (material %#) - run App --import-models.", prop._mesh.c_str(), prop._material.c_str() );
+                SW_LOG_ERROR_ID( "StressTestScene.FailedReadScanProp", "[Bench] Failed to read scan prop %# (material %#) - run App --import-models.", prop._mesh.c_str(), prop._material.c_str() );
                 _listMeshVariant.clear();
                 return false;
             }
@@ -598,7 +598,7 @@ namespace sw
             _glassMaterial = Material::create();
             if ( _glassMaterial->loadFromFile( AssetID{ _settings._glassMaterial.c_str() } ) == false )
             {
-                SW_LOG_WARNING( "[Bench] Failed to read the transparent material - skipping the transparent cubes." );
+                SW_LOG_WARNING_ID( "StressTestScene.FailedReadTransparentMaterial", "[Bench] Failed to read the transparent material - skipping the transparent cubes." );
                 _glassMaterial.reset();
             }
         }
@@ -702,7 +702,7 @@ namespace sw
 
         Material* pSceneMaterial = pScene->getMaterial();
         if ( pSceneMaterial == nullptr )
-            SW_LOG_WARNING( "[Bench] The scene has no default material - cubes may be invisible." );
+            SW_LOG_WARNING_ID( "StressTestScene.SceneNoDefaultMaterial", "[Bench] The scene has no default material - cubes may be invisible." );
 
         // 메시 종류 수입니다. 배치 키에 메시가 들어가므로 종류 수가 곧 **배치 수**입니다. 1 이면 배치가 하나로 합쳐져서
         // 드로우 경로(드로우별 상수와 바인딩)를 전혀 측정하지 못합니다. 실제 씬은 늘 여러 메시를 씁니다.
@@ -717,7 +717,7 @@ namespace sw
             // 인스턴스 배치는 머티리얼 포인터 하나를 받는다 — 소품 머티리얼을 캐시에서 쥐고 놓는 수명은 컴포넌트 경로에만 있다.
             if ( gv_stressTestInstanced != 0 )
             {
-                SW_LOG_ERROR( "[Bench] -gv_stressTestScanProps=1 draws through mesh components - it cannot be combined with -gv_stressTestInstanced=1." );
+                SW_LOG_ERROR_ID( "StressTestScene.GvStressTestScanPropsDrawsThrough", "[Bench] -gv_stressTestScanProps=1 draws through mesh components - it cannot be combined with -gv_stressTestInstanced=1." );
                 return;
             }
             if ( createScanPropVariants() == false )
@@ -745,21 +745,21 @@ namespace sw
         if ( gv_stressTestInstanced != 0 )
         {
             if ( gv_stressTestMaterialInstances != 0 || transparentPercent > 0 )
-                SW_LOG_WARNING( "[Bench] -gv_stressTestInstanced=1 does not support per-cube material instances or a transparent ratio - ignoring them." );
+                SW_LOG_WARNING_ID( "StressTestScene.GvStressTestInstancedDoesNot", "[Bench] -gv_stressTestInstanced=1 does not support per-cube material instances or a transparent ratio - ignoring them." );
             spawnInstancedGrid( pObjects, pSceneMaterial, meshCount, meshVariantCount, side, origin );
             finishGrid( pScene, side );
-            SW_LOG_INFO( "[Bench] In scene '%#', created %# cubes in %# instanced batches (%#x%# grid, no GameObject).",
-                         pScene->getName(), meshCount, meshVariantCount, side, side );
+            SW_LOG_INFO_ID( "StressTestScene.SceneCreatedCubesInstanced", "[Bench] In scene '%#', created %# cubes in %# instanced batches (%#x%# grid, no GameObject).",
+                            pScene->getName(), meshCount, meshVariantCount, side, side );
             return;
         }
 
         spawnCubeGrid( pObjects, pSceneMaterial, meshCount, side, origin, transparentPercent, listTransparentMaterial );
         finishGrid( pScene, side );
 
-        SW_LOG_INFO( "[Bench] %# mesh variants (= batch count), %# shapes. Change them with -gv_stressTestMeshVariants and -gv_stressTestMeshShapes.",
-                     meshVariantCount, shapeCount );
-        SW_LOG_INFO( "[Bench] In scene '%#', created %# cubes in a %#x%# grid.",
-                     pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
+        SW_LOG_INFO_ID( "StressTestScene.MeshVariantsBatchCount", "[Bench] %# mesh variants (= batch count), %# shapes. Change them with -gv_stressTestMeshVariants and -gv_stressTestMeshShapes.",
+                        meshVariantCount, shapeCount );
+        SW_LOG_INFO_ID( "StressTestScene.SceneCreatedCubesX", "[Bench] In scene '%#', created %# cubes in a %#x%# grid.",
+                        pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
     }
 
     void StressTestScene::spawnCharacters( uint32 characterCount )
@@ -810,7 +810,7 @@ namespace sw
         spawnLight( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
         applyFraming( pScene, FramingMode::Character );
-        SW_LOG_INFO( "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
+        SW_LOG_INFO_ID( "StressTestScene.ScenePlacedSkinnedCharacters", "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
     }
 
     void StressTestScene::spawnCharacterParts( GameObjectManager& objects, uint32 characterIndex, SkeletalMeshComponent* pBody )
@@ -870,7 +870,7 @@ namespace sw
         }
         spawnLight( pScene, _settings._combatHalfExtent );
         applyFraming( pScene, FramingMode::Combat );
-        SW_LOG_INFO( "[Bench] In scene '%#', set up the combat staging (KayKit skeletons, swords, floor).", pScene->getName() );
+        SW_LOG_INFO_ID( "StressTestScene.SceneSetUpCombat", "[Bench] In scene '%#', set up the combat staging (KayKit skeletons, swords, floor).", pScene->getName() );
     }
 
     void StressTestScene::spawnRagdolls( uint32 ragdollCount )
@@ -925,7 +925,7 @@ namespace sw
         spawnGround( pScene, halfExtent );
         _ragdollHalfExtent = halfExtent;
         applyFraming( pScene, FramingMode::Ragdoll );
-        SW_LOG_INFO( "[Bench] In scene '%#', placed a ragdoll crowd of %# in a %#x%# grid (period %# frames).", pScene->getName(), ragdollCount, columns, rows, gv_stressTestRagdollPeriod );
+        SW_LOG_INFO_ID( "StressTestScene.ScenePlacedRagdollCrowd", "[Bench] In scene '%#', placed a ragdoll crowd of %# in a %#x%# grid (period %# frames).", pScene->getName(), ragdollCount, columns, rows, gv_stressTestRagdollPeriod );
     }
 
     void StressTestScene::updateRagdollChurn( GameObjectManager* pObjects )
@@ -943,7 +943,7 @@ namespace sw
                 const RagdollComponent* pRagdoll = pObjects->resolveComponent( handle );
                 ragdollCount += ( pRagdoll != nullptr && pRagdoll->getState() == RagdollState::Ragdoll ) ? 1u : 0u;
             }
-            SW_LOG_INFO( "[Bench] frame %# fallen %#/%#", frame + 1u, ragdollCount, static_cast<uint32>( _listRagdoll.size() ) );
+            SW_LOG_INFO_ID( "StressTestScene.FrameFallen", "[Bench] frame %# fallen %#/%#", frame + 1u, ragdollCount, static_cast<uint32>( _listRagdoll.size() ) );
         }
         for ( size_t index = 0; index < _listRagdoll.size(); ++index )
         {
@@ -970,7 +970,7 @@ namespace sw
             pScene = pSceneManager->createEmptyActiveScene( "StressTestScene" );
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
-            SW_LOG_ERROR( "[Bench] Failed to create the scene." );
+            SW_LOG_ERROR_ID( "StressTestScene.FailedCreateScene", "[Bench] Failed to create the scene." );
             return;
         }
         pScene->pickActiveGameCamera();
@@ -1017,7 +1017,7 @@ namespace sw
 
         spawnLight( pScene, _settings._faceLightHalfExtent );
         applyFraming( pScene, FramingMode::Face );
-        SW_LOG_INFO( "[Bench] In scene '%#', spawned %# test heads (%#).", pScene->getName(), faceCount, _settings._faceMesh.c_str() );
+        SW_LOG_INFO_ID( "StressTestScene.SceneSpawnedTestHeads", "[Bench] In scene '%#', spawned %# test heads (%#).", pScene->getName(), faceCount, _settings._faceMesh.c_str() );
     }
 
     float32 StressTestScene::computeFaceCameraDistance( uint32 faceCount ) const
@@ -1217,7 +1217,7 @@ namespace sw
         pLight->setCastShadow( true );
         pLight->setIntensity( _settings._keyLightIntensity );
 
-        SW_LOG_INFO( "[Bench] Created the main light (shadow volume radius %#).", static_cast<int32>( halfExtent * _settings._shadowExtentRatio ) );
+        SW_LOG_INFO_ID( "StressTestScene.CreatedMainLightShadow", "[Bench] Created the main light (shadow volume radius %#).", static_cast<int32>( halfExtent * _settings._shadowExtentRatio ) );
     }
 
     void StressTestScene::spawnBenchLights( Scene* pScene, float32 halfExtent )
@@ -1280,8 +1280,8 @@ namespace sw
             _listBenchExtra.push_back( pPoint->getHandle() );
         }
 
-        SW_LOG_INFO( "[Bench] Scattered %# lights (radius %#, half are spot lights). Change the radius with -gv_stressTestLightRadius.",
-                     lightCount, static_cast<int32>( radius ) );
+        SW_LOG_INFO_ID( "StressTestScene.ScatteredLightsRadiusHalf", "[Bench] Scattered %# lights (radius %#, half are spot lights). Change the radius with -gv_stressTestLightRadius.",
+                        lightCount, static_cast<int32>( radius ) );
     }
 
     void StressTestScene::spawnGround( Scene* pScene, float32 halfExtent )
@@ -1308,7 +1308,7 @@ namespace sw
         pMesh->setVisible( true );
         _listBenchExtra.push_back( pMesh->getHandle() );
 
-        SW_LOG_INFO( "[Bench] Laid the floor plane (side %#).", static_cast<int32>( size ) );
+        SW_LOG_INFO_ID( "StressTestScene.LaidFloorPlaneSide", "[Bench] Laid the floor plane (side %#).", static_cast<int32>( size ) );
     }
 
     void StressTestScene::spawnBenchViews( Scene* pScene, float32 halfExtent )
@@ -1344,7 +1344,7 @@ namespace sw
             pCamera->setRenderOutput( output );
             _listBenchExtra.push_back( pCamera->getHandle() );
         }
-        SW_LOG_INFO( "[Bench] Placed %# capture cameras (render texture %#^2) around the grid.", viewCount, _settings._viewTextureSize );
+        SW_LOG_INFO_ID( "StressTestScene.PlacedCaptureCamerasRender", "[Bench] Placed %# capture cameras (render texture %#^2) around the grid.", viewCount, _settings._viewTextureSize );
     }
 
     void StressTestScene::frameCameras( Scene* pScene, uint32 side, float32 spacing )
@@ -1386,9 +1386,9 @@ namespace sw
         pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), ( halfExtent + distance ) * 3.0f ) );
         pCamera->lookAt( float3{ 0.0f, 0.0f, 0.0f } );
 
-        SW_LOG_INFO( "[Bench] Moved camera '%#' to fit the grid (radius %#) at z=%#.",
-                     pCamera->getComponentName().c_str(), static_cast<int32>( halfExtent ),
-                     static_cast<int32>( -( distance + halfExtent * 0.5f ) ) );
+        SW_LOG_INFO_ID( "StressTestScene.MovedCameraFitGrid", "[Bench] Moved camera '%#' to fit the grid (radius %#) at z=%#.",
+                        pCamera->getComponentName().c_str(), static_cast<int32>( halfExtent ),
+                        static_cast<int32>( -( distance + halfExtent * 0.5f ) ) );
     }
 
     void StressTestScene::refreshFraming()
@@ -1883,9 +1883,9 @@ namespace sw
         SocketKindTable       kinds;
         shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
         if ( kinds.loadDefault() == false )
-            SW_LOG_ERROR( "[Bench] Failed to read the default socket kind table the crossbow sockets need." );
+            SW_LOG_ERROR_ID( "StressTestScene.FailedReadDefaultSocket", "[Bench] Failed to read the default socket kind table the crossbow sockets need." );
         else if ( weaponSockets->loadFromAsset( AssetID{ _settings._rigWeaponSockets.c_str() }, kinds ) == false )
-            SW_LOG_ERROR( "[Bench] Failed to read the crossbow sockets '%#'.", _settings._rigWeaponSockets.c_str() );
+            SW_LOG_ERROR_ID( "StressTestScene.FailedReadCrossbowSockets", "[Bench] Failed to read the crossbow sockets '%#'.", _settings._rigWeaponSockets.c_str() );
 
         const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * _settings._rigSpacing;
         for ( uint32 index = 0; index < characterCount; ++index )
@@ -1896,7 +1896,7 @@ namespace sw
         const float32 halfExtent = MathUtil::max( _settings._rigMinHalfExtent, halfWidth );
         spawnLight( pScene, halfExtent );
         applyFraming( pScene, FramingMode::Rig );
-        SW_LOG_INFO( "[Bench] Placed %# rig knights on the slope (rig %#).", characterCount, bRig ? "on" : "off" );
+        SW_LOG_INFO_ID( "StressTestScene.PlacedRigKnightsSlope", "[Bench] Placed %# rig knights on the slope (rig %#).", characterCount, bRig ? "on" : "off" );
     }
 
     void StressTestScene::frameRigCameras( Scene* pScene )
@@ -2039,7 +2039,7 @@ namespace sw
                 pText->setSpace( WidgetSpace::Screen );
                 pText->setContent( std::move( text ) );
                 _listBenchExtra.push_back( pText->getHandle() );
-                SW_LOG_INFO( "[Bench] probe frame %#: %# Hangul syllables on screen", _probeFrame, gv_stressTestUiHangulGlyphs );
+                SW_LOG_INFO_ID( "StressTestScene.ProbeFrameHangulSyllables", "[Bench] probe frame %#: %# Hangul syllables on screen", _probeFrame, gv_stressTestUiHangulGlyphs );
             }
         }
 
@@ -2047,7 +2047,7 @@ namespace sw
         {
             SceneManager*               pSceneManager = game::findSubsystem<SceneManager>();
             [[maybe_unused]] const bool bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_stressTestSceneLoadPath, SceneLoadKind::Travel );
-            SW_LOG_INFO( "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_stressTestSceneLoadPath.c_str(), bRequested ? "requested" : "failed" );
+            SW_LOG_INFO_ID( "StressTestScene.ProbeFrameAsyncScene", "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_stressTestSceneLoadPath.c_str(), bRequested ? "requested" : "failed" );
         }
     }
 

@@ -50,7 +50,7 @@ namespace sw
         const bool bInvalidArgument = pShm == nullptr || width == 0 || height == 0;
         if ( bInvalidArgument )
         {
-            SW_LOG_ERROR( "Wayland shm buffer needs wl_shm and a non-empty size (%#x%#)", width, height );
+            SW_LOG_ERROR_ID( "WaylandShmBuffer.WaylandShmBufferNeeds", "Wayland shm buffer needs wl_shm and a non-empty size (%#x%#)", width, height );
             return false;
         }
         const uint32 stride   = width * WaylandShmBufferInternal::kBytesPerPixel;
@@ -59,20 +59,20 @@ namespace sw
         const int32 fd = memfd_create( "sw-wayland-shm", MFD_CLOEXEC );
         if ( fd < 0 )
         {
-            SW_LOG_ERROR( "Wayland shm buffer: memfd_create failed" );
+            SW_LOG_ERROR_ID( "WaylandShmBuffer.WaylandShmBufferMemfd", "Wayland shm buffer: memfd_create failed" );
             return false;
         }
         if ( ftruncate( fd, static_cast<off_t>( byteSize ) ) != 0 )
         {
             close( fd );
-            SW_LOG_ERROR( "Wayland shm buffer: ftruncate failed (%# bytes)", static_cast<uint64>( byteSize ) );
+            SW_LOG_ERROR_ID( "WaylandShmBuffer.WaylandShmBufferFtruncate", "Wayland shm buffer: ftruncate failed (%# bytes)", static_cast<uint64>( byteSize ) );
             return false;
         }
         void* const pMapped = mmap( nullptr, byteSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 );
         if ( pMapped == MAP_FAILED )
         {
             close( fd );
-            SW_LOG_ERROR( "Wayland shm buffer: mmap failed (%# bytes)", static_cast<uint64>( byteSize ) );
+            SW_LOG_ERROR_ID( "WaylandShmBuffer.WaylandShmBufferMmap", "Wayland shm buffer: mmap failed (%# bytes)", static_cast<uint64>( byteSize ) );
             return false;
         }
         // 풀은 버퍼를 만든 뒤 바로 지워도 된다(버퍼가 메모리를 붙든다). 파일 번호도 풀을 만든 뒤에는 필요 없다.
@@ -81,7 +81,7 @@ namespace sw
         if ( pPool == nullptr )
         {
             munmap( pMapped, byteSize );
-            SW_LOG_ERROR( "Wayland shm buffer: wl_shm_create_pool failed" );
+            SW_LOG_ERROR_ID( "WaylandShmBuffer.WaylandShmBufferWl", "Wayland shm buffer: wl_shm_create_pool failed" );
             return false;
         }
         wl_buffer* const pBuffer = wl_shm_pool_create_buffer( pPool, 0, static_cast<int32>( width ), static_cast<int32>( height ), static_cast<int32>( stride ), WL_SHM_FORMAT_XRGB8888 );
@@ -89,7 +89,7 @@ namespace sw
         if ( pBuffer == nullptr )
         {
             munmap( pMapped, byteSize );
-            SW_LOG_ERROR( "Wayland shm buffer: wl_shm_pool_create_buffer failed" );
+            SW_LOG_ERROR_ID( "WaylandShmBuffer.WaylandShmBufferWl2", "Wayland shm buffer: wl_shm_pool_create_buffer failed" );
             return false;
         }
         wl_buffer_add_listener( pBuffer, &s_bufferListener, this );

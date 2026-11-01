@@ -76,7 +76,7 @@ namespace sw
                     (void)AutomationBackendSteps::tryParseBackend( requested, backend ); // 검사에서 확인했다
                 if ( committed == backend && pSwitcher->isSwapPending() == false )
                 {
-                    SW_LOG_INFO( "%# -> already on %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
+                    SW_LOG_INFO_ID( "App.Already", "%# -> already on %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
                     return true;
                 }
                 if ( pSwitcher->requestSwap( backend ) == false )
@@ -84,7 +84,7 @@ namespace sw
                     runner.recordFailure( step, "gv_rhiBackend is not registered" );
                     return true;
                 }
-                SW_LOG_INFO( "%# -> requested %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
+                SW_LOG_INFO_ID( "App.Requested", "%# -> requested %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
                 return true;
             }
 
@@ -257,7 +257,7 @@ namespace sw
 
         if ( applyPendingChange() == false )
         {
-            SW_LOG_ERROR( "Backend soft-recreate failed." );
+            SW_LOG_ERROR_ID( "App.BackendSoftRecreateFailed", "Backend soft-recreate failed." );
             ++_failedSwapCount;
             // 값만 되돌린다. 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의 setValueAsInt/setValueFromString
             // (콘솔 · 에디터 패널) 경로에서만 불린다. 그래서 되돌림이 재시도 루프가 될 일은 없다. 심볼이 아니라 매니저가 든 주소로
@@ -308,18 +308,18 @@ namespace sw
         RHI*         pRHI               = _pEngine->getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
         {
-            SW_LOG_ERROR( "applyPendingBackendChange failed - no RHI device, modules are not recreated." );
+            SW_LOG_ERROR_ID( "App.ApplyPendingBackendChangeFailedNoRHI", "applyPendingBackendChange failed - no RHI device, modules are not recreated." );
             return false;
         }
 
         const bool bReinitOk = _pGameModuleManager->reinitializeAfterRHISwap( pEditorModule, pGameModule );
         if ( bReinitOk == false )
-            SW_LOG_ERROR( "reinitializeAfterRHISwap failed." );
+            SW_LOG_ERROR_ID( "App.ReinitializeAfterRHISwapFailed", "reinitializeAfterRHISwap failed." );
         const uint64 totalMicroseconds = swapWatch.getElapsedMicroseconds();
-        SW_LOG_INFO( "Backend swap with modules took %#ms (suspend modules %#ms, engine %#ms, recreate modules %#ms)", totalMicroseconds / 1000, suspendMicroseconds / 1000,
-                     ( engineMicroseconds - suspendMicroseconds ) / 1000, ( totalMicroseconds - engineMicroseconds ) / 1000 );
+        SW_LOG_INFO_ID( "App.BackendSwapModulesTook", "Backend swap with modules took %#ms (suspend modules %#ms, engine %#ms, recreate modules %#ms)", totalMicroseconds / 1000, suspendMicroseconds / 1000,
+                        ( engineMicroseconds - suspendMicroseconds ) / 1000, ( totalMicroseconds - engineMicroseconds ) / 1000 );
         if ( bSwapOk == false )
-            SW_LOG_ERROR( "applyPendingBackendChange failed - restored the previous backend and recreated the modules." );
+            SW_LOG_ERROR_ID( "App.ApplyPendingBackendChangeFailedRestoredPrevious", "applyPendingBackendChange failed - restored the previous backend and recreated the modules." );
         return bSwapOk && bReinitOk;
     }
 
@@ -347,10 +347,10 @@ namespace sw
         const uint32 waitMilliseconds = _pendingDeviceLossWaitMilliseconds.exchange( 0u, std::memory_order_relaxed );
         if ( waitMilliseconds == 0u )
             return;
-        SW_LOG_WARNING( "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
-                        waitMilliseconds );
+        SW_LOG_WARNING_ID( "App.HoldingRenderThreadMs", "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
+                           waitMilliseconds );
         MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( waitMilliseconds ) * constant::time::kNanosecondsPerMillisecond );
         if ( device.debugRemoveDevice() == false )
-            SW_LOG_ERROR( "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
+            SW_LOG_ERROR_ID( "App.RhiRemoveDeviceMsBackend", "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
     }
 } // namespace sw

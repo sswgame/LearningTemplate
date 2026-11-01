@@ -20,13 +20,13 @@ namespace sw::editor
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xmlText, sourceLabel, "RigAsset", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Rig '%#': malformed XML, rig settings not saved", sourceLabel );
+            SW_LOG_ERROR_ID( "RigFileRewrite.RigMalformedXMLRig", "Rig '%#': malformed XML, rig settings not saved", sourceLabel );
             return false;
         }
         const XMLNode nodes = root.findChild( "nodes" );
         if ( nodes.isValid() == false )
         {
-            SW_LOG_ERROR( "Rig '%#': no 'nodes', rig settings not saved", sourceLabel );
+            SW_LOG_ERROR_ID( "RigFileRewrite.RigNoNodesRig", "Rig '%#': no 'nodes', rig settings not saved", sourceLabel );
             return false;
         }
         const XMLNode targets = root.findChild( "targets" );
@@ -52,7 +52,7 @@ namespace sw::editor
             }
             if ( bFound == false )
             {
-                SW_LOG_ERROR( "Rig '%#': target '%#' is not in the file, rig settings not saved", sourceLabel, params._name.c_str() );
+                SW_LOG_ERROR_ID( "RigFileRewrite.RigTargetNotFile", "Rig '%#': target '%#' is not in the file, rig settings not saved", sourceLabel, params._name.c_str() );
                 return false;
             }
         }
@@ -72,7 +72,7 @@ namespace sw::editor
             }
             if ( bFound == false )
             {
-                SW_LOG_ERROR( "Rig '%#': node '%#' is not in the file, rig settings not saved", sourceLabel, params._name.c_str() );
+                SW_LOG_ERROR_ID( "RigFileRewrite.RigNodeNotFile", "Rig '%#': node '%#' is not in the file, rig settings not saved", sourceLabel, params._name.c_str() );
                 return false;
             }
         }

@@ -60,7 +60,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "2D render settings '%#' not found", path );
+            SW_LOG_ERROR_ID( "Render2DSettings.DRenderSettingsNot", "2D render settings '%#' not found", path );
             return false;
         }
         return loadFromXMLText( text, path );
@@ -72,13 +72,13 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR( "%#", doc.getLastError() );
+            SW_LOG_ERROR_ID( "Render2DSettings.Message", "%#", doc.getLastError() );
             return false;
         }
         const XMLNode root = doc.getRoot( "Render2DSettings" );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: the root element must be <Render2DSettings>", sourceName );
+            SW_LOG_ERROR_ID( "Render2DSettings.RootElementMustRender2DSettings", "%#: the root element must be <Render2DSettings>", sourceName );
             return false;
         }
 
@@ -99,7 +99,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> (TransparencySort, SortingLayers)", sourceName, child.getName() );
+                SW_LOG_ERROR_ID( "Render2DSettings.UnknownElementTransparencySortSortingLayers", "%#: unknown element <%#> (TransparencySort, SortingLayers)", sourceName, child.getName() );
             }
             if ( bRead == false )
                 return false;
@@ -107,18 +107,18 @@ namespace sw
 
         if ( bHasLayers == false )
         {
-            SW_LOG_ERROR( "%#: <SortingLayers> is missing (it must list at least 'Default')", sourceName );
+            SW_LOG_ERROR_ID( "Render2DSettings.SortingLayersMissingMustList", "%#: <SortingLayers> is missing (it must list at least 'Default')", sourceName );
             return false;
         }
         if ( loaded._listSortingLayer.size() > kMaxSortingLayerCount )
         {
-            SW_LOG_ERROR( "%#: %# sorting layers exceed the limit %#", sourceName, loaded._listSortingLayer.size(), kMaxSortingLayerCount );
+            SW_LOG_ERROR_ID( "Render2DSettings.SortingLayersExceedLimit", "%#: %# sorting layers exceed the limit %#", sourceName, loaded._listSortingLayer.size(), kMaxSortingLayerCount );
             return false;
         }
         const int32 defaultIndex = loaded.findSortingLayer( hashed_string( Internal::kDefaultLayerName ) );
         if ( defaultIndex < 0 )
         {
-            SW_LOG_ERROR( "%#: the sorting layer list must contain 'Default' (renderers without a layer use it)", sourceName );
+            SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerListMust", "%#: the sorting layer list must contain 'Default' (renderers without a layer use it)", sourceName );
             return false;
         }
         loaded._defaultLayerIndex = static_cast<uint32>( defaultIndex );
@@ -144,7 +144,7 @@ namespace sw
         }
         if ( bFound == false )
         {
-            SW_LOG_ERROR( "%#: unknown transparency sort mode '%#' (Auto, Distance, ViewAxis, CustomAxis)", sourceName, modeName );
+            SW_LOG_ERROR_ID( "Render2DSettings.UnknownTransparencySortMode", "%#: unknown transparency sort mode '%#' (Auto, Distance, ViewAxis, CustomAxis)", sourceName, modeName );
             return false;
         }
         const string_view axisText = node.getAttributeText( "axis" );
@@ -153,7 +153,7 @@ namespace sw
         float3 axis{};
         if ( Internal::parseFloat3( axisText, axis ) == false || axis.getLengthSquared() <= MathUtil::kEpsilon )
         {
-            SW_LOG_ERROR( "%#: transparency sort axis '%#' must be three numbers with a non-zero length", sourceName, axisText );
+            SW_LOG_ERROR_ID( "Render2DSettings.TransparencySortAxisMust", "%#: transparency sort axis '%#' must be three numbers with a non-zero length", sourceName, axisText );
             return false;
         }
         axis.normalize();
@@ -168,7 +168,7 @@ namespace sw
         {
             if ( StringUtil::equals( layerNode.getName(), "Layer" ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
+                SW_LOG_ERROR_ID( "Render2DSettings.UnknownElementSortingLayersOnly", "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
                 return false;
             }
             if ( XMLNameCheck::reportUnknownAttributes( layerNode, kArrKnown, sourceName ) == false )
@@ -176,13 +176,13 @@ namespace sw
             const string_view name = layerNode.getAttributeText( "name" );
             if ( name.empty() )
             {
-                SW_LOG_ERROR( "%#: a sorting layer has no name", sourceName );
+                SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerNoName", "%#: a sorting layer has no name", sourceName );
                 return false;
             }
             const hashed_string layerName( name );
             if ( findSortingLayer( layerName ) >= 0 )
             {
-                SW_LOG_ERROR( "%#: sorting layer '%#' is listed twice", sourceName, name );
+                SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerListedTwice", "%#: sorting layer '%#' is listed twice", sourceName, name );
                 return false;
             }
             _listSortingLayer.push_back( layerName );

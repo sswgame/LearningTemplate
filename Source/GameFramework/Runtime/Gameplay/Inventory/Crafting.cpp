@@ -98,7 +98,7 @@ namespace sw
             bValid      = CraftingInternal::readItems( node, "Out", recipe._outputs, sourceName ) && bValid;
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: recipe '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "Crafting.RecipeInvalidFieldsSkipped", "%#: recipe '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             add( recipe );

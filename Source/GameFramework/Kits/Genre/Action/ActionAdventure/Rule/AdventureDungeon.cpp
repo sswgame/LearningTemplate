@@ -89,7 +89,7 @@ namespace sw
             bool             bDoorValid = GameDataXML::readFields( node, door, sourceName );
             if ( door._kind == AdventureDoorKind::Condition && door._requires.empty() )
             {
-                SW_LOG_ERROR( "%#: condition door '%#' needs requires=\"...\"", sourceName, door._id.c_str() );
+                SW_LOG_ERROR_ID( "AdventureDungeon.ConditionDoorNeedsRequires", "%#: condition door '%#' needs requires=\"...\"", sourceName, door._id.c_str() );
                 bDoorValid = false;
             }
             if ( bDoorValid )
@@ -110,7 +110,7 @@ namespace sw
             bool               bDeviceValid = GameDataXML::readFields( node, device, sourceName );
             if ( device._kind == AdventureDeviceKind::TimedSwitch && device._duration <= 0.0f )
             {
-                SW_LOG_ERROR( "%#: timed switch '%#' needs duration=\"...\" above 0", sourceName, device._id.c_str() );
+                SW_LOG_ERROR_ID( "AdventureDungeon.TimedSwitchNeedsDuration", "%#: timed switch '%#' needs duration=\"...\" above 0", sourceName, device._id.c_str() );
                 bDeviceValid = false;
             }
             if ( bDeviceValid )
@@ -119,7 +119,7 @@ namespace sw
         }
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "%#: <Dungeon id=\"%#\"> has errors - not added", sourceName, dungeon._id.c_str() );
+            SW_LOG_ERROR_ID( "AdventureDungeon.DungeonIdErrorsNot", "%#: <Dungeon id=\"%#\"> has errors - not added", sourceName, dungeon._id.c_str() );
             return false;
         }
         (void)add( dungeon ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다

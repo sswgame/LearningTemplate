@@ -155,19 +155,19 @@ namespace sw
     {
         if ( width < 1 || height < 1 )
         {
-            SW_LOG_ERROR( "CitySimulation: refused map size %#x%# (needs >= 1 in both)", width, height );
+            SW_LOG_ERROR_ID( "CitySimulation.CitySimulationRefusedMapSize", "CitySimulation: refused map size %#x%# (needs >= 1 in both)", width, height );
             return false;
         }
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "CitySimulation: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "CitySimulation.CitySimulationRefusedSettings", "CitySimulation: refused settings - %#", rangeError.c_str() );
             return false;
         }
         _pCatalog = pCatalog;
         _pWallet  = refs._pWallet;
         if ( _pWallet == nullptr )
-            SW_LOG_WARNING( "CitySimulation: no wallet was lent - every road and building is refused" );
+            SW_LOG_WARNING_ID( "CitySimulation.CitySimulationNoWalletLent", "CitySimulation: no wallet was lent - every road and building is refused" );
         _settings = settings;
         _topology = GridTopology{ width, height };
         _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), CityTile{} );

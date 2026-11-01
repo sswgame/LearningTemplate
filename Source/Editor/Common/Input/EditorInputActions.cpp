@@ -96,7 +96,7 @@ namespace sw::editor
         const string& basePath = getEditorToolDefaults()._editorInputMap.get();
         if ( _map.loadFromAsset( AssetID{ basePath } ) == false )
         {
-            SW_LOG_ERROR( "EditorInputActions: the editor input map '%#' could not be read - the editor has no shortcuts", basePath.c_str() );
+            SW_LOG_ERROR_ID( "Editor.EditorInputActionsEditorInputMap", "EditorInputActions: the editor input map '%#' could not be read - the editor has no shortcuts", basePath.c_str() );
             return false;
         }
         bool bValid = true;
@@ -105,7 +105,7 @@ namespace sw::editor
             const EditorInputMapRegistration& row = MapRegistry::getAt( index );
             if ( _map.appendFromAsset( AssetID{ row._pAssetPath } ) == false )
             {
-                SW_LOG_ERROR( "EditorInputActions: the extension input map '%#' (%#) could not be appended (listed above)", row._pAssetPath, row._pID );
+                SW_LOG_ERROR_ID( "Editor.EditorInputActionsExtensionInputMap", "EditorInputActions: the extension input map '%#' (%#) could not be appended (listed above)", row._pAssetPath, row._pID );
                 bValid = false;
             }
         }
@@ -117,8 +117,8 @@ namespace sw::editor
                 hashed_string other{};
                 if ( _map.findSameLayerInputConflict( action, bindIndex, other ) == false )
                     continue;
-                SW_LOG_ERROR( "EditorInputActions: '%#' and '%#' share an input in layer '%#' - fix %#", action.c_str(), other.c_str(),
-                              _map.findBindingLayer( action, bindIndex ).c_str(), basePath.c_str() );
+                SW_LOG_ERROR_ID( "Editor.EditorInputActionsShareInputLayer", "EditorInputActions: '%#' and '%#' share an input in layer '%#' - fix %#", action.c_str(), other.c_str(),
+                                 _map.findBindingLayer( action, bindIndex ).c_str(), basePath.c_str() );
                 bValid = false;
             }
         }
@@ -126,7 +126,7 @@ namespace sw::editor
             return false;
         // 사용자 재배치(옛 `Shortcuts.json` 은 읽지 않는다). 낡은 줄은 경고하고 건너뛴다.
         if ( DebugKeyActions::loadUserBindings( _map, getUserBindingsPath() ) == false )
-            SW_LOG_WARNING( "EditorInputActions: the user bindings '%#' could not be read - the default shortcuts are used", getUserBindingsPath().c_str() );
+            SW_LOG_WARNING_ID( "Editor.EditorInputActionsUserBindingsCould", "EditorInputActions: the user bindings '%#' could not be read - the default shortcuts are used", getUserBindingsPath().c_str() );
         return true;
     }
 
@@ -134,7 +134,7 @@ namespace sw::editor
     {
         // 확장 모듈이 맵을 더하거나(로드) 뺐으면(언로드) 맵을 처음부터 다시 만든다 — 빠진 모듈의 액션이 남지 않고, 다시 올린 모듈의 액션이 두 번 더해지지 않는다.
         if ( EditorExtensionRegistry<EditorInputMapRegistration>::getList().getGeneration() != _syncedMapGeneration && rebuildMap() == false )
-            SW_LOG_ERROR( "EditorInputActions: the editor input map could not be rebuilt after an extension module changed - see above" );
+            SW_LOG_ERROR_ID( "Editor.EditorInputActionsEditorInputMap2", "EditorInputActions: the editor input map could not be rebuilt after an extension module changed - see above" );
         // 지난 프레임 메뉴에서 고른 명령부터 — 패널을 그리기 전이라 그리는 중인 목록이 없다. 실행이 다시 넣은 것은 다음 프레임이다.
         vector<QueuedCommand> listRun;
         listRun.swap( _listQueuedCommand );
@@ -408,6 +408,6 @@ namespace sw::editor
     void EditorInputActions::saveUserBindings() const
     {
         if ( DebugKeyActions::saveUserBindings( _map, getUserBindingsPath() ) == false )
-            SW_LOG_WARNING( "EditorInputActions: the user bindings '%#' could not be written", getUserBindingsPath().c_str() );
+            SW_LOG_WARNING_ID( "Editor.EditorInputActionsUserBindingsCould2", "EditorInputActions: the user bindings '%#' could not be written", getUserBindingsPath().c_str() );
     }
 } // namespace sw::editor

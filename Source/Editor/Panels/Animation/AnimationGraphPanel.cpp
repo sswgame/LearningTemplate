@@ -503,7 +503,7 @@ namespace sw::editor
     {
         if ( _listSelectionOrder.size() < 2 )
         {
-            SW_LOG_WARNING( "Link Selected needs two selected nodes (click one, Ctrl+click the other)" );
+            SW_LOG_WARNING_ID( "AnimationGraph.LinkSelectedNeedsTwo", "Link Selected needs two selected nodes (click one, Ctrl+click the other)" );
             return;
         }
         GraphLink link{};

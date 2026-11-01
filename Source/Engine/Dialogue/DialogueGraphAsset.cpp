@@ -48,7 +48,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_WARNING( "Could not read dialogue graph '%#'", path );
+            SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue", "Could not read dialogue graph '%#'", path );
             return false;
         }
         return readText( text, path );
@@ -65,7 +65,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING( "Could not read dialogue graph file '%#'", diskPath );
+            SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue2", "Could not read dialogue graph file '%#'", diskPath );
             return false;
         }
         return readText( text, diskPath );

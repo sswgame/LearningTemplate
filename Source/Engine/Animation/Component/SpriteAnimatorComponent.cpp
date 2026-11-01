@@ -320,7 +320,7 @@ namespace sw
         _frameRate = rate;
         // 시간이 없는 프레임의 길이가 바뀐다 — 구간 길이를 다시 센다.
         if ( _playable.configure( _playable.getClip(), _playable.getFirstFrame(), _playable.getFrameCount(), _playable.isLoopingByDefault(), getFallbackFrameSeconds() ) == false )
-            SW_LOG_ERROR( "SpriteAnimator: the frame rate %# gives no valid frame length - the playable keeps its previous range", rate );
+            SW_LOG_ERROR_ID( "SpriteAnimator.SpriteAnimatorFrameRateGives", "SpriteAnimator: the frame rate %# gives no valid frame length - the playable keeps its previous range", rate );
     }
 
     int32 SpriteAnimatorComponent::getTotalFrames() const
@@ -404,11 +404,11 @@ namespace sw
             }
             else
             {
-                SW_LOG_WARNING( "Sprite clip has no animation '%#' - showing frame 0", animationName );
+                SW_LOG_WARNING_ID( "SpriteAnimator.SpriteClipNoAnimation", "Sprite clip has no animation '%#' - showing frame 0", animationName );
             }
         }
         if ( _playable.configure( pClip, _firstClipFrame, _totalFrames, bLoop, getFallbackFrameSeconds() ) == false )
-            SW_LOG_ERROR( "SpriteAnimator: the clip range could not be configured - the playable keeps its previous range" );
+            SW_LOG_ERROR_ID( "SpriteAnimator.SpriteAnimatorClipRangeCould", "SpriteAnimator: the clip range could not be configured - the playable keeps its previous range" );
         _currentFrame  = MathUtil::clamp( _currentFrame, 0, _totalFrames - 1 );
         _bRangeChanged = SW_TRUE;
         return bLoop;

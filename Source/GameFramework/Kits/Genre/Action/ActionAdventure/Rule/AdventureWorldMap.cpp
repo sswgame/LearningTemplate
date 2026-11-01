@@ -36,7 +36,7 @@ namespace sw
             }
             if ( kind == AdventureLandmarkKind::Tower && landmark._region.empty() )
             {
-                SW_LOG_ERROR( "%#: tower '%#' needs region=\"...\" (the region it reveals)", sourceName, landmark._id.c_str() );
+                SW_LOG_ERROR_ID( "AdventureWorldMap.TowerNeedsRegionRegion", "%#: tower '%#' needs region=\"...\" (the region it reveals)", sourceName, landmark._id.c_str() );
                 bValid = false;
                 continue;
             }
@@ -58,7 +58,7 @@ namespace sw
         const bool bTowers     = readLandmarks( root, "Tower", AdventureLandmarkKind::Tower, sourceName, loadedCount );
         const bool bShrines    = readLandmarks( root, "Shrine", AdventureLandmarkKind::Shrine, sourceName, loadedCount );
         if ( bTowers == false || bShrines == false )
-            SW_LOG_ERROR( "%#: some landmarks were not read (listed above)", sourceName );
+            SW_LOG_ERROR_ID( "AdventureWorldMap.SomeLandmarksNotRead", "%#: some landmarks were not read (listed above)", sourceName );
         resetState();
         return loadedCount;
     }

@@ -90,7 +90,7 @@ namespace sw
         }
         const bool bCreated = view._arrAutoExposureSRV[0] != kInvalidDescriptorIndex && view._arrAutoExposureSRV[1] != kInvalidDescriptorIndex;
         if ( bCreated == false )
-            SW_LOG_ERROR( "Failed to create the auto exposure history (2 x 1x1 R32 float RT) - auto exposure is not measured on this view" );
+            SW_LOG_ERROR_ID( "FrameAutoExposure.FailedCreateAutoExposure", "Failed to create the auto exposure history (2 x 1x1 R32 float RT) - auto exposure is not measured on this view" );
     }
 
     void FrameAutoExposure::releaseAutoExposureHistory( FrameViewTarget& view )

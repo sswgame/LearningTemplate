@@ -59,7 +59,7 @@ namespace sw
         _pMaterial                = cache.acquire( hashedPath.c_str(), nullptr );
         if ( _pMaterial == nullptr )
         {
-            SW_LOG_WARNING( "Material '%#' could not be acquired - the scene default material is used", hashedPath.c_str() );
+            SW_LOG_WARNING_ID( "EnvironmentUtil.MaterialCouldNotAcquired", "Material '%#' could not be acquired - the scene default material is used", hashedPath.c_str() );
             return false;
         }
         cache.requestInitialize( hashedPath.c_str() );

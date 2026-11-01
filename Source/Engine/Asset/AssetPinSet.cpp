@@ -31,7 +31,7 @@ namespace sw
         }
         if ( costBytes > _budgetBytes )
         {
-            SW_LOG_WARNING( "Asset '%#' (%# bytes) is larger than the pin budget (%# bytes) - it is not pinned", path, costBytes, _budgetBytes );
+            SW_LOG_WARNING_ID( "AssetPinSet.AssetBytesLargerPin", "Asset '%#' (%# bytes) is larger than the pin budget (%# bytes) - it is not pinned", path, costBytes, _budgetBytes );
             return false;
         }
         Entry entry{};

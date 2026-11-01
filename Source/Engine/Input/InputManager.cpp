@@ -142,7 +142,7 @@ namespace sw
         _pInputMap->setInputManager( this );
 
         _bInitialized = SW_TRUE;
-        SW_LOG_INFO( "InputManager initialized with %d devices.", static_cast<int32>( _listDevice.size() ) );
+        SW_LOG_INFO_ID( "InputManager.InputManagerInitializedDevices", "InputManager initialized with %d devices.", static_cast<int32>( _listDevice.size() ) );
         return true;
     }
 
@@ -172,7 +172,7 @@ namespace sw
         _listDrainedEvent.clear();
 
         _bInitialized = SW_FALSE;
-        SW_LOG_INFO( "InputManager shut down." );
+        SW_LOG_INFO_ID( "InputManager.InputManagerShutDown", "InputManager shut down." );
     }
 
     bool InputManager::postRawEvent( const RawInputEvent& rawEvent )
@@ -346,7 +346,7 @@ namespace sw
         ++_beginFrameCount;
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
         if ( droppedCount > 0 )
-            SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
+            SW_LOG_WARNING_ID( "InputManager.RawInputEventQueue", "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
 
         // 지난 프레임까지 뗀 패드 컨트롤은 가림을 푼다(폴링 전이라 지난 프레임의 상태다 — 키와 같은 규칙).
         releaseCapturedGamepadControls();
@@ -1037,7 +1037,7 @@ namespace sw
         if ( bExclusive != bWasExclusive )
             setGamepadVirtualSession( bExclusive );
         syncMouseLock();
-        SW_LOG_INFO( "Virtual input attached (%#)", bExclusive ? "exclusive" : "mixed" );
+        SW_LOG_INFO_ID( "InputManager.VirtualInputAttached", "Virtual input attached (%#)", bExclusive ? "exclusive" : "mixed" );
     }
 
     void InputManager::detachVirtualInput( bool bResetState )
@@ -1052,7 +1052,7 @@ namespace sw
         if ( bWasExclusive )
             setGamepadVirtualSession( false );
         syncMouseLock();
-        SW_LOG_INFO( "Virtual input detached after %# frame(s)", _virtualFrameIndex );
+        SW_LOG_INFO_ID( "InputManager.VirtualInputDetachedAfter", "Virtual input detached after %# frame(s)", _virtualFrameIndex );
     }
 
     void InputManager::setOSDeviceInputBlocked( bool bBlocked )
@@ -1060,7 +1060,7 @@ namespace sw
         // 배타 가상 입력 없이 막으면 사람도 자동화도 입력을 넣지 못한다. 붙어 있을 때만 켠다.
         const bool bApply = bBlocked && isOSInputSuppressed();
         if ( bBlocked && bApply == false )
-            SW_LOG_WARNING( "OS device input stays live: blocking needs an exclusive virtual input source" );
+            SW_LOG_WARNING_ID( "InputManager.OSDeviceInputStays", "OS device input stays live: blocking needs an exclusive virtual input source" );
         _bOSDeviceInputBlocked = bApply ? SW_TRUE : SW_FALSE;
     }
 

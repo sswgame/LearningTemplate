@@ -68,7 +68,7 @@ namespace sw
             _hPort = CreateIoCompletionPort( INVALID_HANDLE_VALUE, nullptr, 0, 1 );
             if ( _hPort == nullptr )
             {
-                SW_LOG_ERROR( "CreateIoCompletionPort failed (error %#)", static_cast<uint32>( GetLastError() ) );
+                SW_LOG_ERROR_ID( "AsyncFileIO.CreateIoCompletionPortFailedError", "CreateIoCompletionPort failed (error %#)", static_cast<uint32>( GetLastError() ) );
                 return false;
             }
             _thread = sw::thread( &IocpAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
@@ -114,7 +114,7 @@ namespace sw
                     // 깨우기 패킷이거나 포트 자체의 실패다. 실패면 이 스레드가 할 수 있는 일이 없다 — 걸린 요청은 돌아오지 않는다.
                     if ( bDequeued == FALSE )
                     {
-                        SW_LOG_ERROR( "GetQueuedCompletionStatus failed (error %#)", static_cast<uint32>( GetLastError() ) );
+                        SW_LOG_ERROR_ID( "AsyncFileIO.GetQueuedCompletionStatusFailedError", "GetQueuedCompletionStatus failed (error %#)", static_cast<uint32>( GetLastError() ) );
                         return;
                     }
                     continue;
@@ -208,7 +208,7 @@ namespace sw
             else if ( errorCode == ERROR_OPERATION_ABORTED )
                 status = AsyncIOStatus::Canceled;
             else
-                SW_LOG_ERROR( "ReadFile failed on '%#' (error %#)", request._pFile != nullptr ? request._pFile->_path.c_str() : "", static_cast<uint32>( errorCode ) );
+                SW_LOG_ERROR_ID( "AsyncFileIO.ReadFileFailedError", "ReadFile failed on '%#' (error %#)", request._pFile != nullptr ? request._pFile->_path.c_str() : "", static_cast<uint32>( errorCode ) );
 
             const shared_ptr<AsyncReadRequest> pRequest = std::move( pOperation->_pRequest );
             sw_delete( pOperation );
@@ -227,8 +227,8 @@ namespace sw
                 const HANDLE hFile = reinterpret_cast<HANDLE>( static_cast<intptr_t>( file._handle ) );
                 if ( CreateIoCompletionPort( hFile, _hPort, WindowsAsyncFileIOBackendInternal::kReadKey, 0 ) == nullptr )
                 {
-                    SW_LOG_WARNING( "Cannot bind '%#' to the IO completion port (error %#) — reading it synchronously",
-                                    file._path, static_cast<uint32>( GetLastError() ) );
+                    SW_LOG_WARNING_ID( "AsyncFileIO.CannotBindIOCompletion", "Cannot bind '%#' to the IO completion port (error %#) — reading it synchronously",
+                                       file._path, static_cast<uint32>( GetLastError() ) );
                     file._pBoundPort.store( WindowsAsyncFileIOBackendInternal::kUnbindablePort, std::memory_order_release );
                     return false;
                 }

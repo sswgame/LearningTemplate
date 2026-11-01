@@ -257,16 +257,16 @@ namespace sw
                 const string recordPath = cachePath + ShaderCookStamp::kIncludeRecordSuffix;
                 if ( FileUtil::removeFile( recordPath ) == false ) // 없으면 성공이다 - 묻고 지우기를 따로 하지 않는다
                 {
-                    SW_LOG_WARNING( "Could not replace the shader cache record '%#' - the cache entry is skipped", recordPath );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotReplaceShader", "Could not replace the shader cache record '%#' - the cache entry is skipped", recordPath );
                     return;
                 }
                 if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, result._bytecode.data(), result._bytecode.size() ) == false )
                 {
-                    SW_LOG_WARNING( "Could not write the shader cache '%#'", cachePath );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader cache '%#'", cachePath );
                     return;
                 }
                 if ( ShaderCookStamp::writeIncludeRecord( recordPath, result._listIncludedFile ) == false )
-                    SW_LOG_WARNING( "Could not write the shader cache record '%#'", recordPath );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader2", "Could not write the shader cache record '%#'", recordPath );
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -314,7 +314,7 @@ namespace sw
                         outResult._errorMessage = static_cast<const utf8*>( errorBlob->GetBufferPointer() );
                     else
                         outResult._errorMessage = "Unknown DXBC compilation error.";
-                    SW_LOG_ERROR( "%#", outResult._errorMessage.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", outResult._errorMessage.c_str() );
                     return false;
                 }
 
@@ -322,7 +322,7 @@ namespace sw
                 outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
                 outResult._listIncludedFile = includeHandler.takeIncludedFiles();
                 outResult._bSuccess         = true;
-                SW_LOG_TRACE( "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( outResult._bytecode.size() ) );
+                SW_LOG_TRACE_ID( "ShaderCompiler.TargetD3D11DXBCRow", "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( outResult._bytecode.size() ) );
                 return true;
             }
 #endif // SW_PLATFORM_WINDOWS
@@ -417,7 +417,7 @@ namespace sw
                 const std::optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( libraryText );
                 if ( libraryPath.has_value() == false )
                 {
-                    SW_LOG_ERROR( "DXC path is not absolute: %#", libraryText.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.DXCPathNotAbsolute", "DXC path is not absolute: %#", libraryText.c_str() );
                     return nullptr;
                 }
                 void* const pLibrary = ModuleLibraryUtil::loadLibraryAt( *libraryPath );
@@ -425,7 +425,7 @@ namespace sw
                     return nullptr;
                 void* const pCreateInstance = ModuleLibraryUtil::getDynamicSymbol( pLibrary, "DxcCreateInstance" );
                 if ( pCreateInstance == nullptr )
-                    SW_LOG_WARNING( "%# loaded but DxcCreateInstance not found", libraryText.c_str() );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.LoadedButDxcCreateInstanceNot", "%# loaded but DxcCreateInstance not found", libraryText.c_str() );
                 return pCreateInstance;
             }
 
@@ -516,7 +516,7 @@ namespace sw
                 DxcCreateInstanceProc fnDXCCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( fnDXCCreateInstance == nullptr )
                 {
-                    SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceUnavailableLibdxcompilerNot", "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
                     return DxcOutcome::NoOutput;
                 }
 
@@ -537,7 +537,7 @@ namespace sw
                 if ( SUCCEEDED( hrInit ) )
                     fnDXCCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
                 else
-                    SW_LOG_ERROR( "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceCLSIDDxcUtilsFailed", "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
                 if ( utils == nullptr || compiler == nullptr )
                     return DxcOutcome::NoOutput;
 
@@ -611,7 +611,7 @@ namespace sw
                     IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
                 if ( FAILED( hrCompile ) )
                 {
-                    SW_LOG_ERROR( "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.DXCCompilerCompileFailed", "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
                     return DxcOutcome::NoOutput;
                 }
 
@@ -624,7 +624,7 @@ namespace sw
                     outResult._errorMessage = errors->GetStringPointer();
                 if ( FAILED( status ) )
                 {
-                    SW_LOG_ERROR( "%#", outResult._errorMessage.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", outResult._errorMessage.c_str() );
                     return DxcOutcome::Rejected;
                 }
 
@@ -645,7 +645,7 @@ namespace sw
                                         : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
                                             ? "OpenGL (SPIR-V vulkan1.1)"
                                             : "D3D12 (DXIL Row-Major)";
-                SW_LOG_TRACE( "Target: %#", pFormatName );
+                SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", pFormatName );
     #endif
                 return DxcOutcome::Compiled;
             }
@@ -700,7 +700,7 @@ namespace sw
         const std::optional<ShaderCompileInput> input = resolver->resolve( desc._source, result._errorMessage );
         if ( input.has_value() == false )
         {
-            SW_LOG_ERROR( "%#", result._errorMessage );
+            SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", result._errorMessage );
             return result;
         }
 
@@ -714,7 +714,7 @@ namespace sw
             }
             if ( result._errorMessage.empty() )
                 result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
-            SW_LOG_ERROR( "%#", result._errorMessage );
+            SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", result._errorMessage );
             return result;
         }
 
@@ -772,7 +772,7 @@ namespace sw
 
         if ( result._errorMessage.empty() )
             result._errorMessage = "DXC produced no shader output (see the DXC error above)";
-        SW_LOG_ERROR( "%# (Path: %#)", result._errorMessage.c_str(), desc._source.c_str() );
+        SW_LOG_ERROR_ID( "ShaderCompiler.Path", "%# (Path: %#)", result._errorMessage.c_str(), desc._source.c_str() );
         return result;
     }
 } // namespace sw

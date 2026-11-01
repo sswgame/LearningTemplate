@@ -437,7 +437,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocCapture" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Open UI" ) );
         if ( ImGui::SmallButton( "Open UI" ) && RenderDocCapture::launchReplayUI() == false )
-            SW_LOG_WARNING( "RenderDoc replay UI could not be started" );
+            SW_LOG_WARNING_ID( "ProfilerPanel.RenderDocReplayUICould", "RenderDoc replay UI could not be started" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocOpenUI" ) );
         ImGui::EndDisabled();
         if ( bRenderDoc == false && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
@@ -515,7 +515,7 @@ namespace sw::editor
         ProfilerPanel* pPanel = panelManager.findPanel<ProfilerPanel>();
         if ( pPanel == nullptr || panelManager.setPanelOpen<ProfilerPanel>( true ) == false )
         {
-            SW_LOG_WARNING( "No Profiler window to open %# in", string( path ) );
+            SW_LOG_WARNING_ID( "ProfilerPanel.NoProfilerWindowOpen", "No Profiler window to open %# in", string( path ) );
             return false;
         }
         if ( pPanel->_timeline.loadTraceFile( path ) == false )
@@ -527,7 +527,7 @@ namespace sw::editor
     void ProfilerPanel::drawTraceControls()
     {
         if ( ImGui::SmallButton( "Load Trace" ) && _timeline.loadLatestTrace() == false )
-            SW_LOG_WARNING( "%#", _timeline.getTraceStatus() );
+            SW_LOG_WARNING_ID( "ProfilerPanel.Message", "%#", _timeline.getTraceStatus() );
         EditorSelfTestMarks::note( "profiler.timeline.loadTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadTrace" ) );
         if ( _timeline.hasLoadedTrace() )

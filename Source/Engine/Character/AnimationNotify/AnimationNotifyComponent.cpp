@@ -97,7 +97,7 @@ namespace sw
         closeAllStates();
         _table = SharedAssetCache<AnimationNotifyTable>::acquire( _notifyTablePath );
         if ( _table == nullptr )
-            SW_LOG_ERROR( "'%#': notify table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str() );
+            SW_LOG_ERROR_ID( "AnimationNotify.NotifyTableCouldNot", "'%#': notify table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str() );
     }
 
     void AnimationNotifyComponent::bindToAnimator()
@@ -117,7 +117,7 @@ namespace sw
             _animator = pSprite->getHandle();
             return;
         }
-        SW_LOG_WARNING( "'%#': animation notify has no animator on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+        SW_LOG_WARNING_ID( "AnimationNotify.AnimationNotifyNoAnimator", "'%#': animation notify has no animator on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
 
     void AnimationNotifyComponent::unbindFromAnimator()
@@ -336,7 +336,7 @@ namespace sw
             if ( findSocketWorldTransform( def._bone, boneWorld ) == false )
             {
                 if ( tracker.isMissingBoneReported() == false )
-                    SW_LOG_ERROR( "'%#': foot contact bone '%#' was not found", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", def._bone.c_str() );
+                    SW_LOG_ERROR_ID( "AnimationNotify.FootContactBoneNot", "'%#': foot contact bone '%#' was not found", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", def._bone.c_str() );
                 tracker.setMissingBoneReported();
                 continue;
             }

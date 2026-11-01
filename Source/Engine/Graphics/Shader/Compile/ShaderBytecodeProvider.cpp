@@ -42,7 +42,7 @@ namespace sw
         const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
         if ( location.has_value() == false )
         {
-            SW_LOG_ERROR( "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
+            SW_LOG_ERROR_ID( "ShaderCache.ShaderSourceNotInside", "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
             return Internal::makeFailure( "Shader source is not inside a domain 'shaders' folder" );
         }
         const AssetID precookedID = location->makeFileID( Internal::makeBinaryFileName( desc ) );
@@ -50,10 +50,10 @@ namespace sw
         if ( AssetIO::readBinaryAsset( precookedID, precookedBytes ) == false || precookedBytes.empty() )
         {
             // 빠진 것은 파일이 아니라 (경로, 스테이지, 진입점, 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
-            SW_LOG_ERROR( "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._source.c_str(), desc._entryPoint.c_str(), precookedID.c_str() );
+            SW_LOG_ERROR_ID( "ShaderCache.PrecompiledShaderBinaryNot", "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._source.c_str(), desc._entryPoint.c_str(), precookedID.c_str() );
             return Internal::makeFailure( "Shader binary missing in the cooked content" );
         }
-        SW_LOG_TRACE( "Loaded cooked shader binary: %# (%zu bytes)", precookedID.c_str(), precookedBytes.size() );
+        SW_LOG_TRACE_ID( "ShaderCache.LoadedCookedShaderBinary", "Loaded cooked shader binary: %# (%zu bytes)", precookedID.c_str(), precookedBytes.size() );
         ShaderCompileResult result{};
         result._bytecode = std::move( precookedBytes );
         result._bSuccess = true;
@@ -85,7 +85,7 @@ namespace sw
             defineList += '=';
             defineList += define._value;
         }
-        SW_LOG_ERROR( "The reflection manifest has no entry for '%#' (%#, define: %#) - the shader must be re-cooked.", desc._source.c_str(), missingKey.c_str(), defineList.c_str() );
+        SW_LOG_ERROR_ID( "ShaderCache.ReflectionManifestNoEntry", "The reflection manifest has no entry for '%#' (%#, define: %#) - the shader must be re-cooked.", desc._source.c_str(), missingKey.c_str(), defineList.c_str() );
         return false;
     }
 
@@ -107,7 +107,7 @@ namespace sw
         const ShaderCompileResult result = cache.getOrCompile( desc );
         if ( result._bSuccess == false || result._bytecode.empty() )
         {
-            SW_LOG_WARNING( "Runtime shader reflection failed: '%#' (%#)", desc._source.c_str(), result._errorMessage.c_str() );
+            SW_LOG_WARNING_ID( "ShaderCache.RuntimeShaderReflectionFailed", "Runtime shader reflection failed: '%#' (%#)", desc._source.c_str(), result._errorMessage.c_str() );
             return false;
         }
         outReflection = ShaderReflection::reflect( result._bytecode, desc._targetFormat );

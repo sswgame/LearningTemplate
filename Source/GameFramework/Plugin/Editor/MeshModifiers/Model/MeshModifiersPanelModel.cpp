@@ -110,9 +110,9 @@ namespace sw::editor
         // 내보낼 자리는 에셋 슬롯이 고른 리소스 id 다 - 쓸 자리로 푼다.
         const std::optional<AbsolutePath> warpFile = editor::getSubsystem<AssetPaths>().toDiskPath( _warpExportPath );
         if ( warpFile.has_value() && WorldWarpModifier::writeWarpFile( shown, *warpFile ) )
-            SW_LOG_INFO( "Exported %# modifiers as the world warp '%#'", shown.getModifierCount(), _warpExportPath.c_str() );
+            SW_LOG_INFO_ID( "MeshModifiers.ExportedModifiersWorldWarp", "Exported %# modifiers as the world warp '%#'", shown.getModifierCount(), _warpExportPath.c_str() );
         else
-            SW_LOG_ERROR( "Could not write the world warp '%#'", _warpExportPath.c_str() );
+            SW_LOG_ERROR_ID( "MeshModifiers.CouldNotWriteWorld", "Could not write the world warp '%#'", _warpExportPath.c_str() );
     }
 
     void MeshModifiersPanelModel::noteEdit( MeshModifierSession& session, bool bItemActive )

@@ -82,11 +82,11 @@ namespace sw::editor
         if ( invoker == nullptr )
         {
             // 그 함수가 바뀌었거나 사라진 뒤의 기록이다(리로드 · 파일). 이 단계만 건너뛴다.
-            SW_LOG_WARNING( "Undo step %# has no handler in this build - skipped", _functionHash );
+            SW_LOG_WARNING_ID( "UndoStep.UndoStepNoHandler", "Undo step %# has no handler in this build - skipped", _functionHash );
             return;
         }
         Archive arguments( _arguments.data(), _arguments.size() );
         if ( invoker( arguments, context ) == false )
-            SW_LOG_WARNING( "Undo step %# could not read its arguments - skipped", _functionHash );
+            SW_LOG_WARNING_ID( "UndoStep.UndoStepCouldNot", "Undo step %# could not read its arguments - skipped", _functionHash );
     }
 } // namespace sw::editor

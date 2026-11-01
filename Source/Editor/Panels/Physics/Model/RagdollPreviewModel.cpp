@@ -157,6 +157,6 @@ namespace sw::editor
         }
         pRagdoll->setPhysicsAssetPath( assetPath ); // 미리보는 것은 열린 에셋이다(프리팹이 건 경로가 아니라)
         _status = "Body placed - bodies stand once the scene ticks (a mismatch between the asset's bones and the skeleton is logged)";
-        SW_LOG_INFO( "Ragdoll Preview hangs '%#' on '%#'", assetPath, _activePrefabPath );
+        SW_LOG_INFO_ID( "RagdollPreviewPanel.RagdollPreviewHangs", "Ragdoll Preview hangs '%#' on '%#'", assetPath, _activePrefabPath );
     }
 } // namespace sw::editor

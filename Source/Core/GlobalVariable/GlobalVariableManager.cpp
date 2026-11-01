@@ -602,7 +602,7 @@ namespace sw
             return false;
         if ( GlobalVariableTypeTable::isValidType( type ) == false )
         {
-            SW_LOG_WARNING( "Variable %# has no valid type (%#).", string( name ).c_str(), static_cast<uint32>( type ) );
+            SW_LOG_WARNING_ID( "GlobalVariableManager.VariableNoValidType", "Variable %# has no valid type (%#).", string( name ).c_str(), static_cast<uint32>( type ) );
             return false;
         }
 
@@ -649,7 +649,7 @@ namespace sw
                 // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 **두 번** 온다).
                 string valueError;
                 if ( iter->second->setValueFromCommandLine( pendingValue, valueError ) == false )
-                    SW_LOG_WARNING( "-%#=%# : %#. Ignored", strName.c_str(), pendingValue.c_str(), valueError.c_str() );
+                    SW_LOG_WARNING_ID( "GlobalVariableManager.Ignored", "-%#=%# : %#. Ignored", strName.c_str(), pendingValue.c_str(), valueError.c_str() );
             }
         }
 

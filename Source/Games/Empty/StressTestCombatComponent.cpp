@@ -162,7 +162,7 @@ namespace sw
         if ( bFatal == false )
         {
             if ( CharacterHitUtil::traceWeaponHit( manager, muzzle, float3{ 0.0f, 0.0f, 1.0f }, 10.0f, 0xFFFFFFFFu, getOwner(), 20.0f, 40.0f, false, hit ) )
-                SW_LOG_INFO( "[StressTestCombat] t=%# hit '%#' zone '%#' x%# (body %#)", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier, hit._bodyIndex );
+                SW_LOG_INFO_ID( "StressTestCombat.THitZoneX", "[StressTestCombat] t=%# hit '%#' zone '%#' x%# (body %#)", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier, hit._bodyIndex );
             return;
         }
         CharacterRayHit rayHit;
@@ -178,7 +178,7 @@ namespace sw
         hit._bFatal      = true;
         CharacterHitUtil::resolveHitZone( *rayHit._pObject, rayHit._body, hit );
         CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
-        SW_LOG_INFO( "[StressTestCombat] t=%# fatal hit '%#' zone '%#' x%# -> ragdoll", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier );
+        SW_LOG_INFO_ID( "StressTestCombat.TFatalHitZone", "[StressTestCombat] t=%# fatal hit '%#' zone '%#' x%# -> ragdoll", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier );
     }
 
     void StressTestCombatComponent::onTick( float32 deltaTime )
@@ -201,7 +201,7 @@ namespace sw
             if ( action._handler == s_footstep )
             {
                 ++_footstepCount;
-                SW_LOG_INFO( "[StressTestCombat] t=%# footstep '%#' surface '%#'", _elapsed, action._notify.c_str(), action._detail.c_str() );
+                SW_LOG_INFO_ID( "StressTestCombat.TFootstepSurface", "[StressTestCombat] t=%# footstep '%#' surface '%#'", _elapsed, action._notify.c_str(), action._detail.c_str() );
             }
         }
 
@@ -230,7 +230,7 @@ namespace sw
                 pCombat->shootAt( *pManager, *pEnemyObject, "chest", true );
                 SocketBindingComponent* pBinding = pSwordObject->getComponent<SocketBindingComponent>();
                 if ( pBinding != nullptr && pBinding->release( SocketReleaseMode::Physics, float3{ 1.2f, 2.0f, -1.0f } ) )
-                    SW_LOG_INFO( "[StressTestCombat] t=%# sword released from '%#' to physics", pCombat->_elapsed, StressTestCombatComponentInternal::kHandSocket );
+                    SW_LOG_INFO_ID( "StressTestCombat.TSwordReleasedPhysics", "[StressTestCombat] t=%# sword released from '%#' to physics", pCombat->_elapsed, StressTestCombatComponentInternal::kHandSocket );
                 pCombat->_stage = 3;
             }
             else if ( pCombat->_stage == 3 && pCombat->_frame >= 900 )
@@ -238,7 +238,7 @@ namespace sw
                 RagdollComponent* pRagdoll        = pEnemyObject->getComponent<RagdollComponent>();
                 const bool        bRagdollSettled = pRagdoll != nullptr && pRagdoll->isSettled() && pRagdoll->getUp();
                 if ( bRagdollSettled )
-                    SW_LOG_INFO( "[StressTestCombat] t=%# ragdoll settled -> get up", pCombat->_elapsed );
+                    SW_LOG_INFO_ID( "StressTestCombat.TRagdollSettledGet", "[StressTestCombat] t=%# ragdoll settled -> get up", pCombat->_elapsed );
                 pCombat->_stage = 4;
             }
         } );
@@ -250,8 +250,8 @@ namespace sw
             // `[[maybe_unused]]` 를 붙인 이유: 아래 SW_LOG_INFO 에서만 쓰이는데, 그 매크로는 Shipping 빌드에서 사라집니다.
             [[maybe_unused]] const RagdollComponent* pRagdoll = pEnemy->getComponent<RagdollComponent>();
             [[maybe_unused]] const float3            sword    = pSword->getPrimarySceneComponent() != nullptr ? pSword->getPrimarySceneComponent()->getWorldPosition() : float3{};
-            SW_LOG_INFO( "[StressTestCombat] t=%# footsteps %# ragdoll state %# sword (%#, %#, %#)", second, _footstepCount,
-                         pRagdoll != nullptr ? static_cast<uint32>( pRagdoll->getState() ) : 0u, sword._x, sword._y, sword._z );
+            SW_LOG_INFO_ID( "StressTestCombat.TFootstepsRagdollState", "[StressTestCombat] t=%# footsteps %# ragdoll state %# sword (%#, %#, %#)", second, _footstepCount,
+                            pRagdoll != nullptr ? static_cast<uint32>( pRagdoll->getState() ) : 0u, sword._x, sword._y, sword._z );
         }
     }
 } // namespace sw

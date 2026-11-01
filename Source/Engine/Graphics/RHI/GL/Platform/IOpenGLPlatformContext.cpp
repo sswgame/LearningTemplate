@@ -31,10 +31,10 @@ namespace sw
         if ( surfaceKind == NativeSurfaceKind::Wayland )
             return make_unique<EGLPlatformContext>();
     #endif
-        SW_LOG_ERROR( "OpenGL on Linux needs an X11 window (GLX) or, in a build with SW_ENABLE_WAYLAND, a Wayland window (EGL)" );
+        SW_LOG_ERROR_ID( "OpenGL.OpenGLLinuxNeedsX112", "OpenGL on Linux needs an X11 window (GLX) or, in a build with SW_ENABLE_WAYLAND, a Wayland window (EGL)" );
         return nullptr;
 #else
-        SW_LOG_ERROR( "This platform has no OpenGL context implementation." );
+        SW_LOG_ERROR_ID( "OpenGL.PlatformNoOpenGLContext", "This platform has no OpenGL context implementation." );
         return nullptr;
 #endif
     }

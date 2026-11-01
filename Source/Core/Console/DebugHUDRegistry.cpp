@@ -146,7 +146,7 @@ namespace sw
         }
         if ( bHasSeparator || isReservedName( name ) )
         {
-            SW_LOG_WARNING( "Debug HUD section '%#' has a reserved name or a separator - the registration is ignored", pRegistration->_pName );
+            SW_LOG_WARNING_ID( "DebugHUD.DebugHUDSectionReserved", "Debug HUD section '%#' has a reserved name or a separator - the registration is ignored", pRegistration->_pName );
             return false;
         }
         RegistrationResult result = RegistrationResult::Added;

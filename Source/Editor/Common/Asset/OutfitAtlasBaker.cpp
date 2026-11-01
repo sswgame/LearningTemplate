@@ -145,7 +145,7 @@ namespace sw::editor
                     const std::optional<AbsolutePath> textureFile = editor::getSubsystem<AssetPaths>().toDiskPath( texture );
                     if ( textureFile.has_value() == false || ImageUtil::loadImage( textureFile->str(), image ) == false || image.isValid() == false )
                     {
-                        SW_LOG_ERROR( "Outfit atlas map '%#': texture '%#' of part '%#' could not be read", map._name.c_str(), texture.c_str(), part._name.c_str() );
+                        SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMapTexture", "Outfit atlas map '%#': texture '%#' of part '%#' could not be read", map._name.c_str(), texture.c_str(), part._name.c_str() );
                         return false;
                     }
                     outListImage.push_back( std::move( image ) );
@@ -162,7 +162,7 @@ namespace sw::editor
                     shared_ptr<Mesh> mesh = MeshCache::acquire( part._mesh );
                     if ( mesh == nullptr )
                     {
-                        SW_LOG_ERROR( "Outfit atlas part '%#': mesh '%#' could not be read", part._name.c_str(), part._mesh.c_str() );
+                        SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasPartMesh", "Outfit atlas part '%#': mesh '%#' could not be read", part._name.c_str(), part._mesh.c_str() );
                         return false;
                     }
                     outListMesh.push_back( std::move( mesh ) );
@@ -196,9 +196,9 @@ namespace sw::editor
                         const bool bSameSize = listSource[partIndex]._width == static_cast<uint32>( image._width ) && listSource[partIndex]._height == static_cast<uint32>( image._height );
                         if ( bSameSize == false )
                         {
-                            SW_LOG_ERROR( "Outfit atlas map '%#': texture of part '%#' is %#x%# but the first map made it %#x%# - every map must share one layout",
-                                          spec._listMap[mapIndex]._name.c_str(), spec._listPart[partIndex]._name.c_str(), image._width, image._height, listSource[partIndex]._width,
-                                          listSource[partIndex]._height );
+                            SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMapTexture2", "Outfit atlas map '%#': texture of part '%#' is %#x%# but the first map made it %#x%# - every map must share one layout",
+                                             spec._listMap[mapIndex]._name.c_str(), spec._listPart[partIndex]._name.c_str(), image._width, image._height, listSource[partIndex]._width,
+                                             listSource[partIndex]._height );
                             return false;
                         }
                     }
@@ -206,7 +206,7 @@ namespace sw::editor
                 string error;
                 if ( OutfitAtlasLayout::pack( listSource, atlasSize, padding, outListRect, &error ) == false )
                 {
-                    SW_LOG_ERROR( "Outfit atlas layout: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasLayout", "Outfit atlas layout: %#", error.c_str() );
                     return false;
                 }
                 return true;
@@ -225,12 +225,12 @@ namespace sw::editor
                 string error;
                 if ( CharacterMeshUtil::mergeMeshes( listMergePart, &hooks, outMerged, &error ) == false )
                 {
-                    SW_LOG_ERROR( "Outfit atlas merge: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMerge", "Outfit atlas merge: %#", error.c_str() );
                     return false;
                 }
                 if ( hooks.getClampedUvCount() > 0 )
                 {
-                    SW_LOG_ERROR( "Outfit atlas: %# UVs lie outside 0..1 - tiled textures cannot be put into an atlas, nothing was written", hooks.getClampedUvCount() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasUVsLie", "Outfit atlas: %# UVs lie outside 0..1 - tiled textures cannot be put into an atlas, nothing was written", hooks.getClampedUvCount() );
                     return false;
                 }
                 return true;
@@ -252,7 +252,7 @@ namespace sw::editor
                         if ( OutfitAtlasComposer::blit( atlasSize, listRect[partIndex], padding, image._bytes, static_cast<uint32>( image._width ), static_cast<uint32>( image._height ),
                                                         outListAtlas[mapIndex], &error ) == false )
                         {
-                            SW_LOG_ERROR( "Outfit atlas compose: %#", error.c_str() );
+                            SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasCompose", "Outfit atlas compose: %#", error.c_str() );
                             return false;
                         }
                     }
@@ -269,7 +269,7 @@ namespace sw::editor
                     const std::optional<AbsolutePath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
                     if ( imageFile.has_value() == false || ImageFileWriter::writePNGRGBA8( imageFile->str(), listAtlas[mapIndex], atlasSize, atlasSize ) == false )
                     {
-                        SW_LOG_ERROR( "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
+                        SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasImageCould", "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
                         return false;
                     }
                     outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
@@ -277,7 +277,7 @@ namespace sw::editor
                 const std::optional<AbsolutePath> meshFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._outputMesh );
                 if ( meshFile.has_value() == false || MeshAssetFormat::saveToFile( *meshFile, makeAssetData( *merged._mesh ) ) == false )
                 {
-                    SW_LOG_ERROR( "Outfit atlas mesh '%#' could not be written", spec._outputMesh.c_str() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMeshCould", "Outfit atlas mesh '%#' could not be written", spec._outputMesh.c_str() );
                     return false;
                 }
                 return true;
@@ -348,7 +348,7 @@ namespace sw::editor
         const bool bBadSize   = spec._size <= 0 || spec._padding < 0;
         if ( bEmptySpec || bBadSize )
         {
-            SW_LOG_ERROR( "Outfit atlas spec is empty or has a bad size - nothing baked" );
+            SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasSpecEmpty", "Outfit atlas spec is empty or has a bad size - nothing baked" );
             return false;
         }
 
@@ -376,8 +376,8 @@ namespace sw::editor
         outResult._partCount   = static_cast<uint32>( spec._listPart.size() );
         outResult._vertexCount = merged._mesh->getVertexCount();
         outResult._meshPath    = spec._outputMesh;
-        SW_LOG_INFO( "Outfit atlas baked: %# parts, %# vertices, %# image(s) at %#x%# -> %#", outResult._partCount, outResult._vertexCount,
-                     static_cast<uint32>( outResult._listTexturePath.size() ), atlasSize, atlasSize, spec._outputMesh.c_str() );
+        SW_LOG_INFO_ID( "OutfitAtlasBaker.OutfitAtlasBakedParts", "Outfit atlas baked: %# parts, %# vertices, %# image(s) at %#x%# -> %#", outResult._partCount, outResult._vertexCount,
+                        static_cast<uint32>( outResult._listTexturePath.size() ), atlasSize, atlasSize, spec._outputMesh.c_str() );
         return true;
     }
 

@@ -168,8 +168,8 @@ namespace sw
                     cycleModules += name;
                 }
             }
-            SW_LOG_ERROR( "Dependency cycle in module graph (sorted %# / %#). Cyclic modules: %s",
-                          static_cast<uint32>( listOrder.size() ), static_cast<uint32>( uniqueSubgraph.size() ), cycleModules.c_str() );
+            SW_LOG_ERROR_ID( "LiveReloadManager.DependencyCycleModuleGraph", "Dependency cycle in module graph (sorted %# / %#). Cyclic modules: %s",
+                             static_cast<uint32>( listOrder.size() ), static_cast<uint32>( uniqueSubgraph.size() ), cycleModules.c_str() );
             return false;
         }
 

@@ -246,7 +246,7 @@ namespace sw
                 LedgerJournalEntry entry;
                 if ( decodeJournal( bytes, entry, &outOutcome._listHolderBalance ) == false )
                 {
-                    SW_LOG_ERROR( "Ledger journal '%#' is unreadable", request._journalKey.c_str() );
+                    SW_LOG_ERROR_ID( "Ledger.LedgerJournalUnreadable", "Ledger journal '%#' is unreadable", request._journalKey.c_str() );
                     return finish( outOutcome, LedgerResult::Unavailable );
                 }
                 if ( entry._contentHash != computeContentHash( request ) )
@@ -367,7 +367,7 @@ namespace sw
             int64 currentAmount = 0;
             if ( balanceRead == ServiceStoreResult::Ok && decodeBalanceRecord( balanceRecord._bytes, currentAmount ) == false )
             {
-                SW_LOG_ERROR( "Ledger balance '%#' is unreadable", balanceKey.c_str() );
+                SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", balanceKey.c_str() );
                 return LedgerInternal::finish( outOutcome, LedgerResult::Unavailable );
             }
             const int64 nextAmount = currentAmount + delta._delta;
@@ -480,7 +480,7 @@ namespace sw
                 balance._version       = record._version;
                 if ( decodeBalanceRecord( record._bytes, balance._amount ) == false )
                 {
-                    SW_LOG_ERROR( "Ledger balance '%#' is unreadable", record._key.c_str() );
+                    SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", record._key.c_str() );
                     return ServiceStoreResult::Unavailable;
                 }
             }
@@ -532,7 +532,7 @@ namespace sw
                 outListEntry.pop_back();
                 if ( found != ServiceStoreResult::NotFound )
                     return found;
-                SW_LOG_WARNING( "Ledger history '%#' points at a missing journal", record._key.c_str() );
+                SW_LOG_WARNING_ID( "Ledger.LedgerHistoryPointsMissing", "Ledger history '%#' points at a missing journal", record._key.c_str() );
             }
         }
         if ( static_cast<int32>( listRecord.size() ) == maxCount )

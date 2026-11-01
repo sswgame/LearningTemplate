@@ -140,7 +140,7 @@ namespace sw
                     string text;
                     if ( FileUtil::readTextFile( candidate, text ) == false )
                     {
-                        SW_LOG_ERROR( "Pack patch manifest could not be read: %#", candidate );
+                        SW_LOG_ERROR_ID( "PackManager.PackPatchManifestCould", "Pack patch manifest could not be read: %#", candidate );
                         return false;
                     }
                     PackPatchManifest manifest;
@@ -315,7 +315,7 @@ namespace sw
         shared_ptr<PackReader> pReader = sw::make_shared<PackReader>();
         if ( pReader->open( normalizedPath ) == false )
         {
-            SW_LOG_ERROR( "Failed to open and mount pack: %#", packFilePath );
+            SW_LOG_ERROR_ID( "PackManager.FailedOpenMountPack", "Failed to open and mount pack: %#", packFilePath );
             return false;
         }
         // 도메인은 팩이 적은 것이다(파일 이름 추측 아님). 도메인 팩은 도메인이, 패치 팩은 없어야 한다 - 항목 경로의 뜻이 다르다.
@@ -343,7 +343,7 @@ namespace sw
         {
             if ( _dlcValidator.isBound() && _dlcValidator( dlcAppID ) == false )
             {
-                SW_LOG_WARNING( "Access denied for DLC pack %# (DLC AppID %# not owned)", packFilePath, dlcAppID );
+                SW_LOG_WARNING_ID( "PackManager.AccessDeniedDLCPack", "Access denied for DLC pack %# (DLC AppID %# not owned)", packFilePath, dlcAppID );
                 return false;
             }
         }
@@ -373,7 +373,7 @@ namespace sw
             VectorUtil::stableSort( _listMountedPack, Descending<&MountedPack::_priority>{} );
         }
 
-        SW_LOG_INFO( "Mounted resource pack: %# (Priority: %#)", normalizedPath, effectivePriority );
+        SW_LOG_INFO_ID( "PackManager.MountedResourcePackPriority", "Mounted resource pack: %# (Priority: %#)", normalizedPath, effectivePriority );
         return true;
     }
 
@@ -397,7 +397,7 @@ namespace sw
             }
         }
         if ( bUnmounted )
-            SW_LOG_INFO( "Unmounted resource pack: %#", packFilePath ); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
+            SW_LOG_INFO_ID( "PackManager.UnmountedResourcePack", "Unmounted resource pack: %#", packFilePath ); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
         return bUnmounted;
     }
 
@@ -552,7 +552,7 @@ namespace sw
         if ( FileUtil::collectFiles( packsDirectory, "", listCandidateFile, false ) == false )
         {
             // 일부 팩만 마운트하면 빠진 팩의 파일이 아래 팩 판으로 조용히 바뀐다 — 아무것도 마운트하지 않는다.
-            SW_LOG_ERROR( "Pack folder '%#' could not be listed completely - no pack is mounted", packsDirectory );
+            SW_LOG_ERROR_ID( "PackManager.PackFolderCouldNot", "Pack folder '%#' could not be listed completely - no pack is mounted", packsDirectory );
             return false;
         }
 
@@ -596,7 +596,7 @@ namespace sw
     {
         if ( trust._pProvider == nullptr )
         {
-            SW_LOG_ERROR( "Pack patch trust has no crypto provider - a signature requirement that cannot be checked is not accepted" );
+            SW_LOG_ERROR_ID( "PackManager.PackPatchTrustNo", "Pack patch trust has no crypto provider - a signature requirement that cannot be checked is not accepted" );
             return false;
         }
         _patchTrust = trust;
@@ -614,7 +614,7 @@ namespace sw
             vector<uint8>            packBytes;
             if ( FileUtil::readFile( packPath, packBytes ) == false )
             {
-                SW_LOG_ERROR( "Pack patch %# -> %# pack %# could not be read to check its signature", manifest._fromBuild, manifest._toBuild, packPath );
+                SW_LOG_ERROR_ID( "PackManager.PackPatchPackCould", "Pack patch %# -> %# pack %# could not be read to check its signature", manifest._fromBuild, manifest._toBuild, packPath );
                 return false;
             }
             if ( PackPatchUtil::verifyManifest( *_patchTrust._pProvider, _patchTrust._publicKey, packBytes, manifest, packPath ) == false )
@@ -629,7 +629,7 @@ namespace sw
         string       recordText;
         if ( FileUtil::readTextFile( recordPath, recordText ) == false )
         {
-            SW_LOG_ERROR( "Pack patches exist in %# but the installed build is unknown - %# is missing", packsDirectory, PackPatchUtil::kBuildRecordFileName );
+            SW_LOG_ERROR_ID( "PackManager.PackPatchesExistBut", "Pack patches exist in %# but the installed build is unknown - %# is missing", packsDirectory, PackPatchUtil::kBuildRecordFileName );
             return false;
         }
         PackBuildRecord record;
@@ -637,8 +637,8 @@ namespace sw
             return false;
         if ( record._patching == PackPatching::None )
         {
-            SW_LOG_ERROR( "Pack patches exist in %# but %# says patching=\"none\" - a build that takes no patches must not ship patch lists", packsDirectory,
-                          PackPatchUtil::kBuildRecordFileName );
+            SW_LOG_ERROR_ID( "PackManager.PackPatchesExistBut2", "Pack patches exist in %# but %# says patching=\"none\" - a build that takes no patches must not ship patch lists", packsDirectory,
+                             PackPatchUtil::kBuildRecordFileName );
             return false;
         }
         vector<size_t> listOrder;
@@ -664,7 +664,7 @@ namespace sw
             const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
             if ( FileUtil::exists( packPath ) == false )
             {
-                SW_LOG_ERROR( "Pack patch %# -> %# names %# but the file is missing from %#", manifest._fromBuild, manifest._toBuild, manifest._packFileName, packsDirectory );
+                SW_LOG_ERROR_ID( "PackManager.PackPatchNamesBut", "Pack patch %# -> %# names %# but the file is missing from %#", manifest._fromBuild, manifest._toBuild, manifest._packFileName, packsDirectory );
                 return false;
             }
             priority += PackManagerInternal::kPriorityStep; // 뒤 패치가 앞 패치를 덮는다
@@ -673,7 +673,7 @@ namespace sw
             listMountedPath.push_back( packPath );
         }
         if ( listOrder.empty() == false )
-            SW_LOG_INFO( "Applied %# pack patch(es): build %# -> %#", listOrder.size(), record._build, latestBuild );
+            SW_LOG_INFO_ID( "PackManager.AppliedPackPatchEs", "Applied %# pack patch(es): build %# -> %#", listOrder.size(), record._build, latestBuild );
         return true;
     }
 

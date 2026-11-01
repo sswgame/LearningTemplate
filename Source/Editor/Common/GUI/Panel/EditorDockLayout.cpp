@@ -181,9 +181,9 @@ namespace sw::editor
         const utf8* const pINIText = ImGui::SaveIniSettingsToMemory( &iniSize );
         const bool        bSaved   = EditorLayoutStore::save( targetFolder, safeName, string_view( pINIText, iniSize ), visibility );
         if ( bSaved )
-            SW_LOG_INFO( "Saved layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
+            SW_LOG_INFO_ID( "EditorDockLayout.SavedLayout", "Saved layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
         else
-            SW_LOG_WARNING( "Could not save layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
+            SW_LOG_WARNING_ID( "EditorDockLayout.CouldNotSaveLayout", "Could not save layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
         return bSaved;
     }
 
@@ -195,7 +195,7 @@ namespace sw::editor
         const string sourceFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
         if ( EditorLayoutStore::load( sourceFolder, safeName, _pendingLayoutINI, _pendingLayoutVisibility ) == false )
         {
-            SW_LOG_WARNING( "Layout '%#' was not found in %#", safeName.c_str(), sourceFolder.c_str() );
+            SW_LOG_WARNING_ID( "EditorDockLayout.LayoutNotFound", "Layout '%#' was not found in %#", safeName.c_str(), sourceFolder.c_str() );
             return false;
         }
         _bLayoutPending = SW_TRUE;
@@ -242,13 +242,13 @@ namespace sw::editor
         const string windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kPanelVisibilityFileName );
         if ( imguiPath.empty() || windowsPath.empty() )
         {
-            SW_LOG_WARNING( "Failed to resolve Saved/Editor - layout will not persist." );
+            SW_LOG_WARNING_ID( "EditorDockLayout.FailedResolveSavedEditor", "Failed to resolve Saved/Editor - layout will not persist." );
             return;
         }
 
         _imguiINIPath        = imguiPath;
         _panelVisibilityPath = windowsPath;
-        SW_LOG_TRACE( "Layout persistence dir: %#", FileUtil::getDirectoryPart( imguiPath ).c_str() );
+        SW_LOG_TRACE_ID( "EditorDockLayout.LayoutPersistenceDir", "Layout persistence dir: %#", FileUtil::getDirectoryPart( imguiPath ).c_str() );
     }
 
     void EditorDockLayout::applyINIFilename() const
@@ -280,14 +280,14 @@ namespace sw::editor
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( true );
             }
-            SW_LOG_INFO( "gv_editorOpenPanel=all: opened every registered panel (windows.json restore skipped)." );
+            SW_LOG_INFO_ID( "EditorDockLayout.GvEditorOpenPanelAllOpened", "gv_editorOpenPanel=all: opened every registered panel (windows.json restore skipped)." );
             return;
         }
 
         // 에디터 자체 테스트는 사용자의 레이아웃과 무관한 상태에서 실행한다. 등록된 기본 가시성(코어는 열림, 도구는 닫힘)과 기본 도킹 배치를 쓴다.
         if ( gv_editorOpenPanel.empty() && isPanelOverrideActive() )
         {
-            SW_LOG_INFO( "Editor self test: default panel visibility and dock layout (saved layout is neither read nor written)." );
+            SW_LOG_INFO_ID( "EditorDockLayout.EditorSelfTestDefault", "Editor self test: default panel visibility and dock layout (saved layout is neither read nor written)." );
             return;
         }
 
@@ -304,9 +304,9 @@ namespace sw::editor
                 bFound = bFound || bMatch;
             }
             if ( bFound )
-                SW_LOG_INFO( "gv_editorOpenPanel: opened only the '%#' panel.", gv_editorOpenPanel.c_str() );
+                SW_LOG_INFO_ID( "EditorDockLayout.GvEditorOpenPanelOpenedOnly", "gv_editorOpenPanel: opened only the '%#' panel.", gv_editorOpenPanel.c_str() );
             else
-                SW_LOG_WARNING( "gv_editorOpenPanel: no panel named '%#' - everything starts closed.", gv_editorOpenPanel.c_str() );
+                SW_LOG_WARNING_ID( "EditorDockLayout.GvEditorOpenPanelNoPanel", "gv_editorOpenPanel: no panel named '%#' - everything starts closed.", gv_editorOpenPanel.c_str() );
             return;
         }
 
@@ -319,7 +319,7 @@ namespace sw::editor
         if ( visibilityResult != ConfigReadResult::Loaded )
         {
             if ( visibilityResult == ConfigReadResult::Invalid )
-                SW_LOG_WARNING( "Panel visibility file is not valid - panels keep their registered visibility: %#", _panelVisibilityPath.c_str() );
+                SW_LOG_WARNING_ID( "EditorDockLayout.PanelVisibilityFileNot", "Panel visibility file is not valid - panels keep their registered visibility: %#", _panelVisibilityPath.c_str() );
             return;
         }
 
@@ -333,7 +333,7 @@ namespace sw::editor
                 entry._pInstance->setOpen( bOpen );
         }
 
-        SW_LOG_TRACE( "Restored panel visibility from %#", _panelVisibilityPath.c_str() );
+        SW_LOG_TRACE_ID( "EditorDockLayout.RestoredPanelVisibility", "Restored panel visibility from %#", _panelVisibilityPath.c_str() );
     }
 
     void EditorDockLayout::save()
@@ -354,9 +354,9 @@ namespace sw::editor
             }
 
             if ( visibility.saveFile( _panelVisibilityPath ) )
-                SW_LOG_TRACE( "Saved panel visibility to %#", _panelVisibilityPath.c_str() );
+                SW_LOG_TRACE_ID( "EditorDockLayout.SavedPanelVisibility", "Saved panel visibility to %#", _panelVisibilityPath.c_str() );
             else
-                SW_LOG_WARNING( "Failed to write the panel visibility file: %#", _panelVisibilityPath.c_str() );
+                SW_LOG_WARNING_ID( "EditorDockLayout.FailedWritePanelVisibility", "Failed to write the panel visibility file: %#", _panelVisibilityPath.c_str() );
         }
 
         // 도킹 레이아웃도 같다. 스위치가 만든 배치(전부 떠 있는 창, 기본 배치)를 사용자의 imgui.ini 에 쓰지 않는다.
@@ -364,7 +364,7 @@ namespace sw::editor
         if ( bCanSaveImguiLayout )
         {
             ImGui::SaveIniSettingsToDisk( _imguiINIPath.c_str() );
-            SW_LOG_TRACE( "Saved ImGui layout to %#", _imguiINIPath.c_str() );
+            SW_LOG_TRACE_ID( "EditorDockLayout.SavedImGuiLayout", "Saved ImGui layout to %#", _imguiINIPath.c_str() );
         }
     }
 
@@ -395,7 +395,7 @@ namespace sw::editor
             const bool                 bEmpty =
                 ( pNode == nullptr ) || ( pNode->IsSplitNode() == false && pNode->Windows.Size == 0 );
             if ( bEmpty && _bResetDefault == SW_FALSE )
-                SW_LOG_INFO( "Dock tree for 'EditorMainDockSpace_v8' is missing or from an older layout version - building the default layout." );
+                SW_LOG_INFO_ID( "EditorDockLayout.DockTreeEditorMainDockSpaceV8", "Dock tree for 'EditorMainDockSpace_v8' is missing or from an older layout version - building the default layout." );
             if ( bEmpty || _bResetDefault == SW_TRUE )
                 applyDefaultDockLayout( dockspaceID );
             _bApplied      = SW_TRUE;

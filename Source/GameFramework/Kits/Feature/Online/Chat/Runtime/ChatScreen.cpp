@@ -130,7 +130,7 @@ namespace sw
             TextInputWidget* pInput = getTree().findWidget<TextInputWidget>( hashed_string( Internal::kInputName ) );
             if ( pInput == nullptr )
             {
-                SW_LOG_ERROR( "Chat document %# needs a '%#' text input", getDocumentPath().c_str(), Internal::kInputName );
+                SW_LOG_ERROR_ID( "ChatScreen.ChatDocumentNeedsText", "Chat document %# needs a '%#' text input", getDocumentPath().c_str(), Internal::kInputName );
                 return false;
             }
             const string text = pInput->getText(); // 모델이 입력 줄을 건드리는 길은 없지만 복사해 두고 비운다
@@ -161,7 +161,7 @@ namespace sw
         TextWidget*  pStatus = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
         if ( pLines == nullptr || pStatus == nullptr )
         {
-            SW_LOG_ERROR( "Chat document %# needs a '%#' panel and a '%#' text", getDocumentPath().c_str(), Internal::kLinesName, Internal::kStatusName );
+            SW_LOG_ERROR_ID( "ChatScreen.ChatDocumentNeedsPanel", "Chat document %# needs a '%#' panel and a '%#' text", getDocumentPath().c_str(), Internal::kLinesName, Internal::kStatusName );
             _bBuilt = true; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }

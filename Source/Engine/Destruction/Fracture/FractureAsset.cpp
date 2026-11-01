@@ -276,7 +276,7 @@ namespace sw
         const bool bMissingFractureMagic = pData == nullptr || size < 8 || Memory::compare( pData, FractureAssetInternal::kArrMagic, 4 ) != 0;
         if ( bMissingFractureMagic )
         {
-            SW_LOG_ERROR( "Not a fracture asset (bad magic)" );
+            SW_LOG_ERROR_ID( "FractureAsset.NotFractureAssetBad", "Not a fracture asset (bad magic)" );
             return false;
         }
         ByteReader reader{ pData, size };
@@ -284,7 +284,7 @@ namespace sw
         const uint32 version = reader.readUint32();
         if ( version != kVersion )
         {
-            SW_LOG_ERROR( "Fracture asset version %# is not %# - re-import the model", version, kVersion );
+            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetVersionNot", "Fracture asset version %# is not %# - re-import the model", version, kVersion );
             return false;
         }
         const uint32 leafCount   = reader.readUint32();
@@ -301,7 +301,7 @@ namespace sw
                            FractureAssetInternal::canHold( reader, vertexCount, FractureAssetInternal::kStoredVertexBytes ) && FractureAssetInternal::canHold( reader, hullCount, 12 );
         if ( bFits == false )
         {
-            SW_LOG_ERROR( "Fracture asset is truncated" );
+            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetTruncated", "Fracture asset is truncated" );
             clear();
             return false;
         }
@@ -313,7 +313,7 @@ namespace sw
         const bool bMalformedFractureAsset = reader.hasOverflowed() || reader.getRemainingByteCount() != 0 || isValid( &error ) == false;
         if ( bMalformedFractureAsset )
         {
-            SW_LOG_ERROR( "Fracture asset is malformed: %#", reader.hasOverflowed() || reader.getRemainingByteCount() != 0 ? "length mismatch" : error.c_str() );
+            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetMalformed", "Fracture asset is malformed: %#", reader.hasOverflowed() || reader.getRemainingByteCount() != 0 ? "length mismatch" : error.c_str() );
             clear();
             return false;
         }

@@ -139,7 +139,7 @@ namespace sw
                 {
                     static atomic<bool> s_bReported{ false };
                     if ( s_bReported.exchange( true ) == false )
-                        SW_LOG_ERROR( "The engine PassCB layout is %# bytes but a pass constant slot holds %# - raise PassConstantRing::kSlotBytes", alignedSize, PassConstantRing::kSlotBytes );
+                        SW_LOG_ERROR_ID( "ShaderParameterBinder.EnginePassCBLayoutBytes", "The engine PassCB layout is %# bytes but a pass constant slot holds %# - raise PassConstantRing::kSlotBytes", alignedSize, PassConstantRing::kSlotBytes );
                     return;
                 }
                 // 버퍼는 슬롯 크기(위에서 막았다)를 넘지 않는 스택 배열이다 — 드로우마다 힙을 잡지 않고, 병렬 패스 기록의 스레드마다 따로이며,

@@ -81,7 +81,7 @@ namespace sw
                     const bool         bHasLoad    = meshIndex < listLoad.size() && listLoad[meshIndex].isValid();
                     shared_ptr<Mesh>   mesh        = bHasLoad ? listLoad[meshIndex].get() : MeshUtil::acquirePrimitive( foliageMesh._meshID );
                     if ( mesh == nullptr )
-                        SW_LOG_WARNING( "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
+                        SW_LOG_WARNING_ID( "FoliageComponent.FoliageLayerMeshCould", "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
                     outListRadius.push_back( mesh != nullptr ? computeOriginRadius( *mesh ) : 0.0f );
                     outListMesh.push_back( std::move( mesh ) );
                 }
@@ -322,8 +322,8 @@ namespace sw
         {
             applyLayerInstances( layerIndex, listLayerInstance[layerIndex] );
         }
-        SW_LOG_INFO( "Foliage: refreshed %# of %# cell batches after a terrain edit (%# instances, %# us)", _lastRebuiltBatchCount, static_cast<uint32>( _listCell.size() ),
-                     _instanceCount, stopwatch.getElapsedMicroseconds() );
+        SW_LOG_INFO_ID( "FoliageComponent.FoliageRefreshedCellBatches", "Foliage: refreshed %# of %# cell batches after a terrain edit (%# instances, %# us)", _lastRebuiltBatchCount, static_cast<uint32>( _listCell.size() ),
+                        _instanceCount, stopwatch.getElapsedMicroseconds() );
     }
 
     PlacementRegion FoliageComponent::computeRegion() const
@@ -471,8 +471,8 @@ namespace sw
         {
             applyLayerInstances( layerIndex, listLayerInstance[layerIndex] );
         }
-        SW_LOG_INFO( "Foliage: %# instances in %# cell batches across %# layers (%# us, %#)", _instanceCount, static_cast<uint32>( _listCell.size() ),
-                     static_cast<uint32>( _listLayer.size() ), stopwatch.getElapsedMicroseconds(), _bBuiltOnTerrain == SW_TRUE ? "on terrain" : "flat" );
+        SW_LOG_INFO_ID( "FoliageComponent.FoliageInstancesCellBatches", "Foliage: %# instances in %# cell batches across %# layers (%# us, %#)", _instanceCount, static_cast<uint32>( _listCell.size() ),
+                        static_cast<uint32>( _listLayer.size() ), stopwatch.getElapsedMicroseconds(), _bBuiltOnTerrain == SW_TRUE ? "on terrain" : "flat" );
     }
 
     void FoliageComponent::computeAllLayerInstances( const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<vector<PlacementInstance>>& outListLayerInstance )

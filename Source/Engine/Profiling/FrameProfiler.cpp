@@ -108,7 +108,7 @@ namespace sw
             // 측정이 실행을 막으면 안 된다. 한 번만 알리고 조용히 무시한다. 여러 스레드가 함께 넘칠 수 있어 원자로 한 번을 고른다.
             static atomic<bool> s_bWarned{ false };
             if ( s_bWarned.exchange( true, std::memory_order_relaxed ) == false )
-                SW_LOG_WARNING( "FrameProfiler: more than %# scopes - ignoring '%#' and later ones (raise kMaxScope).", kMaxScope, pName );
+                SW_LOG_WARNING_ID( "FrameProfiler.FrameProfilerMoreScopesIgnoring", "FrameProfiler: more than %# scopes - ignoring '%#' and later ones (raise kMaxScope).", kMaxScope, pName );
             return kInvalidSlot;
         }
 
@@ -275,15 +275,15 @@ namespace sw
         const uint64 frames = _frameCount.load( std::memory_order_relaxed );
         if ( frames == 0 )
         {
-            SW_LOG_INFO( "[Profile] %# - no frames were collected.", pTitle != nullptr ? pTitle : "" );
+            SW_LOG_INFO_ID( "FrameProfiler.NoFramesCollected", "[Profile] %# - no frames were collected.", pTitle != nullptr ? pTitle : "" );
             return;
         }
 
         fixed_string<constant::buffer::kMax64> nameColumn;
         padRight( nameColumn, "scope", 32 );
 
-        SW_LOG_INFO( "[Profile] ===== %# — %# frames =====", pTitle != nullptr ? pTitle : "", frames );
-        SW_LOG_INFO( "[Profile] %#  avg_us   p50_us   p99_us   min_us   max_us   per_frame", nameColumn.c_str() );
+        SW_LOG_INFO_ID( "FrameProfiler.Frames", "[Profile] ===== %# — %# frames =====", pTitle != nullptr ? pTitle : "", frames );
+        SW_LOG_INFO_ID( "FrameProfiler.AvgUsP50Us", "[Profile] %#  avg_us   p50_us   p99_us   min_us   max_us   per_frame", nameColumn.c_str() );
 
         const uint32 count = _scopeCount.load( std::memory_order_acquire );
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
@@ -299,10 +299,10 @@ namespace sw
             const uint64 avgUs       = toMicros( scope._totalNanos / scope._sampledFrames );
             const uint64 perFrameX10 = ( scope._totalCalls * 10 ) / scope._sampledFrames;
 
-            SW_LOG_INFO( "[Profile] %#  %#   %#   %#   %#   %#   %#.%#",
-                         nameColumn.c_str(), avgUs, toMicros( getPercentileNanos( index, 50 ) ),
-                         toMicros( getPercentileNanos( index, 99 ) ), toMicros( scope._minNanos ),
-                         toMicros( scope._maxNanos ), perFrameX10 / 10, perFrameX10 % 10 );
+            SW_LOG_INFO_ID( "FrameProfiler.Message", "[Profile] %#  %#   %#   %#   %#   %#   %#.%#",
+                            nameColumn.c_str(), avgUs, toMicros( getPercentileNanos( index, 50 ) ),
+                            toMicros( getPercentileNanos( index, 99 ) ), toMicros( scope._minNanos ),
+                            toMicros( scope._maxNanos ), perFrameX10 / 10, perFrameX10 % 10 );
         }
 #endif
     }

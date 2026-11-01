@@ -43,7 +43,7 @@ namespace sw
         for ( uint32 index = 0; index < registrations.getCount(); ++index )
         {
             const AutomationStageResetRegistration* pRegistration = registrations.getAt( index );
-            SW_LOG_INFO( "[Scenario] stage reset: %#", pRegistration->_pName );
+            SW_LOG_INFO_ID( "AutomationStageReset.StageReset", "[Scenario] stage reset: %#", pRegistration->_pName );
             pRegistration->_pFunction();
         }
         return registrations.getCount();

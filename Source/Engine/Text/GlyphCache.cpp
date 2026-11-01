@@ -85,7 +85,7 @@ namespace sw
             }
             if ( bAllocated == false )
             {
-                SW_LOG_WARNING( "[Text] Glyph atlas is full with glyphs used this frame - glyph %# of face %# is not drawn this frame", glyphIndex, face );
+                SW_LOG_WARNING_ID( "GlyphCache.GlyphAtlasFullGlyphs", "[Text] Glyph atlas is full with glyphs used this frame - glyph %# of face %# is not drawn this frame", glyphIndex, face );
                 return nullptr;
             }
             _atlas.write( glyph._rect, _scratchBitmap._bytes.data() );

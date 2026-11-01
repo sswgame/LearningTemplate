@@ -229,13 +229,13 @@ namespace sw
         const uint32 settingIndex = findIndex( settingID );
         if ( settingIndex == constant::invalid_index::kUint32 )
         {
-            SW_LOG_ERROR( "game default for an unknown setting '%#'", settingID.c_str() );
+            SW_LOG_ERROR_ID( "UserSettings.GameDefaultUnknownSetting", "game default for an unknown setting '%#'", settingID.c_str() );
             return false;
         }
         string normalized;
         if ( UserSettingsSchema::normalizeValue( _schema.getSettings()[settingIndex], value, normalized ) != UserSettingValueResult::Accepted )
         {
-            SW_LOG_ERROR( "game default '%#' for '%#' is not a valid value", value, settingID.c_str() );
+            SW_LOG_ERROR_ID( "UserSettings.GameDefaultNotValid", "game default '%#' for '%#' is not a valid value", value, settingID.c_str() );
             return false;
         }
         SettingState& state = _listState[settingIndex];
@@ -332,7 +332,7 @@ namespace sw
             return false;
         if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
         {
-            SW_LOG_WARNING( "Cannot create the folder for user settings '%#'", filePath );
+            SW_LOG_WARNING_ID( "UserSettings.CannotCreateFolderUser", "Cannot create the folder for user settings '%#'", filePath );
             return false;
         }
         // 교체 재시도 sleep 이 이 안에 있다(`FileUtil::writeAtomically`, Core 라 프로파일러를 못 쓴다). 서비스가 묶이기 전 호출은 계측 없이 쓴다.
@@ -345,7 +345,7 @@ namespace sw
         }();
         if ( bWritten == false )
         {
-            SW_LOG_WARNING( "Failed to write user settings '%#'", filePath );
+            SW_LOG_WARNING_ID( "UserSettings.FailedWriteUserSettings", "Failed to write user settings '%#'", filePath );
             return false;
         }
         return true;
@@ -384,8 +384,8 @@ namespace sw
             return false;
         _listState[groupIndex]._committedValue = presetName.c_str();
         applyScalabilityPreset( group, presetName, true );
-        SW_LOG_INFO( "Graphics preset '%#' picked for %# logical cores, %# MB memory and %# MB video memory (%#)", presetName.c_str(), probe._logicalCoreCount,
-                     probe._systemMemoryMb, probe._gpuMemoryMb, probe._gpuName.empty() ? "unknown GPU" : probe._gpuName.c_str() );
+        SW_LOG_INFO_ID( "UserSettings.GraphicsPresetPickedLogical", "Graphics preset '%#' picked for %# logical cores, %# MB memory and %# MB video memory (%#)", presetName.c_str(), probe._logicalCoreCount,
+                        probe._systemMemoryMb, probe._gpuMemoryMb, probe._gpuName.empty() ? "unknown GPU" : probe._gpuName.c_str() );
         return true;
     }
 
@@ -722,7 +722,7 @@ namespace sw
             state._bRollback = false;
             (void)applyToTarget( settingIndex, state._committedValue, false ); // 확인 전 값으로 되돌린다. 대상이 없는 설정은 건너뛴다
         }
-        SW_LOG_INFO( "Display change was not confirmed - reverted" );
+        SW_LOG_INFO_ID( "UserSettings.DisplayChangeNotConfirmed", "Display change was not confirmed - reverted" );
         (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이며, 쓰기 실패는 saveUserFile 이 경고로 남긴다
         broadcast( {}, UserSettingEventKind::ConfirmTimedOut );
     }
@@ -1088,14 +1088,14 @@ namespace sw
         if ( loadSchema( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema.get() } ) && packSettings._userSettingsSchema.isSet() )
         {
             if ( loadSchema( AssetID{ packSettings._userSettingsSchema.get() } ) == false )
-                SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", packSettings._userSettingsSchema.c_str() );
+                SW_LOG_ERROR_ID( "UserSettings.GameUserSettingsSchema", "Game user settings schema '%#' is not loaded", packSettings._userSettingsSchema.c_str() );
         }
         const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         for ( DataPath EngineDefaultAssets::* pSchemaField : _listStartupSchemaField )
         {
             const DataPath& schemaPath = defaultAssets.*pSchemaField;
             if ( loadSchema( AssetID{ schemaPath.get() } ) == false )
-                SW_LOG_ERROR( "User settings schema '%#' is not loaded", schemaPath.c_str() );
+                SW_LOG_ERROR_ID( "UserSettings.UserSettingsSchemaNot", "User settings schema '%#' is not loaded", schemaPath.c_str() );
         }
         for ( const auto& [settingID, value] : packSettings._mapUserSettingDefault )
         {

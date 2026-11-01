@@ -18,7 +18,7 @@ namespace sw
         void* pWindowHandle{ nullptr };
         if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
         {
-            SW_LOG_ERROR( "The D3D12 swap chain needs a Win32 surface" );
+            SW_LOG_ERROR_ID( "D3D12.D3D12SwapChainNeeds", "The D3D12 swap chain needs a Win32 surface" );
             return false;
         }
         _pHWnd       = static_cast<HWND>( pWindowHandle );
@@ -89,7 +89,7 @@ namespace sw
             const HRESULT getHr = _swapChain->GetBuffer( bufferIndex, IID_PPV_ARGS( _listBackBuffer[bufferIndex].GetAddressOf() ) );
             if ( FAILED( getHr ) )
             {
-                SW_LOG_ERROR( "GetBuffer(%#) failed hr=0x%#", bufferIndex, static_cast<uint32>( getHr ) );
+                SW_LOG_ERROR_ID( "D3D12.GetBufferFailedHrX", "GetBuffer(%#) failed hr=0x%#", bufferIndex, static_cast<uint32>( getHr ) );
                 releaseBackBuffers();
                 return;
             }
@@ -123,7 +123,7 @@ namespace sw
         const HRESULT resizeHr = _swapChain->ResizeBuffers( _bufferCount, width, height, DXGI_FORMAT_UNKNOWN, _swapChainFlags );
         if ( FAILED( resizeHr ) )
         {
-            SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
+            SW_LOG_ERROR_ID( "D3D12.ResizeBuffersFailedHrX", "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
             return false;
         }
         return true;

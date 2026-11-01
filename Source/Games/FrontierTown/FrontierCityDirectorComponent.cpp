@@ -84,7 +84,7 @@ namespace sw
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_ERROR( "[Frontier] the city cannot start - no SessionStateComponent in front of it on this object" );
+            SW_LOG_ERROR_ID( "FrontierCity.CityCannotStartNo", "[Frontier] the city cannot start - no SessionStateComponent in front of it on this object" );
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
@@ -98,7 +98,7 @@ namespace sw
         }
         if ( initializeCity( _city, *pState ) == false )
         {
-            SW_LOG_ERROR( "[Frontier] the city cannot start - the city catalog is not loaded" );
+            SW_LOG_ERROR_ID( "FrontierCity.CityCannotStartCity", "[Frontier] the city cannot start - the city catalog is not loaded" );
             return false;
         }
         _bLaidOut    = SW_FALSE;
@@ -132,7 +132,7 @@ namespace sw
 
     void FrontierCityDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[Frontier] the town is open - hold Space to fast-forward; the city and the skirmish share one land, one wallet and one clock" );
+        SW_LOG_INFO_ID( "FrontierCity.TownOpenHoldSpace", "[Frontier] the town is open - hold Space to fast-forward; the city and the skirmish share one land, one wallet and one clock" );
     }
 
     void FrontierCityDirectorComponent::layOutTown()
@@ -144,7 +144,7 @@ namespace sw
                              static_cast<int32>( result ) );
         const int32 roadCount = _city.placeRoadLine( int2{ _roadFromX, _roadFromY }, int2{ _roadToX, _roadToY } );
         if ( roadCount == 0 )
-            SW_LOG_ERROR( "[Frontier] the road (%#, %#) -> (%#, %#) laid no tile - check the scene layout", _roadFromX, _roadFromY, _roadToX, _roadToY );
+            SW_LOG_ERROR_ID( "FrontierCity.RoadLaidNoTile", "[Frontier] the road (%#, %#) -> (%#, %#) laid no tile - check the scene layout", _roadFromX, _roadFromY, _roadToX, _roadToY );
         _bViewsDirty = SW_TRUE;
     }
 

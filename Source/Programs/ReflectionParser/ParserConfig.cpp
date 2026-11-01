@@ -42,7 +42,7 @@ namespace sw
                 const bool bPresent = FileUtil::isRegularFile( path );
                 if ( bPresent == false && bRequired )
                 {
-                    SW_LOG_ERROR( "Parser setting file '%#' is missing - it is committed and required", path );
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileMissing", "Parser setting file '%#' is missing - it is committed and required", path );
                     return false;
                 }
                 if ( bPresent == false )
@@ -51,7 +51,7 @@ namespace sw
                 string text;
                 if ( FileUtil::readTextFile( path, text ) == false )
                 {
-                    SW_LOG_ERROR( "Parser setting file '%#' exists but cannot be read", path );
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileExists", "Parser setting file '%#' exists but cannot be read", path );
                     return false;
                 }
                 inoutListLoadedFile.push_back( path );
@@ -63,7 +63,7 @@ namespace sw
                 }
                 catch ( const nlohmann::json::parse_error& exception )
                 {
-                    SW_LOG_ERROR( "Parser setting file '%#' is not valid JSON: %#", path, exception.what() );
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileNot", "Parser setting file '%#' is not valid JSON: %#", path, exception.what() );
                     return false;
                 }
                 return true;
@@ -194,15 +194,15 @@ namespace sw
                     const auto defaultsIt = defaultsDoc.is_object() ? defaultsDoc.find( section ) : defaultsDoc.end();
                     if ( defaultsIt == defaultsDoc.end() )
                     {
-                        SW_LOG_WARNING( "%#: '%#' is not a parser setting (an old name?) and is ignored - remove it", localPath, section.c_str() );
+                        SW_LOG_WARNING_ID( "ParserConfig.NotParserSettingOld", "%#: '%#' is not a parser setting (an old name?) and is ignored - remove it", localPath, section.c_str() );
                         continue;
                     }
                     if ( sectionIt.value().is_object() == false || defaultsIt->is_object() == false )
                     {
                         if ( *defaultsIt != sectionIt.value() )
-                            SW_LOG_WARNING( "%#: '%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra and "
-                                            "parser_args.force_include are local settings",
-                                            localPath, section.c_str() );
+                            SW_LOG_WARNING_ID( "ParserConfig.DiffersParserConfigDefaults", "%#: '%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra and "
+                                                                                           "parser_args.force_include are local settings",
+                                               localPath, section.c_str() );
                         continue;
                     }
                     for ( auto keyIt = sectionIt.value().begin(); keyIt != sectionIt.value().end(); ++keyIt )
@@ -218,9 +218,9 @@ namespace sw
                         const auto defaultIt = defaultsIt->find( key );
                         if ( defaultIt == defaultsIt->end() || *defaultIt != keyIt.value() )
                         {
-                            SW_LOG_WARNING( "%#: '%#.%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra "
-                                            "and parser_args.force_include are local settings (remove it, or rerun Scripts/setup/Environment.py)",
-                                            localPath, section.c_str(), key.c_str() );
+                            SW_LOG_WARNING_ID( "ParserConfig.DiffersParserConfigDefaults2", "%#: '%#.%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra "
+                                                                                            "and parser_args.force_include are local settings (remove it, or rerun Scripts/setup/Environment.py)",
+                                               localPath, section.c_str(), key.c_str() );
                         }
                     }
                 }
@@ -253,7 +253,7 @@ namespace sw
                 {
                     if ( pValue->empty() == false )
                         continue;
-                    SW_LOG_ERROR( "%#: '%#' is required", defaultsPath, pKey );
+                    SW_LOG_ERROR_ID( "ParserConfig.Required", "%#: '%#' is required", defaultsPath, pKey );
                     bComplete = false;
                 }
                 const pair<const vector<string>*, const utf8*> arrRequiredList[] = {
@@ -264,12 +264,12 @@ namespace sw
                 {
                     if ( pList->empty() == false )
                         continue;
-                    SW_LOG_ERROR( "%#: '%#' is required (a non-empty list)", defaultsPath, pKey );
+                    SW_LOG_ERROR_ID( "ParserConfig.RequiredNonEmptyList", "%#: '%#' is required (a non-empty list)", defaultsPath, pKey );
                     bComplete = false;
                 }
                 if ( config._sourceLookbackBytes == 0 )
                 {
-                    SW_LOG_ERROR( "%#: 'tuning.source_lookback_bytes' is required (a positive number)", defaultsPath );
+                    SW_LOG_ERROR_ID( "ParserConfig.TuningSourceLookbackBytes", "%#: 'tuning.source_lookback_bytes' is required (a positive number)", defaultsPath );
                     bComplete = false;
                 }
                 return bComplete;
@@ -395,7 +395,7 @@ namespace sw
 
         if ( AbsolutePath::tryMake( defaultsPath ).has_value() == false )
         {
-            SW_LOG_ERROR( "%# must be an absolute path to %# (got '%#')", cli::kConfig, parserpath::kParserConfigDefaults, defaultsPath );
+            SW_LOG_ERROR_ID( "ParserConfig.MustAbsolutePathGot", "%# must be an absolute path to %# (got '%#')", cli::kConfig, parserpath::kParserConfigDefaults, defaultsPath );
             return false;
         }
         const string   localPath = ParserConfigInternal::makeSiblingPath( defaultsPath, parserpath::kParserConfig );
@@ -456,7 +456,7 @@ namespace sw
 
         if ( _listBaseArg.empty() )
         {
-            SW_LOG_ERROR( "No parser_args available (config empty)." );
+            SW_LOG_ERROR_ID( "ParserConfig.NoParserArgsAvailable", "No parser_args available (config empty)." );
             return false;
         }
 
@@ -502,7 +502,7 @@ namespace sw
             {
                 vector<string> listClangSubFolder;
                 if ( FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false ) == false )
-                    SW_LOG_ERROR( "clang resource folders under '%#' could not all be listed - the built-in headers may be left out", llvmClangDir );
+                    SW_LOG_ERROR_ID( "ParserConfig.ClangResourceFoldersUnder", "clang resource folders under '%#' could not all be listed - the built-in headers may be left out", llvmClangDir );
                 for ( const string& folder : listClangSubFolder )
                 {
                     const string resourceDir = FileUtil::normalizeSeparators( folder );
@@ -544,7 +544,7 @@ namespace sw
 #endif
 
         _bLoaded = SW_TRUE;
-        SW_LOG_TRACE( "Loaded clang config (%# base args).", static_cast<uint32>( _listBaseArg.size() ) );
+        SW_LOG_TRACE_ID( "ParserConfig.LoadedClangConfigBase", "Loaded clang config (%# base args).", static_cast<uint32>( _listBaseArg.size() ) );
         return true;
     }
 

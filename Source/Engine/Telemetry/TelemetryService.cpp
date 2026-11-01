@@ -299,11 +299,11 @@ namespace sw
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
         if ( loadSchema( AssetID{ engineSchema } ) == false )
-            SW_LOG_ERROR( "Engine telemetry schema '%#' is not loaded", engineSchema.c_str() );
+            SW_LOG_ERROR_ID( "Telemetry.EngineTelemetrySchemaNot", "Engine telemetry schema '%#' is not loaded", engineSchema.c_str() );
         if ( packSettings._telemetrySchema.isSet() )
         {
             if ( loadSchema( AssetID{ packSettings._telemetrySchema.get() } ) == false )
-                SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", packSettings._telemetrySchema.c_str() );
+                SW_LOG_ERROR_ID( "Telemetry.GameTelemetrySchemaNot", "Game telemetry schema '%#' is not loaded", packSettings._telemetrySchema.c_str() );
         }
         initialize( folder, context );
         // 동의는 플레이어 옵션(기본 꺼짐)이다. 꺼져 있으면 지난 실행이 남긴 스풀까지 지운다.
@@ -358,12 +358,12 @@ namespace sw
         {
             purgeLocked();
             if ( bWasEnabled )
-                SW_LOG_INFO( "Telemetry consent withdrawn - pending events and spool files deleted" );
+                SW_LOG_INFO_ID( "Telemetry.TelemetryConsentWithdrawnPending", "Telemetry consent withdrawn - pending events and spool files deleted" );
             return;
         }
         if ( bWasEnabled )
             return;
-        SW_LOG_INFO( "Telemetry consent given - session %# (%#)", _context->_sessionID.c_str(), _bSessionSampled == SW_TRUE ? "sampled in" : "sampled out" );
+        SW_LOG_INFO_ID( "Telemetry.TelemetryConsentGivenSession", "Telemetry consent given - session %# (%#)", _context->_sessionID.c_str(), _bSessionSampled == SW_TRUE ? "sampled in" : "sampled out" );
         if ( _schema.findEvent( hashed_string( kSessionStartEvent ) ) != nullptr )
             (void)recordLocked( TelemetryEvent{ hashed_string( kSessionStartEvent ) } );
     }
@@ -431,8 +431,8 @@ namespace sw
             if ( bMatches )
                 continue;
             ++_stats._rejected;
-            SW_LOG_WARNING( "Telemetry event '%#' field '%#' is unknown or not a %# - dropped", event.getID().c_str(), value._name.c_str(),
-                            pField != nullptr ? toString( pField->_type ) : "declared field" );
+            SW_LOG_WARNING_ID( "Telemetry.TelemetryEventFieldUnknown", "Telemetry event '%#' field '%#' is unknown or not a %# - dropped", event.getID().c_str(), value._name.c_str(),
+                               pField != nullptr ? toString( pField->_type ) : "declared field" );
             return TelemetryRecordResult::InvalidField;
         }
         for ( const TelemetryFieldDef& field : pDef->_listField )
@@ -639,7 +639,7 @@ namespace sw
             return;
         if ( _listPendingLine.empty() == false && FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )
         {
-            SW_LOG_WARNING( "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( _listPendingLine.size() ) );
+            SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFolderCannot", "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( _listPendingLine.size() ) );
             _listPendingLine.clear();
             return;
         }
@@ -676,7 +676,7 @@ namespace sw
             if ( FileUtil::appendTextFile( _currentFile, chunk ) )
                 _currentFileBytes += chunk.size();
             else
-                SW_LOG_WARNING( "Telemetry spool file '%#' cannot be written", _currentFile.c_str() );
+                SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFileCannot", "Telemetry spool file '%#' cannot be written", _currentFile.c_str() );
         }
         _sequence += static_cast<uint32>( _listPendingLine.size() );
         _listPendingLine.clear();

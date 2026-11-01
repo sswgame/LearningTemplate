@@ -24,7 +24,7 @@ namespace sw
     {
         if ( width < 1 || height < 1 )
         {
-            SW_LOG_ERROR( "GridInventory: refused %# x %# cells - both must be at least 1", width, height );
+            SW_LOG_ERROR_ID( "GridInventory.GridInventoryRefusedXCells", "GridInventory: refused %# x %# cells - both must be at least 1", width, height );
             return false;
         }
         _shapeLookup = shapeLookup;

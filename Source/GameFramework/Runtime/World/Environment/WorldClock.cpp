@@ -36,7 +36,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "WorldClock: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "WorldClock.WorldClockRefusedSettings", "WorldClock: refused settings - %#", rangeError.c_str() );
             return false;
         }
         _settings = settings;
@@ -54,7 +54,7 @@ namespace sw
     {
         if ( timeScale < 0.0f )
         {
-            SW_LOG_ERROR( "WorldClock: refused time scale %# - it must not be negative", timeScale );
+            SW_LOG_ERROR_ID( "WorldClock.WorldClockRefusedTimeScale", "WorldClock: refused time scale %# - it must not be negative", timeScale );
             return false;
         }
         _timeScale = timeScale;
@@ -66,7 +66,7 @@ namespace sw
         const bool bInvalid = day < 0 || hour < 0.0f || hour >= 24.0f;
         if ( bInvalid )
         {
-            SW_LOG_ERROR( "WorldClock: refused time day %# hour %# - day must not be negative and hour must be within [0, 24)", day, hour );
+            SW_LOG_ERROR_ID( "WorldClock.WorldClockRefusedTimeDay", "WorldClock: refused time day %# hour %# - day must not be negative and hour must be within [0, 24)", day, hour );
             return false;
         }
         _day         = day;

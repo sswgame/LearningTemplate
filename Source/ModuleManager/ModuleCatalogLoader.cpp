@@ -30,12 +30,12 @@ namespace sw
                 string error;
                 if ( FileUtil::readTextFile( manifestPath, text ) == false )
                 {
-                    SW_LOG_ERROR( "Module catalog: cannot read %#", manifestPath.c_str() );
+                    SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotRead", "Module catalog: cannot read %#", manifestPath.c_str() );
                     return false;
                 }
                 if ( ModuleCatalog::parseManifest( text, manifestPath, outManifest, error ) == false )
                 {
-                    SW_LOG_ERROR( "Module catalog: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalog", "Module catalog: %#", error.c_str() );
                     return false;
                 }
                 return true;
@@ -49,7 +49,7 @@ namespace sw
                     return true;
                 if ( FileUtil::collectFiles( directoryPath, ".json", listFile, bRecursive ) == false )
                 {
-                    SW_LOG_ERROR( "Module catalog: cannot list %#", directoryPath.c_str() );
+                    SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotList", "Module catalog: cannot list %#", directoryPath.c_str() );
                     return false;
                 }
                 VectorUtil::sort( listFile );
@@ -184,7 +184,7 @@ namespace sw
         vector<ModuleManifest> listManifest;
         if ( FileUtil::isDirectory( catalogDirectory ) == false )
         {
-            SW_LOG_ERROR( "Module catalog: Module catalog folder does not exist: %#", catalogDirectory.c_str() );
+            SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogModuleCatalog", "Module catalog: Module catalog folder does not exist: %#", catalogDirectory.c_str() );
             return false;
         }
         if ( ModuleCatalogLoaderInternal::readManifestFolder( catalogDirectory, false, listManifest ) == false )
@@ -213,7 +213,7 @@ namespace sw
             }
             if ( bFound == false )
             {
-                SW_LOG_ERROR( "Module catalog: cannot read %#", selectedPath.c_str() );
+                SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotRead", "Module catalog: cannot read %#", selectedPath.c_str() );
                 return false;
             }
         }
@@ -225,7 +225,7 @@ namespace sw
         {
             if ( outCatalog.addManifest( std::move( manifest ), moduleError ) == false )
             {
-                SW_LOG_ERROR( "Module catalog: %#", moduleError.c_str() );
+                SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalog", "Module catalog: %#", moduleError.c_str() );
                 return false;
             }
         }
@@ -235,7 +235,7 @@ namespace sw
         resolveContext._targetMask    = targetMask;
         if ( outCatalog.resolve( resolveContext, outResolution, moduleError ) == false )
         {
-            SW_LOG_ERROR( "Module manifests: %#", moduleError.c_str() );
+            SW_LOG_ERROR_ID( "ModuleCatalog.ModuleManifests", "Module manifests: %#", moduleError.c_str() );
             return false;
         }
         for ( ModuleInactiveEntry& removed : listRemoved )
@@ -244,10 +244,10 @@ namespace sw
         }
         VectorUtil::sort( outResolution._listInactive, []( const ModuleInactiveEntry& lhs, const ModuleInactiveEntry& rhs )
         { return lhs._name < rhs._name; } );
-        SW_LOG_INFO( "Modules: %# active, %# off", outResolution._listLoadOrder.size(), outResolution._listInactive.size() );
+        SW_LOG_INFO_ID( "ModuleCatalog.ModulesActiveOff", "Modules: %# active, %# off", outResolution._listLoadOrder.size(), outResolution._listInactive.size() );
         for ( [[maybe_unused]] const ModuleInactiveEntry& inactive : outResolution._listInactive ) // Shipping 은 로그가 빠진다
         {
-            SW_LOG_INFO( "Module %# is off — %#", inactive._name.c_str(), inactive._reason.c_str() );
+            SW_LOG_INFO_ID( "ModuleCatalog.ModuleOff", "Module %# is off — %#", inactive._name.c_str(), inactive._reason.c_str() );
         }
         return true;
     }

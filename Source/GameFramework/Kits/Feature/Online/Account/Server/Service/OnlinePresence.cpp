@@ -178,7 +178,7 @@ namespace sw
         const uint64 ownerID = _subscriptions.findIssued( owner );
         if ( ownerID == 0 )
         {
-            SW_LOG_ERROR( "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
+            SW_LOG_ERROR_ID( "OnlinePresence.OnlinePresenceFindWithoutLive", "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
             return 0;
         }
         if ( _pHost == nullptr )
@@ -199,7 +199,7 @@ namespace sw
         const uint64 ownerID = _subscriptions.findIssued( owner );
         if ( ownerID == 0 )
         {
-            SW_LOG_ERROR( "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
+            SW_LOG_ERROR_ID( "OnlinePresence.OnlinePresenceFindWithoutLive", "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
             return 0;
         }
         if ( _pHost == nullptr || accountID == kInvalidAccountID )

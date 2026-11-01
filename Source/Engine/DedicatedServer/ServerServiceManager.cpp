@@ -31,7 +31,7 @@ namespace sw
             running._service = pFactory->_pCreate();
             if ( running._service == nullptr )
             {
-                SW_LOG_ERROR( "Server service '%#' could not be created", running._name.c_str() );
+                SW_LOG_ERROR_ID( "ServerServiceManager.ServerServiceCouldNot", "Server service '%#' could not be created", running._name.c_str() );
                 stopAll();
                 return false;
             }
@@ -40,13 +40,13 @@ namespace sw
             _listRunning.push_back( std::move( running ) );
             if ( bStarted == false )
             {
-                SW_LOG_ERROR( "Server service '%#' failed to start: %#", _listRunning.back()._name.c_str(), error.empty() ? "no reason given" : error.c_str() );
+                SW_LOG_ERROR_ID( "ServerServiceManager.ServerServiceFailedStart", "Server service '%#' failed to start: %#", _listRunning.back()._name.c_str(), error.empty() ? "no reason given" : error.c_str() );
                 stopAll();
                 return false;
             }
         }
         if ( _listRunning.empty() == false )
-            SW_LOG_INFO( "Server services started: %#", static_cast<int32>( _listRunning.size() ) );
+            SW_LOG_INFO_ID( "ServerServiceManager.ServerServicesStarted", "Server services started: %#", static_cast<int32>( _listRunning.size() ) );
         return true;
     }
 

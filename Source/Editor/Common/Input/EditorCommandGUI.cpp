@@ -323,11 +323,11 @@ namespace sw::editor
                 const string path = findSelectedPrefabPath( pObj );
                 if ( path.empty() )
                 {
-                    SW_LOG_WARNING( "Apply Overrides needs a selected prefab instance - nothing was written" );
+                    SW_LOG_WARNING_ID( "Editor.ApplyOverridesNeedsSelected", "Apply Overrides needs a selected prefab instance - nothing was written" );
                     return;
                 }
                 if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, AssetID{ path } ) == false )
-                    SW_LOG_ERROR( "Apply Overrides could not write '%#'", path.c_str() );
+                    SW_LOG_ERROR_ID( "Editor.ApplyOverridesCouldNot", "Apply Overrides could not write '%#'", path.c_str() );
             }
 
             // ------------------------------------------------------------------------------
@@ -539,19 +539,19 @@ namespace sw::editor
 
         string report;
         if ( registry.validate( report ) == false )
-            SW_LOG_ERROR( "The editor command table is inconsistent:\n%#", report.c_str() );
+            SW_LOG_ERROR_ID( "Editor.EditorCommandTableInconsistent", "The editor command table is inconsistent:\n%#", report.c_str() );
         // 명령이 가리키는 액션이 입력 맵에 없으면 그 단축키는 조용히 없는 것이 된다 — 표 · 등록 줄과 editor.input.xml 이 어긋난 것이다.
         const InputMap& inputMap = editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().getInputMap();
         for ( const EditorCommandDesc& desc : registry.getCommands() )
         {
             if ( desc._inputAction.empty() == false && inputMap.hasAction( hashed_string( desc._inputAction.c_str() ) ) == false )
-                SW_LOG_ERROR( "Command '%#' names input action '%#' that the editor input map does not have", desc._id.c_str(), desc._inputAction.c_str() );
+                SW_LOG_ERROR_ID( "Editor.CommandNamesInputAction", "Command '%#' names input action '%#' that the editor input map does not have", desc._id.c_str(), desc._inputAction.c_str() );
         }
         // 코드가 그리는 메뉴 경로에 테이블의 항목이 하나도 없으면 그 메뉴(툴바 팝업)가 비어 있는 채로 뜬다.
         for ( const utf8* pHostedPath : commandmenu::kArrHostedMenuPath )
         {
             if ( registry.findMenu( pHostedPath ) == nullptr )
-                SW_LOG_ERROR( "Menu path '%#' is drawn by code but no command row uses it - the menu is empty", pHostedPath );
+                SW_LOG_ERROR_ID( "Editor.MenuPathDrawnCode", "Menu path '%#' is drawn by code but no command row uses it - the menu is empty", pHostedPath );
         }
     }
 

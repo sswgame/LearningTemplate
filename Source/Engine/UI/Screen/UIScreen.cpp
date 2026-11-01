@@ -148,7 +148,7 @@ namespace sw
             return;
         const utf8* pOrigin = _documentPath.empty() ? "built in code" : _documentPath.c_str();
         if ( _bReportsUnhandledCommands == SW_TRUE )
-            SW_LOG_WARNING( "[UI] Command '%#' from widget '%#' is not handled by screen %# (%#)", command.c_str(), source.getName().c_str(), _handle, pOrigin );
+            SW_LOG_WARNING_ID( "UIScreen.CommandWidgetNotHandled", "[UI] Command '%#' from widget '%#' is not handled by screen %# (%#)", command.c_str(), source.getName().c_str(), _handle, pOrigin );
         else
             SW_LOG_INFO_ID( "UI.CommandNotWired", "[UI] Command '%#' from widget '%#' is not wired in this preview (%#)", command.c_str(), source.getName().c_str(), pOrigin );
     }

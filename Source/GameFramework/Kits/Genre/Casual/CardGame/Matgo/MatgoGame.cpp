@@ -57,14 +57,14 @@ namespace sw
                 const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
                 if ( rangeError.empty() == false )
                 {
-                    SW_LOG_ERROR( "MatgoGame: refused settings - %#", rangeError.c_str() );
+                    SW_LOG_ERROR_ID( "MatgoGame.MatgoGameRefusedSettings", "MatgoGame: refused settings - %#", rangeError.c_str() );
                     return false;
                 }
                 const int32 dealtCount = settings._playerCount * settings._handSize + settings._floorSize;
                 if ( dealtCount >= HwatuDeck::kCardCount )
                 {
-                    SW_LOG_ERROR( "MatgoGame: refused settings - %# players x %# cards + %# floor cards leaves no draw pile (deck has %# cards)", settings._playerCount,
-                                  settings._handSize, settings._floorSize, HwatuDeck::kCardCount );
+                    SW_LOG_ERROR_ID( "MatgoGame.MatgoGameRefusedSettingsPlayers", "MatgoGame: refused settings - %# players x %# cards + %# floor cards leaves no draw pile (deck has %# cards)", settings._playerCount,
+                                     settings._handSize, settings._floorSize, HwatuDeck::kCardCount );
                     return false;
                 }
                 return true;
@@ -118,17 +118,17 @@ namespace sw
         const size_t playerCount = static_cast<size_t>( settings._playerCount );
         if ( layout._listHand.size() != playerCount )
         {
-            SW_LOG_ERROR( "MatgoGame: refused layout - %# hands for %# players", layout._listHand.size(), playerCount );
+            SW_LOG_ERROR_ID( "MatgoGame.MatgoGameRefusedLayoutHands", "MatgoGame: refused layout - %# hands for %# players", layout._listHand.size(), playerCount );
             return false;
         }
         if ( layout._listCaptured.empty() == false && layout._listCaptured.size() != playerCount )
         {
-            SW_LOG_ERROR( "MatgoGame: refused layout - %# captured piles for %# players (leave it empty for none)", layout._listCaptured.size(), playerCount );
+            SW_LOG_ERROR_ID( "MatgoGame.MatgoGameRefusedLayoutCaptured", "MatgoGame: refused layout - %# captured piles for %# players (leave it empty for none)", layout._listCaptured.size(), playerCount );
             return false;
         }
         if ( layout._firstPlayer < 0 || layout._firstPlayer >= settings._playerCount )
         {
-            SW_LOG_ERROR( "MatgoGame: refused layout - first player %# is outside 0..%#", layout._firstPlayer, settings._playerCount - 1 );
+            SW_LOG_ERROR_ID( "MatgoGame.MatgoGameRefusedLayoutFirst", "MatgoGame: refused layout - first player %# is outside 0..%#", layout._firstPlayer, settings._playerCount - 1 );
             return false;
         }
         _settings = settings;

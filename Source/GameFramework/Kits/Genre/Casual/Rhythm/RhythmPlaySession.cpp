@@ -71,8 +71,8 @@ namespace sw
         const bool bLifeValid = settings._maxLife >= 1.0f && 0.0f <= settings._initialLife && settings._initialLife <= settings._maxLife && 0 <= settings._comboBonusCap;
         if ( bLifeValid == false )
         {
-            SW_LOG_ERROR( "RhythmPlaySession: refused settings - maxLife %# (1 or more), initialLife %# (0..maxLife), comboBonusCap %# (0 or more)", settings._maxLife,
-                          settings._initialLife, settings._comboBonusCap );
+            SW_LOG_ERROR_ID( "RhythmPlaySession.RhythmPlaySessionRefusedSettingsMaxLife", "RhythmPlaySession: refused settings - maxLife %# (1 or more), initialLife %# (0..maxLife), comboBonusCap %# (0 or more)", settings._maxLife,
+                             settings._initialLife, settings._comboBonusCap );
             return false;
         }
         _pChart            = pChart;

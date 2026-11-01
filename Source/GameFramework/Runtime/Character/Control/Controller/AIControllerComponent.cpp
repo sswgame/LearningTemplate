@@ -115,8 +115,8 @@ namespace sw
         if ( agent.getDriveMode() != NavAgentDriveMode::SteerOnly && _bWarnedDriveMode == SW_FALSE )
         {
             _bWarnedDriveMode = SW_TRUE;
-            SW_LOG_WARNING( "AI controller '%#' steers a navmesh agent whose drive mode is not SteerOnly - the agent moves the body itself, the controller adds no move intent",
-                            getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+            SW_LOG_WARNING_ID( "AIControllerComponent.AIControllerSteersNavmesh", "AI controller '%#' steers a navmesh agent whose drive mode is not SteerOnly - the agent moves the body itself, the controller adds no move intent",
+                               getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
         }
         if ( _bStopPending == SW_TRUE )
         {

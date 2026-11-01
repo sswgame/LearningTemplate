@@ -41,7 +41,7 @@ namespace sw
         const string_view storeName = pValidator->getStoreName();
         if ( ReceiptValidatorInternal::isValidStoreName( storeName ) == false || findValidator( storeName ) != nullptr )
         {
-            SW_LOG_ERROR( "Receipt validator '%#' has an invalid or duplicate store name", storeName );
+            SW_LOG_ERROR_ID( "ReceiptValidator.ReceiptValidatorInvalidDuplicate", "Receipt validator '%#' has an invalid or duplicate store name", storeName );
             return false;
         }
         _listValidator.push_back( pValidator );

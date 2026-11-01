@@ -16,7 +16,7 @@ namespace sw
         IScenarioPlayer* const pPlayer = engine::findSubsystem<IScenarioPlayer>();
         if ( pPlayer == nullptr )
         {
-            SW_LOG_WARNING( "[Scenario] cannot play '%#' - this host has no scenario player (dedicated server or automation left out)", scenarioPath.c_str() );
+            SW_LOG_WARNING_ID( "ScenarioPlayback.CannotPlayHostNo", "[Scenario] cannot play '%#' - this host has no scenario player (dedicated server or automation left out)", scenarioPath.c_str() );
             return false;
         }
         return pPlayer->play( scenarioPath, options );

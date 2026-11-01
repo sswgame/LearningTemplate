@@ -43,13 +43,13 @@ namespace sw::editor
                     {
 #if defined( SW_DEBUG )
                         if ( bCheckOnly == false )
-                            SW_LOG_WARNING( "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
+                            SW_LOG_WARNING_ID( "AssetImportEntry.TextureImportDebugBuild", "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
 #endif
                         const string        configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
                         if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {
-                            SW_LOG_ERROR( "Cannot import textures without the import config: %#", configPath.c_str() );
+                            SW_LOG_ERROR_ID( "AssetImportEntry.CannotImportTexturesWithout", "Cannot import textures without the import config: %#", configPath.c_str() );
                             return -1;
                         }
                         summary    = TextureImporter::importAllTextures( assetPaths.getRootFolderPath(), config, mode );
@@ -62,7 +62,7 @@ namespace sw::editor
                         ModelImportConfig config;
                         if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {
-                            SW_LOG_ERROR( "Cannot import models without the import config: %#", configPath.c_str() );
+                            SW_LOG_ERROR_ID( "AssetImportEntry.CannotImportModelsWithout", "Cannot import models without the import config: %#", configPath.c_str() );
                             return -1;
                         }
                         summary    = ModelImporter::importAllModels( assetPaths, assetPaths.getRootFolderPath(), config, mode );
@@ -78,16 +78,16 @@ namespace sw::editor
                 }
                 if ( pKindLabel == nullptr )
                 {
-                    SW_LOG_ERROR( "Unknown asset import kind %#", static_cast<uint32>( kind ) );
+                    SW_LOG_ERROR_ID( "AssetImportEntry.UnknownAssetImportKind", "Unknown asset import kind %#", static_cast<uint32>( kind ) );
                     return -1;
                 }
 
                 for ( const string& problem : summary._listProblem )
                 {
-                    SW_LOG_ERROR( "%#", problem.c_str() );
+                    SW_LOG_ERROR_ID( "AssetImportEntry.Message", "%#", problem.c_str() );
                 }
-                SW_LOG_INFO( "%# %#: %# sources, %# imported, %# problems.", pKindLabel, bCheckOnly ? "check" : "import", summary._sourceCount,
-                             summary._importedCount, summary._listProblem.size() );
+                SW_LOG_INFO_ID( "AssetImportEntry.SourcesImportedProblems", "%# %#: %# sources, %# imported, %# problems.", pKindLabel, bCheckOnly ? "check" : "import", summary._sourceCount,
+                                summary._importedCount, summary._listProblem.size() );
                 return static_cast<int32>( summary._listProblem.size() );
             }
         };

@@ -120,7 +120,7 @@ namespace sw::editor
         const string    packFolder = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : string{};
         // 팩 폴더를 못 찾았는데 빈 루트에 이어 붙이면 상대 경로가 돼 작업 폴더의 파일을 열고 쓴다 — 페이지를 만들지 않고 알린다.
         if ( packRoot.isSet() && packFolder.empty() )
-            SW_LOG_ERROR( "Project settings: the active pack folder '%#' was not found - its <Engine> settings page is not listed", packRoot.get().c_str() );
+            SW_LOG_ERROR_ID( "ProjectSettingsPanel.ProjectSettingsActivePack", "Project settings: the active pack folder '%#' was not found - its <Engine> settings page is not listed", packRoot.get().c_str() );
         if ( packFolder.empty() == false )
         {
             unique_ptr<Page> pPackPage      = make_unique<Page>();
@@ -137,7 +137,7 @@ namespace sw::editor
         const ConfigManager* const pConfigManager = editor::findSubsystem<ConfigManager>();
         if ( pConfigManager == nullptr )
         {
-            SW_LOG_ERROR( "Project settings: the editor services have no ConfigManager - there is nothing to list" );
+            SW_LOG_ERROR_ID( "ProjectSettingsPanel.ProjectSettingsEditorServices", "Project settings: the editor services have no ConfigManager - there is nothing to list" );
             return;
         }
         vector<ProjectSettingsEntry> listEntry;
@@ -162,7 +162,7 @@ namespace sw::editor
             return;
         }
         if ( page._document.open( *pType, page._absolutePath, page._entry._elementName ) == ConfigReadResult::Invalid )
-            SW_LOG_WARNING( "Project settings: %# could not be opened - see the errors above", page._absolutePath.c_str() );
+            SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsCouldNot", "Project settings: %# could not be opened - see the errors above", page._absolutePath.c_str() );
         page._bDirty = false;
     }
 

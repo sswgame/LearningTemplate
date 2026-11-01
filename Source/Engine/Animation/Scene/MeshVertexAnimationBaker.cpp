@@ -58,8 +58,8 @@ namespace sw
         const bool bCannotBake = skinMesh.hasSkin() == false || skinMesh.getSkinBoneCount() != skeleton.getBoneCount() || framesPerSecond <= 0.0f;
         if ( bCannotBake )
         {
-            SW_LOG_WARNING( "Vertex animation bake skipped: the mesh has no skin or its bone count (%#) differs from the skeleton (%#)", skinMesh.getSkinBoneCount(),
-                            skeleton.getBoneCount() );
+            SW_LOG_WARNING_ID( "MeshVertexAnimationBaker.VertexAnimationBakeSkipped", "Vertex animation bake skipped: the mesh has no skin or its bone count (%#) differs from the skeleton (%#)", skinMesh.getSkinBoneCount(),
+                               skeleton.getBoneCount() );
             return false;
         }
         const float32 duration = clip.getDuration();

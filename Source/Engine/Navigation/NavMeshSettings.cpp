@@ -50,7 +50,7 @@ namespace sw
         *this                       = NavMeshSettings{};
         if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            SW_LOG_ERROR( "Navigation settings could not be read or hold unknown keys: %#", assetPath );
+            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsCouldNot", "Navigation settings could not be read or hold unknown keys: %#", assetPath );
             return false;
         }
         return validate();
@@ -61,7 +61,7 @@ namespace sw
         *this = NavMeshSettings{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "Navigation settings text could not be read or holds unknown keys" );
+            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsTextCould", "Navigation settings text could not be read or holds unknown keys" );
             return false;
         }
         return validate();
@@ -74,17 +74,17 @@ namespace sw
         // 영역과 에이전트 종류는 데이터가 선언한다 — 비었다고 코드가 "Default" 를 지어 채우지 않는다.
         if ( _listArea.empty() || _listAgentType.empty() )
         {
-            SW_LOG_ERROR( "Navigation settings need at least one area and one agent type (%# areas, %# agent types declared)", _listArea.size(), _listAgentType.size() );
+            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsNeedLeast", "Navigation settings need at least one area and one agent type (%# areas, %# agent types declared)", _listArea.size(), _listAgentType.size() );
             bValid = false;
         }
         if ( _listArea.size() > NavigationConstant::kMaxAreaCount )
         {
-            SW_LOG_ERROR( "Navigation settings declare %# areas - at most %# are supported", _listArea.size(), NavigationConstant::kMaxAreaCount );
+            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsDeclareAreas", "Navigation settings declare %# areas - at most %# are supported", _listArea.size(), NavigationConstant::kMaxAreaCount );
             bValid = false;
         }
         if ( _maxConcurrentTileBakeCount == 0 || _obstacleMoveThreshold < 0.0f )
         {
-            SW_LOG_ERROR( "Navigation settings need at least one concurrent tile build and a non-negative obstacle move threshold" );
+            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsNeedLeast2", "Navigation settings need at least one concurrent tile build and a non-negative obstacle move threshold" );
             bValid = false;
         }
         for ( size_t areaIndex = 0; areaIndex < _listArea.size(); ++areaIndex )
@@ -92,14 +92,14 @@ namespace sw
             const NavAreaDef& area = _listArea[areaIndex];
             if ( area._name.empty() || area._cost < 1.0f )
             {
-                SW_LOG_ERROR( "Navigation area %# needs a name and a cost of at least 1", areaIndex );
+                SW_LOG_ERROR_ID( "NavMeshSettings.NavigationAreaNeedsName", "Navigation area %# needs a name and a cost of at least 1", areaIndex );
                 bValid = false;
             }
             for ( size_t otherIndex = areaIndex + 1; otherIndex < _listArea.size(); ++otherIndex )
             {
                 if ( _listArea[otherIndex]._name == area._name )
                 {
-                    SW_LOG_ERROR( "Navigation area '%#' is declared twice", area._name.c_str() );
+                    SW_LOG_ERROR_ID( "NavMeshSettings.NavigationAreaDeclaredTwice", "Navigation area '%#' is declared twice", area._name.c_str() );
                     bValid = false;
                 }
             }
@@ -109,27 +109,27 @@ namespace sw
             const NavAgentTypeDef& agentType = _listAgentType[typeIndex];
             if ( agentType._name.empty() )
             {
-                SW_LOG_ERROR( "Navigation agent type %# has no name", typeIndex );
+                SW_LOG_ERROR_ID( "NavMeshSettings.NavigationAgentTypeNo", "Navigation agent type %# has no name", typeIndex );
                 bValid = false;
             }
             if ( Internal::isAgentTypeInRange( agentType ) == false )
             {
-                SW_LOG_ERROR( "Navigation agent type '%#' has a value out of range (radius, height, climb, slope, cell, tile, detail or crowd size)",
-                              agentType._name.c_str() );
+                SW_LOG_ERROR_ID( "NavMeshSettings.NavigationAgentTypeValue", "Navigation agent type '%#' has a value out of range (radius, height, climb, slope, cell, tile, detail or crowd size)",
+                                 agentType._name.c_str() );
                 bValid = false;
             }
             for ( size_t otherIndex = typeIndex + 1; otherIndex < _listAgentType.size(); ++otherIndex )
             {
                 if ( _listAgentType[otherIndex]._name == agentType._name )
                 {
-                    SW_LOG_ERROR( "Navigation agent type '%#' is declared twice", agentType._name.c_str() );
+                    SW_LOG_ERROR_ID( "NavMeshSettings.NavigationAgentTypeDeclared", "Navigation agent type '%#' is declared twice", agentType._name.c_str() );
                     bValid = false;
                 }
             }
         }
         if ( _defaultAgentType.empty() == false && findAgentType( _defaultAgentType ) == nullptr )
         {
-            SW_LOG_ERROR( "Navigation default agent type '%#' is not declared", _defaultAgentType.c_str() );
+            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationDefaultAgentType", "Navigation default agent type '%#' is not declared", _defaultAgentType.c_str() );
             bValid = false;
         }
         return bValid;

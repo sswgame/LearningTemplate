@@ -80,8 +80,8 @@ namespace sw
                     {
                         if ( pComp == nullptr || pComp->getTypeInfo() != MissingComponent::StaticType() )
                             continue;
-                        SW_LOG_ERROR( "Scene cook: '%#' has a component of type '%#' that no loaded module registers", pObject->getName().c_str(),
-                                      static_cast<const MissingComponent*>( pComp )->getOriginalTypeName().c_str() );
+                        SW_LOG_ERROR_ID( "SceneCooker.SceneCookComponentType", "Scene cook: '%#' has a component of type '%#' that no loaded module registers", pObject->getName().c_str(),
+                                         static_cast<const MissingComponent*>( pComp )->getOriginalTypeName().c_str() );
                         ++missingCount;
                     }
                 }
@@ -188,7 +188,7 @@ namespace sw
                     const auto objectIt = mapObjectByFileID.find( entity._fileID );
                     if ( objectIt == mapObjectByFileID.end() )
                     {
-                        SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' was not built - it cannot be placed in a cell", entity._name, scenePath );
+                        SW_LOG_ERROR_ID( "SceneCooker.SceneCookEntityNot", "Scene cook: entity '%#' of '%#' was not built - it cannot be placed in a cell", entity._name, scenePath );
                         return false;
                     }
                     const GameObject*         pObject    = objectIt->second;
@@ -225,9 +225,9 @@ namespace sw
                 {
                     const auto fromIt = mapObjectByFileID.find( violation._fromObjectID );
                     const auto toIt   = mapObjectByFileID.find( violation._toObjectID );
-                    SW_LOG_ERROR( "Scene cook: '%#' - entity '%#' (id %#) refers to '%#' (id %#) in another cell; mark the target always loaded or move it", scenePath,
-                                  fromIt != mapObjectByFileID.end() ? fromIt->second->getName().c_str() : "?", violation._fromObjectID,
-                                  toIt != mapObjectByFileID.end() ? toIt->second->getName().c_str() : "?", violation._toObjectID );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookEntityId", "Scene cook: '%#' - entity '%#' (id %#) refers to '%#' (id %#) in another cell; mark the target always loaded or move it", scenePath,
+                                     fromIt != mapObjectByFileID.end() ? fromIt->second->getName().c_str() : "?", violation._fromObjectID,
+                                     toIt != mapObjectByFileID.end() ? toIt->second->getName().c_str() : "?", violation._toObjectID );
                 }
             }
 
@@ -279,7 +279,7 @@ namespace sw
                 StreamingCellGrid grid;
                 if ( StreamingCellGrid::tryCreate( inoutDoc._sceneSettings._cellGrid, grid ) == false )
                 {
-                    SW_LOG_ERROR( "Scene cook: '%#' streams but its cell grid is not usable", scenePath );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookStreamsBut", "Scene cook: '%#' streams but its cell grid is not usable", scenePath );
                     return false;
                 }
 
@@ -287,8 +287,8 @@ namespace sw
                 const bool bBuilt = placement.instantiate( inoutDoc );
                 if ( bBuilt == false || placement.getUnresolvedEntityCount() > 0 )
                 {
-                    SW_LOG_ERROR( "Scene cook: '%#' could not be built to place its entities in cells (%# entities without a prefab)", scenePath,
-                                  static_cast<uint32>( placement.getUnresolvedEntityCount() ) );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookCouldNot", "Scene cook: '%#' could not be built to place its entities in cells (%# entities without a prefab)", scenePath,
+                                     static_cast<uint32>( placement.getUnresolvedEntityCount() ) );
                     return false;
                 }
                 unordered_map<uint64, GameObject*> mapObjectByFileID;
@@ -312,8 +312,8 @@ namespace sw
                 }
 
                 splitIntoCells( inoutDoc, listRecord );
-                SW_LOG_INFO( "Scene cook: '%#' split into %# cells (%# entities always loaded)", scenePath, static_cast<uint32>( inoutDoc._listStreamingCell.size() ),
-                             static_cast<uint32>( inoutDoc._listSceneObjectNode.size() ) );
+                SW_LOG_INFO_ID( "SceneCooker.SceneCookSplitCells", "Scene cook: '%#' split into %# cells (%# entities always loaded)", scenePath, static_cast<uint32>( inoutDoc._listStreamingCell.size() ),
+                                static_cast<uint32>( inoutDoc._listSceneObjectNode.size() ) );
                 return true;
             }
 
@@ -325,14 +325,14 @@ namespace sw
                 // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
                 {
-                    SW_LOG_ERROR( "Scene cook failed to read '%#'.", scenePath );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedRead", "Scene cook failed to read '%#'.", scenePath );
                     return CookStep::Failed;
                 }
                 // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
                 // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
                 if ( AssetCookPath::isInInactiveGamePack( relativeScene, activePackRoot ) && usesUnregisteredComponentTypes( registry, doc ) )
                 {
-                    SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
+                    SW_LOG_INFO_ID( "SceneCooker.SceneCookUsesComponents", "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
                     return CookStep::Skipped;
                 }
 
@@ -349,15 +349,15 @@ namespace sw
                 // 모르는 타입의 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
                 if ( missingComponentCount > 0 )
                 {
-                    SW_LOG_ERROR( "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath, missingComponentCount );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookComponentsUnknown", "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath, missingComponentCount );
                     return CookStep::Failed;
                 }
                 // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
                 // 통째로 사라지는데, "쿠킹했다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
                 if ( cookedCount < statefulCount )
                 {
-                    SW_LOG_WARNING( "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.", scenePath, statefulCount - cookedCount,
-                                    statefulCount );
+                    SW_LOG_WARNING_ID( "SceneCooker.SceneEntitiesCouldNot", "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.", scenePath, statefulCount - cookedCount,
+                                       statefulCount );
                 }
                 // 스트리밍하는 씬은 엔티티를 셀로 나눈다. 셀을 넘는 참조가 있으면 쿠킹 실패다 — 런타임에 조용히 끊기는 참조를 싣지 않는다.
                 if ( SceneCooker::splitStreamingCells( services, doc, scenePath ) == false )
@@ -365,11 +365,11 @@ namespace sw
                 const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
                 if ( outputFile.has_value() == false || doc.saveBinary( *outputFile ) == false )
                 {
-                    SW_LOG_ERROR( "Scene cook failed to write '%#'.", outputPath );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedWrite", "Scene cook failed to write '%#'.", outputPath );
                     return CookStep::Failed;
                 }
-                SW_LOG_INFO( "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath, static_cast<uint32>( doc.computeTotalEntityCount() ),
-                             cookedCount );
+                SW_LOG_INFO_ID( "SceneCooker.CookedEntitiesBinaryState", "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath, static_cast<uint32>( doc.computeTotalEntityCount() ),
+                                cookedCount );
                 return CookStep::Written;
             }
 
@@ -382,20 +382,20 @@ namespace sw
                 SceneDocument doc{};
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
                 {
-                    SW_LOG_ERROR( "Scene preload cook failed to read '%#'.", scenePath );
+                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookFailed", "Scene preload cook failed to read '%#'.", scenePath );
                     return CookStep::Failed;
                 }
                 Scene source{ "ScenePreload.Source", services };
                 if ( source.instantiate( doc ) == false )
                 {
-                    SW_LOG_ERROR( "Scene preload cook could not build '%#'.", scenePath );
+                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookCould", "Scene preload cook could not build '%#'.", scenePath );
                     return CookStep::Failed;
                 }
                 vector<string> listPath;
                 ScenePreloadList::collect( *source.getObjectManager(), listPath );
                 if ( ScenePreloadList::write( outputPath, listPath ) == false )
                 {
-                    SW_LOG_ERROR( "Scene preload cook failed to write '%#'.", outputPath );
+                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookFailed2", "Scene preload cook failed to write '%#'.", outputPath );
                     return CookStep::Failed;
                 }
                 return CookStep::Written;
@@ -414,7 +414,7 @@ namespace sw
             *pOutMissingComponentCount = 0;
         if ( services._pTypeRegistry == nullptr )
         {
-            SW_LOG_ERROR( "Scene cook: '%#' is not cooked - the engine services have no type registry", inoutDoc._name );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookNotCooked", "Scene cook: '%#' is not cooked - the engine services have no type registry", inoutDoc._name );
             return 0;
         }
         // **런타임이 읽는 그대로 짓고 쿠킹한다.** 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
@@ -425,7 +425,7 @@ namespace sw
         {
             if ( entity._fileID == 0 )
             {
-                SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' has no id - nothing is cooked", entity._name, inoutDoc._name );
+                SW_LOG_ERROR_ID( "SceneCooker.SceneCookEntityNo", "Scene cook: entity '%#' of '%#' has no id - nothing is cooked", entity._name, inoutDoc._name );
                 return 0;
             }
         }
@@ -478,7 +478,7 @@ namespace sw
             if ( cookedState._embeddedStateBytes.empty() )
             {
                 if ( entity._embeddedXML.empty() == false )
-                    SW_LOG_WARNING( "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
+                    SW_LOG_WARNING_ID( "SceneCooker.EntityCouldNotCooked", "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
                 continue;
             }
             const auto        sourceIt       = mapSourceByFileID.find( entity._fileID );
@@ -489,7 +489,7 @@ namespace sw
                                         SceneCookerInternal::makeStateText( source, pSource ) != SceneCookerInternal::makeStateText( verify, pVerify );
             if ( bStateMismatch )
             {
-                SW_LOG_WARNING( "Entity '%#' changes when its cooked state is read back - keeping XML.", entity._name );
+                SW_LOG_WARNING_ID( "SceneCooker.EntityChangesWhenCooked", "Entity '%#' changes when its cooked state is read back - keeping XML.", entity._name );
                 continue;
             }
 
@@ -508,7 +508,7 @@ namespace sw
         outFailedCount = 0;
         if ( cookedDir.empty() )
         {
-            SW_LOG_ERROR( "Scene cook needs an output directory (--cooked-dir)." );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookNeedsOutput", "Scene cook needs an output directory (--cooked-dir)." );
             ++outFailedCount;
             return 0;
         }
@@ -516,7 +516,7 @@ namespace sw
         const string resourceRoot( sourceRoot );
         if ( resourceRoot.empty() )
         {
-            SW_LOG_ERROR( "Scene cook could not resolve the content root." );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookCouldNot2", "Scene cook could not resolve the content root." );
             ++outFailedCount;
             return 0;
         }
@@ -524,14 +524,14 @@ namespace sw
         // 쿠킹하는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleLoadStage`)라야 컴포넌트가 제 타입으로 지어진다.
         if ( services._pTypeRegistry == nullptr )
         {
-            SW_LOG_ERROR( "Scene cook has no type registry in the engine services - nothing is cooked" );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookNoType", "Scene cook has no type registry in the engine services - nothing is cooked" );
             ++outFailedCount;
             return 0;
         }
         const TypeRegistry& registry = *services._pTypeRegistry;
         if ( registry.areAllModuleTypesRegistered() == false )
         {
-            SW_LOG_ERROR( "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleLoadStage startup step)" );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookRanBefore", "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleLoadStage startup step)" );
             ++outFailedCount;
             return 0;
         }
@@ -539,7 +539,7 @@ namespace sw
         vector<string> listSceneFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listSceneFile ) == false )
         {
-            SW_LOG_ERROR( "Scene cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookCouldNot3", "Scene cook could not list '%#' - nothing is cooked", resourceRoot );
             ++outFailedCount;
             return 0;
         }
@@ -583,7 +583,7 @@ namespace sw
             outFailedCount += preloadOutcome == CookOutcome::Failed ? 1u : 0u;
         }
 
-        SW_LOG_INFO( "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        SW_LOG_INFO_ID( "SceneCooker.SceneCookReusedDDC", "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount();
     }
 
@@ -596,7 +596,7 @@ namespace sw
             return true;
         if ( inoutDoc._listStreamingCell.empty() == false )
         {
-            SW_LOG_ERROR( "Scene cook: '%#' is already split into cells", sceneName );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookAlreadySplit", "Scene cook: '%#' is already split into cells", sceneName );
             return false;
         }
         return SceneCookerInternal::partitionStreamingCells( services, inoutDoc, sceneName, pOutListViolation );
@@ -607,13 +607,13 @@ namespace sw
         outPreview = StreamingCellPreview{};
         if ( scene.getSceneSettings()._bStreaming == false )
         {
-            SW_LOG_ERROR( "Streaming cell preview: '%#' does not stream", scene.getName().c_str() );
+            SW_LOG_ERROR_ID( "SceneCooker.StreamingCellPreviewDoes", "Streaming cell preview: '%#' does not stream", scene.getName().c_str() );
             return false;
         }
         SceneDocument doc{};
         if ( scene.serializeToDocument( doc ) == false )
         {
-            SW_LOG_ERROR( "Streaming cell preview: '%#' could not be written as a document", scene.getName().c_str() );
+            SW_LOG_ERROR_ID( "SceneCooker.StreamingCellPreviewCould", "Streaming cell preview: '%#' could not be written as a document", scene.getName().c_str() );
             return false;
         }
         // 문서의 파일 id 는 씬이 들고 있는 표(런타임 id → 파일 id)에서 왔다 — 뒤집어 열린 씬의 오브젝트로 되돌린다.

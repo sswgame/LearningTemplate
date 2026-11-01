@@ -338,7 +338,7 @@ namespace sw
                 continue;
             local._presenceWrittenMs = nowMs.count();
             if ( writePresenceRecord( SocialPresence{ local._activity, accountID, local._status } ) == false )
-                SW_LOG_WARNING( "SocialService: presence of account %# was not refreshed - it expires from the cache", accountID );
+                SW_LOG_WARNING_ID( "SocialService.SocialServicePresenceAccountNot", "SocialService: presence of account %# was not refreshed - it expires from the cache", accountID );
         }
     }
 

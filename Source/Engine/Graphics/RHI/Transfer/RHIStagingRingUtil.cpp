@@ -17,12 +17,12 @@ namespace sw
             ledger.free( span );
         if ( result == RHIStagingAllocateResult::TooLarge )
         {
-            SW_LOG_ERROR( "%#: %# bytes exceed the %#-byte %# staging ring and the %#-byte single transfer limit; raise gv_rhiStagingSingleMaxMegabytes to transfer it", pCaller,
-                          sizeBytes, ledger.getCapacityBytes(), pBackend, ledger.getSoloMaxBytes() );
+            SW_LOG_ERROR_ID( "RHIStagingRingUtil.BytesExceedByteStaging", "%#: %# bytes exceed the %#-byte %# staging ring and the %#-byte single transfer limit; raise gv_rhiStagingSingleMaxMegabytes to transfer it", pCaller,
+                             sizeBytes, ledger.getCapacityBytes(), pBackend, ledger.getSoloMaxBytes() );
         }
         else
         {
-            SW_LOG_ERROR( "%#: the %# device is lost; the staging ring no longer drains and the transfer is rejected", pCaller, pBackend );
+            SW_LOG_ERROR_ID( "RHIStagingRingUtil.DeviceLostStagingRing", "%#: the %# device is lost; the staging ring no longer drains and the transfer is rejected", pCaller, pBackend );
         }
         return RHISubmitResult::Rejected;
     }
@@ -30,7 +30,7 @@ namespace sw
     RHISubmitResult RHIStagingRingUtil::rejectSoloBufferFailure( RHIStagingAllocator& ledger, const RHIStagingSpan& span, const utf8* pBackend, const utf8* pCaller )
     {
         ledger.free( span );
-        SW_LOG_ERROR( "%#: a %#-byte %# single transfer buffer could not be created; the transfer is rejected", pCaller, span._sizeBytes, pBackend );
+        SW_LOG_ERROR_ID( "RHIStagingRingUtil.ByteSingleTransferBuffer", "%#: a %#-byte %# single transfer buffer could not be created; the transfer is rejected", pCaller, span._sizeBytes, pBackend );
         return RHISubmitResult::Rejected;
     }
 } // namespace sw

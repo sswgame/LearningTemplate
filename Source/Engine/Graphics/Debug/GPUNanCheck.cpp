@@ -76,13 +76,13 @@ namespace sw
             return true;
         if ( pDevice == nullptr )
         {
-            SW_LOG_ERROR( "NaN check is requested (gv_nanCheck) but there is no device" );
+            SW_LOG_ERROR_ID( "GPUNanCheck.NaNCheckRequestedGv", "NaN check is requested (gv_nanCheck) but there is no device" );
             return false;
         }
         // 능력 선언 분기 - 컴퓨트가 엔진 텍스처를 읽을 수 있는 백엔드만 쓴다. 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못하고, 다른 읽기 길을 두지 않는다.
         if ( pDevice->getCapabilities()._bCompute == SW_FALSE || pDevice->supportsNativeBindlessSampling() == false )
         {
-            SW_LOG_WARNING( "gv_nanCheck is ignored on this backend: the NaN scan reads output textures in a compute shader and needs native bindless sampling (DirectX12, Vulkan)" );
+            SW_LOG_WARNING_ID( "GPUNanCheck.GvNanCheckIgnoredBackend", "gv_nanCheck is ignored on this backend: the NaN scan reads output textures in a compute shader and needs native bindless sampling (DirectX12, Vulkan)" );
             return true;
         }
 
@@ -91,13 +91,13 @@ namespace sw
                                                                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess, true, true, zeroed.data() );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR( "Failed to create the NaN check counter buffer (%# uints) - gv_nanCheck cannot run", kMaxSlot * 2 );
+            SW_LOG_ERROR_ID( "GPUNanCheck.FailedCreateNaNCheck", "Failed to create the NaN check counter buffer (%# uints) - gv_nanCheck cannot run", kMaxSlot * 2 );
             _buffer.release( pDevice );
             return false;
         }
         if ( _readback.initialize( pDevice, sizeof( uint32 ), kMaxSlot * 2 ) == false )
         {
-            SW_LOG_ERROR( "Failed to create the NaN check readback buffers - gv_nanCheck cannot run" );
+            SW_LOG_ERROR_ID( "GPUNanCheck.FailedCreateNaNCheck2", "Failed to create the NaN check readback buffers - gv_nanCheck cannot run" );
             _buffer.release( pDevice );
             return false;
         }
@@ -105,7 +105,7 @@ namespace sw
         _listSlotName.clear();
         _listPreviousCount.assign( kMaxSlot * 2, 0u );
         _frameSerial = 0;
-        SW_LOG_INFO( "NaN check ready (%# output slots, read back a few frames late)", kMaxSlot );
+        SW_LOG_INFO_ID( "GPUNanCheck.NaNCheckReadyOutput", "NaN check ready (%# output slots, read back a few frames late)", kMaxSlot );
         return true;
     }
 
@@ -137,7 +137,7 @@ namespace sw
         const uint32 slot = getOrCreateSlot( name );
         if ( slot >= kMaxSlot )
         {
-            SW_LOG_ERROR_ONCE( "NaN check has more than %# outputs - the rest are not scanned", kMaxSlot );
+            SW_LOG_ERROR_ONCE_ID( "GPUNanCheck.NaNCheckMoreOutputs", "NaN check has more than %# outputs - the rest are not scanned", kMaxSlot );
             return;
         }
         GPUNanCheckRootConstants constants{ srv, width, height, slot };
@@ -170,7 +170,7 @@ namespace sw
             return;
         if ( bytes.size() < static_cast<size_t>( kMaxSlot ) * 2 * sizeof( uint32 ) )
         {
-            SW_LOG_ERROR_ONCE( "NaN check readback is smaller than the counter buffer (%# bytes)", static_cast<uint32>( bytes.size() ) );
+            SW_LOG_ERROR_ONCE_ID( "GPUNanCheck.NaNCheckReadbackSmaller", "NaN check readback is smaller than the counter buffer (%# bytes)", static_cast<uint32>( bytes.size() ) );
             return;
         }
         vector<uint32> words( kMaxSlot * 2 );
@@ -187,7 +187,7 @@ namespace sw
                 continue;
             _reportedNanCount += nanCount;
             _reportedInfCount += infCount;
-            SW_LOG_ERROR( "NaN/Inf in the output of %# (frames up to %#): %# NaN texels, %# Inf texels", _listSlotName[slot].c_str(), frame, nanCount, infCount );
+            SW_LOG_ERROR_ID( "GPUNanCheck.NaNInfOutputFrames", "NaN/Inf in the output of %# (frames up to %#): %# NaN texels, %# Inf texels", _listSlotName[slot].c_str(), frame, nanCount, infCount );
         }
     }
 } // namespace sw

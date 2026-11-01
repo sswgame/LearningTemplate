@@ -248,7 +248,7 @@ namespace sw
             {
                 ++ioCount;
                 s_totalViolation.fetch_add( 1, std::memory_order_relaxed );
-                SW_LOG_ERROR( "[Binding contract] %# - %#: %#", string( shaderLabel ).c_str(), resource.c_str(), message.c_str() );
+                SW_LOG_ERROR_ID( "ShaderBindingValidator.Message", "[Binding contract] %# - %#: %#", string( shaderLabel ).c_str(), resource.c_str(), message.c_str() );
                 if ( pOutIssue != nullptr )
                 {
                     ShaderBindingValidatorIssue issue{};

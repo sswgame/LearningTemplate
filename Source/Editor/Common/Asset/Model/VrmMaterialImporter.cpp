@@ -714,7 +714,7 @@ namespace sw::editor
         string templateText;
         if ( AssetIO::readTextAsset( AssetID{ toonTemplate.get() }, templateText ) == false )
         {
-            SW_LOG_ERROR( "Toon material template '%#' could not be read", toonTemplate.c_str() );
+            SW_LOG_ERROR_ID( "VrmMaterialImporter.ToonMaterialTemplateCould", "Toon material template '%#' could not be read", toonTemplate.c_str() );
             return {};
         }
         XMLDocument document;

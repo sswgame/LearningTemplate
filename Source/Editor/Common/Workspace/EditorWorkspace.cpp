@@ -214,7 +214,7 @@ namespace sw::editor
         Scene* pScene = editor::findSceneOf( object.getManager() );
         if ( pScene == nullptr )
         {
-            SW_LOG_ERROR( "Prefab path of '%#' is not recorded: its scene is neither the active scene nor an open preview scene", object.getName().c_str() );
+            SW_LOG_ERROR_ID( "EditorWorkspace.PrefabPathNotRecorded", "Prefab path of '%#' is not recorded: its scene is neither the active scene nor an open preview scene", object.getName().c_str() );
             return;
         }
         pScene->setEntityPrefabPath( object.getObjectID(), prefabPath );
@@ -301,7 +301,7 @@ namespace sw::editor
     {
         if ( EditorPlaySession::areSceneEditsHeld() )
         {
-            SW_LOG_ERROR( "The scene was edited while scene edits are held (a light probe bake) - the edit path did not ask EditorPlaySession::areSceneEditsAllowed" );
+            SW_LOG_ERROR_ID( "EditorWorkspace.SceneEditedWhileScene", "The scene was edited while scene edits are held (a light probe bake) - the edit path did not ask EditorPlaySession::areSceneEditsAllowed" );
             EditorPlaySession::noteSceneEditWhileHeld();
         }
         _bSceneDirty = SW_TRUE;

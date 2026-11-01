@@ -314,30 +314,30 @@ namespace sw
         if ( hr == S_OK || hr == S_FALSE )
             _impl->_bComInitialized = SW_TRUE;
         else if ( hr != RPC_E_CHANGED_MODE )
-            SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            SW_LOG_WARNING_ID( "XAudio2AudioBackend.CoInitializeExFailedX", "CoInitializeEx failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
         const XAudio2AudioBackendInternal::SystemAudioAPI& api = XAudio2AudioBackendInternal::getSystemAudioAPI();
         if ( api.hasMediaFoundation() == false )
-            SW_LOG_WARNING( "Media Foundation is not available (mfplat.dll / mfreadwrite.dll) - clips the built-in decoders cannot read will not play." );
+            SW_LOG_WARNING_ID( "XAudio2AudioBackend.MediaFoundationNotAvailable", "Media Foundation is not available (mfplat.dll / mfreadwrite.dll) - clips the built-in decoders cannot read will not play." );
         else
         {
             const HRESULT mfHr = api._pfnMFStartup( MF_VERSION, MFSTARTUP_FULL );
             if ( SUCCEEDED( mfHr ) )
                 _impl->_bMfInitialized = SW_TRUE;
             else
-                SW_LOG_WARNING( "MFStartup failed (0x%#).", Fmt( static_cast<uint32>( mfHr ), Format( 8, Format::Padding::Zero ).hex() ) );
+                SW_LOG_WARNING_ID( "XAudio2AudioBackend.MFStartupFailedX", "MFStartup failed (0x%#).", Fmt( static_cast<uint32>( mfHr ), Format( 8, Format::Padding::Zero ).hex() ) );
         }
 
         if ( api._pfnXAudio2Create == nullptr )
         {
-            SW_LOG_WARNING( "XAudio2 is not available (xaudio2_9.dll). Rendering offline." );
+            SW_LOG_WARNING_ID( "XAudio2AudioBackend.XAudio2NotAvailableXaudio2", "XAudio2 is not available (xaudio2_9.dll). Rendering offline." );
             closeDevice();
             return false;
         }
         hr = api._pfnXAudio2Create( &_impl->_pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
         if ( FAILED( hr ) || _impl->_pXAudio == nullptr )
         {
-            SW_LOG_WARNING( "XAudio2Create failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            SW_LOG_WARNING_ID( "XAudio2AudioBackend.XAudio2CreateFailedXRendering", "XAudio2Create failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_pXAudio = nullptr;
             closeDevice();
             return false;
@@ -348,9 +348,9 @@ namespace sw
         {
             // 출력 장치가 없는 기계(CI 러너, 서버, 원격 세션)는 고장이 아니다. 오프라인 렌더로 동작한다는 것만 알린다. 장치가 있는데 실패한 경우만 경고한다.
             if ( hr == HRESULT_FROM_WIN32( ERROR_NOT_FOUND ) )
-                SW_LOG_INFO( "No audio output device (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+                SW_LOG_INFO_ID( "XAudio2AudioBackend.NoAudioOutputDevice", "No audio output device (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             else
-                SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+                SW_LOG_WARNING_ID( "XAudio2AudioBackend.CreateMasteringVoiceFailedXRendering", "CreateMasteringVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_pMasterVoice = nullptr;
             closeDevice();
             return false;
@@ -362,7 +362,7 @@ namespace sw
             channelMask = 0; // 마스크를 모르는 장치는 Auto 에서 스테레오로, 명시 모드는 채널 수로만 판단한다
         outDevice._channelCount = details.InputChannels;
         outDevice._channelMask  = static_cast<uint32>( channelMask );
-        SW_LOG_INFO( "Audio device: %# channels (mask 0x%#).", outDevice._channelCount, Fmt( outDevice._channelMask, Format().hex() ) );
+        SW_LOG_INFO_ID( "XAudio2AudioBackend.AudioDeviceChannelsMask", "Audio device: %# channels (mask 0x%#).", outDevice._channelCount, Fmt( outDevice._channelMask, Format().hex() ) );
         return true;
     }
 
@@ -386,7 +386,7 @@ namespace sw
         HRESULT hr                         = _impl->_pXAudio->CreateSourceVoice( &_impl->_pStreamVoice, &format.Format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, &_impl->_callback );
         if ( FAILED( hr ) || _impl->_pStreamVoice == nullptr )
         {
-            SW_LOG_WARNING( "CreateSourceVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            SW_LOG_WARNING_ID( "XAudio2AudioBackend.CreateSourceVoiceFailedXRendering", "CreateSourceVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_pStreamVoice = nullptr;
             return false;
         }
@@ -409,12 +409,12 @@ namespace sw
         hr = _impl->_pStreamVoice->Start( 0 );
         if ( FAILED( hr ) )
         {
-            SW_LOG_WARNING( "Starting the XAudio2 stream failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            SW_LOG_WARNING_ID( "XAudio2AudioBackend.StartingXAudio2StreamFailed", "Starting the XAudio2 stream failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             stopOutput();
             return false;
         }
-        SW_LOG_INFO( "XAudio2 stream ready (%# Hz, %# channels, %# frames x %#).", audio::kSampleRate, channelCount, XAudio2AudioBackendInternal::kStreamBufferFrameCount,
-                     XAudio2AudioBackendInternal::kStreamBufferCount );
+        SW_LOG_INFO_ID( "XAudio2AudioBackend.XAudio2StreamReadyHz", "XAudio2 stream ready (%# Hz, %# channels, %# frames x %#).", audio::kSampleRate, channelCount, XAudio2AudioBackendInternal::kStreamBufferFrameCount,
+                        XAudio2AudioBackendInternal::kStreamBufferCount );
         return true;
     }
 

@@ -191,8 +191,8 @@ namespace sw
 
     void NileDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[Nile] the city is founded on the Nile - WASD pan, wheel zoom, Q/E pick building, R road, left click build, right click demolish, "
-                     "P auto plan, Space pause, - = speed, F1 status" );
+        SW_LOG_INFO_ID( "NileDirector.CityFoundedNileWASD", "[Nile] the city is founded on the Nile - WASD pan, wheel zoom, Q/E pick building, R road, left click build, right click demolish, "
+                                                            "P auto plan, Space pause, - = speed, F1 status" );
     }
 
     void NileDirectorComponent::updateGame( float32 deltaTime )
@@ -258,7 +258,7 @@ namespace sw
     {
         if ( _catalog.loadFromAsset( AssetID{ _cityDataPath } ) == false )
         {
-            SW_LOG_ERROR( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
+            SW_LOG_ERROR_ID( "NileDirector.CouldNotLoadedCity", "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
         }
         if ( _clock.initialize( makeClockSettings() ) == false )
@@ -528,9 +528,9 @@ namespace sw
     void NileDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ) );
+            SW_LOG_INFO_ID( "NileDirector.CityStateRestoredMonth", "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ) );
         else
-            SW_LOG_WARNING( "[Nile] the saved city state does not match this build - founding a new city" );
+            SW_LOG_WARNING_ID( "NileDirector.SavedCityStateDoes", "[Nile] the saved city state does not match this build - founding a new city" );
     }
 
     // ------------------------------------------------------------------------------
@@ -763,18 +763,18 @@ namespace sw
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Pause" ) ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO( "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
+            SW_LOG_INFO_ID( "NileDirector.Message", "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
         const bool bFaster = inputMap.wasActionTriggered( hashed_string( "Nile.Faster" ) );
         if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Nile.Slower" ) ) )
         {
             _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
-            SW_LOG_INFO( "[Nile] speed x%#", _timeScale );
+            SW_LOG_INFO_ID( "NileDirector.SpeedX", "[Nile] speed x%#", _timeScale );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.ToggleAutoPlan" ) ) )
         {
             _bAutoPlanToggle = _bAutoPlanToggle == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO( "[Nile] auto plan %# (step %# of %#)", _bAutoPlanToggle == SW_TRUE ? "on" : "off", _planner.getNextStep(), _planner.getStepCount() );
+            SW_LOG_INFO_ID( "NileDirector.AutoPlanStep", "[Nile] auto plan %# (step %# of %#)", _bAutoPlanToggle == SW_TRUE ? "on" : "off", _planner.getNextStep(), _planner.getStepCount() );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Status" ) ) )
             logStatus();
@@ -814,18 +814,18 @@ namespace sw
             // 도로는 끌어서 깐다. 이미 도로인 타일은 조용히 넘어간다.
             const CityPlaceResult result = _city.placeRoad( _cursorTile._x, _cursorTile._y );
             if ( result == CityPlaceResult::NotEnoughMoney || result == CityPlaceResult::BadTerrain )
-                SW_LOG_INFO( "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, getEnumName( result ) );
+                SW_LOG_INFO_ID( "NileDirector.CannotLayRoad", "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, getEnumName( result ) );
             return;
         }
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
         if ( result == CityPlaceResult::Ok )
         {
-            SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
+            SW_LOG_INFO_ID( "NileDirector.BuiltLeft", "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
             getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventBuilt );
         }
         else
         {
-            SW_LOG_INFO( "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, getEnumName( result ) );
+            SW_LOG_INFO_ID( "NileDirector.CannotBuild", "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, getEnumName( result ) );
             getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventBlocked );
         }
     }
@@ -842,9 +842,9 @@ namespace sw
                 case CityEvent::Kind::MonthEnded:
                 {
                     ++_monthCount;
-                    SW_LOG_INFO( "[Nile] month %# pop %# money %# (net %#, workers %#/%#, houses up %#, avg level %#, culture %#%%)", _monthCount, _city.getPopulation(),
-                                 _wallet.getBalance( _city.getCurrency() ), event._value, _city.getEmployed(), _city.getWorkforce(), _evolvedCount, _city.computeAverageHouseLevel(),
-                                 static_cast<int32>( _city.computeCultureCoverage() * 100.0f ) );
+                    SW_LOG_INFO_ID( "NileDirector.MonthPopMoneyNet", "[Nile] month %# pop %# money %# (net %#, workers %#/%#, houses up %#, avg level %#, culture %#%%)", _monthCount, _city.getPopulation(),
+                                    _wallet.getBalance( _city.getCurrency() ), event._value, _city.getEmployed(), _city.getWorkforce(), _evolvedCount, _city.computeAverageHouseLevel(),
+                                    static_cast<int32>( _city.computeCultureCoverage() * 100.0f ) );
                     _evolvedCount = 0;
                     break;
                 }
@@ -856,7 +856,7 @@ namespace sw
                 }
                 case CityEvent::Kind::Flood:
                 {
-                    SW_LOG_INFO( "[Nile] year %# - the Nile flooded, farm fertility %#%%", _clock.getYear(), event._value );
+                    SW_LOG_INFO_ID( "NileDirector.YearNileFloodedFarm", "[Nile] year %# - the Nile flooded, farm fertility %#%%", _clock.getYear(), event._value );
                     break;
                 }
                 case CityEvent::Kind::HouseDevolved:
@@ -873,10 +873,10 @@ namespace sw
 
     void NileDirectorComponent::logStatus() const
     {
-        SW_LOG_INFO( "[Nile] year %# month %# · pop %# · money $%# · workers %#/%# · avg house level %# · culture %#%% · fertility %#%% · tool %# · plan %#/%#",
-                     _clock.getYear(), _clock.getSeasonIndex() + 1, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ), _city.getEmployed(), _city.getWorkforce(),
-                     _city.computeAverageHouseLevel(), static_cast<int32>( _city.computeCultureCoverage() * 100.0f ), static_cast<int32>( _city.getFloodFertility() * 100.0f ),
-                     getToolName(), _planner.getNextStep(), _planner.getStepCount() );
+        SW_LOG_INFO_ID( "NileDirector.YearMonthPopMoney", "[Nile] year %# month %# · pop %# · money $%# · workers %#/%# · avg house level %# · culture %#%% · fertility %#%% · tool %# · plan %#/%#",
+                        _clock.getYear(), _clock.getSeasonIndex() + 1, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ), _city.getEmployed(), _city.getWorkforce(),
+                        _city.computeAverageHouseLevel(), static_cast<int32>( _city.computeCultureCoverage() * 100.0f ), static_cast<int32>( _city.getFloodFertility() * 100.0f ),
+                        getToolName(), _planner.getNextStep(), _planner.getStepCount() );
     }
 
     const utf8* NileDirectorComponent::getToolName() const

@@ -18,7 +18,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Music not found: %#", assetPath );
+            SW_LOG_ERROR_ID( "AudioMusic.MusicNotFound", "Music not found: %#", assetPath );
             return false;
         }
         return loadFromXMLText( text, assetPath );
@@ -29,7 +29,7 @@ namespace sw
         *this = AudioMusicDesc{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "%#: music could not be read or holds unknown keys / values", sourceName );
+            SW_LOG_ERROR_ID( "AudioMusic.MusicCouldNotRead", "%#: music could not be read or holds unknown keys / values", sourceName );
             return false;
         }
         return validate( sourceName );
@@ -40,17 +40,17 @@ namespace sw
         bool bValid = true;
         if ( _listSegment.empty() )
         {
-            SW_LOG_ERROR( "%#: music has no segments", sourceName );
+            SW_LOG_ERROR_ID( "AudioMusic.MusicNoSegments", "%#: music has no segments", sourceName );
             return false;
         }
         if ( _tempo <= 0.0f || _beatsPerBar == 0 )
         {
-            SW_LOG_ERROR( "%#: music needs a positive tempo and beats per bar", sourceName );
+            SW_LOG_ERROR_ID( "AudioMusic.MusicNeedsPositiveTempo", "%#: music needs a positive tempo and beats per bar", sourceName );
             bValid = false;
         }
         if ( _startSegment.empty() == false && findSegmentIndex( _startSegment ) < 0 )
         {
-            SW_LOG_ERROR( "%#: start segment '%#' does not exist", sourceName, _startSegment.c_str() );
+            SW_LOG_ERROR_ID( "AudioMusic.StartSegmentDoesNot", "%#: start segment '%#' does not exist", sourceName, _startSegment.c_str() );
             bValid = false;
         }
         for ( size_t segmentIndex = 0; segmentIndex < _listSegment.size(); ++segmentIndex )
@@ -59,20 +59,20 @@ namespace sw
             const utf8*                  pName   = segment._name.c_str();
             if ( segment._name.empty() )
             {
-                SW_LOG_ERROR( "%#: segment %# has no name", sourceName, segmentIndex );
+                SW_LOG_ERROR_ID( "AudioMusic.SegmentNoName", "%#: segment %# has no name", sourceName, segmentIndex );
                 bValid = false;
             }
             for ( size_t otherIndex = segmentIndex + 1; otherIndex < _listSegment.size(); ++otherIndex )
             {
                 if ( _listSegment[otherIndex]._name == segment._name )
                 {
-                    SW_LOG_ERROR( "%#: segment '%#' is declared twice", sourceName, pName );
+                    SW_LOG_ERROR_ID( "AudioMusic.SegmentDeclaredTwice", "%#: segment '%#' is declared twice", sourceName, pName );
                     bValid = false;
                 }
             }
             if ( segment._listLayer.empty() || segment._bars == 0 )
             {
-                SW_LOG_ERROR( "%#: segment '%#' needs at least one layer and one bar", sourceName, pName );
+                SW_LOG_ERROR_ID( "AudioMusic.SegmentNeedsLeastOne", "%#: segment '%#' needs at least one layer and one bar", sourceName, pName );
                 bValid = false;
             }
             for ( const AudioMusicLayerDesc& layer : segment._listLayer )
@@ -81,13 +81,13 @@ namespace sw
                 const bool bInvalidMusicLayer = layer._path.empty() || bCurveMissing || AudioMixerDesc::isCurveSorted( layer._listPoint ) == false;
                 if ( bInvalidMusicLayer )
                 {
-                    SW_LOG_ERROR( "%#: segment '%#' has a layer with no clip, or a parameter with an empty or unordered curve", sourceName, pName );
+                    SW_LOG_ERROR_ID( "AudioMusic.SegmentLayerNoClip", "%#: segment '%#' has a layer with no clip, or a parameter with an empty or unordered curve", sourceName, pName );
                     bValid = false;
                 }
             }
             if ( segment._next.empty() == false && findSegmentIndex( segment._next ) < 0 )
             {
-                SW_LOG_ERROR( "%#: segment '%#' moves to unknown segment '%#'", sourceName, pName, segment._next.c_str() );
+                SW_LOG_ERROR_ID( "AudioMusic.SegmentMovesUnknownSegment", "%#: segment '%#' moves to unknown segment '%#'", sourceName, pName, segment._next.c_str() );
                 bValid = false;
             }
         }
@@ -97,7 +97,7 @@ namespace sw
             const bool bFromKnown = transition._from.empty() || transition._from == anyName || findSegmentIndex( transition._from ) >= 0;
             if ( bFromKnown == false || findSegmentIndex( transition._to ) < 0 )
             {
-                SW_LOG_ERROR( "%#: transition '%#' -> '%#' names an unknown segment", sourceName, transition._from.c_str(), transition._to.c_str() );
+                SW_LOG_ERROR_ID( "AudioMusic.TransitionNamesUnknownSegment", "%#: transition '%#' -> '%#' names an unknown segment", sourceName, transition._from.c_str(), transition._to.c_str() );
                 bValid = false;
             }
         }

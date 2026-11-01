@@ -58,7 +58,7 @@ namespace sw
         const bool bUnusableHeightfield = data.isValid() == false || size._x <= 0.0f || size._y <= 0.0f;
         if ( bUnusableHeightfield )
         {
-            SW_LOG_WARNING( "Terrain heightfield is not usable (resolution %#, size %#x%#)", data._resolution, size._x, size._y );
+            SW_LOG_WARNING_ID( "TerrainHeightfield.TerrainHeightfieldNotUsable", "Terrain heightfield is not usable (resolution %#, size %#x%#)", data._resolution, size._x, size._y );
             return false;
         }
         _resolution = data._resolution;

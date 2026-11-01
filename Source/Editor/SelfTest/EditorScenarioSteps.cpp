@@ -200,7 +200,7 @@ namespace sw::editor
                 EditorSelfTestInput::waitNextFrame();
                 // 누른 뒤 위젯이 사라졌으면(닫힌 팝업) 그 자리에서 놓는다 — 그래도 놓아야 버튼이 눌린 채로 남지 않는다.
                 if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
-                    SW_LOG_INFO( "[Scenario] editor widget '%#' was gone when the click released", mark.c_str() );
+                    SW_LOG_INFO_ID( "EditorScenarioSteps.EditorWidgetGoneWhen", "[Scenario] editor widget '%#' was gone when the click released", mark.c_str() );
                 EditorSelfTestInput::setMouseButton( button, false );
                 for ( const int32 modifier : listModifier )
                 {

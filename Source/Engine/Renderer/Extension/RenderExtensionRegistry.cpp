@@ -13,19 +13,19 @@ namespace sw
     {
         if ( element._mesh.empty() )
         {
-            SW_LOG_ERROR( "Extension draw element has no mesh id - the element is rejected" );
+            SW_LOG_ERROR_ID( "ExtensionRenderPass.ExtensionDrawElementNo", "Extension draw element has no mesh id - the element is rejected" );
             return false;
         }
         if ( element._instanceCount == 0 || element._instanceCount > ExtensionDrawElement::kMaxInstanceCount )
         {
-            SW_LOG_ERROR( "Extension draw element '%#' has instance count %# (valid 1..%#) - the element is rejected", element._mesh.c_str(), element._instanceCount,
-                          ExtensionDrawElement::kMaxInstanceCount );
+            SW_LOG_ERROR_ID( "ExtensionRenderPass.ExtensionDrawElementInstance", "Extension draw element '%#' has instance count %# (valid 1..%#) - the element is rejected", element._mesh.c_str(), element._instanceCount,
+                             ExtensionDrawElement::kMaxInstanceCount );
             return false;
         }
         if ( element._constantCount > ExtensionDrawElement::kMaxConstantCount )
         {
-            SW_LOG_ERROR( "Extension draw element '%#' has %# constants (limit %#) - the element is rejected", element._mesh.c_str(), element._constantCount,
-                          ExtensionDrawElement::kMaxConstantCount );
+            SW_LOG_ERROR_ID( "ExtensionRenderPass.ExtensionDrawElementConstants", "Extension draw element '%#' has %# constants (limit %#) - the element is rejected", element._mesh.c_str(), element._constantCount,
+                             ExtensionDrawElement::kMaxConstantCount );
             return false;
         }
         _listElement.push_back( element );
@@ -169,7 +169,7 @@ namespace sw
     {
         _bRegistered = _registry.registerExtension( _pExtension ) ? SW_TRUE : SW_FALSE;
         if ( _bRegistered == SW_FALSE )
-            SW_LOG_ERROR( "A module render extension is already registered - the second registration is ignored" );
+            SW_LOG_ERROR_ID( "ExtensionRenderPass.ModuleRenderExtensionAlready", "A module render extension is already registered - the second registration is ignored" );
     }
 
     RenderExtensionRegistration::~RenderExtensionRegistration()

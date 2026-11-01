@@ -42,7 +42,7 @@ namespace sw::editor
                 using Registry = EditorExtensionRegistry<TRegistration>;
                 for ( uint32 index = 0; index < Registry::getCount(); ++index )
                 {
-                    SW_LOG_INFO( "EditorExtensionRegistry|%#|%#", TRegistration::kKindName, Registry::getAt( index )._pID );
+                    SW_LOG_INFO_ID( "EditorExtensionRegistryDump.EditorExtensionRegistry", "EditorExtensionRegistry|%#|%#", TRegistration::kKindName, Registry::getAt( index )._pID );
                 }
             }
         };
@@ -67,8 +67,8 @@ namespace sw::editor
         // 패널은 등록 줄이 아니라 매니저가 만든 인스턴스를 본다 — 메뉴에 보이는 제목까지 같이 남긴다.
         for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
         {
-            SW_LOG_INFO( "EditorExtensionRegistry|panel|%#|%#|%#", entry._id.c_str(), EditorExtensionRegistryDumpInternal::getCategoryName( entry._category ),
-                         entry._title.c_str() );
+            SW_LOG_INFO_ID( "EditorExtensionRegistryDump.EditorExtensionRegistryPanel", "EditorExtensionRegistry|panel|%#|%#|%#", entry._id.c_str(), EditorExtensionRegistryDumpInternal::getCategoryName( entry._category ),
+                            entry._title.c_str() );
         }
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorPopupRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorInspectorRegistration>();
@@ -90,7 +90,7 @@ namespace sw::editor
                     itemText += "-,";
                 itemText += registry.getCommands()[item._commandIndex]._id;
             }
-            SW_LOG_INFO( "EditorExtensionRegistry|menu|%#|%#", menu._path.c_str(), itemText.c_str() );
+            SW_LOG_INFO_ID( "EditorExtensionRegistryDump.EditorExtensionRegistryMenu", "EditorExtensionRegistry|menu|%#|%#", menu._path.c_str(), itemText.c_str() );
         }
     }
 } // namespace sw::editor

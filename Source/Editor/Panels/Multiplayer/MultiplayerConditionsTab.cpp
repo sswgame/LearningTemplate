@@ -293,7 +293,7 @@ namespace sw::editor
         for ( int32 processIndex = firstIndex; processIndex <= lastIndex; ++processIndex )
         {
             if ( session.sendProcessCommand( processIndex, command ) == false )
-                SW_LOG_WARNING( "Could not send '%#' to process %# - it has exited", command, processIndex );
+                SW_LOG_WARNING_ID( "MultiplayerConditions.CouldNotSendProcess", "Could not send '%#' to process %# - it has exited", command, processIndex );
         }
     }
 

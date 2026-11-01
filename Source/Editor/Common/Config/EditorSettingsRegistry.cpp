@@ -51,7 +51,7 @@ namespace sw::editor
                     }
                     const string text = object.get( key ).asString();
                     if ( SerializerUtil::applyPropertyText( *pProperty, MutableObjectAddress{ pInstance }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
-                        SW_LOG_WARNING( "Editor preference %#.%# = '%#' could not be applied - kept the current value", type._name.c_str(), key.c_str(), text.c_str() );
+                        SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferenceCouldNot", "Editor preference %#.%# = '%#' could not be applied - kept the current value", type._name.c_str(), key.c_str(), text.c_str() );
                 }
             }
 
@@ -77,7 +77,7 @@ namespace sw::editor
                 applyObject( root.get( sectionID ), *registration._pfnGetType(), registration._pInstance, listUnknownKey );
                 for ( const string& key : listUnknownKey )
                 {
-                    SW_LOG_WARNING( "Editor preferences: unknown key '%#.%#' skipped", sectionID.c_str(), key.c_str() );
+                    SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferencesUnknownKey", "Editor preferences: unknown key '%#.%#' skipped", sectionID.c_str(), key.c_str() );
                 }
                 if ( registration._pfnOnChanged != nullptr )
                     registration._pfnOnChanged();
@@ -113,7 +113,7 @@ namespace sw::editor
             const EditorSettingsRegistration* pRegistration = EditorSettingsRegistryInternal::SettingsRegistry::find( sectionID );
             if ( pRegistration == nullptr || pRegistration->_pfnGetType() == nullptr )
             {
-                SW_LOG_WARNING( "Editor preferences: unknown section '%#' skipped (its module may be off)", sectionID.c_str() );
+                SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferencesUnknownSection", "Editor preferences: unknown section '%#' skipped (its module may be off)", sectionID.c_str() );
                 continue;
             }
             EditorSettingsRegistryInternal::applySection( root, sectionID, *pRegistration );
@@ -208,7 +208,7 @@ namespace sw::editor
         }
         if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || document.saveFile( filePath, 4 ) == false )
         {
-            SW_LOG_WARNING( "Editor preferences could not be saved to %#", string( filePath ).c_str() );
+            SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferencesCouldNot", "Editor preferences could not be saved to %#", string( filePath ).c_str() );
             return false;
         }
         SW_LOG_INFO_ID( "EditorSettings.Saved", "Editor preferences saved: %# key(s) -> %#", keyCount, string( filePath ).c_str() );
@@ -255,7 +255,7 @@ namespace sw::editor
         for ( const PropertyInfo& prop : pType->getPropertiesWithBase() )
         {
             if ( SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefault }, context ), context ) == false )
-                SW_LOG_WARNING( "Reset Section could not restore %#.%#", pType->_name.c_str(), prop._name.c_str() );
+                SW_LOG_WARNING_ID( "EditorPreferences.ResetSectionCouldNot", "Reset Section could not restore %#.%#", pType->_name.c_str(), prop._name.c_str() );
         }
         if ( registration._pfnOnChanged != nullptr )
             registration._pfnOnChanged();

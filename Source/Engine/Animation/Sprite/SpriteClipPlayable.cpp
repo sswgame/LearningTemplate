@@ -26,8 +26,8 @@ namespace sw
         const bool bValid = firstFrame >= 0 && frameCount >= 1 && animatorFrameSeconds > 0.0f;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "SpriteClipPlayable: refused first frame %# frame count %# frame seconds %# - the first frame must not be negative, the count must be at least 1 and the seconds positive", firstFrame, frameCount,
-                          animatorFrameSeconds );
+            SW_LOG_ERROR_ID( "SpriteClipPlayable.SpriteClipPlayableRefusedFirstFrame", "SpriteClipPlayable: refused first frame %# frame count %# frame seconds %# - the first frame must not be negative, the count must be at least 1 and the seconds positive", firstFrame, frameCount,
+                             animatorFrameSeconds );
             return false;
         }
         _pClip                = pClip;

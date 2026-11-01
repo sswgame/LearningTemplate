@@ -41,8 +41,8 @@ namespace sw
         if ( record.isFresh( desc ) == false )
         {
             const CookInput* pChanged = record.findChangedInput();
-            SW_LOG_INFO( "Cook: '%#' is cooked again - %#%#", outputID, pChanged != nullptr ? "input changed: " : "cooker version or settings changed",
-                         pChanged != nullptr ? pChanged->_source : string{} );
+            SW_LOG_INFO_ID( "CookStore.CookCookedAgain", "Cook: '%#' is cooked again - %#%#", outputID, pChanged != nullptr ? "input changed: " : "cooker version or settings changed",
+                            pChanged != nullptr ? pChanged->_source : string{} );
             return false;
         }
         // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.
@@ -53,17 +53,17 @@ namespace sw
         bytes.clear();
         if ( _derivedDataCache.find( record._key, bytes ) == false )
         {
-            SW_LOG_INFO( "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );
+            SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );
             return false;
         }
         if ( hashOutput( bytes ) != record._outputHash )
         {
-            SW_LOG_WARNING( "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
+            SW_LOG_WARNING_ID( "CookStore.CookDDCEntryDoes", "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
             return false;
         }
         if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_WARNING( "Cook: could not write '%#' from the DDC - cooked again", outputPath );
+            SW_LOG_WARNING_ID( "CookStore.CookCouldNotWrite", "Cook: could not write '%#' from the DDC - cooked again", outputPath );
             return false;
         }
         return true;
@@ -92,14 +92,14 @@ namespace sw
         vector<uint8> bytes;
         if ( FileUtil::readFile( outputPath, bytes ) == false )
         {
-            SW_LOG_ERROR( "Cook: '%#' was reported written but cannot be read back", outputPath );
+            SW_LOG_ERROR_ID( "CookStore.CookReportedWrittenBut", "Cook: '%#' was reported written but cannot be read back", outputPath );
             return CookOutcome::Failed;
         }
         // 출력 파일은 쿠커가 쓰므로 다시 읽는 것은 DDC 저장에 어차피 필요하다. 해시는 그 바이트를 한 번만 훑는다(`hashOutput` 이 시간도 잰다).
         const CookRecord record = CookRecord::make( job, hashOutput( bytes ) );
         if ( _derivedDataCache.store( record._key, bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
-            SW_LOG_ERROR( "Cook: could not store '%#' in the DDC or write its record", outputID );
+            SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookOutcome::Failed;
         }
         return CookOutcome::Cooked;
@@ -118,7 +118,7 @@ namespace sw
         outFailedCount = 0;
         if ( cookedDir.empty() )
         {
-            SW_LOG_ERROR( "Cook: removing unrequested outputs needs the cooked directory" );
+            SW_LOG_ERROR_ID( "CookStore.CookRemovingUnrequestedOutputs", "Cook: removing unrequested outputs needs the cooked directory" );
             ++outFailedCount;
             return 0;
         }
@@ -142,12 +142,12 @@ namespace sw
                 continue;
             if ( FileUtil::removeFile( outputPath ) )
             {
-                SW_LOG_INFO( "Cook: removed '%#' - no cooker requested it this run (its source is gone or is no longer cooked)", outputID );
+                SW_LOG_INFO_ID( "CookStore.CookRemovedNoCooker", "Cook: removed '%#' - no cooker requested it this run (its source is gone or is no longer cooked)", outputID );
                 ++removedCount;
             }
             else
             {
-                SW_LOG_ERROR( "Cook: could not remove the unrequested output '%#'", outputPath );
+                SW_LOG_ERROR_ID( "CookStore.CookCouldNotRemove", "Cook: could not remove the unrequested output '%#'", outputPath );
                 ++outFailedCount;
             }
         }

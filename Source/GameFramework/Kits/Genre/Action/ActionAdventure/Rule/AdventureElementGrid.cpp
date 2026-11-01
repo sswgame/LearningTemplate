@@ -183,12 +183,12 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "AdventureElementGrid: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "AdventureElementGrid.AdventureElementGridRefusedSettings", "AdventureElementGrid: refused settings - %#", rangeError.c_str() );
             return false;
         }
         if ( width < 1 || height < 1 )
         {
-            SW_LOG_ERROR( "AdventureElementGrid: refused size %#x%# (both need 1 or more)", width, height );
+            SW_LOG_ERROR_ID( "AdventureElementGrid.AdventureElementGridRefusedSizeX", "AdventureElementGrid: refused size %#x%# (both need 1 or more)", width, height );
             return false;
         }
         _settings = settings;

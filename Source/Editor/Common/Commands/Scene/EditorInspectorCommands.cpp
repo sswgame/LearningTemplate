@@ -37,7 +37,7 @@ namespace sw::editor
             static void writePrefabFile( string prefabPath, string filePath, string text )
             {
                 if ( FileUtil::writeTextFile( filePath, text ) == false )
-                    SW_LOG_ERROR( "Could not write '%#' back", filePath.c_str() );
+                    SW_LOG_ERROR_ID( "EditorInspectorCommands.CouldNotWriteBack", "Could not write '%#' back", filePath.c_str() );
                 // 이 단계는 에셋 관리자가 있을 때만 기록된다(`applyToPrefab`) - 여기서는 필수다.
                 editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabPath }, nullptr );
             }
@@ -77,7 +77,7 @@ namespace sw::editor
                     const bool         bReattachNeeded = pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent &&
                                                  pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) ) == false;
                     if ( bReattachNeeded )
-                        SW_LOG_WARNING( "Revert of '%#' could not re-attach it to its parent - it stays at the root", name.c_str() );
+                        SW_LOG_WARNING_ID( "EditorInspectorCommands.RevertCouldNotRe", "Revert of '%#' could not re-attach it to its parent - it stays at the root", name.c_str() );
                     if ( bHadRoot )
                     {
                         pNewRoot->setLocalPosition( position );
@@ -107,7 +107,7 @@ namespace sw::editor
                 string       overridesError;
                 if ( PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML, overridesError ) == false )
                 {
-                    SW_LOG_WARNING( "Prefab instance '%#' could not be refreshed: %#", pInstance->getName().c_str(), overridesError.c_str() );
+                    SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabInstanceCouldNot", "Prefab instance '%#' could not be refreshed: %#", pInstance->getName().c_str(), overridesError.c_str() );
                     return false;
                 }
                 if ( PrefabOverrides::makeInstanceState( newBaseState, overrideXML, pInstance->getName().c_str(), newInstanceState ) == false )
@@ -149,7 +149,7 @@ namespace sw::editor
         asset.setFromGameObject( pObj );
         if ( asset.saveToFile( *filePath ) == false )
         {
-            SW_LOG_ERROR( "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );
+            SW_LOG_ERROR_ID( "EditorInspectorCommands.ApplyPrefabRefusedCould", "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );
             return false;
         }
         string newFileText;
@@ -194,7 +194,7 @@ namespace sw::editor
             const ObjectSnapshot before = EditorTransaction::captureSnapshot( pInstance );
             if ( EditorInspectorCommandsInternal::updateInstance( prefabCache, pInstance, oldBaseState, prefabPath ) == false )
             {
-                SW_LOG_WARNING( "Prefab instance '%#' could not take the new prefab state", pInstance->getName().c_str() );
+                SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabInstanceCouldNot2", "Prefab instance '%#' could not take the new prefab state", pInstance->getName().c_str() );
                 continue;
             }
             EditorTransaction::recordModify( pInstance, before, EditorTransaction::captureSnapshot( pInstance ), "Update Prefab Instance" );
@@ -216,7 +216,7 @@ namespace sw::editor
         AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr )
         {
-            SW_LOG_ERROR( "Revert to prefab refused: no AssetManager (prefab cache) for '%#'", string{ prefabPath }.c_str() );
+            SW_LOG_ERROR_ID( "EditorInspectorCommands.RevertPrefabRefusedNo", "Revert to prefab refused: no AssetManager (prefab cache) for '%#'", string{ prefabPath }.c_str() );
             return false;
         }
 
@@ -245,11 +245,11 @@ namespace sw::editor
         }
         if ( pTarget == nullptr || workspace.getPlacedPrefabPath( *pTarget ).empty() )
         {
-            SW_LOG_WARNING( "'%#' has no placed prefab instance to unlink", pObj->getName().c_str() );
+            SW_LOG_WARNING_ID( "EditorInspectorCommands.NoPlacedPrefabInstance", "'%#' has no placed prefab instance to unlink", pObj->getName().c_str() );
             return false;
         }
         if ( pTarget != pObj )
-            SW_LOG_INFO( "'%#' is a nested prefab part - its outermost instance '%#' is unpacked one level", pObj->getName().c_str(), pTarget->getName().c_str() );
+            SW_LOG_INFO_ID( "EditorInspectorCommands.NestedPrefabPartOutermost", "'%#' is a nested prefab part - its outermost instance '%#' is unpacked one level", pObj->getName().c_str(), pTarget->getName().c_str() );
         workspace.setPlacedPrefabPath( *pTarget, "" );
         workspace.markSceneDirty();
         return true;
@@ -271,13 +271,13 @@ namespace sw::editor
         GameObject* pOuter = findOuterInstance( pPart );
         if ( pOuter == nullptr )
         {
-            SW_LOG_WARNING( "Apply to outer prefab refused: '%#' has no attached outer instance", pPart != nullptr ? pPart->getName().c_str() : "(null)" );
+            SW_LOG_WARNING_ID( "EditorInspectorCommands.ApplyOuterPrefabRefused", "Apply to outer prefab refused: '%#' has no attached outer instance", pPart != nullptr ? pPart->getName().c_str() : "(null)" );
             return false;
         }
         const string outerPath{ editor::getSubsystem<EditorWorkspace>().findPrefabPath( pOuter ) };
         if ( outerPath.empty() )
         {
-            SW_LOG_WARNING( "The outer instance '%#' of '%#' has no prefab - nothing to apply to", pOuter->getName().c_str(), pPart->getName().c_str() );
+            SW_LOG_WARNING_ID( "EditorInspectorCommands.OuterInstanceNoPrefab", "The outer instance '%#' of '%#' has no prefab - nothing to apply to", pOuter->getName().c_str(), pPart->getName().c_str() );
             return false;
         }
         return applyToPrefab( pOuter, AssetID{ outerPath } );
@@ -292,7 +292,7 @@ namespace sw::editor
         {
             AdoptResult rejected;
             rejected._rejectReason = "cannot check scene object references: the object or its scene is missing";
-            SW_LOG_WARNING( "Prefab creation refused: %#", rejected._rejectReason.c_str() );
+            SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabCreationRefused", "Prefab creation refused: %#", rejected._rejectReason.c_str() );
             return rejected;
         }
         EditorWorkspace&        workspace    = editor::getSubsystem<EditorWorkspace>(); // 필수 서비스 - 없으면 버그라 멈춘다(대상 확인 뒤에 조회: 대상 없는 호출은 위에서 거절)
@@ -327,7 +327,7 @@ namespace sw::editor
             if ( SceneObjectReferenceUtil::findReferenceTo( sceneManager, editor::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
                 continue;
             result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
-            SW_LOG_WARNING( "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );
+            SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabCreationRefused2", "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );
             return result;
         }
 

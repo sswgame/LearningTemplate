@@ -167,12 +167,12 @@ namespace sw
         const PairedAnimationDef& def = session.getDef();
         if ( _pManager == nullptr )
         {
-            SW_LOG_ERROR( "Paired animation session %# is not replicated: the replication server was not initialized with a scene", session.getID() );
+            SW_LOG_ERROR_ID( "PairedAnimationReplication.PairedAnimationSessionNot", "Paired animation session %# is not replicated: the replication server was not initialized with a scene", session.getID() );
             return false;
         }
         if ( def.getSourcePath().empty() )
         {
-            SW_LOG_ERROR( "Paired animation session %# is not replicated: its asset was not loaded from a resource path, so clients cannot load the same asset", session.getID() );
+            SW_LOG_ERROR_ID( "PairedAnimationReplication.PairedAnimationSessionNot2", "Paired animation session %# is not replicated: its asset was not loaded from a resource path, so clients cannot load the same asset", session.getID() );
             return false;
         }
         outState._assetPath = def.getSourcePath();
@@ -185,8 +185,8 @@ namespace sw
             const uint32 netID = findAnimatorNetID( *_pManager, animator );
             if ( netID == 0 )
             {
-                SW_LOG_ERROR( "Paired animation session %# is not replicated: role '%#' of '%#' is bound to an object without a net id (not a captured scene object and not a registered spawned object)", session.getID(),
-                              def.getRoles()[roleIndex]._name.c_str(), def.getSourcePath().c_str() );
+                SW_LOG_ERROR_ID( "PairedAnimationReplication.PairedAnimationSessionNot3", "Paired animation session %# is not replicated: role '%#' of '%#' is bound to an object without a net id (not a captured scene object and not a registered spawned object)", session.getID(),
+                                 def.getRoles()[roleIndex]._name.c_str(), def.getSourcePath().c_str() );
                 return false;
             }
             outState._listRoleNetID[roleIndex] = netID;
@@ -201,8 +201,8 @@ namespace sw
         BitWriter& writer = _writer.begin( NetPairedAnimationMessage::kSessionState );
         if ( state.write( writer ) )
             return true;
-        SW_LOG_ERROR( "Paired animation session %# is not replicated: path '%#' or %# roles exceed the message limits", state._snapshot._sessionID, state._assetPath.c_str(),
-                      static_cast<uint32>( state._listRoleNetID.size() ) );
+        SW_LOG_ERROR_ID( "PairedAnimationReplication.PairedAnimationSessionNot4", "Paired animation session %# is not replicated: path '%#' or %# roles exceed the message limits", state._snapshot._sessionID, state._assetPath.c_str(),
+                         static_cast<uint32>( state._listRoleNetID.size() ) );
         return false;
     }
 
@@ -219,7 +219,7 @@ namespace sw
             writer.writeVarUint( sessionID );
             (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
-            SW_LOG_INFO( "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
             _listAnnouncedID.erase( _listAnnouncedID.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
         // 복제하지 못한 세션은 끝나면 잊는다.
@@ -250,7 +250,7 @@ namespace sw
             }
             (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
             ++_stats._stateSentCount;
-            SW_LOG_INFO( "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
             _listAnnouncedID.push_back( session.getID() );
         }
     }
@@ -272,7 +272,7 @@ namespace sw
                 if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
                 {
                     ++_stats._stateSentCount;
-                    SW_LOG_INFO( "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );
+                    SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );
                 }
                 else
                     ++_stats._sendRejectedCount;
@@ -340,8 +340,8 @@ namespace sw
                 continue; // 복원했거나 오류로 거절했다(applyStateNow 가 남겼다)
             if ( pending._waitedFrames > kMaxPendingFrames )
             {
-                SW_LOG_ERROR( "Replicated paired animation session %# of '%#' was not restored: participants were still loading animation clips after %# frames (limit %#)", pending._state._snapshot._sessionID,
-                              pending._state._assetPath.c_str(), pending._waitedFrames, kMaxPendingFrames );
+                SW_LOG_ERROR_ID( "PairedAnimationReplication.ReplicatedPairedAnimationSession", "Replicated paired animation session %# of '%#' was not restored: participants were still loading animation clips after %# frames (limit %#)", pending._state._snapshot._sessionID,
+                                 pending._state._assetPath.c_str(), pending._waitedFrames, kMaxPendingFrames );
                 ++_stats._rejectedCount;
                 continue;
             }
@@ -353,21 +353,21 @@ namespace sw
     {
         if ( _pManager == nullptr )
         {
-            SW_LOG_ERROR( "Replicated paired animation session %# rejected: the replication client was not initialized with a scene", state._snapshot._sessionID );
+            SW_LOG_ERROR_ID( "PairedAnimationReplication.ReplicatedPairedAnimationSession2", "Replicated paired animation session %# rejected: the replication client was not initialized with a scene", state._snapshot._sessionID );
             ++_stats._rejectedCount;
             return PairedAnimationStartResult::ParticipantMissing;
         }
         const shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( state._assetPath );
         if ( def == nullptr )
         {
-            SW_LOG_ERROR( "Replicated paired animation session %# rejected: asset '%#' could not be loaded", state._snapshot._sessionID, state._assetPath.c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimationReplication.ReplicatedPairedAnimationSession3", "Replicated paired animation session %# rejected: asset '%#' could not be loaded", state._snapshot._sessionID, state._assetPath.c_str() );
             ++_stats._rejectedCount;
             return PairedAnimationStartResult::AssetNotLoaded;
         }
         if ( state._listRoleNetID.size() != def->getRoles().size() )
         {
-            SW_LOG_ERROR( "Replicated paired animation session %# rejected: %# roles received but '%#' has %#", state._snapshot._sessionID,
-                          static_cast<uint32>( state._listRoleNetID.size() ), state._assetPath.c_str(), static_cast<uint32>( def->getRoles().size() ) );
+            SW_LOG_ERROR_ID( "PairedAnimationReplication.ReplicatedPairedAnimationSession4", "Replicated paired animation session %# rejected: %# roles received but '%#' has %#", state._snapshot._sessionID,
+                             static_cast<uint32>( state._listRoleNetID.size() ), state._assetPath.c_str(), static_cast<uint32>( def->getRoles().size() ) );
             ++_stats._rejectedCount;
             return PairedAnimationStartResult::InvalidSnapshot;
         }
@@ -380,8 +380,8 @@ namespace sw
             const TComponentHandle<SkeletalAnimatorComponent> animator = findNetAnimator( *_pManager, netID );
             if ( animator.isValid() == false )
             {
-                SW_LOG_ERROR( "Replicated paired animation session %# rejected: role '%#' names net object %# but no animated object here has that id", state._snapshot._sessionID,
-                              def->getRoles()[roleIndex]._name.c_str(), netID );
+                SW_LOG_ERROR_ID( "PairedAnimationReplication.ReplicatedPairedAnimationSession5", "Replicated paired animation session %# rejected: role '%#' names net object %# but no animated object here has that id", state._snapshot._sessionID,
+                                 def->getRoles()[roleIndex]._name.c_str(), netID );
                 ++_stats._rejectedCount;
                 return PairedAnimationStartResult::ParticipantMissing;
             }
@@ -396,11 +396,11 @@ namespace sw
         if ( result == PairedAnimationStartResult::Started )
         {
             ++_stats._appliedCount;
-            SW_LOG_INFO( "%#", formatEventLine( "client", "restore", state._snapshot._sessionID, state._snapshot._anchorTime ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "client", "restore", state._snapshot._sessionID, state._snapshot._anchorTime ).c_str() );
         }
         else if ( result != PairedAnimationStartResult::ParticipantNotReady ) // 클립을 읽는 중이면 정상 거절 — 보관하고 다시 한다
         {
-            SW_LOG_ERROR( "Replicated paired animation session %# of '%#' was not restored (result %#)", state._snapshot._sessionID, state._assetPath.c_str(), static_cast<uint32>( result ) );
+            SW_LOG_ERROR_ID( "PairedAnimationReplication.ReplicatedPairedAnimationSession6", "Replicated paired animation session %# of '%#' was not restored (result %#)", state._snapshot._sessionID, state._assetPath.c_str(), static_cast<uint32>( result ) );
             ++_stats._rejectedCount;
         }
         return result;
@@ -424,7 +424,7 @@ namespace sw
                 ++_stats._endAppliedCount;
             }
             // 클라이언트 쪽 세션이 먼저 끝났어도(같은 시계로 따라 돈다) 끝 메시지를 받은 것은 남긴다.
-            SW_LOG_INFO( "%#", formatEventLine( "client", "end", sessionID, 0.0f ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "client", "end", sessionID, 0.0f ).c_str() );
             return NetHandleResult::Handled;
         }
         PairedAnimationNetState state{};

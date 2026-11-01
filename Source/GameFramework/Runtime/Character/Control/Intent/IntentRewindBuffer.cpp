@@ -21,7 +21,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( config );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "IntentRewindBuffer: refused to start - settings '%#'", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "IntentRewind.IntentRewindBufferRefusedStartSettings", "IntentRewindBuffer: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
         _intervalTicks = static_cast<uint32>( config._intervalTicks );
@@ -39,13 +39,13 @@ namespace sw
     {
         if ( _listSnapshot.empty() == false && tick <= _listSnapshot.back()._tick )
         {
-            SW_LOG_ERROR( "Rewind key at tick %# does not follow tick %# - discard the future after a seek first", tick, _listSnapshot.back()._tick );
+            SW_LOG_ERROR_ID( "IntentRewind.RewindKeyTickDoes", "Rewind key at tick %# does not follow tick %# - discard the future after a seek first", tick, _listSnapshot.back()._tick );
             return false;
         }
         if ( bytes.size() > _maxBytes )
         {
-            SW_LOG_ERROR( "Rewind key at tick %# is %# bytes, over the whole budget of %# bytes - it is not kept", tick, static_cast<uint64>( bytes.size() ),
-                          static_cast<uint64>( _maxBytes ) );
+            SW_LOG_ERROR_ID( "IntentRewind.RewindKeyTickBytes", "Rewind key at tick %# is %# bytes, over the whole budget of %# bytes - it is not kept", tick, static_cast<uint64>( bytes.size() ),
+                             static_cast<uint64>( _maxBytes ) );
             return false;
         }
         _byteCount += bytes.size();

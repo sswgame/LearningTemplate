@@ -108,12 +108,12 @@ namespace sw
             return true;
         if ( pDevice == nullptr )
         {
-            SW_LOG_ERROR( "GPU assert is requested (gv_gpuAssert) but there is no device" );
+            SW_LOG_ERROR_ID( "GPUAssert.GPUAssertRequestedGv", "GPU assert is requested (gv_gpuAssert) but there is no device" );
             return false;
         }
         if ( pDevice->getCapabilities()._bCompute == SW_FALSE )
         {
-            SW_LOG_ERROR( "GPU assert is requested (gv_gpuAssert) but this backend has no compute support (the UAV ring needs compute)" );
+            SW_LOG_ERROR_ID( "GPUAssert.GPUAssertRequestedGv2", "GPU assert is requested (gv_gpuAssert) but this backend has no compute support (the UAV ring needs compute)" );
             return false;
         }
 
@@ -123,20 +123,20 @@ namespace sw
                                                                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess, true, true, zeroed.data() );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR( "Failed to create the GPU assert ring buffer (%# uints) - gv_gpuAssert cannot run", static_cast<uint32>( SW_GPU_ASSERT_BUFFER_UINTS ) );
+            SW_LOG_ERROR_ID( "GPUAssert.FailedCreateGPUAssert", "Failed to create the GPU assert ring buffer (%# uints) - gv_gpuAssert cannot run", static_cast<uint32>( SW_GPU_ASSERT_BUFFER_UINTS ) );
             _buffer.release( pDevice );
             return false;
         }
         if ( _readback.initialize( pDevice, sizeof( uint32 ), SW_GPU_ASSERT_BUFFER_UINTS ) == false )
         {
-            SW_LOG_ERROR( "Failed to create the GPU assert readback buffers - gv_gpuAssert cannot run" );
+            SW_LOG_ERROR_ID( "GPUAssert.FailedCreateGPUAssert2", "Failed to create the GPU assert readback buffers - gv_gpuAssert cannot run" );
             _buffer.release( pDevice );
             return false;
         }
         _pDevice        = pDevice;
         _frameSerial    = 0;
         _processedCount = 0;
-        SW_LOG_INFO( "GPU assert ring ready (%# records, read back a few frames late)", static_cast<uint32>( SW_GPU_ASSERT_RING_CAPACITY ) );
+        SW_LOG_INFO_ID( "GPUAssert.GPUAssertRingReady", "GPU assert ring ready (%# records, read back a few frames late)", static_cast<uint32>( SW_GPU_ASSERT_RING_CAPACITY ) );
         return true;
     }
 
@@ -176,7 +176,7 @@ namespace sw
             return;
         if ( bytes.size() < static_cast<size_t>( SW_GPU_ASSERT_BUFFER_UINTS ) * sizeof( uint32 ) )
         {
-            SW_LOG_ERROR_ONCE( "GPU assert readback is smaller than the ring (%# bytes)", static_cast<uint32>( bytes.size() ) );
+            SW_LOG_ERROR_ONCE_ID( "GPUAssert.GPUAssertReadbackSmaller", "GPU assert readback is smaller than the ring (%# bytes)", static_cast<uint32>( bytes.size() ) );
             return;
         }
         vector<uint32> words( SW_GPU_ASSERT_BUFFER_UINTS );
@@ -230,7 +230,7 @@ namespace sw
             const GPUAssertInfo* pInfo = findGPUAssertInfo( group._id );
             if ( pInfo == nullptr )
             {
-                SW_LOG_ERROR( "GPU assert id %# (x%#, frame %#) is not in the assert table - the shader and GPUAssert.cpp disagree", group._id, group._count, frame );
+                SW_LOG_ERROR_ID( "GPUAssert.GPUAssertIdX", "GPU assert id %# (x%#, frame %#) is not in the assert table - the shader and GPUAssert.cpp disagree", group._id, group._count, frame );
                 _reportedCount += group._count;
                 continue;
             }
@@ -239,27 +239,27 @@ namespace sw
             if ( pInfo->_severity == GPUAssertSeverity::Error )
             {
                 if ( bFloat )
-                    SW_LOG_ERROR( "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage, floatValue,
-                                  group._firstThread );
+                    SW_LOG_ERROR_ID( "GPUAssert.GPUAssertXFrame", "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage, floatValue,
+                                     group._firstThread );
                 else
-                    SW_LOG_ERROR( "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage,
-                                  group._firstValueBits, group._firstThread );
+                    SW_LOG_ERROR_ID( "GPUAssert.GPUAssertXFrame", "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage,
+                                     group._firstValueBits, group._firstThread );
             }
             else
             {
                 if ( bFloat )
-                    SW_LOG_WARNING( "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage, floatValue,
-                                    group._firstThread );
+                    SW_LOG_WARNING_ID( "GPUAssert.GPUAssertXFrame", "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage, floatValue,
+                                       group._firstThread );
                 else
-                    SW_LOG_WARNING( "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage,
-                                    group._firstValueBits, group._firstThread );
+                    SW_LOG_WARNING_ID( "GPUAssert.GPUAssertXFrame", "GPU assert %# in %# (x%#, frame %#): %# - first value %#, thread %#", group._id, pInfo->_pPass, group._count, frame, pInfo->_pMessage,
+                                       group._firstValueBits, group._firstThread );
             }
             _reportedCount += group._count;
         }
         if ( dropped > 0 )
         {
             _droppedCount += dropped;
-            SW_LOG_WARNING( "GPU assert ring dropped %# records (frame %#) - the ring holds %# records between reads", dropped, frame, static_cast<uint32>( SW_GPU_ASSERT_RING_CAPACITY ) );
+            SW_LOG_WARNING_ID( "GPUAssert.GPUAssertRingDropped", "GPU assert ring dropped %# records (frame %#) - the ring holds %# records between reads", dropped, frame, static_cast<uint32>( SW_GPU_ASSERT_RING_CAPACITY ) );
         }
     }
 } // namespace sw

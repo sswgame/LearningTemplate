@@ -85,8 +85,8 @@ namespace sw
             const uint32 oldestTick = track._ring.getCount() > 0 ? computeOldestTick( track ) : baseTick;
             const uint32 tickCount  = track._ring.getCount() > 0 ? track._lastTick - oldestTick + 1 : 0;
             if ( oldestTick != track._firstTick )
-                SW_LOG_WARNING( "Intent track '%#' lost its first %# tick(s) to the ring - a replay from the scene start will not match", track._pawnName.c_str(),
-                                oldestTick - track._firstTick );
+                SW_LOG_WARNING_ID( "ControlIntentHistory.IntentTrackLostFirst", "Intent track '%#' lost its first %# tick(s) to the ring - a replay from the scene start will not match", track._pawnName.c_str(),
+                                   oldestTick - track._firstTick );
             const string_view name = track._pawnName.c_str();
             writer.writeBlob( reinterpret_cast<const uint8*>( name.data() ), static_cast<int32>( name.size() ) );
             writer.writeVarUint( oldestTick - baseTick );

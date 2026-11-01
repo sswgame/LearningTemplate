@@ -144,7 +144,7 @@ namespace sw
         string error;
         if ( _scenario.loadFromPath( assetID, error ) == false )
         {
-            SW_LOG_ERROR( "[Scenario] could not load '%#': %#", string( scenarioPath ).c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "Automation.CouldNotLoad", "[Scenario] could not load '%#': %#", string( scenarioPath ).c_str(), error.c_str() );
             finish( AutomationOutcome::LoadError, error );
             return;
         }
@@ -152,10 +152,10 @@ namespace sw
         _wallLimitSeconds = computeWallLimitSeconds();
         if ( skipIfThisBuildCannotRun() || prepareScratchFolders() == false )
             return;
-        SW_LOG_INFO( "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
-                     static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
+        SW_LOG_INFO_ID( "Automation.LoadedStepFixedDelta", "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
+                        static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
         if ( _scenario.getInputMode() == VirtualInputMode::Mixed )
-            SW_LOG_WARNING( "[Scenario] %# uses mixed input - do not touch the keyboard or mouse while it runs", _scenario.getName().c_str() );
+            SW_LOG_WARNING_ID( "Automation.UsesMixedInputDo", "[Scenario] %# uses mixed input - do not touch the keyboard or mouse while it runs", _scenario.getName().c_str() );
         startHangWatchdog();
     }
 
@@ -185,7 +185,7 @@ namespace sw
                 finish( AutomationOutcome::LoadError, "the start scene '" + _startScenePath + "' could not be requested" );
                 return true;
             }
-            SW_LOG_INFO( "[Scenario] %#: opening the start scene %#", _scenario.getName().c_str(), _startScenePath.c_str() );
+            SW_LOG_INFO_ID( "Automation.OpeningStartScene", "[Scenario] %#: opening the start scene %#", _scenario.getName().c_str(), _startScenePath.c_str() );
             return true;
         }
         if ( _startSceneLoad.isReady() == false )
@@ -230,11 +230,11 @@ namespace sw
             string error;
             if ( AutomationScratch::prepare( folder, error ) == false )
             {
-                SW_LOG_ERROR( "[Scenario] %#: scratch folder %# could not be prepared: %#", _scenario.getName().c_str(), folder._scratchID.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "Automation.ScratchFolderCouldNot", "[Scenario] %#: scratch folder %# could not be prepared: %#", _scenario.getName().c_str(), folder._scratchID.c_str(), error.c_str() );
                 finish( AutomationOutcome::LoadError, error );
                 return false;
             }
-            SW_LOG_INFO( "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
+            SW_LOG_INFO_ID( "Automation.CopiedFreshRun", "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
         }
         acquireWriteGate(); // 사본을 만든 뒤부터 `scratch/` 밖의 리소스 원본 쓰기를 오류로 만든다
         return true;
@@ -326,7 +326,7 @@ namespace sw
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
-            SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
+            SW_LOG_INFO_ID( "Automation.StartedAfterFrame", "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
             updateCrashContext( "started" );
             startLoadWindow();
         }
@@ -387,7 +387,7 @@ namespace sw
                     _run._currentStepKind   = step._kind;
                     _run._currentStepNumber = step._orderInFile;
                     const string stepLine   = AutomationRunTitleUtil::makeStepLogLine( _scenario.getName(), _run._currentStepNumber, _run._currentStepKind, _run._frameIndex );
-                    SW_LOG_INFO( "%#", stepLine.c_str() );
+                    SW_LOG_INFO_ID( "Automation.Message2", "%#", stepLine.c_str() );
                     CrashHandler::addBreadcrumb( stepLine ); // 크래시 보고에 최근 단계 전환이 남는다
                     updateCrashContext();
                 }
@@ -440,8 +440,8 @@ namespace sw
         }
         // 멈춤 그물 — 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다.
         _run._loadDeadlineSeconds = AutomationRunnerInternal::readNowSeconds() + 2.0 * static_cast<float64>( seconds ) + AutomationTimeLimits::kLoadDeadlineSlackSeconds;
-        SW_LOG_INFO( "[Scenario] load window %# s (clients %#, meshes %#, movers %#, network '%#')", seconds, load._clientCount, load._meshCount, load._moverCount,
-                     load._network.c_str() );
+        SW_LOG_INFO_ID( "Automation.LoadWindowClientsMeshes", "[Scenario] load window %# s (clients %#, meshes %#, movers %#, network '%#')", seconds, load._clientCount, load._meshCount, load._moverCount,
+                        load._network.c_str() );
     }
 
     void AutomationRunner::markWallStart()
@@ -708,7 +708,7 @@ namespace sw
         if ( bReady || _run._holdFrameCount >= timeoutFrames )
         {
             if ( bReady && _run._holdFrameCount > 0 )
-                SW_LOG_INFO( "[Scenario] %# held the clock for %# frame(s)", step.describe().c_str(), _run._holdFrameCount );
+                SW_LOG_INFO_ID( "Automation.HeldClockFrame", "[Scenario] %# held the clock for %# frame(s)", step.describe().c_str(), _run._holdFrameCount );
             _run._holdFrameCount = 0;
             _run.clearHeldStepState(); // 놓인 단계의 상태는 이번 붙잡기의 것이다
             return AutomationStepHold::Run;
@@ -738,7 +738,7 @@ namespace sw
         if ( pHolder == nullptr )
         {
             if ( _run._clockHoldFrameCount > 0 )
-                SW_LOG_INFO( "[Scenario] %# held the clock for %# frame(s)", _run._clockHolderName.c_str(), _run._clockHoldFrameCount );
+                SW_LOG_INFO_ID( "Automation.HeldClockFrame", "[Scenario] %# held the clock for %# frame(s)", _run._clockHolderName.c_str(), _run._clockHoldFrameCount );
             _run._clockHoldFrameCount = 0;
             _run._bClockHeld          = SW_FALSE;
             return false;
@@ -780,7 +780,7 @@ namespace sw
             return true;
         // 처음부터 참이던 조건도 남긴다 - 고정 대기를 조건 대기로 바꿀 때 "기다리지 않고 지나간" 단언(일어나지 않음을 보는 부정형일 수 있다)을 가려낸다.
         if ( bReady && heldFrameCount == 0 )
-            SW_LOG_INFO( "[Scenario] %# was already true", step.describe().c_str() );
+            SW_LOG_INFO_ID( "Automation.AlreadyTrue", "[Scenario] %# was already true", step.describe().c_str() );
         if ( bReady == false )
             recordFailure( step, formatToString( "WaitUntil gave up after %# frame(s): %#", heldFrameCount, message ) );
         return false;
@@ -814,16 +814,16 @@ namespace sw
             _judge.applyLogGate( _result, _finishReason );
         if ( _result == AutomationOutcome::Passed )
         {
-            SW_LOG_INFO( "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _run._frameIndex );
+            SW_LOG_INFO_ID( "Automation.PASSFrame", "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _run._frameIndex );
         }
         else if ( _result == AutomationOutcome::Skipped && _bSkippedByBuild )
         {
             // 시나리오가 선언한 조건(이 빌드에 없는 모듈 · 빠진 개발 명령)이다 - 결함이 아니라 빌드 구성이다(언리얼 자동화의 조건부 제외와 같다).
-            SW_LOG_INFO( "[Scenario] SKIP %#: %#", _scenario.getName().c_str(), _finishReason.c_str() );
+            SW_LOG_INFO_ID( "Automation.SKIP", "[Scenario] SKIP %#: %#", _scenario.getName().c_str(), _finishReason.c_str() );
         }
         else if ( _result == AutomationOutcome::Skipped )
         {
-            SW_LOG_WARNING( "[Scenario] SKIP %#: %#", _scenario.getName().c_str(), _finishReason.c_str() );
+            SW_LOG_WARNING_ID( "Automation.SKIP", "[Scenario] SKIP %#: %#", _scenario.getName().c_str(), _finishReason.c_str() );
         }
         else
         {
@@ -836,11 +836,11 @@ namespace sw
             // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
             if ( _result != AutomationOutcome::UnhandledLog && _judge.getUnhandledLogs().empty() == false )
                 detail += formatToString( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _judge.getUnhandledLogs().size() ) );
-            SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
+            SW_LOG_ERROR_ID( "Automation.Frame", "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
-        SW_LOG_INFO( "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getEnumName( _result ), _run._frameIndex );
-        SW_LOG_INFO( "[Scenario] %# timeline: %#", _scenario.getName().c_str(), _wallProfile.describe().c_str() );
+        SW_LOG_INFO_ID( "Automation.FinishedFrames", "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getEnumName( _result ), _run._frameIndex );
+        SW_LOG_INFO_ID( "Automation.Timeline", "[Scenario] %# timeline: %#", _scenario.getName().c_str(), _wallProfile.describe().c_str() );
         AutomationReportParams report{};
         report._scenarioName       = _scenario.getName();
         report._pResultName        = getEnumName( _result );

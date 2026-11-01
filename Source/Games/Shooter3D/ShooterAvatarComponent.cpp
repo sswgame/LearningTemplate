@@ -135,7 +135,7 @@ namespace sw
         PoseModifierComponent* pRig = pOwner->getComponent<PoseModifierComponent>();
         if ( pRig == nullptr || _firstPersonHeadSlot.empty() )
         {
-            SW_LOG_ERROR( "[Shooter] body '%#' needs a PoseModifierComponent and _firstPersonHeadSlot to hide the head in first person", pOwner->getName().c_str() );
+            SW_LOG_ERROR_ID( "ShooterAvatar.BodyNeedsPoseModifierComponentFirstPersonHeadSlot", "[Shooter] body '%#' needs a PoseModifierComponent and _firstPersonHeadSlot to hide the head in first person", pOwner->getName().c_str() );
         }
         else
         {
@@ -147,8 +147,8 @@ namespace sw
                 bFound = instance.getNode( nodeIndex ).getWeightSlot() == _firstPersonHeadSlot;
             }
             if ( bFound == false )
-                SW_LOG_ERROR( "[Shooter] rig '%#' has no node with weight_slot '%#' - the head stays visible in first person", pRig->getRigPath().c_str(),
-                              _firstPersonHeadSlot.c_str() );
+                SW_LOG_ERROR_ID( "ShooterAvatar.RigNoNodeWeight", "[Shooter] rig '%#' has no node with weight_slot '%#' - the head stays visible in first person", pRig->getRigPath().c_str(),
+                                 _firstPersonHeadSlot.c_str() );
             // 슬롯 가중치 1 = ScaleBone 이 머리를 0 으로 모은다, 0 = 그대로.
             pRig->setSlotWeight( _firstPersonHeadSlot, bFirstPerson ? 1.0f : 0.0f );
         }
@@ -199,7 +199,7 @@ namespace sw
         if ( bMissing && _bStrideErrorShown == SW_FALSE )
         {
             _bStrideErrorShown = SW_TRUE;
-            SW_LOG_ERROR( "[Shooter] pose modifier rig '%#' has no StrideWarping node '%#' - foot sliding beyond the play rate range stays", pModifier->getRigPath(), _strideNode );
+            SW_LOG_ERROR_ID( "ShooterAvatar.PoseModifierRigNo", "[Shooter] pose modifier rig '%#' has no StrideWarping node '%#' - foot sliding beyond the play rate range stays", pModifier->getRigPath(), _strideNode );
         }
     }
 

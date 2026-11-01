@@ -92,8 +92,8 @@ namespace sw
         if ( format == RHIFormat::Unknown )
             return false;
         if ( _bMismatchLogged.exchange( 1 ) == 0 )
-            SW_LOG_WARNING( "Present capture skipped - the output render target (%#x%#, format %#) does not match the capture (%#x%#, format %#)",
-                            width, height, static_cast<uint32>( format ), _width, _height, static_cast<uint32>( constant::render::kBackBufferFormat ) );
+            SW_LOG_WARNING_ID( "FrameRenderer.PresentCaptureSkippedOutput", "Present capture skipped - the output render target (%#x%#, format %#) does not match the capture (%#x%#, format %#)",
+                               width, height, static_cast<uint32>( format ), _width, _height, static_cast<uint32>( constant::render::kBackBufferFormat ) );
         return false;
     }
 
@@ -109,7 +109,7 @@ namespace sw
             return false;
         if ( RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), _texture, 0, 0, outBytes, outLayout ) == false )
         {
-            SW_LOG_ERROR( "readbackPresent: readbackTexture2DAndWait failed." );
+            SW_LOG_ERROR_ID( "FrameRenderer.ReadbackPresentReadbackTexture2DAndWaitFailed", "readbackPresent: readbackTexture2DAndWait failed." );
             return false;
         }
         return outLayout._width != 0 && outLayout._height != 0;
@@ -122,7 +122,7 @@ namespace sw
         const RHITextureHandle texture = _mainPool.findTexture( attachmentName );
         if ( texture == 0 )
         {
-            SW_LOG_ERROR( "readbackTransient: transient '%#' not found.", string( attachmentName ).c_str() );
+            SW_LOG_ERROR_ID( "FrameRenderer.ReadbackTransientTransientNotFound", "readbackTransient: transient '%#' not found.", string( attachmentName ).c_str() );
             return false;
         }
         outFormat = RHIFormat::R8G8B8A8_UNORM;
@@ -136,7 +136,7 @@ namespace sw
         }
         if ( RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), texture, 0, 0, outBytes, outLayout ) == false )
         {
-            SW_LOG_ERROR( "readbackTransient: readbackTexture2DAndWait failed ('%#').", string( attachmentName ).c_str() );
+            SW_LOG_ERROR_ID( "FrameRenderer.ReadbackTransientReadbackTexture2DAndWaitFailed", "readbackTransient: readbackTexture2DAndWait failed ('%#').", string( attachmentName ).c_str() );
             return false;
         }
         // 깊이 첨부는 네 백엔드 모두 텍셀마다 0..1 float32 하나로 읽힌다(스텐실 없음). 선언 포맷(D24S8)을 그대로 넘기면 바이트를 색으로 잘못 푼다.
@@ -153,7 +153,7 @@ namespace sw
                                      outLayout._height == 0;
         if ( bReadbackFailed )
         {
-            SW_LOG_ERROR( "readbackTexture: readbackTexture2DAndWait failed (texture %#).", texture );
+            SW_LOG_ERROR_ID( "FrameRenderer.ReadbackTextureReadbackTexture2DAndWaitFailedTexture", "readbackTexture: readbackTexture2DAndWait failed (texture %#).", texture );
             return false;
         }
         return true;

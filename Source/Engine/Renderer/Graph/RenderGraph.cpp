@@ -338,7 +338,7 @@ namespace sw
             unordered_map<hashed_string, size_t>::iterator indexIt = _mapNameToIndex.find( passName );
             if ( indexIt == _mapNameToIndex.end() )
             {
-                SW_LOG_ERROR( "execute: unknown pass in order: %#", passName.c_str() );
+                SW_LOG_ERROR_ID( "RenderGraph.ExecuteUnknownPassOrder", "execute: unknown pass in order: %#", passName.c_str() );
                 return false;
             }
 
@@ -424,7 +424,7 @@ namespace sw
                 const auto indexIt = _mapNameToIndex.find( passName );
                 if ( indexIt == _mapNameToIndex.end() )
                 {
-                    SW_LOG_ERROR( "executeParallel: unknown pass in level: %#", passName.c_str() );
+                    SW_LOG_ERROR_ID( "RenderGraph.ExecuteParallelUnknownPassLevel", "executeParallel: unknown pass in level: %#", passName.c_str() );
                     return false;
                 }
                 const RenderGraphNode& node = _listNode[indexIt->second];
@@ -463,7 +463,7 @@ namespace sw
             const auto indexIt = _mapNameToIndex.find( passName );
             if ( indexIt == _mapNameToIndex.end() )
             {
-                SW_LOG_ERROR( "executeParallel: unknown pass in level: %#", passName.c_str() );
+                SW_LOG_ERROR_ID( "RenderGraph.ExecuteParallelUnknownPassLevel", "executeParallel: unknown pass in level: %#", passName.c_str() );
                 return false;
             }
 
@@ -793,8 +793,8 @@ namespace sw
         {
             if ( life._bRead && life._bWritten == false )
             {
-                SW_LOG_WARNING( "Resource '%#' is read but never written by any pass — reads stale or zeroed content.",
-                                life._name.c_str() );
+                SW_LOG_WARNING_ID( "RenderGraph.ResourceReadButNever", "Resource '%#' is read but never written by any pass — reads stale or zeroed content.",
+                                   life._name.c_str() );
             }
         }
     }

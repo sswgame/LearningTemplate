@@ -56,10 +56,10 @@ namespace sw::editor
         const string path = getCaptureFilePath();
         if ( FileUtil::ensureParentDirectoryExists( path ) && _scopeHistory.saveToFile( path ) )
         {
-            SW_LOG_INFO( "Profiler capture saved: %#", path.c_str() );
+            SW_LOG_INFO_ID( "ProfilerCaptureModel.ProfilerCaptureSaved", "Profiler capture saved: %#", path.c_str() );
             return true;
         }
-        SW_LOG_WARNING( "Profiler capture could not be saved: %#", path.c_str() );
+        SW_LOG_WARNING_ID( "ProfilerCaptureModel.ProfilerCaptureCouldNot", "Profiler capture could not be saved: %#", path.c_str() );
         return false;
     }
 
@@ -68,7 +68,7 @@ namespace sw::editor
         const string path = getCaptureFilePath();
         if ( _scopeHistory.loadFromFile( path ) == false )
         {
-            SW_LOG_WARNING( "Profiler capture could not be loaded: %#", path.c_str() );
+            SW_LOG_WARNING_ID( "ProfilerCaptureModel.ProfilerCaptureCouldNot2", "Profiler capture could not be loaded: %#", path.c_str() );
             return false;
         }
         _bCapturePaused        = SW_TRUE; // 연 캡처를 보는 동안 새 프레임이 덮어쓰지 않게 한다

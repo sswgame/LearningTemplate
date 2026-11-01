@@ -68,7 +68,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Currency" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "CurrencyCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadCurrency( node, sourceName ) )
                 ++loadedCount;
         }
@@ -77,7 +77,7 @@ namespace sw
         {
             if ( hasValidFunding( *this, _listCurrency[defIndex] ) == false )
             {
-                SW_LOG_ERROR( "%#: virtual currency '%#' funds from an unknown or virtual currency - skipped", sourceName, _listCurrency[defIndex]._id );
+                SW_LOG_ERROR_ID( "CurrencyCatalog.VirtualCurrencyFundsUnknown", "%#: virtual currency '%#' funds from an unknown or virtual currency - skipped", sourceName, _listCurrency[defIndex]._id );
                 _listCurrency.erase( _listCurrency.begin() + static_cast<ptrdiff_t>( defIndex ) );
                 loadedCount = loadedCount > 0 ? loadedCount - 1 : 0;
                 continue;
@@ -85,7 +85,7 @@ namespace sw
             ++defIndex;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Currency> entries", sourceName );
+            SW_LOG_WARNING_ID( "CurrencyCatalog.NoCurrencyEntries", "%#: no <Currency> entries", sourceName );
         return loadedCount;
     }
 
@@ -95,7 +95,7 @@ namespace sw
         bool        bValid = GameDataXML::readFields( node, def, sourceName );
         if ( bValid && LedgerUtil::isValidAssetID( def._id ) == false )
         {
-            SW_LOG_ERROR( "%#: currency id '%#' must be [0-9a-z_.-]", sourceName, def._id );
+            SW_LOG_ERROR_ID( "CurrencyCatalog.CurrencyIdMustZ", "%#: currency id '%#' must be [0-9a-z_.-]", sourceName, def._id );
             bValid = false;
         }
         for ( XMLNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )

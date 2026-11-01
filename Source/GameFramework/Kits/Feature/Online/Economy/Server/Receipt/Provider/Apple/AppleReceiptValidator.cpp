@@ -128,7 +128,7 @@ namespace sw
             payload.has_value() && JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
         if ( bSigned == false )
         {
-            SW_LOG_ERROR( "Could not sign the App Store Server API token with the key '%#'", _settings._keyID.c_str() );
+            SW_LOG_ERROR_ID( "AppleReceiptValidator.CouldNotSignApp", "Could not sign the App Store Server API token with the key '%#'", _settings._keyID.c_str() );
             return {};
         }
         _authorization     = "Bearer " + token;
@@ -201,8 +201,8 @@ namespace sw
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
         {
             _authorization.clear(); // 우리 토큰이 거절됐다 — 다음 요청이 새로 만든다
-            SW_LOG_ERROR( "Apple rejected the App Store Server API token (issuer '%#', key '%#') - check issuerId, keyId and the signing key", _settings._issuerID.c_str(),
-                          _settings._keyID.c_str() );
+            SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRejectedAppStore", "Apple rejected the App Store Server API token (issuer '%#', key '%#') - check issuerId, keyId and the signing key", _settings._issuerID.c_str(),
+                             _settings._keyID.c_str() );
         }
         if ( Internal::isTransientStatus( response ) )
         {
@@ -227,7 +227,7 @@ namespace sw
         if ( verified.has_value() == false )
         {
             result._failureText = "the signed transaction does not verify against the Apple root";
-            SW_LOG_ERROR( "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._transactionID.c_str() );
+            SW_LOG_ERROR_ID( "AppleReceiptValidator.SignedTransactionAppleDoes", "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._transactionID.c_str() );
             return;
         }
         const JWTVerified& token = *verified;
@@ -281,11 +281,11 @@ namespace sw
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
         {
             _authorization.clear();
-            SW_LOG_ERROR( "Apple rejected the App Store Server API token for the notification history - check issuerId, keyId and the signing key" );
+            SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRejectedAppStore2", "Apple rejected the App Store Server API token for the notification history - check issuerId, keyId and the signing key" );
         }
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {
-            SW_LOG_WARNING( "Apple notification history failed (status %#) - the next poll reads from the last successful one", response._statusCode );
+            SW_LOG_WARNING_ID( "AppleReceiptValidator.AppleNotificationHistoryFailed", "Apple notification history failed (status %#) - the next poll reads from the last successful one", response._statusCode );
             _bHistoryInFlight = SW_FALSE; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
             return;
         }
@@ -298,7 +298,7 @@ namespace sw
                 signedPayload.isString() ? verifyJws( signedPayload.asString(), now.toSeconds() ) : std::nullopt;
             if ( notification.has_value() == false )
             {
-                SW_LOG_ERROR( "An Apple notification does not verify against the Apple root - it is skipped" );
+                SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleNotificationDoesNot", "An Apple notification does not verify against the Apple root - it is skipped" );
                 continue;
             }
             string     notificationType;

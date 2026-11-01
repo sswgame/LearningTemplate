@@ -116,7 +116,7 @@ namespace sw
             // 폭은 필수다(적지 않은 칸이 조용히 1 이 되지 않는다). 0 이하는 오류다.
             if ( node.findAttribute( "width" ) == nullptr )
             {
-                SW_LOG_ERROR( "%#: model '%#' has no width", sourceName, pID );
+                SW_LOG_ERROR_ID( "SkirmishUnit.ModelNoWidth", "%#: model '%#' has no width", sourceName, pID );
                 bValid = false;
             }
             else
@@ -125,7 +125,7 @@ namespace sw
             }
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: model '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             entry._model = string( modelName.c_str() );
@@ -133,7 +133,7 @@ namespace sw
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Model> entries", sourceName );
+            SW_LOG_WARNING_ID( "SkirmishUnit.NoModelEntries", "%#: no <Model> entries", sourceName );
         return loadedCount;
     }
 

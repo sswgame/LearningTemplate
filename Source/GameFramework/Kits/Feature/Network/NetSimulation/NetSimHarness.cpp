@@ -132,7 +132,7 @@ namespace sw
         link._pRouter = &_router;
         link._role    = isServer() ? NetLinkRole::Server : NetLinkRole::Client;
         if ( getObjectManager().getSubsystem<SceneNetLink>().bind( link ) == false )
-            SW_LOG_ERROR( "Net sim world %# could not bind its net link", _worldIndex );
+            SW_LOG_ERROR_ID( "NetSimHarness.NetSimWorldCould", "Net sim world %# could not bind its net link", _worldIndex );
         if ( pGame != nullptr )
             _pSession = pGame->createSession( *this );
         getObjectManager().beginPlay();
@@ -207,7 +207,7 @@ namespace sw
         shutdown();
         if ( settings._tickInterval <= 0.0 )
         {
-            SW_LOG_ERROR( "NetSimHarness: tick interval must be positive (%#)", settings._tickInterval );
+            SW_LOG_ERROR_ID( "NetSimHarness.NetSimHarnessTickIntervalMust", "NetSimHarness: tick interval must be positive (%#)", settings._tickInterval );
             return false;
         }
         _settings       = settings;
@@ -228,7 +228,7 @@ namespace sw
         }
         if ( _pServer->_host.listen() == false )
         {
-            SW_LOG_ERROR( "NetSimHarness: server host failed to listen" );
+            SW_LOG_ERROR_ID( "NetSimHarness.NetSimHarnessServerHostFailed", "NetSimHarness: server host failed to listen" );
             shutdown();
             return false;
         }
@@ -253,7 +253,7 @@ namespace sw
         LoopbackTransport* pEndpoint  = _pNetwork->createEndpoint( port );
         if ( pEndpoint == nullptr )
         {
-            SW_LOG_ERROR( "NetSimHarness: port %# is taken", port );
+            SW_LOG_ERROR_ID( "NetSimHarness.NetSimHarnessPortTaken", "NetSimHarness: port %# is taken", port );
             return nullptr;
         }
         unique_ptr<Link> pLink = make_unique<Link>();
@@ -286,7 +286,7 @@ namespace sw
             pBorrowedScene = _settings._pSceneSource->acquireScene( role, worldIndex );
             if ( pBorrowedScene == nullptr )
             {
-                SW_LOG_ERROR( "NetSimHarness: the scene source gave no scene for world %#", worldIndex );
+                SW_LOG_ERROR_ID( "NetSimHarness.NetSimHarnessSceneSourceGave", "NetSimHarness: the scene source gave no scene for world %#", worldIndex );
                 return {};
             }
         }
@@ -309,7 +309,7 @@ namespace sw
             return -1; // 씬을 빌리지 못했다 — createWorld 가 알렸다
         if ( pWorld->_host.connect( _pServer->getAddress() ) == false )
         {
-            SW_LOG_ERROR( "NetSimHarness: client %# failed to start connecting", worldIndex );
+            SW_LOG_ERROR_ID( "NetSimHarness.NetSimHarnessClientFailedStart", "NetSimHarness: client %# failed to start connecting", worldIndex );
             return -1;
         }
         pWorld->start( _pGame );

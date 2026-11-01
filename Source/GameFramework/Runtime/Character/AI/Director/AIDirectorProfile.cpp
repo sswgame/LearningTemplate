@@ -191,7 +191,7 @@ namespace sw
             }
             if ( findSignalIndex( signal._id ) >= 0 )
             {
-                SW_LOG_ERROR( "%#: signal '%#' is declared twice", sourceName, signal._id.c_str() );
+                SW_LOG_ERROR_ID( "AIDirectorProfile.SignalDeclaredTwice", "%#: signal '%#' is declared twice", sourceName, signal._id.c_str() );
                 bValid = false;
                 continue;
             }
@@ -220,7 +220,7 @@ namespace sw
         }
         if ( findPhaseIndex( phase._id ) >= 0 )
         {
-            SW_LOG_ERROR( "%#: phase '%#' is declared twice", sourceName, phase._id.c_str() );
+            SW_LOG_ERROR_ID( "AIDirectorProfile.PhaseDeclaredTwice", "%#: phase '%#' is declared twice", sourceName, phase._id.c_str() );
             return false;
         }
         _listPhase.push_back( phase );
@@ -239,7 +239,7 @@ namespace sw
         // 종류는 적지 않으면 조우 풀이다(Def 초기값). 계기는 반드시 적는다.
         if ( kindText.empty() == false && Internal::kPoolKindTable.parse( kindText, pool._kind ) == false )
         {
-            SW_LOG_ERROR( "%#: pool '%#' has an unknown kind '%#' (%#)", sourceName, pool._id.c_str(), kindText, Internal::kPoolKindTable.joinNames().c_str() );
+            SW_LOG_ERROR_ID( "AIDirectorProfile.PoolUnknownKind", "%#: pool '%#' has an unknown kind '%#' (%#)", sourceName, pool._id.c_str(), kindText, Internal::kPoolKindTable.joinNames().c_str() );
             bValid = false;
         }
         const string_view triggerText = node.getAttributeText( "trigger" );
@@ -251,7 +251,7 @@ namespace sw
         ScheduleCondition::parseNameList( node.getAttributeText( "pacing" ), pool._listPacing );
         if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter && pool._phase.empty() )
         {
-            SW_LOG_ERROR( "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pool._id.c_str() );
+            SW_LOG_ERROR_ID( "AIDirectorProfile.PoolTriggeredPhaseEnter", "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pool._id.c_str() );
             bValid = false;
         }
 
@@ -270,7 +270,7 @@ namespace sw
             {
                 if ( other._id == encounter._id )
                 {
-                    SW_LOG_ERROR( "%#: pool '%#' lists '%#' twice", sourceName, pool._id.c_str(), encounter._id.c_str() );
+                    SW_LOG_ERROR_ID( "AIDirectorProfile.PoolListsTwice", "%#: pool '%#' lists '%#' twice", sourceName, pool._id.c_str(), encounter._id.c_str() );
                     bValid = false;
                 }
             }
@@ -278,14 +278,14 @@ namespace sw
         }
         if ( pool._listEncounter.empty() )
         {
-            SW_LOG_ERROR( "%#: pool '%#' has no <Encounter>", sourceName, pool._id.c_str() );
+            SW_LOG_ERROR_ID( "AIDirectorProfile.PoolNoEncounter", "%#: pool '%#' has no <Encounter>", sourceName, pool._id.c_str() );
             bValid = false;
         }
         for ( const AIDirectorPoolDef& other : _listPool )
         {
             if ( other._id == pool._id )
             {
-                SW_LOG_ERROR( "%#: pool '%#' is declared twice", sourceName, pool._id.c_str() );
+                SW_LOG_ERROR_ID( "AIDirectorProfile.PoolDeclaredTwice", "%#: pool '%#' is declared twice", sourceName, pool._id.c_str() );
                 bValid = false;
             }
         }
@@ -344,7 +344,7 @@ namespace sw
                 pool._phaseIndex = findPhaseIndex( pool._phase );
                 if ( pool._phaseIndex < 0 )
                 {
-                    SW_LOG_ERROR( "%#: pool '%#' waits for an unknown phase '%#'", sourceName, pool._id.c_str(), pool._phase.c_str() );
+                    SW_LOG_ERROR_ID( "AIDirectorProfile.PoolWaitsUnknownPhase", "%#: pool '%#' waits for an unknown phase '%#'", sourceName, pool._id.c_str(), pool._phase.c_str() );
                     bValid = false;
                 }
             }

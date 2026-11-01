@@ -86,7 +86,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "FightingMatch: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "FightingMatch.FightingMatchRefusedSettings", "FightingMatch: refused settings - %#", rangeError.c_str() );
             return false;
         }
         if ( _series.initialize( FightingMatchInternal::makeSeriesSettings( settings ) ) == false )
@@ -1130,7 +1130,7 @@ namespace sw
         if ( bWritten == false )
         {
             // 범위 밖 값은 시뮬레이션의 결함이다. 잘라 쓰지 않고, 읽는 쪽이 거절하도록 빈 바이트를 남긴다.
-            SW_LOG_ERROR( "Fighting rollback state has a value outside its declared range at frame %# - the state is not saved", _frame );
+            SW_LOG_ERROR_ID( "FightingMatch.FightingRollbackStateValue", "Fighting rollback state has a value outside its declared range at frame %# - the state is not saved", _frame );
             SW_ASSERT( bWritten );
             outBuffer.clear();
         }
@@ -1141,7 +1141,7 @@ namespace sw
         const FixedReadResult result = FixedLayout::read( buffer.data(), static_cast<int32>( buffer.size() ), *this );
         if ( result != FixedReadResult::Ok )
         {
-            SW_LOG_WARNING( "Fighting rollback state was rejected (%#) - the match keeps its current state", FixedLayout::toString( result ) );
+            SW_LOG_WARNING_ID( "FightingMatch.FightingRollbackStateRejected", "Fighting rollback state was rejected (%#) - the match keeps its current state", FixedLayout::toString( result ) );
             return false;
         }
         completeLoad();

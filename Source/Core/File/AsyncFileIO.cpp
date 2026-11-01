@@ -345,7 +345,7 @@ namespace sw
         }
         catch ( const std::bad_alloc& )
         {
-            SW_LOG_ERROR( "Out of memory reserving %# bytes to read '%#'", request._size, request._pFile->_path );
+            SW_LOG_ERROR_ID( "AsyncFileIO.OutMemoryReservingBytes", "Out of memory reserving %# bytes to read '%#'", request._size, request._pFile->_path );
             return AsyncIOStatus::ReadFailed;
         }
         request._result._offset = request._offset;
@@ -615,7 +615,7 @@ namespace sw
                 backend.reset();
             if ( backend == nullptr && settings._backendKind != AsyncIOBackendKind::Auto )
             {
-                SW_LOG_ERROR( "Async file IO backend %# is not available on this platform", getBackendName( settings._backendKind ) );
+                SW_LOG_ERROR_ID( "AsyncFileIO.AsyncFileIOBackend", "Async file IO backend %# is not available on this platform", getBackendName( settings._backendKind ) );
                 _queue.reset();
                 return false;
             }
@@ -636,7 +636,7 @@ namespace sw
             pBackend->wake();
         } ) );
         _backend = std::move( backend );
-        SW_LOG_INFO( "Async file IO started (backend %#)", getBackendName( _backend->getKind() ) );
+        SW_LOG_INFO_ID( "AsyncFileIO.AsyncFileIOStarted", "Async file IO started (backend %#)", getBackendName( _backend->getKind() ) );
         return true;
     }
 

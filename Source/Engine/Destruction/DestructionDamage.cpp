@@ -125,7 +125,7 @@ namespace sw
         const bool bInvalidEventLog = pData == nullptr || size < 20 || Memory::compare( pData, Internal::kArrMagic, 4 ) != 0 || LittleEndianUtil::readUint32( pData + 4 ) != kVersion;
         if ( bInvalidEventLog )
         {
-            SW_LOG_ERROR( "Not a destruction event log (bad magic or version)" );
+            SW_LOG_ERROR_ID( "DestructionDamage.NotDestructionEventLog", "Not a destruction event log (bad magic or version)" );
             return false;
         }
         const uint64 seedLow  = LittleEndianUtil::readUint32( pData + 8 );
@@ -133,7 +133,7 @@ namespace sw
         const uint32 count    = LittleEndianUtil::readUint32( pData + 16 );
         if ( static_cast<uint64>( count ) * Internal::kEventSize != size - 20 )
         {
-            SW_LOG_ERROR( "Destruction event log length does not match its event count" );
+            SW_LOG_ERROR_ID( "DestructionDamage.DestructionEventLogLength", "Destruction event log length does not match its event count" );
             return false;
         }
         _listEvent.reserve( count );
@@ -142,7 +142,7 @@ namespace sw
         {
             if ( pCursor[0] >= static_cast<uint8>( DestructionDamageKind::Count ) )
             {
-                SW_LOG_ERROR( "Destruction event %# has an unknown kind %#", index, pCursor[0] );
+                SW_LOG_ERROR_ID( "DestructionDamage.DestructionEventUnknownKind", "Destruction event %# has an unknown kind %#", index, pCursor[0] );
                 _listEvent.clear();
                 return false;
             }

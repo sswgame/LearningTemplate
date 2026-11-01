@@ -144,7 +144,7 @@ namespace sw
             return false;
         if ( _tileMap.assign( pGround->getTileMap(), pGround->getTileSet() ) == false )
         {
-            SW_LOG_ERROR( "[Town] the ground layer '%#' cannot become a walk grid", pGround->getTileMap()._sourcePath );
+            SW_LOG_ERROR_ID( "TownDirector.GroundLayerCannotBecome", "[Town] the ground layer '%#' cannot become a walk grid", pGround->getTileMap()._sourcePath );
             return false;
         }
         if ( _props.isValid() )
@@ -157,19 +157,19 @@ namespace sw
         const SceneComponent* pGroundScene  = pGroundObject->getPrimarySceneComponent();
         if ( pGroundScene == nullptr )
         {
-            SW_LOG_ERROR( "[Town] the ground object has no scene component - the map has no place in the world" );
+            SW_LOG_ERROR_ID( "TownDirector.GroundObjectNoScene", "[Town] the ground object has no scene component - the map has no place in the world" );
             return false;
         }
         _mapOrigin = pGroundScene->getWorldPosition();
         _tileSize  = pGround->getTileSet().getTileSize();
         if ( findHeroPawn() == nullptr )
         {
-            SW_LOG_ERROR( "[Town] the hero object has no PawnComponent - the town cannot start" );
+            SW_LOG_ERROR_ID( "TownDirector.HeroObjectNoPawnComponent", "[Town] the hero object has no PawnComponent - the town cannot start" );
             return false;
         }
         if ( findHeroPawn()->findButton( _interactButton ) < 0 )
         {
-            SW_LOG_ERROR( "[Town] the hero pawn has no button '%#' (Interact Button)", _interactButton.c_str() );
+            SW_LOG_ERROR_ID( "TownDirector.HeroPawnNoButton", "[Town] the hero pawn has no button '%#' (Interact Button)", _interactButton.c_str() );
             return false;
         }
         if ( collectVillagers( *pManager ) == false )
@@ -200,7 +200,7 @@ namespace sw
         const TileMapRendererComponent* pRenderer = pObject != nullptr ? pObject->getComponent<TileMapRendererComponent>() : nullptr;
         if ( pRenderer == nullptr || pRenderer->getTileMap()._width <= 0 )
         {
-            SW_LOG_ERROR( "[Town] the %# layer object has no loaded TileMapRendererComponent", pRole );
+            SW_LOG_ERROR_ID( "TownDirector.LayerObjectNoLoaded", "[Town] the %# layer object has no loaded TileMapRendererComponent", pRole );
             return nullptr;
         }
         return pRenderer;
@@ -220,8 +220,8 @@ namespace sw
             const bool bInsideTheMap = 0 <= tile._x && tile._x < _tileMap.getWidth() && 0 <= tile._y && tile._y < _tileMap.getHeight();
             if ( bInsideTheMap == false )
             {
-                SW_LOG_ERROR( "[Town] villager '%#' stands outside the %#x%# map (tile %#,%#)", pObject->getName().c_str(), _tileMap.getWidth(), _tileMap.getHeight(),
-                              tile._x, tile._y );
+                SW_LOG_ERROR_ID( "TownDirector.VillagerStandsOutsideX", "[Town] villager '%#' stands outside the %#x%# map (tile %#,%#)", pObject->getName().c_str(), _tileMap.getWidth(), _tileMap.getHeight(),
+                                 tile._x, tile._y );
                 bAllPlaced = false;
                 return;
             }
@@ -287,7 +287,7 @@ namespace sw
     void TownDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored == false )
-            SW_LOG_WARNING( "[Town] the saved town state does not match this build - starting at the spawn tile" );
+            SW_LOG_WARNING_ID( "TownDirector.SavedTownStateDoes", "[Town] the saved town state does not match this build - starting at the spawn tile" );
         _stepFromTile = int2{ _mover.getTileX(), _mover.getTileY() };
         _stepElapsed  = _stepSeconds;
         updateHeroPosition();
@@ -295,8 +295,8 @@ namespace sw
 
     void TownDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[Town] town is ready - WASD / arrows walk one tile, Space / E talk to the villager you face (%# villager(s))",
-                     static_cast<uint32>( _listVillager.size() ) );
+        SW_LOG_INFO_ID( "TownDirector.TownReadyWASDArrows", "[Town] town is ready - WASD / arrows walk one tile, Space / E talk to the villager you face (%# villager(s))",
+                        static_cast<uint32>( _listVillager.size() ) );
     }
 
     // ------------------------------------------------------------------------------
@@ -373,14 +373,14 @@ namespace sw
         _pendingTarget                   = GameObjectHandle{};
         if ( pRunner == nullptr )
         {
-            SW_LOG_ERROR( "[Town] the villager to talk to is gone - the talk is closed" );
+            SW_LOG_ERROR_ID( "TownDirector.VillagerTalkGoneTalk", "[Town] the villager to talk to is gone - the talk is closed" );
             _talkTarget = GameObjectHandle{};
             return;
         }
         const bool bStepped = request == TalkRequest::Start ? pRunner->startDialogue() : pRunner->advance();
         if ( bStepped == false && request == TalkRequest::Start )
         {
-            SW_LOG_ERROR( "[Town] villager '%#' has no dialogue to start (empty or unreadable graph)", pObject->getName().c_str() );
+            SW_LOG_ERROR_ID( "TownDirector.VillagerNoDialogueStart", "[Town] villager '%#' has no dialogue to start (empty or unreadable graph)", pObject->getName().c_str() );
             return;
         }
         switch ( pRunner->getState() )
@@ -394,7 +394,7 @@ namespace sw
             case DialogueRunnerState::WaitingForChoice:
             {
                 // 이 게임에는 선택지 UI 가 없다 — 고를 수 없는 대화를 열어 두면 주인공이 멈춘다. 데이터 오류로 알리고 닫는다.
-                SW_LOG_ERROR( "[Town] villager '%#' asks a choice, but PixelTown has no choice UI - the talk is closed", pObject->getName().c_str() );
+                SW_LOG_ERROR_ID( "TownDirector.VillagerAsksChoiceBut", "[Town] villager '%#' asks a choice, but PixelTown has no choice UI - the talk is closed", pObject->getName().c_str() );
                 pRunner->stopDialogue();
                 _talkTarget = GameObjectHandle{};
                 break;

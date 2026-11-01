@@ -18,7 +18,7 @@ namespace sw
         const bool bAnyBound = hooks._onFrameBegin.isBound() || hooks._onAfterSceneTick.isBound() || hooks._onFrameEnd.isBound() || hooks._onWindowClosed.isBound();
         if ( bAnyBound == false )
         {
-            SW_LOG_ERROR( "Frame hooks are all empty - nothing is registered" );
+            SW_LOG_ERROR_ID( "Engine.FrameHooksAllEmpty", "Frame hooks are all empty - nothing is registered" );
             return {};
         }
         // 묶음 하나를 항목 하나로 올린다 — 시점마다 맞는 칸을 부르고, 빈 칸 · 종료 코드가 없는 시점은 `kEngineFrameRunning` 이다.

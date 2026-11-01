@@ -101,7 +101,7 @@ namespace sw
         const GameDirectorComponent* pBefore  = pObject != nullptr ? pObject->getComponent<GameDirectorComponent>() : nullptr;
         if ( pBefore == nullptr || pBefore == this )
         {
-            SW_LOG_WARNING( "GameDirector: _tickAfter does not point at another director - the rules stay on the main tick" );
+            SW_LOG_WARNING_ID( "GameDirector.GameDirectorTickAfterDoesNot", "GameDirector: _tickAfter does not point at another director - the rules stay on the main tick" );
             return;
         }
         (void)registerSubTick( TickGroup::PrePhysics, kRuleSubTick ); // 핸들은 쓰지 않는다 — id 로 다룬다

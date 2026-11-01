@@ -136,8 +136,8 @@ namespace sw
         const AssetFormatVersion version = readXMLVersion( root );
         if ( version != type._formatVersion )
         {
-            SW_LOG_ERROR( "%# asset formatVersion %# does not match the supported %# - rewrite the data (no migration before the first release)", type._name, version,
-                          type._formatVersion );
+            SW_LOG_ERROR_ID( "AssetFormat.AssetFormatVersionDoesNot", "%# asset formatVersion %# does not match the supported %# - rewrite the data (no migration before the first release)", type._name, version,
+                             type._formatVersion );
             return false;
         }
         return true;

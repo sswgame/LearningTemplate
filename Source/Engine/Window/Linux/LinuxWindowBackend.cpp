@@ -22,7 +22,7 @@ namespace sw
             outBackend = LinuxWindowBackend::Wayland;
             return true;
         }
-        SW_LOG_ERROR( "SW_WINDOW_BACKEND='%#' is not a window backend (x11, wayland)", backend.c_str() );
+        SW_LOG_ERROR_ID( "Window.SWWINDOWBACKENDNot", "SW_WINDOW_BACKEND='%#' is not a window backend (x11, wayland)", backend.c_str() );
         return false;
     }
 } // namespace sw

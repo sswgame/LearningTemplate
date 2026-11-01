@@ -71,7 +71,7 @@ namespace sw
             static void warnLoadFailureOnce( string_view path )
             {
                 if ( getState()._warned.tryClaim( HashUtil::computeStringHash64( makeKey( path ), false ) ) )
-                    SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
+                    SW_LOG_WARNING_ID( "MeshCache.MeshAssetCouldNot", "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
             /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 메시 캐시의 키는 리소스 id 만 담는다. */
@@ -251,7 +251,7 @@ namespace sw
         MeshAssetData data{};
         if ( MeshAssetFormat::loadFromAsset( AssetID{ path }, data ) == false )
         {
-            SW_LOG_ERROR( "Hot-Reload failed for Mesh %#", path );
+            SW_LOG_ERROR_ID( "MeshCache.HotReloadFailedMesh", "Hot-Reload failed for Mesh %#", path );
             return false;
         }
 

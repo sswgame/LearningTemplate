@@ -73,7 +73,7 @@ namespace sw
                     MeshComponent* pMesh = pObject != nullptr ? pObject->addComponent<MeshComponent>() : nullptr;
                     if ( pMesh == nullptr )
                     {
-                        SW_LOG_ERROR( "Avatar %# could not get a mesh", entityID );
+                        SW_LOG_ERROR_ID( "NetSimSampleGame.AvatarCouldNotGet", "Avatar %# could not get a mesh", entityID );
                         return;
                     }
                     pMesh->setMeshID( "Cube" );
@@ -109,7 +109,7 @@ namespace sw
             {
                 _routerSubscription = world.getRouter().registerHandler( &_messageHandler );
                 if ( _routerSubscription.isActive() == false )
-                    SW_LOG_ERROR( "NetSimSampleGame: the server could not claim its message kinds - no input arrives" );
+                    SW_LOG_ERROR_ID( "NetSimSampleGame.NetSimSampleGameServerCouldNot", "NetSimSampleGame: the server could not claim its message kinds - no input arrives" );
             }
 
             uint8  getMessageRangeBase() const { return NetMessageRange::kGame; }
@@ -290,7 +290,7 @@ namespace sw
             {
                 _routerSubscription = world.getRouter().registerHandler( &_messageHandler );
                 if ( _routerSubscription.isActive() == false )
-                    SW_LOG_ERROR( "NetSimSampleGame: the client could not claim its message kinds - nothing is shown" );
+                    SW_LOG_ERROR_ID( "NetSimSampleGame.NetSimSampleGameClientCouldNot", "NetSimSampleGame: the client could not claim its message kinds - nothing is shown" );
             }
 
             uint8  getMessageRangeBase() const { return NetMessageRange::kGame; }

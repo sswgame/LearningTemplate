@@ -178,7 +178,7 @@ namespace sw::editor
         outFolderAbs = makeUniquePath( parentAbs, "new_folder", "" );
         if ( FileUtil::ensureDirectoryExists( outFolderAbs ) )
             return true;
-        SW_LOG_ERROR( "Could not create the folder '%#'", outFolderAbs );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotCreateFolder", "Could not create the folder '%#'", outFolderAbs );
         return false;
     }
 
@@ -194,13 +194,13 @@ namespace sw::editor
             const EngineDefaultAssets* pAssets = editor::findSubsystem<const EngineDefaultAssets>();
             if ( pAssets == nullptr )
             {
-                SW_LOG_ERROR( "Engine default assets are not loaded - the new asset template has no source" );
+                SW_LOG_ERROR_ID( "EditorAssetFileCommands.EngineDefaultAssetsNot", "Engine default assets are not loaded - the new asset template has no source" );
                 return false;
             }
             const DataPath& sourcePath = assetTemplate._pfnSourcePath( *pAssets );
             if ( AssetIO::readTextAsset( AssetID{ sourcePath.get() }, text ) == false )
             {
-                SW_LOG_ERROR( "Could not read the new asset template '%#'", sourcePath.c_str() );
+                SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotReadNew", "Could not read the new asset template '%#'", sourcePath.c_str() );
                 return false;
             }
         }
@@ -217,7 +217,7 @@ namespace sw::editor
             SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
         }
-        SW_LOG_ERROR( "Could not write the new asset '%#'", outAssetAbs );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotWriteNew", "Could not write the new asset '%#'", outAssetAbs );
         return false;
     }
 
@@ -242,17 +242,17 @@ namespace sw::editor
             return false;
         if ( isValidAssetName( FileUtil::getFileNamePart( destination ) ) == false )
         {
-            SW_LOG_WARNING( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( destination ) );
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.NotResourceNameUse", "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( destination ) );
             return false;
         }
         if ( FileUtil::exists( destination ) )
         {
-            SW_LOG_WARNING( "'%#' already exists - nothing was moved", newID );
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.AlreadyExistsNothingMoved", "'%#' already exists - nothing was moved", newID );
             return false;
         }
         if ( inoutIndex.isReady() == false )
         {
-            SW_LOG_WARNING( "The reference index is still building - try again in a moment" );
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.ReferenceIndexStillBuilding", "The reference index is still building - try again in a moment" );
             return false;
         }
 
@@ -268,7 +268,7 @@ namespace sw::editor
         {
             (void)replaceReference( metaText, oldID, newID ); // 경로를 적지 않은 .meta 는 그대로 옮긴다
             if ( FileUtil::writeTextFile( AssetDatabase::metaPathFor( destination ), metaText ) == false || FileUtil::removeFile( sourceMeta ) == false )
-                SW_LOG_WARNING( "Moved '%#' but its .meta could not follow", newID );
+                SW_LOG_WARNING_ID( "EditorAssetFileCommands.MovedButMetaCould", "Moved '%#' but its .meta could not follow", newID );
         }
 
         const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
@@ -292,7 +292,7 @@ namespace sw::editor
                 continue;
             if ( FileUtil::writeTextFile( referrerAbs, referrerText ) == false )
             {
-                SW_LOG_WARNING( "Could not fix the reference in '%#' - it still names '%#'", referrerID, oldID );
+                SW_LOG_WARNING_ID( "EditorAssetFileCommands.CouldNotFixReference", "Could not fix the reference in '%#' - it still names '%#'", referrerID, oldID );
                 continue;
             }
             ++outFixedFileCount;
@@ -319,7 +319,7 @@ namespace sw::editor
             SW_LOG_INFO_ID( "Asset.Recycled", "Moved '%#' to the recycle bin", editor::getSubsystem<AssetPaths>().toAssetID( assetPath ) );
             return true;
         }
-        SW_LOG_ERROR( "Could not move '%#' to the recycle bin - it is kept", assetPath );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotMoveRecycle", "Could not move '%#' to the recycle bin - it is kept", assetPath );
         return false;
     }
 
@@ -332,12 +332,12 @@ namespace sw::editor
         const string abs{ absolutePath };
         if ( FileUtil::removeFile( abs ) == false )
         {
-            SW_LOG_ERROR( "Could not delete '%#' - it and its .meta are kept", abs );
+            SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotDeleteMeta", "Could not delete '%#' - it and its .meta are kept", abs );
             return false;
         }
         const string metaPath = AssetDatabase::metaPathFor( abs );
         if ( FileUtil::exists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
-            SW_LOG_WARNING( "Deleted '%#' but its .meta could not be removed", abs );
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaCould", "Deleted '%#' but its .meta could not be removed", abs );
         return true;
     }
 
@@ -359,7 +359,7 @@ namespace sw::editor
     {
         if ( destFolderAbs.empty() )
         {
-            SW_LOG_WARNING( "Import cancelled — no destination folder." );
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.ImportCancelledNoDestination", "Import cancelled — no destination folder." );
             return 0;
         }
 
@@ -368,7 +368,7 @@ namespace sw::editor
         {
             if ( FileUtil::exists( sourcePath ) == false )
             {
-                SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
+                SW_LOG_WARNING_ID( "EditorAssetFileCommands.ImportSkippedMissing", "Import skipped (missing): %#", sourcePath.c_str() );
                 continue;
             }
 
@@ -377,7 +377,7 @@ namespace sw::editor
             const string plainPath = FileUtil::joinPath( destFolderAbs, fileName );
             if ( FileUtil::pathsEqualNormalized( sourcePath, plainPath ) )
             {
-                SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
+                SW_LOG_TRACE_ID( "EditorAssetFileCommands.AlreadyFolder", "Already in folder: %#", fileName.c_str() );
                 continue;
             }
 
@@ -386,7 +386,7 @@ namespace sw::editor
             const string destPath = FileUtil::reserveUniquePath( FileUtil::removeExtension( plainPath ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
             if ( destPath.empty() || FileUtil::copyFile( sourcePath, destPath ) == false )
             {
-                SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
+                SW_LOG_ERROR_ID( "EditorAssetFileCommands.FailedImport", "Failed to import: %#", sourcePath.c_str() );
                 continue;
             }
 
@@ -394,7 +394,7 @@ namespace sw::editor
             const string rel = AssetDatabase::toRootAssetID( destPath );
             if ( rel.empty() == false )
                 editor::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( rel, true );
-            SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
+            SW_LOG_TRACE_ID( "EditorAssetFileCommands.Imported", "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
         }
         return copied;
     }
@@ -436,7 +436,7 @@ namespace sw::editor
         // 기다리지 않는다(Windows 는 셸 API, 리눅스는 분리 실행한 xdg-open). 알 수 있는 실패는 "열지 못했다" 뿐이다. `command` 는 기록 · 단언용 글이고 실행하지 않는다.
         if ( Process::showInFileManager( FileUtil::normalizeSeparators( absolutePath ) ) == false )
         {
-            SW_LOG_WARNING( "Failed to open file explorer: %#", command.c_str() );
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.FailedOpenFileExplorer", "Failed to open file explorer: %#", command.c_str() );
             return false;
         }
         return true;

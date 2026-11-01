@@ -54,12 +54,12 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Mode" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "MatchModeCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadMode( node, sourceName ) )
                 ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Mode> entries", sourceName );
+            SW_LOG_WARNING_ID( "MatchModeCatalog.NoModeEntries", "%#: no <Mode> entries", sourceName );
         return loadedCount;
     }
 
@@ -71,7 +71,7 @@ namespace sw
         const utf8*         pID    = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {
-            SW_LOG_ERROR( "%#: <Mode> needs id=\"...\"", sourceName );
+            SW_LOG_ERROR_ID( "MatchModeCatalog.ModeNeedsId", "%#: <Mode> needs id=\"...\"", sourceName );
             return false;
         }
         mode._modeID = pID;

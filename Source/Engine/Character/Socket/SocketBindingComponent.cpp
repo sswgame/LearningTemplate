@@ -159,7 +159,7 @@ namespace sw
         SceneComponent* pHolderScene = pHolder->getPrimarySceneComponent();
         if ( pScene->getParent() != pHolderScene && pScene->attachToComponent( pHolderScene, AttachRule::KeepRelative ) == false )
         {
-            SW_LOG_WARNING( "'%#' cannot attach to socket '%#' of '%#'", getOwner()->getName().c_str(), _socketName.c_str(), pHolder->getName().c_str() );
+            SW_LOG_WARNING_ID( "SocketBinding.CannotAttachSocket", "'%#' cannot attach to socket '%#' of '%#'", getOwner()->getName().c_str(), _socketName.c_str(), pHolder->getName().c_str() );
             return false;
         }
         SocketBindingComponentInternal::setLocalTransform( *pScene, _socketInHolder );

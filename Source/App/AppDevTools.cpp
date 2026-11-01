@@ -47,12 +47,12 @@ namespace sw
         if ( debugKeys.wasActionTriggered( hashed_string( InputMapDefaults::kReloadGameAction ) ) )
         {
             devLayer.requestReload( config::kTargetGameModule );
-            SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
+            SW_LOG_INFO_ID( "App.ForceSWGameReload", "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
         }
         if ( bEnableEditor && debugKeys.wasActionTriggered( hashed_string( AppDevToolsInternal::kReloadEditorAction ) ) )
         {
             devLayer.requestReload( config::kTargetEditorModule );
-            SW_LOG_INFO( "%#: force EditorModule reload", AppDevToolsInternal::kReloadEditorAction );
+            SW_LOG_INFO_ID( "App.ForceEditorModuleReload", "%#: force EditorModule reload", AppDevToolsInternal::kReloadEditorAction );
         }
     }
 

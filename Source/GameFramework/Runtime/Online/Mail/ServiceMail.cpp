@@ -144,7 +144,7 @@ namespace sw
                 return staged;
             if ( outcome._bReplayed == SW_TRUE )
             {
-                SW_LOG_ERROR( "Mail '%#' has a send journal but no sent record", mailKey.c_str() );
+                SW_LOG_ERROR_ID( "ServiceMail.MailSendJournalBut", "Mail '%#' has a send journal but no sent record", mailKey.c_str() );
                 return LedgerResult::Unavailable;
             }
         }

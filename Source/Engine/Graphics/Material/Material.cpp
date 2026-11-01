@@ -124,7 +124,7 @@ namespace sw
         AssetLoadScope loadScope( "Material", assetRelativePath );
         if ( loadFromFile( assetID ) == false )
         {
-            SW_LOG_ERROR( "Material file '%#' could not be loaded", assetRelativePath );
+            SW_LOG_ERROR_ID( "Material.MaterialFileCouldNot", "Material file '%#' could not be loaded", assetRelativePath );
             return false;
         }
         loadScope.beginPhase( AssetLoadPhase::Upload );
@@ -144,7 +144,7 @@ namespace sw
         // 셰이더 레이아웃도 여기(게임 스레드)서 맞춘다. 결과(레거시 MaterialCB 는 stride 0)는 사본(`getRenderBinding`)이 실어 간다.
         (void)ensureShaderLayout( pRHI->getBackendType() );
 
-        SW_LOG_INFO( "Initialized '%#' (%# bytes)", _desc._name.c_str(), _data._bytes.size() );
+        SW_LOG_INFO_ID( "Material.InitializedBytes", "Initialized '%#' (%# bytes)", _desc._name.c_str(), _data._bytes.size() );
         loadScope.setBytes( _data._bytes.size() );
         loadScope.setSucceeded();
         finishInitState._bSucceeded = true;
@@ -176,8 +176,8 @@ namespace sw
             const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSRV.size() );
             if ( bNativeBindless == false && ordinal >= shaderslot::kMaterialTextureCount )
             {
-                SW_LOG_WARNING( "Material '%#': this backend binds at most %# material textures - '%#' stays white.",
-                                _desc._name.c_str(), shaderslot::kMaterialTextureCount, prop._name.c_str() );
+                SW_LOG_WARNING_ID( "Material.MaterialBackendBindsMost", "Material '%#': this backend binds at most %# material textures - '%#' stays white.",
+                                   _desc._name.c_str(), shaderslot::kMaterialTextureCount, prop._name.c_str() );
                 continue;
             }
 
@@ -191,8 +191,8 @@ namespace sw
                 const bool bLoading = load.isLoading();
                 if ( bLoading == false )
                 {
-                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
-                                  prop._assetPath.c_str(), prop._name.c_str(), load.getError().c_str() );
+                    SW_LOG_ERROR_ID( "Material.MaterialTextureCouldNot", "Material '%#': texture '%#' for '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
+                                     prop._assetPath.c_str(), prop._name.c_str(), load.getError().c_str() );
                     load.reset();
                 }
                 borrowedPath = bLoading ? engine::getSubsystem<EngineDefaultAssets>()._loadingTexture.get() : engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
@@ -200,8 +200,8 @@ namespace sw
                 if ( pTexture == nullptr )
                 {
                     // 로드 중 텍스처와 체커는 엔진 필수 데이터다. 그것마저 없으면 흰색으로 그리지 않고 머티리얼 초기화가 실패한다.
-                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' is not ready and the stand-in texture '%#' could not be loaded either", _desc._name.c_str(),
-                                  prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
+                    SW_LOG_ERROR_ID( "Material.MaterialTextureNotReady", "Material '%#': texture '%#' for '%#' is not ready and the stand-in texture '%#' could not be loaded either", _desc._name.c_str(),
+                                     prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
                     return false;
                 }
             }
@@ -269,14 +269,14 @@ namespace sw
         borrowed.clear();
         if ( load.hasFailed() )
         {
-            SW_LOG_ERROR( "Material '%#': texture '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
-                          _listAcquiredTexturePath[ordinal].c_str(), load.getError().c_str() );
+            SW_LOG_ERROR_ID( "Material.MaterialTextureCouldNot2", "Material '%#': texture '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
+                             _listAcquiredTexturePath[ordinal].c_str(), load.getError().c_str() );
             load.reset();
             borrowed = engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
             if ( textures.acquire( borrowed, _pRHIDevice ) == nullptr )
             {
                 // 체커는 엔진 필수 데이터다 — 못 읽으면 로드 중 텍스처를 그대로 둔다(오류는 남았다).
-                SW_LOG_ERROR( "Material '%#': the missing-texture checker '%#' could not be loaded either", _desc._name.c_str(), borrowed.c_str() );
+                SW_LOG_ERROR_ID( "Material.MaterialMissingTextureChecker", "Material '%#': the missing-texture checker '%#' could not be loaded either", _desc._name.c_str(), borrowed.c_str() );
                 borrowed = std::move( standIn );
                 return;
             }
@@ -416,7 +416,7 @@ namespace sw
         ShaderReflectionData reflection{};
         if ( reflectMaterialSchema( _desc._shaderPath, RHI::getShaderTargetFormat( backend ), reflection ) == false )
         {
-            SW_LOG_ERROR( "Shader reflection for material '%#' not found ('%#') - clearing the bytes and not uploading.", _desc._name.c_str(), _desc._shaderPath.c_str() );
+            SW_LOG_ERROR_ID( "Material.ShaderReflectionMaterialNot", "Shader reflection for material '%#' not found ('%#') - clearing the bytes and not uploading.", _desc._name.c_str(), _desc._shaderPath.c_str() );
             discardBytesAfterLayoutError();
             return false;
         }
@@ -562,7 +562,7 @@ namespace sw
         }
         packPropertiesIntoBytes( schema._totalSize );
         _desc._listProperty = _data._listProperty;
-        SW_LOG_TRACE( "Filled %# properties from shader reflection.", _data._listProperty.size() );
+        SW_LOG_TRACE_ID( "Material.FilledPropertiesShaderReflection", "Filled %# properties from shader reflection.", _data._listProperty.size() );
     }
 
     bool Material::matchPropertiesToSchema( const ShaderBufferInfo& schema )
@@ -605,8 +605,8 @@ namespace sw
                     prop._shaderType = reflected;
                 else
                 {
-                    SW_LOG_ERROR( "Material '%#' property '%#' size mismatch (shaderType %# bytes vs shader %#, %#)",
-                                  _desc._name.c_str(), prop._name.c_str(), MaterialPacking::packedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
+                    SW_LOG_ERROR_ID( "Material.MaterialPropertySizeMismatch", "Material '%#' property '%#' size mismatch (shaderType %# bytes vs shader %#, %#)",
+                                     _desc._name.c_str(), prop._name.c_str(), MaterialPacking::packedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
                     bAllPacked = false;
                 }
             }

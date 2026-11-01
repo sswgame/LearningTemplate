@@ -81,8 +81,8 @@ namespace sw
                 const uint64 maxPossibleEntity = arch.getRemainingBytes() / kMinBytesPerEntity;
                 if ( arch.isError() || static_cast<uint64>( entityCount ) > maxPossibleEntity )
                 {
-                    SW_LOG_ERROR( "Binary scene claims %# entities but only %# can fit in %# remaining bytes: %#", entityCount, maxPossibleEntity,
-                                  arch.getRemainingBytes(), absPath );
+                    SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsEntities", "Binary scene claims %# entities but only %# can fit in %# remaining bytes: %#", entityCount, maxPossibleEntity,
+                                     arch.getRemainingBytes(), absPath );
                     return false;
                 }
 
@@ -94,7 +94,7 @@ namespace sw
                     // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
                     if ( arch.isError() )
                     {
-                        SW_LOG_ERROR( "Binary scene stream corrupted in %#", absPath );
+                        SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamCorrupted", "Binary scene stream corrupted in %#", absPath );
                         return false;
                     }
                     resolvePrefabPathByGUID( node );
@@ -130,13 +130,13 @@ namespace sw
                 const XMLNode sceneSettingsNode = root.findChild( SceneSettings::kElementName );
                 if ( sceneSettingsNode.isValid() == false )
                 {
-                    SW_LOG_ERROR( "Scene has no <%#> in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
+                    SW_LOG_ERROR_ID( "SceneDocument.SceneNoSceneNot", "Scene has no <%#> in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
                     return false;
                 }
                 const bool bSceneSettingsRead = XMLSerializer::deserialize( &outSettings, *SceneSettings::StaticType(), sceneSettingsNode.toString() );
                 if ( bSceneSettingsRead == false || outSettings.validate( sceneName ) == false )
                 {
-                    SW_LOG_ERROR( "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
+                    SW_LOG_ERROR_ID( "SceneDocument.SceneCouldNotRead", "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
                     return false;
                 }
                 return true;
@@ -157,7 +157,7 @@ namespace sw
                 const bool  bInvalidFileID = pFileID == nullptr || StringUtil::parseUint64( pFileID, outNode._fileID ) == false || outNode._fileID == 0;
                 if ( bInvalidFileID )
                 {
-                    SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", outNode._name, pFileID != nullptr ? pFileID : "", absPath );
+                    SW_LOG_ERROR_ID( "SceneDocument.EntityNoValidId", "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", outNode._name, pFileID != nullptr ? pFileID : "", absPath );
                     return false;
                 }
 
@@ -233,13 +233,13 @@ namespace sw
         XMLNode root = doc.getRoot( SceneDocumentInternal::kRoot );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "Missing root <Scene>: %#", absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.MissingRootScene", "Missing root <Scene>: %#", absPath );
             return false;
         }
 
         if ( AssetXMLFormat::isCurrentXMLVersion( kAssetType, root ) == false )
         {
-            SW_LOG_ERROR( "formatVersion mismatch: %#", absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.FormatVersionMismatch", "formatVersion mismatch: %#", absPath );
             return false;
         }
 
@@ -275,8 +275,8 @@ namespace sw
 
         _bValid = true;
         loadScope.setSucceeded();
-        SW_LOG_INFO( "Loaded '%#' (%# entities) from %#",
-                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
+        SW_LOG_INFO_ID( "SceneDocument.LoadedEntities", "Loaded '%#' (%# entities) from %#",
+                        _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
         return true;
     }
 
@@ -285,8 +285,8 @@ namespace sw
         // 셀로 나눈 문서는 쿠킹본이다. XML 에는 셀이 없으므로 쓰면 셀의 엔티티가 사라진다.
         if ( _listStreamingCell.empty() == false )
         {
-            SW_LOG_ERROR( "Scene '%#' is split into %# streaming cells (a cooked scene) - it is not saved as XML", _name,
-                          static_cast<uint32>( _listStreamingCell.size() ) );
+            SW_LOG_ERROR_ID( "SceneDocument.SceneSplitStreamingCells", "Scene '%#' is split into %# streaming cells (a cooked scene) - it is not saved as XML", _name,
+                             static_cast<uint32>( _listStreamingCell.size() ) );
             return false;
         }
         // 읽는 쪽이 받지 않는 월드 설정은 쓰지 않는다.
@@ -302,7 +302,7 @@ namespace sw
             if ( sceneSettingsDoc.parse( XMLSerializer::serialize( &_sceneSettings, *SceneSettings::StaticType() ) ) == false ||
                  sceneSettingsDoc.getRoot().isValid() == false )
             {
-                SW_LOG_ERROR( "Scene '%#' world settings could not be written - the scene is not saved", _name );
+                SW_LOG_ERROR_ID( "SceneDocument.SceneWorldSettingsCould", "Scene '%#' world settings could not be written - the scene is not saved", _name );
                 return false;
             }
             root.appendClone( sceneSettingsDoc.getRoot() );
@@ -314,7 +314,7 @@ namespace sw
             // 읽는 쪽(`loadXML`)이 받지 않는 모양은 쓰지 않는다.
             if ( entity._fileID == 0 )
             {
-                SW_LOG_ERROR( "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
+                SW_LOG_ERROR_ID( "SceneDocument.EntityNoIdScene", "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
                 return false;
             }
             XMLNode      sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
@@ -340,7 +340,7 @@ namespace sw
                 if ( overrideDoc.parse( entity._prefabOverrideXML ) && overrideDoc.getRoot().isValid() )
                     sceneObjectNode.appendClone( overrideDoc.getRoot() );
                 else
-                    SW_LOG_ERROR( "Entity '%#' has prefab overrides that are not XML - they are not written", entity._name );
+                    SW_LOG_ERROR_ID( "SceneDocument.EntityPrefabOverridesNot", "Entity '%#' has prefab overrides that are not XML - they are not written", entity._name );
             }
             if ( entity._embeddedXML.empty() == false )
             {
@@ -356,11 +356,11 @@ namespace sw
 
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveFile( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write: %#", absPath.str() );
+            SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
             return false;
         }
-        SW_LOG_INFO( "Saved '%#' (%# entities) -> %#",
-                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath.str() );
+        SW_LOG_INFO_ID( "SceneDocument.SavedEntities", "Saved '%#' (%# entities) -> %#",
+                        _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath.str() );
         return true;
     }
 
@@ -378,7 +378,7 @@ namespace sw
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
-            SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.BinaryReadFailedToo", "Binary read failed or too small: %#", absPath );
             return false;
         }
 
@@ -386,7 +386,7 @@ namespace sw
         arch >> magic;
         if ( magic != SceneDocumentInternal::kBinMagic )
         {
-            SW_LOG_ERROR( "Bad binary magic: %#", absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.BadBinaryMagic", "Bad binary magic: %#", absPath );
             return false;
         }
 
@@ -402,7 +402,7 @@ namespace sw
         arch >> _name;
         if ( BinarySerializer::deserialize( &_sceneSettings, *SceneSettings::StaticType(), arch ) == false || _sceneSettings.validate( _name ) == false )
         {
-            SW_LOG_ERROR( "Binary scene world settings could not be read or are not usable: %#", absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.BinarySceneWorldSettings", "Binary scene world settings could not be read or are not usable: %#", absPath );
             *this = {};
             return false;
         }
@@ -418,14 +418,14 @@ namespace sw
         const uint64 maxPossibleCell = arch.getRemainingBytes() / SceneDocumentInternal::kMinBytesPerCell;
         if ( arch.isError() || static_cast<uint64>( cellCount ) > maxPossibleCell )
         {
-            SW_LOG_ERROR( "Binary scene claims %# streaming cells but only %# can fit: %#", cellCount, maxPossibleCell, absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsStreaming", "Binary scene claims %# streaming cells but only %# can fit: %#", cellCount, maxPossibleCell, absPath );
             *this = {};
             return false;
         }
         // 셀은 스트리밍하는 씬에만 있다 — 스트리밍하지 않는 씬에 셀이 있으면 그 엔티티는 아무도 올리지 않는다.
         if ( cellCount > 0 && _sceneSettings._bStreaming == false )
         {
-            SW_LOG_ERROR( "Binary scene has %# streaming cells but does not stream: %#", cellCount, absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamingCells", "Binary scene has %# streaming cells but does not stream: %#", cellCount, absPath );
             *this = {};
             return false;
         }
@@ -442,15 +442,15 @@ namespace sw
 
         if ( arch.isError() )
         {
-            SW_LOG_ERROR( "Binary scene stream corrupted in %#", absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamCorrupted", "Binary scene stream corrupted in %#", absPath );
             *this = {};
             return false;
         }
 
         _bValid = true;
-        SW_LOG_INFO( "Loaded '%#' (%# entities) from binary %#", _name, static_cast<uint32>( computeTotalEntityCount() ), absPath );
+        SW_LOG_INFO_ID( "SceneDocument.LoadedEntitiesBinary", "Loaded '%#' (%# entities) from binary %#", _name, static_cast<uint32>( computeTotalEntityCount() ), absPath );
         if ( cellCount > 0 )
-            SW_LOG_INFO( "Scene '%#' has %# streaming cells", _name, cellCount );
+            SW_LOG_INFO_ID( "SceneDocument.SceneStreamingCells", "Scene '%#' has %# streaming cells", _name, cellCount );
         return true;
     }
 
@@ -461,7 +461,7 @@ namespace sw
             return false;
         if ( _listStreamingCell.empty() == false && _sceneSettings._bStreaming == false )
         {
-            SW_LOG_ERROR( "Scene '%#' has streaming cells but does not stream - not saved", _name );
+            SW_LOG_ERROR_ID( "SceneDocument.SceneStreamingCellsBut", "Scene '%#' has streaming cells but does not stream - not saved", _name );
             return false;
         }
 
@@ -471,7 +471,7 @@ namespace sw
         arch << _name;
         if ( BinarySerializer::serialize( &_sceneSettings, *SceneSettings::StaticType(), arch ) == false )
         {
-            SW_LOG_ERROR( "Scene '%#' world settings could not be written - not saved", _name );
+            SW_LOG_ERROR_ID( "SceneDocument.SceneWorldSettingsCould2", "Scene '%#' world settings could not be written - not saved", _name );
             return false;
         }
         SceneDocumentInternal::writeEntities( arch, _listSceneObjectNode );
@@ -484,8 +484,8 @@ namespace sw
 
         const bool bOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && arch.saveFile( absPath.str() );
         if ( bOk )
-            SW_LOG_INFO( "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
-                         static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );
+            SW_LOG_INFO_ID( "SceneDocument.SavedBinaryEntitiesStreaming", "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
+                            static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );
         return bOk;
     }
 
@@ -513,7 +513,7 @@ namespace sw
             return loadXML( AssetID{ path } );
         if ( binPath.empty() == false && loadBinary( AssetID{ binPath } ) )
             return true;
-        SW_LOG_ERROR( "Cooked content requires the cooked scene: %# (cooked name '%#')", path, binPath );
+        SW_LOG_ERROR_ID( "SceneDocument.CookedContentRequiresCooked", "Cooked content requires the cooked scene: %# (cooked name '%#')", path, binPath );
         return false;
     }
 

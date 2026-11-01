@@ -51,7 +51,7 @@ namespace sw
         if ( agent._crowdAgentID == NavigationConstant::kInvalidAgentID )
         {
             if ( agent._driveMode == NavAgentDriveMode::CharacterController && pController == nullptr )
-                SW_LOG_WARNING( "NavMesh agent '%#' drives a character controller but the object has none - it does not move", pOwner->getName().c_str() );
+                SW_LOG_WARNING_ID( "SceneNavigation.NavMeshAgentDrivesCharacter", "NavMesh agent '%#' drives a character controller but the object has none - it does not move", pOwner->getName().c_str() );
             NavCrowdAgentParams    params = agent.makeCrowdParams();
             const NavAgentTypeDef& type   = runtime._pNavMesh->getAgentType();
             if ( params._radius <= 0.0f )
@@ -64,8 +64,8 @@ namespace sw
             agent._crowdAgentID = crowd.addAgent( currentPosition, params );
             if ( agent._crowdAgentID == NavigationConstant::kInvalidAgentID )
             {
-                SW_LOG_WARNING( "Navmesh '%#' crowd is full (%# agents) - '%#' does not move", runtime._agentType.c_str(), crowd.getMaxAgentCount(),
-                                pOwner->getName().c_str() );
+                SW_LOG_WARNING_ID( "SceneNavigation.NavmeshCrowdFullAgents", "Navmesh '%#' crowd is full (%# agents) - '%#' does not move", runtime._agentType.c_str(), crowd.getMaxAgentCount(),
+                                   pOwner->getName().c_str() );
                 agent._moveStatus = NavMoveStatus::Failed;
                 return;
             }

@@ -281,18 +281,18 @@ namespace sw
 
         if ( RHIAvailability::isAvailable( currentBackend ) == false )
         {
-            SW_LOG_ERROR( "Requested RHI backend is unavailable on this platform." );
+            SW_LOG_ERROR_ID( "RHI.RequestedRHIBackendUnavailable", "Requested RHI backend is unavailable on this platform." );
             _initResult = RHIInitResult::BackendNotBuilt;
             return false;
         }
 
         gv_rhiBackend = currentBackend;
-        SW_LOG_INFO( "Initializing RHI with backend: %#", getBackendTypeName( currentBackend ) );
+        SW_LOG_INFO_ID( "RHI.InitializingRHIBackend", "Initializing RHI with backend: %#", getBackendTypeName( currentBackend ) );
 
         _device = engine::getSubsystem<RHIBackendRegistry>().createDevice( currentBackend );
         if ( _device == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create RHI Device!" );
+            SW_LOG_ERROR_ID( "RHI.FailedCreateRHIDevice", "Failed to create RHI Device!" );
             return false;
         }
 
@@ -301,13 +301,13 @@ namespace sw
 
         if ( _device->initialize() == false )
         {
-            SW_LOG_ERROR( "Failed to initialize RHI Device!" );
+            SW_LOG_ERROR_ID( "RHI.FailedInitializeRHIDevice", "Failed to initialize RHI Device!" );
             _initResult = _device->getInitResult();
             _device.reset();
             return false;
         }
 
-        SW_LOG_INFO( "RHI initialized successfully." );
+        SW_LOG_INFO_ID( "RHI.RHIInitializedSuccessfully", "RHI initialized successfully." );
         _initResult          = RHIInitResult::Succeeded;
         _committedRHIBackend = currentBackend;
         _pendingRHIBackend   = currentBackend;
@@ -337,7 +337,7 @@ namespace sw
     {
         if ( RHIAvailability::isAvailable( backend ) == false )
         {
-            SW_LOG_ERROR( "recreateDevice: backend unavailable" );
+            SW_LOG_ERROR_ID( "RHI.RecreateDeviceBackendUnavailable", "recreateDevice: backend unavailable" );
             return false;
         }
 
@@ -353,8 +353,8 @@ namespace sw
 
         if ( recreateSurfaceForSwap( _pSurface, previousBackend, backend ) == false )
         {
-            SW_LOG_ERROR( "recreateDevice: render surface could not be recreated for %# -> %#", getBackendTypeName( previousBackend ),
-                          getBackendTypeName( backend ) );
+            SW_LOG_ERROR_ID( "RHI.RecreateDeviceRenderSurfaceCould", "recreateDevice: render surface could not be recreated for %# -> %#", getBackendTypeName( previousBackend ),
+                             getBackendTypeName( backend ) );
             return false;
         }
 
@@ -372,7 +372,7 @@ namespace sw
             return false;
         }
 
-        SW_LOG_INFO( "Soft-recreated device: %#", getBackendTypeName( backend ) );
+        SW_LOG_INFO_ID( "RHI.SoftRecreatedDevice", "Soft-recreated device: %#", getBackendTypeName( backend ) );
         _committedRHIBackend = backend;
         _pendingRHIBackend   = backend;
         return true;
@@ -382,7 +382,7 @@ namespace sw
     {
         if ( RHIAvailability::isAvailable( requested ) == false )
         {
-            SW_LOG_WARNING( "Backend %# unavailable — reverting.", static_cast<int32>( requested ) );
+            SW_LOG_WARNING_ID( "RHI.BackendUnavailableReverting", "Backend %# unavailable — reverting.", static_cast<int32>( requested ) );
             gv_rhiBackend = _committedRHIBackend;
             return;
         }
@@ -390,7 +390,7 @@ namespace sw
         if ( requested == _committedRHIBackend )
             return;
 
-        SW_LOG_INFO( "RHI Backend change queued: %# → %#", getBackendTypeName( _committedRHIBackend ), getBackendTypeName( requested ) );
+        SW_LOG_INFO_ID( "RHI.RHIBackendChangeQueued", "RHI Backend change queued: %# → %#", getBackendTypeName( _committedRHIBackend ), getBackendTypeName( requested ) );
         _pendingRHIBackend     = requested;
         _bPendingBackendChange = SW_TRUE;
     }

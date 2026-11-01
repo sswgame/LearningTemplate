@@ -222,7 +222,7 @@ namespace sw
     {
         if ( pProvider == nullptr || findProvider( pProvider->getProviderID() ) != nullptr )
         {
-            SW_LOG_ERROR( "PushDispatcher: provider is null or registered twice" );
+            SW_LOG_ERROR_ID( "PushNotificationDispatcher.PushDispatcherProviderNullRegistered", "PushDispatcher: provider is null or registered twice" );
             return false;
         }
         _listProvider.push_back( pProvider );
@@ -379,8 +379,8 @@ namespace sw
                     case PushDeliveryStatus::Rejected:
                     {
                         ++_stats._droppedCount;
-                        SW_LOG_WARNING( "PushDispatcher: provider '%#' rejected a notification (account %#, topic '%#')", delivery._device._providerID.c_str(), delivery._accountID,
-                                        delivery._topic.c_str() );
+                        SW_LOG_WARNING_ID( "PushNotificationDispatcher.PushDispatcherProviderRejectedNotification", "PushDispatcher: provider '%#' rejected a notification (account %#, topic '%#')", delivery._device._providerID.c_str(), delivery._accountID,
+                                           delivery._topic.c_str() );
                         _mapDelivery.erase( deliveryIt );
                         break;
                     }

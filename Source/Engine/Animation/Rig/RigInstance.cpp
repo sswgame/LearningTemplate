@@ -76,7 +76,7 @@ namespace sw
                 continue;
             if ( target._space.empty() == false )
             {
-                SW_LOG_ERROR( "Rig '%#': target '%#' uses 'space' but is on this unit - 'space' is only for other units and objects", label, target._name.c_str() );
+                SW_LOG_ERROR_ID( "RigInstance.RigTargetUsesSpace", "Rig '%#': target '%#' uses 'space' but is on this unit - 'space' is only for other units and objects", label, target._name.c_str() );
                 bOk = false;
                 continue;
             }
@@ -90,7 +90,7 @@ namespace sw
                     continue; // 해석된 외형에 있는 다른 유닛의 소켓이다. 호스트가 값을 넣는다.
                 if ( lookup == RigSocketLookup::Missing )
                 {
-                    SW_LOG_ERROR( "Rig '%#': target '%#' names unknown socket '%#'", label, target._name.c_str(), target._socket.c_str() );
+                    SW_LOG_ERROR_ID( "RigInstance.RigTargetNamesUnknown", "Rig '%#': target '%#' names unknown socket '%#'", label, target._name.c_str(), target._socket.c_str() );
                     bOk = false;
                     continue;
                 }
@@ -107,7 +107,7 @@ namespace sw
             const int32 boneIndex = skeleton.findBoneIndex( boneName );
             if ( boneIndex < 0 )
             {
-                SW_LOG_ERROR( "Rig '%#': target '%#' names unknown bone '%#'", label, target._name.c_str(), boneName.c_str() );
+                SW_LOG_ERROR_ID( "RigInstance.RigTargetNamesUnknown2", "Rig '%#': target '%#' names unknown bone '%#'", label, target._name.c_str(), boneName.c_str() );
                 bOk = false;
                 continue;
             }
@@ -126,7 +126,7 @@ namespace sw
             unique_ptr<RigNode> node = prototype->clone();
             if ( node->bind( bindContext ) == false )
             {
-                SW_LOG_ERROR( "Rig '%#': node '%#' (%#) could not be bound", label, node->getName().c_str(), node->getTypeName() );
+                SW_LOG_ERROR_ID( "RigInstance.RigNodeCouldNot", "Rig '%#': node '%#' (%#) could not be bound", label, node->getName().c_str(), node->getTypeName() );
                 bOk = false;
                 continue;
             }

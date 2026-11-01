@@ -100,7 +100,7 @@ namespace sw
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
         vector<uint8> bytesScene;
         if ( serializeSceneObjects( purpose, bytesScene ) == false )
-            SW_LOG_INFO( "The scene object snapshot is empty - there is no active scene or the game service is not bound. Only the custom state is saved." );
+            SW_LOG_INFO_ID( "GameStateSnapshot.SceneObjectSnapshotEmpty", "The scene object snapshot is empty - there is no active scene or the game service is not bound. Only the custom state is saved." );
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 스냅샷
@@ -141,7 +141,7 @@ namespace sw
 
         if ( magic != StateEnvelopeInternal::kMagic )
         {
-            SW_LOG_ERROR( "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
+            SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotNoSWST", "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
             return false;
         }
 
@@ -155,7 +155,7 @@ namespace sw
         arch >> version;
         if ( version != StateEnvelopeInternal::kVersion )
         {
-            SW_LOG_ERROR( "State snapshot version %# is not this build's %#", version, StateEnvelopeInternal::kVersion );
+            SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotVersionNot", "State snapshot version %# is not this build's %#", version, StateEnvelopeInternal::kVersion );
             return false;
         }
 
@@ -193,7 +193,7 @@ namespace sw
         {
             Archive componentArch( bytesComponent.data(), bytesComponent.size() );
             if ( _pComponentStateStore->read( componentArch ) == false )
-                SW_LOG_WARNING( "Component state section could not be read - components start fresh" );
+                SW_LOG_WARNING_ID( "GameStateSnapshot.ComponentStateSectionCould", "Component state section could not be read - components start fresh" );
             // 다른 실행의 세이브는 컴포넌트 id 가 새로 나갔다. 씬 섹션이 만든 표로 저장된 id 를 이번 id 로 바꿔 id 로만 짝짓는다.
             if ( format == SceneObjectFormat::WithIdentity )
                 _pComponentStateStore->remapComponentIDs( listComponentIDRemap );
@@ -249,7 +249,7 @@ namespace sw
             // 개수를 이미 앞에 적었으므로 하나라도 못 쓰면 개수와 본문이 어긋난다. 그래서 통째로 실패로 처리한다.
             if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes, ObjectSaveOptions{ purpose } ) == false )
             {
-                SW_LOG_ERROR( "Scene object '%#' could not be serialized - the snapshot is not taken", pObj->getName().c_str() );
+                SW_LOG_ERROR_ID( "GameStateSnapshot.SceneObjectCouldNot", "Scene object '%#' could not be serialized - the snapshot is not taken", pObj->getName().c_str() );
                 outBytes.clear();
                 return false;
             }
@@ -304,7 +304,7 @@ namespace sw
             const size_t   identityBytes = ObjectStateSerializer::readIdentity( pData + offset, size - offset, identity );
             if ( identityBytes == 0 )
             {
-                SW_LOG_ERROR( "Failed to read object identity at index %u", objectIndex );
+                SW_LOG_ERROR_ID( "GameStateSnapshot.FailedReadObjectIdentity", "Failed to read object identity at index %u", objectIndex );
                 bComplete = false;
                 break;
             }
@@ -318,7 +318,7 @@ namespace sw
             const size_t readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, context );
             if ( readBytes == 0 )
             {
-                SW_LOG_ERROR( "Failed to load binary object state at index %u", objectIndex );
+                SW_LOG_ERROR_ID( "GameStateSnapshot.FailedLoadBinaryObject", "Failed to load binary object state at index %u", objectIndex );
                 pObjectManager->destroyObject( pObj ); // 읽지 못한 자리에 빈 오브젝트를 남기지 않는다.
                 bComplete = false;
                 break;
@@ -338,8 +338,8 @@ namespace sw
 
         if ( bComplete == false )
         {
-            SW_LOG_ERROR( "Scene restore stopped after %# of %# objects - the snapshot is kept and saving stays blocked",
-                          static_cast<uint32>( listRestoredObject.size() ), count );
+            SW_LOG_ERROR_ID( "GameStateSnapshot.SceneRestoreStoppedAfter", "Scene restore stopped after %# of %# objects - the snapshot is kept and saving stays blocked",
+                             static_cast<uint32>( listRestoredObject.size() ), count );
             return false;
         }
         return true;

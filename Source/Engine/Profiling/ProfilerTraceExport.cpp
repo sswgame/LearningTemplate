@@ -959,7 +959,7 @@ namespace sw
         bool                           bTruncated = false;
         if ( timeline.collectLongCapture( listThread, listFrameBegin, bTruncated ) == false )
         {
-            SW_LOG_WARNING( "Trace recording ended with no events" );
+            SW_LOG_WARNING_ID( "ProfilerTraceExport.TraceRecordingEndedNo", "Trace recording ended with no events" );
             return false;
         }
         ProfilerTraceMeta meta = makeCurrentMeta( session._longRecordingProcessName );
@@ -969,11 +969,11 @@ namespace sw
         string       reply;
         if ( writeTraceFile( savedPath, listThread, listFrameBegin, collectSlotNames( profiler ), meta, reply ) == false )
         {
-            SW_LOG_ERROR( "Trace recording could not be written: %#", reply );
+            SW_LOG_ERROR_ID( "ProfilerTraceExport.TraceRecordingCouldNot", "Trace recording could not be written: %#", reply );
             return false;
         }
-        SW_LOG_INFO( "Trace recording saved %# (%# threads, %# frame marks%#)", savedPath, listThread.size(), listFrameBegin.size(),
-                     bTruncated ? ", TRUNCATED" : "" );
+        SW_LOG_INFO_ID( "ProfilerTraceExport.TraceRecordingSavedThreads", "Trace recording saved %# (%# threads, %# frame marks%#)", savedPath, listThread.size(), listFrameBegin.size(),
+                        bTruncated ? ", TRUNCATED" : "" );
         return true;
     }
 
@@ -1013,11 +1013,11 @@ namespace sw
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )
             {
                 ++capture._slowSavedFileCount;
-                SW_LOG_WARNING( "Slow tick %# us (budget %# ms) - trace saved %#", tickMicro, gv_traceSlowTickMs, path );
+                SW_LOG_WARNING_ID( "ProfilerTraceExport.SlowTickUsBudget", "Slow tick %# us (budget %# ms) - trace saved %#", tickMicro, gv_traceSlowTickMs, path );
             }
             else
             {
-                SW_LOG_WARNING( "Slow tick %# us - trace not saved: %#", tickMicro, reply );
+                SW_LOG_WARNING_ID( "ProfilerTraceExport.SlowTickUsTrace", "Slow tick %# us - trace not saved: %#", tickMicro, reply );
             }
             // 저장 자체가 이 틱을 늦췄다 — 쿨다운은 저장이 끝난 뒤부터 센다.
             capture._slowCooldownEndNanos = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( kSlowFrameCooldownSeconds );
@@ -1048,7 +1048,7 @@ namespace sw
             return;
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().setRecording( true );
-        SW_LOG_INFO( "Timeline recording on - the trace is saved to %# on exit", gv_traceSaveOnExit );
+        SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", gv_traceSaveOnExit );
     }
 
     void ProfilerTraceExport::finishExitCapture( const FrameProfiler& profiler, string_view processName )
@@ -1058,9 +1058,9 @@ namespace sw
         string savedPath;
         string reply;
         if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, gv_traceSaveOnExit, processName, savedPath, reply ) )
-            SW_LOG_INFO( "Exit trace saved %# (%#)", savedPath, reply );
+            SW_LOG_INFO_ID( "ProfilerTraceExport.ExitTraceSaved", "Exit trace saved %# (%#)", savedPath, reply );
         else
-            SW_LOG_WARNING( "Exit trace not saved to %#: %#", savedPath, reply );
+            SW_LOG_WARNING_ID( "ProfilerTraceExport.ExitTraceNotSaved", "Exit trace not saved to %#: %#", savedPath, reply );
     }
 
     bool ProfilerTraceExport::mergeTraceJSON( const vector<ProfilerTraceMergeInput>& listInput, string& outJSON, string& outReport )

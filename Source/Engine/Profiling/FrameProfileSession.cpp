@@ -62,7 +62,7 @@ namespace sw
         _secondsTarget = gv_profileSeconds > 0 ? static_cast<int64>( gv_profileSeconds ) : 0;
         _bActive       = SW_TRUE;
         engine::getSubsystem<FrameProfiler>().setEnabled( true );
-        SW_LOG_INFO( "[Profile] Profiling enabled - warmup %# + measure %# frames / %# seconds (0 = no such criterion)", kWarmupFrames, _frameTarget, _secondsTarget );
+        SW_LOG_INFO_ID( "FrameProfileSession.ProfilingEnabledWarmupMeasure", "[Profile] Profiling enabled - warmup %# + measure %# frames / %# seconds (0 = no such criterion)", kWarmupFrames, _frameTarget, _secondsTarget );
     }
 
     void FrameProfileSession::onFrameEnd()
@@ -98,14 +98,14 @@ namespace sw
             _lastFrameEndMicro = _measureStartMicro;
             profiler.reset();
             CacheStats::markWindowStart(); // 캐시 적중 · 실패는 워밍업(첫 로드가 모두 실패)을 빼고 센다
-            SW_LOG_INFO( "[Profile] Discarded %# warmup frames. Measuring %# frames from now.", kWarmupFrames,
-                         _frameTarget );
+            SW_LOG_INFO_ID( "FrameProfileSession.DiscardedWarmupFramesMeasuring", "[Profile] Discarded %# warmup frames. Measuring %# frames from now.", kWarmupFrames,
+                            _frameTarget );
 #if SW_PROFILER_TRACE_ENABLED
             if ( gv_profileTracePath.empty() == false )
             {
                 string reply;
                 if ( ProfilerTraceExport::startRecording( profiler, 0.0, gv_profileTracePath, "Game", 0, reply ) == false )
-                    SW_LOG_WARNING( "[Profile] trace capture not started: %#", reply );
+                    SW_LOG_WARNING_ID( "FrameProfileSession.TraceCaptureNotStarted", "[Profile] trace capture not started: %#", reply );
             }
 #endif
             // 할당 횟수도 같은 측정 구간에서 센다. 시간 표에는 보이지 않는 비용이다. 배포본에는 프로파일러가 없다.
@@ -131,7 +131,7 @@ namespace sw
         profiler.report( "frame breakdown" );
         // 측정 구간의 벽시계 시간이다. 프레임이 실제로 몇 us 마다 나왔는지(처리량)를 본다. 구간 표만으로는 병목이 어디서 기다리는지 알 수 없다.
         [[maybe_unused]] const int64 elapsedMicro = frameEndMicro - _measureStartMicro;
-        SW_LOG_INFO( "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / constant::time::kMicrosecondsPerMillisecond, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
+        SW_LOG_INFO_ID( "FrameProfileSession.WallFramesMsUs", "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / constant::time::kMicrosecondsPerMillisecond, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
         reportHitches();
         reportAllocations( frames );
 #if SW_PROFILER_TRACE_ENABLED
@@ -167,11 +167,11 @@ namespace sw
 
     void FrameProfileSession::reportHitches() const
     {
-        SW_LOG_INFO( "[Profile] hitch  worst %# %# %# %# %# us  over16ms %#  over33ms %#  over100ms %#", _arrWorstFrameMicro[0], _arrWorstFrameMicro[1], _arrWorstFrameMicro[2],
-                     _arrWorstFrameMicro[3], _arrWorstFrameMicro[4], _arrHitchCount[0], _arrHitchCount[1], _arrHitchCount[2] );
+        SW_LOG_INFO_ID( "FrameProfileSession.HitchWorstUsOver16ms", "[Profile] hitch  worst %# %# %# %# %# us  over16ms %#  over33ms %#  over100ms %#", _arrWorstFrameMicro[0], _arrWorstFrameMicro[1], _arrWorstFrameMicro[2],
+                        _arrWorstFrameMicro[3], _arrWorstFrameMicro[4], _arrHitchCount[0], _arrHitchCount[1], _arrHitchCount[2] );
         // VSync 를 켠 실행이면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상 놓친 프레임 수다.
         [[maybe_unused]] const FramePacing pacing = computePacing( _arrPacingBin, kPacingBinCount );
-        SW_LOG_INFO( "[Profile] pacing  median %# us  over1.5x %#  over2.5x %#", pacing._medianMicro, pacing._overOneAndHalfMedian, pacing._overTwoAndHalfMedian );
+        SW_LOG_INFO_ID( "FrameProfileSession.PacingMedianUsOver1", "[Profile] pacing  median %# us  over1.5x %#  over2.5x %#", pacing._medianMicro, pacing._overOneAndHalfMedian, pacing._overTwoAndHalfMedian );
     }
 
     FrameProfileSession::FramePacing FrameProfileSession::computePacing( const uint32* pArrBin, uint32 binCount )
@@ -225,22 +225,22 @@ namespace sw
 
         const uint64 allocationCount = pMemory->getTotalAllocationCount() - _allocationCountAtStart;
         const uint64 perFrameX10     = ( allocationCount * 10 ) / frames;
-        SW_LOG_INFO( "[Profile] alloc/frame  %#.%#   (%# sw allocations / %# frames - std allocator and direct CRT calls excluded)",
-                     perFrameX10 / 10, perFrameX10 % 10, allocationCount, frames );
+        SW_LOG_INFO_ID( "FrameProfileSession.AllocFrameSwAllocations", "[Profile] alloc/frame  %#.%#   (%# sw allocations / %# frames - std allocator and direct CRT calls excluded)",
+                        perFrameX10 / 10, perFrameX10 % 10, allocationCount, frames );
 
         if ( gv_profileAllocSites > 0 )
         {
             const vector<CallStackAllocInfo> listSite = pMemory->getTopCallStacks( TopCallStackOrder::TotalCount );
             const size_t                     shown    = MathUtil::min<size_t>( listSite.size(), static_cast<size_t>( gv_profileAllocSites ) );
-            SW_LOG_INFO( "[Profile] Top %# allocation sites (by count in the measure window, of %# sites):", shown, listSite.size() );
+            SW_LOG_INFO_ID( "FrameProfileSession.TopAllocationSitesCount", "[Profile] Top %# allocation sites (by count in the measure window, of %# sites):", shown, listSite.size() );
             for ( size_t index = 0; index < shown; ++index )
             {
                 const CallStackAllocInfo& site       = listSite[index];
                 const uint64              countX10   = ( site._totalCount * 10 ) / frames;
                 const uint64              bytesFrame = site._totalBytes / frames;
-                SW_LOG_INFO( "[Profile]  #%#  %#.%# /frame  %# B/frame  (total %#)", index + 1, countX10 / 10, countX10 % 10,
-                             bytesFrame, site._totalCount );
-                SW_LOG_INFO( "%#", CallStackCapture::symbolize( site._stack ).c_str() );
+                SW_LOG_INFO_ID( "FrameProfileSession.FrameBFrameTotal", "[Profile]  #%#  %#.%# /frame  %# B/frame  (total %#)", index + 1, countX10 / 10, countX10 % 10,
+                                bytesFrame, site._totalCount );
+                SW_LOG_INFO_ID( "FrameProfileSession.Message", "%#", CallStackCapture::symbolize( site._stack ).c_str() );
             }
             pMemory->setDetailedTrackingEnabled( false );
         }

@@ -144,8 +144,8 @@ namespace sw::editor
                         continue;
                     if ( EditorViewportPreviewInternal::takesDialogueLineArgs( *pMethod ) == false )
                     {
-                        SW_LOG_WARNING( "%#::%# is EditorPreview=%# but does not take ( string speaker, string text )",
-                                        pType->_name.c_str(), pMethod->_name.c_str(), kDialogueLinePreview );
+                        SW_LOG_WARNING_ID( "EditorViewportPreview.EditorPreviewButDoesNot", "%#::%# is EditorPreview=%# but does not take ( string speaker, string text )",
+                                           pType->_name.c_str(), pMethod->_name.c_str(), kDialogueLinePreview );
                         continue;
                     }
                     pMethod->_invoker( pComp, TaskArgs{ string{ speaker }, string{ text } } );
@@ -153,7 +153,7 @@ namespace sw::editor
             }
         }
         if ( speaker.empty() == false || text.empty() == false )
-            SW_LOG_INFO( "Dialogue preview [%#]: %#", string{ speaker }.c_str(), string{ text }.c_str() );
+            SW_LOG_INFO_ID( "EditorViewportPreview.DialoguePreview", "Dialogue preview [%#]: %#", string{ speaker }.c_str(), string{ text }.c_str() );
     }
 
     const FunctionInfo* EditorViewportPreview::findPreviewMethod( const TypeInfo& type, string_view previewKind )
@@ -199,7 +199,7 @@ namespace sw::editor
                     if ( pMaterial != nullptr )
                     {
                         if ( pCached->loadFromXML( pMaterial->saveToString() ) == false )
-                            SW_LOG_WARNING( "Material preview could not copy the edited material - the preview shows the cached one" );
+                            SW_LOG_WARNING_ID( "EditorViewportPreview.MaterialPreviewCouldNot", "Material preview could not copy the edited material - the preview shows the cached one" );
                         pCached->rebuildPackedBuffer();
                         pMaterial = pCached;
                     }

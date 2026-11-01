@@ -56,12 +56,12 @@ namespace sw
             name = activeGame;
         if ( name.empty() )
         {
-            SW_LOG_ERROR( "No game selected - %# is missing next to the modules; pass -game=<name>", config::kFileActiveGame );
+            SW_LOG_ERROR_ID( "GameSelection.NoGameSelectedMissing", "No game selected - %# is missing next to the modules; pass -game=<name>", config::kFileActiveGame );
             return false;
         }
         if ( name.size() >= kNameCapacity )
         {
-            SW_LOG_ERROR( "Game name '%#' is too long", name.c_str() );
+            SW_LOG_ERROR_ID( "GameSelection.GameNameTooLong", "Game name '%#' is too long", name.c_str() );
             return false;
         }
 
@@ -77,13 +77,13 @@ namespace sw
                                                              ModuleLibraryUtil::formatSharedLibraryName( config::kTargetGameModule ) );
             if ( FileUtil::exists( libraryPath ) == false )
             {
-                SW_LOG_ERROR( "Game '%#' is not built in this build (%# is missing) - add it to SW_GAMES or use its preset", name.c_str(), libraryPath.c_str() );
+                SW_LOG_ERROR_ID( "GameSelection.GameNotBuiltBuild", "Game '%#' is not built in this build (%# is missing) - add it to SW_GAMES or use its preset", name.c_str(), libraryPath.c_str() );
                 return false;
             }
             ModuleLibraryUtil::setModuleSubdirectory( config::kTargetGameModule, packDirectory );
         }
         storeName( name );
-        SW_LOG_INFO( "Game %# (build active game %#)", name.c_str(), activeGame.c_str() );
+        SW_LOG_INFO_ID( "GameSelection.GameBuildActiveGame", "Game %# (build active game %#)", name.c_str(), activeGame.c_str() );
         return true;
     }
 

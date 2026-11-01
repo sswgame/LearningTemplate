@@ -256,8 +256,8 @@ namespace sw
         if ( _pTileCache == nullptr ||
              dtStatusFailed( _pTileCache->init( &params, &_pParts->_allocator, &_pParts->_compressor, &_pParts->_meshProcess ) ) )
         {
-            SW_LOG_ERROR( "Navmesh '%#' tile cache could not be initialized (%# tiles x %# layers, %# obstacles)", agentType._name.c_str(), grid.getTileCount(),
-                          kMaxLayerCount, agentType._maxCacheObstacleCount );
+            SW_LOG_ERROR_ID( "RecastTileCache.NavmeshTileCacheCould", "Navmesh '%#' tile cache could not be initialized (%# tiles x %# layers, %# obstacles)", agentType._name.c_str(), grid.getTileCount(),
+                             kMaxLayerCount, agentType._maxCacheObstacleCount );
             shutdown();
             return false;
         }
@@ -288,7 +288,7 @@ namespace sw
         }
         const int32 layerCount = MathUtil::min( pLayerSet->nlayers, static_cast<int32>( kMaxLayerCount ) );
         if ( pLayerSet->nlayers > static_cast<int32>( kMaxLayerCount ) )
-            SW_LOG_WARNING( "Nav tile (%#, %#) has %# height layers - only the lowest %# are kept", tileX, tileZ, pLayerSet->nlayers, kMaxLayerCount );
+            SW_LOG_WARNING_ID( "RecastTileCache.NavTileHeightLayers", "Nav tile (%#, %#) has %# height layers - only the lowest %# are kept", tileX, tileZ, pLayerSet->nlayers, kMaxLayerCount );
         if ( layerCount == 0 )
         {
             rcFreeHeightfieldLayerSet( pLayerSet );
@@ -357,7 +357,7 @@ namespace sw
         Internal::ParsedPack parsed;
         if ( pack._bytes.empty() == false && Internal::parsePack( pack._bytes, parsed ) == false )
         {
-            SW_LOG_ERROR( "Nav tile (%#, %#) bytes are not a tile-cache layer pack - the cooked navmesh does not match the obstacle mode", pack._tileX, pack._tileZ );
+            SW_LOG_ERROR_ID( "RecastTileCache.NavTileBytesNot", "Nav tile (%#, %#) bytes are not a tile-cache layer pack - the cooked navmesh does not match the obstacle mode", pack._tileX, pack._tileZ );
             return false;
         }
 
@@ -398,7 +398,7 @@ namespace sw
             if ( dtStatusFailed( _pTileCache->addTile( pData, layerSize, DT_COMPRESSEDTILE_FREE_DATA, nullptr ) ) )
             {
                 dtFree( pData );
-                SW_LOG_ERROR( "Nav tile (%#, %#) layer %# was rejected by the tile cache (full or not this layout)", pack._tileX, pack._tileZ, layerIndex );
+                SW_LOG_ERROR_ID( "RecastTileCache.NavTileLayerRejected", "Nav tile (%#, %#) layer %# was rejected by the tile cache (full or not this layout)", pack._tileX, pack._tileZ, layerIndex );
                 return false;
             }
         }
@@ -446,8 +446,8 @@ namespace sw
         _pTileCache->queryTiles( arrBoundsMin, arrBoundsMax, arrTouched, &touchedCount, DT_MAX_TOUCHED_TILES + 1 );
         if ( touchedCount > DT_MAX_TOUCHED_TILES )
         {
-            SW_LOG_ERROR( "Nav obstacle bounds (%# x %# m) touch more than %# tile layers - split the obstacle or raise _tileSize", arrBoundsMax[0] - arrBoundsMin[0],
-                          arrBoundsMax[2] - arrBoundsMin[2], DT_MAX_TOUCHED_TILES );
+            SW_LOG_ERROR_ID( "RecastTileCache.NavObstacleBoundsX", "Nav obstacle bounds (%# x %# m) touch more than %# tile layers - split the obstacle or raise _tileSize", arrBoundsMax[0] - arrBoundsMin[0],
+                             arrBoundsMax[2] - arrBoundsMin[2], DT_MAX_TOUCHED_TILES );
             return 0;
         }
         dtObstacleRef  ref{ 0 };
@@ -455,7 +455,7 @@ namespace sw
                                                 : _pTileCache->addBoxObstacle( probe.orientedBox.center, probe.orientedBox.halfExtents, desc._yaw, &ref );
         if ( dtStatusFailed( status ) )
         {
-            SW_LOG_ERROR( "Nav obstacle could not enter the tile cache (cache full or too many requests this frame) - raise _maxCacheObstacleCount" );
+            SW_LOG_ERROR_ID( "RecastTileCache.NavObstacleCouldNot", "Nav obstacle could not enter the tile cache (cache full or too many requests this frame) - raise _maxCacheObstacleCount" );
             return 0;
         }
         ++_pParts->_pendingRequestCount;
@@ -468,7 +468,7 @@ namespace sw
             return;
         if ( dtStatusFailed( _pTileCache->removeObstacle( static_cast<dtObstacleRef>( obstacle ) ) ) )
         {
-            SW_LOG_ERROR( "Nav obstacle %# could not leave the tile cache (too many requests this frame)", obstacle );
+            SW_LOG_ERROR_ID( "RecastTileCache.NavObstacleCouldNot2", "Nav obstacle %# could not leave the tile cache (too many requests this frame)", obstacle );
             return;
         }
         ++_pParts->_pendingRequestCount;
@@ -484,7 +484,7 @@ namespace sw
         bool           bUpToDate = false;
         const dtStatus status    = _pTileCache->update( deltaSeconds, &navMesh, &bUpToDate );
         if ( dtStatusFailed( status ) )
-            SW_LOG_ERROR( "Nav tile cache update failed (status 0x%#)", static_cast<uint32>( status ) );
+            SW_LOG_ERROR_ID( "RecastTileCache.NavTileCacheUpdate", "Nav tile cache update failed (status 0x%#)", static_cast<uint32>( status ) );
         _pParts->_pendingRequestCount = 0;
         _pParts->_bUpToDate           = bUpToDate;
         return true;

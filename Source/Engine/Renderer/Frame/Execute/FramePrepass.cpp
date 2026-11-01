@@ -69,7 +69,7 @@ namespace sw
         // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
         constexpr uint32 kZeroRank = 0;
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
-            SW_LOG_ERROR( "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
+            SW_LOG_ERROR_ID( "FramePrepass.FailedCreateTransparentRank", "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
         _occlusion.ensurePlaceholder( _pDevice );
     }
 
@@ -173,7 +173,7 @@ namespace sw
                 return true;
             }
         }
-        SW_LOG_ERROR( "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn, SkipDispatch or IndexTag)", static_cast<uint32>( gv_meshMorphDebugMode ) );
+        SW_LOG_ERROR_ID( "FramePrepass.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn, SkipDispatch or IndexTag)", static_cast<uint32>( gv_meshMorphDebugMode ) );
         return false;
     }
 

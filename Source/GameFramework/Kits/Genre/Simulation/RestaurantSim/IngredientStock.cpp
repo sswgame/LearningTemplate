@@ -99,7 +99,7 @@ namespace sw
         for ( const hashed_string& itemID : listItem )
         {
             if ( consume( itemID, items.getItemCount( itemID ) * times, outCost ) == false )
-                SW_LOG_WARNING( "lost '%#' between the check and the take", itemID.c_str() );
+                SW_LOG_WARNING_ID( "IngredientStock.LostBetweenCheckTake", "lost '%#' between the check and the take", itemID.c_str() );
         }
         return true;
     }

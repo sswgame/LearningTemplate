@@ -41,7 +41,7 @@ namespace sw
         uint32 skippedCount = 0;
         IntentPlayback::start( _manager, _history, false, keyTick, &skippedCount );
         if ( skippedCount > 0 )
-            SW_LOG_WARNING( "Rewind to tick %#: %# track(s) could not be replayed from there", keyTick, skippedCount );
+            SW_LOG_WARNING_ID( "ControlSceneRewindWorld.RewindTickTrackCould", "Rewind to tick %#: %# track(s) could not be replayed from there", keyTick, skippedCount );
         return true;
     }
 

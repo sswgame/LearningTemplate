@@ -173,7 +173,7 @@ namespace sw
         if ( bInitialized )
             return material.get();
 
-        SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
+        SW_LOG_ERROR_ID( "MaterialCache.FailedInitializeMaterial", "Failed to initialize Material %#", key.c_str() );
         lock.lock();
         const auto failedIt = _impl->_mapEntry.find( key );
         if ( failedIt != _impl->_mapEntry.end() )
@@ -203,7 +203,7 @@ namespace sw
         // 같은 구조의 `TextureCache::release` 도 같은 검사를 한다.
         if ( it->second._refCount == 0 )
         {
-            SW_LOG_WARNING( "Material '%#' was released more times than acquired - ignoring.", key.c_str() );
+            SW_LOG_WARNING_ID( "MaterialCache.MaterialReleasedMoreTimes", "Material '%#' was released more times than acquired - ignoring.", key.c_str() );
             return;
         }
 
@@ -273,7 +273,7 @@ namespace sw
                 continue;
             // 실패는 `Material::initialize` 가 `Failed` 로 남긴다 — 오류는 여기서 한 번만 낸다(패킷 빌더는 그 머티리얼을 건너뛴다).
             if ( material->initialize( pDevice, AssetID{ key } ) == false )
-                SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
+                SW_LOG_ERROR_ID( "MaterialCache.FailedInitializeMaterial", "Failed to initialize Material %#", key.c_str() );
         }
         if ( processed < listKey.size() )
         {
@@ -416,6 +416,6 @@ namespace sw
         }
 
         if ( material->initialize( pDevice, AssetID{ key } ) == false )
-            SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
+            SW_LOG_ERROR_ID( "MaterialCache.HotReloadFailedMaterial", "Hot-Reload failed for Material %#", key.c_str() );
     }
 } // namespace sw

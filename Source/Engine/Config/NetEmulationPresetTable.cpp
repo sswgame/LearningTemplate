@@ -62,7 +62,7 @@ namespace sw
             const NetEmulationPresetDef& preset = _listPreset[presetIndex];
             if ( preset._name.empty() )
             {
-                SW_LOG_ERROR( "%#: preset %# has no _name", path, static_cast<int32>( presetIndex ) );
+                SW_LOG_ERROR_ID( "NetEmulationPresetTable.PresetNoName", "%#: preset %# has no _name", path, static_cast<int32>( presetIndex ) );
                 bOk = false;
                 continue;
             }

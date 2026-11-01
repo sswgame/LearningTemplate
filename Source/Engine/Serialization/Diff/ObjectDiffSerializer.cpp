@@ -53,8 +53,8 @@ namespace sw
             // 바이트로 옮기지 못한 값이 있으면 diff 전체가 실패다. 그 값만 빼면 받는 쪽이 바뀐 값을 놓친다.
             if ( bWritten == false )
             {
-                SW_LOG_ERROR( "%#::%# (%#) cannot be written to a diff: it or a value inside it has no binary, enum, struct or text handler", typeInfo._name.c_str(),
-                              prop._name.c_str(), prop._typeName.c_str() );
+                SW_LOG_ERROR_ID( "ObjectDiff.CannotWrittenDiffValue", "%#::%# (%#) cannot be written to a diff: it or a value inside it has no binary, enum, struct or text handler", typeInfo._name.c_str(),
+                                 prop._name.c_str(), prop._typeName.c_str() );
                 bAllWritten = false;
                 return;
             }
@@ -105,7 +105,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_WARNING( "unknown property hash %#", nameHash );
+                SW_LOG_WARNING_ID( "ObjectDiff.UnknownPropertyHash", "unknown property hash %#", nameHash );
                 return false;
             }
             offset += payload;

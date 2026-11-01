@@ -79,7 +79,7 @@ namespace sw
             return false;
         if ( read == OptionalFileRead::Failed )
         {
-            SW_LOG_WARNING( "Cook record '%#' cannot be read - the job is cooked again", absPath );
+            SW_LOG_WARNING_ID( "CookRecord.CookRecordCannotRead", "Cook record '%#' cannot be read - the job is cooked again", absPath );
             return false;
         }
         vector<string_view> listLine;

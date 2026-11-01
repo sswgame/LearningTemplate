@@ -179,7 +179,7 @@ namespace sw
         // Windows 의 표면은 Win32 `HWND` 다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
         if ( desc.tryGetWin32Handle( _pHWnd ) == false )
         {
-            SW_LOG_ERROR( "Vulkan on Windows needs a Win32 surface" );
+            SW_LOG_ERROR_ID( "Vulkan.VulkanWindowsNeedsWin32", "Vulkan on Windows needs a Win32 surface" );
             return false;
         }
 #else
@@ -211,15 +211,15 @@ namespace sw
                         bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", FileUtil::joinPath( vulkanSdkEnv, "Bin" ) );
                 }
                 if ( bLayerPathSet == false )
-                    SW_LOG_WARNING( "Could not point the Vulkan loader at the validation layer - the layer check below decides" );
+                    SW_LOG_WARNING_ID( "Vulkan.CouldNotPointVulkan", "Could not point the Vulkan loader at the validation layer - the layer check below decides" );
             }
 #endif
 
             if ( _bEnableValidationLayers == SW_TRUE && supportsValidationLayer() == false )
             {
                 // 리눅스는 시스템 패키지(vulkan-validationlayers)의 레이어를 찾는다 — vcpkg 포트는 Windows 만 짓는다(Bin 옆 VK_LAYER_PATH).
-                SW_LOG_WARNING( "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found - running without validation "
-                                "(Linux: install the vulkan-validationlayers package)" );
+                SW_LOG_WARNING_ID( "Vulkan.VulkanValidationLayersRequested", "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found - running without validation "
+                                                                             "(Linux: install the vulkan-validationlayers package)" );
                 _bEnableValidationLayers = SW_FALSE;
             }
         }
@@ -239,7 +239,7 @@ namespace sw
 
             if ( selectDepthFormat() == false )
             {
-                SW_LOG_ERROR( "No supported depth/stencil format on this GPU." );
+                SW_LOG_ERROR_ID( "Vulkan.NoSupportedDepthStencil", "No supported depth/stencil format on this GPU." );
                 return false;
             }
 
@@ -287,12 +287,12 @@ namespace sw
         {
             if ( createDescriptorResources() == false )
             {
-                SW_LOG_ERROR( "Failed to create descriptor / pipeline layout resources." );
+                SW_LOG_ERROR_ID( "Vulkan.FailedCreateDescriptorPipeline", "Failed to create descriptor / pipeline layout resources." );
                 return false;
             }
             if ( ensureTextureSet() == false )
             {
-                SW_LOG_ERROR( "Failed to create the bindless texture set." );
+                SW_LOG_ERROR_ID( "Vulkan.FailedCreateBindlessTexture", "Failed to create the bindless texture set." );
                 return false;
             }
         }
@@ -308,13 +308,13 @@ namespace sw
                     _vertexBuffer = pRecord->_buffer;
             }
             else
-                SW_LOG_WARNING( "Failed to create fullscreen triangle vertex buffer." );
+                SW_LOG_WARNING_ID( "Vulkan.FailedCreateFullscreenTriangle", "Failed to create fullscreen triangle vertex buffer." );
         }
 
         (void)initializePipelineCache(); // 캐시가 없으면 파이프라인을 처음부터 만들 뿐이다 — 실패는 initializePipelineCache 가 경고로 남긴다
         _frameStreamContext = sw::make_unique<VulkanRHICommandContext>( this );
 
-        SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );
+        SW_LOG_INFO_ID( "Vulkan.VulkanRHIBackendDevice", "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );
         return true;
     }
 
@@ -651,7 +651,7 @@ namespace sw
         VkBuffer buffer = VK_NULL_HANDLE;
         if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &buffer ) != VK_SUCCESS )
         {
-            SW_LOG_ERROR( "Failed to create VkBuffer (usage=0x%#).", usageFlags );
+            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVkBufferUsage", "Failed to create VkBuffer (usage=0x%#).", usageFlags );
             return 0;
         }
 
@@ -662,7 +662,7 @@ namespace sw
         if ( findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
-            SW_LOG_ERROR( "Failed to find a host visible memory type for VkBuffer." );
+            SW_LOG_ERROR_ID( "Vulkan.FailedFindHostVisible", "Failed to find a host visible memory type for VkBuffer." );
             return 0;
         }
 
@@ -675,7 +675,7 @@ namespace sw
         if ( vkAllocateMemory( _device, &allocInfo, nullptr, &memory ) != VK_SUCCESS )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
-            SW_LOG_ERROR( "Failed to allocate memory for VkBuffer." );
+            SW_LOG_ERROR_ID( "Vulkan.FailedAllocateMemoryVkBuffer", "Failed to allocate memory for VkBuffer." );
             return 0;
         }
 
@@ -795,11 +795,11 @@ namespace sw
             return VK_FALSE;
 
         if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
-            SW_LOG_ERROR( "%#", pCallbackData->pMessage );
+            SW_LOG_ERROR_ID( "Vulkan.Message", "%#", pCallbackData->pMessage );
         else if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
-            SW_LOG_WARNING( "%#", pCallbackData->pMessage );
+            SW_LOG_WARNING_ID( "Vulkan.Message", "%#", pCallbackData->pMessage );
         else
-            SW_LOG_INFO( "%#", pCallbackData->pMessage );
+            SW_LOG_INFO_ID( "Vulkan.Message", "%#", pCallbackData->pMessage );
         return VK_FALSE;
     }
 
@@ -871,7 +871,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         if ( VulkanRHIUtil::hasExtension( listAvailableExt, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
         {
-            SW_LOG_ERROR( "VK_KHR_win32_surface is not available." );
+            SW_LOG_ERROR_ID( "Vulkan.VKKHRWin32Surface", "VK_KHR_win32_surface is not available." );
             return false;
         }
         listExtension.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
@@ -882,7 +882,7 @@ namespace sw
         if ( _surfaceKind == NativeSurfaceKind::Win32 )
         {
             // 아래 X11 길로 떨어지면 HWND 를 창 ID 로 읽게 된다 — 대신하지 않고 멈춘다.
-            SW_LOG_ERROR( "Vulkan on Linux needs an X11 or Wayland surface, but the window is a Win32 surface" );
+            SW_LOG_ERROR_ID( "Vulkan.VulkanLinuxNeedsX11", "Vulkan on Linux needs an X11 or Wayland surface, but the window is a Win32 surface" );
             return false;
         }
         if ( _surfaceKind == NativeSurfaceKind::Wayland )
@@ -890,35 +890,35 @@ namespace sw
             // Wayland 창(`WaylandWindow`) — 표면은 wl_surface 라 X11 확장으로는 만들 수 없다. 대신할 것 없이 이 확장만 받는다.
             if ( VulkanRHIUtil::hasExtension( listAvailableExt, "VK_KHR_wayland_surface" ) == false )
             {
-                SW_LOG_ERROR( "The window is a Wayland surface but the Vulkan loader has no VK_KHR_wayland_surface (rebuild vulkan-loader with [wayland])" );
+                SW_LOG_ERROR_ID( "Vulkan.WindowWaylandSurfaceBut", "The window is a Wayland surface but the Vulkan loader has no VK_KHR_wayland_surface (rebuild vulkan-loader with [wayland])" );
                 return false;
             }
             listExtension.push_back( "VK_KHR_wayland_surface" );
             _wsiKind = VulkanWsiKind::Wayland;
-            SW_LOG_TRACE( "Vulkan WSI: VK_KHR_wayland_surface" );
+            SW_LOG_TRACE_ID( "Vulkan.VulkanWSIVKKHR", "Vulkan WSI: VK_KHR_wayland_surface" );
         }
         else if ( VulkanRHIUtil::hasExtension( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
         {
             listExtension.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
             _wsiKind = VulkanWsiKind::Xlib;
-            SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xlib_surface" );
+            SW_LOG_TRACE_ID( "Vulkan.VulkanWSIVKKHR2", "Vulkan WSI: VK_KHR_xlib_surface" );
         }
         else if ( VulkanRHIUtil::hasExtension( listAvailableExt, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
         {
             listExtension.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
             _wsiKind = VulkanWsiKind::Xcb;
-            SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
+            SW_LOG_TRACE_ID( "Vulkan.VulkanWSIVKKHR3", "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
         }
         else
         {
-            SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
-                          listAvailableExt.size() );
+            SW_LOG_ERROR_ID( "Vulkan.NoVulkanX11WSI", "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
+                             listAvailableExt.size() );
             for ( const VkExtensionProperties& ext : listAvailableExt )
             {
                 (void)ext;
-                SW_LOG_TRACE( "  instance ext: %#", ext.extensionName );
+                SW_LOG_TRACE_ID( "Vulkan.InstanceExt", "  instance ext: %#", ext.extensionName );
             }
-            SW_LOG_ERROR( "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
+            SW_LOG_ERROR_ID( "Vulkan.InstallLibxcb1DevLibx11", "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
             return false;
         }
 #endif
@@ -926,7 +926,7 @@ namespace sw
             listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
         else if ( _bEnableValidationLayers == SW_TRUE )
         {
-            SW_LOG_WARNING( "Vulkan validation layer found but VK_EXT_debug_utils is not available - running without validation" );
+            SW_LOG_WARNING_ID( "Vulkan.VulkanValidationLayerFound", "Vulkan validation layer found but VK_EXT_debug_utils is not available - running without validation" );
             _bEnableValidationLayers = SW_FALSE;
         }
 
@@ -944,7 +944,7 @@ namespace sw
         VkResult result = vkCreateInstance( &createInfo, nullptr, &_instance );
         if ( result != VK_SUCCESS )
         {
-            SW_LOG_ERROR( "Failed to create Vulkan instance! Error code: %#", static_cast<int32>( result ) );
+            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanInstance", "Failed to create Vulkan instance! Error code: %#", static_cast<int32>( result ) );
             return false;
         }
         return true;
@@ -980,10 +980,10 @@ namespace sw
             vkGetPhysicalDeviceProperties( device, &candidateProperties );
             if ( VulkanRHIRequiredVersion::isAPIVersionSupported( candidateProperties.apiVersion ) == false )
             {
-                SW_LOG_WARNING( "Skipping Vulkan device '%#': API %#.%# is below the required %#.%# (shaders are SPIR-V for that target)",
-                                candidateProperties.deviceName, VK_API_VERSION_MAJOR( candidateProperties.apiVersion ),
-                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), constant::render::kVulkanRequiredMajor,
-                                constant::render::kVulkanRequiredMinor );
+                SW_LOG_WARNING_ID( "Vulkan.SkippingVulkanDeviceAPI", "Skipping Vulkan device '%#': API %#.%# is below the required %#.%# (shaders are SPIR-V for that target)",
+                                   candidateProperties.deviceName, VK_API_VERSION_MAJOR( candidateProperties.apiVersion ),
+                                   VK_API_VERSION_MINOR( candidateProperties.apiVersion ), constant::render::kVulkanRequiredMajor,
+                                   constant::render::kVulkanRequiredMinor );
                 continue;
             }
             // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
@@ -1034,12 +1034,12 @@ namespace sw
         if ( _physicalDevice == nullptr && bSoftwareAdapter )
         {
             // 환경 탓이다(CPU 구현이 설치되지 않았다) — 결함으로 알리지 않는다.
-            SW_LOG_WARNING( "No CPU Vulkan device (lavapipe / SwiftShader) for gv_rhiSoftwareAdapter - Vulkan does not start" );
+            SW_LOG_WARNING_ID( "Vulkan.NoCPUVulkanDevice", "No CPU Vulkan device (lavapipe / SwiftShader) for gv_rhiSoftwareAdapter - Vulkan does not start" );
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
-            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::render::kVulkanRequiredMajor,
-                          constant::render::kVulkanRequiredMinor );
+            SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::render::kVulkanRequiredMajor,
+                             constant::render::kVulkanRequiredMinor );
         return _physicalDevice != nullptr;
     }
 
@@ -1061,8 +1061,8 @@ namespace sw
                 continue;
             _depthFormat      = static_cast<uint32>( format );
             _bDepthHasStencil = ( format == VK_FORMAT_D32_SFLOAT ) ? 0 : 1;
-            SW_LOG_TRACE( "Selected depth format %# (stencil=%#)", static_cast<uint32>( format ),
-                          static_cast<uint32>( _bDepthHasStencil ) );
+            SW_LOG_TRACE_ID( "Vulkan.SelectedDepthFormatStencil", "Selected depth format %# (stencil=%#)", static_cast<uint32>( format ),
+                             static_cast<uint32>( _bDepthHasStencil ) );
             return true;
         }
         _depthFormat      = 0;
@@ -1080,7 +1080,7 @@ namespace sw
             const VkFormatFeatureFlags kNeeded = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
             if ( ( props.optimalTilingFeatures & kNeeded ) != kNeeded )
             {
-                SW_LOG_ERROR( "This GPU cannot use Vulkan format %# as a sampled color attachment (G-buffer normal)", static_cast<uint32>( format ) );
+                SW_LOG_ERROR_ID( "Vulkan.GPUCannotUseVulkan", "This GPU cannot use Vulkan format %# as a sampled color attachment (G-buffer normal)", static_cast<uint32>( format ) );
                 return false;
             }
         }
@@ -1165,7 +1165,7 @@ namespace sw
         // 1.3 디바이스에는 늘 있다 — 없다고 답하는 드라이버는 스펙을 어긴 것이라 디바이스를 만들지 않는다.
         if ( available13.shaderDemoteToHelperInvocation == VK_FALSE )
         {
-            SW_LOG_ERROR( "Vulkan 1.3 device reports no shaderDemoteToHelperInvocation (a required 1.3 feature) - HLSL discard cannot run" );
+            SW_LOG_ERROR_ID( "Vulkan.VulkanDeviceReportsNo", "Vulkan 1.3 device reports no shaderDemoteToHelperInvocation (a required 1.3 feature) - HLSL discard cannot run" );
             return false;
         }
         VkPhysicalDeviceVulkan13Features vulkan13Features{};
@@ -1245,11 +1245,11 @@ namespace sw
             _pGetCheckpointData = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkGetQueueCheckpointDataNV" ) );
             if ( _pCmdSetCheckpoint == nullptr || _pGetCheckpointData == nullptr )
             {
-                SW_LOG_WARNING( "VK_NV_device_diagnostic_checkpoints is enabled but its functions did not load - GPU breadcrumbs are off" );
+                SW_LOG_WARNING_ID( "Vulkan.VKNVDeviceDiagnostic", "VK_NV_device_diagnostic_checkpoints is enabled but its functions did not load - GPU breadcrumbs are off" );
                 _bCheckpoints = SW_FALSE;
             }
             else
-                SW_LOG_INFO( "Vulkan GPU breadcrumbs enabled (VK_NV_device_diagnostic_checkpoints)" );
+                SW_LOG_INFO_ID( "Vulkan.VulkanGPUBreadcrumbsEnabled", "Vulkan GPU breadcrumbs enabled (VK_NV_device_diagnostic_checkpoints)" );
         }
         return true;
     }
@@ -1391,7 +1391,7 @@ namespace sw
         if ( pFailedStep != nullptr )
         {
             if ( _bSwapChainRecreateFailing == SW_FALSE )
-                SW_LOG_ERROR( "Failed to recreate the %# (%#x%#) — retrying every frame", pFailedStep, _width, _height );
+                SW_LOG_ERROR_ID( "Vulkan.FailedRecreateXRetrying", "Failed to recreate the %# (%#x%#) — retrying every frame", pFailedStep, _width, _height );
             _bSwapChainRecreateFailing = SW_TRUE;
             return false;
         }
@@ -1404,8 +1404,8 @@ namespace sw
     void VulkanRHIDevice::noteSurfaceLost( const utf8* pWhere )
     {
         ++_surfaceLostCount;
-        SW_LOG_WARNING( "Vulkan surface lost at %# (%# time(s) on this device, frame %#) - recreating the surface and swapchain", pWhere, _surfaceLostCount,
-                        _frameFenceCounter );
+        SW_LOG_WARNING_ID( "Vulkan.VulkanSurfaceLostTime", "Vulkan surface lost at %# (%# time(s) on this device, frame %#) - recreating the surface and swapchain", pWhere, _surfaceLostCount,
+                           _frameFenceCounter );
     }
 
     bool VulkanRHIDevice::recreateSurfaceAndSwapChain()
@@ -1433,7 +1433,7 @@ namespace sw
                                                     "vkGetPhysicalDeviceSurfaceSupportKHR (recreated surface)" );
         if ( bQueried == false || bPresentSupported == VK_FALSE )
         {
-            SW_LOG_ERROR( "The recreated Vulkan surface cannot be presented by queue family %#", _graphicsQueueFamilyIndex );
+            SW_LOG_ERROR_ID( "Vulkan.RecreatedVulkanSurfaceCannot", "The recreated Vulkan surface cannot be presented by queue family %#", _graphicsQueueFamilyIndex );
             return false;
         }
         return recreateSwapChain();
@@ -1461,7 +1461,7 @@ namespace sw
         const VkResult res = vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache );
         if ( res != VK_SUCCESS )
         {
-            SW_LOG_WARNING( "Failed to create pipeline cache with saved data; falling back to empty cache." );
+            SW_LOG_WARNING_ID( "Vulkan.FailedCreatePipelineCache", "Failed to create pipeline cache with saved data; falling back to empty cache." );
             createInfo.initialDataSize = 0;
             createInfo.pInitialData    = nullptr;
             if ( isVkSuccess( vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache ), "vkCreatePipelineCache (empty)" ) == false )
@@ -1469,7 +1469,7 @@ namespace sw
         }
         else if ( listCacheData.empty() == false )
         {
-            SW_LOG_INFO( "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
+            SW_LOG_INFO_ID( "Vulkan.LoadedPipelineCacheBytes", "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
         }
         return _pipelineCache != VK_NULL_HANDLE;
     }
@@ -1489,9 +1489,9 @@ namespace sw
                 const string cachePath = getVulkanPipelineCachePath();
                 if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
                      FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
-                    SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
+                    SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
-                    SW_LOG_WARNING( "Could not save the pipeline cache - the next run builds pipelines from scratch" );
+                    SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );
             }
         }
 
@@ -1514,11 +1514,11 @@ namespace sw
             ScopedLock<mutex> lock{ _submittedMarkerMutex };
             lastMarker = _lastSubmittedEventMarker;
         }
-        SW_LOG_ERROR( "%#: VkResult=%# (%#) — last pass put in the submission order: '%#'", pWhere != nullptr ? pWhere : "<queue>", result,
-                      VulkanRHIDeviceInternal::getResultName( vkResult ), lastMarker.empty() ? "<none>" : lastMarker.c_str() );
+        SW_LOG_ERROR_ID( "Vulkan.VkResultLastPassPut", "%#: VkResult=%# (%#) — last pass put in the submission order: '%#'", pWhere != nullptr ? pWhere : "<queue>", result,
+                         VulkanRHIDeviceInternal::getResultName( vkResult ), lastMarker.empty() ? "<none>" : lastMarker.c_str() );
         if ( bDeviceLost == false )
             return;
-        SW_LOG_ERROR( "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
+        SW_LOG_ERROR_ID( "Vulkan.VulkanDeviceLostSubmits", "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
         // 마지막으로 GPU 가 닿은 패스 - 체크포인트를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다(없으면 CPU 가 마지막으로 기록한 패스만).
         uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
         const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
@@ -1530,8 +1530,8 @@ namespace sw
     {
         if ( _device == VK_NULL_HANDLE )
             return false;
-        SW_LOG_WARNING( "Marking the Vulkan device lost on request (rhi.removeDevice) - Vulkan cannot remove a device, so this is the state after the first "
-                        "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
+        SW_LOG_WARNING_ID( "Vulkan.MarkingVulkanDeviceLost", "Marking the Vulkan device lost on request (rhi.removeDevice) - Vulkan cannot remove a device, so this is the state after the first "
+                                                             "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
         _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
@@ -1584,7 +1584,7 @@ namespace sw
                 : nullptr;
         if ( pfnGetFaultInfo == nullptr )
         {
-            SW_LOG_ERROR( "Device lost: VK_EXT_device_fault is not enabled on this device — no fault address or vendor code to report" );
+            SW_LOG_ERROR_ID( "Vulkan.DeviceLostVKEXT", "Device lost: VK_EXT_device_fault is not enabled on this device — no fault address or vendor code to report" );
             return;
         }
 
@@ -1593,7 +1593,7 @@ namespace sw
         const VkResult countResult = pfnGetFaultInfo( _device, &counts, nullptr );
         if ( countResult != VK_SUCCESS && countResult != VK_INCOMPLETE )
         {
-            SW_LOG_ERROR( "Device lost: vkGetDeviceFaultInfoEXT failed to count the fault records (VkResult=%#)", static_cast<int32>( countResult ) );
+            SW_LOG_ERROR_ID( "Vulkan.DeviceLostVkGetDeviceFaultInfoEXTFailed", "Device lost: vkGetDeviceFaultInfoEXT failed to count the fault records (VkResult=%#)", static_cast<int32>( countResult ) );
             return;
         }
 
@@ -1608,25 +1608,25 @@ namespace sw
         const VkResult infoResult = pfnGetFaultInfo( _device, &counts, &info );
         if ( infoResult != VK_SUCCESS && infoResult != VK_INCOMPLETE )
         {
-            SW_LOG_ERROR( "Device lost: vkGetDeviceFaultInfoEXT failed (VkResult=%#)", static_cast<int32>( infoResult ) );
+            SW_LOG_ERROR_ID( "Vulkan.DeviceLostVkGetDeviceFaultInfoEXTFailed2", "Device lost: vkGetDeviceFaultInfoEXT failed (VkResult=%#)", static_cast<int32>( infoResult ) );
             return;
         }
 
-        SW_LOG_ERROR( "Device lost (VK_EXT_device_fault): '%#' — %# address record(s), %# vendor record(s)", info.description, counts.addressInfoCount,
-                      counts.vendorInfoCount );
+        SW_LOG_ERROR_ID( "Vulkan.DeviceLostVKEXT2", "Device lost (VK_EXT_device_fault): '%#' — %# address record(s), %# vendor record(s)", info.description, counts.addressInfoCount,
+                         counts.vendorInfoCount );
         for ( uint32 index = 0; index < counts.addressInfoCount && index < listAddressInfo.size(); ++index )
         {
             const VkDeviceFaultAddressInfoEXT& address = listAddressInfo[index];
-            SW_LOG_ERROR( "  fault address %#: %# at 0x%# (precision %# bytes)", index,
-                          VulkanRHIDeviceInternal::getFaultAddressTypeName( address.addressType ),
-                          Fmt( static_cast<uint64>( address.reportedAddress ), Format( 16, Format::Padding::Zero ).hexUpper() ),
-                          static_cast<uint64>( address.addressPrecision ) );
+            SW_LOG_ERROR_ID( "Vulkan.FaultAddressXPrecision", "  fault address %#: %# at 0x%# (precision %# bytes)", index,
+                             VulkanRHIDeviceInternal::getFaultAddressTypeName( address.addressType ),
+                             Fmt( static_cast<uint64>( address.reportedAddress ), Format( 16, Format::Padding::Zero ).hexUpper() ),
+                             static_cast<uint64>( address.addressPrecision ) );
         }
         for ( uint32 index = 0; index < counts.vendorInfoCount && index < listVendorInfo.size(); ++index )
         {
             const VkDeviceFaultVendorInfoEXT& vendor = listVendorInfo[index];
-            SW_LOG_ERROR( "  vendor record %#: '%#' code %# data %#", index, vendor.description, static_cast<uint64>( vendor.vendorFaultCode ),
-                          static_cast<uint64>( vendor.vendorFaultData ) );
+            SW_LOG_ERROR_ID( "Vulkan.VendorRecordCodeData", "  vendor record %#: '%#' code %# data %#", index, vendor.description, static_cast<uint64>( vendor.vendorFaultCode ),
+                             static_cast<uint64>( vendor.vendorFaultData ) );
         }
     }
 
@@ -2263,7 +2263,7 @@ namespace sw
     {
         if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
         {
-            SW_LOG_ERROR( "The Vulkan backend needs staging ring capacities (gv_rhiStagingRingMegabytes and gv_rhiReadbackRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "Vulkan.VulkanBackendNeedsStaging", "The Vulkan backend needs staging ring capacities (gv_rhiStagingRingMegabytes and gv_rhiReadbackRingMegabytes must be positive)" );
             return false;
         }
 
@@ -2275,7 +2275,7 @@ namespace sw
         if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &_transferCommandPool ) != VK_SUCCESS )
         {
             _transferCommandPool = VK_NULL_HANDLE;
-            SW_LOG_ERROR( "Failed to create the Vulkan transfer command pool" );
+            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanTransfer", "Failed to create the Vulkan transfer command pool" );
             return false;
         }
         return createStagingRing( _uploadRing, desc._stagingRingBytes, desc._stagingSoloMaxBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "upload" ) &&
@@ -2344,8 +2344,8 @@ namespace sw
         if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &outBuffer ) != VK_SUCCESS )
         {
             outBuffer = VK_NULL_HANDLE;
-            SW_LOG_ERROR( "Failed to create the Vulkan %# staging buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes · gv_rhiStagingSingleMaxMegabytes)",
-                          pName, capacityBytes );
+            SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanStaging", "Failed to create the Vulkan %# staging buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes · gv_rhiStagingSingleMaxMegabytes)",
+                             pName, capacityBytes );
             return false;
         }
 
@@ -2367,7 +2367,7 @@ namespace sw
         }
         if ( bMemoryReady == false )
         {
-            SW_LOG_ERROR( "The Vulkan %# staging buffer (%# bytes) could not be allocated or mapped in host visible memory", pName, capacityBytes );
+            SW_LOG_ERROR_ID( "Vulkan.VulkanStagingBufferBytes", "The Vulkan %# staging buffer (%# bytes) could not be allocated or mapped in host visible memory", pName, capacityBytes );
             destroyMappedStagingBuffer( outBuffer, outMemory, outMapped );
             return false;
         }
@@ -2446,7 +2446,7 @@ namespace sw
             result                       = vkAllocateCommandBuffers( _device, &allocInfo, &outJob._commandBuffer );
             if ( result != VK_SUCCESS )
             {
-                SW_LOG_ERROR( "Failed to allocate a Vulkan transfer command buffer (VkResult=%#)", static_cast<int32>( result ) );
+                SW_LOG_ERROR_ID( "Vulkan.FailedAllocateVulkanTransfer", "Failed to allocate a Vulkan transfer command buffer (VkResult=%#)", static_cast<int32>( result ) );
                 return false;
             }
             VkFenceCreateInfo fenceInfo{};
@@ -2455,7 +2455,7 @@ namespace sw
             if ( result != VK_SUCCESS )
             {
                 vkFreeCommandBuffers( _device, _transferCommandPool, 1, &outJob._commandBuffer );
-                SW_LOG_ERROR( "Failed to create a Vulkan transfer fence (VkResult=%#)", static_cast<int32>( result ) );
+                SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanTransfer2", "Failed to create a Vulkan transfer fence (VkResult=%#)", static_cast<int32>( result ) );
                 return false;
             }
         }
@@ -2472,7 +2472,7 @@ namespace sw
             result = vkBeginCommandBuffer( outJob._commandBuffer, &beginInfo ); // 풀이 RESET_COMMAND_BUFFER 라 지난 기록을 함께 지운다
         if ( result == VK_SUCCESS )
             return true;
-        SW_LOG_ERROR( "Failed to begin a Vulkan transfer command buffer (VkResult=%#)", static_cast<int32>( result ) );
+        SW_LOG_ERROR_ID( "Vulkan.FailedBeginVulkanTransfer", "Failed to begin a Vulkan transfer command buffer (VkResult=%#)", static_cast<int32>( result ) );
         recycleTransferJob( outJob );
         return false;
     }
@@ -2629,7 +2629,7 @@ namespace sw
             layoutInfo.pBindings    = arrBinding;
             if ( vkCreateDescriptorSetLayout( _device, &layoutInfo, nullptr, &_slotSetLayout ) != VK_SUCCESS )
             {
-                SW_LOG_ERROR( "Failed to create the slot set layout (descriptor indexing / partially-bound unsupported?)." );
+                SW_LOG_ERROR_ID( "Vulkan.FailedCreateSlotSet", "Failed to create the slot set layout (descriptor indexing / partially-bound unsupported?)." );
                 return false;
             }
         }
@@ -2674,7 +2674,7 @@ namespace sw
             layoutInfo.pBindings    = arrBinding;
             if ( vkCreateDescriptorSetLayout( _device, &layoutInfo, nullptr, &_textureSetLayout ) != VK_SUCCESS )
             {
-                SW_LOG_ERROR( "Failed to create the texture array set layout (update-after-bind unsupported?)." );
+                SW_LOG_ERROR_ID( "Vulkan.FailedCreateTextureArray", "Failed to create the texture array set layout (update-after-bind unsupported?)." );
                 return false;
             }
         }
@@ -2786,7 +2786,7 @@ namespace sw
         uint32 memoryTypeIndex{ 0 };
         if ( findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
         {
-            SW_LOG_ERROR( "Failed to find a device local memory type for the bindless dummy image." );
+            SW_LOG_ERROR_ID( "Vulkan.FailedFindDeviceLocal", "Failed to find a device local memory type for the bindless dummy image." );
             return false;
         }
 
@@ -2817,7 +2817,7 @@ namespace sw
         allocInfo.pSetLayouts        = &_textureSetLayout;
         if ( vkAllocateDescriptorSets( _device, &allocInfo, &_textureSet ) != VK_SUCCESS )
         {
-            SW_LOG_ERROR( "Failed to allocate the texture array set." );
+            SW_LOG_ERROR_ID( "Vulkan.FailedAllocateTextureArray", "Failed to allocate the texture array set." );
             return false;
         }
 
@@ -2837,7 +2837,7 @@ namespace sw
         write.descriptorCount = kBindlessTextureCount;
         write.pImageInfo      = listImage.data();
         vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
-        SW_LOG_INFO( "Bindless texture array ready (%# slots).", kBindlessTextureCount );
+        SW_LOG_INFO_ID( "Vulkan.BindlessTextureArrayReady", "Bindless texture array ready (%# slots).", kBindlessTextureCount );
         return true;
     }
 

@@ -28,7 +28,7 @@ namespace sw
         // 주사위는 여섯 면이다. 범위 밖 성공 눈은 맞추지 않고 거절한다.
         if ( successFace < 1 || successFace > 6 )
         {
-            SW_LOG_ERROR( "HorrorEncounter: refused success face %# - it must be within [1, 6]", successFace );
+            SW_LOG_ERROR_ID( "HorrorEncounter.HorrorEncounterRefusedSuccessFace", "HorrorEncounter: refused success face %# - it must be within [1, 6]", successFace );
             return false;
         }
         _monster          = monster;

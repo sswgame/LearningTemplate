@@ -65,8 +65,8 @@ namespace sw
                             bAreaSet = true;
                             if ( settings.findAreaIndex( pModifier->getAreaName(), verdict._area ) == false )
                             {
-                                SW_LOG_ERROR( "NavMesh modifier on '%#' names unknown area '%#' - baked as plain ground", pCurrent->getName().c_str(),
-                                              pModifier->getAreaName().c_str() );
+                                SW_LOG_ERROR_ID( "SceneNavigation.NavMeshModifierNamesUnknown", "NavMesh modifier on '%#' names unknown area '%#' - baked as plain ground", pCurrent->getName().c_str(),
+                                                 pModifier->getAreaName().c_str() );
                                 verdict._area = 0;
                             }
                         }

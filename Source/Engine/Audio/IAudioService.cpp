@@ -127,7 +127,7 @@ namespace sw
         AudioMixerDesc mixerDesc;
         if ( mixerDesc.loadFromAsset( AssetID{ kDefaultMixerPath } ) == false )
         {
-            SW_LOG_ERROR( "Audio mixer graph '%#' could not be loaded", kDefaultMixerPath );
+            SW_LOG_ERROR_ID( "AudioService.AudioMixerGraphCould", "Audio mixer graph '%#' could not be loaded", kDefaultMixerPath );
             return false;
         }
         _mixerPath = kDefaultMixerPath;
@@ -140,8 +140,8 @@ namespace sw
         AudioChannelLayout layout{ AudioChannelLayout::Stereo };
         if ( resolveLayout( _speakerMode, _device, layout ) == false )
         {
-            SW_LOG_ERROR( "The output device has %# channels (mask 0x%#), fewer than the requested speaker mode needs", _device._channelCount,
-                          Fmt( _device._channelMask, Format().hex() ) );
+            SW_LOG_ERROR_ID( "AudioService.OutputDeviceChannelsMask", "The output device has %# channels (mask 0x%#), fewer than the requested speaker mode needs", _device._channelCount,
+                             Fmt( _device._channelMask, Format().hex() ) );
             if ( _bDeviceOpen )
                 closeDevice();
             _bDeviceOpen = false;
@@ -149,7 +149,7 @@ namespace sw
         }
         if ( _pEngine->initialize( mixerDesc, layout ) == false )
         {
-            SW_LOG_ERROR( "Audio engine rejected the mixer graph '%#' for %# output channels", kDefaultMixerPath, AudioChannelLayoutUtil::getChannelCount( layout ) );
+            SW_LOG_ERROR_ID( "AudioService.AudioEngineRejectedMixer", "Audio engine rejected the mixer graph '%#' for %# output channels", kDefaultMixerPath, AudioChannelLayoutUtil::getChannelCount( layout ) );
             if ( _bDeviceOpen )
                 closeDevice();
             _bDeviceOpen = false;
@@ -177,7 +177,7 @@ namespace sw
             _device      = AudioOutputDevice{};
         }
         _bInitialized = true;
-        SW_LOG_INFO( "Initialized (%#, %# channels).", _bOutputOpen ? "device output" : "offline - no device", AudioChannelLayoutUtil::getChannelCount( layout ) );
+        SW_LOG_INFO_ID( "AudioService.InitializedChannels", "Initialized (%#, %# channels).", _bOutputOpen ? "device output" : "offline - no device", AudioChannelLayoutUtil::getChannelCount( layout ) );
         return true;
     }
 
@@ -244,7 +244,7 @@ namespace sw
         AudioChannelLayout layout{ AudioChannelLayout::Stereo };
         if ( resolveLayout( mode, _device, layout ) == false )
         {
-            SW_LOG_ERROR( "The output device has %# channels, fewer than the requested speaker mode needs - keeping the current mode", _device._channelCount );
+            SW_LOG_ERROR_ID( "AudioService.OutputDeviceChannelsFewer", "The output device has %# channels, fewer than the requested speaker mode needs - keeping the current mode", _device._channelCount );
             return false;
         }
         if ( layout == _pEngine->getChannelLayout() )
@@ -273,7 +273,7 @@ namespace sw
                 closeDevice();
                 _bDeviceOpen = false;
                 _device      = AudioOutputDevice{};
-                SW_LOG_WARNING( "Could not reopen the output stream - rendering offline." );
+                SW_LOG_WARNING_ID( "AudioService.CouldNotReopenOutput", "Could not reopen the output stream - rendering offline." );
             }
         }
         return bChanged;
@@ -292,10 +292,10 @@ namespace sw
         _listDumpSample.clear();
         if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR( "Could not write the audio dump '%#'", path );
+            SW_LOG_ERROR_ID( "AudioService.CouldNotWriteAudio", "Could not write the audio dump '%#'", path );
             return;
         }
-        SW_LOG_INFO( "Audio dump written: %# (%# channels)", path, channelCount );
+        SW_LOG_INFO_ID( "AudioService.AudioDumpWrittenChannels", "Audio dump written: %# (%# channels)", path, channelCount );
     }
 
     void IAudioService::shutdown()
@@ -304,8 +304,8 @@ namespace sw
             return;
         // 장치를 먼저 닫는다. 닫힌 뒤에는 장치 스레드가 render 를 호출하지 않으므로 엔진을 해제해도 된다.
         [[maybe_unused]] const AudioEngineStats stats = _pEngine->getStats();
-        SW_LOG_INFO( "Played %# events (%# dropped by cooldown / limits), peak %# mixed voices, %# s rendered.", stats._playedEventCount, stats._droppedEventCount,
-                     stats._peakRealVoiceCount, stats._renderedFrameCount / audio::kSampleRate );
+        SW_LOG_INFO_ID( "AudioService.PlayedEventsDroppedCooldown", "Played %# events (%# dropped by cooldown / limits), peak %# mixed voices, %# s rendered.", stats._playedEventCount, stats._droppedEventCount,
+                        stats._peakRealVoiceCount, stats._renderedFrameCount / audio::kSampleRate );
         if ( _bOutputOpen )
             stopOutput();
         _bOutputOpen = false;
@@ -319,7 +319,7 @@ namespace sw
         _musicPath.clear();
         _musicPlayingID = 0;
         _bInitialized   = false;
-        SW_LOG_INFO( "Shut down." );
+        SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
     }
 
     void IAudioService::update( float32 deltaSeconds )
@@ -350,7 +350,7 @@ namespace sw
             return false;
         if ( AssetIO::hasAsset( assetID ) == false )
         {
-            SW_LOG_ERROR( "Audio resource not found: %#", path );
+            SW_LOG_ERROR_ID( "AudioService.AudioResourceNotFound", "Audio resource not found: %#", path );
             return false;
         }
         return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ) != 0;
@@ -374,7 +374,7 @@ namespace sw
         // 있는 곡인지 **멈추기 전에** 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
         if ( AssetIO::hasAsset( assetID ) == false )
         {
-            SW_LOG_ERROR( "Audio resource not found: %#", path );
+            SW_LOG_ERROR_ID( "AudioService.AudioResourceNotFound", "Audio resource not found: %#", path );
             return false;
         }
         const bool bCrossfade = _musicPlayingID != 0;
@@ -557,7 +557,7 @@ namespace sw
         {
             const bool bReloaded = _pEngine->getClipStore().reloadClip( graphPath );
             if ( bReloaded )
-                SW_LOG_INFO( "Audio graph reloaded (playing voices finish with the previous graph): %#", assetPath );
+                SW_LOG_INFO_ID( "AudioService.AudioGraphReloadedPlaying", "Audio graph reloaded (playing voices finish with the previous graph): %#", assetPath );
             return bReloaded;
         }
         hashed_string libraryName;
@@ -567,7 +567,7 @@ namespace sw
         {
             const bool bReloaded = loadMixer( AssetID{ _mixerPath } );
             if ( bReloaded )
-                SW_LOG_INFO( "Mixer graph reloaded: %#", assetPath );
+                SW_LOG_INFO_ID( "AudioService.MixerGraphReloaded", "Mixer graph reloaded: %#", assetPath );
             return bReloaded;
         }
         AudioEventLibrary library;
@@ -576,7 +576,7 @@ namespace sw
         // 이름은 라이브러리를 처음 올린 이름 그대로여야 같은 라이브러리를 바꾼다.
         if ( _pEngine->loadEventLibrary( libraryName, library ) == false )
             return false;
-        SW_LOG_INFO( "Event library reloaded: %#", assetPath );
+        SW_LOG_INFO_ID( "AudioService.EventLibraryReloaded", "Event library reloaded: %#", assetPath );
         return true;
     }
 } // namespace sw

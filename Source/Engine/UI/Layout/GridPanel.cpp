@@ -242,7 +242,7 @@ namespace sw
         if ( _outOfRangeCellCount > 0 && _bWarnedOutOfRange == false )
         {
             _bWarnedOutOfRange = true;
-            SW_LOG_WARNING( "[UI] Grid panel '%#' has %# children outside its tracks - they are placed in the last track", getName().c_str(), _outOfRangeCellCount );
+            SW_LOG_WARNING_ID( "GridPanel.GridPanelChildrenOutside", "[UI] Grid panel '%#' has %# children outside its tracks - they are placed in the last track", getName().c_str(), _outOfRangeCellCount );
         }
 
         // 1) 열: 덮은 트랙이 모두 Fixed 면 그 너비, 아니면 무한으로 측정한다.

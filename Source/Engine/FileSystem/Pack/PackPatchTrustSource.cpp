@@ -39,14 +39,14 @@ namespace sw
         if ( PackPatchTrustSourceInternal::decodeCoordinate( config._patchTrustPublicKeyXHex, publicKey._x ) == false ||
              PackPatchTrustSourceInternal::decodeCoordinate( config._patchTrustPublicKeyYHex, publicKey._y ) == false )
         {
-            SW_LOG_ERROR( "Engine config _patchTrustPublicKeyXHex / _patchTrustPublicKeyYHex must both be 64 hex digits (an ES256 P-256 public key) - the pack patch signature requirement is not usable" );
+            SW_LOG_ERROR_ID( "PackPatchTrustSource.EngineConfigPatchTrustPublicKeyXHexPatchTrustPublicKeyYHex", "Engine config _patchTrustPublicKeyXHex / _patchTrustPublicKeyYHex must both be 64 hex digits (an ES256 P-256 public key) - the pack patch signature requirement is not usable" );
             return PackPatchTrustResult::Invalid;
         }
         // 제공자는 GameFramework 가 프로세스 범위에 공개한 모듈 서브시스템이다 — 범위를 올라가며 인터페이스 타입으로 찾는다.
         INetSecurityProvider* pProvider = engine::findSubsystem<INetSecurityProvider>();
         if ( pProvider == nullptr )
         {
-            SW_LOG_ERROR( "Pack patch signatures are required (the engine config holds a public key) but no INetSecurityProvider is published - the GameFramework module was not loaded before the packs were mounted" );
+            SW_LOG_ERROR_ID( "PackPatchTrustSource.PackPatchSignaturesRequired", "Pack patch signatures are required (the engine config holds a public key) but no INetSecurityProvider is published - the GameFramework module was not loaded before the packs were mounted" );
             return PackPatchTrustResult::Invalid;
         }
         outTrust._pProvider = pProvider;

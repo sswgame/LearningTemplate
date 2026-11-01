@@ -228,7 +228,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Lip sync settings '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsCould", "Lip sync settings '%#' could not be read", path );
             *this = LipSyncSettings{};
             return false;
         }
@@ -239,7 +239,7 @@ namespace sw
     {
         if ( _frameRate <= 0.0f || _fullRms <= _silenceRms )
         {
-            SW_LOG_ERROR( "Lip sync settings '%#': _frameRate must be positive and _fullRms above _silenceRms", sourceLabel );
+            SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsFrameRate", "Lip sync settings '%#': _frameRate must be positive and _fullRms above _silenceRms", sourceLabel );
             return false;
         }
         const float2      arrBandHz[3]{ _lowBandHz, _midBandHz, _highBandHz };
@@ -249,13 +249,13 @@ namespace sw
             const float2& band = arrBandHz[bandIndex];
             if ( band._x <= 0.0f || band._y <= band._x )
             {
-                SW_LOG_ERROR( "Lip sync settings '%#': %# must be \"low,high\" Hz with 0 < low < high", sourceLabel, arrBandName[bandIndex] );
+                SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsMust", "Lip sync settings '%#': %# must be \"low,high\" Hz with 0 < low < high", sourceLabel, arrBandName[bandIndex] );
                 return false;
             }
         }
         if ( _listViseme.size() < 2 )
         {
-            SW_LOG_ERROR( "Lip sync settings '%#': _listViseme needs at least two visemes (the first one is silence)", sourceLabel );
+            SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsListViseme", "Lip sync settings '%#': _listViseme needs at least two visemes (the first one is silence)", sourceLabel );
             return false;
         }
         for ( size_t visemeIndex = 0; visemeIndex < _listViseme.size(); ++visemeIndex )
@@ -263,7 +263,7 @@ namespace sw
             const LipSyncViseme& viseme = _listViseme[visemeIndex];
             if ( viseme._name.empty() || findVisemeIndex( viseme._name ) != static_cast<int32>( visemeIndex ) )
             {
-                SW_LOG_ERROR( "Lip sync settings '%#': viseme %# needs a unique, non-empty _name", sourceLabel, visemeIndex );
+                SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsViseme", "Lip sync settings '%#': viseme %# needs a unique, non-empty _name", sourceLabel, visemeIndex );
                 return false;
             }
             // 포먼트는 둘 다 비거나(모음 아님) 0 < F1 < F2 여야 한다.
@@ -271,25 +271,25 @@ namespace sw
             const bool bOrderedFormant = 0.0f < viseme._formantHz._x && viseme._formantHz._x < viseme._formantHz._y;
             if ( bNoFormant == false && bOrderedFormant == false )
             {
-                SW_LOG_ERROR( "Lip sync settings '%#': viseme '%#' _formantHz must be \"0,0\" or \"F1,F2\" with 0 < F1 < F2", sourceLabel, viseme._name.c_str() );
+                SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsViseme2", "Lip sync settings '%#': viseme '%#' _formantHz must be \"0,0\" or \"F1,F2\" with 0 < F1 < F2", sourceLabel, viseme._name.c_str() );
                 return false;
             }
             // 자음 단서는 자음 비즘의 것이다 — 모음(포먼트)이나 무음(첫 비즘)에 달면 두 길이 한 비즘을 두고 다툰다.
             const bool bConsonantOnVowelOrSilence = viseme._consonant != LipSyncConsonant::None && ( viseme.isVowel() || visemeIndex == 0 );
             if ( bConsonantOnVowelOrSilence )
             {
-                SW_LOG_ERROR( "Lip sync settings '%#': viseme '%#' has a _consonant cue but is a vowel or the silence viseme", sourceLabel, viseme._name.c_str() );
+                SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsViseme3", "Lip sync settings '%#': viseme '%#' has a _consonant cue but is a vowel or the silence viseme", sourceLabel, viseme._name.c_str() );
                 return false;
             }
         }
         if ( _plosiveOnsetRatio <= 1.0f )
         {
-            SW_LOG_ERROR( "Lip sync settings '%#': _plosiveOnsetRatio must be greater than 1 (an energy rise)", sourceLabel );
+            SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsPlosiveOnsetRatio", "Lip sync settings '%#': _plosiveOnsetRatio must be greater than 1 (an energy rise)", sourceLabel );
             return false;
         }
         if ( findVisemeIndex( _fallbackViseme ) < 0 )
         {
-            SW_LOG_ERROR( "Lip sync settings '%#': _fallbackViseme '%#' is not a viseme", sourceLabel, _fallbackViseme.c_str() );
+            SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsFallbackViseme", "Lip sync settings '%#': _fallbackViseme '%#' is not a viseme", sourceLabel, _fallbackViseme.c_str() );
             return false;
         }
         return true;
@@ -333,7 +333,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "VisemeTrack", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Viseme track '%#': malformed XML (expected a <VisemeTrack> root)", sourceLabel );
+            SW_LOG_ERROR_ID( "LipSync.VisemeTrackMalformedXML", "Viseme track '%#': malformed XML (expected a <VisemeTrack> root)", sourceLabel );
             return false;
         }
         if ( XMLReadUtil::hasOnlyKnownNames( root, { "_frameRate" }, { "_listViseme", "_listFrame" }, sourceLabel ) == false )
@@ -344,7 +344,7 @@ namespace sw
         const bool                   bMissingVisemeFields = frameRate.has_value() == false || visemes.isValid() == false || visemes.findChild().isValid() == false || frames.isValid() == false;
         if ( bMissingVisemeFields )
         {
-            SW_LOG_ERROR( "Viseme track '%#' needs _frameRate, _listViseme and _listFrame", sourceLabel );
+            SW_LOG_ERROR_ID( "LipSync.VisemeTrackNeedsFrameRate", "Viseme track '%#' needs _frameRate, _listViseme and _listFrame", sourceLabel );
             return false;
         }
         _frameRate = *frameRate;
@@ -358,7 +358,7 @@ namespace sw
         {
             if ( XMLReadUtil::readFloatList( frame.getText(), listFrame.data(), static_cast<uint32>( listFrame.size() ) ) == false )
             {
-                SW_LOG_ERROR( "Viseme track '%#': frame %# must hold one weight per viseme", sourceLabel, frameIndex );
+                SW_LOG_ERROR_ID( "LipSync.VisemeTrackFrameMust", "Viseme track '%#': frame %# must hold one weight per viseme", sourceLabel, frameIndex );
                 *this = VisemeTrack{};
                 return false;
             }
@@ -373,7 +373,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Viseme track '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "LipSync.VisemeTrackCouldNot", "Viseme track '%#' could not be read", path );
             *this = VisemeTrack{};
             return false;
         }

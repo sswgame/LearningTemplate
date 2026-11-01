@@ -32,7 +32,7 @@ namespace sw
                 outID = AssetPaths::normalizeAssetID( id.view() );
                 if ( outID.empty() == false )
                     return true;
-                SW_LOG_ERROR( "Cook input '%#' leaves the resource tree - it cannot be recorded, so the read fails", id.view() );
+                SW_LOG_ERROR_ID( "CookJob.CookInputLeavesResource", "Cook input '%#' leaves the resource tree - it cannot be recorded, so the read fails", id.view() );
                 return false;
             }
 
@@ -41,7 +41,7 @@ namespace sw
             {
                 if ( FileUtil::makeAbsolutePath( diskPath, outAbsPath ) == false )
                 {
-                    SW_LOG_ERROR( "Cook input '%#' cannot be made absolute - it is not recorded, so the read fails", diskPath );
+                    SW_LOG_ERROR_ID( "CookJob.CookInputCannotMade", "Cook input '%#' cannot be made absolute - it is not recorded, so the read fails", diskPath );
                     return false;
                 }
                 outAbsPath = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( outAbsPath ) );
@@ -79,8 +79,8 @@ namespace sw
             {
                 if ( CookSession::isActive() == false )
                     return true;
-                SW_LOG_ERROR( "'%#' was read during cooking outside a cook job - the read is not recorded as an input, so it fails (open a CookJob around the cooker)",
-                              source );
+                SW_LOG_ERROR_ID( "CookJob.ReadDuringCookingOutside", "'%#' was read during cooking outside a cook job - the read is not recorded as an input, so it fails (open a CookJob around the cooker)",
+                                 source );
                 return false;
             }
         };
@@ -168,7 +168,7 @@ namespace sw
     {
         if ( requiresCallingThreadRead() == false )
             return true;
-        SW_LOG_ERROR( "'%#' was read asynchronously during cooking - its completion is not recorded as an input; cookers read synchronously", id.view() );
+        SW_LOG_ERROR_ID( "CookJob.ReadAsynchronouslyDuringCooking", "'%#' was read asynchronously during cooking - its completion is not recorded as an input; cookers read synchronously", id.view() );
         return false;
     }
 

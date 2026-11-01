@@ -47,7 +47,7 @@ namespace sw
         _packetBuilder->initialize( device, &engine::getSubsystem<TaskManager>() );
         if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>() ) == false )
         {
-            SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
+            SW_LOG_ERROR_ID( "FrameRenderer.FailedInitializeFrameRenderer", "Failed to initialize FrameRenderer!" );
             return SubsystemInitResult::Failed;
         }
         GlobalVariableManager&    globalVariables       = engine::getSubsystem<GlobalVariableManager>();
@@ -56,7 +56,7 @@ namespace sw
         {
             if ( pVariable == nullptr )
             {
-                SW_LOG_ERROR( "A pipeline variable (gv_renderPipeline · gv_deferredShading) is not registered" );
+                SW_LOG_ERROR_ID( "FrameRenderer.PipelineVariableGvRenderPipeline", "A pipeline variable (gv_renderPipeline · gv_deferredShading) is not registered" );
                 return SubsystemInitResult::Failed;
             }
             pVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &FrameRendererSubsystem::onPipelineVariableChanged, this );
@@ -73,10 +73,10 @@ namespace sw
                 pRenderThread->waitIdle( RHIWaitIdleReason::PipelineSwitch );
         }
         if ( _frameRenderer->selectPipeline() == false )
-            SW_LOG_ERROR( "%# changed to '%#' but the pipeline could not be selected - %#", pVariable->_name.c_str(), pVariable->getValueAsString().c_str(),
-                          _frameRenderer->getStatusMessage().c_str() );
+            SW_LOG_ERROR_ID( "FrameRenderer.ChangedButPipelineCould", "%# changed to '%#' but the pipeline could not be selected - %#", pVariable->_name.c_str(), pVariable->getValueAsString().c_str(),
+                             _frameRenderer->getStatusMessage().c_str() );
         else
-            SW_LOG_INFO( "%# changed - drawing with %#", pVariable->_name.c_str(), _frameRenderer->getPipelinePath().c_str() );
+            SW_LOG_INFO_ID( "FrameRenderer.ChangedDrawing", "%# changed - drawing with %#", pVariable->_name.c_str(), _frameRenderer->getPipelinePath().c_str() );
     }
 
     void FrameRendererSubsystem::shutdownSubsystem()

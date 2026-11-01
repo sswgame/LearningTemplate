@@ -41,7 +41,7 @@ namespace sw
             }
             if ( name != "Floor" )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+                SW_LOG_ERROR_ID( "RunMap.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
                 bValid = false;
                 continue;
             }
@@ -55,7 +55,7 @@ namespace sw
             const bool  bInsideFloor = index >= 0 && index < settings._floorCount;
             if ( bInsideFloor == false )
             {
-                SW_LOG_ERROR( "%#: <Floor index=\"%#\"> is outside the %# floors", sourceName, forced._index, settings._floorCount );
+                SW_LOG_ERROR_ID( "RunMap.FloorIndexOutsideFloors", "%#: <Floor index=\"%#\"> is outside the %# floors", sourceName, forced._index, settings._floorCount );
                 bValid = false;
                 continue;
             }
@@ -63,7 +63,7 @@ namespace sw
         }
         if ( settings._listRule.empty() )
         {
-            SW_LOG_ERROR( "%#: <RunMap> needs at least one <Node kind=\"...\"/>", sourceName );
+            SW_LOG_ERROR_ID( "RunMap.RunMapNeedsLeastOne", "%#: <RunMap> needs at least one <Node kind=\"...\"/>", sourceName );
             bValid = false;
         }
         if ( bValid )
@@ -130,7 +130,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "RunMap: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "RunMap.RunMapRefusedSettings", "RunMap: refused settings - %#", rangeError.c_str() );
             return false;
         }
         GameRandom random( seed );

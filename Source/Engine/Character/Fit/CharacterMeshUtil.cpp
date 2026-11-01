@@ -99,8 +99,8 @@ namespace sw
                 const bool   bTriangleMismatch = fit._triangleCount != vertexCount / 3 || fit._listVisibleBit.size() * 32 < fit._triangleCount;
                 if ( bGeometryMismatch == false && bTriangleMismatch == false )
                     return true;
-                SW_LOG_ERROR( "Fit result does not match its mesh (%# vertices, %# welded, %# deltas, %# triangles) - the baked mesh is not made", vertexCount,
-                              welded.getVertexCount(), static_cast<uint32>( fit._listVertexDelta.size() ), fit._triangleCount );
+                SW_LOG_ERROR_ID( "CharacterMeshUtil.FitResultDoesNot", "Fit result does not match its mesh (%# vertices, %# welded, %# deltas, %# triangles) - the baked mesh is not made", vertexCount,
+                                 welded.getVertexCount(), static_cast<uint32>( fit._listVertexDelta.size() ), fit._triangleCount );
                 return false;
             }
 
@@ -381,7 +381,7 @@ namespace sw
         const uint32 vertexCount = source.getVertexCount();
         if ( ( pWelded != nullptr ) != ( pFit != nullptr ) )
         {
-            SW_LOG_ERROR( "A baked mesh needs both the welded geometry and its fit result, or neither" );
+            SW_LOG_ERROR_ID( "CharacterMeshUtil.BakedMeshNeedsBoth", "A baked mesh needs both the welded geometry and its fit result, or neither" );
             return nullptr;
         }
         const bool bUseFit = pWelded != nullptr && pFit != nullptr;
@@ -416,7 +416,7 @@ namespace sw
         const uint32 garmentVertexCount = inoutGarment.getVertexCount();
         if ( body.hasSkin() == false )
         {
-            SW_LOG_ERROR( "Body surface transfer needs a skinned body mesh - the garment is left as it is" );
+            SW_LOG_ERROR_ID( "CharacterMeshUtil.BodySurfaceTransferNeeds", "Body surface transfer needs a skinned body mesh - the garment is left as it is" );
             return garmentVertexCount;
         }
         AppearanceGeometry bodyGeometry;

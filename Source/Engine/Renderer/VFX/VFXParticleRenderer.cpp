@@ -113,7 +113,7 @@ namespace sw
             _particleBuffer.release( &device );
             if ( _particleBuffer.ensureCapacity( &device, sizeof( GPUParticle ), capacity, RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
             {
-                SW_LOG_ERROR( "Failed to create the particle buffer (%# particles) - particles are not drawn", capacity );
+                SW_LOG_ERROR_ID( "VFXParticleRenderer.FailedCreateParticleBuffer", "Failed to create the particle buffer (%# particles) - particles are not drawn", capacity );
                 return;
             }
         }

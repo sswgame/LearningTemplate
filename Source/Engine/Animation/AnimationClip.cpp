@@ -320,7 +320,7 @@ namespace sw
                                        Memory::compare( pData, AnimationClipInternal::kArrMagic, sizeof( AnimationClipInternal::kArrMagic ) ) != 0;
         if ( bMissingClipMagic )
         {
-            SW_LOG_ERROR( "Animation clip '%#' has no SWAC magic", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationClip.AnimationClipNoSWAC", "Animation clip '%#' has no SWAC magic", sourceLabel );
             return false;
         }
 
@@ -328,7 +328,7 @@ namespace sw
         const uint32                  version = reader.readUint();
         if ( version != kVersion )
         {
-            SW_LOG_ERROR( "Animation clip '%#' is version %#, not the current %# - re-import the model", sourceLabel, version, kVersion );
+            SW_LOG_ERROR_ID( "AnimationClip.AnimationClipVersionNot", "Animation clip '%#' is version %#, not the current %# - re-import the model", sourceLabel, version, kVersion );
             return false;
         }
         const uint32 flags      = reader.readUint();
@@ -390,7 +390,7 @@ namespace sw
         const bool bMalformedClip = reader._bFailed || reader._offset != byteCount || bCodecKnown == false || bRootInRange == false || bValidHeader == false;
         if ( bMalformedClip )
         {
-            SW_LOG_ERROR( "Animation clip '%#' is malformed", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationClip.AnimationClipMalformed", "Animation clip '%#' is malformed", sourceLabel );
             clear();
             return false;
         }
@@ -414,7 +414,7 @@ namespace sw
         vector<uint8> bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
-            SW_LOG_ERROR( "Animation clip '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "AnimationClip.AnimationClipCouldNot", "Animation clip '%#' could not be read", path );
             clear();
             return false;
         }

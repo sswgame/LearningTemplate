@@ -111,7 +111,7 @@ namespace sw
         {
             if ( isHrSuccess( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ), "CreateCommandAllocator" ) == false )
             {
-                SW_LOG_ERROR( "openUploadSlot: failed to create copy command allocator" );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy", "openUploadSlot: failed to create copy command allocator" );
                 return false;
             }
             utf16 arrName[constant::buffer::kMax64]{};
@@ -128,13 +128,13 @@ namespace sw
             // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
             if ( _pDevice->waitForFenceValue( slot._resetFence ) == false )
             {
-                SW_LOG_ERROR( "openUploadSlot: previous copies on allocator %# have not completed (fence %#)",
-                              slotIndex, slot._resetFence );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotPreviousCopiesAllocator", "openUploadSlot: previous copies on allocator %# have not completed (fence %#)",
+                                 slotIndex, slot._resetFence );
                 return false;
             }
             if ( isHrSuccess( slot._copyAllocator->Reset(), "Reset" ) == false )
             {
-                SW_LOG_ERROR( "openUploadSlot: copy allocator Reset failed" );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyAllocatorReset", "openUploadSlot: copy allocator Reset failed" );
                 return false;
             }
         }
@@ -146,13 +146,13 @@ namespace sw
         {
             if ( isHrSuccess( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ), "CreateCommandList" ) == false )
             {
-                SW_LOG_ERROR( "openUploadSlot: failed to create copy command list" );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy2", "openUploadSlot: failed to create copy command list" );
                 return false;
             }
         }
         else if ( isHrSuccess( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ), "Reset" ) == false )
         {
-            SW_LOG_ERROR( "openUploadSlot: copy command list Reset failed" );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyCommandList", "openUploadSlot: copy command list Reset failed" );
             return false;
         }
         slot._bListOpen = SW_TRUE;
@@ -202,7 +202,7 @@ namespace sw
             void*                                  pMapped{ nullptr };
             if ( _pDevice->createMappedUploadBuffer( newCapacity, newHeap, pMapped ) == false )
             {
-                SW_LOG_ERROR( "acquireUploadStaging: failed to create or map staging upload buffer (%# bytes)", newCapacity );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.AcquireUploadStagingFailedCreateMap", "acquireUploadStaging: failed to create or map staging upload buffer (%# bytes)", newCapacity );
                 return false;
             }
 
@@ -321,7 +321,7 @@ namespace sw
         if ( bTextureUploadUnavailable )
         {
             // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — Accepted 를 주고 폴링에서야 Failed 가 되면 호출자가 잃은 장치에 올린 줄 알고 기다린다.
-            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
 
@@ -329,7 +329,7 @@ namespace sw
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( desc._arraySlice >= resourceDesc.DepthOrArraySize )
         {
-            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureUploadSliceOutRange", "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
             return RHITransferSubmit::rejected();
         }
         // 서브리소스 번호 = 밉 + 면 × 밉 수(D3D12CalcSubresource 와 같은 순서).
@@ -339,8 +339,8 @@ namespace sw
                                                                resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
-                          desc._sizeBytes, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, static_cast<uint32>( resourceDesc.MipLevels ) );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureUploadUnsupportedFormatNot", "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+                             desc._sizeBytes, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, static_cast<uint32>( resourceDesc.MipLevels ) );
             return RHITransferSubmit::rejected();
         }
 
@@ -433,7 +433,7 @@ namespace sw
         const bool      bTextureRegionUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->isDeviceLost();
         if ( bTextureRegionUploadUnavailable )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureRegionUploadTextureDeviceNot", "submitTextureRegionUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
 
@@ -532,20 +532,20 @@ namespace sw
     {
         if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackTicketNotCompleted", "takeTextureReadback: ticket %# has not completed", ticket._serial );
             return false;
         }
         D3D12RHIDevice::TextureReadbackRecord record;
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackTicketNotPending", "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
             return false;
         }
 
         void* pMapped{ nullptr };
         if ( isHrSuccess( record._readback->Map( 0, nullptr, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
-            SW_LOG_ERROR( "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackFailedMapReadback", "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
             return false;
         }
         outBytes.assign( record._layout._sizeBytes, 0 );
@@ -598,7 +598,7 @@ namespace sw
         const bool      bTextureReadbackUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->isDeviceLost();
         if ( bTextureReadbackUnavailable )
         {
-            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
 
@@ -606,8 +606,8 @@ namespace sw
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( mip >= resourceDesc.MipLevels || arraySlice >= resourceDesc.DepthOrArraySize )
         {
-            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, static_cast<uint32>( resourceDesc.MipLevels ),
-                          static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackMipSliceOut", "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, static_cast<uint32>( resourceDesc.MipLevels ),
+                             static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
             return RHITransferSubmit::rejected();
         }
         // 깊이는 typeless(R24G8)로 만들어져 있다. 깊이 평면(평면 0)만 복사하고 가져갈 때 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
@@ -615,7 +615,7 @@ namespace sw
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( resourceDesc.Format );
         if ( computeRHITextureMipLayout( layoutFormat, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
         {
-            SW_LOG_ERROR( "submitTextureReadback: unsupported format for %#x%# mip %#", static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackUnsupportedFormatX", "submitTextureReadback: unsupported format for %#x%# mip %#", static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip );
             return RHITransferSubmit::rejected();
         }
 
@@ -634,14 +634,14 @@ namespace sw
                                                                       D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ),
                           "CreateCommittedResource" ) == false )
         {
-            SW_LOG_ERROR( "submitTextureReadback: failed to create the readback buffer (%# bytes)", totalBytes );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackFailedCreateReadback", "submitTextureReadback: failed to create the readback buffer (%# bytes)", totalBytes );
             return RHITransferSubmit::rejected();
         }
 
         D3D12RHIDevice::D3D12TransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
-            SW_LOG_ERROR( "submitTextureReadback: failed to open the copy command list" );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackFailedOpenCopy", "submitTextureReadback: failed to open the copy command list" );
             return RHITransferSubmit::rejected();
         }
         ID3D12GraphicsCommandList* pList = job._list.Get();
@@ -715,7 +715,7 @@ namespace sw
         void*             pMapped{ nullptr };
         if ( isHrSuccess( pDest->Map( 0, &noRead, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
-            SW_LOG_ERROR( "updateVertexBufferRegions: failed to map the vertex buffer" );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateVertexBufferRegionsFailedMapVertex", "updateVertexBufferRegions: failed to map the vertex buffer" );
             return;
         }
         const uint8* pBase = static_cast<const uint8*>( pBaseSource );
@@ -724,7 +724,7 @@ namespace sw
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
             if ( static_cast<uint64>( region._dstOffset ) + region._sizeBytes > bufferBytes )
             {
-                SW_LOG_ERROR( "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, bufferBytes );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateVertexBufferRegionsRegionOutsideByte", "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, bufferBytes );
                 continue;
             }
             Memory::copy( static_cast<uint8*>( pMapped ) + region._dstOffset, pBase + region._srcOffset, region._sizeBytes );
@@ -831,13 +831,13 @@ namespace sw
         const bool            bNotReadback = FAILED( pResource->GetHeapProperties( &heapProperties, &heapFlags ) ) || heapProperties.Type != D3D12_HEAP_TYPE_READBACK;
         if ( bNotReadback )
         {
-            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback );
             return false;
         }
         const bool bTooLarge = static_cast<uint64>( sizeBytes ) > pResource->GetDesc().Width;
         if ( bTooLarge )
         {
-            SW_LOG_ERROR( "readReadbackBuffer: %# bytes is past the end of the readback buffer", sizeBytes );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.ReadReadbackBufferBytesPastEnd", "readReadbackBuffer: %# bytes is past the end of the readback buffer", sizeBytes );
             return false;
         }
         void*             pMapped{ nullptr };
@@ -855,8 +855,8 @@ namespace sw
     {
         if ( isRHITextureShapeValid( desc ) == false )
         {
-            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                          desc._arraySize, desc._width, desc._height );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                             desc._arraySize, desc._width, desc._height );
             return 0;
         }
         D3D12_HEAP_PROPERTIES heapProps{};
@@ -950,8 +950,8 @@ namespace sw
                 // 고갈은 로그로 남긴다. 유효한 핸들이 돌아오는데 RTV 가 없으므로, 조용히 넘어가면
                 // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보인다.
                 rtvSlot = D3D12RHIDevice::kMaxOffscreenRTVs;
-                SW_LOG_ERROR( "Offscreen RTV descriptors exhausted (max %#) - this texture cannot be used as a render target.",
-                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRTVs ) );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenRTVDescriptorsExhausted", "Offscreen RTV descriptors exhausted (max %#) - this texture cannot be used as a render target.",
+                                 static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRTVs ) );
             }
             if ( rtvSlot >= D3D12RHIDevice::kMaxOffscreenRTVs )
                 break;
@@ -997,8 +997,8 @@ namespace sw
             else
             {
                 dsvSlot = D3D12RHIDevice::kMaxOffscreenDSVs;
-                SW_LOG_ERROR( "Offscreen DSV descriptors exhausted (max %#) - this texture cannot be used as depth.",
-                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDSVs ) );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenDSVDescriptorsExhausted", "Offscreen DSV descriptors exhausted (max %#) - this texture cannot be used as depth.",
+                                 static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDSVs ) );
             }
             if ( dsvSlot >= D3D12RHIDevice::kMaxOffscreenDSVs )
                 break;
@@ -1109,7 +1109,7 @@ namespace sw
 
         if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
         {
-            SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.ShaderVisibleDescriptorHeap", "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
             return kInvalidDescriptorIndex;
         }
         return _pDevice->_allocatedDescriptorsCount++;
@@ -1133,8 +1133,8 @@ namespace sw
             const auto        it = _pDevice->_mapOffscreenTexture.find( texture );
             if ( it != _pDevice->_mapOffscreenTexture.end() && it->second._dimension != RHITextureDimension::Texture2D )
             {
-                SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
-                              texture, static_cast<uint32>( it->second._dimension ) );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
+                                 texture, static_cast<uint32>( it->second._dimension ) );
                 return kInvalidDescriptorIndex;
             }
         }
@@ -1267,8 +1267,8 @@ namespace sw
         const bool bSlotAlreadyFree = record._resource == nullptr && record._buffer == 0 && record._texture == 0;
         if ( bSlotAlreadyFree )
         {
-            SW_LOG_ERROR( "%# index %# is already free; ignoring the duplicate release.",
-                          bUAV ? "Bindless UAV" : "Bindless", index );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.IndexAlreadyFreeIgnoring", "%# index %# is already free; ignoring the duplicate release.",
+                             bUAV ? "Bindless UAV" : "Bindless", index );
             return;
         }
 
@@ -1479,7 +1479,7 @@ namespace sw
             const HRESULT hrPSO = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
             if ( FAILED( hrPSO ) )
             {
-                SW_LOG_ERROR( "CreateGraphicsPipelineState failed (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPSO ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateGraphicsPipelineStateFailedHrVS", "CreateGraphicsPipelineState failed (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPSO ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
                 _pDevice->flushDebugMessages( "CreateGraphicsPipelineState" );
             }
         }
@@ -1507,7 +1507,7 @@ namespace sw
                 const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
                 if ( FAILED( hr ) )
                 {
-                    SW_LOG_ERROR( "CreateComputePipelineState failed hr=0x%#", static_cast<uint32>( hr ) );
+                    SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateComputePipelineStateFailedHrX", "CreateComputePipelineState failed hr=0x%#", static_cast<uint32>( hr ) );
                     _pDevice->flushDebugMessages( "CreateComputePipelineState" );
                     return 0;
                 }

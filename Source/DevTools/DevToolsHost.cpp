@@ -134,7 +134,7 @@ namespace sw
             if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
             {
                 pRecompiler->triggerReloadAll();
-                SW_LOG_INFO( "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
+                SW_LOG_INFO_ID( "DevTools.ForceShaderReload", "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
             }
         }
 #endif

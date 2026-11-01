@@ -31,7 +31,7 @@ namespace sw
         const string_view assetPath = assetID.view();
         if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            SW_LOG_ERROR( "[UI] UI scale settings could not be read or hold unknown keys: %#", assetPath );
+            SW_LOG_ERROR_ID( "UIScale.UIScaleSettingsCould", "[UI] UI scale settings could not be read or hold unknown keys: %#", assetPath );
             return false;
         }
         return true;

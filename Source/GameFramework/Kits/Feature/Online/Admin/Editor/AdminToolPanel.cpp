@@ -183,7 +183,7 @@ namespace sw::editor
                 bNeedsLogin ? session.connectWithLogin( _gmAddressText, "editor", _loginNameText, _arrPassword, error ) : session.connectLive( _gmAddressText, "editor", error );
             Memory::set( _arrPassword, 0, sizeof( _arrPassword ) ); // 비밀번호를 입력 칸에 남기지 않는다(로그인을 맡은 쪽이 받아 갔다)
             if ( bOpened == false )
-                SW_LOG_WARNING( "Admin tool: GM connection failed - %#", error.c_str() );
+                SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolGMConnection", "Admin tool: GM connection failed - %#", error.c_str() );
         }
         if ( bConnected && ImGui::Button( "Disconnect" ) )
             session.disconnectLive();
@@ -207,7 +207,7 @@ namespace sw::editor
             if ( AdminToolPanelInternal::parseAccountID( _accountText, accountID ) )
                 session.requestLookup( accountID );
             else
-                SW_LOG_WARNING( "Admin tool: account id must be a non-zero hex number" );
+                SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolAccountId", "Admin tool: account id must be a non-zero hex number" );
         }
         EditorSelfTestMarks::note( "admin.lookup" );
 

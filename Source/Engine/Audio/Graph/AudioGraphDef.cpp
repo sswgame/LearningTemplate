@@ -28,39 +28,39 @@ namespace sw
             bool                          bValid   = true;
             if ( node._name.empty() )
             {
-                SW_LOG_ERROR( "%#: node %# has no name", sourceName, nodeIndex );
+                SW_LOG_ERROR_ID( "AudioGraphDef.NodeNoName", "%#: node %# has no name", sourceName, nodeIndex );
                 return false;
             }
             for ( size_t otherIndex = nodeIndex + 1; otherIndex < def._listNode.size(); ++otherIndex )
             {
                 if ( def._listNode[otherIndex]._name == node._name )
                 {
-                    SW_LOG_ERROR( "%#: node '%#' is declared twice", sourceName, pName );
+                    SW_LOG_ERROR_ID( "AudioGraphDef.NodeDeclaredTwice", "%#: node '%#' is declared twice", sourceName, pName );
                     bValid = false;
                 }
             }
             // 소스(오실레이터 · 노이즈 · 그래뉼러)는 입력을 받지 않고, 처리 노드는 입력이 하나 이상이어야 한다.
             if ( typeInfo._bSource && node._listInput.empty() == false )
             {
-                SW_LOG_ERROR( "%#: node '%#' (%#) is a source and takes no inputs", sourceName, pName, typeInfo._pName );
+                SW_LOG_ERROR_ID( "AudioGraphDef.NodeSourceTakesNo", "%#: node '%#' (%#) is a source and takes no inputs", sourceName, pName, typeInfo._pName );
                 bValid = false;
             }
             if ( typeInfo._bSource == false && node._listInput.empty() )
             {
-                SW_LOG_ERROR( "%#: node '%#' (%#) needs at least one input", sourceName, pName, typeInfo._pName );
+                SW_LOG_ERROR_ID( "AudioGraphDef.NodeNeedsLeastOne", "%#: node '%#' (%#) needs at least one input", sourceName, pName, typeInfo._pName );
                 bValid = false;
             }
             for ( const hashed_string& input : node._listInput )
             {
                 if ( input == node._name || def.findNodeIndex( input ) < 0 )
                 {
-                    SW_LOG_ERROR( "%#: node '%#' reads '%#', which is not another node of the graph", sourceName, pName, input.c_str() );
+                    SW_LOG_ERROR_ID( "AudioGraphDef.NodeReadsWhichNot", "%#: node '%#' reads '%#', which is not another node of the graph", sourceName, pName, input.c_str() );
                     bValid = false;
                 }
             }
             if ( typeInfo._bNeedsClip != node._clip.isSet() )
             {
-                SW_LOG_ERROR( "%#: node '%#' (%#) %#", sourceName, pName, typeInfo._pName, typeInfo._bNeedsClip ? "needs a source clip (_clip)" : "does not take a clip" );
+                SW_LOG_ERROR_ID( "AudioGraphDef.Node", "%#: node '%#' (%#) %#", sourceName, pName, typeInfo._pName, typeInfo._bNeedsClip ? "needs a source clip (_clip)" : "does not take a clip" );
                 bValid = false;
             }
             for ( size_t parameterIndex = 0; parameterIndex < node._listParameter.size(); ++parameterIndex )
@@ -68,14 +68,14 @@ namespace sw
                 const AudioGraphParameterDesc& parameter = node._listParameter[parameterIndex];
                 if ( AudioGraphRegistry::findParameterIndex( typeInfo, parameter._name ) < 0 )
                 {
-                    SW_LOG_ERROR( "%#: node '%#' (%#) has no value named '%#'", sourceName, pName, typeInfo._pName, parameter._name.c_str() );
+                    SW_LOG_ERROR_ID( "AudioGraphDef.NodeNoValueNamed", "%#: node '%#' (%#) has no value named '%#'", sourceName, pName, typeInfo._pName, parameter._name.c_str() );
                     bValid = false;
                 }
                 for ( size_t otherIndex = parameterIndex + 1; otherIndex < node._listParameter.size(); ++otherIndex )
                 {
                     if ( node._listParameter[otherIndex]._name == parameter._name )
                     {
-                        SW_LOG_ERROR( "%#: node '%#' sets '%#' twice", sourceName, pName, parameter._name.c_str() );
+                        SW_LOG_ERROR_ID( "AudioGraphDef.NodeSetsTwice", "%#: node '%#' sets '%#' twice", sourceName, pName, parameter._name.c_str() );
                         bValid = false;
                     }
                 }
@@ -84,13 +84,13 @@ namespace sw
                 const bool bCurveUsable = parameter._listPoint.empty() == false && AudioMixerDesc::isCurveSorted( parameter._listPoint );
                 if ( bDriven && bCurveUsable == false )
                 {
-                    SW_LOG_ERROR( "%#: node '%#' value '%#' follows '%#' but its curve is empty or out of order", sourceName, pName, parameter._name.c_str(),
-                                  parameter._parameter.c_str() );
+                    SW_LOG_ERROR_ID( "AudioGraphDef.NodeValueFollowsBut", "%#: node '%#' value '%#' follows '%#' but its curve is empty or out of order", sourceName, pName, parameter._name.c_str(),
+                                     parameter._parameter.c_str() );
                     bValid = false;
                 }
                 if ( bDriven == false && parameter._listPoint.empty() == false )
                 {
-                    SW_LOG_ERROR( "%#: node '%#' value '%#' has a curve but no game parameter (_parameter)", sourceName, pName, parameter._name.c_str() );
+                    SW_LOG_ERROR_ID( "AudioGraphDef.NodeValueCurveBut", "%#: node '%#' value '%#' has a curve but no game parameter (_parameter)", sourceName, pName, parameter._name.c_str() );
                     bValid = false;
                 }
             }
@@ -104,7 +104,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Audio graph not found: %#", assetPath );
+            SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphNotFound", "Audio graph not found: %#", assetPath );
             return false;
         }
         return loadFromXMLText( text, assetPath );
@@ -115,7 +115,7 @@ namespace sw
         *this = AudioGraphDef{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "%#: audio graph could not be read or holds unknown keys / values", sourceName );
+            SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot", "%#: audio graph could not be read or holds unknown keys / values", sourceName );
             return false;
         }
         return validate( sourceName );
@@ -126,7 +126,7 @@ namespace sw
         bool bValid = true;
         if ( _listNode.empty() || _listNode.size() > kMaxNodeCount )
         {
-            SW_LOG_ERROR( "%#: an audio graph needs 1 to %# nodes (has %#)", sourceName, kMaxNodeCount, _listNode.size() );
+            SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphNeedsNodes", "%#: an audio graph needs 1 to %# nodes (has %#)", sourceName, kMaxNodeCount, _listNode.size() );
             return false;
         }
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
@@ -136,13 +136,13 @@ namespace sw
         }
         if ( findNodeIndex( _output ) < 0 )
         {
-            SW_LOG_ERROR( "%#: graph output '%#' is not a node of the graph", sourceName, _output.c_str() );
+            SW_LOG_ERROR_ID( "AudioGraphDef.GraphOutputNotNode", "%#: graph output '%#' is not a node of the graph", sourceName, _output.c_str() );
             bValid = false;
         }
         const bool bDurationInRange = 0.0f < _durationSeconds && _durationSeconds <= kMaxDurationSeconds;
         if ( bDurationInRange == false )
         {
-            SW_LOG_ERROR( "%#: graph length (_durationSeconds) must be above 0 and at most %# s", sourceName, kMaxDurationSeconds );
+            SW_LOG_ERROR_ID( "AudioGraphDef.GraphLengthDurationSecondsMust", "%#: graph length (_durationSeconds) must be above 0 and at most %# s", sourceName, kMaxDurationSeconds );
             bValid = false;
         }
         if ( bValid )
@@ -150,7 +150,7 @@ namespace sw
             vector<uint32> listOrder;
             if ( makeProcessingOrder( listOrder ) == false )
             {
-                SW_LOG_ERROR( "%#: node inputs form a cycle", sourceName );
+                SW_LOG_ERROR_ID( "AudioGraphDef.NodeInputsFormCycle", "%#: node inputs form a cycle", sourceName );
                 bValid = false;
             }
         }
@@ -166,12 +166,12 @@ namespace sw
     {
         if ( validate( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio graph not saved - it does not pass validation", absPath.str() );
+            SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphNotSaved", "%#: audio graph not saved - it does not pass validation", absPath.str() );
             return false;
         }
         if ( FileUtil::writeTextFile( absPath.str(), toXMLText() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );
+            SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot2", "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );
             return false;
         }
         return true;

@@ -39,11 +39,11 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, pElement );
+                SW_LOG_ERROR_ID( "LeaderboardCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, pElement );
             }
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Board> or <Achievement> entries", sourceName );
+            SW_LOG_WARNING_ID( "LeaderboardCatalog.NoBoardAchievementEntries", "%#: no <Board> or <Achievement> entries", sourceName );
         return loadedCount;
     }
 

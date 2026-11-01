@@ -61,7 +61,7 @@ namespace sw::editor
             /** @brief 노드 메시의 정점 접근자를 읽지 못했다고 알리고 false 를 돌려줍니다(임포트 실패). */
             static bool reportUnreadableMesh( string_view sourcePath, const cgltf_node& node, const cgltf_data& data )
             {
-                SW_LOG_ERROR( "glTF '%#': the mesh of node '%#' has vertex data that cannot be read", sourcePath, ModelImportUtil::makeNodeName( data, node ).c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.GlTFMeshNodeVertex", "glTF '%#': the mesh of node '%#' has vertex data that cannot be read", sourcePath, ModelImportUtil::makeNodeName( data, node ).c_str() );
                 return false;
             }
 
@@ -92,7 +92,7 @@ namespace sw::editor
                         {
                             if ( ModelImportUtil::readFloats( skin.inverse_bind_matrices, jointIndex, arrMatrix, 16 ) == false )
                             {
-                                SW_LOG_ERROR( "glTF '%#': inverse bind matrix %# of a skin cannot be read", sourcePath, static_cast<uint32>( jointIndex ) );
+                                SW_LOG_ERROR_ID( "ModelImporter.GlTFInverseBindMatrix", "glTF '%#': inverse bind matrix %# of a skin cannot be read", sourcePath, static_cast<uint32>( jointIndex ) );
                                 return false;
                             }
                             inverseBind = ModelImportUtil::convertMatrixToEngineSpace( arrMatrix );
@@ -113,8 +113,8 @@ namespace sw::editor
                             maxDiffer = MathUtil::max( maxDiffer, MathUtil::abs( ( &existing._11 )[element] - ( &inverseBind._11 )[element] ) );
                         }
                         if ( maxDiffer > 1e-3f )
-                            SW_LOG_WARNING( "glTF '%#': joint '%#' has different bind matrices in two skins - the first is used", sourcePath,
-                                            ModelImportUtil::makeNodeName( data, *skin.joints[jointIndex] ).c_str() );
+                            SW_LOG_WARNING_ID( "ModelImporter.GlTFJointDifferentBind", "glTF '%#': joint '%#' has different bind matrices in two skins - the first is used", sourcePath,
+                                               ModelImportUtil::makeNodeName( data, *skin.joints[jointIndex] ).c_str() );
                     }
                 }
 
@@ -158,12 +158,12 @@ namespace sw::editor
                 }
                 if ( outMapJointBone.size() != listJoint.size() )
                 {
-                    SW_LOG_ERROR( "glTF '%#': skin joints are not one connected hierarchy reachable from their roots", sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinJointsNot", "glTF '%#': skin joints are not one connected hierarchy reachable from their roots", sourcePath );
                     return false;
                 }
                 if ( listJoint.size() > 0xFFFFu )
                 {
-                    SW_LOG_ERROR( "glTF '%#': %# joints do not fit 16-bit bone indices", sourcePath, listJoint.size() );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFJointsDoNot", "glTF '%#': %# joints do not fit 16-bit bone indices", sourcePath, listJoint.size() );
                     return false;
                 }
                 return true;
@@ -283,7 +283,7 @@ namespace sw::editor
                 }
                 if ( body._listIndex.empty() )
                 {
-                    SW_LOG_ERROR( "glTF '%#' has a skin but no triangles bound to it", sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinButNo", "glTF '%#' has a skin but no triangles bound to it", sourcePath );
                     return false;
                 }
                 if ( listToon.empty() == false )
@@ -300,7 +300,7 @@ namespace sw::editor
                     // LOD 는 구간 · 모프 없는 스킨드 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
                     if ( rule._listLOD.empty() == false && body._listMorphName.empty() == false )
                     {
-                        SW_LOG_ERROR( "glTF '%#' has morph targets - import rule '%#' asks for mesh LODs, which only meshes without morph targets take", sourcePath, rule._name.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFMorphTargetsImport", "glTF '%#' has morph targets - import rule '%#' asks for mesh LODs, which only meshes without morph targets take", sourcePath, rule._name.c_str() );
                         return false;
                     }
                     ModelImportGeometry::expandTriangles( body, boneCount, outResult._mesh );
@@ -309,7 +309,7 @@ namespace sw::editor
                 }
                 if ( rule._listLOD.empty() == false && listToon.empty() == false )
                 {
-                    SW_LOG_ERROR( "glTF '%#' has material sections - import rule '%#' asks for mesh LODs, which only meshes without sections take", sourcePath, rule._name.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsImport", "glTF '%#' has material sections - import rule '%#' asks for mesh LODs, which only meshes without sections take", sourcePath, rule._name.c_str() );
                     return false;
                 }
                 outResult._bSkinned = SW_TRUE;
@@ -325,7 +325,7 @@ namespace sw::editor
                 const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodecByName( rule._animationCodec );
                 if ( pCodec == nullptr )
                 {
-                    SW_LOG_ERROR( "glTF '%#': unknown animation codec '%#'", sourcePath, rule._animationCodec.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFUnknownAnimationCodec", "glTF '%#': unknown animation codec '%#'", sourcePath, rule._animationCodec.c_str() );
                     return false;
                 }
                 unordered_map<string, ModelImportAnimation::ClipExtra> mapExtra;
@@ -339,7 +339,7 @@ namespace sw::editor
                     rootMotionBone = skeleton.findBoneIndex( hashed_string( rule._rootMotionBone ) );
                     if ( rootMotionBone < 0 )
                     {
-                        SW_LOG_ERROR( "glTF '%#': root_motion_bone '%#' is not a joint", sourcePath, rule._rootMotionBone.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFRootMotionBone", "glTF '%#': root_motion_bone '%#' is not a joint", sourcePath, rule._rootMotionBone.c_str() );
                         return false;
                     }
                 }
@@ -375,7 +375,7 @@ namespace sw::editor
                                                ModelImportAnimation::resampleAnimation( animation, skeleton, mapJointBone, listRest, listRootParent, rule._animationSampleRate, morphDuration, rawClip );
                     if ( bChannelsRead == false )
                     {
-                        SW_LOG_ERROR( "glTF '%#': clip '%#' has a channel whose keys cannot be read", sourcePath, clipName.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipChannelWhose", "glTF '%#': clip '%#' has a channel whose keys cannot be read", sourcePath, clipName.c_str() );
                         return false;
                     }
                     ModelImportClip imported{};
@@ -393,7 +393,7 @@ namespace sw::editor
                     }
                     if ( imported._clip.compressFrom( rawClip, *pCodec, settings, &imported._stats ) == false )
                     {
-                        SW_LOG_ERROR( "glTF '%#': clip '%#' could not be compressed with '%#'", sourcePath, clipName.c_str(), pCodec->getName() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipCouldNot", "glTF '%#': clip '%#' could not be compressed with '%#'", sourcePath, clipName.c_str(), pCodec->getName() );
                         return false;
                     }
                     const string baseStem = ModelImportUtil::makeFileStem( clipName );
@@ -431,12 +431,12 @@ namespace sw::editor
                 {
                     if ( listRequestedFound[requestIndex] == SW_TRUE )
                         continue;
-                    SW_LOG_ERROR( "glTF '%#': import rule asks for clip '%#' which the source does not have", sourcePath, rule._listClipName[requestIndex].c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFImportRuleAsks", "glTF '%#': import rule asks for clip '%#' which the source does not have", sourcePath, rule._listClipName[requestIndex].c_str() );
                     bValid = false;
                 }
                 for ( const auto& [clipName, extra] : mapLeftoverExtra )
                 {
-                    SW_LOG_ERROR( "Clip data for '%#' names clip '%#' which is not imported", sourcePath, clipName.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipDataNamesClip", "Clip data for '%#' names clip '%#' which is not imported", sourcePath, clipName.c_str() );
                     bValid = false;
                 }
                 return bValid;
@@ -461,12 +461,12 @@ namespace sw::editor
             {
                 if ( FileUtil::readFile( sourcePath, inoutBytes ) == false || inoutBytes.empty() )
                 {
-                    SW_LOG_ERROR( "Failed to read glTF '%#'", sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTF", "Failed to read glTF '%#'", sourcePath );
                     return false;
                 }
                 const uint32 promotedCount = ModelImportGeometry::promoteSceneRootsToTopAncestor( inoutBytes );
                 if ( promotedCount > 0 )
-                    SW_LOG_WARNING( "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath, promotedCount );
+                    SW_LOG_WARNING_ID( "ModelImporter.GlTFSceneRootNode", "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath, promotedCount );
 
                 const string        path    = string( sourcePath );
                 const cgltf_options options = ModelImportUtil::makeOptions();
@@ -477,7 +477,7 @@ namespace sw::editor
                     result = cgltf_validate( outData._pData );
                 if ( result != cgltf_result_success )
                 {
-                    SW_LOG_ERROR( "Failed to read glTF '%#' (cgltf result %#)", sourcePath, static_cast<uint32>( result ) );
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTFCgltf", "Failed to read glTF '%#' (cgltf result %#)", sourcePath, static_cast<uint32>( result ) );
                     return false;
                 }
                 return true;
@@ -490,7 +490,7 @@ namespace sw::editor
                 const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
                 if ( bMoves )
                 {
-                    SW_LOG_ERROR( "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinnedImportRule", "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
                     return false;
                 }
                 if ( readSkinnedModel( data, listRoot, rule, sourcePath, listToon, outResult ) == false )
@@ -509,16 +509,16 @@ namespace sw::editor
                 {
                     if ( ModelImportGeometry::appendNode( *pRoot, merged ) == false )
                     {
-                        SW_LOG_ERROR( "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath, ModelImportUtil::makeNodeName( data, *pRoot ).c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFMeshUnderNode", "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath, ModelImportUtil::makeNodeName( data, *pRoot ).c_str() );
                         return false;
                     }
                 }
                 if ( data.animations_count > 0 )
-                    SW_LOG_WARNING( "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, data.animations_count );
+                    SW_LOG_WARNING_ID( "ModelImporter.GlTFAnimationsButNo", "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, data.animations_count );
 
                 if ( merged._listIndex.empty() )
                 {
-                    SW_LOG_ERROR( "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFNoTrianglesDefault", "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
                     return false;
                 }
                 // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePbrMaterial`).
@@ -530,8 +530,8 @@ namespace sw::editor
                 const bool bLODUnsupported = rule._listLOD.empty() == false && ( listToon.empty() == false || merged._listMorphName.empty() == false );
                 if ( bLODUnsupported )
                 {
-                    SW_LOG_ERROR( "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
-                                  rule._name.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsMorph", "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
+                                     rule._name.c_str() );
                     return false;
                 }
                 if ( listToon.empty() == false )
@@ -558,31 +558,31 @@ namespace sw::editor
                 {
                     if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
                     {
-                        SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.FailedRemoveStaleFracture", "Failed to remove stale fracture asset %#", fracturePath.c_str() );
                         return false;
                     }
                     return true;
                 }
                 if ( result._bSkinned == SW_TRUE )
                 {
-                    SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.FractureRuleMatchedSkinned", "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
                     return false;
                 }
                 FractureAsset fracture;
                 string        error;
                 if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
                 {
-                    SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.FractureFailed", "Fracture of %# failed: %#", sourcePath, error.c_str() );
                     return false;
                 }
                 const std::optional<AbsolutePath> fractureFile = FileUtil::requireAbsolutePath( fracturePath );
                 if ( fractureFile.has_value() == false || fracture.saveToFile( *fractureFile ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFractureAsset", "Failed to write fracture asset %#", fracturePath.c_str() );
                     return false;
                 }
-                SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
-                             fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
+                SW_LOG_INFO_ID( "ModelImporter.FracturedPiecesLinksLevels", "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
+                                fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
                 return true;
             }
 
@@ -595,7 +595,7 @@ namespace sw::editor
                     const std::optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath );
                     if ( partFile.has_value() == false || MeshAssetFormat::saveToFile( *partFile, attachment._mesh ) == false )
                     {
-                        SW_LOG_ERROR( "Failed to write attachment mesh %#", partPath.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAttachmentMesh", "Failed to write attachment mesh %#", partPath.c_str() );
                         return false;
                     }
                     SkeletonAttachment entry{};
@@ -617,14 +617,14 @@ namespace sw::editor
                     const std::optional<AbsolutePath> clipFile = FileUtil::requireAbsolutePath( clipPath );
                     if ( clipFile.has_value() == false || imported._clip.saveToFile( *clipFile ) == false )
                     {
-                        SW_LOG_ERROR( "Failed to write animation clip %#", clipPath.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationClip", "Failed to write animation clip %#", clipPath.c_str() );
                         return false;
                     }
                     inoutRawByteTotal += imported._stats._rawByteCount;
                     inoutCompressedByteTotal += imported._stats._compressedByteCount;
-                    SW_LOG_INFO( "Clip '%#' (%#): %# s, %# -> %# bytes (x%#), max error %# mm", imported._clip.getName().c_str(), rule._animationCodec.c_str(),
-                                 imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
-                                 imported._stats._maxError * 1000.0f );
+                    SW_LOG_INFO_ID( "ModelImporter.ClipBytesXMax", "Clip '%#' (%#): %# s, %# -> %# bytes (x%#), max error %# mm", imported._clip.getName().c_str(), rule._animationCodec.c_str(),
+                                    imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
+                                    imported._stats._maxError * 1000.0f );
                 }
                 return true;
             }
@@ -683,7 +683,7 @@ namespace sw::editor
                 ModelImportRuleMatch match = _config.findMatchingRule( assetPath );
                 if ( match.hasError() )
                 {
-                    SW_LOG_ERROR( "%#", match._error.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.Message", "%#", match._error.c_str() );
                     return false;
                 }
                 outRule = std::move( match._rule );
@@ -732,7 +732,7 @@ namespace sw::editor
         const shared_ptr<Mesh> body = MeshCache::acquire( rule._bodySurface );
         if ( body == nullptr )
         {
-            SW_LOG_ERROR( "Import rule '%#': body mesh '%#' for the surface transfer of %# cannot be read", rule._name.c_str(), rule._bodySurface.c_str(), sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.ImportRuleBodyMesh", "Import rule '%#': body mesh '%#' for the surface transfer of %# cannot be read", rule._name.c_str(), rule._bodySurface.c_str(), sourcePath );
             return false;
         }
         shared_ptr<Mesh> garment = Mesh::create();
@@ -743,13 +743,13 @@ namespace sw::editor
         const uint32 unboundCount = CharacterMeshUtil::transferBodySurface( *body, *garment, rule._bodySurfaceDistance );
         if ( unboundCount > 0 )
         {
-            SW_LOG_ERROR( "Import rule '%#': %# of %# vertices of %# are farther than %# m from body '%#' - move the garment onto the body or raise body_surface_distance",
-                          rule._name.c_str(), unboundCount, garment->getVertexCount(), sourcePath, rule._bodySurfaceDistance, rule._bodySurface.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.ImportRuleVerticesFarther", "Import rule '%#': %# of %# vertices of %# are farther than %# m from body '%#' - move the garment onto the body or raise body_surface_distance",
+                             rule._name.c_str(), unboundCount, garment->getVertexCount(), sourcePath, rule._bodySurfaceDistance, rule._bodySurface.c_str() );
             return false;
         }
         inoutMesh._listSkinVertex  = garment->getSkinVertices();
         inoutMesh._listMorphTarget = garment->getMorphTargets();
-        SW_LOG_INFO( "Transferred skin and %# morph targets of '%#' onto %#", static_cast<uint32>( inoutMesh._listMorphTarget.size() ), rule._bodySurface.c_str(), sourcePath );
+        SW_LOG_INFO_ID( "ModelImporter.TransferredSkinMorphTargets", "Transferred skin and %# morph targets of '%#' onto %#", static_cast<uint32>( inoutMesh._listMorphTarget.size() ), rule._bodySurface.c_str(), sourcePath );
         return true;
     }
 
@@ -767,13 +767,13 @@ namespace sw::editor
         const string sideFolder = makeImportedSideFolder( outputPath );
         if ( FileUtil::removeDirectory( sideFolder ) == false )
         {
-            SW_LOG_ERROR( "Failed to clear the imported model folder %#", sideFolder.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedClearImportedModel", "Failed to clear the imported model folder %#", sideFolder.c_str() );
             return false;
         }
         const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
         if ( outputFile.has_value() == false || MeshAssetFormat::saveToFile( *outputFile, result._mesh ) == false )
         {
-            SW_LOG_ERROR( "Failed to write mesh asset %#", outputPath );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteMeshAsset", "Failed to write mesh asset %#", outputPath );
             return false;
         }
         if ( ModelImportMaterial::writeMaterialSections( assetPaths, result, sourcePath, sideFolder ) == false )
@@ -784,7 +784,7 @@ namespace sw::editor
             return false;
         if ( result._bSkinned == SW_FALSE )
         {
-            SW_LOG_INFO( "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
+            SW_LOG_INFO_ID( "ModelImporter.ImportedModelTriangles", "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
             return true;
         }
 
@@ -795,7 +795,7 @@ namespace sw::editor
         const std::optional<AbsolutePath> skeletonFile = FileUtil::requireAbsolutePath( skeletonPath );
         if ( skeletonFile.has_value() == false || result._skeleton.saveToFile( *skeletonFile ) == false )
         {
-            SW_LOG_ERROR( "Failed to write skeleton %#", skeletonPath.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
         if ( ModelImportVrm::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
@@ -806,9 +806,9 @@ namespace sw::editor
         [[maybe_unused]] uint64 compressedByteTotal = 0;
         if ( Internal::writeClips( result, rule, sideFolder, rawByteTotal, compressedByteTotal ) == false )
             return false;
-        SW_LOG_INFO( "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath, outputPath,
-                     result._mesh._listVertex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
-                     compressedByteTotal );
+        SW_LOG_INFO_ID( "ModelImporter.ImportedSkinnedModelTriangles", "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath, outputPath,
+                        result._mesh._listVertex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
+                        compressedByteTotal );
         return true;
     }
 
@@ -821,7 +821,7 @@ namespace sw::editor
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedModelPath( normalized ).empty() )
         {
-            SW_LOG_WARNING( "Model sources must be under `%#` to be imported: %#", ModelImportUtil::kRawModelFolder, relativePath );
+            SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImportUtil::kRawModelFolder, relativePath );
             return true;
         }
 
@@ -836,9 +836,9 @@ namespace sw::editor
         const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr );
         for ( const string& problem : summary._listProblem )
         {
-            SW_LOG_ERROR( "Model import failed: %#", problem.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.ModelImportFailed", "Model import failed: %#", problem.c_str() );
         }
-        SW_LOG_INFO( "Model import: %# changed -> %# imported", relativePath, summary._importedCount );
+        SW_LOG_INFO_ID( "ModelImporter.ModelImportChangedImported", "Model import: %# changed -> %# imported", relativePath, summary._importedCount );
         return true;
     }
 

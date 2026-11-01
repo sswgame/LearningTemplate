@@ -210,7 +210,7 @@ namespace sw
                 }
             }
             if ( bFound == false )
-                SW_LOG_WARNING( "%#: '%#' has an unknown phase '%#'", sourceName, ownerName, token );
+                SW_LOG_WARNING_ID( "ScheduleCondition.UnknownPhase", "%#: '%#' has an unknown phase '%#'", sourceName, ownerName, token );
         } );
         return mask;
     }
@@ -262,7 +262,7 @@ namespace sw
             if ( bChanceInRange )
                 _chance = *chance;
             else
-                SW_LOG_ERROR( "%#: '%#' has chance %# outside [0, 1]", sourceName, ownerName, *chance );
+                SW_LOG_ERROR_ID( "ScheduleCondition.ChanceOutside", "%#: '%#' has chance %# outside [0, 1]", sourceName, ownerName, *chance );
             bValid = bChanceInRange && bValid;
         }
 

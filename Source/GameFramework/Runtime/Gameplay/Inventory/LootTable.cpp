@@ -28,7 +28,7 @@ namespace sw
             const bool bHasMax = node.findAttribute( "max" ) != nullptr;
             if ( bHasMax && row._max < row._min )
             {
-                SW_LOG_ERROR( "%#: <%# max=\"%#\"> is less than min=\"%#\"", sourceName, node.getName(), row._max, row._min );
+                SW_LOG_ERROR_ID( "LootTable.MaxLessMin", "%#: <%# max=\"%#\"> is less than min=\"%#\"", sourceName, node.getName(), row._max, row._min );
                 return false;
             }
             outEntry._itemID   = row._item.empty() ? hashed_string{} : hashed_string( row._item );
@@ -59,7 +59,7 @@ namespace sw
             const bool bHasRollsMax = node.findAttribute( "rollsMax" ) != nullptr;
             if ( bHasRollsMax && row._rollsMax < row._rolls )
             {
-                SW_LOG_ERROR( "%#: table '%#' rollsMax=\"%#\" is less than rolls=\"%#\"", sourceName, pID, row._rollsMax, row._rolls );
+                SW_LOG_ERROR_ID( "LootTable.TableRollsMaxLessRolls", "%#: table '%#' rollsMax=\"%#\" is less than rolls=\"%#\"", sourceName, pID, row._rollsMax, row._rolls );
                 continue;
             }
             LootTableDef table;
@@ -87,7 +87,7 @@ namespace sw
             for ( const LootEntry& entry : table._listEntry )
             {
                 if ( entry._tableID.empty() == false && find( entry._tableID ) == nullptr )
-                    SW_LOG_WARNING( "%#: table '%#' refers to unknown table '%#'", sourceName, table._id.c_str(), entry._tableID.c_str() );
+                    SW_LOG_WARNING_ID( "LootTable.TableRefersUnknownTable", "%#: table '%#' refers to unknown table '%#'", sourceName, table._id.c_str(), entry._tableID.c_str() );
             }
         }
         return loadedCount;

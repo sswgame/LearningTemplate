@@ -84,13 +84,13 @@ namespace sw
             return {};
         if ( isValidTickGroup( group ) == false )
         {
-            SW_LOG_WARNING( "Sub-tick %# asks for tick group %#, which does not exist - not registered", subTickID, static_cast<uint32>( group ) );
+            SW_LOG_WARNING_ID( "Component.SubTickAsksTick", "Sub-tick %# asks for tick group %#, which does not exist - not registered", subTickID, static_cast<uint32>( group ) );
             return {};
         }
         if ( priority > kMaxTickPriority )
         {
-            SW_LOG_WARNING( "Sub-tick %# priority %# is above %# - clamped (a priority must not cross into the next phase)", subTickID,
-                            static_cast<uint32>( priority ), static_cast<uint32>( kMaxTickPriority ) );
+            SW_LOG_WARNING_ID( "Component.SubTickPriorityAbove", "Sub-tick %# priority %# is above %# - clamped (a priority must not cross into the next phase)", subTickID,
+                               static_cast<uint32>( priority ), static_cast<uint32>( kMaxTickPriority ) );
             priority = kMaxTickPriority;
         }
         // 틱 중이면 목록 · 마스크 모두 틱 뒤로 — 핸들은 목록과 상관없이 정해지므로 바로 돌려준다(헤더 머리말).
@@ -153,8 +153,8 @@ namespace sw
             return false;
         if ( prerequisiteHandle._objectID == 0 )
         {
-            SW_LOG_WARNING( "Sub-tick %# prerequisite names component %# without its object - take the handle after the component is added to an object",
-                            subTickID, prerequisiteHandle._componentID );
+            SW_LOG_WARNING_ID( "Component.SubTickPrerequisiteNames", "Sub-tick %# prerequisite names component %# without its object - take the handle after the component is added to an object",
+                               subTickID, prerequisiteHandle._componentID );
             return false;
         }
 
@@ -289,7 +289,7 @@ namespace sw
         // 없는 그룹을 받아 두면 레지스트리가 조용히 버려 이 컴포넌트가 한 번도 돌지 않는다. 지금 그룹을 지킨다.
         if ( isValidTickGroup( group ) == false )
         {
-            SW_LOG_WARNING( "Tick group %# does not exist - the component keeps its current group", static_cast<uint32>( group ) );
+            SW_LOG_WARNING_ID( "Component.TickGroupDoesNot", "Tick group %# does not exist - the component keeps its current group", static_cast<uint32>( group ) );
             return;
         }
         _tickGroup = group;

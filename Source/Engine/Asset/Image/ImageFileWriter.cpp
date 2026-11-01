@@ -92,7 +92,7 @@ namespace sw
         bytes.insert( bytes.end(), rgbaBytes.begin(), rgbaBytes.begin() + static_cast<ptrdiff_t>( static_cast<size_t>( width ) * height * 4u ) );
         if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write DDS '%#'", string( path ).c_str() );
+            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWriteDDS", "Failed to write DDS '%#'", string( path ).c_str() );
             return false;
         }
         return true;
@@ -151,7 +151,7 @@ namespace sw
             return false;
         if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write PNG '%#'", string( path ).c_str() );
+            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWritePNG", "Failed to write PNG '%#'", string( path ).c_str() );
             return false;
         }
         return true;

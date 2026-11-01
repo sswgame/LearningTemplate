@@ -56,7 +56,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_WARNING( "Sprite material '%#' could not be acquired - the sprites use the scene default material", resolvedPath.c_str() );
+                SW_LOG_WARNING_ID( "SpriteInstanceBatch.SpriteMaterialCouldNot", "Sprite material '%#' could not be acquired - the sprites use the scene default material", resolvedPath.c_str() );
             }
         }
 

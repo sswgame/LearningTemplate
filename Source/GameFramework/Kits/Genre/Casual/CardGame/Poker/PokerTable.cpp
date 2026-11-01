@@ -129,14 +129,14 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "PokerTable: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "PokerTable.PokerTableRefusedSettings", "PokerTable: refused settings - %#", rangeError.c_str() );
             return false;
         }
         for ( const int32 stack : listStack )
         {
             if ( stack < 0 )
             {
-                SW_LOG_ERROR( "PokerTable: refused a negative starting stack %#", stack );
+                SW_LOG_ERROR_ID( "PokerTable.PokerTableRefusedNegativeStarting", "PokerTable: refused a negative starting stack %#", stack );
                 return false;
             }
         }

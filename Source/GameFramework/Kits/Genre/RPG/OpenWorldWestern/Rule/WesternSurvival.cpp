@@ -44,7 +44,7 @@ namespace sw
     {
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "WesternSurvival: refused - no catalog (the survival numbers come from the catalog, there is no default set)" );
+            SW_LOG_ERROR_ID( "WesternSurvival.WesternSurvivalRefusedNoCatalog", "WesternSurvival: refused - no catalog (the survival numbers come from the catalog, there is no default set)" );
             return false;
         }
         const WesternSurvivalDef& survival = pCatalog->getSurvival();

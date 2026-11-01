@@ -240,16 +240,16 @@ namespace sw
         ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( desc );
         if ( compileResult._bSuccess == false || compileResult._bytecode.empty() )
         {
-            SW_LOG_WARNING( "Failed to compile shader '%#' [%#] for %#: %#",
-                            source.c_str(), entryPoint.data(),
-                            getSubfolderForFormat( targetFormat ).data(),
-                            compileResult._errorMessage.c_str() );
+            SW_LOG_WARNING_ID( "ShaderCooker.FailedCompileShader", "Failed to compile shader '%#' [%#] for %#: %#",
+                               source.c_str(), entryPoint.data(),
+                               getSubfolderForFormat( targetFormat ).data(),
+                               compileResult._errorMessage.c_str() );
             return false;
         }
 
         if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write cooked bytecode to %#", outputPath );
+            SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath );
             return false;
         }
 
@@ -260,8 +260,8 @@ namespace sw
             pOutResult->_bSuccess         = SW_TRUE;
         }
 
-        SW_LOG_INFO( "Cooked shader '%#' [%#] -> '%#' (%zu bytes)",
-                     source.c_str(), entryPoint.data(), outputPath.data(), compileResult._bytecode.size() );
+        SW_LOG_INFO_ID( "ShaderCooker.CookedShaderUBytes", "Cooked shader '%#' [%#] -> '%#' (%zu bytes)",
+                        source.c_str(), entryPoint.data(), outputPath.data(), compileResult._bytecode.size() );
         return true;
     }
 } // namespace sw

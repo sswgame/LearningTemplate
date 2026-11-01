@@ -79,24 +79,24 @@ namespace sw
         _pRasterizer = IFontRasterizer::createDefault();
         if ( _pRasterizer == nullptr )
         {
-            SW_LOG_ERROR( "Wayland text: the font rasterizer could not start" );
+            SW_LOG_ERROR_ID( "WaylandTextPainter.WaylandTextFontRasterizer", "Wayland text: the font rasterizer could not start" );
             return false;
         }
         _pixelSize = pixelSize;
         _latinFace = openFirstFace( WaylandTextPainterInternal::kLatinFonts );
         if ( _latinFace == kInvalidFontFaceID )
         {
-            SW_LOG_ERROR( "Wayland text: no Latin font from the system font folders (DejaVuSansMono, LiberationMono, NotoSansMono ...) - text is not drawn" );
+            SW_LOG_ERROR_ID( "WaylandTextPainter.WaylandTextNoLatin", "Wayland text: no Latin font from the system font folders (DejaVuSansMono, LiberationMono, NotoSansMono ...) - text is not drawn" );
             return false;
         }
         _fallbackFace = openFirstFace( WaylandTextPainterInternal::kFallbackFonts );
         if ( _fallbackFace == kInvalidFontFaceID )
-            SW_LOG_INFO( "Wayland text: no Korean/Japanese font was found - those letters are skipped" );
+            SW_LOG_INFO_ID( "WaylandTextPainter.WaylandTextNoKorean", "Wayland text: no Korean/Japanese font was found - those letters are skipped" );
 
         FontFaceMetrics metrics{};
         if ( _pRasterizer->findFaceMetrics( _latinFace, metrics ) == false )
         {
-            SW_LOG_ERROR( "Wayland text: the Latin font has no metrics" );
+            SW_LOG_ERROR_ID( "WaylandTextPainter.WaylandTextLatinFont", "Wayland text: the Latin font has no metrics" );
             return false;
         }
         const float32 size  = static_cast<float32>( pixelSize );

@@ -38,7 +38,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "SkeletonBoneLOD", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Bone LOD '%#': malformed XML (expected a <SkeletonBoneLOD> root)", sourceLabel );
+            SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODMalformedXML", "Bone LOD '%#': malformed XML (expected a <SkeletonBoneLOD> root)", sourceLabel );
             return false;
         }
         if ( parseRoot( root, sourceLabel ) )
@@ -57,7 +57,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Bone LOD '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODCouldNot", "Bone LOD '%#' could not be read", path );
             _listLevel.clear();
             return false;
         }
@@ -71,7 +71,7 @@ namespace sw
         const XMLNode levels = root.findChild( "levels" );
         if ( levels.isValid() == false )
         {
-            SW_LOG_ERROR( "Bone LOD '%#': a <levels> element is required", sourceLabel );
+            SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelsElement", "Bone LOD '%#': a <levels> element is required", sourceLabel );
             return false;
         }
         size_t levelIndex{ 0 };
@@ -79,7 +79,7 @@ namespace sw
         {
             if ( string_view{ level.getName() } != "level" || XMLReadUtil::hasOnlyKnownNames( level, { "max_screen_size" }, { "remove" }, sourceLabel ) == false )
             {
-                SW_LOG_ERROR( "Bone LOD '%#': <levels> holds only <level> elements", sourceLabel );
+                SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelsHolds", "Bone LOD '%#': <levels> holds only <level> elements", sourceLabel );
                 return false;
             }
             const XMLNode                removed          = level.findChild( "remove" );
@@ -87,21 +87,21 @@ namespace sw
             const bool                   bInvalidLODLevel = maxScreenSize.has_value() == false || removed.isValid() == false || removed.findChild().isValid() == false;
             if ( bInvalidLODLevel )
             {
-                SW_LOG_ERROR( "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty <remove> list", sourceLabel, levelIndex );
+                SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelNeeds", "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty <remove> list", sourceLabel, levelIndex );
                 return false;
             }
             SkeletonBoneLODLevel entry{};
             entry._maxScreenSize = *maxScreenSize;
             if ( _listLevel.empty() == false && entry._maxScreenSize >= _listLevel.back()._maxScreenSize )
             {
-                SW_LOG_ERROR( "Bone LOD '%#': level %# max_screen_size %# must be smaller than the previous level's", sourceLabel, levelIndex, entry._maxScreenSize );
+                SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelMax", "Bone LOD '%#': level %# max_screen_size %# must be smaller than the previous level's", sourceLabel, levelIndex, entry._maxScreenSize );
                 return false;
             }
             for ( XMLNode bone = removed.findChild(); bone.isValid(); bone = bone.findNextSibling() )
             {
                 if ( string_view{ bone.getName() } != "item" )
                 {
-                    SW_LOG_ERROR( "Bone LOD '%#': level %# <remove> must hold <item> bone names", sourceLabel, levelIndex );
+                    SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelRemove", "Bone LOD '%#': level %# <remove> must hold <item> bone names", sourceLabel, levelIndex );
                     return false;
                 }
                 entry._listRemovedBone.push_back( hashed_string( string_view{ bone.getText() } ) );
@@ -134,7 +134,7 @@ namespace sw
                 const int32 boneIndex = skeleton.findBoneIndex( boneName );
                 if ( boneIndex < 0 )
                 {
-                    SW_LOG_ERROR( "Bone LOD '%#': bone '%#' is not in the skeleton", sourceLabel, boneName.c_str() );
+                    SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODBoneNot", "Bone LOD '%#': bone '%#' is not in the skeleton", sourceLabel, boneName.c_str() );
                     outListMask.clear();
                     return false;
                 }

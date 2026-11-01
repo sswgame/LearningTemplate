@@ -74,7 +74,7 @@ namespace sw
         for ( size_t index = 1; index < _listBuyRate.size(); ++index )
         {
             if ( _listBuyRate[index]._daysLeft == _listBuyRate[index - 1]._daysLeft )
-                SW_LOG_ERROR( "%#: buy rate for %# days left is given twice - the later one is dropped", sourceName, _listBuyRate[index]._daysLeft );
+                SW_LOG_ERROR_ID( "ScavengerCatalog.BuyRateDaysLeft", "%#: buy rate for %# days left is given twice - the later one is dropped", sourceName, _listBuyRate[index]._daysLeft );
         }
         _listBuyRate.erase( std::unique( _listBuyRate.begin(), _listBuyRate.end(),
                                          []( const ScavengerBuyRatePoint& lhs, const ScavengerBuyRatePoint& rhs )
@@ -87,11 +87,11 @@ namespace sw
             for ( const hashed_string& scrapID : moon._listScrap )
             {
                 if ( _scrapCatalog.find( scrapID ) == nullptr )
-                    SW_LOG_ERROR( "%#: moon '%#' lists an unknown scrap '%#'", sourceName, moon._id.c_str(), scrapID.c_str() );
+                    SW_LOG_ERROR_ID( "ScavengerCatalog.MoonListsUnknownScrap", "%#: moon '%#' lists an unknown scrap '%#'", sourceName, moon._id.c_str(), scrapID.c_str() );
             }
         }
         if ( _moonCatalog.isEmpty() )
-            SW_LOG_ERROR( "%#: no moons - nowhere to land", sourceName );
+            SW_LOG_ERROR_ID( "ScavengerCatalog.NoMoonsNowhereLand", "%#: no moons - nowhere to land", sourceName );
         return loadedCount;
     }
 
@@ -125,7 +125,7 @@ namespace sw
         }
         if ( XMLReadUtil::isElement( name, "Moon" ) )
             return loadMoon( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "ScavengerCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 

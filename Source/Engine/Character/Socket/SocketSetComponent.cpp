@@ -72,7 +72,7 @@ namespace sw
     {
         _socketSet = _socketSetPath.empty() ? nullptr : SharedAssetCache<SocketSet>::acquire( _socketSetPath );
         if ( _socketSetPath.empty() == false && _socketSet == nullptr )
-            SW_LOG_ERROR( "'%#': socket set '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _socketSetPath.c_str() );
+            SW_LOG_ERROR_ID( "SocketSet.SocketSetCouldNot", "'%#': socket set '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _socketSetPath.c_str() );
         validateAgainstUnit();
     }
 

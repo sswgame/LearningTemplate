@@ -79,8 +79,8 @@ namespace sw::editor
                         nearestDistSq = distSq;
                     }
                 }
-                SW_LOG_INFO( "Nearest park ride to (%#, %#, %#): '%#' at %# m (cost %#, capacity %#)", position._x, position._y, position._z, pNearest->_name.c_str(),
-                             MathUtil::sqrt( nearestDistSq ), pNearest->_buildCost, pNearest->_capacity );
+                SW_LOG_INFO_ID( "ParkLayoutContextMenu.NearestParkRideM", "Nearest park ride to (%#, %#, %#): '%#' at %# m (cost %#, capacity %#)", position._x, position._y, position._z, pNearest->_name.c_str(),
+                                MathUtil::sqrt( nearestDistSq ), pNearest->_buildCost, pNearest->_capacity );
             }
         };
     } // namespace

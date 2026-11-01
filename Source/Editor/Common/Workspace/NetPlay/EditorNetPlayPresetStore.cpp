@@ -49,7 +49,7 @@ namespace sw::editor
     {
         if ( name.empty() )
         {
-            SW_LOG_ERROR( "A multiplayer preset needs a name" );
+            SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetNeedsName", "A multiplayer preset needs a name" );
             return false;
         }
         const uint32            presetIndex = findPresetIndex( name );
@@ -66,7 +66,7 @@ namespace sw::editor
     {
         if ( findPresetIndex( name ) == constant::invalid_index::kUint32 )
         {
-            SW_LOG_ERROR( "No multiplayer preset named '%#'", string( name ) );
+            SW_LOG_ERROR_ID( "NetPlayPresets.NoMultiplayerPresetNamed", "No multiplayer preset named '%#'", string( name ) );
             return false;
         }
         EditorNetPlayPresetFile changed = _file;
@@ -79,7 +79,7 @@ namespace sw::editor
         const uint32 presetIndex = findPresetIndex( name );
         if ( presetIndex == constant::invalid_index::kUint32 )
         {
-            SW_LOG_ERROR( "No multiplayer preset named '%#'", string( name ) );
+            SW_LOG_ERROR_ID( "NetPlayPresets.NoMultiplayerPresetNamed", "No multiplayer preset named '%#'", string( name ) );
             return false;
         }
         EditorNetPlayPresetFile changed = _file;
@@ -146,12 +146,12 @@ namespace sw::editor
     {
         if ( _filePath.empty() )
         {
-            SW_LOG_ERROR( "Multiplayer presets were changed before a preset file was loaded - nothing written" );
+            SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsChangedBefore", "Multiplayer presets were changed before a preset file was loaded - nothing written" );
             return false;
         }
         if ( FileUtil::ensureParentDirectoryExists( _filePath ) == false || JSONSerializer::saveFile( _filePath, &file, *EditorNetPlayPresetFile::StaticType() ) == false )
         {
-            SW_LOG_ERROR( "Multiplayer presets could not be saved to %#", _filePath );
+            SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsCouldNot", "Multiplayer presets could not be saved to %#", _filePath );
             return false;
         }
         _file = std::move( file );

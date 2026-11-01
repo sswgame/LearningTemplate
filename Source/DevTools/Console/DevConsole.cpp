@@ -207,9 +207,9 @@ namespace sw
         // 로그로 나가는 줄은 머리까지 포함해 한 줄 답의 상한을 넘지 않는다 - 개별 명령이 상한을 기억하지 않아도 되고 새 명령도 우회하지 못한다. 오버레이에는 전체가 남는다.
         const string logLine = makeLogLine( trimmed, reply );
         if ( bError )
-            SW_LOG_WARNING( "%#", logLine.c_str() );
+            SW_LOG_WARNING_ID( "DevConsole.Message", "%#", logLine.c_str() );
         else
-            SW_LOG_INFO( "%#", logLine.c_str() );
+            SW_LOG_INFO_ID( "DevConsole.Message", "%#", logLine.c_str() );
         return result;
     }
 

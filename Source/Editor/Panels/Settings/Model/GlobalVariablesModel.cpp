@@ -97,7 +97,7 @@ namespace sw::editor
         // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
         if ( EditorGlobalVariableCommands::savePreset( presetPath, name.c_str() ) == false )
         {
-            SW_LOG_ERROR( "Could not save preset '%#'", presetPath.c_str() );
+            SW_LOG_ERROR_ID( "GlobalVariablesPanel.CouldNotSavePreset", "Could not save preset '%#'", presetPath.c_str() );
             return false;
         }
         _bPresetListDirty = true;
@@ -108,7 +108,7 @@ namespace sw::editor
     {
         // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다. 읽지 못하면 값이 그대로다.
         if ( EditorGlobalVariableCommands::loadPreset( presetFile ) == false )
-            SW_LOG_ERROR( "Could not load preset '%#'", presetFile.c_str() );
+            SW_LOG_ERROR_ID( "GlobalVariablesPanel.CouldNotLoadPreset", "Could not load preset '%#'", presetFile.c_str() );
     }
 
     bool GlobalVariablesModel::pollPresetFiles()

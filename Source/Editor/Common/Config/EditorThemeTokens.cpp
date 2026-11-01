@@ -85,7 +85,7 @@ namespace sw::editor
         const std::optional<AbsolutePath> themeFile = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
         if ( themeFile.has_value() && loadThemeFile( themeFile->str(), config, error ) )
             return true;
-        SW_LOG_ERROR( "Theme tokens were not loaded: %#", error.c_str() );
+        SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %#", error.c_str() );
         return false;
     }
 

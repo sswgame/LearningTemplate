@@ -151,7 +151,7 @@ namespace sw
             }
             else if ( command._executable.find( '/' ) != string::npos )
             {
-                SW_LOG_ERROR( "Search-path command '%#' holds a path - use ProcessCommand::at", command._executable );
+                SW_LOG_ERROR_ID( "PosixProcess.SearchPathCommandHolds", "Search-path command '%#' holds a path - use ProcessCommand::at", command._executable );
                 return false;
             }
             else
@@ -223,7 +223,7 @@ namespace sw
             {
                 outArrOutputFd[0] = -1;
                 outArrOutputFd[1] = -1;
-                SW_LOG_ERROR( "pipe() failed for command: %#", pCommand );
+                SW_LOG_ERROR_ID( "PosixProcess.PipeFailedCommand", "pipe() failed for command: %#", pCommand );
                 return false;
             }
             if ( bPipeInput && pipe2( outArrInputFd, O_CLOEXEC ) != 0 )
@@ -231,7 +231,7 @@ namespace sw
                 closeLaunchPipePair( outArrOutputFd );
                 outArrInputFd[0] = -1;
                 outArrInputFd[1] = -1;
-                SW_LOG_ERROR( "pipe() (stdin) failed for command: %#", pCommand );
+                SW_LOG_ERROR_ID( "PosixProcess.PipeStdinFailedCommand", "pipe() (stdin) failed for command: %#", pCommand );
                 return false;
             }
             return true;
@@ -327,7 +327,7 @@ namespace sw
         {
             closeLaunchPipePair( arrPipeFd );
             closeLaunchPipePair( arrInputFd );
-            SW_LOG_ERROR( "fork() failed for command: %#", pCommand );
+            SW_LOG_ERROR_ID( "PosixProcess.ForkFailedCommand", "fork() failed for command: %#", pCommand );
             return false;
         }
 
@@ -354,7 +354,7 @@ namespace sw
             kill( -childPid, SIGKILL );
             int32 status = 0;
             waitpid( childPid, &status, 0 );
-            SW_LOG_ERROR( "fdopen() failed for command: %#", pCommand );
+            SW_LOG_ERROR_ID( "PosixProcess.FdopenFailedCommand", "fdopen() failed for command: %#", pCommand );
             return false;
         }
 
@@ -384,7 +384,7 @@ namespace sw
         const pid_t middlePid = fork();
         if ( middlePid < 0 )
         {
-            SW_LOG_ERROR( "fork() failed for detached command: %#", pCommand );
+            SW_LOG_ERROR_ID( "PosixProcess.ForkFailedDetachedCommand", "fork() failed for detached command: %#", pCommand );
             return false;
         }
 
@@ -420,7 +420,7 @@ namespace sw
 
         const bool bLaunched = reaped == middlePid && WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
         if ( bLaunched == false )
-            SW_LOG_ERROR( "Failed to launch detached command: %#", pCommand );
+            SW_LOG_ERROR_ID( "PosixProcess.FailedLaunchDetachedCommand", "Failed to launch detached command: %#", pCommand );
         return bLaunched;
     }
 
@@ -497,7 +497,7 @@ namespace sw
         // 그룹 전체에 보낸다. 자식이 손자 프로세스를 띄웠다면(cmake → 컴파일러) 그것까지 죽는다.
         if ( kill( -childPid, SIGKILL ) != 0 && kill( childPid, SIGKILL ) != 0 )
         {
-            SW_LOG_WARNING( "kill(SIGKILL) failed for pid %#", static_cast<int32>( childPid ) );
+            SW_LOG_WARNING_ID( "PosixProcess.KillSIGKILLFailedPid", "kill(SIGKILL) failed for pid %#", static_cast<int32>( childPid ) );
             return false;
         }
 

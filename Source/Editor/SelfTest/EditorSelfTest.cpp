@@ -101,9 +101,9 @@ namespace sw::editor
             static void appendLine( RunState& state, const string& line, bool bFailure )
             {
                 if ( bFailure )
-                    SW_LOG_ERROR( "%#", line.c_str() );
+                    SW_LOG_ERROR_ID( "EditorSelfTest.Message", "%#", line.c_str() );
                 else
-                    SW_LOG_INFO( "%#", line.c_str() );
+                    SW_LOG_INFO_ID( "EditorSelfTest.Message", "%#", line.c_str() );
                 state._report += line;
                 state._report += "\n";
             }
@@ -252,7 +252,7 @@ namespace sw::editor
                 if ( matchesPattern( Registry::getAt( index )._pID, state._pattern ) )
                     state._listSelectedIndex.push_back( index );
             }
-            SW_LOG_INFO( "Running %# editor self tests matching '%#'", static_cast<uint32>( state._listSelectedIndex.size() ), state._pattern.c_str() );
+            SW_LOG_INFO_ID( "EditorSelfTest.RunningEditorSelfTests", "Running %# editor self tests matching '%#'", static_cast<uint32>( state._listSelectedIndex.size() ), state._pattern.c_str() );
         }
 
         if ( state._cursor < state._listSelectedIndex.size() )
@@ -289,7 +289,7 @@ namespace sw::editor
         if ( gv_editorSelfTestReport.empty() == false )
         {
             if ( FileUtil::ensureParentDirectoryExists( gv_editorSelfTestReport ) == false || FileUtil::writeTextFile( gv_editorSelfTestReport, state._report ) == false )
-                SW_LOG_ERROR( "Could not write the editor self test report to %#", gv_editorSelfTestReport.c_str() );
+                SW_LOG_ERROR_ID( "EditorSelfTest.CouldNotWriteEditor", "Could not write the editor self test report to %#", gv_editorSelfTestReport.c_str() );
         }
 
         // 실패가 하나라도 있으면 프로세스가 실패 코드로 끝난다(CTest 가 읽는다) — 창만 닫으면 코드가 0 이었다.

@@ -145,7 +145,7 @@ namespace sw
                 makeMaskPixels( *pMask, channel._maxValue, listPixel );
                 if ( pCache->createCPUTexture( created._path, resolution, resolution, listPixel ) == false )
                 {
-                    SW_LOG_ERROR( "Surface mask texture '%#' could not be created (the path is taken or the size is wrong)", created._path.c_str() );
+                    SW_LOG_ERROR_ID( "CharacterSurfaceBinding.SurfaceMaskTextureCould", "Surface mask texture '%#' could not be created (the path is taken or the size is wrong)", created._path.c_str() );
                     continue;
                 }
                 created._revision = pMask->getRevision();

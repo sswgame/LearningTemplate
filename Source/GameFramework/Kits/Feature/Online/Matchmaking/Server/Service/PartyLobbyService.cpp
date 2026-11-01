@@ -346,8 +346,8 @@ namespace sw
         const bool bPartySizeOk = PartyLobbyLimit::kMinPartySize <= maxPartySize && maxPartySize <= PartyLobbyLimit::kMaxPartySize;
         if ( bPartySizeOk == false )
         {
-            SW_LOG_ERROR( "PartyLobbyService: refused to start - max party size %# is outside [%#, %#]", maxPartySize, PartyLobbyLimit::kMinPartySize,
-                          PartyLobbyLimit::kMaxPartySize );
+            SW_LOG_ERROR_ID( "PartyLobbyService.PartyLobbyServiceRefusedStartMax", "PartyLobbyService: refused to start - max party size %# is outside [%#, %#]", maxPartySize, PartyLobbyLimit::kMinPartySize,
+                             PartyLobbyLimit::kMaxPartySize );
             return false;
         }
         _pRouter      = pRouter;

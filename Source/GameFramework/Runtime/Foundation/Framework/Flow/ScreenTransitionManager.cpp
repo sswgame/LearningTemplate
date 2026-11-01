@@ -104,7 +104,7 @@ namespace sw
             _callbacks.setPlayerInputEnabled( false );
 
         _fade.beginFadeOut( fadeOutDuration );
-        SW_LOG_INFO( "Begin ScreenTransition (FadeOut duration=%#s)", fadeOutDuration );
+        SW_LOG_INFO_ID( "ScreenTransition.BeginScreenTransitionFadeOutDuration", "Begin ScreenTransition (FadeOut duration=%#s)", fadeOutDuration );
     }
 
     void ScreenTransitionManager::update( float32 deltaTime )
@@ -116,7 +116,7 @@ namespace sw
             if ( _fade.getPhase() == FadePhase::HoldBlack )
             {
                 _phase = Phase::Loading;
-                SW_LOG_TRACE( "ScreenTransition: FadeOut complete, executing transition action." );
+                SW_LOG_TRACE_ID( "ScreenTransition.ScreenTransitionFadeOutCompleteExecuting", "ScreenTransition: FadeOut complete, executing transition action." );
 
                 if ( _pendingAction.isBound() == true )
                 {
@@ -142,7 +142,7 @@ namespace sw
             if ( _fade.getPhase() == FadePhase::Idle )
             {
                 _phase = Phase::None;
-                SW_LOG_INFO( "ScreenTransition: Transition complete, restoring player input." );
+                SW_LOG_INFO_ID( "ScreenTransition.ScreenTransitionTransitionCompleteRestoring", "ScreenTransition: Transition complete, restoring player input." );
 
                 if ( _callbacks.setPlayerInputEnabled.isBound() == true )
                     _callbacks.setPlayerInputEnabled( true );

@@ -351,13 +351,13 @@ namespace sw
         const shared_ptr<const UIDocumentAsset> document = _pDocumentCache->findOrLoad( documentPath, error );
         if ( document == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Screen document is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "UISystem.ScreenDocumentNotLoaded", "[UI] Screen document is not loaded: %#", error.c_str() );
             return root;
         }
         root = UIDocumentLoader::instantiate( *document, *_pDocumentCache, outListBinding, error );
         if ( root == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Screen document cannot be built: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "UISystem.ScreenDocumentCannotBuilt", "[UI] Screen document cannot be built: %#", error.c_str() );
             return root;
         }
         outDesc = document->_screenDesc;
@@ -412,7 +412,7 @@ namespace sw
                 ++rebuiltCount;
         }
         if ( rebuiltCount > 0 )
-            SW_LOG_INFO( "[UI] Reloaded %# screen(s) for %#", rebuiltCount, documentPath );
+            SW_LOG_INFO_ID( "UISystem.ReloadedScreen", "[UI] Reloaded %# screen(s) for %#", rebuiltCount, documentPath );
     }
 
     void UISystem::onStyleSheetReloaded( string_view sheetPath )
@@ -541,7 +541,7 @@ namespace sw
         for ( const string& documentPath : listDocument )
         {
             if ( openScreen( documentPath ) == kInvalidUIScreenHandle )
-                SW_LOG_ERROR( "[UI] Screen document could not be reopened after module reload: %#", documentPath );
+                SW_LOG_ERROR_ID( "UISystem.ScreenDocumentCouldNot", "[UI] Screen document could not be reopened after module reload: %#", documentPath );
         }
     }
 

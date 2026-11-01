@@ -192,12 +192,12 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "RTSWorld: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "RTSWorld.RTSWorldRefusedSettings", "RTSWorld: refused settings - %#", rangeError.c_str() );
             return false;
         }
         if ( width < 1 || height < 1 )
         {
-            SW_LOG_ERROR( "RTSWorld: refused size %#x%# (both need 1 or more)", width, height );
+            SW_LOG_ERROR_ID( "RTSWorld.RTSWorldRefusedSizeX", "RTSWorld: refused size %#x%# (both need 1 or more)", width, height );
             return false;
         }
         _pCatalog = pCatalog;
@@ -1220,7 +1220,7 @@ namespace sw
         if ( player._pWallet == nullptr )
             return;
         if ( player._pWallet->trySpend( _settings._mineralCurrency, def._minerals ) == false || player._pWallet->trySpend( _settings._gasCurrency, def._gas ) == false )
-            SW_LOG_WARNING( "RTSWorld: '%#' cost was checked but could not be paid", def._id.c_str() );
+            SW_LOG_WARNING_ID( "RTSWorld.RTSWorldCostCheckedBut", "RTSWorld: '%#' cost was checked but could not be paid", def._id.c_str() );
     }
 
     void RTSWorld::refundCost( RTSPlayer& player, const RTSUnitDef& def )

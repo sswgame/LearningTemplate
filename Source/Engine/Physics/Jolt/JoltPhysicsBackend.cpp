@@ -60,7 +60,7 @@ namespace sw
                 va_start( arguments, pFormat );
                 ::vsnprintf( arrMessage, sizeof( arrMessage ), pFormat, arguments );
                 va_end( arguments );
-                SW_LOG_INFO( "%#", arrMessage );
+                SW_LOG_INFO_ID( "JoltPhysicsBackend.Message", "%#", arrMessage );
             }
 
 #ifdef JPH_ENABLE_ASSERTS
@@ -72,7 +72,7 @@ namespace sw
                 const string_view expression{ pExpression != nullptr ? pExpression : "" };
                 if ( StringUtil::endsWith( file, "Vec3.inl", true ) && expression.find( "mF32)[2] == " ) != string_view::npos )
                     return false;
-                SW_LOG_ERROR( "Jolt assert %# (%#) at %#:%#", pExpression, pMessage != nullptr ? pMessage : "", pFile, line );
+                SW_LOG_ERROR_ID( "JoltPhysicsBackend.JoltAssert", "Jolt assert %# (%#) at %#:%#", pExpression, pMessage != nullptr ? pMessage : "", pFile, line );
                 return false; // 중단점을 걸지 않는다. 엔진 로그가 [Error] 로 남긴다.
             }
 #endif
@@ -136,7 +136,7 @@ namespace sw
         uint64 libraryVersionID = 0;
         if ( JoltPhysicsBackendInternal::findLibraryVersionID( libraryVersionID ) == false )
         {
-            SW_LOG_ERROR( "Jolt headers and the Jolt library were built with different settings (JPH_VERSION_ID mismatch)" );
+            SW_LOG_ERROR_ID( "JoltPhysicsBackend.JoltHeadersJoltLibrary", "Jolt headers and the Jolt library were built with different settings (JPH_VERSION_ID mismatch)" );
             return false;
         }
 
@@ -146,8 +146,8 @@ namespace sw
         JPH::RegisterTypesInternal( libraryVersionID );
         JoltPhysicsBackendInternal::s_pJobSystem = JoltUtil::createObject<JoltJobSystem>( JoltPhysicsBackendInternal::kMaxJobCount, JoltPhysicsBackendInternal::kMaxBarrierCount );
         JoltPhysicsBackendInternal::s_bInitialized.store( true );
-        SW_LOG_INFO( "Jolt %#.%#.%# initialized (job concurrency %#)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH,
-                     JoltPhysicsBackendInternal::s_pJobSystem->GetMaxConcurrency() );
+        SW_LOG_INFO_ID( "JoltPhysicsBackend.JoltInitializedJobConcurrency", "Jolt %#.%#.%# initialized (job concurrency %#)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH,
+                        JoltPhysicsBackendInternal::s_pJobSystem->GetMaxConcurrency() );
         return true;
     }
 
@@ -168,7 +168,7 @@ namespace sw
     {
         if ( JoltPhysicsBackendInternal::s_bInitialized.load() == false )
         {
-            SW_LOG_ERROR( "createScene: the Jolt backend is not initialized (PhysicsSystem::initialize)" );
+            SW_LOG_ERROR_ID( "JoltPhysicsBackend.CreateSceneJoltBackendNot", "createScene: the Jolt backend is not initialized (PhysicsSystem::initialize)" );
             return nullptr;
         }
         SW_MEMORY_SCOPE( Physics );

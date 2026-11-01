@@ -595,7 +595,7 @@ namespace sw
             float32 seconds = 0.0f;
             if ( AutomationRunnerStepsInternal::parseExitSeconds( step, bClose ? "withinSeconds" : "seconds", seconds, error ) == false )
             {
-                SW_LOG_ERROR( "[Scenario] %#", error.c_str() );
+                SW_LOG_ERROR_ID( "Automation.Message", "[Scenario] %#", error.c_str() );
                 return false;
             }
             runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );

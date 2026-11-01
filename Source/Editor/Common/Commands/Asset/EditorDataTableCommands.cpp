@@ -32,7 +32,7 @@ namespace sw::editor
                     string             error;
                     if ( table.loadFromFile( tablePath, &error ) == false )
                     {
-                        SW_LOG_WARNING( "String table '%#' cannot be read - it is not shown and saving will not overwrite it: %#", tablePath.c_str(), error.c_str() );
+                        SW_LOG_WARNING_ID( "EditorDataTableCommands.StringTableCannotRead", "String table '%#' cannot be read - it is not shown and saving will not overwrite it: %#", tablePath.c_str(), error.c_str() );
                         bAllRead = false;
                     }
                 }
@@ -49,7 +49,7 @@ namespace sw::editor
                 string error;
                 if ( outTable.loadFromFile( path, &error ) )
                     return true;
-                SW_LOG_WARNING( "Translation table '%#' cannot be read - its strings are not shown and saving will not overwrite it: %#", path.c_str(), error.c_str() );
+                SW_LOG_WARNING_ID( "EditorDataTableCommands.TranslationTableCannotRead", "Translation table '%#' cannot be read - its strings are not shown and saving will not overwrite it: %#", path.c_str(), error.c_str() );
                 return false;
             }
 
@@ -112,7 +112,7 @@ namespace sw::editor
                     const std::optional<AbsolutePath> tableFile = FileUtil::requireAbsolutePath( sheet._listTablePath[tableIndex] );
                     if ( tableFile.has_value() == false || listTable[tableIndex].saveToFile( *tableFile ) == false )
                     {
-                        SW_LOG_ERROR( "String table '%#' could not be written", sheet._listTablePath[tableIndex].c_str() );
+                        SW_LOG_ERROR_ID( "EditorDataTableCommands.StringTableCouldNot", "String table '%#' could not be written", sheet._listTablePath[tableIndex].c_str() );
                         bAllWritten = false;
                     }
                 }
@@ -126,7 +126,7 @@ namespace sw::editor
                     const std::optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( path );
                     if ( translationFile.has_value() == false || listTranslation[cultureIndex].saveToFile( *translationFile ) == false )
                     {
-                        SW_LOG_ERROR( "Translation table '%#' could not be written", path.c_str() );
+                        SW_LOG_ERROR_ID( "EditorDataTableCommands.TranslationTableCouldNot", "Translation table '%#' could not be written", path.c_str() );
                         bAllWritten = false;
                     }
                 }
@@ -153,7 +153,7 @@ namespace sw::editor
         string              error;
         if ( project.loadFromFile( projectPath, &error ) == false )
         {
-            SW_LOG_WARNING( "Localization project cannot be read: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "EditorDataTableCommands.LocalizationProjectCannotRead", "Localization project cannot be read: %#", error.c_str() );
             return false;
         }
         outSheet._projectPath   = string( projectPath );
@@ -202,7 +202,7 @@ namespace sw::editor
         vector<SourceStringTable> listTable;
         if ( Internal::readSourceTables( inoutSheet, listTable ) == false )
         {
-            SW_LOG_ERROR( "Localization is not saved - a string table could not be read (fix it and save again)" );
+            SW_LOG_ERROR_ID( "EditorDataTableCommands.LocalizationNotSavedString", "Localization is not saved - a string table could not be read (fix it and save again)" );
             return false;
         }
         bool                     bAllReadable{ true };
@@ -213,7 +213,7 @@ namespace sw::editor
             const string path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
             if ( Internal::readTranslation( path, inoutSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) == false )
             {
-                SW_LOG_ERROR( "Translation table '%#' could not be read - it is not overwritten (fix the file and save again)", path.c_str() );
+                SW_LOG_ERROR_ID( "EditorDataTableCommands.TranslationTableCouldNot2", "Translation table '%#' could not be read - it is not overwritten (fix the file and save again)", path.c_str() );
                 listWritable[cultureIndex] = 0;
                 bAllReadable               = false;
             }
@@ -232,9 +232,9 @@ namespace sw::editor
 
         // 올린 프로젝트가 아니면 NotTracked — 다시 읽을 것이 없다. 저장은 끝났으니 다시 읽기 실패(관리자가 오류를 남겼다)는 실행 중 글이 예전 것이라는 알림이다.
         const bool bReloadFailed = editor::getSubsystem<LocalizationManager>().reloadChangedFile( inoutSheet._projectPath ) == ReloadOutcome::Failed;
-        SW_LOG_INFO( "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
+        SW_LOG_INFO_ID( "EditorDataTableCommands.SavedLocalizationProject", "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
         if ( bReloadFailed )
-            SW_LOG_WARNING( "The running game keeps the previous text of '%#' until it reloads", inoutSheet._projectPath.c_str() );
+            SW_LOG_WARNING_ID( "EditorDataTableCommands.RunningGameKeepsPrevious", "The running game keeps the previous text of '%#' until it reloads", inoutSheet._projectPath.c_str() );
         return true;
     }
 

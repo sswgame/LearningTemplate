@@ -340,7 +340,7 @@ namespace sw
         if ( pMovement != nullptr )
             pMovement->teleport( _spawnPosition );
         else
-            SW_LOG_ERROR( "[Shooter] the player object has no ShooterBodyMovementComponent - the player cannot move" );
+            SW_LOG_ERROR_ID( "ShooterPlayer.PlayerObjectNoShooterBodyMovementComponent", "[Shooter] the player object has no ShooterBodyMovementComponent - the player cannot move" );
         if ( pCamera != nullptr )
         {
             pCamera->setAngles( 0.0f, 0.0f );
@@ -350,7 +350,7 @@ namespace sw
         _bViewModeDirty    = SW_TRUE;
         _bBodyRequested    = SW_TRUE;
         scheduleFlush();
-        SW_LOG_INFO( "[Shooter] arena is ready - WASD move, mouse look, LMB fire, R reload, 1/2/3 or Q/E weapons, Space jump, Shift sprint, C camera, Esc mouse" );
+        SW_LOG_INFO_ID( "ShooterPlayer.ArenaReadyWASDMove", "[Shooter] arena is ready - WASD move, mouse look, LMB fire, R reload, 1/2/3 or Q/E weapons, Space jump, Shift sprint, C camera, Esc mouse" );
     }
 
     void ShooterPlayerComponent::onEndPlay()
@@ -468,7 +468,7 @@ namespace sw
         _downTimer = 0.0f;
         if ( pDirector != nullptr )
         {
-            SW_LOG_INFO( "[Shooter] you were overrun on wave %# after %# kills - starting over", pDirector->getWave(), pDirector->getKillCount() );
+            SW_LOG_INFO_ID( "ShooterPlayer.YouOverrunWaveAfter", "[Shooter] you were overrun on wave %# after %# kills - starting over", pDirector->getWave(), pDirector->getKillCount() );
             TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
             if ( pTelemetry != nullptr )
             {
@@ -551,15 +551,15 @@ namespace sw
         const WeaponCatalog* pCatalog = game::findSubsystem<WeaponCatalog>();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "[Shooter] no WeaponCatalog game service - the player cannot be armed" );
+            SW_LOG_ERROR_ID( "ShooterPlayer.NoWeaponCatalogGameService", "[Shooter] no WeaponCatalog game service - the player cannot be armed" );
             return false;
         }
         const size_t slotCount   = static_cast<size_t>( kWeaponCount );
         const bool   bSlotsMatch = _listWeaponID.size() == slotCount && _listWeaponModel.size() == slotCount;
         if ( bSlotsMatch == false )
         {
-            SW_LOG_ERROR( "[Shooter] the player needs %# weapon ids and models (has %#, %#) - the player cannot be armed", kWeaponCount,
-                          static_cast<uint32>( _listWeaponID.size() ), static_cast<uint32>( _listWeaponModel.size() ) );
+            SW_LOG_ERROR_ID( "ShooterPlayer.PlayerNeedsWeaponIds", "[Shooter] the player needs %# weapon ids and models (has %#, %#) - the player cannot be armed", kWeaponCount,
+                             static_cast<uint32>( _listWeaponID.size() ), static_cast<uint32>( _listWeaponModel.size() ) );
             return false;
         }
         bool bArmed = true;
@@ -569,13 +569,13 @@ namespace sw
             const WeaponDef* pDef     = pCatalog->find( hashed_string( weaponID ) );
             if ( pDef == nullptr )
             {
-                SW_LOG_ERROR( "[Shooter] weapon slot %# names '%#', which is not in the weapon catalog", weaponIndex + 1, weaponID.c_str() );
+                SW_LOG_ERROR_ID( "ShooterPlayer.WeaponSlotNamesWhich", "[Shooter] weapon slot %# names '%#', which is not in the weapon catalog", weaponIndex + 1, weaponID.c_str() );
                 bArmed = false;
                 continue;
             }
             if ( pDef->_itemID.empty() )
             {
-                SW_LOG_ERROR( "[Shooter] weapon '%#' has no item in the weapon catalog - its name and look come from the item", weaponID.c_str() );
+                SW_LOG_ERROR_ID( "ShooterPlayer.WeaponNoItemWeapon", "[Shooter] weapon '%#' has no item in the weapon catalog - its name and look come from the item", weaponID.c_str() );
                 bArmed = false;
                 continue;
             }
@@ -608,7 +608,7 @@ namespace sw
         if ( nextWeapon >= 0 )
             switchWeapon( nextWeapon );
         if ( pawn.wasButtonTriggered( pawn.findButton( hashed_string( Internal::kReloadButton ) ) ) && _arrWeapon[_weaponIndex].startReload() )
-            SW_LOG_INFO( "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
+            SW_LOG_INFO_ID( "ShooterPlayer.Reloading", "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
     }
 
     void ShooterPlayerComponent::fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed )
@@ -620,9 +620,9 @@ namespace sw
         WeaponShot             shot;
         const WeaponFireResult result = weapon.pullTrigger( aim, bJustPressed, shot );
         if ( result == WeaponFireResult::EmptyMagazine )
-            SW_LOG_INFO( "[Shooter] %# empty - reloading (%# in reserve)", weapon.getDef()._name.c_str(), weapon.getReserveAmmo() );
+            SW_LOG_INFO_ID( "ShooterPlayer.EmptyReloadingReserve", "[Shooter] %# empty - reloading (%# in reserve)", weapon.getDef()._name.c_str(), weapon.getReserveAmmo() );
         else if ( result == WeaponFireResult::OutOfAmmo && bJustPressed )
-            SW_LOG_INFO( "[Shooter] %# is out of ammo - switch weapons", weapon.getDef()._name.c_str() );
+            SW_LOG_INFO_ID( "ShooterPlayer.OutAmmoSwitchWeapons", "[Shooter] %# is out of ammo - switch weapons", weapon.getDef()._name.c_str() );
         if ( result != WeaponFireResult::Fired )
             return;
 
@@ -676,7 +676,7 @@ namespace sw
         uint32     hitboxMask = 0;
         const bool bHasMask   = Internal::findLayerMask( manager, _hitboxLayer, hitboxMask );
         if ( bHasMask == false )
-            SW_LOG_ERROR( "Hitbox layer '%#' is not in the physics settings - shots cannot hit enemies", _hitboxLayer.c_str() );
+            SW_LOG_ERROR_ID( "ShooterPlayer.HitboxLayerNotPhysics", "Hitbox layer '%#' is not in the physics settings - shots cannot hit enemies", _hitboxLayer.c_str() );
         GameObject*  pOwner   = getOwner();
         const uint64 ownerID  = pOwner != nullptr ? pOwner->getObjectID() : 0;
         size_t       shotHead = 0;
@@ -928,7 +928,7 @@ namespace sw
         ShooterAvatarComponent* pAvatar = pBody != nullptr ? pBody->getComponent<ShooterAvatarComponent>() : nullptr;
         if ( pAvatar == nullptr )
         {
-            SW_LOG_ERROR( "[Shooter] body prefab '%#' has no ShooterAvatarComponent - the player has no visible body", _bodyPrefab.c_str() );
+            SW_LOG_ERROR_ID( "ShooterPlayer.BodyPrefabNoShooterAvatarComponent", "[Shooter] body prefab '%#' has no ShooterAvatarComponent - the player has no visible body", _bodyPrefab.c_str() );
             if ( pBody != nullptr )
                 pManager->destroyObject( pBody );
             return;

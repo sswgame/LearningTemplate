@@ -255,7 +255,7 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "A socket file was changed on disk while this window has unsaved edits." );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload from disk (discard edits)" ) );
             if ( ImGui::SmallButton( "Reload from disk (discard edits)" ) && _document.loadSocketFile() == false )
-                SW_LOG_WARNING( "Character Editor: the socket file '%#' could not be reloaded - the edits stay", _document.getPaths()._socketPath.c_str() ); // 까닭은 상태 줄에 남았다
+                SW_LOG_WARNING_ID( "CharacterEditorPanel.CharacterEditorSocketFile", "Character Editor: the socket file '%#' could not be reloaded - the edits stay", _document.getPaths()._socketPath.c_str() ); // 까닭은 상태 줄에 남았다
         }
         ImGui::Separator();
 
@@ -1260,7 +1260,7 @@ namespace sw::editor
         _thumbnailCapturePath   = imagePath;
         _thumbnailCapturePreset = string{ _document.getPaths()._presetName.c_str() };
         _thumbnailCaptureSerial = serial;
-        SW_LOG_INFO( "Character Editor: thumbnail of preset '%#' requested", _thumbnailCapturePreset.c_str() );
+        SW_LOG_INFO_ID( "CharacterEditorPanel.CharacterEditorThumbnailPreset", "Character Editor: thumbnail of preset '%#' requested", _thumbnailCapturePreset.c_str() );
     }
 
     void CharacterEditorPanel::pollThumbnailCapture()
@@ -1273,7 +1273,7 @@ namespace sw::editor
         // 다른 요청이 이 요청을 덮었거나(앞 요청이 남아 있으면 덮어쓴다) 쓰기에 실패하면 마지막 경로가 다르다.
         const bool bCaptured = RenderThread::getLastScreenshotPath() == imagePath && FileUtil::readFile( imagePath, pngBytes ) && pngBytes.empty() == false;
         if ( FileUtil::exists( imagePath ) && FileUtil::removeFile( imagePath ) == false )
-            SW_LOG_WARNING( "Character Editor: the thumbnail capture file %# could not be removed", imagePath.c_str() );
+            SW_LOG_WARNING_ID( "CharacterEditorPanel.CharacterEditorThumbnailCapture", "Character Editor: the thumbnail capture file %# could not be removed", imagePath.c_str() );
         if ( bCaptured == false )
         {
             _document.setStatus( "The thumbnail capture failed or was replaced by another screenshot - try again" );

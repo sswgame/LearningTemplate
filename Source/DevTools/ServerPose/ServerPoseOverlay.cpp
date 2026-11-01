@@ -352,7 +352,7 @@ namespace sw
         if ( _bStarted == SW_FALSE )
         {
             startPoller();
-            SW_LOG_INFO( "Authority ghost polling the server debug channel on 127.0.0.1:%#", gv_serverPoseOverlayPort );
+            SW_LOG_INFO_ID( "ServerPoseOverlay.AuthorityGhostPollingServer", "Authority ghost polling the server debug channel on 127.0.0.1:%#", gv_serverPoseOverlayPort );
         }
         GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         if ( pManager == nullptr )

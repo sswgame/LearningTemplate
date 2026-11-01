@@ -19,7 +19,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Audio mixer not found: %#", assetPath );
+            SW_LOG_ERROR_ID( "AudioMixerDesc.AudioMixerNotFound", "Audio mixer not found: %#", assetPath );
             return false;
         }
         return loadFromXMLText( text, assetPath );
@@ -30,7 +30,7 @@ namespace sw
         *this = AudioMixerDesc{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "%#: audio mixer could not be read or holds unknown keys / values", sourceName );
+            SW_LOG_ERROR_ID( "AudioMixerDesc.AudioMixerCouldNot", "%#: audio mixer could not be read or holds unknown keys / values", sourceName );
             return false;
         }
         return validate( sourceName );
@@ -50,7 +50,7 @@ namespace sw
                     const AudioEffectTypeInfo* pTypeInfo = AudioEffectRegistry::findType( effect._type );
                     if ( pTypeInfo == nullptr )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' names unknown effect type '%#'", sourceName, bus._name.c_str(), effect._type.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusNamesUnknownEffect", "%#: bus '%#' names unknown effect type '%#'", sourceName, bus._name.c_str(), effect._type.c_str() );
                         bValid = false;
                         continue;
                     }
@@ -58,14 +58,14 @@ namespace sw
                     {
                         if ( bus._listEffect[otherIndex].getEffectName() == effect.getEffectName() )
                         {
-                            SW_LOG_ERROR( "%#: bus '%#' has two effects named '%#' - give one a _name", sourceName, bus._name.c_str(), effect.getEffectName().c_str() );
+                            SW_LOG_ERROR_ID( "AudioMixerDesc.BusTwoEffectsNamed", "%#: bus '%#' has two effects named '%#' - give one a _name", sourceName, bus._name.c_str(), effect.getEffectName().c_str() );
                             bValid = false;
                         }
                     }
                     // 컨볼루션 리버브의 임펄스 응답은 이 종류에만 필수라 PROPERTY( Required ) 로 못 쓴다(모든 이펙트가 같은 서술 형식). 읽는 단계에서 막는다.
                     if ( effect._type == hashed_string( "ConvolutionReverb" ) && effect._impulse.isSet() == false )
                     {
-                        SW_LOG_ERROR( "%#: effect '%#' on bus '%#' needs an impulse response clip (_impulse)", sourceName, effect.getEffectName().c_str(), bus._name.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.EffectBusNeedsImpulse", "%#: effect '%#' on bus '%#' needs an impulse response clip (_impulse)", sourceName, effect.getEffectName().c_str(), bus._name.c_str() );
                         bValid = false;
                     }
                     for ( const AudioEffectParameterDesc& parameter : effect._listParameter )
@@ -77,7 +77,7 @@ namespace sw
                         }
                         if ( bKnown == false )
                         {
-                            SW_LOG_ERROR( "%#: effect '%#' on bus '%#' has no parameter '%#'", sourceName, effect._type.c_str(), bus._name.c_str(), parameter._name.c_str() );
+                            SW_LOG_ERROR_ID( "AudioMixerDesc.EffectBusNoParameter", "%#: effect '%#' on bus '%#' has no parameter '%#'", sourceName, effect._type.c_str(), bus._name.c_str(), parameter._name.c_str() );
                             bValid = false;
                         }
                     }
@@ -93,18 +93,18 @@ namespace sw
                 {
                     if ( mixer.findBusIndex( duck._sourceBus ) < 0 )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' is ducked by unknown bus '%#'", sourceName, bus._name.c_str(), duck._sourceBus.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusDuckedUnknownBus", "%#: bus '%#' is ducked by unknown bus '%#'", sourceName, bus._name.c_str(), duck._sourceBus.c_str() );
                         bValid = false;
                     }
                     else if ( duck._sourceBus == bus._name )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' ducks itself", sourceName, bus._name.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusDucksItself", "%#: bus '%#' ducks itself", sourceName, bus._name.c_str() );
                         bValid = false;
                     }
                     const bool bInvalidDuckSettings = 0.0f < duck._depthDb || duck._attackSeconds < 0.0f || duck._releaseSeconds < 0.0f;
                     if ( bInvalidDuckSettings )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' has a duck with a positive depth or a negative time", sourceName, bus._name.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusDuckPositiveDepth", "%#: bus '%#' has a duck with a positive depth or a negative time", sourceName, bus._name.c_str() );
                         bValid = false;
                     }
                 }
@@ -112,12 +112,12 @@ namespace sw
                 {
                     if ( mixer.findBusIndex( send._bus ) < 0 )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' sends to unknown bus '%#'", sourceName, bus._name.c_str(), send._bus.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusSendsUnknownBus", "%#: bus '%#' sends to unknown bus '%#'", sourceName, bus._name.c_str(), send._bus.c_str() );
                         bValid = false;
                     }
                     else if ( send._bus == bus._name )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' sends to itself", sourceName, bus._name.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusSendsItself", "%#: bus '%#' sends to itself", sourceName, bus._name.c_str() );
                         bValid = false;
                     }
                 }
@@ -130,7 +130,7 @@ namespace sw
                 const AudioBusDesc& bus = mixer._listBus[busIndex];
                 if ( bus._name.empty() )
                 {
-                    SW_LOG_ERROR( "%#: bus %# has no name", sourceName, busIndex );
+                    SW_LOG_ERROR_ID( "AudioMixerDesc.BusNoName", "%#: bus %# has no name", sourceName, busIndex );
                     return false;
                 }
                 bool bValid = true;
@@ -138,7 +138,7 @@ namespace sw
                 {
                     if ( mixer._listBus[otherIndex]._name == bus._name )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' is declared twice", sourceName, bus._name.c_str() );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusDeclaredTwice", "%#: bus '%#' is declared twice", sourceName, bus._name.c_str() );
                         bValid = false;
                     }
                 }
@@ -147,13 +147,13 @@ namespace sw
                     ++inoutRootCount;
                     if ( bus._name != hashed_string( AudioBusNames::kMaster ) )
                     {
-                        SW_LOG_ERROR( "%#: bus '%#' has no parent - only '%#' may be the root", sourceName, bus._name.c_str(), AudioBusNames::kMaster );
+                        SW_LOG_ERROR_ID( "AudioMixerDesc.BusNoParentOnly", "%#: bus '%#' has no parent - only '%#' may be the root", sourceName, bus._name.c_str(), AudioBusNames::kMaster );
                         bValid = false;
                     }
                 }
                 else if ( mixer.findBusIndex( bus._parent ) < 0 )
                 {
-                    SW_LOG_ERROR( "%#: bus '%#' names unknown parent '%#'", sourceName, bus._name.c_str(), bus._parent.c_str() );
+                    SW_LOG_ERROR_ID( "AudioMixerDesc.BusNamesUnknownParent", "%#: bus '%#' names unknown parent '%#'", sourceName, bus._name.c_str(), bus._parent.c_str() );
                     bValid = false;
                 }
                 if ( validateEffects( bus, sourceName ) == false )
@@ -176,14 +176,14 @@ namespace sw
         }
         if ( rootCount != 1 || findBusIndex( hashed_string( AudioBusNames::kMaster ) ) < 0 )
         {
-            SW_LOG_ERROR( "%#: the mixer needs exactly one root bus named '%#'", sourceName, AudioBusNames::kMaster );
+            SW_LOG_ERROR_ID( "AudioMixerDesc.MixerNeedsExactlyOne", "%#: the mixer needs exactly one root bus named '%#'", sourceName, AudioBusNames::kMaster );
             bValid = false;
         }
         // master 는 장치로 나간다 — 출력 레이아웃이 아니면 장치 버퍼와 채널 수가 어긋난다.
         const int32 masterIndex = findBusIndex( hashed_string( AudioBusNames::kMaster ) );
         if ( masterIndex >= 0 && _listBus[static_cast<size_t>( masterIndex )]._channels != AudioBusChannels::Output )
         {
-            SW_LOG_ERROR( "%#: the '%#' bus feeds the device and must use the output channels (_channels=\"Output\")", sourceName, AudioBusNames::kMaster );
+            SW_LOG_ERROR_ID( "AudioMixerDesc.BusFeedsDeviceMust", "%#: the '%#' bus feeds the device and must use the output channels (_channels=\"Output\")", sourceName, AudioBusNames::kMaster );
             bValid = false;
         }
         if ( validateAttenuations( _listAttenuation, sourceName ) == false )
@@ -192,7 +192,7 @@ namespace sw
             bValid = false;
         if ( _maxVoiceCount == 0 || _maxRealVoiceCount == 0 )
         {
-            SW_LOG_ERROR( "%#: voice limits must be at least 1", sourceName );
+            SW_LOG_ERROR_ID( "AudioMixerDesc.VoiceLimitsMustLeast", "%#: voice limits must be at least 1", sourceName );
             bValid = false;
         }
         if ( bValid )
@@ -200,7 +200,7 @@ namespace sw
             vector<uint32> listOrder;
             if ( makeProcessingOrder( listOrder ) == false )
             {
-                SW_LOG_ERROR( "%#: bus parents and sends form a cycle", sourceName );
+                SW_LOG_ERROR_ID( "AudioMixerDesc.BusParentsSendsForm", "%#: bus parents and sends form a cycle", sourceName );
                 bValid = false;
             }
         }
@@ -220,32 +220,32 @@ namespace sw
             const AudioAttenuationDesc& attenuation = listAttenuation[attenuationIndex];
             if ( attenuation._name.empty() )
             {
-                SW_LOG_ERROR( "%#: attenuation %# has no name", sourceName, attenuationIndex );
+                SW_LOG_ERROR_ID( "AudioMixerDesc.AttenuationNoName", "%#: attenuation %# has no name", sourceName, attenuationIndex );
                 bValid = false;
             }
             for ( size_t otherIndex = attenuationIndex + 1; otherIndex < listAttenuation.size(); ++otherIndex )
             {
                 if ( listAttenuation[otherIndex]._name == attenuation._name )
                 {
-                    SW_LOG_ERROR( "%#: attenuation '%#' is declared twice", sourceName, attenuation._name.c_str() );
+                    SW_LOG_ERROR_ID( "AudioMixerDesc.AttenuationDeclaredTwice", "%#: attenuation '%#' is declared twice", sourceName, attenuation._name.c_str() );
                     bValid = false;
                 }
             }
             if ( attenuation._maxDistance < attenuation._minDistance )
             {
-                SW_LOG_ERROR( "%#: attenuation '%#' has a max distance below its min distance", sourceName, attenuation._name.c_str() );
+                SW_LOG_ERROR_ID( "AudioMixerDesc.AttenuationMaxDistanceBelow", "%#: attenuation '%#' has a max distance below its min distance", sourceName, attenuation._name.c_str() );
                 bValid = false;
             }
             const bool bCustomSorted  = AudioMixerDesc::isCurveSorted( attenuation._listCustomPoint );
             const bool bLowPassSorted = AudioMixerDesc::isCurveSorted( attenuation._listLowPassPoint );
             if ( bCustomSorted == false || bLowPassSorted == false )
             {
-                SW_LOG_ERROR( "%#: attenuation '%#' has curve points out of order", sourceName, attenuation._name.c_str() );
+                SW_LOG_ERROR_ID( "AudioMixerDesc.AttenuationCurvePointsOut", "%#: attenuation '%#' has curve points out of order", sourceName, attenuation._name.c_str() );
                 bValid = false;
             }
             if ( attenuation._curve == AudioAttenuationCurve::Custom && attenuation._listCustomPoint.empty() )
             {
-                SW_LOG_ERROR( "%#: attenuation '%#' uses the Custom curve with no points", sourceName, attenuation._name.c_str() );
+                SW_LOG_ERROR_ID( "AudioMixerDesc.AttenuationUsesCustomCurve", "%#: attenuation '%#' uses the Custom curve with no points", sourceName, attenuation._name.c_str() );
                 bValid = false;
             }
         }
@@ -276,14 +276,14 @@ namespace sw
             const utf8*              pName    = snapshot._name.c_str();
             if ( snapshot._name.empty() )
             {
-                SW_LOG_ERROR( "%#: snapshot %# has no name", sourceName, snapshotIndex );
+                SW_LOG_ERROR_ID( "AudioMixerDesc.SnapshotNoName", "%#: snapshot %# has no name", sourceName, snapshotIndex );
                 bValid = false;
             }
             for ( size_t otherIndex = snapshotIndex + 1; otherIndex < _listSnapshot.size(); ++otherIndex )
             {
                 if ( _listSnapshot[otherIndex]._name == snapshot._name )
                 {
-                    SW_LOG_ERROR( "%#: snapshot '%#' is declared twice", sourceName, pName );
+                    SW_LOG_ERROR_ID( "AudioMixerDesc.SnapshotDeclaredTwice", "%#: snapshot '%#' is declared twice", sourceName, pName );
                     bValid = false;
                 }
             }
@@ -291,7 +291,7 @@ namespace sw
             {
                 if ( findBusIndex( busVolume._bus ) < 0 )
                 {
-                    SW_LOG_ERROR( "%#: snapshot '%#' names unknown bus '%#'", sourceName, pName, busVolume._bus.c_str() );
+                    SW_LOG_ERROR_ID( "AudioMixerDesc.SnapshotNamesUnknownBus", "%#: snapshot '%#' names unknown bus '%#'", sourceName, pName, busVolume._bus.c_str() );
                     bValid = false;
                 }
             }
@@ -308,7 +308,7 @@ namespace sw
                 }
                 if ( bFound == false )
                 {
-                    SW_LOG_ERROR( "%#: snapshot '%#' changes send '%#' -> '%#' that the graph does not have", sourceName, pName, send._bus.c_str(), send._target.c_str() );
+                    SW_LOG_ERROR_ID( "AudioMixerDesc.SnapshotChangesSendGraph", "%#: snapshot '%#' changes send '%#' -> '%#' that the graph does not have", sourceName, pName, send._bus.c_str(), send._target.c_str() );
                     bValid = false;
                 }
             }
@@ -327,8 +327,8 @@ namespace sw
                 }
                 if ( bKnown == false )
                 {
-                    SW_LOG_ERROR( "%#: snapshot '%#' changes '%#.%#.%#' that the graph does not have", sourceName, pName, effect._bus.c_str(), effect._effect.c_str(),
-                                  effect._parameter.c_str() );
+                    SW_LOG_ERROR_ID( "AudioMixerDesc.SnapshotChangesGraphDoes", "%#: snapshot '%#' changes '%#.%#.%#' that the graph does not have", sourceName, pName, effect._bus.c_str(), effect._effect.c_str(),
+                                     effect._parameter.c_str() );
                     bValid = false;
                 }
             }

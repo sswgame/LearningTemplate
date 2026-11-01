@@ -168,7 +168,7 @@ namespace sw
         uint8                  layer     = 0;
         if ( pSettings != nullptr && pSettings->findLayerIndex( layerName, layer ) )
             return layer;
-        SW_LOG_ERROR( "Unknown physics layer '%#' - using layer 0", layerName.c_str() );
+        SW_LOG_ERROR_ID( "ScenePhysics.UnknownPhysicsLayerUsing", "Unknown physics layer '%#' - using layer 0", layerName.c_str() );
         return 0;
     }
 
@@ -194,7 +194,7 @@ namespace sw
     {
         if ( seconds < 0.0f )
         {
-            SW_LOG_ERROR( "Fixed step override %# is negative - the scene keeps its step", seconds );
+            SW_LOG_ERROR_ID( "ScenePhysics.FixedStepOverrideNegative", "Fixed step override %# is negative - the scene keeps its step", seconds );
             return;
         }
         _fixedStepOverride = seconds;

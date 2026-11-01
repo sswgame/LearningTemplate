@@ -69,7 +69,7 @@ namespace sw
                 if ( decode( record._bytes, campaign ) )
                     outListCampaign.push_back( std::move( campaign ) );
                 else
-                    SW_LOG_ERROR( "Mail campaign '%#' is unreadable", record._key );
+                    SW_LOG_ERROR_ID( "ServiceMailCampaign.MailCampaignUnreadable", "Mail campaign '%#' is unreadable", record._key );
             }
             if ( static_cast<int32>( listRecord.size() ) < ServiceMailCampaignInternal::kPageSize )
                 return ServiceStoreResult::Ok;

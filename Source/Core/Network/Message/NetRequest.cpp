@@ -336,7 +336,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         const bool        bInserted = _mapHandler.emplace( method, function ).second;
         if ( bInserted == false )
-            SW_LOG_ERROR( "NetRequestServer: method %# is already registered - two handlers claim one method number", static_cast<uint32>( method ) );
+            SW_LOG_ERROR_ID( "NetRequest.NetRequestServerMethodAlreadyRegistered", "NetRequestServer: method %# is already registered - two handlers claim one method number", static_cast<uint32>( method ) );
         return bInserted;
     }
 

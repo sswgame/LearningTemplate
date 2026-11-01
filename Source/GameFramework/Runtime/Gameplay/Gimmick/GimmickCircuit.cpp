@@ -558,7 +558,7 @@ namespace sw
         if ( bWritten == false )
         {
             // 개수는 populate 와 registerKind 가 막았고 누적 시간은 음수가 될 수 없다. 남는 것은 실행의 결함이다.
-            SW_LOG_ERROR( "Gimmick circuit state has a value outside its declared range at step %#", _stepIndex );
+            SW_LOG_ERROR_ID( "GimmickCircuit.GimmickCircuitStateValue", "Gimmick circuit state has a value outside its declared range at step %#", _stepIndex );
             SW_ASSERT( bWritten );
         }
         return HashUtil::appendBytes64( HashUtil::kFNVOffset64, writer.getBytes().data(), static_cast<size_t>( writer.getByteCount() ) );

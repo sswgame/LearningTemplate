@@ -281,7 +281,7 @@ namespace sw
                     const utf8* pProblem = bParentOk == false  ? "a parent that does not come before it"
                                          : bHasSource == false ? "no prefab path"
                                                                : "a part path only a flattened (cooked) node may have, or a flattened node without one";
-                    SW_LOG_ERROR( "Nested prefab instance #%# ('%#') in '%#' has %# - the prefab is not loaded", static_cast<uint32>( index ), node._name, sourceName, pProblem );
+                    SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabInstancePrefab", "Nested prefab instance #%# ('%#') in '%#' has %# - the prefab is not loaded", static_cast<uint32>( index ), node._name, sourceName, pProblem );
                     return false;
                 }
                 return true;
@@ -333,7 +333,7 @@ namespace sw
                         XMLDocument overrideDoc;
                         if ( overrideDoc.parse( node._overrideXML ) == false || overrideDoc.getRoot().isValid() == false )
                         {
-                            SW_LOG_ERROR( "Nested prefab instance '%#' has overrides that are not XML", node._name );
+                            SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabInstanceOverrides", "Nested prefab instance '%#' has overrides that are not XML", node._name );
                             return false;
                         }
                         element.appendClone( overrideDoc.getRoot() );
@@ -415,17 +415,17 @@ namespace sw
                     if ( pKeyed != nullptr && pKeyed->isSceneComponent() )
                         pTarget = static_cast<SceneComponent*>( pKeyed );
                     else
-                        SW_LOG_WARNING( "Nested prefab instance '%#' attaches to '%#', which '%#' does not have - it is attached to the primary scene component",
-                                        pChild->getName().c_str(), attachKey, pParent->getName().c_str() );
+                        SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceAttaches", "Nested prefab instance '%#' attaches to '%#', which '%#' does not have - it is attached to the primary scene component",
+                                           pChild->getName().c_str(), attachKey, pParent->getName().c_str() );
                 }
                 if ( pTarget == nullptr )
                 {
-                    SW_LOG_WARNING( "Nested prefab instance '%#' has no scene component of '%#' to attach to - it is left at the root", pChild->getName().c_str(),
-                                    pParent->getName().c_str() );
+                    SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceNo", "Nested prefab instance '%#' has no scene component of '%#' to attach to - it is left at the root", pChild->getName().c_str(),
+                                       pParent->getName().c_str() );
                     return;
                 }
                 if ( pChildRoot->attachToComponent( pTarget ) == false )
-                    SW_LOG_WARNING( "Nested prefab instance '%#' could not be attached to '%#'", pChild->getName().c_str(), pParent->getName().c_str() );
+                    SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceCould", "Nested prefab instance '%#' could not be attached to '%#'", pChild->getName().c_str(), pParent->getName().c_str() );
             }
 
             /** @brief 부품 경로 @p parentPath 아래 토막 @p key 를 이은 경로입니다(`PrefabPartOverride`). */
@@ -503,7 +503,7 @@ namespace sw
                     return;
                 if ( pPrefabs == nullptr )
                 {
-                    SW_LOG_WARNING( "'%#' has nested prefab instances but no prefab cache is given - they are not written to the prefab", root.getName().c_str() );
+                    SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstancesBut", "'%#' has nested prefab instances but no prefab cache is given - they are not written to the prefab", root.getName().c_str() );
                     return;
                 }
 
@@ -531,8 +531,8 @@ namespace sw
                         }
                         if ( bParentCaptured == false )
                         {
-                            SW_LOG_WARNING( "Nested prefab instance '%#' hangs under '%#', which is not part of '%#' - it is not written to the prefab", pPart->getName().c_str(),
-                                            pParent != nullptr ? pParent->getName().c_str() : "?", root.getName().c_str() );
+                            SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceHangs", "Nested prefab instance '%#' hangs under '%#', which is not part of '%#' - it is not written to the prefab", pPart->getName().c_str(),
+                                               pParent != nullptr ? pParent->getName().c_str() : "?", root.getName().c_str() );
                             continue;
                         }
                     }
@@ -547,8 +547,8 @@ namespace sw
                     string                              baseState;
                     if ( pSource == nullptr || PrefabOverrides::makeBaseState( *pSource, baseState ) == false )
                     {
-                        SW_LOG_WARNING( "Nested prefab '%#' of '%#' could not be read - instance '%#' is not written to the prefab", node._prefabPath, root.getName().c_str(),
-                                        node._name );
+                        SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot", "Nested prefab '%#' of '%#' could not be read - instance '%#' is not written to the prefab", node._prefabPath, root.getName().c_str(),
+                                           node._name );
                         continue;
                     }
                     ObjectSaveOptions options{ SerializePurpose::Authoring };
@@ -561,8 +561,8 @@ namespace sw
                         pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
                     if ( bOverridesMade == false )
                     {
-                        SW_LOG_WARNING( "Overrides of nested prefab instance '%#' could not be computed (%#) - it is not written to the prefab", node._name,
-                                        overridesError.empty() ? "its nested part overrides could not be collected" : overridesError.c_str() );
+                        SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabInstance", "Overrides of nested prefab instance '%#' could not be computed (%#) - it is not written to the prefab", node._name,
+                                           overridesError.empty() ? "its nested part overrides could not be collected" : overridesError.c_str() );
                         continue;
                     }
                     listCaptured.push_back( NestedPartEntry{ pPart, static_cast<int32>( outListNode.size() ) } );
@@ -644,7 +644,7 @@ namespace sw
             const bool     bRead = doc.loadFile( diskPath );
             return readXMLSource( doc, bRead, string( diskPath ), loadScope );
         }
-        SW_LOG_ERROR( "Not a prefab source file (.prefab.xml / .prefab.json): %#", diskPath );
+        SW_LOG_ERROR_ID( "PrefabAsset.NotPrefabSourceFile", "Not a prefab source file (.prefab.xml / .prefab.json): %#", diskPath );
         return false;
     }
 
@@ -653,7 +653,7 @@ namespace sw
         _bValid = SW_FALSE;
         if ( bRead == false )
         {
-            SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabNotLoaded", "Prefab not loaded - %#", doc.getLastError() );
             return false;
         }
         loadScope.beginPhase( AssetLoadPhase::Decode );
@@ -661,12 +661,12 @@ namespace sw
         XMLNode root = doc.getRoot( PrefabAssetInternal::kRoot );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "Missing <Prefab> root: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.MissingPrefabRoot", "Missing <Prefab> root: %#", absPath );
             return false;
         }
         if ( AssetXMLFormat::isCurrentXMLVersion( PrefabAsset::kAssetType, root ) == false )
         {
-            SW_LOG_ERROR( "formatVersion mismatch: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.FormatVersionMismatch", "formatVersion mismatch: %#", absPath );
             return false;
         }
 
@@ -677,7 +677,7 @@ namespace sw
         XMLNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
         if ( bodyNode.isValid() == false )
         {
-            SW_LOG_ERROR( "Missing <GameObject> in <Prefab>: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.MissingGameObjectPrefab", "Missing <GameObject> in <Prefab>: %#", absPath );
             return false;
         }
         _stateData = bodyNode.toString();
@@ -695,7 +695,7 @@ namespace sw
         _bValid      = SW_TRUE;
         loadScope.setBytes( _stateData.size() );
         loadScope.setSucceeded();
-        SW_LOG_INFO( "Loaded '%#' from %#", _name, absPath );
+        SW_LOG_INFO_ID( "PrefabAsset.Loaded", "Loaded '%#' from %#", _name, absPath );
         return true;
     }
 
@@ -704,7 +704,7 @@ namespace sw
         _bValid = SW_FALSE;
         if ( bRead == false )
         {
-            SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabNotLoaded", "Prefab not loaded - %#", doc.getLastError() );
             return false;
         }
 
@@ -712,7 +712,7 @@ namespace sw
         const JSONValue root = doc.getRoot();
         if ( root.isObject() == false )
         {
-            SW_LOG_ERROR( "Prefab JSON is not a GameObject state object: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabJSONNotGameObject", "Prefab JSON is not a GameObject state object: %#", absPath );
             return false;
         }
         _name = root.get( "_name" ).asString();
@@ -759,7 +759,7 @@ namespace sw
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
-            SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.BinaryReadFailedToo", "Binary read failed or too small: %#", absPath );
             return false;
         }
 
@@ -767,7 +767,7 @@ namespace sw
         arch >> magic;
         if ( magic != PrefabAssetInternal::kBinMagic )
         {
-            SW_LOG_ERROR( "Bad binary magic: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.BadBinaryMagic", "Bad binary magic: %#", absPath );
             return false;
         }
 
@@ -775,7 +775,7 @@ namespace sw
         arch >> version;
         if ( version != PrefabAssetInternal::kBinVersion )
         {
-            SW_LOG_ERROR( "Cooked prefab version %# is not %# in %# - cook the prefabs again", version, PrefabAssetInternal::kBinVersion, absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.CookedPrefabVersionNot", "Cooked prefab version %# is not %# in %# - cook the prefabs again", version, PrefabAssetInternal::kBinVersion, absPath );
             return false;
         }
 
@@ -783,7 +783,7 @@ namespace sw
         arch >> _name >> _stateData >> nodeCount;
         if ( arch.isError() || nodeCount > arch.getSize() )
         {
-            SW_LOG_ERROR( "Binary prefab stream corrupted in %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.BinaryPrefabStreamCorrupted", "Binary prefab stream corrupted in %#", absPath );
             return false;
         }
         vector<PrefabInstanceNode> listNode( nodeCount );
@@ -793,7 +793,7 @@ namespace sw
         }
         if ( arch.isError() )
         {
-            SW_LOG_ERROR( "Binary prefab stream corrupted in %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.BinaryPrefabStreamCorrupted", "Binary prefab stream corrupted in %#", absPath );
             return false;
         }
         if ( PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
@@ -803,12 +803,12 @@ namespace sw
         _stateFormat = PrefabAssetInternal::detectStateFormat( _stateData );
         if ( PrefabAssetInternal::upgradePrefabXMLBody( _stateData, _stateFormat ) == false )
         {
-            SW_LOG_ERROR( "formatVersion mismatch: %#", absPath );
+            SW_LOG_ERROR_ID( "PrefabAsset.FormatVersionMismatch", "formatVersion mismatch: %#", absPath );
             return false;
         }
 
         _bValid = SW_TRUE;
-        SW_LOG_INFO( "Loaded '%#' from binary %#", _name, absPath );
+        SW_LOG_INFO_ID( "PrefabAsset.LoadedBinary", "Loaded '%#' from binary %#", _name, absPath );
         return true;
     }
 
@@ -816,8 +816,8 @@ namespace sw
     {
         if ( hasResolvedNestedInstances() )
         {
-            SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file - '%#' is left as it was", _name,
-                          absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabHoldsCookedResolved", "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file - '%#' is left as it was", _name,
+                             absPath.str() );
             return false;
         }
 
@@ -834,7 +834,7 @@ namespace sw
             XMLNode     bodyRoot    = bBodyParsed ? bodyDoc.getRoot() : XMLNode{};
             if ( bodyRoot.isValid() == false )
             {
-                SW_LOG_ERROR( "Prefab '%#' has a state that cannot be written as XML - '%#' is left as it was", _name, absPath.str() );
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabStateCannotWritten", "Prefab '%#' has a state that cannot be written as XML - '%#' is left as it was", _name, absPath.str() );
                 return false;
             }
             root.appendClone( bodyRoot );
@@ -842,12 +842,12 @@ namespace sw
         else if ( _stateData.empty() == false )
         {
             // 상태가 있는데 XML 로 옮기지 못했다(타입이 빠진 JSON 본문 등). 빈 `<Prefab>` 을 쓰면 파일의 내용이 사라지므로 실패로 돌려준다.
-            SW_LOG_ERROR( "Prefab '%#' could not be converted to XML - '%#' is left as it was", _name, absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabCouldNotConverted", "Prefab '%#' could not be converted to XML - '%#' is left as it was", _name, absPath.str() );
             return false;
         }
         if ( PrefabAssetInternal::writeNodesToXML( root, _listNestedInstance, -1 ) == false )
         {
-            SW_LOG_ERROR( "Prefab '%#' has nested instances that cannot be written - '%#' is left as it was", _name, absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabNestedInstancesCannot", "Prefab '%#' has nested instances that cannot be written - '%#' is left as it was", _name, absPath.str() );
             return false;
         }
 
@@ -855,13 +855,13 @@ namespace sw
         const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && xmlDoc.saveFile( absPath.str() );
         if ( writeOk == false )
         {
-            SW_LOG_ERROR( "Failed to write prefab XML: %#", absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML", "Failed to write prefab XML: %#", absPath.str() );
             return false;
         }
 
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( absPath.str() );
-        SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath.str() );
+        SW_LOG_INFO_ID( "PrefabAsset.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return true;
     }
 
@@ -869,7 +869,7 @@ namespace sw
     {
         if ( hasResolvedNestedInstances() )
         {
-            SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file; nothing written: %#", _name, absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabHoldsCookedResolved2", "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file; nothing written: %#", _name, absPath.str() );
             return false;
         }
 
@@ -877,7 +877,7 @@ namespace sw
         if ( jsonStr.empty() )
         {
             // 상태를 읽지 못했다(타입이 빠진 본문 등). 로더가 읽을 수 없는 파일을 쓰지 않는다 — XML 로는 그대로 저장할 수 있다.
-            SW_LOG_ERROR( "Prefab '%#' state could not be converted to JSON; nothing written: %#", _name, absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabStateCouldNot", "Prefab '%#' state could not be converted to JSON; nothing written: %#", _name, absPath.str() );
             return false;
         }
         if ( _listNestedInstance.empty() == false )
@@ -885,7 +885,7 @@ namespace sw
             JSONDocument doc;
             if ( doc.parse( jsonStr ) == false || doc.getRoot().isObject() == false )
             {
-                SW_LOG_ERROR( "Prefab '%#' state is not a JSON object; nothing written: %#", _name, absPath.str() );
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabStateNotJSON", "Prefab '%#' state is not a JSON object; nothing written: %#", _name, absPath.str() );
                 return false;
             }
             PrefabAssetInternal::writeNodesToJSON( doc.getRoot(), _listNestedInstance, -1 );
@@ -896,13 +896,13 @@ namespace sw
                              FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
         if ( writeOk == false )
         {
-            SW_LOG_ERROR( "Failed to write prefab JSON: %#", absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON", "Failed to write prefab JSON: %#", absPath.str() );
             return false;
         }
 
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( absPath.str() );
-        SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath.str() );
+        SW_LOG_INFO_ID( "PrefabAsset.SavedJSON", "Saved '%#' JSON %#", _name, absPath.str() );
         return true;
     }
 
@@ -914,7 +914,7 @@ namespace sw
             return saveToJSONFile( absPath );
         if ( StringUtil::endsWith( absPath.str(), ".prefab.xml", true ) )
             return saveToXMLFile( absPath );
-        SW_LOG_ERROR( "'%#' is not a prefab source path (.prefab.xml / .prefab.json) - nothing was written", absPath.str() );
+        SW_LOG_ERROR_ID( "PrefabAsset.NotPrefabSourcePath", "'%#' is not a prefab source path (.prefab.xml / .prefab.json) - nothing was written", absPath.str() );
         return false;
     }
 
@@ -934,7 +934,7 @@ namespace sw
 
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || arch.saveFile( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write prefab binary: %#", absPath.str() );
+            SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabBinary", "Failed to write prefab binary: %#", absPath.str() );
             return false;
         }
         return true;
@@ -1195,7 +1195,7 @@ namespace sw
         {
             if ( asset->loadFromBinaryFile( AssetID{ binPath } ) == false )
             {
-                SW_LOG_ERROR( "Cooked content requires the cooked prefab: %#", binPath );
+                SW_LOG_ERROR_ID( "PrefabAsset.CookedContentRequiresCooked", "Cooked content requires the cooked prefab: %#", binPath );
                 return nullptr;
             }
         }
@@ -1207,7 +1207,7 @@ namespace sw
             const bool bSourceLoaded = bJSON ? asset->loadFromJSONFile( AssetID{ resolvedPath } ) : asset->loadFromXMLFile( AssetID{ resolvedPath } );
             if ( bSourceLoaded == false )
             {
-                SW_LOG_ERROR( "Prefab source could not be loaded: %#", resolvedPath );
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabSourceCouldNot", "Prefab source could not be loaded: %#", resolvedPath );
                 return nullptr;
             }
         }
@@ -1252,13 +1252,13 @@ namespace sw
                 if ( stackIndex.has_value() )
                 {
                     cycleFloor = MathUtil::min( cycleFloor, *stackIndex );
-                    SW_LOG_ERROR( "Circular nested prefab reference: '%#' places '%#', which is already being loaded", asset.getName(), childPath );
+                    SW_LOG_ERROR_ID( "PrefabAsset.CircularNestedPrefabReference", "Circular nested prefab reference: '%#' places '%#', which is already being loaded", asset.getName(), childPath );
                     continue;
                 }
                 // 원본은 이 스레드에서 읽는다(`loadAndCache`) — 다른 스레드의 로드 블록을 기다리면 순환한 두 프리팹을 두 워커가 읽을 때 서로를 기다린다.
                 const bool bLoadFailed = loadAndCache( childPath ) == nullptr;
                 if ( bLoadFailed && cycleFloor > depth )
-                    SW_LOG_WARNING( "Nested prefab '%#' in '%#' could not be loaded - that instance is skipped when spawning", childPath, asset.getName() );
+                    SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot2", "Nested prefab '%#' in '%#' could not be loaded - that instance is skipped when spawning", childPath, asset.getName() );
             }
         }
 
@@ -1266,7 +1266,7 @@ namespace sw
         if ( cycleFloor == depth )
             cycleFloor = PrefabAssetInternal::kNoCycle; // 순환이 여기서 시작했다 — 바깥 프리팹은 그 노드만 건너뛰고 로드된다
         if ( bInCycle )
-            SW_LOG_ERROR( "Prefab '%#' is part of a circular nested prefab reference - it is not loaded", asset.getName() );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabPartCircularNested", "Prefab '%#' is part of a circular nested prefab reference - it is not loaded", asset.getName() );
         return bInCycle == false;
     }
 
@@ -1277,7 +1277,7 @@ namespace sw
         // 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
         if ( pGameObjectManager == nullptr )
         {
-            SW_LOG_WARNING( "Cannot spawn prefab '%#' without a GameObjectManager.", assetRelativePath );
+            SW_LOG_WARNING_ID( "PrefabAsset.CannotSpawnPrefabWithout", "Cannot spawn prefab '%#' without a GameObjectManager.", assetRelativePath );
             return nullptr;
         }
 
@@ -1287,8 +1287,8 @@ namespace sw
         PrefabAssetInternal::PrefabPathStack& spawnStack = t_prefabChain._spawnStack;
         if ( VectorUtil::contains( spawnStack, pathKey ) )
         {
-            SW_LOG_ERROR( "Circular prefab reference detected for '%#' — spawn aborted to prevent recursion overflow",
-                          assetRelativePath );
+            SW_LOG_ERROR_ID( "PrefabAsset.CircularPrefabReferenceDetected", "Circular prefab reference detected for '%#' — spawn aborted to prevent recursion overflow",
+                             assetRelativePath );
             return nullptr;
         }
         const PrefabAssetInternal::PathStackScope scope{ spawnStack, pathKey };
@@ -1339,7 +1339,7 @@ namespace sw
         {
             if ( asset.applyStateTo( pGameObject ) == false )
             {
-                SW_LOG_ERROR( "ObjectState apply failed for '%#' — spawn aborted", instanceName );
+                SW_LOG_ERROR_ID( "PrefabAsset.ObjectStateApplyFailedSpawn", "ObjectState apply failed for '%#' — spawn aborted", instanceName );
                 return false;
             }
             pGameObject->setName( hashed_string( string( instanceName ).c_str() ) );
@@ -1361,7 +1361,7 @@ namespace sw
         const shared_ptr<const PrefabAsset> pSource = loadPrefab( node._prefabPath.empty() ? node._prefabGUID : node._prefabPath );
         if ( pSource == nullptr || pSource->isValid() == false )
         {
-            SW_LOG_WARNING( "Nested prefab '%#' could not be loaded - instance '%#' is skipped", node._prefabPath, node._name );
+            SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot3", "Nested prefab '%#' could not be loaded - instance '%#' is skipped", node._prefabPath, node._name );
             return false;
         }
         // XML 본문은 그대로 원형으로 쓴다(스폰마다 임시 매니저를 만들지 않는다). 오버라이드의 덮어쓴 칸은 이름으로 얹히므로 원형에 없는 칸은 더해진다.
@@ -1371,14 +1371,14 @@ namespace sw
         {
             if ( PrefabOverrides::makeBaseState( *pSource, convertedBase ) == false )
             {
-                SW_LOG_WARNING( "Nested prefab '%#' could not be built as a base state - instance '%#' is skipped", node._prefabPath, node._name );
+                SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot4", "Nested prefab '%#' could not be built as a base state - instance '%#' is skipped", node._prefabPath, node._name );
                 return false;
             }
             baseState = convertedBase;
         }
         if ( PrefabOverrides::makeInstanceState( baseState, node._overrideXML, node._name, outStateXML ) == false )
         {
-            SW_LOG_WARNING( "Overrides of nested prefab instance '%#' (%#) could not be applied - it is skipped", node._name, node._prefabPath );
+            SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabInstance2", "Overrides of nested prefab instance '%#' (%#) could not be applied - it is skipped", node._name, node._prefabPath );
             return false;
         }
         outSource = pSource;
@@ -1425,7 +1425,7 @@ namespace sw
                     PrefabAssetInternal::makePrefabCacheKey( PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGUID : node._prefabPath ) ) );
                 if ( VectorUtil::contains( spawnStack, sourceKey ) )
                 {
-                    SW_LOG_ERROR( "Circular nested prefab '%#' in '%#' - instance '%#' is not spawned", node._prefabPath, asset.getName(), node._name );
+                    SW_LOG_ERROR_ID( "PrefabAsset.CircularNestedPrefabInstance", "Circular nested prefab '%#' in '%#' - instance '%#' is not spawned", node._prefabPath, asset.getName(), node._name );
                     continue;
                 }
             }
@@ -1438,7 +1438,7 @@ namespace sw
             const string partPath = PrefabAssetInternal::joinPartPath( rootPath, partKey );
             if ( PrefabAssetInternal::applyPartOverrides( listPartOverride, partPath, state ) == false )
             {
-                SW_LOG_WARNING( "Overrides of nested prefab part '%#' (%#) could not be applied - it is skipped", partPath, node._prefabPath );
+                SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabPart", "Overrides of nested prefab part '%#' (%#) could not be applied - it is skipped", partPath, node._prefabPath );
                 continue;
             }
 
@@ -1451,7 +1451,7 @@ namespace sw
             context._bExternalParentAllowed = false; // 부모는 노드의 자리가 정한다(아래에서 붙인다)
             if ( ObjectStateSerializer::loadFromXMLString( pPart, state, context ) == false )
             {
-                SW_LOG_WARNING( "Nested prefab instance '%#' (%#) state could not be applied - it is skipped", node._name, node._prefabPath );
+                SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceState", "Nested prefab instance '%#' (%#) state could not be applied - it is skipped", node._name, node._prefabPath );
                 pManager->destroyObject( pPart );
                 continue;
             }
@@ -1525,7 +1525,7 @@ namespace sw
             string             overridesError;
             if ( PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseIt->second, part._overrideXML, overridesError ) == false )
             {
-                SW_LOG_WARNING( "Nested part '%#' overrides could not be computed: %#", partPath.c_str(), overridesError.c_str() );
+                SW_LOG_WARNING_ID( "PrefabAsset.NestedPartOverridesCould", "Nested part '%#' overrides could not be computed: %#", partPath.c_str(), overridesError.c_str() );
                 return false;
             }
             if ( part._overrideXML.empty() == false )
@@ -1562,7 +1562,7 @@ namespace sw
                 copied._partPath          = partPath;
                 if ( PrefabAssetInternal::applyPartOverrides( listPartOverride, partPath, copied._resolvedStateXML ) == false )
                 {
-                    SW_LOG_ERROR( "Overrides of nested prefab part '%#' in '%#' could not be applied - the prefab is not flattened", partPath, asset.getName() );
+                    SW_LOG_ERROR_ID( "PrefabAsset.OverridesNestedPrefabPart2", "Overrides of nested prefab part '%#' in '%#' could not be applied - the prefab is not flattened", partPath, asset.getName() );
                     return false;
                 }
                 listFlatIndex[index] = static_cast<int32>( inoutListNode.size() );
@@ -1575,13 +1575,13 @@ namespace sw
             const shared_ptr<const PrefabAsset> pSource    = loadPrefab( sourcePath );
             if ( pSource == nullptr || VectorUtil::contains( spawnStack, sourceKey ) )
             {
-                SW_LOG_ERROR( "Nested prefab '%#' in '%#' could not be loaded (missing or circular) - the prefab is not flattened", sourcePath, asset.getName() );
+                SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabCouldNot5", "Nested prefab '%#' in '%#' could not be loaded (missing or circular) - the prefab is not flattened", sourcePath, asset.getName() );
                 return false;
             }
             string baseState;
             if ( PrefabOverrides::makeBaseState( *pSource, baseState ) == false )
             {
-                SW_LOG_ERROR( "Nested prefab '%#' could not be built as a base state - '%#' is not flattened", sourcePath, asset.getName() );
+                SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabCouldNot6", "Nested prefab '%#' could not be built as a base state - '%#' is not flattened", sourcePath, asset.getName() );
                 return false;
             }
             PrefabInstanceNode flat{};
@@ -1597,7 +1597,7 @@ namespace sw
                                     PrefabOverrides::collectPartOverrides( node._overrideXML, listInnerPart );
             if ( bStateMade == false || flat.isResolved() == false )
             {
-                SW_LOG_ERROR( "Overrides of nested prefab instance '%#' in '%#' could not be applied - the prefab is not flattened", flat._name, asset.getName() );
+                SW_LOG_ERROR_ID( "PrefabAsset.OverridesNestedPrefabInstance3", "Overrides of nested prefab instance '%#' in '%#' could not be applied - the prefab is not flattened", flat._name, asset.getName() );
                 return false;
             }
             const int32 flatIndex = static_cast<int32>( inoutListNode.size() );
@@ -1618,14 +1618,14 @@ namespace sw
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
         {
-            SW_LOG_ERROR( "Prefab cook needs a source root and an output directory (--cooked-dir)." );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabCookNeedsSource", "Prefab cook needs a source root and an output directory (--cooked-dir)." );
             return 0;
         }
 
         vector<string> listFile;
         if ( AssetPaths::collectContentFiles( sourceRoot, {}, listFile ) == false )
         {
-            SW_LOG_ERROR( "Prefab cook could not list '%#' - nothing is cooked", sourceRoot );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabCookCouldNot", "Prefab cook could not list '%#' - nothing is cooked", sourceRoot );
             ++outFailedCount;
             return 0;
         }
@@ -1653,7 +1653,7 @@ namespace sw
             const string outputKey  = StringUtil::toLower( outputPath.c_str() );
             if ( uniqueSetWrittenKey.contains( outputKey ) )
             {
-                SW_LOG_WARNING( "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );
+                SW_LOG_WARNING_ID( "PrefabAsset.PrefabCookWouldOverwrite", "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );
                 ++outFailedCount;
                 continue;
             }
@@ -1669,7 +1669,7 @@ namespace sw
                 const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
                 if ( outputFile.has_value() == false || bFlattened == false || asset.saveToBinaryFile( *outputFile ) == false )
                 {
-                    SW_LOG_WARNING( "Prefab cook failed for '%#'", normalized );
+                    SW_LOG_WARNING_ID( "PrefabAsset.PrefabCookFailed", "Prefab cook failed for '%#'", normalized );
                     return CookStep::Failed;
                 }
                 return CookStep::Written;
@@ -1682,7 +1682,7 @@ namespace sw
             uniqueSetWrittenKey.insert( outputKey );
             tally.add( outcome );
         }
-        SW_LOG_INFO( "Prefab cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        SW_LOG_INFO_ID( "PrefabAsset.PrefabCookReusedDDC", "Prefab cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount();
     }
 

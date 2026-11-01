@@ -75,7 +75,7 @@ namespace sw
                 return false;
             if ( AssetPaths::hasParentDirectoryComponent( relativePath ) )
             {
-                SW_LOG_WARNING( "Refusing resource id '%#' — '..' would leave the content root", relativePath );
+                SW_LOG_WARNING_ID( "AssetIO.RefusingResourceIdWould", "Refusing resource id '%#' — '..' would leave the content root", relativePath );
                 return false;
             }
 
@@ -240,7 +240,7 @@ namespace sw
         const bool bNotAssetID = relativeFolder.empty() || FileUtil::isAbsolutePath( relativeFolder ) || AssetPaths::hasParentDirectoryComponent( relativeFolder );
         if ( bNotAssetID )
         {
-            SW_LOG_ERROR( "Cannot list '%#' - a resource folder is a relative resource id without '..'", relativeFolder );
+            SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder", "Cannot list '%#' - a resource folder is a relative resource id without '..'", relativeFolder );
             return AssetFolderListing::Failed;
         }
         const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( relativeFolder ) );
@@ -259,7 +259,7 @@ namespace sw
                 vector<string> listDiskFile;
                 if ( FileUtil::collectFiles( diskFolder, {}, listDiskFile, false ) == false )
                 {
-                    SW_LOG_ERROR( "Cannot list the resource folder '%#' (%#)", folder, diskFolder );
+                    SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder2", "Cannot list the resource folder '%#' (%#)", folder, diskFolder );
                     return AssetFolderListing::Failed;
                 }
                 bFolderFound = true;

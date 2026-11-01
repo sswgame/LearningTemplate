@@ -32,7 +32,7 @@ namespace sw
                 const shared_ptr<const UIStyleSheetAsset> sheet = styleSheetCache.findOrLoad( path, error );
                 if ( sheet == nullptr )
                 {
-                    SW_LOG_ERROR( "[UI] Style sheet is not loaded: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "UIThemeController.StyleSheetNotLoaded", "[UI] Style sheet is not loaded: %#", error.c_str() );
                     continue;
                 }
                 inoutListSheet.push_back( sheet );
@@ -94,7 +94,7 @@ namespace sw
         }
         const hashed_string& defaultTheme = _catalog._defaultTheme;
         if ( defaultTheme.empty() == false && setTheme( defaultTheme ) == false )
-            SW_LOG_ERROR( "[UI] Default UI theme '%#' is not in the theme catalog", defaultTheme.c_str() );
+            SW_LOG_ERROR_ID( "UIThemeController.DefaultUIThemeNot", "[UI] Default UI theme '%#' is not in the theme catalog", defaultTheme.c_str() );
     }
 
     hashed_string UIThemeController::findSettingTheme() const
@@ -108,7 +108,7 @@ namespace sw
     {
         if ( _catalog.findTheme( name ) == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Unknown UI theme '%#'", name.c_str() );
+            SW_LOG_ERROR_ID( "UIThemeController.UnknownUITheme", "[UI] Unknown UI theme '%#'", name.c_str() );
             return false;
         }
         _themeName = name;

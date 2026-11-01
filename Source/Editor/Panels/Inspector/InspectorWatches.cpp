@@ -167,7 +167,7 @@ namespace sw::editor
             const SceneManager*         pSceneManager = editor::findSubsystem<SceneManager>();
             if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] scene reference watch: SceneManager is missing" );
+                SW_LOG_ERROR_ID( "InspectorWatches.SceneReferenceWatchSceneManager", "[Scenario] scene reference watch: SceneManager is missing" );
                 return false;
             }
             if ( pReference == nullptr )

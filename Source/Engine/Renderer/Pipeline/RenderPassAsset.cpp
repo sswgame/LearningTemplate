@@ -22,7 +22,7 @@ namespace sw
         if ( ReflectedXMLFile::loadDesc( assetID, _desc ) == false )
             return false;
 
-        SW_LOG_INFO( "Loaded '%#' (Attachments: %#)", _desc._name, _desc._listAttachment.size() );
+        SW_LOG_INFO_ID( "RenderPassAsset.LoadedAttachments", "Loaded '%#' (Attachments: %#)", _desc._name, _desc._listAttachment.size() );
         return true;
     }
 
@@ -31,7 +31,7 @@ namespace sw
         if ( ReflectedXMLFile::saveDesc( absPath, _desc ) == false )
             return false;
 
-        SW_LOG_INFO( "Saved RenderPass '%#' to: %#", _desc._name, absPath.str() );
+        SW_LOG_INFO_ID( "RenderPassAsset.SavedRenderPass", "Saved RenderPass '%#' to: %#", _desc._name, absPath.str() );
         return true;
     }
 
@@ -51,7 +51,7 @@ namespace sw
         if ( pResource == nullptr )
             return;
         if ( pResource->loadFromXMLFile( AssetID{ args.get<string>( 1 ) } ) == false )
-            SW_LOG_WARNING( "Could not load '%#'", args.get<string>( 1 ) );
+            SW_LOG_WARNING_ID( "RenderPassAsset.CouldNotLoad", "Could not load '%#'", args.get<string>( 1 ) );
     }
 
 } // namespace sw

@@ -268,7 +268,7 @@ namespace sw
         bool         bClamped{ false };
         const uint32 candidateCount = Internal::computeCandidateCount( rule, region, bClamped );
         if ( bClamped )
-            SW_LOG_WARNING( "Placement asks for more than %# candidates (density %# over the region) - clamped", kMaxCandidateCount, rule._density );
+            SW_LOG_WARNING_ID( "PlacementScatter.PlacementAsksMoreCandidates", "Placement asks for more than %# candidates (density %# over the region) - clamped", kMaxCandidateCount, rule._density );
         outListCandidate.resize( candidateCount );
         // 후보마다 독립이다(위치는 (시드, 번호) 해시, 판정은 읽기 전용 표면 · 제외 영역) - 구간으로 나눠 워커에 돌린다. 풀 레이어(후보 약 6 만)가 Debug 에서 0.2 초였다.
         // 결과 칸은 부르는 스레드에서 원시 포인터로 집는다(워커가 목록에 쓰기 접근을 하지 않게 - 경합 감지기는 다른 칸이어도 쓰기로 본다).

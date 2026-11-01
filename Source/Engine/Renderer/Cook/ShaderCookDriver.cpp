@@ -195,7 +195,7 @@ namespace sw
                 if ( input.has_value() == false )
                 {
                     ++ioState._summary._failedCount;
-                    SW_LOG_ERROR( "Shader cook request cannot be resolved (%#): %#", request._entryPoint, error );
+                    SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookRequestCannot", "Shader cook request cannot be resolved (%#): %#", request._entryPoint, error );
                     return;
                 }
                 const string stemLower = source.getStemLower();
@@ -288,7 +288,7 @@ namespace sw
                     {
                         ++ioState._summary._failedCount;
                         ioState._mapFailedSourceByDir[task._outDir].insert( task._normPath );
-                        SW_LOG_ERROR( "Shader cook failed: %# (%#) -> %#", task._normPath, task._pRequest->_entryPoint, task._outPath );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookFailed", "Shader cook failed: %# (%#) -> %#", task._normPath, task._pRequest->_entryPoint, task._outPath );
                     }
 
                     // 새로 쿠킹했든 이미 최신이든 매니페스트에는 항상 넣는다. 같은 바이너리를 만드는 뒤 작업은 이미 든 항목을 건너뛴다.
@@ -303,7 +303,7 @@ namespace sw
                     else if ( result._bUnreadable )
                     {
                         ++ioState._summary._failedCount;
-                        SW_LOG_ERROR( "Cooked shader binary could not be read for the reflection manifest: %#", task._outPath );
+                        SW_LOG_ERROR_ID( "ShaderCooker.CookedShaderBinaryCould", "Cooked shader binary could not be read for the reflection manifest: %#", task._outPath );
                     }
                 }
                 ioState._summary._compileMs = static_cast<uint32>( compileNanos / constant::time::kNanosecondsPerMillisecond );
@@ -322,7 +322,7 @@ namespace sw
                 {
                     if ( ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first ) == false )
                     {
-                        SW_LOG_ERROR( "Shader reflection manifest could not be written: %#", manifestPair.first );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderReflectionManifestCould", "Shader reflection manifest could not be written: %#", manifestPair.first );
                         ++ioState._summary._failedCount;
                         continue;
                     }
@@ -351,7 +351,7 @@ namespace sw
                                                           ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile,
                                                           ioState._stampCache ) == false )
                     {
-                        SW_LOG_ERROR( "Shader cook stamp could not be written: %#", manifestPair.first );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookStampCould", "Shader cook stamp could not be written: %#", manifestPair.first );
                         ++ioState._summary._failedCount;
                     }
                 }
@@ -369,19 +369,19 @@ namespace sw
         const string rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( resourceRoot );
         if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
         {
-            SW_LOG_ERROR( "Content root directory does not exist: '%#'", rootDir.c_str() );
+            SW_LOG_ERROR_ID( "ShaderCooker.ContentRootDirectoryDoes", "Content root directory does not exist: '%#'", rootDir.c_str() );
             ShaderCookSummary nothingCooked{};
             nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
             return nothingCooked;
         }
 
-        SW_LOG_INFO( "Starting batch shader cook across all domains in '%#'...", rootDir.c_str() );
+        SW_LOG_INFO_ID( "ShaderCooker.StartingBatchShaderCook", "Starting batch shader cook across all domains in '%#'...", rootDir.c_str() );
 
         // 렌더 파이프라인 에셋과 엔진 데이터로 요청을 한꺼번에 모은다
         vector<ShaderCookRequest> listRequest;
         if ( ShaderCookRequestCollector::collectAllRequests( rootDir, listRequest ) == false )
         {
-            SW_LOG_ERROR( "Shader cook requests could not be collected - engine default assets are missing or incomplete" );
+            SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookRequestsCould", "Shader cook requests could not be collected - engine default assets are missing or incomplete" );
             ShaderCookSummary nothingCooked{};
             nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
             return nothingCooked;
@@ -389,7 +389,7 @@ namespace sw
 
         if ( listRequest.empty() )
         {
-            SW_LOG_ERROR( "Shader cook has no requests under '%#' - nothing would be cooked", rootDir.c_str() );
+            SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookNoRequests", "Shader cook has no requests under '%#' - nothing would be cooked", rootDir.c_str() );
             ShaderCookSummary nothingCooked{};
             nothingCooked._failedCount = 1; // 아무것도 쿠킹하지 않은 채 성공으로 끝나지 않는다
             return nothingCooked;
@@ -408,14 +408,14 @@ namespace sw
         Internal::CookState              state;
         if ( cookedDir.empty() )
         {
-            SW_LOG_ERROR( "Shader cook needs -cooked-dir=<folder> (the staging folder of cooked shaders, scenes and prefabs)" );
+            SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookNeedsCooked", "Shader cook needs -cooked-dir=<folder> (the staging folder of cooked shaders, scenes and prefabs)" );
             state._summary._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
             return state._summary;
         }
         state._resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
         if ( state._resolver.has_value() == false )
         {
-            SW_LOG_ERROR( "Shader cook cannot resolve the shader include roots (see the error above)" );
+            SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookCannotResolve", "Shader cook cannot resolve the shader include roots (see the error above)" );
             state._summary._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다
             return state._summary;
         }
@@ -434,11 +434,11 @@ namespace sw
 
         const ShaderCookSummary& summary = state._summary;
         if ( summary._contractViolationCount > 0 )
-            SW_LOG_ERROR( "%# binding contract violations - see the [Binding contract] logs above and fix the shader declarations or binding_slots.hlsli.", summary._contractViolationCount );
+            SW_LOG_ERROR_ID( "ShaderCooker.BindingContractViolationsSee", "%# binding contract violations - see the [Binding contract] logs above and fix the shader declarations or binding_slots.hlsli.", summary._contractViolationCount );
         if ( summary._failedCount > 0 )
-            SW_LOG_ERROR( "Shader cooking failed for %# item(s) - their sources are left out of cook.stamp so the next cook retries them.", summary._failedCount );
-        SW_LOG_INFO( "Shader cooking completed: %# binaries generated/updated, %# stale binaries removed (compile %# ms, reflection %# ms - summed over workers, total %# ms).",
-                     summary._cookedCount, summary._removedCount, summary._compileMs, summary._reflectMs, summary._totalMs );
+            SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookingFailedItem", "Shader cooking failed for %# item(s) - their sources are left out of cook.stamp so the next cook retries them.", summary._failedCount );
+        SW_LOG_INFO_ID( "ShaderCooker.ShaderCookingCompletedBinaries", "Shader cooking completed: %# binaries generated/updated, %# stale binaries removed (compile %# ms, reflection %# ms - summed over workers, total %# ms).",
+                        summary._cookedCount, summary._removedCount, summary._compileMs, summary._reflectMs, summary._totalMs );
         return summary;
     }
 } // namespace sw

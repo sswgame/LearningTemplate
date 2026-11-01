@@ -70,7 +70,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: Autosave group '%#' must be one local store slot group ([0-9a-z_.-], not starting with '.')", sourceName, pGroup );
+                SW_LOG_ERROR_ID( "Autosave.AutosaveGroupMustOne", "%#: Autosave group '%#' must be one local store slot group ([0-9a-z_.-], not starting with '.')", sourceName, pGroup );
                 bValid = false;
             }
         }
@@ -133,8 +133,8 @@ namespace sw
         const bool bNamesValid = bRangesValid && ILocalStore::isValidSlotName( settings.makeInfoSlotName( settings._slotCount - 1 ) );
         if ( bNamesValid == false )
         {
-            SW_LOG_ERROR( "AutosaveManager: refused settings - slots %# (1..%#), interval %# and minimumGap %# (0 or more), slot names '%#' (local store slot name rule)",
-                          settings._slotCount, AutosaveInternal::kMaxSlotCount, settings._interval, settings._minimumGap, settings.makeInfoSlotName( 0 ).c_str() );
+            SW_LOG_ERROR_ID( "Autosave.AutosaveManagerRefusedSettingsSlots", "AutosaveManager: refused settings - slots %# (1..%#), interval %# and minimumGap %# (0 or more), slot names '%#' (local store slot name rule)",
+                             settings._slotCount, AutosaveInternal::kMaxSlotCount, settings._interval, settings._minimumGap, settings.makeInfoSlotName( 0 ).c_str() );
             return false;
         }
         _settings = settings;
@@ -187,7 +187,7 @@ namespace sw
         _bPending                     = SW_FALSE;
         _pendingLabel                 = hashed_string{};
         if ( performSave( trigger, label ) == false )
-            SW_LOG_WARNING( "Autosave (%#) failed - the previous slots are kept", getEnumName( trigger ) );
+            SW_LOG_WARNING_ID( "Autosave.AutosaveFailedPreviousSlots", "Autosave (%#) failed - the previous slots are kept", getEnumName( trigger ) );
     }
 
     void AutosaveManager::requestSave( AutosaveTrigger trigger, const hashed_string& label )
@@ -273,13 +273,13 @@ namespace sw
         _restoringCheckpointID           = hashed_string{};
         if ( completion._result != LocalStoreResult::Ok || completion._formatVersion != AutosaveInternal::kSlotFormatVersion )
         {
-            SW_LOG_WARNING( "Autosave slot %# could not be restored (local store result %#, format version %#, this build reads %#)", completion._slot.c_str(),
-                            static_cast<int32>( completion._result ), completion._formatVersion, AutosaveInternal::kSlotFormatVersion );
+            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotCouldNot", "Autosave slot %# could not be restored (local store result %#, format version %#, this build reads %#)", completion._slot.c_str(),
+                               static_cast<int32>( completion._result ), completion._formatVersion, AutosaveInternal::kSlotFormatVersion );
             return;
         }
         if ( _onLoad( completion._bytes ) == false )
         {
-            SW_LOG_WARNING( "Autosave slot %# was read but the game could not restore it", completion._slot.c_str() );
+            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotReadBut", "Autosave slot %# was read but the game could not restore it", completion._slot.c_str() );
             return;
         }
         if ( checkpointID.empty() )
@@ -414,7 +414,7 @@ namespace sw
         ++_saveCount;
         _lastSaveTime  = _playTime;
         _intervalTimer = 0.0f;
-        SW_LOG_INFO( "Autosaved (%#%#%#) to %#", getEnumName( info._trigger ), info._label.empty() ? "" : " ", info._label.c_str(), info._slotName.c_str() );
+        SW_LOG_INFO_ID( "Autosave.Autosaved", "Autosaved (%#%#%#) to %#", getEnumName( info._trigger ), info._label.empty() ? "" : " ", info._label.c_str(), info._slotName.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
         if ( game::findSubsystem<UISystem>() != nullptr )
         {
@@ -430,7 +430,7 @@ namespace sw
         // 기록이 없는(또는 옛) 칸은 다음 실행의 목록에서 빈 칸이나 옛것으로 남을 뿐 새 저장을 가리지 않는다.
         const bool bErasedMissing = completion._operation == LocalStoreOperation::Erase && completion._result == LocalStoreResult::NotFound;
         if ( completion._result != LocalStoreResult::Ok && bErasedMissing == false )
-            SW_LOG_WARNING( "Autosave slot info %# could not be updated (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
+            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotInfoCould", "Autosave slot info %# could not be updated (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
     }
 
     void AutosaveManager::scanSlots()
@@ -462,8 +462,8 @@ namespace sw
                            readSlotInfo( completion._bytes, info );
         if ( bRead == false )
         {
-            SW_LOG_WARNING( "Autosave slot info %# could not be read (local store result %#) - that slot is treated as empty", completion._slot.c_str(),
-                            static_cast<int32>( completion._result ) );
+            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotInfoCould2", "Autosave slot info %# could not be read (local store result %#) - that slot is treated as empty", completion._slot.c_str(),
+                               static_cast<int32>( completion._result ) );
             return;
         }
         info._slotName                         = _settings.makeSlotName( slot );

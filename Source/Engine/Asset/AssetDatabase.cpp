@@ -252,7 +252,7 @@ namespace sw
         vector<string> listMeta;
         if ( CookJob::collectFiles( domainRoot, constant::path::kMetaExtension, listMeta ) == false )
         {
-            SW_LOG_ERROR( "Asset registry: the .meta files under '%#' could not all be listed - no registry is written for it", domainRoot );
+            SW_LOG_ERROR_ID( "AssetDatabase.AssetRegistryMetaFiles", "Asset registry: the .meta files under '%#' could not all be listed - no registry is written for it", domainRoot );
             ++outFailedCount;
             return {};
         }
@@ -276,7 +276,7 @@ namespace sw
             const bool bUnreadableGUID = bMetaRead == false || UUID::tryParse( meta._guid.c_str(), guid ) == false || guid.isNull();
             if ( bUnreadableGUID )
             {
-                SW_LOG_ERROR( "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
+                SW_LOG_ERROR_ID( "AssetDatabase.AssetRegistryNoReadable", "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
                 ++outFailedCount;
                 continue;
             }
@@ -330,7 +330,7 @@ namespace sw
                     return unreadableCount == 0 ? CookStep::Skipped : CookStep::Failed;
                 if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeTextFile( outputPath, text ) == false )
                 {
-                    SW_LOG_ERROR( "Asset registry: could not write '%#'", outputPath );
+                    SW_LOG_ERROR_ID( "AssetDatabase.AssetRegistryCouldNot", "Asset registry: could not write '%#'", outputPath );
                     return CookStep::Failed;
                 }
                 // 읽지 못한 .meta 가 있으면 레지스트리는 쓰되 기록은 남기지 않는다 — 다음 쿠킹도 그 실패를 다시 센다.
@@ -342,7 +342,7 @@ namespace sw
             partialWrittenCount += bPartialWritten ? 1u : 0u;
             tally.add( outcome );
         }
-        SW_LOG_INFO( "Asset registry cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        SW_LOG_INFO_ID( "AssetDatabase.AssetRegistryCookReused", "Asset registry cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount() + partialWrittenCount;
     }
 
@@ -405,7 +405,7 @@ namespace sw
         const bool bInvalidGUID = UUID::tryParse( meta._guid.c_str(), outGUID ) == false || outGUID.isNull();
         if ( bInvalidGUID )
         {
-            SW_LOG_ERROR( "'%#' has an unreadable guid '%#'", metaRel, meta._guid );
+            SW_LOG_ERROR_ID( "AssetDatabase.UnreadableGuid", "'%#' has an unreadable guid '%#'", metaRel, meta._guid );
             return AssetMetaReadResult::Invalid;
         }
         if ( pOutImported != nullptr )

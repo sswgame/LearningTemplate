@@ -336,7 +336,7 @@ namespace sw::editor
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
         {
-            SW_LOG_ERROR( "Could not read catalog file '%#'", assetID.c_str() );
+            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotReadCatalog", "Could not read catalog file '%#'", assetID.c_str() );
             _statusText = "Could not read the file";
             return;
         }
@@ -369,13 +369,13 @@ namespace sw::editor
         const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _selectedID );
         if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _document.getText() ) == false )
         {
-            SW_LOG_ERROR( "Could not write catalog file '%#'", _selectedID.c_str() );
+            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", _selectedID.c_str() );
             _statusText = "Could not write the file";
             return false;
         }
         _previousFileText = _document.getSavedText(); // 저장 직전에 디스크에 있던 글
         _document.markSaved();
-        SW_LOG_INFO( "Catalog saved %#", _selectedID.c_str() );
+        SW_LOG_INFO_ID( "CatalogPanel.CatalogSaved", "Catalog saved %#", _selectedID.c_str() );
         return true;
     }
 
@@ -419,7 +419,7 @@ namespace sw::editor
         if ( bPassed )
             SW_LOG_INFO_ID( "Catalog.ValidationPassed", "Catalog validation passed (%#)", _selectedKindLabel.c_str() );
         else
-            SW_LOG_INFO( "Catalog validation failed (%#): %# warnings", _selectedKindLabel.c_str(), _listWarning.size() );
+            SW_LOG_INFO_ID( "CatalogPanel.CatalogValidationFailedWarnings", "Catalog validation failed (%#): %# warnings", _selectedKindLabel.c_str(), _listWarning.size() );
     }
 
     void CatalogPanel::restorePreviousFile()
@@ -429,7 +429,7 @@ namespace sw::editor
         const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _selectedID );
         if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _previousFileText ) == false )
         {
-            SW_LOG_ERROR( "Could not restore catalog file '%#'", _selectedID.c_str() );
+            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotRestoreCatalog", "Could not restore catalog file '%#'", _selectedID.c_str() );
             _statusText = "Could not restore the file";
             return;
         }
@@ -438,7 +438,7 @@ namespace sw::editor
         _statusText = "Restored the file as it was before saving";
         validateCurrentFile();
         syncDirty();
-        SW_LOG_INFO( "Catalog restored %#", _selectedID.c_str() );
+        SW_LOG_INFO_ID( "CatalogPanel.CatalogRestored", "Catalog restored %#", _selectedID.c_str() );
     }
 
     void CatalogPanel::syncDirty()

@@ -217,7 +217,7 @@ namespace sw
     {
         if ( FileUtil::ensureDirectoryExists( outputDir ) == false )
         {
-            SW_LOG_ERROR( "Cannot create reflection docs folder '%#'", outputDir );
+            SW_LOG_ERROR_ID( "ReflectionDocWriter.CannotCreateReflectionDocs", "Cannot create reflection docs folder '%#'", outputDir );
             return 0;
         }
 
@@ -285,8 +285,8 @@ namespace sw
         }
         if ( FileUtil::writeTextFile( FileUtil::joinPath( outputDir, "index.md" ), index ) )
             ++fileCount;
-        SW_LOG_INFO( "Wrote reflection docs: %# files, %# types, %# enums -> %#", fileCount, static_cast<uint32>( listType.size() ),
-                     static_cast<uint32>( listEnum.size() ), outputDir );
+        SW_LOG_INFO_ID( "ReflectionDocWriter.WroteReflectionDocsFiles", "Wrote reflection docs: %# files, %# types, %# enums -> %#", fileCount, static_cast<uint32>( listType.size() ),
+                        static_cast<uint32>( listEnum.size() ), outputDir );
         return fileCount;
     }
 } // namespace sw

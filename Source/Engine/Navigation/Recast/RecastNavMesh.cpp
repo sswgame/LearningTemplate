@@ -282,7 +282,7 @@ namespace sw
                     return true;
                 if ( polyMesh.nverts >= 0xffff )
                 {
-                    SW_LOG_ERROR( "Navmesh '%#' tile (%#, %#) has %# vertices - raise the cell size or lower the tile size", agent._name.c_str(), tileX, tileZ, polyMesh.nverts );
+                    SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshTileVerticesRaise", "Navmesh '%#' tile (%#, %#) has %# vertices - raise the cell size or lower the tile size", agent._name.c_str(), tileX, tileZ, polyMesh.nverts );
                     return false;
                 }
                 // 영역 → 표시 비트(거름의 영역 비트와 같다).
@@ -388,7 +388,7 @@ namespace sw
         _agentType = agentType;
         if ( bounds.isValid() == false )
         {
-            SW_LOG_ERROR( "Navmesh '%#' needs valid bounds", agentType._name.c_str() );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshNeedsValidBounds", "Navmesh '%#' needs valid bounds", agentType._name.c_str() );
             return false;
         }
         const float32 tileWorldSize = static_cast<float32>( agentType._tileSize ) * agentType._cellSize;
@@ -406,8 +406,8 @@ namespace sw
         const uint32 tileBits     = Internal::computeBitCount( static_cast<uint32>( _grid.getTileCount() ) * slotsPerTile );
         if ( tileBits > Internal::kMaxTileBits )
         {
-            SW_LOG_ERROR( "Navmesh '%#' needs %# tiles - at most %# fit in a 32-bit polygon reference; raise the tile size", agentType._name.c_str(),
-                          _grid.getTileCount(), 1u << Internal::kMaxTileBits );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshNeedsTilesMost", "Navmesh '%#' needs %# tiles - at most %# fit in a 32-bit polygon reference; raise the tile size", agentType._name.c_str(),
+                             _grid.getTileCount(), 1u << Internal::kMaxTileBits );
             _grid = NavTileGrid{};
             return false;
         }
@@ -422,7 +422,7 @@ namespace sw
         _pNavMesh         = dtAllocNavMesh();
         if ( _pNavMesh == nullptr || dtStatusFailed( _pNavMesh->init( &params ) ) )
         {
-            SW_LOG_ERROR( "Navmesh '%#' could not be initialized", agentType._name.c_str() );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshCouldNotInitialized", "Navmesh '%#' could not be initialized", agentType._name.c_str() );
             shutdown();
             return false;
         }
@@ -497,7 +497,7 @@ namespace sw
         const bool bCacheWithObstacleVolumes = _pTileCache != nullptr && pExtraVolume != nullptr && pExtraVolume->empty() == false;
         if ( bCacheWithObstacleVolumes )
         {
-            SW_LOG_ERROR( "Navmesh '%#' uses the tile cache - obstacle volumes must go through addCacheObstacle, not the bake", _agentType._name.c_str() );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshUsesTileCache", "Navmesh '%#' uses the tile cache - obstacle volumes must go through addCacheObstacle, not the bake", _agentType._name.c_str() );
             return false;
         }
 
@@ -552,7 +552,7 @@ namespace sw
         if ( dtStatusFailed( status ) )
         {
             dtFree( pData );
-            SW_LOG_ERROR( "Navmesh '%#' rejected tile (%#, %#) - the bytes are not a tile of this layout", _agentType._name.c_str(), tile._tileX, tile._tileZ );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshRejectedTileBytes", "Navmesh '%#' rejected tile (%#, %#) - the bytes are not a tile of this layout", _agentType._name.c_str(), tile._tileX, tile._tileZ );
             return false;
         }
         // 새 타일은 베이크한 표시(모두 열림)로 들어온다 — 막힌 링크를 다시 막는다.
@@ -600,7 +600,7 @@ namespace sw
     {
         if ( _pTileCache == nullptr )
         {
-            SW_LOG_ERROR( "Navmesh '%#' does not use the tile cache (_obstacleMode) - the obstacle is not added", _agentType._name.c_str() );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshDoesNotUse", "Navmesh '%#' does not use the tile cache (_obstacleMode) - the obstacle is not added", _agentType._name.c_str() );
             return 0;
         }
         return _pTileCache->addObstacle( desc );
@@ -610,7 +610,7 @@ namespace sw
     {
         if ( _pTileCache == nullptr )
         {
-            SW_LOG_ERROR( "Navmesh '%#' does not use the tile cache (_obstacleMode) - obstacle %# cannot be removed", _agentType._name.c_str(), obstacle );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshDoesNotUse2", "Navmesh '%#' does not use the tile cache (_obstacleMode) - obstacle %# cannot be removed", _agentType._name.c_str(), obstacle );
             return;
         }
         _pTileCache->removeObstacle( obstacle );

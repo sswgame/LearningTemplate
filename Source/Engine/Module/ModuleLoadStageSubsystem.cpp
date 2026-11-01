@@ -23,7 +23,7 @@ namespace sw
         IModuleLoader* pHost = locateSubsystem<IModuleLoader>( _pScope );
         if ( pHost != nullptr && pHost->loadTypeProviders() == false )
         {
-            SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
+            SW_LOG_ERROR_ID( "ModuleLoadStage.HostCouldNotLoad", "The host could not load its type-providing modules - scenes are not read" );
             return SubsystemInitResult::Failed;
         }
         engine::getSubsystem<TypeRegistry>().markAllModuleTypesRegistered();

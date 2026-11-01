@@ -90,7 +90,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "RetargetProfile", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Retarget profile '%#': malformed XML (expected a <RetargetProfile> root)", sourceLabel );
+            SW_LOG_ERROR_ID( "RetargetProfile.RetargetProfileMalformedXML", "Retarget profile '%#': malformed XML (expected a <RetargetProfile> root)", sourceLabel );
             return false;
         }
         if ( parseRoot( root, sourceLabel ) )
@@ -105,7 +105,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Retarget profile '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "RetargetProfile.RetargetProfileCouldNot", "Retarget profile '%#' could not be read", path );
             clear();
             return false;
         }
@@ -190,7 +190,7 @@ namespace sw
             return false;
         if ( root.findAttribute( "height_ratio" ) != nullptr && heightRatio <= 0.0f )
         {
-            SW_LOG_ERROR( "Retarget profile '%#': 'height_ratio' must be positive", sourceLabel );
+            SW_LOG_ERROR_ID( "RetargetProfile.RetargetProfileHeightRatio", "Retarget profile '%#': 'height_ratio' must be positive", sourceLabel );
             return false;
         }
         _bMapSameNames       = bMapSame ? SW_TRUE : SW_FALSE;
@@ -217,7 +217,7 @@ namespace sw
             {
                 if ( existing._bone == poseBone._bone )
                 {
-                    SW_LOG_ERROR( "Retarget profile '%#': duplicate target pose bone '%#'", sourceLabel, poseBone._bone.c_str() );
+                    SW_LOG_ERROR_ID( "RetargetProfile.RetargetProfileDuplicateTarget", "Retarget profile '%#': duplicate target pose bone '%#'", sourceLabel, poseBone._bone.c_str() );
                     return false;
                 }
             }
@@ -248,7 +248,7 @@ namespace sw
             {
                 if ( existing._name == chain._name )
                 {
-                    SW_LOG_ERROR( "Retarget profile '%#': duplicate chain '%#'", sourceLabel, chain._name.c_str() );
+                    SW_LOG_ERROR_ID( "RetargetProfile.RetargetProfileDuplicateChain", "Retarget profile '%#': duplicate chain '%#'", sourceLabel, chain._name.c_str() );
                     return false;
                 }
             }

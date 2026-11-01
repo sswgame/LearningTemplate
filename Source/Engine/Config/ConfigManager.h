@@ -188,7 +188,7 @@ namespace sw
             {
                 _mapConfig[key] = std::move( newConfig );
             }
-            SW_LOG_INFO( "Config loaded successfully from %#", pSourceLabel );
+            SW_LOG_INFO_ID( "ConfigManager.ConfigLoadedSuccessfully", "Config loaded successfully from %#", pSourceLabel );
             return true;
         }
 
@@ -224,7 +224,7 @@ namespace sw
             }
             if ( result == ConfigReadResult::Invalid )
                 return nullptr;
-            SW_LOG_TRACE( "%# source=%#", pTypeName, source.isBaked() ? "baked" : source.getPath().c_str() );
+            SW_LOG_TRACE_ID( "ConfigManager.Source", "%# source=%#", pTypeName, source.isBaked() ? "baked" : source.getPath().c_str() );
             return getConfig<T>();
         }
 
@@ -260,7 +260,7 @@ namespace sw
                 return ConfigReadResult::Invalid; // 이유는 읽기가 오류로 남겼다
             if ( readConfigJSON( outConfig, jsonStr, resolvedPath.c_str() ) == false )
                 return ConfigReadResult::Invalid;
-            SW_LOG_INFO( "Config loaded successfully from %#", resolvedPath.c_str() );
+            SW_LOG_INFO_ID( "ConfigManager.ConfigLoadedSuccessfully", "Config loaded successfully from %#", resolvedPath.c_str() );
             return ConfigReadResult::Loaded;
         }
 
@@ -337,7 +337,7 @@ namespace sw
             string jsonStr;
             if ( FileUtil::readTextFile( resolvedPath, jsonStr ) == false )
             {
-                SW_LOG_WARNING( "Config reload: could not read %#", resolvedPath.c_str() );
+                SW_LOG_WARNING_ID( "ConfigManager.ConfigReloadCouldNot", "Config reload: could not read %#", resolvedPath.c_str() );
                 return false;
             }
             unique_ptr<T> reloaded = make_unique<T>();
@@ -347,7 +347,7 @@ namespace sw
                 return false;
             }
             *pExisting = std::move( *reloaded );
-            SW_LOG_INFO( "Config reloaded from %#", resolvedPath.c_str() );
+            SW_LOG_INFO_ID( "ConfigManager.ConfigReloaded", "Config reloaded from %#", resolvedPath.c_str() );
             manager._onConfigReloaded.broadcast( T::StaticType()->_fullyQualifiedName );
             return true;
         }

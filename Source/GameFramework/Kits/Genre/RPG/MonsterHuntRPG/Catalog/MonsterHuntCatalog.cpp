@@ -19,7 +19,7 @@ namespace sw
                 return false;
             if ( outItem._kind == MonsterHuntAlchemyKind::Oil && outItem._hits < 1 )
             {
-                SW_LOG_ERROR( "%#: oil '%#' needs hits=\"...\" of 1 or more", sourceName, outItem._id.c_str() );
+                SW_LOG_ERROR_ID( "MonsterHuntCatalog.OilNeedsHitsMore", "%#: oil '%#' needs hits=\"...\" of 1 or more", sourceName, outItem._id.c_str() );
                 return false;
             }
             return true;
@@ -63,7 +63,7 @@ namespace sw
             {
                 const bool bSign = weakness._kind == MonsterHuntWeaknessKind::Sign;
                 if ( bSign ? _signCatalog.find( weakness._id ) == nullptr : _alchemyCatalog.find( weakness._id ) == nullptr )
-                    SW_LOG_ERROR( "%#: monster '%#' names an unknown weakness '%#'", sourceName, monster._id.c_str(), weakness._id.c_str() );
+                    SW_LOG_ERROR_ID( "MonsterHuntCatalog.MonsterNamesUnknownWeakness", "%#: monster '%#' names an unknown weakness '%#'", sourceName, monster._id.c_str(), weakness._id.c_str() );
             }
         }
         return loadedCount;
@@ -108,7 +108,7 @@ namespace sw
             return GameDataXML::readInto( node, sourceName, _mutagenCatalog );
         if ( XMLReadUtil::isElement( name, "Contract" ) )
             return loadContract( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "MonsterHuntCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -129,8 +129,8 @@ namespace sw
             }
             if ( weakness._knowledge > monster._maxKnowledge )
             {
-                SW_LOG_ERROR( "%#: monster '%#' weakness '%#' needs knowledge %# above maxKnowledge %#", sourceName, monster._id.c_str(),
-                              weakness._id.c_str(), weakness._knowledge, monster._maxKnowledge );
+                SW_LOG_ERROR_ID( "MonsterHuntCatalog.MonsterWeaknessNeedsKnowledge", "%#: monster '%#' weakness '%#' needs knowledge %# above maxKnowledge %#", sourceName, monster._id.c_str(),
+                                 weakness._id.c_str(), weakness._knowledge, monster._maxKnowledge );
                 bValid = false;
                 continue;
             }

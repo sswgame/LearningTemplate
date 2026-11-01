@@ -57,7 +57,7 @@ namespace sw
         shutdown();
         if ( renderThread.getDevice() == nullptr || renderThread.getFrameRenderer() == nullptr )
         {
-            SW_LOG_ERROR( "The render thread has no device or renderer - nothing can be captured" );
+            SW_LOG_ERROR_ID( "SceneCapture.RenderThreadNoDevice", "The render thread has no device or renderer - nothing can be captured" );
             return false;
         }
         _pRenderThread = &renderThread;
@@ -95,8 +95,8 @@ namespace sw
         {
             if ( MonotonicClock::nowMicroseconds() > deadlineMicro )
             {
-                SW_LOG_ERROR( "The capture never drew a complete frame within %# s (scene work %#, or batches waiting for their material PSO) - nothing was read ('%#')",
-                              SceneCaptureInternal::kReadyWaitSeconds, CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ), _pipelinePath.c_str() );
+                SW_LOG_ERROR_ID( "SceneCapture.CaptureNeverDrewComplete", "The capture never drew a complete frame within %# s (scene work %#, or batches waiting for their material PSO) - nothing was read ('%#')",
+                                 SceneCaptureInternal::kReadyWaitSeconds, CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ), _pipelinePath.c_str() );
                 _job._bSucceeded = false;
                 break;
             }
@@ -133,7 +133,7 @@ namespace sw
         device.waitIdle( RHIWaitIdleReason::Capture );
         if ( pRenderer == nullptr )
         {
-            SW_LOG_ERROR( "The capture could not draw the frame ('%#')", _pipelinePath.c_str() );
+            SW_LOG_ERROR_ID( "SceneCapture.CaptureCouldNotDraw", "The capture could not draw the frame ('%#')", _pipelinePath.c_str() );
             _job._bSucceeded = false;
             return;
         }
@@ -152,7 +152,7 @@ namespace sw
             _job._bSucceeded = pRenderer->getCapture().readbackTransient( request._attachmentName, result._bytes, result._layout, result._format );
         }
         if ( _job._bSucceeded == false )
-            SW_LOG_ERROR( "The capture could not read back '%#'", request._attachmentName.empty() ? "output" : request._attachmentName.c_str() );
+            SW_LOG_ERROR_ID( "SceneCapture.CaptureCouldNotRead", "The capture could not read back '%#'", request._attachmentName.empty() ? "output" : request._attachmentName.c_str() );
     }
 
     bool SceneCapture::ensureOutputTarget( IRHIDevice& device, uint32 width, uint32 height )
@@ -165,7 +165,7 @@ namespace sw
         _outputTarget = make_unique<Texture2D>();
         if ( _outputTarget->createRenderTarget( &device, "SceneCaptureOutput", width, height, constant::render::kOffscreenColorFormat ) )
             return true;
-        SW_LOG_ERROR( "The capture output target (%#x%#) could not be created", width, height );
+        SW_LOG_ERROR_ID( "SceneCapture.CaptureOutputTargetX", "The capture output target (%#x%#) could not be created", width, height );
         _outputTarget.reset();
         return false;
     }

@@ -31,7 +31,7 @@ namespace sw
                         def._listScale.push_back( scale );
                     else
                     {
-                        SW_LOG_ERROR( "%#: <%# scales> has '%#' - needs numbers of 0 or more", sourceName, node.getName(), token );
+                        SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.ScalesNeedsNumbersMore", "%#: <%# scales> has '%#' - needs numbers of 0 or more", sourceName, node.getName(), token );
                         bValid = false;
                     }
                 } );
@@ -68,10 +68,10 @@ namespace sw
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
             if ( loadElement( node, name, sourceName ) == false )
-                SW_LOG_ERROR( "%#: <%#> was not loaded (see above)", sourceName, name );
+                SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove", "%#: <%#> was not loaded (see above)", sourceName, name );
         }
         if ( _catalogKiller.isEmpty() )
-            SW_LOG_ERROR( "%#: no <Killer> - the rules need at least one", sourceName );
+            SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.NoKillerRulesNeed", "%#: no <Killer> - the rules need at least one", sourceName );
         return static_cast<uint32>( _catalogKiller.getAll().size() );
     }
 
@@ -118,7 +118,7 @@ namespace sw
             _listScoreRule.push_back( rule );
             return true;
         }
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 

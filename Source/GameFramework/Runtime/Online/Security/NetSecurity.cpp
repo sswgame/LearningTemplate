@@ -50,7 +50,7 @@ namespace sw
                     outError = "cannot create the development certificate in " + folder;
                     return false;
                 }
-                SW_LOG_INFO( "Created a development TLS certificate: %#", outCertificateFile.c_str() );
+                SW_LOG_INFO_ID( "NetSecurity.CreatedDevelopmentTLSCertificate", "Created a development TLS certificate: %#", outCertificateFile.c_str() );
                 return true;
             }
 

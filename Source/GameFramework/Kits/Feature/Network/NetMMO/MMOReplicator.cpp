@@ -84,26 +84,26 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "MMOReplicator: refused to start - settings '%#'", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorRefusedStartSettings", "MMOReplicator: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
         // 기본값 격자(셀 크기 0)는 `StreamingCellGrid::tryCreate` 를 지나지 않은 것이다 — 칸 크기를 대신 정하지 않는다.
         if ( ( cellGrid.getCellSize() > 0.0f ) == false )
         {
-            SW_LOG_ERROR( "MMOReplicator: refused to start - world cell grid was not created (cell size %#)", cellGrid.getCellSize() );
+            SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorRefusedStartWorld", "MMOReplicator: refused to start - world cell grid was not created (cell size %#)", cellGrid.getCellSize() );
             return false;
         }
         if ( settings._leaveRadius > cellGrid.getLoadingRadius() )
         {
-            SW_LOG_ERROR( "MMOReplicator: refused to start - leave radius %# is larger than the world loading radius %# (visible entities could sit in unloaded cells)",
-                          settings._leaveRadius, cellGrid.getLoadingRadius() );
+            SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorRefusedStartLeave", "MMOReplicator: refused to start - leave radius %# is larger than the world loading radius %# (visible entities could sit in unloaded cells)",
+                             settings._leaveRadius, cellGrid.getLoadingRadius() );
             return false;
         }
         // 반경 관계(나가는 >= 들어오는)는 관심 영역 격자 한 곳이 거절한다 — 클라이언트-서버 키트의 관심 영역도 같은 규칙이다. 칸은 월드 격자의 셀 크기다.
         string interestError;
         if ( _interest.initialize( cellGrid.getCellSize(), settings._enterRadius, settings._leaveRadius, interestError ) == false )
         {
-            SW_LOG_ERROR( "MMOReplicator: refused to start - %# (enter %#, leave %#)", interestError.c_str(), settings._enterRadius, settings._leaveRadius );
+            SW_LOG_ERROR_ID( "MMOReplicator.MMOReplicatorRefusedStartEnter", "MMOReplicator: refused to start - %# (enter %#, leave %#)", interestError.c_str(), settings._enterRadius, settings._leaveRadius );
             return false;
         }
         _pHost    = pHost;
@@ -121,8 +121,8 @@ namespace sw
         if ( static_cast<int32>( entity._listState.size() ) > NetMMOMessage::kMaxStateBytes )
         {
             if ( _oversizedEntityCount == 0 )
-                SW_LOG_WARNING( "MMOReplicator: entity %# has %# state bytes, more than the limit %# - ignored (further ones are only counted)", entity._entityID,
-                                static_cast<int32>( entity._listState.size() ), NetMMOMessage::kMaxStateBytes );
+                SW_LOG_WARNING_ID( "MMOReplicator.MMOReplicatorEntityStateBytes", "MMOReplicator: entity %# has %# state bytes, more than the limit %# - ignored (further ones are only counted)", entity._entityID,
+                                   static_cast<int32>( entity._listState.size() ), NetMMOMessage::kMaxStateBytes );
             ++_oversizedEntityCount;
             return;
         }

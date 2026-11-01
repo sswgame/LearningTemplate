@@ -27,7 +27,7 @@ namespace sw
         SequencePlayerComponent* pPlayer = pOwner != nullptr ? pOwner->getComponent<SequencePlayerComponent>() : nullptr;
         if ( pPlayer == nullptr )
         {
-            SW_LOG_WARNING( "Sequence appearance on '%#' has no SequencePlayerComponent next to it - it hears nothing", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+            SW_LOG_WARNING_ID( "SequenceAppearance.SequenceAppearanceNoSequencePlayerComponent", "Sequence appearance on '%#' has no SequencePlayerComponent next to it - it hears nothing", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
             return;
         }
         _eventSubscription = pPlayer->registerSequenceEvent(
@@ -56,8 +56,8 @@ namespace sw
         CharacterAppearanceComponent* pAppearance = pTarget != nullptr ? pTarget->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pAppearance == nullptr )
         {
-            SW_LOG_ERROR( "Sequence item '%#' wants preset '%#' on '%#' but the object %#", item._name.c_str(), item._preset.c_str(), item._targetObject.c_str(),
-                          pTarget == nullptr ? "is not in the scene" : "has no CharacterAppearanceComponent" );
+            SW_LOG_ERROR_ID( "SequenceAppearance.SequenceItemWantsPreset", "Sequence item '%#' wants preset '%#' on '%#' but the object %#", item._name.c_str(), item._preset.c_str(), item._targetObject.c_str(),
+                             pTarget == nullptr ? "is not in the scene" : "has no CharacterAppearanceComponent" );
             return false;
         }
         pAppearance->setPreset( hashed_string{ item._preset.c_str() }, static_cast<uint32>( pAppearance->getSeed() ) );

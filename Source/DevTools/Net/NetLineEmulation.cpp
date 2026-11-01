@@ -169,7 +169,7 @@ namespace sw
             conditions = NetEmulationConditions{};
             if ( presetTable.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() } ) &&
                  presetTable.tryGetConditions( gv_netEmulationPreset, conditions ) == false )
-                SW_LOG_ERROR( "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.c_str(), presetTable.makePresetNames().c_str() );
+                SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationPresetNotPreset", "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.c_str(), presetTable.makePresetNames().c_str() );
         }
         unique_ptr<NetEmulationTransport> emulation = make_unique<NetEmulationTransport>( &inner );
         emulation->setDefaultConditions( conditions );

@@ -76,7 +76,7 @@ namespace sw
         bool bValid = XMLReadUtil::readOptionalNumber( root, "stepTime", _sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
         if ( _stepTime <= 0.0f )
         {
-            SW_LOG_ERROR( "%#: stepTime must be positive", _sourceName );
+            SW_LOG_ERROR_ID( "GimmickCircuitDef.StepTimeMustPositive", "%#: stepTime must be positive", _sourceName );
             bValid = false;
         }
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
@@ -87,7 +87,7 @@ namespace sw
                 const utf8* pKind = child.findAttribute( "kind" );
                 if ( pID == nullptr || pKind == nullptr )
                 {
-                    SW_LOG_WARNING( "%#: <Node> needs both id and kind", _sourceName );
+                    SW_LOG_WARNING_ID( "GimmickCircuitDef.NodeNeedsBothId", "%#: <Node> needs both id and kind", _sourceName );
                     bValid = false;
                     continue;
                 }
@@ -110,13 +110,13 @@ namespace sw
                 }
                 if ( addWire( child.getAttributeText( "from" ), child.getAttributeText( "to" ), bInvert ) == false )
                 {
-                    SW_LOG_WARNING( "%#: <Wire from=\"%#\" to=\"%#\"> needs node.port on both ends", _sourceName, child.getAttributeText( "from" ),
-                                    child.getAttributeText( "to" ) );
+                    SW_LOG_WARNING_ID( "GimmickCircuitDef.WireNeedsNodePort", "%#: <Wire from=\"%#\" to=\"%#\"> needs node.port on both ends", _sourceName, child.getAttributeText( "from" ),
+                                       child.getAttributeText( "to" ) );
                     bValid = false;
                 }
                 continue;
             }
-            SW_LOG_WARNING( "%#: unknown element <%#> in <GimmickCircuit>", _sourceName, child.getName() );
+            SW_LOG_WARNING_ID( "GimmickCircuitDef.UnknownElementGimmickCircuit", "%#: unknown element <%#> in <GimmickCircuit>", _sourceName, child.getName() );
             bValid = false;
         }
         return bValid;

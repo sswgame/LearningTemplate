@@ -21,7 +21,7 @@ namespace sw
         *this                       = FontCatalogDesc{};
         if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            SW_LOG_ERROR( "[Text] Font catalog could not be read or holds unknown keys: %#", assetPath );
+            SW_LOG_ERROR_ID( "FontCatalog.FontCatalogCouldNot", "[Text] Font catalog could not be read or holds unknown keys: %#", assetPath );
             return false;
         }
         return validate();
@@ -32,7 +32,7 @@ namespace sw
         *this = FontCatalogDesc{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "[Text] Font catalog text could not be read or holds unknown keys" );
+            SW_LOG_ERROR_ID( "FontCatalog.FontCatalogTextCould", "[Text] Font catalog text could not be read or holds unknown keys" );
             return false;
         }
         return validate();
@@ -54,7 +54,7 @@ namespace sw
         {
             if ( listName[index].empty() )
             {
-                SW_LOG_ERROR( "[Text] Font catalog has a family without a name" );
+                SW_LOG_ERROR_ID( "FontCatalog.FontCatalogFamilyWithout", "[Text] Font catalog has a family without a name" );
                 bValid = false;
                 continue;
             }
@@ -62,7 +62,7 @@ namespace sw
             {
                 if ( StringUtil::equals( listName[index], listName[other], true ) )
                 {
-                    SW_LOG_ERROR( "[Text] Font catalog names family '%#' twice", listName[index].c_str() );
+                    SW_LOG_ERROR_ID( "FontCatalog.FontCatalogNamesFamily", "[Text] Font catalog names family '%#' twice", listName[index].c_str() );
                     bValid = false;
                 }
             }
@@ -71,21 +71,21 @@ namespace sw
         {
             if ( family._listFace.empty() )
             {
-                SW_LOG_ERROR( "[Text] Font family '%#' has no faces", family._name.c_str() );
+                SW_LOG_ERROR_ID( "FontCatalog.FontFamilyNoFaces", "[Text] Font family '%#' has no faces", family._name.c_str() );
                 bValid = false;
             }
             for ( const FontFaceDesc& face : family._listFace )
             {
                 if ( face._path.empty() )
                 {
-                    SW_LOG_ERROR( "[Text] Font family '%#' has a face without a path", family._name.c_str() );
+                    SW_LOG_ERROR_ID( "FontCatalog.FontFamilyFaceWithout", "[Text] Font family '%#' has a face without a path", family._name.c_str() );
                     bValid = false;
                 }
             }
         }
         if ( findFamily( _defaultFamily ) == nullptr )
         {
-            SW_LOG_ERROR( "[Text] Font catalog default family '%#' is not a shipped family", _defaultFamily.c_str() );
+            SW_LOG_ERROR_ID( "FontCatalog.FontCatalogDefaultFamily", "[Text] Font catalog default family '%#' is not a shipped family", _defaultFamily.c_str() );
             bValid = false;
         }
         return bValid;

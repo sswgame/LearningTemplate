@@ -33,7 +33,7 @@ namespace sw::editor
                 case EditorLocalizationTask::ExportPo:
                     return LocalizationTools::runExportCommand( projectArgument );
             }
-            SW_LOG_ERROR( "Unknown localization task %#", static_cast<uint32>( task ) );
+            SW_LOG_ERROR_ID( "LocalizationToolEntry.UnknownLocalizationTask", "Unknown localization task %#", static_cast<uint32>( task ) );
             return false;
         }
     } // namespace

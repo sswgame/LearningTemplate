@@ -37,7 +37,7 @@ namespace sw
                 {
                     if ( bValid == false || count < 0 )
                     {
-                        SW_LOG_ERROR( "%#: site '%#' has a bad garrison count '%#'", sourceName, siteID.c_str(), token );
+                        SW_LOG_ERROR_ID( "ConquestCatalog.SiteBadGarrisonCount", "%#: site '%#' has a bad garrison count '%#'", sourceName, siteID.c_str(), token );
                         bAllValid = false;
                         return;
                     }
@@ -85,7 +85,7 @@ namespace sw
             for ( const hashed_string& unitID : building._listTrainable )
             {
                 if ( _unitCatalog.find( unitID ) == nullptr )
-                    SW_LOG_ERROR( "%#: building '%#' trains an unknown unit '%#'", sourceName, building._id.c_str(), unitID.c_str() );
+                    SW_LOG_ERROR_ID( "ConquestCatalog.BuildingTrainsUnknownUnit", "%#: building '%#' trains an unknown unit '%#'", sourceName, building._id.c_str(), unitID.c_str() );
             }
         }
         for ( const ConquestSiteDef& site : _siteCatalog.getAll() )
@@ -93,11 +93,11 @@ namespace sw
             for ( const ConquestGarrisonDef& garrison : site._listGarrison )
             {
                 if ( _unitCatalog.find( garrison._unitID ) == nullptr )
-                    SW_LOG_ERROR( "%#: site '%#' garrisons an unknown unit '%#'", sourceName, site._id.c_str(), garrison._unitID.c_str() );
+                    SW_LOG_ERROR_ID( "ConquestCatalog.SiteGarrisonsUnknownUnit", "%#: site '%#' garrisons an unknown unit '%#'", sourceName, site._id.c_str(), garrison._unitID.c_str() );
             }
         }
         if ( _rules._waveUnit.empty() == false && _unitCatalog.find( _rules._waveUnit ) == nullptr )
-            SW_LOG_ERROR( "%#: waveUnit '%#' is not a unit - no counter-attack waves", sourceName, _rules._waveUnit.c_str() );
+            SW_LOG_ERROR_ID( "ConquestCatalog.WaveUnitNotUnitNo", "%#: waveUnit '%#' is not a unit - no counter-attack waves", sourceName, _rules._waveUnit.c_str() );
         return loadedCount;
     }
 
@@ -124,7 +124,7 @@ namespace sw
             return loadBuilding( node, sourceName );
         if ( name == "Site" )
             return loadSite( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "ConquestCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 

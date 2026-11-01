@@ -174,13 +174,13 @@ namespace sw
         const AbilityCatalog* pCatalog = findCatalog();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_WARNING( "grantAbilitySet '%#': no AbilityCatalog (setCatalog or bind it as a game service)", setID.c_str() );
+            SW_LOG_WARNING_ID( "AbilityComponent.GrantAbilitySetNoAbilityCatalogSetCatalog", "grantAbilitySet '%#': no AbilityCatalog (setCatalog or bind it as a game service)", setID.c_str() );
             return false;
         }
         const AbilitySetDef* pSet = pCatalog->findAbilitySet( setID );
         if ( pSet == nullptr )
         {
-            SW_LOG_WARNING( "grantAbilitySet: no ability set '%#' in the catalog", setID.c_str() );
+            SW_LOG_WARNING_ID( "AbilityComponent.GrantAbilitySetNoAbilitySet", "grantAbilitySet: no ability set '%#' in the catalog", setID.c_str() );
             return false;
         }
 
@@ -190,7 +190,7 @@ namespace sw
             unique_ptr<AttributeSet> pAttributeSet = pCatalog->createAttributeSet( setEntry._className );
             if ( pAttributeSet == nullptr )
             {
-                SW_LOG_WARNING( "grantAbilitySet '%#': attribute set class '%#' is not registered", setID.c_str(), setEntry._className.c_str() );
+                SW_LOG_WARNING_ID( "AbilityComponent.GrantAbilitySetAttributeSetClass", "grantAbilitySet '%#': attribute set class '%#' is not registered", setID.c_str(), setEntry._className.c_str() );
                 continue;
             }
             for ( const AbilitySetAttributeEntry& attributeEntry : setEntry._listAttribute )
@@ -306,7 +306,7 @@ namespace sw
                 }
             }
             if ( bChanged )
-                SW_LOG_ERROR( "refreshOngoingTagRequirements: effects keep inhibiting each other through their ongoing required tags - stopped after %# passes", passCount );
+                SW_LOG_ERROR_ID( "AbilityComponent.RefreshOngoingTagRequirementsEffectsKeepInhibiting", "refreshOngoingTagRequirements: effects keep inhibiting each other through their ongoing required tags - stopped after %# passes", passCount );
         }
         _bRefreshingOngoingTags = SW_FALSE;
     }
@@ -526,7 +526,7 @@ namespace sw
         const AbilityCatalog* pCatalog = findCatalog();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_WARNING( "giveAbilityByID '%#': no AbilityCatalog", abilityID.c_str() );
+            SW_LOG_WARNING_ID( "AbilityComponent.GiveAbilityByIDNoAbilityCatalog", "giveAbilityByID '%#': no AbilityCatalog", abilityID.c_str() );
             return AbilitySpecHandle{};
         }
         return giveAbility( pCatalog->createAbility( abilityID ), level, inputID );
@@ -940,7 +940,7 @@ namespace sw
         for ( const hashed_string& name : pAttributeSet->getAttributeNames() )
         {
             if ( findAttributeSetFor( name ) != nullptr )
-                SW_LOG_WARNING( "addAttributeSet: attribute '%#' already exists in another set - the earlier set wins", name.c_str() );
+                SW_LOG_WARNING_ID( "AbilityComponent.AddAttributeSetAttributeAlreadyExists", "addAttributeSet: attribute '%#' already exists in another set - the earlier set wins", name.c_str() );
         }
 
         AttributeSet* pRaw = pAttributeSet.get();
@@ -1147,13 +1147,13 @@ namespace sw
         const AbilityCatalog* pCatalog = findCatalog();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_WARNING( "makeOutgoingSpecByID '%#': no AbilityCatalog", effectID.c_str() );
+            SW_LOG_WARNING_ID( "AbilityComponent.MakeOutgoingSpecByIDNoAbilityCatalog", "makeOutgoingSpecByID '%#': no AbilityCatalog", effectID.c_str() );
             return AbilityEffectSpec{};
         }
         shared_ptr<const AbilityEffectDef> pDef = pCatalog->findEffect( effectID );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "makeOutgoingSpecByID: no effect '%#' in the catalog", effectID.c_str() );
+            SW_LOG_WARNING_ID( "AbilityComponent.MakeOutgoingSpecByIDNoEffectCatalog", "makeOutgoingSpecByID: no effect '%#' in the catalog", effectID.c_str() );
             return AbilityEffectSpec{};
         }
         return makeOutgoingSpec( pDef, level );
@@ -1372,7 +1372,7 @@ namespace sw
                 const auto mapIter = spec._mapSetByCaller.find( modifier._setByCallerName );
                 if ( mapIter == spec._mapSetByCaller.end() )
                 {
-                    SW_LOG_WARNING( "Effect '%#': SetByCaller '%#' was not set - using 0", spec._pDef->_id.c_str(), modifier._setByCallerName.c_str() );
+                    SW_LOG_WARNING_ID( "AbilityComponent.EffectSetByCallerNotSet", "Effect '%#': SetByCaller '%#' was not set - using 0", spec._pDef->_id.c_str(), modifier._setByCallerName.c_str() );
                     outMagnitude = 0.0f;
                     return true;
                 }
@@ -1432,7 +1432,7 @@ namespace sw
         AttributeData* pData         = findAttributeDataMutable( modifier._attribute, &pAttributeSet );
         if ( pData == nullptr )
         {
-            SW_LOG_WARNING( "Effect '%#' modifies '%#' which this object does not have - skipped", spec._pDef->_id.c_str(), modifier._attribute.c_str() );
+            SW_LOG_WARNING_ID( "AbilityComponent.EffectModifiesWhichObject", "Effect '%#' modifies '%#' which this object does not have - skipped", spec._pDef->_id.c_str(), modifier._attribute.c_str() );
             return;
         }
 
@@ -1703,7 +1703,7 @@ namespace sw
                 if ( pScene != nullptr )
                     pScene->setWorldPosition( position );
                 else
-                    SW_LOG_WARNING( "Gameplay cue '%#': prefab '%#' could not be spawned", cueDef._cueTag.getString(), cueDef._prefab.c_str() );
+                    SW_LOG_WARNING_ID( "AbilityComponent.GameplayCuePrefabCould", "Gameplay cue '%#': prefab '%#' could not be spawned", cueDef._cueTag.getString(), cueDef._prefab.c_str() );
             }
             // 재생 id 는 쓰지 않는다(원샷). 오디오 서비스가 없는 구성(헤드리스)에서는 0 이다.
             if ( cueDef._soundEvent.empty() == false && cueDef._bPositional == SW_TRUE )

@@ -127,14 +127,14 @@ namespace sw
         {
             if ( _listChannel[channelIndex].empty() || findChannelIndex( _listChannel[channelIndex] ) != static_cast<int32>( channelIndex ) )
             {
-                SW_LOG_ERROR( "Live Link Face layout '%#': channel %# needs a unique, non-empty name", sourceLabel, channelIndex );
+                SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceLayout", "Live Link Face layout '%#': channel %# needs a unique, non-empty name", sourceLabel, channelIndex );
                 *this = LiveLinkFaceLayout{};
                 return false;
             }
         }
         if ( _listChannel.empty() )
         {
-            SW_LOG_ERROR( "Live Link Face layout '%#' has no channels", sourceLabel );
+            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceLayout2", "Live Link Face layout '%#' has no channels", sourceLabel );
             return false;
         }
         return true;
@@ -146,7 +146,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Live Link Face layout '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceLayout3", "Live Link Face layout '%#' could not be read", path );
             *this = LiveLinkFaceLayout{};
             return false;
         }
@@ -176,7 +176,7 @@ namespace sw
         // 배치 표는 데이터가 고른다 — 적지 않았으면 기본 표로 물러서지 않고 오류다.
         if ( _layoutPath.empty() )
         {
-            SW_LOG_ERROR( "Live Link Face mapping '%#' needs _layoutPath (the packet layout it reads)", sourceLabel );
+            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceMapping", "Live Link Face mapping '%#' needs _layoutPath (the packet layout it reads)", sourceLabel );
             *this = LiveLinkFaceMapping{};
             return false;
         }
@@ -192,7 +192,7 @@ namespace sw
             const bool bBadExpression = expression._expression.empty() || expression._listChannel.empty() || VectorUtil::contains( listSeen, expression._expression );
             if ( bBadExpression )
             {
-                SW_LOG_ERROR( "Live Link Face mapping '%#': expression '%#' needs a unique name and at least one channel", sourceLabel, expression._expression.c_str() );
+                SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceMapping2", "Live Link Face mapping '%#': expression '%#' needs a unique name and at least one channel", sourceLabel, expression._expression.c_str() );
                 *this = LiveLinkFaceMapping{};
                 return false;
             }
@@ -201,8 +201,8 @@ namespace sw
             {
                 if ( layout.findChannelIndex( channel._channel ) < 0 )
                 {
-                    SW_LOG_ERROR( "Live Link Face mapping '%#': expression '%#' names channel '%#' that the packet layout does not have", sourceLabel,
-                                  expression._expression.c_str(), channel._channel.c_str() );
+                    SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceMapping3", "Live Link Face mapping '%#': expression '%#' names channel '%#' that the packet layout does not have", sourceLabel,
+                                     expression._expression.c_str(), channel._channel.c_str() );
                     *this = LiveLinkFaceMapping{};
                     return false;
                 }
@@ -217,7 +217,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Live Link Face mapping '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceMapping4", "Live Link Face mapping '%#' could not be read", path );
             *this     = LiveLinkFaceMapping{};
             outLayout = LiveLinkFaceLayout{};
             return false;

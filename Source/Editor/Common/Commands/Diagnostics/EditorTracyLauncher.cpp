@@ -75,8 +75,8 @@ namespace sw::editor
         string viewerPath;
         if ( findViewerPath( gv_tracyViewerPath, ProcessRoots::get()._project, viewerPath ) == false )
         {
-            SW_LOG_WARNING( "Tracy viewer not found at gv_tracyViewerPath '%#' — download the 0.14.1 Windows release and put %# there (or point gv_tracyViewerPath at it)",
-                            string( gv_tracyViewerPath ).c_str(), getViewerFileName() );
+            SW_LOG_WARNING_ID( "EditorTracy.TracyViewerNotFound", "Tracy viewer not found at gv_tracyViewerPath '%#' — download the 0.14.1 Windows release and put %# there (or point gv_tracyViewerPath at it)",
+                               string( gv_tracyViewerPath ).c_str(), getViewerFileName() );
             return EditorTracyLaunchResult::ViewerNotFound;
         }
 
@@ -87,10 +87,10 @@ namespace sw::editor
         const ProcessCommand command = makeViewerCommand( viewerPath, ProfilerBackend::getTracyPort() );
         if ( Process::launchDetached( command ) == false )
         {
-            SW_LOG_WARNING( "Failed to launch the Tracy viewer: %#", command.toCommandLine() );
+            SW_LOG_WARNING_ID( "EditorTracy.FailedLaunchTracyViewer", "Failed to launch the Tracy viewer: %#", command.toCommandLine() );
             return EditorTracyLaunchResult::ViewerLaunchFailed;
         }
-        SW_LOG_INFO( "Tracy viewer launched: %#", command.toCommandLine() );
+        SW_LOG_INFO_ID( "EditorTracy.TracyViewerLaunched", "Tracy viewer launched: %#", command.toCommandLine() );
         return EditorTracyLaunchResult::Launched;
     }
 

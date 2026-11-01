@@ -231,7 +231,7 @@ namespace sw
         if ( view._depthHistory != 0 )
             view._depthHistoryUAV = _pDevice->getResourceFactory()->registerBindlessTextureUAV( view._depthHistory );
         if ( view._depthHistoryUAV == kInvalidDescriptorIndex )
-            SW_LOG_ERROR( "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
+            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateDepthHistory", "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
     void FrameViewResources::ensureTAAHistory( FrameViewTarget& view )
@@ -264,7 +264,7 @@ namespace sw
         }
         if ( taaTarget._texture == 0 )
         {
-            SW_LOG_ERROR( "Pipeline '%#': the TAA pass has no declared output attachment - no TAA history", _pipeline.getDesc()._name.c_str() );
+            SW_LOG_ERROR_ID( "FrameViewResources.PipelineTAAPassNo", "Pipeline '%#': the TAA pass has no declared output attachment - no TAA history", _pipeline.getDesc()._name.c_str() );
             return;
         }
 
@@ -295,7 +295,7 @@ namespace sw
                                                                       nullptr );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR( "Failed to create the occlusion tiles (%#x%# floats) - this view culls without occlusion", view._occlusionColumns, view._occlusionRows );
+            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateOcclusionTiles", "Failed to create the occlusion tiles (%#x%# floats) - this view culls without occlusion", view._occlusionColumns, view._occlusionRows );
             view._occlusionTiles.release( _pDevice );
         }
     }

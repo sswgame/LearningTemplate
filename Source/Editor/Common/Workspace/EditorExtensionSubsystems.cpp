@@ -49,12 +49,12 @@ namespace sw::editor
                 continue;
             if ( pSubsystem->initializeSubsystem() == SubsystemInitResult::Failed )
             {
-                SW_LOG_ERROR( "Extension editor subsystem '%#' failed to initialize", registration._pID );
+                SW_LOG_ERROR_ID( "EditorExtensionSubsystems.ExtensionEditorSubsystemFailed", "Extension editor subsystem '%#' failed to initialize", registration._pID );
                 continue;
             }
             if ( registration._pBind( _scope, *pSubsystem ) == false )
             {
-                SW_LOG_ERROR( "Extension editor subsystem '%#' is already bound in the editor scope - two modules contribute one type", registration._pID );
+                SW_LOG_ERROR_ID( "EditorExtensionSubsystems.ExtensionEditorSubsystemAlready", "Extension editor subsystem '%#' is already bound in the editor scope - two modules contribute one type", registration._pID );
                 pSubsystem->shutdownSubsystem();
                 continue;
             }

@@ -48,7 +48,7 @@ namespace sw
         PhysicsSettings settings;
         if ( settings.loadFromAsset( assetID ) == false )
         {
-            SW_LOG_ERROR( "Physics settings '%#' could not be loaded", settingsPath );
+            SW_LOG_ERROR_ID( "PhysicsSystem.PhysicsSettingsCouldNot", "Physics settings '%#' could not be loaded", settingsPath );
             return false;
         }
         _settings = settings;
@@ -56,7 +56,7 @@ namespace sw
         if ( PhysicsBackend::initialize3D() == false )
             return false;
         _bInitialized = true;
-        SW_LOG_INFO( "Physics ready: %# layers, %# materials, %# sub-steps per fixed step", _settings._listLayer.size(), _settings._listMaterial.size(), _settings._subStepCount );
+        SW_LOG_INFO_ID( "PhysicsSystem.PhysicsReadyLayersMaterials", "Physics ready: %# layers, %# materials, %# sub-steps per fixed step", _settings._listLayer.size(), _settings._listMaterial.size(), _settings._subStepCount );
         return true;
     }
 
@@ -77,7 +77,7 @@ namespace sw
     {
         if ( _bInitialized == false )
         {
-            SW_LOG_ERROR( "createScene3D: the physics system is not initialized" );
+            SW_LOG_ERROR_ID( "PhysicsSystem.CreateScene3DPhysicsSystemNot", "createScene3D: the physics system is not initialized" );
             return nullptr;
         }
         if ( settings.validate() == false )
@@ -94,7 +94,7 @@ namespace sw
     {
         if ( _bInitialized == false )
         {
-            SW_LOG_ERROR( "createScene2D: the physics system is not initialized" );
+            SW_LOG_ERROR_ID( "PhysicsSystem.CreateScene2DPhysicsSystemNot", "createScene2D: the physics system is not initialized" );
             return nullptr;
         }
         if ( settings.validate() == false )

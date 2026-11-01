@@ -40,7 +40,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "VertexAnimationCookList", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Vertex animation list '%#': malformed XML (expected a <VertexAnimationCookList> root)", sourceLabel );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListMalformed", "Vertex animation list '%#': malformed XML (expected a <VertexAnimationCookList> root)", sourceLabel );
             return false;
         }
         if ( parseRoot( root, sourceLabel ) )
@@ -55,7 +55,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation list '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListCould", "Vertex animation list '%#' could not be read", path );
             *this = VertexAnimationCookList{};
             return false;
         }
@@ -71,7 +71,7 @@ namespace sw
                                            root.findAttribute( "clip_folder" ) == nullptr || clips.isValid() == false || clips.findChild().isValid() == false;
         if ( bInvalidAnimationList )
         {
-            SW_LOG_ERROR( "Vertex animation list '%#' needs mesh, skeleton, clip_folder and a non-empty <clips> list", sourceLabel );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListNeeds", "Vertex animation list '%#' needs mesh, skeleton, clip_folder and a non-empty <clips> list", sourceLabel );
             return false;
         }
         _meshPath     = string{ root.getAttributeText( "mesh" ) };
@@ -81,7 +81,7 @@ namespace sw
         {
             if ( string_view{ clip.getName() } != "item" )
             {
-                SW_LOG_ERROR( "Vertex animation list '%#': <clips> must hold <item> names", sourceLabel );
+                SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListClips", "Vertex animation list '%#': <clips> must hold <item> names", sourceLabel );
                 return false;
             }
             _listClip.push_back( hashed_string( string_view{ clip.getText() } ) );
@@ -89,14 +89,14 @@ namespace sw
         // 가리키는 파일이 모두 있어야 한다 — 이름이 틀린 목록이 쿠킹 때 조용히 빠지지 않게.
         if ( AssetIO::hasAsset( AssetID{ _meshPath } ) == false || AssetIO::hasAsset( AssetID{ _skeletonPath } ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation list '%#': mesh '%#' or skeleton '%#' does not exist", sourceLabel, _meshPath.c_str(), _skeletonPath.c_str() );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListMesh", "Vertex animation list '%#': mesh '%#' or skeleton '%#' does not exist", sourceLabel, _meshPath.c_str(), _skeletonPath.c_str() );
             return false;
         }
         for ( const hashed_string& clipName : _listClip )
         {
             if ( AssetIO::hasAsset( AssetID{ makeClipPath( clipName ) } ) == false )
             {
-                SW_LOG_ERROR( "Vertex animation list '%#': clip '%#' does not exist in '%#'", sourceLabel, clipName.c_str(), _clipFolder.c_str() );
+                SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListClip", "Vertex animation list '%#': clip '%#' does not exist in '%#'", sourceLabel, clipName.c_str(), _clipFolder.c_str() );
                 return false;
             }
         }
@@ -115,12 +115,12 @@ namespace sw
         Skeleton      skeleton;
         if ( MeshAssetFormat::loadFromAsset( AssetID{ list._meshPath }, meshData ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation cook: could not read mesh '%#'", list._meshPath.c_str() );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould", "Vertex animation cook: could not read mesh '%#'", list._meshPath.c_str() );
             return false;
         }
         if ( skeleton.loadFromAsset( AssetID{ list._skeletonPath } ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation cook: could not read skeleton '%#'", list._skeletonPath.c_str() );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould2", "Vertex animation cook: could not read skeleton '%#'", list._skeletonPath.c_str() );
             return false;
         }
         shared_ptr<Mesh> mesh = Mesh::create();
@@ -133,7 +133,7 @@ namespace sw
             clip.loadFromAsset( AssetID{ list.makeClipPath( clipName ) } ) && MeshVertexAnimationBaker::bake( *mesh, skeleton, clip, framesPerSecond, false, animation );
         if ( bBaked == false || animation.saveToFile( outputPath ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation cook failed for '%#' clip '%#'", list._meshPath.c_str(), clipName.c_str() );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookFailed", "Vertex animation cook failed for '%#' clip '%#'", list._meshPath.c_str(), clipName.c_str() );
             return false;
         }
         return true;
@@ -154,7 +154,7 @@ namespace sw
                 outputPath = FileUtil::requireAbsolutePath( MeshVertexAnimation::makeCookedPath( meshPath->str(), clipName ) );
             if ( outputPath.has_value() == false )
             {
-                SW_LOG_ERROR( "VAT '%#' has no disk folder beside its mesh to be written to", cookedPath.c_str() );
+                SW_LOG_ERROR_ID( "VertexAnimationCooker.VATNoDiskFolder", "VAT '%#' has no disk folder beside its mesh to be written to", cookedPath.c_str() );
                 ++outFailedCount;
                 continue;
             }
@@ -184,7 +184,7 @@ namespace sw
         vector<string> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould3", "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot );
             ++outFailedCount;
             return 0;
         }
@@ -227,7 +227,7 @@ namespace sw
                 tally.add( outcome );
             }
         }
-        SW_LOG_INFO( "Vertex animation cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        SW_LOG_INFO_ID( "VertexAnimationCooker.VertexAnimationCookReused", "Vertex animation cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount();
     }
 } // namespace sw

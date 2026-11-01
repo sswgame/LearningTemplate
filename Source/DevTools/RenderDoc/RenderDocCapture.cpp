@@ -98,13 +98,13 @@ namespace sw
         if ( pfnGetAPI == nullptr )
         {
             if ( bLoadIfMissing )
-                SW_LOG_WARNING( "-renderdoc: RenderDoc is not installed in the default location - captures are unavailable" );
+                SW_LOG_WARNING_ID( "RenderDoc.RenderdocRenderDocNotInstalled", "-renderdoc: RenderDoc is not installed in the default location - captures are unavailable" );
             return;
         }
         void* pAPI = nullptr;
         if ( pfnGetAPI( eRENDERDOC_API_Version_1_6_0, &pAPI ) != 1 || pAPI == nullptr )
         {
-            SW_LOG_WARNING( "RenderDoc is loaded but did not provide API 1.6.0 - captures are unavailable" );
+            SW_LOG_WARNING_ID( "RenderDoc.RenderDocLoadedButDid", "RenderDoc is loaded but did not provide API 1.6.0 - captures are unavailable" );
             return;
         }
         RenderDocCaptureInternal::_s_pAPI = static_cast<RENDERDOC_API_1_6_0*>( pAPI );
@@ -112,7 +112,7 @@ namespace sw
         RenderDocCaptureInternal::_s_pAPI->SetCaptureFilePathTemplate( captureTemplate.c_str() );
         // 화면 글자를 끈다. 캡처하지 않는 프레임의 스크린샷과 픽셀 테스트가 흔들리지 않게 하기 위해서다.
         RenderDocCaptureInternal::_s_pAPI->MaskOverlayBits( eRENDERDOC_Overlay_None, eRENDERDOC_Overlay_None );
-        SW_LOG_INFO( "RenderDoc attached - captures go to %#_frame<N>.rdc", captureTemplate );
+        SW_LOG_INFO_ID( "RenderDoc.RenderDocAttachedCapturesGo", "RenderDoc attached - captures go to %#_frame<N>.rdc", captureTemplate );
     }
 
     bool RenderDocCapture::isAvailable()

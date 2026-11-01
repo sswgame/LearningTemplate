@@ -52,7 +52,7 @@ namespace sw
             // 같은 모듈을 내리지 않고 다시 올리면 앞 이미지의 서브시스템이 남는다 — 올리는 쪽의 잘못이라 덮지 않고 알린다.
             if ( target.findChildScope( moduleName ) != nullptr )
             {
-                SW_LOG_ERROR( "Module '%#' mounted its subsystems again without unloading - the earlier image's subsystems stay", moduleName );
+                SW_LOG_ERROR_ID( "ModuleRegistrationHost.ModuleMountedSubsystemsAgain", "Module '%#' mounted its subsystems again without unloading - the earlier image's subsystems stay", moduleName );
                 bMounted = false;
                 continue;
             }
@@ -64,7 +64,7 @@ namespace sw
             }
             if ( moduleScope.getCollection().initializeAll( _hostMask ) == false )
             {
-                SW_LOG_ERROR( "Module '%#' subsystems failed: %#", moduleName, moduleScope.getCollection().getError().c_str() );
+                SW_LOG_ERROR_ID( "ModuleRegistrationHost.ModuleSubsystemsFailed", "Module '%#' subsystems failed: %#", moduleName, moduleScope.getCollection().getError().c_str() );
                 target.unmountChildScope( moduleName );
                 bMounted = false;
             }

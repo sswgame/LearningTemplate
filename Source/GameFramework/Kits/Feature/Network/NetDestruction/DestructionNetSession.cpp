@@ -73,7 +73,7 @@ namespace sw
         registerNumberedObjects();
         INetMessageHandler* pHandler = side == DestructionNetSide::Server ? static_cast<INetMessageHandler*>( &_server ) : static_cast<INetMessageHandler*>( &_client );
         _routerSubscription          = router.registerHandler( pHandler ); // 앞의 `shutdown` 이 이전 등록을 풀었다 — 다시 시작해도 겹치지 않는다
-        SW_LOG_INFO( "Destruction net session started as %# with %# objects", side == DestructionNetSide::Server ? "server" : "client", static_cast<uint32>( _listEntry.size() ) );
+        SW_LOG_INFO_ID( "DestructionNetSession.DestructionNetSessionStarted", "Destruction net session started as %# with %# objects", side == DestructionNetSide::Server ? "server" : "client", static_cast<uint32>( _listEntry.size() ) );
     }
 
     void DestructionNetSession::registerNumberedObjects()
@@ -122,8 +122,8 @@ namespace sw
         if ( _side == DestructionNetSide::Client )
         {
             [[maybe_unused]] const DestructionReplicationStats& stats = _client.getStats();
-            SW_LOG_INFO( "[DestructionNetSession] client hash checks matched %# mismatched %# snapshots applied %#", stats._hashMatchCount, stats._hashMismatchCount,
-                         stats._snapshotAppliedCount );
+            SW_LOG_INFO_ID( "DestructionNetSession.ClientHashChecksMatched", "[DestructionNetSession] client hash checks matched %# mismatched %# snapshots applied %#", stats._hashMatchCount, stats._hashMismatchCount,
+                            stats._snapshotAppliedCount );
         }
     }
 
@@ -203,7 +203,7 @@ namespace sw
             entry._loggedCount = eventCount;
             const DestructionHashRecord record{ state.computeStateHash(), entry._netID, eventCount };
             _listRecord.push_back( record );
-            SW_LOG_INFO( "%#", formatHashLine( _side, record, entry._name ).c_str() );
+            SW_LOG_INFO_ID( "DestructionNetSession.Message", "%#", formatHashLine( _side, record, entry._name ).c_str() );
         }
     }
 } // namespace sw

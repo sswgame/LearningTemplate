@@ -40,7 +40,7 @@ namespace sw
     {
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "MetroidvaniaDuelist: refused - no catalog" );
+            SW_LOG_ERROR_ID( "MetroidvaniaDuelist.MetroidvaniaDuelistRefusedNoCatalog", "MetroidvaniaDuelist: refused - no catalog" );
             return false;
         }
         // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.

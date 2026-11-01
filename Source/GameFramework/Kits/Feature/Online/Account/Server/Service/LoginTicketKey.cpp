@@ -56,7 +56,7 @@ namespace sw
                 outError.append( " - the game ticket master key is required, set the ticketKeySecretEnvironment option" );
                 return false;
             }
-            SW_LOG_WARNING( "Account kit: no ticketKeySecretEnvironment - using the development ticket key (DevOnline)" );
+            SW_LOG_WARNING_ID( "LoginTicketKey.AccountKitNoTicketKeySecretEnvironment", "Account kit: no ticketKeySecretEnvironment - using the development ticket key (DevOnline)" );
             Memory::set( outArrKey, pDevOptions->_devTicketKeyByte, sizeof( outArrKey ) );
             return true;
         }

@@ -26,7 +26,7 @@ namespace sw
             {
                 if ( outKinds.loadDefault() )
                     return true;
-                SW_LOG_ERROR( "Default socket kinds could not be loaded - no socket asset is handed out" );
+                SW_LOG_ERROR_ID( "CharacterDataCache.DefaultSocketKindsCould", "Default socket kinds could not be loaded - no socket asset is handed out" );
                 return false;
             }
 

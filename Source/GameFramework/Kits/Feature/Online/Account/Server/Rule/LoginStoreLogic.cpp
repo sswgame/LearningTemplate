@@ -418,7 +418,7 @@ namespace sw
                     return read;
                 if ( decodeProfile( raw._bytes, raw._version, outProfile ) == false )
                 {
-                    SW_LOG_ERROR( "account profile %# is corrupt", ServiceKeyUtil::makeHex64( accountID ).c_str() );
+                    SW_LOG_ERROR_ID( "LoginStoreLogic.AccountProfileCorrupt", "account profile %# is corrupt", ServiceKeyUtil::makeHex64( accountID ).c_str() );
                     return ServiceStoreResult::Unavailable;
                 }
                 return ServiceStoreResult::Ok;
@@ -544,7 +544,7 @@ namespace sw
             Internal::AccountRecord account;
             if ( Internal::decodeAccount( accountRaw._bytes, account ) == false )
             {
-                SW_LOG_ERROR( "account record '%#' is corrupt", nameKey.c_str() );
+                SW_LOG_ERROR_ID( "LoginStoreLogic.AccountRecordCorrupt", "account record '%#' is corrupt", nameKey.c_str() );
                 return LoginResult::StoreUnavailable;
             }
             if ( account._lockedUntilMs > nowMs )
@@ -863,7 +863,7 @@ namespace sw
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
-                SW_LOG_WARNING( "session %# could not start its reconnect grace (store %#)", sessionKey.c_str(), static_cast<int32>( commitResult ) );
+                SW_LOG_WARNING_ID( "LoginStoreLogic.SessionCouldNotStart", "session %# could not start its reconnect grace (store %#)", sessionKey.c_str(), static_cast<int32>( commitResult ) );
             return;
         }
     }
@@ -1159,7 +1159,7 @@ namespace sw
                                  ServiceKeyUtil::parseHex64( string_view( due._key ).substr( slash + 1 ), accountID );
             if ( bParsed == false )
             {
-                SW_LOG_WARNING( "account deletion key '%#' is malformed", due._key.c_str() );
+                SW_LOG_WARNING_ID( "LoginStoreLogic.AccountDeletionKeyMalformed", "account deletion key '%#' is malformed", due._key.c_str() );
                 continue;
             }
             if ( static_cast<int64>( dueMs ) > nowMs )
@@ -1257,7 +1257,7 @@ namespace sw
             uint64       accountID = 0;
             if ( slash == string::npos || ServiceKeyUtil::parseHex64( string_view( record._key ).substr( slash + 1 ), accountID ) == false )
             {
-                SW_LOG_WARNING( "login revoke queue key '%#' is malformed", record._key.c_str() );
+                SW_LOG_WARNING_ID( "LoginStoreLogic.LoginRevokeQueueKey", "login revoke queue key '%#' is malformed", record._key.c_str() );
                 continue;
             }
             LoginRevocationEntry& entry = outListEntry.emplace_back();
@@ -1299,7 +1299,7 @@ namespace sw
         Internal::AccountRecord account;
         if ( Internal::decodeAccount( accountRaw._bytes, account ) == false )
         {
-            SW_LOG_ERROR( "account record '%#' is corrupt", nameKey.c_str() );
+            SW_LOG_ERROR_ID( "LoginStoreLogic.AccountRecordCorrupt", "account record '%#' is corrupt", nameKey.c_str() );
             return ServiceStoreResult::Unavailable;
         }
         return readIdentity( connection, account._accountID, outIdentity );

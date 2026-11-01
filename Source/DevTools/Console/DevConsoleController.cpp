@@ -193,14 +193,14 @@ namespace sw
         _bShellMapComplete = SW_TRUE;
         if ( shellMap.hasLayer( hashed_string( InputMapDefaults::kDevConsoleLayerName ) ) == false )
         {
-            SW_LOG_ERROR( "Shell input map has no '%#' layer - the dev console cannot be opened with keys", InputMapDefaults::kDevConsoleLayerName );
+            SW_LOG_ERROR_ID( "DevConsole.ShellInputMapNo", "Shell input map has no '%#' layer - the dev console cannot be opened with keys", InputMapDefaults::kDevConsoleLayerName );
             _bShellMapComplete = SW_FALSE;
         }
         for ( const utf8* pActionName : DevConsoleControllerInternal::kArrActionName )
         {
             if ( shellMap.hasAction( hashed_string( pActionName ) ) )
                 continue;
-            SW_LOG_ERROR( "Shell input map has no '%#' action - the dev console cannot be opened with keys", pActionName );
+            SW_LOG_ERROR_ID( "DevConsole.ShellInputMapNo2", "Shell input map has no '%#' action - the dev console cannot be opened with keys", pActionName );
             _bShellMapComplete = SW_FALSE;
         }
         return _bShellMapComplete == SW_TRUE;

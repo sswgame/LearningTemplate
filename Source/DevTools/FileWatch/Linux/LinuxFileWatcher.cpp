@@ -53,28 +53,28 @@ namespace sw
     {
         if ( _bIsWatching.load( std::memory_order_relaxed ) == true )
         {
-            SW_LOG_ERROR( "Already watching %# - stop it before watching %#", _directoryPath.c_str(), string{ directoryPath }.c_str() );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath.c_str(), string{ directoryPath }.c_str() );
             return false;
         }
         stopWatching(); // 워커가 오류로 끝났으면 남은 fd · 스레드를 거둔다
 
         if ( FileUtil::isDirectory( directoryPath ) == false )
         {
-            SW_LOG_ERROR( "Directory does not exist: %#", string{ directoryPath }.c_str() );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.DirectoryDoesNotExist", "Directory does not exist: %#", string{ directoryPath }.c_str() );
             return false;
         }
 
         _inotifyFd = inotify_init1( IN_NONBLOCK | IN_CLOEXEC );
         if ( _inotifyFd < 0 )
         {
-            SW_LOG_ERROR( "inotify_init1 failed: %#", strerror( errno ) );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.InotifyInit1Failed", "inotify_init1 failed: %#", strerror( errno ) );
             return false;
         }
 
         _wakeFd = eventfd( 0, EFD_NONBLOCK | EFD_CLOEXEC );
         if ( _wakeFd < 0 )
         {
-            SW_LOG_ERROR( "eventfd failed: %#", strerror( errno ) );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.EventfdFailed", "eventfd failed: %#", strerror( errno ) );
             close( _inotifyFd );
             _inotifyFd = -1;
             return false;
@@ -88,7 +88,7 @@ namespace sw
         {
             // 하위 디렉터리의 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기에 오는 것은 **루트조차** 걸지 못한
             // 경우뿐이라, 감시 자체가 성립하지 않는다.
-            SW_LOG_ERROR( "inotify_add_watch failed for root (%#): %#", _directoryPath.c_str(), strerror( errno ) );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.InotifyAddWatchFailed", "inotify_add_watch failed for root (%#): %#", _directoryPath.c_str(), strerror( errno ) );
             stopWatching();
             return false;
         }
@@ -96,7 +96,7 @@ namespace sw
         _bIsWatching  = true;
         _workerThread = sw::thread( &LinuxFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
-        SW_LOG_INFO( "Started watching directory: %#", _directoryPath.c_str() );
+        SW_LOG_INFO_ID( "LinuxFileWatcher.StartedWatchingDirectory", "Started watching directory: %#", _directoryPath.c_str() );
         return true;
     }
 
@@ -214,7 +214,7 @@ namespace sw
     {
         if ( mask & IN_Q_OVERFLOW )
         {
-            SW_LOG_WARNING( "inotify queue overflow — emitting synthetic rescan event." );
+            SW_LOG_WARNING_ID( "LinuxFileWatcher.InotifyQueueOverflowEmitting", "inotify queue overflow — emitting synthetic rescan event." );
             pushRelativeChange( FileWatcherAction::Modified, _directoryPath, {} );
             return true;
         }
@@ -248,7 +248,7 @@ namespace sw
         {
             const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
             if ( addWatchDirectory( childDir ) == false )
-                SW_LOG_WARNING( "Failed to watch new directory: %#", childDir.c_str() );
+                SW_LOG_WARNING_ID( "LinuxFileWatcher.FailedWatchNewDirectory", "Failed to watch new directory: %#", childDir.c_str() );
             pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
             return true;
         }
@@ -283,9 +283,9 @@ namespace sw
         // 디렉터리마다 로그를 찍으면 묻히므로 한 줄로 모으고, 흔한 원인을 함께 적는다.
         if ( failedCount > 0 )
         {
-            SW_LOG_WARNING( "Failed to watch %# subdirectories - changes below them will not be detected. "
-                            "This may be the inotify limit (/proc/sys/fs/inotify/max_user_watches).",
-                            failedCount );
+            SW_LOG_WARNING_ID( "LinuxFileWatcher.FailedWatchSubdirectoriesChanges", "Failed to watch %# subdirectories - changes below them will not be detected. "
+                                                                                    "This may be the inotify limit (/proc/sys/fs/inotify/max_user_watches).",
+                               failedCount );
         }
         return true;
     }
@@ -296,7 +296,7 @@ namespace sw
         const int32  wd         = inotify_add_watch( _inotifyFd, normalized.c_str(), kInotifyMask );
         if ( wd < 0 )
         {
-            SW_LOG_TRACE( "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
+            SW_LOG_TRACE_ID( "LinuxFileWatcher.InotifyAddWatchFailed2", "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
             return false;
         }
 

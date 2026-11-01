@@ -273,8 +273,8 @@ namespace sw::editor
         _bLoaded     = SW_TRUE;
         _bLoadFailed = SW_TRUE;
         clearDocumentDirty();
-        SW_LOG_WARNING( "%# could not load '%#' (%#) - saving is disabled so the file is not overwritten", getPanelTitle(), _loadedAssetPath,
-                        reason );
+        SW_LOG_WARNING_ID( "EditorDocumentPanel.CouldNotLoadSaving", "%# could not load '%#' (%#) - saving is disabled so the file is not overwritten", getPanelTitle(), _loadedAssetPath,
+                           reason );
     }
 
     bool EditorDocumentPanel::isDocumentLoaded() const
@@ -331,7 +331,7 @@ namespace sw::editor
             EditorDocumentPanel* pPanel = *pTarget;
             if ( pPanel == nullptr || documentPath != pPanel->_loadedAssetPath )
             {
-                SW_LOG_WARNING( "Undo skipped: '%#' is no longer open in its panel", documentPath );
+                SW_LOG_WARNING_ID( "EditorDocumentPanel.UndoSkippedNoLonger", "Undo skipped: '%#' is no longer open in its panel", documentPath );
                 return;
             }
             pPanel->restoreDocumentFromUndo( snapshot );

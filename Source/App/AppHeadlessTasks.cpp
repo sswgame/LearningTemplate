@@ -31,7 +31,7 @@ namespace sw
                     return TaskResult::NotRequested;
                 NullCrashReportUploader       uploader;
                 [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, uploader );
-                SW_LOG_INFO( "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
+                SW_LOG_INFO_ID( "App.ReportSent", "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
                 return TaskResult::Finished;
             }
 
@@ -50,7 +50,7 @@ namespace sw
                     return TaskResult::NotRequested;
                 if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)도 없다
                 {
-                    SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+                    SW_LOG_ERROR_ID( "App.AssetImportingNeedsEditor", "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
                     return TaskResult::Failed;
                 }
                 else
@@ -81,7 +81,7 @@ namespace sw
 
                 if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)도 없다
                 {
-                    SW_LOG_ERROR( "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
+                    SW_LOG_ERROR_ID( "App.LocalizationToolsNeedEditor", "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
                     return TaskResult::Failed;
                 }
                 else

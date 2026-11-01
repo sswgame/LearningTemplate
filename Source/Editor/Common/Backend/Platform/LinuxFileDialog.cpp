@@ -335,8 +335,8 @@ namespace sw
             backend = LinuxFileDialogInternal::resolveBackend( toolPath );
             if ( backend == LinuxFileDialogInternal::DialogBackend::None )
             {
-                SW_LOG_WARNING( "No file dialog tool found. Install one of: zenity, kdialog, yad "
-                                "(e.g. sudo apt install zenity)." );
+                SW_LOG_WARNING_ID( "LinuxFileDialog.NoFileDialogTool", "No file dialog tool found. Install one of: zenity, kdialog, yad "
+                                                                       "(e.g. sudo apt install zenity)." );
                 return false;
             }
         }

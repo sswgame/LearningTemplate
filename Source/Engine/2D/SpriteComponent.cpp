@@ -208,7 +208,7 @@ namespace sw
         _clip           = SharedAssetCache<SpriteClipAsset>::acquire( _clipPath );
         // 읽지 못한 경로는 `_loadedClipPath` 에 남아 다시 읽지 않는다. 경고는 로더가 이유와 함께 남겼다. 여기서는 무엇을 대신 그리는지만 말한다.
         if ( _clip == nullptr && _clipPath.empty() == false )
-            SW_LOG_WARNING( "Sprite clip '%#' could not be read - the sprite shows its UV rect instead", _clipPath );
+            SW_LOG_WARNING_ID( "SpriteComponent.SpriteClipCouldNot", "Sprite clip '%#' could not be read - the sprite shows its UV rect instead", _clipPath );
     }
 
     void SpriteComponent::refreshTextureInstance()

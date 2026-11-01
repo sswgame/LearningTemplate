@@ -80,29 +80,7 @@ namespace sw
 
 /**
  * @brief 이 호출 지점에서 처음 부를 때만 Error 를 남깁니다. 프레임마다 도는 길의 "필수 서비스 없음" 처럼 같은 줄이 쏟아질 곳에 씁니다.
- * @details 호출 지점마다 정적 플래그를 두지 않고 `LogOnce` 의 범위 상태(스레드 안전, 테스트 케이스마다 초기화)를 쓴다. 인자는 `SW_LOG_ERROR` 와 같다.
- */
-#define SW_LOG_ERROR_ONCE( ... )                                                                                                                \
-    do                                                                                                                                          \
-    {                                                                                                                                           \
-        if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite, ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ) ) ) \
-            SW_LOG_ERROR( __VA_ARGS__ );                                                                                                        \
-    } while ( 0 )
-/**
- * @brief 이 호출 지점 × @p name 마다 한 번 Error 를 남깁니다. 프레임마다 도는 길이 장면 · 자원 이름에 따라 실패할 때, 호출 지점당 한 번(`SW_LOG_ERROR_ONCE`)이면 두 번째 이름이
- *        가려지므로 이름별로 한 번씩 알립니다.
- * @param name `data()` 와 `size()` 를 가진 이름(`string` · `string_view`)입니다. 나머지 인자는 `SW_LOG_ERROR` 와 같습니다.
- */
-#define SW_LOG_ERROR_ONCE_FOR( name, ... )                                                                                                          \
-    do                                                                                                                                              \
-    {                                                                                                                                               \
-        if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite,                                                                                  \
-                                      ::sw::HashUtil::combine( ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ),            \
-                                                               ::sw::HashUtil::computeStringHash64( ( name ).data(), ( name ).size(), false ) ) ) ) \
-            SW_LOG_ERROR( __VA_ARGS__ );                                                                                                            \
-    } while ( 0 )
-/**
- * @brief id 가 붙은 `SW_LOG_ERROR_ONCE` 입니다. 테스트 · 시나리오는 id 로만 기대 로그를 적으므로(`SW_EXPECT_LOG` · `<ExpectLog id>`) 한 번만 남기는 줄도 id 가 있어야 적을 수 있다.
+ * @details 호출 지점마다 정적 플래그를 두지 않고 `LogOnce` 의 범위 상태(스레드 안전, 테스트 케이스마다 초기화)를 쓴다. 인자는 `SW_LOG_ERROR_ID` 와 같다.
  */
 #define SW_LOG_ERROR_ONCE_ID( id, ... )                                                                                                         \
     do                                                                                                                                          \
@@ -110,10 +88,23 @@ namespace sw
         if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite, ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ) ) ) \
             SW_LOG_ERROR_ID( id, __VA_ARGS__ );                                                                                                 \
     } while ( 0 )
-/** @brief `SW_LOG_ERROR_ONCE` 의 Warning 판입니다. */
-#define SW_LOG_WARNING_ONCE( ... )                                                                                                              \
+/**
+ * @brief 이 호출 지점 × @p name 마다 한 번 Error 를 남깁니다. 프레임마다 도는 길이 장면 · 자원 이름에 따라 실패할 때, 호출 지점당 한 번(`SW_LOG_ERROR_ONCE_ID`)이면 두 번째 이름이
+ *        가려지므로 이름별로 한 번씩 알립니다.
+ * @param name `data()` 와 `size()` 를 가진 이름(`string` · `string_view`)입니다. 나머지 인자는 `SW_LOG_ERROR_ID` 와 같습니다.
+ */
+#define SW_LOG_ERROR_ONCE_FOR_ID( id, name, ... )                                                                                                   \
+    do                                                                                                                                              \
+    {                                                                                                                                               \
+        if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite,                                                                                  \
+                                      ::sw::HashUtil::combine( ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ),            \
+                                                               ::sw::HashUtil::computeStringHash64( ( name ).data(), ( name ).size(), false ) ) ) ) \
+            SW_LOG_ERROR_ID( id, __VA_ARGS__ );                                                                                                     \
+    } while ( 0 )
+/** @brief `SW_LOG_ERROR_ONCE_ID` 의 Warning 판입니다. */
+#define SW_LOG_WARNING_ONCE_ID( id, ... )                                                                                                       \
     do                                                                                                                                          \
     {                                                                                                                                           \
         if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite, ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ) ) ) \
-            SW_LOG_WARNING( __VA_ARGS__ );                                                                                                      \
+            SW_LOG_WARNING_ID( id, __VA_ARGS__ );                                                                                               \
     } while ( 0 )

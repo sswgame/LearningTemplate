@@ -150,7 +150,7 @@ namespace sw
             return false;
         if ( file._formatVersion != kVersion )
         {
-            SW_LOG_WARNING( "Appearance preset save has format version %# (this build reads %#)", file._formatVersion, kVersion );
+            SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetSaveFormat", "Appearance preset save has format version %# (this build reads %#)", file._formatVersion, kVersion );
             return false;
         }
         _listPreset.clear();
@@ -164,7 +164,7 @@ namespace sw
             string reason;
             if ( _pDatabase == nullptr || AppearanceShareCode::decode( string_view( record._code ), *_pDatabase, preset._selection, &reason ) == false )
             {
-                SW_LOG_WARNING( "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, _pDatabase == nullptr ? "no appearance data" : reason.c_str() );
+                SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetCannotRead", "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, _pDatabase == nullptr ? "no appearance data" : reason.c_str() );
                 continue;
             }
             _listPreset.push_back( preset );

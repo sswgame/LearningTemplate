@@ -20,7 +20,7 @@ namespace sw
     {
         if ( value.isComplete() == false )
         {
-            SW_LOG_ERROR( "Scene net link needs both the peers and the router - the link stays unbound" );
+            SW_LOG_ERROR_ID( "SceneNetLink.SceneNetLinkNeeds", "Scene net link needs both the peers and the router - the link stays unbound" );
             return false;
         }
         _value = value;

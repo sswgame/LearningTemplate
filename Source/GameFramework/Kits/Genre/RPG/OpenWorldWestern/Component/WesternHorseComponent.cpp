@@ -24,27 +24,27 @@ namespace sw
             {
                 case WesternHorseEvent::Kind::BondLevelUp:
                 {
-                    SW_LOG_INFO( "[WildWest] %# bond level %#", pHorseName, horseEvent._value );
+                    SW_LOG_INFO_ID( "WesternHorse.BondLevel", "[WildWest] %# bond level %#", pHorseName, horseEvent._value );
                     break;
                 }
                 case WesternHorseEvent::Kind::AbilityUnlocked:
                 {
-                    SW_LOG_INFO( "[WildWest] %# learned %#", pHorseName, horseEvent._ability.c_str() );
+                    SW_LOG_INFO_ID( "WesternHorse.Learned", "[WildWest] %# learned %#", pHorseName, horseEvent._ability.c_str() );
                     break;
                 }
                 case WesternHorseEvent::Kind::Exhausted:
                 {
-                    SW_LOG_INFO( "[WildWest] %# is out of breath - no gallop until it recovers", pHorseName );
+                    SW_LOG_INFO_ID( "WesternHorse.OutBreathNoGallop", "[WildWest] %# is out of breath - no gallop until it recovers", pHorseName );
                     break;
                 }
                 case WesternHorseEvent::Kind::Spooked:
                 {
-                    SW_LOG_INFO( "[WildWest] %# rears up", pHorseName );
+                    SW_LOG_INFO_ID( "WesternHorse.RearsUp", "[WildWest] %# rears up", pHorseName );
                     break;
                 }
                 case WesternHorseEvent::Kind::ThrewRider:
                 {
-                    SW_LOG_INFO( "[WildWest] %# threw its rider", pHorseName );
+                    SW_LOG_INFO_ID( "WesternHorse.ThrewRider", "[WildWest] %# threw its rider", pHorseName );
                     break;
                 }
             }
@@ -121,17 +121,17 @@ namespace sw
         const utf8*                     pName     = pOwner != nullptr ? pOwner->getName().c_str() : "?";
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "[Western] horse '%#' has no western catalog - %#", pName, pDirector == nullptr ? "Director does not point at a western director" : "the director did not start" );
+            SW_LOG_ERROR_ID( "WesternHorse.HorseNoWesternCatalog", "[Western] horse '%#' has no western catalog - %#", pName, pDirector == nullptr ? "Director does not point at a western director" : "the director did not start" );
             return false;
         }
         if ( pMount == nullptr )
         {
-            SW_LOG_ERROR( "[Western] horse '%#' has no Western Horse Mount on its object", pName );
+            SW_LOG_ERROR_ID( "WesternHorse.HorseNoWesternHorse", "[Western] horse '%#' has no Western Horse Mount on its object", pName );
             return false;
         }
         if ( _horse.initialize( pCatalog, _breed, static_cast<uint32>( _seed ) ) == false )
         {
-            SW_LOG_ERROR( "[Western] horse '%#' breed '%#' is not in the western catalog", pName, _breed.c_str() );
+            SW_LOG_ERROR_ID( "WesternHorse.HorseBreedNotWestern", "[Western] horse '%#' breed '%#' is not in the western catalog", pName, _breed.c_str() );
             return false;
         }
         pMount->bindHorse( &_horse );
@@ -168,7 +168,7 @@ namespace sw
         if ( bRead == false )
         {
             const GameObject* pOwner = getOwner();
-            SW_LOG_WARNING( "[Western] horse '%#' state could not be restored - it starts fresh", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+            SW_LOG_WARNING_ID( "WesternHorse.HorseStateCouldNot", "[Western] horse '%#' state could not be restored - it starts fresh", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
         }
     }
 } // namespace sw

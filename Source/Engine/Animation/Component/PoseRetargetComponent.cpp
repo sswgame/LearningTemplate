@@ -168,7 +168,7 @@ namespace sw
             const bool bOverride = _bReferenceOverride == SW_TRUE && _targetReference.getBoneCount() == targetSkeleton.getBoneCount();
             if ( _retargeter.initialize( _profile, sourceSkeleton, targetSkeleton, bOverride ? &_targetReference : nullptr ) == false )
             {
-                SW_LOG_ERROR( "Retarget profile '%#' does not fit the source/target skeletons", _profilePath.c_str() );
+                SW_LOG_ERROR_ID( "PoseRetarget.RetargetProfileDoesNot", "Retarget profile '%#' does not fit the source/target skeletons", _profilePath.c_str() );
                 _bProfileReady = SW_FALSE;
                 return;
             }

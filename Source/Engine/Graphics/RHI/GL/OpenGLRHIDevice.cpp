@@ -257,10 +257,10 @@ namespace sw
             // 핫스왑은 Windows 에서 창과 컨텍스트를 통째로 재생성한다). 둘을 같은 문구로 찍으면
             // 첨부 포맷 문제인 줄 알고 엉뚱한 데를 파게 된다.
             if ( status == 0 )
-                SW_LOG_WARNING( "Composite FBO check failed - there is no current GL context "
-                                "(check thread binding, or window/context recreation during a backend hot swap)." );
+                SW_LOG_WARNING_ID( "OpenGL.CompositeFBOCheckFailed", "Composite FBO check failed - there is no current GL context "
+                                                                     "(check thread binding, or window/context recreation during a backend hot swap)." );
             else
-                SW_LOG_WARNING( "Composite FBO incomplete (status=%#).", static_cast<uint32>( status ) );
+                SW_LOG_WARNING_ID( "OpenGL.CompositeFBOIncompleteStatus", "Composite FBO incomplete (status=%#).", static_cast<uint32>( status ) );
             glDeleteFramebuffers( 1, &fbo );
             return 0;
         }
@@ -317,11 +317,11 @@ namespace sw
             if ( pMessage == nullptr || severity == GL_DEBUG_SEVERITY_NOTIFICATION )
                 return;
             if ( type == GL_DEBUG_TYPE_ERROR || severity == GL_DEBUG_SEVERITY_HIGH )
-                SW_LOG_ERROR( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+                SW_LOG_ERROR_ID( "OpenGL.GLDebug", "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
             else if ( severity == GL_DEBUG_SEVERITY_MEDIUM )
-                SW_LOG_WARNING( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+                SW_LOG_WARNING_ID( "OpenGL.GLDebug", "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
             else
-                SW_LOG_TRACE( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+                SW_LOG_TRACE_ID( "OpenGL.GLDebug", "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
         }
     } // namespace
 
@@ -334,7 +334,7 @@ namespace sw
         _width  = desc._width;
         _height = desc._height;
         if ( desc._bSoftwareAdapter )
-            SW_LOG_WARNING( "gv_rhiSoftwareAdapter is ignored on OpenGL (the driver decides)" );
+            SW_LOG_WARNING_ID( "OpenGL.GvRhiSoftwareAdapterIgnoredOpenGL", "gv_rhiSoftwareAdapter is ignored on OpenGL (the driver decides)" );
         // GL 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
         getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
 
@@ -354,7 +354,7 @@ namespace sw
 
         if ( gladLoadGL() != 0 )
         {
-            SW_LOG_INFO( "OpenGL glad Loaded Successfully." );
+            SW_LOG_INFO_ID( "OpenGL.OpenGLGladLoadedSuccessfully", "OpenGL glad Loaded Successfully." );
 
             // ZERO_TO_ONE = Direct3D 의 깊이 NDC [0,1]. 클립 **원점**은 대상마다 달라야 해서 여기서 고정하지 않는다.
             // 오프스크린 FBO 는 UPPER_LEFT(행 순서를 DX 와 맞춤), 기본 프레임버퍼는 LOWER_LEFT(창 표시가 아래에서 위)로
@@ -376,17 +376,17 @@ namespace sw
                 glGetIntegerv( GL_CLIP_DEPTH_MODE, &clipDepth );
                 if ( clipOrigin != GL_UPPER_LEFT || clipDepth != GL_ZERO_TO_ONE )
                 {
-                    SW_LOG_ERROR( "glClipControl was not applied (origin %#, depth %#) - the screen is flipped vertically and depth precision is halved.",
-                                  static_cast<uint32>( clipOrigin ), static_cast<uint32>( clipDepth ) );
+                    SW_LOG_ERROR_ID( "OpenGL.GlClipControlNotAppliedOrigin", "glClipControl was not applied (origin %#, depth %#) - the screen is flipped vertically and depth precision is halved.",
+                                     static_cast<uint32>( clipOrigin ), static_cast<uint32>( clipDepth ) );
                 }
                 else
                 {
-                    SW_LOG_INFO( "OpenGL glClipControl available - depth fixed to [0,1]. The clip origin is chosen per target (offscreen UPPER_LEFT / default framebuffer LOWER_LEFT)." );
+                    SW_LOG_INFO_ID( "OpenGL.OpenGLGlClipControlAvailableDepth", "OpenGL glClipControl available - depth fixed to [0,1]. The clip origin is chosen per target (offscreen UPPER_LEFT / default framebuffer LOWER_LEFT)." );
                 }
             }
             else
             {
-                SW_LOG_ERROR( "glClipControl is unavailable (needs GL 4.5 / ARB_clip_control) - the screen is flipped vertically and depth precision is halved." );
+                SW_LOG_ERROR_ID( "OpenGL.GlClipControlUnavailableNeedsGL", "glClipControl is unavailable (needs GL 4.5 / ARB_clip_control) - the screen is flipped vertically and depth precision is halved." );
             }
 
             // **GL 오류를 로그로.** 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다.
@@ -399,10 +399,10 @@ namespace sw
                 glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
                 glDebugMessageCallback( &onOpenGLDebugMessage, nullptr );
                 glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE );
-                SW_LOG_INFO( "OpenGL KHR_debug output enabled - GL errors appear as error logs (counted in the smoke error count)." );
+                SW_LOG_INFO_ID( "OpenGL.OpenGLKHRDebugOutput", "OpenGL KHR_debug output enabled - GL errors appear as error logs (counted in the smoke error count)." );
             }
             else if ( bDebugOutput )
-                SW_LOG_WARNING( "glDebugMessageCallback is unavailable (needs GL 4.3 / KHR_debug) - GL errors will not appear in the log." );
+                SW_LOG_WARNING_ID( "OpenGL.GlDebugMessageCallbackUnavailableNeedsGL", "glDebugMessageCallback is unavailable (needs GL 4.3 / KHR_debug) - GL errors will not appear in the log." );
 
             // **프로보킹 정점은 FIRST 다.** GL 기본은 LAST 인데 DirectX · Vulkan 은 FIRST 라, `nointerpolation`
             // 값이 삼각형의 **다른 정점**에서 온다. 지금 flat 으로 넘기는 값(materialIndex)은 배치 안에서 모두
@@ -411,7 +411,7 @@ namespace sw
             if ( glad_glProvokingVertex != nullptr )
                 glProvokingVertex( GL_FIRST_VERTEX_CONVENTION );
             else
-                SW_LOG_WARNING( "glProvokingVertex is unavailable - nointerpolation values come from a different vertex than on DX/Vulkan." );
+                SW_LOG_WARNING_ID( "OpenGL.GlProvokingVertexUnavailableNointerpolationValues", "glProvokingVertex is unavailable - nointerpolation values come from a different vertex than on DX/Vulkan." );
 
             // GPU 메모리 총량 · 남은 양은 벤더 확장에만 있다. 없으면 드라이버 값은 "모름" 이다(queryGPUMemoryBudgetInternal).
             _bNvxMemoryInfo = OpenGLRHIUtil::hasGlExtension( "GL_NVX_gpu_memory_info" ) ? SW_TRUE : SW_FALSE;
@@ -427,12 +427,12 @@ namespace sw
             glGetIntegerv( GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &maxVertexSsbo );
             glGetIntegerv( GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &maxComputeSsbo );
             glGetIntegerv( GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &maxFragmentSsbo );
-            SW_LOG_INFO( "OpenGL SSBO limits: vertex %#, fragment %#, compute %#", static_cast<int32>( maxVertexSsbo ),
-                         static_cast<int32>( maxFragmentSsbo ), static_cast<int32>( maxComputeSsbo ) );
+            SW_LOG_INFO_ID( "OpenGL.OpenGLSSBOLimitsVertex", "OpenGL SSBO limits: vertex %#, fragment %#, compute %#", static_cast<int32>( maxVertexSsbo ),
+                            static_cast<int32>( maxFragmentSsbo ), static_cast<int32>( maxComputeSsbo ) );
             if ( maxVertexSsbo < static_cast<GLint>( shaderslot::kSRVSlotCount ) )
             {
-                SW_LOG_WARNING( "The vertex stage SSBO limit (%#) is smaller than the SRV slot count (%#) - reads of high-numbered slots may be wrong.",
-                                static_cast<int32>( maxVertexSsbo ), shaderslot::kSRVSlotCount );
+                SW_LOG_WARNING_ID( "OpenGL.VertexStageSSBOLimit", "The vertex stage SSBO limit (%#) is smaller than the SRV slot count (%#) - reads of high-numbered slots may be wrong.",
+                                   static_cast<int32>( maxVertexSsbo ), shaderslot::kSRVSlotCount );
             }
             // 머티리얼 텍스처는 텍스처 유닛 16..31 이다(binding_slots.hlsli 2). 프래그먼트 유닛이 모자라면 큰 번호의 머티리얼 텍스처가 조용히 흰색이 되므로 이 백엔드를 쓰지 않는다.
             GLint       maxFragmentTextureUnit{ 0 };
@@ -440,15 +440,15 @@ namespace sw
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
             if ( maxFragmentTextureUnit < requiredTextureUnit )
             {
-                SW_LOG_WARNING( "The OpenGL backend is unusable - %# fragment texture units, but %# are needed for material texture slots.",
-                                static_cast<int32>( maxFragmentTextureUnit ), static_cast<int32>( requiredTextureUnit ) );
+                SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableFragment", "The OpenGL backend is unusable - %# fragment texture units, but %# are needed for material texture slots.",
+                                   static_cast<int32>( maxFragmentTextureUnit ), static_cast<int32>( requiredTextureUnit ) );
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }
         }
         else
         {
-            SW_LOG_WARNING( "gladLoadGL returned 0, OpenGL device initialization failed" );
+            SW_LOG_WARNING_ID( "OpenGL.GladLoadGLReturnedOpenGLDevice", "gladLoadGL returned 0, OpenGL device initialization failed" );
             return false;
         }
 
@@ -459,7 +459,7 @@ namespace sw
         // WSL 의 Mesa 드라이버(llvmpipe/d3d12)가 이 확장을 노출하지 않아 실제로 걸린다.
         if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
         {
-            SW_LOG_WARNING( "The OpenGL backend is unusable - GL_ARB_gl_spirv is missing (glShaderBinary/glSpecializeShader are null)." );
+            SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableGL", "The OpenGL backend is unusable - GL_ARB_gl_spirv is missing (glShaderBinary/glSpecializeShader are null)." );
             _initResult = RHIInitResult::DriverUnsupported;
             return false;
         }
@@ -561,7 +561,7 @@ namespace sw
 
         _frameStreamContext = sw::make_unique<OpenGLRHICommandContext>( this );
 
-        SW_LOG_INFO( "OpenGL RHI Backend Device Active (DirectX Coordinate System & Top-Left UV Texture Space Configured)" );
+        SW_LOG_INFO_ID( "OpenGL.OpenGLRHIBackendDevice", "OpenGL RHI Backend Device Active (DirectX Coordinate System & Top-Left UV Texture Space Configured)" );
         return true;
     }
 
@@ -569,14 +569,14 @@ namespace sw
     {
         if ( capacityBytes == 0 )
         {
-            SW_LOG_ERROR( "The OpenGL backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLBackendNeedsStaging", "The OpenGL backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
             return false;
         }
         // 영속 매핑(glBufferStorage + GL_MAP_PERSISTENT_BIT)은 GL 4.4 코어다(glad 는 4.4 미만 컨텍스트에서 이 포인터를 채우지 않는다). 없으면 링을 두지 않고
         // 텍스처 업로드를 모두 Rejected 로 돌려준다 — 클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다(RHICapabilities::_bPersistentStagingRing).
         if ( glad_glBufferStorage == nullptr )
         {
-            SW_LOG_ERROR( "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no staging ring and every texture upload is rejected" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLARBBufferStorage", "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no staging ring and every texture upload is rejected" );
             return true;
         }
 
@@ -584,7 +584,7 @@ namespace sw
         uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _stagingRingBuffer );
         if ( pMapped == nullptr )
         {
-            SW_LOG_ERROR( "The OpenGL staging ring (%# bytes) could not be created or mapped (gv_rhiStagingRingMegabytes)", capacityBytes );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLStagingRingBytes", "The OpenGL staging ring (%# bytes) could not be created or mapped (gv_rhiStagingRingMegabytes)", capacityBytes );
             return false;
         }
 
@@ -598,14 +598,14 @@ namespace sw
     {
         if ( capacityBytes == 0 )
         {
-            SW_LOG_ERROR( "The OpenGL backend needs a readback ring capacity (gv_rhiReadbackRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLBackendNeedsReadback", "The OpenGL backend needs a readback ring capacity (gv_rhiReadbackRingMegabytes must be positive)" );
             return false;
         }
         // 업로드 링과 같은 GL 4.4 조건이다. 없으면 텍스처 되읽기를 모두 Rejected 로 돌려준다 — 컨텍스트를 쥔 채 동기로 읽는 두 번째 경로를 두지 않는다
         // (RHICapabilities::_bPersistentReadbackRing).
         if ( glad_glBufferStorage == nullptr )
         {
-            SW_LOG_ERROR( "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no readback ring and every texture readback is rejected" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLARBBufferStorage2", "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no readback ring and every texture readback is rejected" );
             return true;
         }
 
@@ -613,7 +613,7 @@ namespace sw
         uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _readbackRingBuffer );
         if ( pMapped == nullptr )
         {
-            SW_LOG_ERROR( "The OpenGL readback ring (%# bytes) could not be created or mapped (gv_rhiReadbackRingMegabytes)", capacityBytes );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLReadbackRingBytes", "The OpenGL readback ring (%# bytes) could not be created or mapped (gv_rhiReadbackRingMegabytes)", capacityBytes );
             return false;
         }
 
@@ -836,7 +836,7 @@ namespace sw
         _pHRC = nullptr;
 
         _bInitialized = SW_FALSE;
-        SW_LOG_INFO( "OpenGL RHI Device Shutdown cleanly." );
+        SW_LOG_INFO_ID( "OpenGL.OpenGLRHIDeviceShutdown", "OpenGL RHI Device Shutdown cleanly." );
     }
 
     void OpenGLRHIDevice::resizeInternal( uint32 width, uint32 height )
@@ -846,7 +846,7 @@ namespace sw
         if ( _platformContext != nullptr )
             _platformContext->resize( width, height );
         glViewport( 0, 0, static_cast<GLsizei>( width ), static_cast<GLsizei>( height ) );
-        SW_LOG_TRACE( "OpenGL RHI Resized to %#×%#", width, height );
+        SW_LOG_TRACE_ID( "OpenGL.OpenGLRHIResized", "OpenGL RHI Resized to %#×%#", width, height );
     }
 
     bool OpenGLRHIDevice::tryMakeCurrentAndRecordOwner()
@@ -890,8 +890,8 @@ namespace sw
         const uint64          sinceNanos = _contextOwnedSinceNanos.load( std::memory_order_relaxed );
         const uint64          heldMs     = nowNanos > sinceNanos ? ( nowNanos - sinceNanos ) / 1000000ull : 0ull;
         const bool            bRtOwner   = owner == _renderThreadID.load( std::memory_order_relaxed ) && owner != std::thread::id{};
-        SW_LOG_ERROR( "GL context not acquired in %# ms - held by thread %# (%#) for %# ms; GL calls on this thread are dropped", timeoutMs,
-                      static_cast<uint64>( std::hash<std::thread::id>{}( owner ) ), bRtOwner ? "render thread" : "not the render thread", heldMs );
+        SW_LOG_ERROR_ID( "OpenGL.GLContextNotAcquired", "GL context not acquired in %# ms - held by thread %# (%#) for %# ms; GL calls on this thread are dropped", timeoutMs,
+                         static_cast<uint64>( std::hash<std::thread::id>{}( owner ) ), bRtOwner ? "render thread" : "not the render thread", heldMs );
         return false;
     }
 
@@ -1078,7 +1078,7 @@ namespace sw
         glFlush();
         // 펜스가 없으면 이 전송이 끝났는지 알 길이 없다 — 끝난 것으로 치지 않고 장치 손실로 둔다(티켓은 Failed, 이후 제출은 Rejected).
         if ( pSync == nullptr && _transferSerials.markLost() )
-            SW_LOG_ERROR( "endTransfer: glFenceSync returned no fence; treating the GL device as lost" );
+            SW_LOG_ERROR_ID( "OpenGL.EndTransferGlFenceSyncReturnedNo", "endTransfer: glFenceSync returned no fence; treating the GL device as lost" );
         const uint64 serial = _transferQueue.enqueue( pSync );
         retireFinishedTransfers(); // 앞서 낸 전송 가운데 끝난 것을 모은다(이 스레드가 컨텍스트를 쥐고 있다)
         return serial;
@@ -1095,7 +1095,7 @@ namespace sw
             {
                 // 실패한 항목은 큐 맨 앞에 남아 매 프레임 다시 여기로 온다 — 처음 표시한 때만 로그를 남긴다.
                 if ( _transferSerials.markLost() )
-                    SW_LOG_ERROR( "pollTransfer: glClientWaitSync failed on a transfer fence" );
+                    SW_LOG_ERROR_ID( "OpenGL.PollTransferGlClientWaitSyncFailedTransfer", "pollTransfer: glClientWaitSync failed on a transfer fence" );
                 return false;
             }
             return waitResult != GL_TIMEOUT_EXPIRED;
@@ -1139,7 +1139,7 @@ namespace sw
         if ( isGraphicsContextCurrent() == false )
         {
             ring.free( span );
-            SW_LOG_ERROR( "%#: the GL context could not be acquired to create a %#-byte single transfer buffer; submit again later", pCaller, span._sizeBytes );
+            SW_LOG_ERROR_ID( "OpenGL.GLContextCouldNot", "%#: the GL context could not be acquired to create a %#-byte single transfer buffer; submit again later", pCaller, span._sizeBytes );
             return RHISubmitResult::Busy;
         }
         deleteSoloBuffer( rSolo ); // 장부가 이미 돌려받았지만 아직 지우지 못한 앞 단독 버퍼
@@ -1147,7 +1147,7 @@ namespace sw
         if ( rSolo._pMapped == nullptr )
         {
             ring.free( span );
-            SW_LOG_ERROR( "%#: a %#-byte single transfer buffer could not be created or mapped; the transfer is rejected", pCaller, span._sizeBytes );
+            SW_LOG_ERROR_ID( "OpenGL.ByteSingleTransferBuffer", "%#: a %#-byte single transfer buffer could not be created or mapped; the transfer is rejected", pCaller, span._sizeBytes );
             return RHISubmitResult::Rejected;
         }
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &rSolo ), RHIMemoryKind::Staging, span._sizeBytes );
@@ -1193,7 +1193,7 @@ namespace sw
     {
         if ( _stagingRingBuffer == 0 )
         {
-            SW_LOG_ERROR( "%#: the GL staging ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the upload is rejected", pCaller );
+            SW_LOG_ERROR_ID( "OpenGL.GLStagingRingUnavailable", "%#: the GL staging ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the upload is rejected", pCaller );
             return RHISubmitResult::Rejected;
         }
         RHIStagingAllocateResult result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
@@ -1211,7 +1211,7 @@ namespace sw
     {
         if ( _readbackRingBuffer == 0 )
         {
-            SW_LOG_ERROR( "submitTextureReadback: the GL readback ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the readback is rejected" );
+            SW_LOG_ERROR_ID( "OpenGL.SubmitTextureReadbackGLReadbackRing", "submitTextureReadback: the GL readback ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the readback is rejected" );
             return RHISubmitResult::Rejected;
         }
         // 워터마크는 버린 되읽기(markSubmitted)의 구간만 돌려준다 — 그래서 차 있으면 펜스를 한 번 모아 본다. 가져갈 되읽기의 구간은 take 가 free 로 놓는다.
@@ -1238,7 +1238,7 @@ namespace sw
             constexpr GLuint64 kRingWaitTimeoutNanoseconds = 10ull * 1000ull * 1000ull * 1000ull;
             const GLenum       waitResult                  = glClientWaitSync( static_cast<GLsync>( rpSlotSync ), GL_SYNC_FLUSH_COMMANDS_BIT, kRingWaitTimeoutNanoseconds );
             if ( waitResult == GL_TIMEOUT_EXPIRED || waitResult == GL_WAIT_FAILED )
-                SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", serial - constant::render::kMaxFrameCountInFlight, static_cast<uint32>( waitResult ) );
+                SW_LOG_ERROR_ID( "OpenGL.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", serial - constant::render::kMaxFrameCountInFlight, static_cast<uint32>( waitResult ) );
             glDeleteSync( static_cast<GLsync>( rpSlotSync ) );
             rpSlotSync            = nullptr;
             _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;

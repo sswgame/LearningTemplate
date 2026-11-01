@@ -302,9 +302,9 @@ namespace sw
             const bool                bSameShape = backDesc.Format == dstDesc.Format && backDesc.Width == dstDesc.Width && backDesc.Height == dstDesc.Height;
             if ( bSameShape == false )
             {
-                SW_LOG_ERROR( "blitTexture(backbuffer): the target must match the back buffer (fmt %# %#x%# vs %# %#x%#)", static_cast<uint32>( backDesc.Format ),
-                              static_cast<uint32>( backDesc.Width ), backDesc.Height, static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ),
-                              dstDesc.Height );
+                SW_LOG_ERROR_ID( "D3D12RHICommandContext.BlitTextureBackbufferTargetMust", "blitTexture(backbuffer): the target must match the back buffer (fmt %# %#x%# vs %# %#x%#)", static_cast<uint32>( backDesc.Format ),
+                                 static_cast<uint32>( backDesc.Width ), backDesc.Height, static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ),
+                                 dstDesc.Height );
                 return;
             }
             _pDevice->reportBarrierDuringRecording( "blitTexture(backbuffer)" );
@@ -364,9 +364,9 @@ namespace sw
                 // 병렬 기록 워커가 함께 오므로 확인과 표시를 한 번의 교환으로 한다.
                 if ( _pDevice->_bBlitMismatchLogged.exchange( SW_TRUE, std::memory_order_relaxed ) == SW_FALSE )
                 {
-                    SW_LOG_ERROR( "blitTexture: CopyResource not possible - src(fmt=%# %#x%#) dst(fmt=%# %#x%#). Skipping the copy.",
-                                  static_cast<uint32>( srcDesc.Format ), static_cast<uint32>( srcDesc.Width ), static_cast<uint32>( srcDesc.Height ),
-                                  static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ), static_cast<uint32>( dstDesc.Height ) );
+                    SW_LOG_ERROR_ID( "D3D12RHICommandContext.BlitTextureCopyResourceNotPossible", "blitTexture: CopyResource not possible - src(fmt=%# %#x%#) dst(fmt=%# %#x%#). Skipping the copy.",
+                                     static_cast<uint32>( srcDesc.Format ), static_cast<uint32>( srcDesc.Width ), static_cast<uint32>( srcDesc.Height ),
+                                     static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ), static_cast<uint32>( dstDesc.Height ) );
                 }
                 return;
             }
@@ -588,7 +588,7 @@ namespace sw
         // 상수버퍼는 디스크립터 테이블이 아니라 루트 CBV(GPU 주소)다. 힙에 쓸 일이 없고 슬롯 b# 이 곧 루트 파라미터다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
         {
-            SW_LOG_TRACE( "bindConstantBuffer: slot b%# exceeds the root signature CBV count (%#).", slot, shaderslot::kConstantBufferSlotCount );
+            SW_LOG_TRACE_ID( "D3D12RHICommandContext.BindConstantBufferSlotBExceeds", "bindConstantBuffer: slot b%# exceeds the root signature CBV count (%#).", slot, shaderslot::kConstantBufferSlotCount );
             return;
         }
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr )

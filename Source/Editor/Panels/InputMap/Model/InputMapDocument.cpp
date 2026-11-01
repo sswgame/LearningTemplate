@@ -90,10 +90,10 @@ namespace sw::editor
         // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
         if ( _inputMap.loadFromAsset( AssetID{ _inputMapPath.c_str() } ) == false )
         {
-            SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
+            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return false;
         }
-        SW_LOG_INFO( "Reloaded InputMap from %#", _inputMapPath.c_str() );
+        SW_LOG_INFO_ID( "InputMapDocument.ReloadedInputMap", "Reloaded InputMap from %#", _inputMapPath.c_str() );
         return true;
     }
 
@@ -104,10 +104,10 @@ namespace sw::editor
         const std::optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.c_str() );
         if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
         {
-            SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
+            SW_LOG_WARNING_ID( "InputMapDocument.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;
         }
-        SW_LOG_INFO( "Saved InputMap to %#", _inputMapPath.c_str() );
+        SW_LOG_INFO_ID( "InputMapDocument.SavedInputMap", "Saved InputMap to %#", _inputMapPath.c_str() );
         return true;
     }
 
@@ -137,8 +137,8 @@ namespace sw::editor
         sw::string conflictingAction;
         if ( _inputMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
         {
-            SW_LOG_WARNING( "Binding '%#' to %# - conflicts with '%#' on the same layer.",
-                            _selectedAction.c_str(), sw::KeyCodeUtil::toName( newKey ), conflictingAction.c_str() );
+            SW_LOG_WARNING_ID( "InputMapDocument.BindingConflictsSameLayer", "Binding '%#' to %# - conflicts with '%#' on the same layer.",
+                               _selectedAction.c_str(), sw::KeyCodeUtil::toName( newKey ), conflictingAction.c_str() );
         }
 
         // 키 하나로 바꿀 수 없는 바인딩(합성 축, 스틱)이면 바뀌지 않는다. 경고는 InputMap 이 남긴다. 이때는 문서를 dirty 로 표시하지 않는다.
@@ -193,7 +193,7 @@ namespace sw::editor
     {
         const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
         if ( diskPath.has_value() == false || _replay.saveToFile( *diskPath ) == false )
-            SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
+            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
 
     void InputMapDocument::loadReplay( InputManager& input )
@@ -202,8 +202,8 @@ namespace sw::editor
             input.detachVirtualInput();
         const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )
-            SW_LOG_ERROR( "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
+            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
         else if ( _replay.loadFromFile( diskPath->str() ) == false )
-            SW_LOG_ERROR( "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath->c_str() );
+            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotLoadInput2", "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath->c_str() );
     }
 } // namespace sw::editor

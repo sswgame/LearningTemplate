@@ -218,7 +218,7 @@ namespace sw
                     GetWindowThreadProcessId( foreground, &foregroundProcess );
                 if ( foregroundProcess != GetCurrentProcessId() || IsIconic( hwnd ) != FALSE )
                 {
-                    SW_LOG_WARNING( "[Scenario] %# skipped - the window is not in front, so the screen there shows other windows", step.describe().c_str() );
+                    SW_LOG_WARNING_ID( "AutomationWindowSteps.SkippedWindowNotFront", "[Scenario] %# skipped - the window is not in front, so the screen there shows other windows", step.describe().c_str() );
                     return true;
                 }
                 const int32 clientWidth  = clientRect.right - clientRect.left;
@@ -306,7 +306,7 @@ namespace sw
                     runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": could not write " + path );
                     return true;
                 }
-                SW_LOG_INFO( "[Scenario] window capture %#x%# (%# windows) -> %#", width, height, static_cast<int32>( context._listRect.size() ), path.c_str() );
+                SW_LOG_INFO_ID( "AutomationWindowSteps.WindowCaptureXWindows", "[Scenario] window capture %#x%# (%# windows) -> %#", width, height, static_cast<int32>( context._listRect.size() ), path.c_str() );
                 return true;
             }
 #else

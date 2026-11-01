@@ -19,7 +19,7 @@ namespace sw::editor
         {
             EditorContext& editorContext = editor::getSubsystem<EditorContext>();
             if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<MeshModifiersPanel>( true ) )
-                SW_LOG_INFO( "Mesh Modifiers panel opened" );
+                SW_LOG_INFO_ID( "MeshModifiersCommands.MeshModifiersPanelOpened", "Mesh Modifiers panel opened" );
         }
     } // namespace
 

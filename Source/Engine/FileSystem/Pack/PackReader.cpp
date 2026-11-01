@@ -107,7 +107,7 @@ namespace sw
         if ( file.isValid() == false )
         {
             lock.unlock();
-            SW_LOG_ERROR( "Failed to open resource pack file: %#", packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.FailedOpenResourcePack", "Failed to open resource pack file: %#", packFilePath );
             return false;
         }
 
@@ -119,7 +119,7 @@ namespace sw
         {
             closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Corrupted pack header: %#", packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.CorruptedPackHeader", "Corrupted pack header: %#", packFilePath );
             return false;
         }
 
@@ -128,8 +128,8 @@ namespace sw
             const auto badMagic = _header._magic; // 잠금을 놓기 전에 복사한다 — 놓은 뒤 헤더를 읽지 않는다
             closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#", Fmt( badMagic, Format( 8, Format::Padding::Zero ).hex() ),
-                          Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.InvalidPackMagicX", "Invalid pack magic (0x%# vs expected 0x%#): %#", Fmt( badMagic, Format( 8, Format::Padding::Zero ).hex() ),
+                             Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
             return false;
         }
 
@@ -138,7 +138,7 @@ namespace sw
             const auto badVersion = _header._formatVersion;
             closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Unsupported pack format version %#: %#", badVersion, packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.UnsupportedPackFormatVersion", "Unsupported pack format version %#: %#", badVersion, packFilePath );
             return false;
         }
 
@@ -149,7 +149,7 @@ namespace sw
             const auto encryptionType = static_cast<uint32>( _header._encryptionType );
             closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Encrypted packs are not supported (encryption type %#): %#", encryptionType, packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.EncryptedPacksNotSupported", "Encrypted packs are not supported (encryption type %#): %#", encryptionType, packFilePath );
             return false;
         }
 
@@ -158,7 +158,7 @@ namespace sw
         {
             closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Failed to load FAT index table from pack: %#", packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.FailedLoadFATIndex", "Failed to load FAT index table from pack: %#", packFilePath );
             return false;
         }
 
@@ -174,11 +174,11 @@ namespace sw
             const utf8* pCompressionName = engine::getSubsystem<TypeRegistry>().enumToString( compression );
             const utf8* pEncryptionName  = engine::getSubsystem<TypeRegistry>().enumToString( encryption );
 
-            SW_LOG_INFO( "Opened pack %# (Files: %# | Compression: %# | Encryption: %#)",
-                         packFilePath,
-                         fileCount,
-                         pCompressionName != nullptr ? pCompressionName : "Raw",
-                         pEncryptionName != nullptr ? pEncryptionName : "None" );
+            SW_LOG_INFO_ID( "PackReader.OpenedPackFilesCompression", "Opened pack %# (Files: %# | Compression: %# | Encryption: %#)",
+                            packFilePath,
+                            fileCount,
+                            pCompressionName != nullptr ? pCompressionName : "Raw",
+                            pEncryptionName != nullptr ? pEncryptionName : "None" );
         }
 #endif
 
@@ -314,7 +314,7 @@ namespace sw
         {
             if ( decompressData( plan._compression, storedBytes.data(), storedBytes.size(), plan._uncompressedSize, outBytes ) == false )
             {
-                SW_LOG_ERROR( "Decompression failed for entry in pack: %#", packPath );
+                SW_LOG_ERROR_ID( "PackReader.DecompressionFailedEntryPack", "Decompression failed for entry in pack: %#", packPath );
                 outBytes.clear();
                 return false;
             }
@@ -327,8 +327,8 @@ namespace sw
             const uint32 computedCRC = HashUtil::computeCRC32( outBytes.data(), outBytes.size() );
             if ( computedCRC != plan._crc32 )
             {
-                SW_LOG_ERROR( "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", packPath,
-                              Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ), Fmt( plan._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
+                SW_LOG_ERROR_ID( "PackReader.CRC32ChecksumMismatchPack", "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", packPath,
+                                 Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ), Fmt( plan._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
                 outBytes.clear();
                 return false;
             }
@@ -350,7 +350,7 @@ namespace sw
         storedBytes.resize( plan.getStoredSize() );
         if ( file.readAt( plan._dataOffset, storedBytes.data(), storedBytes.size() ) == false )
         {
-            SW_LOG_ERROR( "Read error in pack %# (%# bytes at offset %#)", file.getPath(), storedBytes.size(), plan._dataOffset );
+            SW_LOG_ERROR_ID( "PackReader.ReadErrorPackBytes", "Read error in pack %# (%# bytes at offset %#)", file.getPath(), storedBytes.size(), plan._dataOffset );
             outBytes.clear();
             return false;
         }
@@ -389,7 +389,7 @@ namespace sw
             if ( result.isSucceeded() )
                 bSuccess = decodeStoredBytes( plan, file.getPath(), result._bytes, bytes );
             else if ( result._status != AsyncIOStatus::Canceled )
-                SW_LOG_ERROR( "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIO::getStatusName( result._status ), plan._dataOffset );
+                SW_LOG_ERROR_ID( "PackReader.ReadErrorPackOffset", "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIO::getStatusName( result._status ), plan._dataOffset );
             if ( onComplete.isBound() )
                 onComplete( bSuccess, bytes );
         } ) );
@@ -440,20 +440,20 @@ namespace sw
         const bool bHasStringPool = ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0;
         if ( bHasStringPool == false || _header._stringPoolSize == 0 )
         {
-            SW_LOG_ERROR( "Pack has no entry path list (string pool) - cook it again with App --cook-packs: %#", _packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.PackNoEntryPath", "Pack has no entry path list (string pool) - cook it again with App --cook-packs: %#", _packFilePath );
             return false;
         }
         _stringPoolBytes.resize( _header._stringPoolSize );
         if ( _file.readAt( _header._stringPoolOffset, _stringPoolBytes.data(), _stringPoolBytes.size() ) == false )
         {
-            SW_LOG_ERROR( "Failed to read string pool from pack: %#", _packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.FailedReadStringPool", "Failed to read string pool from pack: %#", _packFilePath );
             return false;
         }
         const string_view pool{ reinterpret_cast<const utf8*>( _stringPoolBytes.data() ), _stringPoolBytes.size() };
         const size_t      domainEnd = pool.find( '\0' );
         if ( domainEnd == string_view::npos )
         {
-            SW_LOG_ERROR( "Pack has no mount domain at the start of its string pool: %#", _packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.PackNoMountDomain", "Pack has no mount domain at the start of its string pool: %#", _packFilePath );
             return false;
         }
         _mountDomain.assign( pool.substr( 0, domainEnd ) );
@@ -467,7 +467,7 @@ namespace sw
         const size_t expectedBytes = _header._fileCount * sizeof( PackFileEntryOnDisk );
         if ( _file.readAt( _header._indexOffset, listDiskEntry.data(), expectedBytes ) == false )
         {
-            SW_LOG_ERROR( "Failed to read FAT index table from pack: %#", _packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.FailedReadFATIndex", "Failed to read FAT index table from pack: %#", _packFilePath );
             return false;
         }
 
@@ -496,13 +496,13 @@ namespace sw
             const size_t terminator = diskEntry._stringPoolOffset < pool.size() ? pool.find( '\0', diskEntry._stringPoolOffset ) : string_view::npos;
             if ( terminator == string_view::npos || terminator == diskEntry._stringPoolOffset )
             {
-                SW_LOG_ERROR( "Pack entry path lies outside the string pool or is empty (offset %#): %#", static_cast<uint32>( diskEntry._stringPoolOffset ), _packFilePath );
+                SW_LOG_ERROR_ID( "PackReader.PackEntryPathLies", "Pack entry path lies outside the string pool or is empty (offset %#): %#", static_cast<uint32>( diskEntry._stringPoolOffset ), _packFilePath );
                 return false;
             }
             memEntry._relativePath.assign( pool.substr( diskEntry._stringPoolOffset, terminator - diskEntry._stringPoolOffset ) );
             if ( HashUtil::computeStringHash64( memEntry._relativePath ) != diskEntry._pathHash )
             {
-                SW_LOG_ERROR( "Pack entry path '%#' does not match its path hash: %#", memEntry._relativePath, _packFilePath );
+                SW_LOG_ERROR_ID( "PackReader.PackEntryPathDoes", "Pack entry path '%#' does not match its path hash: %#", memEntry._relativePath, _packFilePath );
                 return false;
             }
 
@@ -519,7 +519,7 @@ namespace sw
         const uint64 sizeBytes = _file.getSize();
         if ( sizeBytes == 0 )
         {
-            SW_LOG_ERROR( "Cannot determine size of pack: %#", _packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.CannotDetermineSizePack", "Cannot determine size of pack: %#", _packFilePath );
             return false;
         }
         outFileSize = sizeBytes;
@@ -530,8 +530,8 @@ namespace sw
         const uint64 derivedIndexSize = static_cast<uint64>( _header._fileCount ) * sizeof( PackFileEntryOnDisk );
         if ( _header._indexSize != derivedIndexSize )
         {
-            SW_LOG_ERROR( "Pack index size disagrees with file count in %# (header says %#, %# entries need %#)",
-                          _packFilePath, static_cast<uint64>( _header._indexSize ), static_cast<uint32>( _header._fileCount ), derivedIndexSize );
+            SW_LOG_ERROR_ID( "PackReader.PackIndexSizeDisagrees", "Pack index size disagrees with file count in %# (header says %#, %# entries need %#)",
+                             _packFilePath, static_cast<uint64>( _header._indexSize ), static_cast<uint32>( _header._fileCount ), derivedIndexSize );
             return false;
         }
 
@@ -539,16 +539,16 @@ namespace sw
         // 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있다.
         if ( _header._indexOffset > sizeBytes || derivedIndexSize > sizeBytes - _header._indexOffset )
         {
-            SW_LOG_ERROR( "Pack index table lies outside the file %# (offset %#, size %#, file %#)",
-                          _packFilePath, static_cast<uint64>( _header._indexOffset ), derivedIndexSize, sizeBytes );
+            SW_LOG_ERROR_ID( "PackReader.PackIndexTableLies", "Pack index table lies outside the file %# (offset %#, size %#, file %#)",
+                             _packFilePath, static_cast<uint64>( _header._indexOffset ), derivedIndexSize, sizeBytes );
             return false;
         }
 
         if ( _header._stringPoolSize > 0 &&
              ( _header._stringPoolOffset > sizeBytes || _header._stringPoolSize > sizeBytes - _header._stringPoolOffset ) )
         {
-            SW_LOG_ERROR( "Pack string pool lies outside the file %# (offset %#, size %#, file %#)",
-                          _packFilePath, static_cast<uint64>( _header._stringPoolOffset ), static_cast<uint64>( _header._stringPoolSize ), sizeBytes );
+            SW_LOG_ERROR_ID( "PackReader.PackStringPoolLies", "Pack string pool lies outside the file %# (offset %#, size %#, file %#)",
+                             _packFilePath, static_cast<uint64>( _header._stringPoolOffset ), static_cast<uint64>( _header._stringPoolSize ), sizeBytes );
             return false;
         }
 
@@ -560,8 +560,8 @@ namespace sw
         // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
         if ( diskEntry._dataOffset > fileSize || diskEntry._compressedSize > fileSize - diskEntry._dataOffset )
         {
-            SW_LOG_ERROR( "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
-                          _packFilePath, diskEntry._dataOffset, diskEntry._compressedSize, fileSize );
+            SW_LOG_ERROR_ID( "PackReader.PackEntryPayloadLies", "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
+                             _packFilePath, diskEntry._dataOffset, diskEntry._compressedSize, fileSize );
             return false;
         }
 
@@ -569,8 +569,8 @@ namespace sw
         if ( static_cast<PackCompressionType>( _header._compressionType ) == PackCompressionType::None &&
              diskEntry._uncompressedSize > fileSize - diskEntry._dataOffset )
         {
-            SW_LOG_ERROR( "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
-                          _packFilePath, diskEntry._dataOffset, diskEntry._uncompressedSize, fileSize );
+            SW_LOG_ERROR_ID( "PackReader.PackEntryPayloadLies", "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
+                             _packFilePath, diskEntry._dataOffset, diskEntry._uncompressedSize, fileSize );
             return false;
         }
 
@@ -579,8 +579,8 @@ namespace sw
         // 가장 큰 조각" 의 답이 두 개일 이유가 없다.
         if ( static_cast<uint64>( diskEntry._uncompressedSize ) > CompressionStream::kMaxUncompressedSize )
         {
-            SW_LOG_ERROR( "Pack entry claims an uncompressed size of %# bytes in %# — beyond what this container carries.",
-                          diskEntry._uncompressedSize, _packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.PackEntryClaimsUncompressed", "Pack entry claims an uncompressed size of %# bytes in %# — beyond what this container carries.",
+                             diskEntry._uncompressedSize, _packFilePath );
             return false;
         }
 
@@ -608,15 +608,15 @@ namespace sw
         ICompressionCodec* pCodec = PackCompressionUtil::findCodec( type );
         if ( pCodec == nullptr )
         {
-            SW_LOG_ERROR( "Unsupported compression type %# in pack", static_cast<uint32>( type ) );
+            SW_LOG_ERROR_ID( "PackReader.UnsupportedCompressionTypePack", "Unsupported compression type %# in pack", static_cast<uint32>( type ) );
             return false;
         }
 
         // 엔트리의 원본 크기는 파일에서 온 값이다. 압축 바이트로 나올 수 없는 크기면 resize 전에 끊는다(B-5).
         if ( uncompressedSize > pCodec->decompressBound( srcSize ) )
         {
-            SW_LOG_ERROR( "The original size of a %# entry exceeds the upper bound for its compressed size (%# > %#, compressed %#)", pCodec->getCodecName(),
-                          static_cast<uint64>( uncompressedSize ), static_cast<uint64>( pCodec->decompressBound( srcSize ) ), static_cast<uint64>( srcSize ) );
+            SW_LOG_ERROR_ID( "PackReader.OriginalSizeEntryExceeds", "The original size of a %# entry exceeds the upper bound for its compressed size (%# > %#, compressed %#)", pCodec->getCodecName(),
+                             static_cast<uint64>( uncompressedSize ), static_cast<uint64>( pCodec->decompressBound( srcSize ) ), static_cast<uint64>( srcSize ) );
             return false;
         }
         outBytes.resize( uncompressedSize );
@@ -628,8 +628,8 @@ namespace sw
         // 엔트리 헤더가 말한 원본 크기와 실제로 푼 크기가 달라지면 그대로 쓰면 안 된다.
         if ( decompressedSize != uncompressedSize )
         {
-            SW_LOG_ERROR( "The %# decompressed size differs from the entry (%# != %#)", pCodec->getCodecName(),
-                          static_cast<uint64>( decompressedSize ), static_cast<uint64>( uncompressedSize ) );
+            SW_LOG_ERROR_ID( "PackReader.DecompressedSizeDiffersEntry", "The %# decompressed size differs from the entry (%# != %#)", pCodec->getCodecName(),
+                             static_cast<uint64>( decompressedSize ), static_cast<uint64>( uncompressedSize ) );
             return false;
         }
         return true;

@@ -88,18 +88,18 @@ namespace sw
     {
         if ( _westernDataPath.empty() || _westernCatalog.loadFromAsset( AssetID{ _westernDataPath } ) == false )
         {
-            SW_LOG_ERROR( "[WildWest] the western catalog '%#' could not be loaded - the prairie cannot open", _westernDataPath.c_str() );
+            SW_LOG_ERROR_ID( "WildWestDirector.WesternCatalogCouldNot", "[WildWest] the western catalog '%#' could not be loaded - the prairie cannot open", _westernDataPath.c_str() );
             return false;
         }
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         if ( pPlayerPawn == nullptr )
         {
-            SW_LOG_ERROR( "[WildWest] Player does not point at an object with a pawn - the prairie cannot open" );
+            SW_LOG_ERROR_ID( "WildWestDirector.PlayerDoesNotPoint", "[WildWest] Player does not point at an object with a pawn - the prairie cannot open" );
             return false;
         }
         if ( pPlayerPawn->findButton( _whistleButton ) < 0 )
         {
-            SW_LOG_ERROR( "[WildWest] the rider pawn has no whistle button '%#' - the prairie cannot open", _whistleButton.c_str() );
+            SW_LOG_ERROR_ID( "WildWestDirector.RiderPawnNoWhistle", "[WildWest] the rider pawn has no whistle button '%#' - the prairie cannot open", _whistleButton.c_str() );
             return false;
         }
         return true;
@@ -107,7 +107,7 @@ namespace sw
 
     void WildWestDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[WildWest] the prairie is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle" );
+        SW_LOG_INFO_ID( "WildWestDirector.PrairieOpenWalkWASD", "[WildWest] the prairie is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle" );
     }
 
     void WildWestDirectorComponent::updateGame( float32 deltaTime )
@@ -174,7 +174,7 @@ namespace sw
             pAI->whistle();
             ++calledCount;
         } );
-        SW_LOG_INFO( "[WildWest] whistle - %# horse(s) coming", calledCount );
+        SW_LOG_INFO_ID( "WildWestDirector.WhistleHorseComing", "[WildWest] whistle - %# horse(s) coming", calledCount );
     }
 
     void WildWestDirectorComponent::mountNearestHorse()
@@ -187,12 +187,12 @@ namespace sw
         VehicleSeatComponent* pSeat = MountUtil::findNearestFreeSeat( *pPawn );
         if ( pSeat == nullptr )
         {
-            SW_LOG_WARNING( "[WildWest] auto play: no horse within reach of the rider" );
+            SW_LOG_WARNING_ID( "WildWestDirector.AutoPlayNoHorse", "[WildWest] auto play: no horse within reach of the rider" );
             return;
         }
         const MountResult result = MountUtil::mount( *pPawn, *pSeat );
         if ( result != MountResult::Mounted )
-            SW_LOG_WARNING( "[WildWest] auto play: the rider could not mount '%#' (result %#)", pSeat->getOwner()->getName().c_str(), static_cast<int32>( result ) );
+            SW_LOG_WARNING_ID( "WildWestDirector.AutoPlayRiderCould", "[WildWest] auto play: the rider could not mount '%#' (result %#)", pSeat->getOwner()->getName().c_str(), static_cast<int32>( result ) );
     }
 
     void WildWestDirectorComponent::updateHUD()

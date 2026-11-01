@@ -40,7 +40,7 @@ namespace sw
         engine::getSubsystem<AssetPaths>().collectLooseFolders( folderID, listDiskFolder );
         if ( listDiskFolder.empty() )
         {
-            SW_LOG_INFO( "'%#' is not on disk as loose files (packed data) - it is not watched", folderID );
+            SW_LOG_INFO_ID( "ContentFolderWatch.NotDiskLooseFiles", "'%#' is not on disk as loose files (packed data) - it is not watched", folderID );
             return {};
         }
         unique_ptr<Watch> watch = make_unique<Watch>();

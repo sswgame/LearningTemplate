@@ -31,7 +31,7 @@ namespace sw
                 }
                 if ( pose._name.empty() == false && bDuplicate == false )
                     continue;
-                SW_LOG_ERROR( "Facial rig '%#': %# entry %# needs a unique, non-empty _name", sourceLabel, pListName, poseIndex );
+                SW_LOG_ERROR_ID( "FacialRig.FacialRigEntryNeeds", "Facial rig '%#': %# entry %# needs a unique, non-empty _name", sourceLabel, pListName, poseIndex );
                 bValid = false;
             }
             return bValid;
@@ -61,7 +61,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Facial rig '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "FacialRig.FacialRigCouldNot", "Facial rig '%#' could not be read", path );
             *this = FacialRig{};
             return false;
         }
@@ -76,17 +76,17 @@ namespace sw
         const bool bInvalidBlinkSettings = _blink._minInterval <= 0.0f || _blink._maxInterval < _blink._minInterval || _blink._duration <= 0.0f;
         if ( bInvalidBlinkSettings )
         {
-            SW_LOG_ERROR( "Facial rig '%#': _blink intervals must be positive and ordered, _duration positive", sourceLabel );
+            SW_LOG_ERROR_ID( "FacialRig.FacialRigBlinkIntervals", "Facial rig '%#': _blink intervals must be positive and ordered, _duration positive", sourceLabel );
             bValid = false;
         }
         if ( _gaze._saccadeMinInterval <= 0.0f || _gaze._saccadeMaxInterval < _gaze._saccadeMinInterval )
         {
-            SW_LOG_ERROR( "Facial rig '%#': _gaze saccade intervals must be positive and ordered", sourceLabel );
+            SW_LOG_ERROR_ID( "FacialRig.FacialRigGazeSaccade", "Facial rig '%#': _gaze saccade intervals must be positive and ordered", sourceLabel );
             bValid = false;
         }
         if ( _gaze._forwardAxis.dot( _gaze._forwardAxis ) <= 0.0f )
         {
-            SW_LOG_ERROR( "Facial rig '%#': _gaze._forwardAxis must not be zero", sourceLabel );
+            SW_LOG_ERROR_ID( "FacialRig.FacialRigGazeForwardAxis", "Facial rig '%#': _gaze._forwardAxis must not be zero", sourceLabel );
             bValid = false;
         }
         return bValid;
@@ -105,8 +105,8 @@ namespace sw
                 {
                     if ( hasTarget( target._target ) )
                         continue;
-                    SW_LOG_ERROR( "Facial rig '%#': pose '%#' names morph target '%#' which the mesh does not have", sourceLabel, pose._name.c_str(),
-                                  target._target.c_str() );
+                    SW_LOG_ERROR_ID( "FacialRig.FacialRigPoseNames", "Facial rig '%#': pose '%#' names morph target '%#' which the mesh does not have", sourceLabel, pose._name.c_str(),
+                                     target._target.c_str() );
                     bValid = false;
                 }
             }
@@ -117,8 +117,8 @@ namespace sw
         {
             if ( hasTarget( expression._name ) == false )
                 continue;
-            SW_LOG_ERROR( "Facial rig '%#': expression '%#' has the name of a morph target - a curve of that name would drive both", sourceLabel,
-                          expression._name.c_str() );
+            SW_LOG_ERROR_ID( "FacialRig.FacialRigExpressionName", "Facial rig '%#': expression '%#' has the name of a morph target - a curve of that name would drive both", sourceLabel,
+                             expression._name.c_str() );
             bValid = false;
         }
         checkTargets( _listViseme );
@@ -126,14 +126,14 @@ namespace sw
         {
             if ( hasTarget( target ) )
                 continue;
-            SW_LOG_ERROR( "Facial rig '%#': blink target '%#' is not a morph target of the mesh", sourceLabel, target.c_str() );
+            SW_LOG_ERROR_ID( "FacialRig.FacialRigBlinkTarget", "Facial rig '%#': blink target '%#' is not a morph target of the mesh", sourceLabel, target.c_str() );
             bValid = false;
         }
         for ( const hashed_string& bone : _gaze._listEyeBone )
         {
             if ( skeleton.findBoneIndex( bone ) >= 0 )
                 continue;
-            SW_LOG_ERROR( "Facial rig '%#': eye bone '%#' is not in the skeleton", sourceLabel, bone.c_str() );
+            SW_LOG_ERROR_ID( "FacialRig.FacialRigEyeBone", "Facial rig '%#': eye bone '%#' is not in the skeleton", sourceLabel, bone.c_str() );
             bValid = false;
         }
         return bValid;

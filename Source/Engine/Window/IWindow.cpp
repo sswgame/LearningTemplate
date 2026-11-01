@@ -62,7 +62,7 @@ namespace sw
         const bool bComplete = bHasX && bHasY && commandLine.getArgument( CommandLineArgument::WINDOW_X, x ) && commandLine.getArgument( CommandLineArgument::WINDOW_Y, y );
         if ( bComplete == false )
         {
-            SW_LOG_ERROR( "Window position needs both -WinX=<x> and -WinY=<y> as numbers - the window is not created" );
+            SW_LOG_ERROR_ID( "Window.WindowPositionNeedsBoth", "Window position needs both -WinX=<x> and -WinY=<y> as numbers - the window is not created" );
             return false;
         }
         setInitialPosition( x, y );
@@ -86,7 +86,7 @@ namespace sw
         const size_t      length  = std::strlen( pSource );
         if ( length >= kTitleCapacity )
         {
-            SW_LOG_ERROR( "Window title is %# bytes - it must be shorter than %# bytes (IWindow::kTitleCapacity)", length, kTitleCapacity );
+            SW_LOG_ERROR_ID( "Window.WindowTitleBytesMust", "Window title is %# bytes - it must be shorter than %# bytes (IWindow::kTitleCapacity)", length, kTitleCapacity );
             return false;
         }
         std::memcpy( _arrTitle, pSource, length + 1 );
@@ -179,10 +179,10 @@ namespace sw
         if ( backend == LinuxWindowBackend::X11 )
             return make_unique<X11Window>();
     #if defined( SW_WITH_WAYLAND )
-        SW_LOG_INFO( "Window backend: Wayland (SW_WINDOW_BACKEND=wayland)" );
+        SW_LOG_INFO_ID( "Window.WindowBackendWaylandSW", "Window backend: Wayland (SW_WINDOW_BACKEND=wayland)" );
         return make_unique<WaylandWindow>();
     #else
-        SW_LOG_ERROR( "SW_WINDOW_BACKEND=wayland but this build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON)" );
+        SW_LOG_ERROR_ID( "Window.SWWINDOWBACKENDWayland", "SW_WINDOW_BACKEND=wayland but this build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON)" );
         return nullptr;
     #endif
 #else

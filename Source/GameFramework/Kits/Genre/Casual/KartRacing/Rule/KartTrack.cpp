@@ -71,7 +71,7 @@ namespace sw
         _def    = def;
         if ( def._listControlPoint.size() < 3 || def._width <= 0.0f )
         {
-            SW_LOG_WARNING( "track '%#' needs at least 3 control points and a positive width", def._id.c_str() );
+            SW_LOG_WARNING_ID( "KartTrack.TrackNeedsLeastControl", "track '%#' needs at least 3 control points and a positive width", def._id.c_str() );
             return false;
         }
 
@@ -111,7 +111,7 @@ namespace sw
         {
             if ( fraction <= 0.0f || fraction >= 1.0f )
             {
-                SW_LOG_WARNING( "track '%#': checkpoint at %# is outside (0, 1) - skipped", def._id.c_str(), fraction );
+                SW_LOG_WARNING_ID( "KartTrack.TrackCheckpointOutsideSkipped", "track '%#': checkpoint at %# is outside (0, 1) - skipped", def._id.c_str(), fraction );
                 continue;
             }
             _def._listCheckpoint.push_back( fraction );
@@ -388,12 +388,12 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Track" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "KartTrack.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadTrack( node, sourceName ) )
                 ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_ERROR( "%#: no <Track> entries", sourceName );
+            SW_LOG_ERROR_ID( "KartTrack.NoTrackEntries", "%#: no <Track> entries", sourceName );
         return loadedCount;
     }
 
@@ -436,13 +436,13 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: track '%#' has an unknown child <%#>", sourceName, def._id.c_str(), name );
+                SW_LOG_ERROR_ID( "KartTrack.TrackUnknownChild", "%#: track '%#' has an unknown child <%#>", sourceName, def._id.c_str(), name );
                 bValid = false;
             }
         }
         if ( def._listControlPoint.size() < 3 )
         {
-            SW_LOG_ERROR( "%#: track '%#' needs 3 or more <Point>", sourceName, def._id.c_str() );
+            SW_LOG_ERROR_ID( "KartTrack.TrackNeedsMorePoint", "%#: track '%#' needs 3 or more <Point>", sourceName, def._id.c_str() );
             bValid = false;
         }
         if ( bValid )

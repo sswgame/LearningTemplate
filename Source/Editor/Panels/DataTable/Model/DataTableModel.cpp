@@ -81,7 +81,7 @@ namespace sw::editor
         {
             // 읽지 못한 테이블은 비어 보이고, 저장은 그 파일을 덮지 않는다(`saveLocalization`).
             if ( EditorDataTableCommands::loadLocalizationProject( _localizationSheet._projectPath, _localizationSheet ) == false )
-                SW_LOG_WARNING( "Some localization files could not be read - see the warnings above" );
+                SW_LOG_WARNING_ID( "DataTablePanel.SomeLocalizationFilesCould", "Some localization files could not be read - see the warnings above" );
             _bLocalizationLoaded = true;
             _bLocalizationDirty  = false;
         }
@@ -194,7 +194,7 @@ namespace sw::editor
         string text;
         if ( FileUtil::readTextFile( pEntry->_absolutePath, text ) == false )
         {
-            SW_LOG_ERROR( "Could not read game data table '%#' - it is not opened", pEntry->_absolutePath.c_str() );
+            SW_LOG_ERROR_ID( "DataTablePanel.CouldNotReadGame", "Could not read game data table '%#' - it is not opened", pEntry->_absolutePath.c_str() );
             _selectedGameDataIndex = -1;
             openGameDataText( string{} ); // 읽은 것이 없다 - 테이블을 비운다
             return;
@@ -219,13 +219,13 @@ namespace sw::editor
 
         if ( FileUtil::writeTextFile( pEntry->_absolutePath, _selectedGameDataRawText ) == false )
         {
-            SW_LOG_ERROR( "Could not write game data table '%#'", pEntry->_absolutePath.c_str() );
+            SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", pEntry->_absolutePath.c_str() );
             return;
         }
         _savedGameDataRawText = _selectedGameDataRawText;
         _gameDataDocument.markSaved();
         _bGameDataDirty = false;
-        SW_LOG_INFO( "Saved game data table %#", pEntry->_fileName.c_str() );
+        SW_LOG_INFO_ID( "DataTablePanel.SavedGameDataTable", "Saved game data table %#", pEntry->_fileName.c_str() );
     }
 
     void DataTableModel::reloadGameDataFiles()

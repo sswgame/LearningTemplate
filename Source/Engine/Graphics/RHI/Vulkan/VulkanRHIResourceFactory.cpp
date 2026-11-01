@@ -175,7 +175,7 @@ namespace sw
             bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             if ( vkCreateBuffer( _pDevice->_device, &bufferInfo, nullptr, &slot._buffer ) != VK_SUCCESS )
             {
-                SW_LOG_ERROR( "acquireStructuredUploadStaging: failed to create the staging buffer (%# bytes)", newCapacity );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.AcquireStructuredUploadStagingFailedCreateStaging", "acquireStructuredUploadStaging: failed to create the staging buffer (%# bytes)", newCapacity );
                 slot._buffer = VK_NULL_HANDLE;
                 return false;
             }
@@ -187,7 +187,7 @@ namespace sw
             {
                 vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
                 slot._buffer = VK_NULL_HANDLE;
-                SW_LOG_ERROR( "acquireStructuredUploadStaging: no host visible memory type" );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.AcquireStructuredUploadStagingNoHostVisible", "acquireStructuredUploadStaging: no host visible memory type" );
                 return false;
             }
 
@@ -205,7 +205,7 @@ namespace sw
                 vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
                 slot             = VulkanRHIDevice::StructuredUploadSlot{};
                 slot._resetFence = _pDevice->_frameFenceCounter;
-                SW_LOG_ERROR( "acquireStructuredUploadStaging: failed to allocate/map the staging memory" );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.AcquireStructuredUploadStagingFailedAllocateMap", "acquireStructuredUploadStaging: failed to allocate/map the staging memory" );
                 return false;
             }
             slot._capacity = newCapacity;
@@ -296,7 +296,7 @@ namespace sw
             oneShot.emplace( _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue, _pDevice->_queueMutex );
             if ( oneShot->isValid() == false )
             {
-                SW_LOG_ERROR( "updateStructuredBuffer: failed to allocate the one-shot command buffer" );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateStructuredBufferFailedAllocateOne", "updateStructuredBuffer: failed to allocate the one-shot command buffer" );
                 return;
             }
             cmd = oneShot->get();
@@ -364,13 +364,13 @@ namespace sw
         const bool                           bVertexBuffer = pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE && ( pRecord->_usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ) != 0;
         if ( bVertexBuffer == false )
         {
-            SW_LOG_ERROR( "updateVertexBufferRegions: the handle is not a vertex buffer" );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateVertexBufferRegionsHandleNotVertex", "updateVertexBufferRegions: the handle is not a vertex buffer" );
             return;
         }
         void* pMapped{ nullptr };
         if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, VK_WHOLE_SIZE, 0, &pMapped ) != VK_SUCCESS || pMapped == nullptr )
         {
-            SW_LOG_ERROR( "updateVertexBufferRegions: failed to map the vertex buffer memory" );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateVertexBufferRegionsFailedMapVertex", "updateVertexBufferRegions: failed to map the vertex buffer memory" );
             return;
         }
         const uint8* pBase = static_cast<const uint8*>( pBaseSource );
@@ -379,7 +379,7 @@ namespace sw
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
             if ( static_cast<uint64>( region._dstOffset ) + region._sizeBytes > pRecord->_sizeBytes )
             {
-                SW_LOG_ERROR( "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, pRecord->_sizeBytes );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateVertexBufferRegionsRegionOutsideByte", "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, pRecord->_sizeBytes );
                 continue;
             }
             Memory::copy( static_cast<uint8*>( pMapped ) + region._dstOffset, pBase + region._srcOffset, region._sizeBytes );
@@ -446,8 +446,8 @@ namespace sw
             return 0;
         if ( isRHITextureShapeValid( desc ) == false )
         {
-            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                          desc._arraySize, desc._width, desc._height );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                             desc._arraySize, desc._width, desc._height );
             return 0;
         }
         const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
@@ -466,7 +466,7 @@ namespace sw
         {
             if ( _pDevice->_depthFormat == 0 )
             {
-                SW_LOG_ERROR( "createTexture2D: depth format not selected." );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DDepthFormatNot", "createTexture2D: depth format not selected." );
                 return 0;
             }
             format = static_cast<VkFormat>( _pDevice->_depthFormat );
@@ -503,7 +503,7 @@ namespace sw
 
         if ( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &record._image ) != VK_SUCCESS )
         {
-            SW_LOG_ERROR( "Failed to create VkImage for Texture2D." );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedCreateVkImageTexture2D", "Failed to create VkImage for Texture2D." );
             return 0;
         }
 
@@ -514,7 +514,7 @@ namespace sw
         if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
         {
             vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            SW_LOG_ERROR( "Failed to find a device local memory type for Texture2D." );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedFindDeviceLocal", "Failed to find a device local memory type for Texture2D." );
             return 0;
         }
 
@@ -526,7 +526,7 @@ namespace sw
         if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record._memory ) != VK_SUCCESS )
         {
             vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            SW_LOG_ERROR( "Failed to allocate memory for Texture2D." );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedAllocateMemoryTexture2D", "Failed to allocate memory for Texture2D." );
             return 0;
         }
 
@@ -558,7 +558,7 @@ namespace sw
         {
             vkDestroyImage( _pDevice->_device, record._image, nullptr );
             vkFreeMemory( _pDevice->_device, record._memory, nullptr );
-            SW_LOG_ERROR( "Failed to create VkImageView for Texture2D." );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedCreateVkImageViewTexture2D", "Failed to create VkImageView for Texture2D." );
             return 0;
         }
 
@@ -570,7 +570,7 @@ namespace sw
             if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record._sampleView ) != VK_SUCCESS )
             {
                 record._sampleView = VK_NULL_HANDLE;
-                SW_LOG_WARNING( "createTexture2D: depth sample view creation failed — texture cannot be sampled." );
+                SW_LOG_WARNING_ID( "VulkanRHIResourceFactory.CreateTexture2DDepthSampleView", "createTexture2D: depth sample view creation failed — texture cannot be sampled." );
             }
         }
 
@@ -588,7 +588,7 @@ namespace sw
                 VkImageView sliceView{ VK_NULL_HANDLE };
                 if ( vkCreateImageView( _pDevice->_device, &sliceInfo, nullptr, &sliceView ) != VK_SUCCESS )
                 {
-                    SW_LOG_ERROR( "createTexture2D: slice view %# creation failed", slice );
+                    SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateTexture2DSliceViewCreation", "createTexture2D: slice view %# creation failed", slice );
                     break;
                 }
                 record._listSliceView.push_back( sliceView );
@@ -596,7 +596,7 @@ namespace sw
         }
 
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
-            SW_LOG_WARNING( "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
+            SW_LOG_WARNING_ID( "VulkanRHIResourceFactory.CreateTexture2DFramebufferCreationFailed", "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
         // GPU 메모리 장부에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
@@ -614,17 +614,17 @@ namespace sw
         if ( bTextureUploadUnavailable )
         {
             // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — 잃은 장치의 큐는 제출을 받지 못하고 펜스는 끝나지 않는다.
-            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepthStencil != SW_FALSE )
         {
-            SW_LOG_ERROR( "submitTextureUpload: texture %# is a depth texture", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture );
             return RHITransferSubmit::rejected();
         }
         if ( desc._arraySlice >= pRecord->_arrayLayers )
         {
-            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arrayLayers );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadSliceOutRange", "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arrayLayers );
             return RHITransferSubmit::rejected();
         }
 
@@ -633,8 +633,8 @@ namespace sw
         const uint32      mipCount = resolveTextureUploadMips( desc, format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
-                          desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureUploadUnsupportedFormatNot", "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+                             desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
             return RHITransferSubmit::rejected();
         }
 
@@ -729,7 +729,7 @@ namespace sw
                                                      pRecord->_bDepthStencil != SW_FALSE || _pDevice->isDeviceLost();
         if ( bTextureRegionUploadUnavailable )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         const RHIFormat format = static_cast<RHIFormat>( pRecord->_rhiFormat );
@@ -818,13 +818,13 @@ namespace sw
     {
         if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.TakeTextureReadbackTicketNotCompleted", "takeTextureReadback: ticket %# has not completed", ticket._serial );
             return false;
         }
         VulkanRHIDevice::VulkanPendingReadback pending{};
         if ( _pDevice->_readbackTable.take( ticket._serial, pending ) == false )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.TakeTextureReadbackTicketNotPending", "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
             return false;
         }
         // 펜스를 지났고 복사 뒤에 HOST 배리어를 걸었다 — 호스트 일관 메모리라 그대로 읽는다. 읽은 뒤 구간을 돌려준다.
@@ -879,14 +879,14 @@ namespace sw
         const bool bNotReadback = pRecord->_usage != VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         if ( bNotReadback )
         {
-            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback );
             return false;
         }
         // 프레임 펜스를 기다린 뒤(해제 콜백)라 GPU 쓰기가 호스트에 보인다.
         void* pMapped{ nullptr };
         if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, sizeBytes, 0, &pMapped ) != VK_SUCCESS || pMapped == nullptr )
         {
-            SW_LOG_ERROR( "readReadbackBuffer: failed to map the readback memory (%# bytes)", sizeBytes );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.ReadReadbackBufferFailedMapReadback", "readReadbackBuffer: failed to map the readback memory (%# bytes)", sizeBytes );
             return false;
         }
         Memory::copy( pDestination, pMapped, sizeBytes );
@@ -905,12 +905,12 @@ namespace sw
                                                  _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_transferCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
         if ( bTextureReadbackUnavailable )
         {
-            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arrayLayers )
         {
-            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureReadbackMipSliceOut", "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
             return RHITransferSubmit::rejected();
         }
         // 깊이는 깊이 aspect 만 복사한다(텍셀마다 4 바이트). D24 는 아래 24비트가 깊이라 가져갈 때 0..1 float32 로 바꾸고, D32 계열은 이미 float32 다(kRHIDepthReadbackFormat).
@@ -918,8 +918,8 @@ namespace sw
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : static_cast<RHIFormat>( pRecord->_rhiFormat );
         if ( computeRHITextureMipLayout( layoutFormat, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
         {
-            SW_LOG_ERROR( "submitTextureReadback: unsupported format %# for %#x%# mip %#",
-                          pRecord->_rhiFormat, pRecord->_width, pRecord->_height, mip );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.SubmitTextureReadbackUnsupportedFormatX", "submitTextureReadback: unsupported format %# for %#x%# mip %#",
+                             pRecord->_rhiFormat, pRecord->_width, pRecord->_height, mip );
             return RHITransferSubmit::rejected();
         }
 
@@ -1082,8 +1082,8 @@ namespace sw
         // 텍스처 배열 세트(set 1 binding 0)는 sampler2D[] 다 — 배열 · 큐브 뷰는 넣을 수 없다(RHITextureDimension 참고).
         if ( pResolved->_dimension != RHITextureDimension::Texture2D )
         {
-            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture set yet", texture,
-                          static_cast<uint32>( pResolved->_dimension ) );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture set yet", texture,
+                             static_cast<uint32>( pResolved->_dimension ) );
             return kInvalidDescriptorIndex;
         }
 
@@ -1111,7 +1111,7 @@ namespace sw
         const RHIDescriptorIndex descriptorIndex = reserveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );
         if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
         {
-            SW_LOG_ERROR( "Bindless texture table full." );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureTableFull", "Bindless texture table full." );
             return kInvalidDescriptorIndex;
         }
 
@@ -1144,7 +1144,7 @@ namespace sw
         // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
         if ( index >= _pDevice->_listBindlessSourceBuffer.size() || _pDevice->_listBindlessSourceBuffer[index] == 0 )
         {
-            SW_LOG_ERROR( "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessBufferIndexNot", "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index );
             return;
         }
         _pDevice->_listBindlessSourceBuffer[index] = RHIBufferHandle{ 0 };
@@ -1180,7 +1180,7 @@ namespace sw
             bFound = true;
         } );
         if ( bFound == false )
-            SW_LOG_ERROR( "Bindless texture index %# is not owned by any texture; ignoring the release.", index );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureIndexNot", "Bindless texture index %# is not owned by any texture; ignoring the release.", index );
     }
 
     void VulkanRHIResourceFactory::releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record )
@@ -1235,7 +1235,7 @@ namespace sw
         const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, RHIBufferHandle{ 0 } );
         if ( index >= _pDevice->kBindlessStorageImageCount )
         {
-            SW_LOG_ERROR( "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RWTextureArrayFull", "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
             releaseFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, index, RHIBufferHandle{ 0 } );
             return kInvalidDescriptorIndex;
         }
@@ -1267,7 +1267,7 @@ namespace sw
         // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
         if ( desc._fillMode == RHIFillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
         {
-            SW_LOG_ERROR( "createPipelineState: wireframe fill needs the fillModeNonSolid device feature ('%#')", desc._vertexShaderPath );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateWireframeFillNeeds", "createPipelineState: wireframe fill needs the fillModeNonSolid device feature ('%#')", desc._vertexShaderPath );
             return 0;
         }
         // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
@@ -1280,14 +1280,14 @@ namespace sw
         ShaderCompileResult            psResult{};
         if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false )
         {
-            SW_LOG_WARNING( "createPipelineState: shader compile failed (vs=%# ps=%#)",
-                            vsResult._bSuccess, psResult._bSuccess );
+            SW_LOG_WARNING_ID( "VulkanRHIResourceFactory.CreatePipelineStateShaderCompileFailed", "createPipelineState: shader compile failed (vs=%# ps=%#)",
+                               vsResult._bSuccess, psResult._bSuccess );
             return 0;
         }
 
         if ( _pDevice->_pipelineLayout == VK_NULL_HANDLE )
         {
-            SW_LOG_ERROR( "createPipelineState: pipeline layout is null" );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStatePipelineLayoutNull", "createPipelineState: pipeline layout is null" );
             return 0;
         }
 
@@ -1299,7 +1299,7 @@ namespace sw
         VkShaderModule vertShaderModule{ VK_NULL_HANDLE };
         if ( vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule ) != VK_SUCCESS || vertShaderModule == VK_NULL_HANDLE )
         {
-            SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the vertex shader '%#'", desc._vertexShaderPath );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateVkCreateShaderModuleFailedVertex", "createPipelineState: vkCreateShaderModule failed for the vertex shader '%#'", desc._vertexShaderPath );
             return 0;
         }
 
@@ -1313,7 +1313,7 @@ namespace sw
             if ( vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule ) != VK_SUCCESS || fragShaderModule == VK_NULL_HANDLE )
             {
                 vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
-                SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the pixel shader '%#'", desc._pixelShaderPath );
+                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateVkCreateShaderModuleFailedPixel", "createPipelineState: vkCreateShaderModule failed for the pixel shader '%#'", desc._pixelShaderPath );
                 return 0;
             }
         }
@@ -1475,7 +1475,7 @@ namespace sw
         // 실패하면 PSO 를 만들지 않는다(핸들 0, 다른 세 백엔드와 같은 규칙). 빈 파이프라인을 등록해 두면 드로우가 다른 것으로 대신 그려진다.
         if ( createResult != VK_SUCCESS || newPipeline == VK_NULL_HANDLE )
         {
-            SW_LOG_ERROR( "createPipelineState: vkCreateGraphicsPipelines failed (%#) '%#'", static_cast<int32>( createResult ), desc._vertexShaderPath );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateVkCreateGraphicsPipelinesFailed", "createPipelineState: vkCreateGraphicsPipelines failed (%#) '%#'", static_cast<int32>( createResult ), desc._vertexShaderPath );
             return 0;
         }
 
@@ -1491,7 +1491,7 @@ namespace sw
 
         if ( csResult._bSuccess == false )
         {
-            SW_LOG_ERROR( "createComputePipelineState: shader compile failed '%#'", shaderPath );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateComputePipelineStateShaderCompileFailed", "createComputePipelineState: shader compile failed '%#'", shaderPath );
             return 0;
         }
 
@@ -1504,7 +1504,7 @@ namespace sw
         if ( vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule ) != VK_SUCCESS ||
              compShaderModule == VK_NULL_HANDLE )
         {
-            SW_LOG_ERROR( "createComputePipelineState: vkCreateShaderModule failed" );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateComputePipelineStateVkCreateShaderModuleFailed", "createComputePipelineState: vkCreateShaderModule failed" );
             return 0;
         }
 
@@ -1526,7 +1526,7 @@ namespace sw
         vkDestroyShaderModule( _pDevice->_device, compShaderModule, nullptr );
         if ( newPipeline == VK_NULL_HANDLE )
         {
-            SW_LOG_ERROR( "createComputePipelineState: vkCreateComputePipelines failed '%#'", shaderPath );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateComputePipelineStateVkCreateComputePipelinesFailed", "createComputePipelineState: vkCreateComputePipelines failed '%#'", shaderPath );
             return 0;
         }
 
@@ -1559,7 +1559,7 @@ namespace sw
 
         if ( desc._listColorAttachment.empty() && desc._bHasDepthStencil == SW_FALSE )
         {
-            SW_LOG_ERROR( "createRenderPass requires color or depth attachments." );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateRenderPassRequiresColorDepth", "createRenderPass requires color or depth attachments." );
             return 0;
         }
 
@@ -1585,7 +1585,7 @@ namespace sw
         VkRenderPass created = _pDevice->createRenderPassFromSpec( spec );
         if ( created == VK_NULL_HANDLE )
         {
-            SW_LOG_ERROR( "createRenderPass(desc) failed" );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreateRenderPassDescFailed", "createRenderPass(desc) failed" );
             return 0;
         }
 

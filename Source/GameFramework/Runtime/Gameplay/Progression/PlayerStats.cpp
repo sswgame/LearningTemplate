@@ -95,7 +95,7 @@ namespace sw
             const string_view kindText = node.getAttributeText( "kind" );
             if ( kindText.empty() == false && parseStatKind( kindText, def._kind ) == false )
             {
-                SW_LOG_ERROR( "%#: stat '%#' has an unknown kind '%#' (Counter, Max, Min, Time) - skipped", sourceName, pID, kindText );
+                SW_LOG_ERROR_ID( "PlayerStats.StatUnknownKindCounter", "%#: stat '%#' has an unknown kind '%#' (Counter, Max, Min, Time) - skipped", sourceName, pID, kindText );
                 continue;
             }
             const utf8* pName = node.findAttribute( "name" );
@@ -105,7 +105,7 @@ namespace sw
             float32 maxValue = static_cast<float32>( def._maxValue );
             if ( XMLReadUtil::readOptionalNumber( node, "max", sourceName, 0.0f, MathUtil::kMaxFloat, maxValue ) == false )
             {
-                SW_LOG_ERROR( "%#: stat '%#' has an invalid max - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "PlayerStats.StatInvalidMaxSkipped", "%#: stat '%#' has an invalid max - skipped", sourceName, pID );
                 continue;
             }
             def._maxValue = static_cast<float64>( maxValue );
@@ -188,12 +188,12 @@ namespace sw
         const StatDef* pDef = _pCatalog != nullptr ? _pCatalog->findStat( id ) : nullptr;
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "Unknown stat '%#' - ignored", id.c_str() );
+            SW_LOG_WARNING_ID( "PlayerStats.UnknownStatIgnored", "Unknown stat '%#' - ignored", id.c_str() );
             return nullptr;
         }
         if ( pDef->_kind != expectedKind && pDef->_kind != alternateKind )
         {
-            SW_LOG_WARNING( "Stat '%#' is a %# stat - %# is not how it takes values", id.c_str(), getEnumName( pDef->_kind ), getEnumName( expectedKind ) );
+            SW_LOG_WARNING_ID( "PlayerStats.StatStatNotHow", "Stat '%#' is a %# stat - %# is not how it takes values", id.c_str(), getEnumName( pDef->_kind ), getEnumName( expectedKind ) );
             return nullptr;
         }
         return pDef;
@@ -260,7 +260,7 @@ namespace sw
                 return false;
             if ( _pCatalog == nullptr || _pCatalog->findStat( id ) == nullptr )
             {
-                SW_LOG_WARNING( "Saved stat '%#' has no definition any more - dropped", id.c_str() );
+                SW_LOG_WARNING_ID( "PlayerStats.SavedStatNoDefinition", "Saved stat '%#' has no definition any more - dropped", id.c_str() );
                 continue;
             }
             mapValue[id] = value;

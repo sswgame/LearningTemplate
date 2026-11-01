@@ -274,7 +274,7 @@ namespace sw::editor
             return false;
         if ( MeshAssetFormat::loadFromAsset( AssetID{ pMesh->getMeshID() }, _sourceData ) == false )
         {
-            SW_LOG_WARNING( "Mesh modifier target '%#' could not be read", pMesh->getMeshID().c_str() );
+            SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierTargetCould", "Mesh modifier target '%#' could not be read", pMesh->getMeshID().c_str() );
             return false;
         }
         _meshPath = pMesh->getMeshID();
@@ -303,7 +303,7 @@ namespace sw::editor
             return;
         recordUndo();
         if ( _stack.readJSONText( _savedStackText ) == false )
-            SW_LOG_ERROR( "Mesh modifier stack of %# could not be restored to its saved state - undo brings the edits back", _meshPath.c_str() );
+            SW_LOG_ERROR_ID( "MeshModifierSession.MeshModifierStackCould", "Mesh modifier stack of %# could not be restored to its saved state - undo brings the edits back", _meshPath.c_str() );
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
         _bPreviewDirty = true;
     }
@@ -610,11 +610,11 @@ namespace sw::editor
         const std::optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
         if ( stackFile.has_value() == false || _stack.saveFile( *stackFile ) == false )
         {
-            SW_LOG_ERROR( "Failed to write mesh modifier stack %#", path.c_str() );
+            SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path.c_str() );
             return false;
         }
         _savedStackText = _stack.makeJSONText( -1 );
-        SW_LOG_INFO( "Mesh modifier stack saved to %#", path.c_str() );
+        SW_LOG_INFO_ID( "MeshModifierSession.MeshModifierStackSaved", "Mesh modifier stack saved to %#", path.c_str() );
         return true;
     }
 
@@ -627,7 +627,7 @@ namespace sw::editor
             return false;
         if ( _stack.loadFile( path->str() ) == false )
         {
-            SW_LOG_WARNING( "Mesh modifier stack %# could not be read", path->c_str() );
+            SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierStackCould2", "Mesh modifier stack %# could not be read", path->c_str() );
             return false;
         }
         _savedStackText = _stack.makeJSONText( -1 );
@@ -654,17 +654,17 @@ namespace sw::editor
         baked._listSkinVertex = _sourceData._listSkinVertex;
         baked._skinBoneCount  = _sourceData._skinBoneCount;
         if ( _sourceData._listMorphTarget.empty() == false )
-            SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
+            SW_LOG_WARNING_ID( "MeshModifierSession.MeshMorphTargetsThey", "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
         // 구운 메시도 원본 메시 파일 곁이다
         const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         const std::optional<AbsolutePath> path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : std::nullopt;
         if ( path.has_value() == false || MeshAssetFormat::saveToFile( *path, baked ) == false )
         {
-            SW_LOG_ERROR( "Failed to write the baked mesh of '%#'", _meshPath.c_str() );
+            SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteBakedMesh", "Failed to write the baked mesh of '%#'", _meshPath.c_str() );
             return false;
         }
-        SW_LOG_INFO( "Baked mesh written to %#", path->c_str() );
+        SW_LOG_INFO_ID( "MeshModifierSession.BakedMeshWritten", "Baked mesh written to %#", path->c_str() );
         if ( pOutPath != nullptr )
             *pOutPath = editor::getSubsystem<AssetPaths>().toAssetID( path->str() );
         return true;

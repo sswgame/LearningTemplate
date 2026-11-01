@@ -246,7 +246,7 @@ namespace sw::editor
         upload._mipLevels = 1;
         if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, _snapshotTexture, upload ) == false )
         {
-            SW_LOG_WARNING( "Render target preview %#x%# could not be uploaded", image._width, image._height );
+            SW_LOG_WARNING_ID( "RenderTargetPanel.RenderTargetPreviewX", "Render target preview %#x%# could not be uploaded", image._width, image._height );
             releaseSnapshotTexture( pDevice );
             return;
         }

@@ -31,7 +31,7 @@ namespace sw
         if ( XMLCatalog<MonsterCatalog>::loadFromAsset( assetID ) )
             return true;
         // 파일이나 루트가 없거나 `<Monster>` 가 하나도 없는 경우다(읽는 쪽이 이미 원인을 알렸다). 코드 폴백 없이 빈 카탈로그로 둔다.
-        SW_LOG_ERROR( "%# gave no monster definitions - the monster catalog stays empty", assetRelativePath );
+        SW_LOG_ERROR_ID( "MonsterCatalog.GaveNoMonsterDefinitions", "%# gave no monster definitions - the monster catalog stays empty", assetRelativePath );
         return false;
     }
 
@@ -43,22 +43,22 @@ namespace sw
         {
             const bool bMonster = StringUtil::equals( node.getName(), "Monster" );
             if ( bMonster == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "MonsterCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             if ( bMonster == false || loadMonster( node, sourceName ) == false )
                 ++rejectedCount; // 원인은 위 줄이나 loadMonster 가 남겼다
         }
         if ( rejectedCount > 0 )
-            SW_LOG_ERROR( "%#: %# element(s) were not loaded (listed above)", sourceName, rejectedCount );
+            SW_LOG_ERROR_ID( "MonsterCatalog.ElementNotLoadedListed", "%#: %# element(s) were not loaded (listed above)", sourceName, rejectedCount );
 
         // **읽었는데 하나도 없으면 실패로 본다**(0을 반환하면 호출한 쪽이 폴백을 채운다). 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 잘못 적은 오타 하나가
         // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 을 반환해서 그 널을 다루는 쪽이 조용히 아무것도 하지 않는다.
         if ( _mapMonster.empty() )
         {
-            SW_LOG_WARNING( "No <Monster> entries in %#", sourceName );
+            SW_LOG_WARNING_ID( "MonsterCatalog.NoMonsterEntries", "No <Monster> entries in %#", sourceName );
             return 0;
         }
 
-        SW_LOG_INFO( "Loaded %# monster definitions from %#", static_cast<int32>( _mapMonster.size() ), sourceName );
+        SW_LOG_INFO_ID( "MonsterCatalog.LoadedMonsterDefinitions", "Loaded %# monster definitions from %#", static_cast<int32>( _mapMonster.size() ), sourceName );
         return static_cast<uint32>( _mapMonster.size() );
     }
 
@@ -100,7 +100,7 @@ namespace sw
                     const bool        bAmount   = StringUtil::parseInt( attr.getValue() != nullptr ? attr.getValue() : "", amount ) && amount >= 0;
                     if ( bAmount == false )
                     {
-                        SW_LOG_ERROR( "%#: <Drop %#=\"%#\"> needs an integer of 0 or more", where, pRewardID, attr.getValue() );
+                        SW_LOG_ERROR_ID( "MonsterCatalog.DropNeedsIntegerMore", "%#: <Drop %#=\"%#\"> needs an integer of 0 or more", where, pRewardID, attr.getValue() );
                         bValid = false;
                         continue;
                     }
@@ -109,7 +109,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: unknown child <%#>", where, name );
+                SW_LOG_ERROR_ID( "MonsterCatalog.UnknownChild", "%#: unknown child <%#>", where, name );
                 bValid = false;
             }
         }

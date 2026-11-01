@@ -91,20 +91,20 @@ namespace sw
         _pHealthRegistry.set( pHealthRegistry );
         if ( pTransport->initialize( this, transportSettings ) == false )
         {
-            SW_LOG_ERROR( "Ops HTTP endpoint could not start its stream transport" );
+            SW_LOG_ERROR_ID( "OpsHTTPEndpoint.OpsHTTPEndpointCould", "Ops HTTP endpoint could not start its stream transport" );
             shutdown();
             return false;
         }
         _pTransport.set( pTransport );
         if ( _pTransport->listen( settings._bindAddress ) == false )
         {
-            SW_LOG_ERROR( "Ops HTTP endpoint could not listen on %#", settings._bindAddress.toString().c_str() );
+            SW_LOG_ERROR_ID( "OpsHTTPEndpoint.OpsHTTPEndpointCould2", "Ops HTTP endpoint could not listen on %#", settings._bindAddress.toString().c_str() );
             shutdown();
             return false;
         }
         NetAddress listenAddress = settings._bindAddress;
         listenAddress._port      = _pTransport->getListenPort(); // 포트 0(아무 포트)이면 실제로 받은 포트
-        SW_LOG_INFO( "Ops HTTP endpoint listening on %# (/metrics /healthz /readyz)", listenAddress.toString().c_str() );
+        SW_LOG_INFO_ID( "OpsHTTPEndpoint.OpsHTTPEndpointListening", "Ops HTTP endpoint listening on %# (/metrics /healthz /readyz)", listenAddress.toString().c_str() );
         return true;
     }
 

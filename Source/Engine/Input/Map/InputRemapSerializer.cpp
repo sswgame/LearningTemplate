@@ -172,7 +172,7 @@ namespace sw
                     {
                         // 종류를 추가하고 이 switch 를 빠뜨린 경우다. 이름은 테이블에서 왔으므로 `kind` 는
                         // 제대로 적히지만 딸린 특성이 하나도 없어서 다시 읽을 수 없는 줄이 된다.
-                        SW_LOG_ERROR( "Unsaved binding kind (kind=%#) - BindingKind was extended but InputRemapSerializer::save was not updated.", BindingKinds::toName( binding._kind ) );
+                        SW_LOG_ERROR_ID( "InputRemapSerializer.UnsavedBindingKindKind", "Unsaved binding kind (kind=%#) - BindingKind was extended but InputRemapSerializer::save was not updated.", BindingKinds::toName( binding._kind ) );
                         break;
                     }
                 }
@@ -362,7 +362,7 @@ namespace sw
                     case BindingKind::Count:
                     {
                         // 테이블은 이 이름을 아는데 여기서는 모른다. 종류를 추가하고 이 switch 를 빠뜨린 경우다.
-                        SW_LOG_ERROR( "Unread binding kind (kind=%#) - BindingKind was extended but InputRemapSerializer::load was not updated.", pKindStr );
+                        SW_LOG_ERROR_ID( "InputRemapSerializer.UnreadBindingKindKind", "Unread binding kind (kind=%#) - BindingKind was extended but InputRemapSerializer::load was not updated.", pKindStr );
                         break;
                     }
                 }
@@ -437,7 +437,7 @@ namespace sw
             bCursorConflict = map.removeVirtualCursorConflicts( filePath, actionName, previousCount ) > 0 || bCursorConflict;
         }
         if ( bValid == false )
-            SW_LOG_ERROR( "user bindings %# have invalid attribute values (listed above)", filePath );
+            SW_LOG_ERROR_ID( "InputRemapSerializer.UserBindingsInvalidAttribute", "user bindings %# have invalid attribute values (listed above)", filePath );
         return bCursorConflict == false && bValid;
     }
 

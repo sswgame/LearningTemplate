@@ -161,9 +161,9 @@ namespace sw
             return false;
         if ( isZlibRepresentableSize( srcSize ) == false || isZlibRepresentableSize( dstCapacity ) == false )
         {
-            SW_LOG_ERROR( "zlib input exceeds the uLong limit (src %# / dst %# bytes > %#).",
-                          static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ),
-                          static_cast<uint64>( kZlibMaxSize ) );
+            SW_LOG_ERROR_ID( "ZlibCodec.ZlibInputExceedsULong", "zlib input exceeds the uLong limit (src %# / dst %# bytes > %#).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ),
+                             static_cast<uint64>( kZlibMaxSize ) );
             return false;
         }
 
@@ -196,9 +196,9 @@ namespace sw
             return false;
         if ( isZlibRepresentableSize( srcSize ) == false || isZlibRepresentableSize( dstCapacity ) == false )
         {
-            SW_LOG_ERROR( "zlib decompression input exceeds the uLong limit (src %# / dst %# bytes > %#).",
-                          static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ),
-                          static_cast<uint64>( kZlibMaxSize ) );
+            SW_LOG_ERROR_ID( "ZlibCodec.ZlibDecompressionInputExceeds", "zlib decompression input exceeds the uLong limit (src %# / dst %# bytes > %#).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ),
+                             static_cast<uint64>( kZlibMaxSize ) );
             return false;
         }
 

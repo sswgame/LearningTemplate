@@ -38,7 +38,7 @@ namespace sw
         }
         if ( pOwner == nullptr || pOwner->getComponent<PairedAnimationComponent>() == nullptr )
         {
-            SW_LOG_ERROR( "'%#': the paired animation net starter needs a PairedAnimationComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            SW_LOG_ERROR_ID( "PairedAnimationNetStarterComponent.PairedAnimationNetStarter", "'%#': the paired animation net starter needs a PairedAnimationComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
             _bStarts = SW_FALSE;
             return;
         }
@@ -83,7 +83,7 @@ namespace sw
         }
         if ( result == PairedAnimationStartResult::ParticipantNotReady )
             return; // 클립을 읽는 중 — 다음 틱에 다시 시도한다
-        SW_LOG_ERROR( "'%#': paired animation '%#' did not start (result %#); the net starter stops", pOwner->getName().c_str(), pPaired->getPairedAnimationPath().c_str(), static_cast<uint32>( result ) );
+        SW_LOG_ERROR_ID( "PairedAnimationNetStarterComponent.PairedAnimationDidNot", "'%#': paired animation '%#' did not start (result %#); the net starter stops", pOwner->getName().c_str(), pPaired->getPairedAnimationPath().c_str(), static_cast<uint32>( result ) );
         _bStarts = SW_FALSE;
     }
 } // namespace sw

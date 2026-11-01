@@ -136,7 +136,7 @@ namespace sw::editor
                             candidates += candidate;
                             candidates += "  ";
                         }
-                        SW_LOG_INFO( "%#", candidates.c_str() );
+                        SW_LOG_INFO_ID( "ConsolePanel.Message", "%#", candidates.c_str() );
                     }
                     return 0;
                 }
@@ -688,7 +688,7 @@ namespace sw::editor
         ILogSink* pSink = Logger::getGlobalSink();
         if ( pSink == nullptr || pSink->getLogFolderPath().empty() )
         {
-            SW_LOG_WARNING( "No log file folder (the log sink writes no file)" );
+            SW_LOG_WARNING_ID( "ConsolePanel.NoLogFileFolder", "No log file folder (the log sink writes no file)" );
             return;
         }
         // 이번 실행의 파일은 싱크만 안다 — 폴더의 "가장 새 파일" 은 같은 폴더를 쓰는 다른 프로세스의 것일 수 있다.

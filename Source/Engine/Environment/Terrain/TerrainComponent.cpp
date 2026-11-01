@@ -317,7 +317,7 @@ namespace sw
             return false;
         if ( TerrainMeshBuilder::makeLayout( data._resolution, _chunkCells, _layout ) == false )
         {
-            SW_LOG_ERROR( "Terrain '%#': chunk size %# must be a power of two dividing resolution - 1 (%#)", _heightfieldPath.c_str(), _chunkCells, data._resolution - 1 );
+            SW_LOG_ERROR_ID( "TerrainComponent.TerrainChunkSizeMust", "Terrain '%#': chunk size %# must be a power of two dividing resolution - 1 (%#)", _heightfieldPath.c_str(), _chunkCells, data._resolution - 1 );
             _heightfield.shutdown();
             return false;
         }
@@ -423,13 +423,13 @@ namespace sw
             return false;
         if ( bLayoutFits == false )
         {
-            SW_LOG_ERROR( "Terrain '%#': resolution %# does not divide into chunks of %# cells (resolution - 1 must be a multiple)", _heightfieldPath.c_str(), resolution, _chunkCells );
+            SW_LOG_ERROR_ID( "TerrainComponent.TerrainResolutionDoesNot", "Terrain '%#': resolution %# does not divide into chunks of %# cells (resolution - 1 must be a multiple)", _heightfieldPath.c_str(), resolution, _chunkCells );
             return false;
         }
         if ( _heightfield.replaceSamples( resolution, listHeight, listHole ) == false )
         {
-            SW_LOG_ERROR( "Terrain '%#': %# heights and %# hole cells do not fit resolution %#", _heightfieldPath.c_str(), static_cast<uint32>( listHeight.size() ),
-                          static_cast<uint32>( listHole.size() ), resolution );
+            SW_LOG_ERROR_ID( "TerrainComponent.TerrainHeightsHoleCells", "Terrain '%#': %# heights and %# hole cells do not fit resolution %#", _heightfieldPath.c_str(), static_cast<uint32>( listHeight.size() ),
+                             static_cast<uint32>( listHole.size() ), resolution );
             return false;
         }
         _layout              = layout;
@@ -594,7 +594,7 @@ namespace sw
         archive >> version >> bHeights;
         if ( archive.isError() || version != TerrainComponentInternal::kStateVersion )
         {
-            SW_LOG_WARNING( "Terrain '%#': unsaved edit state (version %#) did not read - keeping the asset values", _heightfieldPath.c_str(), version );
+            SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedEditState", "Terrain '%#': unsaved edit state (version %#) did not read - keeping the asset values", _heightfieldPath.c_str(), version );
             return;
         }
         if ( bHeights )
@@ -626,7 +626,7 @@ namespace sw
             }
             if ( bWritten == false )
             {
-                SW_LOG_WARNING( "Terrain '%#': unsaved height edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
+                SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedHeightEdits", "Terrain '%#': unsaved height edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
                 return;
             }
         }
@@ -652,7 +652,7 @@ namespace sw
             }
             if ( bWritten == false )
             {
-                SW_LOG_WARNING( "Terrain '%#': unsaved hole edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
+                SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedHoleEdits", "Terrain '%#': unsaved hole edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
                 return;
             }
         }
@@ -668,7 +668,7 @@ namespace sw
         const bool   bFits      = archive.isOk() && texelCount > 0 && width == _heightfield.getSplatWidth() && height == _heightfield.getSplatHeight();
         if ( bFits == false || splatBytes.size() != texelCount * SurfaceLayerWeights::kLayerCount )
         {
-            SW_LOG_WARNING( "Terrain '%#': unsaved splat edits (%#x%#) do not fit the reloaded splat - keeping the asset values", _heightfieldPath.c_str(), width, height );
+            SW_LOG_WARNING_ID( "TerrainComponent.TerrainUnsavedSplatEdits", "Terrain '%#': unsaved splat edits (%#x%#) do not fit the reloaded splat - keeping the asset values", _heightfieldPath.c_str(), width, height );
             return;
         }
         // 바이트를 그대로 되돌리도록 가중치는 정규화하지 않는다(`writeLayerWeights` 는 x 255 를 반올림한다).
@@ -685,7 +685,7 @@ namespace sw
         all.include( 0, 0 );
         all.include( width - 1, height - 1 );
         if ( writeLayerWeights( listWeight, all ) == false )
-            SW_LOG_WARNING( "Terrain '%#': could not write back the unsaved splat edits", _heightfieldPath.c_str() );
+            SW_LOG_WARNING_ID( "TerrainComponent.TerrainCouldNotWrite", "Terrain '%#': could not write back the unsaved splat edits", _heightfieldPath.c_str() );
     }
 
     bool TerrainComponent::loadSplatWeights()
@@ -697,8 +697,8 @@ namespace sw
         LayerWeightsAsset data;
         if ( data.loadFromAsset( AssetID{ _layerWeightsPath } ) == false )
         {
-            SW_LOG_ERROR( "Terrain '%#': layer weights '%#' did not load - the terrain is not loaded (expected a %# asset)", _heightfieldPath.c_str(), _layerWeightsPath.c_str(),
-                          string( LayerWeightsAsset::kExtension ).c_str() );
+            SW_LOG_ERROR_ID( "TerrainComponent.TerrainLayerWeightsDid", "Terrain '%#': layer weights '%#' did not load - the terrain is not loaded (expected a %# asset)", _heightfieldPath.c_str(), _layerWeightsPath.c_str(),
+                             string( LayerWeightsAsset::kExtension ).c_str() );
             return false;
         }
         _heightfield.setSplat( data._width, data._height, data._bytes );
@@ -714,7 +714,7 @@ namespace sw
             const bool    bMade = _heightfield.makeFullSplatPlane( plane, rgbaBytes ) && textures.createCPUTexture( path, data._width, data._height, std::move( rgbaBytes ) );
             if ( bMade == false )
             {
-                SW_LOG_ERROR( "Terrain '%#': could not create splat texture %# for '%#' (%#x%#)", _heightfieldPath.c_str(), plane, _layerWeightsPath.c_str(), data._width, data._height );
+                SW_LOG_ERROR_ID( "TerrainComponent.TerrainCouldNotCreate", "Terrain '%#': could not create splat texture %# for '%#' (%#x%#)", _heightfieldPath.c_str(), plane, _layerWeightsPath.c_str(), data._width, data._height );
                 releaseCPUSplat(); // 만든 평면이 있으면 놓는다 - 반쪽 스플랫으로 그리지 않는다
                 return false;
             }

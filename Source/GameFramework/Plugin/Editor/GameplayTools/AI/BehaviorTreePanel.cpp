@@ -155,7 +155,7 @@ namespace sw::editor
         if ( diskPath.has_value() == false || FileUtil::readTextFile( diskPath->str(), text ) == false )
         {
             _statusText = "The file could not be read";
-            SW_LOG_ERROR( "Behavior tree file '%#' could not be read", path.c_str() );
+            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould", "Behavior tree file '%#' could not be read", path.c_str() );
             return ToolAssetLoadResult::Malformed;
         }
         string error;
@@ -163,7 +163,7 @@ namespace sw::editor
         {
             // 읽지 못한 파일은 덮어쓰지 않도록 저장을 막는다(Malformed).
             _statusText = error;
-            SW_LOG_ERROR( "Behavior tree file '%#' could not be opened: %#", path.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould2", "Behavior tree file '%#' could not be opened: %#", path.c_str(), error.c_str() );
             return ToolAssetLoadResult::Malformed;
         }
         _statusText = "Loaded";
@@ -180,11 +180,11 @@ namespace sw::editor
             return false; // 이유는 toDiskPath 가 남겼다
         _model.collectIssues( _listIssue );
         if ( _listIssue.empty() == false )
-            SW_LOG_WARNING( "Saving behavior tree '%#' with %# problems - the game will not load it until they are fixed", path.c_str(), _listIssue.size() );
+            SW_LOG_WARNING_ID( "BehaviorTreePanel.SavingBehaviorTreeProblems", "Saving behavior tree '%#' with %# problems - the game will not load it until they are fixed", path.c_str(), _listIssue.size() );
         if ( FileUtil::writeTextFile( diskPath->str(), _model.write() ) == false )
         {
             _statusText = "The file could not be written";
-            SW_LOG_ERROR( "Behavior tree file '%#' could not be written", diskPath->c_str() );
+            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );
             return false;
         }
         clearDocumentDirty();
@@ -204,7 +204,7 @@ namespace sw::editor
         if ( _model.parse( text, error ) == false )
         {
             // 되돌리기 글은 이 창이 쓴 XML 이다. 읽지 못하면 결함이므로 알리고 지금 모델을 둔다.
-            SW_LOG_WARNING( "Behavior tree undo snapshot could not be read: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "BehaviorTreePanel.BehaviorTreeUndoSnapshot", "Behavior tree undo snapshot could not be read: %#", error.c_str() );
             return;
         }
         _selectedID     = -1;

@@ -55,7 +55,7 @@ namespace sw
         _listFrameVertex.clear();
         if ( elementCount == 0 || listPosition.size() != elementCount || listNormal.size() != elementCount )
         {
-            SW_LOG_ERROR( "Vertex animation quantize: expected %# elements, got %# positions and %# normals", elementCount, listPosition.size(), listNormal.size() );
+            SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationQuantizeExpected", "Vertex animation quantize: expected %# elements, got %# positions and %# normals", elementCount, listPosition.size(), listNormal.size() );
             return false;
         }
         float3 minimum = listPosition[0];
@@ -150,13 +150,13 @@ namespace sw
                                              Memory::compare( pData, MeshVertexAnimationInternal::kArrMagic, sizeof( MeshVertexAnimationInternal::kArrMagic ) ) != 0;
         if ( bNotVertexAnimationFile )
         {
-            SW_LOG_ERROR( "Vertex animation '%#' is not a SWVA file", sourceLabel );
+            SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationNotSWVA", "Vertex animation '%#' is not a SWVA file", sourceLabel );
             return false;
         }
         const uint32 version = MeshVertexAnimationInternal::readValue<uint32>( pData, 4 );
         if ( version != kVersion )
         {
-            SW_LOG_ERROR( "Vertex animation '%#' is version %#, not the current %# - cook again", sourceLabel, version, kVersion );
+            SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationVersionNot", "Vertex animation '%#' is version %#, not the current %# - cook again", sourceLabel, version, kVersion );
             return false;
         }
         const uint32  frameCount  = MeshVertexAnimationInternal::readValue<uint32>( pData, 8 );
@@ -172,7 +172,7 @@ namespace sw
         const bool    bMalformedVertexAnimation = frameCount == 0 || vertexCount == 0 || frameRate <= 0.0f || byteCount != MeshVertexAnimationInternal::kHeaderSize + elementCount * sizeof( MeshVertexAnimationElement );
         if ( bMalformedVertexAnimation )
         {
-            SW_LOG_ERROR( "Vertex animation '%#' is malformed (%# frames x %# vertices, %# bytes)", sourceLabel, frameCount, vertexCount, byteCount );
+            SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationMalformedFrames", "Vertex animation '%#' is malformed (%# frames x %# vertices, %# bytes)", sourceLabel, frameCount, vertexCount, byteCount );
             return false;
         }
         _listFrameVertex.resize( elementCount );
@@ -203,7 +203,7 @@ namespace sw
         vector<uint8>     bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationCouldNot", "Vertex animation '%#' could not be read", path );
             *this = MeshVertexAnimation{};
             return false;
         }

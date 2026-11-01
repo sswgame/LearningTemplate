@@ -276,7 +276,7 @@ namespace sw
         if ( VectorUtil::contains( _listFailedAgentType, agentType ) )
             return nullptr;
         _listFailedAgentType.push_back( agentType );
-        SW_LOG_ERROR( "Navigation agent type '%#' is not in the navigation settings", agentType.c_str() );
+        SW_LOG_ERROR_ID( "SceneNavigation.NavigationAgentTypeNot", "Navigation agent type '%#' is not in the navigation settings", agentType.c_str() );
         return nullptr;
     }
 
@@ -319,14 +319,14 @@ namespace sw
             return false;
         if ( pEntry->_settingsHash != NavMeshSettings::computeAgentTypeHash( agentType ) || pEntry->_inputHash != inputHash )
         {
-            SW_LOG_WARNING( "Cooked navmesh '%#' (%#) does not match the scene or the settings - baking at runtime", cookedPath.c_str(), agentType._name.c_str() );
+            SW_LOG_WARNING_ID( "SceneNavigation.CookedNavmeshDoesNot", "Cooked navmesh '%#' (%#) does not match the scene or the settings - baking at runtime", cookedPath.c_str(), agentType._name.c_str() );
             return false;
         }
         const Stopwatch stopwatch;
         if ( runtime._pNavMesh->initialize( agentType, _settings, pEntry->_bounds ) == false ||
              NavMeshBakeUtil::installTiles( *runtime._pNavMesh, pEntry->_listTile ) == false )
         {
-            SW_LOG_WARNING( "Cooked navmesh '%#' (%#) could not be installed - baking at runtime", cookedPath.c_str(), agentType._name.c_str() );
+            SW_LOG_WARNING_ID( "SceneNavigation.CookedNavmeshCouldNot", "Cooked navmesh '%#' (%#) could not be installed - baking at runtime", cookedPath.c_str(), agentType._name.c_str() );
             return false;
         }
         runtime._bounds                     = pEntry->_bounds;
@@ -392,13 +392,13 @@ namespace sw
                     pRuntime->addDirtyTile( tile );
                 }
             }
-            SW_LOG_INFO( "Navmesh '%#' loaded from the cooked file: %# tiles, %# polygons, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
-                         pRuntime->_bakeStats._polygonCount, pRuntime->_bakeStats._milliseconds );
+            SW_LOG_INFO_ID( "SceneNavigation.NavmeshLoadedCookedFile", "Navmesh '%#' loaded from the cooked file: %# tiles, %# polygons, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
+                            pRuntime->_bakeStats._polygonCount, pRuntime->_bakeStats._milliseconds );
         }
         else
         {
             if ( pGeometry->isEmpty() )
-                SW_LOG_WARNING( "Navmesh '%#' has no geometry to bake (no visible static meshes or static bodies)", pType->_name.c_str() );
+                SW_LOG_WARNING_ID( "SceneNavigation.NavmeshNoGeometryBake", "Navmesh '%#' has no geometry to bake (no visible static meshes or static bodies)", pType->_name.c_str() );
             const AABB bounds = NavGeometryCollector::computeBakeBounds( pRuntime->_pSurface, *pGeometry );
             if ( pRuntime->_pNavMesh->initialize( *pType, _settings, bounds ) == false )
             {
@@ -407,8 +407,8 @@ namespace sw
             }
             pRuntime->_bounds = bounds;
             (void)NavMeshBakeUtil::bakeAllTiles( *pRuntime->_pNavMesh, *pGeometry, pVolume.get(), &pRuntime->_bakeStats );
-            SW_LOG_INFO( "Navmesh '%#' baked: %# of %# tiles, %# polygons, %# triangles in, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
-                         pRuntime->_bakeStats._tileCount, pRuntime->_bakeStats._polygonCount, pGeometry->getTriangleCount(), pRuntime->_bakeStats._milliseconds );
+            SW_LOG_INFO_ID( "SceneNavigation.NavmeshBakedTilesPolygons", "Navmesh '%#' baked: %# of %# tiles, %# polygons, %# triangles in, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
+                            pRuntime->_bakeStats._tileCount, pRuntime->_bakeStats._polygonCount, pGeometry->getTriangleCount(), pRuntime->_bakeStats._milliseconds );
         }
         // 캐시 종류 — 지금 뚫고 있는 장애물을 캐시에 넣는다(쿠킹본 · 런타임 베이크 모두 장애물 없는 층이다). 다음 갱신이 닿은 타일을 층에서 짓는다.
         if ( bObstacleCache )

@@ -302,7 +302,7 @@ namespace sw
     {
         _graph = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
-            SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         requestClipLoads();
         if ( _listClipLoad.empty() )
         {
@@ -441,7 +441,7 @@ namespace sw
         if ( _pUnit != nullptr )
             _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         else
-            SW_LOG_WARNING( "'%#': skeletal animator has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            SW_LOG_WARNING_ID( "SkeletalAnimator.SkeletalAnimatorNoSkeletalMeshComponent", "'%#': skeletal animator has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
 
     void SkeletalAnimatorComponent::loadGraph()
@@ -452,7 +452,7 @@ namespace sw
         _bClipsPending = SW_FALSE;
         _graph         = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
-            SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         applyGraphPlayables();
         if ( bWasPending )
             runDeferredPlayback();
@@ -468,7 +468,7 @@ namespace sw
             return;
         }
         // 빠진 것만 빼고 돌지 않는다 — 파일을 못 읽은 그래프와 같이 플레이어에 그래프를 걸지 않는다. 데이터는 남겨 클립 폴더를 바꾸면 다시 맞춰 본다.
-        SW_LOG_ERROR( "Animation graph '%#' is not used - it names what SkeletalAnimatorComponent cannot play (errors above)", _animationGraphPath.c_str() );
+        SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNotUsed", "Animation graph '%#' is not used - it names what SkeletalAnimatorComponent cannot play (errors above)", _animationGraphPath.c_str() );
         _listBlendSpace.clear();
         _listGraphLayer.clear();
     }
@@ -483,7 +483,7 @@ namespace sw
             // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 그래프를 쓰지 않는다.
             if ( node.hasPoseNode() )
             {
-                SW_LOG_ERROR( "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", _animationGraphPath.c_str(), node._name.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNodePose", "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", _animationGraphPath.c_str(), node._name.c_str() );
                 bPlayable = false;
                 continue;
             }
@@ -497,7 +497,7 @@ namespace sw
             {
                 const bool bLoaded = preloadClip( sample._clipName );
                 if ( bLoaded == false )
-                    SW_LOG_ERROR( "Blend space state '%#' sample clip '%#' was not found in '%#'", node._name.c_str(), sample._clipName.c_str(), _clipFolder.c_str() );
+                    SW_LOG_ERROR_ID( "SkeletalAnimator.BlendSpaceStateSample", "Blend space state '%#' sample clip '%#' was not found in '%#'", node._name.c_str(), sample._clipName.c_str(), _clipFolder.c_str() );
                 listClip.push_back( bLoaded ? findClip( sample._clipName ) : nullptr );
             }
             // 표본 클립이 하나라도 없으면 그래프를 쓰지 않는다 — 없는 표본을 빼고 섞으면 데이터가 말한 것과 다른 포즈가 된다.
@@ -521,7 +521,7 @@ namespace sw
         {
             if ( preloadClip( def._clipName ) == false )
             {
-                SW_LOG_ERROR( "Animation graph layer '%#' clip '%#' was not found in '%#'", def._name.c_str(), def._clipName.c_str(), _clipFolder.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphLayerClip", "Animation graph layer '%#' clip '%#' was not found in '%#'", def._name.c_str(), def._clipName.c_str(), _clipFolder.c_str() );
                 bPlayable = false;
                 continue;
             }
@@ -608,7 +608,7 @@ namespace sw
         _currentState     = _graphPlayer.getCurrentStateName().c_str();
         _stateTime        = 0.0f;
         if ( bFound == false && stateName.empty() == false )
-            SW_LOG_ERROR( "Animation clip '%#' was not found in '%#'", stateName.c_str(), _clipFolder.c_str() );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationClipNotFound", "Animation clip '%#' was not found in '%#'", stateName.c_str(), _clipFolder.c_str() );
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
         return bFound;
@@ -619,7 +619,7 @@ namespace sw
         const IAnimationPlayable* pPlaying = _graphPlayer.getPlayer().getCurrentPlayable();
         if ( pPlaying == nullptr )
         {
-            SW_LOG_ERROR( "Cannot seek to %# s - nothing is playing", seconds );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.CannotSeekNothingPlaying", "Cannot seek to %# s - nothing is playing", seconds );
             return false;
         }
         const float32 playLength = pPlaying->getPlayLength();
@@ -627,7 +627,7 @@ namespace sw
         const bool    bInRange   = seconds >= 0.0f && seconds <= playLength;
         if ( bFinite == false || bInRange == false )
         {
-            SW_LOG_ERROR( "Cannot seek to %# s - the time must be within 0..%# s", seconds, playLength );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.CannotSeekTimeMust", "Cannot seek to %# s - the time must be within 0..%# s", seconds, playLength );
             return false;
         }
         _graphPlayer.getPlayer().setCurrentTime( seconds );
@@ -650,7 +650,7 @@ namespace sw
     {
         if ( preloadClip( desc._clipName ) == false )
         {
-            SW_LOG_ERROR( "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _clipFolder.c_str() );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerClipNot", "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _clipFolder.c_str() );
             return -1;
         }
         LayerState layer{};
@@ -692,14 +692,14 @@ namespace sw
                 continue;
             if ( layer._pGraphLayer->_weightParameter.empty() == false )
             {
-                SW_LOG_ERROR( "Animation graph layer '%#' takes its weight from parameter '%#'; set the parameter instead", layerName.c_str(),
-                              layer._pGraphLayer->_weightParameter.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphLayerTakes", "Animation graph layer '%#' takes its weight from parameter '%#'; set the parameter instead", layerName.c_str(),
+                                 layer._pGraphLayer->_weightParameter.c_str() );
                 return false;
             }
             layer._desc._weight = MathUtil::clamp( weight, 0.0f, 1.0f );
             return true;
         }
-        SW_LOG_ERROR( "Animation graph layer '%#' was not found in '%#'", layerName.c_str(), _animationGraphPath.c_str() );
+        SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphLayerNot", "Animation graph layer '%#' was not found in '%#'", layerName.c_str(), _animationGraphPath.c_str() );
         return false;
     }
 
@@ -993,14 +993,14 @@ namespace sw
         {
             // 데이터 마스크(roots 퍼뜨림 + bones 예외)다. 스켈레톤에 없는 본을 가리키면 모두 0 이라 이 레이어는 아무것도 바꾸지 않는다.
             if ( layer._pBoneMask->computeBoneWeights( skeleton, layer._listBoneWeight ) == false )
-                SW_LOG_ERROR( "Animation graph layer '%#' is off: bone mask '%#' does not fit the skeleton", layer._pGraphLayer->_name.c_str(), layer._pBoneMask->_name.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphLayerOff", "Animation graph layer '%#' is off: bone mask '%#' does not fit the skeleton", layer._pGraphLayer->_name.c_str(), layer._pBoneMask->_name.c_str() );
         }
         else
         {
             layer._listBoneWeight.assign( boneCount, layer._desc._maskRootBone.empty() ? 1.0f : 0.0f );
             const int32 maskRoot = layer._desc._maskRootBone.empty() ? -1 : skeleton.findBoneIndex( layer._desc._maskRootBone );
             if ( layer._desc._maskRootBone.empty() == false && maskRoot < 0 )
-                SW_LOG_WARNING( "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
+                SW_LOG_WARNING_ID( "SkeletalAnimator.AnimationLayerMaskBone", "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
             // 부모가 앞에 있으므로 한 번 훑으면 마스크 본의 자손이 모두 1 이 된다.
             for ( uint32 boneIndex = 0; maskRoot >= 0 && boneIndex < boneCount; ++boneIndex )
             {

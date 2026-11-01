@@ -36,7 +36,7 @@ namespace sw
         const string configFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfig );
         if ( FileUtil::isDirectory( configFolder ) == false )
         {
-            SW_LOG_INFO( "Config reload is off - no config folder at %#", configFolder.c_str() );
+            SW_LOG_INFO_ID( "ConfigReload.ConfigReloadOffNo", "Config reload is off - no config folder at %#", configFolder.c_str() );
             return SubsystemInitResult::Succeeded;
         }
         _pFileWatchDispatcher = make_unique<FileWatchDispatcher>();
@@ -97,6 +97,6 @@ namespace sw
         const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
         // 모르는 파일은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
         if ( reloadChangedFile( fullPath ) == ReloadOutcome::Failed )
-            SW_LOG_WARNING( "Config reload kept the previous values - fix and save %# again", fullPath.c_str() );
+            SW_LOG_WARNING_ID( "ConfigReload.ConfigReloadKeptPrevious", "Config reload kept the previous values - fix and save %# again", fullPath.c_str() );
     }
 } // namespace sw

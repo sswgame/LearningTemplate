@@ -142,7 +142,7 @@ namespace sw::editor
         if ( bSaved )
             SW_LOG_INFO_ID( "Profiler.TimelineTrace", "Timeline trace: %#", reply );
         else
-            SW_LOG_WARNING( "Timeline trace not saved: %#", reply );
+            SW_LOG_WARNING_ID( "ProfilerTimelineModel.TimelineTraceNotSaved", "Timeline trace not saved: %#", reply );
     }
 
     bool ProfilerTimelineModel::loadTraceFile( string_view path )
@@ -151,13 +151,13 @@ namespace sw::editor
         if ( ProfilerTraceExport::loadTraceFile( path, _loadedTrace, error ) == false )
         {
             _traceStatus = "Load failed: " + error;
-            SW_LOG_WARNING( "Trace not loaded: %#", error );
+            SW_LOG_WARNING_ID( "ProfilerTimelineModel.TraceNotLoaded", "Trace not loaded: %#", error );
             return false;
         }
         _bLoadedTrace    = SW_TRUE;
         _bTimelineZoomed = SW_FALSE;
         _traceStatus     = formatToString( "Loaded %# (%# threads, %# scopes)", FileUtil::getFileNamePart( path ), _loadedTrace._listThread.size(), _loadedTrace._listSlotName.size() );
-        SW_LOG_INFO( "Trace loaded: %#", _traceStatus );
+        SW_LOG_INFO_ID( "ProfilerTimelineModel.TraceLoaded", "Trace loaded: %#", _traceStatus );
         return true;
     }
 

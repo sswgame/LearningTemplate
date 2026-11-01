@@ -143,7 +143,7 @@ namespace sw
         if ( inputMapPath.empty() || map->loadFromAsset( assetID ) == false )
         {
             map->clear();
-            SW_LOG_ERROR( "Debug key map '%#' could not be loaded - debug key actions stay unbound", inputMapPath );
+            SW_LOG_ERROR_ID( "DebugKeyActions.DebugKeyMapCould", "Debug key map '%#' could not be loaded - debug key actions stay unbound", inputMapPath );
         }
         return map;
     }
@@ -221,13 +221,13 @@ namespace sw
         XMLDocument doc;
         if ( doc.loadFile( filePath ) == false )
         {
-            SW_LOG_WARNING( "Debug key user bindings '%#' could not be read - the default keys are used", filePath );
+            SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings", "Debug key user bindings '%#' could not be read - the default keys are used", filePath );
             return false;
         }
         const XMLNode root = doc.getRoot( kRootElement );
         if ( root.isValid() == false )
         {
-            SW_LOG_WARNING( "Debug key user bindings '%#' has no <%#> root - the default keys are used", filePath, kRootElement );
+            SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings2", "Debug key user bindings '%#' has no <%#> root - the default keys are used", filePath, kRootElement );
             return false;
         }
         for ( XMLNode bindNode = root.findChild( kBindElement ); bindNode.isValid(); bindNode = bindNode.findNextSibling( kBindElement ) )
@@ -242,8 +242,8 @@ namespace sw
             const bool                 bUnreadableBind = actionText.empty() || bIndexOkay == false || InputSlotUtil::tryParse( slotText, slot ) == false;
             if ( bUnreadableBind )
             {
-                SW_LOG_WARNING( "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, string( actionText ).c_str(),
-                                string( slotText ).c_str() );
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, string( actionText ).c_str(),
+                                   string( slotText ).c_str() );
                 continue;
             }
             const hashed_string action( string( actionText ).c_str() );
@@ -262,7 +262,7 @@ namespace sw
                            map.rebindKeyShortcut( action, static_cast<uint32>( bindIndex ), static_cast<Key>( slot._controlIndex ), modifierMask );
             }
             if ( bApplied == false )
-                SW_LOG_WARNING( "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, string( actionText ).c_str(), string( slotText ).c_str(), bindIndex );
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings4", "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, string( actionText ).c_str(), string( slotText ).c_str(), bindIndex );
         }
         return true;
     }

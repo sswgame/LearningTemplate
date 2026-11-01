@@ -35,7 +35,7 @@ namespace sw::editor
         if ( isAssetID( text ) == false )
         {
             const string rejected{ text };
-            SW_LOG_WARNING( "'%#' is not a resource path (domain/folder/file) - keeping '%#'", rejected.c_str(), _committed.c_str() );
+            SW_LOG_WARNING_ID( "EditableAssetPath.NotResourcePathDomain", "'%#' is not a resource path (domain/folder/file) - keeping '%#'", rejected.c_str(), _committed.c_str() );
             return false;
         }
         const string path = FileUtil::normalizeSeparators( StringUtil::trim( text ) );

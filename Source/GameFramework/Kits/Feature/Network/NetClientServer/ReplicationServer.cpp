@@ -38,7 +38,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "ReplicationServer: refused to start - settings '%#'", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "ReplicationServer.ReplicationServerRefusedStartSettings", "ReplicationServer: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
         _pHost    = pHost;
@@ -100,8 +100,8 @@ namespace sw
         {
             // 월드에는 넣는다. 빼면 클라이언트에서 엔티티가 사라지기 때문이다. 델타가 싣지 않으므로 클라이언트는 마지막으로 받은 상태를 유지한다.
             if ( _oversizedEntityCount == 0 )
-                SW_LOG_WARNING( "ReplicationServer: entity %# has %# state bytes, more than the snapshot limit %# - it is not replicated (further ones are only counted)",
-                                entityID, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
+                SW_LOG_WARNING_ID( "ReplicationServer.ReplicationServerEntityStateBytes", "ReplicationServer: entity %# has %# state bytes, more than the snapshot limit %# - it is not replicated (further ones are only counted)",
+                                   entityID, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
             ++_oversizedEntityCount;
         }
         if ( _worldEntityCount == _world._listEntity.size() )
@@ -311,8 +311,8 @@ namespace sw
         ControlIntent received;
         if ( received.read( reader ) == false )
         {
-            SW_LOG_WARNING( "ReplicationServer: connection %# sent a malformed control intent for tick %# (%# byte(s))", connectionID, tick,
-                            static_cast<int32>( listInput.size() ) );
+            SW_LOG_WARNING_ID( "ReplicationServer.ReplicationServerConnectionSentMalformed", "ReplicationServer: connection %# sent a malformed control intent for tick %# (%# byte(s))", connectionID, tick,
+                               static_cast<int32>( listInput.size() ) );
             return false;
         }
         // 되풀이한 입력이면 한 번 누름이 두 번 되지 않게 발동 비트를 지운다(`RemoteControllerComponent` 와 같다).
@@ -326,8 +326,8 @@ namespace sw
     {
         if ( static_cast<int32>( buffer.size() ) > NetSnapshot::kMaxEntityBytes )
         {
-            SW_LOG_ERROR( "ReplicationServer: owner state of connection %# has %# bytes, more than the snapshot limit %# - not set", connectionID,
-                          static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
+            SW_LOG_ERROR_ID( "ReplicationServer.ReplicationServerOwnerStateConnection", "ReplicationServer: owner state of connection %# has %# bytes, more than the snapshot limit %# - not set", connectionID,
+                             static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
             return false;
         }
         if ( connectionID < 0 || connectionID >= static_cast<int32>( _listClient.size() ) )

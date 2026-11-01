@@ -72,7 +72,7 @@ namespace sw
         if ( _hWnd == nullptr )
             return false;
 
-        SW_LOG_INFO( "Native Win32 Window created successfully! (%#×%#)", width, height );
+        SW_LOG_INFO_ID( "Win32Window.NativeWin32WindowCreated", "Native Win32 Window created successfully! (%#×%#)", width, height );
         return true;
     }
 
@@ -145,7 +145,7 @@ namespace sw
             SetWindowLongPtrW( _hWnd, GWL_STYLE, WS_POPUP | visibleStyle );
             SetWindowPos( _hWnd, HWND_TOP, monitorRect.left, monitorRect.top, monitorRect.right - monitorRect.left, monitorRect.bottom - monitorRect.top,
                           SWP_FRAMECHANGED | SWP_NOOWNERZORDER | SWP_NOACTIVATE );
-            SW_LOG_INFO( "Display mode: borderless fullscreen (%#x%#)", monitorRect.right - monitorRect.left, monitorRect.bottom - monitorRect.top );
+            SW_LOG_INFO_ID( "Win32Window.DisplayModeBorderlessFullscreen", "Display mode: borderless fullscreen (%#x%#)", monitorRect.right - monitorRect.left, monitorRect.bottom - monitorRect.top );
             return true;
         }
 
@@ -163,7 +163,7 @@ namespace sw
         SetWindowLongPtrW( _hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | visibleStyle );
         SetWindowPos( _hWnd, nullptr, frameX < workRect.left ? workRect.left : frameX, frameY < workRect.top ? workRect.top : frameY, frameWidth, frameHeight,
                       SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE );
-        SW_LOG_INFO( "Display mode: windowed (%#x%#)", width, height );
+        SW_LOG_INFO_ID( "Win32Window.DisplayModeWindowedX", "Display mode: windowed (%#x%#)", width, height );
         return true;
     }
 

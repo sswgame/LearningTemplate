@@ -207,7 +207,7 @@ namespace sw
                 static const DBusObjectPathVTable vtable{ nullptr, &Bridge::onMessage, nullptr, nullptr, nullptr, nullptr };
                 if ( dbus_connection_register_fallback( _pBus, kPathPrefix, &vtable, this ) == FALSE )
                 {
-                    SW_LOG_WARNING( "AT-SPI: cannot register the accessible object paths" );
+                    SW_LOG_WARNING_ID( "AtSpiAccessibility.SPICannotRegisterAccessible", "AT-SPI: cannot register the accessible object paths" );
                     return false;
                 }
 
@@ -281,7 +281,7 @@ namespace sw
         private:
             bool fail( const utf8* pWhat, DBusError& inoutError )
             {
-                SW_LOG_INFO( "AT-SPI bridge is off: %# (%#)", pWhat, dbus_error_is_set( &inoutError ) ? inoutError.message : "no detail" );
+                SW_LOG_INFO_ID( "AtSpiAccessibility.SPIBridgeOff", "AT-SPI bridge is off: %# (%#)", pWhat, dbus_error_is_set( &inoutError ) ? inoutError.message : "no detail" );
                 if ( dbus_error_is_set( &inoutError ) )
                     dbus_error_free( &inoutError );
                 return false;

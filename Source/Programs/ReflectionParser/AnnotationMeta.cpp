@@ -64,7 +64,7 @@ namespace sw
         string text;
         if ( FileUtil::readTextFile( absPath, text ) == false )
         {
-            SW_LOG_ERROR( "Failed to read: %#", absPath );
+            SW_LOG_ERROR_ID( "AnnotationMeta.FailedRead", "Failed to read: %#", absPath );
             return false;
         }
 
@@ -89,14 +89,14 @@ namespace sw
             // 틀린 줄을 건너뛰면 그 철자가 "모르는 토큰" 이 되어 애노테이션이 적는 자리에서 사라진다 - 줄 하나라도 틀리면 멈춘다.
             if ( currentScope.empty() )
             {
-                SW_LOG_ERROR( "%#: binding outside a [scope] section: %#", absPath, line );
+                SW_LOG_ERROR_ID( "AnnotationMeta.BindingOutsideScopeSection", "%#: binding outside a [scope] section: %#", absPath, line );
                 return false;
             }
 
             const size_t equalPos = line.find( '=' );
             if ( equalPos == string_view::npos )
             {
-                SW_LOG_ERROR( "%#: expected kind.Field = aliases: %#", absPath, line );
+                SW_LOG_ERROR_ID( "AnnotationMeta.ExpectedKindFieldAliases", "%#: expected kind.Field = aliases: %#", absPath, line );
                 return false;
             }
 
@@ -106,14 +106,14 @@ namespace sw
             const bool        bMalformedAliasLine = dot == string::npos || dot == 0 || dot + 1 >= left.size();
             if ( bMalformedAliasLine )
             {
-                SW_LOG_ERROR( "%#: expected kind.Field = aliases: %#", absPath, line );
+                SW_LOG_ERROR_ID( "AnnotationMeta.ExpectedKindFieldAliases", "%#: expected kind.Field = aliases: %#", absPath, line );
                 return false;
             }
 
             AnnotationBinding binding;
             if ( tryParseAnnotationKind( left.substr( 0, dot ), binding._kind ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown kind: %#", absPath, line );
+                SW_LOG_ERROR_ID( "AnnotationMeta.UnknownKind", "%#: unknown kind: %#", absPath, line );
                 return false;
             }
 
@@ -131,14 +131,14 @@ namespace sw
             }
             if ( bAnyAlias == false )
             {
-                SW_LOG_ERROR( "%#: binding without aliases: %#", absPath, line );
+                SW_LOG_ERROR_ID( "AnnotationMeta.BindingWithoutAliases", "%#: binding without aliases: %#", absPath, line );
                 return false;
             }
             _listEntry.push_back( AnnotationMetaEntry{ currentScope, std::move( binding ) } );
         }
 
         _bLoaded = SW_TRUE;
-        SW_LOG_TRACE( "%# alias bindings (%#)", bindingCount, absPath );
+        SW_LOG_TRACE_ID( "AnnotationMeta.AliasBindings", "%# alias bindings (%#)", bindingCount, absPath );
         return true;
     }
 

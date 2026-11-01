@@ -1114,8 +1114,8 @@ namespace sw
             return true;
         if ( SerializerUtil::writePropertyBinary( prop, instance, _bytes, context ) )
             return true;
-        SW_LOG_ERROR( "%#::%# (%#): the value before the read cannot be kept, so a failed read could not be undone - the object is not read", ownerType._name.c_str(),
-                      prop._name.c_str(), prop._typeName.c_str() );
+        SW_LOG_ERROR_ID( "SerializerUtil.ValueBeforeReadCannot", "%#::%# (%#): the value before the read cannot be kept, so a failed read could not be undone - the object is not read", ownerType._name.c_str(),
+                         prop._name.c_str(), prop._typeName.c_str() );
         return false;
     }
 
@@ -1125,8 +1125,8 @@ namespace sw
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         if ( _bOwnedPointerList )
         {
-            SW_LOG_ERROR( "%#::%# (%#): the owned pointer list could not be read and is half filled - the object is not read", _pOwnerType->_name.c_str(),
-                          _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
+            SW_LOG_ERROR_ID( "SerializerUtil.OwnedPointerListCould", "%#::%# (%#): the owned pointer list could not be read and is half filled - the object is not read", _pOwnerType->_name.c_str(),
+                             _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
             return false;
         }
         // 이 빌드가 방금 쓴 바이트라 되읽지 못하면 코덱의 결함이다 — 읽다 만 값을 받지 않고 멈춘다.

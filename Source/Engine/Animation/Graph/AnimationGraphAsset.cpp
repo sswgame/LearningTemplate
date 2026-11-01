@@ -116,7 +116,7 @@ namespace sw
         def._space.setAxisCount( def._parameterY.empty() ? 1u : 2u );
         if ( def._parameterX.empty() )
         {
-            SW_LOG_ERROR( "Animation graph node '%#' has a blend space without an 'x' parameter", inoutNode._name.c_str() );
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend", "Animation graph node '%#' has a blend space without an 'x' parameter", inoutNode._name.c_str() );
             return false;
         }
         def._notifyMode = AnimationBlendSpaceNotifyMode::All;
@@ -134,7 +134,7 @@ namespace sw
             }
             if ( bKnown == false )
             {
-                SW_LOG_ERROR( "Animation graph node '%#' blend space has unknown 'notify' '%#' (all, highest_weight, none)", inoutNode._name.c_str(), notifyText.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend2", "Animation graph node '%#' blend space has unknown 'notify' '%#' (all, highest_weight, none)", inoutNode._name.c_str(), notifyText.c_str() );
                 return false;
             }
         }
@@ -145,14 +145,14 @@ namespace sw
         {
             if ( string_view{ sampleXML.getName() } != "sample" || XMLReadUtil::hasOnlyKnownNames( sampleXML, { "clip", "x", "y" }, {}, inoutNode._name ) == false )
             {
-                SW_LOG_ERROR( "Animation graph node '%#' blend space <samples> holds only <sample clip x y> elements", inoutNode._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend3", "Animation graph node '%#' blend space <samples> holds only <sample clip x y> elements", inoutNode._name.c_str() );
                 bValid = false;
                 continue;
             }
             const string clipName{ sampleXML.getAttributeText( "clip" ) };
             if ( clipName.empty() )
             {
-                SW_LOG_ERROR( "Animation graph node '%#' blend space sample %# has no 'clip'", inoutNode._name.c_str(), sampleIndex );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend4", "Animation graph node '%#' blend space sample %# has no 'clip'", inoutNode._name.c_str(), sampleIndex );
                 bValid = false;
                 continue;
             }
@@ -161,7 +161,7 @@ namespace sw
             std::optional<float32> positionY;
             if ( sampleXML.readOptionalAttribute( "x", positionX ) == false || sampleXML.readOptionalAttribute( "y", positionY ) == false )
             {
-                SW_LOG_ERROR( "Animation graph node '%#' blend space sample %# has a non-numeric position", inoutNode._name.c_str(), sampleIndex );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend5", "Animation graph node '%#' blend space sample %# has a non-numeric position", inoutNode._name.c_str(), sampleIndex );
                 bValid = false;
                 continue;
             }
@@ -169,7 +169,7 @@ namespace sw
         }
         if ( bValid && def._space.getSampleCount() == 0 )
         {
-            SW_LOG_ERROR( "Animation graph node '%#' has a blend space without samples", inoutNode._name.c_str() );
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend6", "Animation graph node '%#' has a blend space without samples", inoutNode._name.c_str() );
             bValid = false;
         }
         return bValid;
@@ -189,7 +189,7 @@ namespace sw
         }
         if ( def._type == AnimationPoseNodeType::None )
         {
-            SW_LOG_ERROR( "Animation graph node '%#' has unknown pose_node type '%#'", inoutNode._name.c_str(), typeText.c_str() );
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeUnknown", "Animation graph node '%#' has unknown pose_node type '%#'", inoutNode._name.c_str(), typeText.c_str() );
             return false;
         }
         for ( XMLNode input = poseNodeXML.findChild( "inputs" ).findChild(); input.isValid(); input = input.findNextSibling() )
@@ -204,7 +204,7 @@ namespace sw
         const bool bHasRequiredValues = def._listInput.size() == 2 && bHasEmptyInput == false && def._weightParameter.empty() == false;
         if ( bHasRequiredValues == false )
         {
-            SW_LOG_ERROR( "Animation graph node '%#' blend_poses needs two named 'inputs' and a 'weight' parameter", inoutNode._name.c_str() );
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend7", "Animation graph node '%#' blend_poses needs two named 'inputs' and a 'weight' parameter", inoutNode._name.c_str() );
             return false;
         }
         return true;
@@ -214,7 +214,7 @@ namespace sw
     {
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "Animation graph '%#': expected an <AnimationGraphAsset> root element", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphExpectedAnimationGraphAsset", "Animation graph '%#': expected an <AnimationGraphAsset> root element", sourceLabel );
             return false;
         }
         bool bValid = XMLReadUtil::hasOnlyKnownNames( root, {}, { "nodes", "links", "bone_masks", "layers" }, sourceLabel );
@@ -238,7 +238,7 @@ namespace sw
             if ( string_view{ nodeXML.getName() } != "node" ||
                  XMLReadUtil::hasOnlyKnownNames( nodeXML, { "id", "name", "x", "y", "loop", "sync_group" }, { "blend_space", "pose_node" }, node._name ) == false )
             {
-                SW_LOG_ERROR( "Animation graph '%#': <nodes> holds only <node> elements", sourceLabel );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodesHolds", "Animation graph '%#': <nodes> holds only <node> elements", sourceLabel );
                 bValid = false;
                 continue;
             }
@@ -250,7 +250,7 @@ namespace sw
                                          nodeXML.readOptionalAttribute( "loop", loop );
             if ( bNodeFieldsRead == false )
             {
-                SW_LOG_ERROR( "Animation graph node '%#' needs an 'id' of 1 or more and numeric 'x', 'y' and boolean 'loop'", node._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeNeeds", "Animation graph node '%#' needs an 'id' of 1 or more and numeric 'x', 'y' and boolean 'loop'", node._name.c_str() );
                 bValid = false;
                 continue;
             }
@@ -271,7 +271,7 @@ namespace sw
                 bValid = false;
             if ( node.hasBlendSpace() && node.hasPoseNode() )
             {
-                SW_LOG_ERROR( "Animation graph node '%#' has both blend_space and pose_node", node._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBoth", "Animation graph node '%#' has both blend_space and pose_node", node._name.c_str() );
                 bValid = false;
             }
             _listNode.push_back( std::move( node ) );
@@ -288,7 +288,7 @@ namespace sw
             if ( string_view{ linkXML.getName() } != "link" ||
                  XMLReadUtil::hasOnlyKnownNames( linkXML, { "id", "from", "to", "blend", "blend_mode", "half_life" }, { "condition" }, sourceLabel ) == false )
             {
-                SW_LOG_ERROR( "Animation graph '%#': <links> holds only <link> elements", sourceLabel );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinksHolds", "Animation graph '%#': <links> holds only <link> elements", sourceLabel );
                 bValid = false;
                 continue;
             }
@@ -302,7 +302,7 @@ namespace sw
                                          linkXML.readOptionalAttribute( "half_life", halfLifeSeconds );
             if ( bLinkFieldsRead == false )
             {
-                SW_LOG_ERROR( "Animation graph link needs an 'id' of 1 or more, 'from' and 'to' node ids and numeric 'blend' and 'half_life'" );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinkNeeds", "Animation graph link needs an 'id' of 1 or more, 'from' and 'to' node ids and numeric 'blend' and 'half_life'" );
                 bValid = false;
                 continue;
             }
@@ -318,13 +318,13 @@ namespace sw
                 const string modeText{ linkXML.getAttributeText( "blend_mode" ) };
                 if ( parseBlendMode( modeText, link._blendMode ) == false )
                 {
-                    SW_LOG_ERROR( "Animation graph link %# has unknown blend_mode '%#'", link._id, modeText.c_str() );
+                    SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinkUnknown", "Animation graph link %# has unknown blend_mode '%#'", link._id, modeText.c_str() );
                     bValid = false;
                 }
             }
             if ( link._blendMode == AnimationBlendMode::Inertialization && link._halfLifeSeconds <= 0.0f )
             {
-                SW_LOG_ERROR( "Animation graph link %# uses inertialization without a positive 'half_life'", link._id );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinkUses", "Animation graph link %# uses inertialization without a positive 'half_life'", link._id );
                 bValid = false;
             }
             const XMLNode condition = linkXML.findChild( "condition" );
@@ -335,14 +335,14 @@ namespace sw
                 const string opText{ condition.getAttributeText( "op" ) };
                 if ( parseConditionOp( opText, link._op ) == false || link._op == AnimationConditionOp::None )
                 {
-                    SW_LOG_ERROR( "Animation graph link %# has unknown condition op '%#'", link._id, opText.c_str() );
+                    SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinkUnknown2", "Animation graph link %# has unknown condition op '%#'", link._id, opText.c_str() );
                     bValid = false;
                 }
                 link._parameter = hashed_string( string_view{ condition.getAttributeText( "param" ) } );
                 std::optional<float32> threshold;
                 if ( condition.readOptionalAttribute( "value", threshold ) == false )
                 {
-                    SW_LOG_ERROR( "Animation graph link %# has a non-numeric condition value", link._id );
+                    SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinkNon", "Animation graph link %# has a non-numeric condition value", link._id );
                     bValid = false;
                 }
                 if ( threshold.has_value() )
@@ -377,19 +377,19 @@ namespace sw
             mask._name = hashed_string( string_view{ maskXML.getAttributeText( "name" ) } );
             if ( string_view{ maskXML.getName() } != "bone_mask" )
             {
-                SW_LOG_ERROR( "Animation graph <bone_masks> holds only <bone_mask> elements" );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphBoneMasks", "Animation graph <bone_masks> holds only <bone_mask> elements" );
                 bValid = false;
                 continue;
             }
             if ( mask._name.empty() )
             {
-                SW_LOG_ERROR( "Animation graph bone mask %# has no 'name'", maskIndex );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphBoneMask", "Animation graph bone mask %# has no 'name'", maskIndex );
                 bValid = false;
                 continue;
             }
             if ( findBoneMask( mask._name ) != nullptr )
             {
-                SW_LOG_ERROR( "Animation graph repeats bone mask '%#'", mask._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsBone", "Animation graph repeats bone mask '%#'", mask._name.c_str() );
                 bValid = false;
                 continue;
             }
@@ -403,7 +403,7 @@ namespace sw
             const bool bInline   = maskXML.findChild( "roots" ).isValid() || maskXML.findChild( "bones" ).isValid();
             if ( bFromFile && bInline )
             {
-                SW_LOG_ERROR( "Animation graph bone mask '%#' has both 'file' and inline bones", mask._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphBoneMask2", "Animation graph bone mask '%#' has both 'file' and inline bones", mask._name.c_str() );
                 bValid = false;
                 continue;
             }
@@ -430,19 +430,19 @@ namespace sw
             layer._clipName = hashed_string( string_view{ layerXML.getAttributeText( "clip" ) } );
             if ( string_view{ layerXML.getName() } != "layer" || XMLReadUtil::hasOnlyKnownNames( layerXML, { "name", "clip", "mask", "weight", "blend", "loop", "weight_param", "half_life" }, {}, "Animation graph layer" ) == false )
             {
-                SW_LOG_ERROR( "Animation graph <layers> holds only <layer> elements" );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayersHolds", "Animation graph <layers> holds only <layer> elements" );
                 bValid = false;
                 continue;
             }
             if ( layer._name.empty() || layer._clipName.empty() )
             {
-                SW_LOG_ERROR( "Animation graph layer %# needs 'name' and 'clip'", layerIndex );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayerNeeds", "Animation graph layer %# needs 'name' and 'clip'", layerIndex );
                 bValid = false;
                 continue;
             }
             if ( findLayer( layer._name ) != nullptr )
             {
-                SW_LOG_ERROR( "Animation graph repeats layer '%#'", layer._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsLayer", "Animation graph repeats layer '%#'", layer._name.c_str() );
                 bValid = false;
                 continue;
             }
@@ -461,9 +461,9 @@ namespace sw
                 }
             }
             if ( bWeightValid == false )
-                SW_LOG_ERROR( "Animation graph layer '%#' needs a 'weight' in [0, 1]", layer._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayerNeeds2", "Animation graph layer '%#' needs a 'weight' in [0, 1]", layer._name.c_str() );
             if ( bBlendValid == false )
-                SW_LOG_ERROR( "Animation graph layer '%#' has unknown 'blend' '%#' (Override, Additive)", layer._name.c_str(), blendText.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayerUnknown", "Animation graph layer '%#' has unknown 'blend' '%#' (Override, Additive)", layer._name.c_str(), blendText.c_str() );
             std::optional<bool> layerLoop;
             const bool          bLoopValid = layerXML.readOptionalAttribute( "loop", layerLoop );
             if ( layerLoop.has_value() )
@@ -474,7 +474,7 @@ namespace sw
                 layer._maskName = hashed_string( string_view{ layerXML.getAttributeText( "mask" ) } );
             const bool bMaskValid = layer._maskName.empty() || findBoneMask( layer._maskName ) != nullptr;
             if ( bMaskValid == false )
-                SW_LOG_ERROR( "Animation graph layer '%#' names unknown bone mask '%#'", layer._name.c_str(), layer._maskName.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayerNames", "Animation graph layer '%#' names unknown bone mask '%#'", layer._name.c_str(), layer._maskName.c_str() );
             bool bHalfLifeValid = true;
             if ( layerXML.findAttribute( "half_life" ) != nullptr )
             {
@@ -483,7 +483,7 @@ namespace sw
                 if ( bHalfLifeValid )
                     layer._halfLifeSeconds = *halfLife;
                 if ( bHalfLifeValid == false )
-                    SW_LOG_ERROR( "Animation graph layer '%#' needs a positive 'half_life'", layer._name.c_str() );
+                    SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayerNeeds3", "Animation graph layer '%#' needs a positive 'half_life'", layer._name.c_str() );
             }
             const bool bLayerValid = bWeightValid && bBlendValid && bMaskValid && bHalfLifeValid && bLoopValid;
             if ( bLayerValid == false )

@@ -34,7 +34,7 @@ namespace sw::editor
         if ( reloaded.loadFromHost() == false )
             return ReloadOutcome::Failed;
         getEditorToolDefaults() = std::move( reloaded );
-        SW_LOG_INFO( "Editor tool defaults reloaded from %#", toolDefaultsPath.c_str() );
+        SW_LOG_INFO_ID( "EditorToolDefaultsReload.EditorToolDefaultsReloaded", "Editor tool defaults reloaded from %#", toolDefaultsPath.c_str() );
         return ReloadOutcome::Reloaded;
     }
 } // namespace sw::editor

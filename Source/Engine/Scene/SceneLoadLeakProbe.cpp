@@ -45,24 +45,24 @@ namespace sw
         MemoryProfiler* pProfiler = engine::findSubsystem<MemoryProfiler>();
         if ( pProfiler == nullptr )
         {
-            SW_LOG_ERROR( "Scene leak probe needs the memory profiler (it is not running)" );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeNeeds", "Scene leak probe needs the memory profiler (it is not running)" );
             return false;
         }
         if ( isRunning() )
         {
-            SW_LOG_ERROR( "Scene leak probe is already running" );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeAlready", "Scene leak probe is already running" );
             return false;
         }
         if ( scenePath.empty() || measuredRounds == 0 )
         {
-            SW_LOG_ERROR( "Scene leak probe needs a scene path and at least one measured round" );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeNeeds2", "Scene leak probe needs a scene path and at least one measured round" );
             return false;
         }
         // 기준선 창이 열려 있으면 닫는다(창은 하나다). 끝나면 `finish` 가 `TagTotals` 창을 다시 연다.
         if ( pProfiler->isLeakWindowOpen() )
         {
             const LeakWindowReport startup = pProfiler->endLeakWindow();
-            SW_LOG_INFO( "Scene leak probe closed the startup leak window: %# B in %# blocks", startup._totalBytes, startup._totalBlockCount );
+            SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeClosed", "Scene leak probe closed the startup leak window: %# B in %# blocks", startup._totalBytes, startup._totalBlockCount );
         }
         _scenePath     = string{ scenePath };
         _totalRounds   = LeakCurveCriteria::kDefaultWarmupRounds + measuredRounds;
@@ -74,7 +74,7 @@ namespace sw
         _loadFuture    = {};
         _listPoint.clear();
         _verdict = LeakCurveVerdict{};
-        SW_LOG_INFO( "Scene leak probe: '%#', 1 control round + %# warmup + %# measured rounds", _scenePath, LeakCurveCriteria::kDefaultWarmupRounds, measuredRounds );
+        SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeControl", "Scene leak probe: '%#', 1 control round + %# warmup + %# measured rounds", _scenePath, LeakCurveCriteria::kDefaultWarmupRounds, measuredRounds );
         _phase        = Phase::Settling; // `update` 의 첫 호출이 대조 회차를 연다
         _settleFrames = SceneLoadLeakProbeInternal::kSettleFrames;
         return true;
@@ -95,7 +95,7 @@ namespace sw
                     break;
                 if ( _loadFuture.get() == nullptr )
                 {
-                    SW_LOG_ERROR( "Scene leak probe: loading '%#' failed in round %# - stopping", _scenePath, _round );
+                    SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeLoading", "Scene leak probe: loading '%#' failed in round %# - stopping", _scenePath, _round );
                     finish();
                     break;
                 }
@@ -139,7 +139,7 @@ namespace sw
         _loadFuture = manager.requestLoadFuture( _scenePath, SceneLoadKind::Tool );
         if ( _loadFuture.isValid() == false )
         {
-            SW_LOG_ERROR( "Scene leak probe: could not request loading '%#' - stopping", _scenePath );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeCould", "Scene leak probe: could not request loading '%#' - stopping", _scenePath );
             finish();
             return;
         }
@@ -153,7 +153,7 @@ namespace sw
         const LeakWindowReport report    = pProfiler->endLeakWindow();
         if ( report._bValid == false )
         {
-            SW_LOG_ERROR( "Scene leak probe: the leak window was closed by someone else - stopping" );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeLeak", "Scene leak probe: the leak window was closed by someone else - stopping" );
             _phase = Phase::Idle;
             return;
         }
@@ -161,14 +161,14 @@ namespace sw
         {
             _controlBytes  = report._totalBytes;
             _controlBlocks = report._totalBlockCount;
-            SW_LOG_INFO( "Scene leak probe control round (empty scene only): %# B in %# blocks", _controlBytes, _controlBlocks );
+            SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeControl2", "Scene leak probe control round (empty scene only): %# B in %# blocks", _controlBytes, _controlBlocks );
         }
         else
         {
             _sumBytes += report._totalBytes > _controlBytes ? report._totalBytes - _controlBytes : 0;
             _sumBlocks += report._totalBlockCount > _controlBlocks ? report._totalBlockCount - _controlBlocks : 0;
             _listPoint.push_back( LeakCurvePoint{ _sumBytes, _sumBlocks } );
-            SW_LOG_INFO( "Scene leak probe round %#: left %# B in %# blocks (cumulative %# B, %# blocks)", _round, report._totalBytes, report._totalBlockCount, _sumBytes, _sumBlocks );
+            SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeRound", "Scene leak probe round %#: left %# B in %# blocks (cumulative %# B, %# blocks)", _round, report._totalBytes, report._totalBlockCount, _sumBytes, _sumBlocks );
         }
         if ( _round >= _totalRounds )
         {
@@ -188,19 +188,19 @@ namespace sw
             if ( pProfiler->isLeakWindowOpen() )
             {
                 const LeakWindowReport partial = pProfiler->endLeakWindow(); // 중간에 멈췄다 — 열린 회차의 창을 닫고 버린다
-                SW_LOG_INFO( "Scene leak probe dropped an open round window: %# B in %# blocks", partial._totalBytes, partial._totalBlockCount );
+                SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeDropped", "Scene leak probe dropped an open round window: %# B in %# blocks", partial._totalBytes, partial._totalBlockCount );
             }
             pProfiler->beginLeakWindow( LeakWindowDetail::TagTotals ); // 종료 보고가 창을 기대한다
         }
         _verdict = MemoryProfiler::judgeLeakCurve( _listPoint, LeakCurveCriteria{} );
         if ( _verdict._bValid == false )
-            SW_LOG_ERROR( "Scene leak probe: too few rounds finished for a verdict (%# points)", _listPoint.size() );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeToo", "Scene leak probe: too few rounds finished for a verdict (%# points)", _listPoint.size() );
         else if ( _verdict._bFlat )
-            SW_LOG_INFO( "Scene leak probe: FLAT - slope %# B/round, %# blocks/round over %# rounds", static_cast<int64>( _verdict._slopeBytesPerRound ),
-                         static_cast<int64>( _verdict._slopeBlocksPerRound ), _verdict._sampleCount );
+            SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeFLAT", "Scene leak probe: FLAT - slope %# B/round, %# blocks/round over %# rounds", static_cast<int64>( _verdict._slopeBytesPerRound ),
+                            static_cast<int64>( _verdict._slopeBlocksPerRound ), _verdict._sampleCount );
         else
-            SW_LOG_ERROR( "Scene leak probe: LEAK - slope %# B/round, %# blocks/round over %# rounds ('%#' keeps memory after every load)", static_cast<int64>( _verdict._slopeBytesPerRound ),
-                          static_cast<int64>( _verdict._slopeBlocksPerRound ), _verdict._sampleCount, _scenePath );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeLEAK", "Scene leak probe: LEAK - slope %# B/round, %# blocks/round over %# rounds ('%#' keeps memory after every load)", static_cast<int64>( _verdict._slopeBytesPerRound ),
+                             static_cast<int64>( _verdict._slopeBlocksPerRound ), _verdict._sampleCount, _scenePath );
         _phase = Phase::Idle;
     }
 } // namespace sw

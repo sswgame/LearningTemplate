@@ -103,8 +103,8 @@ namespace sw
         }
         VectorUtil::sort( listRow, &Internal::isNameBefore );
 
-        SW_LOG_INFO( "[CacheStats] %# - %# caches (hit / miss / clear counted since the measure window started; 'no counters' = the cache has no lookup to count)", pTitle,
-                     listRow.size() );
+        SW_LOG_INFO_ID( "CacheStats.CachesHitMissClear", "[CacheStats] %# - %# caches (hit / miss / clear counted since the measure window started; 'no counters' = the cache has no lookup to count)", pTitle,
+                        listRow.size() );
         for ( const Internal::Row& row : listRow )
         {
             utf8 arrItemCount[24]{};
@@ -112,19 +112,19 @@ namespace sw
             const utf8* pItemCount = row._bItemCountKnown ? arrItemCount : "?";
             if ( row._bCounted == false )
             {
-                SW_LOG_INFO( "[CacheStats]   %#  items %#  no counters (%#)", row._name, pItemCount,
-                             row._uncountedReason.empty() ? "declared counted but has no counter slot" : row._uncountedReason.c_str() );
+                SW_LOG_INFO_ID( "CacheStats.ItemsNoCounters", "[CacheStats]   %#  items %#  no counters (%#)", row._name, pItemCount,
+                                row._uncountedReason.empty() ? "declared counted but has no counter slot" : row._uncountedReason.c_str() );
                 continue;
             }
             const uint64 lookupCount  = row._hitCount + row._missCount;
             const uint64 ratePermille = lookupCount == 0 ? 0 : ( row._hitCount * 1000 ) / lookupCount;
             if ( lookupCount == 0 )
             {
-                SW_LOG_INFO( "[CacheStats]   %#  items %#  hit %#  miss %#  rate -  clear %#", row._name, pItemCount, row._hitCount, row._missCount, row._clearCount );
+                SW_LOG_INFO_ID( "CacheStats.ItemsHitMissRate", "[CacheStats]   %#  items %#  hit %#  miss %#  rate -  clear %#", row._name, pItemCount, row._hitCount, row._missCount, row._clearCount );
                 continue;
             }
-            SW_LOG_INFO( "[CacheStats]   %#  items %#  hit %#  miss %#  rate %#.%#%%  clear %#", row._name, pItemCount, row._hitCount, row._missCount, ratePermille / 10,
-                         ratePermille % 10, row._clearCount );
+            SW_LOG_INFO_ID( "CacheStats.ItemsHitMissRate2", "[CacheStats]   %#  items %#  hit %#  miss %#  rate %#.%#%%  clear %#", row._name, pItemCount, row._hitCount, row._missCount, ratePermille / 10,
+                            ratePermille % 10, row._clearCount );
         }
 #endif
     }

@@ -55,7 +55,7 @@ namespace sw::editor
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_WARNING( "Socket file could not be read: %#", string( absolutePath ).c_str() );
+            SW_LOG_WARNING_ID( "SocketEditModel.SocketFileCouldNot", "Socket file could not be read: %#", string( absolutePath ).c_str() );
             return false;
         }
         return loadFromXMLText( text, absolutePath );
@@ -73,7 +73,7 @@ namespace sw::editor
         const string text = _sockets.saveToXMLText();
         if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
         {
-            SW_LOG_ERROR( "Socket file could not be written: %#", string( absPath.str() ).c_str() );
+            SW_LOG_ERROR_ID( "SocketEditModel.SocketFileCouldNot2", "Socket file could not be written: %#", string( absPath.str() ).c_str() );
             return false;
         }
         _savedText = text;

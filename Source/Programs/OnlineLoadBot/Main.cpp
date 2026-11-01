@@ -95,7 +95,7 @@ namespace sw
                 const auto pfnRun = reinterpret_cast<PFN_RunOnlineLoadBot>( ModuleLibraryUtil::getDynamicSymbol( _pBotModule, LoadBotModuleEntry::kEntrySymbol ) );
                 if ( pfnRun == nullptr )
                 {
-                    SW_LOG_ERROR( "OnlineLoadBot: module %# does not export %#", LoadBotModuleEntry::kModuleName, LoadBotModuleEntry::kEntrySymbol );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotModuleDoesNot", "OnlineLoadBot: module %# does not export %#", LoadBotModuleEntry::kModuleName, LoadBotModuleEntry::kEntrySymbol );
                     return LoadBotModuleEntry::kExitStartup;
                 }
                 const int32 botArgumentCount = static_cast<int32>( listBotArgument.size() );
@@ -122,7 +122,7 @@ namespace sw
                     void* const                       pHandle     = libraryPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
                     if ( pHandle == nullptr )
                     {
-                        SW_LOG_ERROR( "OnlineLoadBot: cannot load the module %#", pModule );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotLoadModule", "OnlineLoadBot: cannot load the module %#", pModule );
                         return false;
                     }
                     _listLoadedModule.push_back( pModule ); // 올렸으면 등록이 일부 실패해도 내릴 때 거둔다
@@ -133,7 +133,7 @@ namespace sw
                 }
                 if ( _pBotModule == nullptr )
                 {
-                    SW_LOG_ERROR( "OnlineLoadBot: the module list has no %#", LoadBotModuleEntry::kModuleName );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotModuleListNo", "OnlineLoadBot: the module list has no %#", LoadBotModuleEntry::kModuleName );
                     return false;
                 }
                 return true;

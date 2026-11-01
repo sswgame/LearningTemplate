@@ -163,7 +163,7 @@ namespace sw
 
     void AutomationJudge::addRecordLine( string line )
     {
-        SW_LOG_INFO( "[Scenario] record %#", line.c_str() );
+        SW_LOG_INFO_ID( "Automation.Record", "[Scenario] record %#", line.c_str() );
         _listRecordLine.push_back( std::move( line ) );
     }
 
@@ -301,7 +301,7 @@ namespace sw
         }
         const string& name = *step.findAttribute( "as" );
         string        text = AutomationStepArgsUtil::makeValueText( value );
-        SW_LOG_INFO( "[Scenario] frame %# remember %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
+        SW_LOG_INFO_ID( "Automation.FrameRemember", "[Scenario] frame %# remember %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
         for ( RememberedValue& remembered : _listRemembered )
         {
             if ( remembered._name == name )
@@ -412,7 +412,7 @@ namespace sw
         {
             string line = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (tolerance " +
                           AutomationStepArgsUtil::formatNumber( args._tolerance * 100.0 ) + "%), mean distance " + AutomationStepArgsUtil::formatNumber( difference._meanDistance );
-            SW_LOG_INFO( "[Scenario] image %#", line.c_str() );
+            SW_LOG_INFO_ID( "Automation.Image", "[Scenario] image %#", line.c_str() );
             _listMetricLine.push_back( std::move( line ) );
         }
         if ( bMatches )
@@ -428,7 +428,7 @@ namespace sw
                 context.recordFailure( step, "could not write the golden " + goldenID );
                 return;
             }
-            SW_LOG_INFO( "[Scenario] golden %# %#", bHasGolden ? "updated" : "recorded", goldenID.c_str() );
+            SW_LOG_INFO_ID( "Automation.Golden", "[Scenario] golden %# %#", bHasGolden ? "updated" : "recorded", goldenID.c_str() );
             _listUpdatedGolden.push_back( goldenID );
             return;
         }
@@ -483,7 +483,7 @@ namespace sw
     void AutomationJudge::addFailure( const AutomationStep& step, string_view message )
     {
         string line = step.describe() + ": " + string( message );
-        SW_LOG_WARNING( "[Scenario] %#", line.c_str() );
+        SW_LOG_WARNING_ID( "Automation.Message", "[Scenario] %#", line.c_str() );
         _listFailure.push_back( std::move( line ) );
     }
 

@@ -186,7 +186,7 @@ namespace sw
         _width  = width;
         _height = height;
         if ( loadSplashImage() == false )
-            SW_LOG_INFO( "Wayland splash: no splash image - the status text and progress bar are drawn on the plain background" ); // 로드가 이유를 알렸다
+            SW_LOG_INFO_ID( "WaylandSplash.WaylandSplashNoSplash", "Wayland splash: no splash image - the status text and progress bar are drawn on the plain background" ); // 로드가 이유를 알렸다
         createScaledImage();
 
         state._pDisplay = wl_display_connect( nullptr );
@@ -202,7 +202,7 @@ namespace sw
         const bool bMissingGlobals = state._pCompositor == nullptr || state._pShm == nullptr || state._pWmBase == nullptr;
         if ( bMissingGlobals )
         {
-            SW_LOG_ERROR( "Wayland splash: the compositor lacks wl_compositor, wl_shm or xdg_wm_base - no splash window" );
+            SW_LOG_ERROR_ID( "WaylandSplash.WaylandSplashCompositorLacks", "Wayland splash: the compositor lacks wl_compositor, wl_shm or xdg_wm_base - no splash window" );
             dismiss();
             return false;
         }
@@ -227,7 +227,7 @@ namespace sw
         }
         if ( state._bConfigured == false )
         {
-            SW_LOG_ERROR( "Wayland splash: the compositor closed the connection before configuring the window" );
+            SW_LOG_ERROR_ID( "WaylandSplash.WaylandSplashCompositorClosed", "Wayland splash: the compositor closed the connection before configuring the window" );
             dismiss();
             return false;
         }

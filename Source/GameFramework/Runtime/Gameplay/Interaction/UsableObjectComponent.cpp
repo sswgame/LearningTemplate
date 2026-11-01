@@ -104,14 +104,14 @@ namespace sw
             return;
         if ( _catalogPath.empty() )
         {
-            SW_LOG_ERROR( "Smart object '%#' has no catalog path - set Catalog", _smartObjectID.c_str() );
+            SW_LOG_ERROR_ID( "UsableObjectComponent.SmartObjectNoCatalog", "Smart object '%#' has no catalog path - set Catalog", _smartObjectID.c_str() );
             return;
         }
         const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath );
         const UsableObjectDef*    pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID ) : nullptr;
         if ( pDef == nullptr )
         {
-            SW_LOG_ERROR( "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.c_str() );
+            SW_LOG_ERROR_ID( "UsableObjectComponent.SmartObjectNot", "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.c_str() );
             return;
         }
         ScopedLock<mutex> lock{ _mutex };

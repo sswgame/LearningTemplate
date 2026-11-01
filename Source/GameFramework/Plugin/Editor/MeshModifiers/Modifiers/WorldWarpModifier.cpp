@@ -84,7 +84,7 @@ namespace sw::editor
             _loadedPath = path;
             _bLoaded    = readWarpFile( path, _warpStack );
             if ( _bLoaded == false )
-                SW_LOG_WARNING( "World warp file '%#' could not be read or is malformed - skipped", path.c_str() );
+                SW_LOG_WARNING_ID( "WorldWarpModifier.WorldWarpFileCould", "World warp file '%#' could not be read or is malformed - skipped", path.c_str() );
         }
         return _bLoaded ? &_warpStack : nullptr;
     }

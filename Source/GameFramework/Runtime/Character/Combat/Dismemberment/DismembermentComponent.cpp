@@ -222,19 +222,19 @@ namespace sw
         const FitSolver solver;
         if ( _regionTable.loadFromAsset( AssetID{ _regionTablePath }, solver.getOperatorRegistry() ) == false )
         {
-            SW_LOG_ERROR( "'%#': region table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _regionTablePath.c_str() );
+            SW_LOG_ERROR_ID( "Dismemberment.RegionTableCouldNot", "'%#': region table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _regionTablePath.c_str() );
             return;
         }
         for ( const hashed_string& region : _listSeverableRegion )
         {
             if ( findRegionIndex( region ) < 0 )
-                SW_LOG_ERROR( "'%#': severable region '%#' is not in '%#'", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", region.c_str(),
-                              _regionTablePath.c_str() );
+                SW_LOG_ERROR_ID( "Dismemberment.SeverableRegionNot", "'%#': severable region '%#' is not in '%#'", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", region.c_str(),
+                                 _regionTablePath.c_str() );
         }
         const EngineDefaultAssets* pDefaultAssets = game::findSubsystem<EngineDefaultAssets>();
         if ( pDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR( "Dismemberment needs the engine default assets for its surface channels - dismemberment stays off" );
+            SW_LOG_ERROR_ID( "Dismemberment.DismembermentNeedsEngineDefault", "Dismemberment needs the engine default assets for its surface channels - dismemberment stays off" );
             return;
         }
         const string&       channelsPath = pDefaultAssets->_defaultSurfaceChannels.get();
@@ -242,7 +242,7 @@ namespace sw
         if ( channels.loadFromAsset( AssetID{ channelsPath } ) == false )
         {
             // 채널 없는 표면 상태로 자르면 상처 · 피가 조용히 빠진다 — 표를 읽지 않은 것으로 두고 멈춘다.
-            SW_LOG_ERROR( "Default surface channels '%#' could not be loaded - dismemberment stays off", channelsPath.c_str() );
+            SW_LOG_ERROR_ID( "Dismemberment.DefaultSurfaceChannelsCould", "Default surface channels '%#' could not be loaded - dismemberment stays off", channelsPath.c_str() );
             return;
         }
         _surfaceState.initialize( channels, static_cast<uint32>( _regionTable.getRegions().size() ), 0 );

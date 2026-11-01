@@ -170,7 +170,7 @@ namespace sw
                 // 틀린 값이면 0 자리 — 폴더의 나머지는 그래도 읽되, 카메라가 원점으로 보이는 이유를 남긴다.
                 const bool bPosition = key == BugReportInternal::kKeyPosition;
                 if ( BugReportInternal::parseFloat3( value, bPosition ? outReport._cameraPosition : outReport._cameraRotationDegrees ) == false )
-                    SW_LOG_WARNING( "BugReport report: '%#' value '%#' is not three numbers - the camera keeps 0,0,0", string( key ).c_str(), string( value ).c_str() );
+                    SW_LOG_WARNING_ID( "BugReport.BugReportReportValueNot", "BugReport report: '%#' value '%#' is not three numbers - the camera keeps 0,0,0", string( key ).c_str(), string( value ).c_str() );
             }
         } );
         return true;
@@ -274,21 +274,21 @@ namespace sw
         const string directory = makeUniqueDirectory( inputs._root, inputs._localTime );
         if ( directory.empty() )
         {
-            SW_LOG_WARNING( "bugreport: could not create a folder under '%#'", inputs._root );
+            SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotCreate", "bugreport: could not create a folder under '%#'", inputs._root );
             return false;
         }
 
         const BugReport& report = inputs._report;
         if ( report.writeInfo( directory ) == false )
         {
-            SW_LOG_WARNING( "bugreport: could not write '%#'", FileUtil::joinPath( directory, kInfoFileName ) );
+            SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotWrite", "bugreport: could not write '%#'", FileUtil::joinPath( directory, kInfoFileName ) );
             return false;
         }
 
         if ( inputs._bRequestScreenshot )
             RenderThread::requestScreenshot( FileUtil::joinPath( directory, kScreenshotFileName ) );
         if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( inputs._logFilePath, FileUtil::joinPath( directory, kLogFileName ) ) == false )
-            SW_LOG_WARNING( "bugreport: the log file could not be copied" );
+            SW_LOG_WARNING_ID( "BugReport.BugreportLogFileCould", "bugreport: the log file could not be copied" );
 #if SW_PROFILER_TRACE_ENABLED
         if ( inputs._pFrameProfiler != nullptr )
         {
@@ -297,14 +297,14 @@ namespace sw
             string traceReply;
             if ( ProfilerTraceExport::saveRecentFrames( *inputs._pFrameProfiler, ProfilerTimeline::kFrameCapacity - 1,
                                                         FileUtil::joinPath( directory, kTraceFileName ), "Game", tracePath, traceReply ) )
-                SW_LOG_INFO( "bugreport: timeline trace saved (%#)", traceReply );
+                SW_LOG_INFO_ID( "BugReport.BugreportTimelineTraceSaved", "bugreport: timeline trace saved (%#)", traceReply );
         }
 #endif
         if ( inputs._pSceneManager != nullptr )
         {
             const std::optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kSceneFileName ) );
             if ( scenePath.has_value() == false || inputs._pSceneManager->saveActiveSceneCopy( *scenePath ) == false )
-                SW_LOG_WARNING( "bugreport: the scene copy could not be saved" );
+                SW_LOG_WARNING_ID( "BugReport.BugreportSceneCopyCould", "bugreport: the scene copy could not be saved" );
         }
 
         const utf8* pBackendFlag = findBackendFlag( report._rhiBackend );
@@ -315,7 +315,7 @@ namespace sw
             repro += " -EnableEditor";
         repro += " -gv_devConsoleExec=\"bugreport.goto " + directory + "\"\n";
         if ( FileUtil::writeTextFile( FileUtil::joinPath( directory, kReproFileName ), repro ) == false )
-            SW_LOG_WARNING( "bugreport: could not write the repro command" );
+            SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotWrite2", "bugreport: could not write the repro command" );
 
         SW_LOG_INFO_ID( "BugReport.Saved", "Bug report saved to %# (note: %#)", directory, report._note );
         outDirectory = directory;

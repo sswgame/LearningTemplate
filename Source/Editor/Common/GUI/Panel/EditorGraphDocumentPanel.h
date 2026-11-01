@@ -148,7 +148,7 @@ namespace sw::editor
             AssetType restored;
             // 되돌리기 텍스트는 이 패널이 쓴 XML 이다. 읽지 못하면 결함이므로 알리고 기본 그래프로 둔다.
             if ( text.empty() == false && restored.parseXML( text ) == false )
-                SW_LOG_WARNING( "Graph undo snapshot could not be read - showing the default graph" );
+                SW_LOG_WARNING_ID( "EditorGraphDocumentPanel.GraphUndoSnapshotCould", "Graph undo snapshot could not be read - showing the default graph" );
 
             _graph = std::move( restored );
             if ( _graph._listNode.empty() )

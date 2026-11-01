@@ -50,7 +50,7 @@ namespace sw
             {
                 if ( bNumberValid == false || weight < 0.0f )
                 {
-                    SW_LOG_ERROR( "%#: weather '%#' has an invalid season weight '%#'", sourceName, pID, token );
+                    SW_LOG_ERROR_ID( "WeatherSystem.WeatherInvalidSeasonWeight", "%#: weather '%#' has an invalid season weight '%#'", sourceName, pID, token );
                     bValid = false;
                     return;
                 }
@@ -61,7 +61,7 @@ namespace sw
             } );
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: weather '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "WeatherSystem.WeatherInvalidFieldsSkipped", "%#: weather '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             const XMLNode valueNode = node.findChild( "Values" );

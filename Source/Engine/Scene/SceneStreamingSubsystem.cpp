@@ -36,7 +36,7 @@ namespace sw
         endWorld();
         if ( settings._bStreaming == false || settings.validate( scene.getName() ) == false )
         {
-            SW_LOG_ERROR( "Scene '%#' has streaming cells but no usable streaming settings - its cells are not loaded", scene.getName() );
+            SW_LOG_ERROR_ID( "SceneStreaming.SceneStreamingCellsBut", "Scene '%#' has streaming cells but no usable streaming settings - its cells are not loaded", scene.getName() );
             return false;
         }
         if ( StreamingCellGrid::tryCreate( settings._cellGrid, _grid ) == false )
@@ -49,7 +49,7 @@ namespace sw
             const bool bInserted = _mapCellIndex.emplace( makeCellKey( cell._cell ), static_cast<uint32>( _listCell.size() ) ).second;
             if ( bInserted == false )
             {
-                SW_LOG_ERROR( "Scene '%#' lists cell (%#, %#) twice - its cells are not loaded", scene.getName(), cell._cell._x, cell._cell._z );
+                SW_LOG_ERROR_ID( "SceneStreaming.SceneListsCellTwice", "Scene '%#' lists cell (%#, %#) twice - its cells are not loaded", scene.getName(), cell._cell._x, cell._cell._z );
                 _listCell.clear();
                 _mapCellIndex.clear();
                 return false;
@@ -61,8 +61,8 @@ namespace sw
         }
         _settings = settings;
         _pScene   = &scene;
-        SW_LOG_INFO( "Scene '%#' streams %# cells (cell %# m, radius %# m)", scene.getName(), static_cast<uint32>( _listCell.size() ),
-                     _settings._cellGrid._cellSize, _settings._cellGrid._loadingRadius );
+        SW_LOG_INFO_ID( "SceneStreaming.SceneStreamsCellsCell", "Scene '%#' streams %# cells (cell %# m, radius %# m)", scene.getName(), static_cast<uint32>( _listCell.size() ),
+                        _settings._cellGrid._cellSize, _settings._cellGrid._loadingRadius );
         return true;
     }
 
@@ -202,7 +202,7 @@ namespace sw
         slot._listObjectID.clear();
         if ( _pScene->instantiateCell( slot._listNode, slot._listObjectID ) == false )
         {
-            SW_LOG_ERROR( "Scene '%#' could not load cell (%#, %#) - it stays unloaded", _pScene->getName(), slot._cell._x, slot._cell._z );
+            SW_LOG_ERROR_ID( "SceneStreaming.SceneCouldNotLoad", "Scene '%#' could not load cell (%#, %#) - it stays unloaded", _pScene->getName(), slot._cell._x, slot._cell._z );
             // 반쯤 지은 것을 남기지 않는다.
             _pScene->unloadCell( slot._listObjectID );
             slot._listObjectID.clear();

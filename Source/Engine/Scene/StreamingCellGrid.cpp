@@ -14,12 +14,12 @@ namespace sw
         // 기본값으로 메우지 않는다 — 셀 크기가 없는 월드는 데이터가 빠진 것이다.
         if ( ( def._cellSize > 0.0f ) == false )
         {
-            SW_LOG_ERROR( "World cell grid: cell size must be positive (got %#)", def._cellSize );
+            SW_LOG_ERROR_ID( "StreamingCellGrid.WorldCellGridCell", "World cell grid: cell size must be positive (got %#)", def._cellSize );
             return false;
         }
         if ( ( def._loadingRadius >= 0.0f ) == false )
         {
-            SW_LOG_ERROR( "World cell grid: loading radius must not be negative (got %#)", def._loadingRadius );
+            SW_LOG_ERROR_ID( "StreamingCellGrid.WorldCellGridLoading", "World cell grid: loading radius must not be negative (got %#)", def._loadingRadius );
             return false;
         }
         outGrid._def = def;

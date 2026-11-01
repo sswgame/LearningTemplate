@@ -31,7 +31,7 @@ namespace sw
                 const int32 kindCount     = ( pSet != nullptr ? 1 : 0 ) + ( pEquippedTag != nullptr ? 1 : 0 ) + ( pCharacterTag != nullptr ? 1 : 0 ) + ( pBodyShape != nullptr ? 1 : 0 );
                 if ( kindCount != 1 )
                 {
-                    SW_LOG_WARNING( "%#: item '%#' <Requires> needs exactly one of set / equippedTag / characterTag / bodyShape", sourceName, pItemID );
+                    SW_LOG_WARNING_ID( "ItemCatalog.ItemRequiresNeedsExactly", "%#: item '%#' <Requires> needs exactly one of set / equippedTag / characterTag / bodyShape", sourceName, pItemID );
                     return false;
                 }
                 vector<const utf8*> listUnknown;
@@ -39,7 +39,7 @@ namespace sw
                 {
                     for ( const utf8* pName : listUnknown )
                     {
-                        SW_LOG_WARNING( "%#: item '%#' <Requires> has unknown attribute '%#'", sourceName, pItemID, pName );
+                        SW_LOG_WARNING_ID( "ItemCatalog.ItemRequiresUnknownAttribute", "%#: item '%#' <Requires> has unknown attribute '%#'", sourceName, pItemID, pName );
                     }
                     return false;
                 }
@@ -109,7 +109,7 @@ namespace sw
             bool bValid = true;
             if ( pPolicy != nullptr && parseEquipBreakPolicy( string_view( pPolicy ), def._breakPolicy ) == false )
             {
-                SW_LOG_ERROR( "%#: item '%#' has unknown breakPolicy '%#'", sourceName, pID, pPolicy );
+                SW_LOG_ERROR_ID( "ItemCatalog.ItemUnknownBreakPolicy", "%#: item '%#' has unknown breakPolicy '%#'", sourceName, pID, pPolicy );
                 bValid = false;
             }
             bValid = XMLReadUtil::readOptionalNumber( node, "weight", sourceName, 0.0f, MathUtil::kMaxFloat, def._weight ) && bValid;
@@ -123,7 +123,7 @@ namespace sw
             } );
             if ( def._maxDurability > 0.0f && def._maxStack > 1 )
             {
-                SW_LOG_WARNING( "%#: '%#' has durability - stacks are limited to 1", sourceName, pID );
+                SW_LOG_WARNING_ID( "ItemCatalog.DurabilityStacksLimited", "%#: '%#' has durability - stacks are limited to 1", sourceName, pID );
                 def._maxStack = 1;
             }
             const XMLNode statNode = node.findChild( "Stats" );
@@ -139,14 +139,14 @@ namespace sw
             }
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: item '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "ItemCatalog.ItemInvalidFieldsSkipped", "%#: item '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             add( def );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Item> entries", sourceName );
+            SW_LOG_WARNING_ID( "ItemCatalog.NoItemEntries", "%#: no <Item> entries", sourceName );
         return loadedCount;
     }
 } // namespace sw

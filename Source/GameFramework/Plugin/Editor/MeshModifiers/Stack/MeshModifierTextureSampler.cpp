@@ -74,12 +74,12 @@ namespace sw::editor
                 const bool    bRead = pTexture->_resolvedPath.empty() == false && FileUtil::getFileWriteTime( pTexture->_resolvedPath, pTexture->_writeTicks ) && FileUtil::readFile( pTexture->_resolvedPath, bytes ) && bytes.empty() == false && bytes.size() <= static_cast<size_t>( MathUtil::kMaxInt32 );
                 if ( bRead == false )
                 {
-                    SW_LOG_WARNING( "Mesh modifier texture '%#' could not be read", string( assetPath ).c_str() );
+                    SW_LOG_WARNING_ID( "MeshModifierTextureSampler.MeshModifierTextureCould", "Mesh modifier texture '%#' could not be read", string( assetPath ).c_str() );
                 }
                 else
                 {
                     if ( ImageUtil::loadFloat4FromMemory( bytes.data(), bytes.size(), pTexture->_listTexel, pTexture->_width, pTexture->_height ) == false )
-                        SW_LOG_WARNING( "Mesh modifier texture '%#' could not be decoded", string( assetPath ).c_str() );
+                        SW_LOG_WARNING_ID( "MeshModifierTextureSampler.MeshModifierTextureCould2", "Mesh modifier texture '%#' could not be decoded", string( assetPath ).c_str() );
                 }
                 return pTexture;
             }
@@ -175,7 +175,7 @@ namespace sw::editor
                     }
                     if ( oldest == cache.end() )
                         break; // 남은 것은 방금 읽었거나 지금 쓰는 이미지뿐이다
-                    SW_LOG_INFO( "Mesh modifier texture cache over %# MB - dropping '%#'", kMaxCacheBytes / constant::memory::kBytesPerMegabyte, oldest->first.c_str() );
+                    SW_LOG_INFO_ID( "MeshModifierTextureSampler.MeshModifierTextureCache", "Mesh modifier texture cache over %# MB - dropping '%#'", kMaxCacheBytes / constant::memory::kBytesPerMegabyte, oldest->first.c_str() );
                     total -= oldest->second->getByteSize();
                     cache.erase( oldest );
                 }

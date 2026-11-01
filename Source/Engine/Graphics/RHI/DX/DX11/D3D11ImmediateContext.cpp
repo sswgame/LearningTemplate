@@ -32,21 +32,21 @@ namespace sw
     {
         if ( context == nullptr )
         {
-            SW_LOG_ERROR( "D3D11ImmediateContext::initialize: the device returned no immediate context" );
+            SW_LOG_ERROR_ID( "D3D11.D3D11ImmediateContextInitializeDeviceReturned", "D3D11ImmediateContext::initialize: the device returned no immediate context" );
             return false;
         }
         Microsoft::WRL::ComPtr<ID3D11Multithread> multithread;
         const HRESULT                             hr = context.As( &multithread );
         if ( FAILED( hr ) )
         {
-            SW_LOG_ERROR( "D3D11ImmediateContext::initialize: ID3D11Multithread is not available hr=0x%#", static_cast<uint32>( hr ) );
+            SW_LOG_ERROR_ID( "D3D11.D3D11ImmediateContextInitializeID3D11MultithreadNot", "D3D11ImmediateContext::initialize: ID3D11Multithread is not available hr=0x%#", static_cast<uint32>( hr ) );
             return false;
         }
         // 렌더 스레드의 프레임 스트림과 다른 스레드의 전송이 같은 즉시 컨텍스트를 쓴다. 런타임이 호출마다 잠그게 한다.
         (void)multithread->SetMultithreadProtected( TRUE ); // 돌려주는 값은 이전 상태다
         if ( multithread->GetMultithreadProtected() == FALSE )
         {
-            SW_LOG_ERROR( "D3D11ImmediateContext::initialize: multithread protection could not be turned on" );
+            SW_LOG_ERROR_ID( "D3D11.D3D11ImmediateContextInitializeMultithreadProtection", "D3D11ImmediateContext::initialize: multithread protection could not be turned on" );
             return false;
         }
         _context     = std::move( context );

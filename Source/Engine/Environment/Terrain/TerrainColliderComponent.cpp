@@ -184,7 +184,7 @@ namespace sw
             _triangleCount += _listTriangleCount[chunkIndex];
         }
         if ( bBuiltAny && _triangleCount == 0 )
-            SW_LOG_WARNING( "Terrain collider on '%#': the terrain has no solid cells", getOwner()->getName().c_str() );
+            SW_LOG_WARNING_ID( "TerrainColliderComponent.TerrainColliderTerrainNo", "Terrain collider on '%#': the terrain has no solid cells", getOwner()->getName().c_str() );
     }
 
     PhysicsBodyDesc3D TerrainColliderComponent::makeChunkBodyDesc( const ScenePhysics& physics, const float3& origin ) const

@@ -75,7 +75,7 @@ namespace sw::editor
         // 처음엔 파일이 없다(Missing). 깨진 파일은 키와 함께 오류를 남기고 기본 배치로 둔다(저장하면 다시 쓴다).
         const bool bInvalidOverlayFile = path.empty() == false && _layout.loadFile( path ) == ConfigReadResult::Invalid;
         if ( bInvalidOverlayFile )
-            SW_LOG_WARNING( "Viewport overlay layout is not valid - the default layout is used until it is saved again: %#", path.c_str() );
+            SW_LOG_WARNING_ID( "EditorViewportOverlays.ViewportOverlayLayoutNot", "Viewport overlay layout is not valid - the default layout is used until it is saved again: %#", path.c_str() );
         for ( const EditorViewportOverlaysInternal::BarDesc& desc : EditorViewportOverlaysInternal::kArrBar )
         {
             EditorOverlayBarState state{};
@@ -92,7 +92,7 @@ namespace sw::editor
         if ( path.empty() )
             return;
         if ( _layout.saveFile( path ) == false )
-            SW_LOG_WARNING( "Could not save the viewport overlay layout to '%#'", path.c_str() );
+            SW_LOG_WARNING_ID( "EditorViewportOverlays.CouldNotSaveViewport", "Could not save the viewport overlay layout to '%#'", path.c_str() );
     }
 
     EditorOverlayBarRuntime& EditorViewportOverlays::getRuntime( string_view barID )

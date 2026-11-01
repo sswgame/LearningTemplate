@@ -119,7 +119,7 @@ namespace sw
                 {
                     _loginService.registerAccount( credential, nowMs, AccountOnlineServerKitInternal::kSeedRequestTag );
                 }
-                SW_LOG_INFO( "Seeded %# test account(s) (development option seedTestAccounts)", static_cast<uint32>( _listSeedAccount.size() ) );
+                SW_LOG_INFO_ID( "AccountOnlineServerKit.SeededTestAccountDevelopment", "Seeded %# test account(s) (development option seedTestAccounts)", static_cast<uint32>( _listSeedAccount.size() ) );
                 _listSeedAccount.clear();
             }
 

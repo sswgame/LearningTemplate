@@ -74,24 +74,24 @@ namespace sw::editor
 
         if ( EditorAssetTypeRegistry::matches( EditorAssetType{ PrefabAsset::kAssetType }, pPath ) == false )
         {
-            SW_LOG_TRACE( "Not a prefab path: %#", pPath );
+            SW_LOG_TRACE_ID( "EditorAssetCommands.NotPrefabPath", "Not a prefab path: %#", pPath );
             return nullptr;
         }
 
         GameObject* pSpawned = editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( pManager, pPath );
         if ( pSpawned == nullptr )
         {
-            SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );
+            SW_LOG_WARNING_ID( "EditorAssetCommands.FailedSpawnPrefab", "Failed to spawn prefab: %#", pPath );
             return nullptr;
         }
 
         if ( pParent != nullptr && pSpawned->attachToParent( pParent ) == false )
-            SW_LOG_WARNING( "Spawned prefab could not be put under '%#' - it stays at the root", pParent->getName().c_str() );
+            SW_LOG_WARNING_ID( "EditorAssetCommands.SpawnedPrefabCouldNot", "Spawned prefab could not be put under '%#' - it stays at the root", pParent->getName().c_str() );
 
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         editorContext.getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pSpawned, pPath );
 
-        SW_LOG_TRACE( "Spawned prefab from %#", pPath );
+        SW_LOG_TRACE_ID( "EditorAssetCommands.SpawnedPrefab", "Spawned prefab from %#", pPath );
         return pSpawned;
     }
 
@@ -120,7 +120,7 @@ namespace sw::editor
             // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려지므로 주의한다.
             const string textureID = AssetPaths::normalizeAssetID( pPath );
             if ( textureID.empty() )
-                SW_LOG_WARNING( "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
+                SW_LOG_WARNING_ID( "EditorAssetCommands.SpriteDropNotInside", "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
             pSprite->setTextureName( textureID );
             // 편집 모드에서는 시작(onBeginPlay)이 없다. 드롭한 위치에서 바로 그려지도록 렌더 에셋을 해석한다.
             pSprite->resolveRenderAssets();
@@ -141,7 +141,7 @@ namespace sw::editor
         const string meshID = AssetPaths::normalizeAssetID( pPath ); // 드롭한 것은 콘텐츠 브라우저의 리소스 id 다
         if ( meshID.empty() )
         {
-            SW_LOG_WARNING( "Mesh drop: '%#' is not inside the resource tree - nothing was placed", pPath );
+            SW_LOG_WARNING_ID( "EditorAssetCommands.MeshDropNotInside", "Mesh drop: '%#' is not inside the resource tree - nothing was placed", pPath );
             return nullptr;
         }
         const string name     = FileUtil::removeExtension( FileUtil::getFileNamePart( pPath ) );

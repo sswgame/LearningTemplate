@@ -248,9 +248,6 @@ namespace sw
         }                                                                                                   \
     } while ( false )
 
-/// @brief id 가 없는 줄입니다.
-#define SW_LOG_INTERNAL( level, ... ) SW_LOG_WRITE( level, nullptr, __VA_ARGS__ )
-
 /**
  * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 **모든 구성에서** 멈춥니다(언리얼 `UE_LOG(Fatal)` · 유니티 `Debug.LogError` + `Application.Quit` 자리).
  * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 싱크를 비운 뒤
@@ -264,44 +261,38 @@ namespace sw
         ::sw::internal::reportFatal( __FILE__, static_cast<int32>( __LINE__ ), arrFatalMessage ); \
     } while ( false )
 
+// 로그 줄은 모두 종류 id 를 단다 — id 없는 매크로(`SW_LOG_ERROR` …)는 없다. 테스트 · 시나리오 · 로그 게이트 · 자식 프로세스 중계가 줄을 문장이 아니라 id 로 가리키므로,
+// id 없는 줄이 생길 수 있으면 그 줄을 셀 때마다 문구에 기대게 된다(문구를 고친 커밋이 시나리오를 조용히 깼다). 언리얼 `UE_LOG` 가 범주를 필수 인자로 받는 것과 같은 자리다.
+
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_ERROR )
-    /** @brief Error 수준으로 포맷해 남깁니다. 모든 빌드에 남습니다. */
-    #define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )
     /**
-     * @brief id 가 붙은 Error 입니다. 테스트가 줄의 문장이 아니라 id 로 찾는다(`test::ScopedLogCollector::countWithID`) — 문구를 고쳐도 테스트가 지지 않는다.
+     * @brief Error 수준으로 포맷해 남깁니다. 모든 빌드에 남습니다. 테스트는 줄의 문장이 아니라 id 로 찾는다(`test::ScopedLogCollector::countWithID`) — 문구를 고쳐도 테스트가 지지 않는다.
      * @param id `"영역.사건"` 꼴의 **글자 상수**(예: `"Cook.RemovedOutput"`)입니다. 변수는 받지 않습니다(`"" id` 로 글자 상수를 강제한다). 같은 사건은 같은 id 를 씁니다.
      */
     #define SW_LOG_ERROR_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Error, "" id, __VA_ARGS__ )
 #else
-    #define SW_LOG_ERROR( ... )        SW_LOG_DISCARDED( __VA_ARGS__ )
     #define SW_LOG_ERROR_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_WARNING )
-    /** @brief Warning 수준으로 포맷해 남깁니다. 배포본에도 남습니다. */
-    #define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::LogLevel::Warning, __VA_ARGS__ )
-    /** @brief id 가 붙은 Warning 입니다(`SW_LOG_ERROR_ID` 와 같다). */
+    /** @brief Warning 수준으로 포맷해 남깁니다. 배포본에도 남습니다(id 는 `SW_LOG_ERROR_ID` 와 같다). */
     #define SW_LOG_WARNING_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Warning, "" id, __VA_ARGS__ )
 #else
-    #define SW_LOG_WARNING( ... )        SW_LOG_DISCARDED( __VA_ARGS__ )
     #define SW_LOG_WARNING_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
-    /** @brief Info 수준으로 포맷해 남깁니다. 배포본에서는 호출이 사라집니다. */
-    #define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
-    /** @brief id 가 붙은 Info 입니다(`SW_LOG_ERROR_ID` 와 같다). 시나리오 `<ExpectLog id>` 가 세는 사건 줄은 모두 이것으로 쓴다 — 문장으로 세지 않는다. */
+    /** @brief Info 수준으로 포맷해 남깁니다. 배포본에서는 호출이 사라집니다. 시나리오 `<ExpectLog id>` 가 이 id 로 사건을 센다. */
     #define SW_LOG_INFO_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Info, "" id, __VA_ARGS__ )
 #else
-    #define SW_LOG_INFO( ... )        SW_LOG_DISCARDED( __VA_ARGS__ )
     #define SW_LOG_INFO_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )
     /** @brief Trace 수준으로 포맷해 남깁니다. Debug 에만 컴파일됩니다. */
-    #define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::LogLevel::Trace, __VA_ARGS__ )
+    #define SW_LOG_TRACE_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Trace, "" id, __VA_ARGS__ )
 #else
-    #define SW_LOG_TRACE( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
+    #define SW_LOG_TRACE_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if defined( SW_DEBUG )

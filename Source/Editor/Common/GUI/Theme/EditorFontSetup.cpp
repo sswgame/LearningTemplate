@@ -38,7 +38,7 @@ namespace sw::editor
                 string            error;
                 if ( EditorThemeTokens::loadTheme( themeName, theme, error ) == false )
                 {
-                    SW_LOG_ERROR( "Editor font size needs the theme '%#' tokens: %#", themeName.c_str(), error.c_str() );
+                    SW_LOG_ERROR_ID( "EditorFontSetup.EditorFontSizeNeeds", "Editor font size needs the theme '%#' tokens: %#", themeName.c_str(), error.c_str() );
                     return false;
                 }
                 // 테마 서브시스템보다 먼저라 `SW_THEMEMETRIC` 이 아니라 읽은 벌에서 찾는다. 두 키는 해석이 양수로 확인했다(`EditorThemeTokens::resolve`).
@@ -106,7 +106,7 @@ namespace sw::editor
                 outRatio = metrics._ascender - metrics._descender;
                 if ( bRead == false || outRatio <= 0.0f )
                 {
-                    SW_LOG_ERROR( "Font %# has no usable ascender/descender metrics", path.c_str() );
+                    SW_LOG_ERROR_ID( "EditorFontSetup.FontNoUsableAscender", "Font %# has no usable ascender/descender metrics", path.c_str() );
                     return false;
                 }
                 return true;
@@ -152,13 +152,13 @@ namespace sw::editor
         const string koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
         const string iconPath   = EditorFontSetupInternal::resolveFontFile( EditorPaths::kIconFontFileName );
         if ( basePath.empty() )
-            SW_LOG_ERROR( "No base font from editortooldefaults.json _listBaseFont exists under editor/fonts or the OS font folders" );
+            SW_LOG_ERROR_ID( "EditorFontSetup.NoBaseFontEditortooldefaults", "No base font from editortooldefaults.json _listBaseFont exists under editor/fonts or the OS font folders" );
         if ( monoPath.empty() )
-            SW_LOG_ERROR( "No monospace font from editortooldefaults.json _listMonoFont exists under editor/fonts or the OS font folders" );
+            SW_LOG_ERROR_ID( "EditorFontSetup.NoMonospaceFontEditortooldefaults", "No monospace font from editortooldefaults.json _listMonoFont exists under editor/fonts or the OS font folders" );
         if ( koreanPath.empty() )
-            SW_LOG_ERROR( "No Korean font from editortooldefaults.json _listKoreanFont exists under editor/fonts or the OS font folders" );
+            SW_LOG_ERROR_ID( "EditorFontSetup.NoKoreanFontEditortooldefaults", "No Korean font from editortooldefaults.json _listKoreanFont exists under editor/fonts or the OS font folders" );
         if ( iconPath.empty() )
-            SW_LOG_ERROR( "Editor icon font '%#' not found under editor/fonts", EditorPaths::kIconFontFileName );
+            SW_LOG_ERROR_ID( "EditorFontSetup.EditorIconFontNot", "Editor icon font '%#' not found under editor/fonts", EditorPaths::kIconFontFileName );
         const bool bFontMissing = basePath.empty() || monoPath.empty() || koreanPath.empty() || iconPath.empty();
         if ( bFontMissing )
             return false;
@@ -180,10 +180,10 @@ namespace sw::editor
             pBaseFont             = io.Fonts->AddFontFromFileTTF( basePath.c_str(), baseSize, &baseConfig, io.Fonts->GetGlyphRangesDefault() );
             if ( pBaseFont == nullptr )
             {
-                SW_LOG_ERROR( "Base font %# could not be loaded", basePath.c_str() );
+                SW_LOG_ERROR_ID( "EditorFontSetup.BaseFontCouldNot", "Base font %# could not be loaded", basePath.c_str() );
                 return false;
             }
-            SW_LOG_TRACE( "Loaded base font: %#", basePath.c_str() );
+            SW_LOG_TRACE_ID( "EditorFontSetup.LoadedBaseFont", "Loaded base font: %#", basePath.c_str() );
         }
 
         BLOCK( "Korean Glyph Merge" )
@@ -194,7 +194,7 @@ namespace sw::editor
             mergeConfig.OversampleV = 1;
             mergeConfig.PixelSnapH  = true;
             io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), baseSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
-            SW_LOG_TRACE( "Merged Korean glyphs from: %#", koreanPath.c_str() );
+            SW_LOG_TRACE_ID( "EditorFontSetup.MergedKoreanGlyphs", "Merged Korean glyphs from: %#", koreanPath.c_str() );
         }
 
         auto mergeIcons = [&]( float32 size )
@@ -218,7 +218,7 @@ namespace sw::editor
             ImFont* pMonoFont     = io.Fonts->AddFontFromFileTTF( monoPath.c_str(), monoSize, &monoConfig, io.Fonts->GetGlyphRangesDefault() );
             if ( pMonoFont == nullptr )
             {
-                SW_LOG_ERROR( "Monospace font %# could not be loaded", monoPath.c_str() );
+                SW_LOG_ERROR_ID( "EditorFontSetup.MonospaceFontCouldNot", "Monospace font %# could not be loaded", monoPath.c_str() );
                 return false;
             }
             ImFontConfig mergeConfig{};

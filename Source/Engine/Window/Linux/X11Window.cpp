@@ -103,7 +103,7 @@ namespace sw
                 if ( pData != nullptr )
                     XFree( pData );
                 if ( result != 0 )
-                    SW_LOG_WARNING( "Clipboard property could not be read (X error %#) - nothing pasted", result );
+                    SW_LOG_WARNING_ID( "X11Window.ClipboardPropertyCouldNot", "Clipboard property could not be read (X error %#) - nothing pasted", result );
                 return result == 0;
             }
         };
@@ -143,7 +143,7 @@ namespace sw
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )
         {
-            SW_LOG_ERROR( "Failed to open X11 Display!" );
+            SW_LOG_ERROR_ID( "X11Window.FailedOpenX11Display", "Failed to open X11 Display!" );
             return false;
         }
 
@@ -176,7 +176,7 @@ namespace sw
         applyMinimumClientSize(); // 다시 만든 창(recreate)도 같은 하한을 가진다
         applyTitle();
 
-        SW_LOG_INFO( "Native X11 Window created successfully! (%#×%#)", width, height );
+        SW_LOG_INFO_ID( "X11Window.NativeX11WindowCreated", "Native X11 Window created successfully! (%#×%#)", width, height );
         return true;
     }
 
@@ -448,7 +448,7 @@ namespace sw
         if ( X11ClipboardWait::waitForEvent( pDisplay, win, SelectionNotify, reply, []( const XEvent& )
         { return true; } ) == false )
         {
-            SW_LOG_WARNING( "Clipboard owner did not answer within %# ms - nothing pasted", kClipboardPollMs * kClipboardPollCount );
+            SW_LOG_WARNING_ID( "X11Window.ClipboardOwnerDidNot", "Clipboard owner did not answer within %# ms - nothing pasted", kClipboardPollMs * kClipboardPollCount );
             return false;
         }
         if ( reply.xselection.property == 0 )
@@ -479,7 +479,7 @@ namespace sw
             };
             if ( X11ClipboardWait::waitForEvent( pDisplay, win, PropertyNotify, notify, isNewValue ) == false )
             {
-                SW_LOG_WARNING( "Clipboard owner stopped sending a large (INCR) text after %# bytes - nothing pasted", static_cast<uint64>( outText.size() ) );
+                SW_LOG_WARNING_ID( "X11Window.ClipboardOwnerStoppedSending", "Clipboard owner stopped sending a large (INCR) text after %# bytes - nothing pasted", static_cast<uint64>( outText.size() ) );
                 outText.clear();
                 return false;
             }
@@ -555,8 +555,8 @@ namespace sw
         {
             if ( transfer._deadline.isExpired() )
             {
-                SW_LOG_WARNING( "Clipboard pasting program stopped asking for the large (INCR) text after %# of %# bytes - dropped", static_cast<uint64>( transfer._offset ),
-                                static_cast<uint64>( transfer._text.size() ) );
+                SW_LOG_WARNING_ID( "X11Window.ClipboardPastingProgramStopped", "Clipboard pasting program stopped asking for the large (INCR) text after %# of %# bytes - dropped", static_cast<uint64>( transfer._offset ),
+                                   static_cast<uint64>( transfer._text.size() ) );
                 XSelectInput( pDisplay, static_cast<Window>( transfer._requestor ), NoEventMask );
             }
         }

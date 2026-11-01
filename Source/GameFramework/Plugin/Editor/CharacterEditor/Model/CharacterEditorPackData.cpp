@@ -31,7 +31,7 @@ namespace sw::editor
                 const string_view skeletonExtension{ kSkeletonExtension };
                 if ( StringUtil::endsWith( skeletonPath, skeletonExtension ) == false )
                 {
-                    SW_LOG_ERROR( "%#: skeleton '%#' must end with '%#' (the reference pose is named after it)", sourceName, skeletonPath.c_str(), kSkeletonExtension );
+                    SW_LOG_ERROR_ID( "CharacterEditorPackData.SkeletonMustEndReference", "%#: skeleton '%#' must end with '%#' (the reference pose is named after it)", sourceName, skeletonPath.c_str(), kSkeletonExtension );
                     return false;
                 }
                 outValue = skeletonPath.substr( 0, skeletonPath.size() - skeletonExtension.size() ) + kRefPoseExtension;
@@ -44,7 +44,7 @@ namespace sw::editor
                 const string_view text = root.getAttributeText( pName );
                 if ( text.empty() )
                 {
-                    SW_LOG_ERROR( "%#: <%#> needs the '%#' attribute", sourceName, kRootName, pName );
+                    SW_LOG_ERROR_ID( "CharacterEditorPackData.NeedsAttribute", "%#: <%#> needs the '%#' attribute", sourceName, kRootName, pName );
                     return false;
                 }
                 outValue = string( text );
@@ -89,13 +89,13 @@ namespace sw::editor
                                 StringUtil::equals( pName, "clipFolder" ) || StringUtil::equals( pName, "previewPreset" ) || StringUtil::equals( pName, "rig" );
             if ( bKnown == false )
             {
-                SW_LOG_ERROR( "%#: unknown attribute '%#' on <%#>", sourceName, pName, Internal::kRootName );
+                SW_LOG_ERROR_ID( "CharacterEditorPackData.UnknownAttribute", "%#: unknown attribute '%#' on <%#>", sourceName, pName, Internal::kRootName );
                 bOk = false;
             }
         }
         if ( root.findChild().isValid() )
         {
-            SW_LOG_ERROR( "%#: <%#> takes attributes only", sourceName, Internal::kRootName );
+            SW_LOG_ERROR_ID( "CharacterEditorPackData.TakesAttributesOnly", "%#: <%#> takes attributes only", sourceName, Internal::kRootName );
             bOk = false;
         }
         bOk      = Internal::readRequired( root, "sockets", _socketPath, sourceName ) && bOk;

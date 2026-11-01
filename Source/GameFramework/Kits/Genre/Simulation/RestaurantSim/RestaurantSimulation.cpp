@@ -361,8 +361,8 @@ namespace sw
             {
                 const int64 balance = _pWallet != nullptr ? _pWallet->getBalance( currency ) : 0;
                 if ( balance > 0 && _pWallet->trySpend( currency, balance ) == false )
-                    SW_LOG_WARNING( "could not pay the remaining balance %# to '%#'", balance, staff._name.c_str() );
-                SW_LOG_WARNING( "wage for '%#' is short by %#", staff._name.c_str(), staff._dailyWage - balance );
+                    SW_LOG_WARNING_ID( "RestaurantSimulation.CouldNotPayRemaining", "could not pay the remaining balance %# to '%#'", balance, staff._name.c_str() );
+                SW_LOG_WARNING_ID( "RestaurantSimulation.WageShort", "wage for '%#' is short by %#", staff._name.c_str(), staff._dailyWage - balance );
             }
         }
         _today._profit = _today._revenue + _today._tips - _today._ingredientCost - _today._wages - _today._spoilageCost;
@@ -985,7 +985,7 @@ namespace sw
             const float32 unit     = GameHash::toUnitFloat( GameHash::hashCoord( day, shopIndex, _settings._randomSeed ) );
             const float32 modifier = MathUtil::max( 0.1f, 1.0f + _settings._marketVolatility * ( unit * 2.0f - 1.0f ) );
             if ( _market.setPriceModifier( listShop[static_cast<size_t>( shopIndex )]._id, modifier, 1.0f ) == false )
-                SW_LOG_ERROR( "RestaurantSimulation: the market could not price shop %#", static_cast<int32>( shopIndex ) );
+                SW_LOG_ERROR_ID( "RestaurantSimulation.RestaurantSimulationMarketCouldNot", "RestaurantSimulation: the market could not price shop %#", static_cast<int32>( shopIndex ) );
         }
     }
 

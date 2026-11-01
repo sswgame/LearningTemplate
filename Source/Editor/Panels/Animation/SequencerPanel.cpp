@@ -700,7 +700,7 @@ namespace sw::editor
     {
         SequenceAsset restored;
         if ( text.empty() == false && restored.parseXML( text ) == false )
-            SW_LOG_WARNING( "Sequence undo snapshot could not be read - showing an empty sequence" );
+            SW_LOG_WARNING_ID( "SequencerPanel.SequenceUndoSnapshotCould", "Sequence undo snapshot could not be read - showing an empty sequence" );
         applyAsset( restored );
     }
 

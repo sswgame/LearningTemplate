@@ -34,14 +34,14 @@ namespace sw
         *this          = LayerWeightsAsset{};
         if ( bytes.size() < Internal::kHeaderBytes || LittleEndianUtil::readUint32( bytes.data() ) != kMagic )
         {
-            SW_LOG_ERROR( "'%#' is not a layer weight map (magic SWLW missing)", sourceName );
+            SW_LOG_ERROR_ID( "LayerWeightsAsset.NotLayerWeightMap", "'%#' is not a layer weight map (magic SWLW missing)", sourceName );
             return false;
         }
         // 옛 판(레이어 넷, 버전 1)은 읽지 않는다 — 저장소의 파일은 현재 판으로 다시 썼다.
         const uint32 version = LittleEndianUtil::readUint32( bytes.data() + 4 );
         if ( version != kVersion )
         {
-            SW_LOG_ERROR( "'%#' is layer weight map version %# - this build reads version %# only", sourceName, version, kVersion );
+            SW_LOG_ERROR_ID( "LayerWeightsAsset.LayerWeightMapVersion", "'%#' is layer weight map version %# - this build reads version %# only", sourceName, version, kVersion );
             return false;
         }
         const uint32 width      = LittleEndianUtil::readUint32( bytes.data() + 8 );
@@ -50,14 +50,14 @@ namespace sw
         const bool   bSizeOk    = width >= 1 && width <= kMaxResolution && height >= 1 && height <= kMaxResolution;
         if ( bSizeOk == false || layerCount != kLayerCount )
         {
-            SW_LOG_ERROR( "'%#' is %#x%# with %# layers - expected 1..%# per side and %# layers", sourceName, width, height, layerCount, kMaxResolution, kLayerCount );
+            SW_LOG_ERROR_ID( "LayerWeightsAsset.XLayersExpectedPer", "'%#' is %#x%# with %# layers - expected 1..%# per side and %# layers", sourceName, width, height, layerCount, kMaxResolution, kLayerCount );
             return false;
         }
         const size_t weightBytes = static_cast<size_t>( width ) * height * kLayerCount;
         if ( bytes.size() != Internal::kHeaderBytes + weightBytes )
         {
-            SW_LOG_ERROR( "'%#' has %# bytes - %#x%# needs %#", sourceName, static_cast<uint64>( bytes.size() ), width, height,
-                          static_cast<uint64>( Internal::kHeaderBytes + weightBytes ) );
+            SW_LOG_ERROR_ID( "LayerWeightsAsset.BytesXNeeds", "'%#' has %# bytes - %#x%# needs %#", sourceName, static_cast<uint64>( bytes.size() ), width, height,
+                             static_cast<uint64>( Internal::kHeaderBytes + weightBytes ) );
             return false;
         }
         _width  = width;
@@ -72,7 +72,7 @@ namespace sw
         vector<uint8>     bytes;
         if ( AssetIO::readBinaryAsset( id, bytes ) == false )
         {
-            SW_LOG_ERROR( "Layer weight map '%#' could not be read", assetID );
+            SW_LOG_ERROR_ID( "LayerWeightsAsset.LayerWeightMapCould", "Layer weight map '%#' could not be read", assetID );
             return false;
         }
         return loadFromMemory( bytes, assetID );
@@ -95,7 +95,7 @@ namespace sw
     {
         if ( isValid() == false )
         {
-            SW_LOG_ERROR( "Layer weight map for '%#' is malformed (%#x%#, %# bytes) - not written", absPath.str(), _width, _height, static_cast<uint64>( _bytes.size() ) );
+            SW_LOG_ERROR_ID( "LayerWeightsAsset.LayerWeightMapMalformed", "Layer weight map for '%#' is malformed (%#x%#, %# bytes) - not written", absPath.str(), _width, _height, static_cast<uint64>( _bytes.size() ) );
             return false;
         }
         vector<uint8> bytes;

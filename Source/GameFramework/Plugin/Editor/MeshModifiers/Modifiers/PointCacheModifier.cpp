@@ -148,7 +148,7 @@ namespace sw::editor
                 return false;
             if ( pCache->_vertexCount != vertexCount )
             {
-                SW_LOG_WARNING( "Point cache '%#' has %# vertices but the mesh has %# - skipped", path.c_str(), pCache->_vertexCount, vertexCount );
+                SW_LOG_WARNING_ID( "PointCacheModifier.PointCacheVerticesBut", "Point cache '%#' has %# vertices but the mesh has %# - skipped", path.c_str(), pCache->_vertexCount, vertexCount );
                 return false;
             }
 
@@ -191,7 +191,7 @@ namespace sw::editor
             {
                 _bCacheTried = true;
                 if ( PointCacheModifierInternal::load( path, _cache ) == false )
-                    SW_LOG_WARNING( "Point cache '%#' could not be read or is malformed - skipped", path.c_str() );
+                    SW_LOG_WARNING_ID( "PointCacheModifier.PointCacheCouldNot", "Point cache '%#' could not be read or is malformed - skipped", path.c_str() );
             }
             return _cache._bValid ? &_cache : nullptr;
         }

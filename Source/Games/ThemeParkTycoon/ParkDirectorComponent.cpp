@@ -135,8 +135,8 @@ namespace sw
 
     void ParkDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[Park] park is open - WASD pan, Q/E rotate, wheel zoom, Tab select ride, O open/close, [ ] ride price, - = entry fee, "
-                     "B build next, V ride the coaster, G guest thoughts" );
+        SW_LOG_INFO_ID( "ParkDirector.ParkOpenWASDPan", "[Park] park is open - WASD pan, Q/E rotate, wheel zoom, Tab select ride, O open/close, [ ] ride price, - = entry fee, "
+                                                        "B build next, V ride the coaster, G guest thoughts" );
         logStatus( 0.0f, true );
     }
 
@@ -197,12 +197,12 @@ namespace sw
         ParkLayout layout;
         if ( _layoutCatalog.loadFromAsset( AssetID{ _coasterDataPath } ) == false )
         {
-            SW_LOG_ERROR( "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ParkDirector.CoasterCatalogCouldNot", "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
             return false;
         }
         if ( layout.loadFromAsset( AssetID{ _parkDataPath }, _layoutCatalog ) == false )
         {
-            SW_LOG_ERROR( "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ParkDirector.ParkLayoutCouldNot", "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
         _settings._gatePosition = layout.getGatePosition();
@@ -224,7 +224,7 @@ namespace sw
         }
         if ( _listPlacement.empty() )
         {
-            SW_LOG_ERROR( "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ParkDirector.PlacesNoRidesPark", "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
         _wallet.clear();
@@ -258,7 +258,7 @@ namespace sw
             return false;
         if ( _wallet.canAfford( _settings._currency, placement._buildCost ) == false )
         {
-            SW_LOG_INFO( "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _wallet.getBalance( _settings._currency ) );
+            SW_LOG_INFO_ID( "ParkDirector.NotEnoughCashNeeded", "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _wallet.getBalance( _settings._currency ) );
             getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventBlocked );
             return false;
         }
@@ -275,7 +275,7 @@ namespace sw
                 return false;
             if ( stats._bCompleted == SW_FALSE )
             {
-                SW_LOG_WARNING( "[Park] %# failed its test run (stalled) - not built", pLayout->_name.c_str() );
+                SW_LOG_WARNING_ID( "ParkDirector.FailedTestRunStalled", "[Park] %# failed its test run (stalled) - not built", pLayout->_name.c_str() );
                 return false;
             }
             ride = ThemeParkSimulation::makeRideFromCoaster( placement._layoutID, pLayout->_name, stats, placement._ride._capacity, placement._loadTime );
@@ -284,9 +284,9 @@ namespace sw
             ride._entrance                       = stationFrame._position - stationFrame._right * 5.0f;
             ride._entrance._y                    = 0.0f;
             ride._runningCostPerMinute           = 8 + static_cast<int32>( stats._length / 60.0f );
-            SW_LOG_INFO( "[Park] test run of %#: %# m, %# s lap, top speed %# m/s, %# inversions, airtime %# s -> excitement %# · intensity %# · nausea %#",
-                         pLayout->_name.c_str(), static_cast<int32>( stats._length ), static_cast<int32>( stats._lapTime ), static_cast<int32>( stats._maxSpeed ),
-                         stats._inversionCount, stats._airtime, stats._excitement, stats._intensity, stats._nausea );
+            SW_LOG_INFO_ID( "ParkDirector.TestRunMLap", "[Park] test run of %#: %# m, %# s lap, top speed %# m/s, %# inversions, airtime %# s -> excitement %# · intensity %# · nausea %#",
+                            pLayout->_name.c_str(), static_cast<int32>( stats._length ), static_cast<int32>( stats._lapTime ), static_cast<int32>( stats._maxSpeed ),
+                            stats._inversionCount, stats._airtime, stats._excitement, stats._intensity, stats._nausea );
         }
 
         const int32 rideIndex = _simulation.buildRide( ride, placement._buildCost );
@@ -296,7 +296,7 @@ namespace sw
         placement._ride      = ride;
         if ( pCoaster != nullptr )
             _listCoaster.push_back( std::move( pCoaster ) );
-        SW_LOG_INFO( "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _wallet.getBalance( _settings._currency ) );
+        SW_LOG_INFO_ID( "ParkDirector.BuiltTicketLeft", "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _wallet.getBalance( _settings._currency ) );
         getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventBuilt );
         _listPendingRideView.push_back( placementIndex );
         return true;
@@ -417,10 +417,10 @@ namespace sw
     void ParkDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _wallet.getBalance( _settings._currency ),
-                         static_cast<int32>( _simulation.getElapsedTime() ) );
+            SW_LOG_INFO_ID( "ParkDirector.ParkStateRestoredGuests", "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _wallet.getBalance( _settings._currency ),
+                            static_cast<int32>( _simulation.getElapsedTime() ) );
         else
-            SW_LOG_WARNING( "[Park] the saved park state does not match this build - opening a new park" );
+            SW_LOG_WARNING_ID( "ParkDirector.SavedParkStateDoes", "[Park] the saved park state does not match this build - opening a new park" );
     }
 
     SessionStateRefs ParkDirectorComponent::makeRefs()
@@ -600,7 +600,7 @@ namespace sw
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );
             getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventSelect );
             [[maybe_unused]] const RidePlacement& placement = _listPlacement[static_cast<size_t>( _selectedPlacement )];
-            SW_LOG_INFO( "[Park] selected %# (%#)", placement._ride._name.c_str(), placement._rideIndex >= 0 ? "built" : "not built - B to build" );
+            SW_LOG_INFO_ID( "ParkDirector.Selected", "[Park] selected %# (%#)", placement._ride._name.c_str(), placement._rideIndex >= 0 ? "built" : "not built - B to build" );
         }
         const int32 rideIndex = findSelectedRideIndex();
         if ( rideIndex >= 0 )
@@ -609,20 +609,20 @@ namespace sw
             if ( inputMap.wasActionTriggered( hashed_string( "Park.ToggleOpen" ) ) )
             {
                 _simulation.setRideOpen( rideIndex, ride._bOpen == SW_FALSE );
-                SW_LOG_INFO( "[Park] %# is now %#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed" );
+                SW_LOG_INFO_ID( "ParkDirector.Now", "[Park] %# is now %#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed" );
             }
             const bool bPriceUp = inputMap.wasActionTriggered( hashed_string( "Park.PriceUp" ) );
             if ( bPriceUp || inputMap.wasActionTriggered( hashed_string( "Park.PriceDown" ) ) )
             {
                 _simulation.setRidePrice( rideIndex, ride._price + ( bPriceUp ? 1 : -1 ) );
-                SW_LOG_INFO( "[Park] %# ticket $%# (worth about $%#)", ride._name.c_str(), ride._price, static_cast<int32>( ThemeParkSimulation::computeRideValue( ride ) ) );
+                SW_LOG_INFO_ID( "ParkDirector.TicketWorthAbout", "[Park] %# ticket $%# (worth about $%#)", ride._name.c_str(), ride._price, static_cast<int32>( ThemeParkSimulation::computeRideValue( ride ) ) );
             }
         }
         const bool bFeeUp = inputMap.wasActionTriggered( hashed_string( "Park.FeeUp" ) );
         if ( bFeeUp || inputMap.wasActionTriggered( hashed_string( "Park.FeeDown" ) ) )
         {
             _simulation.setEntryFee( _simulation.getSettings()._entryFee + ( bFeeUp ? 5 : -5 ) );
-            SW_LOG_INFO( "[Park] entry fee $%#", _simulation.getSettings()._entryFee );
+            SW_LOG_INFO_ID( "ParkDirector.EntryFee", "[Park] entry fee $%#", _simulation.getSettings()._entryFee );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Park.Build" ) ) )
         {
@@ -645,7 +645,7 @@ namespace sw
                         _ridingCoaster = coasterIndex;
                 }
             }
-            SW_LOG_INFO( "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
+            SW_LOG_INFO_ID( "ParkDirector.Message", "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Park.Thoughts" ) ) )
             logThoughts();
@@ -692,14 +692,14 @@ namespace sw
         if ( bForce == false && _statusTimer < _statusLogInterval )
             return;
         _statusTimer = 0.0f;
-        SW_LOG_INFO( "[Park] %# min · cash $%# · guests %# (visited %#) · happiness %#%% · rating %# · rides %# · entry $%#",
-                     static_cast<int32>( _simulation.getElapsedTime() / 60.0f ), _wallet.getBalance( _settings._currency ), _simulation.getGuestCount(),
-                     _simulation.getTotalVisitorCount(), static_cast<int32>( _simulation.getAverageHappiness() * 100.0f ), _simulation.getParkRating(),
-                     static_cast<uint32>( _simulation.getRides().size() ), _simulation.getSettings()._entryFee );
+        SW_LOG_INFO_ID( "ParkDirector.MinCashGuestsVisited", "[Park] %# min · cash $%# · guests %# (visited %#) · happiness %#%% · rating %# · rides %# · entry $%#",
+                        static_cast<int32>( _simulation.getElapsedTime() / 60.0f ), _wallet.getBalance( _settings._currency ), _simulation.getGuestCount(),
+                        _simulation.getTotalVisitorCount(), static_cast<int32>( _simulation.getAverageHappiness() * 100.0f ), _simulation.getParkRating(),
+                        static_cast<uint32>( _simulation.getRides().size() ), _simulation.getSettings()._entryFee );
         for ( [[maybe_unused]] const ParkRide& ride : _simulation.getRides() )
         {
-            SW_LOG_INFO( "[Park]   %# - %# · queue %# · riders %# · total %# · income $%# · ticket $%#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed",
-                         static_cast<uint32>( ride._listQueue.size() ), static_cast<uint32>( ride._listRider.size() ), ride._totalRiders, ride._totalIncome, ride._price );
+            SW_LOG_INFO_ID( "ParkDirector.QueueRidersTotalIncome", "[Park]   %# - %# · queue %# · riders %# · total %# · income $%# · ticket $%#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed",
+                            static_cast<uint32>( ride._listQueue.size() ), static_cast<uint32>( ride._listRider.size() ), ride._totalRiders, ride._totalIncome, ride._price );
         }
     }
 
@@ -712,7 +712,7 @@ namespace sw
         {
             const uint32 count = _simulation.countGuestsThinking( thought );
             if ( count > 0 )
-                SW_LOG_INFO( "[Park] %# guests think: %#", count, getEnumName( thought ) );
+                SW_LOG_INFO_ID( "ParkDirector.GuestsThink", "[Park] %# guests think: %#", count, getEnumName( thought ) );
         }
     }
 

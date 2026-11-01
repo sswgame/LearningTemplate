@@ -121,7 +121,7 @@ namespace sw
         }
         const UserSettingSetResult result = _pSettings->setPendingBinding( _settingID, _capturedSlotText, UserSettingBindingPolicy::Reject );
         if ( result != UserSettingSetResult::Accepted && result != UserSettingSetResult::Unchanged )
-            SW_LOG_WARNING( "[UI] Key binding '%#' for '%#' was not accepted", _capturedSlotText.c_str(), _settingID.c_str() );
+            SW_LOG_WARNING_ID( "KeyRebindScreen.KeyBindingNotAccepted", "[UI] Key binding '%#' for '%#' was not accepted", _capturedSlotText.c_str(), _settingID.c_str() );
         close();
     }
 

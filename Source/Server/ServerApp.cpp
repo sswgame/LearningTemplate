@@ -164,7 +164,7 @@ namespace sw
             return false;
         if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer, &_host ) == false )
         {
-            SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
+            SW_LOG_ERROR_ID( "Server.EngineInitializationFailedDedicated", "Engine initialization failed (dedicated server)" );
             return false;
         }
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
@@ -191,7 +191,7 @@ namespace sw
         // 게임 포트가 접속 티켓을 요구하는데 확인할 조립이 서지 않았으면 모든 접속을 거절하는 서버가 된다 — 그런 서버로 뜨지 않는다.
         if ( _pServerConfig->_bGameConnectTicket && engine::getSubsystem<GameNetSession>().getConnectSecurity().isAuthenticatorBound() == false )
         {
-            SW_LOG_ERROR( "Server config _bGameConnectTicket is on but no online kit bound a game connect authenticator (add the account kit 'gameConnect')" );
+            SW_LOG_ERROR_ID( "Server.ServerConfigBGameConnectTicketBut", "Server config _bGameConnectTicket is on but no online kit bound a game connect authenticator (add the account kit 'gameConnect')" );
             return false;
         }
 
@@ -199,8 +199,8 @@ namespace sw
         _observability.beginLoadWindow( ServerAppInternal::nowMonotonicMs() );
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setClockNumber( LogClock::Tick, _tickCount );
-        SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
-                     _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::time::kNanosecondsPerMillisecond );
+        SW_LOG_INFO_ID( "Server.DedicatedServerReadyTarget", "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
+                        _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::time::kNanosecondsPerMillisecond );
         return true;
     }
 
@@ -240,7 +240,7 @@ namespace sw
         _pServerConfig    = pConfigManager->loadHostConfig<ServerConfig>( ConfigSource::disk( path ) );
         if ( _pServerConfig == nullptr )
         {
-            SW_LOG_ERROR( "Server config '%#' could not be read - pass -server-config=<path>", path.c_str() );
+            SW_LOG_ERROR_ID( "Server.ServerConfigCouldNot", "Server config '%#' could not be read - pass -server-config=<path>", path.c_str() );
             return false;
         }
         if ( _pServerConfig->_bJSONLogs )
@@ -249,11 +249,11 @@ namespace sw
             ILogSink* pLogSink = Logger::getGlobalSink();
             if ( pLogSink == nullptr || pLogSink->enableJSONLinesOutput() == false )
             {
-                SW_LOG_ERROR( "Server config _bJSONLogs is on but the log sink could not add the JSON lines output" );
+                SW_LOG_ERROR_ID( "Server.ServerConfigBJSONLogsBut", "Server config _bJSONLogs is on but the log sink could not add the JSON lines output" );
                 return false;
             }
         }
-        SW_LOG_INFO( "Server config: %#", path.c_str() );
+        SW_LOG_INFO_ID( "Server.ServerConfig", "Server config: %#", path.c_str() );
         return true;
     }
 
@@ -285,7 +285,7 @@ namespace sw
                     _gameModuleManager = make_unique<GameModuleManager>();
                 const bool bStarted = _gameModuleManager->initializeDedicatedServer( getLiveReloadManager() );
                 if ( bStarted == false )
-                    SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
+                    SW_LOG_ERROR_ID( "Server.GameModuleCouldNot", "The game module could not be started on the dedicated server" );
                 return bStarted;
             }
             case HostServiceID::StandardInput:
@@ -315,7 +315,7 @@ namespace sw
                 break;
             }
         }
-        SW_LOG_ERROR( "Host service %# is not a dedicated server service", HostService::getName( id ) );
+        SW_LOG_ERROR_ID( "Server.HostServiceNotDedicated", "Host service %# is not a dedicated server service", HostService::getName( id ) );
         return false;
     }
 
@@ -392,7 +392,7 @@ namespace sw
         CrashReportConsent consent{ CrashReportConsent::Local };
         if ( parseCrashReportConsent( _pServerConfig->_crashReportConsent, consent ) == false || consent == CrashReportConsent::Ask )
         {
-            SW_LOG_ERROR( "Server config _crashReportConsent '%#' must be 'local' or 'send'", _pServerConfig->_crashReportConsent.c_str() );
+            SW_LOG_ERROR_ID( "Server.ServerConfigCrashReportConsentMust", "Server config _crashReportConsent '%#' must be 'local' or 'send'", _pServerConfig->_crashReportConsent.c_str() );
             return false;
         }
         crashReports.setConsent( consent );
@@ -402,7 +402,7 @@ namespace sw
         // 지난 실행의 크래시를 묶는 것은 이번 실행의 이상이 아니라 정리다 — 클라이언트(TelemetryService)와 같이 정보로 남긴다. 크래시 자체는 그 실행이 이미
         // 오류로 남겼다. 경고로 두면 같은 바이너리 폴더(Bin/Saved/Logs)를 쓰는 앞선 실행의 잔재가 이번 실행의 판정(시나리오의 처리 안 된 경고)을 바꾼다.
         if ( newCount > 0 )
-            SW_LOG_INFO( "Bundled %# crash report(s) from previous runs into '%#' (%# kept)", newCount, reportsFolder.c_str(), static_cast<uint32>( listReport.size() ) );
+            SW_LOG_INFO_ID( "Server.BundledCrashReportPrevious", "Bundled %# crash report(s) from previous runs into '%#' (%# kept)", newCount, reportsFolder.c_str(), static_cast<uint32>( listReport.size() ) );
         MetricGauge* pCrashGauge = _observability.getMetricRegistry()->registerGauge( "server_crash_reports", "Crash report bundles kept on this machine (previous runs that crashed)" );
         if ( pCrashGauge != nullptr )
             pCrashGauge->set( static_cast<float64>( listReport.size() ) );
@@ -441,8 +441,8 @@ namespace sw
         if ( pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server )
             pNetSession->sendShutdownNotice( GameShutdownNotice{ bWait ? GameShutdownReason::ServerRestart : GameShutdownReason::ServerStopped, notice._graceSeconds } );
         if ( waitMs > 0 )
-            SW_LOG_INFO( "Draining: waiting up to %# s for %# connections / open jobs to finish (%#)", _pServerConfig->_drainWaitSeconds, countDrainBlockers(),
-                         ShutdownSignal::getCauseName( cause ) );
+            SW_LOG_INFO_ID( "Server.DrainingWaitingUpConnections", "Draining: waiting up to %# s for %# connections / open jobs to finish (%#)", _pServerConfig->_drainWaitSeconds, countDrainBlockers(),
+                            ShutdownSignal::getCauseName( cause ) );
     }
 
     bool ServerApp::isDrainFinished( int64 monotonicMs ) const
@@ -456,7 +456,7 @@ namespace sw
     {
         if ( _serverServices != nullptr && _serverServices->isRunning() )
         {
-            SW_LOG_INFO( "Stopping %# server services for a module reload", _serverServices->getRunningCount() );
+            SW_LOG_INFO_ID( "Server.StoppingServerServicesModule", "Stopping %# server services for a module reload", _serverServices->getRunningCount() );
             _serverServices->stopAll();
             _bRestartServerServices = SW_TRUE;
         }
@@ -486,7 +486,7 @@ namespace sw
                     beginDrain( cause, nowMs ); // 처음 본 순간 /readyz 를 503 으로 바꾸고 기한을 정한다
                 if ( isDrainFinished( nowMs ) )
                 {
-                    SW_LOG_INFO( "Dedicated server shutdown requested (%#) after %# ticks", ShutdownSignal::getCauseName( cause ), _tickCount );
+                    SW_LOG_INFO_ID( "Server.DedicatedServerShutdownRequested", "Dedicated server shutdown requested (%#) after %# ticks", ShutdownSignal::getCauseName( cause ), _tickCount );
                     break;
                 }
                 // 접속이 남았고 기한 전이다 — 틱을 계속 돌려 진행 중인 매치 · 거래가 끝나게 한다(아래의 일반 틱 경로).
@@ -544,7 +544,7 @@ namespace sw
                 const uint32 dropped = static_cast<uint32>( ( now - deadline ) / _tickNanoseconds );
                 if ( _droppedTickCount == 0 ||
                      _droppedTickCount / ServerAppInternal::kDroppedTickWarningInterval != ( _droppedTickCount + dropped ) / ServerAppInternal::kDroppedTickWarningInterval )
-                    SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / constant::time::kNanosecondsPerMicrosecond );
+                    SW_LOG_WARNING_ID( "Server.ServerBehindDroppedTicks", "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / constant::time::kNanosecondsPerMicrosecond );
                 _droppedTickCount += dropped;
                 _observability.addDroppedTicks( dropped );
                 deadline = now;
@@ -576,7 +576,7 @@ namespace sw
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.
             _bRestartServerServices = SW_FALSE;
             if ( startServerServices() == false )
-                SW_LOG_ERROR( "Server services could not be restarted after the module reload - fix the error and reload again" );
+                SW_LOG_ERROR_ID( "Server.ServerServicesCouldNot", "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
         const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
         _engine.update( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
@@ -592,13 +592,13 @@ namespace sw
         }
         if ( command == "help" )
         {
-            SW_LOG_INFO( "Server commands: quit | stop | status | help%#", _pDebugControl != nullptr ? _pDebugControl->getHelpSuffix() : "" );
+            SW_LOG_INFO_ID( "Server.ServerCommandsQuitStop", "Server commands: quit | stop | status | help%#", _pDebugControl != nullptr ? _pDebugControl->getHelpSuffix() : "" );
             return;
         }
         // Dev 는 일시정지 명령과 개발 콘솔의 명령(개발 명령과 gv_* 전역 변수)도 받는다. Shipping 서버는 위의 네 가지만 받는다.
         if ( _pDebugControl != nullptr && _pDebugControl->executeCommand( command ) )
             return;
-        SW_LOG_WARNING( "Unknown server command '%#' - type help", string( command ).c_str() );
+        SW_LOG_WARNING_ID( "Server.UnknownServerCommandType", "Unknown server command '%#' - type help", string( command ).c_str() );
     }
 
     void ServerApp::logStatus() const
@@ -610,10 +610,10 @@ namespace sw
         uint64      residentBytes   = 0;
         uint64      peakBytes       = 0;
         (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
-        SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
-                     "resident %# MiB",
-                     uptimeSeconds, _tickCount, ( _pDebugControl != nullptr && _pDebugControl->isPaused() ) ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::time::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::time::kNanosecondsPerMicrosecond,
-                     _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::memory::kBytesPerMegabyte ) );
+        SW_LOG_INFO_ID( "Server.DedicatedServerStatusUptime", "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
+                                                              "resident %# MiB",
+                        uptimeSeconds, _tickCount, ( _pDebugControl != nullptr && _pDebugControl->isPaused() ) ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::time::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::time::kNanosecondsPerMicrosecond,
+                        _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::memory::kBytesPerMegabyte ) );
     }
 
     void ServerApp::shutdown()
@@ -631,7 +631,7 @@ namespace sw
         // 헤드리스 부팅은 이미지만 올리고 호스트 서비스(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _gameModuleManager.reset();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
-        SW_LOG_INFO( "Dedicated server shutdown complete" );
+        SW_LOG_INFO_ID( "Server.DedicatedServerShutdownComplete", "Dedicated server shutdown complete" );
         // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
         if ( _pDevLayer != nullptr )
             _pDevLayer->detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다

@@ -198,7 +198,7 @@ namespace sw
             }
         }
         if ( rebuiltCount > 0 )
-            SW_LOG_INFO( "[UI] Reloaded %# offscreen screen(s) for %#", rebuiltCount, documentPath );
+            SW_LOG_INFO_ID( "UIOffscreenScreens.ReloadedOffscreenScreen", "[UI] Reloaded %# offscreen screen(s) for %#", rebuiltCount, documentPath );
     }
 
     void UIOffscreenScreens::onStyleSheetReloaded( string_view sheetPath )

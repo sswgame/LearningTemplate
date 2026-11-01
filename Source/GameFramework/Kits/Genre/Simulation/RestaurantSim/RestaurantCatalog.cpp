@@ -64,7 +64,7 @@ namespace sw
             return 0;
         if ( rootDef._closeHour <= rootDef._openHour )
         {
-            SW_LOG_ERROR( "%#: close=\"%#\" must be later than open=\"%#\"", sourceName, rootDef._closeHour, rootDef._openHour );
+            SW_LOG_ERROR_ID( "RestaurantCatalog.CloseMustLaterOpen", "%#: close=\"%#\" must be later than open=\"%#\"", sourceName, rootDef._closeHour, rootDef._openHour );
             return 0;
         }
         _openHour     = rootDef._openHour;
@@ -105,11 +105,11 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, pElement );
+                SW_LOG_ERROR_ID( "RestaurantCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, pElement );
             }
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Dish> / <Customer> entries", sourceName );
+            SW_LOG_WARNING_ID( "RestaurantCatalog.NoDishCustomerEntries", "%#: no <Dish> / <Customer> entries", sourceName );
         return loadedCount;
     }
 
@@ -127,7 +127,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: dish '%#' has a quality level '%#' that is not a positive integer", sourceName, dish._id.c_str(), token );
+                SW_LOG_ERROR_ID( "RestaurantCatalog.DishQualityLevelNot", "%#: dish '%#' has a quality level '%#' that is not a positive integer", sourceName, dish._id.c_str(), token );
                 bValid = false;
             }
         } );

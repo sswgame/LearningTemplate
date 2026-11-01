@@ -85,8 +85,8 @@ namespace sw::editor
                 }
 
                 data._bHasSnapshot = SW_TRUE;
-                SW_LOG_TRACE( "Play snapshot captured (%# objects).",
-                              static_cast<uint32>( data._listSnapshot.size() ) );
+                SW_LOG_TRACE_ID( "EditorPlaySession.PlaySnapshotCapturedObjects", "Play snapshot captured (%# objects).",
+                                 static_cast<uint32>( data._listSnapshot.size() ) );
             }
 
             /** @brief 되돌리기 1 단계: 스냅샷에 없는 오브젝트(플레이 도중 생성된 것)를 파괴합니다. */
@@ -130,7 +130,7 @@ namespace sw::editor
                         pObj = objects.createGameObjectWithID( hashed_string( snap._name.c_str() ), snap._identity._objectID );
                         if ( pObj == nullptr )
                         {
-                            SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap._name.c_str() );
+                            SW_LOG_WARNING_ID( "EditorPlaySession.FailedRecreatePlaySnapshot", "Failed to recreate '%#' from play snapshot.", snap._name.c_str() );
                             continue;
                         }
                     }
@@ -144,7 +144,7 @@ namespace sw::editor
                     context._pIdentity = &snap._identity;
                     context._pBatch    = &inoutBatch;
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), context ) == 0 )
-                        SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
+                        SW_LOG_WARNING_ID( "EditorPlaySession.FailedRestoreBinaryPlay", "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
                 }
             }
 
@@ -164,7 +164,7 @@ namespace sw::editor
                     Scene* pRebuilt = sceneManager.createEmptyActiveScene( data._sceneName );
                     if ( pRebuilt != nullptr )
                         pRebuilt->setSourcePath( data._sceneSourcePath );
-                    SW_LOG_INFO( "The active scene changed during play - restoring the edited scene '%#'.", data._sceneName.c_str() );
+                    SW_LOG_INFO_ID( "EditorPlaySession.ActiveSceneChangedDuring", "The active scene changed during play - restoring the edited scene '%#'.", data._sceneName.c_str() );
                 }
 
                 Scene*             pScene   = editor::getActiveScene();
@@ -201,8 +201,8 @@ namespace sw::editor
                         pTerrain->restoreState( std::move( snap._listTerrainEdit ) );
                 }
 
-                SW_LOG_TRACE( "Play snapshot restored (%# objects).",
-                              static_cast<uint32>( data._listSnapshot.size() ) );
+                SW_LOG_TRACE_ID( "EditorPlaySession.PlaySnapshotRestoredObjects", "Play snapshot restored (%# objects).",
+                                 static_cast<uint32>( data._listSnapshot.size() ) );
 
                 data._listSnapshot.clear();
                 data._bHasSnapshot = SW_FALSE;
@@ -228,7 +228,7 @@ namespace sw::editor
                     GameObject* pObj = pObjects->findGameObjectByID( kept._identity._objectID );
                     if ( pObj == nullptr )
                     {
-                        SW_LOG_WARNING( "Keep Simulation Changes: '%#' does not exist after Stop (created during play?)", kept._name.c_str() );
+                        SW_LOG_WARNING_ID( "EditorPlaySession.KeepSimulationChangesDoes", "Keep Simulation Changes: '%#' does not exist after Stop (created during play?)", kept._name.c_str() );
                         continue;
                     }
                     const ObjectSnapshot before = EditorTransaction::captureSnapshot( pObj );
@@ -238,7 +238,7 @@ namespace sw::editor
                     context._pBatch    = &batch;
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, kept._bytes.data(), kept._bytes.size(), context ) == 0 )
                     {
-                        SW_LOG_WARNING( "Keep Simulation Changes: failed to apply the play state of '%#'", kept._name.c_str() );
+                        SW_LOG_WARNING_ID( "EditorPlaySession.KeepSimulationChangesFailed", "Keep Simulation Changes: failed to apply the play state of '%#'", kept._name.c_str() );
                         continue;
                     }
                     // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
@@ -248,7 +248,7 @@ namespace sw::editor
                 }
                 if ( bCompound )
                     EditorTransaction::endTransaction();
-                SW_LOG_INFO( "Kept the play state of %# object(s).", static_cast<uint32>( data._listKept.size() ) );
+                SW_LOG_INFO_ID( "EditorPlaySession.KeptPlayStateObject", "Kept the play state of %# object(s).", static_cast<uint32>( data._listKept.size() ) );
                 data._listKept.clear();
             }
 
@@ -266,7 +266,7 @@ namespace sw::editor
                 SceneComponent* pRoot   = pTarget != nullptr ? pTarget->getComponent<SceneComponent>() : nullptr;
                 if ( pRoot == nullptr )
                 {
-                    SW_LOG_WARNING( "Start at camera: no object tagged '%#' and no game camera to move.", EditorPlaySession::kPlayerStartTag );
+                    SW_LOG_WARNING_ID( "EditorPlaySession.StartCameraNoObject", "Start at camera: no object tagged '%#' and no game camera to move.", EditorPlaySession::kPlayerStartTag );
                     return false;
                 }
                 pRoot->teleportTo( data._startPosition );
@@ -544,7 +544,7 @@ namespace sw::editor
             if ( editor::getSubsystem<SceneManager>().isTransitioning() )
             {
                 if ( data._bStartQueued == SW_FALSE )
-                    SW_LOG_INFO( "Opening the scene - play starts when loading finishes." );
+                    SW_LOG_INFO_ID( "EditorPlaySession.OpeningScenePlayStarts", "Opening the scene - play starts when loading finishes." );
                 data._bStartQueued = SW_TRUE;
                 data._queuedState  = state;
                 return;

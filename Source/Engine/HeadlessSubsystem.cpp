@@ -81,10 +81,10 @@ namespace sw
                 // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
                 uint32                        navMeshFailedCount = 0;
                 [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( sceneServices, resourceRoot, cookedDir, cookStore, navMeshFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
-                             "%# navmeshes (%# failures).",
-                             sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
-                             vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
+                SW_LOG_INFO_ID( "Headless.CookedScenesFailuresPrefabs", "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
+                                                                        "%# navmeshes (%# failures).",
+                                sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
+                                vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
                 const bool bFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 || vertexAnimationFailedCount > 0 ||
                                      navMeshFailedCount > 0;
                 if ( bFailed )
@@ -112,7 +112,7 @@ namespace sw
                 ShaderCookStamp::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, format, listProblem );
                 for ( const string& problem : listProblem )
                 {
-                    SW_LOG_ERROR( "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
+                    SW_LOG_ERROR_ID( "Headless.Message", "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
                 }
                 return listProblem.empty();
             }
@@ -130,7 +130,7 @@ namespace sw
                 ShaderCookStamp::invalidateSharedHeaderCache();
                 if ( summary.isClean() == false || verifyShaderTarget( cookedDir, shaderTarget ) == false )
                 {
-                    SW_LOG_ERROR( "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops" );
+                    SW_LOG_ERROR_ID( "Headless.CookedShadersDoNot", "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops" );
                     return false;
                 }
                 return true;
@@ -155,7 +155,7 @@ namespace sw
                 const string packConfigPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
-                    SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
+                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath );
                     return false;
                 }
 
@@ -169,7 +169,7 @@ namespace sw
                 string localizationError;
                 if ( LocalizationProject::collectUnstagedTranslationTables( params._resourceRoot, params._listExcludedSourceFile, localizationError ) == false )
                 {
-                    SW_LOG_ERROR( "Pack cook: a localization project could not be read for culture staging - %#", localizationError );
+                    SW_LOG_ERROR_ID( "Headless.PackCookLocalizationProject", "Pack cook: a localization project could not be read for culture staging - %#", localizationError );
                     return false;
                 }
                 if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )
@@ -209,12 +209,12 @@ namespace sw
                     params._signer._pProvider = engine::findSubsystem<INetSecurityProvider>();
                     if ( params._signer._pProvider == nullptr )
                     {
-                        SW_LOG_ERROR( "-patch-sign-key was given but no INetSecurityProvider is published (GameFramework is not loaded) - no patch is written" );
+                        SW_LOG_ERROR_ID( "Headless.PatchSignKeyGiven", "-patch-sign-key was given but no INetSecurityProvider is published (GameFramework is not loaded) - no patch is written" );
                         return false;
                     }
                     if ( FileUtil::readTextFile( signKeyPath, params._signer._privateKeyPem ) == false || params._signer._privateKeyPem.empty() )
                     {
-                        SW_LOG_ERROR( "-patch-sign-key file '%#' could not be read or is empty - no patch is written", signKeyPath );
+                        SW_LOG_ERROR_ID( "Headless.PatchSignKeyFile", "-patch-sign-key file '%#' could not be read or is empty - no patch is written", signKeyPath );
                         return false;
                     }
                 }
@@ -222,7 +222,7 @@ namespace sw
                 const string packConfigPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
-                    SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
+                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath );
                     return false;
                 }
                 params._writerDesc._compression      = packConfig._compression._codec;
@@ -253,7 +253,7 @@ namespace sw
                     bool bGiven = false;
                     if ( commandLine.getArgument( argument, bGiven ) && bGiven )
                     {
-                        SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
+                        SW_LOG_ERROR_ID( "Headless.HeadlessTaskRunsClient", "This headless task runs in the client build (App), not in the dedicated server" );
                         inoutState.enterHeadless();
                         inoutState._bFailed = true;
                         return true;
@@ -272,7 +272,7 @@ namespace sw
                 // 로거를 거치지 않는다 — 도움말은 로그 줄(시각 · 범주 머리)이 아니라 그대로 읽을 글이고, 로그 수준을 낮춘 실행에서도 나와야 한다.
                 if ( StandardOutput::write( commandLine.makeUsageText() ) == false )
                 {
-                    SW_LOG_ERROR( "Could not write the -help text to standard output" );
+                    SW_LOG_ERROR_ID( "Headless.CouldNotWriteHelp", "Could not write the -help text to standard output" );
                     inoutState._bFailed = true;
                 }
                 return true;
@@ -306,7 +306,7 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::TEST_SHARD, shard );
                 if ( test::TestRunner::parseShard( shard, options._shardIndex, options._shardCount ) == false )
                 {
-                    SW_LOG_ERROR( "--test-shard=%# is not i/n (0 <= i < n)", shard.c_str() );
+                    SW_LOG_ERROR_ID( "Headless.TestShardNotI", "--test-shard=%# is not i/n (0 <= i < n)", shard.c_str() );
                     inoutState._bFailed = true;
                     return true;
                 }
@@ -331,7 +331,7 @@ namespace sw
                     inoutState.enterHeadless();
                     string cookedDir;
                     commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
-                    SW_LOG_INFO( "Starting Headless (CookShaders) -> '%#'...", cookedDir );
+                    SW_LOG_INFO_ID( "Headless.StartingHeadlessCookShaders", "Starting Headless (CookShaders) -> '%#'...", cookedDir );
                     const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir ); // 비면 쿠커가 오류로 멈춘다
                     inoutState._bFailed             = summary.isClean() == false;
                     return true;
@@ -365,7 +365,7 @@ namespace sw
                 const vector<string_view>& listArgument = parts.getSplitList();
                 const bool                 bWellFormed  = listArgument.size() == 3;
                 if ( bWellFormed == false )
-                    SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
+                    SW_LOG_ERROR_ID( "Headless.BakeRetargetExpectsProfile", "--bake-retarget expects <profile>,<source clip>,<output clip>" );
                 inoutState._bFailed = bWellFormed == false ||
                                       RetargetBakeUtil::bakeClipFile( AssetID{ StringUtil::trim( listArgument[0] ) }, AssetID{ StringUtil::trim( listArgument[1] ) }, StringUtil::trim( listArgument[2] ) ) == false;
                 return true;
@@ -399,7 +399,7 @@ namespace sw
                     bAllCurrent = verifyShaderTarget( cookedDir, info._shaderTarget ) && bAllCurrent;
                 }
                 if ( bAllCurrent )
-                    SW_LOG_INFO( "Cooked shader binaries in '%#' match their sources for every backend", cookedDir );
+                    SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for every backend", cookedDir );
                 inoutState._bFailed = bAllCurrent == false;
                 return true;
             }
@@ -411,7 +411,7 @@ namespace sw
                 if ( commandLine.getArgument( CommandLineArgument::MAKE_PATCH, bMakePatch ) == false || bMakePatch == false )
                     return false;
                 inoutState.enterHeadless();
-                SW_LOG_INFO( "Starting Headless (MakePatch)..." );
+                SW_LOG_INFO_ID( "Headless.StartingHeadlessMakePatch", "Starting Headless (MakePatch)..." );
                 inoutState._bFailed = makePatchStage( commandLine ) == false;
                 return true;
             }
@@ -433,11 +433,11 @@ namespace sw
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 if ( cookedDir.empty() )
                 {
-                    SW_LOG_ERROR( "Cooking needs -cooked-dir=<folder> (the staging folder of cooked scenes and prefabs)" );
+                    SW_LOG_ERROR_ID( "Headless.CookingNeedsCookedDir", "Cooking needs -cooked-dir=<folder> (the staging folder of cooked scenes and prefabs)" );
                     inoutState._bFailed = true;
                     return true;
                 }
-                SW_LOG_INFO( "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
+                SW_LOG_INFO_ID( "Headless.StartingHeadlessCook", "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
                 AnimationCrowdSettings crowdSettings{};
                 const bool             bCrowdSettingsLoaded = crowdSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
                 const CookStore        cookStore            = CookStore::makeLocal();
@@ -469,7 +469,7 @@ namespace sw
                 if ( commandLine.getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) == false || bImportLipSync == false )
                     return false;
                 inoutState.enterHeadless();
-                SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
+                SW_LOG_INFO_ID( "Headless.StartingHeadlessImportLipSync", "Starting Headless (ImportLipSync)..." );
                 LipSyncSettings         lipSyncSettings{};
                 uint32                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
@@ -477,7 +477,7 @@ namespace sw
                     lipSyncCount = LipSyncImport::importAll( engine::getSubsystem<AssetPaths>().getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
                 else
                     ++lipSyncFailedCount;
-                SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
+                SW_LOG_INFO_ID( "Headless.ImportedVisemeTracksFailures", "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
                 inoutState._bFailed = lipSyncFailedCount > 0;
                 return true;
             }
@@ -498,7 +498,7 @@ namespace sw
                 if ( bAnyEditorTool == false )
                     return false;
                 inoutState.enterHeadless();
-                SW_LOG_INFO( "Starting Headless (editor tools: localization or asset import/check)..." );
+                SW_LOG_INFO_ID( "Headless.StartingHeadlessEditorTools", "Starting Headless (editor tools: localization or asset import/check)..." );
                 return true;
             }
         };
@@ -541,7 +541,7 @@ namespace sw
         {
             // 백엔드마다 실행을 시킨 실행은 실행기 없이 결과를 낼 수 없다 — 이유를 남기고 실패로 끝낸다(폴백 없음).
             inoutState.enterHeadless();
-            SW_LOG_ERROR( "-scenario-backends needs a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
+            SW_LOG_ERROR_ID( "Headless.ScenarioBackendsNeedsBuild", "-scenario-backends needs a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
             inoutState._bFailed = true;
             return true;
         }

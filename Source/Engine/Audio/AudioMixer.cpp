@@ -64,7 +64,7 @@ namespace sw
             const bool   bWideBus        = busChannelCount > audio::kStereoChannelCount;
             if ( bWideBus && AudioDownmix::makeForWaveMask( busChannelCount, AudioChannelLayoutUtil::getChannelMask( bus._layout ), bus._downmix ) == false )
             {
-                SW_LOG_ERROR( "Bus '%#' has no downmix for %# channels", busDesc._name.c_str(), busChannelCount );
+                SW_LOG_ERROR_ID( "AudioMixer.BusNoDownmixChannels", "Bus '%#' has no downmix for %# channels", busDesc._name.c_str(), busChannelCount );
                 _listBusState.clear();
                 return false;
             }
@@ -93,7 +93,7 @@ namespace sw
                 unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc, bus._layout );
                 if ( pEffect == nullptr )
                 {
-                    SW_LOG_ERROR( "Bus '%#' effect '%#' could not be created for %# bus channels", busDesc._name.c_str(), effectDesc._type.c_str(), busChannelCount );
+                    SW_LOG_ERROR_ID( "AudioMixer.BusEffectCouldNot", "Bus '%#' effect '%#' could not be created for %# bus channels", busDesc._name.c_str(), effectDesc._type.c_str(), busChannelCount );
                     _listBusState.clear();
                     return false;
                 }

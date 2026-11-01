@@ -58,7 +58,7 @@ namespace sw::editor
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_WARNING( "Paired animation file could not be read: %#", string( absolutePath ).c_str() );
+            SW_LOG_WARNING_ID( "PairedAnimationEditModel.PairedAnimationFileCould", "Paired animation file could not be read: %#", string( absolutePath ).c_str() );
             return false;
         }
         return loadFromXMLText( text, absolutePath );

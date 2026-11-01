@@ -57,7 +57,7 @@ namespace sw
         for ( size_t libraryIndex = batchEnd; libraryIndex > 0; --libraryIndex )
         {
             const DeferredLibrary& deferredLibrary = _listLibrary[libraryIndex - 1];
-            SW_LOG_INFO( "Unloading deferred module image %# (batch %#, handle=%#)", deferredLibrary._moduleName, deferredLibrary._batchID, deferredLibrary._pHandle );
+            SW_LOG_INFO_ID( "LiveReloadManager.UnloadingDeferredModuleImage", "Unloading deferred module image %# (batch %#, handle=%#)", deferredLibrary._moduleName, deferredLibrary._batchID, deferredLibrary._pHandle );
             ModuleLibraryUtil::unloadDynamicLibrary( deferredLibrary._pHandle );
             ModuleShadowCopy::removeArtifacts( deferredLibrary._shadowPath );
         }

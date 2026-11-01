@@ -36,7 +36,7 @@ namespace sw
             vector<ControlIntent> listIntent;
             if ( pPawn == nullptr || history.copyTrack( trackIndex, listIntent ) == false )
             {
-                SW_LOG_WARNING( "Intent playback skipped the track of '%#' (no pawn in the scene or the track has empty ticks)", pawnName.c_str() );
+                SW_LOG_WARNING_ID( "IntentPlayback.IntentPlaybackSkippedTrack", "Intent playback skipped the track of '%#' (no pawn in the scene or the track has empty ticks)", pawnName.c_str() );
                 ++skipped;
                 continue;
             }

@@ -775,7 +775,7 @@ namespace sw
                 RespEphemeralStoreInternal::sleepOneMillisecond();
         }
         if ( _subscriptionAckCount < targetAckCount )
-            SW_LOG_WARNING( "RESP subscription was not confirmed within %# ms", _settings->_timeoutMs );
+            SW_LOG_WARNING_ID( "RespEphemeralStore.RESPSubscriptionNotConfirmed", "RESP subscription was not confirmed within %# ms", _settings->_timeoutMs );
     }
 
     string RespEphemeralStore::makeKey( string_view key ) const

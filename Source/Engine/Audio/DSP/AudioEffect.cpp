@@ -558,7 +558,7 @@ namespace sw
             {
                 if ( path.isSet() == false )
                 {
-                    SW_LOG_ERROR( "ConvolutionReverb needs an impulse response clip (_impulse)" );
+                    SW_LOG_ERROR_ID( "AudioEffect.ConvolutionReverbNeedsImpulseResponse", "ConvolutionReverb needs an impulse response clip (_impulse)" );
                     return false;
                 }
                 vector<uint8> bytes;
@@ -568,7 +568,7 @@ namespace sw
                                       AudioClipData::convertPcm( pcm, clip );
                 if ( bDecoded == false || clip._frameCount == 0 )
                 {
-                    SW_LOG_ERROR( "ConvolutionReverb could not read the impulse response '%#'", path.get() );
+                    SW_LOG_ERROR_ID( "AudioEffect.ConvolutionReverbCouldNotRead", "ConvolutionReverb could not read the impulse response '%#'", path.get() );
                     return false;
                 }
                 // 48 kHz 로 선형 리샘플한다(응답 길이 기준 시간은 그대로).
@@ -577,7 +577,7 @@ namespace sw
                 const uint32  frameCount   = static_cast<uint32>( static_cast<float64>( clip._frameCount ) / ratio );
                 if ( static_cast<float32>( frameCount ) > kMaxImpulseSeconds * static_cast<float32>( audio::kSampleRate ) )
                 {
-                    SW_LOG_ERROR( "ConvolutionReverb impulse response '%#' is longer than %# s", path.get(), kMaxImpulseSeconds );
+                    SW_LOG_ERROR_ID( "AudioEffect.ConvolutionReverbImpulseResponseLonger", "ConvolutionReverb impulse response '%#' is longer than %# s", path.get(), kMaxImpulseSeconds );
                     return false;
                 }
                 if ( _fft.initialize( kFFTSize ) == false )
@@ -879,12 +879,12 @@ namespace sw
         const AudioEffectTypeInfo* pTypeInfo = findType( desc._type );
         if ( pTypeInfo == nullptr )
         {
-            SW_LOG_ERROR( "Unknown audio effect type '%#'", desc._type.c_str() );
+            SW_LOG_ERROR_ID( "AudioEffect.UnknownAudioEffectType", "Unknown audio effect type '%#'", desc._type.c_str() );
             return nullptr;
         }
         if ( pTypeInfo->supportsLayout( layout ) == false )
         {
-            SW_LOG_ERROR( "Audio effect '%#' does not support %# output channels", desc._type.c_str(), AudioChannelLayoutUtil::getChannelCount( layout ) );
+            SW_LOG_ERROR_ID( "AudioEffect.AudioEffectDoesNot", "Audio effect '%#' does not support %# output channels", desc._type.c_str(), AudioChannelLayoutUtil::getChannelCount( layout ) );
             return nullptr;
         }
         unique_ptr<IAudioEffect> pEffect = pTypeInfo->_pCreate( *pTypeInfo, desc, layout );
@@ -895,7 +895,7 @@ namespace sw
             const int32 parameterIndex = pEffect->findParameterIndex( parameter._name );
             if ( parameterIndex < 0 )
             {
-                SW_LOG_ERROR( "Audio effect '%#' has no parameter '%#'", desc._type.c_str(), parameter._name.c_str() );
+                SW_LOG_ERROR_ID( "AudioEffect.AudioEffectNoParameter", "Audio effect '%#' has no parameter '%#'", desc._type.c_str(), parameter._name.c_str() );
                 return nullptr;
             }
             pEffect->setParameter( static_cast<uint32>( parameterIndex ), parameter._value );

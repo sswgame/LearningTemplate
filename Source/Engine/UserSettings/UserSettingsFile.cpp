@@ -86,7 +86,7 @@ namespace sw
                         }
                     }
                 }
-                SW_LOG_TRACE( "%#: upgraded user settings from version %#", sourceName, fromVersion );
+                SW_LOG_TRACE_ID( "UserSettings.UpgradedUserSettingsVersion", "%#: upgraded user settings from version %#", sourceName, fromVersion );
             }
         };
     } // namespace
@@ -101,14 +101,14 @@ namespace sw
         JSONDocument doc;
         if ( doc.parse( jsonText, sourceName ) == false )
         {
-            SW_LOG_ERROR( "User settings '%#' is not valid JSON: %#", sourceName, doc.getLastError() );
+            SW_LOG_ERROR_ID( "UserSettings.UserSettingsNotValid", "User settings '%#' is not valid JSON: %#", sourceName, doc.getLastError() );
             return false;
         }
         const JSONValue root   = doc.getRoot();
         const JSONValue values = root.get( Internal::kValuesKey );
         if ( root.isObject() == false || values.isObject() == false )
         {
-            SW_LOG_ERROR( "User settings '%#' has no \"values\" object", sourceName );
+            SW_LOG_ERROR_ID( "UserSettings.UserSettingsNoValues", "User settings '%#' has no \"values\" object", sourceName );
             return false;
         }
 
@@ -120,7 +120,7 @@ namespace sw
         uint32 fileVersion{ Internal::kUnversionedFile };
         if ( root.readOptionalInto( Internal::kVersionKey, fileVersion ) == false )
         {
-            SW_LOG_ERROR( "User settings '%#' has a \"version\" that is not an unsigned integer", sourceName );
+            SW_LOG_ERROR_ID( "UserSettings.UserSettingsVersionNot", "User settings '%#' has a \"version\" that is not an unsigned integer", sourceName );
             return false;
         }
         const uint32 schemaVersion = schema.getVersion();
@@ -129,7 +129,7 @@ namespace sw
             Internal::applyUpgradeSteps( schema, version, outListEntry, sourceName );
         }
         if ( fileVersion > schemaVersion )
-            SW_LOG_WARNING( "User settings '%#' is version %#, newer than this build (%#) - keys this build does not know are dropped", sourceName, fileVersion, schemaVersion );
+            SW_LOG_WARNING_ID( "UserSettings.UserSettingsVersionNewer", "User settings '%#' is version %#, newer than this build (%#) - keys this build does not know are dropped", sourceName, fileVersion, schemaVersion );
         return true;
     }
 

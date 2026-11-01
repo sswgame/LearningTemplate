@@ -506,7 +506,7 @@ namespace sw
             {
                 _listScratchOrder.push_back( unitIndex );
                 const GameObject* pOwner = listUnit[unitIndex]->getOwner();
-                SW_LOG_ERROR( "Animation dependency cycle includes unit on '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+                SW_LOG_ERROR_ID( "AnimationSystem.AnimationDependencyCycleIncludes", "Animation dependency cycle includes unit on '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
             }
         }
     }

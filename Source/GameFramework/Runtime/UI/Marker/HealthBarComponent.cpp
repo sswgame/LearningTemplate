@@ -66,7 +66,7 @@ namespace sw
         else if ( bWarnMissingWidget )
         {
             _bWarnedNoWidgetComponent = true;
-            SW_LOG_WARNING( "HP bar on '%#' has no WidgetComponent on its object - the bar is not drawn", pOwner->getName().c_str() );
+            SW_LOG_WARNING_ID( "HealthBarComponent.HPBarNoWidgetComponent", "HP bar on '%#' has no WidgetComponent on its object - the bar is not drawn", pOwner->getName().c_str() );
         }
         refreshWidgets();
     }

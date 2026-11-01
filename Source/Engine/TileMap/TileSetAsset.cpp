@@ -86,7 +86,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Tile set '%#' not found", path );
+            SW_LOG_ERROR_ID( "TileSet.TileSetNotFound", "Tile set '%#' not found", path );
             return false;
         }
         return loadFromXMLText( text, path );
@@ -139,7 +139,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR( "%#", doc.getLastError() );
+            SW_LOG_ERROR_ID( "TileSet.Message", "%#", doc.getLastError() );
             return false;
         }
         const XMLNode root = doc.getRoot( "TileSet" );

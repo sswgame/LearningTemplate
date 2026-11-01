@@ -361,7 +361,7 @@ namespace sw
             const bool bKnown = _pCatalog == nullptr || _pCatalog->find( progress._questID ) != nullptr;
             if ( bKnown == false )
             {
-                SW_LOG_WARNING( "QuestLog: saved quest '%#' is not in the catalog - dropped", progress._questID.c_str() );
+                SW_LOG_WARNING_ID( "QuestLog.QuestLogSavedQuestNot", "QuestLog: saved quest '%#' is not in the catalog - dropped", progress._questID.c_str() );
                 continue;
             }
             listProgress.push_back( std::move( progress ) );

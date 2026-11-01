@@ -60,7 +60,7 @@ namespace sw
                 {
                     if ( inputMap.getActionHandle( hashed_string( pAction ) ).isValid() )
                         continue;
-                    SW_LOG_ERROR( "Photo mode input map '%#' has no action '%#'", mapPath, pAction );
+                    SW_LOG_ERROR_ID( "CameraDirectorComponent.PhotoModeInputMap", "Photo mode input map '%#' has no action '%#'", mapPath, pAction );
                     bComplete = false;
                 }
                 return bComplete;
@@ -161,7 +161,7 @@ namespace sw
         {
             _catalog.clear();
             if ( _catalog.loadFromAsset( AssetID{ _catalogPath } ) == false )
-                SW_LOG_WARNING( "Camera presets '%#' did not load", _catalogPath );
+                SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetsDidNot", "Camera presets '%#' did not load", _catalogPath );
         }
         if ( _catalog.getAll().empty() )
             return;
@@ -205,7 +205,7 @@ namespace sw
             return;
         _bViewOverride = false;
         if ( _director.activatePreset( _catalog, _presetBeforeOverride, _overrideBlend ) == false )
-            SW_LOG_WARNING( "Camera preset '%#' to return to after the view override is gone", _presetBeforeOverride.c_str() );
+            SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetReturnAfter", "Camera preset '%#' to return to after the view override is gone", _presetBeforeOverride.c_str() );
     }
 
     bool CameraDirectorComponent::enterPhotoMode()
@@ -216,19 +216,19 @@ namespace sw
         const EngineDefaultAssets* pDefaultAssets = game::findSubsystem<EngineDefaultAssets>();
         if ( pDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR( "Photo mode needs the engine default assets for its input map - not entered" );
+            SW_LOG_ERROR_ID( "CameraDirectorComponent.PhotoModeNeedsEngine", "Photo mode needs the engine default assets for its input map - not entered" );
             return false;
         }
         const string_view    mapPath       = pDefaultAssets->_photoModeInputMap.get();
         unique_ptr<InputMap> photoInputMap = make_unique<InputMap>();
         if ( photoInputMap->loadFromAsset( AssetID{ mapPath } ) == false )
         {
-            SW_LOG_ERROR( "Photo mode input map '%#' could not be read - not entered", mapPath );
+            SW_LOG_ERROR_ID( "CameraDirectorComponent.PhotoModeInputMap2", "Photo mode input map '%#' could not be read - not entered", mapPath );
             return false;
         }
         if ( CameraDirectorComponentInternal::hasPhotoActions( *photoInputMap, mapPath ) == false )
         {
-            SW_LOG_ERROR( "Photo mode input map '%#' lacks the photo actions listed above - not entered", mapPath );
+            SW_LOG_ERROR_ID( "CameraDirectorComponent.PhotoModeInputMap3", "Photo mode input map '%#' lacks the photo actions listed above - not entered", mapPath );
             return false;
         }
         photoInputMap->setInputManager( game::findSubsystem<InputManager>() );
@@ -284,7 +284,7 @@ namespace sw
         cut._curve    = BlendCurve::Cut;
         cut._duration = 0.0f;
         if ( _director.activatePreset( _catalog, id, cut ) == false )
-            SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", id.c_str(), _catalogPath );
+            SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetNot", "Camera preset '%#' is not in '%#'", id.c_str(), _catalogPath );
     }
 
     bool CameraDirectorComponent::findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const
@@ -323,7 +323,7 @@ namespace sw
         const bool bRead = _director.readState( archive, _catalog );
         _pendingStateBytes.clear();
         if ( bRead == false )
-            SW_LOG_WARNING( "Camera director state of '%#' did not read - starting fresh", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+            SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraDirectorStateDid", "Camera director state of '%#' did not read - starting fresh", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
         return bRead;
     }
 
@@ -409,7 +409,7 @@ namespace sw
         if ( _cycleAction.empty() == false && inputMap.wasActionTriggered( _cycleAction ) )
         {
             [[maybe_unused]] const hashed_string nextID = activateNextPreset(); // 로그는 Shipping 에서 빠진다
-            SW_LOG_INFO( "Camera preset -> '%#'", nextID.c_str() );
+            SW_LOG_INFO_ID( "CameraDirectorComponent.CameraPreset", "Camera preset -> '%#'", nextID.c_str() );
         }
         const CameraInputDef& inputDef = _director.getActivePreset()._input;
         if ( _inputCheckedPresetID.isEqual( _director.getActivePresetID(), NameCase::CaseSensitive ) == false )

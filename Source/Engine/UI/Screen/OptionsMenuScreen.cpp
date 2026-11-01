@@ -133,7 +133,7 @@ namespace sw
         UserSettingsManager* pSettings = ui.findUserSettings();
         if ( pSettings == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Options menu needs the user settings service" );
+            SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsMenuNeedsUser", "[UI] Options menu needs the user settings service" );
             return kInvalidUIScreenHandle;
         }
         const UIScreenHandle handle  = ui.openScreen<OptionsMenuScreen>( ui.getOptionsMenuDocument() );
@@ -305,7 +305,7 @@ namespace sw
         _listTabButton.clear();
         if ( _pSettings == nullptr || pTabs == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kTabsName );
+            SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsMenuDocumentNo", "[UI] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kTabsName );
             return;
         }
         pTabs->clearChildren();
@@ -335,7 +335,7 @@ namespace sw
         PanelWidget* pRows = getTree().findWidget<PanelWidget>( OptionsMenuScreenInternal::kRowsName );
         if ( pRows == nullptr || _pSettings == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kRowsName );
+            SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsMenuDocumentNo", "[UI] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kRowsName );
             return;
         }
         pRows->clearChildren();
@@ -365,7 +365,7 @@ namespace sw
         unique_ptr<Widget>                      row = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
         if ( row == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Options row for '%#' failed: %#", setting._id.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsRowFailed", "[UI] Options row for '%#' failed: %#", setting._id.c_str(), error.c_str() );
             return false;
         }
         const string prefix( setting._id.c_str() );
@@ -386,7 +386,7 @@ namespace sw
         Widget* pValue   = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueName ) );
         if ( pValue == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Options row document %# has no '%#' widget", documentPath, Internal::kValueName );
+            SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsRowDocumentNo", "[UI] Options row document %# has no '%#' widget", documentPath, Internal::kValueName );
             return false;
         }
         entry._value = pValue->getID();

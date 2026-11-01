@@ -22,7 +22,7 @@ namespace sw
     {
         if ( result == VK_SUCCESS )
             return true;
-        SW_LOG_ERROR( "%# failed (VkResult %#)", pWhat, static_cast<int32>( result ) );
+        SW_LOG_ERROR_ID( "VulkanResultCheck.FailedVkResult", "%# failed (VkResult %#)", pWhat, static_cast<int32>( result ) );
         return false;
     }
 

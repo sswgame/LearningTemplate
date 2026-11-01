@@ -50,7 +50,7 @@ namespace sw
                 // 못 만들면 오류다 — 그 버퍼를 읽는 구간은 디스패치되지 않고(isDispatchable · isSkinDispatchable) 그 메시들은 그리지 않는다(baseOf).
                 if ( slot.ensureCapacity( pDevice, kElementStride, elementCount, kReadUsage, true, false, pData ) == false )
                 {
-                    SW_LOG_ERROR( "Could not create a mesh deform buffer (%# float4) - the meshes that need it are not drawn", elementCount );
+                    SW_LOG_ERROR_ID( "GPUMeshMorphPool.CouldNotCreateMesh", "Could not create a mesh deform buffer (%# float4) - the meshes that need it are not drawn", elementCount );
                     return;
                 }
                 slot.upload( pDevice, pData, elementCount * kElementStride );
@@ -363,7 +363,7 @@ namespace sw
         if ( bCreated == false )
         {
             // 못 만들면 오류다 — 그 버퍼를 읽는 구간은 디스패치되지 않고(isSkinDispatchable) 스킨 메시들은 그리지 않는다(baseOf).
-            SW_LOG_ERROR( "Could not create the skin source buffers (%# / %# elements) - skinned meshes are not drawn", restCapacity, weightCapacity );
+            SW_LOG_ERROR_ID( "GPUMeshMorphPool.CouldNotCreateSkin", "Could not create the skin source buffers (%# / %# elements) - skinned meshes are not drawn", restCapacity, weightCapacity );
             _skinRest.release( pDevice );
             _skinWeight.release( pDevice );
             for ( auto& [dataID, source] : _mapSkinSource )
@@ -384,7 +384,7 @@ namespace sw
             {
                 // 상한 초과는 오류다 — 이 원본은 풀에 없고(그 인스턴스는 baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
                 if ( bWarnedFull == false )
-                    SW_LOG_ERROR( "Skin source buffer limit exceeded (%# elements) - the remaining skinned meshes are not drawn", kMaxSkinSourceElements );
+                    SW_LOG_ERROR_ID( "GPUMeshMorphPool.SkinSourceBufferLimit", "Skin source buffer limit exceeded (%# elements) - the remaining skinned meshes are not drawn", kMaxSkinSourceElements );
                 bWarnedFull = true;
                 continue;
             }
@@ -460,7 +460,7 @@ namespace sw
             if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
             {
                 // 상한 초과는 오류다 — 이 메시는 풀에 없고(baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
-                SW_LOG_ERROR( "Mesh deform pool limit exceeded (%# vertices, skinned mesh needs %#) - that mesh is not drawn", kMaxPoolVertices, count );
+                SW_LOG_ERROR_ID( "GPUMeshMorphPool.MeshDeformPoolLimit", "Mesh deform pool limit exceeded (%# vertices, skinned mesh needs %#) - that mesh is not drawn", kMaxPoolVertices, count );
                 continue;
             }
             GPUSkinInstanceRow row{};
@@ -497,7 +497,7 @@ namespace sw
         {
             if ( _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
                                               GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr ) == false )
-                SW_LOG_ERROR( "Failed to create the skin palette buffer (%# bones) - skinned meshes are not drawn", _skinBoneCount );
+                SW_LOG_ERROR_ID( "GPUMeshMorphPool.FailedCreateSkinPalette", "Failed to create the skin palette buffer (%# bones) - skinned meshes are not drawn", _skinBoneCount );
         }
         else
         {
@@ -507,9 +507,9 @@ namespace sw
         // 버퍼나 UAV 를 못 받으면(장치 메모리 부족 · 드라이버 거절) 디스패치가 돌지 않고 baseOf 가 kInvalidBase 를 내 변형 메시는 그리지 않는다.
         // 레스트 포즈로 대신 그리지 않는다. 백엔드가 GPU 변형을 아예 못 하면 능력 질의(_bGPUMeshMorph)가 풀을 만들지 않는다 — 그쪽은 실패가 아니다.
         if ( bMorphBuffer == false )
-            SW_LOG_ERROR( "Failed to create the morph result buffer (%# vertices) - deformed meshes are not drawn", _vertexCount );
+            SW_LOG_ERROR_ID( "GPUMeshMorphPool.FailedCreateMorphResult", "Failed to create the morph result buffer (%# vertices) - deformed meshes are not drawn", _vertexCount );
         else if ( _morph._uav == kInvalidDescriptorIndex )
-            SW_LOG_ERROR( "Failed to bind a UAV to the morph result buffer - deformed meshes are not drawn" );
+            SW_LOG_ERROR_ID( "GPUMeshMorphPool.FailedBindUAVMorph", "Failed to bind a UAV to the morph result buffer - deformed meshes are not drawn" );
     }
 
     bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
@@ -663,7 +663,7 @@ namespace sw
                     entry._slot = kInvalidBase;
                 }
                 if ( bWarnedFull == false )
-                    SW_LOG_ERROR( "Mesh deform pool limit exceeded (%# vertices) - the remaining morph meshes are not drawn", kMaxPoolVertices );
+                    SW_LOG_ERROR_ID( "GPUMeshMorphPool.MeshDeformPoolLimit2", "Mesh deform pool limit exceeded (%# vertices) - the remaining morph meshes are not drawn", kMaxPoolVertices );
                 bWarnedFull = true;
                 continue;
             }

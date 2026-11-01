@@ -80,7 +80,7 @@ namespace sw
         const string& path = engine::getSubsystem<EngineDefaultAssets>()._defaultSocketKinds.get();
         if ( loadFromAsset( AssetID{ path } ) )
             return true;
-        SW_LOG_ERROR( "Default socket kinds '%#' could not be loaded", path.c_str() );
+        SW_LOG_ERROR_ID( "SocketKindTable.DefaultSocketKindsCould", "Default socket kinds '%#' could not be loaded", path.c_str() );
         return false;
     }
 

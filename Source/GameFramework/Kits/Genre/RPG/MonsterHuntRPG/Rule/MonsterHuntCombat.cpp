@@ -26,7 +26,7 @@ namespace sw
     {
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "MonsterHuntCombat: refused - no catalog (the combat numbers come from the catalog, there is no default set)" );
+            SW_LOG_ERROR_ID( "MonsterHuntCombat.MonsterHuntCombatRefusedNoCatalog", "MonsterHuntCombat: refused - no catalog (the combat numbers come from the catalog, there is no default set)" );
             return false;
         }
         const MonsterHuntCombatDef& combat = pCatalog->getCombat();

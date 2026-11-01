@@ -37,7 +37,7 @@ namespace sw
     {
         if ( _index == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create CXIndex." );
+            SW_LOG_ERROR_ID( "ParserContext.FailedCreateCXIndex", "Failed to create CXIndex." );
             return false;
         }
 
@@ -74,7 +74,7 @@ namespace sw
 
         if ( _translationUnit == nullptr )
         {
-            SW_LOG_ERROR( "clang_parseTranslationUnit failed for: %#", filePath );
+            SW_LOG_ERROR_ID( "ParserContext.ClangParseTranslationUnitFailed", "clang_parseTranslationUnit failed for: %#", filePath );
             return false;
         }
 
@@ -87,9 +87,9 @@ namespace sw
             {
                 const CXString message = clang_formatDiagnostic( diagnostic, clang_defaultDiagnosticDisplayOptions() );
                 if ( bReportErrors )
-                    SW_LOG_ERROR( "%#", clang_getCString( message ) );
+                    SW_LOG_ERROR_ID( "ParserContext.Message", "%#", clang_getCString( message ) );
                 else
-                    SW_LOG_TRACE( "%#", clang_getCString( message ) );
+                    SW_LOG_TRACE_ID( "ParserContext.Message", "%#", clang_getCString( message ) );
                 clang_disposeString( message );
                 bHasError = true;
             }
@@ -97,7 +97,7 @@ namespace sw
         }
 
         if ( bHasError && bReportErrors )
-            SW_LOG_ERROR( "Parsing failed with errors. Check include paths with --include." );
+            SW_LOG_ERROR_ID( "ParserContext.ParsingFailedErrorsCheck", "Parsing failed with errors. Check include paths with --include." );
         return bHasError == false;
     }
 } // namespace sw

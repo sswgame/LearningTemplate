@@ -69,7 +69,7 @@ namespace sw::editor
     {
         if ( desc._id.empty() )
         {
-            SW_LOG_WARNING( "EditorCommandRegistry: not registering a command with an empty id (label=%#)", desc._label.c_str() );
+            SW_LOG_WARNING_ID( "Editor.EditorCommandRegistryNotRegisteringCommand", "EditorCommandRegistry: not registering a command with an empty id (label=%#)", desc._label.c_str() );
             return;
         }
 

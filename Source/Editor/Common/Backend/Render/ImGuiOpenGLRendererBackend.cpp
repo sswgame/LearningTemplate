@@ -78,7 +78,7 @@ namespace
         HWND hWnd = static_cast<HWND>( sw::editor::IImGuiPlatformBackend::tryGetViewportWin32Handle( pViewport ) );
         if ( hWnd == nullptr )
         {
-            SW_LOG_ERROR( "The ImGui OpenGL viewport window needs a Win32 viewport window with a handle" );
+            SW_LOG_ERROR_ID( "ImGuiOpenGL.ImGuiOpenGLViewportWindow", "The ImGui OpenGL viewport window needs a Win32 viewport window with a handle" );
             return;
         }
         WGL_WindowData* pData = sw::make_unique<WGL_WindowData>().release(); // ImGui 뷰포트가 쥔다. `Hook_Renderer_DestroyWindow` 가 푼다
@@ -127,7 +127,7 @@ namespace
         sw::X11SurfaceHandles x11Surface;
         if ( sw::editor::IImGuiPlatformBackend::tryGetViewportX11Surface( pViewport, x11Surface ) == false )
         {
-            SW_LOG_ERROR( "The ImGui OpenGL viewport window needs an X11 viewport window with a display connection" );
+            SW_LOG_ERROR_ID( "ImGuiOpenGL.ImGuiOpenGLViewportWindow2", "The ImGui OpenGL viewport window needs an X11 viewport window with a display connection" );
             return;
         }
         GLX_WindowData* pData = sw::make_unique<GLX_WindowData>().release(); // ImGui 뷰포트가 쥔다. 파괴 훅이 푼다
@@ -212,7 +212,7 @@ namespace sw::editor
             { hMainRC = static_cast<HGLRC>( pContext ); } ) );
             if ( bContextVisited == false || hMainRC == nullptr )
             {
-                SW_LOG_ERROR( "The OpenGL device has no WGL render context, so ImGui viewports cannot be enabled" );
+                SW_LOG_ERROR_ID( "ImGuiOpenGL.OpenGLDeviceNoWGL", "The OpenGL device has no WGL render context, so ImGui viewports cannot be enabled" );
                 return false;
             }
             s_MainWindowRC                     = hMainRC;
@@ -232,7 +232,7 @@ namespace sw::editor
             RHINativeHandles glNative{};
             if ( _pRHIDevice->queryNativeHandles( RHIBackend::OpenGL, glNative ) == false )
             {
-                SW_LOG_ERROR( "The OpenGL device has no GLX display connection, so ImGui viewports cannot be enabled" );
+                SW_LOG_ERROR_ID( "ImGuiOpenGL.OpenGLDeviceNoGLX", "The OpenGL device has no GLX display connection, so ImGui viewports cannot be enabled" );
                 return false;
             }
             GLXContext mainContext{ nullptr };
@@ -295,7 +295,7 @@ namespace sw::editor
         void* pTextureID = _pRHIDevice->tryGetNativeTexturePointer( RHIBackend::OpenGL, texture );
         if ( pTextureID == nullptr )
         {
-            SW_LOG_ERROR( "Failed to resolve GL texture for RHI handle %#", texture );
+            SW_LOG_ERROR_ID( "ImGuiOpenGL.FailedResolveGLTexture", "Failed to resolve GL texture for RHI handle %#", texture );
             return nullptr;
         }
         return pTextureID;

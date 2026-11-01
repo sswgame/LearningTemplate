@@ -58,7 +58,7 @@ namespace sw
         // 등급표는 점수를 등급으로 바꾸는 유일한 근거다 — 코드가 대신 정한 표를 쓰지 않는다.
         if ( _grading._listGrade.empty() )
         {
-            SW_LOG_ERROR( "%#: needs <Grading> with at least one <Grade id=\"..\" min=\"..\"/>", sourceName );
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.NeedsGradingLeastOne", "%#: needs <Grading> with at least one <Grade id=\"..\" min=\"..\"/>", sourceName );
             return 0;
         }
         return loadedCount;
@@ -78,7 +78,7 @@ namespace sw
             return GameDataXML::readSetting( node, sourceName, _bodySettings );
         if ( XMLReadUtil::isElement( name, "Parry" ) )
             return GameDataXML::readSetting( node, sourceName, _parryRules );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "ActionPlatformerCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -96,12 +96,12 @@ namespace sw
         }
         if ( grading._listGrade.empty() )
         {
-            SW_LOG_ERROR( "%#: <Grading> needs at least one <Grade>", sourceName );
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.GradingNeedsLeastOne", "%#: <Grading> needs at least one <Grade>", sourceName );
             bValid = false;
         }
         if ( grading._timeWeight + grading._hitWeight + grading._collectWeight <= 0.0f )
         {
-            SW_LOG_ERROR( "%#: <Grading> weights (time, hits, collect) are all zero", sourceName );
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.GradingWeightsTimeHits", "%#: <Grading> weights (time, hits, collect) are all zero", sourceName );
             bValid = false;
         }
         if ( bValid == false )
@@ -132,7 +132,7 @@ namespace sw
         XMLReadUtil::parseNameList( node.getAttributeText( "moves" ), Internal::kNameSeparators, combo._listMove );
         if ( combo._listMove.empty() )
         {
-            SW_LOG_ERROR( "%#: <Combo id=\"%#\"> needs moves=\"...\" with at least one move", sourceName, combo._id.c_str() );
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.ComboIdNeedsMoves", "%#: <Combo id=\"%#\"> needs moves=\"...\" with at least one move", sourceName, combo._id.c_str() );
             return false;
         }
         (void)_comboCatalog.add( combo );
@@ -153,12 +153,12 @@ namespace sw
         }
         if ( pattern._listState.empty() )
         {
-            SW_LOG_ERROR( "%#: <Pattern id=\"%#\"> has no <State>", sourceName, pattern._id.c_str() );
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternIdNoState", "%#: <Pattern id=\"%#\"> has no <State>", sourceName, pattern._id.c_str() );
             bValid = false;
         }
         if ( pattern._start.empty() == false && pattern.findStateIndex( pattern._start ) < 0 )
         {
-            SW_LOG_ERROR( "%#: <Pattern id=\"%#\"> starts at an unknown state '%#'", sourceName, pattern._id.c_str(), pattern._start.c_str() );
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternIdStartsUnknown", "%#: <Pattern id=\"%#\"> starts at an unknown state '%#'", sourceName, pattern._id.c_str(), pattern._start.c_str() );
             bValid = false;
         }
         // 이어지는 상태 이름이 틀리면 그 패턴을 넣지 않는다(테스트와 에디터가 바로 볼 수 있다).
@@ -169,7 +169,7 @@ namespace sw
             {
                 if ( target.empty() == false && pattern.findStateIndex( target ) < 0 )
                 {
-                    SW_LOG_ERROR( "%#: pattern '%#' state '%#' goes to an unknown state '%#'", sourceName, pattern._id.c_str(), state._id.c_str(), target.c_str() );
+                    SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternStateGoesUnknown", "%#: pattern '%#' state '%#' goes to an unknown state '%#'", sourceName, pattern._id.c_str(), state._id.c_str(), target.c_str() );
                     bValid = false;
                 }
             }

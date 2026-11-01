@@ -61,7 +61,7 @@ namespace sw
                 }
                 else
                 {
-                    SW_LOG_ERROR( "%#: faction '%#' has a <Tier> without a name", sourceName, pID );
+                    SW_LOG_ERROR_ID( "Reputation.FactionTierWithoutName", "%#: faction '%#' has a <Tier> without a name", sourceName, pID );
                     bValid = false;
                 }
             }
@@ -78,7 +78,7 @@ namespace sw
             }
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: faction '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "Reputation.FactionInvalidFieldsSkipped", "%#: faction '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             add( faction );

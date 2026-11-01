@@ -28,7 +28,7 @@ namespace sw
                     return false;
                 if ( StringUtil::parseInt( pText, outTile ) == false )
                 {
-                    SW_LOG_ERROR( "%#: block '%#' has %#=\"%#\" that is not an integer", sourceName, node.findAttribute( "id" ), pName, pText );
+                    SW_LOG_ERROR_ID( "VoxelBlockCatalog.BlockNotInteger", "%#: block '%#' has %#=\"%#\" that is not an integer", sourceName, node.findAttribute( "id" ), pName, pText );
                     inoutbValid = false;
                 }
                 return true;
@@ -73,7 +73,7 @@ namespace sw
         const int32 existingIndex = _catalog.findIndex( block._id );
         if ( existingIndex < 0 && _catalog.getCount() >= VoxelBlockInternal::kMaxBlockCount )
         {
-            SW_LOG_WARNING( "Block catalog is full - '%#' skipped", block._id.c_str() );
+            SW_LOG_WARNING_ID( "VoxelBlockCatalog.BlockCatalogFullSkipped", "Block catalog is full - '%#' skipped", block._id.c_str() );
             return kVoxelAirBlock;
         }
         VoxelBlockDef stored = block;
@@ -133,7 +133,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Block" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "VoxelBlockCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadBlock( node, sourceName ) )
                 ++loadedCount;
         }
@@ -143,7 +143,7 @@ namespace sw
         {
             if ( block._dropID.empty() || findBlockIndex( block._dropID ) != kVoxelAirBlock )
                 continue;
-            SW_LOG_ERROR( "%#: block '%#' drops '%#', which is not a block in this catalog", sourceName, block._id.c_str(), block._dropID.c_str() );
+            SW_LOG_ERROR_ID( "VoxelBlockCatalog.BlockDropsWhichNot", "%#: block '%#' drops '%#', which is not a block in this catalog", sourceName, block._id.c_str(), block._dropID.c_str() );
             bDropsKnown = false;
         }
         return bDropsKnown ? loadedCount : 0;
@@ -171,7 +171,7 @@ namespace sw
         }
         else if ( bTile || ( bTop && bBottom && bSide ) == false )
         {
-            SW_LOG_ERROR( "%#: block '%#' needs either tile=\"...\" alone or all of top, bottom and side", sourceName, block._id.c_str() );
+            SW_LOG_ERROR_ID( "VoxelBlockCatalog.BlockNeedsEitherTile", "%#: block '%#' needs either tile=\"...\" alone or all of top, bottom and side", sourceName, block._id.c_str() );
             bValid = false;
         }
         const int32 tileCount = _atlasColumns * _atlasRows;
@@ -179,7 +179,7 @@ namespace sw
         {
             if ( faceTile < 0 || faceTile >= tileCount )
             {
-                SW_LOG_ERROR( "%#: block '%#' uses tile %# outside the %#x%# atlas", sourceName, block._id.c_str(), faceTile, _atlasColumns, _atlasRows );
+                SW_LOG_ERROR_ID( "VoxelBlockCatalog.BlockUsesTileOutside", "%#: block '%#' uses tile %# outside the %#x%# atlas", sourceName, block._id.c_str(), faceTile, _atlasColumns, _atlasRows );
                 bValid = false;
             }
         }

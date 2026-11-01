@@ -195,7 +195,7 @@ namespace sw
         }
         resolveReferences( sourceName );
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <NPC> entries", sourceName );
+            SW_LOG_WARNING_ID( "ScheduleCatalog.NoNPCEntries", "%#: no <NPC> entries", sourceName );
         return loadedCount;
     }
 
@@ -252,7 +252,7 @@ namespace sw
         if ( bValidPosition && bValidRadius )
             (void)_placeCatalog.add( place );
         else
-            SW_LOG_ERROR( "%#: place '%#' has invalid fields - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.PlaceInvalidFieldsSkipped", "%#: place '%#' has invalid fields - skipped", sourceName, pID );
     }
 
     void ScheduleCatalog::loadSpot( const XMLNode& node, string_view sourceName, const utf8* pID )
@@ -266,9 +266,9 @@ namespace sw
         const bool bValidCapacity = XMLReadUtil::readOptionalNumber( node, "capacity", sourceName, 1, MathUtil::kMaxInt32, spot._capacity );
         const bool bValidPosition = XMLReadUtil::readRequiredFloat3( node, "position", sourceName, spot._position );
         if ( bValidCapacity == false || bValidPosition == false )
-            SW_LOG_ERROR( "%#: spot '%#' has invalid fields - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.SpotInvalidFieldsSkipped", "%#: spot '%#' has invalid fields - skipped", sourceName, pID );
         else if ( spot._kind.empty() )
-            SW_LOG_ERROR( "%#: spot '%#' has no kind - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.SpotNoKindSkipped", "%#: spot '%#' has no kind - skipped", sourceName, pID );
         else
             (void)_spotCatalog.add( spot );
     }
@@ -284,7 +284,7 @@ namespace sw
         if ( bValid )
             (void)_interruptCatalog.add( interrupt );
         else
-            SW_LOG_ERROR( "%#: interrupt '%#' has invalid fields - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.InterruptInvalidFieldsSkipped", "%#: interrupt '%#' has invalid fields - skipped", sourceName, pID );
     }
 
     void ScheduleCatalog::loadAppointment( const XMLNode& node, string_view sourceName, const utf8* pID )
@@ -302,7 +302,7 @@ namespace sw
         bValid                   = appointment._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
         if ( findPlace( appointment._place ) == nullptr )
         {
-            SW_LOG_ERROR( "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pID, appointment._place.c_str() );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.AppointmentUnknownPlaceSkipped", "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pID, appointment._place.c_str() );
             bValid = false;
         }
         if ( bValid && ( appointment._startMinute < 0 || appointment._endMinute <= appointment._startMinute ) )
@@ -320,7 +320,7 @@ namespace sw
         {
             if ( StringUtil::equals( child.getName(), "Routine" ) == false )
             {
-                SW_LOG_WARNING( "%#: %# '%#' has unknown element <%#>", sourceName, ownerKind, ownerID, child.getName() );
+                SW_LOG_WARNING_ID( "ScheduleCatalog.UnknownElement", "%#: %# '%#' has unknown element <%#>", sourceName, ownerKind, ownerID, child.getName() );
                 continue;
             }
             ScheduleRoutineDef routine;
@@ -351,16 +351,16 @@ namespace sw
         npc._idleActivity = hashed_string( node.findAttribute( "idle" ) != nullptr ? node.getAttributeText( "idle" ) : string_view( "StayHome" ) );
         if ( XMLReadUtil::readOptionalNumber( node, "speed", sourceName, ScheduleNPCDef::kMinUnitsPerMinute, MathUtil::kMaxFloat, npc._unitsPerMinute ) == false )
         {
-            SW_LOG_ERROR( "%#: npc '%#' has an invalid speed - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.NpcInvalidSpeedSkipped", "%#: npc '%#' has an invalid speed - skipped", sourceName, pID );
             return false;
         }
         Internal::parseTagList( node.getAttributeText( "tags" ), npc._listTag );
         if ( npc._home.empty() == false && findPlace( npc._home ) == nullptr )
-            SW_LOG_WARNING( "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
+            SW_LOG_WARNING_ID( "ScheduleCatalog.NpcUnknownHome", "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
         const ScheduleActivityDef* pIdle = getActivityRegistry().findActivity( npc._idleActivity );
         if ( pIdle == nullptr || pIdle->_target != ScheduleActivityTarget::Home )
         {
-            SW_LOG_ERROR( "%#: npc '%#' has idle activity '%#' that is not a home activity - skipped", sourceName, pID, npc._idleActivity.c_str() );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.NpcIdleActivityNot", "%#: npc '%#' has idle activity '%#' that is not a home activity - skipped", sourceName, pID, npc._idleActivity.c_str() );
             return false;
         }
         readRoutineChildren( node, sourceName, "npc", pID, npc._listRoutine );
@@ -380,19 +380,19 @@ namespace sw
         bValid = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "%#: event '%#' has invalid fields - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.EventInvalidFieldsSkipped", "%#: event '%#' has invalid fields - skipped", sourceName, pID );
             return;
         }
         for ( const hashed_string& archetypeID : event._listArchetype )
         {
             if ( findArchetype( archetypeID ) == nullptr )
-                SW_LOG_WARNING( "%#: event '%#' has an unknown archetype '%#'", sourceName, pID, archetypeID.c_str() );
+                SW_LOG_WARNING_ID( "ScheduleCatalog.EventUnknownArchetype", "%#: event '%#' has an unknown archetype '%#'", sourceName, pID, archetypeID.c_str() );
         }
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Block" ) == false )
             {
-                SW_LOG_WARNING( "%#: event '%#' has unknown element <%#>", sourceName, pID, child.getName() );
+                SW_LOG_WARNING_ID( "ScheduleCatalog.EventUnknownElement", "%#: event '%#' has unknown element <%#>", sourceName, pID, child.getName() );
                 continue;
             }
             readBlock( child, sourceName, pID, false, event._listBlock );
@@ -409,7 +409,7 @@ namespace sw
         bool bValid    = XMLReadUtil::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, outRoutine._priority );
         if ( outRoutine._id.empty() )
         {
-            SW_LOG_ERROR( "%#: '%#' has a <Routine> without an id - skipped", sourceName, ownerName );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.RoutineWithoutIdSkipped", "%#: '%#' has a <Routine> without an id - skipped", sourceName, ownerName );
             bValid = false;
         }
         bValid = outRoutine._condition.readFromNode( node, _vocabulary, sourceName, ownerName ) && bValid;
@@ -417,7 +417,7 @@ namespace sw
         {
             if ( StringUtil::equals( child.getName(), "Block" ) == false )
             {
-                SW_LOG_WARNING( "%#: routine '%#' of '%#' has unknown element <%#>", sourceName, outRoutine._id.c_str(), ownerName, child.getName() );
+                SW_LOG_WARNING_ID( "ScheduleCatalog.RoutineUnknownElement", "%#: routine '%#' of '%#' has unknown element <%#>", sourceName, outRoutine._id.c_str(), ownerName, child.getName() );
                 continue;
             }
             readBlock( child, sourceName, ownerName, true, outRoutine._listBlock );
@@ -461,7 +461,7 @@ namespace sw
         bFieldsValid          = XMLReadUtil::readOptionalBool( node, "overnight", bOvernight ) && bFieldsValid;
         if ( bFieldsValid == false )
         {
-            SW_LOG_ERROR( "%#: '%#' has a block with invalid fields - skipped", sourceName, ownerName );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.BlockInvalidFieldsSkipped", "%#: '%#' has a block with invalid fields - skipped", sourceName, ownerName );
             return false;
         }
 
@@ -504,12 +504,12 @@ namespace sw
                 const ScheduleAppointmentDef* pAppointment = findAppointment( outBlock._appointment );
                 if ( bInRoutine == false || pAppointment == nullptr )
                 {
-                    SW_LOG_WARNING( "%#: '%#' has a %# block with an unknown appointment '%#' (or outside a routine) - skipped", sourceName, ownerName,
-                                    outBlock._activity.c_str(), outBlock._appointment.c_str() );
+                    SW_LOG_WARNING_ID( "ScheduleCatalog.BlockUnknownAppointmentOutside", "%#: '%#' has a %# block with an unknown appointment '%#' (or outside a routine) - skipped", sourceName, ownerName,
+                                       outBlock._activity.c_str(), outBlock._appointment.c_str() );
                     return false;
                 }
                 if ( node.findAttribute( "start" ) != nullptr || node.findAttribute( "end" ) != nullptr )
-                    SW_LOG_WARNING( "%#: '%#' has a %# block with its own start/end - the appointment's time is used", sourceName, ownerName, outBlock._activity.c_str() );
+                    SW_LOG_WARNING_ID( "ScheduleCatalog.BlockOwnStartEnd", "%#: '%#' has a %# block with its own start/end - the appointment's time is used", sourceName, ownerName, outBlock._activity.c_str() );
                 outBlock._startMinute = pAppointment->_startMinute;
                 outBlock._endMinute   = pAppointment->_endMinute;
                 outBlock._place       = pAppointment->_place;
@@ -576,7 +576,7 @@ namespace sw
                 const ScheduleArchetypeDef* pParent = findArchetype( current );
                 if ( pParent == nullptr )
                 {
-                    SW_LOG_WARNING( "%#: archetype '%#' has an unknown parent '%#'", sourceName, archetype._id.c_str(), current.c_str() );
+                    SW_LOG_WARNING_ID( "ScheduleCatalog.ArchetypeUnknownParent", "%#: archetype '%#' has an unknown parent '%#'", sourceName, archetype._id.c_str(), current.c_str() );
                     break;
                 }
                 current = pParent->_parent;
@@ -596,7 +596,7 @@ namespace sw
         {
             ScheduleNPCDef npc = _npcCatalog.getAt( npcIndex );
             if ( npc._archetype.empty() == false && findArchetype( npc._archetype ) == nullptr )
-                SW_LOG_WARNING( "%#: npc '%#' has an unknown archetype '%#'", sourceName, npc._id.c_str(), npc._archetype.c_str() );
+                SW_LOG_WARNING_ID( "ScheduleCatalog.NpcUnknownArchetype", "%#: npc '%#' has an unknown archetype '%#'", sourceName, npc._id.c_str(), npc._archetype.c_str() );
             vector<hashed_string> listRoutineID;
             for ( const ScheduleRoutineDef& routine : npc._listRoutine )
             {
@@ -636,8 +636,8 @@ namespace sw
             ScheduleAppointmentDef appointment = _appointmentCatalog.getAt( appointmentIndex );
             appointment._listAttendee          = listAttendeePerAppointment[appointmentIndex];
             if ( appointment._listAttendee.size() < 2 )
-                SW_LOG_WARNING( "%#: appointment '%#' is referenced by %# npc(s) - a meeting needs two", sourceName, appointment._id.c_str(),
-                                static_cast<uint32>( appointment._listAttendee.size() ) );
+                SW_LOG_WARNING_ID( "ScheduleCatalog.AppointmentReferencedNpcMeeting", "%#: appointment '%#' is referenced by %# npc(s) - a meeting needs two", sourceName, appointment._id.c_str(),
+                                   static_cast<uint32>( appointment._listAttendee.size() ) );
             (void)_appointmentCatalog.add( appointment );
         }
         for ( const ScheduleEventDef& event : _eventCatalog.getAll() )
@@ -645,7 +645,7 @@ namespace sw
             for ( const hashed_string& npcID : event._listNPC )
             {
                 if ( findNPC( npcID ) == nullptr )
-                    SW_LOG_WARNING( "%#: event '%#' has an unknown npc '%#'", sourceName, event._id.c_str(), npcID.c_str() );
+                    SW_LOG_WARNING_ID( "ScheduleCatalog.EventUnknownNpc", "%#: event '%#' has an unknown npc '%#'", sourceName, event._id.c_str(), npcID.c_str() );
             }
         }
     }

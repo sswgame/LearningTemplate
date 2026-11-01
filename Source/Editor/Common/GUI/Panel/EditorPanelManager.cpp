@@ -133,7 +133,7 @@ namespace sw::editor
             if ( entry._pInstance != nullptr )
             {
                 if ( entry._pInstance->isDocumentDirty() )
-                    SW_LOG_WARNING( "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
+                    SW_LOG_WARNING_ID( "EditorPanelManager.PanelUnsavedEditsDiscarded", "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
                 if ( entry._pInstance->isOpen() )
                     _listRememberedOpenID.push_back( entry._id );
                 entry._pInstance->shutdown( pRHIDevice );
@@ -254,7 +254,7 @@ namespace sw::editor
         const uint64 frameCount = MathUtil::max<uint64>( 1u, _panelTimeFrameCount );
         for ( const EditorPanelEntry* pEntry : listEntry )
         {
-            SW_LOG_INFO( "EditorPanelTime|%#|avg %# us|max %# us", pEntry->_id.c_str(), pEntry->_drawNanosSum / 1000ull / frameCount, pEntry->_drawNanosMax / 1000ull );
+            SW_LOG_INFO_ID( "EditorPanelManager.EditorPanelTimeAvgUsMax", "EditorPanelTime|%#|avg %# us|max %# us", pEntry->_id.c_str(), pEntry->_drawNanosSum / 1000ull / frameCount, pEntry->_drawNanosMax / 1000ull );
         }
     }
 

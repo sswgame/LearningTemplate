@@ -314,7 +314,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "MechArenaWorld: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "MechArenaWorld.MechArenaWorldRefusedSettings", "MechArenaWorld: refused settings - %#", rangeError.c_str() );
             return false;
         }
         _settings       = settings;

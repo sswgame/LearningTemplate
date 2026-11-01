@@ -108,17 +108,17 @@ namespace sw
             for ( const hashed_string& goodID : building._listGood )
             {
                 if ( _goodCatalog.find( goodID ) == nullptr )
-                    SW_LOG_ERROR( "%#: building '%#' names an unknown good '%#'", sourceName, building._id.c_str(), goodID.c_str() );
+                    SW_LOG_ERROR_ID( "CityCatalog.BuildingNamesUnknownGood", "%#: building '%#' names an unknown good '%#'", sourceName, building._id.c_str(), goodID.c_str() );
             }
         }
         // 집 단계가 없으면 집이 자랄 곳이 없다 — 기본 단계를 지어내지 않고 로드 실패로 본다.
         if ( _listHouseLevel.empty() )
         {
-            SW_LOG_ERROR( "%#: no <HouseLevel> entries - houses have no level to live at", sourceName );
+            SW_LOG_ERROR_ID( "CityCatalog.NoHouseLevelEntriesHouses", "%#: no <HouseLevel> entries - houses have no level to live at", sourceName );
             return 0;
         }
         if ( findHouseBuilding() == nullptr )
-            SW_LOG_ERROR( "%#: no building has kind=\"House\" - nobody can live in this city", sourceName );
+            SW_LOG_ERROR_ID( "CityCatalog.NoBuildingKindHouse", "%#: no building has kind=\"House\" - nobody can live in this city", sourceName );
         return buildingCount;
     }
 
@@ -136,7 +136,7 @@ namespace sw
             return loadBuilding( node, sourceName );
         if ( XMLReadUtil::isElement( name, "HouseLevel" ) )
             return loadHouseLevel( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "CityCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -151,7 +151,7 @@ namespace sw
             building._bRequiresTerrain = CityCatalogInternal::parseTerrain( terrainText, building._requiredTerrain );
             if ( building._bRequiresTerrain == false )
             {
-                SW_LOG_ERROR( "%#: building '%#' needs an unknown terrain '%#'", sourceName, building._id.c_str(), terrainText );
+                SW_LOG_ERROR_ID( "CityCatalog.BuildingNeedsUnknownTerrain", "%#: building '%#' needs an unknown terrain '%#'", sourceName, building._id.c_str(), terrainText );
                 bValid = false;
             }
         }
@@ -159,7 +159,7 @@ namespace sw
         const bool bServiceWithoutService = building._kind == CityBuildingKind::Service && building._service == CityService::Count;
         if ( bServiceWithoutService )
         {
-            SW_LOG_ERROR( "%#: service building '%#' needs service=\"...\"", sourceName, building._id.c_str() );
+            SW_LOG_ERROR_ID( "CityCatalog.ServiceBuildingNeedsService", "%#: service building '%#' needs service=\"...\"", sourceName, building._id.c_str() );
             bValid = false;
         }
         if ( bValid )
@@ -178,7 +178,7 @@ namespace sw
                 level._serviceMask = static_cast<uint8>( level._serviceMask | makeCityServiceBit( service ) );
             else
             {
-                SW_LOG_ERROR( "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), token );
+                SW_LOG_ERROR_ID( "CityCatalog.HouseLevelNeedsUnknown", "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), token );
                 bValid = false;
             }
         } );

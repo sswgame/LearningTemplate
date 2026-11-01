@@ -30,7 +30,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "AdventureVitals: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "AdventureVitals.AdventureVitalsRefusedSettings", "AdventureVitals: refused settings - %#", rangeError.c_str() );
             return false;
         }
 

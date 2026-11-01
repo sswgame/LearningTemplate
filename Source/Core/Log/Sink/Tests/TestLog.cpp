@@ -204,10 +204,10 @@ SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
         ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
     } verbosityRestore{ previousVerbosity };
 
-    SW_LOG_INFO( "[TestLog] Info level log" );
+    SW_LOG_INFO_ID( "TestLog.InfoLevelLog", "[TestLog] Info level log" );
     SW_LOG_WARNING_ID( "Test.LogLevelProbe", "[TestLog] Warning level log" );
     SW_LOG_ERROR_ID( "Test.LogLevelProbe", "[TestLog] Error level log" );
-    SW_LOG_TRACE( "[TestLog] Trace level log" ); // Trace 는 Debug 만 컴파일한다 — 아래 기대 수가 그것을 따른다
+    SW_LOG_TRACE_ID( "TestLog.TraceLevelLog", "[TestLog] Trace level log" ); // Trace 는 Debug 만 컴파일한다 — 아래 기대 수가 그것을 따른다
 
     constexpr sw::LogLevel expectedLevels[] = {
         sw::LogLevel::Info,
@@ -260,8 +260,8 @@ SW_TEST_CASE( LogTest, RuntimeVerbosityDropsLessSevere )
     SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Warning ) == false );
 
     SW_LOG_ERROR_ID( "Test.LogVerbosityProbe", "[TestLog] kept" );
-    SW_LOG_WARNING( "[TestLog] dropped" );
-    SW_LOG_INFO( "[TestLog] dropped" );
+    SW_LOG_WARNING_ID( "TestLog.Dropped", "[TestLog] dropped" );
+    SW_LOG_INFO_ID( "TestLog.Dropped", "[TestLog] dropped" );
     SW_EXPECT_EQUAL( 1u, capture.getCount() );
 
     // Warning 까지 올리면 배포본 기본(컴파일 상한 Warning)과 같은 상태가 된다.
@@ -294,7 +294,7 @@ SW_TEST_CASE( LogTest, LinesAreFoundByIDNotWording )
     SW_LOG_WARNING_ID( "Test.LogIDProbe", "[TestLog] first wording %#", 1 );
     SW_LOG_ERROR_ID( "Test.LogIDProbe", "[TestLog] completely different wording" );
     SW_LOG_WARNING_ID( "Test.LogIDOther", "[TestLog] third" );
-    SW_LOG_INFO( "[TestLog] Test.LogIDProbe is only a word in a line without an id" ); // id 없는 줄 — 어떤 id 로도 잡히지 않는다
+    SW_LOG_INFO_ID( "TestLog.TestLogIDProbeOnlyWord", "[TestLog] Test.LogIDProbe is only a word in a line without an id" ); // id 없는 줄 — 어떤 id 로도 잡히지 않는다
     SW_EXPECT_EQUAL( 2u, capture.countWithID( "Test.LogIDProbe" ) );
     SW_EXPECT_EQUAL( 1u, capture.countWithID( "Test.LogIDOther" ) );
     SW_EXPECT_EQUAL( 0u, capture.countWithID( "Test.LogIDMissing" ) );
@@ -329,10 +329,10 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
         ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
     } verbosityRestore{ previousVerbosity };
 
-    SW_LOG_INFO( "[TestLog] SW_LOG_INFO %#", 123 );
+    SW_LOG_INFO_ID( "TestLog.SWLOGINFO", "[TestLog] SW_LOG_INFO %#", 123 );
     SW_LOG_WARNING_ID( "Test.LogFormatProbe", "[TestLog] SW_LOG_WARNING %#", "warning" );
     SW_LOG_ERROR_ID( "Test.LogFormatProbe", "[TestLog] SW_LOG_ERROR %#", 404 );
-    SW_LOG_TRACE( "[TestLog] SW_LOG_TRACE %#", 3.14f ); // Trace 는 Debug 만 컴파일한다
+    SW_LOG_TRACE_ID( "TestLog.SWLOGTRACE", "[TestLog] SW_LOG_TRACE %#", 3.14f ); // Trace 는 Debug 만 컴파일한다
 
     SW_REQUIRE_EQUAL( SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE ) ? 4u : 3u, capture.getCount() );
     SW_EXPECT_EQUAL( sw::string( "[TestLog] SW_LOG_INFO 123" ), capture.getEntries()[0]._message );
@@ -354,7 +354,7 @@ SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
 
     // 유효하지 않은 UTF-8 바이트 시퀀스 (0xFF, 0xFE 등)
     const utf8 invalidUtf8Bytes[] = { '[', 'T', 'e', 's', 't', 'L', 'o', 'g', ']', ' ', 'B', 'a', 'd', ':', static_cast<utf8>( 0xFF ), static_cast<utf8>( 0xFE ), '\0' };
-    SW_LOG_INFO( "%#", invalidUtf8Bytes );
+    SW_LOG_INFO_ID( "TestLog.Message", "%#", invalidUtf8Bytes );
 
     SW_REQUIRE_EQUAL( 1u, capture.getCount() );
     SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[0]._message, "[TestLog] Bad:" ) );
@@ -369,7 +369,7 @@ SW_TEST_CASE( LogTest, LogCallerHandling )
     SW_REQUIRE_TRUE( capture.isAttached() );
 
     SW_EXPECT_LOG( "Test.LogCallerProbe" ); // Warning 줄은 이 테스트가 호출자 전달을 보려는 대상이다
-    SW_LOG_INFO( "[TestLog] Custom caller message" );
+    SW_LOG_INFO_ID( "TestLog.CustomCallerMessage", "[TestLog] Custom caller message" );
     SW_LOG_WARNING_ID( "Test.LogCallerProbe", "[TestLog] Warning from caller" );
 
     SW_REQUIRE_EQUAL( 2u, capture.getCount() );
@@ -398,7 +398,7 @@ SW_TEST_CASE( LogTest, ConcurrentMultiThreadedLogging )
         {
             for ( uint32 logIndex = 0; logIndex < kLogsPerThread; ++logIndex )
             {
-                SW_LOG_INFO( "[TestLog] Thread %# Log %#", threadIndex, logIndex );
+                SW_LOG_INFO_ID( "TestLog.ThreadLog", "[TestLog] Thread %# Log %#", threadIndex, logIndex );
             }
         } );
     }
@@ -423,7 +423,7 @@ SW_TEST_CASE( LogTest, QueueOverflowFallbackStress )
     constexpr uint32 kHeavyLogCount = 6000;
     for ( uint32 logIndex = 0; logIndex < kHeavyLogCount; ++logIndex )
     {
-        SW_LOG_INFO( "[TestLog] Heavy burst log %#", logIndex );
+        SW_LOG_INFO_ID( "TestLog.HeavyBurstLog", "[TestLog] Heavy burst log %#", logIndex );
     }
 
     SW_EXPECT_EQUAL( kHeavyLogCount, capture.getCount() );
@@ -440,7 +440,7 @@ SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
     constexpr uint32 kDrainCount = 500;
     for ( uint32 logIndex = 0; logIndex < kDrainCount; ++logIndex )
     {
-        SW_LOG_INFO( "[TestLog] Drain check %#", logIndex );
+        SW_LOG_INFO_ID( "TestLog.DrainCheck", "[TestLog] Drain check %#", logIndex );
     }
 
     SW_EXPECT_EQUAL( kDrainCount, capture.getCount() );
@@ -455,7 +455,7 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
     {
         for ( uint32 index = 0; index < 500; ++index )
         {
-            SW_LOG_TRACE( "[TestLog] Background emitter message %#", index );
+            SW_LOG_TRACE_ID( "TestLog.BackgroundEmitterMessage", "[TestLog] Background emitter message %#", index );
         }
     } );
 

@@ -637,7 +637,7 @@ namespace sw
             const bool bEventLoopSetupFailed = loop._epollFd < 0 || loop._wakeFd < 0 || state.registerFd( index, loop._wakeFd, EpollStreamTransportInternal::kWakeTag ) == false;
             if ( bEventLoopSetupFailed )
             {
-                SW_LOG_ERROR( "epoll_create1 / eventfd failed (%#)", errno );
+                SW_LOG_ERROR_ID( "EpollStreamTransport.EpollCreate1EventfdFailed", "epoll_create1 / eventfd failed (%#)", errno );
                 return false; // shutdown 이 연 것을 닫는다.
             }
         }
@@ -739,7 +739,7 @@ namespace sw
                                         getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0;
         if ( bListenSetupFailed )
         {
-            SW_LOG_ERROR( "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
+            SW_LOG_ERROR_ID( "EpollStreamTransport.CouldNotListenStream", "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
             ::close( fd );
             return false;
         }
@@ -748,7 +748,7 @@ namespace sw
         state._listenPort = ntohs( local.sin_port );
         if ( state.registerFd( 0, fd, EpollStreamTransportInternal::kListenTag ) == false )
         {
-            SW_LOG_ERROR( "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
+            SW_LOG_ERROR_ID( "EpollStreamTransport.CouldNotListenStream", "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
             state._listenFd   = -1;
             state._listenPort = 0;
             ::close( fd );

@@ -71,7 +71,7 @@ namespace sw
         const bool bMatches = bValid && matchesCapturePosition( data );
         if ( bMatches == false )
         {
-            SW_LOG_ERROR( "Reflection probe data for '%#' does not fit this probe (%#)", string( path ).c_str(), bValid ? "captured at another position" : error.c_str() );
+            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataDoes", "Reflection probe data for '%#' does not fit this probe (%#)", string( path ).c_str(), bValid ? "captured at another position" : error.c_str() );
             return false;
         }
         _probeData     = std::move( data );
@@ -112,17 +112,17 @@ namespace sw
         string error;
         if ( _probeData.loadFromAsset( AssetID{ _probeDataPath }, &error ) == false )
         {
-            SW_LOG_ERROR( "Reflection probe data '%#' could not be loaded (%#) - the probe gives no reflection until it is baked again", _probeDataPath.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataCould", "Reflection probe data '%#' could not be loaded (%#) - the probe gives no reflection until it is baked again", _probeDataPath.c_str(), error.c_str() );
             return;
         }
         if ( _probeData.isValid( &error ) == false )
         {
-            SW_LOG_ERROR( "Reflection probe data '%#' is broken (%#) - bake the probe again", _probeDataPath.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataBroken", "Reflection probe data '%#' is broken (%#) - bake the probe again", _probeDataPath.c_str(), error.c_str() );
             _probeData.clear();
             return;
         }
         if ( matchesCapturePosition( _probeData ) == false )
-            SW_LOG_ERROR( "Reflection probe data '%#' was captured at another position - bake the probe again", _probeDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataCaptured", "Reflection probe data '%#' was captured at another position - bake the probe again", _probeDataPath.c_str() );
     }
 
     void ReflectionProbeComponent::validateProbeData( ValidationContext& context ) const

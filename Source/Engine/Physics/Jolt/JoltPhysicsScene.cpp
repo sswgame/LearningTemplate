@@ -364,7 +364,7 @@ namespace sw
         {
             const JPH::EPhysicsUpdateError error = _system.Update( fixedDeltaTime, 1, &_tempAllocator, _pJobSystem );
             if ( error != JPH::EPhysicsUpdateError::None )
-                SW_LOG_WARNING( "Jolt step reported overflow flags 0x%# - raise the body pair / contact limits", static_cast<uint32>( error ) );
+                SW_LOG_WARNING_ID( "JoltPhysicsScene.JoltStepReportedOverflow", "Jolt step reported overflow flags 0x%# - raise the body pair / contact limits", static_cast<uint32>( error ) );
         }
         appendActiveBodies();
         VectorUtil::sortUnique( _listMovedBody );
@@ -447,7 +447,7 @@ namespace sw
             return &_settings._listMaterial.front(); // 이름을 적지 않은 것은 "첫 재질" 이라는 선언이다
         const PhysicsMaterialDef* pMaterial = _settings.findMaterial( wanted );
         if ( pMaterial == nullptr )
-            SW_LOG_ERROR( "Unknown physics material '%#' - the shape or body is not created", wanted.c_str() ); // 적은 이름이 틀리면 다른 재질로 만들지 않는다
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.UnknownPhysicsMaterialShape", "Unknown physics material '%#' - the shape or body is not created", wanted.c_str() ); // 적은 이름이 틀리면 다른 재질로 만들지 않는다
         return pMaterial;
     }
 
@@ -531,7 +531,7 @@ namespace sw
         }
         if ( result.HasError() )
         {
-            SW_LOG_ERROR( "Jolt rejected a %# shape: %#", static_cast<uint32>( shape._type ), result.GetError().c_str() );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.JoltRejectedShape", "Jolt rejected a %# shape: %#", static_cast<uint32>( shape._type ), result.GetError().c_str() );
             return nullptr;
         }
         return result.Get();
@@ -542,7 +542,7 @@ namespace sw
         JPH::RefConst<JPH::Shape> pResult;
         if ( listShape.empty() )
         {
-            SW_LOG_ERROR( "A physics body needs at least one shape" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.PhysicsBodyNeedsLeast", "A physics body needs at least one shape" );
             return pResult;
         }
         JPH::StaticCompoundShapeSettings compound;
@@ -551,7 +551,7 @@ namespace sw
         {
             if ( shape._type == PhysicsShapeType3D::TriangleMesh && bAllowMesh == false )
             {
-                SW_LOG_ERROR( "Triangle mesh shapes need a Static or Kinematic body (a moving mesh has no volume)" );
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.TriangleMeshShapesNeed", "Triangle mesh shapes need a Static or Kinematic body (a moving mesh has no volume)" );
                 return pResult;
             }
             const PhysicsMaterialDef* pMaterial = resolveMaterial( shape._material, defaultMaterial );
@@ -573,7 +573,7 @@ namespace sw
                 JPH::Shape::ShapeResult result = offset.Create();
                 if ( result.HasError() )
                 {
-                    SW_LOG_ERROR( "Jolt rejected a shape offset: %#", result.GetError().c_str() );
+                    SW_LOG_ERROR_ID( "JoltPhysicsScene.JoltRejectedShapeOffset", "Jolt rejected a shape offset: %#", result.GetError().c_str() );
                     return pResult;
                 }
                 pResult = result.Get();
@@ -584,7 +584,7 @@ namespace sw
         JPH::Shape::ShapeResult result = compound.Create();
         if ( result.HasError() )
         {
-            SW_LOG_ERROR( "Jolt rejected a compound shape: %#", result.GetError().c_str() );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.JoltRejectedCompoundShape", "Jolt rejected a compound shape: %#", result.GetError().c_str() );
             return pResult;
         }
         pResult = result.Get();
@@ -605,7 +605,7 @@ namespace sw
     {
         if ( listChild.empty() )
         {
-            SW_LOG_ERROR( "createCompoundShape: no child shapes" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCompoundShapeNoChildShapes", "createCompoundShape: no child shapes" );
             return PhysicsShapeHandle{};
         }
         JPH::StaticCompoundShapeSettings compound;
@@ -616,7 +616,7 @@ namespace sw
             const ShapeRecord* pChild = _shapes.get( child.getSlot() );
             if ( pChild == nullptr )
             {
-                SW_LOG_ERROR( "createCompoundShape: a child shape handle is stale" );
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCompoundShapeChildShapeHandle", "createCompoundShape: a child shape handle is stale" );
                 return PhysicsShapeHandle{};
             }
             compound.AddShape( JPH::Vec3::sZero(), JPH::Quat::sIdentity(), pChild->_pShape.GetPtr() );
@@ -626,7 +626,7 @@ namespace sw
         JPH::Shape::ShapeResult result = compound.Create();
         if ( result.HasError() )
         {
-            SW_LOG_ERROR( "Jolt rejected a compound shape: %#", result.GetError().c_str() );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.JoltRejectedCompoundShape", "Jolt rejected a compound shape: %#", result.GetError().c_str() );
             return PhysicsShapeHandle{};
         }
         ShapeRecord record;
@@ -679,7 +679,7 @@ namespace sw
             const ShapeRecord* pShapeRecord = _shapes.get( desc._sharedShape.getSlot() );
             if ( pShapeRecord == nullptr )
             {
-                SW_LOG_ERROR( "createBody: the shared shape handle is stale" );
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateBodySharedShapeHandle", "createBody: the shared shape handle is stale" );
                 return handle;
             }
             pShape             = pShapeRecord->_pShape;
@@ -694,7 +694,7 @@ namespace sw
         }
         if ( desc._type == PhysicsBodyType::Dynamic && pShape->MustBeStatic() )
         {
-            SW_LOG_ERROR( "createBody: a Dynamic body cannot use a triangle mesh shape" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateBodyDynamicBodyCannot", "createBody: a Dynamic body cannot use a triangle mesh shape" );
             return handle;
         }
 
@@ -739,7 +739,7 @@ namespace sw
         JPH::Body* pBody = _system.GetBodyInterface().CreateBody( settings );
         if ( pBody == nullptr )
         {
-            SW_LOG_ERROR( "createBody: Jolt is out of bodies (limit %#)", JoltPhysicsSceneInternal::kMaxBodyCount );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateBodyJoltOutBodies", "createBody: Jolt is out of bodies (limit %#)", JoltPhysicsSceneInternal::kMaxBodyCount );
             return handle;
         }
         record._bodyID   = pBody->GetID();
@@ -840,7 +840,7 @@ namespace sw
             const BodyRecord* pRecord = findBody( body );
             if ( pRecord != nullptr && pRecord->_bCharacterInner )
             {
-                SW_LOG_ERROR( "destroyBody: this body is a character's inner body - destroy the character instead" );
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.DestroyBodyBodyCharacterInner", "destroyBody: this body is a character's inner body - destroy the character instead" );
                 continue;
             }
             BodyRecord record;
@@ -1016,7 +1016,7 @@ namespace sw
             const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), pRecord->_bodyID };
             if ( lock.Succeeded() && lock.GetBody().GetMotionPropertiesUnchecked() == nullptr )
             {
-                SW_LOG_ERROR( "setBodyType: the body was created Static without _bAllowTypeChange" );
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.SetBodyTypeBodyCreatedStatic", "setBodyType: the body was created Static without _bAllowTypeChange" );
                 return;
             }
         }
@@ -1239,7 +1239,7 @@ namespace sw
         const BodyRecord* pChassis = findBody( chassis );
         if ( pChassis == nullptr || pChassis->_type != PhysicsBodyType::Dynamic )
         {
-            SW_LOG_ERROR( "Wheeled vehicle needs a dynamic chassis body, wheels and driven axle pairs" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.WheeledVehicleNeedsDynamic", "Wheeled vehicle needs a dynamic chassis body, wheels and driven axle pairs" );
             return PhysicsVehicleHandle{};
         }
         return _vehicles.create( chassis, pChassis->_bodyID, JoltLayerUtil::makeObjectLayer( pChassis->_layer, true ), desc );
@@ -1307,7 +1307,7 @@ namespace sw
         const BodyRecord* pRecordB = desc._bodyB.isValid() ? findBody( desc._bodyB ) : nullptr;
         if ( pRecordA == nullptr || ( desc._bodyB.isValid() && pRecordB == nullptr ) )
         {
-            SW_LOG_ERROR( "createJoint: a body handle is stale" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateJointBodyHandleStale", "createJoint: a body handle is stale" );
             return PhysicsJointHandle{};
         }
         const JPH::BodyID       bodyIDA       = pRecordA->_bodyID;
@@ -1316,7 +1316,7 @@ namespace sw
         JPH::TwoBodyConstraint* pConstraint   = JoltPhysicsSceneInternal::createConstraint( bodyInterface, desc, bodyIDA, bodyIDB );
         if ( pConstraint == nullptr )
         {
-            SW_LOG_ERROR( "createJoint: Jolt could not create the joint" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateJointJoltCouldNot", "createJoint: Jolt could not create the joint" );
             return PhysicsJointHandle{};
         }
 
@@ -1389,7 +1389,7 @@ namespace sw
             return;
         if ( pRecord->_type != PhysicsJointType::Cone )
         {
-            SW_LOG_ERROR( "driveJointToRotation drives Cone joints only - this joint is not one" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.DriveJointToRotationDrivesConeJoints", "driveJointToRotation drives Cone joints only - this joint is not one" );
             return;
         }
         JPH::SwingTwistConstraint& constraint = *static_cast<JPH::SwingTwistConstraint*>( pRecord->_pConstraint.GetPtr() );
@@ -1463,7 +1463,7 @@ namespace sw
         const JPH::Shape::ShapeResult result = offset.Create();
         if ( result.HasError() )
         {
-            SW_LOG_ERROR( "createCharacter: %#", result.GetError().c_str() );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCharacter", "createCharacter: %#", result.GetError().c_str() );
             return PhysicsCharacterHandle{};
         }
 
@@ -1494,7 +1494,7 @@ namespace sw
             const JPH::BodyID innerBodyID = record._pCharacter->GetInnerBodyID();
             if ( innerBodyID.IsInvalid() )
             {
-                SW_LOG_ERROR( "createCharacter: Jolt is out of bodies for the inner body" );
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCharacterJoltOutBodies", "createCharacter: Jolt is out of bodies for the inner body" );
                 return PhysicsCharacterHandle{};
             }
             PhysicsShapeDesc3D capsuleDesc;

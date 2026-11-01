@@ -162,7 +162,7 @@ namespace sw
         const FontFaceID defaultFace = openFamilyFace( _catalog._defaultFamily, FontWeight::Regular, FontSlant::Upright, bFauxBold, bFauxItalic );
         if ( defaultFace == kInvalidFontFaceID )
         {
-            SW_LOG_ERROR( "[Text] The default font family '%#' could not be opened - no text can be drawn", _catalog._defaultFamily.c_str() );
+            SW_LOG_ERROR_ID( "FontService.DefaultFontFamilyCould", "[Text] The default font family '%#' could not be opened - no text can be drawn", _catalog._defaultFamily.c_str() );
             return false;
         }
         _bInitialized = true;
@@ -354,7 +354,7 @@ namespace sw
             if ( markWarnedOnce( FontServiceInternal::makeFamilyWarningKey( family ) ) )
             {
                 if ( pSystemFamily != nullptr )
-                    SW_LOG_INFO( "[Text] System font family '%#' is not installed on this machine - the next family in the fallback chain is used", string( family ).c_str() );
+                    SW_LOG_INFO_ID( "FontService.SystemFontFamilyNot", "[Text] System font family '%#' is not installed on this machine - the next family in the fallback chain is used", string( family ).c_str() );
                 else
                     SW_LOG_WARNING_ID( "Text.FontFamilyMissing", "[Text] Font family '%#' is not in the font catalog or could not be opened - the next family in the fallback chain is used",
                                        string( family ).c_str() );
@@ -395,7 +395,7 @@ namespace sw
         if ( bRead )
             face = _rasterizer->loadFace( std::move( bytes ), faceIndex, path );
         else
-            SW_LOG_ERROR( "[Text] Font file could not be read: %#", path.c_str() );
+            SW_LOG_ERROR_ID( "FontService.FontFileCouldNot", "[Text] Font file could not be read: %#", path.c_str() );
         _mapOpenedFile.emplace( fileKey, face );
         return face;
     }

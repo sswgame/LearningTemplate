@@ -124,7 +124,7 @@ namespace sw
             unique_ptr<TableType> fresh = make_unique<TableType>();
             if ( fresh->loadFromAsset( assetID ) == false )
             {
-                SW_LOG_ERROR( "[GameDataCache] %# could not be reloaded - keeping the previous table", key );
+                SW_LOG_ERROR_ID( "GameDataCache.CouldNotReloadedKeeping", "[GameDataCache] %# could not be reloaded - keeping the previous table", key );
                 return;
             }
             ScopedLock<mutex>      lock{ _mutex };

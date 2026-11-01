@@ -88,7 +88,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "TurnRelayServer: refused to start - settings '%#'", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "TurnRelay.TurnRelayServerRefusedStartSettings", "TurnRelayServer: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
         _pHost      = pHost;
@@ -154,7 +154,7 @@ namespace sw
             return; // 닫힌 연결이다. 돌아오면 토큰으로 다시 받는다
         if ( pendingCount >= kMaxPendingPerConnection )
         {
-            SW_LOG_WARNING( "connection %# does not acknowledge - %# messages are waiting, disconnecting it", connectionID, pendingCount );
+            SW_LOG_WARNING_ID( "TurnRelay.ConnectionDoesNotAcknowledge", "connection %# does not acknowledge - %# messages are waiting, disconnecting it", connectionID, pendingCount );
             _pHost->disconnect( connectionID );
             return;
         }
@@ -467,7 +467,7 @@ namespace sw
     {
         if ( static_cast<int32>( buffer.size() ) > NetTurnRelayMessage::kMaxActionBytes )
         {
-            SW_LOG_ERROR( "Turn action of %# bytes exceeds the relay limit of %# bytes - not sent", buffer.size(), NetTurnRelayMessage::kMaxActionBytes );
+            SW_LOG_ERROR_ID( "TurnRelay.TurnActionBytesExceeds", "Turn action of %# bytes exceeds the relay limit of %# bytes - not sent", buffer.size(), NetTurnRelayMessage::kMaxActionBytes );
             return -1;
         }
         const int32 submitID = _nextSubmitID++;

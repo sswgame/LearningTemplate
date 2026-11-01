@@ -114,7 +114,7 @@ namespace sw
         const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) != 0;
         if ( bPipelineReady == false )
         {
-            SW_LOG_ERROR_ONCE( "The volumetric fog compute PSO is missing - the fog is drawn without the light-scattering volume" );
+            SW_LOG_ERROR_ONCE_ID( "FrameFog.VolumetricFogComputePSO", "The volumetric fog compute PSO is missing - the fog is drawn without the light-scattering volume" );
             return;
         }
 
@@ -126,7 +126,7 @@ namespace sw
                                   _fogVolumeBuffer._uav != kInvalidDescriptorIndex && _fogVolumeBuffer._srv != kInvalidDescriptorIndex;
         if ( bVolumeReady == false )
         {
-            SW_LOG_ERROR_ONCE( "Failed to create the volumetric fog buffer (%# cells) - the fog is drawn without the light-scattering volume", kCellCount );
+            SW_LOG_ERROR_ONCE_ID( "FrameFog.FailedCreateVolumetricFog", "Failed to create the volumetric fog buffer (%# cells) - the fog is drawn without the light-scattering volume", kCellCount );
             return;
         }
 
@@ -160,7 +160,7 @@ namespace sw
         const uint32 paramRowCount = static_cast<uint32>( _listScratchFogVolumeParam.size() );
         if ( _fogVolumeParamBuffer.ensureCapacity( pDevice, rowStride, paramRowCount, kParamUsage, true, false, _listScratchFogVolumeParam.data() ) == false )
         {
-            SW_LOG_ERROR_ONCE( "Failed to create the volumetric fog parameter buffer - the fog is drawn without the light-scattering volume" );
+            SW_LOG_ERROR_ONCE_ID( "FrameFog.FailedCreateVolumetricFog2", "Failed to create the volumetric fog parameter buffer - the fog is drawn without the light-scattering volume" );
             return;
         }
         _fogVolumeParamBuffer.upload( pDevice, _listScratchFogVolumeParam.data(), paramRowCount * rowStride );

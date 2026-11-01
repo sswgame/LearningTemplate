@@ -150,13 +150,13 @@ namespace sw::editor
                 const bool                 bNotReady            = pPass == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
                 if ( bNotReady )
                 {
-                    SW_LOG_ERROR( "Splash: DefaultRenderPass is not loaded - an argument or the EngineDefaultAssets service is missing" );
+                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashDefaultRenderPassNotLoaded", "Splash: DefaultRenderPass is not loaded - an argument or the EngineDefaultAssets service is missing" );
                     return;
                 }
-                SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
+                SW_LOG_TRACE_ID( "ImGuiEditor.SplashReadingDefaultRenderPassXml", "Splash: reading DefaultRenderPass.xml" );
                 pResult->_bRenderPassLoaded = pPass->loadFromXMLFile( AssetID{ pEngineDefaultAssets->_defaultRenderPass.get() } );
                 if ( pResult->_bRenderPassLoaded == false )
-                    SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
+                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashCouldNotRead", "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
             }
 
             static void loadSplashForwardPipeline( const TaskArgs& args )
@@ -167,13 +167,13 @@ namespace sw::editor
                 const bool                      bNotReady            = pPipeline == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
                 if ( bNotReady )
                 {
-                    SW_LOG_ERROR( "Splash: ForwardPipeline is not loaded - an argument or the EngineDefaultAssets service is missing" );
+                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashForwardPipelineNotLoaded", "Splash: ForwardPipeline is not loaded - an argument or the EngineDefaultAssets service is missing" );
                     return;
                 }
-                SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
+                SW_LOG_TRACE_ID( "ImGuiEditor.SplashReadingForwardPipelineXml", "Splash: reading ForwardPipeline.xml" );
                 pResult->_bForwardPipelineLoaded = pPipeline->loadFromXMLFile( AssetID{ pEngineDefaultAssets->_defaultForwardPipeline.get() } );
                 if ( pResult->_bForwardPipelineLoaded == false )
-                    SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
+                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashCouldNotRead", "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
             }
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 상태의 키와 형식 판입니다. */
@@ -240,8 +240,8 @@ namespace sw::editor
                     selection.selectObjects( listObject, SelectionMode::Replace );
                 if ( listSelectedAsset.empty() == false )
                     selection.selectAssets( listSelectedAsset, SelectionMode::Replace );
-                SW_LOG_INFO( "Resumed the edit session: %# selected object(s), %#", static_cast<uint32>( listObject.size() ),
-                             bSceneDirty ? "unsaved changes" : "no unsaved changes" );
+                SW_LOG_INFO_ID( "ImGuiEditor.ResumedEditSessionSelected", "Resumed the edit session: %# selected object(s), %#", static_cast<uint32>( listObject.size() ),
+                                bSceneDirty ? "unsaved changes" : "no unsaved changes" );
                 return true;
             }
         };
@@ -478,13 +478,13 @@ namespace sw::editor
 
     bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
     {
-        SW_LOG_TRACE( "Initialize start." );
+        SW_LOG_TRACE_ID( "ImGuiEditor.InitializeStart", "Initialize start." );
         if ( _bInitialized != SW_FALSE )
             return true;
 
         if ( pWindow == nullptr || pRHIDevice == nullptr )
         {
-            SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
+            SW_LOG_ERROR_ID( "ImGuiEditor.CannotInitializeWithoutWindow", "Cannot initialize without window and RHI device." );
             return false;
         }
         _pWindow    = pWindow;
@@ -500,7 +500,7 @@ namespace sw::editor
         _startup.add( make_unique<WindowCloseQuerySubsystem>( *this ) );
         if ( _startup.initializeAll( EngineSubsystemHost::kClient ) == false )
         {
-            SW_LOG_ERROR( "Editor startup failed: %#", _startup.getError().c_str() );
+            SW_LOG_ERROR_ID( "ImGuiEditor.EditorStartupFailed", "Editor startup failed: %#", _startup.getError().c_str() );
             _startup.destroyAll();
             return false;
         }
@@ -514,7 +514,7 @@ namespace sw::editor
         EditorPaths::prepareAutomationStateDirectory(); // 상태 파일을 읽는 어떤 일보다 먼저
         // 사용자 환경설정은 사용자 파일이다 — 처음 실행이면 없고, 깨졌으면 옆으로 치우고 새로 쓴다(`EditorPreferencesStore::loadAll`). 닫을 때까지 저장이 이 파일에 간다.
         if ( EditorPreferencesStore::open() == EditorUserFileResult::Missing )
-            SW_LOG_INFO( "Editor preferences: first run - nothing changed from the defaults yet" );
+            SW_LOG_INFO_ID( "ImGuiEditor.EditorPreferencesFirstRun", "Editor preferences: first run - nothing changed from the defaults yet" );
         // 도구 시드는 에디터 필수 데이터다. 대신 쓸 값이 없으므로 읽지 못하면 기동을 멈춘다(이유는 로드가 키 이름과 남겼다).
         _editorToolDefaults = make_unique<EditorToolDefaults>();
         if ( _editorToolDefaults->loadFromHost() == false )
@@ -531,7 +531,7 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializeImGuiContext()
     {
-        SW_LOG_TRACE( "Checking ImGui version and creating context" );
+        SW_LOG_TRACE_ID( "ImGuiEditor.CheckingImGuiVersionCreating", "Checking ImGui version and creating context" );
         IMGUI_CHECKVERSION();
         // 컨텍스트보다 먼저 등록한다. 그래야 이 모듈의 ImGui 할당과 해제가 모두 같은 할당자를 거친다. 컨텍스트는 shutdown 이 이 모듈 안에서 지운다.
         ImGui::SetAllocatorFunctions( &ImGuiEditorInternal::allocateForImGui, &ImGuiEditorInternal::freeForImGui, nullptr );
@@ -540,7 +540,7 @@ namespace sw::editor
         // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 바인딩한다. 확장마다 CMake 가 만든 바인더를 쓴다. EditorModule 자신은 여기서 CreateContext 를 호출했다.
         EditorUIContext::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
 
-        SW_LOG_TRACE( "Configuring ImGui IO" );
+        SW_LOG_TRACE_ID( "ImGuiEditor.ConfiguringImGuiIO", "Configuring ImGui IO" );
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -574,23 +574,23 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializePlatformBackend()
     {
-        SW_LOG_TRACE( "Creating Platform Backend" );
+        SW_LOG_TRACE_ID( "ImGuiEditor.CreatingPlatformBackend", "Creating Platform Backend" );
         if ( _pWindow == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create platform backend: the editor has no window" );
+            SW_LOG_ERROR_ID( "ImGuiEditor.FailedCreatePlatformBackend", "Failed to create platform backend: the editor has no window" );
             return SubsystemInitResult::Failed;
         }
         _platformBackend = IImGuiPlatformBackend::createPlatformBackendFor( *_pWindow );
         if ( _platformBackend == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create platform backend" );
+            SW_LOG_ERROR_ID( "ImGuiEditor.FailedCreatePlatformBackend2", "Failed to create platform backend" );
             return SubsystemInitResult::Failed;
         }
 
-        SW_LOG_TRACE( "Initializing Platform Backend" );
+        SW_LOG_TRACE_ID( "ImGuiEditor.InitializingPlatformBackend", "Initializing Platform Backend" );
         if ( _platformBackend->initialize( _pWindow, _pRHIDevice->getBackendType() ) == false )
         {
-            SW_LOG_ERROR( "Platform backend initialization failed" );
+            SW_LOG_ERROR_ID( "ImGuiEditor.PlatformBackendInitializationFailed", "Platform backend initialization failed" );
             shutdownPlatformBackend();
             return SubsystemInitResult::Failed;
         }
@@ -607,11 +607,11 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializeRendererBackend()
     {
-        SW_LOG_TRACE( "Creating Renderer Backend" );
+        SW_LOG_TRACE_ID( "ImGuiEditor.CreatingRendererBackend", "Creating Renderer Backend" );
         _rendererBackend = IImGuiRendererBackend::createRendererBackend( _pRHIDevice->getBackendType() );
         if ( _rendererBackend == nullptr || _rendererBackend->initialize( _pRHIDevice ) == false )
         {
-            SW_LOG_ERROR( "Renderer backend initialization failed" );
+            SW_LOG_ERROR_ID( "ImGuiEditor.RendererBackendInitializationFailed", "Renderer backend initialization failed" );
             shutdownRendererBackend();
             return SubsystemInitResult::Failed;
         }
@@ -628,7 +628,7 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::loadSplashAssets()
     {
-        SW_LOG_TRACE( "Splash: loading DefaultRenderPass / ForwardPipeline..." );
+        SW_LOG_TRACE_ID( "ImGuiEditor.SplashLoadingDefaultRenderPassForwardPipeline", "Splash: loading DefaultRenderPass / ForwardPipeline..." );
 
         const shared_ptr<RenderPassAsset>     defaultPass     = sw::make_shared<RenderPassAsset>();
         const shared_ptr<RenderPipelineAsset> forwardPipeline = sw::make_shared<RenderPipelineAsset>();
@@ -636,7 +636,7 @@ namespace sw::editor
         TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
         if ( pTaskManager == nullptr )
         {
-            SW_LOG_ERROR( "TaskManager service is not bound — cannot load splash resources" );
+            SW_LOG_ERROR_ID( "ImGuiEditor.TaskManagerServiceNotBound", "TaskManager service is not bound — cannot load splash resources" );
             return SubsystemInitResult::Failed;
         }
 
@@ -646,7 +646,7 @@ namespace sw::editor
         const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         if ( pEngineDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR( "EngineDefaultAssets service is not bound - cannot load splash resources" );
+            SW_LOG_ERROR_ID( "ImGuiEditor.EngineDefaultAssetsServiceNotBound", "EngineDefaultAssets service is not bound - cannot load splash resources" );
             return SubsystemInitResult::Failed;
         }
 
@@ -706,8 +706,8 @@ namespace sw::editor
         EditorThemeUtil::setDPIScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDPIScale() );
         ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
         ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
-        SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDPIScale(), bFixedUIScale ? "fixed" : "monitor DPI",
-                     ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
+        SW_LOG_INFO_ID( "ImGuiEditor.EditorUIScaleFrame", "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDPIScale(), bFixedUIScale ? "fixed" : "monitor DPI",
+                        ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
         // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
         // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
@@ -715,9 +715,9 @@ namespace sw::editor
         const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
         if ( startupScene.empty() == false && bResumedSession == false )
         {
-            SW_LOG_INFO( "Opening the startup scene: %#", startupScene.c_str() );
+            SW_LOG_INFO_ID( "ImGuiEditor.OpeningStartupScene", "Opening the startup scene: %#", startupScene.c_str() );
             if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
-                SW_LOG_ERROR( "Failed to open the startup scene: %#", startupScene.c_str() );
+                SW_LOG_ERROR_ID( "ImGuiEditor.FailedOpenStartupScene", "Failed to open the startup scene: %#", startupScene.c_str() );
         }
         return SubsystemInitResult::Succeeded;
     }
@@ -1100,7 +1100,7 @@ namespace sw::editor
                 ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
                 ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
                 EditorThemeUtil::setDPIScale( wantedScale );
-                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDPIScale(), bFixedUIScale ? "fixed" : "monitor DPI" );
+                SW_LOG_INFO_ID( "ImGuiEditor.EditorUIScale", "Editor UI scale %# (%#)", EditorThemeUtil::getDPIScale(), bFixedUIScale ? "fixed" : "monitor DPI" );
             }
         }
         ImGuizmo::BeginFrame();

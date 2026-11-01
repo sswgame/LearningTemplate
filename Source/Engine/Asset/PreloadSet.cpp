@@ -69,7 +69,7 @@ namespace sw
                 --state._inFlightCount;
                 ++state._completedCount;
                 state._listFailed.push_back( path );
-                SW_LOG_WARNING( "Preload of '%#' was not accepted by the streaming queue", path );
+                SW_LOG_WARNING_ID( "PreloadSet.PreloadNotAcceptedStreaming", "Preload of '%#' was not accepted by the streaming queue", path );
             }
         }
     }

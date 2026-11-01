@@ -382,7 +382,7 @@ namespace sw
                     pCursor += sizeof( uint32 );
                     if ( ( flags & ~kFlagBitangentNegative ) != 0u )
                     {
-                        SW_LOG_WARNING( "Mesh asset has unknown vertex flags %# - re-import the model", flags );
+                        SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownVertex", "Mesh asset has unknown vertex flags %# - re-import the model", flags );
                         return false;
                     }
                     vertex._arrTangent[0] = tangent._x;
@@ -405,7 +405,7 @@ namespace sw
                         pCursor += sizeof( uint16 );
                         if ( joint >= skinBoneCount )
                         {
-                            SW_LOG_WARNING( "Mesh asset skin names bone %# but the skeleton has %# bones", joint, skinBoneCount );
+                            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetSkinNames", "Mesh asset skin names bone %# but the skeleton has %# bones", joint, skinBoneCount );
                             return false;
                         }
                     }
@@ -464,7 +464,7 @@ namespace sw
                 {
                     if ( static_cast<size_t>( pEnd - pCursor ) < 8 )
                     {
-                        SW_LOG_WARNING( "Mesh asset has a truncated chunk header" );
+                        SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetTruncatedChunk", "Mesh asset has a truncated chunk header" );
                         return false;
                     }
                     const bool   bMorph      = Memory::compare( pCursor, kArrMorphChunk, 4 ) == 0;
@@ -476,7 +476,7 @@ namespace sw
                     const bool   bKnownChunk = bMorph || bSection || bLOD || bLODSkin;
                     if ( bKnownChunk == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
                     {
-                        SW_LOG_WARNING( "Mesh asset has an unknown or truncated chunk" );
+                        SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownTruncated", "Mesh asset has an unknown or truncated chunk" );
                         return false;
                     }
                     const uint8* pChunkEnd = pChunk + chunkLength;
@@ -484,7 +484,7 @@ namespace sw
                     {
                         if ( readLODChunk( pChunk, pChunkEnd, uvBounds, ioData._listLOD ) == false )
                         {
-                            SW_LOG_WARNING( "Mesh asset has a malformed LOD chunk" );
+                            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedLOD", "Mesh asset has a malformed LOD chunk" );
                             return false;
                         }
                         pCursor = pChunkEnd;
@@ -494,7 +494,7 @@ namespace sw
                     {
                         if ( readLODSkinChunk( pChunk, pChunkEnd, ioData._skinBoneCount, ioData._listLOD ) == false )
                         {
-                            SW_LOG_WARNING( "Mesh asset has a malformed LOD skin chunk (it must follow the LOD chunk and match its levels)" );
+                            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedLOD2", "Mesh asset has a malformed LOD skin chunk (it must follow the LOD chunk and match its levels)" );
                             return false;
                         }
                         pCursor = pChunkEnd;
@@ -504,7 +504,7 @@ namespace sw
                     {
                         if ( readSectionChunk( pChunk, pChunkEnd, vertexCount, ioData._listSection ) == false )
                         {
-                            SW_LOG_WARNING( "Mesh asset has a malformed section chunk" );
+                            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedSection", "Mesh asset has a malformed section chunk" );
                             return false;
                         }
                         pCursor = pChunkEnd;
@@ -512,7 +512,7 @@ namespace sw
                     }
                     if ( readMorphChunk( pChunk, pChunkEnd, vertexCount, ioData._listMorphTarget ) == false )
                     {
-                        SW_LOG_WARNING( "Mesh asset has a malformed morph target chunk" );
+                        SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedMorph", "Mesh asset has a malformed morph target chunk" );
                         return false;
                     }
                     pCursor = pChunkEnd;
@@ -617,12 +617,12 @@ namespace sw
         outData        = MeshAssetData{};
         if ( pData == nullptr || size < kHeaderSize )
         {
-            SW_LOG_WARNING( "Mesh asset is shorter than its header (%# bytes)", size );
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetShorterHeader", "Mesh asset is shorter than its header (%# bytes)", size );
             return false;
         }
         if ( Memory::compare( pData, Internal::kArrMagic, sizeof( Internal::kArrMagic ) ) != 0 )
         {
-            SW_LOG_WARNING( "Mesh asset has no SWMS magic" );
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetNoSWMS", "Mesh asset has no SWMS magic" );
             return false;
         }
 
@@ -633,7 +633,7 @@ namespace sw
         const uint32  skinBoneCount  = LittleEndianUtil::readUint32( pData + 20 );
         if ( version != kVersion || vertexSize != kVertexSize )
         {
-            SW_LOG_WARNING( "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetVersionVertex", "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
             return false;
         }
 
@@ -644,19 +644,19 @@ namespace sw
         // 정점 · 스킨 뒤의 남은 바이트는 선택 덩어리다(아래에서 하나씩 읽는다). 모자라면 깨진 파일이다.
         if ( bWholeTriangles == false || expectedSize > static_cast<uint64>( size ) )
         {
-            SW_LOG_WARNING( "Mesh asset declares %# vertices but holds %# bytes (expected %#)", vertexCount, size, expectedSize );
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetDeclaresVertices", "Mesh asset declares %# vertices but holds %# bytes (expected %#)", vertexCount, size, expectedSize );
             return false;
         }
         if ( MathUtil::isFinite( boundingRadius ) == false || boundingRadius < 0.0f )
         {
-            SW_LOG_WARNING( "Mesh asset has an invalid bounding radius" );
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidBounding", "Mesh asset has an invalid bounding radius" );
             return false;
         }
 
         Internal::UvBounds uvBounds{};
         if ( Internal::readUvBounds( pData + 24, uvBounds ) == false )
         {
-            SW_LOG_WARNING( "Mesh asset has invalid UV bounds" );
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidUV", "Mesh asset has invalid UV bounds" );
             return false;
         }
 

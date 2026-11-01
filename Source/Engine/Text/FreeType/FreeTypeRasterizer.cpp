@@ -126,7 +126,7 @@ namespace sw
             const FT_Error error    = FT_Init_FreeType( &pLibrary );
             if ( error != 0 )
             {
-                SW_LOG_ERROR( "[Text] FreeType initialization failed (error %#)", static_cast<int32>( error ) );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.FreeTypeInitializationFailedError", "[Text] FreeType initialization failed (error %#)", static_cast<int32>( error ) );
                 return false;
             }
             _pLibrary = pLibrary;
@@ -160,12 +160,12 @@ namespace sw
             const FT_Error error = FT_New_Memory_Face( _pLibrary, entry._bytes.data(), static_cast<FT_Long>( entry._bytes.size() ), static_cast<FT_Long>( faceIndex ), &pFace );
             if ( error != 0 || pFace == nullptr )
             {
-                SW_LOG_ERROR( "[Text] Failed to open font face '%#' (index %#, FreeType error %#)", debugName, faceIndex, static_cast<int32>( error ) );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.FailedOpenFontFace", "[Text] Failed to open font face '%#' (index %#, FreeType error %#)", debugName, faceIndex, static_cast<int32>( error ) );
                 return kInvalidFontFaceID;
             }
             if ( FT_IS_SCALABLE( pFace ) == 0 )
             {
-                SW_LOG_ERROR( "[Text] Font face '%#' has no outlines; only scalable fonts are supported", debugName );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.FontFaceNoOutlines", "[Text] Font face '%#' has no outlines; only scalable fonts are supported", debugName );
                 FT_Done_Face( pFace );
                 return kInvalidFontFaceID;
             }
@@ -188,7 +188,7 @@ namespace sw
                 return false;
             if ( FT_Load_Glyph( pFace, glyphIndex, FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP ) != 0 )
             {
-                SW_LOG_ERROR( "[Text] Failed to load glyph %# for MSDF", glyphIndex );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.FailedLoadGlyphMSDF", "[Text] Failed to load glyph %# for MSDF", glyphIndex );
                 return false;
             }
             FT_GlyphSlot pSlot   = pFace->glyph;
@@ -199,7 +199,7 @@ namespace sw
             outBitmap._bearingPx = float2{};
             if ( pSlot->format != FT_GLYPH_FORMAT_OUTLINE )
             {
-                SW_LOG_ERROR( "[Text] Glyph %# has no outline - MSDF needs vector outlines", glyphIndex );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.GlyphNoOutlineMSDF", "[Text] Glyph %# has no outline - MSDF needs vector outlines", glyphIndex );
                 return false;
             }
             if ( pSlot->outline.n_points == 0 )
@@ -214,7 +214,7 @@ namespace sw
             funcs.cubic_to = &FreeTypeOutlineBuilder::cubicTo;
             if ( FT_Outline_Decompose( &pSlot->outline, &funcs, &builder ) != 0 )
             {
-                SW_LOG_ERROR( "[Text] Failed to read the outline of glyph %# for MSDF", glyphIndex );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.FailedReadOutlineGlyph", "[Text] Failed to read the outline of glyph %# for MSDF", glyphIndex );
                 return false;
             }
             // MSDF 는 안쪽이 간선 왼쪽이어야 한다. TrueType 윤곽은 안쪽이 오른쪽(시계 방향)이라 뒤집는다. PostScript 윤곽은 이미 왼쪽이다.
@@ -319,7 +319,7 @@ namespace sw
                 return false;
             if ( FT_Load_Glyph( pFace, glyphIndex, FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP ) != 0 )
             {
-                SW_LOG_ERROR( "[Text] Failed to load glyph %# for SDF", glyphIndex );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.FailedLoadGlyphSDF", "[Text] Failed to load glyph %# for SDF", glyphIndex );
                 return false;
             }
             FT_GlyphSlot pSlot   = pFace->glyph;
@@ -334,7 +334,7 @@ namespace sw
             const FT_Error error = FT_Render_Glyph( pSlot, FT_RENDER_MODE_SDF );
             if ( error != 0 )
             {
-                SW_LOG_ERROR( "[Text] FT_Render_Glyph(SDF) failed for glyph %# (error %#) - is the FreeType 'sdf' module built?", glyphIndex, static_cast<int32>( error ) );
+                SW_LOG_ERROR_ID( "FreeTypeRasterizer.FTRenderGlyphSDF", "[Text] FT_Render_Glyph(SDF) failed for glyph %# (error %#) - is the FreeType 'sdf' module built?", glyphIndex, static_cast<int32>( error ) );
                 return false;
             }
             const FT_Bitmap& bitmap = pSlot->bitmap;

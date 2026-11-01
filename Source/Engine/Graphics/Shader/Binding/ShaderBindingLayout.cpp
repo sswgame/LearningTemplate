@@ -227,8 +227,8 @@ namespace sw
             auto it = _mapNameToSlot.find( slot._name );
             if ( it != _mapNameToSlot.end() )
             {
-                SW_LOG_TRACE( "Duplicate binding name '%#' (space %#, register %#) — keeping first.",
-                              slot._name.c_str(), slot._space, slot._registerIndex );
+                SW_LOG_TRACE_ID( "ShaderBindingLayout.DuplicateBindingNameSpace", "Duplicate binding name '%#' (space %#, register %#) — keeping first.",
+                                 slot._name.c_str(), slot._space, slot._registerIndex );
                 continue;
             }
             _mapNameToSlot[slot._name] = index;

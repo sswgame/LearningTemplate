@@ -164,7 +164,7 @@ namespace sw
         vector<string> listOrder;
         if ( _dependencyGraph.sortByDependency( listName, listOrder ) == false )
         {
-            SW_LOG_ERROR( "Topological sort failed during shutdown — unloading in arbitrary order" );
+            SW_LOG_ERROR_ID( "LiveReloadManager.TopologicalSortFailedDuring", "Topological sort failed during shutdown — unloading in arbitrary order" );
             for ( auto& [name, context] : _mapModule )
             {
                 unloadModule( context );
@@ -192,7 +192,7 @@ namespace sw
             (void)registeredRecord;
             if ( LiveReloadManagerInternal::isSameModuleName( registeredName, moduleName ) )
             {
-                SW_LOG_ERROR( "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
+                SW_LOG_ERROR_ID( "LiveReloadManager.ModuleAlreadyRegisteredReload", "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
                 return false;
             }
         }
@@ -205,7 +205,7 @@ namespace sw
         const string modulePath = ModuleLibraryUtil::findModuleLibraryPath( moduleName );
         if ( FileUtil::exists( modulePath ) == false )
         {
-            SW_LOG_INFO( "Shared module %# is not built (Bin/Modules · Bin) — nothing links it", moduleName );
+            SW_LOG_INFO_ID( "LiveReloadManager.SharedModuleNotBuilt", "Shared module %# is not built (Bin/Modules · Bin) — nothing links it", moduleName );
             return true;
         }
 
@@ -213,14 +213,14 @@ namespace sw
         vector<uint8> bytes;
         if ( ModuleShadowCopy::readModuleFile( modulePath, bytes ) == false )
         {
-            SW_LOG_ERROR( "Failed to read the shared module %# (locked)", modulePath );
+            SW_LOG_ERROR_ID( "LiveReloadManager.FailedReadSharedModule", "Failed to read the shared module %# (locked)", modulePath );
             return false;
         }
         string moduleStamp;
         if ( ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
         {
-            SW_LOG_ERROR( "Shared module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
-                          moduleName, moduleStamp, engine::getEngineABIStamp() );
+            SW_LOG_ERROR_ID( "LiveReloadManager.SharedModuleBuiltAgainst", "Shared module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
+                             moduleName, moduleStamp, engine::getEngineABIStamp() );
             return false;
         }
         if ( ModuleShadowCopy::rejectsDelayImports( moduleName, modulePath, bytes ) )
@@ -231,14 +231,14 @@ namespace sw
         void* const                       pSharedHandle = sharedPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *sharedPath ) : nullptr;
         if ( pSharedHandle == nullptr )
         {
-            SW_LOG_ERROR( "Failed to load the shared module %#", modulePath );
+            SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadSharedModule", "Failed to load the shared module %#", modulePath );
             return false;
         }
         // 라이브러리는 남긴다(정적 초기화가 이미 돌았다) — 실패는 기동을 멈춘다.
         _listSharedModule.push_back( SharedLibrary{ string{ moduleName }, pSharedHandle } );
         if ( engine::registerModuleTypes( moduleName ) == false )
             return false;
-        SW_LOG_INFO( "Shared module loaded: %#", moduleName );
+        SW_LOG_INFO_ID( "LiveReloadManager.SharedModuleLoaded", "Shared module loaded: %#", moduleName );
         return true;
     }
 
@@ -250,7 +250,7 @@ namespace sw
         {
             if ( LiveReloadManagerInternal::isSameModuleName( shared._name, moduleName ) )
             {
-                SW_LOG_ERROR( "Shared module %# outlives the modules that link it and cannot be registered for reload or unload", moduleName );
+                SW_LOG_ERROR_ID( "LiveReloadManager.SharedModuleOutlivesModules", "Shared module %# outlives the modules that link it and cannot be registered for reload or unload", moduleName );
                 return false;
             }
         }
@@ -258,7 +258,7 @@ namespace sw
         const string moduleDir = ModuleLibraryUtil::getModuleDirectory();
         if ( FileUtil::isDirectory( moduleDir ) == false )
         {
-            SW_LOG_ERROR( "Module directory does not exist: %#", moduleDir );
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDirectoryDoesNot", "Module directory does not exist: %#", moduleDir );
             return false;
         }
         // 바깥 빌드의 신호는 모듈 폴더의 성공 스탬프다(`update`). 감시는 첫 등록이 한 번 건다 — 모듈이 없는 프로세스(테스트)는 감시 스레드를 띄우지 않는다.
@@ -267,9 +267,9 @@ namespace sw
         {
             _buildStampPath = FileUtil::joinPath( moduleDir, config::kFileModuleBuildStamp );
             if ( FileUtil::getFileStamp( _buildStampPath, _seenBuildStamp ) == false )
-                SW_LOG_WARNING( "%# is missing - outside builds are not reloaded until the build tree is configured (sw_addModuleBuildStamp)", _buildStampPath );
+                SW_LOG_WARNING_ID( "LiveReloadManager.MissingOutsideBuildsNot", "%# is missing - outside builds are not reloaded until the build tree is configured (sw_addModuleBuildStamp)", _buildStampPath );
             if ( _fileWatcher->startWatching( moduleDir, false ) == false )
-                SW_LOG_ERROR( "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir );
+                SW_LOG_ERROR_ID( "LiveReloadManager.FailedWatchModuleDirectory", "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir );
         }
 
         // 의존 목록은 로드 **전에** 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
@@ -298,7 +298,7 @@ namespace sw
     {
         if ( _bReloadGraphBroken == SW_TRUE )
         {
-            SW_LOG_ERROR( "Reload graph is broken — restart the process (ignored %#)", moduleName );
+            SW_LOG_ERROR_ID( "LiveReloadManager.ReloadGraphBrokenRestart", "Reload graph is broken — restart the process (ignored %#)", moduleName );
             return;
         }
 
@@ -348,7 +348,7 @@ namespace sw
                 for ( auto& [name, context] : _mapModule )
                 {
                     if ( context._bMtimeDebouncing || context._bForceReload )
-                        SW_LOG_WARNING( "Build failed - %# is not reloaded from its partial output", context._moduleName );
+                        SW_LOG_WARNING_ID( "LiveReloadManager.BuildFailedNotReloaded", "Build failed - %# is not reloaded from its partial output", context._moduleName );
                     context._bMtimeDebouncing = false;
                     context._bForceReload     = false;
                 }
@@ -371,7 +371,7 @@ namespace sw
             {
                 const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
                 if ( poll._bWatchLost )
-                    SW_LOG_ERROR( "Module directory watching stopped - outside builds are not reloaded until the process restarts" );
+                    SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDirectoryWatchingStopped", "Module directory watching stopped - outside builds are not reloaded until the process restarts" );
             }
         }
 
@@ -398,7 +398,7 @@ namespace sw
                 uint64 sourceMtime = 0;
                 if ( FileUtil::tryGetFileTimestamp( context._originalModulePath, sourceMtime ) == false || sourceMtime <= context._loadedSourceMtime )
                     continue; // 없으면(빌드가 아직 쓰는 중) 바뀐 것으로 보지 않는다
-                SW_LOG_TRACE( "Module build stamp changed — queuing reload for %#", context._moduleName );
+                SW_LOG_TRACE_ID( "LiveReloadManager.ModuleBuildStampChanged", "Module build stamp changed — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
             }
         }
@@ -426,7 +426,7 @@ namespace sw
             const bool bForce         = context._bForceReload.exchange( false );
             if ( bForce || sourceMtime > context._loadedSourceMtime )
             {
-                SW_LOG_TRACE( "FileWatcher settled — queuing reload for %#", context._moduleName );
+                SW_LOG_TRACE_ID( "LiveReloadManager.FileWatcherSettledQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
             }
         }
@@ -578,8 +578,8 @@ namespace sw
     {
         _bReloadGraphBroken = SW_TRUE;
         (void)reason;
-        SW_LOG_ERROR( "Reload graph broken (%#) — restart the process; further live reloads are disabled",
-                      reason );
+        SW_LOG_ERROR_ID( "LiveReloadManager.ReloadGraphBrokenRestart2", "Reload graph broken (%#) — restart the process; further live reloads are disabled",
+                         reason );
     }
 
     bool LiveReloadManager::verifyModuleBindings() const
@@ -604,7 +604,7 @@ namespace sw
                                                            pExpected ) )
                     continue;
 
-                SW_LOG_ERROR( "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pActual, pExpected );
+                SW_LOG_ERROR_ID( "LiveReloadManager.ModuleBoundStaleImage", "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pActual, pExpected );
                 bAllBound = false;
             }
         }
@@ -670,14 +670,14 @@ namespace sw
         {
             if ( FileUtil::exists( context._originalModulePath ) == false )
             {
-                SW_LOG_ERROR( "Original module not found: %#", context._originalModulePath.c_str() );
+                SW_LOG_ERROR_ID( "LiveReloadManager.OriginalModuleNotFound", "Original module not found: %#", context._originalModulePath.c_str() );
                 return false;
             }
         }
 
         outShadow._sourceMtime = 0;
         if ( FileUtil::tryGetFileTimestamp( context._originalModulePath, outShadow._sourceMtime ) == false )
-            SW_LOG_WARNING( "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath );
+            SW_LOG_WARNING_ID( "LiveReloadManager.CannotReadTimeNext", "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
         {
@@ -715,7 +715,7 @@ namespace sw
             if ( outShadow._pHandle == nullptr )
             {
                 context._libraryName._current = context._libraryName._loaded;
-                SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
+                SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadDynamicLibrary", "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
                 ModuleShadowCopy::removeArtifacts( outShadow._tempPath );
                 outShadow = {};
                 return false;
@@ -755,10 +755,10 @@ namespace sw
                 {
                     const utf8* pOutcome = ( context._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
                     if ( bCompleted == false )
-                        SW_LOG_ERROR( "Module %# faulted (code 0x%#) while the host checked it — %#", context._moduleName,
-                                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pOutcome );
+                        SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFaultedCodeX", "Module %# faulted (code 0x%#) while the host checked it — %#", context._moduleName,
+                                         Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pOutcome );
                     else
-                        SW_LOG_ERROR( "Module %# was rejected by the host before it took over — %#", context._moduleName, pOutcome );
+                        SW_LOG_ERROR_ID( "LiveReloadManager.ModuleRejectedHostBefore", "Module %# was rejected by the host before it took over — %#", context._moduleName, pOutcome );
                     abortShadowCopy( context, outShadow );
                     outShadow = {};
                     return false;
@@ -812,12 +812,12 @@ namespace sw
 
         if ( _bReloadGraphBroken == SW_TRUE )
         {
-            SW_LOG_ERROR( "Module %# committed but onAfter marked the graph broken",
-                          context._moduleName );
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleCommittedButOnAfter", "Module %# committed but onAfter marked the graph broken",
+                             context._moduleName );
             return false;
         }
 
-        SW_LOG_INFO( "Module loaded (shadow: %#)", context._tempModulePath.c_str() );
+        SW_LOG_INFO_ID( "LiveReloadManager.ModuleLoadedShadow", "Module loaded (shadow: %#)", context._tempModulePath.c_str() );
         return true;
     }
 
@@ -835,8 +835,8 @@ namespace sw
             faultCode );
         if ( bCompleted == false )
         {
-            SW_LOG_ERROR( "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
-                          context._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFaultedCodeX2", "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
+                             context._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
             markGraphBroken( "a module faulted in onAfterReload" );
             if ( context._onReloadFault.isBound() )
                 context._onReloadFault( faultCode );
@@ -848,7 +848,7 @@ namespace sw
         const auto it = _mapModule.find( string( moduleName ) );
         if ( it == _mapModule.end() || it->second._pLibraryModule == nullptr )
         {
-            SW_LOG_ERROR( "Module %# is not loaded - nothing to start", moduleName );
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleNotLoadedNothing", "Module %# is not loaded - nothing to start", moduleName );
             return false;
         }
         invokeAfterReload( it->second );
@@ -879,7 +879,7 @@ namespace sw
 
         if ( context._pLibraryModule != nullptr )
         {
-            SW_LOG_INFO( "Unloading module %# (handle=%#)", context._moduleName.c_str(), context._pLibraryModule );
+            SW_LOG_INFO_ID( "LiveReloadManager.UnloadingModuleHandle", "Unloading module %# (handle=%#)", context._moduleName.c_str(), context._pLibraryModule );
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( context._moduleName );
@@ -904,7 +904,7 @@ namespace sw
         drainTasksBeforeUnload();
         for ( auto it = _listSharedModule.rbegin(); it != _listSharedModule.rend(); ++it )
         {
-            SW_LOG_INFO( "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
+            SW_LOG_INFO_ID( "LiveReloadManager.UnloadingSharedModuleHandle", "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
             engine::unregisterModuleTypes( it->_name );
             ModuleLibraryUtil::unloadDynamicLibrary( it->_pHandle );
             it->_pHandle = nullptr;
@@ -964,7 +964,7 @@ namespace sw
             entry._pRecord = &found->second;
             if ( prepareShadowCopy( *entry._pRecord, entry._shadow ) == false )
             {
-                SW_LOG_ERROR( "Cascade prepare failed for %# — aborting, previous modules kept", name );
+                SW_LOG_ERROR_ID( "LiveReloadManager.CascadePrepareFailedAborting", "Cascade prepare failed for %# — aborting, previous modules kept", name );
                 return false;
             }
             outListPrepared.push_back( std::move( entry ) );
@@ -988,7 +988,7 @@ namespace sw
             PreparedEntry& entry = inoutListPrepared[moduleIndex];
             if ( _bReloadGraphBroken == SW_TRUE )
             {
-                SW_LOG_ERROR( "Cascade abort before commit of %# — graph already broken", entry._pRecord->_moduleName );
+                SW_LOG_ERROR_ID( "LiveReloadManager.CascadeAbortBeforeCommit", "Cascade abort before commit of %# — graph already broken", entry._pRecord->_moduleName );
                 abortPrepared( inoutListPrepared, moduleIndex );
                 if ( committed > 0 )
                     markGraphBroken( "partial cascade commit" );
@@ -1001,7 +1001,7 @@ namespace sw
                 continue;
             }
 
-            SW_LOG_ERROR( "Cascade commit failed for %# — aborting remaining commits", entry._pRecord->_moduleName );
+            SW_LOG_ERROR_ID( "LiveReloadManager.CascadeCommitFailedAborting", "Cascade commit failed for %# — aborting remaining commits", entry._pRecord->_moduleName );
             abortPrepared( inoutListPrepared, moduleIndex );
             if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )
                 markGraphBroken( "partial cascade commit" );
@@ -1021,7 +1021,7 @@ namespace sw
         if ( listOrder.empty() )
             return;
 
-        SW_LOG_TRACE( "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
+        SW_LOG_TRACE_ID( "LiveReloadManager.CascadeReloadCount", "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
 
         vector<PreparedEntry> listPrepared;
         if ( prepareCascade( listOrder, listPrepared ) == false )
@@ -1036,7 +1036,7 @@ namespace sw
         { return bAccepted == false; }, listOrder ) == false;
         if ( bCommitAccepted == false )
         {
-            SW_LOG_ERROR( "Cascade reload refused before the first commit — keeping the previous modules" );
+            SW_LOG_ERROR_ID( "LiveReloadManager.CascadeReloadRefusedBefore", "Cascade reload refused before the first commit — keeping the previous modules" );
             abortPrepared( listPrepared, 0 );
             return;
         }

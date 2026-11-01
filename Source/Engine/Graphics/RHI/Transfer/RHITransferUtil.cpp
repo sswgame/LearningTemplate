@@ -74,7 +74,7 @@ namespace sw
         assertBlockingAllowed();
         if ( ticket.isValid() == false )
         {
-            SW_LOG_ERROR( "waitForTransfer: the ticket is invalid (the submit was not accepted)." );
+            SW_LOG_ERROR_ID( "RHITransferUtil.WaitForTransferTicketInvalidSubmit", "waitForTransfer: the ticket is invalid (the submit was not accepted)." );
             return false;
         }
         const RHITransferWaitResult result = waitWhilePending( [&factory, ticket]()

@@ -31,7 +31,7 @@ namespace sw
                     const bool           bNegative = value.has_value() && *value < 0;
                     if ( bRead == false || bNegative )
                     {
-                        SW_LOG_ERROR( "%#: <%# %#=\"%#\"> needs an integer of 0 or more", sourceName, node.getName(), arrName[index], node.getAttributeText( arrName[index] ) );
+                        SW_LOG_ERROR_ID( "JRPGCatalog.NeedsIntegerMore", "%#: <%# %#=\"%#\"> needs an integer of 0 or more", sourceName, node.getName(), arrName[index], node.getAttributeText( arrName[index] ) );
                         bValid = false;
                     }
                     else if ( value.has_value() )
@@ -45,7 +45,7 @@ namespace sw
             {
                 if ( arrStat[static_cast<size_t>( JRPGStat::MaxHP )] >= 1 )
                     return true;
-                SW_LOG_ERROR( "%#: <%# id=\"%#\"> needs hp of 1 or more", sourceName, node.getName(), node.getAttributeText( "id" ) );
+                SW_LOG_ERROR_ID( "JRPGCatalog.IdNeedsHpMore", "%#: <%# id=\"%#\"> needs hp of 1 or more", sourceName, node.getName(), node.getAttributeText( "id" ) );
                 return false;
             }
         };
@@ -92,7 +92,7 @@ namespace sw
             for ( const JRPGLearnEntry& learn : def._listLearn )
             {
                 if ( _spellCatalog.find( learn._spellID ) == nullptr )
-                    SW_LOG_ERROR( "%#: class '%#' learns unknown spell '%#'", sourceName, def._id.c_str(), learn._spellID.c_str() );
+                    SW_LOG_ERROR_ID( "JRPGCatalog.ClassLearnsUnknownSpell", "%#: class '%#' learns unknown spell '%#'", sourceName, def._id.c_str(), learn._spellID.c_str() );
             }
         }
         for ( const JRPGManualDef& def : _manualCatalog.getAll() )
@@ -100,7 +100,7 @@ namespace sw
             for ( const JRPGManualStage& stage : def._listStage )
             {
                 if ( _spellCatalog.find( stage._techniqueID ) == nullptr )
-                    SW_LOG_ERROR( "%#: manual '%#' unlocks unknown technique '%#'", sourceName, def._id.c_str(), stage._techniqueID.c_str() );
+                    SW_LOG_ERROR_ID( "JRPGCatalog.ManualUnlocksUnknownTechnique", "%#: manual '%#' unlocks unknown technique '%#'", sourceName, def._id.c_str(), stage._techniqueID.c_str() );
             }
         }
         for ( const JRPGAreaDef& def : _areaCatalog.getAll() )
@@ -110,7 +110,7 @@ namespace sw
                 for ( const hashed_string& enemyID : group._listEnemyID )
                 {
                     if ( _enemyCatalog.find( enemyID ) == nullptr )
-                        SW_LOG_ERROR( "%#: area '%#' names unknown enemy '%#'", sourceName, def._id.c_str(), enemyID.c_str() );
+                        SW_LOG_ERROR_ID( "JRPGCatalog.AreaNamesUnknownEnemy", "%#: area '%#' names unknown enemy '%#'", sourceName, def._id.c_str(), enemyID.c_str() );
                 }
             }
         }
@@ -133,7 +133,7 @@ namespace sw
             return loadEnemy( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Area" ) )
             return loadArea( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "JRPGCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -165,7 +165,7 @@ namespace sw
         XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
         if ( def._listMemberID.size() < 2 )
         {
-            SW_LOG_ERROR( "%#: combo '%#' needs two or more members", sourceName, def._id.c_str() );
+            SW_LOG_ERROR_ID( "JRPGCatalog.ComboNeedsTwoMore", "%#: combo '%#' needs two or more members", sourceName, def._id.c_str() );
             return false;
         }
         (void)_comboCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -210,7 +210,7 @@ namespace sw
             XMLReadUtil::appendNameList( groupNode.getAttributeText( "enemies" ), ",; \t", group._listEnemyID );
             if ( group._listEnemyID.empty() )
             {
-                SW_LOG_ERROR( "%#: area '%#' has a <Group> without enemies", sourceName, def._id.c_str() );
+                SW_LOG_ERROR_ID( "JRPGCatalog.AreaGroupWithoutEnemies", "%#: area '%#' has a <Group> without enemies", sourceName, def._id.c_str() );
                 bValid = false;
                 continue;
             }

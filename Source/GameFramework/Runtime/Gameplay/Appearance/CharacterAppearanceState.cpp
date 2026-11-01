@@ -72,7 +72,7 @@ namespace sw
     {
         if ( usesDatabase( database ) == false )
         {
-            SW_LOG_ERROR( "CharacterAppearanceState::update got a different AppearanceDatabase than initialize - call initialize with it first" );
+            SW_LOG_ERROR_ID( "Appearance.CharacterAppearanceStateUpdateGotDifferent", "CharacterAppearanceState::update got a different AppearanceDatabase than initialize - call initialize with it first" );
             return false;
         }
         const uint32 equipmentRevision = pEquipment != nullptr ? pEquipment->getRevision() : 0;

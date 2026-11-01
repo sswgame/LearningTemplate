@@ -126,7 +126,7 @@ namespace sw::editor
         SceneManager&      sceneManager = editor::getSubsystem<SceneManager>();
         if ( pScene == nullptr || pManager == nullptr )
         {
-            SW_LOG_WARNING( "Light probe bake refused: there is no active scene" );
+            SW_LOG_WARNING_ID( "EditorLightProbeBake.LightProbeBakeRefused", "Light probe bake refused: there is no active scene" );
             return;
         }
         if ( _run.isRunning() )
@@ -243,13 +243,13 @@ namespace sw::editor
             reportFailure( "the baked grid does not fit the volume" );
             return;
         }
-        SW_LOG_INFO( "Baked light probes '%#' (%# probes)", assetPath.c_str(), probeCount );
+        SW_LOG_INFO_ID( "EditorLightProbeBake.BakedLightProbesProbes", "Baked light probes '%#' (%# probes)", assetPath.c_str(), probeCount );
         ++_bakedCount; // 씬 dirty 는 잠금을 푼 뒤 `finish` 가 표시한다(잠긴 동안의 표시는 잠금을 지나친 편집으로 센다)
     }
 
     void EditorLightProbeBakeSession::reportFailure( const string& error )
     {
-        SW_LOG_ERROR( "Light probe bake failed: %#", error.c_str() );
+        SW_LOG_ERROR_ID( "EditorLightProbeBake.LightProbeBakeFailed", "Light probe bake failed: %#", error.c_str() );
         _lastError = error;
     }
 

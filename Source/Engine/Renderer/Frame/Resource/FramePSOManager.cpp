@@ -318,8 +318,8 @@ namespace sw
                 if ( makePassPSODesc( passType, findPassDescByType( passType ), nullptr, job._desc ) )
                     listJob.push_back( std::move( job ) );
                 else
-                    SW_LOG_ERROR( "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", passType,
-                                  ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                    SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", passType,
+                                     ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
                 continue;
             }
             // 컬링 · 정렬은 간접 인자 버퍼 능력(_bGPUCulling)을, 애니메이션 · 모프는 구조버퍼 UAV(_bCompute)만 요구한다.
@@ -366,7 +366,7 @@ namespace sw
             // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고 여기서 이유를 한 번 남긴다.
             if ( pso == 0 )
             {
-                SW_LOG_ERROR( "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", computeJob._passType, computeJob._shaderPath.c_str() );
+                SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", computeJob._passType, computeJob._shaderPath.c_str() );
                 continue;
             }
             _pCache->setEnginePSO( computeJob._passType, pso );
@@ -386,7 +386,7 @@ namespace sw
             // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고(drawFullscreen 은 PSO 없이 그리지 않는다) 여기서 이유를 한 번 남긴다.
             if ( pso == 0 )
             {
-                SW_LOG_ERROR( "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", job._passType, job._desc._vertexShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", job._passType, job._desc._vertexShaderPath.c_str() );
                 continue;
             }
             _pCache->setEnginePSO( job._passType, pso );
@@ -494,7 +494,7 @@ namespace sw
             {
                 // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
                 // 그리게 되고(Vulkan 은 partially-bound 슬롯을 읽으면 정의되지 않는다) 원인을 찾기 어렵다.
-                SW_LOG_ERROR( "The material buffer element stride of PSO %# is 0 - reflection did not provide the g_SwMaterials element layout.", pso );
+                SW_LOG_ERROR_ID( "FramePSOManager.MaterialBufferElementStride", "The material buffer element stride of PSO %# is 0 - reflection did not provide the g_SwMaterials element layout.", pso );
                 continue;
             }
 
@@ -514,7 +514,7 @@ namespace sw
                 RHIStructuredBufferSlot buffer{};
                 if ( buffer.ensureCapacity( _pDevice, stride, 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, bytes.data() ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to create the material fallback buffer (stride %#).", stride );
+                    SW_LOG_ERROR_ID( "FramePSOManager.FailedCreateMaterialFallback", "Failed to create the material fallback buffer (stride %#).", stride );
                     continue;
                 }
                 buffer.upload( _pDevice, bytes.data(), stride );
@@ -599,7 +599,7 @@ namespace sw
             const RHIPipelineStateDesc   desc   = makeCookieAtlasPSODesc( shaderPath, atlasFormat );
             const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
             if ( handle == 0 )
-                SW_LOG_ERROR( "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
+                SW_LOG_ERROR_ID( "FramePSOManager.DLightCookieAtlas", "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
             else
                 registerLayout( handle, desc );
             _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
@@ -644,7 +644,7 @@ namespace sw
         const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         registerLayout( handle, desc );
         if ( handle == 0 )
-            SW_LOG_ERROR( "Extension program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
+            SW_LOG_ERROR_ID( "FramePSOManager.ExtensionProgramCouldNot", "Extension program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
         _pCache->setExtensionProgramPSO( programKey, handle );
         return handle;
     }
@@ -682,7 +682,7 @@ namespace sw
             ( pPassDesc == nullptr && info._targetSourceType != RenderPassType::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
         if ( fillPassRenderTargetFormats( desc, pTargetDesc, pRTVFormatOverride != nullptr ? pRTVFormatOverride : info._pColorFormat, info._colorTargetCount ) == false )
         {
-            SW_LOG_ERROR( "Pass %# has no render target format (no fixed format, and no color output declaration with a known format) - no PSO is created", passType );
+            SW_LOG_ERROR_ID( "FramePSOManager.PassNoRenderTarget", "Pass %# has no render target format (no fixed format, and no color output declaration with a known format) - no PSO is created", passType );
             return false;
         }
 
@@ -750,7 +750,7 @@ namespace sw
         if ( _pCache->findDesc( passPSO, desc ) == false )
         {
             // desc 를 모르는 PSO 다 — 변형을 만들 근거가 없다. 패스 PSO 로 다른 그림을 그리지 않고 이 조합은 그리지 않는다.
-            SW_LOG_ERROR( "Material PSO variant: pass PSO of pass type %# has no recorded desc - these batches are not drawn", static_cast<uint32>( passType ) );
+            SW_LOG_ERROR_ID( "FramePSOManager.MaterialPSOVariantPass", "Material PSO variant: pass PSO of pass type %# has no recorded desc - these batches are not drawn", static_cast<uint32>( passType ) );
             return RenderPSOCache::MaterialPSOEntry::failed();
         }
 
@@ -830,8 +830,8 @@ namespace sw
         if ( handle == 0 )
         {
             // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
-            SW_LOG_ERROR( "Material PSO variant '%#' (view mode %#) failed to build - these batches are not drawn", desc._vertexShaderPath,
-                          getRenderViewModeInfo( viewMode )._pName );
+            SW_LOG_ERROR_ID( "FramePSOManager.MaterialPSOVariantView", "Material PSO variant '%#' (view mode %#) failed to build - these batches are not drawn", desc._vertexShaderPath,
+                             getRenderViewModeInfo( viewMode )._pName );
             return RenderPSOCache::MaterialPSOEntry::failed();
         }
         registerLayout( handle, desc );
@@ -1030,7 +1030,7 @@ namespace sw
         RHIPipelineStateDesc transparentDesc{};
         if ( _pCache->findDesc( transparentPSO, transparentDesc ) == false )
         {
-            SW_LOG_ERROR( "Transparent pass PSO has no recorded desc - particles are not drawn" );
+            SW_LOG_ERROR_ID( "FramePSOManager.TransparentPassPSONo", "Transparent pass PSO has no recorded desc - particles are not drawn" );
             _pCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::failed() );
             return;
         }
@@ -1038,7 +1038,7 @@ namespace sw
         const RHIPipelineStateDesc   desc   = makeParticlePSODesc( transparentDesc, shaderPath );
         const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         if ( handle == 0 )
-            SW_LOG_ERROR( "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
+            SW_LOG_ERROR_ID( "FramePSOManager.FailedCreateParticlePSO", "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
         registerLayout( handle, desc );
         _pCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
     }

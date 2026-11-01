@@ -121,13 +121,13 @@ namespace sw
         _liveOpsClient.initialize( &_client );
         const bool bClaimed = _chatClient.claimMessages( _chatLease ) && _socialClient.claimNotifications( _socialLease ) && _matchmakingClient.claimNotifications( _matchmakingLease );
         if ( bClaimed == false )
-            SW_LOG_ERROR( "Load bot %# could not claim its notification buffers", botIndex );
+            SW_LOG_ERROR_ID( "LoadBot.LoadBotCouldNot", "Load bot %# could not claim its notification buffers", botIndex );
         const bool bRegistered = _client.registerClientService( &_accountClient ) && _client.registerClientService( &_directoryClient ) &&
                                  _client.registerClientService( &_chatClient ) && _client.registerClientService( &_socialClient ) &&
                                  _client.registerClientService( &_leaderboardClient ) && _client.registerClientService( &_matchmakingClient ) &&
                                  _client.registerClientService( &_liveOpsClient );
         if ( bRegistered == false )
-            SW_LOG_ERROR( "Load bot %# could not register its kit clients - two kits claim one method range", botIndex );
+            SW_LOG_ERROR_ID( "LoadBot.LoadBotCouldNot2", "Load bot %# could not register its kit clients - two kits claim one method range", botIndex );
         _listFrame.push_back( Frame{ &pRunner->getScenario()._listStep, 0, 1 } );
     }
 

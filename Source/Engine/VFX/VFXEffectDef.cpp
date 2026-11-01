@@ -31,7 +31,7 @@ namespace sw
             {
                 if ( curve._listKey.empty() )
                 {
-                    SW_LOG_ERROR( "VFX '%#': emitter '%#' needs keys in %#", sourceLabel, emitterName, pCurveName );
+                    SW_LOG_ERROR_ID( "VFXEffectDef.VFXEmitterNeedsKeys", "VFX '%#': emitter '%#' needs keys in %#", sourceLabel, emitterName, pCurveName );
                     return false;
                 }
                 bool bValid = true;
@@ -40,7 +40,7 @@ namespace sw
                     const bool bInRange = kLifeRatioMin <= key._time && key._time <= kLifeRatioMax;
                     if ( bInRange == false )
                     {
-                        SW_LOG_ERROR( "VFX '%#': emitter '%#' %# key time %# is outside the life ratio 0..1", sourceLabel, emitterName, pCurveName, key._time );
+                        SW_LOG_ERROR_ID( "VFXEffectDef.VFXEmitterKeyTime", "VFX '%#': emitter '%#' %# key time %# is outside the life ratio 0..1", sourceLabel, emitterName, pCurveName, key._time );
                         bValid = false;
                     }
                 }
@@ -51,7 +51,7 @@ namespace sw
             [[nodiscard]] static bool expect( bool bCondition, string_view sourceLabel, string_view emitterName, const utf8* pMessage )
             {
                 if ( bCondition == false )
-                    SW_LOG_ERROR( "VFX '%#': emitter '%#' %#", sourceLabel, emitterName, pMessage );
+                    SW_LOG_ERROR_ID( "VFXEffectDef.VFXEmitter", "VFX '%#': emitter '%#' %#", sourceLabel, emitterName, pMessage );
                 return bCondition;
             }
 
@@ -263,9 +263,9 @@ namespace sw
             // 시뮬레이션 대상은 데이터가 정한다 — 한 곳에서만 도는 방출기는 그 까닭(모듈 칸)을 남긴다(둘 다 되면 `VFXComponent` 가 고른다).
             const VFXSimulationTargetSet supported = emitter.computeSupportedTargets();
             if ( supported.has( VFXSimulationTarget::GPU ) == false )
-                SW_LOG_INFO( "VFX '%#': emitter '%#' uses %# - it simulates on the CPU in every build", sourceLabel, emitter._name, emitter.findModuleExcluding( VFXSimulationTarget::GPU ) );
+                SW_LOG_INFO_ID( "VFXEffectDef.VFXEmitterUsesSimulates", "VFX '%#': emitter '%#' uses %# - it simulates on the CPU in every build", sourceLabel, emitter._name, emitter.findModuleExcluding( VFXSimulationTarget::GPU ) );
             if ( supported.has( VFXSimulationTarget::CPU ) == false )
-                SW_LOG_INFO( "VFX '%#': emitter '%#' uses %# - it simulates on the GPU in every build", sourceLabel, emitter._name, emitter.findModuleExcluding( VFXSimulationTarget::CPU ) );
+                SW_LOG_INFO_ID( "VFXEffectDef.VFXEmitterUsesSimulates2", "VFX '%#': emitter '%#' uses %# - it simulates on the GPU in every build", sourceLabel, emitter._name, emitter.findModuleExcluding( VFXSimulationTarget::CPU ) );
             // 풀이 찰 수 있는 데이터는 읽을 때 알린다 — 일정만으로 정해지는 상한(생성률 × 가장 긴 수명 + 버스트 전부)이다. CPU 는 차는 순간에도 경고하고,
             // GPU 는 버린 수를 간접 인자 버퍼에 센다(SW_VFX_ARGS_WORD_DROPPED — 읽어 오는 길은 아직 없다).
             float32 worstAlive = emitter._spawnRate * emitter._lifetimeMax;
@@ -274,8 +274,8 @@ namespace sw
                 worstAlive += static_cast<float32>( burst._count );
             }
             if ( worstAlive > static_cast<float32>( emitter._maxParticles ) )
-                SW_LOG_WARNING( "VFX '%#': emitter '%#' may need %# particles but its pool holds %# - new particles are dropped while it is full", sourceLabel,
-                                emitter._name, worstAlive, emitter._maxParticles );
+                SW_LOG_WARNING_ID( "VFXEffectDef.VFXEmitterMayNeed", "VFX '%#': emitter '%#' may need %# particles but its pool holds %# - new particles are dropped while it is full", sourceLabel,
+                                   emitter._name, worstAlive, emitter._maxParticles );
         }
         return true;
     }
@@ -284,7 +284,7 @@ namespace sw
     {
         if ( _listEmitter.empty() )
         {
-            SW_LOG_ERROR( "VFX '%#': no emitters in <_listEmitter>", sourceLabel );
+            SW_LOG_ERROR_ID( "VFXEffectDef.VFXNoEmittersListEmitter", "VFX '%#': no emitters in <_listEmitter>", sourceLabel );
             return false;
         }
         bool bValid = true;
@@ -295,7 +295,7 @@ namespace sw
             {
                 if ( _listEmitter[otherIndex]._name == _listEmitter[emitterIndex]._name )
                 {
-                    SW_LOG_ERROR( "VFX '%#': emitter name '%#' is used twice", sourceLabel, _listEmitter[emitterIndex]._name );
+                    SW_LOG_ERROR_ID( "VFXEffectDef.VFXEmitterNameUsed", "VFX '%#': emitter name '%#' is used twice", sourceLabel, _listEmitter[emitterIndex]._name );
                     bValid = false;
                 }
             }

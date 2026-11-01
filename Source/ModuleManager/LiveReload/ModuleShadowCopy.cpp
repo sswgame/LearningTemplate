@@ -42,7 +42,7 @@ namespace sw
                     return;
 
                 if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
-                    SW_LOG_WARNING( "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
+                    SW_LOG_WARNING_ID( "LiveReloadManager.FailedCopyDebugSymbols", "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
             }
 
             /**
@@ -64,8 +64,8 @@ namespace sw
                 const string generationName = ModuleLibraryPatch::makeGenerationName( inoutLibraryName._original, ++s_libraryNameGeneration );
                 if ( generationName.empty() )
                 {
-                    SW_LOG_ERROR( "Module %# cannot get a same-length generation name for its shadow copy (the name needs at least five characters before .dll)",
-                                  params._moduleName );
+                    SW_LOG_ERROR_ID( "LiveReloadManager.ModuleCannotGetSame", "Module %# cannot get a same-length generation name for its shadow copy (the name needs at least five characters before .dll)",
+                                     params._moduleName );
                     return false;
                 }
                 inoutLibraryName._current = generationName;
@@ -73,7 +73,7 @@ namespace sw
                 vector<string> listImportName;
                 if ( ModuleLibraryPatch::readImportDLLNames( inoutBytes, ModuleLibraryPatch::ImportTable::Load, listImportName ) == false )
                 {
-                    SW_LOG_ERROR( "Module %# is not a PE32+ image this loader can read - refusing its shadow copy", params._moduleName );
+                    SW_LOG_ERROR_ID( "LiveReloadManager.ModuleNotPE32Image", "Module %# is not a PE32+ image this loader can read - refusing its shadow copy", params._moduleName );
                     return false;
                 }
                 // 이 매니저가 올리지 않은 의존(공용 GameFramework · Engine)은 목록에 없다 — 원래 이름 그대로 이미 올라온 라이브러리에 묶인다.
@@ -96,8 +96,8 @@ namespace sw
                         const bool                    bOtherModule = registeredLibrary._moduleName != params._moduleName && registered._original.empty() == false;
                         if ( bOtherModule && StringUtil::equals( importName, registered._original, true ) )
                         {
-                            SW_LOG_ERROR( "Module %# imports %# but does not list %# as a dependency - its shadow copy would load a second image of it", params._moduleName,
-                                          importName, registeredLibrary._moduleName );
+                            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleImportsButDoes", "Module %# imports %# but does not list %# as a dependency - its shadow copy would load a second image of it", params._moduleName,
+                                             importName, registeredLibrary._moduleName );
                             return false;
                         }
                     }
@@ -154,10 +154,10 @@ namespace sw
             return false;
         vector<string> listDLLName;
         (void)ModuleLibraryPatch::readImportDLLNames( bytes, ModuleLibraryPatch::ImportTable::Delay, listDLLName ); // 로그의 이름만 — 못 읽으면 비어 있다
-        SW_LOG_ERROR( "Module %# (%#) has delay-loaded imports (first: %#, %# DLL(s)) - module images must bind every import when they load, because the "
-                      "lld delay-load thunk corrupts the float arguments of the first call. Rebuild it without /DELAYLOAD; refusing to load it",
-                      moduleName, modulePath, listDLLName.empty() ? "unreadable import table" : listDLLName.front().c_str(),
-                      static_cast<uint32>( listDLLName.size() ) );
+        SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDelayLoadedImports", "Module %# (%#) has delay-loaded imports (first: %#, %# DLL(s)) - module images must bind every import when they load, because the "
+                                                                       "lld delay-load thunk corrupts the float arguments of the first call. Rebuild it without /DELAYLOAD; refusing to load it",
+                         moduleName, modulePath, listDLLName.empty() ? "unreadable import table" : listDLLName.front().c_str(),
+                         static_cast<uint32>( listDLLName.size() ) );
         SW_ASSERT( false && "A module image with delay-loaded imports must not be loaded" );
         return true;
 #else
@@ -178,7 +178,7 @@ namespace sw
         vector<uint8> bytes;
         if ( readModuleFile( params._originalModulePath, bytes ) == false )
         {
-            SW_LOG_ERROR( "Failed to read the module for a shadow copy (locked): %#", params._originalModulePath );
+            SW_LOG_ERROR_ID( "LiveReloadManager.FailedReadModuleShadow", "Failed to read the module for a shadow copy (locked): %#", params._originalModulePath );
             return false;
         }
 
@@ -191,8 +191,8 @@ namespace sw
             // 첫 로드면 지킬 옛 모듈이 없다. 엔진과 모듈 중 한쪽만 다시 빌드된 것이므로 둘을 함께 빌드해야 한다.
             const utf8* pHint = params._bReplacingLoadedLibrary ? "keeping the old module; restart to pick up the engine change"
                                                                 : "rebuild the engine and its modules together";
-            SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
-                          params._moduleName, moduleStamp, engine::getEngineABIStamp(), pHint );
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleBuiltAgainstDifferent", "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
+                             params._moduleName, moduleStamp, engine::getEngineABIStamp(), pHint );
             return false;
         }
         if ( rejectsDelayImports( params._moduleName, params._originalModulePath, bytes ) )
@@ -215,7 +215,7 @@ namespace sw
         if ( bWritten == false )
         {
             inoutLibraryName._current = inoutLibraryName._loaded;
-            SW_LOG_ERROR( "Failed to write the shadow copy: %#", shadowPath.c_str() );
+            SW_LOG_ERROR_ID( "LiveReloadManager.FailedWriteShadowCopy", "Failed to write the shadow copy: %#", shadowPath.c_str() );
             removeArtifacts( shadowPath );
             return false;
         }

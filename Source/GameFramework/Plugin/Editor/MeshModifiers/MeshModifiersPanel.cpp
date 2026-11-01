@@ -178,9 +178,9 @@ namespace sw::editor
                     // 모델링 도구는 레벨의 오브젝트를 고친다(언리얼 Modeling Mode 는 레벨 선택) — 메인 씬의 선택이다.
                     GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                     if ( pObject == nullptr )
-                        SW_LOG_WARNING( "Select an object in the scene first" );
+                        SW_LOG_WARNING_ID( "MeshModifiersPanel.SelectObjectSceneFirst", "Select an object in the scene first" );
                     else if ( MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
-                        SW_LOG_WARNING( "Object %# has no %# component", pObject->getName().c_str(), def._pRequiredComponentHint );
+                        SW_LOG_WARNING_ID( "MeshModifiersPanel.ObjectNoComponent", "Object %# has no %# component", pObject->getName().c_str(), def._pRequiredComponentHint );
                     else
                     {
                         outPicked = string( pObject->getName().c_str() );
@@ -319,7 +319,7 @@ namespace sw::editor
         {
             GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject(); // 메인 씬의 선택(위 `UseSelectionForParam` 과 같다)
             if ( session.setTarget( pObject ) == false )
-                SW_LOG_WARNING( "Mesh modifiers need an object whose mesh component uses a .mesh asset" );
+                SW_LOG_WARNING_ID( "MeshModifiersPanel.MeshModifiersNeedObject", "Mesh modifiers need an object whose mesh component uses a .mesh asset" );
         }
         ImGui::SameLine();
         if ( session.hasTarget() )
@@ -1152,7 +1152,7 @@ namespace sw::editor
         {
             session.recordUndo();
             if ( session.loadSidecar() == false )
-                SW_LOG_WARNING( "No mesh modifier stack next to %#", session.getMeshPath().c_str() );
+                SW_LOG_WARNING_ID( "MeshModifiersPanel.NoMeshModifierStack", "No mesh modifier stack next to %#", session.getMeshPath().c_str() );
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdMeshModifiers", "Bake" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "Bake" ) ) )

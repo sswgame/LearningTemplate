@@ -14,6 +14,6 @@ namespace sw
             return;
         _bRequested = true;
         _exitCode   = exitCode;
-        SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
+        SW_LOG_INFO_ID( "Engine.QuitRequestedExitCode", "Quit requested (exit code %#)", exitCode );
     }
 } // namespace sw

@@ -23,7 +23,7 @@ namespace sw
                 XMLReadUtil::appendNameList( node.getAttributeText( "moves" ), ",; ", outSlot._listMoveID );
                 if ( outSlot._kind != MechWeaponKind::Shot && node.findAttribute( "range" ) == nullptr )
                 {
-                    SW_LOG_ERROR( "%#: <Weapon id=\"%#\"> of kind Melee or Special needs range=\"...\"", sourceName, outSlot._id.c_str() );
+                    SW_LOG_ERROR_ID( "MechCatalog.WeaponIdKindMelee", "%#: <Weapon id=\"%#\"> of kind Melee or Special needs range=\"...\"", sourceName, outSlot._id.c_str() );
                     bValid = false;
                 }
                 return bValid;
@@ -51,7 +51,7 @@ namespace sw
                 std::optional<float32> speed;
                 bool                   bValid = node.readOptionalAttribute( "speed", speed ) && ( speed.has_value() == false || *speed >= 0.0f );
                 if ( bValid == false )
-                    SW_LOG_ERROR( "%#: <Mech speed=\"%#\"> needs a number of 0 or more", sourceName, node.getAttributeText( "speed" ) );
+                    SW_LOG_ERROR_ID( "MechCatalog.MechSpeedNeedsNumber", "%#: <Mech speed=\"%#\"> needs a number of 0 or more", sourceName, node.getAttributeText( "speed" ) );
                 else if ( speed.has_value() )
                     outMode._speed = *speed;
                 return readWeapons( node, sourceName, outMode ) && bValid;
@@ -121,15 +121,15 @@ namespace sw
             else if ( StringUtil::equals( name, string_view( "Class" ) ) )
             {
                 if ( loadClass( node, sourceName ) == false )
-                    SW_LOG_ERROR( "%#: <Class> was not read", sourceName );
+                    SW_LOG_ERROR_ID( "MechCatalog.ClassNotRead", "%#: <Class> was not read", sourceName );
             }
             else if ( StringUtil::equals( name, string_view( "Skill" ) ) )
             {
                 if ( loadSkill( node, sourceName ) == false )
-                    SW_LOG_ERROR( "%#: <Skill> was not read", sourceName );
+                    SW_LOG_ERROR_ID( "MechCatalog.SkillNotRead", "%#: <Skill> was not read", sourceName );
             }
             else
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+                SW_LOG_ERROR_ID( "MechCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         }
         return loadedCount;
     }
@@ -142,7 +142,7 @@ namespace sw
             return false;
         if ( parseRangeClass( string_view( pID ), rangeClass ) == false )
         {
-            SW_LOG_ERROR( "%#: unknown mech class '%#' (Near, Mid, Far)", sourceName, pID );
+            SW_LOG_ERROR_ID( "MechCatalog.UnknownMechClassNear", "%#: unknown mech class '%#' (Near, Mid, Far)", sourceName, pID );
             return false;
         }
         StatBlock& modifier = _arrClassModifier[static_cast<size_t>( rangeClass )];
@@ -161,7 +161,7 @@ namespace sw
         {
             if ( node.findAttribute( "speed" ) != nullptr )
             {
-                SW_LOG_ERROR( "%#: <Mech id=\"%#\" speed> belongs to each <Mode> when the mech has modes", sourceName, def._id.c_str() );
+                SW_LOG_ERROR_ID( "MechCatalog.MechIdSpeedBelongs", "%#: <Mech id=\"%#\" speed> belongs to each <Mode> when the mech has modes", sourceName, def._id.c_str() );
                 bValid = false;
             }
             for ( ; modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
@@ -182,7 +182,7 @@ namespace sw
         }
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "%#: <Mech id=\"%#\"> has errors - not added", sourceName, def._id.c_str() );
+            SW_LOG_ERROR_ID( "MechCatalog.MechIdErrorsNot", "%#: <Mech id=\"%#\"> has errors - not added", sourceName, def._id.c_str() );
             return false;
         }
         (void)_catalogMech.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다

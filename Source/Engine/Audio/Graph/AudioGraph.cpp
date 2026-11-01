@@ -181,7 +181,7 @@ namespace sw
         const bool     bReady = def.validate( sourceName ) && listNodeClip.size() == def._listNode.size() && def.makeProcessingOrder( listOrder );
         if ( bReady == false )
         {
-            SW_LOG_ERROR( "%#: audio graph cannot be built", sourceName );
+            SW_LOG_ERROR_ID( "AudioGraph.AudioGraphCannotBuilt", "%#: audio graph cannot be built", sourceName );
             return nullptr;
         }
 
@@ -239,7 +239,7 @@ namespace sw
             const bool                             bUsableClip = pClip != nullptr && pClip->isStreamed() == false && pClip->isGraph() == false && pClip->_frameCount > 1;
             if ( bUsableClip == false )
             {
-                SW_LOG_ERROR( "%#: granular node '%#' needs an in-memory clip of two frames or more ('%#')", sourceName, desc._name.c_str(), desc._clip.c_str() );
+                SW_LOG_ERROR_ID( "AudioGraph.GranularNodeNeedsMemory", "%#: granular node '%#' needs an in-memory clip of two frames or more ('%#')", sourceName, desc._name.c_str(), desc._clip.c_str() );
                 return nullptr;
             }
             pClip->copyMonoSamples( node._listSourceSample );

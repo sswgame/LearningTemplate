@@ -35,7 +35,7 @@ namespace sw
             return false;
         if ( _pAuthenticator != nullptr && _pAuthenticator != pAuthenticator )
         {
-            SW_LOG_ERROR( "A game connect authenticator is already bound - only one assembly may check game tickets" );
+            SW_LOG_ERROR_ID( "GameConnectSecurity.GameConnectAuthenticatorAlready", "A game connect authenticator is already bound - only one assembly may check game tickets" );
             return false;
         }
         _pAuthenticator = pAuthenticator;
@@ -63,7 +63,7 @@ namespace sw
             // 서비스가 서기 전이다 — 받지 않는다. 처음과 2 의 거듭제곱 번째만 알린다(공격 패킷으로 로그를 채우지 않게).
             const uint64 count = _refusedWhileUnbound.fetch_add( 1, std::memory_order_relaxed ) + 1;
             if ( ( count & ( count - 1 ) ) == 0 )
-                SW_LOG_WARNING( "Game connect refused - no authenticator is bound yet (%# so far)", count );
+                SW_LOG_WARNING_ID( "GameConnectSecurity.GameConnectRefusedNo", "Game connect refused - no authenticator is bound yet (%# so far)", count );
             return false;
         }
         return _pAuthenticator->findSessionSecret( pToken, tokenSize, outSecret, outPrincipalID );

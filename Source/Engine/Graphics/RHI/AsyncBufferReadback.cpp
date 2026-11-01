@@ -50,7 +50,7 @@ namespace sw
             vector<uint8> bytes( _sizeBytes );
             if ( _pDevice->getResourceFactory()->readReadbackBuffer( _arrBuffer[slot], _sizeBytes, bytes.data() ) == false )
             {
-                SW_LOG_WARNING( "Failed to read back slot %# (tag %#); the previous value stays", slot, _arrTag[slot] );
+                SW_LOG_WARNING_ID( "AsyncBufferReadback.FailedReadBackSlot", "Failed to read back slot %# (tag %#); the previous value stays", slot, _arrTag[slot] );
                 return;
             }
             // 콜백 순서는 요청 순서와 같지만, 더 새 내용이 이미 도착해 있으면 덮지 않는다.
@@ -78,7 +78,7 @@ namespace sw
             arrBuffer[slot] = pDevice->getResourceFactory()->createReadbackBuffer( elementSize, elementCount );
             if ( arrBuffer[slot] != 0 )
                 continue;
-            SW_LOG_ERROR( "Failed to create readback buffer %# (%# x %# bytes)", slot, elementSize, elementCount );
+            SW_LOG_ERROR_ID( "AsyncBufferReadback.FailedCreateReadbackBuffer", "Failed to create readback buffer %# (%# x %# bytes)", slot, elementSize, elementCount );
             for ( uint32 made = 0; made < slot; ++made )
             {
                 pDevice->getResourceFactory()->destroyBuffer( arrBuffer[made] );

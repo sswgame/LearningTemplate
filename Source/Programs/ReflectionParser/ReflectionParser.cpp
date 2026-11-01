@@ -47,7 +47,7 @@ namespace sw
             {
                 if ( session._emitTemplateStore.loadDirectory( options._emitTemplatesDir, sw::config::kExtReflectionTemplate ) )
                     return true;
-                SW_LOG_ERROR( "Failed to load %#: %#", cli::kEmitTemplates, options._emitTemplatesDir );
+                SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kEmitTemplates, options._emitTemplatesDir );
                 return false;
             }
 
@@ -60,18 +60,18 @@ namespace sw
                 session._typeNameMap.setStripPrefixes( session._config._listTypeStripPrefix );
                 if ( loadReflectBuiltins( options._builtinsPath, session ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to load %#: %#", cli::kBuiltins, options._builtinsPath );
+                    SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kBuiltins, options._builtinsPath );
                     return false;
                 }
 
                 if ( session._annotationMeta.loadFile( options._annotationMetaPath ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to load %#: %#", cli::kAnnotationMeta, options._annotationMetaPath );
+                    SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kAnnotationMeta, options._annotationMetaPath );
                     return false;
                 }
                 if ( AnnotationFields::validateBindings( session._annotationMeta ) == false )
                 {
-                    SW_LOG_ERROR( "%# and PredefinedAnnotationField.xxx disagree (see above).", options._annotationMetaPath );
+                    SW_LOG_ERROR_ID( "ReflectionParser.PredefinedAnnotationFieldXxxDisagreeSee", "%# and PredefinedAnnotationField.xxx disagree (see above).", options._annotationMetaPath );
                     return false;
                 }
                 return true;
@@ -131,8 +131,8 @@ int32 main( int32 argc, utf8* argv[] )
     timer.updateTimer();
     [[maybe_unused]] const float32 elapsedMs = timer.getDeltaTime() * 1000.0f;
     if ( errorCount == 0 )
-        SW_LOG_INFO( "Done in %# ms. All files processed successfully.", elapsedMs );
+        SW_LOG_INFO_ID( "ReflectionParser.DoneMsAllFiles", "Done in %# ms. All files processed successfully.", elapsedMs );
     else
-        SW_LOG_ERROR( "Done in %# ms with %# error(s).", elapsedMs, errorCount );
+        SW_LOG_ERROR_ID( "ReflectionParser.DoneMsError", "Done in %# ms with %# error(s).", elapsedMs, errorCount );
     return errorCount == 0 ? 0 : 1;
 }

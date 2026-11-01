@@ -99,7 +99,7 @@ namespace sw
         smoothing._snapDistance    = _smoothingSnapDistance;
         if ( _smoother.initialize( smoothing ) == false )
         {
-            SW_LOG_ERROR( "Shooter net pawn: smoothing half life %# s is not usable - the networked movement stays off", _smoothingHalfLife );
+            SW_LOG_ERROR_ID( "ShooterNetPawn.ShooterNetPawnSmoothing", "Shooter net pawn: smoothing half life %# s is not usable - the networked movement stays off", _smoothingHalfLife );
             return;
         }
         if ( link._role == NetLinkRole::Server )
@@ -112,7 +112,7 @@ namespace sw
                 _routerSubscription = link._pRouter->registerHandler( &_server );
             if ( _routerSubscription.isActive() == false )
             {
-                SW_LOG_ERROR( "Shooter net pawn: the replication server did not start (reason above) - the networked movement stays off" );
+                SW_LOG_ERROR_ID( "ShooterNetPawn.ShooterNetPawnReplication", "Shooter net pawn: the replication server did not start (reason above) - the networked movement stays off" );
                 return;
             }
             _role = Role::Server;
@@ -125,7 +125,7 @@ namespace sw
                 _routerSubscription = link._pRouter->registerHandler( &_client );
             if ( _routerSubscription.isActive() == false )
             {
-                SW_LOG_ERROR( "Shooter net pawn: the replication client did not start (reason above) - the networked movement stays off" );
+                SW_LOG_ERROR_ID( "ShooterNetPawn.ShooterNetPawnReplication2", "Shooter net pawn: the replication client did not start (reason above) - the networked movement stays off" );
                 return;
             }
             _role = Role::Client;
@@ -136,7 +136,7 @@ namespace sw
         _reconciledTick = 0;
         _controllerID   = -1;
         pMovement->setNetDriven( true );
-        SW_LOG_INFO( "Shooter net pawn: %# movement at %# Hz", _role == Role::Server ? "server-authoritative" : "predicted", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
+        SW_LOG_INFO_ID( "ShooterNetPawn.ShooterNetPawnMovement", "Shooter net pawn: %# movement at %# Hz", _role == Role::Server ? "server-authoritative" : "predicted", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
     }
 
     void ShooterNetPawnComponent::onEndPlay()
@@ -245,11 +245,11 @@ namespace sw
         }
         writeInput( input, _bytesScratch );
         if ( _client.sendInput( _tick, _bytesScratch ) == false )
-            SW_LOG_WARNING( "Shooter net pawn: input of tick %# was not sent (too large)", _tick );
+            SW_LOG_WARNING_ID( "ShooterNetPawn.ShooterNetPawnInput", "Shooter net pawn: input of tick %# was not sent (too large)", _tick );
         const ShooterMoveState before  = movement.getState();
         ShooterMoveState       current = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, input, _tickInterval );
         if ( _prediction.record( _tick, input, current ) == false )
-            SW_LOG_WARNING( "Shooter net pawn: prediction tick %# does not follow %# - not recorded", _tick, _prediction.getLatestTick() );
+            SW_LOG_WARNING_ID( "ShooterNetPawn.ShooterNetPawnPrediction", "Shooter net pawn: prediction tick %# does not follow %# - not recorded", _tick, _prediction.getLatestTick() );
 
         // 서버가 새 소유자 상태(그 입력 틱까지 처리한 내 몸)를 보냈으면 예측을 맞춘다.
         const NetOwnerState* pOwner = _client.findOwnerState();

@@ -12,7 +12,7 @@ namespace sw
     {
         if ( bytecode.empty() )
         {
-            SW_LOG_WARNING( "Reflect called with empty bytecode." );
+            SW_LOG_WARNING_ID( "ShaderReflection.ReflectCalledEmptyBytecode", "Reflect called with empty bytecode." );
             return {};
         }
 

@@ -59,7 +59,7 @@ namespace sw::editor
             bool bShown = DebugHUD::isSectionShown( *pSection );
             ImGui::PushID( pSection->_pName );
             if ( ImGui::Checkbox( pSection->_pTitle, &bShown ) && pHUD->setSectionShown( pSection->_pName, bShown ) == false )
-                SW_LOG_WARNING( "Debug HUD section '%#' is not registered any more", pSection->_pName );
+                SW_LOG_WARNING_ID( "EditorDebugHUD.DebugHUDSectionNot", "Debug HUD section '%#' is not registered any more", pSection->_pName );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDSection" ) );
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( string{ "debugHUD.section." } + pSection->_pName ).c_str() );
@@ -90,7 +90,7 @@ namespace sw::editor
             pHUD->setOpacity( opacity );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpacity" ) );
         if ( ImGui::Button( "Open in-game settings window" ) && pHUD->openWindow() == false )
-            SW_LOG_WARNING( "The Debug HUD settings window could not be opened - the reason is logged above" );
+            SW_LOG_WARNING_ID( "EditorDebugHUD.DebugHUDSettingsWindow", "The Debug HUD settings window could not be opened - the reason is logged above" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpenWindow" ) );
     }
 

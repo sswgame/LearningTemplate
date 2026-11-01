@@ -37,7 +37,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "PartyItemSpawner: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "PartyItemSpawner.PartyItemSpawnerRefusedSettings", "PartyItemSpawner: refused settings - %#", rangeError.c_str() );
             return false;
         }
         _settings = settings;
@@ -212,7 +212,7 @@ namespace sw
         {
             if ( StringUtil::equals( itemNode.getName(), "Item" ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, itemNode.getName() );
+                SW_LOG_ERROR_ID( "PartyItemSpawner.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, itemNode.getName() );
                 continue;
             }
             // 아이템의 효과 수치는 속성 이름이 곧 스탯 이름이라 스키마가 없다 — id · effect · weight 만 형식이 있다.
@@ -223,7 +223,7 @@ namespace sw
             const bool                  bItem   = pID != nullptr && effect.has_value() && bWeight;
             if ( bItem == false )
             {
-                SW_LOG_ERROR( "%#: <Item> needs id, effect and a weight of 0 or more - skipped", sourceName );
+                SW_LOG_ERROR_ID( "PartyItemSpawner.ItemNeedsIdEffect", "%#: <Item> needs id, effect and a weight of 0 or more - skipped", sourceName );
                 continue;
             }
             PartyItemDef def;
@@ -236,7 +236,7 @@ namespace sw
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_ERROR( "%#: no <Item> entries", sourceName );
+            SW_LOG_ERROR_ID( "PartyItemSpawner.NoItemEntries", "%#: no <Item> entries", sourceName );
         return loadedCount;
     }
 } // namespace sw

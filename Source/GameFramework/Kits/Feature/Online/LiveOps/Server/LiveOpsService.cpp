@@ -65,7 +65,7 @@ namespace sw
                 // 이벤트 정의는 고정 배치형 코덱이 없어 상한을 읽기가 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
                 if ( LiveEventRules::isValid( definition ) == false )
                 {
-                    SW_LOG_ERROR( "LiveOps event record '%#' breaks the event rules", record._key );
+                    SW_LOG_ERROR_ID( "LiveOpsService.LiveOpsEventRecordBreaks", "LiveOps event record '%#' breaks the event rules", record._key );
                     return;
                 }
                 _listEvent.push_back( std::move( definition ) );
@@ -303,7 +303,7 @@ namespace sw
             text = string( std::to_string( integer ).c_str() );
             return text;
         }
-        SW_LOG_WARNING( "LiveOps: remote config key '%#' not found — parameter left as is", value.c_str() );
+        SW_LOG_WARNING_ID( "LiveOpsService.LiveOpsRemoteConfigKey", "LiveOps: remote config key '%#' not found — parameter left as is", value.c_str() );
         text = value;
         return text;
     }

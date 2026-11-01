@@ -74,7 +74,7 @@ namespace sw
         {
             if ( pCatalog->find( layoutID ) != nullptr )
                 continue;
-            SW_LOG_ERROR( "[Skirmish] the map layout places '%#' but the unit catalog has no such unit - the match cannot start", layoutID.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishMatch.MapLayoutPlacesBut", "[Skirmish] the map layout places '%#' but the unit catalog has no such unit - the match cannot start", layoutID.c_str() );
             bLayoutKnown = false;
         }
         if ( bLayoutKnown == false )
@@ -120,7 +120,7 @@ namespace sw
                 _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), *_settings._pCommanderTree );
             }
         }
-        SW_LOG_INFO( "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
+        SW_LOG_INFO_ID( "SkirmishMatch.MatchStart", "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
         return true;
     }
 
@@ -203,7 +203,7 @@ namespace sw
         const RTSUnitDef* pDef = _world.getCatalog()->find( hashed_string( pDefID ) );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "[Skirmish] units.xml has no '%#' - not placed", pDefID );
+            SW_LOG_WARNING_ID( "SkirmishMatch.UnitsXmlNoNot", "[Skirmish] units.xml has no '%#' - not placed", pDefID );
             return RTSUnitID{};
         }
         // 점 대칭 — 건물 · 자원은 왼쪽 아래 칸이 기준이라 자리 폭만큼 더 민다.
@@ -267,7 +267,7 @@ namespace sw
                     _arrAI[player].notify( event );
             }
             if ( event._kind == RTSEvent::Kind::PlayerDefeated )
-                SW_LOG_INFO( "[Skirmish] t=%#s player %# lost every building and is defeated", static_cast<int32>( _world.getTime() ), event._player );
+                SW_LOG_INFO_ID( "SkirmishMatch.TPlayerLostEvery", "[Skirmish] t=%#s player %# lost every building and is defeated", static_cast<int32>( _world.getTime() ), event._player );
         }
         _listEvent.insert( _listEvent.end(), _listFrameEvent.begin(), _listFrameEvent.end() );
 
@@ -279,8 +279,8 @@ namespace sw
                 [[maybe_unused]] const int32 winner       = _world.getWinningTeam();
                 [[maybe_unused]] const bool  bHumanResult = _bHumanPlayer != SW_FALSE;
                 logStatus();
-                SW_LOG_INFO( "[Skirmish] game over at t=%#s - player %# wins%#", static_cast<int32>( _world.getTime() ), winner,
-                             bHumanResult ? ( winner == 0 ? " (victory!)" : " (defeat)" ) : "" );
+                SW_LOG_INFO_ID( "SkirmishMatch.GameOverTPlayer", "[Skirmish] game over at t=%#s - player %# wins%#", static_cast<int32>( _world.getTime() ), winner,
+                                bHumanResult ? ( winner == 0 ? " (victory!)" : " (defeat)" ) : "" );
             }
             return;
         }
@@ -374,8 +374,8 @@ namespace sw
     {
         [[maybe_unused]] const SkirmishPlayerSummary first  = makeSummary( 0 );
         [[maybe_unused]] const SkirmishPlayerSummary second = makeSummary( 1 );
-        SW_LOG_INFO( "[Skirmish] t=%#s p0 workers %# army %# buildings %# minerals %# supply %#/%# | p1 workers %# army %# buildings %# minerals %# supply %#/%#",
-                     static_cast<int32>( _world.getTime() ), first._workers, first._army, first._buildings, first._minerals, first._supplyUsed, first._supplyCap,
-                     second._workers, second._army, second._buildings, second._minerals, second._supplyUsed, second._supplyCap );
+        SW_LOG_INFO_ID( "SkirmishMatch.TP0WorkersArmy", "[Skirmish] t=%#s p0 workers %# army %# buildings %# minerals %# supply %#/%# | p1 workers %# army %# buildings %# minerals %# supply %#/%#",
+                        static_cast<int32>( _world.getTime() ), first._workers, first._army, first._buildings, first._minerals, first._supplyUsed, first._supplyCap,
+                        second._workers, second._army, second._buildings, second._minerals, second._supplyUsed, second._supplyCap );
     }
 } // namespace sw

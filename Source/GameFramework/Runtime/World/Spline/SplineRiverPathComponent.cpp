@@ -78,7 +78,7 @@ namespace sw
             if ( _bReportedMissing == false )
             {
                 _bReportedMissing = true;
-                SW_LOG_ERROR( "A WaterBodyComponent and a SplineComponent are both required on the same object - the river path is not driven" );
+                SW_LOG_ERROR_ID( "SplineRiverPathComponent.WaterBodyComponentSplineComponentBothRequired", "A WaterBodyComponent and a SplineComponent are both required on the same object - the river path is not driven" );
             }
             return false;
         }
@@ -94,7 +94,7 @@ namespace sw
             if ( _bReportedMissing == false )
             {
                 _bReportedMissing = true;
-                SW_LOG_ERROR( "The spline has no usable curve (needs two control points) or the sample spacing is not above 0 - the river path is not driven" );
+                SW_LOG_ERROR_ID( "SplineRiverPathComponent.SplineNoUsableCurve", "The spline has no usable curve (needs two control points) or the sample spacing is not above 0 - the river path is not driven" );
             }
             return false;
         }

@@ -20,7 +20,7 @@ namespace sw
     {
         if ( pWorld == nullptr )
         {
-            SW_LOG_ERROR( "IntentRewindSession: refused to start - there is no world to rewind" );
+            SW_LOG_ERROR_ID( "IntentRewindSession.IntentRewindSessionRefusedStartNo", "IntentRewindSession: refused to start - there is no world to rewind" );
             return false;
         }
         if ( _buffer.initialize( config ) == false )
@@ -44,7 +44,7 @@ namespace sw
         vector<uint8> bytes;
         if ( _pWorld->captureKey( bytes ) == false )
         {
-            SW_LOG_ERROR( "IntentRewindSession: the world could not capture the key at tick %#", tick );
+            SW_LOG_ERROR_ID( "IntentRewindSession.IntentRewindSessionWorldCouldNot", "IntentRewindSession: the world could not capture the key at tick %#", tick );
             return false;
         }
         return _buffer.add( tick, std::move( bytes ) );
@@ -54,7 +54,7 @@ namespace sw
     {
         if ( _pWorld == nullptr )
         {
-            SW_LOG_ERROR( "IntentRewindSession: seek before initialize" );
+            SW_LOG_ERROR_ID( "IntentRewindSession.IntentRewindSessionSeekBeforeInitialize", "IntentRewindSession: seek before initialize" );
             return false;
         }
         if ( targetTick < _pWorld->getTick() )
@@ -62,14 +62,14 @@ namespace sw
             const IntentRewindBuffer::KeySnapshot* pKey = _buffer.findAtOrBefore( targetTick );
             if ( pKey == nullptr )
             {
-                SW_LOG_ERROR( "IntentRewindSession: no key at or before tick %# - it is older than the oldest kept key (memory cap or recording start)", targetTick );
+                SW_LOG_ERROR_ID( "IntentRewindSession.IntentRewindSessionNoKeyBefore", "IntentRewindSession: no key at or before tick %# - it is older than the oldest kept key (memory cap or recording start)", targetTick );
                 return false;
             }
             const uint32        keyTick = pKey->_tick;
             const vector<uint8> bytes   = pKey->_bytes; // 되돌리는 동안 버퍼를 건드리지 않도록 복사한다
             if ( _pWorld->restoreKey( keyTick, bytes ) == false )
             {
-                SW_LOG_ERROR( "IntentRewindSession: the world could not restore the key at tick %#", keyTick );
+                SW_LOG_ERROR_ID( "IntentRewindSession.IntentRewindSessionWorldCouldNot2", "IntentRewindSession: the world could not restore the key at tick %#", keyTick );
                 return false;
             }
             // 되돌린 자리에서 다시 돌면 미래가 갈라진다 — 목표 뒤의 키는 버린다(목표 앞의 키는 같은 궤적이라 남긴다).
@@ -88,7 +88,7 @@ namespace sw
         while ( stepped < maxTickCount && _pWorld->getTick() < _targetTick )
         {
             if ( captureIfDue() == false )
-                SW_LOG_WARNING( "IntentRewindSession: a key was not kept at tick %# while seeking - the seek goes on", _pWorld->getTick() );
+                SW_LOG_WARNING_ID( "IntentRewindSession.IntentRewindSessionKeyNotKept", "IntentRewindSession: a key was not kept at tick %# while seeking - the seek goes on", _pWorld->getTick() );
             _pWorld->stepTick();
             ++stepped;
         }

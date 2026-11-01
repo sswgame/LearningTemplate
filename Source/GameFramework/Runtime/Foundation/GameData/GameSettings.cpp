@@ -80,12 +80,12 @@ namespace sw
                 const string pack( child.getAttributeText( "pack" ) );
                 if ( kind.empty() || pack.empty() )
                 {
-                    SW_LOG_ERROR( "GameSettings %#: <RequiredData> needs both kind and pack (kind='%#' pack='%#')", sourceName, kind.c_str(), pack.c_str() );
+                    SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredDataNeedsBoth", "GameSettings %#: <RequiredData> needs both kind and pack (kind='%#' pack='%#')", sourceName, kind.c_str(), pack.c_str() );
                     bOk = false;
                 }
                 else if ( _mapRequiredDataPack.emplace( kind, pack ).second == false )
                 {
-                    SW_LOG_ERROR( "GameSettings %#: <RequiredData kind=\"%#\"> appears twice", sourceName, kind.c_str() );
+                    SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredDataKindAppears", "GameSettings %#: <RequiredData kind=\"%#\"> appears twice", sourceName, kind.c_str() );
                     bOk = false;
                 }
                 continue;
@@ -99,14 +99,14 @@ namespace sw
             }
             if ( pFound == nullptr )
             {
-                SW_LOG_ERROR( "GameSettings %#: unknown element <%#> - game data goes in the game's own catalogs (there is no free-form key-value section)", sourceName, pName );
+                SW_LOG_ERROR_ID( "GameSettings.GameSettingsUnknownElementGame", "GameSettings %#: unknown element <%#> - game data goes in the game's own catalogs (there is no free-form key-value section)", sourceName, pName );
                 bOk = false;
                 continue;
             }
             const utf8* const pText = child.getText() != nullptr ? child.getText() : "";
             if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ this }, pText, context ) == false )
             {
-                SW_LOG_ERROR( "GameSettings %#: <%#>%#</%#> cannot be read as %#", sourceName, pName, pText, pName, pFound->_typeName.c_str() );
+                SW_LOG_ERROR_ID( "GameSettings.GameSettingsCannotRead", "GameSettings %#: <%#>%#</%#> cannot be read as %#", sourceName, pName, pText, pName, pFound->_typeName.c_str() );
                 bOk = false;
             }
         }
@@ -121,13 +121,13 @@ namespace sw
             const bool      bMissing = pPath != nullptr && pPath->isSet() == false;
             if ( bMissing == false )
                 continue;
-            SW_LOG_ERROR( "GameSettings %#: <%#> is required (a resource id such as game/<pack>/maps/start.scene.xml)", sourceName, makeElementName( prop ) );
+            SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredResourceId", "GameSettings %#: <%#> is required (a resource id such as game/<pack>/maps/start.scene.xml)", sourceName, makeElementName( prop ) );
             bOk = false;
         }
         if ( bOk == false )
             return false;
 
-        SW_LOG_INFO( "Loaded from %# (start=%#)", sourceName, _startMap.c_str() );
+        SW_LOG_INFO_ID( "GameSettings.LoadedStart", "Loaded from %# (start=%#)", sourceName, _startMap.c_str() );
         return true;
     }
 

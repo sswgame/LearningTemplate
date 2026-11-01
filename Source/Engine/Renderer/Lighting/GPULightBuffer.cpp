@@ -309,7 +309,7 @@ namespace sw
             if ( _bWarnedOverflow == SW_FALSE )
             {
                 _bWarnedOverflow = SW_TRUE;
-                SW_LOG_WARNING( "The light count exceeds the limit (%#, excluding %# GPU slots) - truncating from the front.", shaderslot::kMaxFrameLight, _gpuLightCount );
+                SW_LOG_WARNING_ID( "GPULightBuffer.LightCountExceedsLimit", "The light count exceeds the limit (%#, excluding %# GPU slots) - truncating from the front.", shaderslot::kMaxFrameLight, _gpuLightCount );
             }
             cpuCount = cpuLimit;
         }
@@ -348,7 +348,7 @@ namespace sw
         if ( bUAVDeniedNow && _bUAVDenied == SW_FALSE )
         {
             _bUAVDenied = SW_TRUE;
-            SW_LOG_ERROR( "Light buffer has no UAV - GPU particle lights stay dead" );
+            SW_LOG_ERROR_ID( "GPULightBuffer.LightBufferNoUAV", "Light buffer has no UAV - GPU particle lights stay dead" );
         }
         _buffer.upload( pDevice, pUpload, totalCount * stride );
         return true;
@@ -375,12 +375,12 @@ namespace sw
             if ( bNewlyDenied && _bProbeUAVDenied == SW_FALSE )
             {
                 _bProbeUAVDenied = SW_TRUE;
-                SW_LOG_ERROR( "Light probe buffer has no UAV - realtime probe volumes stay black" );
+                SW_LOG_ERROR_ID( "GPULightBuffer.LightProbeBufferNo", "Light probe buffer has no UAV - realtime probe volumes stay black" );
             }
         }
         else
         {
-            SW_LOG_ERROR( "Light probe buffer (%# elements) could not be allocated - probe volumes give no indirect light this frame", probeElementCount );
+            SW_LOG_ERROR_ID( "GPULightBuffer.LightProbeBufferElements", "Light probe buffer (%# elements) could not be allocated - probe volumes give no indirect light this frame", probeElementCount );
         }
     }
 
@@ -471,7 +471,7 @@ namespace sw
         if ( _bWarnedGrid == SW_TRUE )
             return;
         _bWarnedGrid = SW_TRUE;
-        SW_LOG_ERROR( "Light grid for view %# %# - that view walks every light", viewIndex, pReason );
+        SW_LOG_ERROR_ID( "GPULightBuffer.LightGridViewView", "Light grid for view %# %# - that view walks every light", viewIndex, pReason );
     }
 
     void GPULightBuffer::reportGPULightRefused( uint32 requestedSlotCount )
@@ -480,7 +480,7 @@ namespace sw
             return;
         _bWarnedGPULightRefused = SW_TRUE;
         // 대신 생산자를 GPU 로 바꾸지 않는다 — 생산자는 데이터와 빌드(gv_lightCulling)가 정했다. 요청한 방출기의 빛만 그리지 않는다.
-        SW_LOG_ERROR( "GPU particle lights (%# slots) need the GPU light grid producer (gv_lightCulling=GPU) - the lights are not drawn", requestedSlotCount );
+        SW_LOG_ERROR_ID( "GPULightBuffer.GPUParticleLightsSlots", "GPU particle lights (%# slots) need the GPU light grid producer (gv_lightCulling=GPU) - the lights are not drawn", requestedSlotCount );
     }
 
     const RHIStructuredBufferSlot* GPULightBuffer::findProbeBuffer() const

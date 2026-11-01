@@ -101,7 +101,7 @@ namespace sw
         {
             GameObject* pRenamed = createGameObjectUnlocked( name, allocateID() );
             lock.unlock(); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
-            SW_LOG_WARNING( "createGameObjectWithID: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.", objectID, name.c_str() );
+            SW_LOG_WARNING_ID( "GameObjectStore.CreateGameObjectWithIDIdStillRegistered", "createGameObjectWithID: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.", objectID, name.c_str() );
             return pRenamed;
         }
 
@@ -637,7 +637,7 @@ namespace sw
         processDeferredDestruction();
 
         if ( count > 0 )
-            SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName );
+            SW_LOG_INFO_ID( "GameObjectStore.DestroyedLiveComponentModule", "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName );
         return count;
     }
 
@@ -713,13 +713,13 @@ namespace sw
             const hashed_string fallback( sb.c_str(), sb.size() );
             if ( isNameTakenUnlocked( fallback ) == false )
             {
-                SW_LOG_ERROR( "Exhausted numeric suffixes for '%#' — using '%#'",
-                              requested.c_str(), fallback.c_str() );
+                SW_LOG_ERROR_ID( "GameObjectStore.ExhaustedNumericSuffixesUsing", "Exhausted numeric suffixes for '%#' — using '%#'",
+                                 requested.c_str(), fallback.c_str() );
                 return fallback;
             }
         }
 
-        SW_LOG_ERROR( "Failed to uniquify '%#' — creating unnamed object", requested.c_str() );
+        SW_LOG_ERROR_ID( "GameObjectStore.FailedUniquifyCreatingUnnamed", "Failed to uniquify '%#' — creating unnamed object", requested.c_str() );
         sb.clear();
         sb.append( "GameObject_anon_" ).append( s_fallback.fetch_add( 1 ) );
         return hashed_string( sb.c_str(), sb.size() );

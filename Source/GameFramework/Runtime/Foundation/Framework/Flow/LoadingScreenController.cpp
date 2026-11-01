@@ -56,7 +56,7 @@ namespace sw
                 const utf8* pText = node.findAttribute( "text" );
                 if ( pText == nullptr || pText[0] == '\0' )
                 {
-                    SW_LOG_ERROR( "%#: <Tip> needs a non-empty text", sourceName );
+                    SW_LOG_ERROR_ID( "LoadingScreen.TipNeedsNonEmpty", "%#: <Tip> needs a non-empty text", sourceName );
                     bValid = false;
                     continue;
                 }
@@ -132,11 +132,11 @@ namespace sw
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen == nullptr )
         {
-            SW_LOG_WARNING( "The loading screen '%#' could not be opened - loading continues without it", _settings._documentPath.c_str() );
+            SW_LOG_WARNING_ID( "LoadingScreen.LoadingScreenCouldNot", "The loading screen '%#' could not be opened - loading continues without it", _settings._documentPath.c_str() );
             return false;
         }
         if ( pScreen->getDesc()._layer != UILayer::Loading )
-            SW_LOG_WARNING( "The loading screen '%#' is not on the Loading layer - it does not cover the other screens", _settings._documentPath.c_str() );
+            SW_LOG_WARNING_ID( "LoadingScreen.LoadingScreenNotLoading", "The loading screen '%#' is not on the Loading layer - it does not cover the other screens", _settings._documentPath.c_str() );
         _spinnerAngle = 0.0f;
         applyTip( *pScreen );
         return true;

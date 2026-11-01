@@ -263,7 +263,7 @@ namespace sw
                 _benchSummary = AutomationRunTitleUtil::makeBenchSummary( std::move( listPair ) );
             }
             if ( _benchSummary.empty() == false )
-                SW_LOG_INFO( "[Bench] backend %# args %#", string{ backendName }.c_str(), _benchSummary.c_str() );
+                SW_LOG_INFO_ID( "Automation.BackendArgs", "[Bench] backend %# args %#", string{ backendName }.c_str(), _benchSummary.c_str() );
             if ( pTitleTarget != nullptr )
                 _initialTitle = pTitleTarget->getCurrentTitle();
         }

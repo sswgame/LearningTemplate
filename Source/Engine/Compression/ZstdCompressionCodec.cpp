@@ -68,15 +68,15 @@ namespace sw
         ZSTD_CCtx*  pContext = ZSTD_createCCtx_advanced( ZstdCompressionCodecInternal::kSwMemory );
         if ( pContext == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create the zstd compression context (src %# bytes)", static_cast<uint64>( srcSize ) );
+            SW_LOG_ERROR_ID( "ZstdCodec.FailedCreateZstdCompression", "Failed to create the zstd compression context (src %# bytes)", static_cast<uint64>( srcSize ) );
             return false;
         }
         const size_t result = ZSTD_compressCCtx( pContext, pDst, dstCapacity, pSrc, srcSize, level );
         ZSTD_freeCCtx( pContext );
         if ( ZSTD_isError( result ) != 0 )
         {
-            SW_LOG_ERROR( "zstd compression failed: %# (src %# bytes, level %#)", ZSTD_getErrorName( result ),
-                          static_cast<uint64>( srcSize ), level );
+            SW_LOG_ERROR_ID( "ZstdCodec.ZstdCompressionFailedSrc", "zstd compression failed: %# (src %# bytes, level %#)", ZSTD_getErrorName( result ),
+                             static_cast<uint64>( srcSize ), level );
             return false;
         }
 
@@ -100,15 +100,15 @@ namespace sw
         ZSTD_DCtx* pContext = ZSTD_createDCtx_advanced( ZstdCompressionCodecInternal::kSwMemory );
         if ( pContext == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create the zstd decompression context (src %# bytes)", static_cast<uint64>( srcSize ) );
+            SW_LOG_ERROR_ID( "ZstdCodec.FailedCreateZstdDecompression", "Failed to create the zstd decompression context (src %# bytes)", static_cast<uint64>( srcSize ) );
             return false;
         }
         const size_t result = ZSTD_decompressDCtx( pContext, pDst, dstCapacity, pSrc, srcSize );
         ZSTD_freeDCtx( pContext );
         if ( ZSTD_isError( result ) != 0 )
         {
-            SW_LOG_ERROR( "zstd decompression failed: %# (src %# -> dst %# bytes)", ZSTD_getErrorName( result ),
-                          static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
+            SW_LOG_ERROR_ID( "ZstdCodec.ZstdDecompressionFailedSrc", "zstd decompression failed: %# (src %# -> dst %# bytes)", ZSTD_getErrorName( result ),
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
             return false;
         }
 

@@ -72,7 +72,7 @@ namespace sw
             const string reason = RenderScaleAdjuster::validate( config );
             if ( reason.empty() == false )
             {
-                SW_LOG_ERROR( "gv_autoRenderScale is on but its settings are invalid: %#", reason );
+                SW_LOG_ERROR_ID( "RenderPacketBuilder.GvAutoRenderScaleButSettings", "gv_autoRenderScale is on but its settings are invalid: %#", reason );
                 gv_autoRenderScale = false;
                 return 1.0f;
             }
@@ -83,7 +83,7 @@ namespace sw
         const float32 before = _renderScaleAdjuster->getScale();
         const float32 scale  = _renderScaleAdjuster->update( deltaTime * 1000.0f );
         if ( scale != before )
-            SW_LOG_INFO( "Auto render scale %# -> %#", before, scale );
+            SW_LOG_INFO_ID( "RenderPacketBuilder.AutoRenderScale", "Auto render scale %# -> %#", before, scale );
         return scale;
     }
 
@@ -116,7 +116,7 @@ namespace sw
         else if ( _bMissingCameraReported == false )
         {
             // 주 시점이 없는 패킷은 렌더러가 그리지 않는다(기본 카메라로 대신 그리지 않는다). 씬 데이터의 결함이므로 한 번 알린다.
-            SW_LOG_ERROR( "Active scene '%#' has no usable camera - the main view is not drawn", activeScene.getName() );
+            SW_LOG_ERROR_ID( "RenderPacketBuilder.ActiveSceneNoUsable", "Active scene '%#' has no usable camera - the main view is not drawn", activeScene.getName() );
             _bMissingCameraReported = true;
         }
         // 보기 모드는 뷰마다다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 씬 뷰 툴바의 모드, 게임 화면은 주 출력 모드(-gv_viewMode, 기본 Lit).

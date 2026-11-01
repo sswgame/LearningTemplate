@@ -199,7 +199,7 @@ namespace sw::editor
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_ERROR( "Reference pose file could not be read: %#", string( absolutePath ).c_str() );
+            SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould", "Reference pose file could not be read: %#", string( absolutePath ).c_str() );
             return false;
         }
         return loadFromXMLText( text, absolutePath );
@@ -217,7 +217,7 @@ namespace sw::editor
         const string text = _override.saveToXMLText();
         if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
         {
-            SW_LOG_ERROR( "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
+            SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
             return false;
         }
         _savedText = text;

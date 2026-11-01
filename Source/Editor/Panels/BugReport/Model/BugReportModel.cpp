@@ -92,8 +92,8 @@ namespace sw::editor
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         string        reply;
         if ( pSceneManager == nullptr || BugReport::goTo( *pSceneManager, row._directory, reply ) == false )
-            SW_LOG_WARNING( "BugReport go to failed: %#", reply.c_str() );
+            SW_LOG_WARNING_ID( "BugReportPanel.BugReportGoFailed", "BugReport go to failed: %#", reply.c_str() );
         else
-            SW_LOG_INFO( "%#", reply.c_str() );
+            SW_LOG_INFO_ID( "BugReportPanel.Message", "%#", reply.c_str() );
     }
 } // namespace sw::editor

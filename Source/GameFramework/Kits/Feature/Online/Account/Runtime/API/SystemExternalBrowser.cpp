@@ -45,13 +45,13 @@ namespace sw
     {
         if ( isOpenableURL( url ) == false )
         {
-            SW_LOG_ERROR( "Refused to open a URL that is not plain http(s): %#", string( url ).c_str() );
+            SW_LOG_ERROR_ID( "SystemExternalBrowser.RefusedOpenURLNot", "Refused to open a URL that is not plain http(s): %#", string( url ).c_str() );
             return false;
         }
         // http(s) 만 넘긴다(위) — `launchURL` 은 무엇이든 그 형식의 기본 처리기에 넘긴다.
         if ( Process::launchURL( url ) == false )
         {
-            SW_LOG_ERROR( "Failed to launch the system browser" );
+            SW_LOG_ERROR_ID( "SystemExternalBrowser.FailedLaunchSystemBrowser", "Failed to launch the system browser" );
             return false;
         }
         return true;

@@ -429,7 +429,7 @@ namespace sw::editor
             if ( EditorToolAssetCommands::hasToolDocument( path.c_str() ) )
                 reloadDocument();
             else
-                SW_LOG_WARNING( "No tile map at '%#'", path.c_str() );
+                SW_LOG_WARNING_ID( "TileMapPanel.NoTileMap", "No tile map at '%#'", path.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LoadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );

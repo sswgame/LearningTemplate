@@ -137,12 +137,12 @@ namespace sw::editor
                 if ( bLaunched && exitCode == 0 )
                 {
                     setProvider( make_unique<GitLfsSourceControlProvider>() );
-                    SW_LOG_INFO( "Source control: %# (%#)", _pProvider->getName().data(), lastLine.c_str() );
+                    SW_LOG_INFO_ID( "SourceControl.SourceControl", "Source control: %# (%#)", _pProvider->getName().data(), lastLine.c_str() );
                     requestRefresh();
                 }
                 else
                 {
-                    SW_LOG_INFO( "Source control: git lfs is not available - locking is off, read-only files are still shown" );
+                    SW_LOG_INFO_ID( "SourceControl.SourceControlGitLfs", "Source control: git lfs is not available - locking is off, read-only files are still shown" );
                 }
                 return;
             }
@@ -152,7 +152,7 @@ namespace sw::editor
                 if ( exitCode == 0 && _pProvider->parseRefreshOutput( listLine, listLock ) )
                     _listLock = std::move( listLock );
                 else
-                    SW_LOG_WARNING( "Source control: listing locks failed (exit %#): %#", exitCode, lastLine.c_str() );
+                    SW_LOG_WARNING_ID( "SourceControl.SourceControlListingLocks", "Source control: listing locks failed (exit %#): %#", exitCode, lastLine.c_str() );
                 return;
             }
             case SourceControlOperation::Lock:
@@ -160,9 +160,9 @@ namespace sw::editor
             {
                 const utf8* pVerb = operation._operation == SourceControlOperation::Lock ? "lock" : "unlock";
                 if ( exitCode == 0 )
-                    SW_LOG_INFO( "Source control: %# %# - %#", pVerb, operation._repositoryPath.c_str(), lastLine.c_str() );
+                    SW_LOG_INFO_ID( "SourceControl.SourceControl2", "Source control: %# %# - %#", pVerb, operation._repositoryPath.c_str(), lastLine.c_str() );
                 else
-                    SW_LOG_WARNING( "Source control: %# %# failed (exit %#): %#", pVerb, operation._repositoryPath.c_str(), exitCode, lastLine.c_str() );
+                    SW_LOG_WARNING_ID( "SourceControl.SourceControlFailedExit", "Source control: %# %# failed (exit %#): %#", pVerb, operation._repositoryPath.c_str(), exitCode, lastLine.c_str() );
                 requestRefresh();
                 return;
             }

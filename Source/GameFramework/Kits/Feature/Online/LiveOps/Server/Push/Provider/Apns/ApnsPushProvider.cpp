@@ -140,7 +140,7 @@ namespace sw
                              JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
         if ( bSigned == false )
         {
-            SW_LOG_ERROR( "Could not sign the APNs provider token with the key '%#' - check the authentication key", _settings._keyID.c_str() );
+            SW_LOG_ERROR_ID( "ApnsPushProvider.CouldNotSignAPNs", "Could not sign the APNs provider token with the key '%#' - check the authentication key", _settings._keyID.c_str() );
             return false;
         }
         _providerToken = std::move( token );
@@ -191,7 +191,7 @@ namespace sw
         {
             // 제공자 토큰이 거절됐다(만료 · 서명 불일치) — 버려서 다음 배달이 새로 서명하게 한다.
             _providerToken.clear();
-            SW_LOG_WARNING( "APNs rejected the provider token (status %#) - it will be signed again", response._statusCode );
+            SW_LOG_WARNING_ID( "ApnsPushProvider.APNsRejectedProviderToken", "APNs rejected the provider token (status %#) - it will be signed again", response._statusCode );
         }
         complete( deliveryID, status, retryAfterMs );
     }

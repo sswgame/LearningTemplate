@@ -149,7 +149,7 @@ namespace sw
         const AbilityCatalog* pCatalog = game::findSubsystem<AbilityCatalog>();
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
-            SW_LOG_ERROR( "[Arena] the ability catalog is not loaded - the arena cannot start" );
+            SW_LOG_ERROR_ID( "ArenaDirector.AbilityCatalogNotLoaded", "[Arena] the ability catalog is not loaded - the arena cannot start" );
             return false;
         }
         bool bSetsKnown = true;
@@ -157,7 +157,7 @@ namespace sw
         {
             if ( pCatalog->findAbilitySet( *pSetID ) != nullptr )
                 continue;
-            SW_LOG_ERROR( "[Arena] the director's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
+            SW_LOG_ERROR_ID( "ArenaDirector.DirectorAbilitySetNot", "[Arena] the director's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
             bSetsKnown = false;
         }
         if ( bSetsKnown == false )
@@ -182,7 +182,7 @@ namespace sw
 
     void ArenaDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
+        SW_LOG_INFO_ID( "ArenaDirector.ArenaReadyWASDMove", "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
     }
 
     void ArenaDirectorComponent::writeState( Archive& outArchive ) const
@@ -211,9 +211,9 @@ namespace sw
     {
         // 어느 쪽이든 정리된다. 다음 틱이 플레이어와 현재 웨이브를 다시 스폰한다.
         if ( bRestored )
-            SW_LOG_INFO( "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
+            SW_LOG_INFO_ID( "ArenaDirector.ArenaStateRestoredWave", "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
         else
-            SW_LOG_WARNING( "[Arena] the saved arena state does not match this build - starting from wave 1" );
+            SW_LOG_WARNING_ID( "ArenaDirector.SavedArenaStateDoes", "[Arena] the saved arena state does not match this build - starting from wave 1" );
     }
 
     void ArenaDirectorComponent::updateGame( float32 deltaTime )
@@ -400,7 +400,7 @@ namespace sw
             const ArenaUnitKind kind = spawnIndex < gruntCount ? ArenaUnitKind::Grunt : ArenaUnitKind::Caster;
             requestUnit( kind, position, level );
         }
-        SW_LOG_INFO( "[Arena] wave %# - %# grunts, %# casters (level %#)", _wave, gruntCount, casterCount, level );
+        SW_LOG_INFO_ID( "ArenaDirector.WaveGruntsCastersLevel", "[Arena] wave %# - %# grunts, %# casters (level %#)", _wave, gruntCount, casterCount, level );
     }
 
     void ArenaDirectorComponent::requestUnit( ArenaUnitKind kind, const float3& position, int32 level )
@@ -436,7 +436,7 @@ namespace sw
         const bool          bMissingPrefabParts = pMesh == nullptr || pAbilitySystem == nullptr || pUnitComponent == nullptr || pPawn == nullptr;
         if ( bMissingPrefabParts )
         {
-            SW_LOG_WARNING( "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
+            SW_LOG_WARNING_ID( "ArenaDirector.PrefabNeedsMeshAbility", "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
             return false;
@@ -446,7 +446,7 @@ namespace sw
         const hashed_string& setID = findAbilitySetID( request._kind );
         if ( pAbilitySystem->grantAbilitySet( setID ) == false )
         {
-            SW_LOG_WARNING( "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );
+            SW_LOG_WARNING_ID( "ArenaDirector.AbilitySetMissingAbilities", "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );
             manager.destroyObject( pObject );
             return false;
         }
@@ -458,7 +458,7 @@ namespace sw
             const std::optional<float32> attackPower = pAbilitySystem->getAttributeBaseValue( CombatAttributes::attackPower() );
             if ( maxHealth.has_value() == false || attackPower.has_value() == false )
             {
-                SW_LOG_ERROR( "[Arena] ability set '%#' gives no MaxHealth / AttackPower - the unit is not spawned", setID.c_str() );
+                SW_LOG_ERROR_ID( "ArenaDirector.AbilitySetGivesNo", "[Arena] ability set '%#' gives no MaxHealth / AttackPower - the unit is not spawned", setID.c_str() );
                 manager.destroyObject( pObject );
                 return false;
             }
@@ -488,7 +488,7 @@ namespace sw
         AIControllerComponent* pAI        = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
         if ( pAI == nullptr )
         {
-            SW_LOG_WARNING( "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
+            SW_LOG_WARNING_ID( "ArenaDirector.AIPrefabNoAI", "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
             return GameObjectHandle{};
@@ -515,7 +515,7 @@ namespace sw
             }
             if ( pAI == nullptr )
             {
-                SW_LOG_WARNING( "[Arena] auto battle prefab '%#' has no AI controller - auto play cannot take the player", _autoBattleAIPrefab.c_str() );
+                SW_LOG_WARNING_ID( "ArenaDirector.AutoBattlePrefabNo", "[Arena] auto battle prefab '%#' has no AI controller - auto play cannot take the player", _autoBattleAIPrefab.c_str() );
                 return;
             }
             if ( isPlayerDrivenByAI() == false )
@@ -581,7 +581,7 @@ namespace sw
                 unit._deathTimer = _deathLinger;
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
-                    SW_LOG_INFO( "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
+                    SW_LOG_INFO_ID( "ArenaDirector.PlayerFellWaveAfter", "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
                     getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventPlayerFell );
                 }
                 else
@@ -692,8 +692,8 @@ namespace sw
                 continue; // 전투 세트가 없는 플레이어는 상태 줄이 없다
             [[maybe_unused]] const int32 health = static_cast<int32>( *healthValue );
             [[maybe_unused]] const int32 mana   = static_cast<int32>( *manaValue );
-            SW_LOG_INFO( "[Arena] wave %# · kills %# · player HP %# · MP %# · units %# · projectiles %#", _wave, _killCount, health, mana,
-                         static_cast<uint32>( _listUnit.size() ), static_cast<uint32>( _listProjectile.size() ) );
+            SW_LOG_INFO_ID( "ArenaDirector.WaveKillsPlayerHP", "[Arena] wave %# · kills %# · player HP %# · MP %# · units %# · projectiles %#", _wave, _killCount, health, mana,
+                            static_cast<uint32>( _listUnit.size() ), static_cast<uint32>( _listProjectile.size() ) );
         }
     }
 

@@ -113,7 +113,7 @@ namespace sw
             const std::optional<AbsolutePath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
             if ( folder.has_value() == false || FileUtil::isDirectory( folder->str() ) == false )
             {
-                SW_LOG_ERROR( "Shader include root '%#/%#' has no folder on disk - the engine headers cannot be found", domain, constant::path::kShaderFolder );
+                SW_LOG_ERROR_ID( "ShaderSource.ShaderIncludeRootNo", "Shader include root '%#/%#' has no folder on disk - the engine headers cannot be found", domain, constant::path::kShaderFolder );
                 return std::nullopt;
             }
             listRootDomain.push_back( ShaderIncludeRootDomain{ std::move( domain ), *folder } );

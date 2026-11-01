@@ -24,7 +24,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "RoundSeries: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "RoundSeries.RoundSeriesRefusedSettings", "RoundSeries: refused settings - %#", rangeError.c_str() );
             return false;
         }
         _settings = settings;

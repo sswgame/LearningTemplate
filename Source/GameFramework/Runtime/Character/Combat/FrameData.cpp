@@ -105,7 +105,7 @@ namespace sw
             const utf8* pHeight         = node.findAttribute( "height" );
             if ( pHeight != nullptr && parseAttackHeight( pHeight, move._height ) == false )
             {
-                SW_LOG_ERROR( "%#: move '%#' has an unknown height '%#' (High, Mid, Low, Throw)", sourceName, pID, pHeight );
+                SW_LOG_ERROR_ID( "FrameData.MoveUnknownHeightHigh", "%#: move '%#' has an unknown height '%#' (High, Mid, Low, Throw)", sourceName, pID, pHeight );
                 bValid = false;
             }
             const int32 lastFrame = move.getTotalFrames();
@@ -124,12 +124,12 @@ namespace sw
                 bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "h", sourceName, 0.0f, kAnyFloat, hitbox._height ) && bHitboxValid;
                 if ( FrameDataInternal::readShape( child, hitbox._shape ) == false )
                 {
-                    SW_LOG_ERROR( "%#: move '%#' has a hitbox with an unknown shape '%#' (Box, Capsule)", sourceName, pID, child.getAttributeText( "shape" ) );
+                    SW_LOG_ERROR_ID( "FrameData.MoveHitboxUnknownShape", "%#: move '%#' has a hitbox with an unknown shape '%#' (Box, Capsule)", sourceName, pID, child.getAttributeText( "shape" ) );
                     bHitboxValid = false;
                 }
                 if ( bHitboxValid && ( hitbox._toFrame < hitbox._fromFrame || hitbox._fromFrame > lastFrame ) )
                 {
-                    SW_LOG_ERROR( "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
+                    SW_LOG_ERROR_ID( "FrameData.MoveHitboxOutsideFrames", "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
                     bHitboxValid = false;
                 }
                 if ( bHitboxValid )
@@ -150,7 +150,7 @@ namespace sw
                 { window._listMoveID.push_back( hashed_string( token ) ); } );
                 if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
                 {
-                    SW_LOG_ERROR( "%#: move '%#' has an empty cancel window", sourceName, pID );
+                    SW_LOG_ERROR_ID( "FrameData.MoveEmptyCancelWindow", "%#: move '%#' has an empty cancel window", sourceName, pID );
                     bWindowValid = false;
                 }
                 if ( bWindowValid )
@@ -160,14 +160,14 @@ namespace sw
 
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: move '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "FrameData.MoveInvalidFieldsSkipped", "%#: move '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             (void)add( move );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Move> entries", sourceName );
+            SW_LOG_WARNING_ID( "FrameData.NoMoveEntries", "%#: no <Move> entries", sourceName );
         return loadedCount;
     }
 
@@ -189,8 +189,8 @@ namespace sw
         const bool bInvalid = move._startup < 1 || move._active < 1 || move._recovery < 0;
         if ( bInvalid )
         {
-            SW_LOG_ERROR( "MoveTimeline: refused move '%#' with startup %# active %# recovery %# - startup and active must be at least 1 and recovery must not be negative", move._id.c_str(),
-                          move._startup, move._active, move._recovery );
+            SW_LOG_ERROR_ID( "FrameData.MoveTimelineRefusedMoveStartup", "MoveTimeline: refused move '%#' with startup %# active %# recovery %# - startup and active must be at least 1 and recovery must not be negative", move._id.c_str(),
+                             move._startup, move._active, move._recovery );
             return false;
         }
         _move             = move;

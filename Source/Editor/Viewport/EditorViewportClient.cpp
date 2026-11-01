@@ -179,7 +179,7 @@ namespace sw::editor
         {
             _bMaximized = SW_FALSE;
             if ( context.getSubsystem<IEditorPanelService>().restoreMaximizedLayout() == false )
-                SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
+                SW_LOG_WARNING_ID( "EditorViewportClient.LayoutBeforeMaximizingGone", "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
         if ( context.getSubsystem<IEditorPanelService>().maximizePanel( editorpanel::kSceneView ) )

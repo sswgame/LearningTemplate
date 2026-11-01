@@ -105,15 +105,15 @@ namespace sw
             const size_t bound = _pCodec->compressBound( entry._bytes.size() );
             if ( bound == 0 )
             {
-                SW_LOG_ERROR( "%# cannot compress '%#' (%# bytes is beyond the codec limit)", _pCodec->getCodecName(), entry._relativePath,
-                              static_cast<uint64>( entry._bytes.size() ) );
+                SW_LOG_ERROR_ID( "PackWriter.CannotCompressBytesBeyond", "%# cannot compress '%#' (%# bytes is beyond the codec limit)", _pCodec->getCodecName(), entry._relativePath,
+                                 static_cast<uint64>( entry._bytes.size() ) );
                 return false;
             }
             outPayloadBytes.resize( bound );
             size_t compressedSize{ 0 };
             if ( _pCodec->compress( entry._bytes.data(), entry._bytes.size(), outPayloadBytes.data(), bound, compressedSize, _compressionLevel ) == false )
             {
-                SW_LOG_ERROR( "%# failed to compress '%#'", _pCodec->getCodecName(), entry._relativePath );
+                SW_LOG_ERROR_ID( "PackWriter.FailedCompress", "%# failed to compress '%#'", _pCodec->getCodecName(), entry._relativePath );
                 outPayloadBytes.clear();
                 return false;
             }
@@ -158,7 +158,7 @@ namespace sw
         {
             if ( listSorted[index]->_pathHash == listSorted[index - 1]->_pathHash )
             {
-                SW_LOG_ERROR( "Pack entry '%#' is added twice (same path hash as '%#')", listSorted[index]->_relativePath, listSorted[index - 1]->_relativePath );
+                SW_LOG_ERROR_ID( "PackWriter.PackEntryAddedTwice", "Pack entry '%#' is added twice (same path hash as '%#')", listSorted[index]->_relativePath, listSorted[index - 1]->_relativePath );
                 return false;
             }
         }
@@ -174,7 +174,7 @@ namespace sw
             pCodec = PackCompressionUtil::findCodec( _desc._compression );
             if ( pCodec == nullptr )
             {
-                SW_LOG_ERROR( "Pack compression type %# has no registered codec", static_cast<uint32>( _desc._compression ) );
+                SW_LOG_ERROR_ID( "PackWriter.PackCompressionTypeNo", "Pack compression type %# has no registered codec", static_cast<uint32>( _desc._compression ) );
                 return false;
             }
         }
@@ -244,7 +244,7 @@ namespace sw
         PackReader reader;
         if ( reader.open( _desc._previousPackPath ) == false )
         {
-            SW_LOG_WARNING( "Pack layout: previous pack '%#' could not be opened - the slot layout starts without it", _desc._previousPackPath );
+            SW_LOG_WARNING_ID( "PackWriter.PackLayoutPreviousPack", "Pack layout: previous pack '%#' could not be opened - the slot layout starts without it", _desc._previousPackPath );
             return true;
         }
         struct Placed
@@ -262,7 +262,7 @@ namespace sw
             PackFileEntry entry;
             if ( reader.getFileEntry( path, entry ) == false )
             {
-                SW_LOG_WARNING( "Pack layout: previous pack '%#' lists '%#' without an index entry - the slot layout starts without it", _desc._previousPackPath, path );
+                SW_LOG_WARNING_ID( "PackWriter.PackLayoutPreviousPack2", "Pack layout: previous pack '%#' lists '%#' without an index entry - the slot layout starts without it", _desc._previousPackPath, path );
                 return true;
             }
             if ( entry._compressedSize != 0 ) // 빈 항목은 자리를 차지하지 않는다
@@ -277,7 +277,7 @@ namespace sw
             const uint64  nextBegin = index + 1 < listPlaced.size() ? listPlaced[index + 1]._offset : usedEnd;
             if ( nextBegin < placed._offset + placed._size )
             {
-                SW_LOG_WARNING( "Pack layout: previous pack '%#' has overlapping payloads - the slot layout starts without it", _desc._previousPackPath );
+                SW_LOG_WARNING_ID( "PackWriter.PackLayoutPreviousPack3", "Pack layout: previous pack '%#' has overlapping payloads - the slot layout starts without it", _desc._previousPackPath );
                 outTable = PreviousSlotTable{};
                 return true;
             }
@@ -316,7 +316,7 @@ namespace sw
             const bool bFitsEntryFields = pEntry->_bytes.size() <= MathUtil::kMaxUInt32 && stringPoolBytes.size() <= MathUtil::kMaxUInt32;
             if ( bFitsEntryFields == false )
             {
-                SW_LOG_ERROR( "Pack entry '%#' does not fit the 32-bit entry fields", pEntry->_relativePath );
+                SW_LOG_ERROR_ID( "PackWriter.PackEntryDoesNot", "Pack entry '%#' does not fit the 32-bit entry fields", pEntry->_relativePath );
                 return false;
             }
             if ( slot._bFailed )
@@ -324,7 +324,7 @@ namespace sw
             const size_t payloadSize = slot._bCompressed ? slot._listPayload.size() : pEntry->_bytes.size();
             if ( payloadSize > MathUtil::kMaxUInt32 )
             {
-                SW_LOG_ERROR( "Compressed pack entry '%#' does not fit the 32-bit entry fields", pEntry->_relativePath );
+                SW_LOG_ERROR_ID( "PackWriter.CompressedPackEntryDoes", "Compressed pack entry '%#' does not fit the 32-bit entry fields", pEntry->_relativePath );
                 return false;
             }
 
@@ -508,7 +508,7 @@ namespace sw
         const Stopwatch writeWatch;
         if ( FileUtil::ensureParentDirectoryExists( packPath ) == false || FileUtil::writeFile( packPath, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR( "Could not write pack file '%#'", packPath );
+            SW_LOG_ERROR_ID( "PackWriter.CouldNotWritePack", "Could not write pack file '%#'", packPath );
             return false;
         }
         if ( pOutStats != nullptr )

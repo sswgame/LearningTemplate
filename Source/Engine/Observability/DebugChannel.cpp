@@ -43,19 +43,19 @@ namespace sw
             return false;
         if ( settings._token.empty() )
         {
-            SW_LOG_ERROR( "Debug channel needs a token (-gv_debugChannelToken) - not started" );
+            SW_LOG_ERROR_ID( "DebugChannel.DebugChannelNeedsToken", "Debug channel needs a token (-gv_debugChannelToken) - not started" );
             return false;
         }
         if ( settings._bindAddress._ipv4 != NetAddress::makeLoopback( 0 )._ipv4 )
         {
-            SW_LOG_ERROR( "Debug channel binds to the loopback address only (got %#) - not started", settings._bindAddress.toString().c_str() );
+            SW_LOG_ERROR_ID( "DebugChannel.DebugChannelBindsLoopback", "Debug channel binds to the loopback address only (got %#) - not started", settings._bindAddress.toString().c_str() );
             return false;
         }
         _settings.set( settings );
         _execute.set( execute );
         if ( pTransport->initialize( this, transportSettings ) == false )
         {
-            SW_LOG_ERROR( "Debug channel could not start its stream transport" );
+            SW_LOG_ERROR_ID( "DebugChannel.DebugChannelCouldNot", "Debug channel could not start its stream transport" );
             _settings.reset();
             _execute.reset();
             return false;
@@ -63,11 +63,11 @@ namespace sw
         _pTransport.set( pTransport );
         if ( _pTransport->listen( settings._bindAddress ) == false )
         {
-            SW_LOG_ERROR( "Debug channel could not listen on %#", settings._bindAddress.toString().c_str() );
+            SW_LOG_ERROR_ID( "DebugChannel.DebugChannelCouldNot2", "Debug channel could not listen on %#", settings._bindAddress.toString().c_str() );
             shutdown();
             return false;
         }
-        SW_LOG_INFO( "Debug channel listening on 127.0.0.1:%# (development builds only, token required)", static_cast<uint32>( _pTransport->getListenPort() ) );
+        SW_LOG_INFO_ID( "DebugChannel.DebugChannelListeningDevelopment", "Debug channel listening on 127.0.0.1:%# (development builds only, token required)", static_cast<uint32>( _pTransport->getListenPort() ) );
         return true;
     }
 
@@ -171,7 +171,7 @@ namespace sw
             // 토큰이 틀린 연결에는 아무것도 실행하지 않고 이유를 한 줄 알린 뒤 닫는다.
             sendReply( handle.packed(), false, bTooLong ? "line too long" : "unauthorized" );
             _pTransport->close( handle, StreamCloseMode::Graceful );
-            SW_LOG_WARNING( "Debug channel rejected a connection (%#)", bTooLong ? "line too long" : "wrong token" );
+            SW_LOG_WARNING_ID( "DebugChannel.DebugChannelRejectedConnection", "Debug channel rejected a connection (%#)", bTooLong ? "line too long" : "wrong token" );
         }
         else if ( bTooBusy )
         {

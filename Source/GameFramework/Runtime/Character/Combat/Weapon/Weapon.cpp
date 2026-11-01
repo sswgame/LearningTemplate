@@ -68,12 +68,12 @@ namespace sw
             bValid                      = XMLReadUtil::readOptionalNumber( node, "headshotMultiplier", sourceName, 0.0f, kAnyFloat, weapon._headshotMultiplier ) && bValid;
             if ( weapon._maxSpread < weapon._minSpread || weapon._falloffEnd < weapon._falloffStart )
             {
-                SW_LOG_ERROR( "%#: weapon '%#' needs minSpread <= maxSpread and falloffStart <= falloffEnd", sourceName, pID );
+                SW_LOG_ERROR_ID( "Weapon.WeaponNeedsMinSpreadMaxSpread", "%#: weapon '%#' needs minSpread <= maxSpread and falloffStart <= falloffEnd", sourceName, pID );
                 bValid = false;
             }
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: weapon '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "Weapon.WeaponInvalidFieldsSkipped", "%#: weapon '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             const utf8* pAmmoID = node.findAttribute( "ammo" );
@@ -84,7 +84,7 @@ namespace sw
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Weapon> entries", sourceName );
+            SW_LOG_WARNING_ID( "Weapon.NoWeaponEntries", "%#: no <Weapon> entries", sourceName );
         return loadedCount;
     }
 

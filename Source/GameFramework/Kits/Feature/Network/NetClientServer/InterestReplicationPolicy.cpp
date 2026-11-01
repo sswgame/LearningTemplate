@@ -18,7 +18,7 @@ namespace sw
         string error;
         if ( _interest.initialize( cellSize, enterRadius, leaveRadius, error ) == false )
         {
-            SW_LOG_ERROR( "InterestReplicationPolicy: refused - %# (cell %#, enter %#, leave %#)", error.c_str(), cellSize, enterRadius, leaveRadius );
+            SW_LOG_ERROR_ID( "InterestReplicationPolicy.InterestReplicationPolicyRefusedCellEnter", "InterestReplicationPolicy: refused - %# (cell %#, enter %#, leave %#)", error.c_str(), cellSize, enterRadius, leaveRadius );
             return false;
         }
         _mapPosition.clear();

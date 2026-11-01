@@ -41,7 +41,7 @@ namespace sw
         _ioThreadCount = transportSettings._ioThreadCount;
         if ( _transport->initialize( this, transportSettings ) == false )
         {
-            SW_LOG_ERROR( "HTTP client transport did not start" );
+            SW_LOG_ERROR_ID( "HTTPClient.HTTPClientTransportDid", "HTTP client transport did not start" );
             _transport.reset();
             _settings.reset();
             return false;

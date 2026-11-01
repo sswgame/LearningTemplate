@@ -251,7 +251,7 @@ namespace sw
             ServiceMailRecord mail;
             if ( ServiceMail::decodeRecord( record._bytes, mail ) == false )
             {
-                SW_LOG_ERROR( "Mail '%#' is unreadable", record._key );
+                SW_LOG_ERROR_ID( "MailboxStoreLogic.MailUnreadable", "Mail '%#' is unreadable", record._key );
                 continue;
             }
             if ( MailboxStoreLogicInternal::isExpired( mail._message, nowMs ) )
@@ -324,7 +324,7 @@ namespace sw
                 if ( staged != LedgerResult::Ok )
                 {
                     if ( staged == LedgerResult::InsufficientFunds )
-                        SW_LOG_ERROR( "Mail '%#' escrow holds less than its attachments", mailKey );
+                        SW_LOG_ERROR_ID( "MailboxStoreLogic.MailEscrowHoldsLess", "Mail '%#' escrow holds less than its attachments", mailKey );
                     return MailboxStoreLogicInternal::toMailboxResult( staged );
                 }
                 if ( outcome._bReplayed == SW_TRUE )

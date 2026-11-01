@@ -104,7 +104,7 @@ namespace sw
             {
                 if ( pHandler == nullptr || settings._ioThreadCount != 0 )
                 {
-                    SW_LOG_ERROR( "LoopbackStreamTransport: needs a handler and _ioThreadCount == 0 (it is driven by pollIO)" );
+                    SW_LOG_ERROR_ID( "LoopbackStreamTransport.LoopbackStreamTransportNeedsHandlerIoThreadCount", "LoopbackStreamTransport: needs a handler and _ioThreadCount == 0 (it is driven by pollIO)" );
                     return false;
                 }
                 _pHandler.set( pHandler );

@@ -28,7 +28,7 @@ namespace sw
             pBody = pOwner->addComponent<RigidBodyComponent>();
         if ( pBody == nullptr )
         {
-            SW_LOG_ERROR( "Blocker '%#' could not add its static body - shots and ragdolls pass through it", pOwner->getName().c_str() );
+            SW_LOG_ERROR_ID( "ShooterBlockerComponent.BlockerCouldNotAdd", "Blocker '%#' could not add its static body - shots and ragdolls pass through it", pOwner->getName().c_str() );
             return;
         }
         const ShooterArenaBox box = computeBox();

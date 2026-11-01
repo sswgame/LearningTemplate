@@ -72,7 +72,7 @@ namespace sw::editor
             if ( sw::internal::tryCaptureAssert() )
             {
                 // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
-                SW_LOG_ERROR( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
+                SW_LOG_ERROR_ID( "EditorService.EditorStateReadOff", "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
                 return;
             }
 #endif

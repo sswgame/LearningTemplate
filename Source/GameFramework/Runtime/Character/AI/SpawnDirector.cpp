@@ -73,7 +73,7 @@ namespace sw
         bValid = GameDataXML::readFloatCurve( root, "Curve", 0.0f, _curve, sourceName ) && bValid;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "%#: spawn table has invalid fields - not loaded", sourceName );
+            SW_LOG_ERROR_ID( "SpawnDirector.SpawnTableInvalidFields", "%#: spawn table has invalid fields - not loaded", sourceName );
             _catalog.clear();
             return 0;
         }

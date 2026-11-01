@@ -68,18 +68,18 @@ namespace sw::editor
     void PrefabOverridesModel::applyAllToTemplate()
     {
         if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabOverridesModelInternal::getPrefabTargetInstance(), AssetID{ _selectedPrefabPath } ) )
-            SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
+            SW_LOG_TRACE_ID( "PrefabTool.AppliedAllInstanceOverrides", "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
         else
-            SW_LOG_ERROR( "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
+            SW_LOG_ERROR_ID( "PrefabTool.CouldNotApplyOverrides", "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
         rescan();
     }
 
     void PrefabOverridesModel::revertAll()
     {
         if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabOverridesModelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
-            SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
+            SW_LOG_TRACE_ID( "PrefabTool.RevertedAllOverrides", "Reverted all overrides on %s", _selectedInstanceName.c_str() );
         else
-            SW_LOG_ERROR( "Could not revert overrides on %s", _selectedInstanceName.c_str() );
+            SW_LOG_ERROR_ID( "PrefabTool.CouldNotRevertOverrides", "Could not revert overrides on %s", _selectedInstanceName.c_str() );
         rescan();
     }
 
@@ -87,7 +87,7 @@ namespace sw::editor
     {
         PrefabOverrideItem& item = _listOverride[overrideIndex];
         EditorToolAssetCommands::revertPrefabOverride( PrefabOverridesModelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
-        SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
+        SW_LOG_TRACE_ID( "PrefabTool.Reverted", "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
         rescan();
     }
 } // namespace sw::editor

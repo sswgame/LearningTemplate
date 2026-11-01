@@ -35,7 +35,7 @@ namespace sw
                 }
                 else
                 {
-                    SW_LOG_ERROR( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropID, season.c_str() );
+                    SW_LOG_ERROR_ID( "CropCatalog.CropNamesUnknownSeason", "%#: crop '%#' names an unknown season '%#'", sourceName, pCropID, season.c_str() );
                     bValid = false;
                 }
             } );
@@ -99,13 +99,13 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Crop" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "CropCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadCrop( node, sourceName ) )
                 ++loadedCount;
         }
         rebuildItemIndex(); // 인덱스는 한 번에 만들고, 작물마다 다시 만들지 않는다
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Crop> entries", sourceName );
+            SW_LOG_WARNING_ID( "CropCatalog.NoCropEntries", "%#: no <Crop> entries", sourceName );
         return loadedCount;
     }
 
@@ -117,7 +117,7 @@ namespace sw
         const utf8* pSeasons = node.findAttribute( "seasons" );
         if ( pSeasons == nullptr )
         {
-            SW_LOG_ERROR( "%#: crop '%#' needs seasons=\"...\"", sourceName, crop._id.c_str() );
+            SW_LOG_ERROR_ID( "CropCatalog.CropNeedsSeasons", "%#: crop '%#' needs seasons=\"...\"", sourceName, crop._id.c_str() );
             bValid = false;
         }
         else if ( parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, crop._id.c_str(), crop._listSeason ) == false )
@@ -126,11 +126,11 @@ namespace sw
         }
         else if ( crop._listSeason.empty() )
         {
-            SW_LOG_ERROR( "%#: crop '%#' grows in no season", sourceName, crop._id.c_str() );
+            SW_LOG_ERROR_ID( "CropCatalog.CropGrowsNoSeason", "%#: crop '%#' grows in no season", sourceName, crop._id.c_str() );
             bValid = false;
         }
         if ( crop._regrowDays > crop._growthDays )
-            SW_LOG_WARNING( "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, crop._id.c_str(), crop._regrowDays, crop._growthDays );
+            SW_LOG_WARNING_ID( "CropCatalog.CropRegrowsSlowerFirst", "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, crop._id.c_str(), crop._regrowDays, crop._growthDays );
         if ( bValid )
             (void)_catalog.add( crop ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return bValid;

@@ -104,7 +104,7 @@ namespace sw
                     return;
                 if ( Internal::isValidWindow( window ) == false )
                 {
-                    SW_LOG_ERROR( "Server directory maintenance record '%#' breaks the write rules", record._key );
+                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryMaintenanceRecord", "Server directory maintenance record '%#' breaks the write rules", record._key );
                     return;
                 }
                 _listMaintenance.push_back( std::move( window ) );
@@ -119,7 +119,7 @@ namespace sw
                     return;
                 if ( Internal::isValidNotice( notice ) == false )
                 {
-                    SW_LOG_ERROR( "Server directory notice record '%#' breaks the write rules", record._key );
+                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryNoticeRecord", "Server directory notice record '%#' breaks the write rules", record._key );
                     return;
                 }
                 _listNotice.push_back( std::move( notice ) );

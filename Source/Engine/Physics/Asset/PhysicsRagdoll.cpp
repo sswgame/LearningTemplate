@@ -31,8 +31,8 @@ namespace sw
                 const size_t boneCount = skeleton._listBoneName.size();
                 if ( skeleton._listParentIndex.size() != boneCount || skeleton._listModelSpaceBone.size() != boneCount )
                 {
-                    SW_LOG_ERROR( "Ragdoll skeleton arrays differ in length (names %#, parents %#, matrices %#)", boneCount, skeleton._listParentIndex.size(),
-                                  skeleton._listModelSpaceBone.size() );
+                    SW_LOG_ERROR_ID( "PhysicsRagdoll.RagdollSkeletonArraysDiffer", "Ragdoll skeleton arrays differ in length (names %#, parents %#, matrices %#)", boneCount, skeleton._listParentIndex.size(),
+                                     skeleton._listModelSpaceBone.size() );
                     return false;
                 }
                 for ( size_t boneIndex = 0; boneIndex < boneCount; ++boneIndex )
@@ -40,7 +40,7 @@ namespace sw
                     const int32 parent = skeleton._listParentIndex[boneIndex];
                     if ( parent >= static_cast<int32>( boneIndex ) || parent < -1 )
                     {
-                        SW_LOG_ERROR( "Ragdoll skeleton bone %# has parent %# - parents must come before their children", boneIndex, parent );
+                        SW_LOG_ERROR_ID( "PhysicsRagdoll.RagdollSkeletonBoneParent", "Ragdoll skeleton bone %# has parent %# - parents must come before their children", boneIndex, parent );
                         return false;
                     }
                 }
@@ -53,7 +53,7 @@ namespace sw
                 const bool bUnknownLayerName = options._pSettings != nullptr && layerName.empty() == false && options._pSettings->findLayerIndex( layerName, layer ) == false;
                 if ( bUnknownLayerName )
                 {
-                    SW_LOG_ERROR( "Ragdoll body names unknown layer '%#' - using layer 0", layerName.c_str() );
+                    SW_LOG_ERROR_ID( "PhysicsRagdoll.RagdollBodyNamesUnknown", "Ragdoll body names unknown layer '%#' - using layer 0", layerName.c_str() );
                     layer = 0;
                 }
                 return layer;
@@ -119,7 +119,7 @@ namespace sw
         {
             if ( body.isValid() == false )
             {
-                SW_LOG_ERROR( "Ragdoll: a body could not be created - nothing is kept" );
+                SW_LOG_ERROR_ID( "PhysicsRagdoll.RagdollBodyCouldNot", "Ragdoll: a body could not be created - nothing is kept" );
                 destroy( scene, outRagdoll );
                 return false;
             }
@@ -220,7 +220,7 @@ namespace sw
         const bool bAssetMismatch = asset._listBody.size() != ragdoll._listBody.size() || ragdoll._listJoint.size() != ragdoll._listBody.size();
         if ( bAssetMismatch )
         {
-            SW_LOG_ERROR( "driveToPoseWithMotors: the asset and the ragdoll disagree on the body count" );
+            SW_LOG_ERROR_ID( "PhysicsRagdoll.DriveToPoseWithMotorsAssetRagdollDisagree", "driveToPoseWithMotors: the asset and the ragdoll disagree on the body count" );
             return;
         }
         for ( size_t bodyIndex = 0; bodyIndex < ragdoll._listBody.size(); ++bodyIndex )
@@ -251,7 +251,7 @@ namespace sw
         const bool   bBoneCountDisagreement = outListModelSpaceBone.size() < boneCount || skeleton._listParentIndex.size() != boneCount || ragdoll._listBodyOfBone.size() != boneCount;
         if ( bBoneCountDisagreement )
         {
-            SW_LOG_ERROR( "readBoneTransforms: the output, the skeleton and the ragdoll disagree on the bone count" );
+            SW_LOG_ERROR_ID( "PhysicsRagdoll.ReadBoneTransformsOutputSkeletonRagdoll", "readBoneTransforms: the output, the skeleton and the ragdoll disagree on the bone count" );
             return;
         }
         const float4x4 modelFromWorld = worldFromModel.invert();

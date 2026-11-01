@@ -150,7 +150,7 @@ namespace sw::editor
                 (void)dockLayout.requestLoadNamedLayout( name ); // 파일이 사라졌으면 경고만 남긴다
             ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * 1.5f );
             if ( ImGui::SmallButton( "x" ) && EditorLayoutStore::remove( EditorLayoutStore::getDefaultFolder(), name ) == false )
-                SW_LOG_WARNING( "Could not delete layout '%#'", name.c_str() );
+                SW_LOG_WARNING_ID( "Editor.CouldNotDeleteLayout", "Could not delete layout '%#'", name.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DeleteLayout" ) );
             ImGui::PopID();
         }
@@ -318,7 +318,7 @@ namespace sw::editor
         IEditorPanel*             pPanel       = request._documentKind.isUnknown() == false ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
         if ( pPanel == nullptr )
         {
-            SW_LOG_ERROR( "Open panel request found no panel (id '%#', document kind '%#')", request._panelID.c_str(), request._documentKind.getID() );
+            SW_LOG_ERROR_ID( "Editor.OpenPanelRequestFound", "Open panel request found no panel (id '%#', document kind '%#')", request._panelID.c_str(), request._documentKind.getID() );
             return;
         }
         pPanel->setOpen( true );

@@ -239,7 +239,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false || absoluteMinute < 0 )
         {
-            SW_LOG_ERROR( "ScheduleSystem: refused to start - settings '%#', minute %#", rangeError.c_str(), absoluteMinute );
+            SW_LOG_ERROR_ID( "ScheduleSystem.ScheduleSystemRefusedStartSettings", "ScheduleSystem: refused to start - settings '%#', minute %#", rangeError.c_str(), absoluteMinute );
             return false;
         }
         shutdown();
@@ -458,7 +458,7 @@ namespace sw
         const ScheduleInterruptDef* pDef = _pCatalog->findInterrupt( interruptID );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "unknown interruption '%#' for npc '%#' - ignored", interruptID.c_str(), getNPCID( npcIndex ).c_str() );
+            SW_LOG_WARNING_ID( "ScheduleSystem.UnknownInterruptionNpcIgnored", "unknown interruption '%#' for npc '%#' - ignored", interruptID.c_str(), getNPCID( npcIndex ).c_str() );
             return false;
         }
         NPCRuntime& npc          = _listNPC[static_cast<size_t>( npcIndex )];
@@ -760,9 +760,9 @@ namespace sw
             if ( bAll == false && getNPCID( npcIndex ) != hashed_string( _lastTraceRequest ) )
                 continue;
             explainNPC( npcIndex, text );
-            SW_LOG_INFO( "[Schedule] %#", text );
+            SW_LOG_INFO_ID( "ScheduleSystem.Message", "[Schedule] %#", text );
             dumpTimeline( npcIndex, text );
-            SW_LOG_INFO( "[Schedule] %#", text );
+            SW_LOG_INFO_ID( "ScheduleSystem.Message", "[Schedule] %#", text );
         }
     }
 

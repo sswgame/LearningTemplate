@@ -44,7 +44,7 @@ namespace sw
     {
         if ( config._duration < 1.0e-3f || config._maxParticipants < 1 )
         {
-            SW_LOG_ERROR( "InteractionProgress: refused config - duration %# (0.001 or more), maxParticipants %# (1 or more)", config._duration, config._maxParticipants );
+            SW_LOG_ERROR_ID( "InteractionProgress.InteractionProgressRefusedConfigDuration", "InteractionProgress: refused config - duration %# (0.001 or more), maxParticipants %# (1 or more)", config._duration, config._maxParticipants );
             return false;
         }
         _config = config;

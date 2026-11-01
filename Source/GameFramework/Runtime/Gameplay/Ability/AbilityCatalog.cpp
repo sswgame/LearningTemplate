@@ -48,7 +48,7 @@ namespace sw
                     hashed_string abilityID;
                     if ( XMLReadUtil::readRequiredName( grantNode, "id", sourceName, abilityID ) == false )
                     {
-                        SW_LOG_ERROR( "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
+                        SW_LOG_ERROR_ID( "AbilityCatalog.EffectGrantAbilityWithoutId", "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
                         return false;
                     }
                     outDef._listGrantedAbility.push_back( abilityID );
@@ -58,7 +58,7 @@ namespace sw
                                                  ( outDef._listGrantedAbility.empty() == false || outDef._ongoingRequiredTags.getTagCount() > 0 );
                 if ( bInstantWithLasting )
                 {
-                    SW_LOG_ERROR( "%#: effect '%#' is Instant but has <GrantAbility> or <OngoingRequiredTag> - skipped", sourceName, pID );
+                    SW_LOG_ERROR_ID( "AbilityCatalog.EffectInstantButGrantAbility", "%#: effect '%#' is Instant but has <GrantAbility> or <OngoingRequiredTag> - skipped", sourceName, pID );
                     return false;
                 }
                 return true;
@@ -69,21 +69,21 @@ namespace sw
             {
                 if ( XMLReadUtil::readRequiredName( node, "attribute", sourceName, outModifier._attribute ) == false )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectID );
+                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectModifierWithoutAttribute", "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectID );
                     return false;
                 }
 
                 const utf8* pOp = node.findAttribute( "op" );
                 if ( pOp != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pOp ), outModifier._op ) == false )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' has unknown modifier op '%#' - skipped", sourceName, pEffectID, pOp );
+                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownModifierOp", "%#: effect '%#' has unknown modifier op '%#' - skipped", sourceName, pEffectID, pOp );
                     return false;
                 }
 
                 const utf8* pSource = node.findAttribute( "source" );
                 if ( pSource != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pSource ), outModifier._magnitudeSource ) == false )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' has unknown magnitude source '%#' - skipped", sourceName, pEffectID, pSource );
+                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownMagnitudeSource", "%#: effect '%#' has unknown magnitude source '%#' - skipped", sourceName, pEffectID, pSource );
                     return false;
                 }
 
@@ -98,7 +98,7 @@ namespace sw
                 outModifier._setByCallerName  = XMLReadUtil::readOptionalName( node, "name" );    // 아래에서 SetByCaller 일 때 필수로 확인한다
                 if ( bValid == false )
                 {
-                    SW_LOG_ERROR( "%#: effect '%#' has a <Modifier> with invalid numbers - skipped", sourceName, pEffectID );
+                    SW_LOG_ERROR_ID( "AbilityCatalog.EffectModifierInvalidNumbers", "%#: effect '%#' has a <Modifier> with invalid numbers - skipped", sourceName, pEffectID );
                     return false;
                 }
 
@@ -109,15 +109,15 @@ namespace sw
                 const bool bMissingBacking = outModifier._magnitudeSource == EffectMagnitudeSource::AttributeBased && outModifier._backingAttribute.empty();
                 if ( bMissingBacking )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' AttributeBased modifier on '%#' has no backing attribute - skipped", sourceName, pEffectID,
-                                    outModifier._attribute.c_str() );
+                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectAttributeBasedModifierNo", "%#: effect '%#' AttributeBased modifier on '%#' has no backing attribute - skipped", sourceName, pEffectID,
+                                       outModifier._attribute.c_str() );
                     return false;
                 }
                 const bool bMissingCallerName = outModifier._magnitudeSource == EffectMagnitudeSource::SetByCaller && outModifier._setByCallerName.empty();
                 if ( bMissingCallerName )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' SetByCaller modifier on '%#' has no name - skipped", sourceName, pEffectID,
-                                    outModifier._attribute.c_str() );
+                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectSetByCallerModifierNo", "%#: effect '%#' SetByCaller modifier on '%#' has no name - skipped", sourceName, pEffectID,
+                                       outModifier._attribute.c_str() );
                     return false;
                 }
                 return true;
@@ -184,7 +184,7 @@ namespace sw
     {
         if ( def._id.empty() )
         {
-            SW_LOG_WARNING( "addEffect: an effect without an id was ignored" );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AddEffectEffectWithoutId", "addEffect: an effect without an id was ignored" );
             return nullptr;
         }
         shared_ptr<const AbilityEffectDef> pDef = make_shared<AbilityEffectDef>( def );
@@ -196,7 +196,7 @@ namespace sw
     {
         if ( def._id.empty() )
         {
-            SW_LOG_WARNING( "addAbility: an ability without an id was ignored" );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AddAbilityAbilityWithoutId", "addAbility: an ability without an id was ignored" );
             return;
         }
         AbilityDef stored  = def;
@@ -208,7 +208,7 @@ namespace sw
     {
         if ( def._id.empty() )
         {
-            SW_LOG_WARNING( "addAbilitySet: an ability set without an id was ignored" );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AddAbilitySetAbilitySetWithout", "addAbilitySet: an ability set without an id was ignored" );
             return;
         }
         _mapAbilitySet.insert_or_assign( def._id, def );
@@ -218,7 +218,7 @@ namespace sw
     {
         if ( def._cueTag.isValid() == false )
         {
-            SW_LOG_WARNING( "addCue: a gameplay cue without a tag was ignored" );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AddCueGameplayCueWithout", "addCue: a gameplay cue without a tag was ignored" );
             return;
         }
         _mapCue.insert_or_assign( def._cueTag._id, def );
@@ -279,14 +279,14 @@ namespace sw
         const AbilityDef* pDef = findAbility( abilityID );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "createAbility: no ability '%#' in the catalog", abilityID.c_str() );
+            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityNoAbilityCatalog", "createAbility: no ability '%#' in the catalog", abilityID.c_str() );
             return nullptr;
         }
         const auto factoryIter = _mapAbilityFactory.find( pDef->_className );
         if ( factoryIter == _mapAbilityFactory.end() )
         {
-            SW_LOG_WARNING( "createAbility: ability '%#' uses class '%#' which is not registered (registerAbilityClass)", abilityID.c_str(),
-                            pDef->_className.c_str() );
+            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityAbilityUsesClass", "createAbility: ability '%#' uses class '%#' which is not registered (registerAbilityClass)", abilityID.c_str(),
+                               pDef->_className.c_str() );
             return nullptr;
         }
         unique_ptr<Ability> pAbility = factoryIter->second();
@@ -300,7 +300,7 @@ namespace sw
         const auto factoryIter = _mapAttributeSetFactory.find( className );
         if ( factoryIter == _mapAttributeSetFactory.end() )
         {
-            SW_LOG_WARNING( "createAttributeSet: attribute set class '%#' is not registered (registerAttributeSetClass)", className.c_str() );
+            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAttributeSetAttributeSetClass", "createAttributeSet: attribute set class '%#' is not registered (registerAttributeSetClass)", className.c_str() );
             return nullptr;
         }
         return factoryIter->second();
@@ -353,7 +353,7 @@ namespace sw
         }
 
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <AbilityEffect>, <Ability>, <AbilitySet> or <AbilityPresentation> entries", sourceName );
+            SW_LOG_WARNING_ID( "AbilityCatalog.NoAbilityEffectAbilityAbilitySet", "%#: no <AbilityEffect>, <Ability>, <AbilitySet> or <AbilityPresentation> entries", sourceName );
         return loadedCount;
     }
 
@@ -362,7 +362,7 @@ namespace sw
         const utf8* pID = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {
-            SW_LOG_WARNING( "%#: <AbilityEffect> without an id - skipped", sourceName );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityEffectWithoutIdSkipped", "%#: <AbilityEffect> without an id - skipped", sourceName );
             return false;
         }
         outDef._id = hashed_string( pID );
@@ -370,7 +370,7 @@ namespace sw
         const utf8* pDuration = node.findAttribute( "duration" );
         if ( pDuration != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pDuration ), outDef._durationPolicy ) == false )
         {
-            SW_LOG_WARNING( "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pID, pDuration );
+            SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownDurationPolicy", "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pID, pDuration );
             return false;
         }
         // 적지 않은 칸은 AbilityEffectDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
@@ -383,26 +383,26 @@ namespace sw
         bValid                   = XMLReadUtil::readOptionalNumber( node, "stackLimit", sourceName, 1, MathUtil::kMaxInt32, outDef._stackLimit ) && bValid;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "%#: effect '%#' has invalid fields - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "AbilityCatalog.EffectInvalidFieldsSkipped", "%#: effect '%#' has invalid fields - skipped", sourceName, pID );
             return false;
         }
 
         const utf8* pStacking = node.findAttribute( "stacking" );
         if ( pStacking != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pStacking ), outDef._stackingPolicy ) == false )
         {
-            SW_LOG_WARNING( "%#: effect '%#' has unknown stacking policy '%#' - skipped", sourceName, pID, pStacking );
+            SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownStackingPolicy", "%#: effect '%#' has unknown stacking policy '%#' - skipped", sourceName, pID, pStacking );
             return false;
         }
         const utf8* pExpiration = node.findAttribute( "stackExpiration" );
         if ( pExpiration != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pExpiration ), outDef._stackExpirationPolicy ) == false )
         {
-            SW_LOG_WARNING( "%#: effect '%#' has unknown stack expiration '%#' - skipped", sourceName, pID, pExpiration );
+            SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownStackExpiration", "%#: effect '%#' has unknown stack expiration '%#' - skipped", sourceName, pID, pExpiration );
             return false;
         }
 
         const bool bDurationWithoutLength = outDef._durationPolicy == EffectDurationPolicy::HasDuration && outDef._duration._baseValue <= 0.0f;
         if ( bDurationWithoutLength )
-            SW_LOG_WARNING( "%#: effect '%#' is HasDuration but 'seconds' is not positive - it expires on the next update", sourceName, pID );
+            SW_LOG_WARNING_ID( "AbilityCatalog.EffectHasDurationButSeconds", "%#: effect '%#' is HasDuration but 'seconds' is not positive - it expires on the next update", sourceName, pID );
 
         for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
         {
@@ -416,19 +416,19 @@ namespace sw
             hashed_string className;
             if ( XMLReadUtil::readRequiredName( executionNode, "class", sourceName, className ) == false )
             {
-                SW_LOG_ERROR( "%#: effect '%#' has an <Execution> without a class - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "AbilityCatalog.EffectExecutionWithoutClass", "%#: effect '%#' has an <Execution> without a class - skipped", sourceName, pID );
                 return false;
             }
             const auto factoryIter = _mapExecutionFactory.find( className );
             if ( factoryIter == _mapExecutionFactory.end() )
             {
-                SW_LOG_WARNING( "%#: effect '%#' uses execution class '%#' which is not registered - skipped", sourceName, pID, className.c_str() );
+                SW_LOG_WARNING_ID( "AbilityCatalog.EffectUsesExecutionClass", "%#: effect '%#' uses execution class '%#' which is not registered - skipped", sourceName, pID, className.c_str() );
                 continue;
             }
             shared_ptr<const IGameplayEffectExecution> pExecution = factoryIter->second( executionNode );
             if ( pExecution == nullptr )
             {
-                SW_LOG_ERROR( "%#: effect '%#' has an <Execution class=\"%#\"> with invalid parameters - skipped", sourceName, pID, className.c_str() );
+                SW_LOG_ERROR_ID( "AbilityCatalog.EffectExecutionClassInvalid", "%#: effect '%#' has an <Execution class=\"%#\"> with invalid parameters - skipped", sourceName, pID, className.c_str() );
                 return false;
             }
             outDef._listExecution.push_back( std::move( pExecution ) );
@@ -442,7 +442,7 @@ namespace sw
         const utf8* pTag = node.findAttribute( "tag" );
         if ( StringUtil::isNullOrEmpty( pTag ) )
         {
-            SW_LOG_ERROR( "%#: <AbilityPresentation> without a tag - skipped", sourceName );
+            SW_LOG_ERROR_ID( "AbilityCatalog.AbilityPresentationWithoutTagSkipped", "%#: <AbilityPresentation> without a tag - skipped", sourceName );
             return false;
         }
         outDef._cueTag     = TagID::request( string_view( pTag ) );
@@ -453,13 +453,13 @@ namespace sw
         bValid             = XMLReadUtil::readOptionalFlag( node, "positional", outDef._bPositional ) && bValid;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "%#: gameplay cue '%#' has invalid fields - skipped", sourceName, pTag );
+            SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueInvalidFields", "%#: gameplay cue '%#' has invalid fields - skipped", sourceName, pTag );
             return false;
         }
         // 보여 줄 것이 없는 정의는 적은 사람의 실수다 — 조용히 아무것도 하지 않는 큐로 두지 않는다.
         if ( outDef._prefab.empty() && outDef._soundEvent.empty() )
         {
-            SW_LOG_ERROR( "%#: gameplay cue '%#' has neither prefab nor sound - skipped", sourceName, pTag );
+            SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueNeitherPrefab", "%#: gameplay cue '%#' has neither prefab nor sound - skipped", sourceName, pTag );
             return false;
         }
         return true;
@@ -470,13 +470,13 @@ namespace sw
         const utf8* pID = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {
-            SW_LOG_WARNING( "%#: <Ability> without an id - skipped", sourceName );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityWithoutIdSkipped", "%#: <Ability> without an id - skipped", sourceName );
             return false;
         }
         outDef._id = hashed_string( pID );
         if ( XMLReadUtil::readRequiredName( node, "class", sourceName, outDef._className ) == false )
         {
-            SW_LOG_WARNING( "%#: ability '%#' has no class - skipped", sourceName, pID );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityNoClassSkipped", "%#: ability '%#' has no class - skipped", sourceName, pID );
             return false;
         }
         // 클래스 이름은 여기서 찾지 않는다. 클래스는 게임 모듈이 등록하므로 데이터를 읽는 순서에 영향받으면 안 된다. 없는 클래스는 만들 때(`createAbility`) 경고한다.
@@ -519,7 +519,7 @@ namespace sw
                 bValid = false;
         }
         if ( bValid == false )
-            SW_LOG_ERROR( "%#: ability '%#' has invalid fields - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "AbilityCatalog.AbilityInvalidFieldsSkipped", "%#: ability '%#' has invalid fields - skipped", sourceName, pID );
         return bValid;
     }
 
@@ -528,7 +528,7 @@ namespace sw
         const utf8* pID = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {
-            SW_LOG_WARNING( "%#: <AbilitySet> without an id - skipped", sourceName );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AbilitySetWithoutIdSkipped", "%#: <AbilitySet> without an id - skipped", sourceName );
             return false;
         }
         outDef._id = hashed_string( pID );
@@ -538,7 +538,7 @@ namespace sw
             AbilitySetAttributeSetEntry setEntry;
             if ( XMLReadUtil::readRequiredName( setNode, "class", sourceName, setEntry._className ) == false )
             {
-                SW_LOG_ERROR( "%#: ability set '%#' has an <AttributeSet> without a class - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeSetWithout", "%#: ability set '%#' has an <AttributeSet> without a class - skipped", sourceName, pID );
                 return false;
             }
 
@@ -547,7 +547,7 @@ namespace sw
                 AbilitySetAttributeEntry attributeEntry;
                 if ( XMLReadUtil::readRequiredName( attributeNode, "name", sourceName, attributeEntry._attribute ) == false )
                 {
-                    SW_LOG_ERROR( "%#: ability set '%#' has an <Attribute> without a name - skipped", sourceName, pID );
+                    SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeWithout", "%#: ability set '%#' has an <Attribute> without a name - skipped", sourceName, pID );
                     return false;
                 }
                 // 범위는 적은 쪽만 막는다 — 적지 않은 쪽은 구조체 초기값(실수의 끝)이라 "제한 없음" 이다.
@@ -559,7 +559,7 @@ namespace sw
                 bAttributeValid             = XMLReadUtil::readOptionalNumber( attributeNode, "max", sourceName, -kAny, kAny, attributeEntry._maxValue ) && bAttributeValid;
                 if ( bAttributeValid == false )
                 {
-                    SW_LOG_ERROR( "%#: ability set '%#' attribute '%#' has invalid numbers - skipped", sourceName, pID, attributeEntry._attribute.c_str() );
+                    SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeInvalid", "%#: ability set '%#' attribute '%#' has invalid numbers - skipped", sourceName, pID, attributeEntry._attribute.c_str() );
                     return false;
                 }
                 setEntry._listAttribute.push_back( attributeEntry );
@@ -572,14 +572,14 @@ namespace sw
             AbilitySetAbilityEntry abilityEntry;
             if ( XMLReadUtil::readRequiredName( abilityNode, "id", sourceName, abilityEntry._abilityID ) == false )
             {
-                SW_LOG_ERROR( "%#: ability set '%#' has an <Ability> without an id - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAbilityWithout", "%#: ability set '%#' has an <Ability> without an id - skipped", sourceName, pID );
                 return false;
             }
             bool bEntryValid = XMLReadUtil::readOptionalNumber( abilityNode, "level", sourceName, 1, MathUtil::kMaxInt32, abilityEntry._level );
             bEntryValid      = XMLReadUtil::readOptionalNumber( abilityNode, "input", sourceName, -1, MathUtil::kMaxInt32, abilityEntry._inputID ) && bEntryValid;
             if ( bEntryValid == false )
             {
-                SW_LOG_ERROR( "%#: ability set '%#' grants ability '%#' with invalid fields - skipped", sourceName, pID, abilityEntry._abilityID.c_str() );
+                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetGrantsAbility", "%#: ability set '%#' grants ability '%#' with invalid fields - skipped", sourceName, pID, abilityEntry._abilityID.c_str() );
                 return false;
             }
             outDef._listAbility.push_back( abilityEntry );
@@ -590,12 +590,12 @@ namespace sw
             AbilitySetEffectEntry effectEntry;
             if ( XMLReadUtil::readRequiredName( effectNode, "id", sourceName, effectEntry._effectID ) == false )
             {
-                SW_LOG_ERROR( "%#: ability set '%#' has an <Effect> without an id - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetEffectWithout", "%#: ability set '%#' has an <Effect> without an id - skipped", sourceName, pID );
                 return false;
             }
             if ( XMLReadUtil::readOptionalNumber( effectNode, "level", sourceName, 1, MathUtil::kMaxInt32, effectEntry._level ) == false )
             {
-                SW_LOG_ERROR( "%#: ability set '%#' applies effect '%#' with an invalid level - skipped", sourceName, pID, effectEntry._effectID.c_str() );
+                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAppliesEffect", "%#: ability set '%#' applies effect '%#' with an invalid level - skipped", sourceName, pID, effectEntry._effectID.c_str() );
                 return false;
             }
             outDef._listEffect.push_back( effectEntry );
@@ -611,7 +611,7 @@ namespace sw
             return nullptr;
         shared_ptr<const AbilityEffectDef> pDef = findEffect( hashed_string( pEffectID ) );
         if ( pDef == nullptr )
-            SW_LOG_WARNING( "%#: ability '%#' refers to effect '%#' which is not in the catalog", sourceName, pOwnerID, pEffectID );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityRefersEffectWhich", "%#: ability '%#' refers to effect '%#' which is not in the catalog", sourceName, pOwnerID, pEffectID );
         return pDef;
     }
 } // namespace sw

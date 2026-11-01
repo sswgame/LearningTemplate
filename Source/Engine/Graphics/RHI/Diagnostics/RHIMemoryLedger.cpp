@@ -261,8 +261,8 @@ namespace sw
         }
 
         const uint64 trackedX10 = RHIMemoryLedgerInternal::toMegabytesX10( summary._trackedBytes );
-        SW_LOG_INFO( "[Profile] GPU memory by kind (live, %# · %# size)  %#.%# MB in %# resources  + %# of unknown size", pBackendName,
-                     getSizeBasisName( summary._sizeBasis ), trackedX10 / 10, trackedX10 % 10, liveCount, summary._unknownSizeCount );
+        SW_LOG_INFO_ID( "RHIMemoryLedger.GPUMemoryKindLive", "[Profile] GPU memory by kind (live, %# · %# size)  %#.%# MB in %# resources  + %# of unknown size", pBackendName,
+                        getSizeBasisName( summary._sizeBasis ), trackedX10 / 10, trackedX10 % 10, liveCount, summary._unknownSizeCount );
         for ( const RHIMemoryKind kind : makeKindOrderByLiveBytes() )
         {
             const RHIMemoryKindStats stats = getStats( kind );
@@ -270,8 +270,8 @@ namespace sw
                 continue;
             const uint64 megabytesX10 = RHIMemoryLedgerInternal::toMegabytesX10( stats._liveBytes );
             const uint64 sharePermill = summary._trackedBytes == 0 ? 0 : ( stats._liveBytes * 1000 ) / summary._trackedBytes;
-            SW_LOG_INFO( "[Profile]   %#  %#.%# MB  %#.%#%%  %# resources  + %# of unknown size", getKindName( kind ), megabytesX10 / 10, megabytesX10 % 10,
-                         sharePermill / 10, sharePermill % 10, stats._liveCount, stats._unknownSizeCount );
+            SW_LOG_INFO_ID( "RHIMemoryLedger.MBResourcesUnknownSize", "[Profile]   %#  %#.%# MB  %#.%#%%  %# resources  + %# of unknown size", getKindName( kind ), megabytesX10 / 10, megabytesX10 % 10,
+                            sharePermill / 10, sharePermill % 10, stats._liveCount, stats._unknownSizeCount );
         }
 
         const RHIMemoryBudget& budget = summary._budget;
@@ -284,16 +284,16 @@ namespace sw
         const utf8* pScope = budget._bUsageKnown == SW_FALSE          ? ""
                            : budget._scope == RHIMemoryScope::Process ? " (this process)"
                                                                       : " (whole device, including other processes)";
-        SW_LOG_INFO( "[Profile]   driver: usage %#%#  budget %#  available %#", arrUsage, pScope, arrBudget, arrAvailable );
+        SW_LOG_INFO_ID( "RHIMemoryLedger.DriverUsageBudgetAvailable", "[Profile]   driver: usage %#%#  budget %#  available %#", arrUsage, pScope, arrBudget, arrAvailable );
         if ( summary._bOutsideKnown == SW_FALSE )
         {
-            SW_LOG_INFO( "[Profile]   (outside the ledger - swap chain, driver internals, device resources not in the ledger)  unknown - no driver usage for this process" );
+            SW_LOG_INFO_ID( "RHIMemoryLedger.OutsideLedgerSwapChain", "[Profile]   (outside the ledger - swap chain, driver internals, device resources not in the ledger)  unknown - no driver usage for this process" );
             return;
         }
         const bool   bNegative  = summary._outsideBytes < 0;
         const uint64 outsideX10 = RHIMemoryLedgerInternal::toMegabytesX10( static_cast<uint64>( bNegative ? -summary._outsideBytes : summary._outsideBytes ) );
-        SW_LOG_INFO( "[Profile]   (outside the ledger - swap chain, driver internals, device resources not in the ledger)  %#%#.%# MB", bNegative ? "-" : "", outsideX10 / 10,
-                     outsideX10 % 10 );
+        SW_LOG_INFO_ID( "RHIMemoryLedger.OutsideLedgerSwapChain2", "[Profile]   (outside the ledger - swap chain, driver internals, device resources not in the ledger)  %#%#.%# MB", bNegative ? "-" : "", outsideX10 / 10,
+                        outsideX10 % 10 );
 #endif
     }
 

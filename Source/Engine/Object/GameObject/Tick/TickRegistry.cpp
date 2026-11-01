@@ -382,8 +382,8 @@ namespace sw
                 // 오류로 알린다(스테이지는 선행 조건이 바뀔 때만 다시 만들어서 프레임마다 쏟아지지 않는다).
                 if ( processedCount < count )
                 {
-                    SW_LOG_ERROR( "Sub-tick prerequisites form a cycle: %# sub-ticks cannot be ordered and run last in their group by order key - break the cycle",
-                                  static_cast<uint32>( count - processedCount ) );
+                    SW_LOG_ERROR_ID( "TickRegistry.SubTickPrerequisitesForm", "Sub-tick prerequisites form a cycle: %# sub-ticks cannot be ordered and run last in their group by order key - break the cycle",
+                                     static_cast<uint32>( count - processedCount ) );
                     vector<uint32> listRemaining;
                     for ( const uint32 member : listGroupMember )
                     {

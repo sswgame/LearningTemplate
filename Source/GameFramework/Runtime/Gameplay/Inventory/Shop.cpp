@@ -199,7 +199,7 @@ namespace sw
                 const utf8* pItem = stockNode.findAttribute( "item" );
                 if ( pItem == nullptr || pItem[0] == '\0' )
                 {
-                    SW_LOG_ERROR( "%#: shop '%#' has a <Stock> without an item", sourceName, pID );
+                    SW_LOG_ERROR_ID( "Shop.ShopStockWithoutItem", "%#: shop '%#' has a <Stock> without an item", sourceName, pID );
                     bValid = false;
                     continue;
                 }
@@ -215,14 +215,14 @@ namespace sw
             }
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: shop '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "Shop.ShopInvalidFieldsSkipped", "%#: shop '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             add( def );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Shop> entries", sourceName );
+            SW_LOG_WARNING_ID( "Shop.NoShopEntries", "%#: no <Shop> entries", sourceName );
         return loadedCount;
     }
 
@@ -262,7 +262,7 @@ namespace sw
     {
         if ( buyModifier < 0.0f || sellModifier < 0.0f )
         {
-            SW_LOG_ERROR( "ShopState: refused price modifiers %# / %# for %# - neither may be negative", buyModifier, sellModifier, shopID.c_str() );
+            SW_LOG_ERROR_ID( "Shop.ShopStateRefusedPriceModifiers", "ShopState: refused price modifiers %# / %# for %# - neither may be negative", buyModifier, sellModifier, shopID.c_str() );
             return false;
         }
         ShopRuntime* pRuntime = findRuntime( shopID );
@@ -321,7 +321,7 @@ namespace sw
             return ShopResult::NotEnoughMoney;
         const int32 addedCount = inventory.addItem( itemID, count );
         if ( addedCount != count )
-            SW_LOG_WARNING( "inventory accepted %# of %# '%#' after hasRoomFor said yes", addedCount, count, itemID.c_str() );
+            SW_LOG_WARNING_ID( "Shop.InventoryAcceptedAfterHasRoomFor", "inventory accepted %# of %# '%#' after hasRoomFor said yes", addedCount, count, itemID.c_str() );
         int32& stockCount = pRuntime->_listStockCount[static_cast<size_t>( stockIndex )];
         if ( stockCount >= 0 )
             stockCount -= count;

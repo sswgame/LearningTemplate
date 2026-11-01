@@ -231,7 +231,7 @@ namespace sw
         outIndex = ( this->*pFind )( hashed_string( pText ) );
         if ( outIndex >= 0 )
             return true;
-        SW_LOG_WARNING( "%#: <%#> %#=\"%#\" names nothing declared in this table", sourceName, node.getName(), pAttribute, pText );
+        SW_LOG_WARNING_ID( "ElementRuleTable.NamesNothingDeclaredTable", "%#: <%#> %#=\"%#\" names nothing declared in this table", sourceName, node.getName(), pAttribute, pText );
         return false;
     }
 
@@ -249,7 +249,7 @@ namespace sw
         outRule._event = hashed_string( node.getAttributeText( "event" ).empty() ? "" : string( node.getAttributeText( "event" ) ).c_str() );
         if ( outRule._floodStatus >= 0 && outRule._floodThrough < 0 )
         {
-            SW_LOG_WARNING( "%#: <On floodStatus> needs through=\"<flag>\"", sourceName );
+            SW_LOG_WARNING_ID( "ElementRuleTable.FloodStatusNeedsThroughFlag", "%#: <On floodStatus> needs through=\"<flag>\"", sourceName );
             bValid = false;
         }
         return bValid;
@@ -265,7 +265,7 @@ namespace sw
             outRule._kind = ElementStepRuleKind::Spread;
         else
         {
-            SW_LOG_WARNING( "%#: unknown step rule <%#> (Expire, Convert, Spread)", sourceName, node.getName() );
+            SW_LOG_WARNING_ID( "ElementRuleTable.UnknownStepRuleExpire", "%#: unknown step rule <%#> (Expire, Convert, Spread)", sourceName, node.getName() );
             return false;
         }
         bool bValid               = readIndex( node, "status", &ElementRuleTable::findStatus, outRule._status, sourceName );
@@ -283,12 +283,12 @@ namespace sw
             outRule._pattern = ElementSpreadPattern::Wind;
         else
         {
-            SW_LOG_WARNING( "%#: <%#> has unknown pattern '%#' (Neighbors4, Wind)", sourceName, node.getName(), pattern );
+            SW_LOG_WARNING_ID( "ElementRuleTable.UnknownPatternNeighbors4Wind", "%#: <%#> has unknown pattern '%#' (Neighbors4, Wind)", sourceName, node.getName(), pattern );
             bValid = false;
         }
         if ( outRule._status < 0 )
         {
-            SW_LOG_WARNING( "%#: <%#> needs a status", sourceName, node.getName() );
+            SW_LOG_WARNING_ID( "ElementRuleTable.NeedsStatus", "%#: <%#> needs a status", sourceName, node.getName() );
             bValid = false;
         }
         return bValid;
@@ -301,7 +301,7 @@ namespace sw
         bool bValid = XMLReadUtil::readOptionalNumber( root, "stepTime", sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
         if ( _stepTime <= 0.0f )
         {
-            SW_LOG_ERROR( "%#: stepTime must be positive", sourceName );
+            SW_LOG_ERROR_ID( "ElementRuleTable.StepTimeMustPositive", "%#: stepTime must be positive", sourceName );
             bValid = false;
         }
         // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 재질, 상태를 먼저 모두 읽고 규칙을 읽는다.
@@ -311,7 +311,7 @@ namespace sw
             {
                 if ( addFlag( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ) ) < 0 )
                 {
-                    SW_LOG_WARNING( "%#: more than %# flags", sourceName, kMaxFlagCount );
+                    SW_LOG_WARNING_ID( "ElementRuleTable.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
                     bValid = false;
                 }
             }
@@ -323,14 +323,14 @@ namespace sw
                     kind = ElementStatusKind::Countdown;
                 else if ( StringUtil::equals( kindText, "Age" ) == false )
                 {
-                    SW_LOG_WARNING( "%#: <Status> has unknown kind '%#' (Age, Countdown)", sourceName, kindText );
+                    SW_LOG_WARNING_ID( "ElementRuleTable.StatusUnknownKindAge", "%#: <Status> has unknown kind '%#' (Age, Countdown)", sourceName, kindText );
                     bValid = false;
                 }
                 int32 steps = ElementStatusDef{}._steps;
                 bValid      = XMLReadUtil::readOptionalNumber( child, "steps", sourceName, 1, MathUtil::kMaxInt32, steps ) && bValid;
                 if ( addStatus( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), kind, steps ) < 0 )
                 {
-                    SW_LOG_WARNING( "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
+                    SW_LOG_WARNING_ID( "ElementRuleTable.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
                     bValid = false;
                 }
             }
@@ -343,7 +343,7 @@ namespace sw
             const int32 material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
             if ( material < 0 )
             {
-                SW_LOG_WARNING( "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );
+                SW_LOG_WARNING_ID( "ElementRuleTable.MaterialIdDuplicateNames", "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );
                 bValid = false;
                 continue;
             }
@@ -355,7 +355,7 @@ namespace sw
                 int32 value{ 0 };
                 if ( StringUtil::parseInt( attribute.getValue(), value ) == false )
                 {
-                    SW_LOG_WARNING( "%#: <Material id=\"%#\"> %#=\"%#\" is not an integer", sourceName, child.getAttributeText( "id" ), attribute.getName(), attribute.getValue() );
+                    SW_LOG_WARNING_ID( "ElementRuleTable.MaterialIdNotInteger", "%#: <Material id=\"%#\"> %#=\"%#\" is not an integer", sourceName, child.getAttributeText( "id" ), attribute.getName(), attribute.getValue() );
                     bValid = false;
                     continue;
                 }
@@ -390,7 +390,7 @@ namespace sw
                                 XMLReadUtil::isElement( child.getName(), "Step" );
             if ( bKnown == false )
             {
-                SW_LOG_WARNING( "%#: unknown element <%#> in <ElementRules>", sourceName, child.getName() );
+                SW_LOG_WARNING_ID( "ElementRuleTable.UnknownElementElementRules", "%#: unknown element <%#> in <ElementRules>", sourceName, child.getName() );
                 bValid = false;
             }
         }

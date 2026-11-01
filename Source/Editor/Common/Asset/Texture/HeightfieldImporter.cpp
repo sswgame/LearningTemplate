@@ -77,7 +77,7 @@ namespace sw::editor
                 const bool   bInvalidSampleLayout = bytes.size() % 2 != 0 || static_cast<size_t>( side ) * side != sampleCount || side < 2;
                 if ( bInvalidSampleLayout )
                 {
-                    SW_LOG_ERROR( "Heightfield '%#' (.r16) is %# bytes - expected a square of 16-bit samples", sourcePath, static_cast<uint64>( bytes.size() ) );
+                    SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldR16BytesExpected", "Heightfield '%#' (.r16) is %# bytes - expected a square of 16-bit samples", sourcePath, static_cast<uint64>( bytes.size() ) );
                     return false;
                 }
                 outData._resolution = side;
@@ -95,15 +95,15 @@ namespace sw::editor
                 vector<uint8> bytes;
                 if ( FileUtil::readFile( path, bytes ) == false || bytes.empty() )
                 {
-                    SW_LOG_ERROR( "Failed to read splat source '%#'", path );
+                    SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadSplatSource", "Failed to read splat source '%#'", path );
                     return false;
                 }
                 if ( ImageUtil::loadImageFromMemory( bytes.data(), bytes.size(), outImage ) == false )
                     return false;
                 if ( outImage._sourceChannelCount != RawImageData::kChannelCount )
                 {
-                    SW_LOG_ERROR( "Splat source '%#' has %# channels, not RGBA - each channel is one layer weight, so the alpha channel (a layer) is required", path,
-                                  outImage._sourceChannelCount );
+                    SW_LOG_ERROR_ID( "HeightfieldImporter.SplatSourceChannelsNot", "Splat source '%#' has %# channels, not RGBA - each channel is one layer weight, so the alpha channel (a layer) is required", path,
+                                     outImage._sourceChannelCount );
                     return false;
                 }
                 return true;
@@ -121,12 +121,12 @@ namespace sw::editor
                 int32          height{ 0 };
                 if ( FileUtil::readFile( holePath, bytes ) == false )
                 {
-                    SW_LOG_ERROR( "Heightfield hole mask '%#' could not be opened", holePath.c_str() );
+                    SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldHoleMaskCould", "Heightfield hole mask '%#' could not be opened", holePath.c_str() );
                     return false;
                 }
                 if ( ImageUtil::loadGray16FromMemory( bytes.data(), bytes.size(), listSample, width, height ) == false )
                 {
-                    SW_LOG_ERROR( "Heightfield hole mask '%#' is not a readable 16-bit grayscale image", holePath.c_str() );
+                    SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldHoleMaskNot", "Heightfield hole mask '%#' is not a readable 16-bit grayscale image", holePath.c_str() );
                     return false;
                 }
                 const uint32 cells       = inoutData._resolution - 1;
@@ -134,8 +134,8 @@ namespace sw::editor
                 const bool   bSampleSize = static_cast<uint32>( width ) == inoutData._resolution && static_cast<uint32>( height ) == inoutData._resolution;
                 if ( bCellSize == false && bSampleSize == false )
                 {
-                    SW_LOG_ERROR( "Heightfield hole mask '%#' is %#x%# - expected %#x%# (cells) or %#x%# (samples)", holePath.c_str(), width, height, cells, cells,
-                                  inoutData._resolution, inoutData._resolution );
+                    SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldHoleMaskX", "Heightfield hole mask '%#' is %#x%# - expected %#x%# (cells) or %#x%# (samples)", holePath.c_str(), width, height, cells, cells,
+                                     inoutData._resolution, inoutData._resolution );
                     return false;
                 }
                 inoutData._listHoleCell.assign( static_cast<size_t>( cells ) * cells, 0u );
@@ -249,8 +249,8 @@ namespace sw::editor
                 return false;
             if ( highImage._width != lowImage._width || highImage._height != lowImage._height )
             {
-                SW_LOG_ERROR( "Splat source '%#' is %#x%# but '%#' is %#x%# - both layer groups must have the same size", sourcePath, lowImage._width, lowImage._height,
-                              highPath.c_str(), highImage._width, highImage._height );
+                SW_LOG_ERROR_ID( "HeightfieldImporter.SplatSourceXBut", "Splat source '%#' is %#x%# but '%#' is %#x%# - both layer groups must have the same size", sourcePath, lowImage._width, lowImage._height,
+                                 highPath.c_str(), highImage._width, highImage._height );
                 return false;
             }
         }
@@ -258,7 +258,7 @@ namespace sw::editor
         outData._height = static_cast<uint32>( lowImage._height );
         if ( outData._width > LayerWeightsAsset::kMaxResolution || outData._height > LayerWeightsAsset::kMaxResolution )
         {
-            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsAsset::kMaxResolution );
+            SW_LOG_ERROR_ID( "HeightfieldImporter.SplatSourceXMost", "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsAsset::kMaxResolution );
             outData = LayerWeightsAsset{};
             return false;
         }
@@ -272,7 +272,7 @@ namespace sw::editor
         }
         if ( outData.isValid() == false )
         {
-            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsAsset::kMaxResolution );
+            SW_LOG_ERROR_ID( "HeightfieldImporter.SplatSourceXMost", "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsAsset::kMaxResolution );
             outData = LayerWeightsAsset{};
             return false;
         }
@@ -297,9 +297,9 @@ namespace sw::editor
             AssetImportStampUtil::importSources( assetPaths.getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ), nullptr );
         for ( const string& problem : summary._listProblem )
         {
-            SW_LOG_ERROR( "Heightfield import failed: %#", problem.c_str() );
+            SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldImportFailed", "Heightfield import failed: %#", problem.c_str() );
         }
-        SW_LOG_INFO( "Heightfield import: %# changed -> %# imported", relativePath, summary._importedCount );
+        SW_LOG_INFO_ID( "HeightfieldImporter.HeightfieldImportChangedImported", "Heightfield import: %# changed -> %# imported", relativePath, summary._importedCount );
         return true;
     }
 
@@ -347,7 +347,7 @@ namespace sw::editor
         vector<uint8> bytes;
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
         {
-            SW_LOG_ERROR( "Failed to read heightfield source '%#'", sourcePath );
+            SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadHeightfieldSource", "Failed to read heightfield source '%#'", sourcePath );
             return false;
         }
         if ( FileUtil::hasExtension( sourcePath, ".r16" ) )
@@ -363,7 +363,7 @@ namespace sw::editor
                 return false;
             if ( width != height || width < 2 )
             {
-                SW_LOG_ERROR( "Heightfield '%#' is %#x%# - it must be square and at least 2x2", sourcePath, width, height );
+                SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldXMustSquare", "Heightfield '%#' is %#x%# - it must be square and at least 2x2", sourcePath, width, height );
                 outData = HeightfieldAsset{};
                 return false;
             }
@@ -371,7 +371,7 @@ namespace sw::editor
         }
         if ( outData._resolution > HeightfieldAsset::kMaxResolution )
         {
-            SW_LOG_ERROR( "Heightfield '%#' has resolution %# - at most %#", sourcePath, outData._resolution, HeightfieldAsset::kMaxResolution );
+            SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldResolutionMost", "Heightfield '%#' has resolution %# - at most %#", sourcePath, outData._resolution, HeightfieldAsset::kMaxResolution );
             return false;
         }
         return Internal::readHoles( sourcePath, outData );
@@ -384,7 +384,7 @@ namespace sw::editor
             return false;
         if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
         {
-            SW_LOG_ERROR( "Cannot create the folder for '%#'", outputPath );
+            SW_LOG_ERROR_ID( "HeightfieldImporter.CannotCreateFolder", "Cannot create the folder for '%#'", outputPath );
             return false;
         }
         const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );

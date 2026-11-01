@@ -81,8 +81,8 @@ namespace sw
                 component._bStartPending = SW_TRUE;
                 return;
             }
-            SW_LOG_ERROR( "'%#': paired animation '%#' did not start on play (result %#, waited %# ticks)", component.getOwner()->getName().c_str(),
-                          component._pairedAnimationPath.c_str(), static_cast<uint32>( result ), static_cast<uint32>( component._startRetryFrames ) );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationDidNot", "'%#': paired animation '%#' did not start on play (result %#, waited %# ticks)", component.getOwner()->getName().c_str(),
+                             component._pairedAnimationPath.c_str(), static_cast<uint32>( result ), static_cast<uint32>( component._startRetryFrames ) );
         } );
     }
 
@@ -122,7 +122,7 @@ namespace sw
         if ( def == nullptr )
         {
             // 읽기 오류는 로더가 줄마다 남겼다. 지난 에셋으로 이어 가지 않는다.
-            SW_LOG_ERROR( "'%#': paired animation '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _pairedAnimationPath.c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationCouldNot", "'%#': paired animation '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _pairedAnimationPath.c_str() );
             _def.reset();
             return;
         }
@@ -142,7 +142,7 @@ namespace sw
             return PairedAnimationStartResult::AssetNotLoaded;
         if ( pAnimator == nullptr )
         {
-            SW_LOG_ERROR( "'%#': paired animation needs a SkeletalAnimatorComponent on its object", pOwner->getName().c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationNeedsSkeletalAnimatorComponent", "'%#': paired animation needs a SkeletalAnimatorComponent on its object", pOwner->getName().c_str() );
             return PairedAnimationStartResult::ParticipantMissing;
         }
         if ( getSessionState() == PairedAnimationSessionState::Playing )
@@ -181,8 +181,8 @@ namespace sw
                 if ( pFound != nullptr )
                 {
                     // 같은 역할을 적은 프롭이 둘이면 어느 쪽인지 고를 수 없다 — 조용히 첫째를 고르지 않는다.
-                    SW_LOG_ERROR( "'%#': paired animation '%#' role '%#' is named by more than one object ('%#' and '%#')", getOwner()->getName().c_str(),
-                                  _pairedAnimationPath.c_str(), role._name.c_str(), pFound->getOwner()->getName().c_str(), pObject->getName().c_str() );
+                    SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationRoleNamed", "'%#': paired animation '%#' role '%#' is named by more than one object ('%#' and '%#')", getOwner()->getName().c_str(),
+                                     _pairedAnimationPath.c_str(), role._name.c_str(), pFound->getOwner()->getName().c_str(), pObject->getName().c_str() );
                     return false;
                 }
                 pFound = pAnimator;

@@ -63,7 +63,7 @@ namespace sw
         if ( _sequencePath.empty() )
             return;
         if ( _player.loadFromFile( AssetID{ _sequencePath } ) == false )
-            SW_LOG_WARNING( "Sequence '%#' could not be loaded - '%#' plays nothing", _sequencePath, getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+            SW_LOG_WARNING_ID( "SequencePlayer.SequenceCouldNotLoaded", "Sequence '%#' could not be loaded - '%#' plays nothing", _sequencePath, getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void SequencePlayerComponent::onEndPlay()

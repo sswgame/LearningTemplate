@@ -343,8 +343,8 @@ namespace sw
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
             if ( static_cast<int64>( region._dstOffset ) + static_cast<int64>( region._sizeBytes ) > static_cast<int64>( bufferBytes ) )
             {
-                SW_LOG_ERROR( "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes,
-                              static_cast<int64>( bufferBytes ) );
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.UpdateVertexBufferRegionsRegionOutsideByte", "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes,
+                                 static_cast<int64>( bufferBytes ) );
                 continue;
             }
             glBufferSubData( GL_COPY_WRITE_BUFFER, static_cast<GLintptr>( region._dstOffset ), static_cast<GLsizeiptr>( region._sizeBytes ), pBase + region._srcOffset );
@@ -430,9 +430,9 @@ namespace sw
         if ( bReadable )
             glGetBufferSubData( GL_COPY_READ_BUFFER, 0, static_cast<GLsizeiptr>( sizeBytes ), pDestination );
         else if ( bIsReadback == false )
-            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer", readback );
         else
-            SW_LOG_ERROR( "readReadbackBuffer: %# bytes is past the end of the %#-byte readback buffer", sizeBytes, static_cast<int64>( bufferBytes ) );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ReadReadbackBufferBytesPastEnd", "readReadbackBuffer: %# bytes is past the end of the %#-byte readback buffer", sizeBytes, static_cast<int64>( bufferBytes ) );
         glBindBuffer( GL_COPY_READ_BUFFER, 0 );
         return bReadable;
     }
@@ -445,17 +445,17 @@ namespace sw
         const bool bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();
         if ( bTextureNotUploadable )
         {
-            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadTextureDeviceNot", "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepthStencil != SW_FALSE )
         {
-            SW_LOG_ERROR( "submitTextureUpload: texture %# is a depth texture", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture );
             return RHITransferSubmit::rejected();
         }
         if ( desc._arraySlice >= pRecord->_arraySize )
         {
-            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arraySize );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadSliceOutRange", "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arraySize );
             return RHITransferSubmit::rejected();
         }
 
@@ -464,8 +464,8 @@ namespace sw
                                                                pRecord->_mipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
-                          desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadUnsupportedFormatNot", "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+                             desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
             return RHITransferSubmit::rejected();
         }
 
@@ -486,7 +486,7 @@ namespace sw
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
             _pDevice->_stagingRing.free( staging );
-            SW_LOG_ERROR( "submitTextureUpload: the GL context could not be acquired; submit again later" );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureUploadGLContextCould", "submitTextureUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
         const bool   bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
@@ -550,7 +550,7 @@ namespace sw
                                                  _pDevice->_transferSerials.isLost();
         if ( bTextureRegionNotUploadable )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         uint32 rowBytes{ 0 };
@@ -569,7 +569,7 @@ namespace sw
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
             _pDevice->_stagingRing.free( staging );
-            SW_LOG_ERROR( "submitTextureRegionUpload: the GL context could not be acquired; submit again later" );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureRegionUploadGLContextCould", "submitTextureRegionUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
         const GLenum glFormat = toGlFormat( pRecord->_format );
@@ -613,13 +613,13 @@ namespace sw
     {
         if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.TakeTextureReadbackTicketNotCompleted", "takeTextureReadback: ticket %# has not completed", ticket._serial );
             return false;
         }
         RHIStagingSpan span{};
         if ( _pDevice->_readbackTable.take( ticket._serial, span ) == false )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.TakeTextureReadbackTicketNotPending", "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
             return false;
         }
         // 펜스가 지났으므로 GPU 가 구간에 쓴 바이트가 COHERENT 매핑에 보인다. 복사는 컨텍스트 밖에서 하고, 다 읽은 구간을 링에 돌려준다.
@@ -652,12 +652,12 @@ namespace sw
         const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();
         if ( bTextureNotReadable )
         {
-            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
         {
-            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arraySize );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackMipSliceOut", "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arraySize );
             return RHITransferSubmit::rejected();
         }
         // 깊이는 깊이 성분만 0..1 float32 로 읽는다(kRHIDepthReadbackFormat). 스텐실은 버린다.
@@ -667,7 +667,7 @@ namespace sw
         const GLenum    pixelType    = bDepth ? GL_FLOAT : toGlType( pRecord->_format );
         if ( computeRHITextureMipLayout( layoutFormat, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
         {
-            SW_LOG_ERROR( "submitTextureReadback: unsupported format for %#x%# mip %#", pRecord->_width, pRecord->_height, mip );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackUnsupportedFormatX", "submitTextureReadback: unsupported format for %#x%# mip %#", pRecord->_width, pRecord->_height, mip );
             return RHITransferSubmit::rejected();
         }
 
@@ -682,7 +682,7 @@ namespace sw
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
             _pDevice->_readbackRing.free( readback );
-            SW_LOG_ERROR( "submitTextureReadback: the GL context could not be acquired; submit again later" );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.SubmitTextureReadbackGLContextCould", "submitTextureReadback: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
         // 컨텍스트를 빌린 동안에는 읽기 명령(링 PBO 오프셋)과 펜스만 낸다 — GPU 가 끝나기를 기다리지 않는다. 앞서 낸 명령 뒤에 실행되므로 앞서 제출된 쓰기가 보인다(계약 3).
@@ -715,8 +715,8 @@ namespace sw
             return 0;
         if ( isRHITextureShapeValid( desc ) == false )
         {
-            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                          desc._arraySize, desc._width, desc._height );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                             desc._arraySize, desc._width, desc._height );
             return 0;
         }
 
@@ -794,7 +794,7 @@ namespace sw
             glBindFramebuffer( GL_FRAMEBUFFER, 0 );
             if ( status != GL_FRAMEBUFFER_COMPLETE )
             {
-                SW_LOG_WARNING( "createTexture2D FBO incomplete (status=%#) — texture kept without a copy FBO.", static_cast<uint32>( status ) );
+                SW_LOG_WARNING_ID( "OpenGLRHIResourceFactory.CreateTexture2DFBOIncompleteStatus", "createTexture2D FBO incomplete (status=%#) — texture kept without a copy FBO.", static_cast<uint32>( status ) );
                 glDeleteFramebuffers( 1, &fbo );
                 fbo = 0;
             }
@@ -871,8 +871,8 @@ namespace sw
         const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord != nullptr && pRecord->_dimension != RHITextureDimension::Texture2D )
         {
-            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture units yet", texture,
-                          static_cast<uint32>( pRecord->_dimension ) );
+            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture units yet", texture,
+                             static_cast<uint32>( pRecord->_dimension ) );
             return kInvalidDescriptorIndex;
         }
         // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
@@ -964,7 +964,7 @@ namespace sw
         {
             if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
             {
-                SW_LOG_ERROR( "GL_ARB_gl_spirv unavailable (glShaderBinary/glSpecializeShader null)" );
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.GLARBGlSpirv", "GL_ARB_gl_spirv unavailable (glShaderBinary/glSpecializeShader null)" );
                 return 0;
             }
 
@@ -1003,12 +1003,12 @@ namespace sw
                 if ( vsCompiled != GL_TRUE )
                 {
                     glGetShaderInfoLog( vertexShader, sizeof( infoLog ), nullptr, infoLog );
-                    SW_LOG_ERROR( "VS specialize failed (%#): %#", desc._vertexShaderPath, infoLog );
+                    SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.VSSpecializeFailed", "VS specialize failed (%#): %#", desc._vertexShaderPath, infoLog );
                 }
                 if ( bHasPixelShader && psCompiled != GL_TRUE )
                 {
                     glGetShaderInfoLog( pixelShader, sizeof( infoLog ), nullptr, infoLog );
-                    SW_LOG_ERROR( "PS specialize failed (%#): %#", desc._pixelShaderPath, infoLog );
+                    SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.PSSpecializeFailed", "PS specialize failed (%#): %#", desc._pixelShaderPath, infoLog );
                 }
             }
             glDeleteShader( vertexShader );
@@ -1048,7 +1048,7 @@ namespace sw
         {
             if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
             {
-                SW_LOG_ERROR( "GL_ARB_gl_spirv unavailable for compute PSO" );
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.GLARBGlSpirv2", "GL_ARB_gl_spirv unavailable for compute PSO" );
                 return 0;
             }
 
@@ -1071,7 +1071,7 @@ namespace sw
             {
                 GLchar infoLog[constant::buffer::kMax1024];
                 glGetShaderInfoLog( computeShader, sizeof( infoLog ), nullptr, infoLog );
-                SW_LOG_ERROR( "Compute shader specialize/compile failed: %#", infoLog );
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ComputeShaderSpecializeCompile", "Compute shader specialize/compile failed: %#", infoLog );
             }
             glDeleteShader( computeShader );
         }
@@ -1137,7 +1137,7 @@ namespace sw
 
         GLchar infoLog[constant::buffer::kMax1024];
         glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
-        SW_LOG_ERROR( "%# program link failed: %#", pLabel, infoLog );
+        SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.ProgramLinkFailed", "%# program link failed: %#", pLabel, infoLog );
         glDeleteProgram( program );
         return false;
     }

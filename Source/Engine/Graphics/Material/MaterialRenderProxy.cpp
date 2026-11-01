@@ -50,7 +50,7 @@ namespace sw
             const RHIBufferHandle buffer = pDevice->getResourceFactory()->createConstantBuffer( byteSize );
             if ( buffer == 0 )
             {
-                SW_LOG_ERROR( "Could not create a material constant buffer of %# bytes", byteSize );
+                SW_LOG_ERROR_ID( "MaterialRenderProxy.CouldNotCreateMaterial", "Could not create a material constant buffer of %# bytes", byteSize );
                 return kInvalidDescriptorIndex;
             }
             _constant.adopt( pDevice, buffer );

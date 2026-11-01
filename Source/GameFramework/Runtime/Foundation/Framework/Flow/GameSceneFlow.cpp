@@ -97,7 +97,7 @@ namespace sw
     {
         if ( _bResumingWorld == SW_TRUE )
         {
-            SW_LOG_INFO( "The game instance was recreated over a live scene - keeping it instead of loading the first scene" );
+            SW_LOG_INFO_ID( "GameSceneFlow.GameInstanceRecreatedOver", "The game instance was recreated over a live scene - keeping it instead of loading the first scene" );
             return false;
         }
         return requestLoadScene( getFirstScene(), "first" );
@@ -133,7 +133,7 @@ namespace sw
     void GameSceneFlow::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
     {
         if ( requestTitleScene() == false )
-            SW_LOG_ERROR( "Return to title: the title scene '%#' was not requested", _settings._titleScene.c_str() );
+            SW_LOG_ERROR_ID( "GameSceneFlow.ReturnTitleTitleScene", "Return to title: the title scene '%#' was not requested", _settings._titleScene.c_str() );
     }
 
     bool GameSceneFlow::requestLoadScene( const string& scenePath, const utf8* pWhich )
@@ -143,13 +143,13 @@ namespace sw
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
         {
-            SW_LOG_WARNING( "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
+            SW_LOG_WARNING_ID( "GameSceneFlow.SceneNotOpenedNo", "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
             return false;
         }
         // 로딩 화면 · 로드 이벤트는 받아들임 알림(`onSceneLoadRequested`)이 붙인다 — 시나리오 · 게임 코드가 연 씬도 같은 길이다.
         if ( pSceneManager->requestLoadFuture( scenePath, SceneLoadKind::Travel ).isValid() == false )
         {
-            SW_LOG_ERROR( "The %# scene '%#' could not be requested", pWhich, scenePath.c_str() );
+            SW_LOG_ERROR_ID( "GameSceneFlow.SceneCouldNotRequested", "The %# scene '%#' could not be requested", pWhich, scenePath.c_str() );
             return false;
         }
         return true;

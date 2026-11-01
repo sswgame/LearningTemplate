@@ -23,7 +23,7 @@ namespace sw
     {
         if ( SUCCEEDED( result ) )
             return true;
-        SW_LOG_ERROR( "%# failed (HRESULT 0x%#)", pWhat, static_cast<uint32>( result ) );
+        SW_LOG_ERROR_ID( "RHIDxResultCheck.FailedHRESULTX", "%# failed (HRESULT 0x%#)", pWhat, static_cast<uint32>( result ) );
         return false;
     }
 

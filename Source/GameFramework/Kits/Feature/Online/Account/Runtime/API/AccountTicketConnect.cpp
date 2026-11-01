@@ -216,7 +216,7 @@ namespace sw
                         return false;
                     }
                     AccountClient::makeConnectCredentials( reply._ticket, outCredentials );
-                    SW_LOG_INFO( "Game ticket for server '%#' received (the account session stays open)", request._serverID.c_str() );
+                    SW_LOG_INFO_ID( "AccountTicketConnect.GameTicketServerReceived", "Game ticket for server '%#' received (the account session stays open)", request._serverID.c_str() );
                     return true; // 연결은 열어 둔다 — 티켓은 이 계정 세션에 묶여 있다
                 }
             }

@@ -52,10 +52,10 @@ namespace sw
         _routerSubscription = link._pRouter->registerHandler( pHandler );
         if ( _routerSubscription.isActive() == false )
         {
-            SW_LOG_ERROR( "Paired animation net session not started: another handler owns the paired animation message range" );
+            SW_LOG_ERROR_ID( "PairedAnimationNetSessionComponent.PairedAnimationNetSession", "Paired animation net session not started: another handler owns the paired animation message range" );
             return;
         }
-        SW_LOG_INFO( "Paired animation net session started as %#", _bServer == SW_TRUE ? "server" : "client" );
+        SW_LOG_INFO_ID( "PairedAnimationNetSessionComponent.PairedAnimationNetSession2", "Paired animation net session started as %#", _bServer == SW_TRUE ? "server" : "client" );
     }
 
     void PairedAnimationNetSessionComponent::onEndPlay()

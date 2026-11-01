@@ -29,13 +29,13 @@ namespace sw
         // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.
         if ( rootPath.empty() )
         {
-            SW_LOG_WARNING( "FileWatchDispatcher: the watch root is empty (no content root folder) - hot reload is off" );
+            SW_LOG_WARNING_ID( "FileWatchDispatcher.FileWatchDispatcherWatchRootEmpty", "FileWatchDispatcher: the watch root is empty (no content root folder) - hot reload is off" );
             _fileWatcher.reset();
             return false;
         }
         if ( _fileWatcher->startWatching( rootPath, true ) == false )
         {
-            SW_LOG_ERROR( "FileWatchDispatcher: failed to start watching %#", rootPath );
+            SW_LOG_ERROR_ID( "FileWatchDispatcher.FileWatchDispatcherFailedStartWatching", "FileWatchDispatcher: failed to start watching %#", rootPath );
             _fileWatcher.reset();
             return false;
         }
@@ -67,7 +67,7 @@ namespace sw
         if ( poll._bWatchLost )
         {
             // 워커가 이유를 이미 오류로 남겼다. 다시 걸어도 같은 실패가 되풀이되므로 감시를 해제하고, 마지막 리스캔은 아래에서 처리한다.
-            SW_LOG_ERROR( "FileWatchDispatcher: file watching stopped - changes under the watch root are no longer reloaded" );
+            SW_LOG_ERROR_ID( "FileWatchDispatcher.FileWatchDispatcherFileWatchingStopped", "FileWatchDispatcher: file watching stopped - changes under the watch root are no longer reloaded" );
             _fileWatcher->stopWatching();
             _fileWatcher.reset();
         }
@@ -97,7 +97,7 @@ namespace sw
         entry._onMatch          = onMatch;
         _listWatch.push_back( entry );
 
-        SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( listExtension.size() ) );
+        SW_LOG_TRACE_ID( "FileWatchDispatcher.RegisteredWatchExtCount", "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( listExtension.size() ) );
         return _subscriptions.issue( entry._id );
     }
 
@@ -181,7 +181,7 @@ namespace sw
                         break;
                     }
                 }
-                SW_LOG_TRACE( "%# : %#/%#", pActionStr, changeEvent._directory.c_str(), changeEvent._filename.c_str() );
+                SW_LOG_TRACE_ID( "FileWatchDispatcher.Message", "%# : %#/%#", pActionStr, changeEvent._directory.c_str(), changeEvent._filename.c_str() );
 #endif
             }
         }
@@ -217,7 +217,7 @@ namespace sw
 
             vector<string> listFile;
             if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
-                SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._pathPrefix );
+                SW_LOG_WARNING_ID( "FileWatchDispatcher.WatchTreeCouldNot", "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._pathPrefix );
             for ( const string& filePath : listFile )
             {
                 if ( isExtensionAllowed( entry, filePath ) == false )
@@ -242,7 +242,7 @@ namespace sw
                 ++found;
             }
         }
-        SW_LOG_INFO( "A burst of file changes made the watcher drop individual notifications - recovered %# by diffing the watch tree.", found );
+        SW_LOG_INFO_ID( "FileWatchDispatcher.BurstFileChangesMade", "A burst of file changes made the watcher drop individual notifications - recovered %# by diffing the watch tree.", found );
     }
 
     bool FileWatchDispatcher::isExtensionAllowed( const WatchEntry& entry, string_view filename ) const

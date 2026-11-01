@@ -87,7 +87,7 @@ namespace sw
                     inoutValue = value;
                     return true;
                 }
-                SW_LOG_ERROR( "%#: <%#> attribute '%#' is not a number: '%#'", sourceName, node.getName(), pName, text );
+                SW_LOG_ERROR_ID( "UserSettingsSchema.AttributeNotNumber", "%#: <%#> attribute '%#' is not a number: '%#'", sourceName, node.getName(), pName, text );
                 return false;
             }
 
@@ -117,7 +117,7 @@ namespace sw
                         return true;
                     }
                 }
-                SW_LOG_ERROR( "%#: setting '%#' has a target '%#' that is neither 'gv:<name>' nor 'handler:<name>'", sourceName, inoutDef._id.c_str(), text );
+                SW_LOG_ERROR_ID( "UserSettingsSchema.SettingTargetNeitherGv", "%#: setting '%#' has a target '%#' that is neither 'gv:<name>' nor 'handler:<name>'", sourceName, inoutDef._id.c_str(), text );
                 return false;
             }
 
@@ -139,7 +139,7 @@ namespace sw
                     }
                     if ( operatorPos == string_view::npos || operatorPos == 0 )
                     {
-                        SW_LOG_ERROR( "%#: setting '%#' has an enabledWhen part '%#' that is not 'id=value' or 'id!=value'", sourceName, inoutDef._id.c_str(), part );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingEnabledWhenPartNot", "%#: setting '%#' has an enabledWhen part '%#' that is not 'id=value' or 'id!=value'", sourceName, inoutDef._id.c_str(), part );
                         bOk = false;
                         continue;
                     }
@@ -165,7 +165,7 @@ namespace sw
                     uint8 bit = 0;
                     if ( NamedValueUtil::find( kArrPlatformName, name, bit ) == false )
                     {
-                        SW_LOG_ERROR( "%#: setting '%#' names an unknown platform '%#'", sourceName, settingID.c_str(), name );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingNamesUnknownPlatform", "%#: setting '%#' names an unknown platform '%#'", sourceName, settingID.c_str(), name );
                         bOk = false;
                         return;
                     }
@@ -237,7 +237,7 @@ namespace sw
                 outCategory._order          = order;
                 if ( outCategory._id.empty() )
                 {
-                    SW_LOG_ERROR( "%#: <Category> without an id", sourceName );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.CategoryWithoutId", "%#: <Category> without an id", sourceName );
                     return false;
                 }
                 return bKnownAttributes;
@@ -251,7 +251,7 @@ namespace sw
                 {
                     if ( StringUtil::equals( optionNode.getName(), "Option" ) == false )
                     {
-                        SW_LOG_ERROR( "%#: setting '%#' has an unknown child <%#>", sourceName, inoutDef._id.c_str(), optionNode.getName() );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingUnknownChild", "%#: setting '%#' has an unknown child <%#>", sourceName, inoutDef._id.c_str(), optionNode.getName() );
                         bOk = false;
                         continue;
                     }
@@ -297,19 +297,19 @@ namespace sw
                 outDef._order          = order;
                 if ( outDef._id.empty() )
                 {
-                    SW_LOG_ERROR( "%#: <Setting> without an id", sourceName );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingWithoutId", "%#: <Setting> without an id", sourceName );
                     return false;
                 }
 
                 if ( findTypeByName( node.getAttributeText( "type" ), outDef._type ) == false )
                 {
-                    SW_LOG_ERROR( "%#: setting '%#' has an unknown type '%#'", sourceName, outDef._id.c_str(), node.getAttributeText( "type" ) );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingUnknownType", "%#: setting '%#' has an unknown type '%#'", sourceName, outDef._id.c_str(), node.getAttributeText( "type" ) );
                     bOk = false;
                 }
                 const string_view timingText = node.getAttributeText( "apply" );
                 if ( timingText.empty() == false && NamedValueUtil::find( kArrTimingName, timingText, outDef._applyTiming ) == false )
                 {
-                    SW_LOG_ERROR( "%#: setting '%#' has an unknown apply timing '%#'", sourceName, outDef._id.c_str(), timingText );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingUnknownApplyTiming", "%#: setting '%#' has an unknown apply timing '%#'", sourceName, outDef._id.c_str(), timingText );
                     bOk = false;
                 }
                 bOk = parseTarget( node.getAttributeText( "target" ), outDef, sourceName ) && bOk;
@@ -339,7 +339,7 @@ namespace sw
                 {
                     if ( StringUtil::equals( valueNode.getName(), "Value" ) == false )
                     {
-                        SW_LOG_ERROR( "%#: preset '%#' has an unknown child <%#>", sourceName, outPreset._name.c_str(), valueNode.getName() );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.PresetUnknownChild", "%#: preset '%#' has an unknown child <%#>", sourceName, outPreset._name.c_str(), valueNode.getName() );
                         bOk = false;
                         continue;
                     }
@@ -385,7 +385,7 @@ namespace sw
                     }
                     else
                     {
-                        SW_LOG_ERROR( "%#: <Scalability> has an unknown child <%#>", sourceName, groupChild.getName() );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityUnknownChild", "%#: <Scalability> has an unknown child <%#>", sourceName, groupChild.getName() );
                         bOk = false;
                     }
                 }
@@ -406,12 +406,12 @@ namespace sw
                 bOk                  = readNumberAttribute( node, "scale", outStep._scale, sourceName ) && bOk;
                 if ( NamedValueUtil::find( kArrUpgradeName, node.getAttributeText( "op" ), outStep._operation ) == false )
                 {
-                    SW_LOG_ERROR( "%#: <Upgrade> has an unknown op '%#'", sourceName, node.getAttributeText( "op" ) );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.UpgradeUnknownOp", "%#: <Upgrade> has an unknown op '%#'", sourceName, node.getAttributeText( "op" ) );
                     bOk = false;
                 }
                 if ( outStep._key.empty() )
                 {
-                    SW_LOG_ERROR( "%#: <Upgrade> without a key", sourceName );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.UpgradeWithoutKey", "%#: <Upgrade> without a key", sourceName );
                     bOk = false;
                 }
                 return bOk;
@@ -429,12 +429,12 @@ namespace sw
                 const bool        bHasProvider = def._optionProvider.empty() == false;
                 if ( bHasProvider == false && def._listOption.empty() )
                 {
-                    SW_LOG_ERROR( "enum setting '%#' has neither <Option> children nor optionsFrom", pID );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.EnumSettingNeitherOption", "enum setting '%#' has neither <Option> children nor optionsFrom", pID );
                     bOk = false;
                 }
                 if ( bHasProvider && registry.hasOptionProvider( def._optionProvider ) == false )
                 {
-                    SW_LOG_ERROR( "setting '%#' names an unknown option provider '%#'", pID, def._optionProvider.c_str() );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingNamesUnknownOption", "setting '%#' names an unknown option provider '%#'", pID, def._optionProvider.c_str() );
                     bOk = false;
                 }
                 for ( size_t optionIndex = 0; optionIndex < def._listOption.size(); ++optionIndex )
@@ -443,7 +443,7 @@ namespace sw
                     {
                         if ( StringUtil::equals( def._listOption[optionIndex]._value, def._listOption[otherIndex]._value ) )
                         {
-                            SW_LOG_ERROR( "setting '%#' lists option '%#' twice", pID, def._listOption[optionIndex]._value );
+                            SW_LOG_ERROR_ID( "UserSettingsSchema.SettingListsOptionTwice", "setting '%#' lists option '%#' twice", pID, def._listOption[optionIndex]._value );
                             bOk = false;
                         }
                     }
@@ -460,12 +460,12 @@ namespace sw
                 const GlobalVariableInfo* pVariable = pGlobalVariableManager->findVariable( def._targetName.c_str() );
                 if ( pVariable == nullptr )
                 {
-                    SW_LOG_ERROR( "setting '%#' targets an unknown global variable '%#'", pID, def._targetName.c_str() );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingTargetsUnknownGlobal", "setting '%#' targets an unknown global variable '%#'", pID, def._targetName.c_str() );
                     return false;
                 }
                 if ( ( UserSettingsSchema::getTypeTraits( def._type )._globalVariableTypeMask & SW_BIT( static_cast<uint32>( pVariable->_type ) ) ) == 0 )
                 {
-                    SW_LOG_ERROR( "setting '%#' cannot drive global variable '%#' (type mismatch)", pID, def._targetName.c_str() );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingCannotDriveGlobal", "setting '%#' cannot drive global variable '%#' (type mismatch)", pID, def._targetName.c_str() );
                     return false;
                 }
                 bool bOk = true;
@@ -477,7 +477,7 @@ namespace sw
                         float32 parsed{ 0.0f };
                         if ( StringUtil::parseFloat( option._targetValue, parsed ) == false )
                         {
-                            SW_LOG_ERROR( "setting '%#' drives float variable '%#' - option '%#' needs a numeric targetValue", pID, def._targetName.c_str(), option._value.c_str() );
+                            SW_LOG_ERROR_ID( "UserSettingsSchema.SettingDrivesFloatVariable", "setting '%#' drives float variable '%#' - option '%#' needs a numeric targetValue", pID, def._targetName.c_str(), option._value.c_str() );
                             bOk = false;
                         }
                     }
@@ -491,20 +491,20 @@ namespace sw
                 const utf8* const pID = def._id.c_str();
                 if ( registry.hasHandler( def._targetName ) == false )
                 {
-                    SW_LOG_ERROR( "setting '%#' targets an unknown handler '%#'", pID, def._targetName.c_str() );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingTargetsUnknownHandler", "setting '%#' targets an unknown handler '%#'", pID, def._targetName.c_str() );
                     return false;
                 }
                 bool bOk = true;
                 if ( registry.acceptsValue( def._targetName, def._defaultValue ) == false )
                 {
-                    SW_LOG_ERROR( "setting '%#': handler '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingHandlerDoesNot", "setting '%#': handler '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
                     bOk = false;
                 }
                 for ( const UserSettingOption& option : def._listOption )
                 {
                     if ( registry.acceptsValue( def._targetName, option._value ) == false )
                     {
-                        SW_LOG_ERROR( "setting '%#': handler '%#' does not accept option '%#'", pID, def._targetName.c_str(), option._value );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingHandlerDoesNot2", "setting '%#': handler '%#' does not accept option '%#'", pID, def._targetName.c_str(), option._value );
                         bOk = false;
                     }
                 }
@@ -521,13 +521,13 @@ namespace sw
                     const UserSettingDef* pOther = schema.findSetting( condition._settingID );
                     if ( pOther == nullptr )
                     {
-                        SW_LOG_ERROR( "setting '%#' depends on an unknown setting '%#'", def._id.c_str(), condition._settingID.c_str() );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingDependsUnknownSetting", "setting '%#' depends on an unknown setting '%#'", def._id.c_str(), condition._settingID.c_str() );
                         bOk = false;
                         continue;
                     }
                     if ( UserSettingsSchema::normalizeValue( *pOther, condition._value, normalized ) != UserSettingValueResult::Accepted )
                     {
-                        SW_LOG_ERROR( "setting '%#' depends on '%#' = '%#', which is not a valid value of it", def._id.c_str(), condition._settingID.c_str(), condition._value );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingDependsWhichNot", "setting '%#' depends on '%#' = '%#', which is not a valid value of it", def._id.c_str(), condition._settingID.c_str(), condition._value );
                         bOk = false;
                     }
                 }
@@ -542,7 +542,7 @@ namespace sw
                 const utf8* const pID = def._id.c_str();
                 if ( schema.findCategory( def._category ) == nullptr )
                 {
-                    SW_LOG_ERROR( "setting '%#' names an unknown category '%#'", pID, def._category.c_str() );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingNamesUnknownCategory", "setting '%#' names an unknown category '%#'", pID, def._category.c_str() );
                     bOk = false;
                 }
                 if ( UserSettingsSchema::getTypeTraits( def._type )._bNumeric )
@@ -550,7 +550,7 @@ namespace sw
                     const bool bRangeValid = def._minValue <= def._maxValue && def._step >= 0.0;
                     if ( bRangeValid == false )
                     {
-                        SW_LOG_ERROR( "setting '%#' has an invalid range [%#, %#] step %#", pID, def._minValue, def._maxValue, def._step );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingInvalidRangeStep", "setting '%#' has an invalid range [%#, %#] step %#", pID, def._minValue, def._maxValue, def._step );
                         bOk = false;
                     }
                 }
@@ -558,14 +558,14 @@ namespace sw
                     bOk = validateEnumSetting( def, registry ) && bOk;
                 if ( def._type == UserSettingType::KeyBinding && def._action.empty() )
                 {
-                    SW_LOG_ERROR( "key binding setting '%#' has no action", pID );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.KeyBindingSettingNo", "key binding setting '%#' has no action", pID );
                     bOk = false;
                 }
 
                 string normalized;
                 if ( UserSettingsSchema::normalizeValue( def, def._defaultValue, normalized ) != UserSettingValueResult::Accepted )
                 {
-                    SW_LOG_ERROR( "setting '%#' has a default '%#' that is not a valid value", pID, def._defaultValue );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingDefaultNotValid", "setting '%#' has a default '%#' that is not a valid value", pID, def._defaultValue );
                     bOk = false;
                 }
 
@@ -595,14 +595,14 @@ namespace sw
                 const UserSettingDef* pGroupSetting = schema.findSetting( group._settingID );
                 if ( pGroupSetting == nullptr || pGroupSetting->_type != UserSettingType::Enum )
                 {
-                    SW_LOG_ERROR( "<Scalability> setting '%#' is not an enum setting", group._settingID.c_str() );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilitySettingNotEnum", "<Scalability> setting '%#' is not an enum setting", group._settingID.c_str() );
                     return false;
                 }
                 bool   bOk = true;
                 string normalized;
                 if ( UserSettingsSchema::normalizeValue( *pGroupSetting, group._customValue, normalized ) != UserSettingValueResult::Accepted )
                 {
-                    SW_LOG_ERROR( "<Scalability> '%#': custom value '%#' is not an option", group._settingID.c_str(), group._customValue );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityCustomValueNot", "<Scalability> '%#': custom value '%#' is not an option", group._settingID.c_str(), group._customValue );
                     bOk = false;
                 }
                 // 선택지 하나하나(custom 제외)가 프리셋 하나다. 프리셋이 없는 선택지를 고르면 묶인 설정이 아무것도 바뀌지 않는다.
@@ -617,7 +617,7 @@ namespace sw
                     }
                     if ( bHasPreset == false )
                     {
-                        SW_LOG_ERROR( "<Scalability> '%#': option '%#' has no <Preset>", group._settingID.c_str(), option._value );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityOptionNoPreset", "<Scalability> '%#': option '%#' has no <Preset>", group._settingID.c_str(), option._value );
                         bOk = false;
                     }
                 }
@@ -625,7 +625,7 @@ namespace sw
                 {
                     if ( UserSettingsSchema::normalizeValue( *pGroupSetting, preset._name.c_str(), normalized ) != UserSettingValueResult::Accepted )
                     {
-                        SW_LOG_ERROR( "<Scalability> '%#': preset '%#' is not an option", group._settingID.c_str(), preset._name.c_str() );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityPresetNotOption", "<Scalability> '%#': preset '%#' is not an option", group._settingID.c_str(), preset._name.c_str() );
                         bOk = false;
                     }
                     for ( const ScalabilityPresetValue& value : preset._listValue )
@@ -633,13 +633,13 @@ namespace sw
                         const UserSettingDef* pMember = schema.findSetting( value._settingID );
                         if ( pMember == nullptr || pMember == pGroupSetting )
                         {
-                            SW_LOG_ERROR( "<Scalability> preset '%#' sets an unknown setting '%#'", preset._name.c_str(), value._settingID.c_str() );
+                            SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityPresetSetsUnknown", "<Scalability> preset '%#' sets an unknown setting '%#'", preset._name.c_str(), value._settingID.c_str() );
                             bOk = false;
                             continue;
                         }
                         if ( UserSettingsSchema::normalizeValue( *pMember, value._value, normalized ) != UserSettingValueResult::Accepted )
                         {
-                            SW_LOG_ERROR( "<Scalability> preset '%#' sets '%#' to an invalid value '%#'", preset._name.c_str(), value._settingID.c_str(), value._value );
+                            SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityPresetSetsInvalid", "<Scalability> preset '%#' sets '%#' to an invalid value '%#'", preset._name.c_str(), value._settingID.c_str(), value._value );
                             bOk = false;
                         }
                     }
@@ -648,14 +648,14 @@ namespace sw
                 {
                     if ( UserSettingsSchema::normalizeValue( *pGroupSetting, rule._preset.c_str(), normalized ) != UserSettingValueResult::Accepted )
                     {
-                        SW_LOG_ERROR( "<AutoDetect> names an unknown preset '%#'", rule._preset.c_str() );
+                        SW_LOG_ERROR_ID( "UserSettingsSchema.AutoDetectNamesUnknownPreset", "<AutoDetect> names an unknown preset '%#'", rule._preset.c_str() );
                         bOk = false;
                     }
                 }
                 if ( group._autoDetectFallback.empty() == false &&
                      UserSettingsSchema::normalizeValue( *pGroupSetting, group._autoDetectFallback.c_str(), normalized ) != UserSettingValueResult::Accepted )
                 {
-                    SW_LOG_ERROR( "<Scalability> '%#': autoDetectFallback '%#' is not an option", group._settingID.c_str(), group._autoDetectFallback.c_str() );
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityAutoDetectFallbackNotOption", "<Scalability> '%#': autoDetectFallback '%#' is not an option", group._settingID.c_str(), group._autoDetectFallback.c_str() );
                     bOk = false;
                 }
                 return bOk;
@@ -711,7 +711,7 @@ namespace sw
         string            absPath;
         if ( doc.loadResource( assetID, &absPath ) == false )
         {
-            SW_LOG_ERROR( "Failed to read the user settings schema '%#'", assetPath );
+            SW_LOG_ERROR_ID( "UserSettingsSchema.FailedReadUserSettings", "Failed to read the user settings schema '%#'", assetPath );
             return false;
         }
         return loadRoot( doc.getRoot( "UserSettingsSchema" ), assetPath );
@@ -722,7 +722,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR( "Failed to parse the user settings schema '%#'", sourceName );
+            SW_LOG_ERROR_ID( "UserSettingsSchema.FailedParseUserSettings", "Failed to parse the user settings schema '%#'", sourceName );
             return false;
         }
         return loadRoot( doc.getRoot( "UserSettingsSchema" ), sourceName );
@@ -733,7 +733,7 @@ namespace sw
         using Internal = UserSettingsSchemaInternal;
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: the root element is not <UserSettingsSchema>", sourceName );
+            SW_LOG_ERROR_ID( "UserSettingsSchema.RootElementNotUserSettingsSchema", "%#: the root element is not <UserSettingsSchema>", sourceName );
             return false;
         }
 
@@ -777,7 +777,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "%#: unknown element <%#>", sourceName, pName );
+                SW_LOG_ERROR_ID( "UserSettingsSchema.UnknownElement", "%#: unknown element <%#>", sourceName, pName );
                 bOk = false;
             }
         }
@@ -792,7 +792,7 @@ namespace sw
             }
             if ( bDuplicate )
             {
-                SW_LOG_ERROR( "%#: setting '%#' is defined twice", sourceName, def._id.c_str() );
+                SW_LOG_ERROR_ID( "UserSettingsSchema.SettingDefinedTwice", "%#: setting '%#' is defined twice", sourceName, def._id.c_str() );
                 bOk = false;
             }
         }
@@ -800,7 +800,7 @@ namespace sw
         {
             if ( findCategory( category._id ) != nullptr )
             {
-                SW_LOG_ERROR( "%#: category '%#' is defined twice", sourceName, category._id.c_str() );
+                SW_LOG_ERROR_ID( "UserSettingsSchema.CategoryDefinedTwice", "%#: category '%#' is defined twice", sourceName, category._id.c_str() );
                 bOk = false;
             }
         }
@@ -957,7 +957,7 @@ namespace sw
         {
             if ( step._fromVersion >= _version )
             {
-                SW_LOG_ERROR( "<Upgrade> from version %# is not older than the schema version %#", step._fromVersion, _version );
+                SW_LOG_ERROR_ID( "UserSettingsSchema.UpgradeVersionNotOlder", "<Upgrade> from version %# is not older than the schema version %#", step._fromVersion, _version );
                 bOk = false;
             }
         }

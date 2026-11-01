@@ -36,7 +36,7 @@ namespace sw
         if ( pSource == nullptr )
         {
             if ( getOwner() != nullptr )
-                SW_LOG_ERROR( "Mesh section '%#' has no main mesh component on its object - it draws nothing", getSectionName().c_str() );
+                SW_LOG_ERROR_ID( "MeshSectionComponent.MeshSectionNoMain", "Mesh section '%#' has no main mesh component on its object - it draws nothing", getSectionName().c_str() );
             assignMeshWithoutFollowers( nullptr );
             return;
         }

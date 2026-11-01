@@ -33,12 +33,12 @@ namespace sw
                 const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
                 if ( rangeError.empty() == false )
                 {
-                    SW_LOG_ERROR( "UnoGame: refused settings - %#", rangeError.c_str() );
+                    SW_LOG_ERROR_ID( "UnoGame.UnoGameRefusedSettings", "UnoGame: refused settings - %#", rangeError.c_str() );
                     return false;
                 }
                 if ( settings._playerCount * settings._handSize + 1 > kDeckCardCount )
                 {
-                    SW_LOG_ERROR( "UnoGame: refused settings - %# players x %# cards leaves no card for the first discard (deck has %# cards)", settings._playerCount, settings._handSize, kDeckCardCount );
+                    SW_LOG_ERROR_ID( "UnoGame.UnoGameRefusedSettingsPlayers", "UnoGame: refused settings - %# players x %# cards leaves no card for the first discard (deck has %# cards)", settings._playerCount, settings._handSize, kDeckCardCount );
                     return false;
                 }
                 return true;
@@ -135,12 +135,12 @@ namespace sw
         const int32 handCount = static_cast<int32>( layout._listHand.size() );
         if ( handCount != settings._playerCount )
         {
-            SW_LOG_ERROR( "UnoGame: refused layout - %# hands for %# players", handCount, settings._playerCount );
+            SW_LOG_ERROR_ID( "UnoGame.UnoGameRefusedLayoutHands", "UnoGame: refused layout - %# hands for %# players", handCount, settings._playerCount );
             return false;
         }
         if ( layout._firstPlayer < 0 || layout._firstPlayer >= handCount )
         {
-            SW_LOG_ERROR( "UnoGame: refused layout - first player %# is outside 0..%#", layout._firstPlayer, handCount - 1 );
+            SW_LOG_ERROR_ID( "UnoGame.UnoGameRefusedLayoutFirst", "UnoGame: refused layout - first player %# is outside 0..%#", layout._firstPlayer, handCount - 1 );
             return false;
         }
         _settings      = settings;

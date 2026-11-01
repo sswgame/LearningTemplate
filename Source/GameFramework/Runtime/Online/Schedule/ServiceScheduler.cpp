@@ -196,7 +196,7 @@ namespace sw
         {
             _pScheduler->onWorkCompleted();
             if ( _result != ServiceStoreResult::Ok && isCancelled() == false ) // 종료 때문에 취소된 일은 경고하지 않는다
-                SW_LOG_WARNING( "Could not record the end of scheduled run '%#' (another server took it over or the store is unavailable)", _run._jobID );
+                SW_LOG_WARNING_ID( "ServiceScheduler.CouldNotRecordEnd", "Could not record the end of scheduled run '%#' (another server took it over or the store is unavailable)", _run._jobID );
         }
 
     private:
@@ -242,7 +242,7 @@ namespace sw
     {
         if ( function.isBound() == false || isValidDefinition( definition ) == false )
         {
-            SW_LOG_WARNING( "Ignored scheduled job '%#' — invalid schedule or no handler", definition._jobID );
+            SW_LOG_WARNING_ID( "ServiceScheduler.IgnoredScheduledJobInvalid", "Ignored scheduled job '%#' — invalid schedule or no handler", definition._jobID );
             return false;
         }
         Job& job        = _listJob.emplace_back();

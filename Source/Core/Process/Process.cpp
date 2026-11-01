@@ -142,7 +142,7 @@ namespace sw
         Process proc;
         if ( proc.launch( command, options ) == false )
         {
-            SW_LOG_ERROR( "Failed to launch command: %#", command.toCommandLine() );
+            SW_LOG_ERROR_ID( "Process.FailedLaunchCommand", "Failed to launch command: %#", command.toCommandLine() );
             return -1;
         }
 

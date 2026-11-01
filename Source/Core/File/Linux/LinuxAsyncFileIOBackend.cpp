@@ -122,7 +122,7 @@ namespace sw
             _ringFd = LinuxAsyncFileIOBackendInternal::setupRing( entryCount, params );
             if ( _ringFd < 0 )
             {
-                SW_LOG_INFO( "io_uring is not available (errno %#) — using the thread-pool backend", errno );
+                SW_LOG_INFO_ID( "AsyncFileIO.IoUringNotAvailable", "io_uring is not available (errno %#) — using the thread-pool backend", errno );
                 _ringFd = -1;
                 return false;
             }
@@ -145,7 +145,7 @@ namespace sw
             if ( _pSqRing == MAP_FAILED )
             {
                 _pSqRing = nullptr;
-                SW_LOG_WARNING( "io_uring ring mmap failed (errno %#) — using the thread-pool backend", errno );
+                SW_LOG_WARNING_ID( "AsyncFileIO.IoUringRingMmap", "io_uring ring mmap failed (errno %#) — using the thread-pool backend", errno );
                 releaseRing();
                 return false;
             }
@@ -159,7 +159,7 @@ namespace sw
                 if ( _pCqRing == MAP_FAILED )
                 {
                     _pCqRing = nullptr;
-                    SW_LOG_WARNING( "io_uring completion ring mmap failed (errno %#) — using the thread-pool backend", errno );
+                    SW_LOG_WARNING_ID( "AsyncFileIO.IoUringCompletionRing", "io_uring completion ring mmap failed (errno %#) — using the thread-pool backend", errno );
                     releaseRing();
                     return false;
                 }
@@ -167,7 +167,7 @@ namespace sw
             void* pSqeMemory = mmap( nullptr, _sqeArrayBytes, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, _ringFd, IORING_OFF_SQES );
             if ( pSqeMemory == MAP_FAILED )
             {
-                SW_LOG_WARNING( "io_uring SQE mmap failed (errno %#) — using the thread-pool backend", errno );
+                SW_LOG_WARNING_ID( "AsyncFileIO.IoUringSQEMmap", "io_uring SQE mmap failed (errno %#) — using the thread-pool backend", errno );
                 releaseRing();
                 return false;
             }
@@ -188,7 +188,7 @@ namespace sw
             _eventFd = eventfd( 0, EFD_CLOEXEC );
             if ( _eventFd < 0 )
             {
-                SW_LOG_WARNING( "eventfd failed (errno %#) — using the thread-pool backend", errno );
+                SW_LOG_WARNING_ID( "AsyncFileIO.EventfdFailedErrnoUsing", "eventfd failed (errno %#) — using the thread-pool backend", errno );
                 releaseRing();
                 return false;
             }
@@ -238,7 +238,7 @@ namespace sw
                     const bool bRetryableError = errno == EINTR || errno == EAGAIN || errno == EBUSY;
                     if ( bRetryableError )
                         continue;
-                    SW_LOG_ERROR( "io_uring_enter failed (errno %#)", errno );
+                    SW_LOG_ERROR_ID( "AsyncFileIO.IoUringEnterFailed", "io_uring_enter failed (errno %#)", errno );
                     return;
                 }
                 // 커널이 받은 SQE 만큼 줄인다(EINTR 로 일부만 받았으면 남은 것은 다음 enter 가 낸다).
@@ -370,7 +370,7 @@ namespace sw
                 if ( result == -ECANCELED )
                     status = AsyncIOStatus::Canceled;
                 else
-                    SW_LOG_ERROR( "io_uring read failed on '%#' (errno %#)", request._pFile != nullptr ? request._pFile->_path.c_str() : "", -result );
+                    SW_LOG_ERROR_ID( "AsyncFileIO.IoUringReadFailed", "io_uring read failed on '%#' (errno %#)", request._pFile != nullptr ? request._pFile->_path.c_str() : "", -result );
             }
             else
             {

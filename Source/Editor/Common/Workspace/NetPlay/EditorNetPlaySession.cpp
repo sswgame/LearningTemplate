@@ -86,8 +86,8 @@ namespace sw::editor
                 const bool bValid = settings._bArrangeWindows == false ||
                                     ( settings._windowColumnCount >= 1 && settings._windowWidth >= kMinWindowSide && settings._windowHeight >= kMinWindowSide );
                 if ( bValid == false )
-                    SW_LOG_ERROR( "Window layout %#x%# in %# column(s) is not usable - each side needs at least %# pixels and one column", settings._windowWidth,
-                                  settings._windowHeight, settings._windowColumnCount, kMinWindowSide );
+                    SW_LOG_ERROR_ID( "NetPlay.WindowLayoutXColumn", "Window layout %#x%# in %# column(s) is not usable - each side needs at least %# pixels and one column", settings._windowWidth,
+                                     settings._windowHeight, settings._windowColumnCount, kMinWindowSide );
                 return bValid;
             }
 
@@ -192,7 +192,7 @@ namespace sw::editor
                 if ( bTraceRead )
                     listInput.push_back( std::move( mergeInput ) );
                 else
-                    SW_LOG_WARNING( "No trace from %# (%#)", source._label, source._tracePath );
+                    SW_LOG_WARNING_ID( "NetPlay.NoTrace", "No trace from %# (%#)", source._label, source._tracePath );
             }
             if ( listInput.size() < 2 )
                 return mergedPath;
@@ -200,17 +200,17 @@ namespace sw::editor
             string report;
             if ( ProfilerTraceExport::mergeTraceJSON( listInput, json, report ) == false )
             {
-                SW_LOG_WARNING( "Traces could not be merged: %#", report );
+                SW_LOG_WARNING_ID( "NetPlay.TracesCouldNotMerged", "Traces could not be merged: %#", report );
                 return mergedPath;
             }
             mergedPath = input._traceDirectory + "/" + EditorNetPlaySession::kMergedTraceFileName;
             if ( FileUtil::writeTextFile( mergedPath, json ) == false )
             {
-                SW_LOG_WARNING( "Merged trace could not be written to %#", mergedPath );
+                SW_LOG_WARNING_ID( "NetPlay.MergedTraceCouldNot", "Merged trace could not be written to %#", mergedPath );
                 mergedPath.clear();
                 return mergedPath;
             }
-            SW_LOG_INFO( "Traces merged: %# -> %#", report, mergedPath );
+            SW_LOG_INFO_ID( "NetPlay.TracesMerged", "Traces merged: %# -> %#", report, mergedPath );
             return mergedPath;
 #else
             (void)input;
@@ -266,7 +266,7 @@ namespace sw::editor
         if ( pSelected != nullptr )
         {
             _pendingSettings = *pSelected;
-            SW_LOG_INFO( "Multiplayer preset '%#' restored - %#, %# player(s)", _presetStore.getSelectedPresetName(), toString( _pendingSettings._mode ), _pendingSettings._clientCount );
+            SW_LOG_INFO_ID( "NetPlay.MultiplayerPresetRestoredPlayer", "Multiplayer preset '%#' restored - %#, %# player(s)", _presetStore.getSelectedPresetName(), toString( _pendingSettings._mode ), _pendingSettings._clientCount );
         }
         return SubsystemInitResult::Succeeded;
     }
@@ -367,11 +367,11 @@ namespace sw::editor
         options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
         if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
         {
-            SW_LOG_ERROR( "Could not launch %#: %#", label, command.toCommandLine() );
+            SW_LOG_ERROR_ID( "NetPlay.CouldNotLaunch", "Could not launch %#: %#", label, command.toCommandLine() );
             return false;
         }
         pChild->_processID = pChild->_process.getProcessID();
-        SW_LOG_INFO( "Launched %# (pid %#): %#", label, pChild->_processID, command.toCommandLine() );
+        SW_LOG_INFO_ID( "NetPlay.LaunchedPid", "Launched %# (pid %#): %#", label, pChild->_processID, command.toCommandLine() );
         pChild->_reader = sw::thread( &EditorNetPlaySession::readChildOutput, pChild.get() );
         _listProcess.push_back( std::move( pChild ) );
         return true;
@@ -381,7 +381,7 @@ namespace sw::editor
     {
         if ( intentFilePath.empty() )
         {
-            SW_LOG_WARNING( "A replay server needs an intent recording (.swintent) path" );
+            SW_LOG_WARNING_ID( "NetPlay.ReplayServerNeedsIntent", "A replay server needs an intent recording (.swintent) path" );
             return false;
         }
         EditorNetPlaySettings settings = _pendingSettings;
@@ -395,7 +395,7 @@ namespace sw::editor
         // 서버는 멈춘 채 떴다(`-gv_serverStartPaused`). 틱 0 에서 재생을 건다 — 다음 `step N` 이 목표 틱까지 정확히 진행한다.
         if ( sendServerCommand( "intent.play " + intentFilePath ) == false )
         {
-            SW_LOG_ERROR( "Could not send intent.play to the replay server" );
+            SW_LOG_ERROR_ID( "NetPlay.CouldNotSendIntent", "Could not send intent.play to the replay server" );
             requestStop();
             return false;
         }
@@ -406,18 +406,18 @@ namespace sw::editor
     {
         if ( isRunning() )
         {
-            SW_LOG_WARNING( "A multiplayer session is already running - stop it first" );
+            SW_LOG_WARNING_ID( "NetPlay.MultiplayerSessionAlreadyRunning", "A multiplayer session is already running - stop it first" );
             return false;
         }
         // 앞 세션의 프로세스를 아직 거두는 중이다 - 같은 트레이스 폴더 · 로그 줄 · 포트 조사를 겹치지 않는다(끝은 `Editor.NetPlayStopping` == 0).
         if ( isStopping() )
         {
-            SW_LOG_WARNING( "The previous multiplayer session is still stopping - start again when it has finished" );
+            SW_LOG_WARNING_ID( "NetPlay.PreviousMultiplayerSessionStill", "The previous multiplayer session is still stopping - start again when it has finished" );
             return false;
         }
         if ( settings._mode == EditorNetMode::Standalone || ( settings._clientCount < 1 && _bReplayServer == false ) )
         {
-            SW_LOG_WARNING( "Net mode %# with %# player(s) needs no processes - play in the editor instead", toString( settings._mode ), settings._clientCount );
+            SW_LOG_WARNING_ID( "NetPlay.NetModePlayerNeeds", "Net mode %# with %# player(s) needs no processes - play in the editor instead", toString( settings._mode ), settings._clientCount );
             return false;
         }
         if ( EditorNetPlaySessionInternal::isWindowLayoutValid( settings ) == false )
@@ -430,7 +430,7 @@ namespace sw::editor
         _port = settings._port != 0 ? settings._port : findFreeUDPPort();
         if ( _port == 0 )
         {
-            SW_LOG_ERROR( "No free UDP port for the multiplayer session" );
+            SW_LOG_ERROR_ID( "NetPlay.NoFreeUDPPort", "No free UDP port for the multiplayer session" );
             return false;
         }
 #if SW_PROFILER_TRACE_ENABLED
@@ -442,7 +442,7 @@ namespace sw::editor
                                 : settings._traceDirectory;
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
-                SW_LOG_ERROR( "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
+                SW_LOG_ERROR_ID( "NetPlay.TraceFolderCouldNot", "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
                 _traceDirectory.clear();
                 return false;
             }
@@ -467,7 +467,7 @@ namespace sw::editor
         _debugChannelToken.clear();
         if ( bDedicated && _debugChannelPort == 0 )
         {
-            SW_LOG_ERROR( "No free TCP port for the dedicated server's debug channel" );
+            SW_LOG_ERROR_ID( "NetPlay.NoFreeTCPPort", "No free TCP port for the dedicated server's debug channel" );
             return false;
         }
         int32 windowIndex = 0;
@@ -503,8 +503,8 @@ namespace sw::editor
             requestStop(); // 띄운 프로세스는 끈다(거두기는 프레임마다 `update` 가 잇는다). 합칠 트레이스는 없다
             return false;
         }
-        SW_LOG_INFO( "Multiplayer session started - %#, %# player(s), UDP port %#, traces %#", toString( settings._mode ), settings._clientCount, _port,
-                     _traceDirectory.empty() ? string( "off" ) : _traceDirectory );
+        SW_LOG_INFO_ID( "NetPlay.MultiplayerSessionStartedPlayer", "Multiplayer session started - %#, %# player(s), UDP port %#, traces %#", toString( settings._mode ), settings._clientCount, _port,
+                        _traceDirectory.empty() ? string( "off" ) : _traceDirectory );
         return true;
     }
 
@@ -517,7 +517,7 @@ namespace sw::editor
             if ( child._exited.load() != 0 && child._bExitReported == false )
             {
                 child._bExitReported = true;
-                SW_LOG_WARNING( "%# exited with code %# during the session - last line: %#", child._label, child._exitCode.load(), child._lastLine );
+                SW_LOG_WARNING_ID( "NetPlay.ExitedCodeDuringSession", "%# exited with code %# during the session - last line: %#", child._label, child._exitCode.load(), child._lastLine );
             }
         }
         // 거두는 중인 프로세스의 줄도 옮긴다(끝날 때까지 나오는 줄 - 서버의 끊김 줄 등). 번호는 멈추기 전과 같다(목록을 통째로 옮겼다).
@@ -562,9 +562,9 @@ namespace sw::editor
             }
             // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 줄에는 자식의 로그 수준 레이블이 그대로 있다.
             if ( line.find( "[Error]" ) != string::npos )
-                SW_LOG_WARNING( "[%#] %#", child._label, line );
+                SW_LOG_WARNING_ID( "NetPlay.Message", "[%#] %#", child._label, line );
             else
-                SW_LOG_INFO( "[%#] %#", child._label, line );
+                SW_LOG_INFO_ID( "NetPlay.Message", "[%#] %#", child._label, line );
             if ( processIndex > 0 && line.find( EditorNetPlaySessionInternal::kConnectedLine ) != string::npos )
                 child._bConnected = true; // 0 번은 서버(전용 서버나 리슨 호스트)다
             if ( NetEmulationReport::tryParseLine( line, child._emulationReport ) )
@@ -635,7 +635,7 @@ namespace sw::editor
             ChildProcess& child  = *_listProcess[processIndex];
             child._bExitReported = true; // 끄는 중의 끝남은 알리지 않는다
             if ( child._exited.load() == 0 && child._process.writeInput( "quit\n" ) == false )
-                SW_LOG_WARNING( "Could not send quit to %# - it is terminated after the timeout", child._label );
+                SW_LOG_WARNING_ID( "NetPlay.CouldNotSendQuit", "Could not send quit to %# - it is terminated after the timeout", child._label );
         }
         // 프로세스는 거둘 때까지 따로 둔다 - 이때부터 세션은 돌지 않는다(`isRunning` 거짓 · 명령을 보내지 않는다 · 디버그 채널을 내놓는다).
         _listStoppingProcess = std::move( _listProcess );
@@ -644,7 +644,7 @@ namespace sw::editor
         _debugChannelToken.clear();
         _stopDeadline = Deadline::afterMilliseconds( static_cast<int64>( _settings._stopTimeoutSeconds * constant::time::kMillisecondsPerSecond ) );
         _stopPhase    = StopPhase::WaitingForExit;
-        SW_LOG_INFO( "Multiplayer session stopping - %# process(es)", _listStoppingProcess.size() );
+        SW_LOG_INFO_ID( "NetPlay.MultiplayerSessionStoppingProcess", "Multiplayer session stopping - %# process(es)", _listStoppingProcess.size() );
     }
 
     void EditorNetPlaySession::advanceStop( bool bInline )
@@ -667,7 +667,7 @@ namespace sw::editor
                 {
                     if ( pChild->_exited.load() == 0 )
                     {
-                        SW_LOG_WARNING( "%# did not exit within %# s - terminating it (its trace is lost)", pChild->_label, _settings._stopTimeoutSeconds );
+                        SW_LOG_WARNING_ID( "NetPlay.DidNotExitWithin", "%# did not exit within %# s - terminating it (its trace is lost)", pChild->_label, _settings._stopTimeoutSeconds );
                         (void)pChild->_process.terminate( 1 ); // 죽으면 파이프가 닫혀 읽기 스레드가 끝난다
                     }
                     input._listReader.push_back( &pChild->_reader );

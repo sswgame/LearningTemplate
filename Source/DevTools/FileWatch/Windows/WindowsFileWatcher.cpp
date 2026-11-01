@@ -60,7 +60,7 @@ namespace sw
     {
         if ( _bIsWatching )
         {
-            SW_LOG_ERROR( "Already watching %# - stop it before watching %#", _directoryPath, directoryPath );
+            SW_LOG_ERROR_ID( "WindowsFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath, directoryPath );
             return false;
         }
         stopWatching(); // 워커가 오류로 끝났으면 남은 핸들 · 스레드를 거둔다
@@ -79,7 +79,7 @@ namespace sw
         if ( _hDirectory == INVALID_HANDLE_VALUE )
         {
             _hDirectory = nullptr; // stopWatching 은 nullptr 로 "연 핸들 없음" 을 본다
-            SW_LOG_ERROR( "Failed to open directory for watching (error %#): %#", static_cast<uint32>( GetLastError() ), directoryPath );
+            SW_LOG_ERROR_ID( "WindowsFileWatcher.FailedOpenDirectoryWatching", "Failed to open directory for watching (error %#): %#", static_cast<uint32>( GetLastError() ), directoryPath );
             return false;
         }
 
@@ -88,7 +88,7 @@ namespace sw
         {
             CloseHandle( _hDirectory );
             _hDirectory = nullptr;
-            SW_LOG_ERROR( "Failed to create IO completion port for directory watching: %#", directoryPath );
+            SW_LOG_ERROR_ID( "WindowsFileWatcher.FailedCreateIOCompletion", "Failed to create IO completion port for directory watching: %#", directoryPath );
             return false;
         }
 
@@ -98,7 +98,7 @@ namespace sw
 
         _workerThread = sw::thread( &WindowsFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
-        SW_LOG_INFO( "Started watching directory: %#", directoryPath );
+        SW_LOG_INFO_ID( "WindowsFileWatcher.StartedWatchingDirectory", "Started watching directory: %#", directoryPath );
         return true;
     }
 

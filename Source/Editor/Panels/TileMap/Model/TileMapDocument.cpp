@@ -92,7 +92,7 @@ namespace sw::editor
     {
         TileMapXMLData restored;
         if ( text.empty() == false && restored.loadFromXML( text ) == false )
-            SW_LOG_WARNING( "Tile map undo snapshot could not be read - showing an empty map" );
+            SW_LOG_WARNING_ID( "TileMapDocument.TileMapUndoSnapshot", "Tile map undo snapshot could not be read - showing an empty map" );
         applyMapData( restored );
     }
 
@@ -336,8 +336,8 @@ namespace sw::editor
         if ( _map.resetTiles( width, height ) == false )
         {
             _status = SW_LOCKEY( "EditorTileMap", "SizeOutOfRange" );
-            SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",
-                            width, height, TileMapXMLData::kMaxTileCount );
+            SW_LOG_WARNING_ID( "TileMapDocument.TileMapResizeXBeyond", "TileMap resize %#x%# is beyond the supported tile count (%#)",
+                               width, height, TileMapXMLData::kMaxTileCount );
             return false;
         }
         _inputWidth  = width;

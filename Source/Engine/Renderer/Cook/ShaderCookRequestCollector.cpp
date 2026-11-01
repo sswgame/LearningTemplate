@@ -142,8 +142,8 @@ namespace sw
                 }
                 if ( listRuntimeSwitch.size() > kMaxRuntimeSwitchCount )
                 {
-                    SW_LOG_ERROR( "Material '%#' has %# runtime static switches (bShaderFeature=\"0\") - only %# are cooked in every combination; the asset state is cooked alone",
-                                  materialPath, listRuntimeSwitch.size(), kMaxRuntimeSwitchCount );
+                    SW_LOG_ERROR_ID( "ShaderCooker.MaterialRuntimeStaticSwitches", "Material '%#' has %# runtime static switches (bShaderFeature=\"0\") - only %# are cooked in every combination; the asset state is cooked alone",
+                                     materialPath, listRuntimeSwitch.size(), kMaxRuntimeSwitchCount );
                     return;
                 }
                 const uint32 comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );

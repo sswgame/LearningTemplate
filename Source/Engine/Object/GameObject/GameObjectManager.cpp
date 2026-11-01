@@ -155,7 +155,7 @@ namespace sw
         }
         SubsystemCollection& collection = _sceneScope.getCollection();
         if ( collection.initializeAll( SubsystemHostMask::All ) == false )
-            SW_LOG_ERROR( "Scene services failed to start: %#", collection.getError().c_str() );
+            SW_LOG_ERROR_ID( "GameObjectManager.SceneServicesFailedStart", "Scene services failed to start: %#", collection.getError().c_str() );
         // 갱신도 초기화 순서다 — 같은 단계의 서비스가 서로 기대면 의존으로 적는다.
         _listSceneService.reserve( listCreated.size() );
         for ( const uint32 index : collection.getInitializeOrder() )
@@ -281,7 +281,7 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
         {
             if ( bLogWarning )
-                SW_LOG_WARNING( "Cannot create component '%#' by name - engine services (TypeRegistry) are not bound", typeName.c_str() );
+                SW_LOG_WARNING_ID( "GameObjectManager.CannotCreateComponentName", "Cannot create component '%#' by name - engine services (TypeRegistry) are not bound", typeName.c_str() );
             return nullptr;
         }
 
@@ -289,13 +289,13 @@ namespace sw
         if ( pType == nullptr )
         {
             if ( bLogWarning )
-                SW_LOG_WARNING( "Component type '%#' is not registered (no REFLECT, its module is not loaded, or a typo)", typeName.c_str() );
+                SW_LOG_WARNING_ID( "GameObjectManager.ComponentTypeNotRegistered", "Component type '%#' is not registered (no REFLECT, its module is not loaded, or a typo)", typeName.c_str() );
             return nullptr;
         }
         if ( pType->_addComponent == nullptr )
         {
             if ( bLogWarning )
-                SW_LOG_WARNING( "Type '%#' cannot be created as a component (abstract, not a component, or its module was unloaded)", typeName.c_str() );
+                SW_LOG_WARNING_ID( "GameObjectManager.TypeCannotCreatedComponent", "Type '%#' cannot be created as a component (abstract, not a component, or its module was unloaded)", typeName.c_str() );
             return nullptr;
         }
         return pType->_addComponent( pGameObject );
@@ -322,15 +322,15 @@ namespace sw
         const Component* pComponent = _store.resolveComponent( handle );
         if ( pComponent == nullptr )
         {
-            SW_LOG_ERROR( "Typed handle to '%#' could not be made: component %#:%# does not exist (destroyed or pending destroy)", pExpected, handle.objectID(),
-                          handle.componentID() );
+            SW_LOG_ERROR_ID( "GameObjectManager.TypedHandleCouldNot", "Typed handle to '%#' could not be made: component %#:%# does not exist (destroyed or pending destroy)", pExpected, handle.objectID(),
+                             handle.componentID() );
             return TypedHandleResult::TargetMissing;
         }
         if ( isComponentOfType( *pComponent, pToType ) == false )
         {
             const TypeInfo* pActual = pComponent->findCachedTypeInfo();
-            SW_LOG_ERROR( "Typed handle to '%#' could not be made: component %#:%# is a '%#'", pExpected, handle.objectID(), handle.componentID(),
-                          pActual != nullptr ? pActual->_fullyQualifiedName.c_str() : "(type unloaded)" );
+            SW_LOG_ERROR_ID( "GameObjectManager.TypedHandleCouldNot2", "Typed handle to '%#' could not be made: component %#:%# is a '%#'", pExpected, handle.objectID(), handle.componentID(),
+                             pActual != nullptr ? pActual->_fullyQualifiedName.c_str() : "(type unloaded)" );
             return TypedHandleResult::TypeMismatch;
         }
         return TypedHandleResult::Success;
@@ -340,8 +340,8 @@ namespace sw
     {
         // 핸들이 가리키던 id 를 다른 타입이 받았다. 타입 핸들의 전제(한 핸들의 대상 타입은 바뀌지 않는다)가 깨졌으므로 결함이다.
         const TypeInfo* pActual = found.findCachedTypeInfo();
-        SW_LOG_ERROR( "Typed handle %#:%# expected '%#' but resolved to a '%#' - returning nothing", handle.objectID(), handle.componentID(),
-                      pToType != nullptr ? pToType->_fullyQualifiedName.c_str() : "(no type)", pActual != nullptr ? pActual->_fullyQualifiedName.c_str() : "(type unloaded)" );
+        SW_LOG_ERROR_ID( "GameObjectManager.TypedHandleExpectedBut", "Typed handle %#:%# expected '%#' but resolved to a '%#' - returning nothing", handle.objectID(), handle.componentID(),
+                         pToType != nullptr ? pToType->_fullyQualifiedName.c_str() : "(no type)", pActual != nullptr ? pActual->_fullyQualifiedName.c_str() : "(type unloaded)" );
         SW_ASSERT( false && "typed component handle resolved to another type" );
     }
 

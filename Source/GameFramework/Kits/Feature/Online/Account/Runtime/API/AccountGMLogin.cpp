@@ -25,7 +25,7 @@ namespace sw
         _account.initialize( &client, info );
         if ( client.registerClientService( &_account ) == false )
         {
-            SW_LOG_ERROR( "The account client could not be registered (method range already taken)" );
+            SW_LOG_ERROR_ID( "AccountGMLogin.AccountClientCouldNot", "The account client could not be registered (method range already taken)" );
             return false;
         }
         _bAttached = true;
@@ -36,7 +36,7 @@ namespace sw
     {
         if ( loginName.empty() || password.empty() )
         {
-            SW_LOG_ERROR( "A GM login needs both an account name and a password" );
+            SW_LOG_ERROR_ID( "AccountGMLogin.GMLoginNeedsBoth", "A GM login needs both an account name and a password" );
             return false;
         }
         _loginName = string( loginName );

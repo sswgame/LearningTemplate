@@ -35,7 +35,7 @@ namespace sw
         {
             if ( abilitySystem.setAttributeBaseValue( value._attribute, value._baseValue ) )
                 continue;
-            SW_LOG_ERROR( "applyBaseValues: the save has attribute '%#' but the ability system has no such attribute", value._attribute.c_str() );
+            SW_LOG_ERROR_ID( "AbilityAttributeSave.ApplyBaseValuesSaveAttributeBut", "applyBaseValues: the save has attribute '%#' but the ability system has no such attribute", value._attribute.c_str() );
             bAllApplied = false;
         }
         return bAllApplied;
@@ -47,7 +47,7 @@ namespace sw
         {
             if ( value._attribute.view().empty() )
             {
-                SW_LOG_ERROR( "writeBytes: an attribute without a name cannot be saved" );
+                SW_LOG_ERROR_ID( "AbilityAttributeSave.WriteBytesAttributeWithoutName", "writeBytes: an attribute without a name cannot be saved" );
                 return false;
             }
         }

@@ -141,6 +141,6 @@ namespace sw::editor
         }
         _clipSeconds = pClip->getDuration();
         _status      = "Playing";
-        SW_LOG_INFO( "Clip Preview playing '%#' on '%#'", _playedClipPath, _activePrefabPath );
+        SW_LOG_INFO_ID( "AnimationClipPreviewPanel.ClipPreviewPlaying", "Clip Preview playing '%#' on '%#'", _playedClipPath, _activePrefabPath );
     }
 } // namespace sw::editor

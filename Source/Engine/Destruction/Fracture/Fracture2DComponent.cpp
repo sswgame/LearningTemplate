@@ -58,7 +58,7 @@ namespace sw
         string                    error;
         if ( PolygonFractureUtil::fracture( listBorder, settings, *asset, error ) == false )
         {
-            SW_LOG_ERROR( "'%#': 2D fracture failed: %#", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", error.c_str() );
+            SW_LOG_ERROR_ID( "Fracture2DComponent.DFractureFailed", "'%#': 2D fracture failed: %#", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", error.c_str() );
             return;
         }
         _asset2D = std::move( asset );

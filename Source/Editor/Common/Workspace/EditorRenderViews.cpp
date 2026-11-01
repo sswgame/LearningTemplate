@@ -228,7 +228,7 @@ namespace sw::editor
         // 쓰지 않은 텍스처를 샘플링하지 않도록 클리어 색으로 채워 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다).
         // 닫혀 있다 열린 패널의 첫 프레임도 이 색이다(그 뷰는 보이는 동안만 그린다).
         if ( EditorRenderViewsInternal::fillTextureWithColor( *_pRHIDevice->getResourceFactory(), view._renderTarget, width, height, viewClearColor ) == false )
-            SW_LOG_WARNING( "View target %#x%# could not be cleared before its first frame", width, height );
+            SW_LOG_WARNING_ID( "EditorRenderViews.ViewTargetXCould", "View target %#x%# could not be cleared before its first frame", width, height );
 
         view._width  = width;
         view._height = height;

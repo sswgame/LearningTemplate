@@ -20,7 +20,7 @@ namespace sw
         *this                       = PhysicsSettings{};
         if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            SW_LOG_ERROR( "Physics settings could not be read or hold unknown keys: %#", assetPath );
+            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsCouldNot", "Physics settings could not be read or hold unknown keys: %#", assetPath );
             return false;
         }
         return validate();
@@ -31,7 +31,7 @@ namespace sw
         *this = PhysicsSettings{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "Physics settings text could not be read or holds unknown keys" );
+            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsTextCould", "Physics settings text could not be read or holds unknown keys" );
             return false;
         }
         return validate();
@@ -43,22 +43,22 @@ namespace sw
         // 레이어 · 재질 표는 데이터가 정한다. 비었다고 코드가 `Default` 를 채우지 않는다 — 빈 표는 데이터 오류다.
         if ( _listLayer.empty() || _listMaterial.empty() )
         {
-            SW_LOG_ERROR( "Physics settings declare %# layers and %# materials - at least one of each is required", _listLayer.size(), _listMaterial.size() );
+            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsDeclareLayers", "Physics settings declare %# layers and %# materials - at least one of each is required", _listLayer.size(), _listMaterial.size() );
             bValid = false;
         }
         if ( _listLayer.size() > kMaxLayerCount )
         {
-            SW_LOG_ERROR( "Physics settings declare %# layers - at most %# are supported", _listLayer.size(), kMaxLayerCount );
+            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsDeclareLayers2", "Physics settings declare %# layers - at most %# are supported", _listLayer.size(), kMaxLayerCount );
             bValid = false;
         }
         if ( _subStepCount == 0 || _subStepCount2D == 0 )
         {
-            SW_LOG_ERROR( "Physics settings need a positive fixed step, at least one step per frame and one 2D sub-step" );
+            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsNeedPositive", "Physics settings need a positive fixed step, at least one step per frame and one 2D sub-step" );
             bValid = false;
         }
         if ( _workerCount2D == 0 || _workerCount2D > kMaxWorkerCount2D )
         {
-            SW_LOG_ERROR( "Physics settings ask for %# 2D workers - use 1 to %#", _workerCount2D, kMaxWorkerCount2D );
+            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsAskD", "Physics settings ask for %# 2D workers - use 1 to %#", _workerCount2D, kMaxWorkerCount2D );
             bValid = false;
         }
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
@@ -66,14 +66,14 @@ namespace sw
             const PhysicsLayerDef& layer = _listLayer[layerIndex];
             if ( layer._name.empty() )
             {
-                SW_LOG_ERROR( "Physics layer %# has no name", layerIndex );
+                SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsLayerNoName", "Physics layer %# has no name", layerIndex );
                 bValid = false;
             }
             for ( size_t otherIndex = layerIndex + 1; otherIndex < _listLayer.size(); ++otherIndex )
             {
                 if ( _listLayer[otherIndex]._name == layer._name )
                 {
-                    SW_LOG_ERROR( "Physics layer '%#' is declared twice", layer._name.c_str() );
+                    SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsLayerDeclaredTwice", "Physics layer '%#' is declared twice", layer._name.c_str() );
                     bValid = false;
                 }
             }
@@ -82,7 +82,7 @@ namespace sw
                 uint8 otherLayer = 0;
                 if ( findLayerIndex( otherName, otherLayer ) == false )
                 {
-                    SW_LOG_ERROR( "Physics layer '%#' collides with unknown layer '%#'", layer._name.c_str(), otherName.c_str() );
+                    SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsLayerCollidesUnknown", "Physics layer '%#' collides with unknown layer '%#'", layer._name.c_str(), otherName.c_str() );
                     bValid = false;
                 }
             }
@@ -92,14 +92,14 @@ namespace sw
             const PhysicsMaterialDef& material = _listMaterial[materialIndex];
             if ( material._name.empty() )
             {
-                SW_LOG_ERROR( "Physics material %# has no name", materialIndex );
+                SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsMaterialNoName", "Physics material %# has no name", materialIndex );
                 bValid = false;
             }
             for ( size_t otherIndex = materialIndex + 1; otherIndex < _listMaterial.size(); ++otherIndex )
             {
                 if ( _listMaterial[otherIndex]._name == material._name )
                 {
-                    SW_LOG_ERROR( "Physics material '%#' is declared twice", material._name.c_str() );
+                    SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsMaterialDeclaredTwice", "Physics material '%#' is declared twice", material._name.c_str() );
                     bValid = false;
                 }
             }

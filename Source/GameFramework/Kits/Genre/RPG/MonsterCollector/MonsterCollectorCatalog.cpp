@@ -34,7 +34,7 @@ namespace sw
                 if ( text.empty() )
                 {
                     if ( bRequired )
-                        SW_LOG_ERROR( "%#: <%#> needs %#=\"HP Attack Defense SpecialAttack SpecialDefense Speed\"", sourceName, node.getName(), pName );
+                        SW_LOG_ERROR_ID( "MonsterCollectorCatalog.NeedsHPAttackDefense", "%#: <%#> needs %#=\"HP Attack Defense SpecialAttack SpecialDefense Speed\"", sourceName, node.getName(), pName );
                     return bRequired == false;
                 }
                 int32 arrValue[kMonsterStatCount] = {};
@@ -53,7 +53,7 @@ namespace sw
                 } );
                 if ( bValid == false || count != kMonsterStatCount )
                 {
-                    SW_LOG_ERROR( "%#: <%# %#=\"%#\"> needs six integers of %# or more", sourceName, node.getName(), pName, text, minValue );
+                    SW_LOG_ERROR_ID( "MonsterCollectorCatalog.NeedsSixIntegersMore", "%#: <%# %#=\"%#\"> needs six integers of %# or more", sourceName, node.getName(), pName, text, minValue );
                     return false;
                 }
                 std::copy( arrValue, arrValue + kMonsterStatCount, outArrValue );
@@ -248,12 +248,12 @@ namespace sw
             for ( const MonsterLearnEntry& learn : species._listLearn )
             {
                 if ( _moveCatalog.find( learn._moveID ) == nullptr )
-                    SW_LOG_ERROR( "%#: species '%#' learns unknown move '%#'", sourceName, species._id.c_str(), learn._moveID.c_str() );
+                    SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesLearnsUnknownMove", "%#: species '%#' learns unknown move '%#'", sourceName, species._id.c_str(), learn._moveID.c_str() );
             }
             for ( const MonsterEvolutionDef& evolution : species._listEvolution )
             {
                 if ( _speciesCatalog.find( evolution._targetID ) == nullptr )
-                    SW_LOG_ERROR( "%#: species '%#' evolves into unknown '%#'", sourceName, species._id.c_str(), evolution._targetID.c_str() );
+                    SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesEvolvesUnknown", "%#: species '%#' evolves into unknown '%#'", sourceName, species._id.c_str(), evolution._targetID.c_str() );
             }
         }
         for ( const MonsterEncounterDef& table : _encounterCatalog.getAll() )
@@ -261,7 +261,7 @@ namespace sw
             for ( const MonsterEncounterSlot& slot : table._listSlot )
             {
                 if ( _speciesCatalog.find( slot._speciesID ) == nullptr )
-                    SW_LOG_ERROR( "%#: encounter '%#' names unknown species '%#'", sourceName, table._id.c_str(), slot._speciesID.c_str() );
+                    SW_LOG_ERROR_ID( "MonsterCollectorCatalog.EncounterNamesUnknownSpecies", "%#: encounter '%#' names unknown species '%#'", sourceName, table._id.c_str(), slot._speciesID.c_str() );
             }
         }
         return loadedCount;
@@ -275,7 +275,7 @@ namespace sw
             const string_view status = node.getAttributeText( "status" );
             if ( parseStatus( status, immunity._status ) == false )
             {
-                SW_LOG_ERROR( "%#: <StatusImmunity> needs a known status, got '%#'", sourceName, status );
+                SW_LOG_ERROR_ID( "MonsterCollectorCatalog.StatusImmunityNeedsKnownStatus", "%#: <StatusImmunity> needs a known status, got '%#'", sourceName, status );
                 return false;
             }
             XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", immunity._listType );
@@ -299,7 +299,7 @@ namespace sw
         }
         if ( XMLReadUtil::isElement( name, "Encounter" ) )
             return loadEncounter( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "MonsterCollectorCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -312,12 +312,12 @@ namespace sw
         const bool bStatusWithoutChance = def._status != MonsterStatus::None && def._statusChance == 0;
         if ( bStatusWithoutChance )
         {
-            SW_LOG_ERROR( "%#: move '%#' sets status %# but needs statusChance=\"1..100\"", sourceName, def._id.c_str(), getEnumName( def._status ) );
+            SW_LOG_ERROR_ID( "MonsterCollectorCatalog.MoveSetsStatusBut", "%#: move '%#' sets status %# but needs statusChance=\"1..100\"", sourceName, def._id.c_str(), getEnumName( def._status ) );
             return false;
         }
         if ( def._statStages != 0 && def._changedStat == MonsterStat::HP )
         {
-            SW_LOG_ERROR( "%#: move '%#' cannot change HP by stages", sourceName, def._id.c_str() );
+            SW_LOG_ERROR_ID( "MonsterCollectorCatalog.MoveCannotChangeHP", "%#: move '%#' cannot change HP by stages", sourceName, def._id.c_str() );
             return false;
         }
         (void)_moveCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -332,7 +332,7 @@ namespace sw
         XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listType );
         if ( def._listType.empty() || def._listType.size() > 2 )
         {
-            SW_LOG_ERROR( "%#: species '%#' has %# types - needs 1 or 2", sourceName, def._id.c_str(), static_cast<uint32>( def._listType.size() ) );
+            SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesTypesNeeds", "%#: species '%#' has %# types - needs 1 or 2", sourceName, def._id.c_str(), static_cast<uint32>( def._listType.size() ) );
             bValid = false;
         }
         bValid = Internal::readSixInts( node, "stats", true, 1, sourceName, def._arrBaseStat ) && bValid;
@@ -345,7 +345,7 @@ namespace sw
                 bValid = GameDataXML::readInto( child, sourceName, def._listEvolution ) && bValid;
             else
             {
-                SW_LOG_ERROR( "%#: species '%#' has an unknown child <%#>", sourceName, def._id.c_str(), child.getName() );
+                SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesUnknownChild", "%#: species '%#' has an unknown child <%#>", sourceName, def._id.c_str(), child.getName() );
                 bValid = false;
             }
         }

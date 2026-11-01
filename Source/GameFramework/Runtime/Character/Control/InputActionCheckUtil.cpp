@@ -15,12 +15,12 @@ namespace sw
         {
             if ( action.empty() )
             {
-                SW_LOG_ERROR( "%#: an input action PROPERTY is empty - set it in the scene", ownerName );
+                SW_LOG_ERROR_ID( "InputActionCheck.InputActionPROPERTYEmpty", "%#: an input action PROPERTY is empty - set it in the scene", ownerName );
                 return false;
             }
             if ( inputMap.hasAction( action ) == false )
             {
-                SW_LOG_ERROR( "%#: input action '%#' is not in the input map", ownerName, action.c_str() );
+                SW_LOG_ERROR_ID( "InputActionCheck.InputActionNotInput", "%#: input action '%#' is not in the input map", ownerName, action.c_str() );
                 return false;
             }
             return true;
@@ -45,7 +45,7 @@ namespace sw
         bool bAll = true;
         if ( listAction.size() != expectedCount )
         {
-            SW_LOG_ERROR( "%#: needs %# input actions in the list, has %#", ownerName, static_cast<uint32>( expectedCount ), static_cast<uint32>( listAction.size() ) );
+            SW_LOG_ERROR_ID( "InputActionCheck.NeedsInputActionsList", "%#: needs %# input actions in the list, has %#", ownerName, static_cast<uint32>( expectedCount ), static_cast<uint32>( listAction.size() ) );
             bAll = false;
         }
         for ( const hashed_string& action : listAction )

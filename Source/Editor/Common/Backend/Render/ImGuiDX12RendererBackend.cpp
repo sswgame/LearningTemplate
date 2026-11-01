@@ -44,7 +44,7 @@ namespace sw::editor
 
     bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
-        SW_LOG_TRACE( "Initialize start." );
+        SW_LOG_TRACE_ID( "ImGuiDX12.InitializeStart", "Initialize start." );
         _pRHIDevice.set( pRHIDevice );
         if ( _pRHIDevice.get() == nullptr )
             return false;
@@ -53,12 +53,12 @@ namespace sw::editor
         RHINativeHandles handles{};
         if ( _pRHIDevice->queryNativeHandles( RHIBackend::DirectX12, handles ) == false )
         {
-            SW_LOG_ERROR( "The ImGui DX12 renderer needs a D3D12 device" );
+            SW_LOG_ERROR_ID( "ImGuiDX12.ImGuiDX12RendererNeeds", "The ImGui DX12 renderer needs a D3D12 device" );
             return false;
         }
         ID3D12Device* pDevice = static_cast<ID3D12Device*>( handles._pDevice );
 
-        SW_LOG_TRACE( "Creating D3D12 Descriptor Heap for ImGui" );
+        SW_LOG_TRACE_ID( "ImGuiDX12.CreatingD3D12DescriptorHeap", "Creating D3D12 Descriptor Heap for ImGui" );
         D3D12_DESCRIPTOR_HEAP_DESC desc = {};
         desc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         desc.NumDescriptors             = kMaxDescriptors;
@@ -75,7 +75,7 @@ namespace sw::editor
             _listFreeDescriptor.clear();
         }
 
-        SW_LOG_TRACE( "Populating ImGui_ImplDX12_InitInfo" );
+        SW_LOG_TRACE_ID( "ImGuiDX12.PopulatingImGuiImplDX12InitInfo", "Populating ImGui_ImplDX12_InitInfo" );
         // NumFramesInFlight: ImGui 는 이 값을 뷰포트별 정점 · 인덱스 버퍼 링의 슬롯 수로 쓴다. 캡처 프레임은 메인 뷰포트를 두 번 그린다(`kImGuiDrawBufferRingSize`).
         // 보조(플로팅) 뷰포트의 스왑체인 버퍼 수 · 프레임 지연 한도도 같은 값이다(ImGui 가 한 값으로 묶는다).
         ImGui_ImplDX12_InitInfo initInfo = {};
@@ -88,9 +88,9 @@ namespace sw::editor
         initInfo.SrvDescriptorAllocFn    = &ImGuiDX12RendererBackendInternal::ImGuiAllocSrv;
         initInfo.SrvDescriptorFreeFn     = &ImGuiDX12RendererBackendInternal::ImGuiFreeSrv;
 
-        SW_LOG_TRACE( "Calling ImGui_ImplDX12_Init" );
+        SW_LOG_TRACE_ID( "ImGuiDX12.CallingImGuiImplDX12Init", "Calling ImGui_ImplDX12_Init" );
         const bool bInitialized = ImGui_ImplDX12_Init( &initInfo );
-        SW_LOG_TRACE( "ImGui_ImplDX12_Init Returned: %#", bInitialized );
+        SW_LOG_TRACE_ID( "ImGuiDX12.ImGuiImplDX12InitReturned", "ImGui_ImplDX12_Init Returned: %#", bInitialized );
         if ( bInitialized )
         {
             _viewportSizeGuard.install();
@@ -143,7 +143,7 @@ namespace sw::editor
             if ( _bDeviceRemovedLogged == false )
             {
                 _bDeviceRemovedLogged = true;
-                SW_LOG_ERROR( "Device removed before RenderDrawData (hr=%#)", static_cast<uint32>( removed ) );
+                SW_LOG_ERROR_ID( "ImGuiDX12.DeviceRemovedBeforeRenderDrawData", "Device removed before RenderDrawData (hr=%#)", static_cast<uint32>( removed ) );
             }
             return;
         }
@@ -241,7 +241,7 @@ namespace sw::editor
         {
             if ( _nextDescriptor >= kMaxDescriptors )
             {
-                SW_LOG_ERROR( "SRV descriptor heap exhausted (%#)", kMaxDescriptors );
+                SW_LOG_ERROR_ID( "ImGuiDX12.SRVDescriptorHeapExhausted", "SRV descriptor heap exhausted (%#)", kMaxDescriptors );
                 return false;
             }
             index = _nextDescriptor++;

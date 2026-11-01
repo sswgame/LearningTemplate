@@ -76,7 +76,7 @@ namespace sw
 
     void VoxelDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
+        SW_LOG_INFO_ID( "VoxelDirector.WorldReadyWASDMove", "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
     }
 
     void VoxelDirectorComponent::updateGame( float32 deltaTime )
@@ -122,12 +122,12 @@ namespace sw
             VoxelAutoPlayControllerComponent* pAI = pAIObject->getComponent<VoxelAutoPlayControllerComponent>();
             if ( pAI != nullptr && pAI->getPawn() != pPawn->getHandle() )
                 pAI->possess( *pPawn );
-            SW_LOG_INFO( "[Voxel] auto play took the player" );
+            SW_LOG_INFO_ID( "VoxelDirector.AutoPlayTookPlayer", "[Voxel] auto play took the player" );
             return;
         }
         // 끄는 경우입니다. 플레이어 조종자에게 폰을 돌려주고 AI 를 정리합니다. 이미 다른 조종자(플레이어)가 폰을 가지고 있으면 그대로 둡니다.
         if ( ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoPlayController ) )
-            SW_LOG_INFO( "[Voxel] the player took the body back" );
+            SW_LOG_INFO_ID( "VoxelDirector.PlayerTookBodyBack", "[Voxel] the player took the body back" );
         if ( pAIObject != nullptr )
             destroySpawned( manager, _autoPlayController );
     }
@@ -181,9 +181,9 @@ namespace sw
     void VoxelDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Voxel] world state restored - %# chunks", _world.getChunkCountX() * _world.getChunkCountZ() );
+            SW_LOG_INFO_ID( "VoxelDirector.WorldStateRestoredChunks", "[Voxel] world state restored - %# chunks", _world.getChunkCountX() * _world.getChunkCountZ() );
         else
-            SW_LOG_WARNING( "[Voxel] the saved world state does not match this build - keeping the seeded island" );
+            SW_LOG_WARNING_ID( "VoxelDirector.SavedWorldStateDoes", "[Voxel] the saved world state does not match this build - keeping the seeded island" );
     }
 
     // ------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ namespace sw
         const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
         if ( pCatalog == nullptr || pCatalog->getBlocks().empty() )
         {
-            SW_LOG_ERROR( "[Voxel] the block catalog is not loaded - the world cannot start" );
+            SW_LOG_ERROR_ID( "VoxelDirector.BlockCatalogNotLoaded", "[Voxel] the block catalog is not loaded - the world cannot start" );
             return false;
         }
         bool bBlocksKnown = true;
@@ -202,7 +202,7 @@ namespace sw
         {
             if ( pCatalog->findBlockIndex( *pBlockID ) != kVoxelAirBlock )
                 continue;
-            SW_LOG_ERROR( "[Voxel] the director's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
+            SW_LOG_ERROR_ID( "VoxelDirector.DirectorBlockNotBlock", "[Voxel] the director's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
             bBlocksKnown = false;
         }
         if ( bBlocksKnown == false )
@@ -213,8 +213,8 @@ namespace sw
         settings._seed                                   = static_cast<uint32>( _terrainSeed );
         [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainGenerator::fillWorld( _world, settings );
         decorateTerrain();
-        SW_LOG_INFO( "[Voxel] terrain %# x %# x %# - heights %#..%#, %# trees", _world.getSizeX(), _world.getSizeY(), _world.getSizeZ(), report._minHeight,
-                     report._maxHeight, report._treeCount );
+        SW_LOG_INFO_ID( "VoxelDirector.TerrainXXHeights", "[Voxel] terrain %# x %# x %# - heights %#..%#, %# trees", _world.getSizeX(), _world.getSizeY(), _world.getSizeZ(), report._minHeight,
+                        report._maxHeight, report._treeCount );
         return true;
     }
 
@@ -340,9 +340,9 @@ namespace sw
         const VoxelBody&                      body     = pPlayer->getBody();
         [[maybe_unused]] const float3&        position = body.getPosition();
         [[maybe_unused]] const VoxelBlockDef* pBlock   = _world.getCatalog()->findBlock( pPlayer->getHotbar().getSelectedSlot()._block );
-        SW_LOG_INFO( "[Voxel] at (%#, %#, %#)%#%# · broken %# · placed %# · hand %# x%#", static_cast<int32>( position._x ), static_cast<int32>( position._y ),
-                     static_cast<int32>( position._z ), body.isOnGround() ? " on ground" : "", body.isInWater() ? " swimming" : "", pPlayer->getBrokenCount(),
-                     pPlayer->getPlacedCount(), pBlock != nullptr ? pBlock->_name.c_str() : "empty", pPlayer->getHotbar().getSelectedSlot()._count );
+        SW_LOG_INFO_ID( "VoxelDirector.BrokenPlacedHandX", "[Voxel] at (%#, %#, %#)%#%# · broken %# · placed %# · hand %# x%#", static_cast<int32>( position._x ), static_cast<int32>( position._y ),
+                        static_cast<int32>( position._z ), body.isOnGround() ? " on ground" : "", body.isInWater() ? " swimming" : "", pPlayer->getBrokenCount(),
+                        pPlayer->getPlacedCount(), pBlock != nullptr ? pBlock->_name.c_str() : "empty", pPlayer->getHotbar().getSelectedSlot()._count );
     }
 
 } // namespace sw

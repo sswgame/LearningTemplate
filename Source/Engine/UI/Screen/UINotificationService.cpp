@@ -233,7 +233,7 @@ namespace sw
         PanelWidget* pStack = pScreen->getTree().findWidget<PanelWidget>( Internal::kStackName );
         if ( pStack == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Notification document %# has no '%#' panel", _pUI->getEngineDocuments()._notifications.c_str(), Internal::kStackName );
+            SW_LOG_ERROR_ID( "UINotificationService.NotificationDocumentNoPanel", "[UI] Notification document %# has no '%#' panel", _pUI->getEngineDocuments()._notifications.c_str(), Internal::kStackName );
             return;
         }
         UIDocumentCache&                        documents = engine::getSubsystem<UIDocumentCache>();
@@ -243,7 +243,7 @@ namespace sw
         unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
         if ( widget == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Notification entry failed: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "UINotificationService.NotificationEntryFailed", "[UI] Notification entry failed: %#", error.c_str() );
             return;
         }
         widget->setStyleClass( Internal::getKindClass( entry._desc._kind ) );

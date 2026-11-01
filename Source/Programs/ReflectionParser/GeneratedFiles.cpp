@@ -145,10 +145,10 @@ namespace sw
 
         if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, content ) == false )
         {
-            SW_LOG_ERROR( "Failed to write %#", path );
+            SW_LOG_ERROR_ID( "GeneratedFiles.FailedWrite", "Failed to write %#", path );
             return false;
         }
-        SW_LOG_TRACE( "Generated  : %#", path );
+        SW_LOG_TRACE_ID( "GeneratedFiles.Generated", "Generated  : %#", path );
         return true;
     }
 
@@ -171,7 +171,7 @@ namespace sw
         }
         if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
         {
-            SW_LOG_ERROR( "Failed to write %#", stampPath );
+            SW_LOG_ERROR_ID( "GeneratedFiles.FailedWrite", "Failed to write %#", stampPath );
             return false;
         }
         return true;

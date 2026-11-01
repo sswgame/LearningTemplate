@@ -93,12 +93,12 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Offer" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "OfferCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadOffer( node, sourceName ) )
                 ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Offer> entries", sourceName );
+            SW_LOG_WARNING_ID( "OfferCatalog.NoOfferEntries", "%#: no <Offer> entries", sourceName );
         return loadedCount;
     }
 
@@ -114,7 +114,7 @@ namespace sw
             return false;
         if ( addOffer( def ) == false )
         {
-            SW_LOG_ERROR( "%#: offer '%#' is malformed (needs grants and either prices or products, amounts 1..1e15, lowercase ids, a unique id) - skipped", sourceName, def._id );
+            SW_LOG_ERROR_ID( "OfferCatalog.OfferMalformedNeedsGrants", "%#: offer '%#' is malformed (needs grants and either prices or products, amounts 1..1e15, lowercase ids, a unique id) - skipped", sourceName, def._id );
             return false;
         }
         return true;

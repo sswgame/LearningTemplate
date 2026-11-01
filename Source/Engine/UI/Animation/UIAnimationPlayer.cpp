@@ -103,7 +103,7 @@ namespace sw
         const UIAnimation* pAnimation = findAnimation( name );
         if ( pAnimation == nullptr )
         {
-            SW_LOG_WARNING( "[UI] Animation '%#' is not in this screen", name.c_str() );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationNotScreen", "[UI] Animation '%#' is not in this screen", name.c_str() );
             return false;
         }
         stop( name );
@@ -156,7 +156,7 @@ namespace sw
             const UIAnimation* pAnimation = findAnimation( name );
             if ( pAnimation == nullptr )
             {
-                SW_LOG_WARNING( "[UI] Animation '%#' is not in this screen", name.c_str() );
+                SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationNotScreen", "[UI] Animation '%#' is not in this screen", name.c_str() );
                 return false;
             }
             _listActive.push_back( makeActive( *pAnimation, 1.0f, 1, false ) );
@@ -195,13 +195,13 @@ namespace sw
         Widget* pWidget = _pTree->findWidgetByName( track._widget );
         if ( pWidget == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Animation '%#': no widget named '%#' — the track is skipped", animation._name.c_str(), track._widget.c_str() );
+            SW_LOG_ERROR_ID( "UIAnimationPlayer.AnimationNoWidgetNamed", "[UI] Animation '%#': no widget named '%#' — the track is skipped", animation._name.c_str(), track._widget.c_str() );
             return false;
         }
         string error;
         if ( UIAnimatedProperty::resolve( *pWidget->getTypeInfo(), track._property, outTrack._property, error ) == false )
         {
-            SW_LOG_WARNING( "[UI] Animation '%#': %# — the track is skipped", animation._name.c_str(), error.c_str() );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationTrackSkipped", "[UI] Animation '%#': %# — the track is skipped", animation._name.c_str(), error.c_str() );
             return false;
         }
         // 곡선 위 사건은 실수 성분을 본다. 볼 성분이 없는 트랙의 사건은 조용히 안 보내지 않고 트랙째 뺀다(문서가 틀렸다는 뜻이다).
@@ -211,8 +211,8 @@ namespace sw
                                           curveEvent._component < static_cast<int32>( outTrack._property._componentCount );
             if ( bComponentExists == false )
             {
-                SW_LOG_WARNING( "[UI] Animation '%#': curve event '%#' on '%#.%#' needs float component %# — the track is skipped", animation._name.c_str(),
-                                curveEvent._command.c_str(), track._widget.c_str(), track._property.c_str(), curveEvent._component );
+                SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationCurveEventNeeds", "[UI] Animation '%#': curve event '%#' on '%#.%#' needs float component %# — the track is skipped", animation._name.c_str(),
+                                   curveEvent._command.c_str(), track._widget.c_str(), track._property.c_str(), curveEvent._component );
                 return false;
             }
         }
@@ -222,14 +222,14 @@ namespace sw
             const UIAnimationKey& key = track._listKey[index];
             if ( index > 0 && key._time < track._listKey[index - 1]._time )
             {
-                SW_LOG_WARNING( "[UI] Animation '%#': keys of '%#.%#' are not in time order — the track is skipped", animation._name.c_str(), track._widget.c_str(),
-                                track._property.c_str() );
+                SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationKeysNotTime", "[UI] Animation '%#': keys of '%#.%#' are not in time order — the track is skipped", animation._name.c_str(), track._widget.c_str(),
+                                   track._property.c_str() );
                 return false;
             }
             if ( outTrack._property.parseValue( key._value, outTrack._listValue[index] ) == false )
             {
-                SW_LOG_WARNING( "[UI] Animation '%#': key value '%#' cannot be read as '%#.%#' — the track is skipped", animation._name.c_str(), key._value.c_str(),
-                                track._widget.c_str(), track._property.c_str() );
+                SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationKeyValueCannot", "[UI] Animation '%#': key value '%#' cannot be read as '%#.%#' — the track is skipped", animation._name.c_str(), key._value.c_str(),
+                                   track._widget.c_str(), track._property.c_str() );
                 return false;
             }
         }
@@ -243,19 +243,19 @@ namespace sw
         Widget* pWidget = _pTree->findWidgetByID( widget );
         if ( pWidget == nullptr )
         {
-            SW_LOG_WARNING( "[UI] Tween of '%#': widget %# is not in this tree", string( propertyPath ).c_str(), widget );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.TweenWidgetNotTree", "[UI] Tween of '%#': widget %# is not in this tree", string( propertyPath ).c_str(), widget );
             return false;
         }
         ActiveTween tween{};
         string      error;
         if ( UIAnimatedProperty::resolve( *pWidget->getTypeInfo(), propertyPath, tween._property, error ) == false )
         {
-            SW_LOG_WARNING( "[UI] Tween: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.Tween", "[UI] Tween: %#", error.c_str() );
             return false;
         }
         if ( tween._property.parseValue( endValue, tween._to ) == false )
         {
-            SW_LOG_WARNING( "[UI] Tween: '%#' cannot be read as '%#'", string( endValue ).c_str(), string( propertyPath ).c_str() );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.TweenCannotRead", "[UI] Tween: '%#' cannot be read as '%#'", string( endValue ).c_str(), string( propertyPath ).c_str() );
             return false;
         }
         // 같은 위젯과 경로의 기존 트윈은 지금 값에서 새 끝값으로 대체한다.

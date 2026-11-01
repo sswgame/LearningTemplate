@@ -218,12 +218,12 @@ namespace sw
     {
         if ( bRestored )
         {
-            SW_LOG_INFO( "[Shooter] arena state restored - %# kills, wave %#", _killCount, getWave() );
+            SW_LOG_INFO_ID( "ShooterDirector.ArenaStateRestoredKills", "[Shooter] arena state restored - %# kills, wave %#", _killCount, getWave() );
         }
         else
         {
             // 감독은 읽었는데 끝 바이트가 남은 경우도 여기로 온다. 새 판으로 되돌린다.
-            SW_LOG_WARNING( "[Shooter] the saved arena state does not match this build - starting a new round" );
+            SW_LOG_WARNING_ID( "ShooterDirector.SavedArenaStateDoes", "[Shooter] the saved arena state does not match this build - starting a new round" );
             _killCount = 0;
             if ( _bPacingReady == SW_TRUE )
                 _director.restart();
@@ -233,7 +233,7 @@ namespace sw
     void ShooterDirectorComponent::onEndPlay()
     {
         if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace, _motionTrace ) == false )
-            SW_LOG_WARNING( "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
+            SW_LOG_WARNING_ID( "ShooterDirector.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
         GameDirectorComponent::onEndPlay();
     }
 
@@ -371,29 +371,29 @@ namespace sw
         const bool                bPresetNamesSet = _listEnemyPreset.empty() == false && _eliteEnemyPreset.empty() == false;
         if ( pAppearance == nullptr || bPresetNamesSet == false )
         {
-            SW_LOG_ERROR( "[Shooter] enemy presets are not set (or no appearance database) - no enemies will come" );
+            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetsNotSet", "[Shooter] enemy presets are not set (or no appearance database) - no enemies will come" );
             return;
         }
         bool bPresetsKnown = pAppearance->getPresets().findPreset( hashed_string( _eliteEnemyPreset ) ) != nullptr;
         if ( bPresetsKnown == false )
-            SW_LOG_ERROR( "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyPreset.c_str() );
+            SW_LOG_ERROR_ID( "ShooterDirector.ElitePresetNotAppearance", "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyPreset.c_str() );
         for ( const string& preset : _listEnemyPreset )
         {
             if ( pAppearance->getPresets().findPreset( hashed_string( preset ) ) != nullptr )
                 continue;
-            SW_LOG_ERROR( "[Shooter] enemy preset '%#' is not in the appearance presets", preset.c_str() );
+            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetNotAppearance", "[Shooter] enemy preset '%#' is not in the appearance presets", preset.c_str() );
             bPresetsKnown = false;
         }
         if ( bPresetsKnown == false )
             return;
         if ( _profile.loadFromAsset( AssetID{ _pacingProfile } ) == false )
         {
-            SW_LOG_ERROR( "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
+            SW_LOG_ERROR_ID( "ShooterDirector.PacingProfileCouldNot", "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
             return;
         }
         if ( _table.loadFromAsset( AssetID{ _spawnTable } ) == false )
         {
-            SW_LOG_ERROR( "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
+            SW_LOG_ERROR_ID( "ShooterDirector.SpawnTableCouldNot", "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
             return;
         }
         // 감독은 ID 만 낸다. 이 게임이 모르는 ID 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
@@ -402,12 +402,12 @@ namespace sw
         for ( const hashed_string& id : listID )
         {
             if ( Internal::isKnownID( id, Internal::kArrKnownEncounter ) == false )
-                SW_LOG_ERROR( "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
+                SW_LOG_ERROR_ID( "ShooterDirector.PacingProfileNamesEncounter", "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
         }
         for ( const SpawnEntryDef& entry : _table.getEntries() )
         {
             if ( Internal::isKnownID( entry._id, Internal::kArrKnownSpawn ) == false )
-                SW_LOG_ERROR( "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
+                SW_LOG_ERROR_ID( "ShooterDirector.SpawnTableNamesGame", "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
         }
         _director.initialize( &_profile, &_table, static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
@@ -451,8 +451,8 @@ namespace sw
                         waveReached.setInt( "wave", getWave() ).setInt( "kills", _killCount ).setFloat( "seconds", static_cast<float64>( _director.getTime() ) );
                         (void)pTelemetry->record( waveReached );
                     }
-                    SW_LOG_INFO( "[Shooter] pacing '%#' -> '%#' (wave %#, intensity %.2f)", event._source.empty() ? "start" : event._source.c_str(), event._id.c_str(), getWave(),
-                                 event._intensity );
+                    SW_LOG_INFO_ID( "ShooterDirector.PacingWaveIntensity", "[Shooter] pacing '%#' -> '%#' (wave %#, intensity %.2f)", event._source.empty() ? "start" : event._source.c_str(), event._id.c_str(), getWave(),
+                                    event._intensity );
                     break;
                 }
                 case AIDirectorEventKind::Spawned:
@@ -463,7 +463,7 @@ namespace sw
                 case AIDirectorEventKind::Encounter:
                 {
                     requestEnemies( event._count, event._scale, 0, event._id == hashed_string( "elite" ) );
-                    SW_LOG_INFO( "[Shooter] %# - %# skeletons (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
+                    SW_LOG_INFO_ID( "ShooterDirector.SkeletonsXHealthWave", "[Shooter] %# - %# skeletons (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
                     break;
                 }
                 case AIDirectorEventKind::Reward:
@@ -535,7 +535,7 @@ namespace sw
             if ( pAI != nullptr && pAI->getPawn() != pPawn->getHandle() )
             {
                 pAI->possess( *pPawn );
-                SW_LOG_INFO( "[Shooter] auto play took the player" );
+                SW_LOG_INFO_ID( "ShooterDirector.AutoPlayTookPlayer", "[Shooter] auto play took the player" );
             }
             return;
         }
@@ -730,9 +730,9 @@ namespace sw
             return;
         [[maybe_unused]] const WeaponState& weapon  = pPlayer->getCurrentWeapon();
         [[maybe_unused]] const uint32       percent = pPlayer->getShotCount() > 0u ? pPlayer->getHitCount() * 100u / pPlayer->getShotCount() : 0u;
-        SW_LOG_INFO( "[Shooter] wave %# (%#, intensity %.2f) · kills %# · HP %# · %# %#/%# · skeletons %# · accuracy %#%%", getWave(), _director.getPhase().c_str(),
-                     _director.getIntensity(), _killCount, static_cast<int32>( pPlayer->getHealth() ), weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(),
-                     weapon.getReserveAmmo(), static_cast<uint32>( _listEnemyView.size() ), percent );
+        SW_LOG_INFO_ID( "ShooterDirector.WaveIntensityKillsHP", "[Shooter] wave %# (%#, intensity %.2f) · kills %# · HP %# · %# %#/%# · skeletons %# · accuracy %#%%", getWave(), _director.getPhase().c_str(),
+                        _director.getIntensity(), _killCount, static_cast<int32>( pPlayer->getHealth() ), weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(),
+                        weapon.getReserveAmmo(), static_cast<uint32>( _listEnemyView.size() ), percent );
     }
 
     void ShooterDirectorComponent::appendMotionTrace( float32 deltaTime )

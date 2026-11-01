@@ -44,7 +44,7 @@ namespace sw
         if ( pControl == nullptr )
         {
             if ( _bWarnedNoTick == false )
-                SW_LOG_ERROR( "'%#' has a TickedPathMover but its scene has no ControlSystem tick - it does not move", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+                SW_LOG_ERROR_ID( "TickedPathMover.TickedPathMoverButSceneNo", "'%#' has a TickedPathMover but its scene has no ControlSystem tick - it does not move", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
             _bWarnedNoTick = true;
             return;
         }

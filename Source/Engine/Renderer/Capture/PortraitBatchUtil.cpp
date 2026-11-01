@@ -89,7 +89,7 @@ namespace sw
         for ( size_t index = 0; index < listCapture.size(); ++index )
         {
             bAllSucceeded = bAllSucceeded && listWritten[index] != 0;
-            SW_LOG_INFO( "Portrait '%#' -> %#.dds / .png (%#x%#)", listPath[index].c_str(), listBase[index].c_str(), listCapture[index]._width, listCapture[index]._height );
+            SW_LOG_INFO_ID( "PortraitBatchUtil.PortraitDdsPngX", "Portrait '%#' -> %#.dds / .png (%#x%#)", listPath[index].c_str(), listBase[index].c_str(), listCapture[index]._width, listCapture[index]._height );
         }
         return bAllSucceeded;
     }

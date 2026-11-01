@@ -253,12 +253,12 @@ namespace sw
         }
         if ( _bHuman == SW_TRUE )
         {
-            SW_LOG_INFO( "[Skirmish] you are blue - drag to select, right click to move/attack/gather, A attack-move, S stop, H hold, Q/W/E train, "
-                         "B depot · N barracks · G refinery · Y academy · F factory · T starport · U bunker at the cursor, Ctrl+1..9 groups, arrows pan, "
-                         "wheel zoom, - = speed, P pause, F1 status" );
+            SW_LOG_INFO_ID( "SkirmishDirector.YouBlueDragSelect", "[Skirmish] you are blue - drag to select, right click to move/attack/gather, A attack-move, S stop, H hold, Q/W/E train, "
+                                                                  "B depot · N barracks · G refinery · Y academy · F factory · T starport · U bunker at the cursor, Ctrl+1..9 groups, arrows pan, "
+                                                                  "wheel zoom, - = speed, P pause, F1 status" );
         }
         else
-            SW_LOG_INFO( "[Skirmish] watching computer vs computer - arrows/WASD pan, wheel zoom, - = speed, P pause, F1 status" );
+            SW_LOG_INFO_ID( "SkirmishDirector.WatchingComputerVsComputer", "[Skirmish] watching computer vs computer - arrows/WASD pan, wheel zoom, - = speed, P pause, F1 status" );
     }
 
     void SkirmishDirectorComponent::updateGame( float32 deltaTime )
@@ -338,12 +338,12 @@ namespace sw
     {
         if ( bRestored )
         {
-            SW_LOG_INFO( "[Skirmish] match state restored - %#s in", static_cast<int32>( _match.getWorld().getTime() ) );
+            SW_LOG_INFO_ID( "SkirmishDirector.MatchStateRestored", "[Skirmish] match state restored - %#s in", static_cast<int32>( _match.getWorld().getTime() ) );
         }
         else
         {
             // 판이 반쯤 바뀌었을 수 있다. 새 판으로 되돌린다.
-            SW_LOG_WARNING( "[Skirmish] the saved match state does not match this build - starting a new match" );
+            SW_LOG_WARNING_ID( "SkirmishDirector.SavedMatchStateDoes", "[Skirmish] the saved match state does not match this build - starting a new match" );
             (void)startGame();
         }
     }
@@ -352,29 +352,29 @@ namespace sw
     {
         if ( _catalog.loadFromAsset( AssetID{ _unitDataPath } ) == false )
         {
-            SW_LOG_ERROR( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishDirector.CouldNotLoadedMatch", "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
         _unitModelCatalog.clear();
         if ( _unitModelCatalog.loadFromAsset( AssetID{ _unitModelPath } ) == false )
         {
-            SW_LOG_ERROR( "[Skirmish] the unit model table '%#' could not be loaded - the match cannot start", _unitModelPath.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishDirector.UnitModelTableCould", "[Skirmish] the unit model table '%#' could not be loaded - the match cannot start", _unitModelPath.c_str() );
             return false;
         }
         if ( _commanderTree.loadFromAsset( AssetID{ _commanderTreePath } ) == false )
         {
-            SW_LOG_ERROR( "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishDirector.CommanderBehaviorTreeCould", "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
             return false;
         }
         if ( hasValidNames() == false )
         {
-            SW_LOG_ERROR( "[Skirmish] the director's input actions or unit ids do not match the data - the match cannot start" );
+            SW_LOG_ERROR_ID( "SkirmishDirector.DirectorInputActionsUnit", "[Skirmish] the director's input actions or unit ids do not match the data - the match cannot start" );
             return false;
         }
         const bool bAIStylesSet = _rushAI.isSet() && _macroAI.isSet() && _opponentAI.isSet();
         if ( bAIStylesSet == false )
         {
-            SW_LOG_ERROR( "[Skirmish] the director needs _rushAI, _macroAI and _opponentAI (worker, production and attack targets) - the match cannot start" );
+            SW_LOG_ERROR_ID( "SkirmishDirector.DirectorNeedsRushAIMacroAI", "[Skirmish] the director needs _rushAI, _macroAI and _opponentAI (worker, production and attack targets) - the match cannot start" );
             return false;
         }
         _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
@@ -535,12 +535,12 @@ namespace sw
         if ( bFaster || inputMap.wasActionTriggered( _slowerAction ) )
         {
             _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
-            SW_LOG_INFO( "[Skirmish] speed x%#", _timeScale );
+            SW_LOG_INFO_ID( "SkirmishDirector.SpeedX", "[Skirmish] speed x%#", _timeScale );
         }
         if ( inputMap.wasActionTriggered( _pauseAction ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO( "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
+            SW_LOG_INFO_ID( "SkirmishDirector.Message", "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
         if ( inputMap.wasActionTriggered( _statusAction ) )
             _match.logStatus();
@@ -567,7 +567,7 @@ namespace sw
             if ( inputMap.wasActionTriggered( _attackMoveAction ) )
             {
                 _bAttackMovePending = SW_TRUE;
-                SW_LOG_INFO( "[Skirmish] attack-move - left click a target point" );
+                SW_LOG_INFO_ID( "SkirmishDirector.AttackMoveLeftClick", "[Skirmish] attack-move - left click a target point" );
             }
             const bool bHold = inputMap.wasActionTriggered( _holdAction );
             if ( bHold || inputMap.wasActionTriggered( _stopAction ) )
@@ -600,7 +600,7 @@ namespace sw
             else if ( bShift )
                 _selection.addToGroup( group );
             else if ( _selection.recallGroup( world, group ) )
-                SW_LOG_INFO( "[Skirmish] group %# - %# units", group, static_cast<int32>( _selection.getSelected().size() ) );
+                SW_LOG_INFO_ID( "SkirmishDirector.GroupUnits", "[Skirmish] group %# - %# units", group, static_cast<int32>( _selection.getSelected().size() ) );
         }
         if ( inputMap.wasActionTriggered( _jumpToSelectionAction ) )
         {
@@ -625,7 +625,7 @@ namespace sw
                 // A 다음 선택(왼쪽 클릭)이면 선택한 병력을 그 위치로 공격 이동시킨다.
                 _bAttackMovePending                = SW_FALSE;
                 [[maybe_unused]] const int32 count = world.issueGroupMove( _selection.getSelected(), point, true, bShift );
-                SW_LOG_INFO( "[Skirmish] %# units attack-move to (%#, %#)", count, static_cast<int32>( point._x ), static_cast<int32>( point._z ) );
+                SW_LOG_INFO_ID( "SkirmishDirector.UnitsAttackMove", "[Skirmish] %# units attack-move to (%#, %#)", count, static_cast<int32>( point._x ), static_cast<int32>( point._z ) );
                 return;
             }
             _bDragging = SW_TRUE;
@@ -654,7 +654,7 @@ namespace sw
         const RTSUnit* pPrimary = world.findUnit( _selection.getPrimary() );
         if ( pPrimary != nullptr )
         {
-            SW_LOG_INFO( "[Skirmish] selected %# (%# units)", pPrimary->_pDef->_name.c_str(), static_cast<int32>( _selection.getSelected().size() ) );
+            SW_LOG_INFO_ID( "SkirmishDirector.SelectedUnits", "[Skirmish] selected %# (%# units)", pPrimary->_pDef->_name.c_str(), static_cast<int32>( _selection.getSelected().size() ) );
             getSoundQueue().queueEvent( SkirmishDirectorComponentInternal::kSoundSelect );
         }
     }
@@ -692,7 +692,7 @@ namespace sw
         {
             if ( _catalog.find( *pUnitID ) != nullptr )
                 continue;
-            SW_LOG_ERROR( "%#: unit id '%#' is not in %#", kOwner, pUnitID->c_str(), _unitDataPath.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishDirector.UnitIdNot", "%#: unit id '%#' is not in %#", kOwner, pUnitID->c_str(), _unitDataPath.c_str() );
             bValid = false;
         }
         // 모델 표와 유닛 카탈로그는 서로 같은 id 를 가져야 한다. 모델이 없는 유닛은 조용히 그려지지 않으므로 시작할 때 막는다.
@@ -700,33 +700,33 @@ namespace sw
         {
             if ( _unitModelCatalog.find( def._id ) != nullptr )
                 continue;
-            SW_LOG_ERROR( "%#: unit '%#' of %# has no row in %#", kOwner, def._id.c_str(), _unitDataPath.c_str(), _unitModelPath.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishDirector.UnitNoRow", "%#: unit '%#' of %# has no row in %#", kOwner, def._id.c_str(), _unitDataPath.c_str(), _unitModelPath.c_str() );
             bValid = false;
         }
         for ( const SkirmishUnitModel& model : _unitModelCatalog.getAll() )
         {
             if ( _catalog.find( model._id ) != nullptr )
                 continue;
-            SW_LOG_ERROR( "%#: model row '%#' of %# is not in %#", kOwner, model._id.c_str(), _unitModelPath.c_str(), _unitDataPath.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishDirector.ModelRowNot", "%#: model row '%#' of %# is not in %#", kOwner, model._id.c_str(), _unitModelPath.c_str(), _unitDataPath.c_str() );
             bValid = false;
         }
         if ( _listBuildAction.size() != _listBuildUnitID.size() )
         {
-            SW_LOG_ERROR( "%#: %# build actions but %# build units - they pair by index", kOwner, static_cast<uint32>( _listBuildAction.size() ),
-                          static_cast<uint32>( _listBuildUnitID.size() ) );
+            SW_LOG_ERROR_ID( "SkirmishDirector.BuildActionsButBuild", "%#: %# build actions but %# build units - they pair by index", kOwner, static_cast<uint32>( _listBuildAction.size() ),
+                             static_cast<uint32>( _listBuildUnitID.size() ) );
             bValid = false;
         }
         for ( const hashed_string& unitID : _listBuildUnitID )
         {
             if ( _catalog.find( unitID ) != nullptr )
                 continue;
-            SW_LOG_ERROR( "%#: build unit '%#' is not in %#", kOwner, unitID.c_str(), _unitDataPath.c_str() );
+            SW_LOG_ERROR_ID( "SkirmishDirector.BuildUnitNot", "%#: build unit '%#' is not in %#", kOwner, unitID.c_str(), _unitDataPath.c_str() );
             bValid = false;
         }
         // 관전 카메라 프리셋은 씬 데이터가 준다(코드에 기본 이름이 없다). 카탈로그에 있는지는 카메라가 시작할 때 본다(`CameraDirectorComponent::startWithPreset`).
         if ( _watchCameraPreset.empty() )
         {
-            SW_LOG_ERROR( "%#: _watchCameraPreset is empty - the scene must name the camera preset for AI vs AI", kOwner );
+            SW_LOG_ERROR_ID( "SkirmishDirector.WatchCameraPresetEmptySceneMust", "%#: _watchCameraPreset is empty - the scene must name the camera preset for AI vs AI", kOwner );
             bValid = false;
         }
         // 입력 액션은 입력 맵에 있어야 한다. 입력이 없는 실행(전용 서버 · 헤드리스)은 보지 않는다.
@@ -763,17 +763,17 @@ namespace sw
         }
         if ( workerID.isValid() == false )
         {
-            SW_LOG_INFO( "[Skirmish] select a worker to build %#", pDef->_name.c_str() );
+            SW_LOG_INFO_ID( "SkirmishDirector.SelectWorkerBuild", "[Skirmish] select a worker to build %#", pDef->_name.c_str() );
             return;
         }
         int2 cell{ static_cast<int32>( MathUtil::floor( point._x ) ) - pDef->_footprint / 2, static_cast<int32>( MathUtil::floor( point._z ) ) - pDef->_footprint / 2 };
         if ( pDef->_bExtractor != SW_FALSE && world.findBuildSite( pDef->_id, point, 0, 8, cell ) == false )
         {
-            SW_LOG_INFO( "[Skirmish] no free geyser near the cursor for %#", pDef->_name.c_str() );
+            SW_LOG_INFO_ID( "SkirmishDirector.NoFreeGeyserNear", "[Skirmish] no free geyser near the cursor for %#", pDef->_name.c_str() );
             return;
         }
         [[maybe_unused]] const RTSCommandResult result = world.issueBuild( workerID, pDef->_id, cell );
-        SW_LOG_INFO( "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, getEnumName( result ) );
+        SW_LOG_INFO_ID( "SkirmishDirector.Build", "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, getEnumName( result ) );
     }
 
     void SkirmishDirectorComponent::trainFromPrimary( int32 productIndex )
@@ -788,7 +788,7 @@ namespace sw
             return;
         const RTSUnitDef&                       product = *listProduct[static_cast<size_t>( productIndex )];
         [[maybe_unused]] const RTSCommandResult result  = world.train( pPrimary->_id, product._id );
-        SW_LOG_INFO( "[Skirmish] train %# at %#: %#", product._name.c_str(), pPrimary->_pDef->_name.c_str(), getEnumName( result ) );
+        SW_LOG_INFO_ID( "SkirmishDirector.Train", "[Skirmish] train %# at %#: %#", product._name.c_str(), pPrimary->_pDef->_name.c_str(), getEnumName( result ) );
     }
 
     bool SkirmishDirectorComponent::findGroundPoint( const InputManager& input, float3& outPoint ) const
@@ -833,24 +833,24 @@ namespace sw
             {
                 case RTSEvent::Kind::ConstructionComplete:
                 {
-                    SW_LOG_INFO( "[Skirmish] %# complete", pName );
+                    SW_LOG_INFO_ID( "SkirmishDirector.Complete", "[Skirmish] %# complete", pName );
                     getSoundQueue().queueEvent( Internal::kSoundBuilt );
                     break;
                 }
                 case RTSEvent::Kind::ProductionComplete:
                 {
-                    SW_LOG_INFO( "[Skirmish] %# ready", pName );
+                    SW_LOG_INFO_ID( "SkirmishDirector.Ready", "[Skirmish] %# ready", pName );
                     break;
                 }
                 case RTSEvent::Kind::SupplyBlocked:
                 {
-                    SW_LOG_INFO( "[Skirmish] not enough supply - build a Supply Depot (B)" );
+                    SW_LOG_INFO_ID( "SkirmishDirector.NotEnoughSupplyBuild", "[Skirmish] not enough supply - build a Supply Depot (B)" );
                     getSoundQueue().queueEvent( Internal::kSoundBlocked );
                     break;
                 }
                 case RTSEvent::Kind::UnderAttack:
                 {
-                    SW_LOG_INFO( "[Skirmish] we are under attack at (%#, %#)", static_cast<int32>( event._position._x ), static_cast<int32>( event._position._z ) );
+                    SW_LOG_INFO_ID( "SkirmishDirector.WeUnderAttack", "[Skirmish] we are under attack at (%#, %#)", static_cast<int32>( event._position._x ), static_cast<int32>( event._position._z ) );
                     break;
                 }
                 case RTSEvent::Kind::UnitCreated:

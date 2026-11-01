@@ -68,7 +68,7 @@ namespace sw
             return {};
 
         const CompressionCodecType type = codec->getCodecType();
-        SW_LOG_INFO( "Registered codec: %# (type=%#)", codec->getCodecName(), static_cast<uint32>( type ) );
+        SW_LOG_INFO_ID( "Compression.RegisteredCodecType", "Registered codec: %# (type=%#)", codec->getCodecName(), static_cast<uint32>( type ) );
 
         uint64 id{ 0 };
         {

@@ -57,7 +57,7 @@ namespace sw
                 {
                     if ( bNumberValid == false || rank < 1 )
                     {
-                        SW_LOG_ERROR( "%#: skill '%#' has an invalid requirement '%#'", sourceName, pID, token );
+                        SW_LOG_ERROR_ID( "SkillTree.SkillInvalidRequirement", "%#: skill '%#' has an invalid requirement '%#'", sourceName, pID, token );
                         bValid = false;
                         return;
                     }
@@ -68,7 +68,7 @@ namespace sw
                 } );
                 if ( bValid == false )
                 {
-                    SW_LOG_ERROR( "%#: skill '%#' has invalid fields - skipped", sourceName, pID );
+                    SW_LOG_ERROR_ID( "SkillTree.SkillInvalidFieldsSkipped", "%#: skill '%#' has invalid fields - skipped", sourceName, pID );
                     continue;
                 }
                 const XMLNode statNode = node.findChild( "Stats" );
@@ -81,7 +81,7 @@ namespace sw
                 for ( const SkillRequirement& requirement : skill._listRequirement )
                 {
                     if ( tree.findSkill( requirement._skillID ) == nullptr )
-                        SW_LOG_WARNING( "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
+                        SW_LOG_WARNING_ID( "SkillTree.SkillRequiresUnknown", "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
                 }
             }
             (void)add( tree );

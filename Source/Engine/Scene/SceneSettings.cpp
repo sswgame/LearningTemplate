@@ -17,18 +17,18 @@ namespace sw
         StreamingCellGrid grid;
         if ( StreamingCellGrid::tryCreate( _cellGrid, grid ) == false )
         {
-            SW_LOG_ERROR( "Scene '%#' streams but its cell grid is not usable (cell size %#, loading radius %#)", sceneName, _cellGrid._cellSize,
-                          _cellGrid._loadingRadius );
+            SW_LOG_ERROR_ID( "SceneSettings.SceneStreamsButCell", "Scene '%#' streams but its cell grid is not usable (cell size %#, loading radius %#)", sceneName, _cellGrid._cellSize,
+                             _cellGrid._loadingRadius );
             bValid = false;
         }
         if ( _maxCellLoadsPerFrame == 0 )
         {
-            SW_LOG_ERROR( "Scene '%#' streams but loads no cell per frame (_maxCellLoadsPerFrame is 0)", sceneName );
+            SW_LOG_ERROR_ID( "SceneSettings.SceneStreamsButLoads", "Scene '%#' streams but loads no cell per frame (_maxCellLoadsPerFrame is 0)", sceneName );
             bValid = false;
         }
         if ( ( _unloadMargin >= 0.0f ) == false )
         {
-            SW_LOG_ERROR( "Scene '%#' has a negative unload margin (%#)", sceneName, _unloadMargin );
+            SW_LOG_ERROR_ID( "SceneSettings.SceneNegativeUnloadMargin", "Scene '%#' has a negative unload margin (%#)", sceneName, _unloadMargin );
             bValid = false;
         }
         return bValid;

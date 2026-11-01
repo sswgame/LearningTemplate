@@ -215,7 +215,7 @@ namespace sw
             const string& documentPath = _pScreen->getDocumentPath();
             string        message      = documentPath.empty() ? string( "(code)" ) : documentPath;
             message += formatToString( ":%#: binding '%#' on %#: %#", desc._sourceLine, desc._expression, desc._propertyPath, error );
-            SW_LOG_ERROR( "[UI] %#", message.c_str() );
+            SW_LOG_ERROR_ID( "UIBindingSet.Message", "[UI] %#", message.c_str() );
             _listError.push_back( std::move( message ) );
         }
         bool bUsesSettings = false;
@@ -301,8 +301,8 @@ namespace sw
             }
         }
         if ( build::kShipping && binding._expression._source == UIBindingSource::Poll )
-            SW_LOG_WARNING( "[UI] %#:%#: poll binding '%#' in a shipped build - use {bind:} with field notification", _pScreen->getDocumentPath().c_str(),
-                            desc._sourceLine, desc._expression.c_str() );
+            SW_LOG_WARNING_ID( "UIBindingSet.PollBindingShippedBuild", "[UI] %#:%#: poll binding '%#' in a shipped build - use {bind:} with field notification", _pScreen->getDocumentPath().c_str(),
+                               desc._sourceLine, desc._expression.c_str() );
         _listBinding.push_back( std::move( binding ) );
         return true;
     }

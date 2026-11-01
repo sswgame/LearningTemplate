@@ -7,7 +7,7 @@
  *          네트워크 키트에서 시작해(`NetKitConfigUtil`) Base 와 다른 키트도 같이 쓰도록 여기로 옮겼다.
  * @code
  *     const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
- *     if ( rangeError.empty() == false ) { SW_LOG_ERROR( "Kit: refused to start - %#", rangeError.c_str() ); return false; }
+ *     if ( rangeError.empty() == false ) { SW_LOG_ERROR_ID( "Kit.RefusedToStart", "Kit: refused to start - %#", rangeError.c_str() ); return false; }
  * @endcode
  */
 #pragma once

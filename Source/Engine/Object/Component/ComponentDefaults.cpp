@@ -177,7 +177,7 @@ namespace sw
         if ( bLoaded )
             _bDefaultsLoaded.store( true, std::memory_order_release );
         else
-            SW_LOG_TRACE( "Component defaults not found at '%#' — skipping defaults for this run.", _customDefaultsPath );
+            SW_LOG_TRACE_ID( "ComponentDefaults.ComponentDefaultsNotFound", "Component defaults not found at '%#' — skipping defaults for this run.", _customDefaultsPath );
 
         // **성공하든 실패하든 시도는 끝났다.** 이 줄이 없으면 실패가 매번 되풀이된다.
         _bLoadAttempted.store( true, std::memory_order_release );
@@ -312,7 +312,7 @@ namespace sw
             void* const pPropPtr = patch._pProperty->getRawPtr( pInstance );
             if ( pPropPtr == nullptr )
             {
-                SW_LOG_ERROR( "Component default '%#' of '%#' has no value address - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
+                SW_LOG_ERROR_ID( "ComponentDefaults.ComponentDefaultNoValue", "Component default '%#' of '%#' has no value address - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
                 return;
             }
             Memory::copy( pPropPtr, patch._arrByte.data(), patch._arrByte.size() );
@@ -320,7 +320,7 @@ namespace sw
         }
         // 프로퍼티 단위로 쓴다. 비트필드는 그 비트만 바뀐다(값 주소로 쓰면 같은 바이트의 다른 플래그를 덮었다).
         if ( applyPropertyTextCoerced( *patch._pProperty, MutableObjectAddress{ pInstance }, patch._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
-            SW_LOG_WARNING( "Component default '%#' of '%#' cannot be read - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
+            SW_LOG_WARNING_ID( "ComponentDefaults.ComponentDefaultCannotRead", "Component default '%#' of '%#' cannot be read - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
     }
 
     void ComponentDefaults::setPath( string_view path )

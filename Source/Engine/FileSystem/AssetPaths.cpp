@@ -493,7 +493,7 @@ namespace sw
 
         // 루트는 실행 파일 위치로 한 번 정한 것이다(`ProcessRoots`) - 작업 폴더에서 위로 찾지 않는다(작업 폴더를 바꾸고 띄우면 다른 저장소를 열었다).
         const string& rootPath = ProcessRoots::get()._project.str();
-        SW_LOG_INFO( "RootFolder : %#", rootPath );
+        SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
         // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
         const string resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content.str() ) ? ProcessRoots::get()._content.str() : string{};
@@ -504,7 +504,7 @@ namespace sw
         if ( listSearchPriority.empty() )
         {
             // 읽지 못한 이유를 여기서 남긴다(읽는 함수는 정적 초기화 가드 안이라 로그하지 않는다). 가드 안에서 만든 값이므로 다시 읽어도 같은 문장이다.
-            SW_LOG_ERROR( "%#", AssetPathsInternal::readBasePriority()._error );
+            SW_LOG_ERROR_ID( "AssetPaths.Message", "%#", AssetPathsInternal::readBasePriority()._error );
             return false; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 false 를 반환한다.
         }
 
@@ -845,7 +845,7 @@ namespace sw
         (void)AssetPathsInternal::publishTable( *_pState, [&]( AssetPathTable& table )
         { table._listHostExcludedGroup = std::move( listHostExcludedGroup ); } );
         if ( excludedCount > 0 )
-            SW_LOG_INFO( "Host target %# does not read %# asset groups", string( buildTargetName ).c_str(), excludedCount );
+            SW_LOG_INFO_ID( "AssetPaths.HostTargetDoesNot", "Host target %# does not read %# asset groups", string( buildTargetName ).c_str(), excludedCount );
     }
 
     bool AssetPaths::isExcludedForHost( string_view assetPath ) const
@@ -887,7 +887,7 @@ namespace sw
         vector<string> listPackFolder;
         if ( FileUtil::collectFolders( gameRoot, listPackFolder, false ) == false )
         {
-            SW_LOG_ERROR( "Game pack folders under '%#' could not all be listed - the packs left out are not seen", gameRoot );
+            SW_LOG_ERROR_ID( "AssetPaths.GamePackFoldersUnder", "Game pack folders under '%#' could not all be listed - the packs left out are not seen", gameRoot );
             return false;
         }
         VectorUtil::sort( listPackFolder );

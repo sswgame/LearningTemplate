@@ -43,14 +43,14 @@ namespace sw
         const bool            bReady = pBody != nullptr && pRoot != nullptr && pBody->getBodyType() == PhysicsBodyType::Dynamic;
         if ( bReady == false )
         {
-            SW_LOG_ERROR( "'%#': LaunchVelocityComponent needs a dynamic RigidBodyComponent on the same object - nothing was launched",
-                          pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            SW_LOG_ERROR_ID( "LaunchVelocity.LaunchVelocityComponentNeedsDynamicRigidBodyComponent", "'%#': LaunchVelocityComponent needs a dynamic RigidBodyComponent on the same object - nothing was launched",
+                             pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
             return;
         }
         const float32 length = _localDirection.getLength();
         if ( length <= 1e-6f )
         {
-            SW_LOG_ERROR( "'%#': LaunchVelocityComponent _localDirection is zero - nothing was launched", pOwner->getName().c_str() );
+            SW_LOG_ERROR_ID( "LaunchVelocity.LaunchVelocityComponentLocalDirectionZeroNothing", "'%#': LaunchVelocityComponent _localDirection is zero - nothing was launched", pOwner->getName().c_str() );
             return;
         }
         const float3 worldDirection = float3::transformVector( _localDirection / length, pRoot->getWorldMatrix() );

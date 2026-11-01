@@ -227,7 +227,7 @@ namespace sw
         // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 테이블을 건드리지 않는다.
         if ( isHrSuccess( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ), "CreateBuffer" ) == false )
         {
-            SW_LOG_ERROR( "Failed to create root-constant cbuffer." );
+            SW_LOG_ERROR_ID( "D3D11.FailedCreateRootConstant", "Failed to create root-constant cbuffer." );
             return false;
         }
         return true;
@@ -445,8 +445,8 @@ namespace sw
         const HRESULT                           hr = _device->CreateTexture2D( &stagingDesc, pArrInitialData, stagingTexture.GetAddressOf() );
         if ( FAILED( hr ) )
         {
-            SW_LOG_ERROR( "%#: CreateTexture2D of the %#×%# staging texture (%# mips, %# bytes) failed hr=0x%#", pCaller, width, height, mipCount, uploadBytes,
-                          static_cast<uint32>( hr ) );
+            SW_LOG_ERROR_ID( "D3D11.CreateTexture2DStagingTextureMips", "%#: CreateTexture2D of the %#×%# staging texture (%# mips, %# bytes) failed hr=0x%#", pCaller, width, height, mipCount, uploadBytes,
+                             static_cast<uint32>( hr ) );
             return RHITransferSubmit::rejected();
         }
         staging.attachTexture( std::move( stagingTexture ), uploadBytes );
@@ -485,7 +485,7 @@ namespace sw
         void* pWindowHandle{ nullptr };
         if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
         {
-            SW_LOG_ERROR( "The D3D11 swap chain needs a Win32 surface" );
+            SW_LOG_ERROR_ID( "D3D11.D3D11SwapChainNeeds", "The D3D11 swap chain needs a Win32 surface" );
             return false;
         }
         _pHWnd            = static_cast<HWND>( pWindowHandle );
@@ -495,7 +495,7 @@ namespace sw
         // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
         if ( desc._stagingRingBytes == 0 )
         {
-            SW_LOG_ERROR( "The upload staging budget is 0 (gv_rhiStagingRingMegabytes) - Direct3D 11 does not start" );
+            SW_LOG_ERROR_ID( "D3D11.UploadStagingBudgetGv", "The upload staging budget is 0 (gv_rhiStagingRingMegabytes) - Direct3D 11 does not start" );
             return false;
         }
         _uploadStagingBudget.initialize( desc._stagingRingBytes );
@@ -554,7 +554,7 @@ namespace sw
 
         if ( FAILED( hr ) )
         {
-            SW_LOG_ERROR( "Failed to create Direct3D 11 Device and SwapChain! HRESULT: %#", hr );
+            SW_LOG_ERROR_ID( "D3D11.FailedCreateDirect3DDevice", "Failed to create Direct3D 11 Device and SwapChain! HRESULT: %#", hr );
             return false;
         }
         // 즉시 컨텍스트는 렌더 스레드와 전송 · 폴링 스레드가 함께 쓴다. 런타임 보호를 켜지 못하면 초기화를 실패시킨다(폴백 없음).
@@ -588,7 +588,7 @@ namespace sw
             }
             if ( bCompletionQueriesReady == false )
             {
-                SW_LOG_ERROR( "Failed to create the D3D11 event queries that confirm GPU completion" );
+                SW_LOG_ERROR_ID( "D3D11.FailedCreateD3D11Event", "Failed to create the D3D11 event queries that confirm GPU completion" );
                 return false;
             }
         }
@@ -604,9 +604,9 @@ namespace sw
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D11_FEATURE_THREADING, &threadingCaps, sizeof( threadingCaps ) ) ) )
             {
                 _bDriverCommandLists = threadingCaps.DriverCommandLists != FALSE ? SW_TRUE : SW_FALSE;
-                SW_LOG_INFO( "Threading caps: DriverConcurrentCreates=%#, DriverCommandLists=%#",
-                             static_cast<uint32>( threadingCaps.DriverConcurrentCreates ),
-                             static_cast<uint32>( threadingCaps.DriverCommandLists ) );
+                SW_LOG_INFO_ID( "D3D11.ThreadingCapsDriverConcurrentCreatesDriverCommandLists", "Threading caps: DriverConcurrentCreates=%#, DriverCommandLists=%#",
+                                static_cast<uint32>( threadingCaps.DriverConcurrentCreates ),
+                                static_cast<uint32>( threadingCaps.DriverCommandLists ) );
             }
         }
 
@@ -645,7 +645,7 @@ namespace sw
                 // 정적 샘플러는 셰이더가 번호로 고르는 필수 세트다. 빠지면 그 샘플러로 읽는 텍스처가 조용히 검정이 되므로 초기화를 실패시킨다.
                 if ( isHrSuccess( _device->CreateSamplerState( &staticDesc, _arrStaticSampler[samplerIndex].GetAddressOf() ), "CreateSamplerState" ) == false )
                 {
-                    SW_LOG_ERROR( "CreateSamplerState failed for static sampler %#.", samplerIndex );
+                    SW_LOG_ERROR_ID( "D3D11.CreateSamplerStateFailedStaticSampler", "CreateSamplerState failed for static sampler %#.", samplerIndex );
                     return false;
                 }
             }
@@ -665,10 +665,10 @@ namespace sw
             D3D11_SUBRESOURCE_DATA vbData{};
             vbData.pSysMem = constant::render::arrFallbackVertex;
             if ( isHrSuccess( _device->CreateBuffer( &vbDesc, &vbData, _vertexBuffer.GetAddressOf() ), "CreateBuffer" ) == false )
-                SW_LOG_WARNING( "Failed to create the fullscreen triangle vertex buffer." );
+                SW_LOG_WARNING_ID( "D3D11.FailedCreateFullscreenTriangle", "Failed to create the fullscreen triangle vertex buffer." );
         }
 
-        SW_LOG_INFO( "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );
+        SW_LOG_INFO_ID( "D3D11.Direct3DRHIBackendDevice", "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );
         // 프레임 스트림은 렌더 스레드만 쓰고 호출마다 런타임 보호를 받는다. 다른 스레드의 묶음(`lock()`)은 그 호출 사이에 끼지 않는다.
         _frameStreamContext = sw::make_unique<D3D11RHICommandContext>( this, _immediateContext.getPerCallProtected() );
         return true;
@@ -748,7 +748,7 @@ namespace sw
     {
         if ( _transferSerials.markLost() )
         {
-            SW_LOG_ERROR( "The D3D11 device was lost (%#, hr=0x%#) - later transfer submits are rejected and GPU waits stop", pCause, static_cast<uint32>( hr ) );
+            SW_LOG_ERROR_ID( "D3D11.D3D11DeviceLostHr", "The D3D11 device was lost (%#, hr=0x%#) - later transfer submits are rejected and GPU waits stop", pCause, static_cast<uint32>( hr ) );
             GPUBreadcrumbs::reportDeviceLost( "Direct3D 11", nullptr, 0 ); // GPU 쪽 표지가 없다 - CPU 가 마지막으로 기록한 패스만 싣는다
         }
     }
@@ -773,8 +773,8 @@ namespace sw
     {
         if ( _device == nullptr )
             return false;
-        SW_LOG_WARNING( "Marking the D3D11 device lost on request (rhi.removeDevice) - D3D11 cannot remove a device, so this is the state after the first "
-                        "DXGI_ERROR_DEVICE_REMOVED: later transfer submits are rejected" );
+        SW_LOG_WARNING_ID( "D3D11.MarkingD3D11DeviceLost", "Marking the D3D11 device lost on request (rhi.removeDevice) - D3D11 cannot remove a device, so this is the state after the first "
+                                                           "DXGI_ERROR_DEVICE_REMOVED: later transfer submits are rejected" );
         _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
@@ -1038,7 +1038,7 @@ namespace sw
             if ( FAILED( hr ) )
             {
                 // 장치 제거는 자동 복구가 없어 이후 매 프레임 여기로 들어온다 - 첫 실패만 남긴다(DX12 의 _bDeviceRemovedLogged 와 같은 뜻). 손실 표시는 markDeviceLost 가 한 번 남긴다.
-                SW_LOG_ERROR_ONCE( "Present failed hr=%#", static_cast<uint32>( hr ) );
+                SW_LOG_ERROR_ONCE_ID( "D3D11.PresentFailedHr", "Present failed hr=%#", static_cast<uint32>( hr ) );
                 // 장치 제거 · 리셋으로 실패했으면 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
                 if ( hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET )
                     markDeviceLost( "Present", hr );
@@ -1062,7 +1062,7 @@ namespace sw
             context->End( _idleQuery.Get() );
             context->Flush();
             if ( waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
-                SW_LOG_ERROR( "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
+                SW_LOG_ERROR_ID( "D3D11.WaitIdleGPUDidNot", "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
             _completedFrameSerial = _frameSerial; // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
             // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다(업로드 스테이징은 항목과 함께 놓인다).
             _transferQueue.retireAll( [this]( TransferProbe& probe )
@@ -1085,8 +1085,8 @@ namespace sw
             if ( bRingFull )
             {
                 if ( waitForEventQuery( context, _arrFrameDoneQuery[slot].Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
-                    SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::render::kMaxFrameCountInFlight,
-                                  D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
+                    SW_LOG_ERROR_ID( "D3D11.EndFrameGPUDidNot", "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::render::kMaxFrameCountInFlight,
+                                     D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
                 _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;
             }
             context->End( _arrFrameDoneQuery[slot].Get() );
@@ -1121,7 +1121,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Query> query;
         if ( isHrSuccess( _device->CreateQuery( &eventDesc, query.GetAddressOf() ), "CreateQuery" ) == false )
         {
-            SW_LOG_ERROR( "acquireTransferQuery: failed to create the event query that marks a transfer's end" );
+            SW_LOG_ERROR_ID( "D3D11.AcquireTransferQueryFailedCreateEvent", "acquireTransferQuery: failed to create the event query that marks a transfer's end" );
             return nullptr;
         }
         return query;
@@ -1163,7 +1163,7 @@ namespace sw
         unique_ptr<D3D11RHICommandList> list = make_unique<D3D11RHICommandList>( this );
         if ( list->isValid() == false )
         {
-            SW_LOG_ERROR( "D3D11RHIDevice::createCommandList: failed to create the native Deferred Context." );
+            SW_LOG_ERROR_ID( "D3D11.D3D11RHIDeviceCreateCommandListFailedCreate", "D3D11RHIDevice::createCommandList: failed to create the native Deferred Context." );
             return nullptr;
         }
         return list;

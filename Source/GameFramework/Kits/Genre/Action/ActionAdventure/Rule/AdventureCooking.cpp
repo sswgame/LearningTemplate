@@ -62,7 +62,7 @@ namespace sw
                 continue;
             if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
             {
-                SW_LOG_ERROR( "%#: ingredient '%#' has an undeclared effect '%#' - not added", sourceName, ingredient._id.c_str(), ingredient._effect.c_str() );
+                SW_LOG_ERROR_ID( "AdventureCooking.IngredientUndeclaredEffectNot", "%#: ingredient '%#' has an undeclared effect '%#' - not added", sourceName, ingredient._id.c_str(), ingredient._effect.c_str() );
                 continue;
             }
             (void)_ingredientCatalog.add( ingredient );

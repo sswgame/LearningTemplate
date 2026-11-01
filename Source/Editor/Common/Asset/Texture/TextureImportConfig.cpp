@@ -105,7 +105,7 @@ namespace sw::editor
             return ConfigReadResult::Missing;
         if ( read == OptionalFileRead::Failed || text.empty() )
         {
-            SW_LOG_ERROR( "Failed to read TextureImportConfig file: %#", configPath );
+            SW_LOG_ERROR_ID( "TextureImportConfig.FailedReadTextureImportConfigFile", "Failed to read TextureImportConfig file: %#", configPath );
             return ConfigReadResult::Invalid;
         }
         return loadFromJSONString( text ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
@@ -116,14 +116,14 @@ namespace sw::editor
         JSONDocument doc;
         if ( doc.parse( jsonString ) == false )
         {
-            SW_LOG_ERROR( "Failed to parse TextureImportConfig JSON." );
+            SW_LOG_ERROR_ID( "TextureImportConfig.FailedParseTextureImportConfigJSON", "Failed to parse TextureImportConfig JSON." );
             return false;
         }
 
         const JSONValue root = doc.getRoot();
         if ( root.isObject() == false )
         {
-            SW_LOG_ERROR( "TextureImportConfig root is not an object." );
+            SW_LOG_ERROR_ID( "TextureImportConfig.TextureImportConfigRootNotObject", "TextureImportConfig root is not an object." );
             return false;
         }
 
@@ -167,16 +167,16 @@ namespace sw::editor
             }
         }
 
-        SW_LOG_INFO( "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
+        SW_LOG_INFO_ID( "TextureImportConfig.LoadedTextureImportConfigPresetsRules", "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
 
         // 조건 없는 규칙은 나머지를 받는 규칙이라 맨 끝에 하나만 둔다. 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 오류로 멈춘다 — 그 위치를 이름으로 짚어 준다.
         const size_t misplacedIndex = findShadowingRuleIndex();
         if ( misplacedIndex < _listRule.size() )
         {
             const TextureImportRule& misplacedRule = _listRule[misplacedIndex];
-            SW_LOG_ERROR( "TextureImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. "
-                          "Put the unconditional rule at the very end of the list, once.",
-                          misplacedIndex, misplacedRule._name.empty() ? "(unnamed)" : misplacedRule._name.c_str() );
+            SW_LOG_ERROR_ID( "TextureImportConfig.TextureImportConfigRuleNoCondition", "TextureImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. "
+                                                                                       "Put the unconditional rule at the very end of the list, once.",
+                             misplacedIndex, misplacedRule._name.empty() ? "(unnamed)" : misplacedRule._name.c_str() );
             return clearAndFail();
         }
 
@@ -213,7 +213,7 @@ namespace sw::editor
     {
         if ( jsonValue.isObject() == false )
         {
-            SW_LOG_ERROR( "%#: must be an object", context );
+            SW_LOG_ERROR_ID( "TextureImportConfig.MustObject", "%#: must be an object", context );
             return false;
         }
         if ( ConfigKeyDocUtil::hasOnlyKnownKeys( jsonValue, kArrTextureImportRuleKeyDoc, context ) == false )
@@ -230,7 +230,7 @@ namespace sw::editor
             const string formatName = jsonValue.get( "format" ).asString();
             if ( TextureImportFormatUtil::parse( formatName, inoutRule._format ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown format '%#' (see TextureImportConfig key doc)", context, formatName.c_str() );
+                SW_LOG_ERROR_ID( "TextureImportConfig.UnknownFormatSeeTextureImportConfig", "%#: unknown format '%#' (see TextureImportConfig key doc)", context, formatName.c_str() );
                 return false;
             }
         }
@@ -240,7 +240,7 @@ namespace sw::editor
             const string swizzleName = jsonValue.get( "swizzle" ).asString();
             if ( parseSwizzleInternal( swizzleName, inoutRule._swizzle ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown swizzle '%#' (RGBA, BGRA, ARGB, RGB1)", context, swizzleName.c_str() );
+                SW_LOG_ERROR_ID( "TextureImportConfig.UnknownSwizzleRGBABGRA", "%#: unknown swizzle '%#' (RGBA, BGRA, ARGB, RGB1)", context, swizzleName.c_str() );
                 return false;
             }
         }
@@ -253,7 +253,7 @@ namespace sw::editor
                                 jsonValue.readOptionalInto( "invert_green", bInvertGreen );
         if ( bFlagsRead == false )
         {
-            SW_LOG_ERROR( "%#: generate_mips, srgb and invert_green must be booleans", context );
+            SW_LOG_ERROR_ID( "TextureImportConfig.GenerateMipsSrgbInvert", "%#: generate_mips, srgb and invert_green must be booleans", context );
             return false;
         }
         inoutRule._bGenerateMips = bGenerateMips ? SW_TRUE : SW_FALSE;

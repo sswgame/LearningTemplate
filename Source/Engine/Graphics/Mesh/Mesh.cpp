@@ -169,7 +169,7 @@ namespace sw
         const bool bPlainMesh = _listMorphTarget.empty() && _listSection.empty() && _vertexAnimation == nullptr;
         if ( bPlainMesh == false )
         {
-            SW_LOG_ERROR( "Mesh LODs need a mesh without morph targets, sections or vertex animation - the mesh keeps LOD 0 only" );
+            SW_LOG_ERROR_ID( "Mesh.MeshLODsNeedMesh", "Mesh LODs need a mesh without morph targets, sections or vertex animation - the mesh keeps LOD 0 only" );
             return false;
         }
         const bool bSkinned           = hasSkin();
@@ -193,8 +193,8 @@ namespace sw
             const bool bShapeOk = bTriangles && bThreshold;
             if ( bShapeOk == false || bSkinMatches == false )
             {
-                SW_LOG_ERROR( "Mesh LOD %# has %# vertices and screen size %# - it needs whole triangles, a threshold below %# and (skinned meshes) one in-range skin per vertex - the mesh keeps LOD 0 only",
-                              levelIndex + 1, vertexCount, level._screenSize, previousScreenSize );
+                SW_LOG_ERROR_ID( "Mesh.MeshLODVerticesScreen", "Mesh LOD %# has %# vertices and screen size %# - it needs whole triangles, a threshold below %# and (skinned meshes) one in-range skin per vertex - the mesh keeps LOD 0 only",
+                                 levelIndex + 1, vertexCount, level._screenSize, previousScreenSize );
                 _listLOD.clear();
                 _listLODVertex.clear();
                 _listLODSkinVertex.clear();
@@ -320,7 +320,7 @@ namespace sw
         const uint32 vertexCount = getVertexCount();
         if ( listSection.empty() == false && _listLOD.empty() == false )
         {
-            SW_LOG_ERROR( "Mesh has LODs - sections are not supported with LODs (setLODs), the mesh has no sections" );
+            SW_LOG_ERROR_ID( "Mesh.MeshLODsSectionsNot", "Mesh has LODs - sections are not supported with LODs (setLODs), the mesh has no sections" );
             _listSection.clear();
             return false;
         }
@@ -337,8 +337,8 @@ namespace sw
             const bool bValidSection = bInRange && bTriangles && bUnique;
             if ( bValidSection == false )
             {
-                SW_LOG_ERROR( "Mesh section '%#' [%#, +%#) does not fit %# vertices, is not whole triangles, or repeats a name - the mesh has no sections", section._name.c_str(),
-                              section._firstVertex, section._vertexCount, vertexCount );
+                SW_LOG_ERROR_ID( "Mesh.MeshSectionDoesNot", "Mesh section '%#' [%#, +%#) does not fit %# vertices, is not whole triangles, or repeats a name - the mesh has no sections", section._name.c_str(),
+                                 section._firstVertex, section._vertexCount, vertexCount );
                 _listSection.clear();
                 return false;
             }
@@ -458,7 +458,7 @@ namespace sw
         const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( pDrawVertex, bytes );
         if ( vertexBuffer == 0 )
         {
-            SW_LOG_ERROR( "createVertexBuffer failed (%# verts)", _listVertex.size() );
+            SW_LOG_ERROR_ID( "Mesh.CreateVertexBufferFailedVerts", "createVertexBuffer failed (%# verts)", _listVertex.size() );
             return false;
         }
         _vertex.adopt( pDevice, vertexBuffer );

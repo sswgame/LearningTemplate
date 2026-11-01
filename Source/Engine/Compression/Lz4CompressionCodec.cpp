@@ -53,8 +53,8 @@ namespace sw
             return false;
         if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
         {
-            SW_LOG_ERROR( "LZ4 input exceeds the limit (%# bytes > %# ).",
-                          static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
+            SW_LOG_ERROR_ID( "Lz4Codec.LZ4InputExceedsLimit", "LZ4 input exceeds the limit (%# bytes > %# ).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
             return false;
         }
 
@@ -99,8 +99,8 @@ namespace sw
         // 들어가고, 그때 동작은 정의되어 있지 않다. (대상 용량은 아래에서 좁은 쪽으로 자른다.)
         if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
         {
-            SW_LOG_ERROR( "LZ4 decompression input exceeds the limit (%# bytes > %#).",
-                          static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
+            SW_LOG_ERROR_ID( "Lz4Codec.LZ4DecompressionInputExceeds", "LZ4 decompression input exceeds the limit (%# bytes > %#).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
             return false;
         }
 
@@ -113,8 +113,8 @@ namespace sw
                                                     static_cast<int32>( srcSize ), dstBytes );
         if ( written < 0 )
         {
-            SW_LOG_ERROR( "LZ4 decompression failed (src %# -> dst %# bytes).",
-                          static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
+            SW_LOG_ERROR_ID( "Lz4Codec.LZ4DecompressionFailedSrc", "LZ4 decompression failed (src %# -> dst %# bytes).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
             return false;
         }
 

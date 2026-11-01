@@ -43,13 +43,13 @@ namespace sw
         SceneDocument document;
         if ( document.loadXML( assetID ) == false )
         {
-            SW_LOG_ERROR( "Navmesh cook could not read scene '%#'", sceneAssetPath );
+            SW_LOG_ERROR_ID( "SceneNavigationCooker.NavmeshCookCouldNot", "Navmesh cook could not read scene '%#'", sceneAssetPath );
             return false;
         }
         Scene scene{ "NavMeshCook", services };
         if ( scene.instantiate( document ) == false || scene.getObjectManager() == nullptr )
         {
-            SW_LOG_ERROR( "Navmesh cook could not build scene '%#'", sceneAssetPath );
+            SW_LOG_ERROR_ID( "SceneNavigationCooker.NavmeshCookCouldNot2", "Navmesh cook could not build scene '%#'", sceneAssetPath );
             return false;
         }
         GameObjectManager&    manager    = *scene.getObjectManager();
@@ -76,7 +76,7 @@ namespace sw
             NavMeshAssetEntry entry;
             if ( navigation.makeCookedEntry( agentType, entry ) == false )
             {
-                SW_LOG_ERROR( "Navmesh cook could not bake agent type '%#' of scene '%#'", agentType.c_str(), sceneAssetPath );
+                SW_LOG_ERROR_ID( "SceneNavigationCooker.NavmeshCookCouldNot3", "Navmesh cook could not bake agent type '%#' of scene '%#'", agentType.c_str(), sceneAssetPath );
                 bAll = false;
                 continue;
             }
@@ -96,7 +96,7 @@ namespace sw
         vector<string> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
-            SW_LOG_ERROR( "Scene navigation cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "SceneNavigationCooker.SceneNavigationCookCould", "Scene navigation cook could not list '%#' - nothing is cooked", resourceRoot );
             ++outFailedCount;
             return 0;
         }
@@ -129,16 +129,16 @@ namespace sw
                 const std::optional<AbsolutePath> cookedFile = FileUtil::requireAbsolutePath( cookedPath );
                 if ( cookedFile.has_value() == false || asset.saveToFile( *cookedFile ) == false )
                 {
-                    SW_LOG_ERROR( "Navmesh cook could not write '%#'", cookedPath.c_str() );
+                    SW_LOG_ERROR_ID( "SceneNavigationCooker.NavmeshCookCouldNot4", "Navmesh cook could not write '%#'", cookedPath.c_str() );
                     return CookStep::Failed;
                 }
-                SW_LOG_INFO( "Cooked navmesh '%#' (%# agent types)", cookedPath.c_str(), asset.getEntries().size() );
+                SW_LOG_INFO_ID( "SceneNavigationCooker.CookedNavmeshAgentTypes", "Cooked navmesh '%#' (%# agent types)", cookedPath.c_str(), asset.getEntries().size() );
                 return CookStep::Written;
             } );
             outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;
             tally.add( outcome );
         }
-        SW_LOG_INFO( "Navmesh cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        SW_LOG_INFO_ID( "SceneNavigationCooker.NavmeshCookReusedDDC", "Navmesh cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount();
     }
 

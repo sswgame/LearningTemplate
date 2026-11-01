@@ -61,7 +61,7 @@ namespace sw
             static void discardTempFile( const string& tempPath )
             {
                 if ( FileUtil::removeFile( tempPath ) == false )
-                    SW_LOG_WARNING( "Failed to remove the temporary file %# - delete it by hand", tempPath.c_str() );
+                    SW_LOG_WARNING_ID( "FileUtil.FailedRemoveTemporaryFile", "Failed to remove the temporary file %# - delete it by hand", tempPath.c_str() );
             }
 
             /**
@@ -144,7 +144,7 @@ namespace sw
                 if ( fileSize < 0 )
                 {
                     PlatformFileUtil::closeNativeFile( handle );
-                    SW_LOG_ERROR( "Failed to query size of: %#", fileName );
+                    SW_LOG_ERROR_ID( "FileUtil.FailedQuerySize", "Failed to query size of: %#", fileName );
                     return OptionalFileRead::Failed;
                 }
                 const uint64 uFileSize = static_cast<uint64>( fileSize );
@@ -165,7 +165,7 @@ namespace sw
                 if ( bRead == false || readBytes != static_cast<size_t>( dataSize ) )
                 {
                     outBuffer.clear();
-                    SW_LOG_ERROR( "Short read (%# of %# bytes) from: %#", readBytes, dataSize, fileName );
+                    SW_LOG_ERROR_ID( "FileUtil.ShortReadBytes", "Short read (%# of %# bytes) from: %#", readBytes, dataSize, fileName );
                     return OptionalFileRead::Failed;
                 }
                 return OptionalFileRead::Read;
@@ -741,7 +741,7 @@ namespace sw
         if ( bReadError || bWithinLimit == false )
         {
             outText.clear();
-            SW_LOG_ERROR( "Failed to read %# to the end (%#)", fileName, bReadError ? "read error" : "larger than the limit" );
+            SW_LOG_ERROR_ID( "FileUtil.FailedReadEnd", "Failed to read %# to the end (%#)", fileName, bReadError ? "read error" : "larger than the limit" );
             return false;
         }
         PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() );
@@ -889,7 +889,7 @@ namespace sw
         } );
         const bool bStopped   = stopToken.isStopRequested();
         if ( bWalked == false && bStopped == false )
-            SW_LOG_WARNING( "Collecting files under '%#' stopped partway - the list is incomplete", directory );
+            SW_LOG_WARNING_ID( "FileUtil.CollectingFilesUnderStopped", "Collecting files under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;
     }
 
@@ -905,7 +905,7 @@ namespace sw
             return true;
         } );
         if ( bWalked == false )
-            SW_LOG_WARNING( "Collecting folders under '%#' stopped partway - the list is incomplete", directory );
+            SW_LOG_WARNING_ID( "FileUtil.CollectingFoldersUnderStopped", "Collecting folders under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;
     }
 
@@ -1067,7 +1067,7 @@ namespace sw
     {
         if ( PlatformFileSystem::setWritable( path, bWritable ) == false )
         {
-            SW_LOG_WARNING( "Could not make '%#' %#: %#", path, bWritable ? "writable" : "read-only", PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_WARNING_ID( "FileUtil.CouldNotMake", "Could not make '%#' %#: %#", path, bWritable ? "writable" : "read-only", PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
         return true;
@@ -1078,7 +1078,7 @@ namespace sw
         string current;
         if ( PlatformFileSystem::getCurrentDirectory( current ) == false )
         {
-            SW_LOG_WARNING( "Could not read the current directory: %#", PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_WARNING_ID( "FileUtil.CouldNotReadCurrent", "Could not read the current directory: %#", PlatformFileSystem::describeLastError().c_str() );
             return {};
         }
         return current;
@@ -1088,7 +1088,7 @@ namespace sw
     {
         if ( PlatformFileSystem::setCurrentDirectory( path ) == false )
         {
-            SW_LOG_WARNING( "Could not change the current directory to '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_WARNING_ID( "FileUtil.CouldNotChangeCurrent", "Could not change the current directory to '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
         return true;
@@ -1123,7 +1123,7 @@ namespace sw
     {
         if ( PlatformFileSystem::setWriteTicks( path, ticks ) == false )
         {
-            SW_LOG_WARNING( "Could not set the write time of '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_WARNING_ID( "FileUtil.CouldNotSetWrite", "Could not set the write time of '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
         return true;
@@ -1150,7 +1150,7 @@ namespace sw
             return false;
         if ( PlatformFileSystem::copyFileOverwrite( source, destination ) == false )
         {
-            SW_LOG_ERROR( "copyFile '%#' -> '%#' failed: %#", source, destination, PlatformFileSystem::describeLastError().c_str() );
+            SW_LOG_ERROR_ID( "FileUtil.CopyFileFailed", "copyFile '%#' -> '%#' failed: %#", source, destination, PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
         noteFileCreated(); // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
@@ -1167,7 +1167,7 @@ namespace sw
             noteFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
         if ( exists( path ) == false )
             return true;
-        SW_LOG_WARNING( "Could not remove '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+        SW_LOG_WARNING_ID( "FileUtil.CouldNotRemove", "Could not remove '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
         return false;
     }
 
@@ -1200,7 +1200,7 @@ namespace sw
         }
         if ( isDirectory( path ) == false )
             return true;
-        SW_LOG_WARNING( "Could not remove directory '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
+        SW_LOG_WARNING_ID( "FileUtil.CouldNotRemoveDirectory", "Could not remove directory '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
         return false;
     }
 

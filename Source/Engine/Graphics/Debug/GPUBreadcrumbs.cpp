@@ -33,7 +33,7 @@ namespace sw
         }
         if ( _count >= GPUBreadcrumbs::kMaxName )
         {
-            SW_LOG_ERROR_ONCE( "GPU breadcrumb table is full (%# pass names) - new passes leave no breadcrumb", GPUBreadcrumbs::kMaxName );
+            SW_LOG_ERROR_ONCE_ID( "GPUBreadcrumbs.GPUBreadcrumbTableFull", "GPU breadcrumb table is full (%# pass names) - new passes leave no breadcrumb", GPUBreadcrumbs::kMaxName );
             return 0;
         }
         _arrHash[_count] = hash;
@@ -105,11 +105,11 @@ namespace sw
             if ( resolve( pGPUID[index], arrName, sizeof( arrName ) ) == false )
             {
                 if ( pGPUID[index] != 0 )
-                    SW_LOG_ERROR( "Device lost (%#): the GPU breadcrumb %# is not in the pass name table", pBackendName, pGPUID[index] );
+                    SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPUBreadcrumb", "Device lost (%#): the GPU breadcrumb %# is not in the pass name table", pBackendName, pGPUID[index] );
                 continue;
             }
             ++reported;
-            SW_LOG_ERROR( "Device lost (%#): the GPU last reached the pass '%#' (breadcrumb %#)", pBackendName, arrName, pGPUID[index] );
+            SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPULast", "Device lost (%#): the GPU last reached the pass '%#' (breadcrumb %#)", pBackendName, arrName, pGPUID[index] );
             formatstring( arrLine, sizeof( arrLine ), "gpu device lost (%#) - GPU last reached pass '%#'", pBackendName, arrName );
             CrashBreadcrumbStore::get().add( arrLine );
             // 크래시 문맥은 키 하나에 값 하나다 - 첫 표지를 마지막 패스로 싣는다(Vulkan 은 단계마다 하나씩 와도 모두 빵부스러기에 남는다).
@@ -117,12 +117,12 @@ namespace sw
                 CrashContextStore::get().set( "gpu_last_pass", arrName );
         }
         if ( reported == 0 )
-            SW_LOG_ERROR( "Device lost (%#): this backend leaves no GPU-side breadcrumb (or none was written)", pBackendName );
+            SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostBackendLeaves", "Device lost (%#): this backend leaves no GPU-side breadcrumb (or none was written)", pBackendName );
 
         // CPU 가 마지막으로 기록한 패스 - GPU 표지가 없는 백엔드의 유일한 단서이고, 있는 백엔드에는 "어디까지 기록했나" 의 비교 기준이다.
         if ( resolve( getLastRecordedID(), arrName, sizeof( arrName ) ) )
         {
-            SW_LOG_ERROR( "Device lost (%#): the last pass recorded on the CPU was '%#'", pBackendName, arrName );
+            SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostLastPass", "Device lost (%#): the last pass recorded on the CPU was '%#'", pBackendName, arrName );
             formatstring( arrLine, sizeof( arrLine ), "gpu device lost (%#) - last pass recorded on the CPU '%#'", pBackendName, arrName );
             CrashBreadcrumbStore::get().add( arrLine );
             CrashContextStore::get().set( "gpu_last_recorded_pass", arrName );

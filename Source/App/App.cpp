@@ -138,7 +138,7 @@ namespace sw
         // 1. 코어 매니저는 모두 Engine 가 초기화한다(헤드리스 작업 처리 포함).
         if ( _engine.initialize( argc, pArgv, EngineHostRole::Client, &_host ) == false )
         {
-            SW_LOG_ERROR( "Engine initialization failed." );
+            SW_LOG_ERROR_ID( "App.EngineInitializationFailed", "Engine initialization failed." );
             return false;
         }
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
@@ -222,7 +222,7 @@ namespace sw
             RenderThread* const pRenderThread = _engine.getRenderThread();
             if ( pRenderThread == nullptr || pRenderThread->getDevice() == nullptr )
             {
-                SW_LOG_ERROR( "Portrait bake needs a render thread with a device (--render-portraits)" );
+                SW_LOG_ERROR_ID( "App.PortraitBakeNeedsRender", "Portrait bake needs a render thread with a device (--render-portraits)" );
                 return false;
             }
             return PortraitBatchUtil::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
@@ -243,10 +243,10 @@ namespace sw
         {
             [[maybe_unused]] const int64     showEndMicro = MonotonicClock::nowMicroseconds();
             [[maybe_unused]] constexpr int64 kMs          = constant::time::kMicrosecondsPerMillisecond;
-            SW_LOG_INFO( "Startup phases: hostScope %# ms, engine %# ms, window %# ms, modules %# ms, finalize+show %# ms, total %# ms | subsystems: %#",
-                         ( hostScopeEndMicro - _initializeStartMicro ) / kMs, ( engineEndMicro - hostScopeEndMicro ) / kMs, ( windowEndMicro - engineEndMicro ) / kMs,
-                         ( modulesEndMicro - windowEndMicro ) / kMs, ( showEndMicro - modulesEndMicro ) / kMs, ( showEndMicro - _initializeStartMicro ) / kMs,
-                         _engine.describeSubsystemInitTimings().c_str() );
+            SW_LOG_INFO_ID( "App.StartupPhasesHostScopeMs", "Startup phases: hostScope %# ms, engine %# ms, window %# ms, modules %# ms, finalize+show %# ms, total %# ms | subsystems: %#",
+                            ( hostScopeEndMicro - _initializeStartMicro ) / kMs, ( engineEndMicro - hostScopeEndMicro ) / kMs, ( windowEndMicro - engineEndMicro ) / kMs,
+                            ( modulesEndMicro - windowEndMicro ) / kMs, ( showEndMicro - modulesEndMicro ) / kMs, ( showEndMicro - _initializeStartMicro ) / kMs,
+                            _engine.describeSubsystemInitTimings().c_str() );
         }
 
         return true;
@@ -272,7 +272,7 @@ namespace sw
         string     value;
         const bool bAsked = commandLineManager.getArgument( CommandLineArgument::SCENARIO, value ) || commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD, value );
         if ( bAsked )
-            SW_LOG_ERROR( "-scenario / -scenario-record need a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
+            SW_LOG_ERROR_ID( "App.ScenarioScenarioRecordNeed", "-scenario / -scenario-record need a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
         return bAsked == false;
     }
 
@@ -288,7 +288,7 @@ namespace sw
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         if ( pWindowHost == nullptr )
         {
-            SW_LOG_ERROR( "The engine scope has no MainWindow subsystem!" );
+            SW_LOG_ERROR_ID( "App.EngineScopeNoMainWindow", "The engine scope has no MainWindow subsystem!" );
             return false;
         }
         if ( pWindowHost->getWindow() == nullptr )
@@ -298,13 +298,13 @@ namespace sw
                                   window->initializeWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height );
             if ( bCreated == false )
             {
-                SW_LOG_ERROR( "Failed to create platform window!" );
+                SW_LOG_ERROR_ID( "App.FailedCreatePlatformWindow", "Failed to create platform window!" );
                 return false;
             }
             window->showWindow( false );
             if ( pWindowHost->adopt( window ) == false )
             {
-                SW_LOG_ERROR( "The main window owner refused the platform window!" );
+                SW_LOG_ERROR_ID( "App.MainWindowOwnerRefused", "The main window owner refused the platform window!" );
                 return false;
             }
         }
@@ -346,7 +346,7 @@ namespace sw
                     _gameModuleManager->initialize( getLiveReloadManager(), _engine.getRHI(), _pWindow, _engine.getRenderThread(), bEnableEditor );
                 if ( bStarted == false )
                 {
-                    SW_LOG_ERROR( "GameModuleManager initialization failed." );
+                    SW_LOG_ERROR_ID( "App.GameModuleManagerInitializationFailed", "GameModuleManager initialization failed." );
                     return false;
                 }
                 // 시나리오 체인이 단계마다 게임을 처음부터 다시 세운다(`AutomationSession::startStage` 가 `engine::findSubsystem<IGameRestarter>()` 로 찾는다).
@@ -383,7 +383,7 @@ namespace sw
                 break;
             }
         }
-        SW_LOG_ERROR( "Host service %# is not a client service", HostService::getName( id ) );
+        SW_LOG_ERROR_ID( "App.HostServiceNotClient", "Host service %# is not a client service", HostService::getName( id ) );
         return false;
     }
 
@@ -495,8 +495,8 @@ namespace sw
         // 시작 시간은 `initialize` 첫 줄부터 여기까지의 경과 시간이다. 표준 출력 로그는 에러가 아니면 버퍼에 머물러 있어 밖에서는 시각을 측정할 수 없다.
         [[maybe_unused]] const int64 startupMicro =
             MonotonicClock::nowMicroseconds() - _initializeStartMicro;
-        SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms, %# file opens", startupMicro / constant::time::kMicrosecondsPerMillisecond,
-                     PlatformFileUtil::getFileOpenCount() );
+        SW_LOG_INFO_ID( "App.EnteringAppMainLoop", "Entering App Main Loop (Thin Launcher)... startup %# ms, %# file opens", startupMicro / constant::time::kMicrosecondsPerMillisecond,
+                        PlatformFileUtil::getFileOpenCount() );
 
         _fixedTimestep.start();
 
@@ -504,7 +504,7 @@ namespace sw
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         if ( pWindowHost == nullptr )
         {
-            SW_LOG_ERROR( "The engine scope has no MainWindow subsystem - the main loop cannot pace frames" );
+            SW_LOG_ERROR_ID( "App.EngineScopeNoMainWindow2", "The engine scope has no MainWindow subsystem - the main loop cannot pace frames" );
             return;
         }
         FramePacer& framePacer       = pWindowHost->getFramePacer();

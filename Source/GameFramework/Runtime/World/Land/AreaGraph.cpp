@@ -53,11 +53,11 @@ namespace sw
             bValid                      = XMLReadUtil::readOptionalNumber( areaNode, "w", sourceName, 0.0f, kAnyFloat, area._width ) && bValid;
             bValid                      = XMLReadUtil::readOptionalNumber( areaNode, "h", sourceName, 0.0f, kAnyFloat, area._height ) && bValid;
             if ( bValid == false )
-                SW_LOG_ERROR( "%#: area '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "AreaGraph.AreaInvalidFieldsSkipped", "%#: area '%#' has invalid fields - skipped", sourceName, pID );
             else if ( addArea( area ) )
                 ++loadedCount;
             else
-                SW_LOG_WARNING( "%#: duplicate area '%#' - skipped", sourceName, pID );
+                SW_LOG_WARNING_ID( "AreaGraph.DuplicateAreaSkipped", "%#: duplicate area '%#' - skipped", sourceName, pID );
         }
         for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
@@ -70,16 +70,16 @@ namespace sw
                 continue; // 끝점이 없는 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
             if ( XMLReadUtil::readOptionalBool( linkNode, "oneWay", bOneWay ) == false )
             {
-                SW_LOG_ERROR( "%#: link '%#' -> '%#' has an invalid oneWay - skipped", sourceName, from.c_str(), to.c_str() );
+                SW_LOG_ERROR_ID( "AreaGraph.LinkInvalidOneWaySkipped", "%#: link '%#' -> '%#' has an invalid oneWay - skipped", sourceName, from.c_str(), to.c_str() );
                 continue;
             }
             if ( addLink( from, to, XMLReadUtil::readOptionalName( linkNode, "kind" ), linkNode.getAttributeText( "requires" ), bOneWay, bInvalid ) == false )
             {
-                SW_LOG_WARNING( "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );
+                SW_LOG_WARNING_ID( "AreaGraph.LinkNeedsTwoDifferent", "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );
                 continue;
             }
             if ( bInvalid )
-                SW_LOG_WARNING( "%#: link '%#' -> '%#' has an invalid condition and stays locked", sourceName, from.c_str(), to.c_str() );
+                SW_LOG_WARNING_ID( "AreaGraph.LinkInvalidConditionStays", "%#: link '%#' -> '%#' has an invalid condition and stays locked", sourceName, from.c_str(), to.c_str() );
         }
         return loadedCount;
     }

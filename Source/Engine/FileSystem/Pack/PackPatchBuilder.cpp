@@ -39,13 +39,13 @@ namespace sw
                 outListSource.clear();
                 if ( packsDirectory.empty() || FileUtil::isDirectory( packsDirectory ) == false )
                 {
-                    SW_LOG_ERROR( "Pack folder '%#' does not exist", packsDirectory );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderDoesNot", "Pack folder '%#' does not exist", packsDirectory );
                     return false;
                 }
                 vector<string> listFile;
                 if ( FileUtil::collectFiles( packsDirectory, "", listFile, false ) == false )
                 {
-                    SW_LOG_ERROR( "Pack folder '%#' could not be listed completely", packsDirectory );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderCouldNot", "Pack folder '%#' could not be listed completely", packsDirectory );
                     return false;
                 }
                 VectorUtil::sort( listFile );
@@ -53,7 +53,7 @@ namespace sw
                 {
                     if ( StringUtil::endsWith( file, PackPatchUtil::kManifestExtension, true ) )
                     {
-                        SW_LOG_ERROR( "Pack folder '%#' holds the patch %# - give the base packs of the build, not a patched install", packsDirectory, file );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderHoldsPatch", "Pack folder '%#' holds the patch %# - give the base packs of the build, not a patched install", packsDirectory, file );
                         return false;
                     }
                     if ( StringUtil::endsWith( file, kPackExtension, true ) )
@@ -65,14 +65,14 @@ namespace sw
                     PackReader reader;
                     if ( reader.open( outListPackPath[packIndex] ) == false )
                     {
-                        SW_LOG_ERROR( "Pack '%#' could not be opened", outListPackPath[packIndex] );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackCouldNotOpened", "Pack '%#' could not be opened", outListPackPath[packIndex] );
                         return false;
                     }
                     // 도메인은 팩이 적은 마운트 도메인이다(예전에는 파일 이름 `game_<팩>` 에서 추측했다 - 런타임 마운트와 같은 사실을 따로 셈했다).
                     const string domain = reader.getMountDomain();
                     if ( domain.empty() )
                     {
-                        SW_LOG_ERROR( "Pack '%#' has no mount domain - it is a patch pack, give the base packs of the build", outListPackPath[packIndex] );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackNoMountDomain", "Pack '%#' has no mount domain - it is a patch pack, give the base packs of the build", outListPackPath[packIndex] );
                         return false;
                     }
                     vector<string> listPathInPack;
@@ -82,7 +82,7 @@ namespace sw
                         vector<uint8> bytes;
                         if ( reader.readFile( pathInPack, bytes ) == false )
                         {
-                            SW_LOG_ERROR( "Pack '%#' could not read '%#'", outListPackPath[packIndex], pathInPack );
+                            SW_LOG_ERROR_ID( "PackPatchBuilder.PackCouldNotRead", "Pack '%#' could not read '%#'", outListPackPath[packIndex], pathInPack );
                             return false;
                         }
                         Source source;
@@ -92,7 +92,7 @@ namespace sw
                         source._pathInPack  = pathInPack;
                         if ( mapFullPathToPack.emplace( source._fullPath, packIndex ).second == false )
                         {
-                            SW_LOG_ERROR( "Path '%#' is in more than one pack of '%#' - a build lists each path once", source._fullPath, packsDirectory );
+                            SW_LOG_ERROR_ID( "PackPatchBuilder.PathMoreOnePack", "Path '%#' is in more than one pack of '%#' - a build lists each path once", source._fullPath, packsDirectory );
                             return false;
                         }
                         outListSource.push_back( std::move( source ) );
@@ -123,30 +123,30 @@ namespace sw
                 const bool bMissingParam = params._packsDirectory.empty() || params._previousRecordPath.empty() || params._outputDirectory.empty();
                 if ( bMissingParam )
                 {
-                    SW_LOG_ERROR( "Making a patch needs the new pack folder, the previous build record and an output folder" );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.MakingPatchNeedsNew", "Making a patch needs the new pack folder, the previous build record and an output folder" );
                     return false;
                 }
                 if ( PackPatchBuilder::isValidBuildName( params._newBuild ) == false )
                 {
-                    SW_LOG_ERROR( "Build name '%#' is not usable - use letters, digits, '.', '_' and '-'", params._newBuild );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.BuildNameNotUsable", "Build name '%#' is not usable - use letters, digits, '.', '_' and '-'", params._newBuild );
                     return false;
                 }
                 string previousText;
                 if ( FileUtil::readTextFile( params._previousRecordPath, previousText ) == false )
                 {
-                    SW_LOG_ERROR( "Previous build record '%#' could not be read", params._previousRecordPath );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.PreviousBuildRecordCould", "Previous build record '%#' could not be read", params._previousRecordPath );
                     return false;
                 }
                 if ( PackPatchUtil::parseBuildRecord( previousText, params._previousRecordPath, outPrevious ) == false )
                     return false;
                 if ( outPrevious._patching == PackPatching::None )
                 {
-                    SW_LOG_ERROR( "Previous build record '%#' says patching=\"none\" - a build that takes no patches has no content list to patch from", params._previousRecordPath );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.PreviousBuildRecordSays", "Previous build record '%#' says patching=\"none\" - a build that takes no patches has no content list to patch from", params._previousRecordPath );
                     return false;
                 }
                 if ( outPrevious._build == params._newBuild )
                 {
-                    SW_LOG_ERROR( "The new build '%#' is the same as the previous build - a patch goes from one build to another", params._newBuild );
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.NewBuildSamePrevious", "The new build '%#' is the same as the previous build - a patch goes from one build to another", params._newBuild );
                     return false;
                 }
                 return true;
@@ -166,7 +166,7 @@ namespace sw
                 {
                     if ( listReader[packIndex].open( listPackPath[packIndex] ) == false )
                     {
-                        SW_LOG_ERROR( "Pack '%#' could not be opened", listPackPath[packIndex] );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackCouldNotOpened", "Pack '%#' could not be opened", listPackPath[packIndex] );
                         return false;
                     }
                 }
@@ -175,14 +175,14 @@ namespace sw
                     const auto sourceIt = mapFullPathToSource.find( changedPath );
                     if ( sourceIt == mapFullPathToSource.end() )
                     {
-                        SW_LOG_ERROR( "Changed path '%#' is not in the packs of '%#' (internal mismatch)", changedPath, params._packsDirectory );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.ChangedPathNotPacks", "Changed path '%#' is not in the packs of '%#' (internal mismatch)", changedPath, params._packsDirectory );
                         return false;
                     }
                     const Source& source = listSource[sourceIt->second];
                     vector<uint8> bytes;
                     if ( listReader[source._packIndex].readFile( source._pathInPack, bytes ) == false )
                     {
-                        SW_LOG_ERROR( "Pack '%#' could not read '%#'", listPackPath[source._packIndex], source._pathInPack );
+                        SW_LOG_ERROR_ID( "PackPatchBuilder.PackCouldNotRead", "Pack '%#' could not read '%#'", listPackPath[source._packIndex], source._pathInPack );
                         return false;
                     }
                     inoutWriter.addBytes( changedPath, std::move( bytes ) );
@@ -234,7 +234,7 @@ namespace sw
     {
         if ( isValidBuildName( build ) == false )
         {
-            SW_LOG_ERROR( "Build name '%#' is not usable - use letters, digits, '.', '_' and '-'", build );
+            SW_LOG_ERROR_ID( "PackPatchBuilder.BuildNameNotUsable", "Build name '%#' is not usable - use letters, digits, '.', '_' and '-'", build );
             return false;
         }
         PackBuildRecord record;
@@ -243,10 +243,10 @@ namespace sw
             return false;
         if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( record ) ) == false )
         {
-            SW_LOG_ERROR( "Build record '%#' could not be written", recordPath );
+            SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath );
             return false;
         }
-        SW_LOG_INFO( "Pack build record: build %# lists %# files -> %#", build, record._listEntry.size(), recordPath );
+        SW_LOG_INFO_ID( "PackPatchBuilder.PackBuildRecordBuild", "Pack build record: build %# lists %# files -> %#", build, record._listEntry.size(), recordPath );
         return true;
     }
 
@@ -256,10 +256,10 @@ namespace sw
         record._patching = PackPatching::None;
         if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( record ) ) == false )
         {
-            SW_LOG_ERROR( "Build record '%#' could not be written", recordPath );
+            SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath );
             return false;
         }
-        SW_LOG_INFO( "Pack build record: this build takes no patches (patching=\"none\") -> %#", recordPath );
+        SW_LOG_INFO_ID( "PackPatchBuilder.PackBuildRecordBuild2", "Pack build record: this build takes no patches (patching=\"none\") -> %#", recordPath );
         return true;
     }
 
@@ -282,7 +282,7 @@ namespace sw
             return false;
         if ( delta._listChangedPath.empty() && delta._listRemovedPath.empty() )
         {
-            SW_LOG_ERROR( "Builds '%#' and '%#' have the same content - there is nothing to patch", previous._build, params._newBuild );
+            SW_LOG_ERROR_ID( "PackPatchBuilder.BuildsSameContentNothing", "Builds '%#' and '%#' have the same content - there is nothing to patch", previous._build, params._newBuild );
             return false;
         }
 
@@ -300,7 +300,7 @@ namespace sw
         const string recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackPatchUtil::kBuildRecordExtension ) );
         if ( FileUtil::ensureDirectoryExists( params._outputDirectory ) == false || writer.writePackFile( packPath ) == false )
         {
-            SW_LOG_ERROR( "Patch pack could not be written to '%#'", packPath );
+            SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot", "Patch pack could not be written to '%#'", packPath );
             return false;
         }
         // 서명은 디스크에 쓴 팩의 바이트에 건다 — 배포되는 바이트의 해시다(메모리의 사본과 갈릴 길이 없다).
@@ -309,7 +309,7 @@ namespace sw
             vector<uint8> packBytes;
             if ( FileUtil::readFile( packPath, packBytes ) == false )
             {
-                SW_LOG_ERROR( "Patch pack '%#' could not be read back for signing", packPath );
+                SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot2", "Patch pack '%#' could not be read back for signing", packPath );
                 return false;
             }
             if ( PackPatchUtil::signManifest( *params._signer._pProvider, params._signer._privateKeyPem, packBytes, manifest ) == false )
@@ -319,10 +319,10 @@ namespace sw
                               FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( current ) );
         if ( bWritten == false )
         {
-            SW_LOG_ERROR( "Patch files could not be written to '%#'", params._outputDirectory );
+            SW_LOG_ERROR_ID( "PackPatchBuilder.PatchFilesCouldNot", "Patch files could not be written to '%#'", params._outputDirectory );
             return false;
         }
-        SW_LOG_INFO( "Pack patch %# -> %#: %# changed, %# removed -> %#", previous._build, params._newBuild, delta._listChangedPath.size(), delta._listRemovedPath.size(), packPath );
+        SW_LOG_INFO_ID( "PackPatchBuilder.PackPatchChangedRemoved", "Pack patch %# -> %#: %# changed, %# removed -> %#", previous._build, params._newBuild, delta._listChangedPath.size(), delta._listRemovedPath.size(), packPath );
         return true;
     }
 } // namespace sw

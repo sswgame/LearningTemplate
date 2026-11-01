@@ -49,12 +49,12 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "BattleRoyaleFlightPath: refused flight settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "BattleRoyaleDrop.BattleRoyaleFlightPathRefusedFlightSettings", "BattleRoyaleFlightPath: refused flight settings - %#", rangeError.c_str() );
             return false;
         }
         if ( mapSize < 1.0f )
         {
-            SW_LOG_ERROR( "BattleRoyaleFlightPath: refused map size %# (needs >= 1)", mapSize );
+            SW_LOG_ERROR_ID( "BattleRoyaleDrop.BattleRoyaleFlightPathRefusedMapSize", "BattleRoyaleFlightPath: refused map size %# (needs >= 1)", mapSize );
             return false;
         }
         GameRandom    random{ seed };

@@ -35,7 +35,7 @@ namespace sw::editor
             HWND hWnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
             if ( hWnd == nullptr )
             {
-                SW_LOG_ERROR( "The ImGui Win32 platform backend needs a Win32 window with a handle" );
+                SW_LOG_ERROR_ID( "ImGuiWin32.ImGuiWin32PlatformBackend", "The ImGui Win32 platform backend needs a Win32 window with a handle" );
                 return false;
             }
             _hWnd = hWnd;

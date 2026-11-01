@@ -49,7 +49,7 @@ namespace sw
                 if ( pAI == nullptr )
                 {
                     const utf8* pPawnName = pawn.getOwner() != nullptr ? pawn.getOwner()->getName().c_str() : "?";
-                    SW_LOG_WARNING( "Pawn '%#' auto-possess prefab '%#' has no AI controller - the pawn stays unpossessed", pPawnName, prefabPath.c_str() );
+                    SW_LOG_WARNING_ID( "ControlSystem.PawnAutoPossessPrefab", "Pawn '%#' auto-possess prefab '%#' has no AI controller - the pawn stays unpossessed", pPawnName, prefabPath.c_str() );
                 }
                 return pAI;
             }

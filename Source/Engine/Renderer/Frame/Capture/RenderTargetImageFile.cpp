@@ -132,7 +132,7 @@ namespace sw
         vector<uint8> rgbaBytes;
         if ( unpackRGBA8( bytes, layout, format, rgbaBytes ) == false )
         {
-            SW_LOG_ERROR( "writeImageFile: format %# cannot be written as an image.", static_cast<uint32>( format ) );
+            SW_LOG_ERROR_ID( "FrameRenderer.WriteImageFileFormatCannotWritten", "writeImageFile: format %# cannot be written as an image.", static_cast<uint32>( format ) );
             return false;
         }
         return writeRGBA8File( rgbaBytes, layout._width, layout._height, outFilePath );
@@ -147,10 +147,10 @@ namespace sw
             bWritten = writePpm( outFilePath, rgbaBytes, width, height );
         if ( bWritten == false )
         {
-            SW_LOG_ERROR( "writeImageFile: could not write %#.", string( outFilePath ).c_str() );
+            SW_LOG_ERROR_ID( "FrameRenderer.WriteImageFileCouldNotWrite", "writeImageFile: could not write %#.", string( outFilePath ).c_str() );
             return false;
         }
-        SW_LOG_INFO( "Screenshot: %#×%# -> %#", width, height, string( outFilePath ).c_str() );
+        SW_LOG_INFO_ID( "FrameRenderer.Screenshot", "Screenshot: %#×%# -> %#", width, height, string( outFilePath ).c_str() );
         return true;
     }
 } // namespace sw

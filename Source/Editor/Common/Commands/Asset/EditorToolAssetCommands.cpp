@@ -140,7 +140,7 @@ namespace sw::editor
                 }
                 if ( readDocument( outData, resolved ) == false )
                 {
-                    SW_LOG_WARNING( "Could not read the %# '%#' (malformed or a newer format)", desc._pLabel, resolved );
+                    SW_LOG_WARNING_ID( "EditorToolAssetCommands.CouldNotReadMalformed", "Could not read the %# '%#' (malformed or a newer format)", desc._pLabel, resolved );
                     if ( pOutStatus != nullptr )
                         *pOutStatus = "Failed to read " + makeShownPath( path, resolved );
                     return ToolAssetLoadResult::Malformed;
@@ -157,15 +157,15 @@ namespace sw::editor
                 const string resolved = resolveDocumentPath( desc, path, DocumentUse::Write );
                 if ( resolved.empty() )
                 {
-                    SW_LOG_ERROR( "Failed to save the %# - no file path and no default file", desc._pLabel );
+                    SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSaveNoFile", "Failed to save the %# - no file path and no default file", desc._pLabel );
                     return false;
                 }
                 if ( writeDocument( data, resolved ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to save the %# to '%#'", desc._pLabel, resolved );
+                    SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSave", "Failed to save the %# to '%#'", desc._pLabel, resolved );
                     return false;
                 }
-                SW_LOG_INFO( "Saved the %# to '%#'", desc._pLabel, resolved );
+                SW_LOG_INFO_ID( "EditorToolAssetCommands.Saved", "Saved the %# to '%#'", desc._pLabel, resolved );
                 return true;
             }
 
@@ -350,7 +350,7 @@ namespace sw::editor
                                           pInstanceComponent->getTypeInfo() != pCdoComp->getTypeInfo();
         if ( bNoMatchingComponent )
         {
-            SW_LOG_WARNING( "Prefab override '%#.%#' has no matching component to revert", item._componentKey.c_str(), item._propertyName.c_str() );
+            SW_LOG_WARNING_ID( "EditorToolAssetCommands.PrefabOverrideNoMatching", "Prefab override '%#.%#' has no matching component to revert", item._componentKey.c_str(), item._propertyName.c_str() );
             return false;
         }
         const PropertyInfo* pProp = pInstanceComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );
@@ -361,7 +361,7 @@ namespace sw::editor
         // 값을 옮기지 못했으면 되돌렸다고 표시하지 않고 되돌리기 기록도 남기지 않는다.
         if ( SerializerUtil::copyPropertyValue( *pProp, ObjectAddress{ pCdoComp }, MutableObjectAddress{ pInstanceComponent }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
         {
-            SW_LOG_WARNING( "Prefab override '%#.%#' could not be reverted", item._componentKey.c_str(), item._propertyName.c_str() );
+            SW_LOG_WARNING_ID( "EditorToolAssetCommands.PrefabOverrideCouldNot", "Prefab override '%#.%#' could not be reverted", item._componentKey.c_str(), item._propertyName.c_str() );
             return false;
         }
         pInstanceComponent->onPropertyChanged( pProp->_name );

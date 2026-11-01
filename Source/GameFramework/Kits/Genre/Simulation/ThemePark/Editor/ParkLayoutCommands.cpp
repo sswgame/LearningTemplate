@@ -20,7 +20,7 @@ namespace sw::editor
         {
             EditorContext& editorContext = editor::getSubsystem<EditorContext>();
             if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( true ) )
-                SW_LOG_INFO( "Park Layout panel opened" );
+                SW_LOG_INFO_ID( "ParkLayoutCommands.ParkLayoutPanelOpened", "Park Layout panel opened" );
         }
         // [/doc:command-open]
     } // namespace

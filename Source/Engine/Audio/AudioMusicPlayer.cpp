@@ -75,7 +75,7 @@ namespace sw
         const int32 targetSegment = _playback._pDesc->findSegmentIndex( segment );
         if ( targetSegment < 0 )
         {
-            SW_LOG_ERROR( "Unknown music segment '%#'", segment.c_str() );
+            SW_LOG_ERROR_ID( "AudioMusicPlayer.UnknownMusicSegment", "Unknown music segment '%#'", segment.c_str() );
             return;
         }
 
@@ -138,7 +138,7 @@ namespace sw
             request._bLoop         = segment._bLoop;
             if ( voices.startMusicVoice( request ) == false )
             {
-                SW_LOG_WARNING( "Voice pool exhausted - dropped a music layer" );
+                SW_LOG_WARNING_ID( "AudioMusicPlayer.VoicePoolExhaustedDropped", "Voice pool exhausted - dropped a music layer" );
                 return;
             }
         }

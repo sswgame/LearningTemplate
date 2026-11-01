@@ -877,8 +877,8 @@ namespace sw
             return false;
         const string profilePath = _profilePath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._defaultDestructionProfile.get() : _profilePath;
         if ( _profile.loadFromAsset( AssetID{ profilePath } ) == false )
-            SW_LOG_ERROR( "'%#': destruction profile '%#' could not be read - using built-in values", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
-                          profilePath.c_str() );
+            SW_LOG_ERROR_ID( "FractureComponent.DestructionProfileCouldNot", "'%#': destruction profile '%#' could not be read - using built-in values", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
+                             profilePath.c_str() );
         vector<uint8> listAnchor;
         computeAnchors( physics, listAnchor );
         _state.initialize( _asset->_graph, _profile, listAnchor );
@@ -1709,23 +1709,23 @@ namespace sw
         // 확인 순서는 매직 → 상태 바이트 → 그래프에 맞는지 → 그룹 자세다. 앞의 것이 실패하면 그 오류만 남긴다.
         if ( result == FractureNetworkSync::SnapshotReadResult::WrongMagic )
         {
-            SW_LOG_ERROR( "'%#': destruction snapshot has a wrong magic", pOwnerName );
+            SW_LOG_ERROR_ID( "FractureComponent.DestructionSnapshotWrongMagic", "'%#': destruction snapshot has a wrong magic", pOwnerName );
             return;
         }
         if ( result == FractureNetworkSync::SnapshotReadResult::StateTruncated )
         {
-            SW_LOG_ERROR( "'%#': destruction snapshot is truncated", pOwnerName );
+            SW_LOG_ERROR_ID( "FractureComponent.DestructionSnapshotTruncated", "'%#': destruction snapshot is truncated", pOwnerName );
             return;
         }
         DestructionState trial = _state;
         if ( trial.readSnapshot( stateBytes.data(), stateBytes.size() ) == false )
         {
-            SW_LOG_ERROR( "'%#': destruction snapshot does not fit this fracture", pOwnerName );
+            SW_LOG_ERROR_ID( "FractureComponent.DestructionSnapshotDoesNot", "'%#': destruction snapshot does not fit this fracture", pOwnerName );
             return;
         }
         if ( result == FractureNetworkSync::SnapshotReadResult::PoseTruncated )
         {
-            SW_LOG_ERROR( "'%#': destruction snapshot poses are truncated", pOwnerName );
+            SW_LOG_ERROR_ID( "FractureComponent.DestructionSnapshotPosesTruncated", "'%#': destruction snapshot poses are truncated", pOwnerName );
             return;
         }
         _state = std::move( trial );

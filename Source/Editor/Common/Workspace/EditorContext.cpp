@@ -55,12 +55,12 @@ namespace sw::editor
         // 주의: 지역화 관리자는 엔진 서비스다. 멤버 `findSubsystem` 은 이 컨텍스트의 범위만 보므로 `editor::findSubsystem`(호스트까지 찾는다)을 쓴다.
         LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
         if ( pLocalization == nullptr )
-            SW_LOG_WARNING( "No LocalizationManager - editor text shows its keys" );
+            SW_LOG_WARNING_ID( "EditorContext.NoLocalizationManagerEditorText", "No LocalizationManager - editor text shows its keys" );
         else if ( pLocalization->mountProject( AssetID{ EditorPaths::kLocalizationProject }, LocalizationScope::Editor ) == false )
-            SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
+            SW_LOG_WARNING_ID( "EditorContext.EditorLocalizationProjectNot", "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
 
         if ( _scope.getCollection().initializeAll( EngineSubsystemHost::kClient ) == false )
-            SW_LOG_ERROR( "Editor subsystems did not all initialize: %#", _scope.getCollection().getError().c_str() );
+            SW_LOG_ERROR_ID( "EditorContext.EditorSubsystemsDidNot", "Editor subsystems did not all initialize: %#", _scope.getCollection().getError().c_str() );
     }
 
     void EditorContext::shutdown()

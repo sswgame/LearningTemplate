@@ -64,7 +64,7 @@ namespace sw
                 ++outFailedCount;
                 continue;
             }
-            SW_LOG_INFO( "Lip sync: '%#' -> %# frames", relative.c_str(), track.getFrameCount() );
+            SW_LOG_INFO_ID( "LipSync.LipSyncFrames", "Lip sync: '%#' -> %# frames", relative.c_str(), track.getFrameCount() );
             ++writtenCount;
         }
         return writtenCount;

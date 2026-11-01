@@ -281,7 +281,7 @@ namespace sw
             _circuit.clear();
         for ( const string& error : _listError )
         {
-            SW_LOG_ERROR( "%#", error );
+            SW_LOG_ERROR_ID( "GimmickCircuitComponent.Message", "%#", error );
         }
         _listBinding.clear();
         _listNodeTag.clear();
@@ -344,7 +344,7 @@ namespace sw
             if ( pTarget == nullptr )
             {
                 if ( binding != Binding::None )
-                    SW_LOG_ERROR( "Gimmick node '%#' points at an object that is not loaded", _circuit.getNodeID( node ).c_str() );
+                    SW_LOG_ERROR_ID( "GimmickCircuitComponent.GimmickNodePointsObject", "Gimmick node '%#' points at an object that is not loaded", _circuit.getNodeID( node ).c_str() );
                 continue;
             }
             const bool bNeedsSensor = binding == Binding::Volume || binding == Binding::PressurePlate || binding == Binding::Damage || binding == Binding::Interaction ||
@@ -353,7 +353,7 @@ namespace sw
             {
                 const string error = string( "Gimmick node '" ) + _circuit.getNodeID( node ).c_str() + "' (" + _circuit.getKind( node )._name.c_str() + ") needs a GimmickSensorComponent on '" +
                                      pTarget->getName().c_str() + "'";
-                SW_LOG_ERROR( "%#", error );
+                SW_LOG_ERROR_ID( "GimmickCircuitComponent.Message", "%#", error );
                 _listError.push_back( error );
             }
             if ( binding == Binding::Mover )
@@ -574,13 +574,13 @@ namespace sw
             formatstring( arrBuffer, constant::buffer::kMax512,
                           "Saved gimmick state of '%#' does not fit node '%#' (its kind or state version changed) - the circuit does not run until the saved state is cleared",
                           pName, pNode );
-            SW_LOG_ERROR( "%#", arrBuffer );
+            SW_LOG_ERROR_ID( "GimmickCircuitComponent.Message", "%#", arrBuffer );
             _listError.push_back( string( arrBuffer ) );
             _circuit.clear();
             return;
         }
         if ( loaded._match == GimmickStateMatch::NodeSetChanged )
-            SW_LOG_WARNING( "Saved gimmick state of '%#' was written for a different node set - matching nodes continue, new nodes start from their initial state", pName );
+            SW_LOG_WARNING_ID( "GimmickCircuitComponent.SavedGimmickStateWritten", "Saved gimmick state of '%#' was written for a different node set - matching nodes continue, new nodes start from their initial state", pName );
         commitRestoredState();
     }
 

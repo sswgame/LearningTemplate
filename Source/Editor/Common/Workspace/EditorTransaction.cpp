@@ -278,7 +278,7 @@ namespace sw::editor
             CommandStack* pPreviewStack = pPreviewScope->findPreviewCommandStack();
             if ( pSceneManager == nullptr || pPreviewStack == nullptr )
             {
-                SW_LOG_ERROR( "No SceneManager - the lifetime edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
+                SW_LOG_ERROR_ID( "EditorTransaction.NoSceneManagerLifetimeEdit", "No SceneManager - the lifetime edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
                 return;
             }
             pPreviewStack->push( ObjectUndoUtil::makeLifetime( *pSceneManager, pObj, edit, label ) );
@@ -311,7 +311,7 @@ namespace sw::editor
         CommandStack* pStack = editor::findSubsystem<CommandStack>();
         if ( pStack == nullptr )
         {
-            SW_LOG_TRACE( "No CommandStack - the undo record '%#' is not kept", string{ label }.c_str() );
+            SW_LOG_TRACE_ID( "EditorTransaction.NoCommandStackUndoRecord", "No CommandStack - the undo record '%#' is not kept", string{ label }.c_str() );
             return;
         }
 

@@ -319,7 +319,7 @@ namespace sw
                 string error;
                 if ( outProject.loadFromFile( outAbsolutePath, &error ) == false )
                 {
-                    SW_LOG_ERROR( "Localization project is not loaded: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %#", error.c_str() );
                     return false;
                 }
                 outListTable.assign( outProject._listStringTable.size(), SourceStringTable{} );
@@ -328,7 +328,7 @@ namespace sw
                     const string tablePath = LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] );
                     if ( outListTable[tableIndex].loadFromFile( tablePath, &error ) == false )
                     {
-                        SW_LOG_ERROR( "String table is not loaded: %#", error.c_str() );
+                        SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %#", error.c_str() );
                         return false;
                     }
                 }
@@ -364,7 +364,7 @@ namespace sw
                     }
                     if ( outListTable[tableIndex].loadFromFile( tablePath, &error ) == false )
                     {
-                        SW_LOG_ERROR( "String table is not loaded: %#", error.c_str() );
+                        SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %#", error.c_str() );
                         return false;
                     }
                 }
@@ -445,7 +445,7 @@ namespace sw
         if ( pDefaultAssets != nullptr )
             outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( pDefaultAssets->_localizationProject.get() ) );
         else
-            SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
+            SW_LOG_ERROR_ID( "LocalizationTools.EngineDefaultAssetsNot", "Engine default assets are not loaded - the engine localization project is left out" );
         outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editor::EditorPaths::kLocalizationProject ) ); // 에디터 UI 문구
 
         const string   localizationFolder = FileUtil::joinPath( constant::path::kDataFolder, constant::path::kLocalizationFolder );
@@ -528,7 +528,7 @@ namespace sw
         string              error;
         if ( project.loadFromFile( absolute, &error ) == false )
         {
-            SW_LOG_ERROR( "Localization project is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %#", error.c_str() );
             return false;
         }
         outResult._projectName = project._name;
@@ -580,9 +580,9 @@ namespace sw
     void LocalizationTools::logGatherResult( const LocalizationGatherResult& result )
     {
         const TextGatherReport& report = result._report;
-        SW_LOG_INFO( "[GatherText] project '%#': %# files, +%# added, ~%# changed, -%# removed, %# unchanged%#", result._projectName.c_str(), result._fileCount,
-                     report._listAdded.size(), report._listChanged.size(), report._listRemoved.size(), report._unchangedCount,
-                     result._bOutOfDate ? " (OUT OF DATE)" : ( result._bWritten ? " (written)" : "" ) );
+        SW_LOG_INFO_ID( "LocalizationTools.ProjectFilesAddedChanged", "[GatherText] project '%#': %# files, +%# added, ~%# changed, -%# removed, %# unchanged%#", result._projectName.c_str(), result._fileCount,
+                        report._listAdded.size(), report._listChanged.size(), report._listRemoved.size(), report._unchangedCount,
+                        result._bOutOfDate ? " (OUT OF DATE)" : ( result._bWritten ? " (written)" : "" ) );
         // 줄을 모아 한 번에 쓴다. 정보 로그가 빠지는 배포 구성에서도 같은 코드를 쓴다.
         string details;
         for ( const string& key : report._listAdded )
@@ -605,13 +605,13 @@ namespace sw
             details.append( to_string( culture._prefilledExact ) ).append( " exact + " ).append( to_string( culture._prefilledFuzzy ) ).append( " fuzzy from translation memory" );
         }
         if ( details.empty() == false )
-            SW_LOG_INFO( "[GatherText] %#%#", result._projectName.c_str(), details.c_str() );
+            SW_LOG_INFO_ID( "LocalizationTools.Message", "[GatherText] %#%#", result._projectName.c_str(), details.c_str() );
         for ( const TextGatherIssue& issue : report._listIssue )
         {
             if ( issue._bError )
-                SW_LOG_ERROR( "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.Message2", "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
             else
-                SW_LOG_WARNING( "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
+                SW_LOG_WARNING_ID( "LocalizationTools.Message2", "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
         }
     }
 
@@ -620,12 +620,12 @@ namespace sw
         bool bClean{ true };
         if ( result._bOutOfDate )
         {
-            SW_LOG_ERROR( "[CheckText] project '%#': tables or translation memory are out of date - run App --gather-text and commit the result", result._projectName.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.ProjectTablesTranslationMemory", "[CheckText] project '%#': tables or translation memory are out of date - run App --gather-text and commit the result", result._projectName.c_str() );
             bClean = false;
         }
         if ( result._report._listIssue.empty() == false )
         {
-            SW_LOG_ERROR( "[CheckText] project '%#': %# gather issue(s) - see the lines above", result._projectName.c_str(), result._report._listIssue.size() );
+            SW_LOG_ERROR_ID( "LocalizationTools.ProjectGatherIssueSee", "[CheckText] project '%#': %# gather issue(s) - see the lines above", result._projectName.c_str(), result._report._listIssue.size() );
             bClean = false;
         }
         for ( const LocalizationCultureReport& culture : result._listCulture )
@@ -633,8 +633,8 @@ namespace sw
             const bool bIncompleteStaged = culture._bStaged && culture.countIncomplete() > 0;
             if ( bIncompleteStaged == false )
                 continue;
-            SW_LOG_ERROR( "[CheckText] project '%#' culture '%#': %# missing, %# stale, %# review - translate them (or --export-po / --import-po)", result._projectName.c_str(),
-                          culture._culture.c_str(), culture._missingCount, culture._staleCount, culture._reviewCount );
+            SW_LOG_ERROR_ID( "LocalizationTools.ProjectCultureMissingStale", "[CheckText] project '%#' culture '%#': %# missing, %# stale, %# review - translate them (or --export-po / --import-po)", result._projectName.c_str(),
+                             culture._culture.c_str(), culture._missingCount, culture._staleCount, culture._reviewCount );
             bClean = false;
         }
         return bClean;
@@ -649,7 +649,7 @@ namespace sw
             listProjectPath.push_back( string( projectArgument ) );
         if ( listProjectPath.empty() )
         {
-            SW_LOG_ERROR( "[GatherText] no localization project to gather" );
+            SW_LOG_ERROR_ID( "LocalizationTools.NoLocalizationProjectGather", "[GatherText] no localization project to gather" );
             return false;
         }
 
@@ -691,7 +691,7 @@ namespace sw
             string error;
             if ( FileUtil::exists( translationPath ) && translation.loadFromFile( translationPath, &error ) == false )
             {
-                SW_LOG_ERROR( "[ExportPo] %#", error.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.Message3", "[ExportPo] %#", error.c_str() );
                 bAllWritten = false;
                 continue;
             }
@@ -713,7 +713,7 @@ namespace sw
             const bool               bSame = FileUtil::readOptionalTextFile( result._path, existing ) == OptionalFileRead::Read && existing == text;
             if ( bSame == false && ( FileUtil::ensureParentDirectoryExists( result._path ) == false || FileUtil::writeTextFile( result._path, text ) == false ) )
             {
-                SW_LOG_ERROR( "[ExportPo] '%#' could not be written", result._path.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.CouldNotWritten", "[ExportPo] '%#' could not be written", result._path.c_str() );
                 bAllWritten = false;
             }
         }
@@ -736,12 +736,12 @@ namespace sw
         PortableObjectFile file;
         if ( FileUtil::readTextFile( poPath, text ) == false )
         {
-            SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
+            SW_LOG_ERROR_ID( "LocalizationTools.CannotReadFileCould", "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
             return false;
         }
         if ( file.parse( text, &error ) == false )
         {
-            SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: %#", poPath, error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.CannotRead", "[ImportPo] '%#' cannot be read: %#", poPath, error.c_str() );
             return false;
         }
         const string culture = CultureTable::normalizeCode( file._language );
@@ -752,12 +752,12 @@ namespace sw
         }
         if ( bListed == false )
         {
-            SW_LOG_ERROR( "[ImportPo] '%#' is for culture '%#', which project '%#' does not list", poPath, culture.c_str(), project._name.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.CultureWhichProjectDoes", "[ImportPo] '%#' is for culture '%#', which project '%#' does not list", poPath, culture.c_str(), project._name.c_str() );
             return false;
         }
         if ( file._projectName.empty() == false && file._projectName != project._name )
         {
-            SW_LOG_ERROR( "[ImportPo] '%#' was exported from project '%#', not '%#'", poPath, file._projectName.c_str(), project._name.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.ExportedProjectNot", "[ImportPo] '%#' was exported from project '%#', not '%#'", poPath, file._projectName.c_str(), project._name.c_str() );
             return false;
         }
         outResult._culture = culture;
@@ -767,7 +767,7 @@ namespace sw
         translation.setCulture( culture );
         if ( FileUtil::exists( translationPath ) && translation.loadFromFile( translationPath, &error ) == false )
         {
-            SW_LOG_ERROR( "[ImportPo] %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.Message4", "[ImportPo] %#", error.c_str() );
             return false;
         }
         TextGatherReport  memoryReport;
@@ -777,7 +777,7 @@ namespace sw
         {
             for ( const TextGatherIssue& issue : memoryReport._listIssue )
             {
-                SW_LOG_ERROR( "[ImportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.TranslationMemoryCannotRead", "[ImportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
             }
             return false;
         }
@@ -788,7 +788,7 @@ namespace sw
             const auto sourceIt = mapSource.find( poEntry._context );
             if ( poEntry._context.empty() || sourceIt == mapSource.end() )
             {
-                SW_LOG_WARNING( "[ImportPo] key '%#' is not in the string tables - skipped", poEntry._context.c_str() );
+                SW_LOG_WARNING_ID( "LocalizationTools.KeyNotStringTables", "[ImportPo] key '%#' is not in the string tables - skipped", poEntry._context.c_str() );
                 ++outResult._unknownKeyCount;
                 continue;
             }
@@ -809,7 +809,7 @@ namespace sw
         const std::optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( translationPath );
         if ( translationFile.has_value() == false || translation.saveToFile( *translationFile ) == false || memory.saveToFile( memoryPath ) == false )
         {
-            SW_LOG_ERROR( "[ImportPo] translation table '%#' could not be written", translationPath.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.TranslationTableCouldNot", "[ImportPo] translation table '%#' could not be written", translationPath.c_str() );
             return false;
         }
         return true;
@@ -834,7 +834,7 @@ namespace sw
                 summary.append( " entries, " ).append( to_string( result._translatedCount ) ).append( " translated, " ).append( to_string( result._fuzzyCount ) );
                 summary.append( " fuzzy (" ).append( to_string( result._staleCount ) ).append( " stale)" );
             }
-            SW_LOG_INFO( "[ExportPo] %#%#", projectPath.c_str(), summary.c_str() );
+            SW_LOG_INFO_ID( "LocalizationTools.Message5", "[ExportPo] %#%#", projectPath.c_str(), summary.c_str() );
         }
         return bSucceeded;
     }
@@ -850,12 +850,12 @@ namespace sw
             string             parseError;
             if ( FileUtil::readTextFile( poPath, text ) == false )
             {
-                SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
+                SW_LOG_ERROR_ID( "LocalizationTools.CannotReadFileCould", "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
                 return false;
             }
             if ( file.parse( text, &parseError ) == false )
             {
-                SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: %#", poPath, parseError.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.CannotRead", "[ImportPo] '%#' cannot be read: %#", poPath, parseError.c_str() );
                 return false;
             }
             vector<string> listProjectPath;
@@ -868,15 +868,15 @@ namespace sw
             }
             if ( projectPath.empty() )
             {
-                SW_LOG_ERROR( "[ImportPo] no project named '%#' - pass -loc-project=<project file>", file._projectName.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.NoProjectNamedPass", "[ImportPo] no project named '%#' - pass -loc-project=<project file>", file._projectName.c_str() );
                 return false;
             }
         }
         LocalizationExchangeResult result;
         if ( importPo( projectPath, poPath, result ) == false )
             return false;
-        SW_LOG_INFO( "[ImportPo] %# <- %#: %# entries, %# translations imported, %# fuzzy, %# for an older source, %# unknown keys", result._culture.c_str(), poPath,
-                     result._entryCount, result._translatedCount, result._fuzzyCount, result._staleCount, result._unknownKeyCount );
+        SW_LOG_INFO_ID( "LocalizationTools.EntriesTranslationsImportedFuzzy", "[ImportPo] %# <- %#: %# entries, %# translations imported, %# fuzzy, %# for an older source, %# unknown keys", result._culture.c_str(), poPath,
+                        result._entryCount, result._translatedCount, result._fuzzyCount, result._staleCount, result._unknownKeyCount );
         return true;
     }
 } // namespace sw

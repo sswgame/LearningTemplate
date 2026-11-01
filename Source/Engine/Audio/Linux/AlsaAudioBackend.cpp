@@ -137,19 +137,19 @@ namespace sw
         _impl->_pLibrary = ModuleLibraryUtil::loadSystemLibrary( "libasound.so.2" );
         if ( _impl->_pLibrary == nullptr )
         {
-            SW_LOG_INFO( "ALSA (libasound.so.2) is not available. Rendering offline." );
+            SW_LOG_INFO_ID( "AlsaAudioBackend.ALSALibasoundNotAvailable", "ALSA (libasound.so.2) is not available. Rendering offline." );
             return false;
         }
         if ( _impl->bindFunctions() == false )
         {
-            SW_LOG_WARNING( "libasound.so.2 lacks the PCM functions. Rendering offline." );
+            SW_LOG_WARNING_ID( "AlsaAudioBackend.LibasoundLacksPCMFunctions", "libasound.so.2 lacks the PCM functions. Rendering offline." );
             closeDevice();
             return false;
         }
         const int32 openResult = _impl->_pfnOpen( &_impl->_pPcm, "default", Internal::kStreamPlayback, 0 );
         if ( openResult < 0 || _impl->_pPcm == nullptr )
         {
-            SW_LOG_INFO( "No ALSA playback device (error %#). Rendering offline.", openResult );
+            SW_LOG_INFO_ID( "AlsaAudioBackend.NoALSAPlaybackDevice", "No ALSA playback device (error %#). Rendering offline.", openResult );
             _impl->_pPcm = nullptr;
             closeDevice();
             return false;
@@ -165,7 +165,7 @@ namespace sw
         }
         outDevice._channelCount = maxChannels;
         outDevice._channelMask  = AudioChannelLayoutUtil::getChannelMask( AudioChannelLayout::Stereo );
-        SW_LOG_INFO( "ALSA device 'default': up to %# channels.", maxChannels );
+        SW_LOG_INFO_ID( "AlsaAudioBackend.ALSADeviceDefaultUp", "ALSA device 'default': up to %# channels.", maxChannels );
         return true;
     }
 
@@ -179,14 +179,14 @@ namespace sw
                                                           Internal::kLatencyMicroseconds );
         if ( setResult < 0 )
         {
-            SW_LOG_WARNING( "snd_pcm_set_params failed for %# channels (error %#). Rendering offline.", channelCount, setResult );
+            SW_LOG_WARNING_ID( "AlsaAudioBackend.SndPcmSetParams", "snd_pcm_set_params failed for %# channels (error %#). Rendering offline.", channelCount, setResult );
             return false;
         }
         _impl->_channelCount = channelCount;
         _impl->_listRender.assign( static_cast<size_t>( Internal::kWriteFrameCount ) * channelCount, 0.0f );
         _impl->_listDevice.assign( static_cast<size_t>( Internal::kWriteFrameCount ) * channelCount, 0.0f );
         _impl->_streamThread = thread( &AlsaAudioBackend::runStream, this );
-        SW_LOG_INFO( "ALSA stream ready (%# Hz, %# channels, %# frames per write).", audio::kSampleRate, channelCount, Internal::kWriteFrameCount );
+        SW_LOG_INFO_ID( "AlsaAudioBackend.ALSAStreamReadyHz", "ALSA stream ready (%# Hz, %# channels, %# frames per write).", audio::kSampleRate, channelCount, Internal::kWriteFrameCount );
         return true;
     }
 

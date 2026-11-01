@@ -33,13 +33,13 @@ namespace sw
                         outListDigit.push_back( digit );
                     else
                     {
-                        SW_LOG_ERROR( "%#: dial lock '%#' has a bad digit '%#'", sourceName, id.c_str(), token );
+                        SW_LOG_ERROR_ID( "HorrorCatalog.DialLockBadDigit", "%#: dial lock '%#' has a bad digit '%#'", sourceName, id.c_str(), token );
                         bValid = false;
                     }
                 } );
                 if ( outListDigit.empty() )
                 {
-                    SW_LOG_ERROR( "%#: dial lock '%#' needs code=\"...\"", sourceName, id.c_str() );
+                    SW_LOG_ERROR_ID( "HorrorCatalog.DialLockNeedsCode", "%#: dial lock '%#' needs code=\"...\"", sourceName, id.c_str() );
                     bValid = false;
                 }
                 return bValid;
@@ -56,7 +56,7 @@ namespace sw
                     const bool   bMalformedLink = dash == string_view::npos || dash == 0 || dash + 1 >= token.size();
                     if ( bMalformedLink )
                     {
-                        SW_LOG_ERROR( "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, id.c_str(), token );
+                        SW_LOG_ERROR_ID( "HorrorCatalog.DeductionBadLinkExpected", "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, id.c_str(), token );
                         bValid = false;
                         return;
                     }
@@ -126,7 +126,7 @@ namespace sw
         for ( const HorrorKeyLockDef& lock : _keyLockCatalog.getAll() )
         {
             if ( _itemCatalog.find( lock._keyItem ) == nullptr )
-                SW_LOG_ERROR( "%#: key lock '%#' names an unknown key item '%#'", sourceName, lock._id.c_str(), lock._keyItem.c_str() );
+                SW_LOG_ERROR_ID( "HorrorCatalog.KeyLockNamesUnknown", "%#: key lock '%#' names an unknown key item '%#'", sourceName, lock._id.c_str(), lock._keyItem.c_str() );
         }
         return loadedCount;
     }
@@ -151,7 +151,7 @@ namespace sw
             return loadDocument( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Deduction" ) )
             return loadDeduction( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "HorrorCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -188,7 +188,7 @@ namespace sw
         XMLReadUtil::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
         if ( sequence._listStep.empty() )
         {
-            SW_LOG_ERROR( "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
+            SW_LOG_ERROR_ID( "HorrorCatalog.SequenceNeedsStepsB", "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
             return false;
         }
         (void)_sequenceCatalog.add( sequence ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다

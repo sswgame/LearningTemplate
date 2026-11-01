@@ -71,7 +71,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_WARNING( "Could not read sequence '%#'", path );
+            SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence", "Could not read sequence '%#'", path );
             return false;
         }
         return readText( text, path );
@@ -86,7 +86,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING( "Could not read sequence file '%#'", diskPath );
+            SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence2", "Could not read sequence file '%#'", diskPath );
             return false;
         }
         return readText( text, diskPath );
@@ -144,13 +144,13 @@ namespace sw
             bValid = isFrameWithinLimit( item._prerollFrames, sourceLabel, "_prerollFrames" ) && bValid;
             if ( item._prerollFrames < SequenceTrackItem::kUseSequencePreroll )
             {
-                SW_LOG_ERROR( "Sequence '%#': item '%#' _prerollFrames %# must be 0 or more (-1: the sequence value)", sourceLabel, item._name, item._prerollFrames );
+                SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemPrerollFramesMust", "Sequence '%#': item '%#' _prerollFrames %# must be 0 or more (-1: the sequence value)", sourceLabel, item._name, item._prerollFrames );
                 bValid = false;
             }
             const SequenceItemKindInfo* pKindInfo = findItemKindInfo( item._kind );
             if ( pKindInfo == nullptr )
             {
-                SW_LOG_ERROR( "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
+                SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNoItem", "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
                 bValid = false;
                 continue;
             }
@@ -158,12 +158,12 @@ namespace sw
             const bool bSpawnNeedsFields = pKindInfo->_bSpawns && ( item._prefab.empty() || item._targetObject.empty() );
             if ( bSpawnNeedsFields )
             {
-                SW_LOG_ERROR( "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
+                SW_LOG_ERROR_ID( "SequenceAsset.SequenceSpawnItemNeeds", "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
                 bValid = false;
             }
             else if ( pKindInfo->_bNeedsPreset && ( item._preset.empty() || item._targetObject.empty() ) )
             {
-                SW_LOG_ERROR( "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
+                SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNeedsBoth", "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
                 bValid = false;
             }
         }
@@ -172,8 +172,8 @@ namespace sw
             const uint32 channelCount = SequenceKeyTrack::getChannelCount( track._kind );
             if ( channelCount == 0 || track._listChannel.size() != channelCount )
             {
-                SW_LOG_ERROR( "Sequence '%#': track '%#' needs %# channel(s) for its kind, has %#", sourceLabel, track._name, channelCount,
-                              track._listChannel.size() );
+                SW_LOG_ERROR_ID( "SequenceAsset.SequenceTrackNeedsChannel", "Sequence '%#': track '%#' needs %# channel(s) for its kind, has %#", sourceLabel, track._name, channelCount,
+                                 track._listChannel.size() );
                 bValid = false;
             }
             for ( const FloatCurve& channel : track._listChannel )

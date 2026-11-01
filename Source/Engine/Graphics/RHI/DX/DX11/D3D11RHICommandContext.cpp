@@ -51,8 +51,8 @@ namespace sw
             const bool bSameShape = backDesc.Format == dstDesc.Format && backDesc.Width == dstDesc.Width && backDesc.Height == dstDesc.Height;
             if ( bSameShape == false )
             {
-                SW_LOG_ERROR( "blitTexture(backbuffer): the target must match the back buffer (fmt %# %#x%# vs %# %#x%#)", static_cast<uint32>( backDesc.Format ),
-                              backDesc.Width, backDesc.Height, static_cast<uint32>( dstDesc.Format ), dstDesc.Width, dstDesc.Height );
+                SW_LOG_ERROR_ID( "D3D11RHICommandContext.BlitTextureBackbufferTargetMust", "blitTexture(backbuffer): the target must match the back buffer (fmt %# %#x%# vs %# %#x%#)", static_cast<uint32>( backDesc.Format ),
+                                 backDesc.Width, backDesc.Height, static_cast<uint32>( dstDesc.Format ), dstDesc.Width, dstDesc.Height );
                 return;
             }
             _pContext->CopyResource( pDstRecord->_texture.Get(), backTex.Get() );

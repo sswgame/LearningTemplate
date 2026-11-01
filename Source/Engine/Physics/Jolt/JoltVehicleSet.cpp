@@ -29,7 +29,7 @@ namespace sw
         const bool bHasDrivenAxle = desc._listDrivenAxle.size() >= 2 && ( desc._listDrivenAxle.size() % 2 ) == 0;
         if ( desc._listWheel.empty() || bHasDrivenAxle == false )
         {
-            SW_LOG_ERROR( "Wheeled vehicle needs a dynamic chassis body, wheels and driven axle pairs" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.WheeledVehicleNeedsDynamic", "Wheeled vehicle needs a dynamic chassis body, wheels and driven axle pairs" );
             return PhysicsVehicleHandle{};
         }
         const int32 wheelCount = static_cast<int32>( desc._listWheel.size() );
@@ -37,7 +37,7 @@ namespace sw
         {
             if ( wheelIndex < 0 || wheelCount <= wheelIndex )
             {
-                SW_LOG_ERROR( "Wheeled vehicle driven axle names wheel %# of %#", wheelIndex, wheelCount );
+                SW_LOG_ERROR_ID( "JoltPhysicsScene.WheeledVehicleDrivenAxle", "Wheeled vehicle driven axle names wheel %# of %#", wheelIndex, wheelCount );
                 return PhysicsVehicleHandle{};
             }
         }

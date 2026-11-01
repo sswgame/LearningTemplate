@@ -21,7 +21,7 @@ namespace sw
         string       text;
         if ( AssetIO::readTextAsset( AssetID{ path }, text ) == false )
         {
-            SW_LOG_ERROR( "%#: the pack settings file could not be read", path.c_str() );
+            SW_LOG_ERROR_ID( "PackEngineSettings.PackSettingsFileCould", "%#: the pack settings file could not be read", path.c_str() );
             return false;
         }
         return loadFromXMLText( text, path );
@@ -33,7 +33,7 @@ namespace sw
         XMLDocument  document;
         if ( document.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR( "%#: %#", label.c_str(), document.getLastError().c_str() );
+            SW_LOG_ERROR_ID( "PackEngineSettings.Message", "%#: %#", label.c_str(), document.getLastError().c_str() );
             return false;
         }
         const XMLNode root    = document.getRoot( kRootElementName );

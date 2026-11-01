@@ -123,7 +123,7 @@ namespace sw
                 const shared_ptr<const PrefabAsset> pPrefab = assetManager.getAssetCache<PrefabCache>().loadPrefab( prefabPath );
                 if ( pPrefab != nullptr && PrefabOverrides::makeBaseState( *pPrefab, baseState ) == false )
                 {
-                    SW_LOG_WARNING( "Prefab '%#' could not be built as a base state", prefabPath );
+                    SW_LOG_WARNING_ID( "Scene.PrefabCouldNotBuilt", "Prefab '%#' could not be built as a base state", prefabPath );
                     baseState.clear();
                 }
                 const string& stored = inoutMapBaseState.emplace( prefabPath, std::move( baseState ) ).first->second;
@@ -186,7 +186,7 @@ namespace sw
                         continue;
                     if ( prefabs.collectPartOverrides( *pInstance, *pPrefab, listPartOverride ) == false )
                     {
-                        SW_LOG_ERROR( "Nested part overrides of '%#' could not be computed - its parts are saved as the prefab has them", pInstance->getName().c_str() );
+                        SW_LOG_ERROR_ID( "Scene.NestedPartOverridesCould", "Nested part overrides of '%#' could not be computed - its parts are saved as the prefab has them", pInstance->getName().c_str() );
                         continue;
                     }
                     if ( listPartOverride.empty() == false )
@@ -223,8 +223,8 @@ namespace sw
                 GameObject* pGo = bStateMade ? objects.createGameObject( hashed_string( entity._name.c_str() ) ) : nullptr;
                 if ( pGo == nullptr )
                 {
-                    SW_LOG_WARNING( "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
-                                    entity._prefabGUID.empty() ? "none" : entity._prefabGUID.c_str() );
+                    SW_LOG_WARNING_ID( "Scene.PrefabSpawnFailedEntity", "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
+                                       entity._prefabGUID.empty() ? "none" : entity._prefabGUID.c_str() );
                     if ( bStreamingCell == false )
                         inoutListUnresolved.push_back( entity );
                 }
@@ -243,19 +243,19 @@ namespace sw
                 if ( entity._embeddedStateBytes.empty() == false )
                 {
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) == 0 )
-                        SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", entity._name );
+                        SW_LOG_WARNING_ID( "Scene.EmbeddedBinaryStateApply", "Embedded binary state apply failed for '%#'", entity._name );
                 }
                 else if ( entity._embeddedXML.empty() == false )
                 {
                     if ( ObjectStateSerializer::loadFromXMLString( pGo, entity._embeddedXML, context ) == false )
-                        SW_LOG_WARNING( "Embedded state apply failed for '%#'", entity._name );
+                        SW_LOG_WARNING_ID( "Scene.EmbeddedStateApplyFailed", "Embedded state apply failed for '%#'", entity._name );
                 }
                 else if ( prefabInstanceState.empty() == false )
                 {
                     // 원형은 다른 오브젝트로의 부착과 핸들을 싣지 않는다(`PrefabOverrides::makeBaseState`). 다른 엔티티에 붙은 인스턴스의 부착은
                     // 덮어쓴 값이라 파일 id 로 들어 있고, 배치가 모두 읽은 뒤 연결한다.
                     if ( ObjectStateSerializer::loadFromXMLString( pGo, prefabInstanceState, context ) == false )
-                        SW_LOG_WARNING( "Prefab instance state apply failed for '%#' (%#)", entity._name, entity._prefab );
+                        SW_LOG_WARNING_ID( "Scene.PrefabInstanceStateApply", "Prefab instance state apply failed for '%#' (%#)", entity._name, entity._prefab );
                 }
                 else
                 {
@@ -278,7 +278,7 @@ namespace sw
                     if ( pPrefab == nullptr )
                         continue;
                     if ( PrefabOverrides::collectPartOverrides( *prefabEntity._pOverrideXML, listPartOverride ) == false )
-                        SW_LOG_ERROR( "Nested part overrides of '%#' could not be read - its parts are spawned as the prefab has them", prefabEntity._pObject->getName().c_str() );
+                        SW_LOG_ERROR_ID( "Scene.NestedPartOverridesCould2", "Nested part overrides of '%#' could not be read - its parts are spawned as the prefab has them", prefabEntity._pObject->getName().c_str() );
                     (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab, listPartOverride ); // 건너뛴 노드는 노드마다 경고했다
                 }
             }
@@ -350,13 +350,13 @@ namespace sw
                 if ( bOverridesMade == false )
                 {
                     if ( overridesError.empty() == false )
-                        SW_LOG_WARNING( "Prefab instance '%#' is saved with its full state because its overrides could not be computed: %#", outNode._name, overridesError.c_str() );
+                        SW_LOG_WARNING_ID( "Scene.PrefabInstanceSavedFull", "Prefab instance '%#' is saved with its full state because its overrides could not be computed: %#", outNode._name, overridesError.c_str() );
                     outNode._prefabOverrideXML.clear();
                     outNode._embeddedXML = state;
                 }
                 const auto partIt = outNode._embeddedXML.empty() ? inputs._mapPartOverride.find( pGo->getObjectID() ) : inputs._mapPartOverride.end();
                 if ( partIt != inputs._mapPartOverride.end() && PrefabOverrides::appendPartOverrides( outNode._prefabOverrideXML, partIt->second ) == false )
-                    SW_LOG_ERROR( "Nested part overrides of '%#' could not be written - its parts are saved as the prefab has them", outNode._name );
+                    SW_LOG_ERROR_ID( "Scene.NestedPartOverridesCould3", "Nested part overrides of '%#' could not be written - its parts are saved as the prefab has them", outNode._name );
                 return outNode._embeddedXML.empty() == false || outNode._prefab.empty() == false;
             }
         };
@@ -503,7 +503,7 @@ namespace sw
                 _pMaterial           = _services._pAssetManager->getAssetCache<MaterialCache>().acquire( materialPath, pRHIDevice );
                 if ( _pMaterial == nullptr )
                 {
-                    SW_LOG_ERROR( "Failed to acquire Material from %#", materialPath );
+                    SW_LOG_ERROR_ID( "Scene.FailedAcquireMaterial", "Failed to acquire Material from %#", materialPath );
                     _defaultMaterialPath.clear();
                     return false;
                 }
@@ -581,7 +581,7 @@ namespace sw
             // 종료 신호(`SceneManager::requestAsyncLoadStop`) — 중간에 멈추면 false 다. 이미 지은 오브젝트는 부른 쪽이 씬을 버리며 정리한다(비동기 로드 잡이 신호를 다시 읽고 씬을 소멸시킨다).
             if ( stopToken.isStopRequested() )
                 return false;
-            SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
+            SW_LOG_TRACE_ID( "Scene.SpawningEntityPrefab", "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
             string      prefabInstanceState; // 프리팹 원형에 덮어쓴 값을 얹어 만든 상태(프리팹 엔티티만)
             GameObject* pGo = SceneInternal::createEntityObject( *_objectManager, _services._pAssetManager, mapPrefabBaseState, entity, bStreamingCell, _listUnresolvedEntity, prefabInstanceState );
             if ( pGo == nullptr )
@@ -601,7 +601,7 @@ namespace sw
         // 옮기지 못한 핸들 PROPERTY 가 있으면 로드 오류다(배치가 필드를 적어 오류를 남겼다). 비우고 이어 가면 값이 조용히 사라진다.
         if ( batch.finish() == false )
         {
-            SW_LOG_ERROR( "Scene '%#' could not link its object handles - the load fails", _name.c_str() );
+            SW_LOG_ERROR_ID( "Scene.SceneCouldNotLink", "Scene '%#' could not link its object handles - the load fails", _name.c_str() );
             return false;
         }
 
@@ -620,7 +620,7 @@ namespace sw
         // 셀을 스트리밍하는 씬(쿠킹본)은 내려가 있는 셀의 엔티티를 들고 있지 않다 — 쓰면 그 엔티티가 파일에서 사라진다.
         if ( _objectManager->getSubsystem<SceneStreamingSubsystem>().isStreaming() )
         {
-            SW_LOG_ERROR( "Scene '%#' streams cells from a cooked scene - it cannot be written as a document", _name.c_str() );
+            SW_LOG_ERROR_ID( "Scene.SceneStreamsCellsCooked", "Scene '%#' streams cells from a cooked scene - it cannot be written as a document", _name.c_str() );
             return false;
         }
 

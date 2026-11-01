@@ -165,7 +165,7 @@ namespace sw
         UIScreen* pScreen          = _pUI->findScreen( _screen );
         if ( pScreen == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Subtitle screen '%#' could not be opened - subtitles are not shown", documentPath.c_str() );
+            SW_LOG_ERROR_ID( "UISubtitle.SubtitleScreenCouldNot", "[UI] Subtitle screen '%#' could not be opened - subtitles are not shown", documentPath.c_str() );
             _screen          = kInvalidUIScreenHandle;
             _bDocumentFailed = true;
             return false;
@@ -178,7 +178,7 @@ namespace sw
         const bool         bMissingSubtitleWidgets = pLine == nullptr || pSpeaker == nullptr || pText == nullptr;
         if ( bMissingSubtitleWidgets )
         {
-            SW_LOG_ERROR( "[UI] Subtitle screen '%#' lacks Line0 / Speaker0 / Text0 - subtitles are not shown", documentPath.c_str() );
+            SW_LOG_ERROR_ID( "UISubtitle.SubtitleScreenLacksLine0", "[UI] Subtitle screen '%#' lacks Line0 / Speaker0 / Text0 - subtitles are not shown", documentPath.c_str() );
             closeScreen();
             _bDocumentFailed = true;
             return false;

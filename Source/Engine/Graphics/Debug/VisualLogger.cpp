@@ -230,7 +230,7 @@ namespace sw
     {
         if ( capacity == 0 )
         {
-            SW_LOG_ERROR( "VisualLogger capacity must be at least 1 entry" );
+            SW_LOG_ERROR_ID( "VisualLogger.VisualLoggerCapacityMustLeast", "VisualLogger capacity must be at least 1 entry" );
             return false;
         }
         ScopedLock<mutex> lock{ _mutex };
@@ -461,7 +461,7 @@ namespace sw
         JSONDocument document;
         if ( document.loadFile( diskPath ) == false )
         {
-            SW_LOG_ERROR( "Visual log '%#' could not be read: %#", diskPath, document.getLastError().c_str() );
+            SW_LOG_ERROR_ID( "VisualLogger.VisualLogCouldNot", "Visual log '%#' could not be read: %#", diskPath, document.getLastError().c_str() );
             return false;
         }
         const JSONValue root         = document.getRoot();
@@ -471,7 +471,7 @@ namespace sw
         const bool      bNotThisFile = version.has_value() == false || *version != kFileVersion || frame.has_value() == false || listNode.isArray() == false;
         if ( bNotThisFile )
         {
-            SW_LOG_ERROR( "Visual log '%#' is not a version %# visual log file", diskPath, kFileVersion );
+            SW_LOG_ERROR_ID( "VisualLogger.VisualLogNotVersion", "Visual log '%#' is not a version %# visual log file", diskPath, kFileVersion );
             return false;
         }
         deque<VisualLogEntry> listLoaded;
@@ -480,7 +480,7 @@ namespace sw
             VisualLogEntry entry;
             if ( readEntry( listNode.at( index ), entry ) == false )
             {
-                SW_LOG_ERROR( "Visual log '%#': entry %# is broken", diskPath, static_cast<uint32>( index ) );
+                SW_LOG_ERROR_ID( "VisualLogger.VisualLogEntryBroken", "Visual log '%#': entry %# is broken", diskPath, static_cast<uint32>( index ) );
                 return false;
             }
             listLoaded.push_back( std::move( entry ) );

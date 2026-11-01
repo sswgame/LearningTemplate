@@ -196,7 +196,7 @@ namespace sw::editor
         SceneManager&      sceneManager = editor::getSubsystem<SceneManager>();
         if ( pScene == nullptr || pManager == nullptr )
         {
-            SW_LOG_WARNING( "Reflection probe bake refused: there is no active scene" );
+            SW_LOG_WARNING_ID( "EditorReflectionProbeBake.ReflectionProbeBakeRefused", "Reflection probe bake refused: there is no active scene" );
             return;
         }
         if ( _run.isRunning() )
@@ -204,7 +204,7 @@ namespace sw::editor
         // 취소한 베이크의 접기 · 쓰기가 아직 돈다 - 같은 파일을 겹쳐 쓰지 않게 끝난 뒤에 받는다.
         if ( _pFilterJob->isPending() )
         {
-            SW_LOG_WARNING( "Reflection probe bake refused: the previous bake is still writing a probe - try again in a moment" );
+            SW_LOG_WARNING_ID( "EditorReflectionProbeBake.ReflectionProbeBakeRefused2", "Reflection probe bake refused: the previous bake is still writing a probe - try again in a moment" );
             return;
         }
         vector<ReflectionProbeComponent*> listProbe;
@@ -283,7 +283,7 @@ namespace sw::editor
             reportFailure( "the baked reflection does not fit the probe" );
             return;
         }
-        SW_LOG_INFO( "Baked reflection probe '%#' (%#x%# octahedral)", result._assetPath.c_str(), resolution, resolution );
+        SW_LOG_INFO_ID( "EditorReflectionProbeBake.BakedReflectionProbeX", "Baked reflection probe '%#' (%#x%# octahedral)", result._assetPath.c_str(), resolution, resolution );
         ++_bakedCount; // 씬 dirty 는 잠금을 푼 뒤 `finish` 가 표시한다(잠긴 동안의 표시는 잠금을 지나친 편집으로 센다)
     }
 
@@ -345,7 +345,7 @@ namespace sw::editor
 
     void EditorReflectionProbeBakeSession::reportFailure( const string& error )
     {
-        SW_LOG_ERROR( "Reflection probe bake failed: %#", error.c_str() );
+        SW_LOG_ERROR_ID( "EditorReflectionProbeBake.ReflectionProbeBakeFailed", "Reflection probe bake failed: %#", error.c_str() );
         _lastError = error;
     }
 

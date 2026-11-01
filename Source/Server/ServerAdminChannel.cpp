@@ -45,8 +45,8 @@ namespace sw
         string token;
         if ( ProcessEnvironment::tryReadNonEmpty( config._adminChannelTokenEnvironment, token ) == false )
         {
-            SW_LOG_ERROR( "The admin channel is enabled (_adminChannelPort=%#) but the token environment variable '%#' is not set or empty - the server does not start without a token",
-                          config._adminChannelPort, config._adminChannelTokenEnvironment.c_str() );
+            SW_LOG_ERROR_ID( "Server.AdminChannelEnabledAdminChannelPort", "The admin channel is enabled (_adminChannelPort=%#) but the token environment variable '%#' is not set or empty - the server does not start without a token",
+                             config._adminChannelPort, config._adminChannelTokenEnvironment.c_str() );
             return false;
         }
         _pHealthRegistry = &healthRegistry;
@@ -63,12 +63,12 @@ namespace sw
                           { return executeCommand( line, outReply ); } ) );
         if ( bStarted == false )
         {
-            SW_LOG_ERROR( "The admin channel (_adminChannelPort=%#) could not start", config._adminChannelPort );
+            SW_LOG_ERROR_ID( "Server.AdminChannelAdminChannelPortCould", "The admin channel (_adminChannelPort=%#) could not start", config._adminChannelPort );
             _channel.reset();
             _transport.reset();
             return false;
         }
-        SW_LOG_INFO( "Admin channel listening on loopback port %# (token from environment variable %#)", _channel->getListenPort(), config._adminChannelTokenEnvironment.c_str() );
+        SW_LOG_INFO_ID( "Server.AdminChannelListeningLoopback", "Admin channel listening on loopback port %# (token from environment variable %#)", _channel->getListenPort(), config._adminChannelTokenEnvironment.c_str() );
         return true;
     }
 
@@ -125,13 +125,13 @@ namespace sw
             }
             _bMaintenance = argument == "on";
             _pHealthRegistry->setDraining( _bMaintenance ); // /readyz 503 이면 부하 분산기가 새 접속을 보내지 않는다. 이미 접속한 사람은 그대로다.
-            SW_LOG_INFO( "Admin channel: maintenance mode %#", _bMaintenance ? "on" : "off" );
+            SW_LOG_INFO_ID( "Server.AdminChannelMaintenanceMode", "Admin channel: maintenance mode %#", _bMaintenance ? "on" : "off" );
             outReply = _bMaintenance ? "maintenance on" : "maintenance off";
             return true;
         }
         if ( name == "shutdown" )
         {
-            SW_LOG_INFO( "Admin channel: graceful shutdown requested" );
+            SW_LOG_INFO_ID( "Server.AdminChannelGracefulShutdown", "Admin channel: graceful shutdown requested" );
             ShutdownSignal::request( ShutdownCause::Terminate ); // 종료 신호(SIGTERM)와 같은 길 - 드레인 뒤 정상 종료
             outReply = "shutdown requested";
             return true;

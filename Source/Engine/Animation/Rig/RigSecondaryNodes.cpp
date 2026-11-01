@@ -325,7 +325,7 @@ namespace sw
                 }
                 if ( RigSecondaryNodesInternal::invertMatrix( kernel, poseCount, _listInverseKernel ) == false )
                 {
-                    SW_LOG_ERROR( "Rig '%#': pose driver '%#' has two poses at the same rotation", context._label, _name.c_str() );
+                    SW_LOG_ERROR_ID( "RigSecondaryNodes.RigPoseDriverTwo", "Rig '%#': pose driver '%#' has two poses at the same rotation", context._label, _name.c_str() );
                     return false;
                 }
                 _listPoseWeight.assign( poseCount, 0.0f );

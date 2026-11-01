@@ -63,7 +63,7 @@ namespace sw
             return;
         const string path = _graphPath;
         if ( loadGraphFile( AssetID{ path } ) == false )
-            SW_LOG_WARNING( "Dialogue graph '%#' could not be loaded", path );
+            SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueGraphCouldNot", "Dialogue graph '%#' could not be loaded", path );
     }
 
     void DialogueRunnerComponent::onEndPlay()
@@ -97,7 +97,7 @@ namespace sw
     {
         if ( _graph._listNode.empty() )
         {
-            SW_LOG_WARNING( "DialogueRunner: No valid nodes in graph." );
+            SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerNoValidNodes", "DialogueRunner: No valid nodes in graph." );
             return false;
         }
 
@@ -110,7 +110,7 @@ namespace sw
 
         if ( targetID <= 0 )
         {
-            SW_LOG_WARNING( "DialogueRunner: No valid root or start node to execute." );
+            SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerNoValidRoot", "DialogueRunner: No valid root or start node to execute." );
             return false;
         }
 
@@ -255,7 +255,7 @@ namespace sw
         // **값으로 받는다.** `const string&` 로 받으면 `node._actionCommand`, 곧 `_graph` 가 가진
         // 문자열을 가리킨다. 아래 `_onEvent` 핸들러가 `loadGraphFile()` 로 그래프를 갈면
         // 그 참조는 죽은 메모리가 되는데, **그 뒤로도 계속 읽는다**(`startsWith` · `substr`).
-        SW_LOG_TRACE( "Execute Action: %#", actionCmd );
+        SW_LOG_TRACE_ID( "DialogueRunnerComponent.ExecuteAction", "Execute Action: %#", actionCmd );
         if ( _onEvent.isBound() )
         {
             const OnDialogueEventFunc onEvent = _onEvent.get();
@@ -272,7 +272,7 @@ namespace sw
                 const string key   = ( colon != string::npos ) ? rest.substr( 0, colon ) : string{ rest };
                 int32        val{ 1 };
                 if ( colon != string::npos && StringUtil::parseInt( rest.substr( colon + 1 ), val ) == false )
-                    SW_LOG_WARNING( "Dialogue action '%#' sets a value that is not a number - using 1", rest );
+                    SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueActionSetsValue", "Dialogue action '%#' sets a value that is not a number - using 1", rest );
                 // 0 은 지우기다(`GameFlags` 규칙) — 읽는 쪽에는 없는 플래그와 같은 0 이다.
                 _pFlags->setFlag( hashed_string( key ), val );
             }
@@ -301,7 +301,7 @@ namespace sw
         ++_transitionSerial;
         if ( recursionDepth > 64 )
         {
-            SW_LOG_WARNING( "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeID );
+            SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerCyclicNodeTransition", "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeID );
             finishDialogue();
             return;
         }
@@ -315,7 +315,7 @@ namespace sw
         const DialogueAssetNode* pNode = _graph.findNode( nodeID );
         if ( pNode == nullptr )
         {
-            SW_LOG_WARNING( "Node %# not found in graph.", nodeID );
+            SW_LOG_WARNING_ID( "DialogueRunnerComponent.NodeNotFoundGraph", "Node %# not found in graph.", nodeID );
             finishDialogue();
             return;
         }
@@ -376,7 +376,7 @@ namespace sw
             }
             case DialogueAssetNodeType::Count:
             {
-                SW_LOG_WARNING( "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeID, static_cast<uint32>( node._type ) );
+                SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerNodeUnknownType", "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeID, static_cast<uint32>( node._type ) );
                 finishDialogue();
                 return;
             }

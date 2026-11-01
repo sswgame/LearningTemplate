@@ -250,7 +250,7 @@ namespace sw::editor
             return false;
         if ( pAccessor->count < elementCount )
         {
-            SW_LOG_ERROR( "glTF accessor has %# elements, the primitive has %# vertices", static_cast<uint32>( pAccessor->count ), static_cast<uint32>( elementCount ) );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFAccessorElementsPrimitive", "glTF accessor has %# elements, the primitive has %# vertices", static_cast<uint32>( pAccessor->count ), static_cast<uint32>( elementCount ) );
             outListValue.clear();
             return false;
         }
@@ -360,7 +360,7 @@ namespace sw::editor
     {
         if ( primitive.type != cgltf_primitive_type_triangles )
         {
-            SW_LOG_WARNING( "Skipping a non-triangle primitive (type %#)", static_cast<uint32>( primitive.type ) );
+            SW_LOG_WARNING_ID( "ModelImporter.SkippingNonTrianglePrimitive", "Skipping a non-triangle primitive (type %#)", static_cast<uint32>( primitive.type ) );
             ++inoutMesh._skippedPrimitiveCount;
             return true;
         }
@@ -368,7 +368,7 @@ namespace sw::editor
         const PrimitiveAccessors accessors = findPrimitiveAccessors( primitive );
         if ( accessors._pPosition == nullptr || accessors._pPosition->count == 0 )
         {
-            SW_LOG_WARNING( "Skipping a primitive without positions" );
+            SW_LOG_WARNING_ID( "ModelImporter.SkippingPrimitiveWithoutPositions", "Skipping a primitive without positions" );
             ++inoutMesh._skippedPrimitiveCount;
             return true;
         }
@@ -413,7 +413,7 @@ namespace sw::editor
         cgltf_uint arrJoint[ModelImportUtil::kInfluenceCount]{};
         if ( cgltf_accessor_read_uint( pJoint, vertexIndex, arrJoint, ModelImportUtil::kInfluenceCount ) == 0 )
         {
-            SW_LOG_ERROR( "glTF JOINTS_0 of vertex %# could not be read", static_cast<uint32>( vertexIndex ) );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFJOINTSVertexCould", "glTF JOINTS_0 of vertex %# could not be read", static_cast<uint32>( vertexIndex ) );
             return false;
         }
         float32 weightSum = 0.0f;
@@ -649,8 +649,8 @@ namespace sw::editor
             const bool   bReduced    = 0 < indexCount && indexCount < sourceIndexCount;
             if ( bReduced == false )
             {
-                SW_LOG_ERROR( "glTF '%#': LOD %# of rule '%#' kept %# of %# indices - adjust triangle_ratio / max_error for this model", sourcePath, lodIndex + 1,
-                              rule._name.c_str(), indexCount, sourceIndexCount );
+                SW_LOG_ERROR_ID( "ModelImporter.GlTFLODRuleKept", "glTF '%#': LOD %# of rule '%#' kept %# of %# indices - adjust triangle_ratio / max_error for this model", sourcePath, lodIndex + 1,
+                                 rule._name.c_str(), indexCount, sourceIndexCount );
                 outListLevel.clear();
                 return false;
             }
@@ -662,7 +662,7 @@ namespace sw::editor
             level._listVertex     = std::move( expanded._listVertex );
             level._listSkinVertex = std::move( expanded._listSkinVertex );
             level._screenSize     = lodRule._screenSize;
-            SW_LOG_INFO( "glTF '%#': LOD %# has %# of %# triangles (error %#)", sourcePath, lodIndex + 1, indexCount / 3, sourceIndexCount / 3, resultError );
+            SW_LOG_INFO_ID( "ModelImporter.GlTFLODTrianglesError", "glTF '%#': LOD %# has %# of %# triangles (error %#)", sourcePath, lodIndex + 1, indexCount / 3, sourceIndexCount / 3, resultError );
             outListLevel.push_back( std::move( level ) );
         }
         return true;

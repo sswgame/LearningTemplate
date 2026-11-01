@@ -26,8 +26,8 @@ namespace sw
     void QuestObjectiveMarkerComponent::onBeginPlay()
     {
         if ( isConfigured() == false )
-            SW_LOG_ERROR( "Quest objective marker needs a quest, a kind and a target (quest '%#', kind '%#', target '%#') - hidden", _quest.c_str(), _kind.c_str(),
-                          _target.c_str() );
+            SW_LOG_ERROR_ID( "QuestObjectiveMarkerComponent.QuestObjectiveMarkerNeeds", "Quest objective marker needs a quest, a kind and a target (quest '%#', kind '%#', target '%#') - hidden", _quest.c_str(), _kind.c_str(),
+                             _target.c_str() );
         ObjectiveMarkerComponent::onBeginPlay();
     }
 
@@ -55,7 +55,7 @@ namespace sw
         if ( pQuestLog != nullptr )
             return isObjectiveOpen( *pQuestLog );
         if ( _bQuestLogMissingReported == SW_FALSE )
-            SW_LOG_ERROR( "Quest objective marker '%#' needs exactly one game state with a quest log in the scene (found %#) - hidden", getLabel().c_str(), sessionCount );
+            SW_LOG_ERROR_ID( "QuestObjectiveMarkerComponent.QuestObjectiveMarkerNeeds2", "Quest objective marker '%#' needs exactly one game state with a quest log in the scene (found %#) - hidden", getLabel().c_str(), sessionCount );
         _bQuestLogMissingReported = SW_TRUE;
         return false;
     }

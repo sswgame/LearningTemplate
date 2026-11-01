@@ -861,11 +861,11 @@ namespace sw
             if ( enumInfo._bIsBitFlag == SW_TRUE )
                 bNeedFlags = true;
             if ( enumInfo._invalidEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._invalidEnumerator ) == nullptr )
-                SW_LOG_WARNING( "ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator,
-                                enumInfo._fullyQualifiedName );
+                SW_LOG_WARNING_ID( "CodeGenerator.ENUMInvalidNotFound", "ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator,
+                                   enumInfo._fullyQualifiedName );
             if ( enumInfo._countEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._countEnumerator ) == nullptr )
-                SW_LOG_WARNING( "ENUM(Count=%#) not found on %#", enumInfo._countEnumerator,
-                                enumInfo._fullyQualifiedName );
+                SW_LOG_WARNING_ID( "CodeGenerator.ENUMCountNotFound", "ENUM(Count=%#) not found on %#", enumInfo._countEnumerator,
+                                   enumInfo._fullyQualifiedName );
         }
 
         if ( bNeedFlags )
@@ -896,12 +896,12 @@ namespace sw
                     //
                     // 여기서 코드젠을 실패시키면 중첩 열거형이 `ENUM( Flags )` 를 쓸 수 없다. `|` · `&` 를 쓰면 그 자리에서
                     // 컴파일이 막히므로 조용히 잘못될 여지는 없다 — 조치할 것이 없으니 Warning 이 아니라 Info 다.
-                    SW_LOG_INFO( "ENUM(Flags) is inside a class, so bit operators are not generated (the bit-flag marking in the registry is kept): %#", enumInfo._fullyQualifiedName );
+                    SW_LOG_INFO_ID( "CodeGenerator.ENUMFlagsInsideClass", "ENUM(Flags) is inside a class, so bit operators are not generated (the bit-flag marking in the registry is kept): %#", enumInfo._fullyQualifiedName );
                     continue;
                 }
                 if ( enumInfo._underlyingType.empty() )
                 {
-                    SW_LOG_ERROR( "Could not determine the underlying integer type of ENUM(Flags): %#", enumInfo._fullyQualifiedName );
+                    SW_LOG_ERROR_ID( "CodeGenerator.CouldNotDetermineUnderlying", "Could not determine the underlying integer type of ENUM(Flags): %#", enumInfo._fullyQualifiedName );
                     return false;
                 }
 

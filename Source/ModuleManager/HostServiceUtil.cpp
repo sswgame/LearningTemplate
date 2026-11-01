@@ -17,10 +17,10 @@ namespace sw
     {
         if ( startHostServices( outParts, listPart, start, stop ) == false )
         {
-            SW_LOG_ERROR( "Host services failed to start: %#", outParts.getError().c_str() );
+            SW_LOG_ERROR_ID( "HostServices.HostServicesFailedStart", "Host services failed to start: %#", outParts.getError().c_str() );
             return false;
         }
-        SW_LOG_INFO( "Host services up: %#", describeHostServiceOrder( outParts ).c_str() );
+        SW_LOG_INFO_ID( "HostServices.HostServicesUp", "Host services up: %#", describeHostServiceOrder( outParts ).c_str() );
         warnUnknownGlobalOverrides( commandLine );
         return true;
     }
@@ -31,7 +31,7 @@ namespace sw
         for ( const string& pendingName : listPendingName )
         {
             if ( engine::getSubsystem<GlobalVariableManager>().findVariable( pendingName ) == nullptr )
-                SW_LOG_WARNING( "%#: no such global variable. Ignored", pendingName.c_str() );
+                SW_LOG_WARNING_ID( "HostServices.NoSuchGlobalVariable", "%#: no such global variable. Ignored", pendingName.c_str() );
         }
     }
 } // namespace sw

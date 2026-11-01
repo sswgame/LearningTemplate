@@ -42,11 +42,11 @@ namespace sw
         const uint32 issueCount = validate( sourcePath );
         if ( issueCount > 0 )
         {
-            SW_LOG_ERROR( "'%#' has %# pipeline issue(s) - not loaded", sourcePath, issueCount );
+            SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineIssueNotLoaded", "'%#' has %# pipeline issue(s) - not loaded", sourcePath, issueCount );
             return false;
         }
-        SW_LOG_INFO( "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
-                     _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
+        SW_LOG_INFO_ID( "RenderPipelineAsset.LoadedModelAttachmentsPasses", "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
+                        _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
         return true;
     }
 
@@ -84,36 +84,36 @@ namespace sw
                     RHIFormat                   parsed{};
                     if ( engine::getSubsystem<TypeRegistry>().enumFromString( attachment._format, parsed ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] attachment '%#': unknown format '%#'", sourcePath, attachment._name, attachment._format );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentUnknownFormat", "[%#] attachment '%#': unknown format '%#'", sourcePath, attachment._name, attachment._format );
                         ++issueCount;
                     }
                     else if ( isRHIFormatRenderable( parsed ) == false )
                     {
                         // 이름은 맞지만 첨부가 될 수 없는 포맷(Unknown · 블록 압축 · R32G32B32_FLOAT) — 트랜지언트를 만들 때 백엔드가 실패한다.
-                        SW_LOG_ERROR( "[%#] attachment '%#': format '%#' cannot be a render target", sourcePath, attachment._name, attachment._format );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentFormatCannotRender", "[%#] attachment '%#': format '%#' cannot be a render target", sourcePath, attachment._name, attachment._format );
                         ++issueCount;
                     }
                     for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
                     {
                         if ( desc._listAttachment[otherIndex]._name == attachment._name )
                         {
-                            SW_LOG_ERROR( "[%#] attachment '%#' name is duplicated", sourcePath, attachment._name );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentNameDuplicated", "[%#] attachment '%#' name is duplicated", sourcePath, attachment._name );
                             ++issueCount;
                             break;
                         }
                     }
                     if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2 and 4 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentResolutionDivisorOnlyAccepted", "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2 and 4 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
                         ++issueCount;
                     }
                     // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.
                     RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
                     if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] attachment '%#': unknown role '%#' - must be one of SourceColor, SceneDepth, GBufferAlbedo, GBufferNormal, GBufferMaterial, "
-                                      "ShadowMap, AmbientOcclusion, BloomBright, SceneColorCopy, SceneDepthCopy",
-                                      sourcePath, attachment._name, attachment._role );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentUnknownRoleMust", "[%#] attachment '%#': unknown role '%#' - must be one of SourceColor, SceneDepth, GBufferAlbedo, GBufferNormal, GBufferMaterial, "
+                                                                                          "ShadowMap, AmbientOcclusion, BloomBright, SceneColorCopy, SceneDepthCopy",
+                                         sourcePath, attachment._name, attachment._role );
                         ++issueCount;
                     }
                 }
@@ -130,8 +130,8 @@ namespace sw
                     {
                         if ( desc._listPass[earlierIndex]._name == desc._listPass[passIndex]._name )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#' is declared twice - the name is the pass key, so the later one is dropped", sourcePath,
-                                          desc._listPass[passIndex]._name );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDeclaredTwiceName", "[%#] pass '%#' is declared twice - the name is the pass key, so the later one is dropped", sourcePath,
+                                             desc._listPass[passIndex]._name );
                             ++issueCount;
                             break;
                         }
@@ -177,15 +177,15 @@ namespace sw
                 uint32 issueCount{ 0 };
                 if ( isPipelinePassType( pass._resolvedType ) == false )
                 {
-                    SW_LOG_ERROR( "[%#] pass '%#': unknown type '%#' - not a RenderPassType spelling",
-                                  sourcePath, pass._name, pass._type );
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassUnknownTypeNot", "[%#] pass '%#': unknown type '%#' - not a RenderPassType spelling",
+                                     sourcePath, pass._name, pass._type );
                     ++issueCount;
                 }
                 for ( const string& inputName : pass._listInput )
                 {
                     if ( findAttachment( desc, inputName ) == nullptr )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': input '%#' is not in _attachments", sourcePath, pass._name, inputName );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassInputNotAttachments", "[%#] pass '%#': input '%#' is not in _attachments", sourcePath, pass._name, inputName );
                         ++issueCount;
                     }
                 }
@@ -197,14 +197,14 @@ namespace sw
                     {
                         if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#': only output passes (Present, Canvas) can write the Swapchain (type '%#')", sourcePath, pass._name, pass._type );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOnlyOutputPasses", "[%#] pass '%#': only output passes (Present, Canvas) can write the Swapchain (type '%#')", sourcePath, pass._name, pass._type );
                             ++issueCount;
                         }
                         continue;
                     }
                     if ( findAttachment( desc, outputName ) == nullptr )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': output '%#' is not in _attachments", sourcePath, pass._name, outputName );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputNotAttachments", "[%#] pass '%#': output '%#' is not in _attachments", sourcePath, pass._name, outputName );
                         ++issueCount;
                     }
                 }
@@ -223,14 +223,14 @@ namespace sw
                     const RenderPassAttachment* pDepthAttachment = findAttachment( desc, pass._depthAttachment );
                     if ( pDepthAttachment == nullptr )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': depth attachment '%#' is not in _attachments",
-                                      sourcePath, pass._name, pass._depthAttachment );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthAttachmentNot", "[%#] pass '%#': depth attachment '%#' is not in _attachments",
+                                         sourcePath, pass._name, pass._depthAttachment );
                         ++issueCount;
                     }
                     else if ( isDepthAttachment( pDepthAttachment ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': depth attachment '%#' has format '%#' - it must be a depth format",
-                                      sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthAttachmentFormat", "[%#] pass '%#': depth attachment '%#' has format '%#' - it must be a depth format",
+                                         sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
                         ++issueCount;
                     }
                     return issueCount;
@@ -239,9 +239,9 @@ namespace sw
                 {
                     if ( isDepthAttachment( findAttachment( desc, outputName ) ) == false )
                         continue;
-                    SW_LOG_ERROR( "[%#] pass '%#': depth attachment '%#' is declared as an output but _depthAttachment is empty "
-                                  "- as is, it draws without depth",
-                                  sourcePath, pass._name, outputName );
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthAttachmentDeclared", "[%#] pass '%#': depth attachment '%#' is declared as an output but _depthAttachment is empty "
+                                                                                        "- as is, it draws without depth",
+                                     sourcePath, pass._name, outputName );
                     ++issueCount;
                 }
                 return issueCount;
@@ -268,7 +268,7 @@ namespace sw
                 {
                     if ( desc._listExtensionShader[shaderIndex].empty() )
                     {
-                        SW_LOG_ERROR( "[%#] _listExtensionShader[%#] is empty", sourcePath, static_cast<uint32>( shaderIndex ) );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.ListExtensionShaderEmpty", "[%#] _listExtensionShader[%#] is empty", sourcePath, static_cast<uint32>( shaderIndex ) );
                         ++issueCount;
                         continue;
                     }
@@ -276,7 +276,7 @@ namespace sw
                     {
                         if ( desc._listExtensionShader[earlierIndex] == desc._listExtensionShader[shaderIndex] )
                         {
-                            SW_LOG_ERROR( "[%#] _listExtensionShader lists '%#' twice", sourcePath, desc._listExtensionShader[shaderIndex] );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.ListExtensionShaderListsTwice", "[%#] _listExtensionShader lists '%#' twice", sourcePath, desc._listExtensionShader[shaderIndex] );
                             ++issueCount;
                             break;
                         }
@@ -303,8 +303,8 @@ namespace sw
                     }
                     if ( colorCount > kMaxColorAttachments )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': %# color outputs exceed the limit (%#)",
-                                      sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassColorOutputsExceed", "[%#] pass '%#': %# color outputs exceed the limit (%#)",
+                                         sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
                         ++issueCount;
                     }
                 }
@@ -333,8 +333,8 @@ namespace sw
                         }
                         if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor )
                             return;
-                        SW_LOG_ERROR( "[%#] pass '%#': outputs '%#' (divisor %#) and '%#' (divisor %#) differ in size - all outputs of one pass must have the same size",
-                                      sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputsDivisorDivisor", "[%#] pass '%#': outputs '%#' (divisor %#) and '%#' (divisor %#) differ in size - all outputs of one pass must have the same size",
+                                         sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
                         ++issueCount;
                     };
                     for ( const string& outputName : pass._listOutput )
@@ -372,8 +372,8 @@ namespace sw
                                                          pass._listResolvedColorOutput.size() == expectedGBufferColorCount;
                     if ( bSkipGBufferOutputCheck )
                         continue;
-                    SW_LOG_ERROR( "[%#] pass '%#' (%#): %# color outputs - the G-buffer writes albedo, normal and material (%#) in one MRT pass",
-                                  sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassColorOutputsG", "[%#] pass '%#' (%#): %# color outputs - the G-buffer writes albedo, normal and material (%#) in one MRT pass",
+                                     sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
                     ++issueCount;
                 }
                 return issueCount;
@@ -400,14 +400,14 @@ namespace sw
                             ++sourceColorCount;
                         if ( pContract->reads( role ) )
                             continue;
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): input '%#' (role %#) is not read by this pass type - it is declared but never bound",
-                                      sourcePath, pass._name, pass._type, input._attachment.c_str(), getRenderPassInputRoleName( role ) );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassInputRoleNot", "[%#] pass '%#' (%#): input '%#' (role %#) is not read by this pass type - it is declared but never bound",
+                                         sourcePath, pass._name, pass._type, input._attachment.c_str(), getRenderPassInputRoleName( role ) );
                         ++issueCount;
                     }
                     if ( sourceColorCount > 1 )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): %# color inputs to process (SourceColor role) - the shader reads only one",
-                                      sourcePath, pass._name, pass._type, sourceColorCount );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassColorInputsProcess", "[%#] pass '%#' (%#): %# color inputs to process (SourceColor role) - the shader reads only one",
+                                         sourcePath, pass._name, pass._type, sourceColorCount );
                         ++issueCount;
                     }
                     for ( uint32 requiredIndex = 0; requiredIndex < pContract->_requiredCount; ++requiredIndex )
@@ -417,8 +417,8 @@ namespace sw
                                          { return static_cast<RenderPassInputRole>( input._role ) == required; } );
                         if ( bFound )
                             continue;
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): required input (role %#) is not declared - the shader reads kInvalidIndex",
-                                      sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassRequiredInputRole", "[%#] pass '%#' (%#): required input (role %#) is not declared - the shader reads kInvalidIndex",
+                                         sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
                         ++issueCount;
                     }
                 }
@@ -441,7 +441,7 @@ namespace sw
                     {
                         if ( bWritesSwapchain == false )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#' (Canvas): the output is not the Swapchain - Canvas draws to the main output", sourcePath, pass._name );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassCanvasOutputNot", "[%#] pass '%#' (Canvas): the output is not the Swapchain - Canvas draws to the main output", sourcePath, pass._name );
                             ++issueCount;
                         }
                         pCanvas = &pass;
@@ -449,8 +449,8 @@ namespace sw
                     }
                     if ( pCanvas != nullptr && bWritesSwapchain )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': writes the Swapchain after Canvas '%#' - Canvas must be the last pass that writes the Swapchain (the UI would be covered)",
-                                      sourcePath, pass._name, pCanvas->_name );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassWritesSwapchainAfter", "[%#] pass '%#': writes the Swapchain after Canvas '%#' - Canvas must be the last pass that writes the Swapchain (the UI would be covered)",
+                                         sourcePath, pass._name, pCanvas->_name );
                         ++issueCount;
                     }
                 }
@@ -458,7 +458,7 @@ namespace sw
                 {
                     if ( pass._resolvedType != RenderPassType::Sky || pass._depthAttachment.empty() == false )
                         continue;
-                    SW_LOG_ERROR( "[%#] pass '%#' (Sky): _depthAttachment is empty - the sky paints only where nothing was drawn, using the depth test", sourcePath, pass._name );
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassSkyDepthAttachmentEmpty", "[%#] pass '%#' (Sky): _depthAttachment is empty - the sky paints only where nothing was drawn, using the depth test", sourcePath, pass._name );
                     ++issueCount;
                 }
                 return issueCount;
@@ -476,12 +476,12 @@ namespace sw
                     const bool bSkippable = getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess );
                     if ( pass._minPostQuality < 0 )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': _minPostQuality %# - must be 0 or greater", sourcePath, pass._name, pass._minPostQuality );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMinPostQualityMustGreater", "[%#] pass '%#': _minPostQuality %# - must be 0 or greater", sourcePath, pass._name, pass._minPostQuality );
                         ++issueCount;
                     }
                     else if ( pass._minPostQuality > 0 && bSkippable == false )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): _minPostQuality is accepted only for types whose post-processing can be skipped (SSAO, Bloom, Outline, MotionBlur)", sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMinPostQualityAcceptedOnly", "[%#] pass '%#' (%#): _minPostQuality is accepted only for types whose post-processing can be skipped (SSAO, Bloom, Outline, MotionBlur)", sourcePath, pass._name, pass._type );
                         ++issueCount;
                     }
                 }
@@ -517,8 +517,8 @@ namespace sw
                         continue; // 컬러 출력이 없으면 3-1 · 3-2 가 이미 알렸다(이 타입들은 모두 kDrawsDeclaredColor 다)
                     if ( pass._listResolvedColorOutput.size() != 1 )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): needs one color output - when the effect is off the output names the source",
-                                      sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNeedsOneColor", "[%#] pass '%#' (%#): needs one color output - when the effect is off the output names the source",
+                                         sourcePath, pass._name, pass._type );
                         ++issueCount;
                         continue;
                     }
@@ -529,8 +529,8 @@ namespace sw
                     const bool                  bSameShape = pOutput != nullptr && pSourceAtt != nullptr && pOutput->_format == pSourceAtt->_format && pOutput->_resolutionDivisor == pSourceAtt->_resolutionDivisor;
                     if ( bSameShape == false )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): output '%#' and source '%#' differ in format or divisor - when the effect is off the output names the source",
-                                      sourcePath, pass._name, pass._type, outputName, sourceName );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputSourceDiffer", "[%#] pass '%#' (%#): output '%#' and source '%#' differ in format or divisor - when the effect is off the output names the source",
+                                         sourcePath, pass._name, pass._type, outputName, sourceName );
                         ++issueCount;
                     }
                     for ( size_t otherIndex = 0; otherIndex < desc._listPass.size(); ++otherIndex )
@@ -538,14 +538,14 @@ namespace sw
                         const RenderGraphPassDesc& other = desc._listPass[otherIndex];
                         if ( otherIndex != passIndex && VectorUtil::contains( other._listOutput, outputName ) )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#' also writes '%#', the output of '%#' (%#) - that output may name the source texture", sourcePath, other._name, outputName,
-                                          pass._name, pass._type );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassAlsoWritesOutput", "[%#] pass '%#' also writes '%#', the output of '%#' (%#) - that output may name the source texture", sourcePath, other._name, outputName,
+                                             pass._name, pass._type );
                             ++issueCount;
                         }
                         if ( otherIndex > passIndex && VectorUtil::contains( other._listOutput, sourceName ) )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#' writes '%#' after '%#' (%#) reads it - readers of '%#' would see the later version when the effect is off", sourcePath,
-                                          other._name, sourceName, pass._name, pass._type, outputName );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassWritesAfterReads", "[%#] pass '%#' writes '%#' after '%#' (%#) reads it - readers of '%#' would see the later version when the effect is off", sourcePath,
+                                             other._name, sourceName, pass._name, pass._type, outputName );
                             ++issueCount;
                         }
                     }
@@ -568,7 +568,7 @@ namespace sw
                         continue;
                     if ( pass._listResolvedColorOutput.size() != 1 )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): needs one color output - when the effect is off that output is absent", sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNeedsOneColor2", "[%#] pass '%#' (%#): needs one color output - when the effect is off that output is absent", sourcePath, pass._name, pass._type );
                         ++issueCount;
                         continue;
                     }
@@ -581,8 +581,8 @@ namespace sw
                         const RenderGraphPassDesc& other = desc._listPass[otherIndex];
                         if ( VectorUtil::contains( other._listOutput, outputName ) )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#' also writes '%#', the output of '%#' (%#) - that output may be absent", sourcePath, other._name, outputName, pass._name,
-                                          pass._type );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassAlsoWritesOutput2", "[%#] pass '%#' also writes '%#', the output of '%#' (%#) - that output may be absent", sourcePath, other._name, outputName, pass._name,
+                                             pass._type );
                             ++issueCount;
                         }
                         const RenderPassInputSignature* pContract = findRenderPassInputSignature( other._resolvedType );
@@ -599,8 +599,8 @@ namespace sw
                             const bool bOptionalRead = pContract != nullptr && pContract->reads( role ) && bRequired == false;
                             if ( bOptionalRead )
                                 continue;
-                            SW_LOG_ERROR( "[%#] pass '%#' reads '%#' (role %#) not as an optional input - when '%#' (%#) is off that input is absent", sourcePath, other._name,
-                                          outputName, getRenderPassInputRoleName( role ), pass._name, pass._type );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassReadsRoleNot", "[%#] pass '%#' reads '%#' (role %#) not as an optional input - when '%#' (%#) is off that input is absent", sourcePath, other._name,
+                                             outputName, getRenderPassInputRoleName( role ), pass._name, pass._type );
                             ++issueCount;
                         }
                     }
@@ -627,8 +627,8 @@ namespace sw
         issueCount += Internal::checkBypassPasses( _desc, sourcePath );
         issueCount += Internal::checkOmittedPasses( _desc, sourcePath );
         if ( issueCount > 0 )
-            SW_LOG_ERROR( "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
-                          sourcePath, issueCount );
+            SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
+                             sourcePath, issueCount );
         return issueCount;
     }
 
@@ -637,7 +637,7 @@ namespace sw
         if ( ReflectedXMLFile::saveDesc( absPath, _desc ) == false )
             return false;
 
-        SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, absPath.str() );
+        SW_LOG_INFO_ID( "RenderPipelineAsset.Saved", "Saved '%#' -> %#", _desc._name, absPath.str() );
         return true;
     }
 
@@ -657,7 +657,7 @@ namespace sw
         if ( pResource == nullptr )
             return;
         if ( pResource->loadFromXMLFile( AssetID{ args.get<string>( 1 ) } ) == false )
-            SW_LOG_WARNING( "Could not load '%#'", args.get<string>( 1 ) );
+            SW_LOG_WARNING_ID( "RenderPipelineAsset.CouldNotLoad", "Could not load '%#'", args.get<string>( 1 ) );
     }
 
 } // namespace sw

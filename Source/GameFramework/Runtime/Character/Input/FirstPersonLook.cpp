@@ -48,7 +48,7 @@ namespace sw
     {
         if ( maxPitch < 0.0f || maxPitch > MathUtil::kPi * 0.5f )
         {
-            SW_LOG_ERROR( "FirstPersonLook: refused max pitch %# - it must be within [0, pi/2]", maxPitch );
+            SW_LOG_ERROR_ID( "FirstPersonLook.FirstPersonLookRefusedMaxPitch", "FirstPersonLook: refused max pitch %# - it must be within [0, pi/2]", maxPitch );
             return false;
         }
         _maxPitch = maxPitch;

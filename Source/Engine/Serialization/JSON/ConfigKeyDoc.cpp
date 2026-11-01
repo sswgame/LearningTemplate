@@ -35,7 +35,7 @@ namespace sw
                     known += ", ";
                 known += pArrKeyDoc[keyIndex]._pKey;
             }
-            SW_LOG_ERROR( "%#: unknown key '%#' (known: %#)", context, memberName.c_str(), known.c_str() );
+            SW_LOG_ERROR_ID( "ConfigKeyDoc.UnknownKeyKnown", "%#: unknown key '%#' (known: %#)", context, memberName.c_str(), known.c_str() );
             if ( pOutUnknownKey != nullptr && bAllKnown )
                 *pOutUnknownKey = memberName;
             bAllKnown = false;

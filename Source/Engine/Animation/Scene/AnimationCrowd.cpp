@@ -59,7 +59,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "AnimationCrowdSettings", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Animation crowd settings '%#': malformed XML (expected an <AnimationCrowdSettings> root)", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationCrowd.AnimationCrowdSettingsMalformed", "Animation crowd settings '%#': malformed XML (expected an <AnimationCrowdSettings> root)", sourceLabel );
             return false;
         }
         if ( parseRoot( root, sourceLabel ) )
@@ -74,7 +74,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Animation crowd settings '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "AnimationCrowd.AnimationCrowdSettingsCould", "Animation crowd settings '%#' could not be read", path );
             *this = AnimationCrowdSettings{};
             return false;
         }
@@ -93,8 +93,8 @@ namespace sw
         const bool                   bInvalidCrowdSettings = bAllRead == false || *variations < 1 || *keep < 0.0f || *frameRate <= 0.0f;
         if ( bInvalidCrowdSettings )
         {
-            SW_LOG_ERROR( "Animation crowd settings '%#': variations_per_clip (>= 1), bucket_keep_seconds (>= 0) and vertex_animation_frames_per_second (> 0) are required",
-                          sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationCrowd.AnimationCrowdSettingsVariations", "Animation crowd settings '%#': variations_per_clip (>= 1), bucket_keep_seconds (>= 0) and vertex_animation_frames_per_second (> 0) are required",
+                             sourceLabel );
             return false;
         }
         _variationsPerClip              = *variations;
@@ -436,8 +436,8 @@ namespace sw
             // 정점 순서가 원본과 같아 구간도 그대로다(구간 컴포넌트가 VAT 메시의 같은 범위를 그린다).
             (void)entry._mesh->setSections( sourceMesh->getSections() );
             entry._mesh->setVertexAnimation( std::move( animation ) );
-            SW_LOG_INFO( "Vertex animation '%#' ready (%# frames x %# vertices)", clip.getName().c_str(), entry._mesh->findVertexAnimation()->_frameCount,
-                         entry._mesh->getVertexCount() );
+            SW_LOG_INFO_ID( "AnimationCrowd.VertexAnimationReadyFrames", "Vertex animation '%#' ready (%# frames x %# vertices)", clip.getName().c_str(), entry._mesh->findVertexAnimation()->_frameCount,
+                            entry._mesh->getVertexCount() );
         }
         _listVertexAnimation.push_back( entry );
         return entry._mesh;

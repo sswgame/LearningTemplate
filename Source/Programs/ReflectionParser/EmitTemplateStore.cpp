@@ -49,7 +49,7 @@ namespace sw
 
         if ( FileUtil::isDirectory( absDir ) == false )
         {
-            SW_LOG_ERROR( "Not a directory: %#", absDir );
+            SW_LOG_ERROR_ID( "EmitTemplateStore.NotDirectory", "Not a directory: %#", absDir );
             return false;
         }
 
@@ -57,7 +57,7 @@ namespace sw
         if ( FileUtil::collectFiles( absDir, extension, listFile, false ) == false )
         {
             // 일부 템플릿만 읽으면 빠진 템플릿의 출력이 조용히 비어 나온다 — 읽지 않는다(경로는 collectFiles 가 알린다).
-            SW_LOG_ERROR( "Emit templates under '%#' could not all be listed", absDir );
+            SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplatesUnderCould", "Emit templates under '%#' could not all be listed", absDir );
             return false;
         }
 
@@ -68,7 +68,7 @@ namespace sw
             string content;
             if ( FileUtil::readTextFile( filePath, content ) == false )
             {
-                SW_LOG_ERROR( "Emit template '%#' could not be read", filePath );
+                SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateCouldNot", "Emit template '%#' could not be read", filePath );
                 return false;
             }
 
@@ -81,7 +81,7 @@ namespace sw
             // 모르는 이름은 철자가 틀린 골격이다 - 쓰이지 않고 남아 고친 줄 알게 한다.
             if ( index == std::size( kArrEmitTemplateName ) )
             {
-                SW_LOG_ERROR( "Emit template '%#' is not a known template (EmitTemplate) - rename or remove it", filePath );
+                SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateNotKnown", "Emit template '%#' is not a known template (EmitTemplate) - rename or remove it", filePath );
                 return false;
             }
             _arrTemplate[index] = std::move( content );
@@ -93,13 +93,13 @@ namespace sw
         {
             if ( arrLoaded[index] )
                 continue;
-            SW_LOG_ERROR( "Emit template '%#%#' is missing under '%#'", kArrEmitTemplateName[index], extension, absDir );
+            SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateMissingUnder", "Emit template '%#%#' is missing under '%#'", kArrEmitTemplateName[index], extension, absDir );
             bAllLoaded = false;
         }
         if ( bAllLoaded == false )
             return false;
 
-        SW_LOG_TRACE( "Loaded %# templates from %#", static_cast<uint32>( listFile.size() ), absDir );
+        SW_LOG_TRACE_ID( "EmitTemplateStore.LoadedTemplates", "Loaded %# templates from %#", static_cast<uint32>( listFile.size() ), absDir );
         return true;
     }
 

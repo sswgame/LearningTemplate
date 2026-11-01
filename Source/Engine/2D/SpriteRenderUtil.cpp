@@ -88,7 +88,7 @@ namespace sw
         const Render2DSettings& settings = engine::getSubsystem<Render2DSettings>();
         uint32                  sortKey  = 0;
         if ( settings.resolveSortKey( layerName, orderInLayer, sortKey ) == false )
-            SW_LOG_ERROR( "'%#': unknown sorting layer '%#' - drawn in 'Default' (layers are listed in render2d.xml)", ownerLabel, layerName.c_str() );
+            SW_LOG_ERROR_ID( "SpriteRenderUtil.UnknownSortingLayerDrawn", "'%#': unknown sorting layer '%#' - drawn in 'Default' (layers are listed in render2d.xml)", ownerLabel, layerName.c_str() );
         return sortKey;
     }
 } // namespace sw

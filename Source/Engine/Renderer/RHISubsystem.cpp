@@ -58,7 +58,7 @@ namespace sw
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         if ( pWindowHost == nullptr )
         {
-            SW_LOG_ERROR( "RHI needs the MainWindow subsystem (the main window owner) in the engine scope" );
+            SW_LOG_ERROR_ID( "RHI.RHINeedsMainWindowSubsystem", "RHI needs the MainWindow subsystem (the main window owner) in the engine scope" );
             return SubsystemInitResult::Failed;
         }
         if ( pWindowHost->getWindow() == nullptr )
@@ -80,7 +80,7 @@ namespace sw
                     (void)defaultWindow->setDisplayMode( display._mode, windowWidth, windowHeight );
                 // 소유권은 주 창 서브시스템이 갖는다(엔진 종료 때 RHI 가 내려간 뒤 파괴한다). 이미 주 창이 있어 실패하면 defaultWindow 가 여기서 파괴된다.
                 if ( pWindowHost->adopt( defaultWindow ) == false )
-                    SW_LOG_ERROR( "The main window owner refused the default window" );
+                    SW_LOG_ERROR_ID( "RHI.MainWindowOwnerRefused", "The main window owner refused the default window" );
             }
         }
 

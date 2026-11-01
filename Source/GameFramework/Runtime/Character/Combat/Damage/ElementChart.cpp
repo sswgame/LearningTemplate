@@ -44,7 +44,7 @@ namespace sw
     {
         if ( multiplier < 0.0f )
         {
-            SW_LOG_ERROR( "ElementChart: refused multiplier %# for %# -> %# - it must not be negative", multiplier, attack.c_str(), defend.c_str() );
+            SW_LOG_ERROR_ID( "ElementChart.ElementChartRefusedMultiplierMust", "ElementChart: refused multiplier %# for %# -> %# - it must not be negative", multiplier, attack.c_str(), defend.c_str() );
             return false;
         }
         _mapRule[attack][defend] = multiplier;
@@ -103,7 +103,7 @@ namespace sw
         }
         if ( _listElement.empty() )
         {
-            SW_LOG_WARNING( "%#: no <Element> entries", sourceName );
+            SW_LOG_WARNING_ID( "ElementChart.NoElementEntries", "%#: no <Element> entries", sourceName );
             return 0;
         }
 
@@ -113,14 +113,14 @@ namespace sw
             const hashed_string defend( node.getAttributeText( "defend" ) );
             if ( hasElement( attack ) == false || hasElement( defend ) == false )
             {
-                SW_LOG_WARNING( "%#: rule '%#' -> '%#' names an undeclared element - skipped", sourceName, attack.c_str(), defend.c_str() );
+                SW_LOG_WARNING_ID( "ElementChart.RuleNamesUndeclaredElement", "%#: rule '%#' -> '%#' names an undeclared element - skipped", sourceName, attack.c_str(), defend.c_str() );
                 continue;
             }
             // 규칙 줄은 배율을 적으려고 있는 것이다 — 빠진 배율을 1 로 두지 않는다.
             const std::optional<float32> multiplier = node.readRequiredAttribute<float32>( "multiplier" );
             if ( multiplier.has_value() )
                 if ( setMultiplier( attack, defend, *multiplier ) == false )
-                    SW_LOG_WARNING( "%#: rule '%#' -> '%#' has a negative multiplier - skipped", sourceName, attack.c_str(), defend.c_str() );
+                    SW_LOG_WARNING_ID( "ElementChart.RuleNegativeMultiplierSkipped", "%#: rule '%#' -> '%#' has a negative multiplier - skipped", sourceName, attack.c_str(), defend.c_str() );
         }
 
         for ( XMLNode node = root.findChild( "Status" ); node; node = node.findNextSibling( "Status" ) )
@@ -136,7 +136,7 @@ namespace sw
             const bool bEntryValid = hasElement( entry._element ) && entry._status.empty() == false && bChanceValid;
             if ( bEntryValid == false )
             {
-                SW_LOG_WARNING( "%#: status '%#' on '%#' is invalid - skipped", sourceName, entry._status.c_str(), entry._element.c_str() );
+                SW_LOG_WARNING_ID( "ElementChart.StatusInvalidSkipped", "%#: status '%#' on '%#' is invalid - skipped", sourceName, entry._status.c_str(), entry._element.c_str() );
                 continue;
             }
             addStatusChance( entry );

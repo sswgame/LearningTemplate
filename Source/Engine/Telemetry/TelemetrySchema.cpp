@@ -35,7 +35,7 @@ namespace sw
                 const bool bValid = StringUtil::parseUint64( *text, bytes ) && bytes >= kMinFileBytes;
                 if ( bValid == false )
                 {
-                    SW_LOG_ERROR( "%#: <Pipeline maxTotalBytes=\"%#\"> must be a byte count of at least %#", sourceName, *text, kMinFileBytes );
+                    SW_LOG_ERROR_ID( "TelemetrySchema.PipelineMaxTotalBytesMustByte", "%#: <Pipeline maxTotalBytes=\"%#\"> must be a byte count of at least %#", sourceName, *text, kMinFileBytes );
                     return false;
                 }
                 inoutBytes = bytes;
@@ -109,7 +109,7 @@ namespace sw
         string            sourceName( path );
         if ( doc.loadResource( assetID, &sourceName ) == false )
         {
-            SW_LOG_WARNING( "Failed to read telemetry schema %#", path );
+            SW_LOG_WARNING_ID( "TelemetrySchema.FailedReadTelemetrySchema", "Failed to read telemetry schema %#", path );
             return false;
         }
         return loadRoot( doc.getRoot( TelemetrySchemaInternal::kRootName ), sourceName );
@@ -120,7 +120,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_WARNING( "Failed to parse telemetry schema %#", sourceName );
+            SW_LOG_WARNING_ID( "TelemetrySchema.FailedParseTelemetrySchema", "Failed to parse telemetry schema %#", sourceName );
             return false;
         }
         return loadRoot( doc.getRoot( TelemetrySchemaInternal::kRootName ), sourceName );
@@ -143,7 +143,7 @@ namespace sw
         using Internal = TelemetrySchemaInternal;
         if ( root.isValid() == false )
         {
-            SW_LOG_WARNING( "%#: missing <%#> root", sourceName, Internal::kRootName );
+            SW_LOG_WARNING_ID( "TelemetrySchema.MissingRoot", "%#: missing <%#> root", sourceName, Internal::kRootName );
             return false;
         }
         // 파일 하나는 통째로 받거나 통째로 버린다 — 반쯤 읽힌 스키마는 어느 사건이 빠졌는지 보이지 않는다.
@@ -174,7 +174,7 @@ namespace sw
             bValid          = node.readOptionalAttributeInRange( "sample", 0.0f, 1.0f, event._sampleRate ) && bValid;
             if ( event._id.empty() )
             {
-                SW_LOG_WARNING( "%#: <Event> without an id", sourceName );
+                SW_LOG_WARNING_ID( "TelemetrySchema.EventWithoutId", "%#: <Event> without an id", sourceName );
                 bValid = false;
                 continue;
             }

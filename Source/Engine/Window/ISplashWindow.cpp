@@ -155,10 +155,10 @@ namespace sw
         const size_t requiredBytes = static_cast<size_t>( _splashData._width ) * static_cast<size_t>( _splashData._height ) * 4u;
         if ( _splashData._bCompressed != SW_FALSE || _splashData._bytes.size() < requiredBytes )
         {
-            SW_LOG_ERROR(
-                "Splash image must be uncompressed 32bpp — got %#x%#, %# bytes (need %#), compressed=%#. Skipping splash.",
-                _splashData._width, _splashData._height, _splashData._bytes.size(), requiredBytes,
-                static_cast<uint32>( _splashData._bCompressed ) );
+            SW_LOG_ERROR_ID( "ISplashWindow.SplashImageMustUncompressed",
+                             "Splash image must be uncompressed 32bpp — got %#x%#, %# bytes (need %#), compressed=%#. Skipping splash.",
+                             _splashData._width, _splashData._height, _splashData._bytes.size(), requiredBytes,
+                             static_cast<uint32>( _splashData._bCompressed ) );
             _splashData = DDSImageData{};
             return false;
         }

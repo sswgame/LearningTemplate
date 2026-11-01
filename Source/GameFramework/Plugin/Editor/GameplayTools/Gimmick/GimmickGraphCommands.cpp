@@ -19,7 +19,7 @@ namespace sw::editor
         {
             EditorContext& editorContext = editor::getSubsystem<EditorContext>();
             if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<GimmickGraphPanel>( true ) )
-                SW_LOG_INFO( "Gimmick Graph panel opened" );
+                SW_LOG_INFO_ID( "GimmickGraphCommands.GimmickGraphPanelOpened", "Gimmick Graph panel opened" );
         }
     } // namespace
 

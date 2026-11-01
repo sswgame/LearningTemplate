@@ -1339,7 +1339,7 @@ namespace sw
         if ( bReadOk == false )
         {
             if ( completion.isCancelled() == false ) // 종료 때문에 취소된 읽기는 경고하지 않는다
-                SW_LOG_WARNING( "Leaderboard: stats of account %# could not be read - matchmaking reports RatingUnavailable until it reconnects", accountID );
+                SW_LOG_WARNING_ID( "LeaderboardService.LeaderboardStatsAccountCould", "Leaderboard: stats of account %# could not be read - matchmaking reports RatingUnavailable until it reconnects", accountID );
             return;
         }
         for ( LeaderboardStat& stat : listStat )

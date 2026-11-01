@@ -294,8 +294,8 @@ namespace sw
         if ( _writer.getByteCount() > NetConnection::kMaxReliableMessageSize )
         {
             // 다시 만들어도 같은 결과이므로 큐에 되돌려 놓지 않는다. 이 오브젝트는 늦은 참가와 복구를 받지 못하며, 해시 비교가 계속 어긋남을 알린다.
-            SW_LOG_ERROR( "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
-                          entry._netID, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
+            SW_LOG_ERROR_ID( "DestructionReplication.DestructionReplicationSnapshotObjectBytes", "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
+                             entry._netID, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
             ++_stats._sendRejectedCount;
             return true;
         }
@@ -363,9 +363,9 @@ namespace sw
                 {
                     // 이 서버에서 처음 넘는 순간만 알린다. 넘은 덩어리는 틱마다 다시 걸리므로 매번 알리면 로그가 넘친다. 그 뒤는 `_outOfRangePoseCount` 가 센다.
                     if ( _stats._outOfRangePoseCount == 0 )
-                        SW_LOG_WARNING( "DestructionReplication: chunk %# of object %# moved outside the position range +-%# m - its moving pose is not sent until it rests "
-                                        "(raise DestructionReplicationConfig::_positionRange)",
-                                        pose._groupID, entry._netID, _settings._positionRange );
+                        SW_LOG_WARNING_ID( "DestructionReplication.DestructionReplicationChunkObjectMoved", "DestructionReplication: chunk %# of object %# moved outside the position range +-%# m - its moving pose is not sent until it rests "
+                                                                                                            "(raise DestructionReplicationConfig::_positionRange)",
+                                           pose._groupID, entry._netID, _settings._positionRange );
                     ++_stats._outOfRangePoseCount;
                 }
             }

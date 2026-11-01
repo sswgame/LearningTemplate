@@ -452,8 +452,8 @@ namespace sw
         _listTrace.push( event );
         if ( gv_aiDirectorTrace != 0 )
         {
-            SW_LOG_INFO( "[AIDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str(),
-                         event._source.c_str(), event._count, event._scale );
+            SW_LOG_INFO_ID( "AIDirector.TICountScale", "[AIDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str(),
+                            event._source.c_str(), event._count, event._scale );
         }
     }
 

@@ -60,7 +60,7 @@ namespace sw::editor
             const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
             if ( pWindowHost == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] watch Editor.WindowTitleDirty: MainWindowSubsystem is missing" );
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorWindowTitleDirtyMainWindowSubsystem", "[Scenario] watch Editor.WindowTitleDirty: MainWindowSubsystem is missing" );
                 return false;
             }
             const IWindow* pWindow = pWindowHost->getWindow();
@@ -117,7 +117,7 @@ namespace sw::editor
             const CommandStack* pStack = editor::findSubsystem<CommandStack>();
             if ( pStack == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] watch Editor.UndoCount: CommandStack is missing" );
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorUndoCountCommandStack", "[Scenario] watch Editor.UndoCount: CommandStack is missing" );
                 return false;
             }
             outValue = static_cast<float64>( pStack->getCommandCount() );
@@ -129,7 +129,7 @@ namespace sw::editor
             const CommandStack* pStack = editor::findSubsystem<CommandStack>();
             if ( pStack == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] watch Editor.UndoIndex: CommandStack is missing" );
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorUndoIndexCommandStack", "[Scenario] watch Editor.UndoIndex: CommandStack is missing" );
                 return false;
             }
             outValue = static_cast<float64>( pStack->getCurrentIndex() );
@@ -142,7 +142,7 @@ namespace sw::editor
             const CommandStack* pMainStack = editor::findSubsystem<CommandStack>();
             if ( pMainStack == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] watch Editor.ToolFocusIsMain: CommandStack is missing" );
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorToolFocusIsMainCommandStack", "[Scenario] watch Editor.ToolFocusIsMain: CommandStack is missing" );
                 return false;
             }
             if ( editor::getActiveScene() == nullptr )
@@ -193,7 +193,7 @@ namespace sw::editor
                 hash = HashUtil::combine( hash, HashUtil::computeStringHash64( entry.first, false ) );
                 hash = HashUtil::combine( hash, entry.second );
                 if ( bDump )
-                    SW_LOG_INFO( "[Scenario] scene hash item %# %#", entry.first.c_str(), formatHash( entry.second ).c_str() );
+                    SW_LOG_INFO_ID( "EditorWorkspaceWatches.SceneHashItem", "[Scenario] scene hash item %# %#", entry.first.c_str(), formatHash( entry.second ).c_str() );
             }
             outHash = hash;
             return true;
@@ -356,7 +356,7 @@ namespace sw::editor
             const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
             if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] watch ScenePreviewRenderers: FrameRenderer is missing" );
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchScenePreviewRenderersFrameRendererMissing", "[Scenario] watch ScenePreviewRenderers: FrameRenderer is missing" );
                 return false;
             }
             outValue = static_cast<float64>( pRenderer->getScenePreviewRendererCount() );

@@ -144,7 +144,7 @@ namespace sw
         SW_ASSERT( def != nullptr );
         if ( snapshot._sessionID == 0 )
         {
-            SW_LOG_ERROR( "Paired animation snapshot has no session id" );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationSnapshotNo", "Paired animation snapshot has no session id" );
             return PairedAnimationStartResult::InvalidSnapshot;
         }
         size_t endedIndex = _listSession.size(); // 같은 id 로 끝나 아직 빠지지 않은 세션(없으면 끝 인덱스)

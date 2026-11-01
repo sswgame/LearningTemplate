@@ -42,7 +42,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_WARNING( "Could not read sprite clip '%#'", path );
+            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite", "Could not read sprite clip '%#'", path );
             return false;
         }
         return loadText( text, path );
@@ -57,7 +57,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING( "Could not read sprite clip file '%#'", diskPath );
+            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite2", "Could not read sprite clip file '%#'", diskPath );
             return false;
         }
         return loadText( text, diskPath );
@@ -104,14 +104,14 @@ namespace sw
         bool bValid = true;
         if ( _atlasPixelSize._x < 0.0f || _atlasPixelSize._y < 0.0f )
         {
-            SW_LOG_ERROR( "Sprite clip '%#': _atlasPixelSize must not be negative", sourceLabel );
+            SW_LOG_ERROR_ID( "SpriteClip.SpriteClipAtlasPixelSizeMust", "Sprite clip '%#': _atlasPixelSize must not be negative", sourceLabel );
             bValid = false;
         }
         for ( size_t frameIndex = 0; frameIndex < _listFrame.size(); ++frameIndex )
         {
             if ( hasNegativeComponent( _listFrame[frameIndex]._borderPixels ) == false )
                 continue;
-            SW_LOG_ERROR( "Sprite clip '%#' frame %#: _borderPixels must not be negative", sourceLabel, frameIndex );
+            SW_LOG_ERROR_ID( "SpriteClip.SpriteClipFrameBorderPixels", "Sprite clip '%#' frame %#: _borderPixels must not be negative", sourceLabel, frameIndex );
             bValid = false;
         }
         if ( bValid == false )
@@ -120,8 +120,8 @@ namespace sw
         // 비율 테두리는 파일에 없다 — 픽셀 테두리와 아틀라스 크기로 채운다. 아틀라스 크기가 없으면 그 테두리를 버리고 알린다.
         const uint32 droppedBorderCount = rebuildFrameBorders();
         if ( droppedBorderCount > 0 )
-            SW_LOG_ERROR( "Sprite clip '%#': %# frame(s) have a pixel border but the clip has no _atlasPixelSize - read without those borders", sourceLabel,
-                          droppedBorderCount );
+            SW_LOG_ERROR_ID( "SpriteClip.SpriteClipFramePixel", "Sprite clip '%#': %# frame(s) have a pixel border but the clip has no _atlasPixelSize - read without those borders", sourceLabel,
+                             droppedBorderCount );
 
         // 구간은 프레임 목록 안으로 자른다. 잘리거나 버린 것은 로드마다 한 번 알린다(조용히 다른 프레임을 보이지 않게 하려는 것이다).
         // 에디터는 구간 칸을 숫자로 바로 고치므로 프레임을 지운 뒤 저장한 파일에 프레임 밖 구간이 남을 수 있다.

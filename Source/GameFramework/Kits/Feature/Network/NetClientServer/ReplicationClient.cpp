@@ -32,7 +32,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "ReplicationClient: refused to start - settings '%#'", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientRefusedStartSettings", "ReplicationClient: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
         _pHost    = pHost;
@@ -194,8 +194,8 @@ namespace sw
     {
         if ( static_cast<int32>( listInput.size() ) > NetClientServerMessage::kMaxInputBytes )
         {
-            SW_LOG_WARNING( "ReplicationClient: input for tick %# has %# bytes, more than the limit %# - not sent", tick, static_cast<int32>( listInput.size() ),
-                            NetClientServerMessage::kMaxInputBytes );
+            SW_LOG_WARNING_ID( "ReplicationClient.ReplicationClientInputTickBytes", "ReplicationClient: input for tick %# has %# bytes, more than the limit %# - not sent", tick, static_cast<int32>( listInput.size() ),
+                               NetClientServerMessage::kMaxInputBytes );
             return false;
         }
         // 틱이 건너뛰면 그 틱부터 다시 쌓고, 틱이 줄면(새 게임 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
@@ -218,7 +218,7 @@ namespace sw
         BitWriter intentWriter;
         if ( intent.write( intentWriter ) == false )
         {
-            SW_LOG_ERROR( "ReplicationClient: control intent for tick %# could not be written - not sent", tick );
+            SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientControlIntentTick", "ReplicationClient: control intent for tick %# could not be written - not sent", tick );
             return false;
         }
         const uint8*        pBytes = intentWriter.getBytes().data();

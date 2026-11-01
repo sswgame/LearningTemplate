@@ -383,44 +383,44 @@ namespace sw
         {
             case CrashTestKind::AccessViolation:
             {
-                SW_LOG_ERROR( "[CrashTest] writing through a null pointer" );
+                SW_LOG_ERROR_ID( "CrashHandler.WritingThroughNullPointer", "[CrashTest] writing through a null pointer" );
                 volatile int32* pNull = nullptr;
                 *pNull                = 1;
                 break;
             }
             case CrashTestKind::StackOverflow:
             {
-                SW_LOG_ERROR( "[CrashTest] overflowing the stack of this thread" );
+                SW_LOG_ERROR_ID( "CrashHandler.OverflowingStackThread", "[CrashTest] overflowing the stack of this thread" );
                 overflowStackInternal( 0 );
                 break;
             }
             case CrashTestKind::WorkerStackOverflow:
             {
-                SW_LOG_ERROR( "[CrashTest] overflowing the stack of a new thread" );
+                SW_LOG_ERROR_ID( "CrashHandler.OverflowingStackNewThread", "[CrashTest] overflowing the stack of a new thread" );
                 std::thread worker( &overflowStackOnWorkerInternal );
                 worker.join();
                 break;
             }
             case CrashTestKind::Abort:
             {
-                SW_LOG_ERROR( "[CrashTest] calling std::abort()" );
+                SW_LOG_ERROR_ID( "CrashHandler.CallingStdAbort", "[CrashTest] calling std::abort()" );
                 std::abort();
             }
             case CrashTestKind::PureVirtualCall:
             {
-                SW_LOG_ERROR( "[CrashTest] calling a pure virtual function during construction" );
+                SW_LOG_ERROR_ID( "CrashHandler.CallingPureVirtualFunction", "[CrashTest] calling a pure virtual function during construction" );
                 PureCallProbeInternal probe;
                 break;
             }
             case CrashTestKind::AssertFailure:
             {
-                SW_LOG_ERROR( "[CrashTest] failing SW_ASSERT" );
+                SW_LOG_ERROR_ID( "CrashHandler.FailingSWASSERT", "[CrashTest] failing SW_ASSERT" );
                 SW_ASSERT( s_bAssertProbeHolds );
                 break;
             }
             case CrashTestKind::StderrHeld:
             {
-                SW_LOG_ERROR( "[CrashTest] writing through a null pointer while another thread holds stderr" );
+                SW_LOG_ERROR_ID( "CrashHandler.WritingThroughNullPointer2", "[CrashTest] writing through a null pointer while another thread holds stderr" );
                 std::thread holder( &holdStderrForeverInternal );
                 holder.detach();
                 while ( s_bStderrHeld.load() == false )

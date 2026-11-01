@@ -30,7 +30,7 @@ namespace sw
         const std::optional<float32> damage = getParameter( "damage" );
         if ( range.has_value() == false || damage.has_value() == false )
         {
-            SW_LOG_ERROR( "ability '%#' needs <Param name=\"range\"> and <Param name=\"damage\">", getConfig()._id.c_str() );
+            SW_LOG_ERROR_ID( "ArenaAbilities.AbilityNeedsParamName", "ability '%#' needs <Param name=\"range\"> and <Param name=\"damage\">", getConfig()._id.c_str() );
             cancelAbility();
             return;
         }
@@ -67,7 +67,7 @@ namespace sw
         const bool                   bComplete = damage.has_value() && speed.has_value() && range.has_value();
         if ( bComplete == false )
         {
-            SW_LOG_ERROR( "ability '%#' needs <Param name=\"damage\">, \"speed\" and \"range\"", getConfig()._id.c_str() );
+            SW_LOG_ERROR_ID( "ArenaAbilities.AbilityNeedsParamName2", "ability '%#' needs <Param name=\"damage\">, \"speed\" and \"range\"", getConfig()._id.c_str() );
             cancelAbility();
             return;
         }
@@ -98,7 +98,7 @@ namespace sw
         const std::optional<float32> duration = getParameter( "duration" );
         if ( duration.has_value() == false )
         {
-            SW_LOG_ERROR( "ability '%#' needs <Param name=\"duration\">", getConfig()._id.c_str() );
+            SW_LOG_ERROR_ID( "ArenaAbilities.AbilityNeedsParamName3", "ability '%#' needs <Param name=\"duration\">", getConfig()._id.c_str() );
             endAbility();
             return;
         }

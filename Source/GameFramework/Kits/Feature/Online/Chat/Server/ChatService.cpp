@@ -313,7 +313,7 @@ namespace sw
     {
         if ( dependencies._pStore == nullptr || dependencies._pDirectory == nullptr )
         {
-            SW_LOG_ERROR( "ChatService needs a service store and an account directory" );
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceNeedsServiceStore", "ChatService needs a service store and an account directory" );
             return false;
         }
         _dependencies = dependencies;
@@ -325,7 +325,7 @@ namespace sw
         // 금칙어 파일을 고른 서버가 그것을 못 읽으면 서지 않는다 - 예전에는 경고만 남기고 거르지 않은 채 열렸다(fail-open). 거르지 않으려면 옵션을 'none' 으로 밝힌다.
         if ( settings._bannedWordsPath.empty() == false && _wordFilter.loadFile( settings._bannedWordsPath, settings._filterMode ) == false )
         {
-            SW_LOG_ERROR( "ChatService: banned word file '%#' could not be read - the chat service does not start (set bannedWords to 'none' to run unfiltered)", settings._bannedWordsPath );
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceBannedWordFile", "ChatService: banned word file '%#' could not be read - the chat service does not start (set bannedWords to 'none' to run unfiltered)", settings._bannedWordsPath );
             return false;
         }
         if ( dependencies._pBus != nullptr )
@@ -341,7 +341,7 @@ namespace sw
         ServiceStoreUtil::drainUntilIdle( _dependencies._pStore, [this]()
         { return _pendingStoreCount <= 0; } );
         if ( _pendingStoreCount > 0 )
-            SW_LOG_ERROR( "ChatService shut down with %# store works still pending", _pendingStoreCount );
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceShutDownStore", "ChatService shut down with %# store works still pending", _pendingStoreCount );
         // 맡긴 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다
         _findOwner.reset();
         _mapAccountToMember.clear();
@@ -731,7 +731,7 @@ namespace sw
     {
         if ( static_cast<int32>( _listHistoryQueue.size() ) >= _settings._maxQueuedHistory )
         {
-            SW_LOG_WARNING( "ChatService: chat history queue is full (%#) - dropping the oldest record", _listHistoryQueue.size() );
+            SW_LOG_WARNING_ID( "ChatService.ChatServiceChatHistoryQueue", "ChatService: chat history queue is full (%#) - dropping the oldest record", _listHistoryQueue.size() );
             _listHistoryQueue.erase( _listHistoryQueue.begin() );
         }
         _listHistoryQueue.push_back( message );
@@ -762,9 +762,9 @@ namespace sw
         --_pendingStoreCount;
         _bHistoryWriting = SW_FALSE;
         if ( bCommitted == false && completion.isCancelled() == false ) // 종료 때문에 취소된 쓰기는 경고하지 않는다(기록은 어느 쪽이든 버려진다)
-            SW_LOG_WARNING( "ChatService: %# chat history records were not stored (store unavailable) - they are dropped", messageCount );
+            SW_LOG_WARNING_ID( "ChatService.ChatServiceChatHistoryRecords", "ChatService: %# chat history records were not stored (store unavailable) - they are dropped", messageCount );
         if ( rejectedCount > 0 )
-            SW_LOG_ERROR( "ChatService: %# chat history records could not be written - they are dropped", rejectedCount );
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceChatHistoryRecords2", "ChatService: %# chat history records could not be written - they are dropped", rejectedCount );
     }
 
     bool ChatService::isWhisperParticipant( AccountID accountID, string_view channelID ) const

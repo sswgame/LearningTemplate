@@ -170,7 +170,7 @@ namespace sw
             _screen                    = _pUI->openScreen( documentPath );
             if ( _pUI->findScreen( _screen ) == nullptr )
             {
-                SW_LOG_ERROR( "[UI] Tooltip screen '%#' could not be opened - tooltips are not shown", documentPath.c_str() );
+                SW_LOG_ERROR_ID( "UITooltipService.TooltipScreenCouldNot", "[UI] Tooltip screen '%#' could not be opened - tooltips are not shown", documentPath.c_str() );
                 _screen          = kInvalidUIScreenHandle;
                 _bDocumentFailed = true;
                 return;
@@ -187,7 +187,7 @@ namespace sw
         TextWidget*       pText = tree.findWidget<TextWidget>( hashed_string( UITooltipServiceInternal::kTextName ) );
         if ( pBody == nullptr || pText == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Tooltip screen has no '%#' or '%#' widget - tooltips are not shown", UITooltipServiceInternal::kBodyName, UITooltipServiceInternal::kTextName );
+            SW_LOG_ERROR_ID( "UITooltipService.TooltipScreenNoWidget", "[UI] Tooltip screen has no '%#' or '%#' widget - tooltips are not shown", UITooltipServiceInternal::kBodyName, UITooltipServiceInternal::kTextName );
             _bDocumentFailed = true;
             hide();
             return;

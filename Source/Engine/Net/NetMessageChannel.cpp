@@ -37,14 +37,14 @@ namespace sw
     {
         if ( _bSealed == SW_TRUE )
         {
-            SW_LOG_ERROR( "message kind 0x%02x is registered after the channel was sealed - the handshake version would not cover it", kind );
+            SW_LOG_ERROR_ID( "NetMessageChannel.MessageKindXRegistered", "message kind 0x%02x is registered after the channel was sealed - the handshake version would not cover it", kind );
             return false;
         }
         for ( const Entry& entry : _listEntry )
         {
             if ( entry._kind == kind )
             {
-                SW_LOG_ERROR( "message kind 0x%02x is registered twice", kind );
+                SW_LOG_ERROR_ID( "NetMessageChannel.MessageKindXRegistered2", "message kind 0x%02x is registered twice", kind );
                 return false;
             }
         }
@@ -56,7 +56,7 @@ namespace sw
     {
         if ( _bSealed == SW_TRUE || _listEntry.empty() )
         {
-            SW_LOG_ERROR( "the channel cannot be sealed (%#) - seal once, after registering at least one message", _bSealed == SW_TRUE ? "already sealed" : "nothing registered" );
+            SW_LOG_ERROR_ID( "NetMessageChannel.ChannelCannotSealedSeal", "the channel cannot be sealed (%#) - seal once, after registering at least one message", _bSealed == SW_TRUE ? "already sealed" : "nothing registered" );
             return false;
         }
         // 등록 순서가 아니라 종류 순이다 — 두 빌드가 같은 메시지를 다른 순서로 등록해도 같은 버전이 된다.
@@ -79,7 +79,7 @@ namespace sw
     {
         if ( _bSealed == SW_FALSE )
         {
-            SW_LOG_ERROR( "message kind 0x%02x is used before the channel was sealed - the peer has not confirmed the schema", kind );
+            SW_LOG_ERROR_ID( "NetMessageChannel.MessageKindXUsed", "message kind 0x%02x is used before the channel was sealed - the peer has not confirmed the schema", kind );
             return false;
         }
         for ( const Entry& entry : _listEntry )
@@ -87,12 +87,12 @@ namespace sw
             if ( entry._kind == kind && entry._schemaHash == schemaHash )
                 return true;
         }
-        SW_LOG_ERROR( "message kind 0x%02x is not registered with this type on the channel", kind );
+        SW_LOG_ERROR_ID( "NetMessageChannel.MessageKindXNot", "message kind 0x%02x is not registered with this type on the channel", kind );
         return false;
     }
 
     void NetMessageChannel::logMissingCodec( const hashed_string& typeFqn, const string& reason )
     {
-        SW_LOG_ERROR( "%# has no fixed layout codec (%#) - it cannot be registered on a net channel", typeFqn.c_str(), reason.c_str() );
+        SW_LOG_ERROR_ID( "NetMessageChannel.NoFixedLayoutCodec", "%# has no fixed layout codec (%#) - it cannot be registered on a net channel", typeFqn.c_str(), reason.c_str() );
     }
 } // namespace sw

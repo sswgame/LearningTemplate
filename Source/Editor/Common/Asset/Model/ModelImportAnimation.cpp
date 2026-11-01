@@ -274,7 +274,7 @@ namespace sw::editor
         JSONDocument document;
         if ( document.loadFile( clipDataPath ) == false ) // 원본 모델 옆 디스크 파일이라 디스크 입구로 읽는다
         {
-            SW_LOG_ERROR( "Clip data '%#' is not valid JSON", clipDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotValid", "Clip data '%#' is not valid JSON", clipDataPath.c_str() );
             return false;
         }
         const JSONValue root = document.getRoot();
@@ -302,7 +302,7 @@ namespace sw::editor
                                             notify.get( "time" ).isNumber() == false;
                 if ( bInvalidNotify )
                 {
-                    SW_LOG_ERROR( "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath.c_str(), notifyIndex, clipName.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotifyNeeds", "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath.c_str(), notifyIndex, clipName.c_str() );
                     return false;
                 }
                 AnimationNotifyEvent event{};
@@ -325,7 +325,7 @@ namespace sw::editor
                     float32 arrKey[2]{};
                     if ( ModelImportJSONUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
                     {
-                        SW_LOG_ERROR( "Clip data '%#': curve '%#' keys must be [time, value] pairs", clipDataPath.c_str(), curveName.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.ClipDataCurveKeys", "Clip data '%#': curve '%#' keys must be [time, value] pairs", clipDataPath.c_str(), curveName.c_str() );
                         return false;
                     }
                     curve._listKey.push_back( AnimationClipCurveKey{ arrKey[0], arrKey[1] } );

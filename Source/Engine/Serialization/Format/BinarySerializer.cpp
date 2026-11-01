@@ -57,7 +57,7 @@ namespace sw
                 const uint64 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | nameHash;
                 if ( LogOnce::tryClaim( LogOnceKind::SkippedField, key ) == false )
                     return;
-                SW_LOG_WARNING( "%#: a saved field (name hash %#) is not in the type any more - skipped (once per field)", typeInfo._name.c_str(), nameHash );
+                SW_LOG_WARNING_ID( "BinarySerializer.SavedFieldNameHash", "%#: a saved field (name hash %#) is not in the type any more - skipped (once per field)", typeInfo._name.c_str(), nameHash );
             }
 
             /**
@@ -70,8 +70,8 @@ namespace sw
                 const uint64 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | prop.getNameHash();
                 if ( LogOnce::tryClaim( LogOnceKind::UnreadableField, key ) == false )
                     return;
-                SW_LOG_WARNING( "%#: saved field '%#' (%#) could not be read - it is skipped and the rest is read (once per field)", typeInfo._name.c_str(),
-                                prop._name.c_str(), prop._typeName.c_str() );
+                SW_LOG_WARNING_ID( "BinarySerializer.SavedFieldCouldNot", "%#: saved field '%#' (%#) could not be read - it is skipped and the rest is read (once per field)", typeInfo._name.c_str(),
+                                   prop._name.c_str(), prop._typeName.c_str() );
             }
 
             static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize,
@@ -100,8 +100,8 @@ namespace sw
                 const uint32 wireVersionNumber = header >> kTaggedVersionShift;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
                 {
-                    SW_LOG_WARNING( "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
-                                    static_cast<uint32>( kCurrentBinaryWireVersion ) );
+                    SW_LOG_WARNING_ID( "BinarySerializer.BinaryStreamWireVersion", "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
+                                       static_cast<uint32>( kCurrentBinaryWireVersion ) );
                     return false;
                 }
                 outWireVersion = static_cast<BinaryWireVersion>( wireVersionNumber );
@@ -459,8 +459,8 @@ namespace sw
             const bool   bCannotKeep = unknown._name.empty() == false || bKnownName || unknown._wireVersion != kCurrentBinaryWireVersion;
             if ( bCannotKeep )
             {
-                SW_LOG_ERROR( "%#: a kept unknown field (name hash %#) is a known field or another wire version - the object is not written", typeInfo._name.c_str(),
-                              unknown._nameHash );
+                SW_LOG_ERROR_ID( "BinarySerializer.KeptUnknownFieldName", "%#: a kept unknown field (name hash %#) is a known field or another wire version - the object is not written", typeInfo._name.c_str(),
+                                 unknown._nameHash );
                 return false;
             }
         }
@@ -498,8 +498,8 @@ namespace sw
             if ( bWritten == false )
             {
                 // 쓰는 순간 멈춘다. 계속 쓰면 세이브는 써지고 로드에서 이 값이 빠진다. 알림은 호출마다 한다(타입마다 한 번이면 테스트 순서에 따라 결과가 달라진다).
-                SW_LOG_ERROR( "%#::%# (%#) cannot be written: it or a value inside it has no binary, enum, struct or text handler - the object is not written",
-                              typeInfo._name.c_str(), prop._name.c_str(), prop._typeName.c_str() );
+                SW_LOG_ERROR_ID( "BinarySerializer.CannotWrittenValueInside", "%#::%# (%#) cannot be written: it or a value inside it has no binary, enum, struct or text handler - the object is not written",
+                                 typeInfo._name.c_str(), prop._name.c_str(), prop._typeName.c_str() );
                 return false;
             }
 

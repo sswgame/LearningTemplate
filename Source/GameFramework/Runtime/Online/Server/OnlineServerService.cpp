@@ -71,7 +71,7 @@ namespace sw
         const ConfigReadResult result = context._pConfigManager->readConfigFileInto( path, onlineConfig );
         if ( result == ConfigReadResult::Missing )
         {
-            SW_LOG_INFO( "Online services are off - '%#' does not exist", path.c_str() );
+            SW_LOG_INFO_ID( "OnlineServerService.OnlineServicesOffDoes", "Online services are off - '%#' does not exist", path.c_str() );
             return true;
         }
         if ( result != ConfigReadResult::Loaded )

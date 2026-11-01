@@ -132,7 +132,7 @@ namespace sw
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "null IRHIDevice";
-            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
             return false;
         }
 
@@ -151,7 +151,7 @@ namespace sw
             _renderPipelineAssetCache.reset();
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "RenderPipelineAssetCache initialize failed";
-            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
             return false;
         }
 
@@ -159,7 +159,7 @@ namespace sw
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_meshMorphDebugMode is not a mesh morph diagnostic mode";
-            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
             return false;
         }
 
@@ -173,7 +173,7 @@ namespace sw
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_viewMode=" + to_string( static_cast<int64>( gv_viewMode ) ) + " is not a view mode (0 .. " +
                              formatToString( "%#)", static_cast<int64>( RenderViewMode::Count ) - 1 );
-            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
             return false;
         }
         if ( gv_viewMode != RenderViewMode::Lit )
@@ -210,13 +210,13 @@ namespace sw
             _status = FrameRendererStatus::Failed;
             if ( _statusMessage.empty() )
                 _statusMessage = string( "pipeline load failed: " ) + string( resolvedPipeline );
-            SW_LOG_ERROR( "Not ready — %#", _statusMessage );
+            SW_LOG_ERROR_ID( "FrameRenderer.NotReady", "Not ready — %#", _statusMessage );
             return false;
         }
 
         _status = FrameRendererStatus::Ready;
         _statusMessage.clear();
-        SW_LOG_INFO( "Ready with pipeline '%#'", _pipelinePath );
+        SW_LOG_INFO_ID( "FrameRenderer.ReadyPipeline", "Ready with pipeline '%#'", _pipelinePath );
         return true;
     }
 
@@ -274,7 +274,7 @@ namespace sw
         _statusMessage.clear();
         _bCallbacksBound = SW_FALSE;
         _pipelinePath.clear();
-        SW_LOG_INFO( "Shut down." );
+        SW_LOG_INFO_ID( "FrameRenderer.ShutDown", "Shut down." );
     }
 
     bool FrameRenderer::loadPipeline( const AssetID& assetID )
@@ -306,7 +306,7 @@ namespace sw
         if ( listPass.empty() )
         {
             _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXMLPath );
-            SW_LOG_ERROR( "%#", _statusMessage );
+            SW_LOG_ERROR_ID( "FrameRenderer.Message", "%#", _statusMessage );
             return false;
         }
 
@@ -315,10 +315,10 @@ namespace sw
         const uint32 untimedPassCount = FrameRendererUtil::countUntimedGPUPass( listPass.size() );
         if ( untimedPassCount > 0 )
         {
-            SW_LOG_WARNING( "Pipeline '%#' has %# passes; GPU timestamps cover the first %#, so %# pass(es) from '%#' on are not timed "
-                            "(constant::render::kMaxGPUTimestampSlot)",
-                            _pipelineResource.getDesc()._name, listPass.size(), FrameRendererUtil::kGPUTimedPassCapacity, untimedPassCount,
-                            listPass[FrameRendererUtil::kGPUTimedPassCapacity]._name );
+            SW_LOG_WARNING_ID( "FrameRenderer.PipelinePassesGPUTimestamps", "Pipeline '%#' has %# passes; GPU timestamps cover the first %#, so %# pass(es) from '%#' on are not timed "
+                                                                            "(constant::render::kMaxGPUTimestampSlot)",
+                               _pipelineResource.getDesc()._name, listPass.size(), FrameRendererUtil::kGPUTimedPassCapacity, untimedPassCount,
+                               listPass[FrameRendererUtil::kGPUTimedPassCapacity]._name );
         }
 #endif
 
@@ -332,8 +332,8 @@ namespace sw
         ensureTransientResources();
         _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
 
-        SW_LOG_INFO( "Built graph '%#' (%# passes, callbacks bound once)",
-                     _pipelineResource.getDesc()._name, listPass.size() );
+        SW_LOG_INFO_ID( "FrameRenderer.BuiltGraphPassesCallbacks", "Built graph '%#' (%# passes, callbacks bound once)",
+                        _pipelineResource.getDesc()._name, listPass.size() );
         return true;
     }
 
@@ -359,7 +359,7 @@ namespace sw
         {
             const bool bCarries3DContent = packet._gpuScene.getInstances().empty() == false || packet._listView.empty() == false;
             if ( bCarries3DContent )
-                SW_LOG_ERROR_ONCE( "Render packet carries scene content but no main view (RenderFramePacket::setMainView) - the frame is not drawn" );
+                SW_LOG_ERROR_ONCE_ID( "FrameRenderer.RenderPacketCarriesScene", "Render packet carries scene content but no main view (RenderFramePacket::setMainView) - the frame is not drawn" );
             return false;
         }
 
@@ -471,7 +471,7 @@ namespace sw
         if ( _bLightGridPSOMissingLogged == SW_FALSE )
         {
             _bLightGridPSOMissingLogged = SW_TRUE;
-            SW_LOG_ERROR( "The light grid compute PSO (%#) is missing - every pixel walks every light", engine::getSubsystem<EngineDefaultAssets>()._shaderLightGrid.c_str() );
+            SW_LOG_ERROR_ID( "FrameRenderer.LightGridComputePSO", "The light grid compute PSO (%#) is missing - every pixel walks every light", engine::getSubsystem<EngineDefaultAssets>()._shaderLightGrid.c_str() );
         }
         return LightGridProducer::None;
     }
@@ -671,7 +671,7 @@ namespace sw
         if ( _state._passCbRing.initialize( _pDevice ) == false )
         {
             // 준비 깃발을 세우지 않아 다음 프레임에 다시 시도한다 — 같은 실패를 프레임마다 남기지 않게 한 번만 알린다.
-            SW_LOG_ERROR_ONCE( "Pass constant buffer slots could not be created - passes stay unprepared" );
+            SW_LOG_ERROR_ONCE_ID( "FrameRenderer.PassConstantBufferSlots", "Pass constant buffer slots could not be created - passes stay unprepared" );
             return;
         }
         // 직렬 경로 시드는 0번 슬롯을 쓴다(패스별 경로는 acquirePassCb 로 덮어쓴다).
@@ -683,7 +683,7 @@ namespace sw
         for ( const ComputeConstantBufferRow& row : arrComputeCb )
         {
             if ( row._pSlot->create( _pDevice, row._byteSize ) == false )
-                SW_LOG_ERROR( "Failed to create the %# constant buffer - its compute dispatch is skipped", row._pUsage );
+                SW_LOG_ERROR_ID( "FrameRenderer.FailedCreateConstantBuffer", "Failed to create the %# constant buffer - its compute dispatch is skipped", row._pUsage );
         }
 
         // 패스 실행의 상주 자원(assert 링 · NaN 감시 · 컬링 자리표)을 PSO 보다 먼저 만든다 — assert 변형 PSO 는 assert 링 없이는 돌릴 수 없다.
@@ -696,13 +696,13 @@ namespace sw
         // 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신 여기서 크게 알린다.
         const RHICapabilities caps = _pDevice->getCapabilities();
         if ( caps._bIndirectDraw == SW_FALSE )
-            SW_LOG_ERROR( "This backend does not support indirect draws - scene meshes cannot be drawn." );
+            SW_LOG_ERROR_ID( "FrameRenderer.BackendDoesNotSupport", "This backend does not support indirect draws - scene meshes cannot be drawn." );
 
         _bPassResourcesReady = SW_TRUE;
-        SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
-                     _psoManager.getEnginePSO( RenderPassType::Shadow ), _psoManager.getEnginePSO( RenderPassType::ForwardOpaque ),
-                     _psoManager.getEnginePSO( RenderPassType::Transparent ), _psoManager.getEnginePSO( RenderPassType::Lighting ),
-                     _psoManager.getEnginePSO( RenderPassType::Bloom ), _psoManager.getEnginePSO( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
+        SW_LOG_INFO_ID( "FrameRenderer.PassPSOsCBReady", "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
+                        _psoManager.getEnginePSO( RenderPassType::Shadow ), _psoManager.getEnginePSO( RenderPassType::ForwardOpaque ),
+                        _psoManager.getEnginePSO( RenderPassType::Transparent ), _psoManager.getEnginePSO( RenderPassType::Lighting ),
+                        _psoManager.getEnginePSO( RenderPassType::Bloom ), _psoManager.getEnginePSO( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
     }
 
     void FrameRenderer::collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] )
@@ -896,12 +896,12 @@ namespace sw
             totalBytes += static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format );
         }
         const uint64 totalKilobytes = totalBytes / 1024u;
-        SW_LOG_INFO( "[RenderTargets] main view %#x%#: %# KB in %# attachments", _state._mainView._transientPool.getWidth(), _state._mainView._transientPool.getHeight(),
-                     totalKilobytes, _state._mainView._transientPool.getAll().size() );
+        SW_LOG_INFO_ID( "FrameRenderer.MainViewXKB", "[RenderTargets] main view %#x%#: %# KB in %# attachments", _state._mainView._transientPool.getWidth(), _state._mainView._transientPool.getHeight(),
+                        totalKilobytes, _state._mainView._transientPool.getAll().size() );
         for ( const auto& [name, attachment] : _state._mainView._transientPool.getAll() )
         {
             const uint64 kilobytes = static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format ) / 1024u;
-            SW_LOG_INFO( "[RenderTargets]   %#  %#x%#  %# KB", name, attachment._width, attachment._height, kilobytes );
+            SW_LOG_INFO_ID( "FrameRenderer.XKB", "[RenderTargets]   %#  %#x%#  %# KB", name, attachment._width, attachment._height, kilobytes );
         }
 #endif
     }
@@ -1026,7 +1026,7 @@ namespace sw
             if ( input._cullCb.isValid() || input._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) ) )
                 continue;
             // 만들지 못하면 이 프레임은 합친 칸으로 돌아간다(같은 결과, 컬링만 덜 좁다). 칸마다 부분적으로 섞어 쓰지 않는다.
-            SW_LOG_ERROR( "Failed to create the cull constant buffer of shadow cascade %# - the combined shadow cull slot is used this frame", cascadeIndex );
+            SW_LOG_ERROR_ID( "FrameRenderer.FailedCreateCullConstant", "Failed to create the cull constant buffer of shadow cascade %# - the combined shadow cull slot is used this frame", cascadeIndex );
             return 0;
         }
         return shadow._cascadeCount;
@@ -1090,7 +1090,7 @@ namespace sw
         const bool bConstantBufferCreateFailed = bCullCb == false || bSortCb == false || bShadowCullCb == false;
         if ( bConstantBufferCreateFailed )
         {
-            SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewID );
+            SW_LOG_ERROR_ID( "FrameRenderer.FailedCreateCullSort", "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewID );
             view._bRenderThisFrame = SW_FALSE;
             return;
         }
@@ -1102,7 +1102,7 @@ namespace sw
         // 비었으면 주 시점 것을 빌리지 않는다(다른 곳을 보는 뷰는 그림자가 빠진다) — 이 뷰를 그리지 않는다.
         if ( request._shadow._bValid == SW_FALSE )
         {
-            SW_LOG_ERROR( "Extra view %# has no shadow data of its own - it is not drawn", view._viewID );
+            SW_LOG_ERROR_ID( "FrameRenderer.ExtraViewNoShadow", "Extra view %# has no shadow data of its own - it is not drawn", view._viewID );
             view._bRenderThisFrame = SW_FALSE;
             return;
         }
@@ -1239,7 +1239,7 @@ namespace sw
         const bool bDrawable       = bNeedsWireframe == false || _pDevice == nullptr || _pDevice->getCapabilities()._bWireframeFill != SW_FALSE;
         if ( bDrawable )
             return true;
-        SW_LOG_ERROR( "View mode %# needs wireframe fill, which this device does not support - the mode is not applied", getRenderViewModeInfo( viewMode )._pName );
+        SW_LOG_ERROR_ID( "FrameRenderer.ViewModeNeedsWireframe", "View mode %# needs wireframe fill, which this device does not support - the mode is not applied", getRenderViewModeInfo( viewMode )._pName );
         return false;
     }
 
@@ -1248,7 +1248,7 @@ namespace sw
         // 범위 밖 값을 Lit 으로 바꾸지 않는다 — 들어오는 번호는 부르는 쪽이 거른다(isRenderViewModeIndex).
         if ( viewMode >= RenderViewMode::Count )
         {
-            SW_LOG_ERROR( "setViewMode: %# is not a view mode - the main output keeps its mode", static_cast<uint32>( viewMode ) );
+            SW_LOG_ERROR_ID( "FrameRenderer.SetViewModeNotViewMode", "setViewMode: %# is not a view mode - the main output keeps its mode", static_cast<uint32>( viewMode ) );
             SW_ASSERT( viewMode < RenderViewMode::Count );
             return;
         }
@@ -1259,7 +1259,7 @@ namespace sw
             return;
 
         // 바뀔 때만 남긴다. 뷰 모드는 화면 전체를 바꾸는 상태다. 로그가 없으면 "왜 와이어프레임인가" 를 화면만 보고 되짚어야 한다.
-        SW_LOG_INFO( "Main output view mode: %#", getRenderViewModeInfo( viewMode )._pName );
+        SW_LOG_INFO_ID( "FrameRenderer.MainOutputViewMode", "Main output view mode: %#", getRenderViewModeInfo( viewMode )._pName );
     }
 
     RenderViewMode FrameRenderer::getViewMode() const
@@ -1272,7 +1272,7 @@ namespace sw
     {
         if ( viewMode >= RenderViewMode::Count )
         {
-            SW_LOG_ERROR( "setSceneViewMode: %# is not a view mode - the scene view keeps its mode", static_cast<uint32>( viewMode ) );
+            SW_LOG_ERROR_ID( "FrameRenderer.SetSceneViewModeNotViewMode", "setSceneViewMode: %# is not a view mode - the scene view keeps its mode", static_cast<uint32>( viewMode ) );
             SW_ASSERT( viewMode < RenderViewMode::Count );
             return;
         }
@@ -1281,7 +1281,7 @@ namespace sw
         const uint8 previous = _sceneViewMode.exchange( static_cast<uint8>( viewMode ), std::memory_order_relaxed );
         if ( previous == static_cast<uint8>( viewMode ) )
             return;
-        SW_LOG_INFO( "Scene view mode: %#", getRenderViewModeInfo( viewMode )._pName );
+        SW_LOG_INFO_ID( "FrameRenderer.SceneViewMode", "Scene view mode: %#", getRenderViewModeInfo( viewMode )._pName );
     }
 
     RenderViewMode FrameRenderer::getSceneViewMode() const
@@ -1332,7 +1332,7 @@ namespace sw
         const string& createPath = bMainPipeline ? _pipelinePath : created._pipelinePath;
         if ( created._renderer->initialize( pDevice, _state._pTaskManager, createPath ) == false )
         {
-            SW_LOG_ERROR( "Offscreen renderer for scene key %# ('%#') could not start: %#", sceneKey, createPath.c_str(), created._renderer->getStatusMessage() );
+            SW_LOG_ERROR_ID( "FrameRenderer.OffscreenRendererSceneKey", "Offscreen renderer for scene key %# ('%#') could not start: %#", sceneKey, createPath.c_str(), created._renderer->getStatusMessage() );
             return nullptr;
         }
         SW_LOG_INFO_ID( "Renderer.OffscreenStarted", "Offscreen renderer started for scene key %# ('%#')", sceneKey, createPath.c_str() );

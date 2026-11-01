@@ -117,7 +117,7 @@ namespace sw::editor
             static void writeRigText( const string& writePath, const string& text )
             {
                 if ( FileUtil::writeTextFile( writePath, text ) == false )
-                    SW_LOG_ERROR( "Rig file '%#' could not be written", writePath.c_str() );
+                    SW_LOG_ERROR_ID( "RigDebugPanel.RigFileCouldNot", "Rig file '%#' could not be written", writePath.c_str() );
             }
 
             /**
@@ -146,7 +146,7 @@ namespace sw::editor
                     EditorTransaction::push( SW_UNDO_STEP( RigDebugPanelInternal::writeRigText, writePath, text ),
                                              SW_UNDO_STEP( RigDebugPanelInternal::writeRigText, writePath, rewritten ), pUndoLabel );
                 }
-                SW_LOG_INFO( "Rig settings saved to %#", writePath.c_str() );
+                SW_LOG_INFO_ID( "RigDebugPanel.RigSettingsSaved", "Rig settings saved to %#", writePath.c_str() );
                 return string( "Saved" );
             }
 

@@ -95,7 +95,7 @@ namespace sw::editor
     {
         SpriteClipAsset restored;
         if ( text.empty() == false && restored.parseXML( text ) == false )
-            SW_LOG_WARNING( "Sprite clip undo snapshot could not be read - showing an empty clip" );
+            SW_LOG_WARNING_ID( "SpriteClip.SpriteClipUndoSnapshot", "Sprite clip undo snapshot could not be read - showing an empty clip" );
         adoptClip( std::move( restored ) );
     }
 

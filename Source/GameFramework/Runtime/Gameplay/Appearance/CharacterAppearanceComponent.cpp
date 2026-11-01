@@ -302,7 +302,7 @@ namespace sw
         // 베이크한 메시는 틱이 받아 건다 — 플레이하지 않는 씬에 입히면 영영 걸리지 않으므로 오류로 알린다(그 자리에서 기다리지 않는다).
         if ( pManager == nullptr || pManager->hasBegunPlay() == false )
         {
-            SW_LOG_ERROR( "Appearance preview needs a playing scene (ScenePreviewPolicy::_bPlay) - '%#' is not dressed", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePreviewNeedsPlaying", "Appearance preview needs a playing scene (ScenePreviewPolicy::_bPlay) - '%#' is not dressed", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
             return;
         }
         if ( _bStarted == SW_TRUE )
@@ -419,7 +419,7 @@ namespace sw
         GameObject*           pOwner     = getOwner();
         const bool            bRemovable = pSection != nullptr && pOwner != nullptr;
         if ( bRemovable && pOwner->removeComponent( pSection ) == false )
-            SW_LOG_WARNING( "Appearance '%#' could not remove the section component of a merged part", _presetID.c_str() );
+            SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceCouldNotRemove", "Appearance '%#' could not remove the section component of a merged part", _presetID.c_str() );
     }
 
     template <typename Func>
@@ -520,12 +520,12 @@ namespace sw
         const AppearanceDatabase* pDatabase = _pPreviewDatabase != nullptr ? _pPreviewDatabase : game::findSubsystem<AppearanceDatabase>();
         if ( pManager == nullptr || pBody == nullptr )
         {
-            SW_LOG_WARNING( "'%#' has no skeletal mesh to wear appearance '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?", _presetID.c_str() );
+            SW_LOG_WARNING_ID( "CharacterAppearance.NoSkeletalMeshWear", "'%#' has no skeletal mesh to wear appearance '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?", _presetID.c_str() );
             return;
         }
         if ( pDatabase == nullptr )
         {
-            SW_LOG_ERROR( "Appearance '%#' cannot be assembled - no AppearanceDatabase game service", _presetID.c_str() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceCannotAssembledNo", "Appearance '%#' cannot be assembled - no AppearanceDatabase game service", _presetID.c_str() );
             return;
         }
 
@@ -561,7 +561,7 @@ namespace sw
         (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 계산한다
         string socketError;
         if ( _rig.rebuild( _state.getResolved(), _bodyBindBones, _socketCache, &socketError ) == false )
-            SW_LOG_ERROR( "Appearance '%#' sockets: %#", _presetID.c_str(), socketError.c_str() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceSockets", "Appearance '%#' sockets: %#", _presetID.c_str(), socketError.c_str() );
 
         syncParts( *pManager, *pBody, _bodyPart, listDetachEvent );
         bindSocketParts( *pManager );
@@ -583,7 +583,7 @@ namespace sw
         CharacterAppearanceSpec base;
         if ( database.getPresets().expand( presetID, seed, database.getSlotTable(), database.getSets(), database.getSchemas(), base ) == false )
         {
-            SW_LOG_ERROR( "Appearance preset '%#' could not be expanded", presetID.c_str() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePresetCouldNot", "Appearance preset '%#' could not be expanded", presetID.c_str() );
             return false;
         }
         if ( bPreview == false )
@@ -594,8 +594,8 @@ namespace sw
         AppearanceSelectionReport report;
         AppearanceSelectionUtil::applySelection( database, _previewSelection, base, nullptr, outSpec, report );
         if ( report.isClean() == false )
-            SW_LOG_WARNING( "Previewed appearance on base '%#' dropped %# values and reset %# slots to their defaults", presetID.c_str(),
-                            static_cast<uint32>( report._listDroppedParameter.size() ), static_cast<uint32>( report._listSlotFallback.size() ) );
+            SW_LOG_WARNING_ID( "CharacterAppearance.PreviewedAppearanceBaseDropped", "Previewed appearance on base '%#' dropped %# values and reset %# slots to their defaults", presetID.c_str(),
+                               static_cast<uint32>( report._listDroppedParameter.size() ), static_cast<uint32>( report._listSlotFallback.size() ) );
         return true;
     }
 
@@ -617,7 +617,7 @@ namespace sw
                 body.setMaterialPath( part._material.c_str() );
             return static_cast<int32>( partIndex );
         }
-        SW_LOG_WARNING( "Appearance '%#' has no body part (a Skinned part without an owner)", _presetID.c_str() );
+        SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceNoBodyPart", "Appearance '%#' has no body part (a Skinned part without an owner)", _presetID.c_str() );
         return -1;
     }
 
@@ -639,17 +639,17 @@ namespace sw
             _bodyShapeSet         = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.c_str() );
             _seenShapeReloadCount = SharedAssetCache<BodyShapeSet>::getReloadCount();
             if ( _bodyShapeSet == nullptr )
-                SW_LOG_ERROR( "Appearance '%#' body shapes '%#' could not be read - the body keeps its proportions", _presetID.c_str(), pBodyPart->_bodyShapes.c_str() );
+                SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapesCould", "Appearance '%#' body shapes '%#' could not be read - the body keeps its proportions", _presetID.c_str(), pBodyPart->_bodyShapes.c_str() );
         }
         else if ( listValue.empty() == false )
         {
-            SW_LOG_ERROR( "Appearance '%#' drives %# body shape axes but its body part has no 'bodyShapes' - the sliders do nothing", _presetID.c_str(), static_cast<uint32>( listValue.size() ) );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceDrivesBodyShape", "Appearance '%#' drives %# body shape axes but its body part has no 'bodyShapes' - the sliders do nothing", _presetID.c_str(), static_cast<uint32>( listValue.size() ) );
         }
         if ( _bodyShapeSet != nullptr )
         {
             string error;
             if ( _bodyShapeSet->evaluate( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ), _listShapeMorph, _bodyProportion, &error ) == false )
-                SW_LOG_ERROR( "Appearance '%#' body shape axes: %#", _presetID.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapeAxes", "Appearance '%#' body shape axes: %#", _presetID.c_str(), error.c_str() );
         }
         // 본 비율이 있을 때만 단계 작업을 등록한다 — 포즈를 쓰는 작업이 둘이면 몸의 군중 공유가 꺼지므로, 비율이 없는 몸은 공유를 지킨다.
         const bool bWantsTask = _bodyProportion.getEntries().empty() == false;
@@ -679,7 +679,7 @@ namespace sw
             SocketBindingComponent* pBinding = object.getComponent<SocketBindingComponent>();
             if ( pBinding != nullptr && pBinding->release( SocketReleaseMode::Physics, detached._impulse ) )
                 return true;
-            SW_LOG_WARNING( "Appearance '%#' part '%#' fell off but has no physics body to release onto - removed", _presetID.c_str(), spawned._partName.c_str() );
+            SW_LOG_WARNING_ID( "CharacterAppearance.AppearancePartFellOff", "Appearance '%#' part '%#' fell off but has no physics body to release onto - removed", _presetID.c_str(), spawned._partName.c_str() );
             return false;
         }
         return false;
@@ -715,7 +715,7 @@ namespace sw
             if ( bRestPlaced && restUnit == AppearanceSocketRig::kBodyUnit )
                 pSkinned->setLocalPosition( restInUnit.getTranslation() );
             else if ( part._placement.isEmpty() == false )
-                SW_LOG_WARNING( "Appearance '%#' rigged part '%#' names no active body socket - it rests at the body origin", _presetID.c_str(), part._partName.c_str() );
+                SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceRiggedPartNames", "Appearance '%#' rigged part '%#' names no active body socket - it rests at the body origin", _presetID.c_str(), part._partName.c_str() );
         }
         if ( pBodyScene != nullptr )
             (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모이면 false 이고, 그 부위는 제자리에 남는다
@@ -801,7 +801,7 @@ namespace sw
             }
             if ( pObject == nullptr )
             {
-                SW_LOG_WARNING( "Appearance '%#' part '%#' (%#) could not be spawned", _presetID.c_str(), part._partName.c_str(), part._asset.c_str() );
+                SW_LOG_WARNING_ID( "CharacterAppearance.AppearancePartCouldNot", "Appearance '%#' part '%#' (%#) could not be spawned", _presetID.c_str(), part._partName.c_str(), part._asset.c_str() );
                 continue;
             }
             spawned._object = pObject->getHandle();
@@ -822,7 +822,7 @@ namespace sw
             uint32                  unitIndex = AppearanceSocketRig::kNoUnit;
             if ( pBinding == nullptr || _rig.computePlacement( part._placement, _bodyBones, inUnit, unitIndex ) == false )
             {
-                SW_LOG_WARNING( "Appearance '%#' part '%#' has no active socket among its candidates", _presetID.c_str(), part._partName.c_str() );
+                SW_LOG_WARNING_ID( "CharacterAppearance.AppearancePartNoActive", "Appearance '%#' part '%#' has no active socket among its candidates", _presetID.c_str(), part._partName.c_str() );
                 continue;
             }
             GameObject* pHolder = findUnitObject( manager, unitIndex );
@@ -939,7 +939,7 @@ namespace sw
         SurfaceChannelTable channels;
         if ( channels.loadFromAsset( AssetID{ _surfaceChannelsPath } ) == false )
         {
-            SW_LOG_ERROR( "Appearance '%#' surface channels '%#' could not be read - the surface state stays off", _presetID.c_str(), _surfaceChannelsPath.c_str() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceSurfaceChannelsCould", "Appearance '%#' surface channels '%#' could not be read - the surface state stays off", _presetID.c_str(), _surfaceChannelsPath.c_str() );
             _surfaceBinding.releaseTextures();
             _surface = CharacterSurfaceState{};
             _loadedSurfaceChannels.clear();
@@ -1043,7 +1043,7 @@ namespace sw
             load._mesh                  = MeshCache::request( part._asset.c_str() );
             const bool bForeignSkeleton = part._skeleton.empty() == false && part._skeleton != pBodyPart->_skeleton;
             if ( part._fit.empty() == false && bForeignSkeleton )
-                SW_LOG_ERROR( "Appearance '%#' part '%#' has fit data but its own skeleton '%#' - it is drawn unfitted", _presetID.c_str(), part._partName.c_str(), part._skeleton.c_str() );
+                SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartFitData", "Appearance '%#' part '%#' has fit data but its own skeleton '%#' - it is drawn unfitted", _presetID.c_str(), part._partName.c_str(), part._skeleton.c_str() );
             else if ( part._fit.empty() == false )
                 load._fit = SharedAssetCache<FitPartDef>::request( part._fit.c_str() );
             _listMeshAssemblyLoad.push_back( std::move( load ) );
@@ -1194,7 +1194,7 @@ namespace sw
         }
         if ( listBaked.size() != listPart.size() )
         {
-            SW_LOG_ERROR( "Appearance '%#' meshes are drawn unbaked: %#", _presetID.c_str(), report.c_str() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceMeshesDrawnUnbaked", "Appearance '%#' meshes are drawn unbaked: %#", _presetID.c_str(), report.c_str() );
             listBaked.assign( listPart.size(), nullptr );
         }
         // 합치는 부품이 있으면 몸과 합친 부품의 메시를 하나로 합쳐 몸 유닛에 건다. 합치지 못하면 오류를 남기고(몸 원본만 그려진다) 아래 부품별 길로 간다.
@@ -1229,7 +1229,7 @@ namespace sw
             const shared_ptr<Mesh>& mesh = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
             if ( mesh == nullptr )
             {
-                SW_LOG_ERROR( "Appearance '%#' cannot merge parts - part '%#' has no mesh", _presetID.c_str(), resolved._listPart[partIndex]._partName.c_str() );
+                SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceCannotMergeParts", "Appearance '%#' cannot merge parts - part '%#' has no mesh", _presetID.c_str(), resolved._listPart[partIndex]._partName.c_str() );
                 return false;
             }
             const ResolvedPart& part = resolved._listPart[partIndex];
@@ -1253,7 +1253,7 @@ namespace sw
             string          error;
             if ( CharacterMeshUtil::mergeMeshes( listMergePart, nullptr, result, &error ) == false )
             {
-                SW_LOG_ERROR( "Appearance '%#' parts are drawn unmerged: %#", _presetID.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %#", _presetID.c_str(), error.c_str() );
                 return false;
             }
             merged = result._mesh;
@@ -1279,7 +1279,7 @@ namespace sw
                 pSection = pOwner->addComponent<MeshSectionComponent>();
                 if ( pSection == nullptr )
                 {
-                    SW_LOG_ERROR( "Appearance '%#' part '%#' could not get a section component", _presetID.c_str(), part._partName.c_str() );
+                    SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartCouldNot2", "Appearance '%#' part '%#' could not get a section component", _presetID.c_str(), part._partName.c_str() );
                     continue;
                 }
                 spawned._section = TComponentHandle<MeshSectionComponent>{ pSection };

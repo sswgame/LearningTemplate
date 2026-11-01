@@ -174,7 +174,7 @@ namespace sw::editor
         {
             (void)ObjectValidation::reportGameObject( *pObject, false ); // 결과는 그 씬의 표(SceneValidationIssues)에 남고 테이블이 읽는다
         }
-        SW_LOG_INFO( "Map Check: %# object(s) checked in %# ms", listObject.size(), stopwatch.getElapsedMilliseconds() );
+        SW_LOG_INFO_ID( "MapCheckPanel.MapCheckObjectChecked", "Map Check: %# object(s) checked in %# ms", listObject.size(), stopwatch.getElapsedMilliseconds() );
         return static_cast<uint32>( listObject.size() );
     }
 

@@ -14,14 +14,14 @@ namespace sw
 
     bool RenderPipelineAssetCache::initialize()
     {
-        SW_LOG_INFO( "Subsystem Initialized." );
+        SW_LOG_INFO_ID( "RenderPipelineAssetCache.SubsystemInitialized", "Subsystem Initialized." );
         return true;
     }
 
     void RenderPipelineAssetCache::shutdown()
     {
         clearCache();
-        SW_LOG_INFO( "Subsystem Shutdown Cleanly." );
+        SW_LOG_INFO_ID( "RenderPipelineAssetCache.SubsystemShutdownCleanly", "Subsystem Shutdown Cleanly." );
     }
 
     RenderPassAsset* RenderPipelineAssetCache::loadRenderPass( string_view assetRelativePath )

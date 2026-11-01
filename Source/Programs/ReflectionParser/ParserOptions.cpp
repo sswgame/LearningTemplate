@@ -80,7 +80,7 @@ namespace sw
                     string text;
                     if ( FileUtil::readTextFile( argv[argIndex] + 1, text ) == false )
                     {
-                        SW_LOG_ERROR( "Could not read the response file: %#", argv[argIndex] + 1 );
+                        SW_LOG_ERROR_ID( "ParserOptions.CouldNotReadResponse", "Could not read the response file: %#", argv[argIndex] + 1 );
                         return false;
                     }
                     size_t lineBegin = 0;
@@ -117,7 +117,7 @@ namespace sw
             {
                 if ( value.empty() == false )
                     return true;
-                SW_LOG_ERROR( "%# requires %#.", pMode, pFlag );
+                SW_LOG_ERROR_ID( "ParserOptions.Requires", "%# requires %#.", pMode, pFlag );
                 return false;
             }
         };
@@ -144,12 +144,12 @@ namespace sw
             const OptionRow* pRow = ParserOptionsInternal::findRow( argument );
             if ( pRow == nullptr )
             {
-                SW_LOG_ERROR( "Unknown argument: %#", argument );
+                SW_LOG_ERROR_ID( "ParserOptions.UnknownArgument", "Unknown argument: %#", argument );
                 return false;
             }
             if ( argIndex + 1 >= argCount )
             {
-                SW_LOG_ERROR( "%# needs a value %#.", pRow->_pFlag, pRow->_pValueName );
+                SW_LOG_ERROR_ID( "ParserOptions.NeedsValue", "%# needs a value %#.", pRow->_pFlag, pRow->_pValueName );
                 return false;
             }
 
@@ -173,7 +173,7 @@ namespace sw
 
         if ( _listInputFile.empty() )
         {
-            SW_LOG_ERROR( "No %# files specified.", cli::kInput );
+            SW_LOG_ERROR_ID( "ParserOptions.NoFilesSpecified", "No %# files specified.", cli::kInput );
             return false;
         }
         // 철자 표가 없으면 모든 애노테이션 토큰이 "모르는 토큰" 이 되어 빌드가 선다. 시작할 때 이유를 알린다.

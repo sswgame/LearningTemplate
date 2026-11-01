@@ -78,19 +78,19 @@ namespace sw
             string_view value;
             if ( StringUtil::trySplitKeyValue( part, key, value ) == false )
             {
-                SW_LOG_WARNING( "gv_userSettingsApply: '%#' is not <setting>=<value> - skipped", part );
+                SW_LOG_WARNING_ID( "UserSettingsHost.GvUserSettingsApplyNotSetting", "gv_userSettingsApply: '%#' is not <setting>=<value> - skipped", part );
                 continue;
             }
             const hashed_string        settingID( key );
             const UserSettingSetResult result = settings.setPendingValue( settingID, value );
             const bool                 bTaken = result == UserSettingSetResult::Accepted || result == UserSettingSetResult::Clamped || result == UserSettingSetResult::Unchanged;
             if ( bTaken == false )
-                SW_LOG_WARNING( "gv_userSettingsApply: '%#' = '%#' was not taken (result %#)", settingID.c_str(), value, static_cast<uint32>( result ) );
+                SW_LOG_WARNING_ID( "UserSettingsHost.GvUserSettingsApplyNotTaken", "gv_userSettingsApply: '%#' = '%#' was not taken (result %#)", settingID.c_str(), value, static_cast<uint32>( result ) );
         }
 
         const UserSettingsApplyResult applied = settings.applyPending();
-        SW_LOG_INFO( "gv_userSettingsApply: applied %# setting(s), %# failed, restart %#, confirm %#", applied._appliedCount, applied._failedCount,
-                     applied._bNeedsRestart ? "needed" : "not needed", applied._bAwaitingConfirm ? "pending" : "not needed" );
+        SW_LOG_INFO_ID( "UserSettingsHost.GvUserSettingsApplyAppliedSetting", "gv_userSettingsApply: applied %# setting(s), %# failed, restart %#, confirm %#", applied._appliedCount, applied._failedCount,
+                        applied._bNeedsRestart ? "needed" : "not needed", applied._bAwaitingConfirm ? "pending" : "not needed" );
         if ( applied._bAwaitingConfirm && gv_userSettingsAutoConfirm )
             settings.confirmChanges();
     }
@@ -112,7 +112,7 @@ namespace sw
             device.setVSync( request._bVSync );
             // 백엔드를 바꿔 디바이스를 다시 만들 때도 같은 값이어야 한다.
             pRHI->setPreferredVSync( request._bVSync );
-            SW_LOG_INFO( "VSync %#", request._bVSync ? "on" : "off" );
+            SW_LOG_INFO_ID( "UserSettingsHost.VSync", "VSync %#", request._bVSync ? "on" : "off" );
         }
 
         // 창 크기가 바뀌면 이 호출 안(Win32)이나 다음 메시지 처리(X11)에서 Engine::onMainWindowResize 가 스왑체인을 맞춘다.
@@ -122,7 +122,7 @@ namespace sw
             const bool bSameSize = _pWindow->getWidth() == request._width && _pWindow->getHeight() == request._height;
             const bool bNoChange = bSameMode && ( bSameSize || request._mode != WindowDisplayMode::Windowed );
             if ( bNoChange == false && _pWindow->setDisplayMode( request._mode, request._width, request._height ) == false )
-                SW_LOG_WARNING( "This platform cannot change the window mode" );
+                SW_LOG_WARNING_ID( "UserSettingsHost.PlatformCannotChangeWindow", "This platform cannot change the window mode" );
         }
     }
 } // namespace sw

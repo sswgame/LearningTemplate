@@ -162,11 +162,11 @@ namespace sw
             if ( bOpened == false )
             {
                 _pFailedDevice = pDevice;
-                SW_LOG_WARNING( "GPU timeline for the external profiler is unavailable on %# (GPU clock read %#)", pDevice->getBackendName(),
-                                bClockRead ? "ok" : "failed" );
+                SW_LOG_WARNING_ID( "FrameRenderer.GPUTimelineExternalProfiler", "GPU timeline for the external profiler is unavailable on %# (GPU clock read %#)", pDevice->getBackendName(),
+                                   bClockRead ? "ok" : "failed" );
                 return;
             }
-            SW_LOG_INFO( "GPU timeline for the external profiler opened on %#", pDevice->getBackendName() );
+            SW_LOG_INFO_ID( "FrameRenderer.GPUTimelineExternalProfiler2", "GPU timeline for the external profiler opened on %#", pDevice->getBackendName() );
         }
         else if ( pTimestamps->isGPUClockReadCheap() && _exporter.advanceAndCheckResync() )
         {

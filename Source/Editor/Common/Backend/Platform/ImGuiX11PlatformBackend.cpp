@@ -40,7 +40,7 @@ namespace sw::editor
             X11SurfaceHandles x11Surface;
             if ( pWindow->tryGetX11Surface( x11Surface ) == false )
             {
-                SW_LOG_ERROR( "The ImGui X11 platform backend needs an X11 window with a display connection (a Wayland window is not supported)" );
+                SW_LOG_ERROR_ID( "ImGuiX11.ImGuiX11PlatformBackend", "The ImGui X11 platform backend needs an X11 window with a display connection (a Wayland window is not supported)" );
                 return false;
             }
             Display* pDisplay = static_cast<Display*>( x11Surface._pDisplay );
@@ -83,7 +83,7 @@ namespace sw::editor
             // 모니터를 하나도 못 읽으면 가짜 모니터로 계속하지 않고 초기화 실패로 멈춘다(호출 쪽이 실패를 처리한다)
             if ( updateMonitors() == false )
             {
-                SW_LOG_ERROR( "The ImGui X11 platform backend found no usable monitor (ScreenCount or the screen size is zero)" );
+                SW_LOG_ERROR_ID( "ImGuiX11.ImGuiX11PlatformBackend2", "The ImGui X11 platform backend found no usable monitor (ScreenCount or the screen size is zero)" );
                 return false; // 정리는 호출 쪽(ImGuiEditor)이 shutdownPlatformBackend 로 한다
             }
             return true;

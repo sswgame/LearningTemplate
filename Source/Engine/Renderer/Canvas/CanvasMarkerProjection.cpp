@@ -79,7 +79,7 @@ namespace sw
         constexpr RHIBufferUsage kRowUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         if ( _markerRowBuffer.ensureCapacity( &device, sizeof( float4 ), rowCount, kRowUsage, true, false, nullptr ) == false )
         {
-            SW_LOG_ERROR( "Failed to create the canvas marker input buffer (%# rows) - GPU-projected markers are not placed", rowCount );
+            SW_LOG_ERROR_ID( "Canvas.FailedCreateCanvasMarker", "Failed to create the canvas marker input buffer (%# rows) - GPU-projected markers are not placed", rowCount );
             return;
         }
         _markerRowBuffer.upload( &device, _listMarkerRowScratch.data(), rowCount * static_cast<uint32>( sizeof( float4 ) ) );
@@ -95,19 +95,19 @@ namespace sw
         if ( pso == 0 )
         {
             // 셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드다. CPU 투영으로 대신하지 않는다 — 켜진 마커의 앵커 배율은 CPU 가 0 으로 올렸으므로 그려지지 않는다.
-            SW_LOG_ERROR_ONCE( "The canvas marker projection compute PSO is missing (shader not cooked or no compute support) - GPU-projected markers are not drawn" );
+            SW_LOG_ERROR_ONCE_ID( "Canvas.CanvasMarkerProjectionCompute", "The canvas marker projection compute PSO is missing (shader not cooked or no compute support) - GPU-projected markers are not drawn" );
             return;
         }
         const RHIStructuredBufferSlot& quads = quadBuffer.getSlot();
         if ( quads.isValid() == false || quads._uav == kInvalidDescriptorIndex || _markerRowBuffer.isValid() == false )
         {
-            SW_LOG_ERROR_ONCE( "The canvas quad buffer has no UAV for the marker projection - GPU-projected markers are not drawn" );
+            SW_LOG_ERROR_ONCE_ID( "Canvas.CanvasQuadBufferNo", "The canvas quad buffer has no UAV for the marker projection - GPU-projected markers are not drawn" );
             return;
         }
         // 인스턴스 칸을 읽는 마커가 있으면 GPUScene 인스턴스 버퍼(컬링 · 인스턴스 애니메이션이 이미 끝났다)를 읽는다. 읽을 버퍼가 없으면 칸을 해석할 수 없으므로 멈춘다.
         if ( _bMarkerReadsInstances && ( instanceBuffer == 0 || instanceSRV == kInvalidDescriptorIndex ) )
         {
-            SW_LOG_ERROR_ONCE( "GPU-projected markers reference GPUScene instances but the instance buffer is not available - the markers are not placed" );
+            SW_LOG_ERROR_ONCE_ID( "Canvas.GPUProjectedMarkersReference", "GPU-projected markers reference GPUScene instances but the instance buffer is not available - the markers are not placed" );
             return;
         }
         using Internal = CanvasMarkerProjectionInternal;

@@ -151,7 +151,7 @@ namespace sw::editor
         unique_ptr<EditorPreviewViewport> pViewport = make_unique<EditorPreviewViewport>();
         if ( pViewport->attachScene( pWorld->getScene(), _pSceneSource->findSceneKey( worldIndex ) ) == false )
         {
-            SW_LOG_ERROR( "In-process play: world %# has no preview scene key", worldIndex );
+            SW_LOG_ERROR_ID( "EditorNetSimSession.ProcessPlayWorldNo", "In-process play: world %# has no preview scene key", worldIndex );
             return nullptr;
         }
         // 월드 내용을 아는 게임이 카메라와 바닥을 알리면 그대로 잡고, 조명 환경(방향광 · 하늘 · 바닥)은 그 월드 씬에 더한다.

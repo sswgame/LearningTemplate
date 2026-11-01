@@ -105,8 +105,8 @@ namespace sw
         const bool       bComplete  = texelBytes > 0 && upload._bytes.size() >= static_cast<size_t>( upload._width ) * upload._height * texelBytes;
         if ( bInside == false || bComplete == false )
         {
-            SW_LOG_ERROR( "Glyph atlas upload (%#,%# %#x%#) on page %# is outside the page or short of bytes - skipped", upload._x, upload._y, upload._width,
-                          upload._height, upload._page );
+            SW_LOG_ERROR_ID( "Canvas.GlyphAtlasUploadX", "Glyph atlas upload (%#,%# %#x%#) on page %# is outside the page or short of bytes - skipped", upload._x, upload._y, upload._width,
+                             upload._height, upload._page );
             return;
         }
         if ( _listPage.size() <= upload._page )
@@ -137,7 +137,7 @@ namespace sw
     void CanvasGlyphAtlasMirror::failPage( AtlasPage& page, string_view reason )
     {
         const size_t pageIndex = static_cast<size_t>( &page - _listPage.data() );
-        SW_LOG_ERROR( "Glyph atlas page %# %# - its glyphs are not drawn until the canvas GPU resources are recreated", pageIndex, reason );
+        SW_LOG_ERROR_ID( "Canvas.GlyphAtlasPageGlyphs", "Glyph atlas page %# %# - its glyphs are not drawn until the canvas GPU resources are recreated", pageIndex, reason );
         page._bFailed        = SW_TRUE;
         page._registerTicket = RHITransferTicket{};
     }

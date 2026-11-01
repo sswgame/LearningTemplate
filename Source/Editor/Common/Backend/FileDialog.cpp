@@ -39,7 +39,7 @@ namespace sw
             return;
         if ( s_pOpenDialog != nullptr )
         {
-            SW_LOG_WARNING( "A file dialog is already open - close it first" );
+            SW_LOG_WARNING_ID( "FileDialog.FileDialogAlreadyOpen", "A file dialog is already open - close it first" );
             return;
         }
         s_pOpenDialog                 = make_unique<OpenFileDialog>();
@@ -58,7 +58,7 @@ namespace sw
             bSuccess = LinuxFileDialog::open( params, listResult );
 #else
             (void)params;
-            SW_LOG_WARNING( "The file dialog is not supported on this platform." );
+            SW_LOG_WARNING_ID( "FileDialog.FileDialogNotSupported", "The file dialog is not supported on this platform." );
 #endif
             // **여기서 델리게이트를 부르지 않는다** — 콜백은 메인 스레드가 매 프레임 만지는 상태(씬 · 컴포넌트)를 고친다.
             if ( bSuccess )

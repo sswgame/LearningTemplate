@@ -75,7 +75,7 @@ namespace sw
             {
                 // 같은 번호(같은 이름 또는 해시 충돌) — 어느 쪽에도 주지 않는다. 다른 오브젝트에 조용히 묶이면 복제가 엉뚱한 오브젝트를 움직인다.
                 if ( it->_bAmbiguous == SW_FALSE )
-                    SW_LOG_ERROR( "Net object '%#' shares its scene id %# with another object - give replicated scene objects unique names", pObject->getName().c_str(), sceneID );
+                    SW_LOG_ERROR_ID( "NetObjectTable.NetObjectSharesScene", "Net object '%#' shares its scene id %# with another object - give replicated scene objects unique names", pObject->getName().c_str(), sceneID );
                 it->_bAmbiguous = SW_TRUE;
                 continue;
             }
@@ -84,7 +84,7 @@ namespace sw
             {
                 Entry& earlier = listNew[itNew->second];
                 if ( earlier._bAmbiguous == SW_FALSE )
-                    SW_LOG_ERROR( "Net object '%#' shares its scene id %# with another object - give replicated scene objects unique names", pObject->getName().c_str(), sceneID );
+                    SW_LOG_ERROR_ID( "NetObjectTable.NetObjectSharesScene", "Net object '%#' shares its scene id %# with another object - give replicated scene objects unique names", pObject->getName().c_str(), sceneID );
                 earlier._bAmbiguous = SW_TRUE;
                 continue;
             }
@@ -172,7 +172,7 @@ namespace sw
     {
         if ( ( netID & kSpawnedBit ) == 0 || netID == kSpawnedBit )
         {
-            SW_LOG_ERROR( "Net object '%#' cannot be bound to %# - it is not a spawned id", object.getName().c_str(), netID );
+            SW_LOG_ERROR_ID( "NetObjectTable.NetObjectCannotBound", "Net object '%#' cannot be bound to %# - it is not a spawned id", object.getName().c_str(), netID );
             return false;
         }
         const Entry* pOwn = findSpawnedEntryByObject( object.getHandle() );
@@ -180,7 +180,7 @@ namespace sw
         {
             if ( pOwn->_netID == netID )
                 return true;
-            SW_LOG_ERROR( "Net object '%#' already has spawned id %# - cannot bind it to %#", object.getName().c_str(), pOwn->_netID, netID );
+            SW_LOG_ERROR_ID( "NetObjectTable.NetObjectAlreadySpawned", "Net object '%#' already has spawned id %# - cannot bind it to %#", object.getName().c_str(), pOwn->_netID, netID );
             return false;
         }
         const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, uint32 id )
@@ -190,7 +190,7 @@ namespace sw
             // 묶였던 오브젝트가 지워졌으면 새 오브젝트로 바꾼다(서버가 같은 번호를 다시 알린다 — 늦은 참가 · 재접속).
             if ( _pManager->resolveGameObject( it->_object ) != nullptr )
             {
-                SW_LOG_ERROR( "Spawned net id %# is already bound to another object - '%#' was not bound", netID, object.getName().c_str() );
+                SW_LOG_ERROR_ID( "NetObjectTable.SpawnedNetIdAlready", "Spawned net id %# is already bound to another object - '%#' was not bound", netID, object.getName().c_str() );
                 return false;
             }
             (void)_mapSpawnedNetID.erase( it->_object );

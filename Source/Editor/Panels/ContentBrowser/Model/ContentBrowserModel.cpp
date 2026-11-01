@@ -304,7 +304,7 @@ namespace sw::editor
         }
 
         selectAsset( entry );
-        SW_LOG_TRACE( "Open: %#", entry._relativePath.c_str() );
+        SW_LOG_TRACE_ID( "ContentBrowserModel.Open", "Open: %#", entry._relativePath.c_str() );
         (void)EditorAssetCommands::openPath( entry._relativePath ); // 실패는 openPath 가 알린다
     }
 
@@ -361,7 +361,7 @@ namespace sw::editor
     {
         EditorReferenceIndex* pIndex = _referenceSearch.findCurrentIndex( ContentBrowserModelInternal::getContentChangeSerial() );
         if ( pIndex == nullptr )
-            SW_LOG_WARNING( "The reference index has not caught up with the last file change yet - nothing was moved, try again in a moment" );
+            SW_LOG_WARNING_ID( "ContentBrowserModel.ReferenceIndexNotCaught", "The reference index has not caught up with the last file change yet - nothing was moved, try again in a moment" );
         return pIndex;
     }
 
@@ -411,7 +411,7 @@ namespace sw::editor
     {
         if ( _selectedFolderAbs.empty() )
         {
-            SW_LOG_WARNING( "Select a destination folder before importing." );
+            SW_LOG_WARNING_ID( "ContentBrowserModel.SelectDestinationFolderBefore", "Select a destination folder before importing." );
             return;
         }
         _importQueue.openDialog( _selectedFolderAbs );
@@ -424,7 +424,7 @@ namespace sw::editor
             return;
         if ( _selectedFolderAbs.empty() )
         {
-            SW_LOG_WARNING( "Import cancelled — no destination folder." );
+            SW_LOG_WARNING_ID( "ContentBrowserModel.ImportCancelledNoDestination", "Import cancelled — no destination folder." );
             return;
         }
         if ( EditorAssetFileCommands::importFiles( _selectedFolderAbs, listPath ) > 0 )

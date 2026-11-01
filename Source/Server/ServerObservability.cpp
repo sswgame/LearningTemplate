@@ -96,14 +96,14 @@ namespace sw
         OpsHTTPEndpointConfig opsSettings;
         if ( NetAddress::parse( config._opsListenAddress, static_cast<uint16>( config._opsPort ), opsSettings._bindAddress ) == false )
         {
-            SW_LOG_ERROR( "Server config _opsListenAddress '%#' is not an IPv4 address", config._opsListenAddress.c_str() );
+            SW_LOG_ERROR_ID( "Server.ServerConfigOpsListenAddressNot", "Server config _opsListenAddress '%#' is not an IPv4 address", config._opsListenAddress.c_str() );
             return false;
         }
         opsSettings._bindAddress._port = static_cast<uint16>( config._opsPort ); // 포트는 `_opsPort` 가 기준이다(주소 필드에 포트를 적어도 무시한다).
         _opsTransport                  = StreamTransportFactory::createPlatformTransport();
         if ( _opsTransport == nullptr )
         {
-            SW_LOG_ERROR( "Ops HTTP endpoint needs a stream transport and this platform has none" );
+            SW_LOG_ERROR_ID( "Server.OpsHTTPEndpointNeeds", "Ops HTTP endpoint needs a stream transport and this platform has none" );
             return false;
         }
         StreamTransportConfig transportSettings;
@@ -198,10 +198,10 @@ namespace sw
         const string path = FileUtil::joinPath( reportsFolder, fileName );
         if ( FileUtil::writeTextFile( path, text ) == false )
         {
-            SW_LOG_WARNING( "Frame history could not be written to '%#'", path.c_str() );
+            SW_LOG_WARNING_ID( "Server.FrameHistoryCouldNot", "Frame history could not be written to '%#'", path.c_str() );
             return;
         }
-        SW_LOG_INFO( "Frame history (%#) written to '%#' (%# ticks)", pReason, path.c_str(), _frameHistory->getCount() );
+        SW_LOG_INFO_ID( "Server.FrameHistoryWrittenTicks", "Frame history (%#) written to '%#' (%# ticks)", pReason, path.c_str(), _frameHistory->getCount() );
     }
 
     void ServerObservability::updateLoad( int64 monotonicMs )
@@ -220,8 +220,8 @@ namespace sw
         if ( bOverloaded && bWarnDue )
         {
             _lastLoadWarningMs = monotonicMs;
-            SW_LOG_WARNING( "Server tick load is %# percent of the tick budget (warn above %# percent) - the server is close to falling behind", static_cast<int32>( utilization * 100.0 ),
-                            _pServerConfig->_tickLoadWarnPercent );
+            SW_LOG_WARNING_ID( "Server.ServerTickLoadPercent", "Server tick load is %# percent of the tick budget (warn above %# percent) - the server is close to falling behind", static_cast<int32>( utilization * 100.0 ),
+                               _pServerConfig->_tickLoadWarnPercent );
         }
     }
 

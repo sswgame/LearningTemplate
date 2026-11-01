@@ -21,7 +21,7 @@ namespace sw
         const bool bInvalid = width < 1 || height < 1 || cellSize <= 0.0f;
         if ( bInvalid )
         {
-            SW_LOG_ERROR( "NavGrid: refused %# x %# cells of size %# - both counts must be at least 1 and the size must be positive", width, height, cellSize );
+            SW_LOG_ERROR_ID( "NavGrid.NavGridRefusedXCells", "NavGrid: refused %# x %# cells of size %# - both counts must be at least 1 and the size must be positive", width, height, cellSize );
             return false;
         }
         _topology = GridTopology( width, height );

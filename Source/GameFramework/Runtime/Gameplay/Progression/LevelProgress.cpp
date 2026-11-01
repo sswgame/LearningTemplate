@@ -27,7 +27,7 @@ namespace sw
     {
         if ( base < 0.0f || maxLevel < 1 )
         {
-            SW_LOG_ERROR( "ExperienceCurve: refused formula base %# maxLevel %# - base must not be negative and maxLevel must be at least 1", base, maxLevel );
+            SW_LOG_ERROR_ID( "LevelProgress.ExperienceCurveRefusedFormulaBase", "ExperienceCurve: refused formula base %# maxLevel %# - base must not be negative and maxLevel must be at least 1", base, maxLevel );
             return false;
         }
         _listXPToNext.clear();
@@ -68,7 +68,7 @@ namespace sw
                 continue;
             }
             if ( xp.has_value() )
-                SW_LOG_ERROR( "%#: <Level xp=\"%#\"> must be at least 1", sourceName, *xp );
+                SW_LOG_ERROR_ID( "LevelProgress.LevelXpMustLeast", "%#: <Level xp=\"%#\"> must be at least 1", sourceName, *xp );
             bValid = false;
         }
         if ( bValid == false )

@@ -842,7 +842,7 @@ namespace sw
         }
         GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( pVariableName );
         if ( pVariable == nullptr || pVariable->setValueFromString( value ) == false )
-            SW_LOG_WARNING( "Debug HUD could not write %# = '%#'", pVariableName, value );
+            SW_LOG_WARNING_ID( "DebugHUD.DebugHUDCouldNot", "Debug HUD could not write %# = '%#'", pVariableName, value );
     }
 
     void DebugHUD::syncScreen()

@@ -469,7 +469,7 @@ namespace sw
         ScenarioRecordOutput result = toScenarioXML( _replay.getFrames(), resolved );
         _replay.clear();
         if ( result._skippedEventCount != 0 )
-            SW_LOG_INFO( "[ScenarioRecorder] skipped %# input events that have no scenario step", result._skippedEventCount );
+            SW_LOG_INFO_ID( "Automation.SkippedInputEventsNo", "[ScenarioRecorder] skipped %# input events that have no scenario step", result._skippedEventCount );
         return result;
     }
 
@@ -620,7 +620,7 @@ namespace sw
         const string& savedFolder = ProcessRoots::get()._saved.str();
         if ( FileUtil::ensureDirectoryExists( savedFolder ) == false )
         {
-            SW_LOG_ERROR( "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );
+            SW_LOG_ERROR_ID( "Automation.CouldNotCreateDomain", "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );
             return false;
         }
         return engine::getSubsystem<AssetPaths>().mountDiskDomain( kSavedDomain, savedFolder ); // 거절하면 이유를 로그로 남긴다

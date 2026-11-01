@@ -15,7 +15,7 @@ namespace sw
     {
         if ( object.isObject() == false )
         {
-            SW_LOG_ERROR( "%#: expected a JSON object", context );
+            SW_LOG_ERROR_ID( "ModelImportJSONUtil.ExpectedJSONObject", "%#: expected a JSON object", context );
             return false;
         }
         bool bKnown = true;
@@ -24,7 +24,7 @@ namespace sw
             const bool bFound = VectorUtil::contains( listKnownKey, string_view( memberName ) );
             if ( bFound )
                 continue;
-            SW_LOG_ERROR( "%#: unknown key '%#'", context, memberName.c_str() );
+            SW_LOG_ERROR_ID( "ModelImportJSONUtil.UnknownKey", "%#: unknown key '%#'", context, memberName.c_str() );
             bKnown = false;
         }
         return bKnown;

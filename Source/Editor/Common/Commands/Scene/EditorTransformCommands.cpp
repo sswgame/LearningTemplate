@@ -152,8 +152,8 @@ namespace sw::editor
             // 남아, 쓰는 사람은 왜 비었는지 알 수 없다. 컴포넌트는 이미 붙었으니 되돌리지 않고, 대신 조용히 넘어가지 않는다.
             if ( bSuccess == false )
             {
-                SW_LOG_WARNING( "Paste Component as New: failed to read the value of %#. An empty component is added.",
-                                string{ typeName }.c_str() );
+                SW_LOG_WARNING_ID( "EditorTransformCommands.PasteComponentNewFailed", "Paste Component as New: failed to read the value of %#. An empty component is added.",
+                                   string{ typeName }.c_str() );
             }
 
             const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
@@ -194,7 +194,7 @@ namespace sw::editor
         const string fileName = makeComponentPresetFileName( pComp, presetName );
         if ( folder.empty() || fileName.empty() )
         {
-            SW_LOG_ERROR( "Component preset '%#': the preset folder of the active game could not be resolved", presetName );
+            SW_LOG_ERROR_ID( "EditorTransformCommands.ComponentPresetPresetFolder", "Component preset '%#': the preset folder of the active game could not be resolved", presetName );
             return false;
         }
         return saveComponentPresetTo( pComp, FileUtil::joinPath( folder, fileName ) );

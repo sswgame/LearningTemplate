@@ -65,7 +65,7 @@ namespace sw
         signalStack.ss_flags = 0;
         if ( sigaltstack( &signalStack, nullptr ) != 0 )
         {
-            SW_LOG_WARNING( "sigaltstack failed — a stack overflow on this thread will not be reported" );
+            SW_LOG_WARNING_ID( "PosixCrashHandler.SigaltstackFailedStackOverflow", "sigaltstack failed — a stack overflow on this thread will not be reported" );
             return;
         }
         t_signalStack._stack = std::move( stack );

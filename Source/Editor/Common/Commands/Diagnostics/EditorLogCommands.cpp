@@ -161,15 +161,15 @@ namespace sw::editor
         const ProcessCommand command = makeOpenCommand( getOpenCommandTemplate(), location );
         if ( command._executable.empty() )
         {
-            SW_LOG_WARNING( "Open in IDE: no command template (Editor/General IDE open command in Preferences) or no file." );
+            SW_LOG_WARNING_ID( "EditorLog.OpenIDENoCommand", "Open in IDE: no command template (Editor/General IDE open command in Preferences) or no file." );
             return false;
         }
         if ( Process::launchDetached( command ) == false )
         {
-            SW_LOG_WARNING( "Open in IDE: failed to launch '%#'", command.toCommandLine() );
+            SW_LOG_WARNING_ID( "EditorLog.OpenIDEFailedLaunch", "Open in IDE: failed to launch '%#'", command.toCommandLine() );
             return false;
         }
-        SW_LOG_INFO( "Open in IDE: %#", command.toCommandLine() );
+        SW_LOG_INFO_ID( "EditorLog.OpenIDE", "Open in IDE: %#", command.toCommandLine() );
         return true;
     }
 

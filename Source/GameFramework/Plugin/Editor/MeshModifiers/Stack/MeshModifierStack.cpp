@@ -296,7 +296,7 @@ namespace sw::editor
                 outModifier         = MeshModifierRegistry::create( typeID );
                 if ( outModifier == nullptr )
                 {
-                    SW_LOG_WARNING( "Unknown mesh modifier type '%#' is skipped", typeID.c_str() );
+                    SW_LOG_WARNING_ID( "MeshModifierStack.UnknownMeshModifierType", "Unknown mesh modifier type '%#' is skipped", typeID.c_str() );
                     return true;
                 }
                 MeshModifier& modifier = *outModifier;
@@ -311,7 +311,7 @@ namespace sw::editor
                                          object.readOptionalInto( "axis", gizmo._axisIndex ) && gizmo._axisIndex <= 2;
                 if ( bFieldsRead == false )
                 {
-                    SW_LOG_ERROR( "Mesh modifier '%#' has a broken enabled, worldSpace, center, rotation or axis (0 to 2)", typeID.c_str() );
+                    SW_LOG_ERROR_ID( "MeshModifierStack.MeshModifierBrokenEnabled", "Mesh modifier '%#' has a broken enabled, worldSpace, center, rotation or axis (0 to 2)", typeID.c_str() );
                     return false;
                 }
                 modifier.setEnabled( bEnabled );
@@ -326,7 +326,7 @@ namespace sw::editor
                         const utf8* pName = modifier.getParamDefs()[paramIndex]._pName;
                         if ( params.has( pName ) && readParam( modifier, paramIndex, params.get( pName ) ) == false )
                         {
-                            SW_LOG_ERROR( "Mesh modifier '%#' parameter '%#' does not have the shape of its kind: %#", typeID.c_str(), pName, params.get( pName ).dump() );
+                            SW_LOG_ERROR_ID( "MeshModifierStack.MeshModifierParameterDoes", "Mesh modifier '%#' parameter '%#' does not have the shape of its kind: %#", typeID.c_str(), pName, params.get( pName ).dump() );
                             return false;
                         }
                     }
@@ -335,7 +335,7 @@ namespace sw::editor
                 const JSONValue extra = object.get( "extra" );
                 if ( extra.isObject() && modifier.readExtraJSON( extra ) == false )
                 {
-                    SW_LOG_ERROR( "Mesh modifier '%#' has broken extra state", typeID.c_str() );
+                    SW_LOG_ERROR_ID( "MeshModifierStack.MeshModifierBrokenExtra", "Mesh modifier '%#' has broken extra state", typeID.c_str() );
                     return false;
                 }
                 return true;

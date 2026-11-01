@@ -194,7 +194,7 @@ namespace sw
     {
         if ( pStore == nullptr )
         {
-            SW_LOG_ERROR( "MailboxService needs a store" );
+            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNeedsStore", "MailboxService needs a store" );
             return false;
         }
         _pStore    = pStore;
@@ -219,7 +219,7 @@ namespace sw
             schedule._intervalMs = settings._sweepIntervalMs;
             if ( settings._pScheduler->registerJob( schedule, ScheduledJobFunction::create<&MailboxService::onScheduledRun>( this ) ) == false )
             {
-                SW_LOG_ERROR( "MailboxService: the sweep job could not be scheduled (sweepIntervalMs %# must be at least a minute)", settings._sweepIntervalMs );
+                SW_LOG_ERROR_ID( "MailboxService.MailboxServiceSweepJobCould", "MailboxService: the sweep job could not be scheduled (sweepIntervalMs %# must be at least a minute)", settings._sweepIntervalMs );
                 return false;
             }
         }
@@ -232,7 +232,7 @@ namespace sw
         { return isIdle(); } );
         if ( isIdle() == false )
         {
-            SW_LOG_ERROR( "MailboxService shut down with %# calls still pending", _listPendingCall.size() );
+            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceShutDownCalls", "MailboxService shut down with %# calls still pending", _listPendingCall.size() );
             _listPendingCall.clear();
         }
         _findOwner.reset(); // 기다리던 찾기의 알림을 잃는다. 우편은 목록에 있다
@@ -282,7 +282,7 @@ namespace sw
     {
         _bNoticePending = SW_FALSE;
         if ( result == ServiceStoreResult::Invalid )
-            SW_LOG_ERROR( "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
+            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotice", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
         if ( result != ServiceStoreResult::Ok || _pHost == nullptr )
             return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
         if ( static_cast<int32>( inoutListNotice.size() ) == _settings._noticeBatchCount )
@@ -395,7 +395,7 @@ namespace sw
                 return;
             }
         }
-        SW_LOG_WARNING( "MailboxService completed an unknown call %#", callID );
+        SW_LOG_WARNING_ID( "MailboxService.MailboxServiceCompletedUnknownCall", "MailboxService completed an unknown call %#", callID );
     }
 
     void MailboxService::completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
@@ -415,7 +415,7 @@ namespace sw
             }
         }
         if ( stats._failedCount > 0 && completion.isCancelled() == false ) // 종료 때문에 취소된 정리는 경고하지 않는다
-            SW_LOG_WARNING( "Mail sweep left %# expired mails for the next pass", stats._failedCount );
+            SW_LOG_WARNING_ID( "MailboxService.MailSweepLeftExpired", "Mail sweep left %# expired mails for the next pass", stats._failedCount );
         if ( stats._bMore == SW_TRUE )
         {
             _bSweepRequested = SW_TRUE; // 상한까지 채웠으므로 다음 틱에 바로 다시 정리한다
@@ -432,7 +432,7 @@ namespace sw
         if ( result != ServiceStoreResult::Ok )
         {
             if ( completion.isCancelled() == false ) // 종료 때문에 취소된 읽기는 경고하지 않고 캐시를 그대로 둔다
-                SW_LOG_WARNING( "Mail campaigns could not be read - keeping the cached list" );
+                SW_LOG_WARNING_ID( "MailboxService.MailCampaignsCouldNot", "Mail campaigns could not be read - keeping the cached list" );
             return;
         }
         _listCampaign.clear();

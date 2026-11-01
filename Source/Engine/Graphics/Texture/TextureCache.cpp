@@ -180,13 +180,13 @@ namespace sw
                 // 원본은 이미 고쳤다 — 다음 프레임에 같은 구간을 다시 쓰고 낸다(같은 바이트라 원본은 그대로다).
                 if ( written == RHISubmitResult::Busy )
                     return RegionFlushResult::RetryBusy;
-                SW_LOG_ERROR( "Region update for CPU texture %# rejected (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width, update._height );
+                SW_LOG_ERROR_ID( "TextureCache.RegionUpdateCPUTexture", "Region update for CPU texture %# rejected (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width, update._height );
                 return RegionFlushResult::Dropped;
             }
             const bool bResident = pFound != nullptr && it->second._bPublished && it->second._bLoading == false && pFound->isRHIValid();
             if ( bResident == false || pDevice == nullptr )
             {
-                SW_LOG_WARNING( "Region update for texture %# dropped - the texture is not resident", update._key.c_str() );
+                SW_LOG_WARNING_ID( "TextureCache.RegionUpdateTextureDropped", "Region update for texture %# dropped - the texture is not resident", update._key.c_str() );
                 return RegionFlushResult::Dropped;
             }
             const Texture2D& texture = *pFound;
@@ -203,7 +203,7 @@ namespace sw
             }
             else if ( texture.getFormat() != RHIFormat::R8G8B8A8_UNORM )
             {
-                SW_LOG_WARNING( "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
+                SW_LOG_WARNING_ID( "TextureCache.RegionUpdateTextureDropped2", "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
                 return RegionFlushResult::Dropped;
             }
             const RHITransferSubmit submit = pDevice->getResourceFactory()->submitTextureRegionUpload( texture.getHandle(), desc );
@@ -211,7 +211,7 @@ namespace sw
                 return RegionFlushResult::RetryBusy;
             if ( submit.isAccepted() )
                 return RegionFlushResult::Uploaded;
-            SW_LOG_ERROR( "Region update for texture %# rejected by the RHI (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width, update._height );
+            SW_LOG_ERROR_ID( "TextureCache.RegionUpdateTextureRejected", "Region update for texture %# rejected by the RHI (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width, update._height );
             return RegionFlushResult::Dropped;
         }
 
@@ -778,7 +778,7 @@ namespace sw
         pTexture->detachRHI( retired );
         const bool bReady = pTexture->createRenderTarget( pDevice, key, width, height, constant::render::kOffscreenColorFormat );
         if ( bReady == false )
-            SW_LOG_ERROR( "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
+            SW_LOG_ERROR_ID( "TextureCache.FailedResizeRenderTexture", "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
 
         lock.lock();
         const auto            it = _impl->_mapEntry.find( key );
@@ -1169,7 +1169,7 @@ namespace sw
         pDevice->waitIdle( RHIWaitIdleReason::HotReload );
         pTexture->releaseRHI( pDevice );
         if ( pTexture->loadFromAsset( pDevice, AssetID{ key } ) == false )
-            SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
+            SW_LOG_ERROR_ID( "TextureCache.HotReloadFailedTexture", "Hot-Reload failed for Texture %#", key.c_str() );
 
         lock.lock();
         const auto            it = _impl->_mapEntry.find( key );

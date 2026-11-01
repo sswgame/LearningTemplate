@@ -25,7 +25,7 @@ namespace sw::editor
         RHINativeHandles handles{};
         if ( _pRHIDevice->queryNativeHandles( RHIBackend::DirectX11, handles ) == false )
         {
-            SW_LOG_ERROR( "The ImGui DX11 renderer needs a D3D11 device" );
+            SW_LOG_ERROR_ID( "ImGuiDX11.ImGuiDX11RendererNeeds", "The ImGui DX11 renderer needs a D3D11 device" );
             return false;
         }
         ID3D11Device* pDevice = static_cast<ID3D11Device*>( handles._pDevice );
@@ -40,7 +40,7 @@ namespace sw::editor
         } ) );
         if ( bContextVisited == false || bInitialized == false )
         {
-            SW_LOG_ERROR( "The ImGui DX11 renderer needs a D3D11 immediate context" );
+            SW_LOG_ERROR_ID( "ImGuiDX11.ImGuiDX11RendererNeeds2", "The ImGui DX11 renderer needs a D3D11 immediate context" );
             return false;
         }
         _viewportSizeGuard.install();
@@ -128,7 +128,7 @@ namespace sw::editor
         const HRESULT                                    hr = pDevice->CreateShaderResourceView( pTex, &srvDesc, srv.GetAddressOf() );
         if ( FAILED( hr ) || srv == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create SRV for registered texture. HRESULT: %#", hr );
+            SW_LOG_ERROR_ID( "ImGuiDX11.FailedCreateSRVRegistered", "Failed to create SRV for registered texture. HRESULT: %#", hr );
             return nullptr;
         }
 

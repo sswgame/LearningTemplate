@@ -51,7 +51,7 @@ namespace sw::editor
         vector<uint8> bytes;
         if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
         {
-            SW_LOG_ERROR( "Failed to read image file: %#", filePath );
+            SW_LOG_ERROR_ID( "ImageUtil.FailedReadImageFile", "Failed to read image file: %#", filePath );
             return false;
         }
 
@@ -65,7 +65,7 @@ namespace sw::editor
 
         if ( pBuffer == nullptr || bufferSize == 0 )
         {
-            SW_LOG_ERROR( "Image buffer is null or empty." );
+            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferNullEmpty", "Image buffer is null or empty." );
             return false;
         }
 
@@ -73,7 +73,7 @@ namespace sw::editor
         // 넘기기 전에 거절한다.
         if ( bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
         {
-            SW_LOG_ERROR( "Image buffer is larger than stb_image can address (%# bytes).", bufferSize );
+            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferLargerStb", "Image buffer is larger than stb_image can address (%# bytes).", bufferSize );
             return false;
         }
 
@@ -91,14 +91,14 @@ namespace sw::editor
 
         if ( pDecoded == nullptr )
         {
-            SW_LOG_ERROR( "stbi_load_from_memory failed: %#", stbi_failure_reason() );
+            SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryFailed", "stbi_load_from_memory failed: %#", stbi_failure_reason() );
             return false;
         }
 
         // stb 는 요청한 채널 수로 펼쳐 주고 `channels` 에는 원본 파일의 채널 수를 돌려준다. 범위 밖이면 원본을 알 수 없으므로 실패로 멈춘다.
         if ( channels < 1 || RawImageData::kChannelCount < channels )
         {
-            SW_LOG_ERROR( "stbi_load_from_memory reported %# source channels (expected 1..%#).", channels, RawImageData::kChannelCount );
+            SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryReported", "stbi_load_from_memory reported %# source channels (expected 1..%#).", channels, RawImageData::kChannelCount );
             stbi_image_free( pDecoded );
             return false;
         }
@@ -122,7 +122,7 @@ namespace sw::editor
         const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
         if ( bInvalidImageBuffer )
         {
-            SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferEmptyLarger", "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
             return false;
         }
         int32   width    = 0;
@@ -131,7 +131,7 @@ namespace sw::editor
         uint16* pDecoded = stbi_load_16_from_memory( pBuffer, static_cast<int32>( bufferSize ), &width, &height, &channels, 1 );
         if ( pDecoded == nullptr )
         {
-            SW_LOG_ERROR( "stbi_load_16_from_memory failed: %#", stbi_failure_reason() );
+            SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryFailed2", "stbi_load_16_from_memory failed: %#", stbi_failure_reason() );
             return false;
         }
         outListSample.assign( pDecoded, pDecoded + static_cast<size_t>( width ) * static_cast<size_t>( height ) );
@@ -149,7 +149,7 @@ namespace sw::editor
         const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
         if ( bInvalidImageBuffer )
         {
-            SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferEmptyLarger", "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
             return false;
         }
         const int32 byteCount = static_cast<int32>( bufferSize );
@@ -161,7 +161,7 @@ namespace sw::editor
             float32* pDecoded = stbi_loadf_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
             if ( pDecoded == nullptr )
             {
-                SW_LOG_ERROR( "stbi_loadf_from_memory failed: %#", stbi_failure_reason() );
+                SW_LOG_ERROR_ID( "ImageUtil.StbiLoadfMemoryFailed", "stbi_loadf_from_memory failed: %#", stbi_failure_reason() );
                 return false;
             }
             const size_t texelCount = static_cast<size_t>( width ) * static_cast<size_t>( height );
@@ -177,7 +177,7 @@ namespace sw::editor
             uint8* pDecoded = stbi_load_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
             if ( pDecoded == nullptr )
             {
-                SW_LOG_ERROR( "stbi_load_from_memory failed: %#", stbi_failure_reason() );
+                SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryFailed", "stbi_load_from_memory failed: %#", stbi_failure_reason() );
                 return false;
             }
             constexpr float32 kByteToUnit = 1.0f / 255.0f;

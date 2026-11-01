@@ -36,8 +36,8 @@ namespace sw
         if ( _buffer == 0 )
         {
             // 프레임마다 다시 묻는 슬롯(GPUScene)이 있어 한 번만 남긴다 — 어느 슬롯인지는 부르는 쪽이 알린다.
-            SW_LOG_ERROR_ONCE( "Failed to create a structured buffer (%# elements x %# bytes, usage %#) - the slot stays empty", elementCount, elementSize,
-                               static_cast<uint32>( usage ) );
+            SW_LOG_ERROR_ONCE_ID( "RHIStructuredBufferSlot.FailedCreateStructuredBuffer", "Failed to create a structured buffer (%# elements x %# bytes, usage %#) - the slot stays empty", elementCount, elementSize,
+                                  static_cast<uint32>( usage ) );
             return false;
         }
 

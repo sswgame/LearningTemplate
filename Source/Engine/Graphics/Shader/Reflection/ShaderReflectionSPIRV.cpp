@@ -532,7 +532,7 @@ namespace sw
         using Internal = ShaderReflectionSPIRVInternal;
         if ( bytecode.size() < 20 || ( bytecode.size() % 4 ) != 0 )
         {
-            SW_LOG_WARNING( "SPIR-V bytecode size invalid." );
+            SW_LOG_WARNING_ID( "ShaderReflection.SPIRVBytecodeSize", "SPIR-V bytecode size invalid." );
             return {};
         }
 
@@ -540,7 +540,7 @@ namespace sw
         const size_t  wordCount = bytecode.size() / 4;
         if ( pWords[0] != spirv::kMagic )
         {
-            SW_LOG_WARNING( "Not a SPIR-V module (bad magic)." );
+            SW_LOG_WARNING_ID( "ShaderReflection.NotSPIRVModule", "Not a SPIR-V module (bad magic)." );
             return {};
         }
 
@@ -558,8 +558,8 @@ namespace sw
         if ( module._executionModel == spirv::kExecutionModelVertex )
             Internal::appendVertexInputs( module, data );
 
-        SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %# VertexInputs: %#",
-                      data._listConstantBuffer.size(), data._listResource.size(), data._listVertexInput.size() );
+        SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResourcesVertexInputs", "ConstantBuffers: %# BoundResources: %# VertexInputs: %#",
+                         data._listConstantBuffer.size(), data._listResource.size(), data._listVertexInput.size() );
         return data;
     }
 

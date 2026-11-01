@@ -81,7 +81,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( definition );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "MatchMaker: refused mode '%#' - %#", definition._modeID, rangeError.c_str() );
+            SW_LOG_ERROR_ID( "MatchMaker.MatchMakerRefusedMode", "MatchMaker: refused mode '%#' - %#", definition._modeID, rangeError.c_str() );
             return false;
         }
         _definition = definition;

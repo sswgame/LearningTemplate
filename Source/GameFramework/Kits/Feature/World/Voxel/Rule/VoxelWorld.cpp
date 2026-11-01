@@ -33,7 +33,7 @@ namespace sw
     {
         if ( chunkCountX < 1 || chunkCountZ < 1 )
         {
-            SW_LOG_ERROR( "VoxelWorld: refused chunk counts %# x %# - both must be at least 1", chunkCountX, chunkCountZ );
+            SW_LOG_ERROR_ID( "VoxelWorld.VoxelWorldRefusedChunkCounts", "VoxelWorld: refused chunk counts %# x %# - both must be at least 1", chunkCountX, chunkCountZ );
             return false;
         }
         _pCatalog    = pCatalog;

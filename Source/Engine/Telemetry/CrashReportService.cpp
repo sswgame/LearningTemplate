@@ -297,7 +297,7 @@ namespace sw
         root.set( "session" ).setString( sessionID );
         uint64 crashTime = 0;
         if ( FileUtil::tryGetFileTimestamp( contextPath, crashTime ) == false )
-            SW_LOG_WARNING( "Crash report: cannot read the time of %# - the bundle carries crashTime 0", contextPath );
+            SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead", "Crash report: cannot read the time of %# - the bundle carries crashTime 0", contextPath );
         root.set( "crashTime" ).setUint( crashTime );
         root.set( "bundledBy" ).setString( _currentSessionID );
         const string    contextText = Internal::readText( contextPath );
@@ -338,7 +338,7 @@ namespace sw
             const string target = FileUtil::joinPath( bundleFolder, kind._pBundleName );
             if ( FileUtil::copyFile( source, target ) == false )
             {
-                SW_LOG_WARNING( "Crash report: '%#' could not be copied into the bundle", source.c_str() );
+                SW_LOG_WARNING_ID( "CrashReport.CrashReportCouldNot", "Crash report: '%#' could not be copied into the bundle", source.c_str() );
                 continue;
             }
             if ( StringUtil::equals( kind._pExtension, "breadcrumbs.txt" ) )
@@ -349,7 +349,7 @@ namespace sw
             entry.set( "name" ).setString( kind._pBundleName );
             uint64 byteCount = 0;
             if ( FileUtil::tryGetFileSize( target, byteCount ) == false )
-                SW_LOG_WARNING( "Crash report: cannot read the size of %#", target );
+                SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead2", "Crash report: cannot read the size of %#", target );
             entry.set( "bytes" ).setUint( byteCount );
         }
         const string log = Internal::collectSessionLog( _crashFolder, sessionID, fixedLogPath, kMaxLogBytes );
@@ -370,11 +370,11 @@ namespace sw
         Internal::setState( manifest, state );
         if ( Internal::saveManifest( bundleFolder, manifest ) == false )
         {
-            SW_LOG_WARNING( "Crash report: manifest of '%#' could not be written", bundleFolder.c_str() );
+            SW_LOG_WARNING_ID( "CrashReport.CrashReportManifestCould", "Crash report: manifest of '%#' could not be written", bundleFolder.c_str() );
             return false;
         }
-        SW_LOG_INFO( "Crash report: bundled session %# (%#) into '%#' - %#", sessionID, reason.c_str(), bundleFolder.c_str(),
-                     toString( state ) );
+        SW_LOG_INFO_ID( "CrashReport.CrashReportBundledSession", "Crash report: bundled session %# (%#) into '%#' - %#", sessionID, reason.c_str(), bundleFolder.c_str(),
+                        toString( state ) );
         return true;
     }
 
@@ -484,7 +484,7 @@ namespace sw
         const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( _reporterExecutable );
         const ProcessCommand              command    = executable.has_value() ? ProcessCommand::at( *executable, { string( kReporterArgument ) + "=" + _reportsFolder } ) : ProcessCommand{};
         const bool                        bLaunched  = Process::launchDetached( command );
-        SW_LOG_INFO( "Crash report: %# the reporter process for '%#'", bLaunched ? "launched" : "could not launch", _reportsFolder.c_str() );
+        SW_LOG_INFO_ID( "CrashReport.CrashReportReporterProcess", "Crash report: %# the reporter process for '%#'", bLaunched ? "launched" : "could not launch", _reportsFolder.c_str() );
         return bLaunched;
     }
 

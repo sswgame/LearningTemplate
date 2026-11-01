@@ -211,7 +211,7 @@ namespace sw
             _pendingWarpSpawn._x = pWarp->_targetTileX;
             _pendingWarpSpawn._y = pWarp->_targetTileY;
             _bWarpPending        = SW_TRUE;
-            SW_LOG_TRACE( "Warp trigger → %# @ (%#,%#)", _pendingWarpMap, _pendingWarpSpawn._x, _pendingWarpSpawn._y );
+            SW_LOG_TRACE_ID( "OverworldTileMover.WarpTrigger", "Warp trigger → %# @ (%#,%#)", _pendingWarpMap, _pendingWarpSpawn._x, _pendingWarpSpawn._y );
         }
         else if ( _pTileMap->isEncounterTile( _tile._x, _tile._y ) )
         {
@@ -220,7 +220,7 @@ namespace sw
             {
                 _encounterSteps.markEncounter();
                 _bEncounterPending = SW_TRUE;
-                SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tile._x, _tile._y );
+                SW_LOG_TRACE_ID( "OverworldTileMover.WildEncounter", "Wild encounter at (%#,%#)", _tile._x, _tile._y );
             }
         }
         return true;

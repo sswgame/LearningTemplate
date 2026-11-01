@@ -72,7 +72,7 @@ namespace sw
         _random.setSeed( seed );
         const SRPGTerrainDef* pTerrain = pCatalog != nullptr ? pCatalog->findTerrain( defaultTerrain ) : nullptr;
         if ( pTerrain == nullptr )
-            SW_LOG_WARNING( "unknown default terrain '%#' - cells are impassable until painted", defaultTerrain.c_str() );
+            SW_LOG_WARNING_ID( "SRPGBattlefield.UnknownDefaultTerrainCells", "unknown default terrain '%#' - cells are impassable until painted", defaultTerrain.c_str() );
         _listTerrain.assign( static_cast<size_t>( _topology.getCellCount() ), pTerrain );
         _listUnit.clear();
         _eventBuffer.clear();
@@ -112,7 +112,7 @@ namespace sw
         unit._pPilot = _pCatalog->findPilot( pilotID );
         if ( unit._pDef == nullptr || unit._pPilot == nullptr )
         {
-            SW_LOG_WARNING( "cannot place unit '%#' with pilot '%#' - unknown id", unitID.c_str(), pilotID.c_str() );
+            SW_LOG_WARNING_ID( "SRPGBattlefield.CannotPlaceUnitPilot", "cannot place unit '%#' with pilot '%#' - unknown id", unitID.c_str(), pilotID.c_str() );
             return -1;
         }
         const bool bCannotPlaceUnit = isInside( cell ) == false || findUnitAt( cell ) >= 0 || computeTerrainCost( unit, cell ) < 0;

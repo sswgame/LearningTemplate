@@ -21,7 +21,7 @@ namespace sw
         // 정렬 레이어 표는 엔진 파일에만 있다 - 못 읽으면 대신 쓸 표가 없으므로 기동을 멈춘다(이유는 loadFromAsset 가 남긴다).
         if ( reload() == false )
         {
-            SW_LOG_ERROR( "2D render settings '%#' could not be read - stopping startup", Render2DSettings::getEngineSettingsPath() );
+            SW_LOG_ERROR_ID( "Render2DSettings.DRenderSettingsCould", "2D render settings '%#' could not be read - stopping startup", Render2DSettings::getEngineSettingsPath() );
             return SubsystemInitResult::Failed;
         }
         return SubsystemInitResult::Succeeded;

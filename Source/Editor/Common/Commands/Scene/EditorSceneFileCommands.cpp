@@ -99,7 +99,7 @@ namespace sw::editor
         const string loadPath = AssetPaths::normalizeAssetID( path );
         if ( loadPath.empty() )
         {
-            SW_LOG_ERROR( "Open Scene: '%#' is not a scene resource id", path );
+            SW_LOG_ERROR_ID( "EditorSceneFileCommands.OpenSceneNotScene", "Open Scene: '%#' is not a scene resource id", path );
             return false;
         }
 
@@ -109,7 +109,7 @@ namespace sw::editor
         {
             // 여기서 알린다. 호출하는 쪽이 이 반환값을 읽지 않으므로, 조용히 false 만 반환하면 사용자가 씬을 선택했는데 아무 일도
             // 일어나지 않고 로그에도 남지 않는다.
-            SW_LOG_ERROR( "Open Scene: load request failed - %#", loadPath );
+            SW_LOG_ERROR_ID( "EditorSceneFileCommands.OpenSceneLoadRequest", "Open Scene: load request failed - %#", loadPath );
             editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneOpenFailed" ),
                                                                     NotificationType::Error );
             return false;
@@ -117,7 +117,7 @@ namespace sw::editor
 
         editor::getSubsystem<EditorWorkspace>().clearSelection();
 
-        SW_LOG_INFO( "Open Scene: %#", loadPath );
+        SW_LOG_INFO_ID( "EditorSceneFileCommands.OpenScene", "Open Scene: %#", loadPath );
         return true;
     }
 
@@ -150,7 +150,7 @@ namespace sw::editor
         Scene* pScene = editor::getSubsystem<SceneManager>().createEmptyActiveScene( "Untitled" );
         if ( pScene == nullptr )
         {
-            SW_LOG_ERROR( "New Scene: SceneManager could not create an empty scene" );
+            SW_LOG_ERROR_ID( "EditorSceneFileCommands.NewSceneSceneManagerCould", "New Scene: SceneManager could not create an empty scene" );
             return false;
         }
         syncAfterSceneGenerationChange();
@@ -265,7 +265,7 @@ namespace sw::editor
         if ( FileUtil::isReadOnlyFile( absPath.str() ) == false )
             return false;
         editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ), NotificationType::Warning );
-        SW_LOG_WARNING( "Scene '%#' is read-only (not checked out) - not saved", absPath.str() );
+        SW_LOG_WARNING_ID( "EditorSceneFileCommands.SceneReadOnlyNot", "Scene '%#' is read-only (not checked out) - not saved", absPath.str() );
         return true;
     }
 
@@ -273,7 +273,7 @@ namespace sw::editor
     {
         if ( bSaved == false )
         {
-            SW_LOG_ERROR( "Save Scene: SceneManager could not save '%#'", target );
+            SW_LOG_ERROR_ID( "EditorSceneFileCommands.SaveSceneSceneManagerCould", "Save Scene: SceneManager could not save '%#'", target );
             return false;
         }
         editor::getSubsystem<EditorWorkspace>().clearSceneDirty();

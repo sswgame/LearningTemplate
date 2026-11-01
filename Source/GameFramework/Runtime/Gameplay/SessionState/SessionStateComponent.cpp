@@ -48,7 +48,7 @@ namespace sw
             {
                 if ( section._version != TState::kStateVersion )
                 {
-                    SW_LOG_WARNING( "SessionState: %# section version %# is not %# - it starts fresh", pName, section._version, TState::kStateVersion );
+                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionVersionNot", "SessionState: %# section version %# is not %# - it starts fresh", pName, section._version, TState::kStateVersion );
                     return false;
                 }
                 Archive    body  = section._body;
@@ -56,7 +56,7 @@ namespace sw
                 const bool bRead = state.readState( body ) && body.getRemainingBytes() == 0;
                 if ( bRead == false )
                 {
-                    SW_LOG_WARNING( "SessionState: %# section is broken - it starts fresh", pName );
+                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionBrokenStarts", "SessionState: %# section is broken - it starts fresh", pName );
                     return false;
                 }
                 inoutState = std::move( state );
@@ -158,7 +158,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "SessionState: refused to open - settings '%#'", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "SessionState.SessionStateRefusedOpenSettings", "SessionState: refused to open - settings '%#'", rangeError.c_str() );
             return SessionStateInitResult::Refused;
         }
         if ( _clock.initialize( settings._clock ) == false )
@@ -281,7 +281,7 @@ namespace sw
         const bool bRestored = readState( archive );
         _pendingStateBytes.clear();
         if ( bRestored == false )
-            SW_LOG_ERROR( "SessionState: the saved shared state could not be read - the game state starts fresh" );
+            SW_LOG_ERROR_ID( "SessionState.SessionStateSavedSharedState", "SessionState: the saved shared state could not be read - the game state starts fresh" );
         return bRestored;
     }
 
@@ -356,7 +356,7 @@ namespace sw
                 }
                 default:
                 {
-                    SW_LOG_WARNING( "SessionState: unknown section %# skipped", section._tag );
+                    SW_LOG_WARNING_ID( "SessionState.SessionStateUnknownSectionSkipped", "SessionState: unknown section %# skipped", section._tag );
                     break;
                 }
             }

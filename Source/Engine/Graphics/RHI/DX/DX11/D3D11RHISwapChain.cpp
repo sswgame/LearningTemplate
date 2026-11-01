@@ -41,7 +41,7 @@ namespace sw
         const HRESULT resizeHr = _swapChain->ResizeBuffers( 0, width, height, DXGI_FORMAT_UNKNOWN, _swapChainFlags );
         if ( FAILED( resizeHr ) )
         {
-            SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
+            SW_LOG_ERROR_ID( "D3D11.ResizeBuffersFailedHrX", "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
             return false;
         }
         return true;
@@ -85,7 +85,7 @@ namespace sw
         const HRESULT hr = _swapChain->GetBuffer( 0, IID_PPV_ARGS( backBuffer.GetAddressOf() ) );
         if ( FAILED( hr ) )
         {
-            SW_LOG_ERROR( "GetBuffer failed hr=0x%#", static_cast<uint32>( hr ) );
+            SW_LOG_ERROR_ID( "D3D11.GetBufferFailedHrX", "GetBuffer failed hr=0x%#", static_cast<uint32>( hr ) );
             backBuffer.Reset();
         }
         return backBuffer;

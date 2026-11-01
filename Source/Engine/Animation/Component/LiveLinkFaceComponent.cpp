@@ -36,7 +36,7 @@ namespace sw
         FacialAnimationComponent* pFace  = pOwner != nullptr ? pOwner->getComponent<FacialAnimationComponent>() : nullptr;
         if ( pFace == nullptr )
         {
-            SW_LOG_ERROR( "Live Link Face on '%#' needs a FacialAnimationComponent on the same object", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceNeeds", "Live Link Face on '%#' needs a FacialAnimationComponent on the same object", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
             return;
         }
         LiveLinkFaceMapping mapping;
@@ -46,7 +46,7 @@ namespace sw
         _transport = make_unique<UDPNetTransport>();
         if ( _transport->open( static_cast<uint16>( _port ), _bLoopbackOnly == SW_TRUE ) == false )
         {
-            SW_LOG_ERROR( "Live Link Face could not open UDP port %#", _port );
+            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceCould", "Live Link Face could not open UDP port %#", _port );
             _transport.reset();
             return;
         }
@@ -81,7 +81,7 @@ namespace sw
                 continue;
             }
             if ( _bReportedError == SW_FALSE )
-                SW_LOG_ERROR( "Live Link Face packet rejected (further rejections are not logged): %#", error.c_str() );
+                SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFacePacket", "Live Link Face packet rejected (further rejections are not logged): %#", error.c_str() );
             _bReportedError = SW_TRUE;
         }
         if ( bApplied == false )

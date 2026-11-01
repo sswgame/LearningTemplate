@@ -284,7 +284,7 @@ namespace sw::editor
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
         {
-            SW_LOG_ERROR( "No SceneManager - the edit of '%#' in the preview scene is not recorded", obj.getName().c_str() );
+            SW_LOG_ERROR_ID( "EditorSelection.NoSceneManagerEditPreview", "No SceneManager - the edit of '%#' in the preview scene is not recorded", obj.getName().c_str() );
             return;
         }
         _pPreviewStack->push( ObjectUndoUtil::makeModify( *pSceneManager, obj, before, after, label ) );

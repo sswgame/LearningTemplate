@@ -43,7 +43,7 @@ namespace sw
                 ++loadedCount;
         }
         if ( _zone._listPhase.empty() )
-            SW_LOG_WARNING( "%#: no zone phases - the zone never shrinks", sourceName );
+            SW_LOG_WARNING_ID( "BattleRoyaleCatalog.NoZonePhasesZone", "%#: no zone phases - the zone never shrinks", sourceName );
         return loadedCount;
     }
 
@@ -65,7 +65,7 @@ namespace sw
             return loadZone( node, sourceName );
         if ( XMLReadUtil::isElement( name, "SupplyDrop" ) )
             return loadSupplyDrop( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "BattleRoyaleCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -98,7 +98,7 @@ namespace sw
                 supplyDrop._listTime.push_back( time );
             else
             {
-                SW_LOG_ERROR( "%#: <SupplyDrop times> has '%#', which is not a time of 0 or more", sourceName, token );
+                SW_LOG_ERROR_ID( "BattleRoyaleCatalog.SupplyDropTimesWhichNot", "%#: <SupplyDrop times> has '%#', which is not a time of 0 or more", sourceName, token );
                 bValid = false;
             }
         } );

@@ -44,7 +44,7 @@ namespace sw::editor
             static void onAppearanceChanged()
             {
                 if ( ImGui::GetCurrentContext() != nullptr && EditorThemeUtil::loadFromConfig() == false )
-                    SW_LOG_ERROR( "Editor/Appearance names a theme that cannot be applied - the current theme stays until it is fixed" );
+                    SW_LOG_ERROR_ID( "EditorThemeUtil.EditorAppearanceNamesTheme", "Editor/Appearance names a theme that cannot be applied - the current theme stays until it is fixed" );
             }
 
             /**
@@ -68,15 +68,15 @@ namespace sw::editor
                     string            error;
                     string            mismatchKey;
                     if ( EditorThemeTokens::loadTheme( name, config, error ) == false )
-                        SW_LOG_ERROR( "Theme tokens '%#' were not loaded: %#", name.c_str(), error.c_str() );
+                        SW_LOG_ERROR_ID( "EditorThemeUtil.ThemeTokensNotLoaded", "Theme tokens '%#' were not loaded: %#", name.c_str(), error.c_str() );
                     else if ( outListTheme.empty() == false && EditorThemeTokens::findKeyMismatch( outListTheme.front(), config, mismatchKey ) )
-                        SW_LOG_ERROR( "Theme tokens '%#' were not loaded: key '%#' is in only one of '%#' and '%#' - every theme needs the same keys", name.c_str(),
-                                      mismatchKey.c_str(), outListTheme.front()._name.c_str(), name.c_str() );
+                        SW_LOG_ERROR_ID( "EditorThemeUtil.ThemeTokensNotLoaded2", "Theme tokens '%#' were not loaded: key '%#' is in only one of '%#' and '%#' - every theme needs the same keys", name.c_str(),
+                                         mismatchKey.c_str(), outListTheme.front()._name.c_str(), name.c_str() );
                     else
                         outListTheme.push_back( std::move( config ) );
                 }
                 if ( outListTheme.empty() )
-                    SW_LOG_ERROR( "No editor theme token file under %# - no theme can be applied", EditorThemeTokens::getFolderPath().c_str() );
+                    SW_LOG_ERROR_ID( "EditorThemeUtil.NoEditorThemeToken", "No editor theme token file under %# - no theme can be applied", EditorThemeTokens::getFolderPath().c_str() );
             }
 
             /** @brief 읽어 둔 벌 목록입니다. 비었으면 지금 읽습니다. */
@@ -333,7 +333,7 @@ namespace sw::editor
         EditorThemeInternal::loadAvailableThemes( theme.getAvailable() );
         // 지금 벌을 새 값으로 다시 적용하고, 사용자가 덮어쓴 강조색 · 둥글기는 설정에서 다시 적용한다. 못 하면 오류를 남기고 지금 테마를 둔다.
         if ( loadFromConfig() )
-            SW_LOG_INFO( "Editor theme tokens reloaded (%# set(s))", theme.getAvailable().size() );
+            SW_LOG_INFO_ID( "EditorThemeUtil.EditorThemeTokensReloaded", "Editor theme tokens reloaded (%# set(s))", theme.getAvailable().size() );
     }
 
     void EditorThemeUtil::applyTheme( const EditorThemeConfig& config )
@@ -371,7 +371,7 @@ namespace sw::editor
         const EditorThemeConfig* pTheme       = EditorThemeInternal::findAvailable( editorConfig._themeName );
         if ( pTheme == nullptr )
         {
-            SW_LOG_ERROR( "Editor theme '%#' (Editor/Appearance) has no token file under %#", editorConfig._themeName.c_str(), EditorThemeTokens::getFolderPath().c_str() );
+            SW_LOG_ERROR_ID( "EditorThemeUtil.EditorThemeEditorAppearance", "Editor theme '%#' (Editor/Appearance) has no token file under %#", editorConfig._themeName.c_str(), EditorThemeTokens::getFolderPath().c_str() );
             return false;
         }
 

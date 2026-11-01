@@ -88,13 +88,13 @@ namespace sw
             {
                 if ( packBytes.size() > static_cast<size_t>( MathUtil::kMaxInt32 ) )
                 {
-                    SW_LOG_ERROR( "Pack patch pack is %# bytes - signing and checking take packs under 2 GiB", packBytes.size() );
+                    SW_LOG_ERROR_ID( "PackPatch.PackPatchPackBytes", "Pack patch pack is %# bytes - signing and checking take packs under 2 GiB", packBytes.size() );
                     return false;
                 }
                 uint8 arrDigest[NetSecurityConstant::kSHA256Size]{};
                 if ( provider.computeSHA256( packBytes.data(), static_cast<int32>( packBytes.size() ), arrDigest ) == false )
                 {
-                    SW_LOG_ERROR( "Pack patch pack hash could not be computed" );
+                    SW_LOG_ERROR_ID( "PackPatch.PackPatchPackHash", "Pack patch pack hash could not be computed" );
                     return false;
                 }
                 outHex = toHex( arrDigest, sizeof( arrDigest ) );
@@ -108,7 +108,7 @@ namespace sw
                 {
                     if ( outMapPathToHash.emplace( entry._path, entry._contentHash ).second == false )
                     {
-                        SW_LOG_ERROR( "Pack delta: the %# build lists '%#' twice - cannot tell which content is right", pWhich, entry._path );
+                        SW_LOG_ERROR_ID( "PackPatch.PackDeltaBuildLists", "Pack delta: the %# build lists '%#' twice - cannot tell which content is right", pWhich, entry._path );
                         return false;
                     }
                 }
@@ -146,13 +146,13 @@ namespace sw
         XMLDocument document;
         if ( document.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR( "Pack patch manifest is not valid XML: %#", document.getLastError() );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestNot", "Pack patch manifest is not valid XML: %#", document.getLastError() );
             return false;
         }
         const XMLNode root = document.getRoot( PackPatchInternal::kRootName );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# has no <%#> root", sourceName, PackPatchInternal::kRootName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestNo", "Pack patch manifest %# has no <%#> root", sourceName, PackPatchInternal::kRootName );
             return false;
         }
         const std::optional<string> fromBuild     = root.readRequiredAttribute<string>( "from" );
@@ -163,14 +163,14 @@ namespace sw
             return false; // 읽기가 원소 · 속성 이름으로 오류를 남겼다
         if ( *fromBuild == *toBuild )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# goes from build '%#' to itself", sourceName, *fromBuild );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestGoes", "Pack patch manifest %# goes from build '%#' to itself", sourceName, *fromBuild );
             return false;
         }
         // 패치 팩은 목록 파일과 같은 폴더의 파일이다 — 폴더를 벗어나는 이름을 받지 않는다.
         const bool bUnsafePackName = packFile->empty() || packFile->find_first_of( "/\\" ) != string::npos || *packFile == "..";
         if ( bUnsafePackName )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# names pack '%#' - it must be a plain file name next to the manifest", sourceName, *packFile );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestNames", "Pack patch manifest %# names pack '%#' - it must be a plain file name next to the manifest", sourceName, *packFile );
             return false;
         }
         // 팩 해시와 서명은 함께 있거나 함께 없다 — 한쪽만 있으면 서명이 무엇을 묶는지 알 수 없다.
@@ -180,7 +180,7 @@ namespace sw
             return false;
         if ( packSHA256.has_value() != signature.has_value() )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# has only one of packSHA256 and signature - a signed patch needs both", sourceName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestOnly", "Pack patch manifest %# has only one of packSHA256 and signature - a signed patch needs both", sourceName );
             return false;
         }
         if ( packSHA256.has_value() )
@@ -188,12 +188,12 @@ namespace sw
             vector<uint8> listDecoded;
             if ( packSHA256->size() != PackPatchInternal::kSHA256HexDigits || PackPatchInternal::fromHex( *packSHA256, listDecoded ) == false )
             {
-                SW_LOG_ERROR( "Pack patch manifest %#: packSHA256 must be %# lowercase hex digits", sourceName, PackPatchInternal::kSHA256HexDigits );
+                SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestPackSHA256", "Pack patch manifest %#: packSHA256 must be %# lowercase hex digits", sourceName, PackPatchInternal::kSHA256HexDigits );
                 return false;
             }
             if ( signature->size() != PackPatchInternal::kSignatureHexDigits || PackPatchInternal::fromHex( *signature, listDecoded ) == false )
             {
-                SW_LOG_ERROR( "Pack patch manifest %#: signature must be %# lowercase hex digits", sourceName, PackPatchInternal::kSignatureHexDigits );
+                SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestSignature", "Pack patch manifest %#: signature must be %# lowercase hex digits", sourceName, PackPatchInternal::kSignatureHexDigits );
                 return false;
             }
             outManifest._packSHA256Hex = *packSHA256;
@@ -242,13 +242,13 @@ namespace sw
         XMLDocument document;
         if ( document.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR( "Pack build record is not valid XML: %#", document.getLastError() );
+            SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordNot", "Pack build record is not valid XML: %#", document.getLastError() );
             return false;
         }
         const XMLNode root = document.getRoot( PackPatchInternal::kRecordRoot );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "Pack build record %# has no <%#> root", sourceName, PackPatchInternal::kRecordRoot );
+            SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordNo", "Pack build record %# has no <%#> root", sourceName, PackPatchInternal::kRecordRoot );
             return false;
         }
         const std::optional<string> patching = root.readRequiredAttribute<string>( "patching" );
@@ -260,14 +260,14 @@ namespace sw
             outRecord._patching = PackPatching::None;
         else
         {
-            SW_LOG_ERROR( "Pack build record %#: patching '%#' is neither '%#' nor '%#'", sourceName, *patching, PackPatchInternal::kPatchingChain, PackPatchInternal::kPatchingNone );
+            SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordPatching", "Pack build record %#: patching '%#' is neither '%#' nor '%#'", sourceName, *patching, PackPatchInternal::kPatchingChain, PackPatchInternal::kPatchingNone );
             return false;
         }
         if ( outRecord._patching == PackPatching::None )
         {
             if ( root.findChild( PackPatchInternal::kEntryName ).isValid() || root.findAttribute( "build" ) != nullptr )
             {
-                SW_LOG_ERROR( "Pack build record %#: patching '%#' carries no build number or entries", sourceName, PackPatchInternal::kPatchingNone );
+                SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordPatching2", "Pack build record %#: patching '%#' carries no build number or entries", sourceName, PackPatchInternal::kPatchingNone );
                 return false;
             }
             return true;
@@ -287,12 +287,12 @@ namespace sw
             content._path = *path;
             if ( PackPatchInternal::parseHash( *hashText, content._contentHash ) == false )
             {
-                SW_LOG_ERROR( "Pack build record %#: '%#' has hash '%#' - need %# hex digits", sourceName, *path, *hashText, PackPatchInternal::kHashDigits );
+                SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordHash", "Pack build record %#: '%#' has hash '%#' - need %# hex digits", sourceName, *path, *hashText, PackPatchInternal::kHashDigits );
                 return false;
             }
             if ( mapPathToHash.emplace( content._path, content._contentHash ).second == false )
             {
-                SW_LOG_ERROR( "Pack build record %# lists '%#' twice - cannot tell which content is right", sourceName, *path );
+                SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordLists", "Pack build record %# lists '%#' twice - cannot tell which content is right", sourceName, *path );
                 return false;
             }
             outRecord._listEntry.push_back( std::move( content ) );
@@ -344,12 +344,12 @@ namespace sw
                 break;
             if ( startCount > 1 )
             {
-                SW_LOG_ERROR( "Pack patch chain forks: %# patches start at build '%#'", startCount, outLatestBuild );
+                SW_LOG_ERROR_ID( "PackPatch.PackPatchChainForks", "Pack patch chain forks: %# patches start at build '%#'", startCount, outLatestBuild );
                 return false;
             }
             if ( outListOrder.size() >= listManifest.size() )
             {
-                SW_LOG_ERROR( "Pack patch chain from build '%#' loops back to '%#'", installedBuild, outLatestBuild );
+                SW_LOG_ERROR_ID( "PackPatch.PackPatchChainBuild", "Pack patch chain from build '%#' loops back to '%#'", installedBuild, outLatestBuild );
                 return false;
             }
             outListOrder.push_back( nextIndex );
@@ -359,8 +359,8 @@ namespace sw
         {
             if ( std::find( outListOrder.begin(), outListOrder.end(), manifestIndex ) != outListOrder.end() )
                 continue;
-            SW_LOG_ERROR( "Pack patch from build '%#' to '%#' (%#) cannot be reached from the installed build '%#' - a patch in between is missing", listManifest[manifestIndex]._fromBuild,
-                          listManifest[manifestIndex]._toBuild, listManifest[manifestIndex]._packFileName, installedBuild );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchBuildCannot", "Pack patch from build '%#' to '%#' (%#) cannot be reached from the installed build '%#' - a patch in between is missing", listManifest[manifestIndex]._fromBuild,
+                             listManifest[manifestIndex]._toBuild, listManifest[manifestIndex]._packFileName, installedBuild );
             return false;
         }
         return true;
@@ -403,19 +403,19 @@ namespace sw
         inOutManifest._signatureHex.clear();
         if ( PackPatchInternal::hasLineBreakField( inOutManifest ) )
         {
-            SW_LOG_ERROR( "Pack patch %# -> %# has a line break in a field - it cannot be signed", inOutManifest._fromBuild, inOutManifest._toBuild );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchLineBreak", "Pack patch %# -> %# has a line break in a field - it cannot be signed", inOutManifest._fromBuild, inOutManifest._toBuild );
             return false;
         }
         const string  payload = makeSigningPayload( inOutManifest );
         vector<uint8> listSignature;
         if ( provider.signData( NetSignatureAlgorithm::EcdsaP256Sha256, privateKeyPem, reinterpret_cast<const uint8*>( payload.data() ), static_cast<int32>( payload.size() ), listSignature ) == false )
         {
-            SW_LOG_ERROR( "Pack patch %# -> %# could not be signed - check the private key is an ES256 (P-256) PKCS#8 PEM", inOutManifest._fromBuild, inOutManifest._toBuild );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchCouldNot", "Pack patch %# -> %# could not be signed - check the private key is an ES256 (P-256) PKCS#8 PEM", inOutManifest._fromBuild, inOutManifest._toBuild );
             return false;
         }
         if ( listSignature.size() != PackPatchInternal::kSignatureSize )
         {
-            SW_LOG_ERROR( "Pack patch signature is %# bytes - ES256 gives %#", listSignature.size(), PackPatchInternal::kSignatureSize );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchSignatureBytes", "Pack patch signature is %# bytes - ES256 gives %#", listSignature.size(), PackPatchInternal::kSignatureSize );
             return false;
         }
         inOutManifest._signatureHex = PackPatchInternal::toHex( listSignature.data(), listSignature.size() );
@@ -427,17 +427,17 @@ namespace sw
     {
         if ( manifest._signatureHex.empty() || manifest._packSHA256Hex.empty() )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# is not signed but a signature is required", sourceName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestNot2", "Pack patch manifest %# is not signed but a signature is required", sourceName );
             return false;
         }
         if ( publicKey._algorithm != NetSignatureAlgorithm::EcdsaP256Sha256 )
         {
-            SW_LOG_ERROR( "Pack patch signing key for %# is not an ES256 (P-256) key", sourceName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchSigningKey", "Pack patch signing key for %# is not an ES256 (P-256) key", sourceName );
             return false;
         }
         if ( PackPatchInternal::hasLineBreakField( manifest ) )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# has a line break in a field", sourceName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestLine", "Pack patch manifest %# has a line break in a field", sourceName );
             return false;
         }
         string actualSHA256Hex;
@@ -445,19 +445,19 @@ namespace sw
             return false;
         if ( SecureUtil::equalsConstantTime( actualSHA256Hex, manifest._packSHA256Hex ) == false )
         {
-            SW_LOG_ERROR( "Pack patch pack %# does not match the SHA-256 in %# - the pack was changed after signing", manifest._packFileName, sourceName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchPackDoes", "Pack patch pack %# does not match the SHA-256 in %# - the pack was changed after signing", manifest._packFileName, sourceName );
             return false;
         }
         vector<uint8> listSignature;
         if ( PackPatchInternal::fromHex( manifest._signatureHex, listSignature ) == false || listSignature.size() != PackPatchInternal::kSignatureSize )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# has a malformed signature", sourceName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestMalformed", "Pack patch manifest %# has a malformed signature", sourceName );
             return false;
         }
         const string payload = makeSigningPayload( manifest );
         if ( provider.verifySignature( publicKey, reinterpret_cast<const uint8*>( payload.data() ), static_cast<int32>( payload.size() ), listSignature.data(), static_cast<int32>( listSignature.size() ) ) == false )
         {
-            SW_LOG_ERROR( "Pack patch manifest %# signature does not verify with the trusted key", sourceName );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestSignature2", "Pack patch manifest %# signature does not verify with the trusted key", sourceName );
             return false;
         }
         return true;
@@ -471,7 +471,7 @@ namespace sw
         {
             if ( outListOrder.size() >= listManifest.size() )
             {
-                SW_LOG_ERROR( "Pack patch chain from build '%#' loops before it reaches '%#'", installedBuild, targetBuild );
+                SW_LOG_ERROR_ID( "PackPatch.PackPatchChainBuild2", "Pack patch chain from build '%#' loops before it reaches '%#'", installedBuild, targetBuild );
                 return false;
             }
             size_t nextIndex  = listManifest.size();
@@ -485,7 +485,7 @@ namespace sw
             }
             if ( startCount != 1 )
             {
-                SW_LOG_ERROR( "Pack patch chain: %# patches start at build '%#' (need exactly one to reach '%#')", startCount, currentBuild, targetBuild );
+                SW_LOG_ERROR_ID( "PackPatch.PackPatchChainPatches", "Pack patch chain: %# patches start at build '%#' (need exactly one to reach '%#')", startCount, currentBuild, targetBuild );
                 return false;
             }
             outListOrder.push_back( nextIndex );

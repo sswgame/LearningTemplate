@@ -33,7 +33,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Animation LOD settings '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsCould", "Animation LOD settings '%#' could not be read", path );
             *this = AnimationLODSettings{};
             return false;
         }
@@ -44,25 +44,25 @@ namespace sw
     {
         if ( _listRateLevel.empty() )
         {
-            SW_LOG_ERROR( "Animation LOD settings '%#': '_listRateLevel' must be a non-empty array", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsListRateLevel", "Animation LOD settings '%#': '_listRateLevel' must be a non-empty array", sourceLabel );
             return false;
         }
         for ( size_t levelIndex = 1; levelIndex < _listRateLevel.size(); ++levelIndex )
         {
             if ( _listRateLevel[levelIndex]._minScreenSize >= _listRateLevel[levelIndex - 1]._minScreenSize )
             {
-                SW_LOG_ERROR( "Animation LOD settings '%#': rate level %# _minScreenSize must be smaller than the previous level's", sourceLabel, levelIndex );
+                SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsRate", "Animation LOD settings '%#': rate level %# _minScreenSize must be smaller than the previous level's", sourceLabel, levelIndex );
                 return false;
             }
         }
         if ( _listRateLevel.back()._minScreenSize > 0.0f )
         {
-            SW_LOG_ERROR( "Animation LOD settings '%#': the last rate level must have _minScreenSize 0", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsLast", "Animation LOD settings '%#': the last rate level must have _minScreenSize 0", sourceLabel );
             return false;
         }
         if ( _budgetMilliseconds > 0.0f && _unitCostMicroseconds <= 0.0f )
         {
-            SW_LOG_ERROR( "Animation LOD settings '%#': _budgetMilliseconds is set but _unitCostMicroseconds is not - the budget needs a modelled unit cost", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsBudgetMilliseconds", "Animation LOD settings '%#': _budgetMilliseconds is set but _unitCostMicroseconds is not - the budget needs a modelled unit cost", sourceLabel );
             return false;
         }
         return true;

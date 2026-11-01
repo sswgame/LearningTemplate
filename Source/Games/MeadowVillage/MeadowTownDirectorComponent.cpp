@@ -62,7 +62,7 @@ namespace sw
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_ERROR( "[Meadow] the town cannot start - no SessionStateComponent in front of it on this object" );
+            SW_LOG_ERROR_ID( "MeadowTown.TownCannotStartNo", "[Meadow] the town cannot start - no SessionStateComponent in front of it on this object" );
             return false;
         }
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
@@ -112,7 +112,7 @@ namespace sw
             {
                 if ( 0 < _town.attractVisitorsAt( clock.getDay(), clockEvent._value, clock.getDayPhase(), "sunny" ) )
                 {
-                    SW_LOG_INFO( "[Meadow] a creature moved in on day %#", clock.getDay() );
+                    SW_LOG_INFO_ID( "MeadowTown.CreatureMovedDay", "[Meadow] a creature moved in on day %#", clock.getDay() );
                     _bViewsDirty = SW_TRUE;
                 }
             }
@@ -124,7 +124,7 @@ namespace sw
         const hashed_string request( MeadowVillageData::kRequestQuest );
         const bool          bCanAsk = _town.findCreature( sprout ) != nullptr && pState->getQuestLog().getStatus( request ) == QuestStatus::NotStarted;
         if ( bCanAsk && _town.startRequest( sprout, request ) == CreatureRequestResult::Ok )
-            SW_LOG_INFO( "[Meadow] sprout asks for an orchard (%# G)", _orchardPrice );
+            SW_LOG_INFO_ID( "MeadowTown.SproutAsksOrchardG", "[Meadow] sprout asks for an orchard (%# G)", _orchardPrice );
 
         // 밭이 이번 틱에 번 돈도 여기서 보인다 — 같은 오브젝트에서 밭이 먼저 돈다.
         Wallet&    wallet         = pState->getWallet();
@@ -133,8 +133,8 @@ namespace sw
         {
             (void)_town.setObject( 0, 2, "tree" );
             (void)_town.setObject( 1, 2, "tree" );
-            SW_LOG_INFO( "[Meadow] orchard planted on day %# - request %#", clock.getDay(),
-                         pState->getQuestLog().getStatus( request ) == QuestStatus::Completed ? "done" : "still open" );
+            SW_LOG_INFO_ID( "MeadowTown.OrchardPlantedDayRequest", "[Meadow] orchard planted on day %# - request %#", clock.getDay(),
+                            pState->getQuestLog().getStatus( request ) == QuestStatus::Completed ? "done" : "still open" );
             _bViewsDirty = SW_TRUE;
         }
 
@@ -143,7 +143,7 @@ namespace sw
         if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
         {
             const CreatureInteractResult result = _town.talkTo( sprout );
-            SW_LOG_INFO( "[Meadow] talk to sprout: %# (friendship %#)", getEnumName( result ), _town.getFriendship( sprout ) );
+            SW_LOG_INFO_ID( "MeadowTown.TalkSproutFriendship", "[Meadow] talk to sprout: %# (friendship %#)", getEnumName( result ), _town.getFriendship( sprout ) );
         }
     }
 
@@ -170,7 +170,7 @@ namespace sw
         const CreatureLifeCatalog* pCatalog = game::findSubsystem<CreatureLifeCatalog>();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "[Meadow] the town cannot start - the creature catalog is not loaded" );
+            SW_LOG_ERROR_ID( "MeadowTown.TownCannotStartCreature", "[Meadow] the town cannot start - the creature catalog is not loaded" );
             return false;
         }
         return outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} );

@@ -9,7 +9,7 @@ namespace sw
         vector<uint8> bytes;
         if ( writeBytes( bytes ) == false )
         {
-            SW_LOG_WARNING( "SaveGame could not serialize itself for slot %#", string( slot ).c_str() );
+            SW_LOG_WARNING_ID( "SaveGame.SaveGameCouldNotSerialize", "SaveGame could not serialize itself for slot %#", string( slot ).c_str() );
             return 0;
         }
         LocalStoreWriteOptions writeOptions = options;
@@ -24,7 +24,7 @@ namespace sw
             return false;
         if ( completion._formatVersion != getFormatVersion() )
         {
-            SW_LOG_WARNING( "SaveGame slot %# has format version %# (expected %#) — not read", completion._slot.c_str(), completion._formatVersion, getFormatVersion() );
+            SW_LOG_WARNING_ID( "SaveGame.SaveGameSlotFormatVersion", "SaveGame slot %# has format version %# (expected %#) — not read", completion._slot.c_str(), completion._formatVersion, getFormatVersion() );
             return false;
         }
         return readBytes( completion._bytes.data(), completion._bytes.size() );

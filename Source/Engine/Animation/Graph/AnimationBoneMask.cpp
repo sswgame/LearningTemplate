@@ -34,7 +34,7 @@ namespace sw
                 {
                     if ( string_view{ entryNode.getName() } != kEntryTag )
                     {
-                        SW_LOG_ERROR( "%#: bone mask '%#' item %# is not an <%#> element", context, pListKey, index, kEntryTag );
+                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskItemNot", "%#: bone mask '%#' item %# is not an <%#> element", context, pListKey, index, kEntryTag );
                         bValid = false;
                         continue;
                     }
@@ -48,14 +48,14 @@ namespace sw
                     entry._bPropagate = bPropagate ? SW_TRUE : SW_FALSE;
                     if ( entry._bone.empty() )
                     {
-                        SW_LOG_ERROR( "%#: bone mask '%#' item %# has no 'bone'", context, pListKey, index );
+                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskItemNo", "%#: bone mask '%#' item %# has no 'bone'", context, pListKey, index );
                         bValid = false;
                         continue;
                     }
                     const std::optional<float32> weight = entryNode.readRequiredAttribute<float32>( "weight" );
                     if ( weight.has_value() == false )
                     {
-                        SW_LOG_ERROR( "%#: bone mask entry '%#' needs a numeric 'weight'", context, entry._bone.c_str() );
+                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskEntryNeeds", "%#: bone mask entry '%#' needs a numeric 'weight'", context, entry._bone.c_str() );
                         bValid = false;
                         continue;
                     }
@@ -63,7 +63,7 @@ namespace sw
                     const bool bWeightValid = 0.0f <= entry._weight && entry._weight <= 1.0f;
                     if ( bWeightValid == false )
                     {
-                        SW_LOG_ERROR( "%#: bone mask entry '%#' weight %# is outside [0, 1]", context, entry._bone.c_str(), entry._weight );
+                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskEntryWeight", "%#: bone mask entry '%#' weight %# is outside [0, 1]", context, entry._bone.c_str(), entry._weight );
                         bValid = false;
                         continue;
                     }
@@ -82,7 +82,7 @@ namespace sw
         _listEntry.clear();
         if ( element.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: bone mask must be an element", context );
+            SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskMustElement", "%#: bone mask must be an element", context );
             return false;
         }
         // 알려진 이름은 목록 둘뿐이다. 그래프 안에 적을 때는 `name` · `file` 속성이 더해진다(`AnimationGraphAsset`) — 그 이름은 부르는 쪽이 이미 걸렀다.
@@ -91,7 +91,7 @@ namespace sw
             const string_view childName{ child.getName() };
             if ( childName != AnimationBoneMaskInternal::kArrListKey[0] && childName != AnimationBoneMaskInternal::kArrListKey[1] )
             {
-                SW_LOG_ERROR( "%#: bone mask has unknown element '%#'", context, child.getName() );
+                SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskUnknownElement", "%#: bone mask has unknown element '%#'", context, child.getName() );
                 return false;
             }
         }
@@ -101,7 +101,7 @@ namespace sw
             return false;
         if ( _listEntry.empty() )
         {
-            SW_LOG_ERROR( "%#: bone mask has neither 'roots' nor 'bones'", context );
+            SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskNeitherRoots", "%#: bone mask has neither 'roots' nor 'bones'", context );
             return false;
         }
         return true;
@@ -114,13 +114,13 @@ namespace sw
         XMLDocument doc;
         if ( path.empty() || doc.loadResource( assetID ) == false )
         {
-            SW_LOG_ERROR( "Bone mask file '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskFileCould", "Bone mask file '%#' could not be read", path );
             return false;
         }
         const XMLNode root = doc.getRoot( "AnimationBoneMaskDef" );
         if ( root.isValid() == false || XMLReadUtil::hasOnlyKnownNames( root, {}, { "roots", "bones" }, path ) == false )
         {
-            SW_LOG_ERROR( "Bone mask file '%#' must be an <AnimationBoneMaskDef> element", path );
+            SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskFileMust", "Bone mask file '%#' must be an <AnimationBoneMaskDef> element", path );
             return false;
         }
         if ( parseObject( root, path ) == false )
@@ -166,7 +166,7 @@ namespace sw
             const int32                   boneIndex = skeleton.findBoneIndex( entry._bone );
             if ( boneIndex < 0 )
             {
-                SW_LOG_ERROR( "Bone mask '%#' names bone '%#' that is not in the skeleton", _name.c_str(), entry._bone.c_str() );
+                SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskNamesBone", "Bone mask '%#' names bone '%#' that is not in the skeleton", _name.c_str(), entry._bone.c_str() );
                 outListWeight.assign( boneCount, 0.0f );
                 return false;
             }

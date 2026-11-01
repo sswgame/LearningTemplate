@@ -101,7 +101,7 @@ namespace sw
                     const std::optional<size_t> chainFound = VectorUtil::findIndex( listChainBone, bone );
                     if ( chainFound.has_value() == false )
                     {
-                        SW_LOG_ERROR( "Rig '%#': limit bone '%#' is not in the chain", context._label, spec._bone.c_str() );
+                        SW_LOG_ERROR_ID( "RigIKNodes.RigLimitBoneNot", "Rig '%#': limit bone '%#' is not in the chain", context._label, spec._bone.c_str() );
                         return false;
                     }
                     const size_t   chainIndex = *chainFound;
@@ -765,7 +765,7 @@ namespace sw
                     }
                     if ( ancestor < 0 || chain._listBone[0] == _pelvis )
                     {
-                        SW_LOG_ERROR( "Rig '%#': FullBodyIK chain '%#' must start below pelvis '%#'", context._label, chain._listBoneName[0].c_str(), _pelvisName.c_str() );
+                        SW_LOG_ERROR_ID( "RigIKNodes.RigFullBodyIKChainMust", "Rig '%#': FullBodyIK chain '%#' must start below pelvis '%#'", context._label, chain._listBoneName[0].c_str(), _pelvisName.c_str() );
                         return false;
                     }
                 }

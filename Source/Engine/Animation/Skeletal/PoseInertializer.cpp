@@ -74,7 +74,7 @@ namespace sw
         const uint32 boneCount = targetPose.getBoneCount();
         if ( halfLifeSeconds <= 0.0f )
         {
-            SW_LOG_ERROR( "Inertialization half life must be positive (got %#)", halfLifeSeconds );
+            SW_LOG_ERROR_ID( "PoseInertializer.InertializationHalfLifeMust", "Inertialization half life must be positive (got %#)", halfLifeSeconds );
             return false;
         }
         const bool bSourcePreviousMismatch = pSourcePreviousPose != nullptr && pSourcePreviousPose->getBoneCount() != boneCount;
@@ -82,7 +82,7 @@ namespace sw
         const bool bPreviousMismatch       = bSourcePreviousMismatch || bTargetPreviousMismatch;
         if ( sourcePose.getBoneCount() != boneCount || bPreviousMismatch )
         {
-            SW_LOG_ERROR( "Inertialization poses have different bone counts (source %#, target %#)", sourcePose.getBoneCount(), boneCount );
+            SW_LOG_ERROR_ID( "PoseInertializer.InertializationPosesDifferentBone", "Inertialization poses have different bone counts (source %#, target %#)", sourcePose.getBoneCount(), boneCount );
             return false;
         }
 

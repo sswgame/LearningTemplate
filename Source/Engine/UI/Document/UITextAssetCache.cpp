@@ -90,7 +90,7 @@ namespace sw
         string       text;
         if ( readText( key, assetID, text ) == false )
         {
-            SW_LOG_ERROR( "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
+            SW_LOG_ERROR_ID( "UITextAssetCache.ReloadFailedNotFound", "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
             return;
         }
         ++_parseCount;
@@ -98,7 +98,7 @@ namespace sw
         const shared_ptr<const void> asset = _pParse( text, relativePath, error );
         if ( asset == nullptr )
         {
-            SW_LOG_ERROR( "[UI] %# reload failed, keeping the old one: %#", _pAssetLabel, error.c_str() );
+            SW_LOG_ERROR_ID( "UITextAssetCache.ReloadFailedKeepingOld", "[UI] %# reload failed, keeping the old one: %#", _pAssetLabel, error.c_str() );
             return;
         }
         _mapPathToAsset[key] = asset;

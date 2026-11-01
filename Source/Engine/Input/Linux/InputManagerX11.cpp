@@ -403,7 +403,7 @@ namespace sw
             return;
         // 창이 스스로 커서를 숨긴다(X11 투명 커서 · Wayland `wl_pointer.set_cursor`). 못 하면 커서가 그대로 보이므로 한 번 오류로 알린다.
         if ( pWindow->setCursorVisible( bVisible ) == false && X11InputInternal::markUnsupportedReported( _unsupportedReportedMask, X11InputInternal::kUnsupportedCursorVisibleBit ) )
-            SW_LOG_ERROR( "This window cannot hide or show the cursor (Wayland needs a pointer device and a cursor theme) - the cursor stays as it is" );
+            SW_LOG_ERROR_ID( "InputManagerX11.WindowCannotHideShow", "This window cannot hide or show the cursor (Wayland needs a pointer device and a cursor theme) - the cursor stays as it is" );
     }
 
     void InputManager::applyCursorShapePlatform()
@@ -417,7 +417,7 @@ namespace sw
         const bool bApplied     = pWindow->supportsCursorShape() && pWindow->setCursorShape( _cursorShape );
         const bool bNeedsReport = bApplied == false && _cursorShape != CursorShape::Arrow;
         if ( bNeedsReport && X11InputInternal::markUnsupportedReported( _unsupportedReportedMask, X11InputInternal::kUnsupportedCursorShapeBit ) )
-            SW_LOG_ERROR( "This window cannot change the cursor shape (Wayland needs the compositor's cursor-shape-v1) - the cursor keeps its current shape" );
+            SW_LOG_ERROR_ID( "InputManagerX11.WindowCannotChangeCursor", "This window cannot change the cursor shape (Wayland needs the compositor's cursor-shape-v1) - the cursor keeps its current shape" );
     }
 
     void InputManager::applyMouseLockMode()
@@ -440,7 +440,7 @@ namespace sw
             const MouseLockMode     mode = _pMouse->getLockMode();
             const WindowPointerLock lock = mode == MouseLockMode::LockedInCenter ? WindowPointerLock::Locked : ( mode == MouseLockMode::ConfinedToWindow ? WindowPointerLock::Confined : WindowPointerLock::Released );
             if ( pWindow->setPointerLock( lock ) == false && X11InputInternal::markUnsupportedReported( _unsupportedReportedMask, X11InputInternal::kUnsupportedPointerLockBit ) )
-                SW_LOG_ERROR( "This window cannot lock the pointer (Wayland needs the compositor's pointer-constraints, relative-pointer for a centre lock, and a pointer device) - the pointer stays free" );
+                SW_LOG_ERROR_ID( "InputManagerX11.WindowCannotLockPointer", "This window cannot lock the pointer (Wayland needs the compositor's pointer-constraints, relative-pointer for a centre lock, and a pointer device) - the pointer stays free" );
             return;
         }
 

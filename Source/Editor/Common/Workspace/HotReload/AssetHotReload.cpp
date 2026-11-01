@@ -133,7 +133,7 @@ namespace sw::editor
                         listExtension.push_back( extension );
                         continue;
                     }
-                    SW_LOG_WARNING( "Ignoring hot-reload extension '%#' because it has no handler (editortooldefaults.json)", extension.c_str() );
+                    SW_LOG_WARNING_ID( "AssetHotReload.IgnoringHotReloadExtension", "Ignoring hot-reload extension '%#' because it has no handler (editortooldefaults.json)", extension.c_str() );
                 }
                 return listExtension;
             }
@@ -179,7 +179,7 @@ namespace sw::editor
         const vector<string> listExtension = AssetHotReloadInternal::resolveWatchExtensions();
         if ( listExtension.empty() )
         {
-            SW_LOG_INFO( "Asset hot reload: no extensions to watch, not enabling it." );
+            SW_LOG_INFO_ID( "AssetHotReload.AssetHotReloadNo", "Asset hot reload: no extensions to watch, not enabling it." );
             return false;
         }
 
@@ -305,7 +305,7 @@ namespace sw::editor
             _bFenceSeen      = false;
             if ( FileUtil::writeTextFile( markerPath, "fence" ) == false )
             {
-                SW_LOG_ERROR( "[ContentWatchFence] could not write the fence marker %# - the content index may be read before the file watch reports the scratch copy", markerPath );
+                SW_LOG_ERROR_ID( "AssetHotReload.CouldNotWriteFence", "[ContentWatchFence] could not write the fence marker %# - the content index may be read before the file watch reports the scratch copy", markerPath );
                 _fencePrepareCount = prepareCount;
                 return false;
             }
@@ -317,7 +317,7 @@ namespace sw::editor
         if ( _bFenceSeen == false && bTimedOut == false )
             return true;
         if ( _bFenceSeen == false )
-            SW_LOG_ERROR( "[ContentWatchFence] the file watch did not report the fence marker within %# ms - the scenario starts anyway", Internal::kFenceTimeoutMilliseconds );
+            SW_LOG_ERROR_ID( "AssetHotReload.FileWatchDidNot", "[ContentWatchFence] the file watch did not report the fence marker within %# ms - the scenario starts anyway", Internal::kFenceTimeoutMilliseconds );
         else if ( isImportBusy() )
         {
             // 표지 앞의 사본 쓰기가 일으킨 원본 임포트가 워커에서 돈다. 임포트가 끝나기 전에 시작하면 시나리오가 낡은 결과(옛 DDS · 메시)를 읽는다.
@@ -326,7 +326,7 @@ namespace sw::editor
                 _fenceImportDeadlineNanoseconds = nowNanoseconds + Internal::kFenceImportTimeoutMilliseconds * constant::time::kNanosecondsPerMillisecond;
             if ( nowNanoseconds < _fenceImportDeadlineNanoseconds )
                 return true;
-            SW_LOG_ERROR( "[ContentWatchFence] the asset import did not finish within %# ms - the scenario starts anyway", Internal::kFenceImportTimeoutMilliseconds );
+            SW_LOG_ERROR_ID( "AssetHotReload.AssetImportDidNot", "[ContentWatchFence] the asset import did not finish within %# ms - the scenario starts anyway", Internal::kFenceImportTimeoutMilliseconds );
         }
         _fenceImportDeadlineNanoseconds = 0;
         (void)FileUtil::removeFile( markerPath ); // 표지는 한 번 쓰고 지운다 — 못 지워도 다음 울타리가 덮어쓴다
@@ -373,7 +373,7 @@ namespace sw::editor
     {
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
         if ( reloadChangedAsset( AssetHotReloadInternal::toAssetID( relativePath ) ) == ReloadOutcome::Failed )
-            SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );
+            SW_LOG_WARNING_ID( "AssetHotReload.HotReloadSkippedRunning", "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );
     }
 
     void AssetHotReload::requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport )
@@ -400,7 +400,7 @@ namespace sw::editor
             finishImport( result );
         else if ( _bImportInFlight )
         {
-            SW_LOG_ERROR( "Asset import job lost its result - dropping the %# running source(s)", _listRunningImport.size() );
+            SW_LOG_ERROR_ID( "AssetHotReload.AssetImportJobLost", "Asset import job lost its result - dropping the %# running source(s)", _listRunningImport.size() );
             _listRunningImport.clear();
             _uniqueSetRunningImportKey.clear();
             _bImportInFlight = false;
@@ -423,7 +423,7 @@ namespace sw::editor
         const size_t sourceCount = listItem.size();
         if ( _pImportJob->request( std::move( listItem ), editor::getSubsystem<AssetPaths>() ) == false ) // 경로 상태는 여기(에디터 스레드)서 찾아 워커에 넘긴다
         {
-            SW_LOG_ERROR( "Asset import job is still running - %# source(s) wait for the next frame", sourceCount );
+            SW_LOG_ERROR_ID( "AssetHotReload.AssetImportJobStill", "Asset import job is still running - %# source(s) wait for the next frame", sourceCount );
             return;
         }
         _listRunningImport = std::move( _listQueuedImport );
@@ -431,7 +431,7 @@ namespace sw::editor
         _uniqueSetRunningImportKey = std::move( _uniqueSetQueuedImportKey );
         _uniqueSetQueuedImportKey.clear();
         _bImportInFlight = true;
-        SW_LOG_INFO( "Asset import started: %# changed source(s)", sourceCount );
+        SW_LOG_INFO_ID( "AssetHotReload.AssetImportStartedChanged", "Asset import started: %# changed source(s)", sourceCount );
     }
 
     void AssetHotReload::finishImport( EditorAssetImportResult& result )
@@ -455,10 +455,10 @@ namespace sw::editor
                 // 임포터가 원본으로 보지 않은 파일 — 옛 길처럼 캐시가 다시 읽는다. 표가 임포터를 달아 둔 파일에서만 일어난다.
                 const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( itemResult._relativePath );
                 if ( reloadCaches( route, AssetHotReloadInternal::toAssetID( itemResult._relativePath ) ) == ReloadOutcome::Failed )
-                    SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", itemResult._relativePath.c_str() );
+                    SW_LOG_WARNING_ID( "AssetHotReload.HotReloadSkippedRunning", "Hot reload skipped %# - the running scene keeps the previous content", itemResult._relativePath.c_str() );
             }
         }
-        SW_LOG_INFO( "Asset import finished: %# source(s)%#", result._listItem.size() - skippedCount, result._bCanceled ? " (canceled; the rest runs again)" : "" );
+        SW_LOG_INFO_ID( "AssetHotReload.AssetImportFinishedSource", "Asset import finished: %# source(s)%#", result._listItem.size() - skippedCount, result._bCanceled ? " (canceled; the rest runs again)" : "" );
         _listRunningImport.clear();
         _uniqueSetRunningImportKey.clear();
     }
@@ -516,16 +516,16 @@ namespace sw::editor
             IAssetCache* pCache = pResources->findAssetCache( route._pCacheKindName );
             if ( pCache == nullptr )
             {
-                SW_LOG_ERROR( "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
+                SW_LOG_ERROR_ID( "AssetHotReload.HotReloadNoAsset", "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
                 return ReloadOutcome::Failed;
             }
             const AssetCacheReloadFunction pReload = pResources->findReloadFunction( pCache );
             if ( pReload == nullptr )
             {
-                SW_LOG_ERROR( "Hot reload: asset cache '%#' has no reload function (registered without SW_ASSET_CACHE_RELOAD_FUNCTION) - %# is not reloaded", route._pCacheKindName, relativePath );
+                SW_LOG_ERROR_ID( "AssetHotReload.HotReloadAssetCache", "Hot reload: asset cache '%#' has no reload function (registered without SW_ASSET_CACHE_RELOAD_FUNCTION) - %# is not reloaded", route._pCacheKindName, relativePath );
                 return ReloadOutcome::Failed;
             }
-            SW_LOG_INFO( "Hot-Reloading asset: %#", relativePath );
+            SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset", "Hot-Reloading asset: %#", relativePath );
             pReload( *pCache, assetID, pDevice );
         }
 
@@ -545,7 +545,7 @@ namespace sw::editor
             const AssetCacheReloadFunction pReload = resources.findReloadFunction( pCache );
             if ( pReload == nullptr || pCache->isCached( relativePath ) == false )
                 continue;
-            SW_LOG_INFO( "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
+            SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset2", "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
             pReload( *pCache, assetID, pDevice );
             ++reloadedCount;
         }

@@ -190,14 +190,14 @@ namespace sw
             return false;
         if ( isEncrypted() && _settings._security._pProvider == nullptr )
         {
-            SW_LOG_ERROR( "NetEndpoint: encrypted mode needs a security provider (the INetSecurityProvider subsystem GameFramework publishes)" );
+            SW_LOG_ERROR_ID( "NetEndpoint.NetEndpointEncryptedModeNeeds", "NetEndpoint: encrypted mode needs a security provider (the INetSecurityProvider subsystem GameFramework publishes)" );
             return false;
         }
 #if defined( SW_SHIPPING )
         if ( isEncrypted() && _settings._security._pAuthenticator == nullptr )
         {
             // 인증기 없는 암호화(일회용 키)는 도청만 막고 중간자 공격은 막지 못하므로 개발 빌드에서만 쓴다.
-            SW_LOG_ERROR( "NetEndpoint: a shipping server must bind encrypted connections to session tokens (set NetSecurityConfig::_pAuthenticator)" );
+            SW_LOG_ERROR_ID( "NetEndpoint.NetEndpointShippingServerMust", "NetEndpoint: a shipping server must bind encrypted connections to session tokens (set NetSecurityConfig::_pAuthenticator)" );
             return false;
         }
 #endif
@@ -269,7 +269,7 @@ namespace sw
             return false;
         if ( _bHasCredentials == SW_TRUE && _credentials._tokenSize > NetSecurityConstant::kMaxTokenSize )
         {
-            SW_LOG_ERROR( "NetEndpoint: session token of %# bytes exceeds the limit of %# bytes", _credentials._tokenSize, NetSecurityConstant::kMaxTokenSize );
+            SW_LOG_ERROR_ID( "NetEndpoint.NetEndpointSessionTokenBytes", "NetEndpoint: session token of %# bytes exceeds the limit of %# bytes", _credentials._tokenSize, NetSecurityConstant::kMaxTokenSize );
             return false;
         }
         _bServer    = SW_FALSE;
@@ -286,7 +286,7 @@ namespace sw
             slot._security = make_unique<NetSlotSecurity>();
             if ( _settings._security._pProvider == nullptr || _settings._security._pProvider->makeX25519KeyPair( slot._security->_keyPair ) == false )
             {
-                SW_LOG_ERROR( "NetEndpoint: cannot create a key pair - is NetSecurityConfig::_pProvider set?" );
+                SW_LOG_ERROR_ID( "NetEndpoint.NetEndpointCannotCreateKey", "NetEndpoint: cannot create a key pair - is NetSecurityConfig::_pProvider set?" );
                 closeSlot( 0, NetDisconnectReason::Rejected, false );
                 return false;
             }

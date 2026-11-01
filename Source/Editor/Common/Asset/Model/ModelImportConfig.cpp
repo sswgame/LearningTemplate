@@ -140,7 +140,7 @@ namespace sw::editor
             return ConfigReadResult::Missing;
         if ( read == OptionalFileRead::Failed || text.empty() )
         {
-            SW_LOG_ERROR( "Failed to read ModelImportConfig file: %#", configPath );
+            SW_LOG_ERROR_ID( "ModelImportConfig.FailedReadModelImportConfigFile", "Failed to read ModelImportConfig file: %#", configPath );
             return ConfigReadResult::Invalid;
         }
         return loadFromJSONString( text ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
@@ -153,13 +153,13 @@ namespace sw::editor
         JSONDocument doc;
         if ( doc.parse( jsonString ) == false )
         {
-            SW_LOG_ERROR( "Failed to parse ModelImportConfig JSON." );
+            SW_LOG_ERROR_ID( "ModelImportConfig.FailedParseModelImportConfigJSON", "Failed to parse ModelImportConfig JSON." );
             return false;
         }
         const JSONValue root = doc.getRoot();
         if ( root.isObject() == false )
         {
-            SW_LOG_ERROR( "ModelImportConfig root is not an object." );
+            SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRootNotObject", "ModelImportConfig root is not an object." );
             return false;
         }
         if ( ConfigKeyDocUtil::hasOnlyKnownKeys( root, kArrModelImportRootKeyDoc, "ModelImportConfig" ) == false )
@@ -173,7 +173,7 @@ namespace sw::editor
             const JSONValue ruleValue = rulesValue.at( ruleIndex );
             if ( ruleValue.isObject() == false )
             {
-                SW_LOG_ERROR( "ModelImportConfig rule %# is not an object.", ruleIndex );
+                SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleNotObject", "ModelImportConfig rule %# is not an object.", ruleIndex );
                 _listRule.clear();
                 return false;
             }
@@ -203,7 +203,7 @@ namespace sw::editor
             {
                 if ( ModelImportJSONUtil::readFloats( ruleValue.get( "translation" ), rule._arrTranslation, 3 ) == false )
                 {
-                    SW_LOG_ERROR( "ModelImportConfig rule '%#': translation must be an array of three numbers.", rule._name.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleTranslationMust", "ModelImportConfig rule '%#': translation must be an array of three numbers.", rule._name.c_str() );
                     _listRule.clear();
                     return false;
                 }
@@ -213,7 +213,7 @@ namespace sw::editor
                 const string recenterText = ruleValue.get( "recenter" ).asString();
                 if ( parseRecenter( recenterText, rule._recenter ) == false )
                 {
-                    SW_LOG_ERROR( "ModelImportConfig rule '%#': unknown recenter '%#' (none | xz | bottom-center).", rule._name.c_str(), recenterText.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleUnknownRecenter", "ModelImportConfig rule '%#': unknown recenter '%#' (none | xz | bottom-center).", rule._name.c_str(), recenterText.c_str() );
                     _listRule.clear();
                     return false;
                 }
@@ -225,8 +225,8 @@ namespace sw::editor
         const size_t misplacedIndex = AssetImportRuleUtil::findMisplacedCatchAllIndex( _listRule );
         if ( misplacedIndex < _listRule.size() )
         {
-            SW_LOG_ERROR( "ModelImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. Put the unconditional rule at the very end of the list, once.",
-                          misplacedIndex, _listRule[misplacedIndex]._name.c_str() );
+            SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleNoCondition", "ModelImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. Put the unconditional rule at the very end of the list, once.",
+                             misplacedIndex, _listRule[misplacedIndex]._name.c_str() );
             _listRule.clear();
             return false;
         }
@@ -257,7 +257,7 @@ namespace sw::editor
             inoutRule._animationCodec = ruleValue.get( "animation_codec" ).asString();
             if ( AnimationCodecRegistry::findCodecByName( inoutRule._animationCodec ) == nullptr )
             {
-                SW_LOG_ERROR( "ModelImportConfig rule '%#': unknown animation_codec '%#' (raw | acl).", inoutRule._name.c_str(), inoutRule._animationCodec.c_str() );
+                SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleUnknownAnimation", "ModelImportConfig rule '%#': unknown animation_codec '%#' (raw | acl).", inoutRule._name.c_str(), inoutRule._animationCodec.c_str() );
                 return false;
             }
         }
@@ -273,7 +273,7 @@ namespace sw::editor
             const std::optional<float32> number = ruleValue.get( arrNumberKey[keyIndex] ).read<float32>();
             if ( number.has_value() == false || *number <= 0.0f )
             {
-                SW_LOG_ERROR( "ModelImportConfig rule '%#': %# must be a positive number.", inoutRule._name.c_str(), arrNumberKey[keyIndex] );
+                SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleMustPositive", "ModelImportConfig rule '%#': %# must be a positive number.", inoutRule._name.c_str(), arrNumberKey[keyIndex] );
                 return false;
             }
             *arrNumberValue[keyIndex] = *number;
@@ -286,7 +286,7 @@ namespace sw::editor
         const string context = "ModelImportConfig rule '" + inoutRule._name + "' fracture";
         if ( fractureValue.isObject() == false )
         {
-            SW_LOG_ERROR( "%#: must be an object.", context.c_str() );
+            SW_LOG_ERROR_ID( "ModelImportConfig.MustObject", "%#: must be an object.", context.c_str() );
             return false;
         }
         const bool bKnownKeys = ConfigKeyDocUtil::hasOnlyKnownKeys( fractureValue, kArrModelImportFractureKeyDoc, context );
@@ -298,7 +298,7 @@ namespace sw::editor
             const string volumeText = fractureValue.get( "volume" ).asString();
             if ( FractureSettings::parseVolume( volumeText, settings._volume ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown volume '%#' (mesh | bounds | hull).", context.c_str(), volumeText.c_str() );
+                SW_LOG_ERROR_ID( "ModelImportConfig.UnknownVolumeMeshBounds", "%#: unknown volume '%#' (mesh | bounds | hull).", context.c_str(), volumeText.c_str() );
                 return false;
             }
         }
@@ -307,7 +307,7 @@ namespace sw::editor
             const string patternText = fractureValue.get( "pattern" ).asString();
             if ( FractureSettings::parsePattern( patternText, settings._pattern ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown pattern '%#' (uniform | clustered | slices).", context.c_str(), patternText.c_str() );
+                SW_LOG_ERROR_ID( "ModelImportConfig.UnknownPatternUniformClustered", "%#: unknown pattern '%#' (uniform | clustered | slices).", context.c_str(), patternText.c_str() );
                 return false;
             }
         }
@@ -329,7 +329,7 @@ namespace sw::editor
             const std::optional<uint64> number = fractureValue.get( arrIntegerKey[keyIndex] ).read<uint64>();
             if ( number.has_value() == false || *number < 1 )
             {
-                SW_LOG_ERROR( "%#: %# must be a positive integer.", context.c_str(), arrIntegerKey[keyIndex] );
+                SW_LOG_ERROR_ID( "ModelImportConfig.MustPositiveInteger", "%#: %# must be a positive integer.", context.c_str(), arrIntegerKey[keyIndex] );
                 return false;
             }
             arrInteger[keyIndex] = *number;
@@ -346,7 +346,7 @@ namespace sw::editor
             const std::optional<float32> number = fractureValue.get( arrNumberKey[keyIndex] ).read<float32>();
             if ( number.has_value() == false || *number < 0.0f )
             {
-                SW_LOG_ERROR( "%#: %# must be a non-negative number.", context.c_str(), arrNumberKey[keyIndex] );
+                SW_LOG_ERROR_ID( "ModelImportConfig.MustNonNegativeNumber", "%#: %# must be a non-negative number.", context.c_str(), arrNumberKey[keyIndex] );
                 return false;
             }
             *arrNumberValue[keyIndex] = *number;
@@ -358,12 +358,12 @@ namespace sw::editor
     {
         if ( fractureValue.has( "impact_point" ) && ModelImportJSONUtil::readFloats( fractureValue.get( "impact_point" ), &inoutSettings._impactPoint._x, 3 ) == false )
         {
-            SW_LOG_ERROR( "%#: impact_point must be an array of three numbers.", context.c_str() );
+            SW_LOG_ERROR_ID( "ModelImportConfig.ImpactPointMustArray", "%#: impact_point must be an array of three numbers.", context.c_str() );
             return false;
         }
         if ( fractureValue.has( "interior_color" ) && ModelImportJSONUtil::readFloats( fractureValue.get( "interior_color" ), &inoutSettings._interiorColor._x, 4 ) == false )
         {
-            SW_LOG_ERROR( "%#: interior_color must be an array of four numbers.", context.c_str() );
+            SW_LOG_ERROR_ID( "ModelImportConfig.InteriorColorMustArray", "%#: interior_color must be an array of four numbers.", context.c_str() );
             return false;
         }
         if ( fractureValue.has( "slices" ) )
@@ -373,7 +373,7 @@ namespace sw::editor
             const bool bInvalidFractureSlices = bRead == false || arrSlice[0] < 1.0f || arrSlice[1] < 1.0f || arrSlice[2] < 1.0f;
             if ( bInvalidFractureSlices )
             {
-                SW_LOG_ERROR( "%#: slices must be three positive integers.", context.c_str() );
+                SW_LOG_ERROR_ID( "ModelImportConfig.SlicesMustThreePositive", "%#: slices must be three positive integers.", context.c_str() );
                 return false;
             }
             for ( uint32 axis = 0; axis < 3; ++axis )
@@ -387,7 +387,7 @@ namespace sw::editor
             const size_t    count  = levels.isArray() ? levels.size() : 0;
             if ( levels.isArray() == false )
             {
-                SW_LOG_ERROR( "%#: levels must be an array of positive integers.", context.c_str() );
+                SW_LOG_ERROR_ID( "ModelImportConfig.LevelsMustArrayPositive", "%#: levels must be an array of positive integers.", context.c_str() );
                 return false;
             }
             for ( size_t levelIndex = 0; levelIndex < count; ++levelIndex )
@@ -395,7 +395,7 @@ namespace sw::editor
                 const std::optional<uint32> levelCount = levels.at( levelIndex ).read<uint32>();
                 if ( levelCount.has_value() == false || *levelCount < 1 )
                 {
-                    SW_LOG_ERROR( "%#: levels must be an array of positive integers.", context.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImportConfig.LevelsMustArrayPositive", "%#: levels must be an array of positive integers.", context.c_str() );
                     return false;
                 }
                 inoutSettings._listLevelCount.push_back( *levelCount );
@@ -409,7 +409,7 @@ namespace sw::editor
         const string context = "ModelImportConfig rule '" + inoutRule._name + "' lods";
         if ( lodsValue.isArray() == false )
         {
-            SW_LOG_ERROR( "%#: must be an array of objects.", context.c_str() );
+            SW_LOG_ERROR_ID( "ModelImportConfig.MustArrayObjects", "%#: must be an array of objects.", context.c_str() );
             return false;
         }
         float32 previousRatio      = 1.0f;
@@ -419,7 +419,7 @@ namespace sw::editor
             const JSONValue lodValue = lodsValue.at( lodIndex );
             if ( lodValue.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( lodValue, kArrModelImportLODKeyDoc, context ) == false )
             {
-                SW_LOG_ERROR( "%#: entry %# must be an object with known keys.", context.c_str(), lodIndex );
+                SW_LOG_ERROR_ID( "ModelImportConfig.EntryMustObjectKnown", "%#: entry %# must be an object with known keys.", context.c_str(), lodIndex );
                 return false;
             }
             ModelImportLODRule lod{};
@@ -430,8 +430,8 @@ namespace sw::editor
             const bool bValidLOD   = bRead && bRatio && bScreenSize && lod._maxError >= 0.0f;
             if ( bValidLOD == false )
             {
-                SW_LOG_ERROR( "%#: entry %# needs numbers with 0 < triangle_ratio < %#, 0 < screen_size < %# and max_error >= 0.", context.c_str(), lodIndex, previousRatio,
-                              previousScreenSize );
+                SW_LOG_ERROR_ID( "ModelImportConfig.EntryNeedsNumbersTriangle", "%#: entry %# needs numbers with 0 < triangle_ratio < %#, 0 < screen_size < %# and max_error >= 0.", context.c_str(), lodIndex, previousRatio,
+                                 previousScreenSize );
                 return false;
             }
             previousRatio      = lod._triangleRatio;

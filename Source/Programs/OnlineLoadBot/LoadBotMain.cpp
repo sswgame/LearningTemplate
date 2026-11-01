@@ -173,9 +173,9 @@ namespace sw
                     if ( lineEnd == string::npos )
                         lineEnd = text.size();
                     if ( level == LogLevel::Error )
-                        SW_LOG_ERROR( "OnlineLoadBot: %#", text.substr( lineStart, lineEnd - lineStart ) );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#", text.substr( lineStart, lineEnd - lineStart ) );
                     else
-                        SW_LOG_INFO( "%#", text.substr( lineStart, lineEnd - lineStart ) );
+                        SW_LOG_INFO_ID( "OnlineLoadBot.Message", "%#", text.substr( lineStart, lineEnd - lineStart ) );
                     lineStart = lineEnd + 1;
                 }
             }
@@ -196,7 +196,7 @@ namespace sw
                 LoadBotScenario scenario;
                 if ( LoadBotScenario::loadFile( options._scenarioPath, scenario, error ) == false || readLoad( options._loadPath, scenario, error ) == false )
                 {
-                    SW_LOG_ERROR( "OnlineLoadBot: %#", error );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#", error );
                     return Exit::kExitUsage;
                 }
 
@@ -211,7 +211,7 @@ namespace sw
                     const ConfigReadResult configRead = configManager.readConfigFileInto( options._onlineConfigPath, serverSettings._config );
                     if ( configRead != ConfigReadResult::Loaded )
                     {
-                        SW_LOG_ERROR( "OnlineLoadBot: online config '%#' is %#", options._onlineConfigPath, configRead == ConfigReadResult::Missing ? "missing" : "invalid" );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotOnlineConfig", "OnlineLoadBot: online config '%#' is %#", options._onlineConfigPath, configRead == ConfigReadResult::Missing ? "missing" : "invalid" );
                         return Exit::kExitUsage;
                     }
                     serverTransport                    = StreamTransportFactory::createPlatformTransport();
@@ -222,7 +222,7 @@ namespace sw
                     serverSettings._pClock             = &serverClock;
                     if ( serverTransport == nullptr || localServer.initialize( serverTransport.get(), serverSettings, error ) == false )
                     {
-                        SW_LOG_ERROR( "OnlineLoadBot: local server did not start: %#", error );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotLocalServerDid", "OnlineLoadBot: local server did not start: %#", error );
                         return Exit::kExitUsage;
                     }
                     // 포트 0 이면 OS 가 고른 포트다 — 받은 포트로 붙는다.
@@ -230,13 +230,13 @@ namespace sw
                 }
                 else if ( NetAddress::parse( options._serverAddress, kDefaultServerPort, runnerSettings._serverAddress ) == false )
                 {
-                    SW_LOG_ERROR( "OnlineLoadBot: cannot read server address '%#'", options._serverAddress );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotReadServer", "OnlineLoadBot: cannot read server address '%#'", options._serverAddress );
                     return Exit::kExitUsage;
                 }
 
                 if ( options._gameAddress.empty() == false && NetAddress::parse( options._gameAddress, 0, runnerSettings._gameAddress ) == false )
                 {
-                    SW_LOG_ERROR( "OnlineLoadBot: cannot read game address '%#' (--game=<ip:port>)", options._gameAddress );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotReadGame", "OnlineLoadBot: cannot read game address '%#' (--game=<ip:port>)", options._gameAddress );
                     return Exit::kExitUsage;
                 }
 
@@ -246,7 +246,7 @@ namespace sw
                     tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), options._tlsTrustFile, "", error );
                     if ( tlsContext == nullptr )
                     {
-                        SW_LOG_ERROR( "OnlineLoadBot: TLS client context failed: %#", error );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotTLSClientContext", "OnlineLoadBot: TLS client context failed: %#", error );
                         return Exit::kExitUsage;
                     }
                     runnerSettings._pTLSContext = tlsContext.get();
@@ -256,10 +256,10 @@ namespace sw
                 LoadBotRunner                runner;
                 if ( botTransport == nullptr || runner.initialize( botTransport.get(), scenario, runnerSettings, error ) == false )
                 {
-                    SW_LOG_ERROR( "OnlineLoadBot: %#", error );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#", error );
                     return Exit::kExitUsage;
                 }
-                SW_LOG_INFO( "OnlineLoadBot: scenario '%#' with %# bots against %#", scenario._name, scenario._botCount, runnerSettings._serverAddress.toString() );
+                SW_LOG_INFO_ID( "OnlineLoadBot.OnlineLoadBotScenarioBotsAgainst", "OnlineLoadBot: scenario '%#' with %# bots against %#", scenario._name, scenario._botCount, runnerSettings._serverAddress.toString() );
 
                 bool bRunning = true;
                 while ( bRunning )
@@ -274,7 +274,7 @@ namespace sw
                 logLines( LogLevel::Info, metrics.formatTable( elapsedMs ) );
                 const bool bReportFailed = options._reportPath.empty() == false && FileUtil::writeTextFile( options._reportPath, metrics.formatJSON( runner.getScenario(), elapsedMs ) ) == false;
                 if ( bReportFailed )
-                    SW_LOG_ERROR( "OnlineLoadBot: cannot write report '%#'", options._reportPath );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotWriteReport", "OnlineLoadBot: cannot write report '%#'", options._reportPath );
                 runner.shutdown();
                 localServer.shutdown();
 
@@ -284,7 +284,7 @@ namespace sw
                 const int64 errorCount     = metrics.getTotalErrorCount();
                 const bool  bTooManyErrors = completedCount == 0 || errorCount * kPercentScale > completedCount * options._maxErrorPercent;
                 if ( bTooManyErrors )
-                    SW_LOG_ERROR( "OnlineLoadBot: %# errors in %# completed actions - over the limit of %# percent", errorCount, completedCount, options._maxErrorPercent );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotErrorsCompletedActions", "OnlineLoadBot: %# errors in %# completed actions - over the limit of %# percent", errorCount, completedCount, options._maxErrorPercent );
                 return bTooManyErrors ? Exit::kExitErrorRate : Exit::kExitOk;
             }
         };
@@ -296,7 +296,7 @@ extern "C" SW_MODULE_API int32 swRunOnlineLoadBot( int32 argc, utf8** argv, sw::
     static_assert( std::is_same_v<decltype( &swRunOnlineLoadBot ), sw::PFN_RunOnlineLoadBot> );
     if ( pConfigManager == nullptr )
     {
-        SW_LOG_ERROR( "OnlineLoadBot: the host passed no config manager" );
+        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotHostPassedNo", "OnlineLoadBot: the host passed no config manager" );
         return sw::LoadBotModuleEntry::kExitStartup;
     }
     return sw::LoadBotMainInternal::run( argc, argv, *pConfigManager );

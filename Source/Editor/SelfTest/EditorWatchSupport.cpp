@@ -29,7 +29,7 @@ namespace sw::editor
     {
         EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 필수 서비스: 없으면 버그
         if ( pContext == nullptr )
-            SW_LOG_ERROR( "[Watch] EditorContext is missing - %# reads nothing", pWatch );
+            SW_LOG_ERROR_ID( "EditorWatchSupport.EditorContextMissingReadsNothing", "[Watch] EditorContext is missing - %# reads nothing", pWatch );
         return pContext;
     }
 

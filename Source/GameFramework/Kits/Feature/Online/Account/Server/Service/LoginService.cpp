@@ -343,7 +343,7 @@ namespace sw
     {
         if ( pProvider == nullptr || AccountUtil::isValidLowerToken( pProvider->getName(), LoginConstant::kMaxProviderNameSize ) == false )
         {
-            SW_LOG_ERROR( "platform login provider has no valid name" );
+            SW_LOG_ERROR_ID( "LoginService.PlatformLoginProviderNo", "platform login provider has no valid name" );
             return false;
         }
         return _registeredPlatformProvider.addLogged( pProvider, "Platform login provider", pProvider->getName() ) == RegistrationResult::Added;
@@ -422,13 +422,13 @@ namespace sw
             IPlatformLoginProvider* pProvider = _registeredPlatformProvider.findByName( entry._provider );
             if ( pProvider == nullptr || pProvider->supportsRevocation() == false )
             {
-                SW_LOG_WARNING( "login revoke queue holds a secret of provider '%#' that is not configured here - it stays in the queue", entry._provider.c_str() );
+                SW_LOG_WARNING_ID( "LoginService.LoginRevokeQueueHolds", "login revoke queue holds a secret of provider '%#' that is not configured here - it stays in the queue", entry._provider.c_str() );
                 continue;
             }
             string secret;
             if ( _pSecretVault->open( entry._sealedSecret, entry._provider, secret ) == false )
             {
-                SW_LOG_ERROR( "login revoke queue entry '%#' cannot be opened (wrong secret key?) - it stays in the queue", entry._key.c_str() );
+                SW_LOG_ERROR_ID( "LoginService.LoginRevokeQueueEntry", "login revoke queue entry '%#' cannot be opened (wrong secret key?) - it stays in the queue", entry._key.c_str() );
                 continue;
             }
             PendingRevocation& pending = _listPendingRevocation.emplace_back();
@@ -845,7 +845,7 @@ namespace sw
             if ( bSealed == false )
             {
                 work->_listSealedLinkSecret.clear();
-                SW_LOG_ERROR( "login provider '%#' gave a link secret but the secret vault is not available - it is not stored", pending._provider.c_str() );
+                SW_LOG_ERROR_ID( "LoginService.LoginProviderGaveLink", "login provider '%#' gave a link secret but the secret vault is not available - it is not stored", pending._provider.c_str() );
             }
         }
         ++_pendingCount;

@@ -262,8 +262,8 @@ namespace sw
         }
         _srv.store( srv, std::memory_order_release );
         _uploadTicket = RHITransferTicket{};
-        SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
-                     static_cast<uint32>( _format ), srv );
+        SW_LOG_INFO_ID( "Texture2D.Texture2DReadyMipsTop", "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
+                        static_cast<uint32>( _format ), srv );
         return Texture2DUploadStatus::Ready;
     }
 
@@ -402,7 +402,7 @@ namespace sw
         _mipCount      = 1;
         _format        = format;
         _bRenderTarget = SW_TRUE;
-        SW_LOG_INFO( "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, getSRV() );
+        SW_LOG_INFO_ID( "Texture2D.Texture2DRenderTargetReady", "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, getSRV() );
         return true;
     }
 

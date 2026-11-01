@@ -190,8 +190,8 @@ namespace sw
         // 무엇이 나갔는지 한 줄로 남긴다 — 뷰어 없이 돌린 실행에서도 경로가 살아 있었는지 로그로 보인다.
         if ( getActiveBackend() == &ProfilerBackendInternal::s_tracy )
         {
-            SW_LOG_INFO( "Tracy profiler: %# CPU zones, %# GPU zones emitted (viewer %#)", ProfilerBackendInternal::s_tracy.getZoneCount(),
-                         ProfilerBackendInternal::s_tracy.getGPUZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
+            SW_LOG_INFO_ID( "Profiler.TracyProfilerCPUZones", "Tracy profiler: %# CPU zones, %# GPU zones emitted (viewer %#)", ProfilerBackendInternal::s_tracy.getZoneCount(),
+                            ProfilerBackendInternal::s_tracy.getGPUZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
         }
         Memory::unregisterAllocationObserver();
 #if SW_PROFILER_BACKEND_COMPILED
@@ -205,7 +205,7 @@ namespace sw
 #if SW_PROFILER_BACKEND_COMPILED
         if ( TracyProfilerBackend::isCompiled() == false )
         {
-            SW_LOG_WARNING( "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF)" );
+            SW_LOG_WARNING_ID( "Profiler.TracyNotLinkedBuild", "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF)" );
             return false;
         }
         if ( getActiveBackend() == &ProfilerBackendInternal::s_tracy )
@@ -214,7 +214,7 @@ namespace sw
         // 함수 표를 채우며 TracyClient.dll 을 올린다 — 수집 스레드 · 리슨 소켓이 이때 선다.
         if ( TracyProfilerBackend::loadClient() == false )
         {
-            SW_LOG_WARNING( "Tracy client library (TracyClient.dll) could not be loaded or lacks a function this engine calls - Tracy stays off" );
+            SW_LOG_WARNING_ID( "Profiler.TracyClientLibraryTracyClient", "Tracy client library (TracyClient.dll) could not be loaded or lacks a function this engine calls - Tracy stays off" );
             return false;
         }
         setActiveBackend( &ProfilerBackendInternal::s_tracy );
@@ -227,8 +227,8 @@ namespace sw
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<FrameProfiler>().setEnabled( true );
 
-        SW_LOG_INFO( "Tracy profiler started (data port %#, memory %#) — connect with tracy-profiler -a 127.0.0.1", getTracyPort(),
-                     gv_tracyMemory ? "on" : "off" );
+        SW_LOG_INFO_ID( "Profiler.TracyProfilerStartedData", "Tracy profiler started (data port %#, memory %#) — connect with tracy-profiler -a 127.0.0.1", getTracyPort(),
+                        gv_tracyMemory ? "on" : "off" );
         return true;
 #else
         return false;

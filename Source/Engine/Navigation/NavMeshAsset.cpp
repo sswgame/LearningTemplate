@@ -111,13 +111,13 @@ namespace sw
         const bool bInvalidHeader = bHeader == false || magic != NavMeshAssetInternal::kMagic || version != kVersion;
         if ( bInvalidHeader )
         {
-            SW_LOG_ERROR( "'%#' is not a navmesh of format %#", sourceLabel, kVersion );
+            SW_LOG_ERROR_ID( "NavMeshAsset.NotNavmeshFormat", "'%#' is not a navmesh of format %#", sourceLabel, kVersion );
             return false;
         }
         if ( backendName != NavMeshBackend::getBackendName() || backendVersion != NavMeshBackend::getBackendFormatVersion() )
         {
-            SW_LOG_WARNING( "'%#' was cooked by navmesh backend '%#' v%# - this build uses '%#' v%#", sourceLabel, backendName.c_str(), backendVersion,
-                            NavMeshBackend::getBackendName(), NavMeshBackend::getBackendFormatVersion() );
+            SW_LOG_WARNING_ID( "NavMeshAsset.CookedNavmeshBackendV", "'%#' was cooked by navmesh backend '%#' v%# - this build uses '%#' v%#", sourceLabel, backendName.c_str(), backendVersion,
+                               NavMeshBackend::getBackendName(), NavMeshBackend::getBackendFormatVersion() );
             return false;
         }
         for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
@@ -129,7 +129,7 @@ namespace sw
                                          reader.readPod( entry._bounds ) == false || reader.readPod( tileCount ) == false;
             if ( bTruncatedEntry )
             {
-                SW_LOG_ERROR( "'%#' is truncated", sourceLabel );
+                SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated", sourceLabel );
                 _listEntry.clear();
                 return false;
             }
@@ -140,7 +140,7 @@ namespace sw
                 const bool bTruncatedTile = reader.readPod( tile._tileX ) == false || reader.readPod( tile._tileZ ) == false || reader.readByteVector( tile._bytes ) == false;
                 if ( bTruncatedTile )
                 {
-                    SW_LOG_ERROR( "'%#' is truncated", sourceLabel );
+                    SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated", sourceLabel );
                     _listEntry.clear();
                     return false;
                 }
@@ -227,7 +227,7 @@ namespace sw
                 ++failedCount;
         }
         if ( failedCount > 0 )
-            SW_LOG_ERROR( "Navmesh '%#': %# of %# tiles failed to bake", navMesh.getAgentType()._name.c_str(), failedCount, tileCount );
+            SW_LOG_ERROR_ID( "NavMeshAsset.NavmeshTilesFailedBake", "Navmesh '%#': %# of %# tiles failed to bake", navMesh.getAgentType()._name.c_str(), failedCount, tileCount );
         if ( pOutStats != nullptr )
         {
             pOutStats->_milliseconds    = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / constant::time::kMicrosecondsPerMillisecond;

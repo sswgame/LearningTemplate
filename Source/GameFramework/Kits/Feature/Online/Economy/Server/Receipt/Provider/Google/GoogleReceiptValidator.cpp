@@ -207,7 +207,7 @@ namespace sw
         if ( Internal::isAuthFailure( response ) )
         {
             _tokenSource.invalidate(); // 토큰이 거절됐다 — 다음 요청이 새로 받는다
-            SW_LOG_ERROR( "Google rejected the access token or the service account has no access to '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
+            SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedAccessToken", "Google rejected the access token or the service account has no access to '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
             completeRetry( pending, "google rejected the access token" );
             return;
         }
@@ -271,18 +271,18 @@ namespace sw
         if ( Internal::isAuthFailure( response ) )
         {
             _tokenSource.invalidate();
-            SW_LOG_ERROR( "Google rejected the voided purchases query for '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
+            SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedVoidedPurchases", "Google rejected the voided purchases query for '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
         }
         JSONDocument document;
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {
-            SW_LOG_WARNING( "Google voided purchases query failed (status %#) - the next poll reads from the last successful one", response._statusCode );
+            SW_LOG_WARNING_ID( "GoogleReceiptValidator.GoogleVoidedPurchasesQuery", "Google voided purchases query failed (status %#) - the next poll reads from the last successful one", response._statusCode );
             return; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
         }
         _lastVoidedUnixMs      = _voidedStartUnixMs;
         const JSONValue voided = document.getRoot().get( "voidedPurchases" );
         if ( voided.isArray() && voided.size() >= static_cast<size_t>( kVoidedMaxResults ) )
-            SW_LOG_WARNING( "Google returned %# voided purchases (the limit) - some may be read at the next overlapping poll only", static_cast<int32>( voided.size() ) );
+            SW_LOG_WARNING_ID( "GoogleReceiptValidator.GoogleReturnedVoidedPurchases", "Google returned %# voided purchases (the limit) - some may be read at the next overlapping poll only", static_cast<int32>( voided.size() ) );
         for ( size_t index = 0; voided.isArray() && index < voided.size(); ++index )
         {
             const JSONValue entry   = voided.at( index );
@@ -342,7 +342,7 @@ namespace sw
             else if ( call._kind == WaitingCall::Kind::Voided )
                 finishVoided( response, now );
             else if ( response.isSuccess() == false )
-                SW_LOG_WARNING( "Google purchase acknowledge failed (status %#) - it is sent again when the token is validated again", response._statusCode );
+                SW_LOG_WARNING_ID( "GoogleReceiptValidator.GooglePurchaseAcknowledgeFailed", "Google purchase acknowledge failed (status %#) - it is sent again when the token is validated again", response._statusCode );
         }
     }
 

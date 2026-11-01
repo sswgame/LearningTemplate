@@ -118,7 +118,7 @@ namespace sw
         string            text;
         if ( LocalizationManagerInternal::readLocalizationFile( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Culture table '%#' cannot be read", assetPath );
+            SW_LOG_ERROR_ID( "LocalizationManager.CultureTableCannotRead", "Culture table '%#' cannot be read", assetPath );
             return false;
         }
         return loadCultureTableXML( text );
@@ -130,7 +130,7 @@ namespace sw
         string       error;
         if ( loaded.loadFromXMLText( xmlText, "<cultures>", &error ) == false )
         {
-            SW_LOG_ERROR( "Culture table is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationManager.CultureTableNotLoaded", "Culture table is not loaded: %#", error.c_str() );
             return false;
         }
         {
@@ -159,12 +159,12 @@ namespace sw
         string            error;
         if ( LocalizationManagerInternal::readLocalizationFile( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Localization project '%#' cannot be read", projectPath );
+            SW_LOG_ERROR_ID( "LocalizationManager.LocalizationProjectCannotRead", "Localization project '%#' cannot be read", projectPath );
             return false;
         }
         if ( outProject._project.loadFromXMLText( text, projectPath, &error ) == false )
         {
-            SW_LOG_ERROR( "Localization project is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationManager.LocalizationProjectNotLoaded", "Localization project is not loaded: %#", error.c_str() );
             return false;
         }
         outProject._projectPath = string( projectPath );
@@ -182,7 +182,7 @@ namespace sw
             const bool        bRead = LocalizationManagerInternal::readLocalizationFile( AssetID{ tablePath }, text ) && table.loadFromXMLText( text, tablePath, &error );
             if ( bRead == false )
             {
-                SW_LOG_ERROR( "String table '%#' is not loaded: %#", tablePath.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationManager.StringTableNotLoaded", "String table '%#' is not loaded: %#", tablePath.c_str(), error.c_str() );
                 bAllRead = false;
                 continue;
             }
@@ -190,8 +190,8 @@ namespace sw
             {
                 if ( outProject._mapSource.find( key ) != outProject._mapSource.end() )
                 {
-                    SW_LOG_ERROR( "String table '%#': key '%#' is already defined by another table of project '%#'", tablePath.c_str(), key.c_str(),
-                                  outProject._project._name.c_str() );
+                    SW_LOG_ERROR_ID( "LocalizationManager.StringTableKeyAlready", "String table '%#': key '%#' is already defined by another table of project '%#'", tablePath.c_str(), key.c_str(),
+                                     outProject._project._name.c_str() );
                     continue;
                 }
                 outProject._mapSource[key] = entry;
@@ -206,7 +206,7 @@ namespace sw
                 continue; // 아직 번역이 없는 문화권이다. 수집과 가져오기가 만든다
             if ( LocalizationManagerInternal::readLocalizationFile( AssetID{ translationPath }, text ) == false )
             {
-                SW_LOG_ERROR( "Translation table '%#' cannot be read", translationPath.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationManager.TranslationTableCannotRead", "Translation table '%#' cannot be read", translationPath.c_str() );
                 bAllRead = false;
                 continue;
             }
@@ -219,8 +219,8 @@ namespace sw
             }
             if ( translation.getCulture() != culture )
             {
-                SW_LOG_ERROR( "Translation table '%#' says culture '%#' but the project lists it as '%#'", translationPath.c_str(), translation.getCulture().c_str(),
-                              culture.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationManager.TranslationTableSaysCulture", "Translation table '%#' says culture '%#' but the project lists it as '%#'", translationPath.c_str(), translation.getCulture().c_str(),
+                                 culture.c_str() );
                 bAllRead = false;
                 continue;
             }
@@ -261,7 +261,7 @@ namespace sw
             rebuildTablesLocked();
             rebuildLookupChainLocked();
         }
-        SW_LOG_INFO( "Mounted localization project '%#'.", projectPath );
+        SW_LOG_INFO_ID( "LocalizationManager.MountedLocalizationProject", "Mounted localization project '%#'.", projectPath );
         notifyLanguageChanged( oldLanguage, newLanguage );
         return bComplete;
     }
@@ -335,7 +335,7 @@ namespace sw
         string           error;
         if ( languageCode.empty() || table.loadFromXMLText( xmlText, "<memory>", &error ) == false )
         {
-            SW_LOG_WARNING( "Translation XML for '%#' is not loaded: %#", languageCode, error.c_str() );
+            SW_LOG_WARNING_ID( "LocalizationManager.TranslationXMLNotLoaded", "Translation XML for '%#' is not loaded: %#", languageCode, error.c_str() );
             return false;
         }
         string oldLanguage;
@@ -405,7 +405,7 @@ namespace sw
         const string code = normalizeLanguageCode( table.getCulture() );
         if ( code.empty() )
         {
-            SW_LOG_WARNING( "Binary localization table has no culture" );
+            SW_LOG_WARNING_ID( "LocalizationManager.BinaryLocalizationTableNo", "Binary localization table has no culture" );
             return false;
         }
         string oldLanguage;
@@ -430,7 +430,7 @@ namespace sw
         vector<uint8>     bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
-            SW_LOG_WARNING( "Binary localization table '%#' cannot be read", assetPath );
+            SW_LOG_WARNING_ID( "LocalizationManager.BinaryLocalizationTableCannot", "Binary localization table '%#' cannot be read", assetPath );
             return false;
         }
         return loadBinaryTable( bytes.data(), bytes.size() );
@@ -479,7 +479,7 @@ namespace sw
         setFallbackLanguage( fallbackLanguage.empty() ? string_view( constant::locale::kDefaultLanguage ) : fallbackLanguage );
         if ( mountProject( assetID, LocalizationScope::Game ) == false )
         {
-            SW_LOG_WARNING( "Localization project '%#' is not (fully) loaded.", projectPath );
+            SW_LOG_WARNING_ID( "LocalizationManager.LocalizationProjectNotFully", "Localization project '%#' is not (fully) loaded.", projectPath );
             if ( getMountedProjectNames().empty() )
                 return false;
         }
@@ -500,7 +500,7 @@ namespace sw
         if ( preferredLanguage.empty() == false )
         {
             setCurrentLanguage( preferredLanguage );
-            SW_LOG_INFO( "Localization setup complete. Active language: '%#', Fallback: '%#'.", preferredLanguage.c_str(), getFallbackLanguage().c_str() );
+            SW_LOG_INFO_ID( "LocalizationManager.LocalizationSetupCompleteActive", "Localization setup complete. Active language: '%#', Fallback: '%#'.", preferredLanguage.c_str(), getFallbackLanguage().c_str() );
         }
         return true;
     }
@@ -644,7 +644,7 @@ namespace sw
             _currentLanguage = code;
             rebuildLookupChainLocked();
         }
-        SW_LOG_INFO( "Language changed: '%#' -> '%#'", oldLanguage.c_str(), code.c_str() );
+        SW_LOG_INFO_ID( "LocalizationManager.LanguageChanged", "Language changed: '%#' -> '%#'", oldLanguage.c_str(), code.c_str() );
         notifyLanguageChanged( oldLanguage, code );
         return true;
     }
@@ -827,7 +827,7 @@ namespace sw
         string text;
         string error;
         if ( TextFormatter::format( pattern, arguments, culture, text, &error ) == false )
-            SW_LOG_WARNING( "Text format '%#' (culture '%#'): %#", pattern, culture._code.c_str(), error.c_str() );
+            SW_LOG_WARNING_ID( "LocalizationManager.TextFormatCulture", "Text format '%#' (culture '%#'): %#", pattern, culture._code.c_str(), error.c_str() );
         return text;
     }
 
@@ -930,7 +930,7 @@ namespace sw
             rebuildLookupChainLocked();
             language = _currentLanguage;
         }
-        SW_LOG_INFO( "Reloaded localization project '%#' (changed: %#).", projectPath.c_str(), changedPath );
+        SW_LOG_INFO_ID( "LocalizationManager.ReloadedLocalizationProjectChanged", "Reloaded localization project '%#' (changed: %#).", projectPath.c_str(), changedPath );
         notifyLanguageChanged( language, language );
         return ReloadOutcome::Reloaded;
     }

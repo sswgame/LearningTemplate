@@ -1494,7 +1494,7 @@ namespace sw::editor
             Build::cutSite( site, listSite, listSource, listSurfaceSource, settings, listScratch, listOrder, cut );
         }
         if ( cut._openLoopCount > 0 )
-            SW_LOG_WARNING( "Fracture left %# cut loops open (non-manifold input) - those pieces may have holes", cut._openLoopCount );
+            SW_LOG_WARNING_ID( "MeshFracture.FractureLeftCutLoops", "Fracture left %# cut loops open (non-manifold input) - those pieces may have holes", cut._openLoopCount );
 
         Build::PieceSet pieces;
         Build::numberPieces( cut, pieces );

@@ -133,7 +133,7 @@ namespace sw
                 // 못 읽으면 빈 글로 캐시한다 — 그 헤더의 애노테이션을 찾지 못하니 알린다.
                 string content;
                 if ( FileUtil::readTextFile( path, content ) == false )
-                    SW_LOG_ERROR( "Could not read '%#' - annotations in it are not seen", path );
+                    SW_LOG_ERROR_ID( "AstVisitor.CouldNotReadAnnotations", "Could not read '%#' - annotations in it are not seen", path );
                 return s_mapPathToContent.emplace( path, std::move( content ) ).first->second;
             }
 
@@ -359,9 +359,9 @@ namespace sw
                 const ReflectAnnotationDesc& desc = *getAnnotationScope<TParsed>()._pDesc;
                 for ( const string& token : listUnknownToken )
                 {
-                    SW_LOG_ERROR( "ERROR: %#() on '%#' has an unknown token '%#'. Spellings are listed in AnnotationMeta.txt [%#]; "
-                                  "a free-form editor hint is written Meta = \"Key\" or Meta = \"Key=Value\".",
-                                  desc._pMacroName, owner, token, desc._pScope );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORUnknownTokenSpellings", "ERROR: %#() on '%#' has an unknown token '%#'. Spellings are listed in AnnotationMeta.txt [%#]; "
+                                                                              "a free-form editor hint is written Meta = \"Key\" or Meta = \"Key=Value\".",
+                                     desc._pMacroName, owner, token, desc._pScope );
                 }
                 return listUnknownToken.empty();
             }
@@ -862,10 +862,10 @@ namespace sw
                 uint32 line = 0;
                 clang_getExpansionLocation( clang_getCursorLocation( cursor ), &file, &line, nullptr, nullptr );
                 const string path = file != nullptr ? takeString( clang_getFileName( file ) ) : string{};
-                SW_LOG_ERROR( "ERROR: %#(%#): REFLECT type '%#' has %# base '%#'. A REFLECT type takes at most one non-virtual base: castTo "
-                              "reinterpret_casts along the reflected parent chain, so any other base gets the wrong address. "
-                              "Compose the extra behaviour as a component or member instead.",
-                              path, line, collector._pType->_fullyQualifiedName, bVirtualBase ? "a virtual" : "a second", baseFQN );
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTTypeBase", "ERROR: %#(%#): REFLECT type '%#' has %# base '%#'. A REFLECT type takes at most one non-virtual base: castTo "
+                                                                    "reinterpret_casts along the reflected parent chain, so any other base gets the wrong address. "
+                                                                    "Compose the extra behaviour as a component or member instead.",
+                                 path, line, collector._pType->_fullyQualifiedName, bVirtualBase ? "a virtual" : "a second", baseFQN );
                 collector._bHasError = SW_TRUE;
             }
 
@@ -1138,8 +1138,8 @@ namespace sw
                                                           : session._annotationMeta.findKey( annotation::kPropertyScope, StringUtil::trim( string_view( token ).substr( 0, eqPos ) ) );
                     if ( pBinding != nullptr && AnnotationFields::acceptsOnEvent( pBinding->_field ) == false )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only (%#).", owner, token,
-                                      AnnotationFields::makeEventFieldList() );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEventEvent", "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only (%#).", owner, token,
+                                         AnnotationFields::makeEventFieldList() );
                         collector._bHasError = SW_TRUE;
                         return;
                     }
@@ -1150,7 +1150,7 @@ namespace sw
                 const CXType resultType   = clang_getResultType( functionType );
                 if ( functionType.kind != CXType_FunctionProto || resultType.kind != CXType_Void )
                 {
-                    SW_LOG_ERROR( "ERROR: event '%#' must be MulticastDelegate<void( ... )> - broadcast does not collect return values.", owner );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERROREventMustMulticastDelegate", "ERROR: event '%#' must be MulticastDelegate<void( ... )> - broadcast does not collect return values.", owner );
                     collector._bHasError = SW_TRUE;
                     return;
                 }
@@ -1240,9 +1240,9 @@ namespace sw
                 const bool bSequenceOfHandles = bFlatSequence && bOrderedOrHashed == false && tryReadTypedHandleTarget( prop._elementTypeName, target );
                 if ( bSingleValue == false && bSequenceOfHandles == false )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
-                                  "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type.",
-                                  owner, prop._typeName );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYHoldsComponent", "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
+                                                                               "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type.",
+                                     owner, prop._typeName );
                     return false;
                 }
 
@@ -1279,16 +1279,16 @@ namespace sw
                     const bool bTyped = tryReadTypedHandleTarget( parameter._typeName, target );
                     if ( bTyped == false )
                     {
-                        SW_LOG_ERROR( "ERROR: FUNCTION '%#' argument '%#' holds component handles in a container (%#). Pass one TComponentHandle<T> per argument.", owner,
-                                      parameter._name, parameter._typeName );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORFUNCTIONArgumentHolds", "ERROR: FUNCTION '%#' argument '%#' holds component handles in a container (%#). Pass one TComponentHandle<T> per argument.", owner,
+                                         parameter._name, parameter._typeName );
                         return false;
                     }
                     const bool bMemberOfComponent = bComponentOwner && method._bStatic == SW_FALSE && method._bConstructor == SW_FALSE;
                     if ( bMemberOfComponent == false )
                     {
-                        SW_LOG_ERROR( "ERROR: FUNCTION '%#' argument '%#' is a TComponentHandle<%#>. Typed handle arguments are checked against the scene of the "
-                                      "called component, so only non-static member functions of a Component may take them.",
-                                      owner, parameter._name, target );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORFUNCTIONArgumentTComponentHandle", "ERROR: FUNCTION '%#' argument '%#' is a TComponentHandle<%#>. Typed handle arguments are checked against the scene of the "
+                                                                                             "called component, so only non-static member functions of a Component may take them.",
+                                         owner, parameter._name, target );
                         return false;
                     }
                     parameter._handleTargetTypeName = target;
@@ -1404,8 +1404,8 @@ namespace sw
                 const CXCursor found = findNamedConstant( memberCursor, prop._maxCountName );
                 if ( clang_Cursor_isNull( found ) != 0 )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#': MaxCount constant '%#' is not declared in this type or an enclosing scope", owner,
-                                  prop._maxCountName.c_str() );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYMaxCountConstant", "ERROR: PROPERTY() '%#': MaxCount constant '%#' is not declared in this type or an enclosing scope", owner,
+                                     prop._maxCountName.c_str() );
                     return false;
                 }
 
@@ -1430,8 +1430,8 @@ namespace sw
                 const bool bWithinLimit = 1 <= value && value <= kMaxCountLimit;
                 if ( bInteger == false || bWithinLimit == false )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#': MaxCount constant '%#' must be an integer constant between 1 and 4294967295", owner,
-                                  prop._maxCountName.c_str() );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYMaxCountConstant2", "ERROR: PROPERTY() '%#': MaxCount constant '%#' must be an integer constant between 1 and 4294967295", owner,
+                                     prop._maxCountName.c_str() );
                     return false;
                 }
                 prop._maxCount     = static_cast<uint32>( value );
@@ -1480,7 +1480,7 @@ namespace sw
                         const CXCursor found = findNamedConstant( memberCursor, name );
                         if ( clang_Cursor_isNull( found ) != 0 )
                         {
-                            SW_LOG_ERROR( "ERROR: PROPERTY() '%#': %# constant '%#' is not declared in this type or an enclosing scope", owner, side._label, name );
+                            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYConstantNot", "ERROR: PROPERTY() '%#': %# constant '%#' is not declared in this type or an enclosing scope", owner, side._label, name );
                             return false;
                         }
                         float64            value  = 0.0;
@@ -1504,7 +1504,7 @@ namespace sw
                         }
                         if ( bValid == false )
                         {
-                            SW_LOG_ERROR( "ERROR: PROPERTY() '%#': %# constant '%#' must be an integer or floating-point constant", owner, side._label, name );
+                            SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYConstantMust", "ERROR: PROPERTY() '%#': %# constant '%#' must be an integer or floating-point constant", owner, side._label, name );
                             return false;
                         }
                         utf8       buffer[40]{};
@@ -1561,8 +1561,8 @@ namespace sw
                 // 선언의 소스 토큰에 그 이름이 없으면 매크로가 만든 이름이다 — 칸 이름을 바꾸게 멈춘다.
                 if ( isSpelledInSource( cursor, prop._memberName ) == false )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#' in '%#' is renamed by a macro (the source spells another name) - rename the field",
-                                  prop._memberName.c_str(), makeFullyQualifiedName( clang_getCursorSemanticParent( cursor ) ).c_str() );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRenamedMacro", "ERROR: PROPERTY() '%#' in '%#' is renamed by a macro (the source spells another name) - rename the field",
+                                     prop._memberName.c_str(), makeFullyQualifiedName( clang_getCursorSemanticParent( cursor ) ).c_str() );
                     collector._bHasError = SW_TRUE;
                     return;
                 }
@@ -1575,8 +1575,8 @@ namespace sw
                     const int32 bitWidth = clang_getFieldDeclBitWidth( cursor );
                     if ( bitWidth != 1 )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY() bitfield '%#' in '%#' has bit width %#. Only 1-bit bitfield boolean flags (e.g. uint8 _flag : 1;) are supported in reflection!",
-                                      prop._name.c_str(), makeFullyQualifiedName( clang_getCursorSemanticParent( cursor ) ).c_str(), bitWidth );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYBitfieldBit", "ERROR: PROPERTY() bitfield '%#' in '%#' has bit width %#. Only 1-bit bitfield boolean flags (e.g. uint8 _flag : 1;) are supported in reflection!",
+                                         prop._name.c_str(), makeFullyQualifiedName( clang_getCursorSemanticParent( cursor ) ).c_str(), bitWidth );
                         collector._bHasError = SW_TRUE;
                         return;
                     }
@@ -1650,9 +1650,9 @@ namespace sw
                                       resultType.kind == CXType_LValueReference && clang_isConstQualifiedType( valueType ) == 0;
                 if ( bShapeOk == false )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY() on method '%#' needs a non-static method with no parameters that returns a non-const "
-                                  "lvalue reference (T&) to the value. Put PROPERTY() on a field instead if the value lives in the object.",
-                                  owner );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYMethodNeeds", "ERROR: PROPERTY() on method '%#' needs a non-static method with no parameters that returns a non-const "
+                                                                            "lvalue reference (T&) to the value. Put PROPERTY() on a field instead if the value lives in the object.",
+                                     owner );
                     collector._bHasError = SW_TRUE;
                     return;
                 }
@@ -1668,7 +1668,7 @@ namespace sw
                 fillContainerDetails( prop, valueType, session );
                 if ( prop._bIsContainer == SW_TRUE )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY() on method '%#' returns a container. Accessor properties support single values only.", owner );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYMethodReturns", "ERROR: PROPERTY() on method '%#' returns a container. Accessor properties support single values only.", owner );
                     collector._bHasError = SW_TRUE;
                     return;
                 }
@@ -1869,16 +1869,16 @@ namespace sw
             {
                 if ( collector._pType->_validate.empty() == false && isValidatorDeclared( collector, collector._pType->_validate ) == false )
                 {
-                    SW_LOG_ERROR( "ERROR: REFLECT( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
-                                  collector._pType->_validate, collector._pType->_fullyQualifiedName, collector._pType->_validate );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTValidateNeeds", "ERROR: REFLECT( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                                     collector._pType->_validate, collector._pType->_fullyQualifiedName, collector._pType->_validate );
                     collector._bHasError = SW_TRUE;
                 }
                 for ( ParsedPropertyInfo& prop : collector._pType->_listProperty )
                 {
                     if ( prop._validate.empty() == false && isValidatorDeclared( collector, prop._validate ) == false )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
-                                      prop._validate, makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name ), prop._validate );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYValidateNeeds", "ERROR: PROPERTY( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                                         prop._validate, makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name ), prop._validate );
                         collector._bHasError = SW_TRUE;
                     }
                     if ( prop._repNotify.empty() )
@@ -1888,9 +1888,9 @@ namespace sw
                     const bool                   bTakesOld  = pSignature != nullptr && pSignature->_listParameterTypeName.size() == 1;
                     if ( pSignature == nullptr || ( bTakesOld && pSignature->_listParameterTypeName[0] != prop._typeName ) )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY( RepNotify = %# ) on '%#' needs a method of the same type named '%#' taking nothing or the old "
-                                      "value (const %#&).",
-                                      prop._repNotify, owner, prop._repNotify, prop._typeName );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRepNotifyNeeds", "ERROR: PROPERTY( RepNotify = %# ) on '%#' needs a method of the same type named '%#' taking nothing or the old "
+                                                                                   "value (const %#&).",
+                                         prop._repNotify, owner, prop._repNotify, prop._typeName );
                         collector._bHasError = SW_TRUE;
                         continue;
                     }
@@ -1912,16 +1912,16 @@ namespace sw
                     const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name );
                     if ( prop._bTransient == SW_TRUE )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY( RuntimeState, Transient ) on '%#' - RuntimeState is written to snapshots and saves, Transient is never "
-                                      "written. Keep one.",
-                                      owner );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateTransient", "ERROR: PROPERTY( RuntimeState, Transient ) on '%#' - RuntimeState is written to snapshots and saves, Transient is never "
+                                                                                          "written. Keep one.",
+                                         owner );
                         collector._bHasError = SW_TRUE;
                     }
                     if ( prop._bRequired == SW_TRUE )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY( RuntimeState, Required ) on '%#' - authoring files never write a RuntimeState field, so it cannot be "
-                                      "required.",
-                                      owner );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRuntimeStateRequired", "ERROR: PROPERTY( RuntimeState, Required ) on '%#' - authoring files never write a RuntimeState field, so it cannot be "
+                                                                                         "required.",
+                                         owner );
                         collector._bHasError = SW_TRUE;
                     }
                 }
@@ -1945,8 +1945,8 @@ namespace sw
                         {
                             if ( StringUtil::equals( alias, other._name, true ) )
                             {
-                                SW_LOG_ERROR( "ERROR: PROPERTY( Alias = %# ) on '%#' is the current name of '%#' - an old name must not be a field that exists now.", alias,
-                                              owner, other._name );
+                                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYAliasCurrent", "ERROR: PROPERTY( Alias = %# ) on '%#' is the current name of '%#' - an old name must not be a field that exists now.", alias,
+                                                 owner, other._name );
                                 collector._bHasError = SW_TRUE;
                             }
                         }
@@ -1954,8 +1954,8 @@ namespace sw
                         {
                             if ( StringUtil::equals( alias, seen, true ) )
                             {
-                                SW_LOG_ERROR( "ERROR: PROPERTY( Alias = %# ) on '%#' is declared twice in '%#' - one old name reads into one field.", alias, owner,
-                                              collector._pType->_fullyQualifiedName );
+                                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYAliasDeclared", "ERROR: PROPERTY( Alias = %# ) on '%#' is declared twice in '%#' - one old name reads into one field.", alias, owner,
+                                                 collector._pType->_fullyQualifiedName );
                                 collector._bHasError = SW_TRUE;
                             }
                         }
@@ -1993,30 +1993,30 @@ namespace sw
                         const utf8* const pKey = arrKeyName[listIndex];
                         if ( oldName.empty() || targetName.empty() )
                         {
-                            SW_LOG_ERROR( "ERROR: ENUM( %# ) on '%#' expects \"Old:Target\", got '%#:%#'.", pKey, enumInfo._fullyQualifiedName, oldName, targetName );
+                            SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMExpectsOld", "ERROR: ENUM( %# ) on '%#' expects \"Old:Target\", got '%#:%#'.", pKey, enumInfo._fullyQualifiedName, oldName, targetName );
                             bValid = false;
                             continue;
                         }
                         const ParsedEnumeratorInfo* pTarget = findEnumeratorIgnoreCase( enumInfo, targetName );
                         if ( pTarget == nullptr || pTarget->_name != targetName )
                         {
-                            SW_LOG_ERROR( "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is not an enumerator of it (spell it as declared).", pKey, oldName, targetName,
-                                          enumInfo._fullyQualifiedName, targetName );
+                            SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMNotEnumerator", "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is not an enumerator of it (spell it as declared).", pKey, oldName, targetName,
+                                             enumInfo._fullyQualifiedName, targetName );
                             bValid = false;
                         }
                         const ParsedEnumeratorInfo* pCurrent = findEnumeratorIgnoreCase( enumInfo, oldName );
                         if ( pCurrent != nullptr )
                         {
-                            SW_LOG_ERROR( "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is still an enumerator; an old name must be one that no longer exists.", pKey,
-                                          oldName, targetName, enumInfo._fullyQualifiedName, pCurrent->_name );
+                            SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMStillEnumerator", "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is still an enumerator; an old name must be one that no longer exists.", pKey,
+                                             oldName, targetName, enumInfo._fullyQualifiedName, pCurrent->_name );
                             bValid = false;
                         }
                         for ( const string_view seen : listSeenOld )
                         {
                             if ( StringUtil::equals( seen, oldName, true ) )
                             {
-                                SW_LOG_ERROR( "ERROR: ENUM() on '%#' declares the old enumerator name '%#' twice (ValueAlias and Removed together count once).",
-                                              enumInfo._fullyQualifiedName, oldName );
+                                SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMDeclaresOld", "ERROR: ENUM() on '%#' declares the old enumerator name '%#' twice (ValueAlias and Removed together count once).",
+                                                 enumInfo._fullyQualifiedName, oldName );
                                 bValid = false;
                             }
                         }
@@ -2039,7 +2039,7 @@ namespace sw
                 {
                     if ( key == "Units" && ReflectUnitUtil::findUnit( value ) != nullptr )
                     {
-                        SW_LOG_ERROR( "ERROR: '%#' writes Meta = \"Units=%#\" - a known unit is written PROPERTY( Units = %# ).", owner, value, value );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORWritesMetaUnits", "ERROR: '%#' writes Meta = \"Units=%#\" - a known unit is written PROPERTY( Units = %# ).", owner, value, value );
                         return false;
                     }
                 }
@@ -2048,15 +2048,15 @@ namespace sw
                 {
                     if ( ReflectUnitUtil::findUnit( prop._units ) == nullptr )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY( Units = %# ) on '%#' - unknown unit. Known: %#. A free-form label is written Meta = \"Units=…\".",
-                                      prop._units, owner, ReflectUnitUtil::makeUnitList() );
+                        SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYUnitsUnknown", "ERROR: PROPERTY( Units = %# ) on '%#' - unknown unit. Known: %#. A free-form label is written Meta = \"Units=…\".",
+                                         prop._units, owner, ReflectUnitUtil::makeUnitList() );
                         return false;
                     }
                     for ( const auto& [key, value] : prop._listCustomMeta )
                     {
                         if ( key == "Units" )
                         {
-                            SW_LOG_ERROR( "ERROR: '%#' gives Units twice (Units = %# and Meta = \"Units=%#\").", owner, prop._units, value );
+                            SW_LOG_ERROR_ID( "AstVisitor.ERRORGivesUnitsTwice", "ERROR: '%#' gives Units twice (Units = %# and Meta = \"Units=%#\").", owner, prop._units, value );
                             return false;
                         }
                     }
@@ -2065,14 +2065,14 @@ namespace sw
 
                 if ( prop._editCondition.empty() == false && isEditConditionWellFormed( prop._editCondition ) == false )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - use name, !name, name == Value or name != Value.", prop._editCondition, owner );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEditConditionUse", "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - use name, !name, name == Value or name != Value.", prop._editCondition, owner );
                     return false;
                 }
 
                 const bool bFixedArrayOfContainers = fieldType.kind == CXType_ConstantArray && prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr;
                 if ( bFixedArrayOfContainers )
                 {
-                    SW_LOG_ERROR( "ERROR: PROPERTY() on '%#' is a fixed array of containers - use a container of containers (vector<array<…>>) instead.", owner );
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYFixedArray", "ERROR: PROPERTY() on '%#' is a fixed array of containers - use a container of containers (vector<array<…>>) instead.", owner );
                     return false;
                 }
                 return true;
@@ -2126,8 +2126,8 @@ namespace sw
                 const bool bAnimatableProperty = bKnownType && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE;
                 if ( bAnimatableProperty )
                     return true;
-                SW_LOG_ERROR( "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single number, float2/3/4 or quaternion can be animated by a value track.",
-                              owner, prop._typeName );
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYInterpOnly", "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single number, float2/3/4 or quaternion can be animated by a value track.",
+                                 owner, prop._typeName );
                 return false;
             }
 
@@ -2159,8 +2159,8 @@ namespace sw
                     {
                         if ( annotation._functionSpelling.empty() == false )
                         {
-                            SW_LOG_ERROR( "ERROR: '%#' has both PROPERTY() and FUNCTION(). A method is either a value accessor (PROPERTY) or a callable (FUNCTION).",
-                                          makeMemberOwnerName( collector._pType->_fullyQualifiedName, spelling ) );
+                            SW_LOG_ERROR_ID( "AstVisitor.ERRORBothPROPERTYFUNCTION", "ERROR: '%#' has both PROPERTY() and FUNCTION(). A method is either a value accessor (PROPERTY) or a callable (FUNCTION).",
+                                             makeMemberOwnerName( collector._pType->_fullyQualifiedName, spelling ) );
                             collector._bHasError = SW_TRUE;
                             return;
                         }
@@ -2174,8 +2174,8 @@ namespace sw
                 // 멤버 함수 템플릿은 인자 타입이 정해지지 않아 등록할 수 없다. 클래스 템플릿처럼 알리고 건너뛴다.
                 if ( kind == CXCursor_FunctionTemplate && annotation._functionSpelling.empty() == false )
                 {
-                    SW_LOG_WARNING( "FUNCTION on a member function template is not supported, skipping: %#",
-                                    makeMemberOwnerName( collector._pType->_fullyQualifiedName, spelling ) );
+                    SW_LOG_WARNING_ID( "AstVisitor.FUNCTIONMemberFunctionTemplate", "FUNCTION on a member function template is not supported, skipping: %#",
+                                       makeMemberOwnerName( collector._pType->_fullyQualifiedName, spelling ) );
                 }
             }
 
@@ -2218,10 +2218,10 @@ namespace sw
                 const bool bMissingExport = collector._bBusBody == SW_TRUE && collector._bExported == SW_FALSE;
                 if ( bMissingExport == false || collector._pSession->_bModuleLocal )
                     return;
-                SW_LOG_ERROR( "ERROR: '%#' declares '%#' (a server bus body type) but has no module export macro. "
-                              "Another module's ServerBusTopic<T> calls T::StaticType(), which then fails to link. "
-                              "Write the module's macro before the name: 'struct SW_KIT_API %#' (SW_GF_API in Base, SW_KIT_SERVER_API in a server kit).",
-                              collector._pType->_fullyQualifiedName, annotation::kBusVersionMember, collector._pType->_name );
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORDeclaresServerBus", "ERROR: '%#' declares '%#' (a server bus body type) but has no module export macro. "
+                                                                      "Another module's ServerBusTopic<T> calls T::StaticType(), which then fails to link. "
+                                                                      "Write the module's macro before the name: 'struct SW_KIT_API %#' (SW_GF_API in Base, SW_KIT_SERVER_API in a server kit).",
+                                 collector._pType->_fullyQualifiedName, annotation::kBusVersionMember, collector._pType->_name );
                 collector._bHasError = SW_TRUE;
             }
 
@@ -2306,8 +2306,8 @@ namespace sw
                 if ( hasAnnotation( parent, annotation::kReflect, config ) )
                     return true;
 
-                SW_LOG_ERROR( "ERROR: %#() is used in class/struct '%#', but it lacks REFLECT()!", pMacroName,
-                              makeFullyQualifiedName( parent ).c_str() );
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORUsedClassStruct", "ERROR: %#() is used in class/struct '%#', but it lacks REFLECT()!", pMacroName,
+                                 makeFullyQualifiedName( parent ).c_str() );
                 return false;
             }
         };
@@ -2348,7 +2348,7 @@ namespace sw
         {
             if ( _listTargetFile[index] == nullptr )
             {
-                SW_LOG_ERROR( "ERROR: '%#' is not part of the parsed translation unit.", _listTargetPath[index] );
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORNotPartParsed", "ERROR: '%#' is not part of the parsed translation unit.", _listTargetPath[index] );
                 _bHasError = SW_TRUE;
             }
         }
@@ -2444,8 +2444,8 @@ namespace sw
         {
             if ( AstVisitorInternal::hasAnnotation( cursor, annotation::kReflect, config ) )
             {
-                SW_LOG_WARNING( "REFLECT on class template is not supported, skipping: %#",
-                                AstVisitorInternal::makeFullyQualifiedName( cursor ) );
+                SW_LOG_WARNING_ID( "AstVisitor.REFLECTClassTemplateNot", "REFLECT on class template is not supported, skipping: %#",
+                                   AstVisitorInternal::makeFullyQualifiedName( cursor ) );
             }
             return CXChildVisit_Continue;
         }
@@ -2521,18 +2521,18 @@ namespace sw
         // 그냥 지나치게 되므로 생성 자체를 실패시킨다.
         if ( typeInfo._bReflectBody == SW_FALSE )
         {
-            SW_LOG_ERROR( "ERROR: REFLECT() is used in class/struct '%#', but it lacks REFLECT_BODY()! "
-                          "Add REFLECT_BODY(); as the first line of the type body "
-                          "(and include \"Engine/Reflection/ReflectionMacros.h\").",
-                          typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTUsedClass", "ERROR: REFLECT() is used in class/struct '%#', but it lacks REFLECT_BODY()! "
+                                                                 "Add REFLECT_BODY(); as the first line of the type body "
+                                                                 "(and include \"Engine/Reflection/ReflectionMacros.h\").",
+                             typeInfo._fullyQualifiedName.c_str() );
             markHeaderError( outHeader );
             return;
         }
 
-        SW_LOG_TRACE( "REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%#)",
-                      typeInfo._fullyQualifiedName, typeInfo._listProperty.size(), typeInfo._listMethod.size(),
-                      typeInfo._bAbstract ? 1 : 0, typeInfo._bStatic ? 1 : 0, typeInfo._bReflectBody ? 1 : 0,
-                      typeInfo._bComponentFactory ? 1 : 0 );
+        SW_LOG_TRACE_ID( "AstVisitor.REFLECTClassPropsMethods", "REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%#)",
+                         typeInfo._fullyQualifiedName, typeInfo._listProperty.size(), typeInfo._listMethod.size(),
+                         typeInfo._bAbstract ? 1 : 0, typeInfo._bStatic ? 1 : 0, typeInfo._bReflectBody ? 1 : 0,
+                         typeInfo._bComponentFactory ? 1 : 0 );
         outHeader._listType.push_back( std::move( typeInfo ) );
     }
 
@@ -2597,9 +2597,9 @@ namespace sw
         // C++ 트레이트(`IsBitFlagEnum<>`, 명시한 `ENUM( Flags )` 로만 나간다)와 레지스트리가 다른 답을 낸다. 명시하지 않아 놓친 쪽은
         // 비트 연산자가 없어 컴파일이 그 자리에서 막히지만, 명시하지 않았는데 켜지는 쪽은 조용히 틀린다.
 
-        SW_LOG_INFO( "ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",
-                     enumInfo._fullyQualifiedName, enumInfo._listEnumerator.size(), enumInfo._bIsBitFlag ? "true" : "false",
-                     enumInfo._listAlias.size() );
+        SW_LOG_INFO_ID( "AstVisitor.ENUMValuesBIsBitFlagAliases", "ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",
+                        enumInfo._fullyQualifiedName, enumInfo._listEnumerator.size(), enumInfo._bIsBitFlag ? "true" : "false",
+                        enumInfo._listAlias.size() );
         outHeader._listEnum.push_back( std::move( enumInfo ) );
     }
 } // namespace sw

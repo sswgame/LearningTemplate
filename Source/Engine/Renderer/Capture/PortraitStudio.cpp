@@ -105,7 +105,7 @@ namespace sw
         shutdown();
         if ( services._pAssetManager == nullptr || services._pDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR( "Portrait: the scene services have no asset manager or default assets" );
+            SW_LOG_ERROR_ID( "PortraitStudio.PortraitSceneServicesNo", "Portrait: the scene services have no asset manager or default assets" );
             return false;
         }
         _services = services;
@@ -133,7 +133,7 @@ namespace sw
         GameObject*        pSubject = assetManager.getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
         if ( pSubject == nullptr )
         {
-            SW_LOG_ERROR( "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
+            SW_LOG_ERROR_ID( "PortraitStudio.PortraitPrefabCouldNot", "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
             return false;
         }
         // 스튜디오는 틱하지 않으므로 게임 루프가 프레임마다 하는 일을 여기서 차례로 한다 — 스폰이 건 에셋(메시 · 텍스처) 일을 끝내고(`finishPendingAssetWork`),
@@ -146,7 +146,7 @@ namespace sw
         float32 radius = 1.0f;
         if ( PortraitStudioInternal::computeSubjectSphere( *pManager, center, radius ) == false )
         {
-            SW_LOG_ERROR( "Portrait: prefab '%#' has no mesh to draw", request._prefabPath.c_str() );
+            SW_LOG_ERROR_ID( "PortraitStudio.PortraitPrefabNoMesh", "Portrait: prefab '%#' has no mesh to draw", request._prefabPath.c_str() );
             return false;
         }
 
@@ -189,7 +189,7 @@ namespace sw
         SceneCaptureResult result;
         if ( _capture.capture( studio, capture, result ) == false )
         {
-            SW_LOG_ERROR( "Portrait: rendering '%#' failed", request._prefabPath.c_str() );
+            SW_LOG_ERROR_ID( "PortraitStudio.PortraitRenderingFailed", "Portrait: rendering '%#' failed", request._prefabPath.c_str() );
             return false;
         }
         outCapture._bytes               = std::move( result._bytes );
@@ -201,7 +201,7 @@ namespace sw
         // 대상이 한 픽셀도 보이지 않는 사진(전부 배경색)은 실패다 — 성공으로 쓰면 빈 썸네일이 조용히 남는다(등장 디더 · 시점 결함이 그렇게 숨었다).
         if ( PortraitStudioInternal::hasVisibleSubject( outCapture ) == false )
         {
-            SW_LOG_ERROR( "Portrait: '%#' rendered only the background - the subject is not visible", request._prefabPath.c_str() );
+            SW_LOG_ERROR_ID( "PortraitStudio.PortraitRenderedOnlyBackground", "Portrait: '%#' rendered only the background - the subject is not visible", request._prefabPath.c_str() );
             return false;
         }
         return true;

@@ -28,7 +28,7 @@ namespace sw
     {
         // 서비스 범위가 내려갈 때 칸이 남았으면 그 컴포넌트가 새었다. 페이지는 그래도 놓는다 — 샌 컴포넌트는 다시 불리지 않는다.
         if ( _liveSlotCount != 0 )
-            SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", _liveSlotCount );
+            SW_LOG_WARNING_ID( "SceneTransformStorage.SceneTransformStorageStill", "Scene transform storage still has %# live slots at shutdown - a scene component leaked", _liveSlotCount );
         for ( atomic<SceneTransformPage*>& page : _arrPage )
         {
             sw_delete( page.load( std::memory_order_relaxed ) );

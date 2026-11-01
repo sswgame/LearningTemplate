@@ -161,10 +161,10 @@ namespace sw
         for ( int32 signalNumber : kArrFatalSignal )
         {
             if ( sigaction( signalNumber, &action, nullptr ) != 0 )
-                SW_LOG_WARNING( "sigaction(%#) failed - this signal will not be recorded.", signalNumber );
+                SW_LOG_WARNING_ID( "PosixCrashHandler.SigactionFailedSignalNot", "sigaction(%#) failed - this signal will not be recorded.", signalNumber );
         }
 
-        SW_LOG_TRACE( "Crash handler installed." );
+        SW_LOG_TRACE_ID( "PosixCrashHandler.CrashHandlerInstalled", "Crash handler installed." );
     }
 
     void CrashHandler::shutdown()

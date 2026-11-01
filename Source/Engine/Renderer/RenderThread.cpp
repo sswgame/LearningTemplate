@@ -99,7 +99,7 @@ namespace sw
                 if ( write._kind == ScreenshotWriteKind::Packet )
                 {
                     if ( bWritten == false )
-                        SW_LOG_WARNING( "Packet screenshot was not written: %#", write._path.c_str() );
+                        SW_LOG_WARNING_ID( "RenderThread.PacketScreenshotNotWritten", "Packet screenshot was not written: %#", write._path.c_str() );
                     if ( write._pMailbox != nullptr )
                         write._pMailbox->reportPacketCaptureCompleted();
                     return;
@@ -244,14 +244,14 @@ namespace sw
 
         if ( _bRunning.load( std::memory_order_relaxed ) )
         {
-            SW_LOG_WARNING( "bind() ignored while worker is running." );
+            SW_LOG_WARNING_ID( "RenderThread.BindIgnoredWhileWorker", "bind() ignored while worker is running." );
             return false;
         }
 
         _pDevice        = pDevice;
         _pFrameRenderer = pFrameRenderer;
         _bContextBound  = false;
-        SW_LOG_INFO( "Bound for inline submit (no dedicated worker). Backend=%#", pDevice->getBackendName() );
+        SW_LOG_INFO_ID( "RenderThread.BoundInlineSubmitNo", "Bound for inline submit (no dedicated worker). Backend=%#", pDevice->getBackendName() );
         return true;
     }
 
@@ -276,7 +276,7 @@ namespace sw
         // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 작업을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
         if ( pDevice != nullptr )
             pDevice->setRenderThreadDrain( &RenderThread::drainPacketsThunk, this, _thread.get_id() );
-        SW_LOG_TRACE( "Dedicated worker started" );
+        SW_LOG_TRACE_ID( "RenderThread.DedicatedWorkerStarted", "Dedicated worker started" );
         return true;
     }
 
@@ -311,14 +311,14 @@ namespace sw
         _pDevice        = nullptr;
         _pFrameRenderer = nullptr;
         _bContextBound  = false;
-        SW_LOG_TRACE( "Stopped" );
+        SW_LOG_TRACE_ID( "RenderThread.Stopped", "Stopped" );
     }
 
     void RenderThread::submit( RenderFramePacket& packet )
     {
         if ( _pDevice == nullptr )
         {
-            SW_LOG_WARNING_ONCE( "submit() with no bound device — packet dropped." );
+            SW_LOG_WARNING_ONCE_ID( "RenderThread.SubmitNoBoundDevice", "submit() with no bound device — packet dropped." );
             return;
         }
 
@@ -343,7 +343,7 @@ namespace sw
                 waitIdle( RHIWaitIdleReason::Tool ); // `gv_useRenderThread` 토글은 개발 토글이다(프레임 경로가 아니다)
                 stop();
                 if ( bind( pSavedDevice, pSavedFrameRenderer ) == false )
-                    SW_LOG_ERROR( "Render thread could not go back to inline submit - no device is bound" );
+                    SW_LOG_ERROR_ID( "RenderThread.RenderThreadCouldNot", "Render thread could not go back to inline submit - no device is bound" );
             }
         }
 
@@ -523,7 +523,7 @@ namespace sw
     {
         if ( _pDevice == nullptr )
         {
-            SW_LOG_ERROR( "executeAndWait() with no bound device - the render command is not run" );
+            SW_LOG_ERROR_ID( "RenderThread.ExecuteAndWaitNoBoundDevice", "executeAndWait() with no bound device - the render command is not run" );
             return false;
         }
         // 워커가 없으면 부른 스레드가 패킷을 실행하는 스레드다(`executeInline`). 렌더 스레드 자신이 부르면 기다릴 상대가 없다.
@@ -540,7 +540,7 @@ namespace sw
         {
             // 렌더 스레드가 멈추는 중이라 집어 가지 않았다 — 맡긴 것을 거둔다(명령의 수명은 이 함수 안이다).
             _pPendingCommand = nullptr;
-            SW_LOG_ERROR( "The render thread stopped before running the render command" );
+            SW_LOG_ERROR_ID( "RenderThread.RenderThreadStoppedBefore", "The render thread stopped before running the render command" );
             return false;
         }
         return _bCommandSucceeded;
@@ -578,7 +578,7 @@ namespace sw
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();
         if ( bOffscreen && pFrameStream == nullptr )
         {
-            SW_LOG_ERROR_ONCE( "getFrameStreamContext() is null; skipping offscreen packet" );
+            SW_LOG_ERROR_ONCE_ID( "RenderThread.GetFrameStreamContextNullSkippingOffscreen", "getFrameStreamContext() is null; skipping offscreen packet" );
             return false;
         }
 
@@ -591,7 +591,7 @@ namespace sw
         if ( gv_rhiImmediateSubmit != _bLastImmediateSubmit )
         {
             _bLastImmediateSubmit = gv_rhiImmediateSubmit;
-            SW_LOG_INFO( "RHI submit mode: %#", _bLastImmediateSubmit ? "immediate (debug)" : "batched at endFrame" );
+            SW_LOG_INFO_ID( "RenderThread.RHISubmitMode", "RHI submit mode: %#", _bLastImmediateSubmit ? "immediate (debug)" : "batched at endFrame" );
         }
         _pDevice->setImmediateSubmit( gv_rhiImmediateSubmit );
         {
@@ -702,7 +702,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_WARNING( "Packet screenshot was not written: %#", packet._screenshotPath.c_str() );
+                SW_LOG_WARNING_ID( "RenderThread.PacketScreenshotNotWritten", "Packet screenshot was not written: %#", packet._screenshotPath.c_str() );
                 if ( pWrite->_pMailbox != nullptr )
                     pWrite->_pMailbox->reportPacketCaptureCompleted();
             }
@@ -793,8 +793,8 @@ namespace sw
                 const float64 waitedSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() - _screenshotWaitStartMicroseconds ) * 1.0e-6;
                 if ( waitedSeconds > RenderThreadInternal::kSettleTimeoutSeconds )
                 {
-                    SW_LOG_ERROR( "Screenshot was not taken: the screen did not settle within %# s (loading screen, screen fade or asset loads never finished) - %#",
-                                  static_cast<uint32>( RenderThreadInternal::kSettleTimeoutSeconds ), gv_screenshot.c_str() );
+                    SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotTakenScreen", "Screenshot was not taken: the screen did not settle within %# s (loading screen, screen fade or asset loads never finished) - %#",
+                                     static_cast<uint32>( RenderThreadInternal::kSettleTimeoutSeconds ), gv_screenshot.c_str() );
                     _bScreenshotTaken = SW_TRUE;
                     reportCaptureFinished( CaptureKind::GameView, false ); // 한 장도 맡기지 않았다 - 쓰는 중인 장이 없다
                 }
@@ -853,7 +853,7 @@ namespace sw
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
-            SW_LOG_ERROR( "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath );
+            SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotRequestedHost", "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath );
             return;
         }
         pMailbox->put( filePath, sourceTexture, sourceFormat );
@@ -870,7 +870,7 @@ namespace sw
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
-            SW_LOG_ERROR( "A capture was announced but this host has no screenshot mailbox (no renderer)" );
+            SW_LOG_ERROR_ID( "RenderThread.CaptureAnnouncedButHost", "A capture was announced but this host has no screenshot mailbox (no renderer)" );
             return;
         }
         pMailbox->expectCapture( static_cast<uint32>( kind ) );
@@ -881,7 +881,7 @@ namespace sw
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
-            SW_LOG_ERROR( "A capture finished but this host has no screenshot mailbox (no renderer)" );
+            SW_LOG_ERROR_ID( "RenderThread.CaptureFinishedButHost", "A capture finished but this host has no screenshot mailbox (no renderer)" );
             return;
         }
         pMailbox->reportCaptureFinished( static_cast<uint32>( kind ), bWritten );

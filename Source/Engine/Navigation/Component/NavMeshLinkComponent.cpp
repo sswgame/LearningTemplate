@@ -142,8 +142,8 @@ namespace sw
         if ( _areaName.empty() == false && settings.findAreaIndex( _areaName, outLink._area ) == false )
         {
             const GameObject* pOwner = getOwner();
-            SW_LOG_ERROR( "NavMesh link on '%#' names unknown area '%#' - baked as the object's area", pOwner != nullptr ? pOwner->getName().c_str() : "",
-                          _areaName.c_str() );
+            SW_LOG_ERROR_ID( "SceneNavigation.NavMeshLinkNamesUnknown", "NavMesh link on '%#' names unknown area '%#' - baked as the object's area", pOwner != nullptr ? pOwner->getName().c_str() : "",
+                             _areaName.c_str() );
             outLink._area = fallbackArea;
         }
         return true;

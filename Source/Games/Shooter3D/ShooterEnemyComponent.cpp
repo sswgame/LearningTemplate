@@ -153,7 +153,7 @@ namespace sw
         RagdollComponent* pRagdoll = pOwner != nullptr ? pOwner->getComponent<RagdollComponent>() : nullptr;
         if ( pRagdoll == nullptr )
         {
-            SW_LOG_ERROR( "Enemy '%#' has no RagdollComponent - it cannot collapse into a ragdoll", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyNoRagdollComponentCannot", "Enemy '%#' has no RagdollComponent - it cannot collapse into a ragdoll", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
             return;
         }
         pRagdoll->startRagdoll( hit._direction * hit._impulse, hit._bodyIndex );
@@ -240,8 +240,8 @@ namespace sw
                     if ( _bAttackLanded == SW_FALSE && _bHitEventMissingReported == SW_FALSE )
                     {
                         _bHitEventMissingReported = SW_TRUE;
-                        SW_LOG_ERROR( "[Shooter] enemy '%#' finished a swing without the '%#' notify event - check the attack clip's notifies and the notify table",
-                                      pOwner->getName().c_str(), _attackHitEvent.c_str() );
+                        SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyFinishedSwingWithout", "[Shooter] enemy '%#' finished a swing without the '%#' notify event - check the attack clip's notifies and the notify table",
+                                         pOwner->getName().c_str(), _attackHitEvent.c_str() );
                     }
                     enterPhase( ShooterEnemyPhase::Chasing );
                 }
@@ -337,7 +337,7 @@ namespace sw
                 SocketBindingComponent* pBinding   = pPart != nullptr ? pPart->getComponent<SocketBindingComponent>() : nullptr;
                 const bool              bDroppable = pBinding != nullptr && pPart->getComponent<RigidBodyComponent>() != nullptr;
                 if ( bDroppable && pBinding->release( SocketReleaseMode::Physics ) == false )
-                    SW_LOG_ERROR( "Enemy part '%#' has a rigid body but could not be released to physics", pPart->getName().c_str() );
+                    SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyPartRigidBody", "Enemy part '%#' has a rigid body but could not be released to physics", pPart->getName().c_str() );
             }
         } );
     }

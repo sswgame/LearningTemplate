@@ -215,7 +215,7 @@ namespace sw
         const bool bDedicatedServer = role == EngineHostRole::DedicatedServer;
         if ( ( bDedicatedServer && build::kWithServerCode == false ) || ( bDedicatedServer == false && build::kWithClientCode == false ) )
         {
-            SW_LOG_ERROR( "The %# build cannot host the %# role", build::kTargetName, bDedicatedServer ? "dedicated server" : "client" );
+            SW_LOG_ERROR_ID( "Engine.BuildCannotHostRole", "The %# build cannot host the %# role", build::kTargetName, bDedicatedServer ? "dedicated server" : "client" );
             return false;
         }
         const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
@@ -239,7 +239,7 @@ namespace sw
             _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {
-                SW_LOG_ERROR( "Engine services failed: %#", _services.getCollection().getError().c_str() );
+                SW_LOG_ERROR_ID( "Engine.EngineServicesFailed", "Engine services failed: %#", _services.getCollection().getError().c_str() );
                 return false;
             }
         }
@@ -272,7 +272,7 @@ namespace sw
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
         if ( const utf8* pMissing = engine::bindEngineServices( _startup ) )
         {
-            SW_LOG_ERROR( "Required engine service '%#' is not in any subsystem scope", pMissing );
+            SW_LOG_ERROR_ID( "Engine.RequiredEngineServiceNot", "Required engine service '%#' is not in any subsystem scope", pMissing );
             return false;
         }
         _pQuitRequest                      = &engine::getSubsystem<QuitRequest>();
@@ -287,7 +287,7 @@ namespace sw
         // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
         if ( bStarted == false )
         {
-            SW_LOG_ERROR( "Engine startup failed: %#", _startup.getCollection().getError().c_str() );
+            SW_LOG_ERROR_ID( "Engine.EngineStartupFailed", "Engine startup failed: %#", _startup.getCollection().getError().c_str() );
             return false;
         }
         // 디버그 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 디버그 키 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
@@ -315,7 +315,7 @@ namespace sw
                     skipped += " ";
                 skipped += subsystem.getSubsystemName();
             }
-            SW_LOG_INFO( "Dedicated server: startup steps not run - %#", skipped.c_str() );
+            SW_LOG_INFO_ID( "Engine.DedicatedServerStartupSteps", "Dedicated server: startup steps not run - %#", skipped.c_str() );
         }
         // 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트)은 RHI 이후 단계를 건너뛰고 여기서 끝난다. 누수 기준선은 그 작업 직전에 잡았다.
         if ( _headlessState.isHeadless() )
@@ -411,7 +411,7 @@ namespace sw
         // 코어 범위(정적 저장소)를 닫기 전, 렌더 리소스를 가질 수 있는 범위가 모두 사라진 자리에서 센다 — 코어 층은 그래픽을 모른다.
         const uint32 registeredResourceCount = RHIRenderResource::getRegisteredCount();
         if ( registeredResourceCount != 0 )
-            SW_LOG_WARNING( "%# RHI render resources are still registered at shutdown - a mesh, texture or material leaked", registeredResourceCount );
+            SW_LOG_WARNING_ID( "Engine.RHIRenderResourcesStill", "%# RHI render resources are still registered at shutdown - a mesh, texture or material leaked", registeredResourceCount );
         _coreScope.destroyAll();
         _pCommandLineSubsystem = nullptr;
         _pMemoryBudget         = nullptr;
@@ -493,7 +493,7 @@ namespace sw
                 const hashed_string key( name );
                 const string        text = ( registry.findType( key ) == nullptr && registry.findEnum( key ) != nullptr ) ? registry.describeEnum( key )
                                                                                                                           : registry.describeType( key );
-                SW_LOG_INFO( "[gv_dumpReflection]\n%#", text.c_str() );
+                SW_LOG_INFO_ID( "Engine.Message", "[gv_dumpReflection]\n%#", text.c_str() );
             }
             gv_dumpReflection = string{}; // 한 번만
         }
@@ -688,7 +688,7 @@ namespace sw
         if ( pOutTiming != nullptr )
             *pOutTiming = formatToString( "re-init resources %#ms, restart stages %#ms", initMicroseconds / 1000, ( rebindWatch.getElapsedMicroseconds() - initMicroseconds ) / 1000 );
         if ( bRestarted == false )
-            SW_LOG_ERROR( "Backend change: %#", _startup.getCollection().getError().c_str() );
+            SW_LOG_ERROR_ID( "Engine.BackendChange", "Backend change: %#", _startup.getCollection().getError().c_str() );
 
         Scene* pScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
@@ -805,9 +805,9 @@ namespace sw
         if ( requested == previous )
             return true;
 
-        SW_LOG_INFO( "Soft-recreating RHI: %# → %#",
-                     RHI::getBackendTypeName( previous ),
-                     RHI::getBackendTypeName( requested ) );
+        SW_LOG_INFO_ID( "Engine.SoftRecreatingRHI", "Soft-recreating RHI: %# → %#",
+                        RHI::getBackendTypeName( previous ),
+                        RHI::getBackendTypeName( requested ) );
         // 교체의 단계마다 든 시간을 남긴다 - 무엇이 교체를 무겁게 하는지(내리기 · 디바이스 · 자원 다시 올리기 · 단계 다시 세우기) 실행마다 보인다.
         const Stopwatch swapWatch;
 
@@ -825,12 +825,12 @@ namespace sw
         const uint64 shutdownMicroseconds = swapWatch.getElapsedMicroseconds();
         if ( _pRHI->recreateDevice( requested ) == false )
         {
-            SW_LOG_ERROR( "recreateDevice failed; restoring previous backend %#",
-                          RHI::getBackendTypeName( previous ) );
+            SW_LOG_ERROR_ID( "Engine.RecreateDeviceFailedRestoringPrevious", "recreateDevice failed; restoring previous backend %#",
+                             RHI::getBackendTypeName( previous ) );
             gv_rhiBackend = previous;
             if ( _pRHI->recreateDevice( previous ) == false )
             {
-                SW_LOG_ERROR( "Failed to restore previous RHI backend — device is gone." );
+                SW_LOG_ERROR_ID( "Engine.FailedRestorePreviousRHI", "Failed to restore previous RHI backend — device is gone." );
                 return false;
             }
             (void)rebindSceneAfterDeviceRecreate(); // 되돌린 장치에 장면을 다시 묶는다 — 이 경로는 이미 실패로 답한다
@@ -841,12 +841,12 @@ namespace sw
         string       rebindTiming;
         if ( rebindSceneAfterDeviceRecreate( &rebindTiming ) == false )
             return false;
-        SW_LOG_INFO( "Backend swap took %#ms (shut down %#ms, device %#ms, %#)", swapWatch.getElapsedMicroseconds() / 1000, shutdownMicroseconds / 1000,
-                     ( recreateMicroseconds - shutdownMicroseconds ) / 1000, rebindTiming.c_str() );
+        SW_LOG_INFO_ID( "Engine.BackendSwapTookMs", "Backend swap took %#ms (shut down %#ms, device %#ms, %#)", swapWatch.getElapsedMicroseconds() / 1000, shutdownMicroseconds / 1000,
+                        ( recreateMicroseconds - shutdownMicroseconds ) / 1000, rebindTiming.c_str() );
         // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다(AppSmokeTest.BackendSwapFollowsTheNewDevice 가 읽는다).
-        SW_LOG_INFO( "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
-                     _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
-                     _pRHI->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
+        SW_LOG_INFO_ID( "Engine.ActiveBackendNowMerge", "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
+                        _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
+                        _pRHI->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
         return true;
     }
 #endif // SW_WITH_CLIENT_CODE

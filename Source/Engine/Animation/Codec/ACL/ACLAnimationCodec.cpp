@@ -124,7 +124,7 @@ namespace sw
         const acl::error_result result      = acl::compress_track_list( allocator, listTrack, compressionSettings, pCompressed, stats );
         if ( result.any() || pCompressed == nullptr )
         {
-            SW_LOG_ERROR( "ACL compression failed: %#", result.c_str() );
+            SW_LOG_ERROR_ID( "ACLAnimationCodec.ACLCompressionFailed", "ACL compression failed: %#", result.c_str() );
             return false;
         }
         const uint32 size  = pCompressed->get_size();

@@ -51,7 +51,7 @@ namespace sw::editor
         clearNodeRefs();
         AudioGraphDef restored;
         if ( restored.loadFromXMLText( xmlText, "<audio graph undo>" ) == false )
-            SW_LOG_ERROR( "Audio graph undo snapshot could not be read - the graph is cleared" );
+            SW_LOG_ERROR_ID( "AudioGraphModel.AudioGraphUndoSnapshot", "Audio graph undo snapshot could not be read - the graph is cleared" );
         _editGraph = std::move( restored );
     }
 

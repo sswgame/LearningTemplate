@@ -371,7 +371,7 @@ namespace sw
         // 이쪽 목록은 모르니 다음 플러시가 해제된 컴포넌트를 읽는다.
         if ( pParent->_pManager != _pManager )
         {
-            SW_LOG_WARNING( "attachToComponent: the parent belongs to another object manager (scene) - a hierarchy cannot span two scenes" );
+            SW_LOG_WARNING_ID( "SceneComponent.AttachToComponentParentBelongsAnother", "attachToComponent: the parent belongs to another object manager (scene) - a hierarchy cannot span two scenes" );
             return false;
         }
         // 부모 오브젝트의 삭제 대기는 다시 보지 않는다. 그 오브젝트의 컴포넌트는 항상 삭제 대기다(`GameObject::isPendingDestroy`).
@@ -393,8 +393,8 @@ namespace sw
                                        pParentOwner->isDescendantOf( pOwner );
         if ( bWouldCreateCycle )
         {
-            SW_LOG_WARNING( "attachToComponent: '%#' would become a descendant of its own child '%#' - rejected", pOwner->getName().c_str(),
-                            pParentOwner->getName().c_str() );
+            SW_LOG_WARNING_ID( "SceneComponent.AttachToComponentWouldBecomeDescendant", "attachToComponent: '%#' would become a descendant of its own child '%#' - rejected", pOwner->getName().c_str(),
+                               pParentOwner->getName().c_str() );
             return false;
         }
         return true;

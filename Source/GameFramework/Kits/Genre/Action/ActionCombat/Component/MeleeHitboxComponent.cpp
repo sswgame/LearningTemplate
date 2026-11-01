@@ -69,7 +69,7 @@ namespace sw
     {
         if ( ( _bladeEnd - _bladeStart ).getLengthSquared() <= 1.0e-12f )
         {
-            SW_LOG_ERROR( "MeleeHitboxComponent: blade has no length - call setBlade() with two different points before beginAttack()" );
+            SW_LOG_ERROR_ID( "MeleeHitbox.MeleeHitboxComponentBladeNoLength", "MeleeHitboxComponent: blade has no length - call setBlade() with two different points before beginAttack()" );
             return;
         }
         _damage          = damage;

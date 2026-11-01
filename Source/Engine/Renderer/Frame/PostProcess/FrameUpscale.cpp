@@ -90,8 +90,8 @@ namespace sw
         if ( bReportPostChain )
         {
             // 이 파이프라인은 Present 가 톤맵까지 한다 — 키울 톤맵한 중간 그림이 없다(EASU 는 톤맵한 색을 받는다). 데이터(파이프라인)와 설정이 맞지 않는 것을 알린다.
-            SW_LOG_ERROR( "Pipeline '%#' tonemaps in its Present pass - FSR 1 needs a tonemapped image to upscale, so this view is upscaled linearly",
-                          _pipeline.getDesc()._name.c_str() );
+            SW_LOG_ERROR_ID( "FrameUpscale.PipelineTonemapsPresentPass", "Pipeline '%#' tonemaps in its Present pass - FSR 1 needs a tonemapped image to upscale, so this view is upscaled linearly",
+                             _pipeline.getDesc()._name.c_str() );
             _bUpscalePostChainLogged = SW_TRUE;
         }
         const bool bUpscale = bCandidate && bPostChain == false && _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) != 0;
@@ -117,7 +117,7 @@ namespace sw
                 view._upscaleIntermediateSRV = pFactory->registerBindlessTexture( view._upscaleIntermediate );
             if ( view._upscaleIntermediateSRV == kInvalidDescriptorIndex )
             {
-                SW_LOG_ERROR( "Failed to create the FSR 1 intermediate (%#x%#, RGBA8 RT) - this view is upscaled linearly", viewportWidth, viewportHeight );
+                SW_LOG_ERROR_ID( "FrameUpscale.FailedCreateFSRIntermediate", "Failed to create the FSR 1 intermediate (%#x%#, RGBA8 RT) - this view is upscaled linearly", viewportWidth, viewportHeight );
                 releaseUpscaleIntermediate( view );
                 return;
             }

@@ -32,7 +32,7 @@ namespace sw
                 float4 scales{};
                 if ( XMLReadUtil::parseFloat4( node.getAttributeText( "scales" ), scales ) == false )
                 {
-                    SW_LOG_ERROR( "%#: <PeltGrade scales> needs exactly four numbers (0..3 stars)", sourceName );
+                    SW_LOG_ERROR_ID( "WesternCatalog.PeltGradeScalesNeedsExactly", "%#: <PeltGrade scales> needs exactly four numbers (0..3 stars)", sourceName );
                     return false;
                 }
                 outListScale.assign( { scales._x, scales._y, scales._z, scales._w } );
@@ -57,7 +57,7 @@ namespace sw
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Large );
                     else
                     {
-                        SW_LOG_ERROR( "%#: <HuntWeapon sizes> has an unknown size '%#' (Small, Medium, Large)", sourceName, token );
+                        SW_LOG_ERROR_ID( "WesternCatalog.HuntWeaponSizesUnknownSize", "%#: <HuntWeapon sizes> has an unknown size '%#' (Small, Medium, Large)", sourceName, token );
                         bValid = false;
                     }
                 } );
@@ -176,7 +176,7 @@ namespace sw
                 (void)_huntWeaponCatalog.add( weapon );
         }
         else
-            SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+            SW_LOG_ERROR_ID( "WesternCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return bAdd;
     }
 

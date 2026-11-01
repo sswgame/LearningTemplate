@@ -204,7 +204,7 @@ namespace sw
         int64                                       retryDelayMs = SQLConnectionPoolInternal::kFirstRetryDelayMs;
         Deadline                                    retryAt      = Deadline::afterMilliseconds( 0 );
         if ( connection == nullptr )
-            SW_LOG_WARNING( "SQL worker %# could not connect: %#", workerIndex, error.c_str() );
+            SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot", "SQL worker %# could not connect: %#", workerIndex, error.c_str() );
         for ( ;; )
         {
             unique_ptr<ISQLJob> job;
@@ -226,7 +226,7 @@ namespace sw
                 connection = _pDriver->openConnection( _settings->_connection, _settings->_secret, error );
                 if ( connection == nullptr )
                 {
-                    SW_LOG_WARNING( "SQL worker %# could not reconnect: %#", workerIndex, error.c_str() );
+                    SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot2", "SQL worker %# could not reconnect: %#", workerIndex, error.c_str() );
                     retryDelayMs = MathUtil::min( retryDelayMs * 2, SQLConnectionPoolInternal::kMaxRetryDelayMs );
                     retryAt      = Deadline::afterMilliseconds( retryDelayMs );
                 }

@@ -155,7 +155,7 @@ namespace sw
             return;
         if ( baseName.size() >= std::size( entry._arrBaseName ) || binRelativeDirectory.size() >= std::size( entry._arrDirectory ) )
         {
-            SW_LOG_ERROR( "Module subdirectory for %# is too long - the module stays in %#", string{ baseName }.c_str(), kModuleFolder );
+            SW_LOG_ERROR_ID( "ModuleLibraryUtil.ModuleSubdirectoryTooLong", "Module subdirectory for %# is too long - the module stays in %#", string{ baseName }.c_str(), kModuleFolder );
             return;
         }
         StringUtil::strncpy( entry._arrBaseName, string{ baseName }.c_str(), static_cast<uint32>( std::size( entry._arrBaseName ) ) );
@@ -198,14 +198,14 @@ namespace sw
         const wstring widePath = StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( libraryPath.str() ).c_str() );
         const HMODULE hModule  = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
         if ( hModule == nullptr )
-            SW_LOG_WARNING( "LoadLibrary failed for %# (Win32 error %#)", libraryPath.c_str(), static_cast<uint32>( GetLastError() ) ); // 126 의존 DLL 없음, 1114 DllMain 실패 등
+            SW_LOG_WARNING_ID( "ModuleLibraryUtil.LoadLibraryFailedWin32Error", "LoadLibrary failed for %# (Win32 error %#)", libraryPath.c_str(), static_cast<uint32>( GetLastError() ) ); // 126 의존 DLL 없음, 1114 DllMain 실패 등
         return hModule;
 #else
         void* const pHandle = dlopen( libraryPath.c_str(), RTLD_NOW | RTLD_LOCAL );
         if ( pHandle == nullptr )
         {
             const utf8* pReason = dlerror(); // 실패 이유는 이것 하나뿐이다
-            SW_LOG_WARNING( "dlopen failed for %#: %#", libraryPath.c_str(), ( pReason != nullptr ) ? pReason : "(no reason)" );
+            SW_LOG_WARNING_ID( "ModuleLibraryUtil.DlopenFailed", "dlopen failed for %#: %#", libraryPath.c_str(), ( pReason != nullptr ) ? pReason : "(no reason)" );
         }
         return pHandle;
 #endif

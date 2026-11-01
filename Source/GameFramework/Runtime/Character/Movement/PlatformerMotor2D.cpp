@@ -31,7 +31,7 @@ namespace sw
         const bool bInvalid = tileSize <= 0.0f || width < 0 || height < 0;
         if ( bInvalid )
         {
-            SW_LOG_ERROR( "PlatformTileMap: refused %# x %# tiles of size %# - the size must be positive and the counts must not be negative", width, height, tileSize );
+            SW_LOG_ERROR_ID( "PlatformerMotor2D.PlatformTileMapRefusedXTiles", "PlatformTileMap: refused %# x %# tiles of size %# - the size must be positive and the counts must not be negative", width, height, tileSize );
             return false;
         }
         _topology = GridTopology( width, height );

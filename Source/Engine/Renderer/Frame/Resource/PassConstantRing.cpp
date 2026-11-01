@@ -88,8 +88,8 @@ namespace sw
             // 오류는 프레임당 한 번만 남긴다. 드로우마다 찍으면 로그가 잠긴다.
             if ( _bExhaustedLogged.exchange( SW_TRUE ) == SW_FALSE )
             {
-                SW_LOG_ERROR( "Out of constant buffer slots (%#) - the remaining passes of this frame that need a slot are not drawn; the next frame grows the ring",
-                              static_cast<uint32>( _listSlot.size() ) );
+                SW_LOG_ERROR_ID( "PassConstantRing.OutConstantBufferSlots", "Out of constant buffer slots (%#) - the remaining passes of this frame that need a slot are not drawn; the next frame grows the ring",
+                                 static_cast<uint32>( _listSlot.size() ) );
             }
             return false;
         }

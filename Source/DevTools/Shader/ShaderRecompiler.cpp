@@ -76,8 +76,8 @@ namespace sw
             if ( newResult._bSuccess == false )
             {
                 ++failed;
-                SW_LOG_ERROR( "Shader reload failed for %# (Entry: %#):\n%#",
-                              desc._source.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
+                SW_LOG_ERROR_ID( "ShaderRecompiler.ShaderReloadFailedEntry", "Shader reload failed for %# (Entry: %#):\n%#",
+                                 desc._source.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
                 continue;
             }
 
@@ -103,8 +103,8 @@ namespace sw
             ShaderReflectionLibrary::clearCache();
         }
 
-        SW_LOG_INFO( "Shader reload: %# checked, %# updated, %# failed.",
-                     static_cast<uint32>( listToCompile.size() ), changed, failed );
+        SW_LOG_INFO_ID( "ShaderRecompiler.ShaderReloadCheckedUpdated", "Shader reload: %# checked, %# updated, %# failed.",
+                        static_cast<uint32>( listToCompile.size() ), changed, failed );
     }
 
     void ShaderRecompiler::shutdown()

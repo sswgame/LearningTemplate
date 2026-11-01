@@ -24,12 +24,12 @@ namespace sw
             CallStackCapture::capture( callStack, 2 );
             string stackTrace = CallStackCapture::symbolize( callStack );
 
-            SW_LOG_ERROR( "%s (context: %p, readers: %u, writers: %u)", pMessage, pContext, readerCount, writerCount );
+            SW_LOG_ERROR_ID( "DataRaceDetector.ContextReadersWriters", "%s (context: %p, readers: %u, writers: %u)", pMessage, pContext, readerCount, writerCount );
 
             StringUtil::forEachLine( stackTrace, []( string_view line )
             {
                 if ( line.empty() == false )
-                    SW_LOG_ERROR( "  %s", string( line ).c_str() );
+                    SW_LOG_ERROR_ID( "DataRaceDetector.Message", "  %s", string( line ).c_str() );
             } );
         }
 

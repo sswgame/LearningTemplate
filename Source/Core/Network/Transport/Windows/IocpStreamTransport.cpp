@@ -458,7 +458,7 @@ namespace sw
             slot._socket         = Internal::openStreamSocket();
             if ( slot._socket == INVALID_SOCKET )
             {
-                SW_LOG_ERROR( "WSASocketW failed for an accept slot (%#)", WSAGetLastError() );
+                SW_LOG_ERROR_ID( "IocpStreamTransport.WSASocketWFailedAcceptSlot", "WSASocketW failed for an accept slot (%#)", WSAGetLastError() );
                 return;
             }
             std::memset( &slot._operation._overlapped, 0, sizeof( slot._operation._overlapped ) );
@@ -666,7 +666,7 @@ namespace sw
         _state->_completionPort = CreateIoCompletionPort( INVALID_HANDLE_VALUE, nullptr, 0, static_cast<DWORD>( threadCount ) );
         if ( _state->_completionPort == nullptr )
         {
-            SW_LOG_ERROR( "CreateIoCompletionPort failed (%#)", GetLastError() );
+            SW_LOG_ERROR_ID( "IocpStreamTransport.CreateIoCompletionPortFailed", "CreateIoCompletionPort failed (%#)", GetLastError() );
             return false;
         }
         _state->_pHandler.set( pHandler );
@@ -715,7 +715,7 @@ namespace sw
             }
         }
         if ( state._openCount.load() > 0 || state._pendingAcceptCount.load() > 0 )
-            SW_LOG_ERROR( "IocpStreamTransport::shutdown timed out with %# connections and %# accepts outstanding", state._openCount.load(), state._pendingAcceptCount.load() );
+            SW_LOG_ERROR_ID( "IocpStreamTransport.IocpStreamTransportShutdownTimedOut", "IocpStreamTransport::shutdown timed out with %# connections and %# accepts outstanding", state._openCount.load(), state._pendingAcceptCount.load() );
         state._bExitThreads.store( true, std::memory_order_release );
         for ( size_t index = 0; index < state._listThread.size(); ++index )
         {
@@ -754,7 +754,7 @@ namespace sw
         state._pAcceptEx = bListened ? IocpStreamTransportInternal::findExtension<LPFN_ACCEPTEX>( listenSocket, WSAID_ACCEPTEX ) : nullptr;
         if ( state._pAcceptEx == nullptr )
         {
-            SW_LOG_ERROR( "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), WSAGetLastError() );
+            SW_LOG_ERROR_ID( "IocpStreamTransport.CouldNotListenStream", "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), WSAGetLastError() );
             closesocket( listenSocket );
             return false;
         }

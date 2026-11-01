@@ -64,7 +64,7 @@ namespace sw
 
     void RigXMLReader::fail( string_view message )
     {
-        SW_LOG_ERROR( "Rig '%#': %#", _context.c_str(), message );
+        SW_LOG_ERROR_ID( "Rig.Rig", "Rig '%#': %#", _context.c_str(), message );
         _bOk = SW_FALSE;
     }
 
@@ -282,7 +282,7 @@ namespace sw
         const int32 boneIndex = ( _pSkeleton != nullptr ) ? _pSkeleton->findBoneIndex( name ) : -1;
         if ( boneIndex < 0 )
         {
-            SW_LOG_ERROR( "Rig '%#': unknown bone '%#'", _label, name.c_str() );
+            SW_LOG_ERROR_ID( "Rig.RigUnknownBone", "Rig '%#': unknown bone '%#'", _label, name.c_str() );
             return false;
         }
         outBone = static_cast<uint32>( boneIndex );
@@ -294,7 +294,7 @@ namespace sw
         const int32 targetIndex = ( _pInstance != nullptr ) ? _pInstance->findTargetIndex( name ) : -1;
         if ( targetIndex < 0 )
         {
-            SW_LOG_ERROR( "Rig '%#': unknown target '%#'", _label, name.c_str() );
+            SW_LOG_ERROR_ID( "Rig.RigUnknownTarget", "Rig '%#': unknown target '%#'", _label, name.c_str() );
             return false;
         }
         outTarget = static_cast<uint32>( targetIndex );
@@ -323,7 +323,7 @@ namespace sw
             }
             if ( current < 0 )
             {
-                SW_LOG_ERROR( "Rig '%#': chain bone '%#' is not a descendant of '%#'", _label, listName[index].c_str(), listName[index - 1].c_str() );
+                SW_LOG_ERROR_ID( "Rig.RigChainBoneNot", "Rig '%#': chain bone '%#' is not a descendant of '%#'", _label, listName[index].c_str(), listName[index - 1].c_str() );
                 return false;
             }
         }

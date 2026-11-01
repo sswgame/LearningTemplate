@@ -82,7 +82,7 @@ namespace sw::editor
             {
                 pData->_bMaximizedForPlay = SW_FALSE;
                 if ( editorContext.getSubsystem<IEditorPanelService>().restoreMaximizedLayout() == false )
-                    SW_LOG_WARNING( "The layout before Maximize On Play is gone - use Panel > Reset Layout" );
+                    SW_LOG_WARNING_ID( "EditorPlay.LayoutBeforeMaximizePlay", "The layout before Maximize On Play is gone - use Panel > Reset Layout" );
             }
             return;
         }
@@ -156,10 +156,10 @@ namespace sw::editor
             makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
         if ( Process::launchDetached( command ) == false )
         {
-            SW_LOG_WARNING( "Failed to launch the standalone game: %#", command.toCommandLine() );
+            SW_LOG_WARNING_ID( "EditorPlay.FailedLaunchStandaloneGame", "Failed to launch the standalone game: %#", command.toCommandLine() );
             return false;
         }
-        SW_LOG_INFO( "Standalone game launched: %#", command.toCommandLine() );
+        SW_LOG_INFO_ID( "EditorPlay.StandaloneGameLaunched", "Standalone game launched: %#", command.toCommandLine() );
         return true;
     }
 

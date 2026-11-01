@@ -55,7 +55,7 @@ namespace sw
         const RHITextureHandle handle = pDevice->getResourceFactory()->createTexture2D( desc );
         if ( handle == 0 )
         {
-            SW_LOG_WARNING( "Failed to allocate transient '%#'", name );
+            SW_LOG_WARNING_ID( "TransientAttachmentPool.FailedAllocateTransient", "Failed to allocate transient '%#'", name );
             return false;
         }
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );

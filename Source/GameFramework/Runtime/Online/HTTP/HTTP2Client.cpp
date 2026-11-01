@@ -46,7 +46,7 @@ namespace sw
         _ioThreadCount = transportSettings._ioThreadCount;
         if ( _transport->initialize( this, transportSettings ) == false )
         {
-            SW_LOG_ERROR( "HTTP/2 client transport did not start" );
+            SW_LOG_ERROR_ID( "HTTP2Client.HTTPClientTransportDid", "HTTP/2 client transport did not start" );
             _transport.reset();
             _settings.reset();
             return false;

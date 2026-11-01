@@ -49,7 +49,7 @@ namespace sw
         else if ( bWarnMissingWidget )
         {
             _bWarnedNoWidgetComponent = true;
-            SW_LOG_WARNING( "Damage number on '%#' has no WidgetComponent on its object - the number is not drawn", getOwner()->getName().c_str() );
+            SW_LOG_WARNING_ID( "DamageNumberComponent.DamageNumberNoWidgetComponent", "Damage number on '%#' has no WidgetComponent on its object - the number is not drawn", getOwner()->getName().c_str() );
         }
         refreshWidget();
     }

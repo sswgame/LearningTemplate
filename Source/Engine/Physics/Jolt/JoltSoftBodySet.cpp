@@ -41,7 +41,7 @@ namespace sw
                     return true;
                 if ( desc._listInverseBind.empty() )
                 {
-                    SW_LOG_ERROR( "Soft body has %# skinned vertices but no inverse bind matrices", desc._listSkinnedVertex.size() );
+                    SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodySkinnedVertices", "Soft body has %# skinned vertices but no inverse bind matrices", desc._listSkinnedVertex.size() );
                     return false;
                 }
                 for ( const PhysicsSoftBodySkinnedVertex& skinned : desc._listSkinnedVertex )
@@ -52,7 +52,7 @@ namespace sw
                     const bool bBadSkinnedVertex = bBadVertex || bBadCount || skinned._maxDistance < 0.0f;
                     if ( bBadSkinnedVertex )
                     {
-                        SW_LOG_ERROR( "Soft body skinned vertex %# is out of range, pinned, has %# weights or a negative max distance", skinned._vertex, skinned._weightCount );
+                        SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodySkinnedVertex", "Soft body skinned vertex %# is out of range, pinned, has %# weights or a negative max distance", skinned._vertex, skinned._weightCount );
                         return false;
                     }
                     float32 weightSum = 0.0f;
@@ -61,14 +61,14 @@ namespace sw
                         const PhysicsSoftBodySkinWeight& weight = skinned._arrWeight[weightIndex];
                         if ( desc._listInverseBind.size() <= weight._jointIndex || weight._weight < 0.0f )
                         {
-                            SW_LOG_ERROR( "Soft body skinned vertex %# names joint %# of %#", skinned._vertex, weight._jointIndex, desc._listInverseBind.size() );
+                            SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodySkinnedVertex2", "Soft body skinned vertex %# names joint %# of %#", skinned._vertex, weight._jointIndex, desc._listInverseBind.size() );
                             return false;
                         }
                         weightSum += weight._weight;
                     }
                     if ( MathUtil::abs( weightSum - 1.0f ) > 1.0e-3f )
                     {
-                        SW_LOG_ERROR( "Soft body skinned vertex %# weights sum to %# (must be 1)", skinned._vertex, weightSum );
+                        SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodySkinnedVertex3", "Soft body skinned vertex %# weights sum to %# (must be 1)", skinned._vertex, weightSum );
                         return false;
                     }
                 }
@@ -83,8 +83,8 @@ namespace sw
                 const bool   bInvalidSoftBody = vertexCount == 0 || bWholeTriangles == false || desc._vertexMass <= 0.0f;
                 if ( bInvalidSoftBody )
                 {
-                    SW_LOG_ERROR( "Soft body needs vertices, whole triangles and a positive vertex mass (%# vertices, %# indices, mass %#)", vertexCount, desc._listTriangleIndex.size(),
-                                  desc._vertexMass );
+                    SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodyNeedsVertices", "Soft body needs vertices, whole triangles and a positive vertex mass (%# vertices, %# indices, mass %#)", vertexCount, desc._listTriangleIndex.size(),
+                                     desc._vertexMass );
                     return false;
                 }
                 for ( const vector<uint32>* pListIndex : { &desc._listTriangleIndex, &desc._listPinnedVertex } )
@@ -93,7 +93,7 @@ namespace sw
                     {
                         if ( vertexCount <= vertexIndex )
                         {
-                            SW_LOG_ERROR( "Soft body names vertex %# of %#", vertexIndex, vertexCount );
+                            SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodyNamesVertex", "Soft body names vertex %# of %#", vertexIndex, vertexCount );
                             return false;
                         }
                     }
@@ -150,7 +150,7 @@ namespace sw
                     const JPH::SoftBodySharedSettings::Face face{ desc._listTriangleIndex[index], desc._listTriangleIndex[index + 1], desc._listTriangleIndex[index + 2] };
                     if ( face.IsDegenerate() )
                     {
-                        SW_LOG_ERROR( "Soft body triangle %# repeats a vertex", index / 3 );
+                        SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodyTriangleRepeats", "Soft body triangle %# repeats a vertex", index / 3 );
                         return JPH::Ref<JPH::SoftBodySharedSettings>{};
                     }
                     pShared->AddFace( face );
@@ -186,7 +186,7 @@ namespace sw
         const JPH::BodyID bodyID = _system.GetBodyInterface().CreateAndAddSoftBody( settings, JPH::EActivation::Activate );
         if ( bodyID.IsInvalid() )
         {
-            SW_LOG_ERROR( "Soft body could not be created (body limit)" );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodyCouldNot", "Soft body could not be created (body limit)" );
             return PhysicsSoftBodyHandle{};
         }
 
@@ -274,7 +274,7 @@ namespace sw
             return;
         if ( pRecord->_jointCount == 0 || listJointWorld.size() != pRecord->_jointCount )
         {
-            SW_LOG_ERROR( "Soft body skinning pose has %# joints, the body expects %#", listJointWorld.size(), pRecord->_jointCount );
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodySkinningPose", "Soft body skinning pose has %# joints, the body expects %#", listJointWorld.size(), pRecord->_jointCount );
             return;
         }
         {

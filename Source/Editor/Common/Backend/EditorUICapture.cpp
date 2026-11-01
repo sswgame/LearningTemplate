@@ -150,18 +150,18 @@ namespace sw::editor
                     bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, write._layout._width, write._layout._height, path );
                     if ( bWritten )
                     {
-                        SW_LOG_INFO( "Editor UI capture -> %# (%#x%#, windows %#, clipped %# [%#], magenta %#)", path.c_str(), write._layout._width, write._layout._height,
-                                     write._job._windowCount, write._job._clippedWindowCount, write._job._clippedWindowNames.c_str(), magentaFraction );
+                        SW_LOG_INFO_ID( "EditorUICapture.EditorUICaptureX", "Editor UI capture -> %# (%#x%#, windows %#, clipped %# [%#], magenta %#)", path.c_str(), write._layout._width, write._layout._height,
+                                        write._job._windowCount, write._job._clippedWindowCount, write._job._clippedWindowNames.c_str(), magentaFraction );
                     }
                     else
                     {
-                        SW_LOG_WARNING( "Editor UI capture was not written: %#", path.c_str() );
+                        SW_LOG_WARNING_ID( "EditorUICapture.EditorUICaptureNot", "Editor UI capture was not written: %#", path.c_str() );
                     }
                     write._pMagentaFraction->publish( magentaFraction ); // 비율은 쓰기와 무관하게 읽은 픽셀의 것이다
                 }
                 else
                 {
-                    SW_LOG_WARNING( "Editor UI capture could not be unpacked to RGBA8 (format %#): %#", static_cast<uint32>( write._format ), path.c_str() );
+                    SW_LOG_WARNING_ID( "EditorUICapture.EditorUICaptureCould", "Editor UI capture could not be unpacked to RGBA8 (format %#): %#", static_cast<uint32>( write._format ), path.c_str() );
                     write._pMagentaFraction->abandon();
                 }
                 if ( write._pStartupMailbox != nullptr )
@@ -204,7 +204,7 @@ namespace sw::editor
             {
                 write._pStartupMailbox = findSubsystem<ScreenshotRequestQueue>();
                 if ( write._pStartupMailbox == nullptr )
-                    SW_LOG_ERROR( "Editor UI capture '%#' cannot report its end - this host has no screenshot mailbox (no renderer)", write._job._path.c_str() );
+                    SW_LOG_ERROR_ID( "EditorUICapture.EditorUICaptureCannot", "Editor UI capture '%#' cannot report its end - this host has no screenshot mailbox (no renderer)", write._job._path.c_str() );
             }
             submitEditorBackgroundJob( "EditorUICaptureWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorUICaptureInternal::runWriteJob ),
                                        MakeTaskArgs( make_shared<EditorUICaptureWrite>( std::move( write ) ), _pWritesInFlight ) );
@@ -319,7 +319,7 @@ namespace sw::editor
         }
         else
         {
-            SW_LOG_WARNING( "Editor UI capture was not read: %#", result._job._path.c_str() );
+            SW_LOG_WARNING_ID( "EditorUICapture.EditorUICaptureNot2", "Editor UI capture was not read: %#", result._job._path.c_str() );
         }
         addResult( result );
     }
@@ -359,7 +359,7 @@ namespace sw::editor
         _textureWidth           = _texture != 0 ? clampedWidth : 0u;
         _textureHeight          = _texture != 0 ? clampedHeight : 0u;
         if ( _texture == 0 )
-            SW_LOG_ERROR( "Editor UI capture texture (%#x%#) could not be created", clampedWidth, clampedHeight );
+            SW_LOG_ERROR_ID( "EditorUICapture.EditorUICaptureTexture", "Editor UI capture texture (%#x%#) could not be created", clampedWidth, clampedHeight );
     }
 
     void EditorUICapture::addResult( const EditorUICaptureResult& result )

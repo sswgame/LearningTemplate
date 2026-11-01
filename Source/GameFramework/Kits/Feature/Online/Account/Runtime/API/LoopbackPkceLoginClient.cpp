@@ -260,7 +260,7 @@ namespace sw
         result._bSucceeded                = bSucceeded ? SW_TRUE : SW_FALSE;
         result._bCancelled                = bCancelled ? SW_TRUE : SW_FALSE;
         if ( bSucceeded == false )
-            SW_LOG_WARNING( "external sign-in with '%#' did not finish: %#", pending._provider.c_str(), result._failureText.c_str() );
+            SW_LOG_WARNING_ID( "LoopbackPkceLoginClient.ExternalSignDidNot", "external sign-in with '%#' did not finish: %#", pending._provider.c_str(), result._failureText.c_str() );
     }
 
     string LoopbackPkceLoginClient::makeRedirectURI() const

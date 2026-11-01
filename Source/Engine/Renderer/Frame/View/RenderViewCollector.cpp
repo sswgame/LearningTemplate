@@ -86,7 +86,7 @@ namespace sw
                 const float32 scale = camera.getRenderOutput()._resolutionScale;
                 if ( MathUtil::abs( scale - 1.0f ) <= kUnitScaleTolerance )
                     return true;
-                SW_LOG_ERROR( "Camera %# has resolution scale %# on a %# view, which has no present upsample - the view is not drawn (use 1)", camera.getComponentID(), scale, viewKind );
+                SW_LOG_ERROR_ID( "RenderViewCollector.CameraResolutionScaleView", "Camera %# has resolution scale %# on a %# view, which has no present upsample - the view is not drawn (use 1)", camera.getComponentID(), scale, viewKind );
                 return false;
             }
 

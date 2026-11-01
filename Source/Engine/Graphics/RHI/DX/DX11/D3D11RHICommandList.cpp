@@ -13,8 +13,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
         if ( pDevice == nullptr || pDevice->_device == nullptr )
         {
-            SW_LOG_ERROR( "D3D11RHICommandList::createNativeContext: precondition failed (device=%#)",
-                          pDevice != nullptr && pDevice->_device != nullptr );
+            SW_LOG_ERROR_ID( "D3D11RHICommandList.D3D11RHICommandListCreateNativeContextPreconditionFailed", "D3D11RHICommandList::createNativeContext: precondition failed (device=%#)",
+                             pDevice != nullptr && pDevice->_device != nullptr );
             return context;
         }
 
@@ -23,7 +23,7 @@ namespace sw
         const HRESULT hr = pDevice->_device->CreateDeferredContext( 0, context.GetAddressOf() );
         if ( FAILED( hr ) )
         {
-            SW_LOG_ERROR( "D3D11RHICommandList::createNativeContext: CreateDeferredContext failed hr=0x%#", static_cast<uint32>( hr ) );
+            SW_LOG_ERROR_ID( "D3D11RHICommandList.D3D11RHICommandListCreateNativeContextCreateDeferredContextFailed", "D3D11RHICommandList::createNativeContext: CreateDeferredContext failed hr=0x%#", static_cast<uint32>( hr ) );
             context.Reset();
         }
         return context;

@@ -281,7 +281,7 @@ namespace sw
         }
 
         _bInitialized = true;
-        SW_LOG_INFO( "Initialized with %# worker threads.", threadCount );
+        SW_LOG_INFO_ID( "TaskManager.InitializedWorkerThreads", "Initialized with %# worker threads.", threadCount );
         return true;
     }
 
@@ -317,7 +317,7 @@ namespace sw
             _mainThreadID = {};
             _bInitialized = false;
         }
-        SW_LOG_INFO( "Shutdown cleanly." );
+        SW_LOG_INFO_ID( "TaskManager.ShutdownCleanly", "Shutdown cleanly." );
     }
 
     void TaskManager::clear()
@@ -956,8 +956,8 @@ namespace sw
             const int64 elapsed = reportWatch.getElapsedMilliseconds();
             if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
             {
-                SW_LOG_ERROR( "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, join.getPending(), kStageWaitReportMs,
-                              _nodePool->describeFirstUnfinished( stage._pNode ) );
+                SW_LOG_ERROR_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, join.getPending(), kStageWaitReportMs,
+                                 _nodePool->describeFirstUnfinished( stage._pNode ) );
                 reportWatch = Stopwatch{};
                 continue;
             }
@@ -1044,8 +1044,8 @@ namespace sw
             const int64 elapsed = reportStopwatch.getElapsedMilliseconds();
             if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
             {
-                SW_LOG_ERROR( "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, _activeTaskCount.load( std::memory_order_acquire ),
-                              kStageWaitReportMs, describeUnfinishedTask() );
+                SW_LOG_ERROR_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, _activeTaskCount.load( std::memory_order_acquire ),
+                                 kStageWaitReportMs, describeUnfinishedTask() );
                 reportStopwatch = Stopwatch{};
                 continue;
             }

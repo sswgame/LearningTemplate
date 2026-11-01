@@ -169,7 +169,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::loadRoot( document, assetID, "NileAutoPlan", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "[Nile] auto plan '%#' could not be read: %#", planPath, document.getLastError().c_str() );
+            SW_LOG_ERROR_ID( "NileCityPlanner.AutoPlanCouldNot", "[Nile] auto plan '%#' could not be read: %#", planPath, document.getLastError().c_str() );
             return false;
         }
         // 한 줄이 한 단계다(적힌 순서). 칸의 이름 · 필수 · 형식은 스키마(NileAutoPlanStepDef)가 정하고 readFields 가 모르는 속성까지 막는다.
@@ -188,8 +188,8 @@ namespace sw
             const bool bShapeValid = bFieldsRead && bBlockInPlan && ( step._bRoad == step._def._id.empty() );
             if ( bShapeValid == false )
             {
-                SW_LOG_ERROR( "[Nile] auto plan '%#': <%#> needs from=\"x,y\" (to), block 1..3 (extra) and Building an id (Road none) - %#", planPath,
-                              node.getName(), node.toString().c_str() );
+                SW_LOG_ERROR_ID( "NileCityPlanner.AutoPlanNeedsX", "[Nile] auto plan '%#': <%#> needs from=\"x,y\" (to), block 1..3 (extra) and Building an id (Road none) - %#", planPath,
+                                 node.getName(), node.toString().c_str() );
                 bValid = false;
                 continue;
             }
@@ -225,8 +225,8 @@ namespace sw
                                    Internal::findBlockPopulation( layout, def._block, population, resolveError );
             if ( bResolved == false )
             {
-                SW_LOG_ERROR( "[Nile] auto plan '%#': step from '%#' to '%#' (block %#) does not resolve on this layout: %#", planPath, def._from, def._to, def._block,
-                              resolveError.c_str() );
+                SW_LOG_ERROR_ID( "NileCityPlanner.AutoPlanStepBlock", "[Nile] auto plan '%#': step from '%#' to '%#' (block %#) does not resolve on this layout: %#", planPath, def._from, def._to, def._block,
+                                 resolveError.c_str() );
                 _listStep.clear();
                 return false;
             }

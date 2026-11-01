@@ -329,7 +329,7 @@ namespace sw::editor
                 }
                 else
                 {
-                    SW_LOG_WARNING( "Sync could not ask %# for its history (the process has exited)", status._label );
+                    SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotAsk", "Sync could not ask %# for its history (the process has exited)", status._label );
                 }
             }
             ImGui::EndDisabled();
@@ -359,13 +359,13 @@ namespace sw::editor
                 {
                     _arrPendingProcess[sourceIndex] = -1;
                     _errorText                      = formatToString( "Timed out waiting for %#'s history (no valid answer within %# ms)", status._label, MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() );
-                    SW_LOG_WARNING( "Sync %#", _errorText );
+                    SW_LOG_WARNING_ID( "MultiplayerSync.Sync", "Sync %#", _errorText );
                 }
                 continue;
             }
             _arrPendingProcess[sourceIndex] = -1;
             if ( MultiplayerSyncTabInternal::loadClientReport( sourceIndex, status ) == false )
-                SW_LOG_WARNING( "Sync could not take %#'s history: %#", status._label, MultiplayerSyncTabInternal::getCompare().getLastError() );
+                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotTake", "Sync could not take %#'s history: %#", status._label, MultiplayerSyncTabInternal::getCompare().getLastError() );
             else
                 MultiplayerSyncTabInternal::getCompare().setClientOrigin( sourceIndex, processIndex );
         }
@@ -386,7 +386,7 @@ namespace sw::editor
                 // 클라이언트는 디버그 채널이 없다 - 표준 입력의 한 줄 답(`state.objectline`)을 기다린다.
                 if ( session.isRunning() == false || session.sendProcessCommand( processIndex, "state.objectline" ) == false )
                 {
-                    SW_LOG_WARNING( "Sync could not ask slot %# for its object hashes (the session or the process is gone)", sourceIndex );
+                    SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotAsk2", "Sync could not ask slot %# for its object hashes (the session or the process is gone)", sourceIndex );
                     return;
                 }
                 _arrObjectPendingProcess[sourceIndex] = processIndex;
@@ -396,7 +396,7 @@ namespace sw::editor
             }
             if ( compare.readObjectsFromChannel( sourceIndex, _arrObjectTick[sourceIndex], _arrObjectList[sourceIndex] ) == false )
             {
-                SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
+                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare", "Sync could not compare objects: %#", compare.getLastError() );
                 return;
             }
         }
@@ -443,14 +443,14 @@ namespace sw::editor
                     _arrObjectPendingProcess[sourceIndex] = -1;
                 }
                 _errorText = formatToString( "Timed out waiting for the object hashes (no valid answer within %# ms)", MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() );
-                SW_LOG_WARNING( "Sync %#", _errorText );
+                SW_LOG_WARNING_ID( "MultiplayerSync.Sync", "Sync %#", _errorText );
             }
             return;
         }
         _bObjectRequest                 = false;
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         if ( compare.compareObjects( _arrObjectTick[0], _arrObjectList[0], _arrObjectTick[1], _arrObjectList[1] ) == false )
-            SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
+            SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare", "Sync could not compare objects: %#", compare.getLastError() );
     }
 
     void MultiplayerSyncTab::drawSource( int32 sourceIndex )
@@ -469,7 +469,7 @@ namespace sw::editor
         {
             string reason;
             if ( MultiplayerSyncTabInternal::loadSessionServer( sourceIndex, reason ) == false )
-                SW_LOG_WARNING( "Sync could not read the session server's history: %#", reason );
+                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotRead", "Sync could not read the session server's history: %#", reason );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncSessionServer" ) );
         ImGui::SameLine();
@@ -486,9 +486,9 @@ namespace sw::editor
             NetAddress remote;
             const bool bLoopback = NetAddress::parse( _arrAddress[sourceIndex].c_str(), 0, remote ) && remote.isValid() && remote.isLoopback();
             if ( bLoopback == false )
-                SW_LOG_WARNING( "Sync reads only 127.0.0.1:<port> - '%#' is not one", _arrAddress[sourceIndex].c_str() );
+                SW_LOG_WARNING_ID( "MultiplayerSync.SyncReadsOnlyPort", "Sync reads only 127.0.0.1:<port> - '%#' is not one", _arrAddress[sourceIndex].c_str() );
             else if ( compare.loadFromChannel( sourceIndex, remote, _arrToken[sourceIndex].c_str() ) == false )
-                SW_LOG_WARNING( "Sync could not read %#: %#", remote.toString(), compare.getLastError() );
+                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotRead2", "Sync could not read %#: %#", remote.toString(), compare.getLastError() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncReadServer" ) );
 
@@ -499,11 +499,11 @@ namespace sw::editor
         const string                      filePath  = typedPath.has_value() ? typedPath->str() : string{};
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load file" ) );
         if ( ImGui::Button( "Load file" ) && compare.loadFromFile( sourceIndex, filePath ) == false )
-            SW_LOG_WARNING( "Sync could not load %#: %#", _arrPath[sourceIndex].c_str(), compare.getLastError() );
+            SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotLoad", "Sync could not load %#: %#", _arrPath[sourceIndex].c_str(), compare.getLastError() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         ImGui::BeginDisabled( source._listSample.empty() );
         if ( ImGui::Button( "Save" ) && compare.saveToFile( sourceIndex, filePath ) == false )
-            SW_LOG_WARNING( "Sync could not write %#", _arrPath[sourceIndex].c_str() );
+            SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotWrite", "Sync could not write %#", _arrPath[sourceIndex].c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
         if ( ImGui::Button( "Clear" ) )
             compare.clearSource( sourceIndex );
@@ -559,7 +559,7 @@ namespace sw::editor
             EditorThemeUtil::textError( _errorText.c_str() );
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         if ( ImGui::Button( "Compare" ) && compare.compare() == false )
-            SW_LOG_WARNING( "Sync could not compare: %#", compare.getLastError() );
+            SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare2", "Sync could not compare: %#", compare.getLastError() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncCompare" ) );
         if ( compare.isComparisonCurrent() )
         {

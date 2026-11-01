@@ -216,7 +216,7 @@ namespace sw
     {
         FacialRig rig;
         if ( _facialRigPath.empty() == false && rig.loadFromAsset( AssetID{ _facialRigPath } ) == false )
-            SW_LOG_ERROR( "Facial rig '%#' could not be loaded", _facialRigPath.c_str() );
+            SW_LOG_ERROR_ID( "FacialAnimation.FacialRigCouldNot", "Facial rig '%#' could not be loaded", _facialRigPath.c_str() );
         setFacialRig( rig );
     }
 
@@ -235,7 +235,7 @@ namespace sw
         if ( _pUnit != nullptr )
             _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         else if ( pOwner != nullptr )
-            SW_LOG_WARNING( "'%#': facial animation has no SkeletalMeshComponent on its object", pOwner->getName().c_str() );
+            SW_LOG_WARNING_ID( "FacialAnimation.FacialAnimationNoSkeletalMeshComponent", "'%#': facial animation has no SkeletalMeshComponent on its object", pOwner->getName().c_str() );
     }
 
     bool FacialAnimationComponent::setExpressionWeight( const hashed_string& expressionName, float32 weight )
@@ -299,7 +299,7 @@ namespace sw
         {
             const string& lipSyncPath = engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get();
             if ( _lipSync.loadFromAsset( AssetID{ lipSyncPath } ) == false )
-                SW_LOG_ERROR( "Lip sync settings '%#' could not be loaded", lipSyncPath );
+                SW_LOG_ERROR_ID( "FacialAnimation.LipSyncSettingsCould", "Lip sync settings '%#' could not be loaded", lipSyncPath );
             _bLipSyncSettingsReady = SW_TRUE;
         }
         // 임포트가 만든 비즘 트랙이 먼저다. 없으면 PCM 을 풀어 진폭으로 입을 연다.
@@ -329,7 +329,7 @@ namespace sw
         }
         if ( bStarted == false )
         {
-            SW_LOG_ERROR( "'%#': neither a viseme track nor decodable audio", string( audioPath ).c_str() );
+            SW_LOG_ERROR_ID( "FacialAnimation.NeitherVisemeTrackNor", "'%#': neither a viseme track nor decodable audio", string( audioPath ).c_str() );
             return false;
         }
         // 소리는 이 오브젝트가 속한 씬이 받은 엔진 범위의 오디오 서비스로 낸다(`SceneEngineServices::_pEngineSubsystems` — 전역 표를 다시 찾지 않는다).

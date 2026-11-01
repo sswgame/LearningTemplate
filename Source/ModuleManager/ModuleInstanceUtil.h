@@ -51,14 +51,14 @@ namespace sw
                 reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
             if ( pfnVersion == nullptr || pfnVersion() != kModuleABIVersion )
             {
-                SW_LOG_ERROR( "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIVersion );
+                SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIVersionDiffers", "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIVersion );
                 return false;
             }
 
             const PFN_GetModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetModuleABIStamp>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
             if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleABIStamp ) == false )
             {
-                SW_LOG_ERROR( "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIStamp );
+                SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIStampDiffers", "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIStamp );
                 return false;
             }
             return true;
@@ -78,7 +78,7 @@ namespace sw
             if ( pfnExport == nullptr || pfnExport( &outAPI ) == false )
             {
                 outAPI = {};
-                SW_LOG_ERROR( "The %# module does not export its API table (%#)", symbols._pModuleLabel, symbols._pExportSymbol );
+                SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleDoesNotExport", "The %# module does not export its API table (%#)", symbols._pModuleLabel, symbols._pExportSymbol );
                 return false;
             }
             return true;
@@ -96,26 +96,26 @@ namespace sw
             const bool bHasDevice = pRHI != nullptr && pRHI->hasDevice();
             if ( bRequireDevice && bHasDevice == false )
             {
-                SW_LOG_ERROR( "No RHI device - %# instance is not created", pModuleLabel );
+                SW_LOG_ERROR_ID( "ModuleInstanceUtil.NoRHIDeviceInstance", "No RHI device - %# instance is not created", pModuleLabel );
                 return false;
             }
 
             pOutHandle = api.create();
             if ( pOutHandle == nullptr )
             {
-                SW_LOG_ERROR( "Failed to create %# instance", pModuleLabel );
+                SW_LOG_ERROR_ID( "ModuleInstanceUtil.FailedCreateInstance", "Failed to create %# instance", pModuleLabel );
                 return false;
             }
 
             if ( api.initialize( pOutHandle, pWindow, bHasDevice ? &pRHI->getDevice() : nullptr ) == false )
             {
-                SW_LOG_ERROR( "Failed to initialize %# instance", pModuleLabel );
+                SW_LOG_ERROR_ID( "ModuleInstanceUtil.FailedInitializeInstance", "Failed to initialize %# instance", pModuleLabel );
                 if ( api.destroy != nullptr )
                     api.destroy( pOutHandle );
                 pOutHandle = nullptr;
                 return false;
             }
-            SW_LOG_INFO( "Module instance initialized: %#", pModuleLabel );
+            SW_LOG_INFO_ID( "ModuleInstanceUtil.ModuleInstanceInitialized", "Module instance initialized: %#", pModuleLabel );
             return true;
         }
 

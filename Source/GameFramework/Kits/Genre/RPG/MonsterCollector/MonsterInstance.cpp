@@ -156,7 +156,7 @@ namespace sw
         // 범위 밖 레벨은 맞추지 않고 종이 없을 때와 같이 빈 개체로 거절한다.
         if ( level < 1 || level > MonsterCollectorCatalog::kMaxLevel )
         {
-            SW_LOG_ERROR( "MonsterRules: refused level %# for %# - it must be within [1, %#]", level, speciesID.c_str(), MonsterCollectorCatalog::kMaxLevel );
+            SW_LOG_ERROR_ID( "MonsterInstance.MonsterRulesRefusedLevelMust", "MonsterRules: refused level %# for %# - it must be within [1, %#]", level, speciesID.c_str(), MonsterCollectorCatalog::kMaxLevel );
             return monster;
         }
 
@@ -333,7 +333,7 @@ namespace sw
     {
         if ( boxCapacity < 0 )
         {
-            SW_LOG_ERROR( "MonsterStorage: refused box capacity %# - it must not be negative", boxCapacity );
+            SW_LOG_ERROR_ID( "MonsterInstance.MonsterStorageRefusedBoxCapacity", "MonsterStorage: refused box capacity %# - it must not be negative", boxCapacity );
             return false;
         }
         _listParty.clear();

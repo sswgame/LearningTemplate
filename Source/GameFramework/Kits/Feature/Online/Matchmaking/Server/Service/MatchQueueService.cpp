@@ -84,8 +84,8 @@ namespace sw
         {
             if ( mode._ratingStat.empty() == false && dependencies._pStatSource == nullptr )
             {
-                SW_LOG_ERROR( "MatchQueue: mode '%#' is rated by stat '%#' but no stat source is assembled (the leaderboard kit provides it)", mode._modeID,
-                              mode._ratingStat );
+                SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueModeRatedStat", "MatchQueue: mode '%#' is rated by stat '%#' but no stat source is assembled (the leaderboard kit provides it)", mode._modeID,
+                                 mode._ratingStat );
                 return false;
             }
         }
@@ -95,7 +95,7 @@ namespace sw
         {
             if ( isValidMatchModeID( mode._modeID ) == false )
             {
-                SW_LOG_ERROR( "MatchQueue: mode id '%#' breaks the id rule — skipped", mode._modeID );
+                SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueModeIdBreaks", "MatchQueue: mode id '%#' breaks the id rule — skipped", mode._modeID );
                 continue;
             }
             MatchMaker maker;
@@ -237,7 +237,7 @@ namespace sw
             pState->_maker.clearTickets();
             pState->_listUnplaced.clear();
         }
-        SW_LOG_INFO( "MatchQueue: server %# %# authority for mode '%#'", _dependencies._serverID, bHold ? "took" : "lost", modeID );
+        SW_LOG_INFO_ID( "MatchQueueService.MatchQueueServerAuthorityMode", "MatchQueue: server %# %# authority for mode '%#'", _dependencies._serverID, bHold ? "took" : "lost", modeID );
     }
 
     void MatchQueueService::joinQueue( AccountID accountID, string_view modeID, string_view region, UnixMilliseconds nowMs, uint64 requestTag )
@@ -432,13 +432,13 @@ namespace sw
         ModeState* pState = findModeState( request._modeID );
         if ( pState == nullptr )
         {
-            SW_LOG_WARNING( "MatchQueue: backfill for unknown mode '%#' (match %#) refused", request._modeID, request._matchID );
+            SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueBackfillUnknownMode", "MatchQueue: backfill for unknown mode '%#' (match %#) refused", request._modeID, request._matchID );
             return;
         }
         if ( pState->_bAuthority != SW_FALSE )
         {
             if ( pState->_maker.addBackfill( request ) != MatchmakingResult::Ok )
-                SW_LOG_WARNING( "MatchQueue: backfill for match %# does not fit mode '%#' - refused", request._matchID, request._modeID );
+                SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueBackfillMatchDoes", "MatchQueue: backfill for match %# does not fit mode '%#' - refused", request._matchID, request._modeID );
             return;
         }
         if ( _dependencies._pBus != nullptr )
@@ -502,7 +502,7 @@ namespace sw
             deliverToTicket( ticket._originServerID, assignment );
         }
         if ( bPlaced == false )
-            SW_LOG_WARNING( "MatchQueue: no '%#' server for match %# in region '%#' — gave up", mode._serverKind, match._matchID, match._region );
+            SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueNoServerMatch", "MatchQueue: no '%#' server for match %# in region '%#' — gave up", mode._serverKind, match._matchID, match._region );
         return bPlaced;
     }
 

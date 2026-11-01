@@ -42,9 +42,9 @@ namespace sw::editor
         if ( archive.isOk() == false || sceneGeneration != pSceneManager->getSceneGeneration() )
             return SubsystemInitResult::Succeeded; // 다른 씬의 기록이다
         if ( _stack.load( archive ) == false )
-            SW_LOG_WARNING( "The undo history from the previous editor instance could not be read - starting empty" );
+            SW_LOG_WARNING_ID( "EditorUndoHistory.UndoHistoryPreviousEditor", "The undo history from the previous editor instance could not be read - starting empty" );
         else
-            SW_LOG_INFO( "Resumed the undo history: %# command(s)", static_cast<uint32>( _stack.getCommandCount() ) );
+            SW_LOG_INFO_ID( "EditorUndoHistory.ResumedUndoHistoryCommand", "Resumed the undo history: %# command(s)", static_cast<uint32>( _stack.getCommandCount() ) );
         return SubsystemInitResult::Succeeded;
     }
 

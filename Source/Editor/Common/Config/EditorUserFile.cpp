@@ -14,10 +14,10 @@ namespace sw::editor
         const string destination = source + kCorruptSuffix;
         if ( FileUtil::copyFile( source, destination ) == false || FileUtil::removeFile( source ) == false )
         {
-            SW_LOG_ERROR( "User file %# is broken (%#) and could not be moved to %# - it is left in place", source, string( reason ), destination );
+            SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenCould", "User file %# is broken (%#) and could not be moved to %# - it is left in place", source, string( reason ), destination );
             return false;
         }
-        SW_LOG_ERROR( "User file %# is broken (%#) - moved it to %# and starting a new one", source, string( reason ), destination );
+        SW_LOG_ERROR_ID( "EditorUserFile.UserFileBrokenMoved", "User file %# is broken (%#) - moved it to %# and starting a new one", source, string( reason ), destination );
         return true;
     }
 } // namespace sw::editor

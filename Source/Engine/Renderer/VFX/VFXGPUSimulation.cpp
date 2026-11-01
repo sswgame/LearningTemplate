@@ -212,7 +212,7 @@ namespace sw
         if ( bReportMissingPipeline )
         {
             // 대신 CPU 로 그리지 않는다 — 시뮬레이션 대상은 데이터와 빌드가 정했고, 바꿔 그리면 CPU 와 GPU 를 비교하는 화면이 거짓이 된다.
-            SW_LOG_ERROR( "The VFX simulation compute PSO is missing - GPU-simulated emitters are not drawn" );
+            SW_LOG_ERROR_ID( "VFXGPUSimulation.VFXSimulationComputePSO", "The VFX simulation compute PSO is missing - GPU-simulated emitters are not drawn" );
             _bPipelineMissingLogged = true;
         }
     }
@@ -227,15 +227,15 @@ namespace sw
             const VFXGPULightAssignment assignment = assignLightRanges( listBatch, listMeshEmitter, _listLightRange );
             if ( assignment._slotCount != _frameInput._lightSlotCount )
             {
-                SW_LOG_ERROR( "VFX particle light slots (%#) differ from the light buffer's GPU section (%#) - particle lights are not drawn", assignment._slotCount,
-                              _frameInput._lightSlotCount );
+                SW_LOG_ERROR_ID( "VFXGPUSimulation.VFXParticleLightSlots", "VFX particle light slots (%#) differ from the light buffer's GPU section (%#) - particle lights are not drawn", assignment._slotCount,
+                                 _frameInput._lightSlotCount );
                 _listLightRange.clear();
             }
             else if ( assignment._overflowEmitterCount > 0 && _bLightOverflowLogged == false )
             {
                 _bLightOverflowLogged = true;
-                SW_LOG_ERROR( "%# VFX emitters asked for more particle light slots than the GPU section holds (%#) - they have no lights", assignment._overflowEmitterCount,
-                              GPULightBuffer::kMaxGPULight );
+                SW_LOG_ERROR_ID( "VFXGPUSimulation.VFXEmittersAskedMore", "%# VFX emitters asked for more particle light slots than the GPU section holds (%#) - they have no lights", assignment._overflowEmitterCount,
+                                 GPULightBuffer::kMaxGPULight );
             }
         }
     }
@@ -264,7 +264,7 @@ namespace sw
         const bool bReportMissingMesh = listMeshEmitter.empty() == false && bMeshReady == false && _bMeshPipelineMissingLogged == false;
         if ( bReportMissingMesh )
         {
-            SW_LOG_ERROR( "GPU mesh particles need the VFX mesh instance PSO and a GPUScene instance UAV - GPU mesh emitters are not drawn" );
+            SW_LOG_ERROR_ID( "VFXGPUSimulation.GPUMeshParticlesNeed", "GPU mesh particles need the VFX mesh instance PSO and a GPUScene instance UAV - GPU mesh emitters are not drawn" );
             _bMeshPipelineMissingLogged = true;
         }
         for ( size_t meshIndex = 0; meshIndex < listMeshEmitter.size(); ++meshIndex )
@@ -312,7 +312,7 @@ namespace sw
         if ( _paramBuffer.ensureCapacity( &device, static_cast<uint32>( sizeof( uint32 ) ) * Internal::kWordsPerRow, rowCount,
                                           RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
         {
-            SW_LOG_ERROR( "Failed to create the VFX simulation parameter buffer (%# rows) - GPU-simulated emitters are not drawn", rowCount );
+            SW_LOG_ERROR_ID( "VFXGPUSimulation.FailedCreateVFXSimulation", "Failed to create the VFX simulation parameter buffer (%# rows) - GPU-simulated emitters are not drawn", rowCount );
             _listDispatch.clear();
             _listMeshDispatch.clear();
             _listBatchDrawSource.assign( listBatch.size(), nullptr );
@@ -349,7 +349,7 @@ namespace sw
         const bool bBuffersReady = bStateReady && bParticleReady && bArgsReady;
         if ( bBuffersReady == false )
         {
-            SW_LOG_ERROR( "Failed to create the GPU buffers of VFX emitter '%#' (%# particles) - it is not drawn", def._name, def._maxParticles );
+            SW_LOG_ERROR_ID( "VFXGPUSimulation.FailedCreateGPUBuffers", "Failed to create the GPU buffers of VFX emitter '%#' (%# particles) - it is not drawn", def._name, def._maxParticles );
             return nullptr;
         }
         state._drawSource._particleSRV = state._particleBuffer._srv;

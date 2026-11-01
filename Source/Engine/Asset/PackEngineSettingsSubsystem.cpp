@@ -28,10 +28,10 @@ namespace sw
         const DataPath& packRoot = engine::getSubsystem<GameConfig>()._packRoot;
         if ( _settings->loadFromPack( packRoot ) == false )
         {
-            SW_LOG_ERROR( "Pack engine settings of '%#' could not be read - stopping startup", packRoot.c_str() );
+            SW_LOG_ERROR_ID( "PackEngineSettings.PackEngineSettingsCould", "Pack engine settings of '%#' could not be read - stopping startup", packRoot.c_str() );
             return SubsystemInitResult::Failed;
         }
-        SW_LOG_INFO( "Loaded <%#> of %# (title '%#')", PackEngineSettings::kElementName, packRoot.c_str(), _settings->_windowTitle.c_str() );
+        SW_LOG_INFO_ID( "PackEngineSettings.LoadedTitle", "Loaded <%#> of %# (title '%#')", PackEngineSettings::kElementName, packRoot.c_str(), _settings->_windowTitle.c_str() );
         return SubsystemInitResult::Succeeded;
     }
 

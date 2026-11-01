@@ -37,7 +37,7 @@ namespace sw
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Stance ) ) );
                     else
                     {
-                        SW_LOG_ERROR( "%#: move '%#' has an unknown posture '%#' (Standing, Crouching, Airborne, Stance)", sourceName, moveID.c_str(), string( token ) );
+                        SW_LOG_ERROR_ID( "FighterCatalog.MoveUnknownPostureStanding", "%#: move '%#' has an unknown posture '%#' (Standing, Crouching, Airborne, Stance)", sourceName, moveID.c_str(), string( token ) );
                         bValid = false;
                     }
                 } );
@@ -53,7 +53,7 @@ namespace sw
                 const string_view notation = node.getAttributeText( pName );
                 if ( notation.empty() == false && parser.parse( notation, outCommand ) )
                     return true;
-                SW_LOG_ERROR( "%#: <%# id=\"%#\"> needs a readable %#=\"...\" command", sourceName, node.getName(), node.getAttributeText( "id" ), pName );
+                SW_LOG_ERROR_ID( "FighterCatalog.IdNeedsReadableCommand", "%#: <%# id=\"%#\"> needs a readable %#=\"...\" command", sourceName, node.getName(), node.getAttributeText( "id" ), pName );
                 return false;
             }
 
@@ -64,8 +64,8 @@ namespace sw
                 const bool           bRead = node.readOptionalAttribute( pName, value );
                 if ( bRead == false || ( value.has_value() && *value < minValue ) )
                 {
-                    SW_LOG_ERROR( "%#: <%# id=\"%#\" %#=\"%#\"> needs an integer of %# or more", sourceName, node.getName(), node.getAttributeText( "id" ), pName,
-                                  node.getAttributeText( pName ), minValue );
+                    SW_LOG_ERROR_ID( "FighterCatalog.IdNeedsIntegerMore", "%#: <%# id=\"%#\" %#=\"%#\"> needs an integer of %# or more", sourceName, node.getName(), node.getAttributeText( "id" ), pName,
+                                     node.getAttributeText( pName ), minValue );
                     return false;
                 }
                 if ( value.has_value() )
@@ -93,7 +93,7 @@ namespace sw
                 const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
                 if ( pFrame == nullptr )
                 {
-                    SW_LOG_ERROR( "%#: move '%#' has no frame data in the MoveCatalog", sourceName, pMoveID );
+                    SW_LOG_ERROR_ID( "FighterCatalog.MoveNoFrameData", "%#: move '%#' has no frame data in the MoveCatalog", sourceName, pMoveID );
                     return false;
                 }
                 move._frame       = *pFrame;
@@ -114,7 +114,7 @@ namespace sw
                         move._breakButtons = breakCommand._listStep[0]._buttons;
                     else
                     {
-                        SW_LOG_ERROR( "%#: move '%#' has unreadable breakButtons '%#' (one step such as \"1\" or \"1+2\")", sourceName, pMoveID, breakButtons );
+                        SW_LOG_ERROR_ID( "FighterCatalog.MoveUnreadableBreakButtonsOne", "%#: move '%#' has unreadable breakButtons '%#' (one step such as \"1\" or \"1+2\")", sourceName, pMoveID, breakButtons );
                         bValid = false;
                     }
                 }
@@ -199,7 +199,7 @@ namespace sw
             bValid            = Internal::readRequiredCommand( parser, node, "jump", sourceName, fighter._jump ) && bValid;
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: <Fighter id=\"%#\"> has errors - not added", sourceName, fighter._id.c_str() );
+                SW_LOG_ERROR_ID( "FighterCatalog.FighterIdErrorsNot", "%#: <Fighter id=\"%#\"> has errors - not added", sourceName, fighter._id.c_str() );
                 continue;
             }
 
@@ -210,15 +210,15 @@ namespace sw
                 if ( Internal::readMove( child, parser, moveCatalog, sourceName, move ) )
                     fighter._listMove.push_back( move );
                 else
-                    SW_LOG_ERROR( "%#: fighter '%#' move was not read - skipped", sourceName, fighter._id.c_str() );
+                    SW_LOG_ERROR_ID( "FighterCatalog.FighterMoveNotRead", "%#: fighter '%#' move was not read - skipped", sourceName, fighter._id.c_str() );
             }
             if ( fighter._listMove.empty() )
-                SW_LOG_WARNING( "%#: fighter '%#' has no usable <Move>", sourceName, fighter._id.c_str() );
+                SW_LOG_WARNING_ID( "FighterCatalog.FighterNoUsableMove", "%#: fighter '%#' has no usable <Move>", sourceName, fighter._id.c_str() );
             addFighter( fighter );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Fighter> entries", sourceName );
+            SW_LOG_WARNING_ID( "FighterCatalog.NoFighterEntries", "%#: no <Fighter> entries", sourceName );
         return loadedCount;
     }
 } // namespace sw

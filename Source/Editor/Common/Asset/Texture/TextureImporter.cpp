@@ -152,10 +152,10 @@ namespace sw::editor
                     pTaskManager->runParallel( bandCount, 2, body );
                 else
                     job.run( 0, bandCount );
-                SW_LOG_INFO( "Compressed %#x%# (%# mips, format %#) in %# bands on %# workers: %# ms", static_cast<uint32>( metadata.width ), static_cast<uint32>( metadata.height ),
-                             static_cast<uint32>( metadata.mipLevels ), static_cast<uint32>( format ), bandCount,
-                             pTaskManager != nullptr ? pTaskManager->getWorkerCount() : 0u,
-                             stopwatch.getElapsedMilliseconds() );
+                SW_LOG_INFO_ID( "TextureImporter.CompressedXMipsFormat", "Compressed %#x%# (%# mips, format %#) in %# bands on %# workers: %# ms", static_cast<uint32>( metadata.width ), static_cast<uint32>( metadata.height ),
+                                static_cast<uint32>( metadata.mipLevels ), static_cast<uint32>( format ), bandCount,
+                                pTaskManager != nullptr ? pTaskManager->getWorkerCount() : 0u,
+                                stopwatch.getElapsedMilliseconds() );
 
                 for ( const Band& band : listBand )
                 {
@@ -181,8 +181,8 @@ namespace sw::editor
             const HRESULT            hrSave    = DirectX::SaveToDDSFile( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), saveFlags, wOutPath.c_str() );
             if ( FAILED( hrSave ) )
             {
-                SW_LOG_ERROR( "DirectX::SaveToDDSFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
-                              outputPath );
+                SW_LOG_ERROR_ID( "TextureImporter.DirectXSaveToDDSFileFailedHr", "DirectX::SaveToDDSFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
+                                 outputPath );
                 return false;
             }
 
@@ -190,7 +190,7 @@ namespace sw::editor
             const uint32                mipCount        = static_cast<uint32>( metadata.mipLevels );
             uint64                      outputSizeBytes = 0;
             if ( FileUtil::tryGetFileSize( outputPath, outputSizeBytes ) == false )
-                SW_LOG_WARNING( "Imported texture %# but cannot read its size", outputPath );
+                SW_LOG_WARNING_ID( "TextureImporter.ImportedTextureButCannot", "Imported texture %# but cannot read its size", outputPath );
             if ( pOutResult != nullptr )
             {
                 pOutResult->_width              = static_cast<uint32>( metadata.width );
@@ -202,8 +202,8 @@ namespace sw::editor
             }
             uint64 sourceSizeBytes = 0;
             (void)FileUtil::tryGetFileSize( sourcePath, sourceSizeBytes ); // 로그 한 줄의 숫자다 - 읽은 원본이라 늘 있다
-            SW_LOG_INFO( "Imported texture: %# -> %# (Format: %#, Mips: %#, %# -> %# bytes)", sourcePath, outputPath,
-                         static_cast<uint32>( metadata.format ), mipCount, sourceSizeBytes, outputSizeBytes );
+            SW_LOG_INFO_ID( "TextureImporter.ImportedTextureFormatMips", "Imported texture: %# -> %# (Format: %#, Mips: %#, %# -> %# bytes)", sourcePath, outputPath,
+                            static_cast<uint32>( metadata.format ), mipCount, sourceSizeBytes, outputSizeBytes );
             return true;
         }
 
@@ -221,8 +221,8 @@ namespace sw::editor
             HRESULT               hr = bGenerateMips ? DirectX::GenerateMipMaps( baseImage, kFilterFlags, 0, mipChain ) : mipChain.InitializeFromImage( baseImage );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "%# failed (hr=0x%#) for %#", bGenerateMips ? "DirectX::GenerateMipMaps" : "DirectX::InitializeFromImage",
-                              Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ), sourcePath );
+                SW_LOG_ERROR_ID( "TextureImporter.FailedHrX", "%# failed (hr=0x%#) for %#", bGenerateMips ? "DirectX::GenerateMipMaps" : "DirectX::InitializeFromImage",
+                                 Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ), sourcePath );
                 return false;
             }
 
@@ -231,8 +231,8 @@ namespace sw::editor
                 hr = BandCompressJob::compress( mipChain, targetFormat, pTaskManager, outFinalImage );
                 if ( FAILED( hr ) )
                 {
-                    SW_LOG_ERROR( "DirectX::Compress failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                                  static_cast<uint32>( targetFormat ), sourcePath );
+                    SW_LOG_ERROR_ID( "TextureImporter.DirectXCompressFailedHr", "DirectX::Compress failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                                     static_cast<uint32>( targetFormat ), sourcePath );
                     return false;
                 }
                 return true;
@@ -248,8 +248,8 @@ namespace sw::editor
                                                                              outFinalImage );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "DirectX::Convert failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                              static_cast<uint32>( targetFormat ), sourcePath );
+                SW_LOG_ERROR_ID( "TextureImporter.DirectXConvertFailedHr", "DirectX::Convert failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                                 static_cast<uint32>( targetFormat ), sourcePath );
                 return false;
             }
             return true;
@@ -265,7 +265,7 @@ namespace sw::editor
             const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, false );
             if ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT )
             {
-                SW_LOG_ERROR( "HDR source needs format bc6h or rgba16f (rule format '%#'): %#", TextureImportFormatUtil::getName( rule._format ), sourcePath );
+                SW_LOG_ERROR_ID( "TextureImporter.HDRSourceNeedsFormat", "HDR source needs format bc6h or rgba16f (rule format '%#'): %#", TextureImportFormatUtil::getName( rule._format ), sourcePath );
                 return false;
             }
             const wstring         wSourcePath = StringUtil::utf8ToUTF16( string( sourcePath ).c_str() );
@@ -274,8 +274,8 @@ namespace sw::editor
             HRESULT               hr = DirectX::LoadFromHDRFile( wSourcePath.c_str(), &metadata, sourceImage );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "DirectX::LoadFromHDRFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
-                              sourcePath );
+                SW_LOG_ERROR_ID( "TextureImporter.DirectXLoadFromHDRFileFailedHr", "DirectX::LoadFromHDRFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                                 sourcePath );
                 return false;
             }
             DirectX::ScratchImage finalImage;
@@ -400,7 +400,7 @@ namespace sw::editor
                 TextureImportRuleMatch match = _config.findMatchingRule( assetPath );
                 if ( match.hasError() )
                 {
-                    SW_LOG_ERROR( "%#", match._error.c_str() );
+                    SW_LOG_ERROR_ID( "TextureImporter.Message", "%#", match._error.c_str() );
                     return false;
                 }
                 outRule = std::move( match._rule );
@@ -432,7 +432,7 @@ namespace sw::editor
         RawImageData rawImage;
         if ( ImageUtil::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
         {
-            SW_LOG_ERROR( "Failed to decode source image: %#", sourcePath );
+            SW_LOG_ERROR_ID( "TextureImporter.FailedDecodeSourceImage", "Failed to decode source image: %#", sourcePath );
             return false;
         }
 
@@ -506,7 +506,7 @@ namespace sw::editor
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedTexturePath( normalized ).empty() )
         {
-            SW_LOG_WARNING( "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
+            SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
             return true;
         }
 
@@ -521,10 +521,10 @@ namespace sw::editor
         const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr );
         for ( const string& problem : summary._listProblem )
         {
-            SW_LOG_ERROR( "Texture import failed: %#", problem.c_str() );
+            SW_LOG_ERROR_ID( "TextureImporter.TextureImportFailed", "Texture import failed: %#", problem.c_str() );
         }
 
-        SW_LOG_INFO( "Texture import: %# changed -> %# imported", relativePath, summary._importedCount );
+        SW_LOG_INFO_ID( "TextureImporter.TextureImportChangedImported", "Texture import: %# changed -> %# imported", relativePath, summary._importedCount );
         return true;
     }
 

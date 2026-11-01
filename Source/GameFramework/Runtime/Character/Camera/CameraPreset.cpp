@@ -45,7 +45,7 @@ namespace sw
                     }
                     if ( inoutBlend._listCustomKey.empty() == false && key._time < inoutBlend._listCustomKey.back()._time )
                     {
-                        SW_LOG_ERROR( "%#: <%#> keys are not in time order", sourceName, node.getName() );
+                        SW_LOG_ERROR_ID( "CameraPreset.KeysNotTimeOrder", "%#: <%#> keys are not in time order", sourceName, node.getName() );
                         bValid = false;
                     }
                     inoutBlend._listCustomKey.push_back( key );
@@ -59,7 +59,7 @@ namespace sw
                 bool bValid = GameDataXML::readFields( node, outLens, sourceName );
                 if ( outLens._farPlane <= outLens._nearPlane )
                 {
-                    SW_LOG_ERROR( "%#: <Lens> farPlane %# must be beyond nearPlane %#", sourceName, outLens._farPlane, outLens._nearPlane );
+                    SW_LOG_ERROR_ID( "CameraPreset.LensFarPlaneMustBeyond", "%#: <Lens> farPlane %# must be beyond nearPlane %#", sourceName, outLens._farPlane, outLens._nearPlane );
                     bValid = false;
                 }
                 return bValid;
@@ -72,12 +72,12 @@ namespace sw
                 const bool bBothCorner = node.findAttribute( "boundsMin" ) != nullptr && node.findAttribute( "boundsMax" ) != nullptr;
                 if ( outConfiner._bBounds && bBothCorner == false )
                 {
-                    SW_LOG_ERROR( "%#: <Confiner bounds=\"true\"> needs both boundsMin and boundsMax", sourceName );
+                    SW_LOG_ERROR_ID( "CameraPreset.ConfinerBoundsTrueNeeds", "%#: <Confiner bounds=\"true\"> needs both boundsMin and boundsMax", sourceName );
                     bValid = false;
                 }
                 if ( outConfiner._pitchMax < outConfiner._pitchMin )
                 {
-                    SW_LOG_ERROR( "%#: <Confiner> pitchMax %# is below pitchMin %#", sourceName, outConfiner._pitchMax, outConfiner._pitchMin );
+                    SW_LOG_ERROR_ID( "CameraPreset.ConfinerPitchMaxBelowPitchMin", "%#: <Confiner> pitchMax %# is below pitchMin %#", sourceName, outConfiner._pitchMax, outConfiner._pitchMin );
                     bValid = false;
                 }
                 return bValid;
@@ -90,7 +90,7 @@ namespace sw
                 const bool bSoftInDead = outFraming._softZone._x < outFraming._deadZone._x || outFraming._softZone._y < outFraming._deadZone._y;
                 if ( bSoftInDead )
                 {
-                    SW_LOG_ERROR( "%#: <Framing> softZone must not be smaller than deadZone", sourceName );
+                    SW_LOG_ERROR_ID( "CameraPreset.FramingSoftZoneMustNot", "%#: <Framing> softZone must not be smaller than deadZone", sourceName );
                     bValid = false;
                 }
                 return bValid;
@@ -114,7 +114,7 @@ namespace sw
                 }
                 if ( outDolly._listPoint.size() < 2 )
                 {
-                    SW_LOG_ERROR( "%#: <Dolly> needs at least two <Point>", sourceName );
+                    SW_LOG_ERROR_ID( "CameraPreset.DollyNeedsLeastTwo", "%#: <Dolly> needs at least two <Point>", sourceName );
                     bValid = false;
                 }
                 return bValid;
@@ -267,7 +267,7 @@ namespace sw
         // 기본 블렌드를 먼저 — `<BlendIn>` 이 없는 프리셋이 이 값으로 시작한다.
         const XMLNode defaultNode = root.findChild( "DefaultBlend" );
         if ( defaultNode.isValid() && CameraPresetInternal::readBlend( defaultNode, _defaultBlend, sourceName ) == false )
-            SW_LOG_ERROR( "%#: <DefaultBlend> has invalid fields", sourceName );
+            SW_LOG_ERROR_ID( "CameraPreset.DefaultBlendInvalidFields", "%#: <DefaultBlend> has invalid fields", sourceName );
 
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
@@ -284,7 +284,7 @@ namespace sw
                 if ( CameraPresetInternal::readPreset( node, def, sourceName ) == false )
                 {
                     // 틀린 값으로 반쯤 읽은 프리셋을 쓰지 않는다 — 켜려는 쪽이 없는 id 로 알게 된다.
-                    SW_LOG_ERROR( "%#: preset '%#' has invalid fields - skipped", sourceName, pID );
+                    SW_LOG_ERROR_ID( "CameraPreset.PresetInvalidFieldsSkipped", "%#: preset '%#' has invalid fields - skipped", sourceName, pID );
                     continue;
                 }
                 add( def );
@@ -296,7 +296,7 @@ namespace sw
                 const utf8* pTo   = node.findAttribute( "to" );
                 if ( StringUtil::isNullOrEmpty( pFrom ) || StringUtil::isNullOrEmpty( pTo ) )
                 {
-                    SW_LOG_ERROR( "%#: <Blend> needs both from and to - skipped", sourceName );
+                    SW_LOG_ERROR_ID( "CameraPreset.BlendNeedsBothSkipped", "%#: <Blend> needs both from and to - skipped", sourceName );
                     continue;
                 }
                 CameraBlendRule rule;
@@ -306,15 +306,15 @@ namespace sw
                 if ( CameraPresetInternal::readBlend( node, rule._blend, sourceName, { "from", "to" } ) )
                     addBlendRule( rule );
                 else
-                    SW_LOG_ERROR( "%#: <Blend from=\"%#\" to=\"%#\"> has invalid fields - skipped", sourceName, pFrom, pTo );
+                    SW_LOG_ERROR_ID( "CameraPreset.BlendInvalidFieldsSkipped", "%#: <Blend from=\"%#\" to=\"%#\"> has invalid fields - skipped", sourceName, pFrom, pTo );
             }
             else if ( StringUtil::equals( pName, "DefaultBlend" ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#>", sourceName, pName );
+                SW_LOG_ERROR_ID( "CameraPreset.UnknownElement", "%#: unknown element <%#>", sourceName, pName );
             }
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Preset> entries", sourceName );
+            SW_LOG_WARNING_ID( "CameraPreset.NoPresetEntries", "%#: no <Preset> entries", sourceName );
         return loadedCount;
     }
 } // namespace sw

@@ -947,13 +947,13 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Culture table '%#' cannot be read", assetPath );
+            SW_LOG_ERROR_ID( "CultureInfo.CultureTableCannotRead", "Culture table '%#' cannot be read", assetPath );
             return false;
         }
         string error;
         if ( loadFromXMLText( text, assetPath, &error ) == false )
         {
-            SW_LOG_ERROR( "Culture table is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "CultureInfo.CultureTableNotLoaded", "Culture table is not loaded: %#", error.c_str() );
             return false;
         }
         return true;

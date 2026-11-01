@@ -111,7 +111,7 @@ namespace sw
                 context._pIdentity = &snapshot._identity;
                 // 실패하면 로드가 오브젝트를 읽기 전 상태로 되돌린다 — 되돌리기 하나가 빠졌다고 알린다.
                 if ( ObjectStateSerializer::loadFromXMLString( pTarget, snapshot._xml, context ) == false )
-                    SW_LOG_WARNING( "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
+                    SW_LOG_WARNING_ID( "ObjectUndoUtil.UndoRedoCouldNot", "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
             }
 
             /** @brief 이 단계를 실행하는 스택에 알립니다. */
@@ -151,7 +151,7 @@ namespace sw
                 GameObject*  pCreated = target._pManager->createGameObjectWithID( hashed_string( name.c_str() ), objectID );
                 if ( pCreated == nullptr )
                 {
-                    SW_LOG_WARNING( "Undo/redo could not recreate '%#' with its id %#", name.c_str(), objectID );
+                    SW_LOG_WARNING_ID( "ObjectUndoUtil.UndoRedoCouldNot2", "Undo/redo could not recreate '%#' with its id %#", name.c_str(), objectID );
                     return;
                 }
                 loadSnapshot( pCreated, snapshot );

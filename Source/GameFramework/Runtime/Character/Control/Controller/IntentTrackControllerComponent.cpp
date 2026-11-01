@@ -39,11 +39,11 @@ namespace sw
         string               error;
         if ( history.loadFromAsset( AssetID{ _trackFile }, error ) == false ) // 씬 데이터의 칸은 리소스다(작업 폴더 기준 디스크 경로가 아니다)
         {
-            SW_LOG_ERROR( "Intent track controller could not load %#", error.c_str() );
+            SW_LOG_ERROR_ID( "IntentTrackControllerComponent.IntentTrackControllerCould", "Intent track controller could not load %#", error.c_str() );
             return;
         }
         if ( loadTrack( history, trackName ) == false )
-            SW_LOG_ERROR( "Intent recording '%#' has no complete track for pawn '%#'", _trackFile.c_str(), trackName.c_str() );
+            SW_LOG_ERROR_ID( "IntentTrackControllerComponent.IntentRecordingNoComplete", "Intent recording '%#' has no complete track for pawn '%#'", _trackFile.c_str(), trackName.c_str() );
     }
 
     void IntentTrackControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )

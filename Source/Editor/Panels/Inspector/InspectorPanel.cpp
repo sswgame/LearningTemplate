@@ -391,7 +391,7 @@ namespace sw::editor
             if ( EditorComponentMenu::drawAddComponentList( pObj, _addComponentSearch, "inspector.previewAddComponent", ImGui::IsWindowAppearing(), bFailed ) )
                 ImGui::CloseCurrentPopup();
             if ( bFailed )
-                SW_LOG_WARNING( "Could not add the component to '%#'", pObj->getName().c_str() );
+                SW_LOG_WARNING_ID( "InspectorPanel.CouldNotAddComponent", "Could not add the component to '%#'", pObj->getName().c_str() );
             ImGui::EndPopup();
         }
     }
@@ -410,7 +410,7 @@ namespace sw::editor
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert to Prefab" ) );
         if ( ImGui::Button( "Revert to Prefab" ) && EditorInspectorCommands::revertToPrefab( pObj, prefabPath ) == false )
-            SW_LOG_WARNING( "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath );
+            SW_LOG_WARNING_ID( "InspectorPanel.RevertPrefabFailed", "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "RevertToPrefab" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unlink" ) );
@@ -505,7 +505,7 @@ namespace sw::editor
             if ( EditorComponentMenu::drawAddComponentList( pObj, _addComponentSearch, "inspector.addComponent", ImGui::IsWindowAppearing(), bFailed ) )
                 ImGui::CloseCurrentPopup();
             if ( bFailed )
-                SW_LOG_WARNING( "Could not add the component to '%#'", pObj->getName().c_str() );
+                SW_LOG_WARNING_ID( "InspectorPanel.CouldNotAddComponent", "Could not add the component to '%#'", pObj->getName().c_str() );
             ImGui::EndPopup();
         }
     }
@@ -533,7 +533,7 @@ namespace sw::editor
             }
             else
             {
-                SW_LOG_ERROR( "Could not save component preset '%#'", _presetNameBuffer.c_str() );
+                SW_LOG_ERROR_ID( "InspectorPanel.CouldNotSaveComponent", "Could not save component preset '%#'", _presetNameBuffer.c_str() );
             }
         }
         ImGui::Separator();
@@ -558,7 +558,7 @@ namespace sw::editor
                 continue;
             bFoundPresets = true;
             if ( ImGui::MenuItem( displayPreset.c_str() ) && EditorTransformCommands::loadComponentPreset( pComp, presetFile ) == false )
-                SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
+                SW_LOG_ERROR_ID( "InspectorPanel.CouldNotApplyComponent", "Could not apply component preset '%#'", presetFile.c_str() );
         }
         if ( bFoundPresets == false )
             ImGui::TextDisabled( "No saved presets." );

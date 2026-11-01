@@ -124,7 +124,7 @@ namespace sw::editor
         uint32 windowCount = 0;
         uint32 blankCount  = 0;
 
-        SW_LOG_INFO( "===== ImGui window dump (frame %#) - compare this block before and after a panel change =====", frameCount );
+        SW_LOG_INFO_ID( "PanelDump.ImGuiWindowDumpFrame", "===== ImGui window dump (frame %#) - compare this block before and after a panel change =====", frameCount );
         for ( const ImGuiWindow* pWindow : pContext->Windows )
         {
             if ( EditorPanelDumpInternal::isReportableWindow( pWindow ) == false )
@@ -145,23 +145,23 @@ namespace sw::editor
             if ( bBlank )
                 ++blankCount;
 
-            SW_LOG_INFO( "  %# size=%#×%# vtx=%# active=%# collapsed=%# hidden=%# %#",
-                         pWindow->Name,
-                         static_cast<int32>( pWindow->Size.x ),
-                         static_cast<int32>( pWindow->Size.y ),
-                         vertexCount,
-                         bActive ? 1 : 0,
-                         bCollapsed ? 1 : 0,
-                         bHidden ? 1 : 0,
-                         bBlank ? "<== BLANK" : "" );
+            SW_LOG_INFO_ID( "PanelDump.SizeVtxActiveCollapsed", "  %# size=%#×%# vtx=%# active=%# collapsed=%# hidden=%# %#",
+                            pWindow->Name,
+                            static_cast<int32>( pWindow->Size.x ),
+                            static_cast<int32>( pWindow->Size.y ),
+                            vertexCount,
+                            bActive ? 1 : 0,
+                            bCollapsed ? 1 : 0,
+                            bHidden ? 1 : 0,
+                            bBlank ? "<== BLANK" : "" );
         }
 
-        SW_LOG_INFO( "===== %# windows, %# panels with no content =====", windowCount, blankCount );
+        SW_LOG_INFO_ID( "PanelDump.WindowsPanelsNoContent", "===== %# windows, %# panels with no content =====", windowCount, blankCount );
         if ( blankCount > 0 )
         {
-            SW_LOG_WARNING( "%# visible panels drew nothing. Containers and overlays are excluded from the count, so "
-                            "a panel change probably blanked the screen.",
-                            blankCount );
+            SW_LOG_WARNING_ID( "PanelDump.VisiblePanelsDrewNothing", "%# visible panels drew nothing. Containers and overlays are excluded from the count, so "
+                                                                     "a panel change probably blanked the screen.",
+                               blankCount );
         }
     }
 } // namespace sw::editor

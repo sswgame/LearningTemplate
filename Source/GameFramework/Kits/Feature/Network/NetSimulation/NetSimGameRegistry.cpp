@@ -21,7 +21,7 @@ namespace sw
     {
         if ( entry._name.empty() || entry._pfnCreate == nullptr )
         {
-            SW_LOG_ERROR( "NetSimGameRegistry: a game needs a name and a create function ('%#')", entry._name );
+            SW_LOG_ERROR_ID( "NetSimGameRegistry.NetSimGameRegistryGameNeedsName", "NetSimGameRegistry: a game needs a name and a create function ('%#')", entry._name );
             return false;
         }
         const RegistrationResult result = getEntries().addLogged( &entry, "Net simulation game", entry._name );

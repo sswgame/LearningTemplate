@@ -154,7 +154,7 @@ namespace sw
                 continue;
             if ( name != "Item" )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+                SW_LOG_ERROR_ID( "KartItems.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
                 continue;
             }
             KartItemDef def;
@@ -166,10 +166,10 @@ namespace sw
         for ( XMLNode node = root.findChild( "RankTable" ); node; node = node.findNextSibling( "RankTable" ) )
         {
             if ( loadRankTable( node, sourceName ) == false )
-                SW_LOG_ERROR( "%#: a <RankTable> was not loaded (see above)", sourceName );
+                SW_LOG_ERROR_ID( "KartItems.RankTableNotLoadedSee", "%#: a <RankTable> was not loaded (see above)", sourceName );
         }
         if ( loadedCount == 0 )
-            SW_LOG_ERROR( "%#: no <Item> entries", sourceName );
+            SW_LOG_ERROR_ID( "KartItems.NoItemEntries", "%#: no <Item> entries", sourceName );
         return loadedCount;
     }
 
@@ -188,7 +188,7 @@ namespace sw
             }
             if ( find( entry._itemID ) == nullptr )
             {
-                SW_LOG_ERROR( "%#: rank table entry names an unknown item '%#'", sourceName, entry._itemID.c_str() );
+                SW_LOG_ERROR_ID( "KartItems.RankTableEntryNames", "%#: rank table entry names an unknown item '%#'", sourceName, entry._itemID.c_str() );
                 bValid = false;
                 continue;
             }
@@ -199,7 +199,7 @@ namespace sw
         }
         if ( listEntry.empty() )
         {
-            SW_LOG_ERROR( "%#: <RankTable from=\"%#\"> needs <Entry> children", sourceName, range._fromPlace );
+            SW_LOG_ERROR_ID( "KartItems.RankTableNeedsEntryChildren", "%#: <RankTable from=\"%#\"> needs <Entry> children", sourceName, range._fromPlace );
             bValid = false;
         }
         if ( bValid )

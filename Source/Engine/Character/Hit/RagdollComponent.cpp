@@ -175,7 +175,7 @@ namespace sw
         _seenAssetReloadCount = SharedAssetCache<PhysicsAsset>::getReloadCount();
         _asset                = _physicsAssetPath.empty() ? nullptr : SharedAssetCache<PhysicsAsset>::acquire( _physicsAssetPath );
         if ( _physicsAssetPath.empty() == false && _asset == nullptr )
-            SW_LOG_ERROR( "'%#': physics asset '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _physicsAssetPath.c_str() );
+            SW_LOG_ERROR_ID( "Ragdoll.PhysicsAssetCouldNot", "'%#': physics asset '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _physicsAssetPath.c_str() );
         _bRebuild = true;
     }
 
@@ -190,7 +190,7 @@ namespace sw
         if ( _pUnit != nullptr )
             _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         else
-            SW_LOG_WARNING( "'%#': ragdoll has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            SW_LOG_WARNING_ID( "Ragdoll.RagdollNoSkeletalMeshComponentObject", "'%#': ragdoll has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
 
     void RagdollComponent::unbindFromUnit()
@@ -336,8 +336,8 @@ namespace sw
             ( boneIndex >= 0 && static_cast<size_t>( boneIndex ) < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[static_cast<size_t>( boneIndex )] : -1;
         if ( bodyIndex < 0 )
         {
-            SW_LOG_WARNING( "'%#': partial ragdoll root bone '%#' has no body", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)",
-                            _partialRootBone.c_str() );
+            SW_LOG_WARNING_ID( "Ragdoll.PartialRagdollRootBone", "'%#': partial ragdoll root bone '%#' has no body", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)",
+                               _partialRootBone.c_str() );
             return;
         }
         _listPartialMask.clear();

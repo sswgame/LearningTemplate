@@ -193,7 +193,7 @@ namespace sw::editor
             const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
             if ( pDefaultAssets == nullptr )
             {
-                SW_LOG_ERROR( "UI preview needs the engine default assets for its resolution table - the preview stays empty" );
+                SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewNeedsEngine", "UI preview needs the engine default assets for its resolution table - the preview stays empty" );
                 return nullptr;
             }
             if ( _resolutionTable.loadFromAsset( AssetID{ pDefaultAssets->_uiResolutionPresets.get() } ) == false )
@@ -390,16 +390,16 @@ namespace sw::editor
         string error;
         if ( UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, text, error ) == false )
         {
-            SW_LOG_ERROR( "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCannotSaved", "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
             return false;
         }
         const std::optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
         if ( path.has_value() == false || FileUtil::writeTextFile( path->str(), text ) == false )
         {
-            SW_LOG_ERROR( "UI Preview: '%#' could not be written", _openedDocument.c_str() );
+            SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCouldNot", "UI Preview: '%#' could not be written", _openedDocument.c_str() );
             return false;
         }
-        SW_LOG_INFO( "UI Preview: saved '%#'", _openedDocument.c_str() );
+        SW_LOG_INFO_ID( "UIPreviewModel.UIPreviewSaved", "UI Preview: saved '%#'", _openedDocument.c_str() );
         _bAwaitReload       = true;
         _bReloadedAfterSave = false;
         return true;
@@ -552,8 +552,8 @@ namespace sw::editor
         Widget*      pAdded        = UIPreviewLogic::insertWidget( tree, *pType, parentOrdinal, index );
         if ( pAdded == nullptr )
         {
-            SW_LOG_WARNING( "UI Preview: a '%#' cannot be added to '%#' (the panel takes no more children or the type cannot be built)", typeName.c_str(),
-                            pParent->getName().c_str() );
+            SW_LOG_WARNING_ID( "UIPreviewModel.UIPreviewCannotAdded", "UI Preview: a '%#' cannot be added to '%#' (the panel takes no more children or the type cannot be built)", typeName.c_str(),
+                               pParent->getName().c_str() );
             return false;
         }
         afterStructureEdit( screen, UIPreviewLogic::findWidgetOrdinal( tree, pAdded->getID() ) );
@@ -699,7 +699,7 @@ namespace sw::editor
         const PropertyInfo* pProp = UIPreviewLogic::findWidgetProperty( *pWidget, propertyName );
         if ( pProp == nullptr || UIPreviewLogic::applyWidgetProperty( *pWidget, *pProp, text ) == false )
         {
-            SW_LOG_WARNING( "UI Preview: '%#' could not be restored to '%#'", propertyName.c_str(), text.c_str() );
+            SW_LOG_WARNING_ID( "UIPreviewModel.UIPreviewCouldNot2", "UI Preview: '%#' could not be restored to '%#'", propertyName.c_str(), text.c_str() );
             return;
         }
         setDirty( true );

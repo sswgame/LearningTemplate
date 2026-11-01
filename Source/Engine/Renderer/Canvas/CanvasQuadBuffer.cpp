@@ -88,7 +88,7 @@ namespace sw
             _quadBuffer.release( &device );
             if ( _quadBuffer.ensureCapacity( &device, sizeof( CanvasQuad ), capacity, quadUsage, true, bNeedsUAV, nullptr ) == false )
             {
-                SW_LOG_ERROR( "Failed to create the canvas quad buffer (%# quads) - the canvas is not drawn", capacity );
+                SW_LOG_ERROR_ID( "Canvas.FailedCreateCanvasQuad", "Failed to create the canvas quad buffer (%# quads) - the canvas is not drawn", capacity );
                 _uploadedRevision = 0;
                 return;
             }

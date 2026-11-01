@@ -74,7 +74,7 @@ namespace sw::editor
             pMesh->setMeshID( assetPath );
             _previewMeshPath = assetPath;
             _bFramed         = false;
-            SW_LOG_INFO( "Mesh Preview showing '%#'", _previewMeshPath );
+            SW_LOG_INFO_ID( "MeshPreviewPanel.MeshPreviewShowing", "Mesh Preview showing '%#'", _previewMeshPath );
         }
         if ( _bFramed )
             return false;

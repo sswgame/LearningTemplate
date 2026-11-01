@@ -15,7 +15,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Physics asset not found: %#", assetPath );
+            SW_LOG_ERROR_ID( "PhysicsAsset.PhysicsAssetNotFound", "Physics asset not found: %#", assetPath );
             return false;
         }
         return loadFromXMLText( text, assetPath );
@@ -26,7 +26,7 @@ namespace sw
         *this = PhysicsAsset{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "%#: physics asset could not be read or holds unknown keys / values", sourceName );
+            SW_LOG_ERROR_ID( "PhysicsAsset.PhysicsAssetCouldNot", "%#: physics asset could not be read or holds unknown keys / values", sourceName );
             return false;
         }
         return validate( sourceName );
@@ -40,19 +40,19 @@ namespace sw
             const PhysicsAssetBodyDef& body = _listBody[bodyIndex];
             if ( body._bone.empty() )
             {
-                SW_LOG_ERROR( "%#: body %# has no bone name", sourceName, bodyIndex );
+                SW_LOG_ERROR_ID( "PhysicsAsset.BodyNoBoneName", "%#: body %# has no bone name", sourceName, bodyIndex );
                 bValid = false;
             }
             if ( body._listShape.empty() )
             {
-                SW_LOG_ERROR( "%#: body '%#' has no shape", sourceName, body._bone.c_str() );
+                SW_LOG_ERROR_ID( "PhysicsAsset.BodyNoShape", "%#: body '%#' has no shape", sourceName, body._bone.c_str() );
                 bValid = false;
             }
             for ( size_t otherIndex = bodyIndex + 1; otherIndex < _listBody.size(); ++otherIndex )
             {
                 if ( _listBody[otherIndex]._bone == body._bone )
                 {
-                    SW_LOG_ERROR( "%#: bone '%#' has two bodies", sourceName, body._bone.c_str() );
+                    SW_LOG_ERROR_ID( "PhysicsAsset.BoneTwoBodies", "%#: bone '%#' has two bodies", sourceName, body._bone.c_str() );
                     bValid = false;
                 }
             }
@@ -61,7 +61,7 @@ namespace sw
         {
             if ( findBodyIndex( pair._boneA ) < 0 || findBodyIndex( pair._boneB ) < 0 )
             {
-                SW_LOG_ERROR( "%#: disabled pair '%#' - '%#' names a bone without a body", sourceName, pair._boneA.c_str(), pair._boneB.c_str() );
+                SW_LOG_ERROR_ID( "PhysicsAsset.DisabledPairNamesBone", "%#: disabled pair '%#' - '%#' names a bone without a body", sourceName, pair._boneA.c_str(), pair._boneB.c_str() );
                 bValid = false;
             }
         }
@@ -84,7 +84,7 @@ namespace sw
             }
             if ( bFound == false )
             {
-                SW_LOG_ERROR( "%#: bone '%#' is not in the skeleton", sourceName, body._bone.c_str() );
+                SW_LOG_ERROR_ID( "PhysicsAsset.BoneNotSkeleton", "%#: bone '%#' is not in the skeleton", sourceName, body._bone.c_str() );
                 bValid = false;
             }
         }

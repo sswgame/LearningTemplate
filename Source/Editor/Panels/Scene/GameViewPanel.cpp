@@ -183,7 +183,7 @@ namespace sw::editor
             EditorPlayPreferences& playPreferences = editPreferences<EditorPlayPreferences>();
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Max" ) );
             if ( ImGui::Checkbox( "Max", &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveOpened() == false )
-                SW_LOG_WARNING( "Editor preferences could not be saved" );
+                SW_LOG_WARNING_ID( "GameViewPanel.EditorPreferencesCouldNot", "Editor preferences could not be saved" );
             EditorSelfTestMarks::note( "gameView.maximizeOnPlay" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "MaximizeOnPlay" ) );
 

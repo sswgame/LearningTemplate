@@ -248,7 +248,7 @@ namespace sw
 
         if ( _pCmd == nullptr )
         {
-            SW_LOG_ERROR_ONCE( "%#: createCommandList returned null", pCallerName );
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.CreateCommandListReturnedNull", "%#: createCommandList returned null", pCallerName );
             return false;
         }
 
@@ -396,7 +396,7 @@ namespace sw
 
         pCmd->beginCommandList();
         if ( _state._graph.execute( _graphContext, pCmd ) == false )
-            SW_LOG_ERROR_ONCE( "Render graph could not run for an extra view (cycle or compile failure)" );
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.RenderGraphCouldNot", "Render graph could not run for an extra view (cycle or compile failure)" );
         // 렌더 텍스처는 이어서 주 시점의 머티리얼이, 호스트 타깃은 에디터 UI 가 읽는다 — 읽기 상태로 돌려 둔다(DX11 은 RTV 슬롯에서 뗀다).
         if ( view._outputKind == RenderViewOutputKind::RenderTexture && view._pOutputTexture != nullptr )
             pCmd->prepareTextureForShaderRead( view._pOutputTexture->getHandle() );
@@ -563,7 +563,7 @@ namespace sw
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::NanCheck );
         if ( pso == 0 )
         {
-            SW_LOG_ERROR_ONCE( "gv_nanCheck is on but the NaN check PSO is missing (shader not cooked?) - no output is scanned" );
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "gv_nanCheck is on but the NaN check PSO is missing (shader not cooked?) - no output is scanned" );
             return;
         }
         if ( _nanCheckCommandList == nullptr )
@@ -709,11 +709,11 @@ namespace sw
 
         if ( _state._graph.compile() == false )
         {
-            SW_LOG_ERROR( "Callback bind compile failed" );
+            SW_LOG_ERROR_ID( "FramePassExecutor.CallbackBindCompileFailed", "Callback bind compile failed" );
             return false;
         }
         if ( gv_dumpRenderGraph )
-            SW_LOG_INFO( "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
+            SW_LOG_INFO_ID( "FramePassExecutor.Message", "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
         return true;
     }
 
@@ -893,7 +893,7 @@ namespace sw
 
         if ( context._pCmd == nullptr )
         {
-            SW_LOG_ERROR_ONCE( "executePass: no active IRHICommandList" );
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ExecutePassNoActiveIRHICommandList", "executePass: no active IRHICommandList" );
             return;
         }
 
@@ -1050,7 +1050,7 @@ namespace sw
                 case RenderPassType::NanCheck:
                 case RenderPassType::ProbeUpdate:
                 {
-                    SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
+                    SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
                     break;
                 }
             }
@@ -1424,7 +1424,7 @@ namespace sw
         else
         {
             // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상의 상태 전이만 위해 패스를 열고 닫는다.
-            SW_LOG_ERROR_ONCE( "Present source color has no transient (its allocation failed) - the output is not drawn" );
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.PresentSourceColorNo", "Present source color has no transient (its allocation failed) - the output is not drawn" );
             RHIRenderPassBeginInfo beginInfo{};
             beginInfo.setColorTarget( dstTarget, _state._clearColor, RHIRenderPassLoadOp::Load );
             beginInfo._bBindColor = SW_TRUE;
@@ -1503,9 +1503,9 @@ namespace sw
             if ( beginInfo._arrColorTarget[colorTargetIndex] == 0 )
             {
                 if ( _bMissingColorTargetLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
-                    SW_LOG_ERROR( "Color target '%#' does not exist this frame - skipping the pass (handle 0 of a missing attachment is the back buffer, so opening it as is would draw to the screen). "
-                                  "Check _listOutput and _listAttachment of the pipeline.",
-                                  pColorNames[colorTargetIndex] );
+                    SW_LOG_ERROR_ID( "FramePassExecutor.ColorTargetDoesNot", "Color target '%#' does not exist this frame - skipping the pass (handle 0 of a missing attachment is the back buffer, so opening it as is would draw to the screen). "
+                                                                             "Check _listOutput and _listAttachment of the pipeline.",
+                                     pColorNames[colorTargetIndex] );
                 return false;
             }
             beginInfo._arrLoadOp[colorTargetIndex] = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
@@ -1785,8 +1785,8 @@ namespace sw
             {
                 // 여기서 조용히 나가면 t5 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
                 // 막는 것은 ensureMaterialPSOs 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
-                SW_LOG_ERROR( "No material fallback buffer for stride %# - this draw goes out with g_SwMaterials empty.",
-                              pSlot->_elementStride );
+                SW_LOG_ERROR_ID( "FramePassExecutor.NoMaterialFallbackBuffer", "No material fallback buffer for stride %# - this draw goes out with g_SwMaterials empty.",
+                                 pSlot->_elementStride );
             }
             return;
         }

@@ -33,7 +33,7 @@ namespace sw
         void* pWindowHandle{ nullptr };
         if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
         {
-            SW_LOG_ERROR( "OpenGL on Windows needs a Win32 window (WGL) - this surface is not Win32" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLWindowsNeedsWin32", "OpenGL on Windows needs a Win32 window (WGL) - this surface is not Win32" );
             return false;
         }
         HWND hWnd = static_cast<HWND>( pWindowHandle );
@@ -64,13 +64,13 @@ namespace sw
             pixelFormat = ChoosePixelFormat( hDC, &pfd );
             if ( pixelFormat == 0 )
             {
-                SW_LOG_ERROR( "ChoosePixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+                SW_LOG_ERROR_ID( "OpenGL.ChoosePixelFormatFailedErr", "ChoosePixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
                 ReleaseDC( hWnd, hDC );
                 return false;
             }
             if ( SetPixelFormat( hDC, pixelFormat, &pfd ) == FALSE )
             {
-                SW_LOG_ERROR( "SetPixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+                SW_LOG_ERROR_ID( "OpenGL.SetPixelFormatFailedErr", "SetPixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
                 ReleaseDC( hWnd, hDC );
                 return false;
             }
@@ -79,7 +79,7 @@ namespace sw
         HGLRC dummyContext = wglCreateContext( hDC );
         if ( dummyContext == nullptr || wglMakeCurrent( hDC, dummyContext ) == FALSE )
         {
-            SW_LOG_ERROR( "wglCreateContext/MakeCurrent failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+            SW_LOG_ERROR_ID( "OpenGL.WglCreateContextMakeCurrentFailedErr", "wglCreateContext/MakeCurrent failed (err=%#)", static_cast<uint32>( GetLastError() ) );
             if ( dummyContext )
                 wglDeleteContext( dummyContext );
             ReleaseDC( hWnd, hDC );
@@ -110,7 +110,7 @@ namespace sw
                 hRC = wglCreateContextAttribsARB( hDC, nullptr, arrAttrib );
                 if ( hRC != nullptr )
                 {
-                    SW_LOG_TRACE( "WGL core context %#.%# created", ver[0], ver[1] );
+                    SW_LOG_TRACE_ID( "OpenGL.WGLCoreContextCreated", "WGL core context %#.%# created", ver[0], ver[1] );
                     break;
                 }
             }
@@ -123,7 +123,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "Failed to create WGL core context" );
+                SW_LOG_ERROR_ID( "OpenGL.FailedCreateWGLCore", "Failed to create WGL core context" );
                 ReleaseDC( hWnd, hDC );
                 return false;
             }

@@ -102,7 +102,7 @@ namespace sw::editor
         const bool bSaveFailed = bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, AssetID{ frame._prefabPath } ) == false;
         if ( bSaveFailed )
         {
-            SW_LOG_ERROR( "Prefab window could not save '%#' - still editing it", frame._prefabPath.c_str() );
+            SW_LOG_ERROR_ID( "PrefabEditorPanel.PrefabWindowCouldNot", "Prefab window could not save '%#' - still editing it", frame._prefabPath.c_str() );
             _status = "Could not save the prefab";
             return PrefabFrameExit::Failed;
         }

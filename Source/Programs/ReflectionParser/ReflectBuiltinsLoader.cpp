@@ -67,7 +67,7 @@ namespace sw
                 string text;
                 if ( FileUtil::readTextFile( absPath, text ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to read builtins: %#", absPath );
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.FailedReadBuiltins", "Failed to read builtins: %#", absPath );
                     return false;
                 }
 
@@ -100,7 +100,7 @@ namespace sw
                     }
                     if ( bParsed == false || row._listArgument.size() < minArgumentCount )
                     {
-                        SW_LOG_ERROR( "%#: malformed builtins line (needs at least %# arguments): %#", absPath, static_cast<uint32>( minArgumentCount ), line );
+                        SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.MalformedBuiltinsLineNeeds", "%#: malformed builtins line (needs at least %# arguments): %#", absPath, static_cast<uint32>( minArgumentCount ), line );
                         return false;
                     }
                     outListRow.push_back( std::move( row ) );
@@ -176,7 +176,7 @@ namespace sw
             {
                 if ( outSession._containerTypeMap.registerRule( listArgument[0], listArgument[1], listArgument[2] ) == false )
                 {
-                    SW_LOG_ERROR( "%#: bad CONTAINER row '%#'", absPath, listArgument[0] );
+                    SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.BadCONTAINERRow", "%#: bad CONTAINER row '%#'", absPath, listArgument[0] );
                     return false;
                 }
                 ++containerCount;
@@ -193,7 +193,7 @@ namespace sw
 
         outSession._typeNameMap.setLoaded( true );
         outSession._containerTypeMap.setLoaded( true );
-        SW_LOG_TRACE( "types=%# containers=%# (%#)", typeCount, containerCount, absPath );
+        SW_LOG_TRACE_ID( "ReflectBuiltinsLoader.TypesContainers", "types=%# containers=%# (%#)", typeCount, containerCount, absPath );
         return typeCount > 0 || containerCount > 0;
     }
 
@@ -240,14 +240,14 @@ namespace sw
 
         if ( typeCount == 0 )
         {
-            SW_LOG_ERROR( "emit: no TYPE rows in %#", builtinsAbsPath );
+            SW_LOG_ERROR_ID( "ReflectBuiltinsLoader.EmitNoTYPERows", "emit: no TYPE rows in %#", builtinsAbsPath );
             return false;
         }
         out += tpls.render( EmitTemplate::BuiltinFileFooter, {} );
 
         if ( GeneratedFileUtil::writeIfChanged( string( outCppAbsPath ), out ) == false )
             return false;
-        SW_LOG_TRACE( "Emitted %# TYPE registrars → %#", typeCount, outCppAbsPath );
+        SW_LOG_TRACE_ID( "ReflectBuiltinsLoader.EmittedTYPERegistrars", "Emitted %# TYPE registrars → %#", typeCount, outCppAbsPath );
         return true;
     }
 } // namespace sw

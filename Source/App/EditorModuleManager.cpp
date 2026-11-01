@@ -94,7 +94,7 @@ namespace sw
         {
             // 에디터를 켜 달라는 실행을 에디터 없이 조용히 시작하지 않는다.
             if ( bEnableEditor )
-                SW_LOG_ERROR( "-EnableEditor needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+                SW_LOG_ERROR_ID( "EditorModuleManager.EnableEditorNeedsEditorModule", "-EnableEditor needs the editor module, which a Shipping build does not have - run it from a Dev build." );
             return bEnableEditor == false;
         }
         else
@@ -251,8 +251,8 @@ namespace sw
     void EditorModuleManager::onEditorReloadFault( uint32 faultCode )
     {
         // 반쯤 만든 인스턴스를 부수는 코드도 결함을 낸 그 모듈이다. 부르지 않고 잊는다(새는 것은 재시작이 치운다).
-        SW_LOG_ERROR( "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
-                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+        SW_LOG_ERROR_ID( "EditorModuleManager.EditorModuleFaultedAfter", "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
+                         Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
         _editor    = nullptr;
         _editorAPI = {};
     }
@@ -266,7 +266,7 @@ namespace sw
         const bool bStopSimulation = hasEditor() && _editorAPI.stopSimulation != nullptr;
         if ( bStopSimulation )
         {
-            SW_LOG_INFO( "Stopping editor simulation before module suspend." );
+            SW_LOG_INFO_ID( "EditorModuleManager.StoppingEditorSimulationBefore", "Stopping editor simulation before module suspend." );
             _editorAPI.stopSimulation( _editor );
         }
     }
@@ -385,7 +385,7 @@ namespace sw
         if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
         {
             // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트나 구성 때문이다). 에디터 없이 조용히 시작하지 않는다.
-            SW_LOG_ERROR( "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
+            SW_LOG_ERROR_ID( "EditorModuleManager.EnableEditorGivenButModule", "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
             return false;
         }
         if ( _bEnableEditor == SW_FALSE || pLiveReloadManager == nullptr )
@@ -406,7 +406,7 @@ namespace sw
             holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( LiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
             if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
             {
-                SW_LOG_ERROR( "Failed to load the Editor Module." );
+                SW_LOG_ERROR_ID( "EditorModuleManager.FailedLoadEditorModule", "Failed to load the Editor Module." );
                 return false;
             }
 
@@ -417,15 +417,15 @@ namespace sw
                 if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
                 {
                     // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다. 에디터는 시작한다.
-                    SW_LOG_ERROR( "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
+                    SW_LOG_ERROR_ID( "EditorModuleManager.EditorExtensionModuleCould", "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
                     continue;
                 }
-                SW_LOG_INFO( "Editor extension module %# loaded", extension._name.c_str() );
+                SW_LOG_INFO_ID( "EditorModuleManager.EditorExtensionModuleLoaded", "Editor extension module %# loaded", extension._name.c_str() );
             }
 
             if ( pLiveReloadManager->isGraphBroken() )
             {
-                SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
+                SW_LOG_ERROR_ID( "EditorModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
                 return false;
             }
         }
@@ -458,19 +458,19 @@ namespace sw
                 void* const                       pLibraryModule = libraryPath.has_value() && FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
                 if ( pLibraryModule == nullptr )
                 {
-                    SW_LOG_ERROR( "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
+                    SW_LOG_ERROR_ID( "EditorModuleManager.NeedsEditorModuleBin", "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
                     return false;
                 }
 
                 // 로드하는 순간 모듈의 정적 등록기가 전역 헤드에 매달린다. 모듈 이름으로 등록해 두어야 언로드하기 전에 해제할 수 있다.
                 bool bSucceeded = false;
                 if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
-                    SW_LOG_ERROR( "%# cannot register the editor module types", pPurpose );
+                    SW_LOG_ERROR_ID( "EditorModuleManager.CannotRegisterEditorModule", "%# cannot register the editor module types", pPurpose );
                 else if ( ModuleInstanceUtil::matchesModuleABI( pLibraryModule, symbols ) )
                 {
                     const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
                     if ( pfnEntry == nullptr )
-                        SW_LOG_ERROR( "The editor module does not export %#", pSymbol );
+                        SW_LOG_ERROR_ID( "EditorModuleManager.EditorModuleDoesNot", "The editor module does not export %#", pSymbol );
                     else
                     {
                         SubsystemScope service;

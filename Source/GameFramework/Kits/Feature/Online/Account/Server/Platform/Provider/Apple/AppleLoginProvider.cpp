@@ -34,7 +34,7 @@ namespace sw
         string signingKeyPem;
         if ( ServerSecret::read( settings._keySecretEnvironment, signingKeyPem ) == false || signingKeyPem.empty() )
         {
-            SW_LOG_ERROR( "Login provider '%#': the signing key environment variable '%#' is not set", settings._name, settings._keySecretEnvironment );
+            SW_LOG_ERROR_ID( "AppleLoginProvider.LoginProviderSigningKey", "Login provider '%#': the signing key environment variable '%#' is not set", settings._name, settings._keySecretEnvironment );
             return nullptr;
         }
         return make_unique<AppleLoginProvider>( settings, std::move( signingKeyPem ), pSecurity, pOidcHTTPClient, pAppleHTTPClient );
@@ -110,7 +110,7 @@ namespace sw
             payload.has_value() && JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, *payload, _signingKeyPem, secret );
         if ( bSigned == false )
         {
-            SW_LOG_ERROR( "Could not sign the client secret of login provider '%#' with its key", _settings._name.c_str() );
+            SW_LOG_ERROR_ID( "AppleLoginProvider.CouldNotSignClient", "Could not sign the client secret of login provider '%#' with its key", _settings._name.c_str() );
             return {};
         }
         _clientSecret    = std::move( secret );
@@ -173,8 +173,8 @@ namespace sw
                 pending._verified._linkSecret = refreshToken.asString();
         }
         if ( pending._verified._linkSecret.empty() )
-            SW_LOG_WARNING( "Login provider '%#' could not exchange the authorization code (status %#) - the account has no token to revoke later", _settings._name.c_str(),
-                            response._statusCode );
+            SW_LOG_WARNING_ID( "AppleLoginProvider.LoginProviderCouldNot", "Login provider '%#' could not exchange the authorization code (status %#) - the account has no token to revoke later", _settings._name.c_str(),
+                               response._statusCode );
         _listDone.push_back( std::move( pending._verified ) );
         pending._outerID = 0;
     }
@@ -278,7 +278,7 @@ namespace sw
         if ( bInvalidGrant )
             return; // 이미 무효인 토큰이다 — 더 철회할 것이 없다
         if ( response._bTransportFailed == SW_FALSE && response._statusCode == Internal::kStatusBadRequest )
-            SW_LOG_ERROR( "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response._statusCode );
+            SW_LOG_ERROR_ID( "AppleLoginProvider.LoginProviderRejectedRevocation", "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response._statusCode );
         done._bUnavailable = SW_TRUE;
     }
 

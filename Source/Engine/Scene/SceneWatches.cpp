@@ -72,7 +72,7 @@ namespace sw
                 hash                           = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( MathUtil::round( position._z * kHashUnitsPerMeter ) ) ) );
                 sum += static_cast<uint32>( HashUtil::mix64( hash ) );
                 if ( gv_automationHashDump != 0 )
-                    SW_LOG_INFO( "[Scenario] hash item %# %# %# %#", pObject->getName().c_str(), position._x, position._y, position._z );
+                    SW_LOG_INFO_ID( "Automation.HashItem", "[Scenario] hash item %# %# %# %#", pObject->getName().c_str(), position._x, position._y, position._z );
             } );
             outValue = static_cast<float64>( sum );
             return true;

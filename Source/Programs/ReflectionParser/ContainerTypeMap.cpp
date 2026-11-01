@@ -43,7 +43,7 @@ namespace sw
         ContainerKind kind = ContainerKind::Sequence;
         if ( tryParseContainerKind( kindSpelling, kind ) == false )
         {
-            SW_LOG_ERROR( "Unknown container kind '%#' for '%#'", kindSpelling, match );
+            SW_LOG_ERROR_ID( "ContainerTypeMap.UnknownContainerKind", "Unknown container kind '%#' for '%#'", kindSpelling, match );
             return false;
         }
         return registerRule( match, kind, type );

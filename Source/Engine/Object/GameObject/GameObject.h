@@ -465,7 +465,7 @@ namespace sw
 
         if ( _pOwnerManager == nullptr )
         {
-            SW_LOG_ERROR( "Cannot add component without an owner GameObjectManager!" );
+            SW_LOG_ERROR_ID( "GameObject.CannotAddComponentWithout", "Cannot add component without an owner GameObjectManager!" );
             return nullptr;
         }
 

@@ -86,13 +86,13 @@ namespace sw
                         pParent = pGameObject->getPrimarySceneComponent();
                     if ( pParent == nullptr )
                     {
-                        SW_LOG_WARNING( "In-place load of '%#' left child '%#' as a root (no scene component to attach to)",
-                                        pGameObject->getName().c_str(), pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
+                        SW_LOG_WARNING_ID( "ObjectStateSerializer.PlaceLoadLeftChild", "In-place load of '%#' left child '%#' as a root (no scene component to attach to)",
+                                           pGameObject->getName().c_str(), pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
                         continue;
                     }
                     if ( pChild->getParent() != pParent && pChild->attachToComponent( pParent ) == false )
-                        SW_LOG_WARNING( "In-place load of '%#' could not re-attach child '%#'", pGameObject->getName().c_str(),
-                                        pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
+                        SW_LOG_WARNING_ID( "ObjectStateSerializer.PlaceLoadCouldNot", "In-place load of '%#' could not re-attach child '%#'", pGameObject->getName().c_str(),
+                                           pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
                 }
             }
 
@@ -144,8 +144,8 @@ namespace sw
                 if ( pMissing == nullptr )
                     return false;
                 pMissing->setOriginalElement( element );
-                SW_LOG_WARNING( "'%#' has a component of unknown type '%#' - kept as MissingComponent, saving writes its data back unchanged",
-                                pGameObject->getName().c_str(), element._typeName );
+                SW_LOG_WARNING_ID( "ObjectStateSerializer.ComponentUnknownTypeKept", "'%#' has a component of unknown type '%#' - kept as MissingComponent, saving writes its data back unchanged",
+                                   pGameObject->getName().c_str(), element._typeName );
                 return true;
             }
 
@@ -465,7 +465,7 @@ namespace sw
         const GameObjectManager* pManager = pGameObject->getManager();
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
-            SW_LOG_ERROR( "State of '%#' cannot be loaded during the component tick - defer it (executeOrDeferPostTick)", pGameObject->getName().c_str() );
+            SW_LOG_ERROR_ID( "ObjectStateSerializer.StateCannotLoadedDuring", "State of '%#' cannot be loaded during the component tick - defer it (executeOrDeferPostTick)", pGameObject->getName().c_str() );
             return false;
         }
 
@@ -511,12 +511,12 @@ namespace sw
         }
         else if ( previousBytes.empty() == false )
         {
-            SW_LOG_WARNING( "State of '%#' could not be read - it is restored to what it was before the load", oldName.c_str() );
+            SW_LOG_WARNING_ID( "ObjectStateSerializer.StateCouldNotRead", "State of '%#' could not be read - it is restored to what it was before the load", oldName.c_str() );
             ObjectLoadContext restoreContext{ SerializePurpose::Snapshot };
             restoreContext._pIdentity                 = &previousIdentity;
             restoreContext._bRestorePreviousOnFailure = false;
             if ( loadFromBinaryBuffer( pGameObject, previousBytes.data(), previousBytes.size(), restoreContext ) == 0 )
-                SW_LOG_ERROR( "State of '%#' could not be restored either - the object is left empty", oldName.c_str() );
+                SW_LOG_ERROR_ID( "ObjectStateSerializer.StateCouldNotRestored", "State of '%#' could not be restored either - the object is left empty", oldName.c_str() );
         }
         ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
         return bLoaded;
@@ -938,9 +938,9 @@ namespace sw
             if ( bExternal && entry._bExternalParentAllowed == false )
             {
                 // 프리팹 루트에는 부모가 없다. 프리팹을 쓰는 쪽은 다른 오브젝트로의 부착을 싣지 않는다(`ObjectSaveOptions::_bOmitExternalParent`).
-                SW_LOG_WARNING( "Prefab state of '%#' carries a parent reference to '%#' (id %#, %#) - a prefab root has no parent, the reference is dropped",
-                                pObject->getName().c_str(), reference._ownerName.empty() ? "?" : reference._ownerName.c_str(), reference._ownerID,
-                                reference._componentKey.c_str() );
+                SW_LOG_WARNING_ID( "ObjectStateSerializer.PrefabStateCarriesParent", "Prefab state of '%#' carries a parent reference to '%#' (id %#, %#) - a prefab root has no parent, the reference is dropped",
+                                   pObject->getName().c_str(), reference._ownerName.empty() ? "?" : reference._ownerName.c_str(), reference._ownerID,
+                                   reference._componentKey.c_str() );
                 continue;
             }
 
@@ -951,8 +951,8 @@ namespace sw
                 continue;
 
             // 찾지 못했다. 지우지 않고 남긴다. 다음 저장이 그대로 다시 쓰고, 부모가 돌아오면(프리팹을 되찾은 경우) 다음 로드가 붙인다.
-            SW_LOG_WARNING( "'%#' keeps its parent reference to '%#' (id %#, %#) - the parent is not loaded", pObject->getName().c_str(),
-                            reference._ownerName.empty() ? "self" : reference._ownerName.c_str(), reference._ownerID, reference._componentKey.c_str() );
+            SW_LOG_WARNING_ID( "ObjectStateSerializer.KeepsParentReferenceId", "'%#' keeps its parent reference to '%#' (id %#, %#) - the parent is not loaded", pObject->getName().c_str(),
+                               reference._ownerName.empty() ? "self" : reference._ownerName.c_str(), reference._ownerID, reference._componentKey.c_str() );
             pScene->keepUnresolvedAttach( reference );
         }
     }

@@ -137,7 +137,7 @@ namespace sw
 
                 if ( CreatePipe( &outPipes._hOutRead, &outPipes._hOutWrite, &saAttr, 0 ) == FALSE )
                 {
-                    SW_LOG_ERROR( "CreatePipe failed!" );
+                    SW_LOG_ERROR_ID( "WindowsProcess.CreatePipeFailed", "CreatePipe failed!" );
                     return false;
                 }
                 SetHandleInformation( outPipes._hOutRead, HANDLE_FLAG_INHERIT, 0 );
@@ -148,7 +148,7 @@ namespace sw
                     if ( CreatePipe( &outPipes._hInRead, &outPipes._hInWrite, &saAttr, 0 ) == FALSE )
                     {
                         outPipes.closeAll();
-                        SW_LOG_ERROR( "CreatePipe (stdin) failed!" );
+                        SW_LOG_ERROR_ID( "WindowsProcess.CreatePipeStdinFailed", "CreatePipe (stdin) failed!" );
                         return false;
                     }
                     SetHandleInformation( outPipes._hInWrite, HANDLE_FLAG_INHERIT, 0 );
@@ -285,7 +285,7 @@ namespace sw
         if ( inheritedHandles.initialize( pipes ) == false )
         {
             pipes.closeAll();
-            SW_LOG_ERROR( "Failed to restrict inherited handles for: %#", cmdStr.c_str() );
+            SW_LOG_ERROR_ID( "WindowsProcess.FailedRestrictInheritedHandles", "Failed to restrict inherited handles for: %#", cmdStr.c_str() );
             return false;
         }
 
@@ -364,7 +364,7 @@ namespace sw
                                               nullptr, options._workingDirectory.empty() ? nullptr : wsDirectory.c_str(), &startupInfo, &pi );
         if ( bCreated == FALSE )
         {
-            SW_LOG_ERROR( "Failed to launch detached command: %#", cmdStr.c_str() );
+            SW_LOG_ERROR_ID( "WindowsProcess.FailedLaunchDetachedCommand", "Failed to launch detached command: %#", cmdStr.c_str() );
             return false;
         }
 
@@ -381,7 +381,7 @@ namespace sw
         const INT_PTR result = reinterpret_cast<INT_PTR>( ShellExecuteW( nullptr, L"open", wideURL.c_str(), nullptr, nullptr, SW_SHOWNORMAL ) );
         if ( result <= 32 )
         {
-            SW_LOG_ERROR( "ShellExecuteW failed (%#) for URL: %#", static_cast<int64>( result ), string( url ) );
+            SW_LOG_ERROR_ID( "WindowsProcess.ShellExecuteWFailedURL", "ShellExecuteW failed (%#) for URL: %#", static_cast<int64>( result ), string( url ) );
             return false;
         }
         return true;
@@ -401,14 +401,14 @@ namespace sw
         PIDLIST_ABSOLUTE                             pItem    = ILCreateFromPathW( widePath.c_str() );
         if ( pItem == nullptr )
         {
-            SW_LOG_ERROR( "ILCreateFromPathW failed for: %#", windowsPath );
+            SW_LOG_ERROR_ID( "WindowsProcess.ILCreateFromPathWFailed", "ILCreateFromPathW failed for: %#", windowsPath );
             return false;
         }
         const HRESULT result = SHOpenFolderAndSelectItems( pItem, 0, nullptr, 0 );
         ILFree( pItem );
         if ( FAILED( result ) )
         {
-            SW_LOG_ERROR( "SHOpenFolderAndSelectItems failed (HRESULT %#) for: %#", static_cast<uint32>( result ), windowsPath );
+            SW_LOG_ERROR_ID( "WindowsProcess.SHOpenFolderAndSelectItemsFailedHRESULT", "SHOpenFolderAndSelectItems failed (HRESULT %#) for: %#", static_cast<uint32>( result ), windowsPath );
             return false;
         }
         return true;

@@ -51,8 +51,8 @@ namespace sw
                 const bool                    bCannotCreate = pCreateFn == nullptr || pDisplayHandle == nullptr || pWindowHandle == nullptr;
                 if ( bCannotCreate )
                 {
-                    SW_LOG_ERROR( "Cannot create a Wayland Vulkan surface (loader entry %#, display %#, surface %#)", pCreateFn != nullptr ? 1 : 0,
-                                  pDisplayHandle != nullptr ? 1 : 0, pWindowHandle != nullptr ? 1 : 0 );
+                    SW_LOG_ERROR_ID( "Vulkan.CannotCreateWaylandVulkan", "Cannot create a Wayland Vulkan surface (loader entry %#, display %#, surface %#)", pCreateFn != nullptr ? 1 : 0,
+                                     pDisplayHandle != nullptr ? 1 : 0, pWindowHandle != nullptr ? 1 : 0 );
                     return false;
                 }
                 VkWaylandSurfaceCreateInfoKHR createInfo{};
@@ -61,7 +61,7 @@ namespace sw
                 createInfo.surface = static_cast<struct wl_surface*>( pWindowHandle );
                 if ( pCreateFn( instance, &createInfo, nullptr, &outSurface ) != VK_SUCCESS )
                 {
-                    SW_LOG_ERROR( "Failed to create Wayland Vulkan surface!" );
+                    SW_LOG_ERROR_ID( "Vulkan.FailedCreateWaylandVulkan", "Failed to create Wayland Vulkan surface!" );
                     return false;
                 }
                 return true;
@@ -71,7 +71,7 @@ namespace sw
             {
                 if ( pDisplay == nullptr || window == 0 )
                 {
-                    SW_LOG_ERROR( "Invalid X11 display/window for Vulkan surface." );
+                    SW_LOG_ERROR_ID( "Vulkan.InvalidX11DisplayWindow", "Invalid X11 display/window for Vulkan surface." );
                     return false;
                 }
 
@@ -79,7 +79,7 @@ namespace sw
                     vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
                 if ( pCreateFn == nullptr )
                 {
-                    SW_LOG_ERROR( "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
+                    SW_LOG_ERROR_ID( "Vulkan.VkCreateXlibSurfaceKHRNotAvailableVulkan", "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
                     return false;
                 }
 
@@ -89,7 +89,7 @@ namespace sw
                 createInfo.window = window;
                 if ( pCreateFn( instance, &createInfo, nullptr, &outSurface ) != VK_SUCCESS )
                 {
-                    SW_LOG_ERROR( "Failed to create Xlib Vulkan surface!" );
+                    SW_LOG_ERROR_ID( "Vulkan.FailedCreateXlibVulkan", "Failed to create Xlib Vulkan surface!" );
                     return false;
                 }
                 return true;
@@ -99,7 +99,7 @@ namespace sw
             {
                 if ( pDisplay == nullptr || window == 0 )
                 {
-                    SW_LOG_ERROR( "Invalid X11 display/window for Vulkan surface." );
+                    SW_LOG_ERROR_ID( "Vulkan.InvalidX11DisplayWindow", "Invalid X11 display/window for Vulkan surface." );
                     return false;
                 }
 
@@ -107,14 +107,14 @@ namespace sw
                     vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
                 if ( pCreateFn == nullptr )
                 {
-                    SW_LOG_ERROR( "vkCreateXcbSurfaceKHR not available from Vulkan loader!" );
+                    SW_LOG_ERROR_ID( "Vulkan.VkCreateXcbSurfaceKHRNotAvailableVulkan", "vkCreateXcbSurfaceKHR not available from Vulkan loader!" );
                     return false;
                 }
 
                 xcb_connection_t* pConnection = XGetXCBConnection( pDisplay );
                 if ( pConnection == nullptr )
                 {
-                    SW_LOG_ERROR( "XGetXCBConnection failed — cannot create Vulkan xcb surface." );
+                    SW_LOG_ERROR_ID( "Vulkan.XGetXCBConnectionFailedCannotCreate", "XGetXCBConnection failed — cannot create Vulkan xcb surface." );
                     return false;
                 }
 
@@ -124,7 +124,7 @@ namespace sw
                 createInfo.window     = static_cast<xcb_window_t>( window );
                 if ( pCreateFn( instance, &createInfo, nullptr, &outSurface ) != VK_SUCCESS )
                 {
-                    SW_LOG_ERROR( "Failed to create XCB Vulkan surface!" );
+                    SW_LOG_ERROR_ID( "Vulkan.FailedCreateXCBVulkan", "Failed to create XCB Vulkan surface!" );
                     return false;
                 }
                 return true;
@@ -149,7 +149,7 @@ namespace sw
 
                 if ( vkCreateWin32SurfaceKHR( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
                 {
-                    SW_LOG_ERROR( "Failed to create window surface!" );
+                    SW_LOG_ERROR_ID( "Vulkan.FailedCreateWindowSurface", "Failed to create window surface!" );
                     return false;
                 }
                 return true;
@@ -159,11 +159,11 @@ namespace sw
             case VulkanWsiKind::Xcb:
             case VulkanWsiKind::Wayland:
             {
-                SW_LOG_ERROR( "Vulkan WSI kind %# cannot create a surface on Windows (only Win32 can).", static_cast<uint32>( wsiKind ) );
+                SW_LOG_ERROR_ID( "Vulkan.VulkanWSIKindCannot", "Vulkan WSI kind %# cannot create a surface on Windows (only Win32 can).", static_cast<uint32>( wsiKind ) );
                 return false;
             }
         }
-        SW_LOG_ERROR( "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
+        SW_LOG_ERROR_ID( "Vulkan.UnknownVulkanWSIKind", "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
         return false;
 #elif defined( SW_PLATFORM_LINUX )
         // 아래 둘은 X11 길(xlib · xcb)만 읽는다. Wayland 는 핸들의 뜻이 달라 자기 길에서 따로 검사한다.
@@ -181,11 +181,11 @@ namespace sw
             case VulkanWsiKind::None:
             case VulkanWsiKind::Win32:
             {
-                SW_LOG_ERROR( "Vulkan WSI kind %# cannot create a surface on Linux (instance creation picks Xlib, Xcb or Wayland).", static_cast<uint32>( wsiKind ) );
+                SW_LOG_ERROR_ID( "Vulkan.VulkanWSIKindCannot2", "Vulkan WSI kind %# cannot create a surface on Linux (instance creation picks Xlib, Xcb or Wayland).", static_cast<uint32>( wsiKind ) );
                 return false;
             }
         }
-        SW_LOG_ERROR( "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
+        SW_LOG_ERROR_ID( "Vulkan.UnknownVulkanWSIKind", "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
         return false;
 #else
         (void)instance;
@@ -252,8 +252,8 @@ namespace sw
         }
         if ( surfaceFormat.format != requestedFormat )
         {
-            SW_LOG_INFO( "The swap chain adopted a different format than requested (requested VkFormat %#, adopted %#) - back buffer PSOs are built with getBackBufferFormat().",
-                         static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
+            SW_LOG_INFO_ID( "Vulkan.SwapChainAdoptedDifferent", "The swap chain adopted a different format than requested (requested VkFormat %#, adopted %#) - back buffer PSOs are built with getBackBufferFormat().",
+                            static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
         }
 
         // present 모드가 Vulkan 의 VSync 스위치다. DX/GL 처럼 present 호출에 넘길 인자가 없다.
@@ -280,7 +280,7 @@ namespace sw
             }
 
             if ( presentMode == VK_PRESENT_MODE_FIFO_KHR )
-                SW_LOG_INFO( "VSync off was requested but the surface offers neither MAILBOX nor IMMEDIATE - staying on FIFO." );
+                SW_LOG_INFO_ID( "Vulkan.VSyncOffRequestedBut", "VSync off was requested but the surface offers neither MAILBOX nor IMMEDIATE - staying on FIFO." );
         }
 
         // 서피스가 크기를 고정한 경우( currentExtent != UINT32_MAX ) 반드시 그 값을 써야 한다.
@@ -304,8 +304,8 @@ namespace sw
         // 다시 부르므로 여기서는 조용히 물러난다.
         if ( extent.width == 0 || extent.height == 0 )
         {
-            SW_LOG_TRACE( "createSwapChain: surface size is 0 (%#x%#) - the window is minimizing or closing. Skipping swap chain creation.",
-                          extent.width, extent.height );
+            SW_LOG_TRACE_ID( "Vulkan.CreateSwapChainSurfaceSizeX", "createSwapChain: surface size is 0 (%#x%#) - the window is minimizing or closing. Skipping swap chain creation.",
+                             extent.width, extent.height );
             _bSurfaceEmpty = true;
             return false;
         }
@@ -518,7 +518,7 @@ namespace sw
         const VkResult result = vkAcquireNextImageKHR( device, _swapChain, UINT64_MAX,
                                                        _listImageAvailableSemaphore[frameSlot], VK_NULL_HANDLE, &_imageIndex );
         if ( toSwapChainStatus( result ) == VulkanSwapChainStatus::Failed )
-            SW_LOG_ERROR_ONCE( "vkAcquireNextImageKHR failed! Error code: %#", static_cast<int32>( result ) );
+            SW_LOG_ERROR_ONCE_ID( "Vulkan.VkAcquireNextImageKHRFailedErrorCode", "vkAcquireNextImageKHR failed! Error code: %#", static_cast<int32>( result ) );
         return toSwapChainStatus( result );
     }
 
@@ -540,7 +540,7 @@ namespace sw
 
         const VkResult result = vkQueuePresentKHR( queue, &presentInfo );
         if ( toSwapChainStatus( result ) == VulkanSwapChainStatus::Failed )
-            SW_LOG_ERROR_ONCE( "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( result ) );
+            SW_LOG_ERROR_ONCE_ID( "Vulkan.VkQueuePresentKHRFailedErrorCode", "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( result ) );
         return toSwapChainStatus( result );
     }
 

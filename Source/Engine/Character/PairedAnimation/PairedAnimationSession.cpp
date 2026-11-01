@@ -155,19 +155,19 @@ namespace sw
             const uint32 roleIndex = def.findRoleIndex( binding._role );
             if ( roleIndex == constant::invalid_index::kUint32 )
             {
-                SW_LOG_ERROR( "Paired animation binds unknown role '%#'", binding._role.c_str() );
+                SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationBindsUnknown", "Paired animation binds unknown role '%#'", binding._role.c_str() );
                 return PairedAnimationStartResult::InvalidBinding;
             }
             if ( _listRole[roleIndex]._animator.isValid() )
             {
-                SW_LOG_ERROR( "Paired animation binds role '%#' twice", binding._role.c_str() );
+                SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationBindsRole", "Paired animation binds role '%#' twice", binding._role.c_str() );
                 return PairedAnimationStartResult::InvalidBinding;
             }
             for ( const RoleState& other : _listRole )
             {
                 if ( other._animator == binding._animator )
                 {
-                    SW_LOG_ERROR( "Paired animation binds one animator to two roles (second: '%#')", binding._role.c_str() );
+                    SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationBindsOne", "Paired animation binds one animator to two roles (second: '%#')", binding._role.c_str() );
                     return PairedAnimationStartResult::InvalidBinding;
                 }
             }
@@ -185,7 +185,7 @@ namespace sw
         {
             if ( roleDef._bRequired == false )
                 return PairedAnimationStartResult::Started; // 선택 역할은 비어 있어도 된다
-            SW_LOG_ERROR( "Paired animation needs required role '%#'", roleDef._name.c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationNeedsRequired", "Paired animation needs required role '%#'", roleDef._name.c_str() );
             return PairedAnimationStartResult::MissingRequiredRole;
         }
         SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
@@ -201,14 +201,14 @@ namespace sw
             const bool                   bSameSkeleton = pMesh != nullptr && pMesh->getSkeletonPath() == roleDef._skeletonPath;
             if ( bSameSkeleton == false )
             {
-                SW_LOG_ERROR( "'%#': role '%#' needs skeleton '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._skeletonPath.c_str() );
+                SW_LOG_ERROR_ID( "PairedAnimation.RoleNeedsSkeleton", "'%#': role '%#' needs skeleton '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._skeletonPath.c_str() );
                 return PairedAnimationStartResult::SkeletonMismatch;
             }
         }
         const AnimationClip* pClip = pAnimator->preloadClip( roleDef._clip ) ? pAnimator->findClip( roleDef._clip ) : nullptr;
         if ( pClip == nullptr )
         {
-            SW_LOG_ERROR( "'%#': role '%#' clip '%#' was not found in '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), pAnimator->getClipFolder().c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimation.RoleClipNotFound", "'%#': role '%#' clip '%#' was not found in '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), pAnimator->getClipFolder().c_str() );
             return PairedAnimationStartResult::ClipNotFound;
         }
         role._pClip       = pClip;
@@ -217,19 +217,19 @@ namespace sw
             roleDef._bAnchor ? MathUtil::abs( role._clipSeconds - def.getDuration() ) > kTimeToleranceSeconds : roleDef._startSeconds + role._clipSeconds > def.getDuration() + kTimeToleranceSeconds;
         if ( bClipLengthMismatch )
         {
-            SW_LOG_ERROR( "'%#': role '%#' clip '%#' (%# s) does not fit the %# s timeline", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), role._clipSeconds, def.getDuration() );
+            SW_LOG_ERROR_ID( "PairedAnimation.RoleClipDoesNot", "'%#': role '%#' clip '%#' (%# s) does not fit the %# s timeline", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), role._clipSeconds, def.getDuration() );
             return PairedAnimationStartResult::ClipLengthMismatch;
         }
         if ( roleDef._align == PairedAnimationAlign::Warp )
         {
             if ( PairedAnimationSessionInternal::findSibling<MotionWarpingComponent>( *pAnimator ) == nullptr )
             {
-                SW_LOG_ERROR( "'%#': role '%#' aligns by warp but has no MotionWarpingComponent", ownerName.c_str(), roleDef._name.c_str() );
+                SW_LOG_ERROR_ID( "PairedAnimation.RoleAlignsWarpBut", "'%#': role '%#' aligns by warp but has no MotionWarpingComponent", ownerName.c_str(), roleDef._name.c_str() );
                 return PairedAnimationStartResult::WarpingUnavailable;
             }
             if ( roleDef._warpEndSeconds > role._clipSeconds + kTimeToleranceSeconds )
             {
-                SW_LOG_ERROR( "'%#': role '%#' warp ends after its clip", ownerName.c_str(), roleDef._name.c_str() );
+                SW_LOG_ERROR_ID( "PairedAnimation.RoleWarpEndsAfter", "'%#': role '%#' warp ends after its clip", ownerName.c_str(), roleDef._name.c_str() );
                 return PairedAnimationStartResult::ClipLengthMismatch;
             }
         }
@@ -249,7 +249,7 @@ namespace sw
             const AnimationNotifyTable*      pTable    = pNotify != nullptr ? pNotify->getNotifyTable() : nullptr;
             if ( pTable == nullptr || pTable->findEntry( notify._name ) == nullptr )
             {
-                SW_LOG_ERROR( "Paired animation notify '%#' has no entry in the notify table of role '%#'", notify._name.c_str(), notify._role.c_str() );
+                SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationNotifyNo", "Paired animation notify '%#' has no entry in the notify table of role '%#'", notify._name.c_str(), notify._role.c_str() );
                 return PairedAnimationStartResult::NotifyTargetMissing;
             }
         }
@@ -342,8 +342,8 @@ namespace sw
         const bool bAnchorTimeValid  = bAnchorTimeFinite && bAnchorTimeInside;
         if ( bAnchorStageValid == false || bAnchorTimeValid == false )
         {
-            SW_LOG_ERROR( "Paired animation %# snapshot does not fit the asset (roles %#/%#, notify cursor %#, anchor time %#)", snapshot._sessionID, static_cast<uint32>( snapshot._listRole.size() ),
-                          static_cast<uint32>( listRoleDef.size() ), snapshot._nextNotifyIndex, snapshot._anchorTime );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationSnapshotDoes", "Paired animation %# snapshot does not fit the asset (roles %#/%#, notify cursor %#, anchor time %#)", snapshot._sessionID, static_cast<uint32>( snapshot._listRole.size() ),
+                             static_cast<uint32>( listRoleDef.size() ), snapshot._nextNotifyIndex, snapshot._anchorTime );
             return PairedAnimationStartResult::InvalidSnapshot;
         }
         for ( size_t roleIndex = 0; roleIndex < _listRole.size(); ++roleIndex )
@@ -359,7 +359,7 @@ namespace sw
             const bool bPlayingBad  = saved._stage == PairedAnimationRoleStage::Playing && bEntryValid == false;
             if ( bStageValid == false || bPlayingBad )
             {
-                SW_LOG_ERROR( "Paired animation %# snapshot has an invalid state for role '%#' (entry anchor time %#)", snapshot._sessionID, listRoleDef[roleIndex]._name.c_str(), saved._entryAnchorTime );
+                SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationSnapshotInvalid", "Paired animation %# snapshot has an invalid state for role '%#' (entry anchor time %#)", snapshot._sessionID, listRoleDef[roleIndex]._name.c_str(), saved._entryAnchorTime );
                 return PairedAnimationStartResult::InvalidSnapshot;
             }
         }
@@ -474,8 +474,8 @@ namespace sw
         // 창이 끝까지 열려 있었는데 목표에 없다 — 루트 모션을 뽑지 않거나 워핑이 애니메이터에 붙지 않았다. 조용히 넘기지 않는다.
         const bool bMissed = bCheckReached && pTarget != nullptr && pRoot != nullptr && ( pTarget->_position - pRoot->getWorldPosition() ).getLength() > kWarpReachToleranceMeters;
         if ( bMissed )
-            SW_LOG_ERROR( "'%#': paired role '%#' did not reach its warp target (is root motion extracted?)", PairedAnimationSessionInternal::findOwnerName( *pAnimator ).c_str(),
-                          _def->getRoles()[roleIndex]._name.c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedRoleDidNot", "'%#': paired role '%#' did not reach its warp target (is root motion extracted?)", PairedAnimationSessionInternal::findOwnerName( *pAnimator ).c_str(),
+                             _def->getRoles()[roleIndex]._name.c_str() );
         pWarping->endWindow( PairedAnimationSessionInternal::getWarpTargetName(), role._pClip );
         pWarping->clearWarpTarget( PairedAnimationSessionInternal::getWarpTargetName() );
     }
@@ -526,7 +526,7 @@ namespace sw
         const PairedAnimationRoleDef& roleDef = _def->getRoles()[roleIndex];
         if ( roleDef._bRequired )
         {
-            SW_LOG_WARNING( "Paired animation %# aborts: required role '%#' %#", _sessionID, roleDef._name.c_str(), pReason );
+            SW_LOG_WARNING_ID( "PairedAnimation.PairedAnimationAbortsRequired", "Paired animation %# aborts: required role '%#' %#", _sessionID, roleDef._name.c_str(), pReason );
             end( manager, PairedAnimationSessionState::Aborted );
             return true;
         }
@@ -552,7 +552,7 @@ namespace sw
         fired._eventIndex = notifyIndex;
         fired._phase      = AnimationNotifyPhase::Instant;
         if ( pNotify->processExternalNotify( fired ) == false )
-            SW_LOG_ERROR( "Paired animation notify '%#' lost its entry in the notify table of role '%#'", notify._name.c_str(), notify._role.c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationNotifyLost", "Paired animation notify '%#' lost its entry in the notify table of role '%#'", notify._name.c_str(), notify._role.c_str() );
     }
 
     bool PairedAnimationSession::loseVanishedRoles( GameObjectManager& manager )
@@ -587,7 +587,7 @@ namespace sw
             const float32 expected = MathUtil::min( anchorTime - role._entryAnchorTime, role._clipSeconds );
             if ( MathUtil::abs( clipTime - expected ) > kTimeToleranceSeconds )
             {
-                SW_LOG_ERROR( "Paired animation %# aborts: role '%#' time %# differs from the expected %#", _sessionID, _def->getRoles()[roleIndex]._name.c_str(), clipTime, expected );
+                SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationAbortsRole", "Paired animation %# aborts: role '%#' time %# differs from the expected %#", _sessionID, _def->getRoles()[roleIndex]._name.c_str(), clipTime, expected );
                 end( manager, PairedAnimationSessionState::Aborted );
                 return true;
             }
@@ -652,7 +652,7 @@ namespace sw
         }
         if ( _bClockStarted && MathUtil::abs( anchorTime - _predictedAnchorTime ) > kTimeToleranceSeconds )
         {
-            SW_LOG_ERROR( "Paired animation %# aborts: anchor time %# differs from the expected %# (play rate or time changed outside the session)", _sessionID, anchorTime, _predictedAnchorTime );
+            SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationAbortsAnchor", "Paired animation %# aborts: anchor time %# differs from the expected %# (play rate or time changed outside the session)", _sessionID, anchorTime, _predictedAnchorTime );
             end( manager, PairedAnimationSessionState::Aborted );
             return;
         }

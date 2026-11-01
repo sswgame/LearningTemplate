@@ -118,8 +118,8 @@ namespace sw
             // ------------------------------------------------------------------------------
             static void reportError( EmitState& state, const ParsedPropertyInfo& prop, const string_view message )
             {
-                SW_LOG_ERROR( "ERROR: %#(%#): fixed layout of '%#::%#': %#", *state._pSourcePath, prop._line, state._pRoot->_fullyQualifiedName,
-                              prop._memberName, message );
+                SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORFixedLayout", "ERROR: %#(%#): fixed layout of '%#::%#': %#", *state._pSourcePath, prop._line, state._pRoot->_fullyQualifiedName,
+                                 prop._memberName, message );
                 state._bError = SW_TRUE;
             }
 
@@ -1100,9 +1100,9 @@ namespace sw
                 plan._bResolvedByParent = SW_TRUE;
                 continue;
             }
-            SW_LOG_ERROR( "ERROR: %#(%#): fixed layout of '%#::%#': range name '%#' is not a field of this type, and no type in this header "
-                          "embeds it with such a field declared before it",
-                          _sourceFilePath, plan._unresolvedLine, type._fullyQualifiedName, plan._unresolvedMember, plan._unresolvedName );
+            SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORFixedLayoutRange", "ERROR: %#(%#): fixed layout of '%#::%#': range name '%#' is not a field of this type, and no type in this header "
+                                                                          "embeds it with such a field declared before it",
+                             _sourceFilePath, plan._unresolvedLine, type._fullyQualifiedName, plan._unresolvedMember, plan._unresolvedName );
             bValid = false;
         }
         return bValid;

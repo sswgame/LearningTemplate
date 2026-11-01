@@ -107,7 +107,7 @@ namespace sw::editor
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : error;
             return false;
         }
-        SW_LOG_INFO( "Paired animation saved to %#", writePath->c_str() );
+        SW_LOG_INFO_ID( "PairedAnimationPanel.PairedAnimationSaved", "Paired animation saved to %#", writePath->c_str() );
         _status = "Saved";
         acknowledgePreviewEdits();
         return true;

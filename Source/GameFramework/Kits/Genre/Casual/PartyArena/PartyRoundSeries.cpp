@@ -91,12 +91,12 @@ namespace sw
         std::optional<int32> winScore;
         if ( root.readOptionalAttribute( "winScore", winScore ) == false )
         {
-            SW_LOG_ERROR( "%#: <%# winScore> is not a number", sourceName, root.getName() );
+            SW_LOG_ERROR_ID( "PartyRoundSeries.WinScoreNotNumber", "%#: <%# winScore> is not a number", sourceName, root.getName() );
             return 0;
         }
         if ( winScore.has_value() && setWinScore( *winScore ) == false )
         {
-            SW_LOG_ERROR( "%#: <%# winScore=\"%#\"> needs 1 or more", sourceName, root.getName(), *winScore );
+            SW_LOG_ERROR_ID( "PartyRoundSeries.WinScoreNeedsMore", "%#: <%# winScore=\"%#\"> needs 1 or more", sourceName, root.getName(), *winScore );
             return 0;
         }
         const string_view points = root.getAttributeText( "placementPoints" );
@@ -115,7 +115,7 @@ namespace sw
             } );
             if ( bPoints == false )
             {
-                SW_LOG_ERROR( "%#: <%# placementPoints=\"%#\"> needs integers of 0 or more", sourceName, root.getName(), points );
+                SW_LOG_ERROR_ID( "PartyRoundSeries.PlacementPointsNeedsIntegersMore", "%#: <%# placementPoints=\"%#\"> needs integers of 0 or more", sourceName, root.getName(), points );
                 return 0;
             }
             _seriesSettings._listPlacementPoint = listPlacementPoint;
@@ -125,7 +125,7 @@ namespace sw
         {
             if ( StringUtil::equals( node.getName(), "Round" ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "PartyRoundSeries.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
                 continue;
             }
             PartyRoundDef round;
@@ -135,7 +135,7 @@ namespace sw
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_ERROR( "%#: no <Round>", sourceName );
+            SW_LOG_ERROR_ID( "PartyRoundSeries.NoRound", "%#: no <Round>", sourceName );
         return loadedCount;
     }
 

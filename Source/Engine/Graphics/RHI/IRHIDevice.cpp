@@ -100,10 +100,10 @@ namespace sw
         static atomic<uint32> s_reported{ 0 };
         if ( s_reported.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
             return;
-        SW_LOG_TRACE( "%# issued a barrier during parallel recording - the level prologue did not "
-                      "transition this resource beforehand (a pipeline declaration may be missing). "
-                      "Behavior is safe: state transitions are protected by a lock.",
-                      pWhat );
+        SW_LOG_TRACE_ID( "RHI.IssuedBarrierDuringParallel", "%# issued a barrier during parallel recording - the level prologue did not "
+                                                            "transition this resource beforehand (a pipeline declaration may be missing). "
+                                                            "Behavior is safe: state transitions are protected by a lock.",
+                         pWhat );
 #endif
     }
 
@@ -122,7 +122,7 @@ namespace sw
 
     void IRHIDevice::waitIdle( RHIWaitIdleReason reason )
     {
-        SW_LOG_TRACE( "waitIdle (%#)", getEnumName( reason ) );
+        SW_LOG_TRACE_ID( "RHI.WaitIdle", "waitIdle (%#)", getEnumName( reason ) );
         // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
         // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
         const RenderThreadDrainFunction pfnDrain = _pfnRenderThreadDrain.load( std::memory_order_acquire );
@@ -391,7 +391,7 @@ namespace sw
         }
         if ( requestedFormat == RHIFormat::Unknown )
         {
-            SW_LOG_ERROR( "gv_rhiBackBufferFormat has no back buffer format for the value %# (RGBA8 or BGRA8)", static_cast<uint32>( gv_rhiBackBufferFormat ) );
+            SW_LOG_ERROR_ID( "RHI.GvRhiBackBufferFormatNoBack", "gv_rhiBackBufferFormat has no back buffer format for the value %# (RGBA8 or BGRA8)", static_cast<uint32>( gv_rhiBackBufferFormat ) );
             return false;
         }
 
@@ -419,7 +419,7 @@ namespace sw
             // 환경 변수도 명령줄과 같은 켬/끔 토큰만 받는다. 알 수 없는 값은(빈 값 포함) 끔으로 읽지 않고 멈춘다.
             if ( ProcessEnvironment::tryRead( "SW_RHI_SOFTWARE_ADAPTER", softwareEnv ) && StringUtil::tryParseBool( softwareEnv.c_str(), bSoftwareEnv ) == false )
             {
-                SW_LOG_ERROR( "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
+                SW_LOG_ERROR_ID( "RHI.SWRHISOFTWAREADAPTER", "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
                 return false;
             }
             swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter || bSoftwareEnv;
@@ -441,13 +441,13 @@ namespace sw
         {
             // 요청대로 섰으면 알림이다(소프트웨어 렌더러 CI 묶음 `swrender` 가 일부러 켠다 — 호스트 스위트는 Warning 을 실패로 센다). 요청을 무시한 것만 경고다.
             if ( _bSoftwareAdapter )
-                SW_LOG_INFO( "RHI %# is running on a software adapter (gv_rhiSoftwareAdapter) - timings are not representative", getBackendName() );
+                SW_LOG_INFO_ID( "RHI.RHIRunningSoftwareAdapter", "RHI %# is running on a software adapter (gv_rhiSoftwareAdapter) - timings are not representative", getBackendName() );
             else
-                SW_LOG_WARNING( "RHI %# ignored the software adapter request (gv_rhiSoftwareAdapter) - it runs on the hardware adapter", getBackendName() );
+                SW_LOG_WARNING_ID( "RHI.RHIIgnoredSoftwareAdapter", "RHI %# ignored the software adapter request (gv_rhiSoftwareAdapter) - it runs on the hardware adapter", getBackendName() );
         }
         // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
-        SW_LOG_INFO( "Back buffer format: requested %# -> adopted %# (getBackBufferFormat)",
-                     static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );
+        SW_LOG_INFO_ID( "RHI.BackBufferFormatRequested", "Back buffer format: requested %# -> adopted %# (getBackBufferFormat)",
+                        static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );
         return true;
     }
 

@@ -36,14 +36,14 @@ namespace sw
         const TypeInfo* pTypeInfo = EngineDefaultAssets::StaticType();
         if ( pTypeInfo == nullptr )
         {
-            SW_LOG_ERROR( "EngineDefaultAssets TypeInfo is missing - cannot read %#", path );
+            SW_LOG_ERROR_ID( "EngineDefaultAssets.EngineDefaultAssetsTypeInfoMissingCannot", "EngineDefaultAssets TypeInfo is missing - cannot read %#", path );
             return false;
         }
 
         // 파일에 없는 선택 칸은 멤버 초기값(스키마 기본값)이 그대로 남는다. 필수 칸은 초기값이 없으므로 아래에서 막는다.
         if ( XMLSerializer::loadFile( AssetID{ path }, this, *pTypeInfo ) == false )
         {
-            SW_LOG_ERROR( "EngineDefaultAssets could not be read or has mismatched fields: %#", path );
+            SW_LOG_ERROR_ID( "EngineDefaultAssets.EngineDefaultAssetsCouldNotRead", "EngineDefaultAssets could not be read or has mismatched fields: %#", path );
             return false;
         }
 
@@ -58,7 +58,7 @@ namespace sw
             const DataPath* pValue = prop.getValuePtr<DataPath>( this );
             if ( pValue == nullptr || pValue->isSet() == false )
             {
-                SW_LOG_ERROR( "%#: required field <%#> is missing", path, prop._name.c_str() );
+                SW_LOG_ERROR_ID( "EngineDefaultAssets.RequiredFieldMissing", "%#: required field <%#> is missing", path, prop._name.c_str() );
                 bComplete = false;
                 continue;
             }
@@ -66,14 +66,14 @@ namespace sw
             const bool bNotInThisPackage = engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() ) || ( build::kShipping && PackConfig::isRawShaderSource( pValue->get() ) );
             if ( bNotInThisPackage == false && AssetIO::hasAsset( AssetID{ pValue->get() } ) == false )
             {
-                SW_LOG_ERROR( "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );
+                SW_LOG_ERROR_ID( "EngineDefaultAssets.PointsWhichDoesNot", "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );
                 bComplete = false;
             }
         }
         if ( bComplete == false )
             return false;
 
-        SW_LOG_INFO( "Loaded from %#", path );
+        SW_LOG_INFO_ID( "EngineDefaultAssets.Loaded", "Loaded from %#", path );
         return true;
     }
 } // namespace sw

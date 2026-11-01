@@ -211,7 +211,7 @@ namespace sw
                 writer.endArray();
                 writer.endObject();
                 if ( FileUtil::ensureParentDirectoryExists( options._reportPath ) == false || FileUtil::writeTextFile( options._reportPath, json ) == false )
-                    SW_LOG_ERROR( "[Scenario] per-backend: could not write the report %#", options._reportPath.c_str() );
+                    SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot", "[Scenario] per-backend: could not write the report %#", options._reportPath.c_str() );
             }
         };
     } // namespace
@@ -359,7 +359,7 @@ namespace sw
             assignOptions._splitOffset     = static_cast<int32>( ( WallClock::nowUnixMilliseconds().toSeconds() / kSecondsPerDay ) % static_cast<int64>( MathUtil::max<size_t>( 1, options._listBackend.size() ) ) );
         }
         if ( options._bSplitScenarios )
-            SW_LOG_INFO( "[Scenario] per-backend: split offset %# (rerun the same assignment with -scenario-backend-split-offset=%#)", assignOptions._splitOffset, assignOptions._splitOffset );
+            SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendSplitOffset", "[Scenario] per-backend: split offset %# (rerun the same assignment with -scenario-backend-split-offset=%#)", assignOptions._splitOffset, assignOptions._splitOffset );
         const vector<string>                listScenarioList = assignScenarios( assignOptions );
         vector<unique_ptr<Internal::Child>> listChild;
         for ( const string& backend : options._listBackend )
@@ -394,10 +394,10 @@ namespace sw
             const ProcessCommand              command    = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
             pChild->_bLaunched                           = pChild->_process.launch( command );
             if ( pChild->_bLaunched == false )
-                SW_LOG_ERROR( "[Scenario] per-backend: could not launch %#", command.toCommandLine().c_str() );
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot2", "[Scenario] per-backend: could not launch %#", command.toCommandLine().c_str() );
             else
             {
-                SW_LOG_INFO( "[Scenario] per-backend: %# started (log %#)", backend.c_str(), pChild->_logPath.c_str() );
+                SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendStartedLog", "[Scenario] per-backend: %# started (log %#)", backend.c_str(), pChild->_logPath.c_str() );
                 Process* pProcess    = &pChild->_process;
                 pChild->_drainThread = thread( [pProcess]()
                 {
@@ -428,7 +428,7 @@ namespace sw
                     MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 50 * constant::time::kNanosecondsPerMillisecond );
                 const bool bKilled = pChild->_process.isRunning() && pChild->_process.terminate( getAutomationExitCode( AutomationOutcome::TimedOut ) );
                 if ( bKilled )
-                    SW_LOG_ERROR( "[Scenario] per-backend: %# did not finish within %# s - killed", pChild->_backend.c_str(), killSeconds );
+                    SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# did not finish within %# s - killed", pChild->_backend.c_str(), killSeconds );
                 pChild->_exitCode = pChild->_process.waitForExit();
                 if ( bKilled )
                     pChild->_exitCode = getAutomationExitCode( AutomationOutcome::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
@@ -440,17 +440,17 @@ namespace sw
                 firstFailure = pChild->_exitCode == -1 ? getAutomationExitCode( AutomationOutcome::Failed ) : pChild->_exitCode;
             const LogLevel level = pChild->_exitCode == 0 || bSkipped ? LogLevel::Info : LogLevel::Error;
             if ( level == LogLevel::Error )
-                SW_LOG_ERROR( "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
-                              pChild->_logPath.c_str() );
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendExit", "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
+                                 pChild->_logPath.c_str() );
             else
-                SW_LOG_INFO( "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
-                             pChild->_logPath.c_str() );
+                SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendExit", "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
+                                pChild->_logPath.c_str() );
         }
 
         // 백엔드 사이의 기록 대조 — 게임 상태는 CPU 에서만 정해지므로 같은 시나리오의 `<Record>` 는 모든 백엔드에서 같아야 한다.
         const vector<string> listRecordMismatch = Internal::compareChildRecords( listScenarioList, listChild );
         for ( const string& mismatch : listRecordMismatch )
-            SW_LOG_ERROR( "[Scenario] per-backend: record mismatch - %#", mismatch.c_str() );
+            SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendRecordMismatch", "[Scenario] per-backend: record mismatch - %#", mismatch.c_str() );
         if ( listRecordMismatch.empty() == false && firstFailure == 0 )
             firstFailure = getAutomationExitCode( AutomationOutcome::Failed );
 

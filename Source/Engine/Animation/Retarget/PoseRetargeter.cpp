@@ -26,7 +26,7 @@ namespace sw
                 const int32 boneIndex = skeleton.findBoneIndex( name );
                 if ( boneIndex < 0 )
                 {
-                    SW_LOG_ERROR( "Retarget: %# skeleton has no bone '%#'", pSide, name.c_str() );
+                    SW_LOG_ERROR_ID( "PoseRetargeter.RetargetSkeletonNoBone", "Retarget: %# skeleton has no bone '%#'", pSide, name.c_str() );
                     return false;
                 }
                 outBone = static_cast<uint32>( boneIndex );
@@ -215,7 +215,7 @@ namespace sw
     {
         if ( inoutPose.getBoneCount() != targetSkeleton.getBoneCount() )
         {
-            SW_LOG_ERROR( "Retarget: the target pose has %# bones but the target skeleton has %#", inoutPose.getBoneCount(), targetSkeleton.getBoneCount() );
+            SW_LOG_ERROR_ID( "PoseRetargeter.RetargetTargetPoseBones", "Retarget: the target pose has %# bones but the target skeleton has %#", inoutPose.getBoneCount(), targetSkeleton.getBoneCount() );
             return false;
         }
         // 한 본이라도 없으면 아무것도 바꾸지 않는다(일부만 얹은 포즈로 몰래 이어 가지 않는다).
@@ -331,7 +331,7 @@ namespace sw
             sourcePose.setToReference( sourceSkeleton );
             if ( sourceClip.sampleTracks( time, trackPose ) == false )
             {
-                SW_LOG_ERROR( "Retarget bake: clip '%#' could not be sampled", sourceClip.getName().c_str() );
+                SW_LOG_ERROR_ID( "PoseRetargeter.RetargetBakeClipCould", "Retarget bake: clip '%#' could not be sampled", sourceClip.getName().c_str() );
                 return false;
             }
             AnimationClip::copyTracksToPose( trackPose, listTrackToBone, sourcePose );
@@ -376,7 +376,7 @@ namespace sw
                              targetSkeleton.loadFromAsset( AssetID{ profile.getTargetSkeletonPath() } ) && sourceClip.loadFromAsset( sourceClipID );
         if ( bLoaded == false )
         {
-            SW_LOG_ERROR( "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );
+            SW_LOG_ERROR_ID( "PoseRetargeter.RetargetBakeCouldNot", "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );
             return false;
         }
         const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodec( sourceClip.getCodecID() );
@@ -388,10 +388,10 @@ namespace sw
         const std::optional<AbsolutePath> clipFile = FileUtil::requireAbsolutePath( outClipPath );
         if ( clipFile.has_value() == false || bBaked == false || baked.saveToFile( *clipFile ) == false )
         {
-            SW_LOG_ERROR( "Retarget bake: '%#' could not be baked to '%#'", sourceClipPath, outClipPath );
+            SW_LOG_ERROR_ID( "PoseRetargeter.RetargetBakeCouldNot2", "Retarget bake: '%#' could not be baked to '%#'", sourceClipPath, outClipPath );
             return false;
         }
-        SW_LOG_INFO( "Retarget bake: '%#' -> '%#' (%# tracks, %# s)", sourceClipPath, outClipPath, baked.getTrackCount(), baked.getDuration() );
+        SW_LOG_INFO_ID( "PoseRetargeter.RetargetBakeTracks", "Retarget bake: '%#' -> '%#' (%# tracks, %# s)", sourceClipPath, outClipPath, baked.getTrackCount(), baked.getDuration() );
         return true;
     }
 

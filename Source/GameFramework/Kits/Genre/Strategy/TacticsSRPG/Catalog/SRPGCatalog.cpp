@@ -58,7 +58,7 @@ namespace sw
                 } );
                 if ( bValid == false || count != kSRPGMoveTypeCount )
                 {
-                    SW_LOG_ERROR( "%#: <%# %#=\"%#\"> needs four values (Ground Air Space Water)", sourceName, node.getName(), pName, text );
+                    SW_LOG_ERROR_ID( "SRPGCatalog.NeedsFourValuesGround", "%#: <%# %#=\"%#\"> needs four values (Ground Air Space Water)", sourceName, node.getName(), pName, text );
                     return false;
                 }
                 std::copy( arrValue, arrValue + kSRPGMoveTypeCount, inoutArrValue );
@@ -84,7 +84,7 @@ namespace sw
                 const bool bValue = StringUtil::parseInt( text, value ) && 0 <= value && value <= 3;
                 if ( bValue == false )
                 {
-                    SW_LOG_ERROR( "%#: <%# size=\"%#\"> needs S, M, L, LL or 0..3", sourceName, node.getName(), text );
+                    SW_LOG_ERROR_ID( "SRPGCatalog.SizeNeedsML", "%#: <%# size=\"%#\"> needs S, M, L, LL or 0..3", sourceName, node.getName(), text );
                     return false;
                 }
                 inoutSize = value;
@@ -177,12 +177,12 @@ namespace sw
             for ( const hashed_string& weaponID : def._listWeaponID )
             {
                 if ( _weaponCatalog.find( weaponID ) == nullptr )
-                    SW_LOG_ERROR( "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponID.c_str() );
+                    SW_LOG_ERROR_ID( "SRPGCatalog.UnitUnknownWeapon", "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponID.c_str() );
             }
             for ( const SRPGDevelopTarget& target : def._listDevelop )
             {
                 if ( _unitCatalog.find( target._unitID ) == nullptr )
-                    SW_LOG_ERROR( "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitID.c_str() );
+                    SW_LOG_ERROR_ID( "SRPGCatalog.UnitDevelopsUnknown", "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitID.c_str() );
             }
         }
         return loadedCount;
@@ -202,7 +202,7 @@ namespace sw
             return loadUnit( node, sourceName );
         if ( name == "Pilot" )
             return loadPilot( node, sourceName );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "SRPGCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -230,20 +230,20 @@ namespace sw
                     def._listMapOffset.push_back( int2{ static_cast<int32>( cell._x ), static_cast<int32>( cell._y ) } );
                 else
                 {
-                    SW_LOG_ERROR( "%#: MAP weapon '%#' has a bad pattern cell '%#' (x,y)", sourceName, def._id.c_str(), token );
+                    SW_LOG_ERROR_ID( "SRPGCatalog.MAPWeaponBadPattern", "%#: MAP weapon '%#' has a bad pattern cell '%#' (x,y)", sourceName, def._id.c_str(), token );
                     bValid = false;
                 }
             } );
             if ( def._listMapOffset.empty() )
             {
-                SW_LOG_ERROR( "%#: MAP weapon '%#' needs pattern=\"x,y ...\"", sourceName, def._id.c_str() );
+                SW_LOG_ERROR_ID( "SRPGCatalog.MAPWeaponNeedsPattern", "%#: MAP weapon '%#' needs pattern=\"x,y ...\"", sourceName, def._id.c_str() );
                 bValid = false;
             }
             def._bCounter = false; // MAP 병기로는 반격하지 않는다(규칙이다)
         }
         else if ( node.getAttributeText( "pattern" ).empty() == false )
         {
-            SW_LOG_ERROR( "%#: weapon '%#' has a pattern but no map=\"Self|Target\"", sourceName, def._id.c_str() );
+            SW_LOG_ERROR_ID( "SRPGCatalog.WeaponPatternButNo", "%#: weapon '%#' has a pattern but no map=\"Self|Target\"", sourceName, def._id.c_str() );
             bValid = false;
         }
         if ( bValid )
@@ -264,7 +264,7 @@ namespace sw
         {
             if ( bLevel == false || requiredLevel < 1 )
             {
-                SW_LOG_ERROR( "%#: unit '%#' has a bad develop level in '%#'", sourceName, def._id.c_str(), token );
+                SW_LOG_ERROR_ID( "SRPGCatalog.UnitBadDevelopLevel", "%#: unit '%#' has a bad develop level in '%#'", sourceName, def._id.c_str(), token );
                 bValid = false;
                 return;
             }

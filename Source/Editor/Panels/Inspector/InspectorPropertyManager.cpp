@@ -692,7 +692,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 EditorThemeUtil::textError( text.c_str() );
                 if ( _uniqueReported.insert( static_cast<uint32>( prop._name.getHash() ) ).second )
-                    SW_LOG_ERROR( "Inspector: component handle '%#' cannot be edited: %#", prop._name.c_str(), text.c_str() );
+                    SW_LOG_ERROR_ID( "InspectorPropertyManager.InspectorComponentHandleCannot", "Inspector: component handle '%#' cannot be edited: %#", prop._name.c_str(), text.c_str() );
                 showTooltipIfHovered( prop );
             }
 

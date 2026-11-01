@@ -87,7 +87,7 @@ namespace sw
         const HTTPResponse response = _pClient->send( request );
         if ( response.isSuccess() )
             return CrashReportUploadResult::Sent;
-        SW_LOG_INFO( "Crash report '%#' was not accepted (status %#, %#)", bundle._sessionID.c_str(), response._status, response._error.c_str() );
+        SW_LOG_INFO_ID( "CrashReportUploader.CrashReportNotAccepted", "Crash report '%#' was not accepted (status %#, %#)", bundle._sessionID.c_str(), response._status, response._error.c_str() );
         return CrashReportUploadResult::Failed;
     }
 } // namespace sw

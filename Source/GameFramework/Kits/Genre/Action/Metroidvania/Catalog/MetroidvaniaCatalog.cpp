@@ -71,7 +71,7 @@ namespace sw
             bValid = false;
         if ( rules._parryJudge.getWindows().empty() )
         {
-            SW_LOG_ERROR( "%#: needs <Parry> with at least one <Window grade=\"..\" early=\"..\" late=\"..\"/>", sourceName );
+            SW_LOG_ERROR_ID( "MetroidvaniaCatalog.NeedsParryLeastOne", "%#: needs <Parry> with at least one <Window grade=\"..\" early=\"..\" late=\"..\"/>", sourceName );
             bValid = false;
         }
         if ( bValid == false )
@@ -125,7 +125,7 @@ namespace sw
         {
             if ( MetroidvaniaAbilitySet::isMotorSettingName( value._name ) == false )
             {
-                SW_LOG_ERROR( "%#: ability '%#' changes an unknown motor setting '%#'", sourceName, ability._id.c_str(), value._name.c_str() );
+                SW_LOG_ERROR_ID( "MetroidvaniaCatalog.AbilityChangesUnknownMotor", "%#: ability '%#' changes an unknown motor setting '%#'", sourceName, ability._id.c_str(), value._name.c_str() );
                 bValid = false;
             }
         }
@@ -153,12 +153,12 @@ namespace sw
         bool                  bValid = GameDataXML::readFields( node, pickup, sourceName );
         if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
         {
-            SW_LOG_ERROR( "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pickup._id.c_str(), pickup._ability.c_str() );
+            SW_LOG_ERROR_ID( "MetroidvaniaCatalog.PickupGrantsUnknownAbility", "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pickup._id.c_str(), pickup._ability.c_str() );
             bValid = false;
         }
         if ( pickup._charm.empty() == false && _charmCatalog.find( pickup._charm ) == nullptr )
         {
-            SW_LOG_ERROR( "%#: pickup '%#' grants an unknown charm '%#'", sourceName, pickup._id.c_str(), pickup._charm.c_str() );
+            SW_LOG_ERROR_ID( "MetroidvaniaCatalog.PickupGrantsUnknownCharm", "%#: pickup '%#' grants an unknown charm '%#'", sourceName, pickup._id.c_str(), pickup._charm.c_str() );
             bValid = false;
         }
         if ( bValid == false )
@@ -173,7 +173,7 @@ namespace sw
         bool                 bValid = GameDataXML::readFields( node, enemy, sourceName );
         if ( enemy._bBoss && enemy._flag.empty() )
         {
-            SW_LOG_ERROR( "%#: boss '%#' needs flag=\"...\" (set when it is defeated)", sourceName, enemy._id.c_str() );
+            SW_LOG_ERROR_ID( "MetroidvaniaCatalog.BossNeedsFlagSet", "%#: boss '%#' needs flag=\"...\" (set when it is defeated)", sourceName, enemy._id.c_str() );
             bValid = false;
         }
         if ( bValid == false )

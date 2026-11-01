@@ -70,8 +70,8 @@ namespace sw
             if ( bWritten )
                 return true;
             outBytes.clear();
-            SW_LOG_ERROR( "record %# (version %#) is not written: %#", T::StaticType()->_fullyQualifiedName.c_str(), version,
-                          bInRange ? "a field has no binary handler" : "a value is out of its declared range" );
+            SW_LOG_ERROR_ID( "ServiceRecordUtil.RecordVersionNotWritten", "record %# (version %#) is not written: %#", T::StaticType()->_fullyQualifiedName.c_str(), version,
+                             bInRange ? "a field has no binary handler" : "a value is out of its declared range" );
             return false;
         }
 
@@ -92,8 +92,8 @@ namespace sw
                 outRecord = std::move( decoded );
                 return true;
             }
-            SW_LOG_ERROR( "durable record %# (%#, version %#, %# bytes) is corrupt", string( key ).c_str(), T::StaticType()->_fullyQualifiedName.c_str(), version,
-                          static_cast<uint64>( bytes.size() ) );
+            SW_LOG_ERROR_ID( "ServiceRecordUtil.DurableRecordVersionBytes", "durable record %# (%#, version %#, %# bytes) is corrupt", string( key ).c_str(), T::StaticType()->_fullyQualifiedName.c_str(), version,
+                             static_cast<uint64>( bytes.size() ) );
             return false;
         }
 

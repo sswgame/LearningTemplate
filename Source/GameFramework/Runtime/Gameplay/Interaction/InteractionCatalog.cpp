@@ -50,7 +50,7 @@ namespace sw
                     inoutValue = parsed;
                     return true;
                 }
-                SW_LOG_WARNING( "%#: <%#> has unknown %# '%#'", sourceName, node.getName(), pName, pText );
+                SW_LOG_WARNING_ID( "InteractionCatalog.Unknown", "%#: <%#> has unknown %# '%#'", sourceName, node.getName(), pName, pText );
                 return false;
             }
 
@@ -98,12 +98,12 @@ namespace sw
                 bool bValid = true;
                 if ( step._interactorRole.empty() || step._interactableRole.empty() )
                 {
-                    SW_LOG_WARNING( "%#: <Interaction id=\"%#\"> pairedAnimation needs interactorRole and interactableRole", sourceName, interactionID.c_str() );
+                    SW_LOG_WARNING_ID( "InteractionCatalog.InteractionIdPairedAnimationNeeds", "%#: <Interaction id=\"%#\"> pairedAnimation needs interactorRole and interactableRole", sourceName, interactionID.c_str() );
                     bValid = false;
                 }
                 if ( step._montage.empty() == false )
                 {
-                    SW_LOG_WARNING( "%#: <Interaction id=\"%#\"> has both montage and pairedAnimation on one step", sourceName, interactionID.c_str() );
+                    SW_LOG_WARNING_ID( "InteractionCatalog.InteractionIdBothMontage", "%#: <Interaction id=\"%#\"> has both montage and pairedAnimation on one step", sourceName, interactionID.c_str() );
                     bValid = false;
                 }
                 return bValid;
@@ -170,7 +170,7 @@ namespace sw
         {
             if ( StringUtil::equals( child.getName(), "Step" ) == false )
             {
-                SW_LOG_WARNING( "%#: unknown element <%#> in <Interaction>", sourceName, child.getName() );
+                SW_LOG_WARNING_ID( "InteractionCatalog.UnknownElementInteraction", "%#: unknown element <%#> in <Interaction>", sourceName, child.getName() );
                 bValid = false;
                 continue;
             }
@@ -197,7 +197,7 @@ namespace sw
         {
             if ( StringUtil::equals( slotNode.getName(), "Slot" ) == false )
             {
-                SW_LOG_WARNING( "%#: unknown element <%#> in <UsableObject>", sourceName, slotNode.getName() );
+                SW_LOG_WARNING_ID( "InteractionCatalog.UnknownElementUsableObject", "%#: unknown element <%#> in <UsableObject>", sourceName, slotNode.getName() );
                 bValid = false;
                 continue;
             }
@@ -226,7 +226,7 @@ namespace sw
                 bValid = readInteraction( child, def, sourceName ) && bValid;
                 if ( def._id.empty() )
                 {
-                    SW_LOG_WARNING( "%#: <Interaction> without an id - skipped", sourceName );
+                    SW_LOG_WARNING_ID( "InteractionCatalog.InteractionWithoutIdSkipped", "%#: <Interaction> without an id - skipped", sourceName );
                     bValid = false;
                     continue;
                 }
@@ -239,14 +239,14 @@ namespace sw
                 bValid = readSmartObject( child, def, sourceName ) && bValid;
                 if ( def._id.empty() )
                 {
-                    SW_LOG_WARNING( "%#: <UsableObject> without an id - skipped", sourceName );
+                    SW_LOG_WARNING_ID( "InteractionCatalog.UsableObjectWithoutIdSkipped", "%#: <UsableObject> without an id - skipped", sourceName );
                     bValid = false;
                     continue;
                 }
                 addSmartObject( def );
                 continue;
             }
-            SW_LOG_WARNING( "%#: unknown element <%#> in <Interactions>", sourceName, child.getName() );
+            SW_LOG_WARNING_ID( "InteractionCatalog.UnknownElementInteractions", "%#: unknown element <%#> in <Interactions>", sourceName, child.getName() );
             bValid = false;
         }
         return bValid;

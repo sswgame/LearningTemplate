@@ -56,7 +56,7 @@ namespace sw
     {
         if ( crewCount < 1 || data._pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "ScavengerExpedition: refused - crewCount %# (needs 1 or more) and a catalog (%#)", crewCount, data._pCatalog != nullptr ? "given" : "missing" );
+            SW_LOG_ERROR_ID( "ScavengerExpedition.ScavengerExpeditionRefusedCrewCountNeeds", "ScavengerExpedition: refused - crewCount %# (needs 1 or more) and a catalog (%#)", crewCount, data._pCatalog != nullptr ? "given" : "missing" );
             return false;
         }
         _data = data;
@@ -133,7 +133,7 @@ namespace sw
         const float32 valueScale = computeWeatherValue( "scrapValue" );
         const uint32  layoutSeed = makeDaySeed( _seed ^ _pMoon->_id.getHash(), dayIndex, 0x46u );
         if ( _facility.createLayout( catalog, *_pMoon, layoutSeed, valueScale ) == false )
-            SW_LOG_WARNING( "facility layout for '%#' failed to load", _pMoon->_id.c_str() );
+            SW_LOG_WARNING_ID( "ScavengerExpedition.FacilityLayoutFailedLoad", "facility layout for '%#' failed to load", _pMoon->_id.c_str() );
 
         _indoorDirector.initialize( nullptr, 1u );
         _outdoorDirector.initialize( nullptr, 1u );

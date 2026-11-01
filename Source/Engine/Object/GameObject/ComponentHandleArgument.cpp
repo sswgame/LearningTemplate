@@ -13,7 +13,7 @@ namespace sw
         const GameObject*        pOwner   = self.getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
-            SW_LOG_ERROR( "'%#' was not called: its component is not in a scene, so the typed handle argument cannot be checked", string( functionName ).c_str() );
+            SW_LOG_ERROR_ID( "ComponentHandleArgument.NotCalledComponentNot", "'%#' was not called: its component is not in a scene, so the typed handle argument cannot be checked", string( functionName ).c_str() );
         return pManager;
     }
 } // namespace sw

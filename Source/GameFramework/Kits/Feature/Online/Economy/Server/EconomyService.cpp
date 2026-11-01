@@ -200,14 +200,14 @@ namespace sw
         const bool bMissingDependencies = pStore == nullptr || settings._pCurrencyCatalog == nullptr || settings._pOfferCatalog == nullptr;
         if ( bMissingDependencies )
         {
-            SW_LOG_ERROR( "EconomyService needs a store and both catalogs" );
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsStoreBoth", "EconomyService needs a store and both catalogs" );
             return false;
         }
         // 서명 없는 개발 전용 제공자는 DevOnline 단위가 있는 구성(개발)에서만 받는다 — 배포는 그 단위를 짓지 않는다.
         const bool bDevValidatorRefused = settings._pReceiptRegistry != nullptr && settings._pReceiptRegistry->hasDevelopmentValidator() && EconomyDevOptions::s_devOnline.isRegistered() == false;
         if ( bDevValidatorRefused )
         {
-            SW_LOG_ERROR( "EconomyService refuses a development-only receipt validator in a build without the DevOnline unit (Shipping)" );
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceRefusesDevelopmentOnly", "EconomyService refuses a development-only receipt validator in a build without the DevOnline unit (Shipping)" );
             return false;
         }
         _pStore          = pStore;
@@ -222,7 +222,7 @@ namespace sw
             schedule._minuteOfDay = settings._auditMinuteOfDay;
             if ( settings._pScheduler->registerJob( schedule, ScheduledJobFunction::create<&EconomyService::onScheduledRun>( this ) ) == false )
             {
-                SW_LOG_ERROR( "EconomyService: the ledger audit job could not be scheduled (minute of day %#)", settings._auditMinuteOfDay );
+                SW_LOG_ERROR_ID( "EconomyService.EconomyServiceLedgerAuditJob", "EconomyService: the ledger audit job could not be scheduled (minute of day %#)", settings._auditMinuteOfDay );
                 return false;
             }
         }
@@ -238,7 +238,7 @@ namespace sw
         { pollReceipts(); } );
         if ( _listPendingCall.empty() == false )
         {
-            SW_LOG_ERROR( "EconomyService shut down with %# calls still pending", _listPendingCall.size() );
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceShutDownCalls", "EconomyService shut down with %# calls still pending", _listPendingCall.size() );
             _listPendingCall.clear();
         }
         _findOwner.reset(); // 잔액 알림 찾기가 이 객체를 부르지 않게 한다(저장 작업을 회수한 뒤 — 그 완료가 찾기를 낼 수 있다)
@@ -428,10 +428,10 @@ namespace sw
         if ( bRead == false )
         {
             if ( completion.isCancelled() == false ) // 종료 때문에 취소된 검사는 오류가 아니다
-                SW_LOG_ERROR( "EconomyService: the ledger audit could not read the store" );
+                SW_LOG_ERROR_ID( "EconomyService.EconomyServiceLedgerAuditCould", "EconomyService: the ledger audit could not read the store" );
         }
         else if ( report.isBalanced() == false )
-            SW_LOG_ERROR( "EconomyService: the ledger is not balanced (negative escrows %#, unreadable records %#)", report._negativeEscrowCount, report._unreadableRecordCount );
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceLedgerNotBalanced", "EconomyService: the ledger is not balanced (negative escrows %#, unreadable records %#)", report._negativeEscrowCount, report._unreadableRecordCount );
         if ( bRead && _pMetricRegistry != nullptr )
         {
             for ( const LedgerAssetAudit& asset : report._listAsset )
@@ -475,7 +475,7 @@ namespace sw
         BitWriter body;
         if ( EconomyProtocol::MessageTypes::write( body, changed ) == false )
         {
-            SW_LOG_WARNING( "EconomyService: a balance notice for account %# is too large to send", accountID );
+            SW_LOG_WARNING_ID( "EconomyService.EconomyServiceBalanceNoticeAccount", "EconomyService: a balance notice for account %# is too large to send", accountID );
             return;
         }
         if ( _pHost->sendPush( accountID, EconomyMethod::kPushBalanceChanged, body ) )
@@ -519,7 +519,7 @@ namespace sw
         }
         const bool bFailed = result != EconomyResult::Ok && result != EconomyResult::AlreadyRefunded;
         if ( bFailed && completion.isCancelled() == false ) // 종료 때문에 취소된 회수는 오류가 아니다(스토어가 다시 보낸다)
-            SW_LOG_ERROR( "EconomyService: a store refund could not be revoked (%#) - the store will resend or an operator revokes it", static_cast<int32>( result ) );
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceStoreRefundCould", "EconomyService: a store refund could not be revoked (%#) - the store will resend or an operator revokes it", static_cast<int32>( result ) );
         if ( _pMetricRegistry == nullptr )
             return;
         const vector<MetricLabel> listLabel = {
@@ -540,7 +540,7 @@ namespace sw
                 return;
             }
         }
-        SW_LOG_WARNING( "EconomyService completed an unknown call %#", callID );
+        SW_LOG_WARNING_ID( "EconomyService.EconomyServiceCompletedUnknownCall", "EconomyService completed an unknown call %#", callID );
     }
 
     void EconomyService::finishCall( size_t pendingIndex, const EconomyReply& reply )

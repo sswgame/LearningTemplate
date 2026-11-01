@@ -92,7 +92,7 @@ namespace sw
         // GLX 는 X11 창에만 문맥을 건다. Wayland 표면(wl_surface)은 `EGLPlatformContext` 가 맡는다(`IOpenGLPlatformContext::create` 가 고른다) — X11 핸들로 읽지 않고 멈춘다.
         if ( desc._surfaceKind != NativeSurfaceKind::X11 )
         {
-            SW_LOG_ERROR( "OpenGL on Linux needs an X11 window (GLX) - this window is not X11" );
+            SW_LOG_ERROR_ID( "OpenGL.OpenGLLinuxNeedsX11", "OpenGL on Linux needs an X11 window (GLX) - this window is not X11" );
             return false;
         }
         Display* pDpy = (Display*)desc._pWindowDisplay;
@@ -101,7 +101,7 @@ namespace sw
         XWindowAttributes windowAttributes{};
         if ( XGetWindowAttributes( pDpy, win, &windowAttributes ) == 0 || windowAttributes.visual == nullptr )
         {
-            SW_LOG_ERROR( "XGetWindowAttributes failed" );
+            SW_LOG_ERROR_ID( "OpenGL.XGetWindowAttributesFailed", "XGetWindowAttributes failed" );
             return false;
         }
         const VisualID windowVisualID = XVisualIDFromVisual( windowAttributes.visual );
@@ -110,7 +110,7 @@ namespace sw
         GLXFBConfig* pFbcAll = glXGetFBConfigs( pDpy, DefaultScreen( pDpy ), &fbcount );
         if ( pFbcAll == nullptr || fbcount <= 0 )
         {
-            SW_LOG_ERROR( "glXGetFBConfigs failed" );
+            SW_LOG_ERROR_ID( "OpenGL.GlXGetFBConfigsFailed", "glXGetFBConfigs failed" );
             return false;
         }
 
@@ -169,7 +169,7 @@ namespace sw
                     context = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttrib );
                     if ( context != nullptr && trap.failed() == false )
                     {
-                        SW_LOG_TRACE( "GLX core context %#.%#", ver[0], ver[1] );
+                        SW_LOG_TRACE_ID( "OpenGL.GLXCoreContext", "GLX core context %#.%#", ver[0], ver[1] );
                         break;
                     }
                     if ( context != nullptr )
@@ -197,12 +197,12 @@ namespace sw
 
         if ( context == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create GLX context (WSLg often lacks GL 4.x — use -vk)" );
+            SW_LOG_ERROR_ID( "OpenGL.FailedCreateGLXContext", "Failed to create GLX context (WSLg often lacks GL 4.x — use -vk)" );
             return false;
         }
         if ( glXMakeCurrent( pDpy, win, context ) == 0 )
         {
-            SW_LOG_ERROR( "glXMakeCurrent failed" );
+            SW_LOG_ERROR_ID( "OpenGL.GlXMakeCurrentFailed", "glXMakeCurrent failed" );
             glXDestroyContext( pDpy, context );
             return false;
         }

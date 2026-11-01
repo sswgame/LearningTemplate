@@ -78,7 +78,7 @@ namespace sw
             if ( _atlas->createRenderTarget( pDevice, Internal::kAtlasName, shaderslot::kLight2DCookieAtlasSize, shaderslot::kLight2DCookieAtlasSize, RHIFormat::R8G8B8A8_UNORM ) ==
                  false )
             {
-                SW_LOG_ERROR( "The 2D light cookie atlas render target could not be created - cookie lights draw without cookies" );
+                SW_LOG_ERROR_ID( "Light2DCookieAtlas.DLightCookieAtlas", "The 2D light cookie atlas render target could not be created - cookie lights draw without cookies" );
                 _atlas.reset();
             }
         }
@@ -108,15 +108,15 @@ namespace sw
                 if ( cell >= shaderslot::kLight2DCookieCellCount )
                 {
                     if ( _bOverflowReported == SW_FALSE )
-                        SW_LOG_ERROR( "2D light cookies need more than %# atlas cells ('%#' has none) - that light draws without its cookie",
-                                      shaderslot::kLight2DCookieCellCount, cookie._texturePath.c_str() );
+                        SW_LOG_ERROR_ID( "Light2DCookieAtlas.DLightCookiesNeed", "2D light cookies need more than %# atlas cells ('%#' has none) - that light draws without its cookie",
+                                         shaderslot::kLight2DCookieCellCount, cookie._texturePath.c_str() );
                     _bOverflowReported = SW_TRUE;
                     continue;
                 }
                 const Texture2D* pTexture = pCache->acquire( cookie._texturePath.c_str(), pDevice );
                 if ( pTexture == nullptr )
                 {
-                    SW_LOG_ERROR( "2D light cookie '%#' could not be loaded - that light draws without its cookie", cookie._texturePath.c_str() );
+                    SW_LOG_ERROR_ID( "Light2DCookieAtlas.DLightCookieCould", "2D light cookie '%#' could not be loaded - that light draws without its cookie", cookie._texturePath.c_str() );
                     continue;
                 }
                 _listEntry.push_back( Entry{ cookie._texturePath, pTexture, RHITextureHandle{ 0 }, cell, SW_FALSE } );

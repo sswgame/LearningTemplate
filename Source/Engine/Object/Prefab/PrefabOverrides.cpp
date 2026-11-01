@@ -280,7 +280,7 @@ namespace sw
                         const XMLNode added = findFirstElement( entry );
                         if ( bFound || added.isValid() == false )
                             continue;
-                        SW_LOG_TRACE( "Added component follows '%#', which the prefab no longer has - appended at the end", pAfter );
+                        SW_LOG_TRACE_ID( "PrefabOverrides.AddedComponentFollowsWhich", "Added component follows '%#', which the prefab no longer has - appended at the end", pAfter );
                         outList.appendClone( added );
                     }
                 }
@@ -322,7 +322,7 @@ namespace sw
                             bMatched = bMatched || component._key == removedKey;
                         }
                         if ( bMatched == false )
-                            SW_LOG_TRACE( "Removed prefab component '%#' is already gone from the prefab", removedKey );
+                            SW_LOG_TRACE_ID( "PrefabOverrides.RemovedPrefabComponentAlready", "Removed prefab component '%#' is already gone from the prefab", removedKey );
                     }
                 }
             };
@@ -474,7 +474,7 @@ namespace sw
             overrideRoot = overrideDoc.getRoot( kRootName );
             if ( overrideRoot.isValid() == false )
             {
-                SW_LOG_WARNING( "Prefab overrides have no <%#> root - the instance is built from the prefab alone", kRootName );
+                SW_LOG_WARNING_ID( "PrefabOverrides.PrefabOverridesNoRoot", "Prefab overrides have no <%#> root - the instance is built from the prefab alone", kRootName );
                 return false;
             }
         }
@@ -536,13 +536,13 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( overrideXML ) == false )
         {
-            SW_LOG_ERROR( "Prefab overrides could not be parsed - nested part overrides are not read" );
+            SW_LOG_ERROR_ID( "PrefabOverrides.PrefabOverridesCouldNot", "Prefab overrides could not be parsed - nested part overrides are not read" );
             return false;
         }
         const XMLNode root = doc.getRoot( kRootName );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "Prefab overrides have no <%#> root - nested part overrides are not read", kRootName );
+            SW_LOG_ERROR_ID( "PrefabOverrides.PrefabOverridesNoRoot2", "Prefab overrides have no <%#> root - nested part overrides are not read", kRootName );
             return false;
         }
         for ( XMLNode entry = root.findChild( PrefabOverridesInternal::kPart ); entry.isValid();
@@ -552,7 +552,7 @@ namespace sw
             const XMLNode body  = PrefabOverridesInternal::findChildElement( entry, kRootName );
             if ( StringUtil::isNullOrEmpty( pPath ) || body.isValid() == false )
             {
-                SW_LOG_ERROR( "A nested part override has no path or no <%#> body - nested part overrides are not read", kRootName );
+                SW_LOG_ERROR_ID( "PrefabOverrides.NestedPartOverrideNo", "A nested part override has no path or no <%#> body - nested part overrides are not read", kRootName );
                 outListPartOverride.clear();
                 return false;
             }

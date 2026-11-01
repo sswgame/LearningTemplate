@@ -145,7 +145,7 @@ namespace sw::editor
         _listLine.clear();
         _progress        = PackagingProgress{};
         _progress._state = PackagingState::Running;
-        SW_LOG_INFO( "Packaging started: %#", command.toCommandLine() );
+        SW_LOG_INFO_ID( "PackagingPanel.PackagingStarted", "Packaging started: %#", command.toCommandLine() );
         return true;
     }
 
@@ -160,6 +160,6 @@ namespace sw::editor
         if ( bSucceeded )
             SW_LOG_INFO_ID( "Packaging.Done", "Packaging done: %# (%# bytes)", _progress._outputFolder, _progress._byteCount );
         else
-            SW_LOG_WARNING( "Packaging failed at '%#': %#", _progress._stepName, _progress._failure );
+            SW_LOG_WARNING_ID( "PackagingPanel.PackagingFailed", "Packaging failed at '%#': %#", _progress._stepName, _progress._failure );
     }
 } // namespace sw::editor

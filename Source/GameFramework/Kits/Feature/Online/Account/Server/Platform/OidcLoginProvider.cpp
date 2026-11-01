@@ -61,7 +61,7 @@ namespace sw
                 continue;
             const bool bReplaced = response.isSuccess() && _keyCache.replaceFromJwks( response.getBodyText(), nowMs.count() );
             if ( bReplaced == false )
-                SW_LOG_WARNING( "JWKS fetch for '%#' failed: %#", _settings._name.c_str(), response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "bad response" );
+                SW_LOG_WARNING_ID( "OidcLoginProvider.JWKSFetchFailed", "JWKS fetch for '%#' failed: %#", _settings._name.c_str(), response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "bad response" );
             _bLastFetchFailed = bReplaced ? SW_FALSE : SW_TRUE;
             _jwksRequestID    = 0;
             ++_fetchGeneration;

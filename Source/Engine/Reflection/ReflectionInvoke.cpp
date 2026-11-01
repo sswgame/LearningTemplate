@@ -216,7 +216,7 @@ namespace sw
             const vector<ReflectValue> listPass( listArg.begin(), listArg.begin() + static_cast<ptrdiff_t>( passCount ) );
             const ReflectCallResult    result = call( *pCurrent, pTarget, listPass, nullptr );
             if ( result != ReflectCallResult::Ok )
-                SW_LOG_WARNING( "Event-bound call '%#::%#' failed: %#", pTargetType->_fullyQualifiedName.c_str(), functionName.c_str(), getEnumName( result ) );
+                SW_LOG_WARNING_ID( "ReflectionInvoke.EventBoundCallFailed", "Event-bound call '%#::%#' failed: %#", pTargetType->_fullyQualifiedName.c_str(), functionName.c_str(), getEnumName( result ) );
         };
         return bindEvent( event, pSource, ReflectEventHandler::create( forward ) );
     }

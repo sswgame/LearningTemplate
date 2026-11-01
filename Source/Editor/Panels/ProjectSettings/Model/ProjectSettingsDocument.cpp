@@ -225,7 +225,7 @@ namespace sw::editor
         _default     = ReflectedInstance::create( type );
         if ( _current.isValid() == false || _default.isValid() == false )
         {
-            SW_LOG_ERROR( "Project settings: %# has no default constructor in the reflection table", type._name.c_str() );
+            SW_LOG_ERROR_ID( "ProjectSettings.ProjectSettingsNoDefault", "Project settings: %# has no default constructor in the reflection table", type._name.c_str() );
             shutdown();
             _readResult = ConfigReadResult::Invalid;
             return _readResult;
@@ -251,7 +251,7 @@ namespace sw::editor
         XMLDocument document;
         if ( document.parse( fileText, _path ) == false || document.getRoot().isValid() == false )
         {
-            SW_LOG_ERROR( "Project settings: %# is not XML - %#", _path.c_str(), document.getLastError().c_str() );
+            SW_LOG_ERROR_ID( "ProjectSettings.ProjectSettingsNotXML", "Project settings: %# is not XML - %#", _path.c_str(), document.getLastError().c_str() );
             return ConfigReadResult::Invalid;
         }
         const XMLNode element = document.getRoot().findChild( _elementName.c_str() );
@@ -434,7 +434,7 @@ namespace sw::editor
         string fileText;
         if ( FileUtil::readOptionalTextFile( _path, fileText ) != OptionalFileRead::Read )
         {
-            SW_LOG_WARNING( "Project settings: %# is missing - the <%#> element lives in that file", _path.c_str(), _elementName.c_str() );
+            SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsMissingElement", "Project settings: %# is missing - the <%#> element lives in that file", _path.c_str(), _elementName.c_str() );
             return false;
         }
         // 쓸 요소가 다음 기동에서 읽히는지 먼저 본다 — 필수 필드가 빠진 요소(Reset to Default 뒤)는 쓰지 않는다.
@@ -444,13 +444,13 @@ namespace sw::editor
         const bool bReadable = ConfigManager::readConfigXMLElement( check.get(), *_pType, elementText, _path.c_str() );
         if ( bReadable == false )
         {
-            SW_LOG_WARNING( "Project settings: the edited <%#> would not load - not saved", _elementName.c_str() );
+            SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsEditedWould", "Project settings: the edited <%#> would not load - not saved", _elementName.c_str() );
             return false;
         }
         string newText;
         if ( ProjectSettingsDocumentInternal::spliceElement( fileText, _elementName, elementText, newText ) == false )
         {
-            SW_LOG_WARNING( "Project settings: <%#> could not be placed in %# - not saved", _elementName.c_str(), _path.c_str() );
+            SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot", "Project settings: <%#> could not be placed in %# - not saved", _elementName.c_str(), _path.c_str() );
             return false;
         }
         // 바꾼 글을 다시 읽어 같은 요소인지 본다 — 원문에서 위치를 잘못 잡았으면(속성 값 안의 `>` 등) 파일을 쓰지 않는다.
@@ -460,7 +460,7 @@ namespace sw::editor
         const bool bSame = readInto( reread.get(), newText ) == ConfigReadResult::Loaded && XMLSerializer::serialize( reread.get(), *_pType ) == XMLSerializer::serialize( _current.get(), *_pType );
         if ( bSame == false )
         {
-            SW_LOG_WARNING( "Project settings: rewriting <%#> in %# did not round-trip - not saved", _elementName.c_str(), _path.c_str() );
+            SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsRewritingDid", "Project settings: rewriting <%#> in %# did not round-trip - not saved", _elementName.c_str(), _path.c_str() );
             return false;
         }
         return FileUtil::writeTextFile( _path, newText );
@@ -475,7 +475,7 @@ namespace sw::editor
         string textError;
         if ( tryMakeDifferenceText( text, textError ) == false )
         {
-            SW_LOG_ERROR( "Project settings were not saved to %#: %#", _path.c_str(), textError.c_str() );
+            SW_LOG_ERROR_ID( "ProjectSettings.ProjectSettingsNotSaved", "Project settings were not saved to %#: %#", _path.c_str(), textError.c_str() );
             return false;
         }
         bool bSaved = false;
@@ -485,12 +485,12 @@ namespace sw::editor
             bSaved = FileUtil::ensureParentDirectoryExists( _path ) && FileUtil::writeTextFile( _path, text );
         if ( bSaved == false )
         {
-            SW_LOG_WARNING( "Project settings could not be saved to %#", _path.c_str() );
+            SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot2", "Project settings could not be saved to %#", _path.c_str() );
             return false;
         }
         _savedText  = text;
         _readResult = ConfigReadResult::Loaded;
-        SW_LOG_INFO( "Project settings saved: %# key(s) -> %#", countNonDefaultKeys(), _path.c_str() );
+        SW_LOG_INFO_ID( "ProjectSettings.ProjectSettingsSavedKey", "Project settings saved: %# key(s) -> %#", countNonDefaultKeys(), _path.c_str() );
         return true;
     }
 } // namespace sw::editor

@@ -281,7 +281,7 @@ namespace sw
         {
             skeleton = SharedAssetCache<Skeleton>::acquire( _skeletonPath );
             if ( skeleton == nullptr )
-                SW_LOG_ERROR( "Skeleton '%#' could not be loaded - using a one-bone implicit skeleton", _skeletonPath.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalMeshComponent.SkeletonCouldNotLoaded", "Skeleton '%#' could not be loaded - using a one-bone implicit skeleton", _skeletonPath.c_str() );
         }
         if ( skeleton == nullptr )
             skeleton = SkeletalMeshComponentInternal::getImplicitSkeleton();
@@ -399,8 +399,8 @@ namespace sw
         const shared_ptr<Mesh>& mesh               = getMesh();
         const bool              bBoneCountMismatch = mesh != nullptr && mesh->hasSkin() && mesh->getSkinBoneCount() != _skeleton->getBoneCount();
         if ( bBoneCountMismatch )
-            SW_LOG_ERROR( "Skinned mesh '%#' expects %# bones but skeleton '%#' has %#", getMeshID().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(),
-                          _skeleton->getBoneCount() );
+            SW_LOG_ERROR_ID( "SkeletalMeshComponent.SkinnedMeshExpectsBones", "Skinned mesh '%#' expects %# bones but skeleton '%#' has %#", getMeshID().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(),
+                             _skeleton->getBoneCount() );
     }
 
     bool SkeletalMeshComponent::findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const

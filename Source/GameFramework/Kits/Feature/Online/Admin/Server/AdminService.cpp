@@ -93,7 +93,7 @@ namespace sw
     {
         if ( pStore == nullptr )
         {
-            SW_LOG_ERROR( "AdminService needs a store" );
+            SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsStore", "AdminService needs a store" );
             return false;
         }
         _pStore   = pStore;
@@ -111,7 +111,7 @@ namespace sw
         { pollForwardedCompletions(); } );
         if ( _listPendingCall.empty() == false )
         {
-            SW_LOG_ERROR( "AdminService shut down with %# calls still pending", _listPendingCall.size() );
+            SW_LOG_ERROR_ID( "AdminService.AdminServiceShutDownCalls", "AdminService shut down with %# calls still pending", _listPendingCall.size() );
             _listPendingCall.clear();
         }
         _pStore = nullptr;
@@ -235,7 +235,7 @@ namespace sw
             finishCall( pendingIndex, inoutReply );
             return;
         }
-        SW_LOG_WARNING( "AdminService completed an unknown call %#", callID );
+        SW_LOG_WARNING_ID( "AdminService.AdminServiceCompletedUnknownCall", "AdminService completed an unknown call %#", callID );
     }
 
     bool AdminService::forwardDirectoryCall( const PendingCall& pending )
@@ -326,7 +326,7 @@ namespace sw
             finishCall( pendingIndex, reply );
             return;
         }
-        SW_LOG_WARNING( "AdminService got a forwarded completion for an unknown call %#", callID );
+        SW_LOG_WARNING_ID( "AdminService.AdminServiceGotForwardedCompletion", "AdminService got a forwarded completion for an unknown call %#", callID );
     }
 
     void AdminService::pollForwardedCompletions()
@@ -387,7 +387,7 @@ namespace sw
                 break;
             }
             if ( bFound == false )
-                SW_LOG_WARNING( "AdminService got a server directory completion for an unknown call %#", completion._requestTag );
+                SW_LOG_WARNING_ID( "AdminService.AdminServiceGotServerDirectory", "AdminService got a server directory completion for an unknown call %#", completion._requestTag );
         }
     }
 
@@ -395,7 +395,7 @@ namespace sw
     {
         --_pendingSeedCount;
         if ( result != AdminResult::Ok && completion.isCancelled() == false ) // 종료 때문에 취소된 일은 오류가 아니다
-            SW_LOG_ERROR( "AdminService could not seed the first administrator (%#)", getEnumName( result ) );
+            SW_LOG_ERROR_ID( "AdminService.AdminServiceCouldNotSeed", "AdminService could not seed the first administrator (%#)", getEnumName( result ) );
     }
 
     void AdminService::finishCall( size_t pendingIndex, const AdminReply& reply )

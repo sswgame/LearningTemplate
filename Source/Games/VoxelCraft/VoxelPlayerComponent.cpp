@@ -44,7 +44,7 @@ namespace sw
                 const int32 slot = pawn.findButton( name );
                 if ( slot < 0 )
                 {
-                    SW_LOG_ERROR( "[Voxel] %# button '%#' is not in the pawn's button list", pRole, name.c_str() );
+                    SW_LOG_ERROR_ID( "VoxelPlayer.ButtonNotPawnButton", "[Voxel] %# button '%#' is not in the pawn's button list", pRole, name.c_str() );
                     outResolved = false;
                 }
                 return slot;
@@ -56,7 +56,7 @@ namespace sw
                 const VoxelBlockIndex index = catalog.findBlockIndex( blockID );
                 if ( index == kVoxelAirBlock )
                 {
-                    SW_LOG_ERROR( "[Voxel] block '%#' is not in the block catalog", blockID.c_str() );
+                    SW_LOG_ERROR_ID( "VoxelPlayer.BlockNotBlockCatalog", "[Voxel] block '%#' is not in the block catalog", blockID.c_str() );
                     outKnown = false;
                 }
                 return index;
@@ -203,7 +203,7 @@ namespace sw
         const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "[Voxel] no VoxelBlockCatalog game service - the player cannot start" );
+            SW_LOG_ERROR_ID( "VoxelPlayer.NoVoxelBlockCatalogGameService", "[Voxel] no VoxelBlockCatalog game service - the player cannot start" );
             setCanEverTick( false );
             return;
         }
@@ -272,7 +272,7 @@ namespace sw
         const bool bStateMismatch = bRead == false || archive.isError() || archive.getRemainingBytes() != 0;
         if ( bStateMismatch )
         {
-            SW_LOG_WARNING( "[Voxel] the saved player state does not match this build - starting at the spawn" );
+            SW_LOG_WARNING_ID( "VoxelPlayer.SavedPlayerStateDoes", "[Voxel] the saved player state does not match this build - starting at the spawn" );
             return;
         }
         _hotbar      = hotbar;
@@ -359,12 +359,12 @@ namespace sw
         _intentSlots._hotbarScroll = pawn.findAnalog( _hotbarScrollAnalog );
         if ( _intentSlots._hotbarScroll < 0 )
         {
-            SW_LOG_ERROR( "[Voxel] hotbar scroll analog '%#' is not in the pawn's analog list", _hotbarScrollAnalog.c_str() );
+            SW_LOG_ERROR_ID( "VoxelPlayer.HotbarScrollAnalogNot", "[Voxel] hotbar scroll analog '%#' is not in the pawn's analog list", _hotbarScrollAnalog.c_str() );
             bResolved = false;
         }
         if ( _listSlotButton.size() != static_cast<size_t>( VoxelHotbar::kSlotCount ) )
         {
-            SW_LOG_ERROR( "[Voxel] the player needs %# slot buttons, has %#", VoxelHotbar::kSlotCount, static_cast<uint32>( _listSlotButton.size() ) );
+            SW_LOG_ERROR_ID( "VoxelPlayer.PlayerNeedsSlotButtons", "[Voxel] the player needs %# slot buttons, has %#", VoxelHotbar::kSlotCount, static_cast<uint32>( _listSlotButton.size() ) );
             return false;
         }
         for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
@@ -411,8 +411,8 @@ namespace sw
         if ( previousSlot != _hotbar.getSelectedIndex() )
         {
             [[maybe_unused]] const VoxelBlockDef* pBlock = catalog.findBlock( _hotbar.getSelectedSlot()._block );
-            SW_LOG_INFO( "[Voxel] slot %#: %# x%#", _hotbar.getSelectedIndex() + 1, pBlock != nullptr ? pBlock->_name.c_str() : "empty",
-                         _hotbar.getSelectedSlot()._count );
+            SW_LOG_INFO_ID( "VoxelPlayer.SlotX", "[Voxel] slot %#: %# x%#", _hotbar.getSelectedIndex() + 1, pBlock != nullptr ? pBlock->_name.c_str() : "empty",
+                            _hotbar.getSelectedSlot()._count );
         }
     }
 
@@ -449,7 +449,7 @@ namespace sw
         ++_brokenCount;
         _breakProgress = 0.0f;
         if ( drop != kVoxelAirBlock && _hotbar.addBlock( drop, 1 ) > 0 )
-            SW_LOG_INFO( "[Voxel] hotbar is full - the %# is lost", pBlock->_name.c_str() );
+            SW_LOG_INFO_ID( "VoxelPlayer.HotbarFullLost", "[Voxel] hotbar is full - the %# is lost", pBlock->_name.c_str() );
         _bHasTarget = SW_FALSE;
     }
 

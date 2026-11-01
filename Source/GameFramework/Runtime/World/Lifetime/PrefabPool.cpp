@@ -28,7 +28,7 @@ namespace sw
         AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || _prefabPath.empty() )
         {
-            SW_LOG_ERROR( "Prefab pool '%#' cannot spawn - %#", _prefabPath, _prefabPath.empty() ? "no prefab path" : "no asset manager" );
+            SW_LOG_ERROR_ID( "PrefabPool.PrefabPoolCannotSpawn", "Prefab pool '%#' cannot spawn - %#", _prefabPath, _prefabPath.empty() ? "no prefab path" : "no asset manager" );
             return nullptr;
         }
         GameObject* pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, _prefabPath, pInstanceName );

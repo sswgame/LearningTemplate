@@ -87,7 +87,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "HorrorMatch: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "HorrorMatch.HorrorMatchRefusedSettings", "HorrorMatch: refused settings - %#", rangeError.c_str() );
             return false;
         }
         _settings = settings;
@@ -122,7 +122,7 @@ namespace sw
         _killer._pDef = _pCatalog->findKiller( _settings._killerID );
         if ( _killer._pDef == nullptr )
         {
-            SW_LOG_WARNING( "unknown killer '%#'", _settings._killerID.c_str() );
+            SW_LOG_WARNING_ID( "HorrorMatch.UnknownKiller", "unknown killer '%#'", _settings._killerID.c_str() );
             return false;
         }
         return true;

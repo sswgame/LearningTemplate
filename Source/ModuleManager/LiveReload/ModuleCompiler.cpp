@@ -47,7 +47,7 @@ namespace sw
     {
         if ( _bIsCompiling.load( std::memory_order_relaxed ) )
         {
-            SW_LOG_WARNING( "Compilation is already in progress (target: %#)", getTargetName().c_str() ); // 이름은 잠금 아래에서 복사한다
+            SW_LOG_WARNING_ID( "ModuleCompiler.CompilationAlreadyProgressTarget", "Compilation is already in progress (target: %#)", getTargetName().c_str() ); // 이름은 잠금 아래에서 복사한다
             return false;
         }
 
@@ -134,11 +134,11 @@ namespace sw
 
             const bool bIsErrorLine = outputLine.find( "FAILED:" ) != string::npos || outputLine.find( "error:" ) != string::npos || outputLine.find( "Error" ) != string::npos;
             if ( bIsErrorLine )
-                SW_LOG_ERROR( "%#", outputLine.c_str() );
+                SW_LOG_ERROR_ID( "ModuleCompiler.Message", "%#", outputLine.c_str() );
             else if ( outputLine.find( "warning:" ) != string::npos || outputLine.find( "Warning" ) != string::npos )
-                SW_LOG_WARNING( "%#", outputLine.c_str() );
+                SW_LOG_WARNING_ID( "ModuleCompiler.Message", "%#", outputLine.c_str() );
             else
-                SW_LOG_INFO( "%#", outputLine.c_str() );
+                SW_LOG_INFO_ID( "ModuleCompiler.Message", "%#", outputLine.c_str() );
         }
     }
 
@@ -163,25 +163,25 @@ namespace sw
         if ( stopToken.isStopRequested() )
         {
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
-            SW_LOG_WARNING( "Compilation was cancelled by user." );
+            SW_LOG_WARNING_ID( "ModuleCompiler.CompilationCancelledUser", "Compilation was cancelled by user." );
             return false;
         }
         if ( exitCode == 0 )
         {
             _buildState.store( BuildState::Success, std::memory_order_relaxed );
-            SW_LOG_INFO( "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
+            SW_LOG_INFO_ID( "ModuleCompiler.CompilationSucceededTarget", "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
             return true;
         }
         _buildState.store( BuildState::Failed, std::memory_order_relaxed );
         if ( _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0 )
         {
-            SW_LOG_ERROR( "Compilation failed (target: %#): a binary cannot be replaced because it is already running. "
-                          "Hot reload can only replace plugin modules; a change that requires relinking the engine itself needs a restart.",
-                          targetDisplayName.c_str() );
+            SW_LOG_ERROR_ID( "ModuleCompiler.CompilationFailedTargetBinary", "Compilation failed (target: %#): a binary cannot be replaced because it is already running. "
+                                                                             "Hot reload can only replace plugin modules; a change that requires relinking the engine itself needs a restart.",
+                             targetDisplayName.c_str() );
         }
         else
         {
-            SW_LOG_ERROR( "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
+            SW_LOG_ERROR_ID( "ModuleCompiler.CompilationFailedExitCode", "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
         }
         return false;
     }
@@ -195,13 +195,13 @@ namespace sw
         const string buildDir = findBuildDirectory();
         if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
         {
-            SW_LOG_ERROR( "No CMake build tree (build.ninja / CMakeCache.txt) next to the binary folder '%#' - this build cannot compile modules", ProcessRoots::get()._binary.str() );
+            SW_LOG_ERROR_ID( "ModuleCompiler.NoCMakeBuildTree", "No CMake build tree (build.ninja / CMakeCache.txt) next to the binary folder '%#' - this build cannot compile modules", ProcessRoots::get()._binary.str() );
             failBeforeBuild( targetName );
             return;
         }
 
         const string targetDisplayName = targetName.empty() ? "all" : targetName;
-        SW_LOG_INFO( "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
+        SW_LOG_INFO_ID( "ModuleCompiler.StartingCompilationTargetBuild", "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
 
         ProcessCommand command = ProcessCommand::fromSearchPath( "cmake", { "--build", buildDir } );
         if ( targetName.empty() == false )
@@ -217,7 +217,7 @@ namespace sw
         unique_ptr<Process> pProcess = make_unique<Process>();
         if ( pProcess->launch( command, options ) == false )
         {
-            SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", command.toCommandLine() );
+            SW_LOG_ERROR_ID( "ModuleCompiler.FailedLaunchCMakeProcess", "Failed to launch CMake process! Command: %#", command.toCommandLine() );
             failBeforeBuild( targetName );
             return;
         }

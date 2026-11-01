@@ -62,8 +62,8 @@ namespace sw
         const bool bValid = 1 <= width && 1 <= height && pTable != nullptr && 0.0f < pTable->getStepTime();
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "ElementGrid: refused - size %#x%# (both need 1 or more), table %# (needs a table with a step time above 0)", width, height,
-                          pTable != nullptr ? "given" : "missing" );
+            SW_LOG_ERROR_ID( "ElementGrid.ElementGridRefusedSizeX", "ElementGrid: refused - size %#x%# (both need 1 or more), table %# (needs a table with a step time above 0)", width, height,
+                             pTable != nullptr ? "given" : "missing" );
             return false;
         }
         _pTable   = pTable;

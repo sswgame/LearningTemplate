@@ -235,7 +235,7 @@ namespace sw
         const AudioSnapshotDesc* pDesc = mixer.getDesc().findSnapshot( name );
         if ( pDesc == nullptr )
         {
-            SW_LOG_ERROR( "Unknown audio snapshot '%#'", name.c_str() );
+            SW_LOG_ERROR_ID( "AudioSnapshotMixer.UnknownAudioSnapshot", "Unknown audio snapshot '%#'", name.c_str() );
             return nullptr;
         }
         SnapshotState snapshot;

@@ -43,7 +43,7 @@ namespace sw
             for ( const hashed_string& ghostID : room._listGhost )
             {
                 if ( _ghostCatalog.find( ghostID ) == nullptr )
-                    SW_LOG_ERROR( "%#: room '%#' names an unknown ghost '%#'", sourceName, room._id.c_str(), ghostID.c_str() );
+                    SW_LOG_ERROR_ID( "GhostCatalog.RoomNamesUnknownGhost", "%#: room '%#' names an unknown ghost '%#'", sourceName, room._id.c_str(), ghostID.c_str() );
             }
         }
         return loadedCount;
@@ -65,7 +65,7 @@ namespace sw
             return loadFurniture( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Boo" ) )
             return GameDataXML::readInto( node, sourceName, _booCatalog );
-        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "GhostCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
@@ -86,7 +86,7 @@ namespace sw
                     vacuum._listStagePower.push_back( power );
                 else
                 {
-                    SW_LOG_ERROR( "%#: <Vacuum stages> has '%#' - needs numbers of 0 or more", sourceName, token );
+                    SW_LOG_ERROR_ID( "GhostCatalog.VacuumStagesNeedsNumbers", "%#: <Vacuum stages> has '%#' - needs numbers of 0 or more", sourceName, token );
                     bValid = false;
                 }
             } );
@@ -124,7 +124,7 @@ namespace sw
                     furniture._bShake = true;
                 else
                 {
-                    SW_LOG_ERROR( "%#: furniture '%#' has an unknown search mode '%#' (Vacuum, Shake)", sourceName, furniture._id.c_str(), token );
+                    SW_LOG_ERROR_ID( "GhostCatalog.FurnitureUnknownSearchMode", "%#: furniture '%#' has an unknown search mode '%#' (Vacuum, Shake)", sourceName, furniture._id.c_str(), token );
                     bValid = false;
                 }
             } );

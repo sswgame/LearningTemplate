@@ -17,7 +17,7 @@ namespace sw
         const string_view assetPath = assetID.view();
         if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            SW_LOG_ERROR( "[UI] UI theme catalog could not be read or holds unknown keys: %#", assetPath );
+            SW_LOG_ERROR_ID( "UITheme.UIThemeCatalogCould", "[UI] UI theme catalog could not be read or holds unknown keys: %#", assetPath );
             return false;
         }
         return true;

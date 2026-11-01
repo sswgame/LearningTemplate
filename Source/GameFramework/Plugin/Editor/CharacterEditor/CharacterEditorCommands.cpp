@@ -22,14 +22,14 @@ namespace sw::editor
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<CharacterEditorPanel>( true ) )
-                    SW_LOG_INFO( "Character Editor panel opened" );
+                    SW_LOG_INFO_ID( "CharacterEditorCommands.CharacterEditorPanelOpened", "Character Editor panel opened" );
             }
 
             static void openPairedAnimationPanel()
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( PairedAnimationPanel::kPanelID, true ) )
-                    SW_LOG_INFO( "Paired Animation panel opened" );
+                    SW_LOG_INFO_ID( "CharacterEditorCommands.PairedAnimationPanelOpened", "Paired Animation panel opened" );
             }
         };
     } // namespace

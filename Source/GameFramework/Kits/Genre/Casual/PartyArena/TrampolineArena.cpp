@@ -170,12 +170,12 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "TrampolineArena: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "TrampolineArena.TrampolineArenaRefusedSettings", "TrampolineArena: refused settings - %#", rangeError.c_str() );
             return false;
         }
         if ( roundTime < 0.0f || scoreLimit < 0 )
         {
-            SW_LOG_ERROR( "TrampolineArena: refused roundTime %# or scoreLimit %# (0 means no limit, negative is not a limit)", roundTime, scoreLimit );
+            SW_LOG_ERROR_ID( "TrampolineArena.TrampolineArenaRefusedRoundTimeScoreLimit", "TrampolineArena: refused roundTime %# or scoreLimit %# (0 means no limit, negative is not a limit)", roundTime, scoreLimit );
             return false;
         }
         _settings = settings;
@@ -704,7 +704,7 @@ namespace sw
             const bool                   bComplete      = duration.has_value() && knockbackTaken.has_value() && knockbackDealt.has_value();
             if ( bComplete == false )
             {
-                SW_LOG_ERROR( "item '%#' (Heavy) needs duration, knockbackTaken and knockbackDealt - not applied", def._id.c_str() );
+                SW_LOG_ERROR_ID( "TrampolineArena.ItemHeavyNeedsDuration", "item '%#' (Heavy) needs duration, knockbackTaken and knockbackDealt - not applied", def._id.c_str() );
                 return;
             }
             body._heavyTimer.start( *duration );

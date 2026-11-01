@@ -123,7 +123,7 @@ namespace sw
         // 루트는 경로 상태의 주인(코어 범위의 `ContentRootSubsystem`)이 이미 찾았다 — 여기서 다시 찾지 않고 찾았는지만 본다.
         if ( engine::getSubsystem<AssetPaths>().isInitialized() == false )
         {
-            SW_LOG_ERROR( "Failed to initialize AssetManager - the content root was not found" );
+            SW_LOG_ERROR_ID( "AssetManager.FailedInitializeAssetManagerContent", "Failed to initialize AssetManager - the content root was not found" );
             return false;
         }
 
@@ -181,14 +181,14 @@ namespace sw
         // 어느 경로로 채웠는지 같이 적는다. 팩과 느슨한 트리가 둘 다 있는 자리에서 "5 항목" 만으로는 구분이 안 된다.
         if ( registered > 0 )
         {
-            SW_LOG_INFO( "Asset registry: %# entries (pack assetregistry.txt)", registered );
+            SW_LOG_INFO_ID( "AssetManager.AssetRegistryEntriesPack", "Asset registry: %# entries (pack assetregistry.txt)", registered );
         }
         else if ( getPackManager().isAllowLooseFiles() == false )
         {
             // 팩 전용 구성은 디스크의 .meta 를 훑지 않는다(배포본은 .meta 를 싣지 않고, 훑으면 낱개 파일 금지를 지나간다). 레지스트리가 빠진 팩은
             // 쿠킹이 막는다(`PackCooker` — .meta 가 있는 도메인에 assetregistry.txt 가 없으면 그 팩을 실패로 한다). 그래서 0 항목은 .meta 가 하나도
             // 없는 콘텐츠라는 뜻이고, 그 사실을 남긴다.
-            SW_LOG_INFO( "Asset registry: 0 entries (no assetregistry.txt in the pack - content without .meta)" );
+            SW_LOG_INFO_ID( "AssetManager.AssetRegistryEntriesNo", "Asset registry: 0 entries (no assetregistry.txt in the pack - content without .meta)" );
         }
         else if ( engine::getSubsystem<AssetPaths>().getRootFolderPath().empty() == false )
         {
@@ -198,7 +198,7 @@ namespace sw
                 if ( domain.empty() == false )
                     registered += _assetDatabase.scanMetaFiles( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), domain ) );
             }
-            SW_LOG_INFO( "Asset registry: %# entries (.meta scan)", registered );
+            SW_LOG_INFO_ID( "AssetManager.AssetRegistryEntriesMeta", "Asset registry: %# entries (.meta scan)", registered );
         }
         return registered;
     }
@@ -305,9 +305,9 @@ namespace sw
                 continue;
 
             // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**
-            SW_LOG_WARNING( "Asset cache '%#' is still registered - the registering side (module) must call "
-                            "release its registerAssetCache subscription before it goes down. Otherwise the next clear jumps into dead code.",
-                            _registeredAssetCache.getNameAt( index ).c_str() );
+            SW_LOG_WARNING_ID( "AssetManager.AssetCacheStillRegistered", "Asset cache '%#' is still registered - the registering side (module) must call "
+                                                                         "release its registerAssetCache subscription before it goes down. Otherwise the next clear jumps into dead code.",
+                               _registeredAssetCache.getNameAt( index ).c_str() );
         }
     }
 
@@ -315,7 +315,7 @@ namespace sw
     {
         IAssetCache* pCache = _registeredAssetCache.findByName( assetKindName );
         if ( pCache == nullptr || isBuiltInAssetCache( pCache ) == false )
-            SW_LOG_ERROR( "Built-in asset cache '%#' is not registered - its .cpp needs SW_BUILT_IN_ASSET_CACHE", assetKindName );
+            SW_LOG_ERROR_ID( "AssetManager.BuiltAssetCacheNot", "Built-in asset cache '%#' is not registered - its .cpp needs SW_BUILT_IN_ASSET_CACHE", assetKindName );
         if ( pCache == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
         return *pCache;

@@ -70,7 +70,7 @@ namespace sw
         _replayName      = replayName.empty() ? "NewReplay" : string( replayName );
         _startFrameIndex = 0;
         _bRecording      = SW_TRUE;
-        SW_LOG_INFO( "Started recording input replay: %#", _replayName.c_str() );
+        SW_LOG_INFO_ID( "InputReplay.StartedRecordingInputReplay", "Started recording input replay: %#", _replayName.c_str() );
     }
 
     void InputReplay::recordFrame( float32 deltaTime, const vector<RawInputEvent>& listEvent )
@@ -95,7 +95,7 @@ namespace sw
             return;
 
         _bRecording = SW_FALSE;
-        SW_LOG_INFO( "Stopped recording input replay: %# (Total %d frames recorded)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
+        SW_LOG_INFO_ID( "InputReplay.StoppedRecordingInputReplay", "Stopped recording input replay: %# (Total %d frames recorded)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
     }
 
     void InputReplay::emitFrame( uint32 frameIndex, vector<RawInputEvent>& outListEvent )
@@ -177,12 +177,12 @@ namespace sw
         // 버전이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
         if ( header._version != kReplayVersion )
         {
-            SW_LOG_WARNING( "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath );
+            SW_LOG_WARNING_ID( "InputReplay.InputReplayVersionNot", "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath );
             return false;
         }
         if ( static_cast<size_t>( pEnd - pCursor ) < header._nameLength )
         {
-            SW_LOG_WARNING( "Input replay is truncated in its name — refusing to load: %#", filePath );
+            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedName", "Input replay is truncated in its name — refusing to load: %#", filePath );
             return false;
         }
 
@@ -201,7 +201,7 @@ namespace sw
                                          static_cast<size_t>( pEnd - pCursor ) / sizeof( RawInputEvent ) < eventCount;
             if ( bTruncatedFrame )
             {
-                SW_LOG_WARNING( "Input replay is truncated at frame %# — refusing to load: %#", frameIndex, filePath );
+                SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedFrame", "Input replay is truncated at frame %# — refusing to load: %#", frameIndex, filePath );
                 return false;
             }
             frame._listRawEvent.resize( eventCount );
@@ -216,7 +216,7 @@ namespace sw
         _replayName      = std::move( replayName );
         _startFrameIndex = 0;
         _bRecording      = SW_FALSE;
-        SW_LOG_INFO( "Successfully loaded replay: %# (%d frames)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
+        SW_LOG_INFO_ID( "InputReplay.SuccessfullyLoadedReplayFrames", "Successfully loaded replay: %# (%d frames)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
         return true;
     }
 

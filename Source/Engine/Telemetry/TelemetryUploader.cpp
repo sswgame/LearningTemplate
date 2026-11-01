@@ -39,7 +39,7 @@ namespace sw
         const HTTPResponse response = _pClient->send( request );
         if ( response.isSuccess() )
             return TelemetryUploadResult::Sent;
-        SW_LOG_INFO( "Telemetry upload of '%#' was not accepted (status %#, %#)", batch._filePath.c_str(), response._status, response._error.c_str() );
+        SW_LOG_INFO_ID( "TelemetryUploader.TelemetryUploadNotAccepted", "Telemetry upload of '%#' was not accepted (status %#, %#)", batch._filePath.c_str(), response._status, response._error.c_str() );
         return TelemetryUploadResult::Failed;
     }
 } // namespace sw

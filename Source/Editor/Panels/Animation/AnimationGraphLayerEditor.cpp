@@ -236,7 +236,7 @@ namespace sw::editor
             const bool          bTaken = name != inoutLayer._name && inoutGraph.findLayer( name ) != nullptr;
             if ( committed.empty() || bTaken )
             {
-                SW_LOG_WARNING( "Layer name '%#' is empty or already used - the name stays '%#'", committed.c_str(), inoutLayer._name.c_str() );
+                SW_LOG_WARNING_ID( "AnimationGraphLayers.LayerNameEmptyAlready", "Layer name '%#' is empty or already used - the name stays '%#'", committed.c_str(), inoutLayer._name.c_str() );
             }
             else if ( name != inoutLayer._name )
             {
@@ -249,7 +249,7 @@ namespace sw::editor
         {
             if ( committed.empty() )
             {
-                SW_LOG_WARNING( "A layer needs a clip - the clip stays '%#'", inoutLayer._clipName.c_str() );
+                SW_LOG_WARNING_ID( "AnimationGraphLayers.LayerNeedsClipClip", "A layer needs a clip - the clip stays '%#'", inoutLayer._clipName.c_str() );
             }
             else
             {
@@ -404,7 +404,7 @@ namespace sw::editor
             const bool          bTaken = name != inoutMask._name && inoutGraph.findBoneMask( name ) != nullptr;
             if ( committed.empty() || bTaken )
             {
-                SW_LOG_WARNING( "Bone mask name '%#' is empty or already used - the name stays '%#'", committed.c_str(), inoutMask._name.c_str() );
+                SW_LOG_WARNING_ID( "AnimationGraphLayers.BoneMaskNameEmpty", "Bone mask name '%#' is empty or already used - the name stays '%#'", committed.c_str(), inoutMask._name.c_str() );
             }
             else if ( name != inoutMask._name )
             {
@@ -437,7 +437,7 @@ namespace sw::editor
             }
             else
             {
-                SW_LOG_WARNING( "Bone mask preset '%#' could not be read - the mask is unchanged", presetPath.c_str() );
+                SW_LOG_WARNING_ID( "AnimationGraphLayers.BoneMaskPresetCould", "Bone mask preset '%#' could not be read - the mask is unchanged", presetPath.c_str() );
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "BoneMaskPresetTip" ) );
@@ -467,7 +467,7 @@ namespace sw::editor
                 {
                     if ( committed.empty() )
                     {
-                        SW_LOG_WARNING( "A bone mask entry needs a bone name - it stays '%#'", entry._bone.c_str() );
+                        SW_LOG_WARNING_ID( "AnimationGraphLayers.BoneMaskEntryNeeds", "A bone mask entry needs a bone name - it stays '%#'", entry._bone.c_str() );
                     }
                     else
                     {

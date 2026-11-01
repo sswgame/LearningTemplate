@@ -171,7 +171,7 @@ namespace sw
         AssetManager* const pAssetManager = engine::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr )
         {
-            SW_LOG_ERROR( "AudioClipCache destroyed after the asset manager - its decode tasks cannot be waited on" );
+            SW_LOG_ERROR_ID( "AudioClipCache.AudioClipCacheDestroyedAfterAsset", "AudioClipCache destroyed after the asset manager - its decode tasks cannot be waited on" );
             return;
         }
         pAssetManager->waitLoadTasks( "AudioClipCache::~AudioClipCache" );
@@ -310,14 +310,14 @@ namespace sw
             bDecoded = _pFallbackDecoder( assetID, pcm );
         if ( bDecoded == false )
         {
-            SW_LOG_WARNING( "Failed to decode: %#", pathView );
+            SW_LOG_WARNING_ID( "AudioClipCache.FailedDecode", "Failed to decode: %#", pathView );
             return nullptr;
         }
 
         shared_ptr<AudioClipData> pClip = make_shared<AudioClipData>();
         if ( AudioClipData::convertPcm( pcm, *pClip ) == false || pClip->_frameCount == 0 )
         {
-            SW_LOG_WARNING( "Unsupported sample format: %#", pathView );
+            SW_LOG_WARNING_ID( "AudioClipCache.UnsupportedSampleFormat", "Unsupported sample format: %#", pathView );
             return nullptr;
         }
         return pClip;
@@ -340,7 +340,7 @@ namespace sw
             const string_view clipPath = node._clip.get();
             if ( StringUtil::endsWith( clipPath, AudioGraphDef::kExtension, true ) )
             {
-                SW_LOG_ERROR( "%#: node '%#' uses another audio graph '%#' as its clip", pathView, node._name.c_str(), clipPath );
+                SW_LOG_ERROR_ID( "AudioClipCache.NodeUsesAnotherAudio", "%#: node '%#' uses another audio graph '%#' as its clip", pathView, node._name.c_str(), clipPath );
                 return nullptr;
             }
             listNodeClip[nodeIndex] = decodeClip( hashed_string( clipPath ) );
@@ -375,7 +375,7 @@ namespace sw
         shared_ptr<const AudioClipData> pClip = decodeClip( path );
         if ( pClip == nullptr )
         {
-            SW_LOG_ERROR( "Reload failed, keeping the previous sound: %#", path.c_str() );
+            SW_LOG_ERROR_ID( "AudioClipCache.ReloadFailedKeepingPrevious", "Reload failed, keeping the previous sound: %#", path.c_str() );
             return false;
         }
         storeResult( path, std::move( pClip ) );

@@ -52,7 +52,7 @@ namespace sw
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "Vitality: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "Vitality.VitalityRefusedSettings", "Vitality: refused settings - %#", rangeError.c_str() );
             return false;
         }
         applySettings( settings );

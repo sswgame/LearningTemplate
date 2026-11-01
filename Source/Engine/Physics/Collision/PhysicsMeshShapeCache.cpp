@@ -103,7 +103,7 @@ namespace sw
                 bFirstFailure                    = failedInserted.second;
             }
             if ( bFirstFailure )
-                SW_LOG_ERROR( "Physics shape mesh '%#' could not be loaded or has no triangle - the shape is not created", path );
+                SW_LOG_ERROR_ID( "PhysicsMeshShapeCache.PhysicsShapeMeshCould", "Physics shape mesh '%#' could not be loaded or has no triangle - the shape is not created", path );
             return result;
         }
 

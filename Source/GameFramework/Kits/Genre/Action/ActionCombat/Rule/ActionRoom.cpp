@@ -237,7 +237,7 @@ namespace sw
         const MonsterCatalog* pCatalog = game::findSubsystem<MonsterCatalog>();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "Monster '%#': no MonsterCatalog is registered as a game service - the action room does not spawn it", monsterID.c_str() );
+            SW_LOG_ERROR_ID( "ActionRoom.MonsterNoMonsterCatalogRegistered", "Monster '%#': no MonsterCatalog is registered as a game service - the action room does not spawn it", monsterID.c_str() );
             return -1;
         }
         const MonsterDef* pFound = pCatalog->findMonster( monsterID );

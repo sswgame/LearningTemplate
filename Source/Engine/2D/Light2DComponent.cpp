@@ -160,7 +160,7 @@ namespace sw
         const bool bValidCount = listPoint.size() >= 3 && listPoint.size() <= shaderslot::kLight2DMaxFreeformEdges;
         if ( bValidCount == false )
         {
-            SW_LOG_ERROR( "FreeformLight2DComponent::setPoints: %# corners (needs 3 to %#) - the polygon is unchanged", static_cast<uint64>( listPoint.size() ), shaderslot::kLight2DMaxFreeformEdges );
+            SW_LOG_ERROR_ID( "Light2D.FreeformLight2DComponentSetPointsCornersNeeds", "FreeformLight2DComponent::setPoints: %# corners (needs 3 to %#) - the polygon is unchanged", static_cast<uint64>( listPoint.size() ), shaderslot::kLight2DMaxFreeformEdges );
             return false;
         }
         _listPoint = listPoint;
@@ -197,7 +197,7 @@ namespace sw
         // 데이터(씬 파일)가 상한을 넘는 다각형을 들고 왔으면 변을 싣지 않는다 — 셰이더 루프가 끝까지 돌지 못한다. 오류로 알린다.
         const bool bValidPolygon = listWorld.size() >= 3 && listWorld.size() <= shaderslot::kLight2DMaxFreeformEdges;
         if ( bValidPolygon == false )
-            SW_LOG_ERROR( "FreeformLight2DComponent: %# corners (needs 3 to %#) - the light is not drawn", static_cast<uint64>( listWorld.size() ), shaderslot::kLight2DMaxFreeformEdges );
+            SW_LOG_ERROR_ID( "Light2D.FreeformLight2DComponentCornersNeedsLight", "FreeformLight2DComponent: %# corners (needs 3 to %#) - the light is not drawn", static_cast<uint64>( listWorld.size() ), shaderslot::kLight2DMaxFreeformEdges );
         const float3 origin = getLightPosition();
         float32      reach  = 0.0f;
         for ( const float2& point : listWorld )

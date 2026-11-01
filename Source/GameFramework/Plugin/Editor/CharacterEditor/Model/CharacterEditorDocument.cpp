@@ -133,13 +133,13 @@ namespace sw::editor
         _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
         SocketKindTable kinds;
         if ( kinds.loadDefault() == false )
-            SW_LOG_WARNING( "Default socket kind table could not be loaded - kinds are not validated" );
+            SW_LOG_WARNING_ID( "CharacterEditorDocument.DefaultSocketKindTable", "Default socket kind table could not be loaded - kinds are not validated" );
         else
             _sockets.setKindTable( kinds );
 
         MirrorNameRules rules;
         if ( rules.loadFromAsset( AssetID{ MirrorNameRules::kDefaultPath } ) == false )
-            SW_LOG_WARNING( "Default mirror name table could not be loaded - left/right pairs are not found" );
+            SW_LOG_WARNING_ID( "CharacterEditorDocument.DefaultMirrorNameTable", "Default mirror name table could not be loaded - left/right pairs are not found" );
         else
             _sockets.setMirrorRules( rules );
     }
@@ -191,7 +191,7 @@ namespace sw::editor
             else
             {
                 _reloadGuard.onSaved( SharedAssetCache<SocketSet>::getReloadCount(), nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
-                SW_LOG_INFO( "Socket file saved to %#", writePath->c_str() );
+                SW_LOG_INFO_ID( "CharacterEditorDocument.SocketFileSaved", "Socket file saved to %#", writePath->c_str() );
             }
         }
         if ( _pose.isDirty() )
@@ -203,7 +203,7 @@ namespace sw::editor
                 bSaved  = false;
             }
             else
-                SW_LOG_INFO( "Reference pose file saved to %#", writePath->c_str() );
+                SW_LOG_INFO_ID( "CharacterEditorDocument.ReferencePoseFileSaved", "Reference pose file saved to %#", writePath->c_str() );
         }
         if ( bSaved )
             _status.clear();
@@ -213,9 +213,9 @@ namespace sw::editor
     void CharacterEditorDocument::revert()
     {
         if ( _sockets.isDirty() && _sockets.revertToSaved() == false )
-            SW_LOG_ERROR( "Character Editor: the socket edits could not be discarded - the saved state did not read back" );
+            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorSocketEdits", "Character Editor: the socket edits could not be discarded - the saved state did not read back" );
         if ( _pose.isDirty() && _pose.revertToSaved() == false )
-            SW_LOG_ERROR( "Character Editor: the reference pose edits could not be discarded - the saved state did not read back" );
+            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorReferencePose", "Character Editor: the reference pose edits could not be discarded - the saved state did not read back" );
         _selectedSocket = hashed_string{};
         _status.clear();
     }
@@ -390,7 +390,7 @@ namespace sw::editor
         {
             // 목록과 "저장된 상태" 를 그대로 둔다 — 저장된 줄 알고 넘어가지 않게.
             _status = "Preset slot could not be written (see log)";
-            SW_LOG_ERROR( "Character Editor: preset slot %# could not be written (result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
+            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorPresetSlot", "Character Editor: preset slot %# could not be written (result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
             return;
         }
         _presetStore = std::move( _stagedPresetStore );
@@ -441,8 +441,8 @@ namespace sw::editor
         if ( bAttachable == false )
         {
             _status = "The thumbnail could not be stored (the slot write failed or the preset was removed)";
-            SW_LOG_ERROR( "Character Editor: thumbnail slot %# of preset '%#' could not be stored (result %#)", _thumbnailSlot.c_str(), _thumbnailPresetName.c_str(),
-                          static_cast<int32>( completion._result ) );
+            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorThumbnailSlot", "Character Editor: thumbnail slot %# of preset '%#' could not be stored (result %#)", _thumbnailSlot.c_str(), _thumbnailPresetName.c_str(),
+                             static_cast<int32>( completion._result ) );
             return;
         }
         SW_LOG_INFO_ID( "CharacterEditor.ThumbnailStored", "Character Editor: thumbnail of preset '%#' stored in slot %#", _thumbnailPresetName.c_str(), _thumbnailSlot.c_str() );
@@ -479,7 +479,7 @@ namespace sw::editor
         }
         AppearanceDatabase* pGameData = game::findSubsystem<AppearanceDatabase>();
         if ( pGameData == nullptr )
-            SW_LOG_WARNING( "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
+            SW_LOG_WARNING_ID( "CharacterEditorDocument.ExportedAppearancePresetGame", "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
         else if ( pGameData->loadPresetFile( AssetID{ assetID } ) == false )
         {
             _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();

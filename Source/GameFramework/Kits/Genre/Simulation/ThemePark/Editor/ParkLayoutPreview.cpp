@@ -85,7 +85,7 @@ namespace sw::editor
              GamePackDataUtil::tryMakeKindPath( packRoot, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
         {
             if ( _bWarned == false )
-                SW_LOG_ERROR( "The park layout preview has no path in pack '%#': %#", packRoot.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "ParkLayoutPreview.ParkLayoutPreviewNo", "The park layout preview has no path in pack '%#': %#", packRoot.c_str(), error.c_str() );
             _bWarned    = true;
             _layoutPath = error;
             clearPreview( false );
@@ -100,7 +100,7 @@ namespace sw::editor
         if ( AssetIO::readTextAsset( AssetID{ _layoutPath }, text ) == false )
         {
             if ( _bWarned == false )
-                SW_LOG_WARNING( "%# could not be read - the park layout preview is empty", _layoutPath.c_str() );
+                SW_LOG_WARNING_ID( "ParkLayoutPreview.CouldNotReadPark", "%# could not be read - the park layout preview is empty", _layoutPath.c_str() );
             _bWarned = true;
             clearPreview( false );
             return false;
@@ -115,13 +115,13 @@ namespace sw::editor
         ParkLayout           layout;
         if ( catalog.loadFromAsset( AssetID{ coasterPath } ) == false )
         {
-            SW_LOG_WARNING( "The coaster catalog '%#' could not be loaded - the park layout preview is empty", coasterPath );
+            SW_LOG_WARNING_ID( "ParkLayoutPreview.CoasterCatalogCouldNot", "The coaster catalog '%#' could not be loaded - the park layout preview is empty", coasterPath );
             clearPreview( false );
             return true;
         }
         if ( layout.loadFromXMLText( text, catalog, _layoutPath ) == false )
         {
-            SW_LOG_WARNING( "%# did not load through the ThemePark kit - the park layout preview is empty", _layoutPath.c_str() );
+            SW_LOG_WARNING_ID( "ParkLayoutPreview.DidNotLoadThrough", "%# did not load through the ThemePark kit - the park layout preview is empty", _layoutPath.c_str() );
             clearPreview( false );
             return true;
         }
@@ -160,7 +160,7 @@ namespace sw::editor
         _bLoaded  = true;
         _bMissing = false;
         _bWarned  = false;
-        SW_LOG_INFO( "Park layout preview loaded %# rides from %#", static_cast<uint32>( _listRide.size() ), _layoutPath.c_str() );
+        SW_LOG_INFO_ID( "ParkLayoutPreview.ParkLayoutPreviewLoaded", "Park layout preview loaded %# rides from %#", static_cast<uint32>( _listRide.size() ), _layoutPath.c_str() );
         return true;
     }
 

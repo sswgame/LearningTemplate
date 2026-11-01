@@ -142,7 +142,7 @@ namespace sw
     {
         if ( isValidTopic( topic ) == false )
         {
-            SW_LOG_WARNING( "FCM topic '%#' is not a valid topic name", string( topic ).c_str() );
+            SW_LOG_WARNING_ID( "FcmPushProvider.FCMTopicNotValid", "FCM topic '%#' is not a valid topic name", string( topic ).c_str() );
             complete( deliveryID, PushDeliveryStatus::Rejected );
             return;
         }
@@ -206,7 +206,7 @@ namespace sw
         {
             // 토큰이 거절됐다 — 버려서 다음 배달이 새로 받게 한다.
             _tokenSource.invalidate();
-            SW_LOG_WARNING( "FCM rejected the access token (status %#) - it will be requested again", response._statusCode );
+            SW_LOG_WARNING_ID( "FcmPushProvider.FCMRejectedAccessToken", "FCM rejected the access token (status %#) - it will be requested again", response._statusCode );
         }
         complete( deliveryID, status, retryAfterMs );
     }

@@ -281,7 +281,7 @@ namespace sw
                 }
                 else
                 {
-                    SW_LOG_ERROR( "Action '%#' has a binding on a device the <InputMap> format cannot name - not saved", pActionName );
+                    SW_LOG_ERROR_ID( "InputMap.ActionBindingDeviceInputMap", "Action '%#' has a binding on a device the <InputMap> format cannot name - not saved", pActionName );
                     return false;
                 }
                 if ( pTriggerName != nullptr )
@@ -297,7 +297,7 @@ namespace sw
                 const InputSlot& slot = binding._arrSlot[0];
                 if ( slot._deviceKind != InputDeviceKind::Keyboard || binding._modifierMask == ModifierKey::None )
                 {
-                    SW_LOG_ERROR( "Action '%#' has a shortcut binding without a key or a modifier - not saved", pActionName );
+                    SW_LOG_ERROR_ID( "InputMap.ActionShortcutBindingWithout", "Action '%#' has a shortcut binding without a key or a modifier - not saved", pActionName );
                     return false;
                 }
                 XMLNode bindNode = actionNode.appendChild( InputMapXML::kBind );
@@ -321,7 +321,7 @@ namespace sw
                 const bool bKeyboard = negativeSlot._deviceKind == InputDeviceKind::Keyboard && positiveSlot._deviceKind == InputDeviceKind::Keyboard;
                 if ( bGamepad == false && bKeyboard == false )
                 {
-                    SW_LOG_ERROR( "Action '%#' has an axis1d binding over two devices, which the <InputMap> format cannot name - not saved", pActionName );
+                    SW_LOG_ERROR_ID( "InputMap.ActionAxis1dBindingOver", "Action '%#' has an axis1d binding over two devices, which the <InputMap> format cannot name - not saved", pActionName );
                     return false;
                 }
                 XMLNode axisNode = actionNode.appendChild( "axis1d" );
@@ -419,8 +419,8 @@ namespace sw
                     case BindingKind::AnyKey:
                     case BindingKind::Count:
                     {
-                        SW_LOG_ERROR( "Action '%#' has a %# binding, which the <InputMap> format cannot hold - not saved", pActionName,
-                                      BindingKinds::toName( binding._kind ) );
+                        SW_LOG_ERROR_ID( "InputMap.ActionBindingWhichInputMap", "Action '%#' has a %# binding, which the <InputMap> format cannot hold - not saved", pActionName,
+                                         BindingKinds::toName( binding._kind ) );
                         return false;
                     }
                 }
@@ -455,7 +455,7 @@ namespace sw
                 {
                     if ( root.findAttribute( pAttr ) == nullptr )
                         continue;
-                    SW_LOG_ERROR( "InputMap %# is appended to another map but sets the map-wide attribute '%#' - only the base map sets it", absPath, pAttr );
+                    SW_LOG_ERROR_ID( "InputMap.InputMapAppendedAnotherMap", "InputMap %# is appended to another map but sets the map-wide attribute '%#' - only the base map sets it", absPath, pAttr );
                     bMapWide = true;
                 }
                 return bMapWide;
@@ -919,8 +919,8 @@ namespace sw
         const uint32   slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
         if ( slotIndex == BindingKinds::kNoRebindSlot )
         {
-            SW_LOG_WARNING( "rebind: binding %# of '%#' is a '%#' binding - one key cannot replace it (bind it again, or edit its parts)", bindIndex,
-                            action.c_str(), BindingKinds::toName( binding._kind ) );
+            SW_LOG_WARNING_ID( "InputMap.RebindBindingBindingOne", "rebind: binding %# of '%#' is a '%#' binding - one key cannot replace it (bind it again, or edit its parts)", bindIndex,
+                               action.c_str(), BindingKinds::toName( binding._kind ) );
             return false;
         }
         // 맵 읽기와 같은 검사 — 가상 커서가 마우스로 바꾸는 스틱 · 버튼으로는 다시 묶지 않는다(사용자 설정의 키 바인딩도 이 길이다).
@@ -945,7 +945,7 @@ namespace sw
         const bool     bKeyOrShortcut = binding._kind == BindingKind::SingleSlot || binding._kind == BindingKind::Shortcut;
         if ( bKeyboardSlot == false || bKeyOrShortcut == false )
         {
-            SW_LOG_WARNING( "rebind: binding %# of '%#' is not a keyboard key or shortcut - a key with modifiers cannot replace it", bindIndex, action.c_str() );
+            SW_LOG_WARNING_ID( "InputMap.RebindBindingNotKeyboard", "rebind: binding %# of '%#' is not a keyboard key or shortcut - a key with modifiers cannot replace it", bindIndex, action.c_str() );
             return false;
         }
         // 수정 키가 없으면 단일 키, 있으면 단축키다 — 읽기(`<bind modifier>`)와 같은 규칙이라 저장 · 다시 읽기에서 종류가 바뀌지 않는다.
@@ -1006,8 +1006,8 @@ namespace sw
         const uint32 targetSlot = BindingKinds::getRebindSlotIndex( pEntry->_listBinding[bindIndex]._kind );
         if ( targetSlot == BindingKinds::kNoRebindSlot )
         {
-            SW_LOG_WARNING( "rebind: binding %# of '%#' is a '%#' binding - one key cannot replace it (bind it again, or edit its parts)", bindIndex,
-                            action.c_str(), BindingKinds::toName( pEntry->_listBinding[bindIndex]._kind ) );
+            SW_LOG_WARNING_ID( "InputMap.RebindBindingBindingOne", "rebind: binding %# of '%#' is a '%#' binding - one key cannot replace it (bind it again, or edit its parts)", bindIndex,
+                               action.c_str(), BindingKinds::toName( pEntry->_listBinding[bindIndex]._kind ) );
             return false;
         }
         ActionBinding candidate        = pEntry->_listBinding[bindIndex];
@@ -1166,7 +1166,7 @@ namespace sw
         const bool bValid = seconds >= InputMapDefaults::kDoubleClickTimeMin && seconds <= InputMapDefaults::kDoubleClickTimeMax;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "InputMap: refused double click time %# - it must be within [%#, %#]", seconds, InputMapDefaults::kDoubleClickTimeMin, InputMapDefaults::kDoubleClickTimeMax );
+            SW_LOG_ERROR_ID( "InputMap.InputMapRefusedDoubleClick", "InputMap: refused double click time %# - it must be within [%#, %#]", seconds, InputMapDefaults::kDoubleClickTimeMin, InputMapDefaults::kDoubleClickTimeMax );
             return false;
         }
         _triggerRules._doubleClickTime = seconds;
@@ -1178,7 +1178,7 @@ namespace sw
         const bool bValid = pixels >= 0.0f && pixels <= InputMapDefaults::kDoubleClickDistanceMax;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "InputMap: refused double click distance %# - it must be within [0, %#]", pixels, InputMapDefaults::kDoubleClickDistanceMax );
+            SW_LOG_ERROR_ID( "InputMap.InputMapRefusedDoubleClick2", "InputMap: refused double click distance %# - it must be within [0, %#]", pixels, InputMapDefaults::kDoubleClickDistanceMax );
             return false;
         }
         _triggerRules._doubleClickMaxDistance = pixels;
@@ -1190,7 +1190,7 @@ namespace sw
         const bool bValid = pixels >= 0.0f && pixels <= InputMapDefaults::kDragThresholdMax;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "InputMap: refused drag threshold %# - it must be within [0, %#]", pixels, InputMapDefaults::kDragThresholdMax );
+            SW_LOG_ERROR_ID( "InputMap.InputMapRefusedDragThreshold", "InputMap: refused drag threshold %# - it must be within [0, %#]", pixels, InputMapDefaults::kDragThresholdMax );
             return false;
         }
         _triggerRules._dragThreshold = pixels;
@@ -1202,7 +1202,7 @@ namespace sw
         const bool bValid = seconds >= InputMapDefaults::kHoldThresholdMin && seconds <= InputMapDefaults::kHoldThresholdMax;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "InputMap: refused hold threshold %# - it must be within [%#, %#]", seconds, InputMapDefaults::kHoldThresholdMin, InputMapDefaults::kHoldThresholdMax );
+            SW_LOG_ERROR_ID( "InputMap.InputMapRefusedHoldThreshold", "InputMap: refused hold threshold %# - it must be within [%#, %#]", seconds, InputMapDefaults::kHoldThresholdMin, InputMapDefaults::kHoldThresholdMax );
             return false;
         }
         _triggerRules._holdThreshold = seconds;
@@ -2126,7 +2126,7 @@ namespace sw
             outAxis = GamepadStickAxis::Y;
             return true;
         }
-        SW_LOG_ERROR( "stick axis '%#' is neither 'X' nor 'Y' - binding dropped", pAxisStr );
+        SW_LOG_ERROR_ID( "InputMap.StickAxisNeitherX", "stick axis '%#' is neither 'X' nor 'Y' - binding dropped", pAxisStr );
         inoutbValid = false;
         return false;
     }
@@ -2158,7 +2158,7 @@ namespace sw
         const bool bTapCountInRange = kMinTapCount <= tapCount && tapCount <= kMaxTapCount;
         if ( bTapCountInRange == false )
         {
-            SW_LOG_ERROR( "Action '%#' has taps=\"%#\" outside %#..%#", action.c_str(), tapCount, kMinTapCount, kMaxTapCount );
+            SW_LOG_ERROR_ID( "InputMap.ActionTapsOutside", "Action '%#' has taps=\"%#\" outside %#..%#", action.c_str(), tapCount, kMinTapCount, kMaxTapCount );
             inoutbValid = false;
             return;
         }
@@ -2196,8 +2196,8 @@ namespace sw
             const GamepadButton positiveButton = GamepadButtonUtil::fromName( node.getAttributeText( pPositiveName ) );
             if ( negativeButton == GamepadButton::Count || positiveButton == GamepadButton::Count )
             {
-                SW_LOG_WARNING( "axis1d names an unknown gamepad button ('%#' / '%#') - binding dropped", node.getAttributeText( pNegativeName ),
-                                node.getAttributeText( pPositiveName ) );
+                SW_LOG_WARNING_ID( "InputMap.Axis1dNamesUnknownGamepad", "axis1d names an unknown gamepad button ('%#' / '%#') - binding dropped", node.getAttributeText( pNegativeName ),
+                                   node.getAttributeText( pPositiveName ) );
                 return false;
             }
             outNegative = InputSlot::fromGamepadButton( negativeButton, padIndex );
@@ -2206,15 +2206,15 @@ namespace sw
         }
         if ( pSource != nullptr && StringUtil::equals( pSource, InputMapXML::kSourceKey ) == false )
         {
-            SW_LOG_WARNING( "axis1d source '%#' is neither 'key' nor 'gamepad' - binding dropped", pSource );
+            SW_LOG_WARNING_ID( "InputMap.Axis1dSourceNeitherKey", "axis1d source '%#' is neither 'key' nor 'gamepad' - binding dropped", pSource );
             return false;
         }
         const Key negativeKey = KeyCodeUtil::fromName( node.getAttributeText( pNegativeName ) );
         const Key positiveKey = KeyCodeUtil::fromName( node.getAttributeText( pPositiveName ) );
         if ( negativeKey == Key::Unknown || positiveKey == Key::Unknown )
         {
-            SW_LOG_WARNING( "axis1d names an unknown key ('%#' / '%#') - binding dropped", node.getAttributeText( pNegativeName ),
-                            node.getAttributeText( pPositiveName ) );
+            SW_LOG_WARNING_ID( "InputMap.Axis1dNamesUnknownKey", "axis1d names an unknown key ('%#' / '%#') - binding dropped", node.getAttributeText( pNegativeName ),
+                               node.getAttributeText( pPositiveName ) );
             return false;
         }
         outNegative = InputSlot::fromKey( negativeKey );
@@ -2289,7 +2289,7 @@ namespace sw
                 if ( Internal::tryParseValueType( pValueTypeAttr, valueType ) )
                     map.createAction( hashed_string( pActionName ), valueType );
                 else
-                    SW_LOG_WARNING( "Action '%#' has an unknown valueType '%#' - the bindings decide it", pActionName, pValueTypeAttr );
+                    SW_LOG_WARNING_ID( "InputMap.ActionUnknownValueTypeBindings", "Action '%#' has an unknown valueType '%#' - the bindings decide it", pActionName, pValueTypeAttr );
             }
 
             hashed_string layer      = inheritedLayer.empty() ? map._defaultLayerName : hashed_string( inheritedLayer );
@@ -2353,8 +2353,8 @@ namespace sw
                     const bool bKeyShortcut = StringUtil::equals( pSource, Internal::InputMapXML::kSourceKey, true ) && triggerKey != Key::Unknown;
                     if ( bKeyShortcut == false || InputRemapSerializer::tryParseModifierNames( pModifierAttr, modifierMask ) == false )
                     {
-                        SW_LOG_ERROR( "Action '%#': <bind modifier=\"%#\" code=\"%#\"> is not a key shortcut (modifier is Ctrl, Shift, Alt, Super joined by '+')", _action.c_str(),
-                                      pModifierAttr, pCode );
+                        SW_LOG_ERROR_ID( "InputMap.ActionBindModifierCode", "Action '%#': <bind modifier=\"%#\" code=\"%#\"> is not a key shortcut (modifier is Ctrl, Shift, Alt, Super joined by '+')", _action.c_str(),
+                                         pModifierAttr, pCode );
                         _bValid = false;
                         continue;
                     }
@@ -2522,14 +2522,14 @@ namespace sw
         string      absPath;
         if ( doc.loadResource( assetID, &absPath ) == false )
         {
-            SW_LOG_WARNING( "Failed to load InputMap %#", relativePath );
+            SW_LOG_WARNING_ID( "InputMap.FailedLoadInputMap", "Failed to load InputMap %#", relativePath );
             return false;
         }
 
         XMLNode root = doc.getRoot( InputMapXML::kRoot );
         if ( root.isValid() == false )
         {
-            SW_LOG_WARNING( "Missing <InputMap> in %#", absPath );
+            SW_LOG_WARNING_ID( "InputMap.MissingInputMap", "Missing <InputMap> in %#", absPath );
             return false;
         }
 
@@ -2546,7 +2546,7 @@ namespace sw
 
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "InputMap %# has invalid attribute values (listed above)", absPath );
+            SW_LOG_ERROR_ID( "InputMap.InputMapInvalidAttributeValues", "InputMap %# has invalid attribute values (listed above)", absPath );
             return false;
         }
         // 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 액션에 따로 묶으면 한 입력이 두 입력이 된다 — 읽기를 실패로 돌려 데이터를 고치게 한다.
@@ -2575,7 +2575,7 @@ namespace sw
         InputMapXMLUtil::readOptional( root, InputMapXML::kAttrDragThreshold, dragThreshold, bValid );
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "InputMap %# has invalid timing attributes", absPath );
+            SW_LOG_ERROR_ID( "InputMap.InputMapInvalidTimingAttributes", "InputMap %# has invalid timing attributes", absPath );
             return false;
         }
         const utf8*           pDefaultLayer  = root.findAttribute( InputMapXML::kAttrDefaultLayer );
@@ -2583,7 +2583,7 @@ namespace sw
         InputMapVirtualCursor virtualCursor  = InputMapVirtualCursor::Off;
         if ( pVirtualCursor != nullptr && InputMapInternal::tryParseVirtualCursor( pVirtualCursor, virtualCursor ) == false )
         {
-            SW_LOG_ERROR( "InputMap %# has an unknown virtualCursor '%#' (Off, LeftStick, RightStick)", absPath, pVirtualCursor );
+            SW_LOG_ERROR_ID( "InputMap.InputMapUnknownVirtualCursorOff", "InputMap %# has an unknown virtualCursor '%#' (Off, LeftStick, RightStick)", absPath, pVirtualCursor );
             return false;
         }
 
@@ -2614,7 +2614,7 @@ namespace sw
                     continue;
                 if ( bAppend && hasLayer( hashed_string( pLayerName ) ) )
                 {
-                    SW_LOG_ERROR( "InputMap %# redefines layer '%#' that the map already has - put actions in it with <layer name=...> instead", absPath, pLayerName );
+                    SW_LOG_ERROR_ID( "InputMap.InputMapRedefinesLayerMap", "InputMap %# redefines layer '%#' that the map already has - put actions in it with <layer name=...> instead", absPath, pLayerName );
                     inoutbValid = false;
                     continue;
                 }
@@ -2639,7 +2639,7 @@ namespace sw
                 const hashed_string actionName( pActionName );
                 if ( hasAction( actionName ) )
                 {
-                    SW_LOG_ERROR( "InputMap %# defines action '%#' that the map already has", absPath, pActionName );
+                    SW_LOG_ERROR_ID( "InputMap.InputMapDefinesActionMap", "InputMap %# defines action '%#' that the map already has", absPath, pActionName );
                     inoutbValid = false;
                     return;
                 }
@@ -2682,8 +2682,8 @@ namespace sw
             hashed_string otherName{};
             if ( findSameLayerInputConflict( action, bindIndex, otherName ) == false )
                 continue;
-            SW_LOG_ERROR( "InputMap %#: action '%#' uses the same input as '%#' in layer '%#' - one press would fire both", sourceName, action.c_str(), otherName.c_str(),
-                          pEntry->_listBinding[bindIndex]._layer.c_str() );
+            SW_LOG_ERROR_ID( "InputMap.InputMapActionUsesSame", "InputMap %#: action '%#' uses the same input as '%#' in layer '%#' - one press would fire both", sourceName, action.c_str(), otherName.c_str(),
+                             pEntry->_listBinding[bindIndex]._layer.c_str() );
             ++conflictCount;
         }
         return conflictCount;
@@ -2744,8 +2744,8 @@ namespace sw
         }
         if ( bCursorStick == false && bCursorButton == false )
             return false;
-        SW_LOG_ERROR( "InputMap %#: action '%#' binds the %# the virtual cursor (%#) turns into the mouse - one press would fire twice; bind the mouse only",
-                      sourceName, action.c_str(), bCursorStick ? "stick" : "gamepad button", InputMapInternal::toVirtualCursorName( _virtualCursorStick ) );
+        SW_LOG_ERROR_ID( "InputMap.InputMapActionBindsVirtual", "InputMap %#: action '%#' binds the %# the virtual cursor (%#) turns into the mouse - one press would fire twice; bind the mouse only",
+                         sourceName, action.c_str(), bCursorStick ? "stick" : "gamepad button", InputMapInternal::toVirtualCursorName( _virtualCursorStick ) );
         return true;
     }
 
@@ -2798,7 +2798,7 @@ namespace sw
             return false;
         if ( doc.saveFile( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "Could not write InputMap %#", absPath.str() );
+            SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
             return false;
         }
         return true;

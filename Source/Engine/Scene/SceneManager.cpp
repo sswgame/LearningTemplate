@@ -93,7 +93,7 @@ namespace sw
         _queuedPath.clear();
         _bInitialized = true;
 
-        SW_LOG_INFO( "Initialized." );
+        SW_LOG_INFO_ID( "SceneManager.Initialized", "Initialized." );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -151,7 +151,7 @@ namespace sw
         }
         _listLoadedScene.clear();
         broadcastSceneObjectsInvalidated();
-        SW_LOG_INFO( "Shut down." );
+        SW_LOG_INFO_ID( "SceneManager.ShutDown", "Shut down." );
     }
 
     Scene* SceneManager::createScene( string_view name )
@@ -186,7 +186,7 @@ namespace sw
         Scene* const pScene = scene.get();
         // 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
         if ( _pRHIDevice != nullptr && pScene->initialize( _pRHIDevice ) == false )
-            SW_LOG_WARNING( "Scene '%#' could not acquire its default material", pScene->getName() );
+            SW_LOG_WARNING_ID( "SceneManager.SceneCouldNotAcquire", "Scene '%#' could not acquire its default material", pScene->getName() );
         // 넷 링크는 플레이가 시작되기 전(활성화 · `beginPlay` 앞)에 올린다. 미리보기 씬은 만드는 쪽(가상 서버 하니스)이 자기 링크를 올린다.
         GameObjectManager* const pNewManager = pScene->getObjectManager();
         if ( role != SceneRole::Preview && _netLink.isComplete() && pNewManager != nullptr )
@@ -222,12 +222,12 @@ namespace sw
     {
         if ( path.empty() )
         {
-            SW_LOG_WARNING( "requestLoadFuture: empty path" );
+            SW_LOG_WARNING_ID( "SceneManager.RequestLoadFutureEmptyPath", "requestLoadFuture: empty path" );
             return {};
         }
         if ( _asyncLoad == nullptr || _asyncLoad->_bAccepting.load( std::memory_order_acquire ) == false )
         {
-            SW_LOG_WARNING( "requestLoadFuture: manager is shutting down" );
+            SW_LOG_WARNING_ID( "SceneManager.RequestLoadFutureManagerShuttingDown", "requestLoadFuture: manager is shutting down" );
             return {};
         }
         // 씬은 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleLoadStage`)에만 읽는다. 그 전에 지으면 아직 오르지 않은 모듈의 컴포넌트가
@@ -235,7 +235,7 @@ namespace sw
         // 타입 표를 받지 못한 매니저도 같은 이유로 거절한다 — 무엇으로 지을지 모른다.
         if ( _services._pTypeRegistry == nullptr || _services._pTypeRegistry->areAllModuleTypesRegistered() == false )
         {
-            SW_LOG_ERROR( "Scene '%#' was requested before every module registered its types - refused (load it after the ModuleLoadStage startup step)", path );
+            SW_LOG_ERROR_ID( "SceneManager.SceneRequestedBeforeEvery", "Scene '%#' was requested before every module registered its types - refused (load it after the ModuleLoadStage startup step)", path );
             return {};
         }
 
@@ -250,7 +250,7 @@ namespace sw
 
             _queuedPath    = path;
             _queuedPromise = TaskPromise<Scene*>{};
-            SW_LOG_TRACE( "Async load in flight — queued '%#'", path );
+            SW_LOG_TRACE_ID( "SceneManager.AsyncLoadFlightQueued", "Async load in flight — queued '%#'", path );
             TaskFuture<Scene*> queuedFuture = _queuedPromise.getFuture();
             _onSceneLoadRequested.broadcast( _queuedPath, kind, queuedFuture );
             return queuedFuture;
@@ -271,7 +271,7 @@ namespace sw
         // 로드를 띄울 곳(태스크)과 지을 표(타입)가 없으면 띄우지 않는다. 기다리는 쪽에는 실패로 알린다.
         if ( _services._pTaskManager == nullptr || _services._pTypeRegistry == nullptr )
         {
-            SW_LOG_ERROR( "Scene '%#' cannot be loaded - the scene manager has no task manager or type registry", path );
+            SW_LOG_ERROR_ID( "SceneManager.SceneCannotLoadedScene", "Scene '%#' cannot be loaded - the scene manager has no task manager or type registry", path );
             _bLoadInFlight.store( false, std::memory_order_release );
             promise.setValue( nullptr );
             return false;
@@ -280,7 +280,7 @@ namespace sw
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _asyncLoad->_promise             = std::move( promise );
         _asyncLoad->_typeTableGeneration = _services._pTypeRegistry->getGeneration();
-        SW_LOG_TRACE( "dispatchLoad: %#", path );
+        SW_LOG_TRACE_ID( "SceneManager.DispatchLoad", "dispatchLoad: %#", path );
 
         shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
         _loadHandle                    = _services._pTaskManager->emplaceTask(
@@ -375,10 +375,10 @@ namespace sw
             newScene->setSourcePath( pathStr );
             const bool bInstantiated = newScene->instantiate( doc, slot->_stop.getToken() );
             if ( bInstantiated == false && slot->_stop.isStopRequested() == false ) // 종료 신호로 멈춘 것은 실패가 아니다
-                SW_LOG_WARNING( "[SceneLoad] '%#' could not be instantiated", pathStr );
+                SW_LOG_WARNING_ID( "SceneManager.CouldNotInstantiated", "[SceneLoad] '%#' could not be instantiated", pathStr );
         }
 
-        SW_LOG_INFO( "[SceneLoad] '%#' %# entities", pathStr, static_cast<uint32>( doc._listSceneObjectNode.size() ) );
+        SW_LOG_INFO_ID( "SceneManager.Entities", "[SceneLoad] '%#' %# entities", pathStr, static_cast<uint32>( doc._listSceneObjectNode.size() ) );
 
         if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
             return; // 지은 씬(중간에 멈춘 부분 씬 포함)은 여기서 소멸하며 정리된다
@@ -390,9 +390,9 @@ namespace sw
         }
         slot->_bReady.store( true, std::memory_order_release );
         if ( bSuccess )
-            SW_LOG_TRACE( "Async load task completed for '%#'", pathStr );
+            SW_LOG_TRACE_ID( "SceneManager.AsyncLoadTaskCompleted", "Async load task completed for '%#'", pathStr );
         else
-            SW_LOG_ERROR( "Async load task failed for '%#'", pathStr );
+            SW_LOG_ERROR_ID( "SceneManager.AsyncLoadTaskFailed", "Async load task failed for '%#'", pathStr );
     }
 
     void SceneManager::waitForPendingLoad() const
@@ -444,13 +444,13 @@ namespace sw
         const Scene* pScene = getActiveScene();
         if ( pScene == nullptr || pScene->getSourcePath().empty() )
         {
-            SW_LOG_ERROR( "saveActiveScene: the active scene has no source - give it a place with saveActiveSceneAs; nothing is saved" );
+            SW_LOG_ERROR_ID( "SceneManager.SaveActiveSceneActiveSceneNo", "saveActiveScene: the active scene has no source - give it a place with saveActiveSceneAs; nothing is saved" );
             return false;
         }
         // 쓰는 이름은 쿠커가 쿠킹하는 씬 이름이다(`AssetCookPath::toSourcePath` - 쿠킹본에서 연 씬은 원본 이름으로 쓴다).
         const string sourceID = AssetCookPath::toSourcePath( pScene->getSourcePath(), SceneDocument::kAssetType );
         if ( sourceID != pScene->getSourcePath() )
-            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", pScene->getSourcePath(), sourceID );
+            SW_LOG_WARNING_ID( "SceneManager.ScenePathNotName", "Scene path '%#' is not a name the cooker cooks - saving as '%#'", pScene->getSourcePath(), sourceID );
         const std::optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         return absPath.has_value() && writeActiveScene( *absPath, sourceID );
     }
@@ -461,11 +461,11 @@ namespace sw
         const string                      sourceID = outPath.has_value() ? engine::getSubsystem<AssetPaths>().toAssetID( outPath->str() ) : string{};
         if ( sourceID.empty() )
         {
-            SW_LOG_ERROR( "Save Scene As: '%#' is outside the content root and every mounted disk domain - a scene saved there cannot be opened again", absPath.str() );
+            SW_LOG_ERROR_ID( "SceneManager.SaveSceneOutsideContent", "Save Scene As: '%#' is outside the content root and every mounted disk domain - a scene saved there cannot be opened again", absPath.str() );
             return false;
         }
         if ( *outPath != absPath )
-            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", absPath.str(), outPath->str() );
+            SW_LOG_WARNING_ID( "SceneManager.ScenePathNotName", "Scene path '%#' is not a name the cooker cooks - saving as '%#'", absPath.str(), outPath->str() );
         return writeActiveScene( *outPath, sourceID );
     }
 
@@ -484,7 +484,7 @@ namespace sw
         Scene* pScene = getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
-            SW_LOG_WARNING( "Scene save: no active scene" );
+            SW_LOG_WARNING_ID( "SceneManager.SceneSaveNoActive", "Scene save: no active scene" );
             return false;
         }
         SceneDocument doc{};
@@ -528,7 +528,7 @@ namespace sw
         if ( bReloadForTypeChange )
         {
             const string path = pendingScene->getSourcePath();
-            SW_LOG_INFO( "Reflected types changed while '%#' was loading — loading it again", path );
+            SW_LOG_INFO_ID( "SceneManager.ReflectedTypesChangedWhile", "Reflected types changed while '%#' was loading — loading it again", path );
             pendingScene.reset();
             dispatchLoad( path, std::move( _asyncLoad->_promise ) );
             return;
@@ -547,7 +547,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_TRACE( "Discarding completed load in favor of queued '%#'", nextPath );
+                SW_LOG_TRACE_ID( "SceneManager.DiscardingCompletedLoadFavor", "Discarding completed load in favor of queued '%#'", nextPath );
                 if ( _asyncLoad != nullptr )
                     _asyncLoad->_promise.setValue( nullptr );
                 pendingScene.reset();
@@ -560,7 +560,7 @@ namespace sw
 
         if ( pendingScene == nullptr )
         {
-            SW_LOG_ERROR( "Async load failed" );
+            SW_LOG_ERROR_ID( "SceneManager.AsyncLoadFailed", "Async load failed" );
             if ( _asyncLoad != nullptr )
                 _asyncLoad->_promise.setValue( nullptr );
             if ( bQueuedSatisfiedByThisLoad )
@@ -573,7 +573,7 @@ namespace sw
 
         // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `adoptScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
         Scene* const pAdopted = adoptScene( std::move( pendingScene ), SceneRole::Active );
-        SW_LOG_INFO( "Active scene swapped to '%#'", pAdopted->getName() );
+        SW_LOG_INFO_ID( "SceneManager.ActiveSceneSwapped", "Active scene swapped to '%#'", pAdopted->getName() );
         if ( _asyncLoad != nullptr )
             _asyncLoad->_promise.setValue( pAdopted );
         // 대기열이 같은 경로를 가리키고 있었으면 그 요청자도 이 씬이 답이다.
@@ -782,13 +782,13 @@ namespace sw
         // 편집 중에는 받지 않는다(유니티도 플레이 모드에서만). 받아 두면 편집 중 씬을 바꿀 때 옮겨 간다.
         if ( _bWorldPlaying == false )
         {
-            SW_LOG_WARNING( "markPersistent: '%#' ignored - objects carry across scene loads only while the world is playing", pRoot->getName().c_str() );
+            SW_LOG_WARNING_ID( "SceneManager.MarkPersistentIgnoredObjectsCarry", "markPersistent: '%#' ignored - objects carry across scene loads only while the world is playing", pRoot->getName().c_str() );
             return;
         }
         if ( pRoot->getParent() != nullptr )
         {
-            SW_LOG_WARNING( "markPersistent: '%#' is not a root object - only roots (with their children) carry across scene loads",
-                            pRoot->getName().c_str() );
+            SW_LOG_WARNING_ID( "SceneManager.MarkPersistentNotRootObject", "markPersistent: '%#' is not a root object - only roots (with their children) carry across scene loads",
+                               pRoot->getName().c_str() );
             return;
         }
         if ( isPersistent( pRoot ) == false )
@@ -855,7 +855,7 @@ namespace sw
                 context._pBatch    = &batch;
                 if ( carried._pTarget == nullptr ||
                      ObjectStateSerializer::loadFromBinaryBuffer( carried._pTarget, carried._bytes.data(), carried._bytes.size(), context ) == 0 )
-                    SW_LOG_WARNING( "Persistent object '%#' could not be carried into '%#'", carried._pSource->getName().c_str(), pTo->getName() );
+                    SW_LOG_WARNING_ID( "SceneManager.PersistentObjectCouldNot", "Persistent object '%#' could not be carried into '%#'", carried._pSource->getName().c_str(), pTo->getName() );
             }
             // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
             [[maybe_unused]] const bool bLinked = batch.finish();

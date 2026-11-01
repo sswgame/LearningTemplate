@@ -50,7 +50,7 @@ namespace sw
         // 모든 메시를 풀에서 빼고 오류를 남긴다 — 그 배치들은 그리지 않는다. 다음 프레임에 다시 시도한다.
         if ( _table.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), capacity, kUsage, true, false, nullptr ) == false )
         {
-            SW_LOG_ERROR( "Could not create the vertex animation table (%# words) - meshes with vertex animation are not drawn", capacity );
+            SW_LOG_ERROR_ID( "GPUVertexAnimationPool.CouldNotCreateVertex", "Could not create the vertex animation table (%# words) - meshes with vertex animation are not drawn", capacity );
             _allocator.reset( 0 );
             _listBuilt.clear();
             _listBuiltContentID.clear();
@@ -78,7 +78,7 @@ namespace sw
             if ( needed > kMaxWordCount )
             {
                 // 상한 초과는 오류다 — 이 메시는 풀에 없고(baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다, GPUMeshBatch::_bDeformRefused).
-                SW_LOG_ERROR( "Vertex animation pool limit exceeded (%# words, table needs %#) - that mesh is not drawn", kMaxWordCount, static_cast<uint32>( needed ) );
+                SW_LOG_ERROR_ID( "GPUVertexAnimationPool.VertexAnimationPoolLimit", "Vertex animation pool limit exceeded (%# words, table needs %#) - that mesh is not drawn", kMaxWordCount, static_cast<uint32>( needed ) );
                 continue;
             }
             const uint32 base = _allocator.allocate( static_cast<uint32>( needed ) );
@@ -194,7 +194,7 @@ namespace sw
             if ( placeWanted( pDevice, listWanted, listAll ) == false )
             {
                 // 상한 안에서 다 못 담는다 — 담은 것까지만 풀에 있고 나머지 메시는 그리지 않는다.
-                SW_LOG_ERROR( "Vertex animation pool is full (%# words) - some meshes with vertex animation are not drawn", capacity );
+                SW_LOG_ERROR_ID( "GPUVertexAnimationPool.VertexAnimationPoolFull", "Vertex animation pool is full (%# words) - some meshes with vertex animation are not drawn", capacity );
             }
         }
         refreshBases();

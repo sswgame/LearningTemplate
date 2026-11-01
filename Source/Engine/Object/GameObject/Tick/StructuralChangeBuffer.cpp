@@ -105,7 +105,7 @@ namespace sw
         }
         // 상한에 닿으면 남은 것을 호출하지 않고 버린다. SW_ASSERT 로 멈추면 언로드가 반쯤 끝난 채 남고, 남겨 두면 모듈이 내려간 뒤
         // 다음 프레임 drain 이 없는 코드를 부른다. 게임 쪽 일 몇 개를 잃는 편이 안전하다.
-        SW_LOG_ERROR( "Deferred work kept re-queueing after %# drain passes before module unload; discarding the rest", kMaxDrainPass );
+        SW_LOG_ERROR_ID( "StructuralChangeBuffer.DeferredWorkKeptRe", "Deferred work kept re-queueing after %# drain passes before module unload; discarding the rest", kMaxDrainPass );
         clear();
     }
 

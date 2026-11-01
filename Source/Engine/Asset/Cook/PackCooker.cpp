@@ -107,7 +107,7 @@ namespace sw
                 {
                     if ( FileUtil::isDirectory( FileUtil::joinPath( gameRoot, params._gamePackFolder ) ) == false )
                     {
-                        SW_LOG_ERROR( "Game pack folder '%#' does not exist under %#", params._gamePackFolder, gameRoot );
+                        SW_LOG_ERROR_ID( "PackCooker.GamePackFolderDoes", "Game pack folder '%#' does not exist under %#", params._gamePackFolder, gameRoot );
                         return false;
                     }
                     outListDomain.push_back( string( constant::path::kGamePack ) + "/" + params._gamePackFolder );
@@ -146,7 +146,7 @@ namespace sw
                 ioTiming._readNanos += readWatch.getElapsedNanoseconds();
                 if ( bRead == false )
                 {
-                    SW_LOG_ERROR( "Pack cook: could not read '%#'", absPath );
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNot", "Pack cook: could not read '%#'", absPath );
                     return false;
                 }
                 writer.addBytes( relativePath, std::move( bytes ) );
@@ -162,11 +162,11 @@ namespace sw
             {
                 const PackWriteStats& write      = timing._write;
                 const int64           otherNanos = totalNanos - ( timing._readNanos + write._compressWallNanos + write._layoutNanos + hashNanos + write._writeNanos );
-                SW_LOG_INFO( "Pack cook: %# packs written or reused, %# failed (target %#) in %# ms - read %# ms, compress %# ms wall / %# ms cpu, layout %# ms, hash %# ms, write %# ms, other %# ms (%# files, %# bytes)",
-                             packCount, failedCount, target, totalNanos / constant::time::kNanosecondsPerMillisecond, timing._readNanos / constant::time::kNanosecondsPerMillisecond,
-                             write._compressWallNanos / constant::time::kNanosecondsPerMillisecond, write._compressCPUNanos / constant::time::kNanosecondsPerMillisecond,
-                             write._layoutNanos / constant::time::kNanosecondsPerMillisecond, hashNanos / constant::time::kNanosecondsPerMillisecond,
-                             write._writeNanos / constant::time::kNanosecondsPerMillisecond, otherNanos / constant::time::kNanosecondsPerMillisecond, write._entryCount, write._inputBytes );
+                SW_LOG_INFO_ID( "PackCooker.PackCookPacksWritten", "Pack cook: %# packs written or reused, %# failed (target %#) in %# ms - read %# ms, compress %# ms wall / %# ms cpu, layout %# ms, hash %# ms, write %# ms, other %# ms (%# files, %# bytes)",
+                                packCount, failedCount, target, totalNanos / constant::time::kNanosecondsPerMillisecond, timing._readNanos / constant::time::kNanosecondsPerMillisecond,
+                                write._compressWallNanos / constant::time::kNanosecondsPerMillisecond, write._compressCPUNanos / constant::time::kNanosecondsPerMillisecond,
+                                write._layoutNanos / constant::time::kNanosecondsPerMillisecond, hashNanos / constant::time::kNanosecondsPerMillisecond,
+                                write._writeNanos / constant::time::kNanosecondsPerMillisecond, otherNanos / constant::time::kNanosecondsPerMillisecond, write._entryCount, write._inputBytes );
             }
 
             /** @brief 도메인 하나의 팩을 @p outputPath 에 씁니다. 작업 범위 안에서 부른다. 단계별 시간은 @p ioTiming 에 더한다. */
@@ -210,8 +210,8 @@ namespace sw
                         return CookStep::Failed;
                 }
                 if ( listStale.empty() == false )
-                    SW_LOG_WARNING( "Pack cook: %# has %# stale cooked files in the source tree (first: %#) - delete them; they are not packed", domain, listStale.size(),
-                                    listStale.front() );
+                    SW_LOG_WARNING_ID( "PackCooker.PackCookStaleCooked", "Pack cook: %# has %# stale cooked files in the source tree (first: %#) - delete them; they are not packed", domain, listStale.size(),
+                                       listStale.front() );
 
                 vector<string> listStagedFile;
                 if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
@@ -232,8 +232,8 @@ namespace sw
                 // 레지스트리가 없으면 배포본의 GUID 참조가 전부 경로로 대신 찾는다(이름을 바꾼 에셋은 배포본에서만 못 찾는다) — 이 팩을 실패로 한다.
                 if ( bHasMeta && bHasRegistry == false )
                 {
-                    SW_LOG_ERROR( "Pack cook: %# has .meta files but the staging folder has no %# - run the scene cook (--cook-scenes or --cook-all) first", domain,
-                                  kAssetRegistryFileName );
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookMetaFiles", "Pack cook: %# has .meta files but the staging folder has no %# - run the scene cook (--cook-scenes or --cook-all) first", domain,
+                                     kAssetRegistryFileName );
                     return CookStep::Failed;
                 }
 
@@ -241,7 +241,7 @@ namespace sw
                 if ( writer.writePackFile( outputPath, &writeStats ) == false )
                     return CookStep::Failed;
                 ioTiming._write.add( writeStats );
-                SW_LOG_INFO( "Pack cook: wrote %# (%# files)", outputPath, writer.getEntryCount() );
+                SW_LOG_INFO_ID( "PackCooker.PackCookWroteFiles", "Pack cook: wrote %# (%# files)", outputPath, writer.getEntryCount() );
                 return CookStep::Written;
             }
         };
@@ -325,7 +325,7 @@ namespace sw
         const bool bMissingParam = params._resourceRoot.empty() || params._cookedDir.empty() || params._packOutputDir.empty() || params._shaderFolder.empty();
         if ( bMissingParam )
         {
-            SW_LOG_ERROR( "Pack cook needs the content root, --cooked-dir, --pack-dir and a shader folder" );
+            SW_LOG_ERROR_ID( "PackCooker.PackCookNeedsContent", "Pack cook needs the content root, --cooked-dir, --pack-dir and a shader folder" );
             return false;
         }
 
@@ -334,7 +334,7 @@ namespace sw
             return false;
         if ( listDomain.empty() )
         {
-            SW_LOG_ERROR( "Pack cook found no domain folder under %#", params._resourceRoot );
+            SW_LOG_ERROR_ID( "PackCooker.PackCookFoundNo", "Pack cook found no domain folder under %#", params._resourceRoot );
             return false;
         }
 

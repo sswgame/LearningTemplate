@@ -37,7 +37,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "themepark.layout.reload" );
         // [/doc:panel-draw]
         if ( preview.refresh( bForce ) && bForce )
-            SW_LOG_INFO( "Park layout reloaded on request" );
+            SW_LOG_INFO_ID( "ParkLayoutPanel.ParkLayoutReloadedRequest", "Park layout reloaded on request" );
         if ( preview.isLoaded() == false )
         {
             const string hint = ( preview.isMissing() ? "This game has no park layout data (" : "The park layout could not be read (" ) + preview.getLayoutPath() + ")";

@@ -56,7 +56,7 @@ namespace sw
             _barBatch.setSorting( _barSortingLayer, Render2DSettings::kMaxOrderInLayer );
             _barBatch.setOwnerComponent( this );
             if ( _barBatch.initialize( *pManager, {}, PixelPerfectCameraComponentInternal::kBarCount ) == false )
-                SW_LOG_WARNING( "Pixel perfect letterbox bars could not be created" );
+                SW_LOG_WARNING_ID( "PixelPerfectCamera.PixelPerfectLetterboxBars", "Pixel perfect letterbox bars could not be created" );
         }
     }
 

@@ -103,7 +103,7 @@ namespace sw
         if ( gv_serverStartPaused )
         {
             _bPaused = true;
-            SW_LOG_INFO( "Server starts paused at tick %# (-gv_serverStartPaused)", _tickCount() );
+            SW_LOG_INFO_ID( "Server.ServerStartsPausedTick", "Server starts paused at tick %# (-gv_serverStartPaused)", _tickCount() );
         }
     }
 
@@ -119,7 +119,7 @@ namespace sw
             return true;
         if ( _pDev == nullptr )
         {
-            SW_LOG_ERROR( "The debug channel was requested (-gv_debugChannelPort=%#) before the dev console started", gv_debugChannelPort );
+            SW_LOG_ERROR_ID( "Server.DebugChannelRequestedGv", "The debug channel was requested (-gv_debugChannelPort=%#) before the dev console started", gv_debugChannelPort );
             return false;
         }
         const uint16 port = static_cast<uint16>( gv_debugChannelPort );
@@ -152,7 +152,7 @@ namespace sw
         } ) );
         if ( bStarted == false )
         {
-            SW_LOG_ERROR( "The debug channel was requested (-gv_debugChannelPort=%#) but could not start", gv_debugChannelPort );
+            SW_LOG_ERROR_ID( "Server.DebugChannelRequestedGv2", "The debug channel was requested (-gv_debugChannelPort=%#) but could not start", gv_debugChannelPort );
             _pDev->_channel.reset();
             _pDev->_transport.reset();
             return false;
@@ -192,7 +192,7 @@ namespace sw
     void ServerDebugControl::onTickFinished()
     {
         if ( _bPaused && _pendingStepCount > 0 && --_pendingStepCount == 0 )
-            SW_LOG_INFO( "Server stepped to tick %# (paused)", _tickCount() );
+            SW_LOG_INFO_ID( "Server.ServerSteppedTickPaused", "Server stepped to tick %# (paused)", _tickCount() );
     }
 
     bool ServerDebugControl::executePauseCommand( string_view command )
@@ -201,14 +201,14 @@ namespace sw
         {
             _bPaused          = true;
             _pendingStepCount = 0;
-            SW_LOG_INFO( "Server paused at tick %#", _tickCount() );
+            SW_LOG_INFO_ID( "Server.ServerPausedTick", "Server paused at tick %#", _tickCount() );
             return true;
         }
         if ( command == "resume" )
         {
             _bPaused          = false;
             _pendingStepCount = 0;
-            SW_LOG_INFO( "Server resumed at tick %#", _tickCount() );
+            SW_LOG_INFO_ID( "Server.ServerResumedTick", "Server resumed at tick %#", _tickCount() );
             return true;
         }
         const string_view kStep = "step";
@@ -219,11 +219,11 @@ namespace sw
         const string_view argument  = StringUtil::trim( command.substr( kStep.size() ) );
         if ( argument.empty() == false && ( StringUtil::parseInt( argument, stepCount ) == false || stepCount <= 0 ) )
         {
-            SW_LOG_WARNING( "step takes a positive tick count - got '%#'", string( argument ).c_str() );
+            SW_LOG_WARNING_ID( "Server.StepTakesPositiveTick", "step takes a positive tick count - got '%#'", string( argument ).c_str() );
             return true;
         }
         if ( _bPaused == false )
-            SW_LOG_INFO( "Server paused at tick %#", _tickCount() );
+            SW_LOG_INFO_ID( "Server.ServerPausedTick", "Server paused at tick %#", _tickCount() );
         _bPaused          = true; // 도는 중에 step 이면 멈추고 그만큼만 돈다.
         _pendingStepCount = static_cast<uint32>( stepCount );
         return true;

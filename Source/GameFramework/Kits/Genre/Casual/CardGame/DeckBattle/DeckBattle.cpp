@@ -62,7 +62,7 @@ namespace sw
         {
             if ( StringUtil::equals( node.getName(), "Card" ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "DeckBattle.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
                 continue;
             }
             DeckBattleCardDef def;
@@ -77,7 +77,7 @@ namespace sw
                     def._listEffect.push_back( effect );
                 else
                 {
-                    SW_LOG_ERROR( "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
+                    SW_LOG_ERROR_ID( "DeckBattle.CardUnreadableEffect", "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
                     bValid = false;
                 }
             } );

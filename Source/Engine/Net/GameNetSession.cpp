@@ -51,24 +51,24 @@ namespace sw
                 const bool bBadShardCount = params._shardCount < 1 || ( bServer == false && params._shardCount != 1 );
                 if ( bBadShardCount )
                 {
-                    SW_LOG_ERROR( "Net session shard count %# - a server opens 1 or more shards and a client exactly 1", params._shardCount );
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionShardCount", "Net session shard count %# - a server opens 1 or more shards and a client exactly 1", params._shardCount );
                     return false;
                 }
                 const bool bBadPortSharing = params._bShardsSharePort && ( bServer == false || kbCanSharePort == false || params._shardCount < 2 );
                 if ( bBadPortSharing )
                 {
-                    SW_LOG_ERROR( "Net session port sharing is for a Linux server with 2 or more shards (%# shard(s))", params._shardCount );
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionPortSharing", "Net session port sharing is for a Linux server with 2 or more shards (%# shard(s))", params._shardCount );
                     return false;
                 }
                 if ( params._shardCount > 1 && params._listenPort == 0 )
                 {
-                    SW_LOG_ERROR( "Net session %# shards on port 0 - shards need a fixed first port (the server assignment hands out first port + shard)", params._shardCount );
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionShardsPort", "Net session %# shards on port 0 - shards need a fixed first port (the server assignment hands out first port + shard)", params._shardCount );
                     return false;
                 }
                 const int32 lastPort = params._bShardsSharePort ? static_cast<int32>( params._listenPort ) : static_cast<int32>( params._listenPort ) + params._shardCount - 1;
                 if ( constant::network::kMaxPort < lastPort )
                 {
-                    SW_LOG_ERROR( "Net session shards %#-%# run past the UDP port range", params._listenPort, lastPort );
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionShardsRun", "Net session shards %#-%# run past the UDP port range", params._listenPort, lastPort );
                     return false;
                 }
                 return true;
@@ -264,7 +264,7 @@ namespace sw
         // 두 역할을 함께 주면 어느 쪽을 바랐는지 모른다 — 한쪽을 골라 띄우지 않는다.
         if ( bListen && bConnect )
         {
-            SW_LOG_ERROR( "Both gv_netListenPort and gv_netConnectAddress are set - pick one role" );
+            SW_LOG_ERROR_ID( "GameNetSession.BothGvNetListenPortGv", "Both gv_netListenPort and gv_netConnectAddress are set - pick one role" );
             return GameNetLaunch::Invalid;
         }
         if ( bListen )
@@ -272,7 +272,7 @@ namespace sw
             const bool bPortInRange = 0 < gv_netListenPort && gv_netListenPort <= constant::network::kMaxPort;
             if ( bPortInRange == false )
             {
-                SW_LOG_ERROR( "gv_netListenPort %# is not a UDP port", gv_netListenPort );
+                SW_LOG_ERROR_ID( "GameNetSession.GvNetListenPortNotUDP", "gv_netListenPort %# is not a UDP port", gv_netListenPort );
                 return GameNetLaunch::Invalid;
             }
             outParams._role          = GameNetRole::Server;
@@ -284,7 +284,7 @@ namespace sw
         const bool bResolved = PlatformSocketUtil::resolveAddress( gv_netConnectAddress, kDefaultPort, outParams._serverAddress );
         if ( bResolved == false || outParams._serverAddress.isValid() == false )
         {
-            SW_LOG_ERROR( "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port", gv_netConnectAddress );
+            SW_LOG_ERROR_ID( "GameNetSession.GvNetConnectAddressDidNot", "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port", gv_netConnectAddress );
             return GameNetLaunch::Invalid;
         }
         outParams._role = GameNetRole::Client;
@@ -297,7 +297,7 @@ namespace sw
         NetAddress listenAddress;
         if ( NetAddress::parse( config._listenAddress, 0, listenAddress ) == false )
         {
-            SW_LOG_ERROR( "Server config _listenAddress '%#' is not an IPv4 address - the game port stays closed", config._listenAddress.c_str() );
+            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigListenAddressNot", "Server config _listenAddress '%#' is not an IPv4 address - the game port stays closed", config._listenAddress.c_str() );
             return false;
         }
         // UDP 전송은 루프백 · 모든 인터페이스 두 가지로만 묶는다. 다른 주소를 조용히 모든 인터페이스로 바꾸지 않는다.
@@ -305,12 +305,12 @@ namespace sw
         const bool bAnyInterface = listenAddress._ipv4 == NetAddress::makeAnyInterface( 0 )._ipv4;
         if ( bLoopbackOnly == false && bAnyInterface == false )
         {
-            SW_LOG_ERROR( "Server config _listenAddress '%#' - the game port binds only 0.0.0.0 or 127.0.0.1", config._listenAddress.c_str() );
+            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigListenAddressGame", "Server config _listenAddress '%#' - the game port binds only 0.0.0.0 or 127.0.0.1", config._listenAddress.c_str() );
             return false;
         }
         if ( config._gamePort < 0 || constant::network::kMaxPort < config._gamePort )
         {
-            SW_LOG_ERROR( "Server config _gamePort %# is not a UDP port - the game port stays closed", config._gamePort );
+            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigGamePortNot", "Server config _gamePort %# is not a UDP port - the game port stays closed", config._gamePort );
             return false;
         }
         // 샤드 배치(한 포트 나누기는 리눅스만 · 샤드 여럿은 고정 포트)는 `isValidShardLayout` 한 곳이 거절한다 — 다른 플랫폼에서 연이은 포트로 바꿔 열지 않는다.
@@ -331,7 +331,7 @@ namespace sw
             INetSecurityProvider* pProvider = _connectSecurity.findProvider();
             if ( pProvider == nullptr )
             {
-                SW_LOG_ERROR( "Server config _bGameConnectTicket needs the network security provider (GameFramework) - the game port stays closed" );
+                SW_LOG_ERROR_ID( "GameNetSession.ServerConfigBGameConnectTicketNeeds", "Server config _bGameConnectTicket needs the network security provider (GameFramework) - the game port stays closed" );
                 outParams = GameNetSessionParams{};
                 return false;
             }
@@ -344,7 +344,7 @@ namespace sw
         const bool bPlainPublicPort = build::kShipping && outParams._hostSettings._security._mode == NetSecurityMode::LanUnsecured && outParams._bLoopbackOnly == false;
         if ( bPlainPublicPort )
         {
-            SW_LOG_ERROR( "A shipping server opens a non-loopback game port only with _bGameConnectTicket (encrypted, session-bound) - the game port stays closed" );
+            SW_LOG_ERROR_ID( "GameNetSession.ShippingServerOpensNon", "A shipping server opens a non-loopback game port only with _bGameConnectTicket (encrypted, session-bound) - the game port stays closed" );
             outParams = GameNetSessionParams{};
             return false;
         }
@@ -356,13 +356,13 @@ namespace sw
         outParams = GameNetSessionParams{};
         if ( serverAddress.isValid() == false || credentials._tokenSize <= 0 )
         {
-            SW_LOG_ERROR( "A ticket client needs a server address and a game connect ticket" );
+            SW_LOG_ERROR_ID( "GameNetSession.TicketClientNeedsServer", "A ticket client needs a server address and a game connect ticket" );
             return false;
         }
         INetSecurityProvider* pProvider = _connectSecurity.findProvider();
         if ( pProvider == nullptr )
         {
-            SW_LOG_ERROR( "A ticket client needs the network security provider (GameFramework) - it does not connect without credentials instead" );
+            SW_LOG_ERROR_ID( "GameNetSession.TicketClientNeedsNetwork", "A ticket client needs the network security provider (GameFramework) - it does not connect without credentials instead" );
             return false;
         }
         outParams._role                              = GameNetRole::Client;
@@ -383,7 +383,7 @@ namespace sw
         const UDPPortSharing sharing       = params._bShardsSharePort ? UDPPortSharing::ReusePort : UDPPortSharing::Exclusive;
         if ( shard->_transport->open( transportPort, bLoopbackOnly, sharing ) == false )
         {
-            SW_LOG_ERROR( "Net session could not open UDP port %# (in use?)", transportPort );
+            SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot", "Net session could not open UDP port %# (in use?)", transportPort );
             return nullptr;
         }
         INetTransport* pHostTransport = shard->_transport.get();
@@ -407,7 +407,7 @@ namespace sw
         if ( bHasTicket && ( params._role != GameNetRole::Client || params._hostSettings._security._mode != NetSecurityMode::Encrypted ) )
         {
             // 티켓은 암호화된 클라이언트 연결에만 실린다 — 평문 연결에 비밀을 실어 보내지 않는다.
-            SW_LOG_ERROR( "Net session params carry a game connect ticket but are not an encrypted client - use makeTicketClientParams" );
+            SW_LOG_ERROR_ID( "GameNetSession.NetSessionParamsCarry", "Net session params carry a game connect ticket but are not an encrypted client - use makeTicketClientParams" );
             return false;
         }
         const bool           bServer = params._role == GameNetRole::Server;
@@ -437,7 +437,7 @@ namespace sw
             {
                 if ( shard->_host.listen() == false )
                 {
-                    SW_LOG_ERROR( "Net session could not listen on UDP port %#", shard->_transport->getLocalAddress()._port );
+                    SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot2", "Net session could not listen on UDP port %#", shard->_transport->getLocalAddress()._port );
                     shutdown();
                     return false;
                 }
@@ -450,7 +450,7 @@ namespace sw
             _routerSubscription = _router.registerHandler( &_engineMessageHandler );
             if ( _routerSubscription.isActive() == false )
             {
-                SW_LOG_ERROR( "Net session could not claim the engine message range - another handler holds it" );
+                SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot3", "Net session could not claim the engine message range - another handler holds it" );
                 shutdown();
                 return false;
             }
@@ -463,20 +463,20 @@ namespace sw
         {
             if ( shard->_thread.start( &shard->_host ) == false )
             {
-                SW_LOG_ERROR( "Net session could not start its network thread" );
+                SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot4", "Net session could not start its network thread" );
                 shutdown();
                 return false;
             }
         }
         _role = params._role;
         if ( _role == GameNetRole::Client )
-            SW_LOG_INFO( "Net session connecting to %#", _serverAddress.toString() );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionConnecting", "Net session connecting to %#", _serverAddress.toString() );
         else if ( getShardCount() == 1 )
-            SW_LOG_INFO( "Net session listening on UDP port %#", _listenPort );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP", "Net session listening on UDP port %#", _listenPort );
         else if ( params._bShardsSharePort )
-            SW_LOG_INFO( "Net session listening on UDP port %# (%# shards share the port)", _listenPort, getShardCount() );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP2", "Net session listening on UDP port %# (%# shards share the port)", _listenPort, getShardCount() );
         else
-            SW_LOG_INFO( "Net session listening on UDP port %# (%# shards, ports %#-%#)", _listenPort, getShardCount(), _listenPort, _listenPort + getShardCount() - 1 );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP3", "Net session listening on UDP port %# (%# shards, ports %#-%#)", _listenPort, getShardCount(), _listenPort, _listenPort + getShardCount() - 1 );
         return true;
     }
 
@@ -529,7 +529,7 @@ namespace sw
             shard->_host.disconnectAll();
         }
         if ( _role != GameNetRole::None )
-            SW_LOG_INFO( "Net session closed (%#)", getEnumName( _role ) );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionClosed", "Net session closed (%#)", getEnumName( _role ) );
         _routerSubscription.reset();
         _peers.shutdown();
         _listShard.clear(); // 샤드마다 스레드 → 호스트 → 흉내 → 소켓 순으로 내린다(`Shard` 의 선언 순서)
@@ -565,16 +565,16 @@ namespace sw
                     SW_LOG_INFO_ID( "Net.ClientConnected", "Net session client %# connected from %# (%# connected)", event._connectionID,
                                     _peers.getConnectionAddress( event._connectionID ).toString(), _peers.getConnectedCount() );
                 else
-                    SW_LOG_INFO( "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _peers.getConnectedCount() );
+                    SW_LOG_INFO_ID( "GameNetSession.NetSessionClientDisconnected", "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _peers.getConnectedCount() );
             }
             else if ( event._kind == NetEndpointEvent::Kind::Disconnected && phase == EventPhase::Running )
             {
-                SW_LOG_WARNING( "Net session lost the server %# (%#)", _serverAddress.toString(), toString( event._reason ) );
+                SW_LOG_WARNING_ID( "GameNetSession.NetSessionLostServer", "Net session lost the server %# (%#)", _serverAddress.toString(), toString( event._reason ) );
             }
             else if ( event._kind == NetEndpointEvent::Kind::Disconnected )
             {
                 // 세션은 엔진 수명이라 종료의 끝에서 닫힌다 — 같이 끝나는 서버(에디터 netplay.stop)가 먼저 나간 끊김이 여기서 읽힌다. 이상이 아니다.
-                SW_LOG_INFO( "Net session closing after the server %# left (%#)", _serverAddress.toString(), toString( event._reason ) );
+                SW_LOG_INFO_ID( "GameNetSession.NetSessionClosingAfter", "Net session closing after the server %# left (%#)", _serverAddress.toString(), toString( event._reason ) );
             }
         }
     }
@@ -617,7 +617,7 @@ namespace sw
         writer.writeBits( static_cast<uint32>( notice._reason ), 8 );
         writer.writeVarUint( notice._graceSeconds );
         const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelType::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
-        SW_LOG_INFO( "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notice._reason ), notice._graceSeconds );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionToldClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notice._reason ), notice._graceSeconds );
     }
 
     bool GameNetSession::tryGetShutdownNotice( GameShutdownNotice& outNotice ) const
@@ -647,7 +647,7 @@ namespace sw
             _shutdownNotice._reason       = static_cast<GameShutdownReason>( reasonValue );
             _shutdownNotice._graceSeconds = graceSeconds;
             _bShutdownNoticeKnown         = SW_TRUE;
-            SW_LOG_INFO( "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionClientTold", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
             return NetHandleResult::Handled;
         }
         const uint64 tick = body.readVarUint();
@@ -668,7 +668,7 @@ namespace sw
         {
             shard->_host.disconnectAll();
         }
-        SW_LOG_INFO( "Net session disconnected its peers on request (%#)", getEnumName( _role ) );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionDisconnectedPeers", "Net session disconnected its peers on request (%#)", getEnumName( _role ) );
     }
 
     bool GameNetSession::reconnect()
@@ -678,12 +678,12 @@ namespace sw
             return false;
         if ( _bTicketBound == SW_TRUE && _credentials._tokenSize <= 0 )
         {
-            SW_LOG_WARNING( "Net session cannot reconnect to %# - the server refused the game connect ticket, ask for a new one", _serverAddress.toString() );
+            SW_LOG_WARNING_ID( "GameNetSession.NetSessionCannotReconnect", "Net session cannot reconnect to %# - the server refused the game connect ticket, ask for a new one", _serverAddress.toString() );
             return false;
         }
         _bConnectFailureReported = SW_FALSE;
         _connectFuture           = startClientConnect();
-        SW_LOG_INFO( "Net session reconnecting to %#", _serverAddress.toString() );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionReconnecting", "Net session reconnecting to %#", _serverAddress.toString() );
         return true;
     }
 
@@ -784,7 +784,7 @@ namespace sw
     {
         if ( NetStatsReport::isValidReplicaName( name ) == false )
         {
-            SW_LOG_WARNING( "Net session: replica stats name '%#' is not [a-z0-9_.-] - the entry is not reported", name );
+            SW_LOG_WARNING_ID( "GameNetSession.NetSessionReplicaStats", "Net session: replica stats name '%#' is not [a-z0-9_.-] - the entry is not reported", name );
             return false;
         }
         for ( ReplicaStat& stat : _listReplicaStat )
@@ -798,7 +798,7 @@ namespace sw
         }
         if ( _listReplicaStat.size() >= kMaxReplicaSources )
         {
-            SW_LOG_WARNING( "Net session: more than %# replica stats names - '%#' is not reported", static_cast<int32>( kMaxReplicaSources ), name );
+            SW_LOG_WARNING_ID( "GameNetSession.NetSessionMoreReplica", "Net session: more than %# replica stats names - '%#' is not reported", static_cast<int32>( kMaxReplicaSources ), name );
             return false;
         }
         _listReplicaStat.push_back( ReplicaStat{
@@ -816,13 +816,13 @@ namespace sw
         _connectFuture                = TaskFuture<NetConnectResult>{};
         if ( result.isConnected() )
         {
-            SW_LOG_INFO( "Net session connected to %# as client %#", _serverAddress.toString(), result._clientIndex );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionConnectedClient", "Net session connected to %# as client %#", _serverAddress.toString(), result._clientIndex );
             return;
         }
         // 시간 초과는 다시 시도한다 — 같이 띄운 서버가 아직 기동 중일 수 있다(멀티 프로세스 재생 · 느린 Debug 기동). 거절 · 판 불일치는 다시 해도 같다.
         const bool bRetry = result._reason == NetDisconnectReason::Timeout;
         if ( _bConnectFailureReported == SW_FALSE || bRetry == false )
-            SW_LOG_WARNING( "Net session could not connect to %# (%#)%#", _serverAddress.toString(), toString( result._reason ), bRetry ? " - retrying" : "" );
+            SW_LOG_WARNING_ID( "GameNetSession.NetSessionCouldNot5", "Net session could not connect to %# (%#)%#", _serverAddress.toString(), toString( result._reason ), bRetry ? " - retrying" : "" );
         _bConnectFailureReported = SW_TRUE;
         if ( bRetry )
             _connectFuture = startClientConnect();

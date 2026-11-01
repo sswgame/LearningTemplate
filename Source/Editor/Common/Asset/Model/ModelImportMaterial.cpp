@@ -67,14 +67,14 @@ namespace sw::editor
                 // 0.x 는 materialProperties[i] 가 materials[i] 의 것이다(UniVRM 이 같은 순서로 쓴다).
                 if ( materialProperties.isArray() == false || index >= materialProperties.size() )
                 {
-                    SW_LOG_ERROR( "VRM '%#': material %# has no materialProperties entry", sourcePath, index );
+                    SW_LOG_ERROR_ID( "ModelImporter.VRMMaterialNoMaterialProperties", "VRM '%#': material %# has no materialProperties entry", sourcePath, index );
                     return false;
                 }
                 bRead = VrmMaterialImporter::readVrm0Material( materialProperties.at( index ), materials.at( index ), outListToon[index], &outListIgnored, error );
             }
             if ( bRead == false )
             {
-                SW_LOG_ERROR( "VRM '%#': %#", sourcePath, error.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.VRM", "VRM '%#': %#", sourcePath, error.c_str() );
                 return false;
             }
             if ( outListToon[index]._name.empty() )
@@ -150,7 +150,7 @@ namespace sw::editor
             listKey[triangle] = static_cast<uint32>( pMaterial - data.materials ) * kVisibilityCount + static_cast<uint32>( visibility );
         }
         if ( noMaterialCount > 0 )
-            SW_LOG_WARNING( "VRM model: %# triangles have no material - no mesh section draws them", noMaterialCount );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMModelTrianglesNo", "VRM model: %# triangles have no material - no mesh section draws them", noMaterialCount );
 
         // 열쇠 순서로 삼각형을 다시 놓고(안정 정렬 — 같은 묶음 안의 원본 순서를 지킨 뒤 묶음마다 최적화한다), 구간 표를 만든다.
         vector<uint32> listOrder( triangleCount );
@@ -246,7 +246,7 @@ namespace sw::editor
             if ( readImageBytes( *pImage, sourcePath, texture ) == false )
                 return false;
             if ( texture._bytes.empty() )
-                SW_LOG_WARNING( "glTF '%#': texture %# has no readable image bytes - the material samples white", sourcePath, textureIndex );
+                SW_LOG_WARNING_ID( "ModelImporter.GlTFTextureNoReadable", "glTF '%#': texture %# has no readable image bytes - the material samples white", sourcePath, textureIndex );
         }
         return true;
     }
@@ -269,7 +269,7 @@ namespace sw::editor
             {
                 if ( FileUtil::ensureDirectoryExists( rawTextureFolder ) == false || FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to write texture source %#", rawPath.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedWriteTextureSource", "Failed to write texture source %#", rawPath.c_str() );
                     return false;
                 }
             }
@@ -280,7 +280,7 @@ namespace sw::editor
         const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
         if ( pDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR( "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFEngineDefaultAssets", "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath );
             return false;
         }
 
@@ -296,14 +296,14 @@ namespace sw::editor
             const bool   bWritten     = materialText.empty() == false && FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, materialText );
             if ( bWritten == false )
             {
-                SW_LOG_ERROR( "Failed to write toon material %#", materialPath.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material %#", materialPath.c_str() );
                 return false;
             }
             // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
             // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
             if ( ModelImportUtil::writeImportedMeta( assetPaths, materialPath ) == false )
             {
-                SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteMeta", "Failed to write %#.meta", materialPath.c_str() );
                 return false;
             }
         }
@@ -314,9 +314,9 @@ namespace sw::editor
             {
                 joined += ( joined.empty() ? "" : ", " ) + key;
             }
-            SW_LOG_WARNING( "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMMaterialKeysToon", "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
         }
-        SW_LOG_INFO( "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
+        SW_LOG_INFO_ID( "ModelImporter.VRMMaterialSectionsTexture", "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
         return true;
     }
 
@@ -385,7 +385,7 @@ namespace sw::editor
         const bool           bSameORM = pAO != nullptr && pORM != nullptr && pAO->image == pORM->image;
         outPbr._occlusionStrength     = bSameORM ? pMaterial->occlusion_texture.scale : 0.0f;
         if ( pAO != nullptr && bSameORM == false )
-            SW_LOG_WARNING( "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath );
+            SW_LOG_WARNING_ID( "ModelImporter.GlTFOcclusionTextureNot", "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath );
         outPbr._bPresent = SW_TRUE;
         return true;
     }
@@ -398,7 +398,7 @@ namespace sw::editor
         const string rawTextureFolder = makeRawTextureFolder( sourcePath );
         if ( rawTextureFolder.empty() )
         {
-            SW_LOG_ERROR( "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFNotUnderNo", "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
             return false;
         }
         // 텍스처 원본을 꺼내 두고(바이트가 같으면 건드리지 않는다) 텍스처 임포트가 만들 DDS 경로를 머티리얼에 적는다.
@@ -418,7 +418,7 @@ namespace sw::editor
             const bool    bSame = FileUtil::exists( rawPath ) && FileUtil::readFile( rawPath, existingBytes ) && existingBytes == texture._bytes;
             if ( bSame == false && ( FileUtil::ensureDirectoryExists( rawTextureFolder ) == false || FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false ) )
             {
-                SW_LOG_ERROR( "Failed to write texture source %#", rawPath.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteTextureSource", "Failed to write texture source %#", rawPath.c_str() );
                 return false;
             }
             outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
@@ -434,7 +434,7 @@ namespace sw::editor
         string                                templateText;
         if ( pDefaultAssets == nullptr || AssetIO::readTextAsset( AssetID{ pDefaultAssets->_pbrMaterialTemplate.get() }, templateText ) == false )
         {
-            SW_LOG_ERROR( "glTF '%#': the PBR material template could not be read", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate", "glTF '%#': the PBR material template could not be read", sourcePath );
             return false;
         }
         XMLDocument   document;
@@ -443,7 +443,7 @@ namespace sw::editor
         const XMLNode properties = root.isValid() ? root.findChild( "_properties" ) : XMLNode{};
         if ( properties.isValid() == false )
         {
-            SW_LOG_ERROR( "glTF '%#': the PBR material template is not a material", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate2", "glTF '%#': the PBR material template is not a material", sourcePath );
             return false;
         }
         root.setAttribute( "name", string_view( pbr._name ) );
@@ -470,17 +470,17 @@ namespace sw::editor
         setAttribute( "_ormMap", "assetPath", ormPath );
         if ( bMissingProperty )
         {
-            SW_LOG_ERROR( "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
             return false;
         }
         const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), pbr._name + ".material" );
         const bool   bWritten     = FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, document.saveToString() );
         if ( bWritten == false || ModelImportUtil::writeImportedMeta( assetPaths, materialPath ) == false )
         {
-            SW_LOG_ERROR( "Failed to write PBR material %#", materialPath.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedWritePBRMaterial", "Failed to write PBR material %#", materialPath.c_str() );
             return false;
         }
-        SW_LOG_INFO( "glTF '%#': PBR material %# (albedo%#%#)", sourcePath, materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
+        SW_LOG_INFO_ID( "ModelImporter.GlTFPBRMaterialAlbedo", "glTF '%#': PBR material %# (albedo%#%#)", sourcePath, materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
         return true;
     }
 

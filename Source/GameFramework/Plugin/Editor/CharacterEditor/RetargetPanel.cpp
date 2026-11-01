@@ -220,7 +220,7 @@ namespace sw::editor
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written" );
             return false;
         }
-        SW_LOG_INFO( "Retarget profile saved to %#", writePath->c_str() );
+        SW_LOG_INFO_ID( "RetargetPanel.RetargetProfileSaved", "Retarget profile saved to %#", writePath->c_str() );
         _status = "Saved";
         return true;
     }

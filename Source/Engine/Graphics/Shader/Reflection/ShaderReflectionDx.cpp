@@ -342,13 +342,13 @@ namespace sw
                 const HRESULT                                  hr = D3DReflect( bytecode.data(), bytecode.size(), IID_PPV_ARGS( reflection.GetAddressOf() ) );
                 if ( FAILED( hr ) || reflection == nullptr )
                 {
-                    SW_LOG_ERROR( "D3DReflect failed for DXBC (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+                    SW_LOG_ERROR_ID( "ShaderReflection.D3DReflectFailedDXBCHr", "D3DReflect failed for DXBC (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
                     return ShaderReflectionData{};
                 }
 
                 ShaderReflectionData data = fillFromReflection<D3D11ReflectionApi>( reflection.Get() );
-                SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
-                              data._listConstantBuffer.size(), data._listResource.size() );
+                SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResources", "ConstantBuffers: %# BoundResources: %#",
+                                 data._listConstantBuffer.size(), data._listResource.size() );
                 return data;
             }
 
@@ -359,14 +359,14 @@ namespace sw
                 DxcCreateInstanceProc createInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( createInstance == nullptr )
                 {
-                    SW_LOG_WARNING( "DXIL reflection unavailable: dxcompiler.dll not found or DxcCreateInstance failed." );
+                    SW_LOG_WARNING_ID( "ShaderReflection.DXILReflectionUnavailableDxcompiler", "DXIL reflection unavailable: dxcompiler.dll not found or DxcCreateInstance failed." );
                     return ShaderReflectionData{};
                 }
 
                 Microsoft::WRL::ComPtr<IDxcUtils> utils;
                 if ( FAILED( createInstance( CLSID_DxcUtils, IID_PPV_ARGS( utils.GetAddressOf() ) ) ) || utils == nullptr )
                 {
-                    SW_LOG_ERROR( "Failed to create IDxcUtils for reflection." );
+                    SW_LOG_ERROR_ID( "ShaderReflection.FailedCreateIDxcUtilsReflection", "Failed to create IDxcUtils for reflection." );
                     return ShaderReflectionData{};
                 }
 
@@ -382,8 +382,8 @@ namespace sw
                 if ( SUCCEEDED( hr ) && reflection12 != nullptr )
                 {
                     data = fillFromReflection<D3D12ReflectionApi>( reflection12.Get() );
-                    SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
-                                  data._listConstantBuffer.size(), data._listResource.size() );
+                    SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResources", "ConstantBuffers: %# BoundResources: %#",
+                                     data._listConstantBuffer.size(), data._listResource.size() );
                 }
                 else
                 {
@@ -393,11 +393,11 @@ namespace sw
                     if ( SUCCEEDED( hr ) && reflection11 != nullptr )
                     {
                         data = fillFromReflection<D3D11ReflectionApi>( reflection11.Get() );
-                        SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
-                                      data._listConstantBuffer.size(), data._listResource.size() );
+                        SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResources", "ConstantBuffers: %# BoundResources: %#",
+                                         data._listConstantBuffer.size(), data._listResource.size() );
                     }
                     else
-                        SW_LOG_ERROR( "IDxcUtils::CreateReflection failed for DXIL (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+                        SW_LOG_ERROR_ID( "ShaderReflection.IDxcUtilsCreateReflectionFailedDXIL", "IDxcUtils::CreateReflection failed for DXIL (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
                 }
 
                 return data;
@@ -421,7 +421,7 @@ namespace sw
             return ShaderReflectionDxInternal::reflectDXIL( bytecode );
     #endif
 
-        SW_LOG_ERROR( "Unsupported DX target format %#.", static_cast<uint32>( targetFormat ) );
+        SW_LOG_ERROR_ID( "ShaderReflection.UnsupportedDXTargetFormat", "Unsupported DX target format %#.", static_cast<uint32>( targetFormat ) );
         return {};
     }
 } // namespace sw

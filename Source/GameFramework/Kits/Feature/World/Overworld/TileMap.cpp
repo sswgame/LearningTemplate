@@ -57,8 +57,8 @@ namespace sw
     {
         if ( layer._width != _data._width || layer._height != _data._height )
         {
-            SW_LOG_ERROR( "Tile layer '%#' is %#x%# but the map '%#' is %#x%#", layer._sourcePath, layer._width, layer._height, _data._sourcePath,
-                          _data._width, _data._height );
+            SW_LOG_ERROR_ID( "TileMap.TileLayerXBut", "Tile layer '%#' is %#x%# but the map '%#' is %#x%#", layer._sourcePath, layer._width, layer._height, _data._sourcePath,
+                             _data._width, _data._height );
             return false;
         }
         vector<uint16> listBrushIndex;
@@ -68,8 +68,8 @@ namespace sw
         TileGridUtil::makeSolidMask( tileSet, listBrushIndex, listSolid );
         if ( listSolid.size() != _listTileSolid.size() )
         {
-            SW_LOG_ERROR( "Tile layer '%#' has %# cells but the map '%#' has %#", layer._sourcePath, static_cast<uint32>( listSolid.size() ), _data._sourcePath,
-                          static_cast<uint32>( _listTileSolid.size() ) );
+            SW_LOG_ERROR_ID( "TileMap.TileLayerCellsBut", "Tile layer '%#' has %# cells but the map '%#' has %#", layer._sourcePath, static_cast<uint32>( listSolid.size() ), _data._sourcePath,
+                             static_cast<uint32>( _listTileSolid.size() ) );
             return false;
         }
         for ( size_t cellIndex = 0; cellIndex < listSolid.size(); ++cellIndex )
@@ -91,8 +91,8 @@ namespace sw
         // 크기 상한은 `TileMapXMLData` 가 기준이다. 로더와 에디터(`TileMapPanel::resize`)가 같은 값을 본다.
         if ( _data.resetTiles( width, height ) == false )
         {
-            SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",
-                            width, height, TileMapXMLData::kMaxTileCount );
+            SW_LOG_WARNING_ID( "TileMap.TileMapResizeXBeyond", "TileMap resize %#x%# is beyond the supported tile count (%#)",
+                               width, height, TileMapXMLData::kMaxTileCount );
             return;
         }
         _listTileSolid.assign( _data.getFlagLayer( TileFlagLayer::Walkable ).size(), 0 );
@@ -262,8 +262,8 @@ namespace sw
     void TileMap::debugLogTileHd2d( int32 x, int32 y ) const
     {
         [[maybe_unused]] const OverworldTileVisual tileVisual = getTileVisual( x, y );
-        SW_LOG_TRACE( "tile (%#,%#) h=%# tint=(%#,%#,%#) flags walk=%# enc=%# pt=%#",
-                      x, y, tileVisual._height, tileVisual._tintR, tileVisual._tintG, tileVisual._tintB,
-                      isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );
+        SW_LOG_TRACE_ID( "TileMap.TileHTintFlags", "tile (%#,%#) h=%# tint=(%#,%#,%#) flags walk=%# enc=%# pt=%#",
+                         x, y, tileVisual._height, tileVisual._tintR, tileVisual._tintG, tileVisual._tintB,
+                         isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );
     }
 } // namespace sw

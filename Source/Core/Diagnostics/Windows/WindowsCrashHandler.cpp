@@ -404,7 +404,7 @@ namespace sw
         if ( s_hReportRequested != nullptr && s_hReportFinished != nullptr )
             s_hReportThread = CreateThread( nullptr, constant::memory::kBytesPerMegabyte, &reportThreadMainInternal, nullptr, STACK_SIZE_PARAM_IS_A_RESERVATION, &s_reportThreadID );
         if ( s_hReportThread == nullptr )
-            SW_LOG_WARNING( "Crash report thread could not be created - reports will be written on the faulting thread." );
+            SW_LOG_WARNING_ID( "WindowsCrashHandler.CrashReportThreadCould", "Crash report thread could not be created - reports will be written on the faulting thread." );
 
         s_pPreviousFilter = SetUnhandledExceptionFilter( &onUnhandledException );
         // CRT 가 필터를 건너뛰는 경로 셋을 우리 필터로 돌린다(kExceptionCodeAbort 설명). abort 메시지 창도 끈다. 리포트는 우리가 쓴다.
@@ -412,7 +412,7 @@ namespace sw
         s_pPreviousPureCallHandler         = _set_purecall_handler( &onPureCallInternal );
         s_pPreviousInvalidParameterHandler = _set_invalid_parameter_handler( &onInvalidParameterInternal );
         s_previousAbortBehavior            = _set_abort_behavior( 0, _WRITE_ABORT_MSG );
-        SW_LOG_TRACE( "Crash handler installed." );
+        SW_LOG_TRACE_ID( "WindowsCrashHandler.CrashHandlerInstalled", "Crash handler installed." );
     }
 
     void CrashHandler::shutdown()

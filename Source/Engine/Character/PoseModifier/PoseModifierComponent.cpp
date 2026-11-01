@@ -232,7 +232,7 @@ namespace sw
         _rigPath = string{ path };
         _asset   = _rigPath.empty() ? nullptr : SharedAssetCache<RigAsset>::acquire( _rigPath );
         if ( _rigPath.empty() == false && _asset == nullptr )
-            SW_LOG_ERROR( "Rig '%#' could not be loaded", _rigPath.c_str() );
+            SW_LOG_ERROR_ID( "PoseModifier.RigCouldNotLoaded", "Rig '%#' could not be loaded", _rigPath.c_str() );
         bindRig();
     }
 
@@ -251,9 +251,9 @@ namespace sw
             SocketKindTable       kinds;
             shared_ptr<SocketSet> sockets = make_shared<SocketSet>();
             if ( kinds.loadDefault() == false )
-                SW_LOG_ERROR( "Default socket kinds could not be loaded for the rig sockets '%#'", _socketSetPath.c_str() );
+                SW_LOG_ERROR_ID( "PoseModifier.DefaultSocketKindsCould", "Default socket kinds could not be loaded for the rig sockets '%#'", _socketSetPath.c_str() );
             else if ( sockets->loadFromAsset( AssetID{ _socketSetPath }, kinds ) == false )
-                SW_LOG_ERROR( "Sockets '%#' could not be loaded for the rig", _socketSetPath.c_str() );
+                SW_LOG_ERROR_ID( "PoseModifier.SocketsCouldNotLoaded", "Sockets '%#' could not be loaded for the rig", _socketSetPath.c_str() );
             else
                 _ownSockets = std::move( sockets );
         }
@@ -400,7 +400,7 @@ namespace sw
         const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath;
         if ( _instance.initialize( _asset, _pUnit->getSkeleton(), &_socketResolver, label ) == false )
         {
-            SW_LOG_ERROR( "Rig '%#' could not be bound to '%#'", label.c_str(), pOwner->getName().c_str() );
+            SW_LOG_ERROR_ID( "PoseModifier.RigCouldNotBound", "Rig '%#' could not be bound to '%#'", label.c_str(), pOwner->getName().c_str() );
             return;
         }
         _boundContentID = _asset->getContentID();
@@ -504,8 +504,8 @@ namespace sw
             const SocketDef* pDef = ( def._kind == RigTargetKind::Socket && pBinding->_sockets != nullptr ) ? pBinding->_sockets->findSocket( def._socket ) : nullptr;
             if ( pDef == nullptr )
             {
-                SW_LOG_ERROR( "Rig '%#': target '%#' on rigid unit '%#' must name one of its sockets (it has no bones) - '%#' not found", label, def._name.c_str(),
-                              def._unit.c_str(), def._socket.c_str() );
+                SW_LOG_ERROR_ID( "PoseModifier.RigTargetRigidUnit", "Rig '%#': target '%#' on rigid unit '%#' must name one of its sockets (it has no bones) - '%#' not found", label, def._name.c_str(),
+                                 def._unit.c_str(), def._socket.c_str() );
                 return false;
             }
             outResolved._pRigidObject = pRigidObject;
@@ -520,8 +520,8 @@ namespace sw
                 const SocketDef* pDef = ( sockets != nullptr ) ? sockets->findSocket( def._socket ) : nullptr;
                 if ( pDef == nullptr )
                 {
-                    SW_LOG_ERROR( "Rig '%#': target '%#' names socket '%#' but unit '%#' has no such socket (bindUnit with its sockets)", label, def._name.c_str(),
-                                  def._socket.c_str(), def._unit.c_str() );
+                    SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesSocket", "Rig '%#': target '%#' names socket '%#' but unit '%#' has no such socket (bindUnit with its sockets)", label, def._name.c_str(),
+                                     def._socket.c_str(), def._unit.c_str() );
                     return false;
                 }
                 boneName    = pDef->_parent;
@@ -575,7 +575,7 @@ namespace sw
                 external._spaceBone = _pUnit->getSkeleton().findBoneIndex( def._space );
                 if ( external._spaceBone < 0 )
                 {
-                    SW_LOG_ERROR( "Rig '%#': target '%#' has unknown space bone '%#'", label, def._name.c_str(), def._space.c_str() );
+                    SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnknownSpace", "Rig '%#': target '%#' has unknown space bone '%#'", label, def._name.c_str(), def._space.c_str() );
                     continue;
                 }
             }
@@ -611,8 +611,8 @@ namespace sw
             external._unitBone = bSocketRoot ? -1 : pTargetUnit->getSkeleton().findBoneIndex( boneName );
             if ( bSocketRoot == false && external._unitBone < 0 )
             {
-                SW_LOG_ERROR( "Rig '%#': target '%#' names bone '%#' that unit '%#' does not have", label, def._name.c_str(), boneName.c_str(),
-                              pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
+                SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesBone", "Rig '%#': target '%#' names bone '%#' that unit '%#' does not have", label, def._name.c_str(), boneName.c_str(),
+                                 pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
                 continue;
             }
             // 데이터 오프셋은 소켓 공간에서 먼저 적용된다(행 벡터: 오프셋 × 소켓 로컬).
@@ -625,8 +625,8 @@ namespace sw
             }
             if ( wouldCreateCycle( pTargetUnit ) )
             {
-                SW_LOG_ERROR( "Rig '%#': target '%#' on unit '%#' would create an animation dependency cycle - the target is disabled", label, def._name.c_str(),
-                              pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
+                SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnitWould", "Rig '%#': target '%#' on unit '%#' would create an animation dependency cycle - the target is disabled", label, def._name.c_str(),
+                                 pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
                 continue;
             }
             _pUnit->addAnimationDependency( pTargetUnit );
@@ -643,7 +643,7 @@ namespace sw
         {
             PhysicsAsset asset;
             if ( asset.loadFromAsset( AssetID{ _physicsAssetPath } ) == false )
-                SW_LOG_ERROR( "Physics asset '%#' could not be loaded for spring colliders", _physicsAssetPath.c_str() );
+                SW_LOG_ERROR_ID( "PoseModifier.PhysicsAssetCouldNot", "Physics asset '%#' could not be loaded for spring colliders", _physicsAssetPath.c_str() );
             for ( const PhysicsAssetBodyDef& body : asset._listBody )
             {
                 const int32 bone = _pUnit->getSkeleton().findBoneIndex( body._bone );

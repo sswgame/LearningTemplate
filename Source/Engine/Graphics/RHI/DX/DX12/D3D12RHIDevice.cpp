@@ -240,8 +240,8 @@ namespace sw
             {
                 _bOnlineHeapExhaustedLogged = SW_TRUE;
                 // 실제 동작은 건너뛰기다 — flushSlotTables 가 false 를 받아 드로우 · 디스패치를 내지 않는다(앞 테이블로 그리지 않는다).
-                SW_LOG_ERROR( "Out of online descriptor blocks (%#x%#) - draws and dispatches that need a new slot table are skipped.",
-                              kOnlineBlockCount, kOnlineBlockDescriptorCount );
+                SW_LOG_ERROR_ID( "D3D12.OutOnlineDescriptorBlocks", "Out of online descriptor blocks (%#x%#) - draws and dispatches that need a new slot table are skipped.",
+                                 kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }
             return UINT32_MAX;
         }
@@ -396,8 +396,8 @@ namespace sw
         constexpr uint32 kMaxLoggedMessages = 16;
         const uint32     count              = pDevice->_validationMessageCount.fetch_add( 1, std::memory_order_relaxed ) + 1;
         if ( count <= kMaxLoggedMessages )
-            SW_LOG_WARNING( "D3D12 debug layer (severity %#, id %#): %#", static_cast<int32>( severity ), static_cast<int32>( id ),
-                            pDescription != nullptr ? pDescription : "" );
+            SW_LOG_WARNING_ID( "D3D12.D3D12DebugLayerSeverity", "D3D12 debug layer (severity %#, id %#): %#", static_cast<int32>( severity ), static_cast<int32>( id ),
+                               pDescription != nullptr ? pDescription : "" );
     }
 
     void D3D12RHIDevice::flushDebugMessages( [[maybe_unused]] const utf8* pStage )
@@ -421,7 +421,7 @@ namespace sw
                 vector<uint8>  bytes( messageLength );
                 D3D12_MESSAGE* pMessage = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
                 if ( SUCCEEDED( infoQueue->GetMessage( messageIndex, pMessage, &messageLength ) ) && bAlreadyDeviceRemoved == false )
-                    SW_LOG_ERROR( "[%#] %#", pStage, pMessage->pDescription );
+                    SW_LOG_ERROR_ID( "D3D12.Message", "[%#] %#", pStage, pMessage->pDescription );
             }
             infoQueue->ClearStoredMessages();
         }
@@ -449,18 +449,18 @@ namespace sw
                         const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
                                                   ? *pNode->pLastBreadcrumbValue
                                                   : 0;
-                        SW_LOG_ERROR( "CommandList='%#', Total=%#, Executed=%#",
-                                      pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
-                                      pNode->BreadcrumbCount, executed );
+                        SW_LOG_ERROR_ID( "D3D12.CommandListTotalExecuted", "CommandList='%#', Total=%#, Executed=%#",
+                                         pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
+                                         pNode->BreadcrumbCount, executed );
                         const bool bHasCompletedBreadcrumb = pNode->pCommandHistory != nullptr && 0 < executed && executed <= pNode->BreadcrumbCount;
                         if ( bHasCompletedBreadcrumb )
                         {
-                            SW_LOG_ERROR( "Last completed Op index=%#, OpType=%#",
-                                          executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
+                            SW_LOG_ERROR_ID( "D3D12.LastCompletedOpIndex", "Last completed Op index=%#, OpType=%#",
+                                             executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
                             if ( executed < pNode->BreadcrumbCount )
                             {
-                                SW_LOG_ERROR( "Failed/In-Flight Op index=%#, OpType=%#",
-                                              executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
+                                SW_LOG_ERROR_ID( "D3D12.FailedFlightOpIndex", "Failed/In-Flight Op index=%#, OpType=%#",
+                                                 executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
                             }
                         }
                         pNode = pNode->pNext;
@@ -470,20 +470,20 @@ namespace sw
                 D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
                 if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
                 {
-                    SW_LOG_ERROR( "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
+                    SW_LOG_ERROR_ID( "D3D12.PageFaultVAX", "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
                     // 폴트 주소를 덮는 할당을 이름으로 되짚는다 — 살아 있는 것과 최근에 해제된 것(해제 뒤 사용이면 여기 나온다).
                     // 이름은 storeBuffer · storeTexture 가 붙인다(nameResourceForDiagnostics, `SW Buffer <핸들>`).
                     for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadExistingAllocationNode; pAllocation != nullptr;
                           pAllocation                                   = pAllocation->pNext )
                     {
-                        SW_LOG_ERROR( "  PageFault VA is inside live allocation '%#' (type %#)",
-                                      pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                        SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideLive", "  PageFault VA is inside live allocation '%#' (type %#)",
+                                         pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
                     }
                     for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadRecentFreedAllocationNode; pAllocation != nullptr;
                           pAllocation                                   = pAllocation->pNext )
                     {
-                        SW_LOG_ERROR( "  PageFault VA is inside recently freed allocation '%#' (type %#) — use after free",
-                                      pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                        SW_LOG_ERROR_ID( "D3D12.PageFaultVAInsideRecently", "  PageFault VA is inside recently freed allocation '%#' (type %#) — use after free",
+                                         pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
                     }
                 }
             }
@@ -513,7 +513,7 @@ namespace sw
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( debugController.GetAddressOf() ) ) ) )
             {
                 debugController->EnableDebugLayer();
-                SW_LOG_INFO( "Debug layer enabled." );
+                SW_LOG_INFO_ID( "D3D12.DebugLayerEnabled", "Debug layer enabled." );
             }
         }
     #endif
@@ -526,7 +526,7 @@ namespace sw
             {
                 dredSettings->SetAutoBreadcrumbsEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
                 dredSettings->SetPageFaultEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
-                SW_LOG_INFO( "DRED (Device Removed Extended Data) diagnostic enabled." );
+                SW_LOG_INFO_ID( "D3D12.DREDDeviceRemovedExtended", "DRED (Device Removed Extended Data) diagnostic enabled." );
             }
         }
 
@@ -538,7 +538,7 @@ namespace sw
         Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
         if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
         {
-            SW_LOG_ERROR( "WARP adapter is not available (gv_rhiSoftwareAdapter)" );
+            SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (gv_rhiSoftwareAdapter)" );
             return false;
         }
 
@@ -578,9 +578,9 @@ namespace sw
         if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) )
         {
             if ( options.ResourceBindingTier >= D3D12_RESOURCE_BINDING_TIER_3 )
-                SW_LOG_TRACE( "Device supports Resource Binding Tier 3 (Bindless)." );
+                SW_LOG_TRACE_ID( "D3D12.DeviceSupportsResourceBinding", "Device supports Resource Binding Tier 3 (Bindless)." );
             else
-                SW_LOG_WARNING( "Device does NOT support Resource Binding Tier 3. Fallback may be required." );
+                SW_LOG_WARNING_ID( "D3D12.DeviceDoesNOTSupport", "Device does NOT support Resource Binding Tier 3. Fallback may be required." );
         }
 
     #if defined( SW_DEBUG )
@@ -597,7 +597,7 @@ namespace sw
                 filter.DenyList.NumIDs  = static_cast<UINT>( std::size( arrDeniedID ) );
                 filter.DenyList.pIDList = arrDeniedID;
                 if ( FAILED( infoQueue->PushStorageFilter( &filter ) ) )
-                    SW_LOG_INFO( "D3D12 debug layer storage filter was not applied" );
+                    SW_LOG_INFO_ID( "D3D12.D3D12DebugLayerStorage", "D3D12 debug layer storage filter was not applied" );
             }
             // 큐는 장치 실패 때만 비운다(flushDebugMessages). 경고가 나는 그 자리에서 보이게 콜백을 단다(Windows 11 의 디버그 레이어부터 있다).
             Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;
@@ -607,7 +607,7 @@ namespace sw
             if ( bCallbackRegistered == false )
             {
                 _validationCallbackCookie = 0;
-                SW_LOG_INFO( "D3D12 debug layer has no message callback (ID3D12InfoQueue1) - validation warnings show only when the device fails" );
+                SW_LOG_INFO_ID( "D3D12.D3D12DebugLayerNo", "D3D12 debug layer has no message callback (ID3D12InfoQueue1) - validation warnings show only when the device fails" );
             }
         }
     #endif
@@ -759,7 +759,7 @@ namespace sw
                                                             IID_PPV_ARGS( _breadcrumbBuffer.GetAddressOf() ) ),
                           "CreateCommittedResource(breadcrumb)" ) == false )
         {
-            SW_LOG_WARNING( "The D3D12 GPU breadcrumb buffer could not be created - device lost reports only the CPU-recorded last pass" );
+            SW_LOG_WARNING_ID( "D3D12.D3D12GPUBreadcrumbBuffer", "The D3D12 GPU breadcrumb buffer could not be created - device lost reports only the CPU-recorded last pass" );
             return;
         }
         void*       pMapped = nullptr;
@@ -772,7 +772,7 @@ namespace sw
         *static_cast<uint32*>( pMapped ) = 0;
         _pBreadcrumbMapped               = static_cast<const volatile uint32*>( pMapped );
         _breadcrumbAddress               = _breadcrumbBuffer->GetGPUVirtualAddress();
-        SW_LOG_INFO( "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
+        SW_LOG_INFO_ID( "D3D12.D3D12GPUBreadcrumbsEnabled", "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
     }
 
     uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
@@ -907,7 +907,7 @@ namespace sw
         if ( list->isValid() == false )
         {
             if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
-                SW_LOG_ERROR_ONCE( "D3D12RHIDevice::createCommandList: failed to create the native command list." );
+                SW_LOG_ERROR_ONCE_ID( "D3D12.D3D12RHIDeviceCreateCommandListFailedCreate", "D3D12RHIDevice::createCommandList: failed to create the native command list." );
             return nullptr;
         }
         return list;
@@ -1065,7 +1065,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12Device5> device5;
         if ( _device == nullptr || FAILED( _device.As( &device5 ) ) )
             return false;
-        SW_LOG_WARNING( "Removing the D3D12 device on request (rhi.removeDevice) - every later GPU call fails as after a TDR" );
+        SW_LOG_WARNING_ID( "D3D12.RemovingD3D12DeviceRequest", "Removing the D3D12 device on request (rhi.removeDevice) - every later GPU call fails as after a TDR" );
         device5->RemoveDevice();
         _transferSerials.markLost(); // 제거 직후부터 제출 진입이 Rejected 를 준다(다음 질의를 기다리지 않는다)
         return true;
@@ -1105,9 +1105,9 @@ namespace sw
 
         if ( FAILED( signalHr ) )
         {
-            SW_LOG_ERROR( "Fence Signal failed hr=0x%# (DeviceRemoved=0x%#)",
-                          static_cast<uint32>( signalHr ),
-                          static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
+            SW_LOG_ERROR_ID( "D3D12.FenceSignalFailedHr", "Fence Signal failed hr=0x%# (DeviceRemoved=0x%#)",
+                             static_cast<uint32>( signalHr ),
+                             static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
             return;
         }
 
@@ -1155,7 +1155,7 @@ namespace sw
         const HANDLE fenceEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         if ( fenceEvent == nullptr )
         {
-            SW_LOG_ERROR( "Fence %# wait failed: CreateEventW returned null (GetLastError=%#)", fenceValue, static_cast<uint32>( GetLastError() ) );
+            SW_LOG_ERROR_ID( "D3D12.FenceWaitFailedCreateEventW", "Fence %# wait failed: CreateEventW returned null (GetLastError=%#)", fenceValue, static_cast<uint32>( GetLastError() ) );
             return false;
         }
         // 끝날 때까지 기다린다. 시간 초과로 실패를 돌려주면 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을
@@ -1167,14 +1167,14 @@ namespace sw
             waitedSeconds += 2;
             if ( isDeviceRemoved() )
             {
-                SW_LOG_ERROR_ONCE( "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
-                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+                SW_LOG_ERROR_ONCE_ID( "D3D12.FenceNeverCompletedDevice", "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
+                                      static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
                 bReached = false;
                 break;
             }
             if ( _fence->GetCompletedValue() >= fenceValue )
                 break;
-            SW_LOG_WARNING( "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
+            SW_LOG_WARNING_ID( "D3D12.GPUNotReachedFence", "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
         }
         CloseHandle( fenceEvent );
         return bReached;
@@ -1200,7 +1200,7 @@ namespace sw
         }
         if ( FAILED( signalHr ) )
         {
-            SW_LOG_ERROR_ONCE( "Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
+            SW_LOG_ERROR_ONCE_ID( "D3D12.FenceSignalFailedHr2", "Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
             return;
         }
         _frameRing.setFenceValue( _frameRing.currentIndex(), fenceToSignal );
@@ -1241,10 +1241,10 @@ namespace sw
         if ( FAILED( allocHr ) )
         {
             if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
-                SW_LOG_ERROR_ONCE( "acquireCommandListEntry: CreateCommandAllocator failed hr=0x%# removed=0x%# pooled=%#",
-                                   static_cast<uint32>( allocHr ),
-                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ),
-                                   static_cast<uint32>( _cmdListEntryCreated ) );
+                SW_LOG_ERROR_ONCE_ID( "D3D12.AcquireCommandListEntryCreateCommandAllocatorFailedHr", "acquireCommandListEntry: CreateCommandAllocator failed hr=0x%# removed=0x%# pooled=%#",
+                                      static_cast<uint32>( allocHr ),
+                                      static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                                      static_cast<uint32>( _cmdListEntryCreated ) );
             flushDebugMessages( "acquireCommandListEntry" );
             entry = D3D12CommandListEntry{};
             return entry;
@@ -1254,10 +1254,10 @@ namespace sw
         if ( FAILED( listHr ) )
         {
             if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
-                SW_LOG_ERROR_ONCE( "acquireCommandListEntry: CreateCommandList failed hr=0x%# removed=0x%# pooled=%#",
-                                   static_cast<uint32>( listHr ),
-                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ),
-                                   static_cast<uint32>( _cmdListEntryCreated ) );
+                SW_LOG_ERROR_ONCE_ID( "D3D12.AcquireCommandListEntryCreateCommandListFailedHr", "acquireCommandListEntry: CreateCommandList failed hr=0x%# removed=0x%# pooled=%#",
+                                      static_cast<uint32>( listHr ),
+                                      static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                                      static_cast<uint32>( _cmdListEntryCreated ) );
             entry = D3D12CommandListEntry{};
             return entry;
         }
@@ -1541,8 +1541,8 @@ namespace sw
                 if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
                 {
                     // %# 는 10진 출력이다. DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
-                    SW_LOG_ERROR_ONCE( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
-                                       static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
+                    SW_LOG_ERROR_ONCE_ID( "D3D12.PresentFailedHrX887A0005", "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
+                                          static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
                 }
                 flushDebugMessages( "after Present" );
             }
@@ -1634,8 +1634,8 @@ namespace sw
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) &&
                  options.ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_2 )
             {
-                SW_LOG_ERROR( "Resource Binding Tier %# - unbounded texture arrays need Tier 2 or higher.",
-                              static_cast<uint32>( options.ResourceBindingTier ) );
+                SW_LOG_ERROR_ID( "D3D12.ResourceBindingTierUnbounded", "Resource Binding Tier %# - unbounded texture arrays need Tier 2 or higher.",
+                                 static_cast<uint32>( options.ResourceBindingTier ) );
             }
         }
 
@@ -1749,12 +1749,12 @@ namespace sw
         if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
         {
             if ( errorBlob )
-                SW_LOG_ERROR( "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
+                SW_LOG_ERROR_ID( "D3D12.RootSignatureSerializeError", "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
             return false;
         }
         if ( isHrSuccess( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ), "CreateRootSignature" ) == false )
         {
-            SW_LOG_ERROR( "CreateRootSignature failed." );
+            SW_LOG_ERROR_ID( "D3D12.CreateRootSignatureFailed", "CreateRootSignature failed." );
             return false;
         }
         _bBindlessRootSignature = SW_TRUE;
@@ -1795,7 +1795,7 @@ namespace sw
             void* pMapped{ nullptr };
             if ( createMappedUploadBuffer( sizeof( constant::render::arrFallbackVertex ), _vertexBuffer, pMapped ) == false )
             {
-                SW_LOG_ERROR( "Failed to create or map fullscreen vertex buffer." );
+                SW_LOG_ERROR_ID( "D3D12.FailedCreateMapFullscreen", "Failed to create or map fullscreen vertex buffer." );
                 return false;
             }
             Memory::copy( pMapped, constant::render::arrFallbackVertex, sizeof( constant::render::arrFallbackVertex ) );
@@ -1821,7 +1821,7 @@ namespace sw
     {
         if ( desc._stagingRingBytes == 0 )
         {
-            SW_LOG_ERROR( "The D3D12 backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
+            SW_LOG_ERROR_ID( "D3D12.D3D12BackendNeedsStaging", "The D3D12 backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
             return false;
         }
         return createStagingRing( _uploadRing, desc._stagingRingBytes, desc._stagingSoloMaxBytes );
@@ -1873,7 +1873,7 @@ namespace sw
         void* pMapped{ nullptr };
         if ( createMappedUploadBuffer( sizeBytes, outBuffer, pMapped ) == false )
         {
-            SW_LOG_ERROR( "Failed to create or map the D3D12 staging upload buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiStagingSingleMaxMegabytes)", sizeBytes );
+            SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiStagingSingleMaxMegabytes)", sizeBytes );
             return false;
         }
         pOutMapped = static_cast<uint8*>( pMapped );
@@ -1943,8 +1943,8 @@ namespace sw
                                                                  : allocatorHr;
             if ( FAILED( listHr ) )
             {
-                SW_LOG_ERROR( "Failed to create a D3D12 transfer command allocator or list hr=0x%# (DeviceRemoved=0x%#)", static_cast<uint32>( listHr ),
-                              static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+                SW_LOG_ERROR_ID( "D3D12.FailedCreateD3D12Transfer", "Failed to create a D3D12 transfer command allocator or list hr=0x%# (DeviceRemoved=0x%#)", static_cast<uint32>( listHr ),
+                                 static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
                 outJob = D3D12TransferJob{};
                 return false;
             }
@@ -1956,7 +1956,7 @@ namespace sw
         const HRESULT resetHr = isHrSuccess( outJob._allocator->Reset(), "Reset" ) == false ? E_FAIL : outJob._list->Reset( outJob._allocator.Get(), nullptr );
         if ( FAILED( resetHr ) )
         {
-            SW_LOG_ERROR( "Failed to reset a pooled D3D12 transfer command allocator or list (DeviceRemoved=0x%#)", static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+            SW_LOG_ERROR_ID( "D3D12.FailedResetPooledD3D12", "Failed to reset a pooled D3D12 transfer command allocator or list (DeviceRemoved=0x%#)", static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
             outJob = D3D12TransferJob{};
             return false;
         }
@@ -1968,7 +1968,7 @@ namespace sw
         const HRESULT closeHr = job._list->Close();
         if ( FAILED( closeHr ) )
         {
-            SW_LOG_ERROR( "%#: failed to close the transfer command list hr=0x%#", pWhere, static_cast<uint32>( closeHr ) );
+            SW_LOG_ERROR_ID( "D3D12.FailedCloseTransferCommand", "%#: failed to close the transfer command list hr=0x%#", pWhere, static_cast<uint32>( closeHr ) );
             recycleTransferJob( std::move( job ) );
             return 0;
         }
@@ -1977,7 +1977,7 @@ namespace sw
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
         if ( isDeviceLost() )
         {
-            SW_LOG_ERROR( "%#: the D3D12 device was lost while the transfer was recorded; the transfer is rejected", pWhere );
+            SW_LOG_ERROR_ID( "D3D12.D3D12DeviceLostWhile", "%#: the D3D12 device was lost while the transfer was recorded; the transfer is rejected", pWhere );
             recycleTransferJob( std::move( job ) );
             return 0;
         }
@@ -1989,8 +1989,8 @@ namespace sw
         {
             // 리스트는 이미 큐에 났지만 끝났는지 알 방법이 없다. 작업은 돌려놓지 않고 버린다(재사용하면 실행 중인 얼로케이터를 Reset 할 수 있다).
             if ( _transferSerials.markLost() )
-                SW_LOG_ERROR( "%#: transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", pWhere, static_cast<uint32>( signalHr ),
-                              static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+                SW_LOG_ERROR_ID( "D3D12.TransferFenceSignalFailed", "%#: transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", pWhere, static_cast<uint32>( signalHr ),
+                                 static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
             return 0;
         }
         _transferFenceValue = fenceToSignal;

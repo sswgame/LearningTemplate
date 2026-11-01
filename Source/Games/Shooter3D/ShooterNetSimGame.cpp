@@ -99,12 +99,12 @@ namespace sw
         SceneDocument document{};
         if ( document.load( AssetID{ kScenePath } ) == false )
         {
-            SW_LOG_ERROR( "Shooter net sim: the arena scene '%#' could not be loaded - the world stays empty", kScenePath );
+            SW_LOG_ERROR_ID( "ShooterNetSimGame.ShooterNetSimArena", "Shooter net sim: the arena scene '%#' could not be loaded - the world stays empty", kScenePath );
             return nullptr;
         }
         if ( world.getScene().instantiate( document ) == false )
         {
-            SW_LOG_ERROR( "Shooter net sim: the arena scene '%#' could not be instantiated - the world stays incomplete", kScenePath );
+            SW_LOG_ERROR_ID( "ShooterNetSimGame.ShooterNetSimArena2", "Shooter net sim: the arena scene '%#' could not be instantiated - the world stays incomplete", kScenePath );
             return nullptr;
         }
         GameObjectManager& manager = world.getObjectManager();
@@ -121,7 +121,7 @@ namespace sw
         }
         const GameObjectHandle pawnObject = findPawnObject( manager );
         if ( manager.resolveGameObject( pawnObject ) == nullptr )
-            SW_LOG_WARNING( "Shooter net sim: the arena scene has no object with a ShooterNetPawnComponent - the world has no player body" );
+            SW_LOG_WARNING_ID( "ShooterNetSimGame.ShooterNetSimArena3", "Shooter net sim: the arena scene has no object with a ShooterNetPawnComponent - the world has no player body" );
         return make_unique<ShooterNetSimSession>( pawnObject );
     }
 

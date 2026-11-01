@@ -40,7 +40,7 @@ namespace sw
                     const string_view symbol = keyNode.getAttributeText( "symbol" );
                     if ( symbol.size() != 1 || symbol[0] == '.' )
                     {
-                        SW_LOG_ERROR( "%#: habitat '%#' has a key whose symbol is not one character (or is '.')", sourceName, pHabitatID );
+                        SW_LOG_ERROR_ID( "CreatureLifeCatalog.HabitatKeyWhoseSymbol", "%#: habitat '%#' has a key whose symbol is not one character (or is '.')", sourceName, pHabitatID );
                         return false;
                     }
                     listKey.push_back( SymbolKey{ parseObject( keyNode.getAttributeText( "object" ) ), symbol[0] } );
@@ -55,7 +55,7 @@ namespace sw
                         width = static_cast<int32>( cells.size() );
                     if ( cells.empty() || static_cast<int32>( cells.size() ) != width )
                     {
-                        SW_LOG_ERROR( "%#: habitat '%#' has rows of different length", sourceName, pHabitatID );
+                        SW_LOG_ERROR_ID( "CreatureLifeCatalog.HabitatRowsDifferentLength", "%#: habitat '%#' has rows of different length", sourceName, pHabitatID );
                         return false;
                     }
                     for ( const utf8 symbol : cells )
@@ -70,7 +70,7 @@ namespace sw
                             const SymbolKey* pKey = VectorUtil::findBy<&SymbolKey::_symbol>( listKey, symbol );
                             if ( pKey == nullptr )
                             {
-                                SW_LOG_ERROR( "%#: habitat '%#' uses an unknown symbol in row '%#'", sourceName, pHabitatID, cells );
+                                SW_LOG_ERROR_ID( "CreatureLifeCatalog.HabitatUsesUnknownSymbol", "%#: habitat '%#' uses an unknown symbol in row '%#'", sourceName, pHabitatID, cells );
                                 return false;
                             }
                             cell._object = pKey->_object;
@@ -82,7 +82,7 @@ namespace sw
                 outHabitat._topology = GridTopology{ width, height };
                 if ( height == 0 || outHabitat.countClaimedCells() == 0 )
                 {
-                    SW_LOG_ERROR( "%#: habitat '%#' has no cells to match", sourceName, pHabitatID );
+                    SW_LOG_ERROR_ID( "CreatureLifeCatalog.HabitatNoCellsMatch", "%#: habitat '%#' has no cells to match", sourceName, pHabitatID );
                     return false;
                 }
                 return true;
@@ -157,7 +157,7 @@ namespace sw
         const bool  bMalformedHabitat = cellCount <= 0 || static_cast<int32>( habitat._listCell.size() ) != cellCount;
         if ( bMalformedHabitat )
         {
-            SW_LOG_WARNING( "habitat '%#' has a malformed pattern - skipped", habitat._id.c_str() );
+            SW_LOG_WARNING_ID( "CreatureLifeCatalog.HabitatMalformedPatternSkipped", "habitat '%#' has a malformed pattern - skipped", habitat._id.c_str() );
             return;
         }
         if ( _habitatCatalog.add( habitat ) >= 0 )
@@ -187,7 +187,7 @@ namespace sw
             const string_view elementName( node.getName() != nullptr ? node.getName() : "" );
             const bool        bKnown = elementName == "Habitat" || elementName == "Ability" || elementName == "Species" || elementName == "Appeal";
             if ( bKnown == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, elementName );
+                SW_LOG_ERROR_ID( "CreatureLifeCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, elementName );
         }
         for ( XMLNode node = root.findChild( "Habitat" ); node; node = node.findNextSibling( "Habitat" ) )
         {
@@ -207,23 +207,23 @@ namespace sw
         }
         const XMLNode appealNode = root.findChild( "Appeal" );
         if ( appealNode && loadAppeal( appealNode, sourceName ) == false )
-            SW_LOG_ERROR( "%#: <Appeal> is invalid - the town appeal keeps its previous tiers", sourceName );
+            SW_LOG_ERROR_ID( "CreatureLifeCatalog.AppealInvalidTownAppeal", "%#: <Appeal> is invalid - the town appeal keeps its previous tiers", sourceName );
 
         for ( const CreatureSpeciesDef& species : _speciesCatalog.getAll() )
         {
             for ( const hashed_string& habitatID : species._listHabitat )
             {
                 if ( _habitatCatalog.find( habitatID ) == nullptr )
-                    SW_LOG_ERROR( "%#: species '%#' likes an unknown habitat '%#'", sourceName, species._id.c_str(), habitatID.c_str() );
+                    SW_LOG_ERROR_ID( "CreatureLifeCatalog.SpeciesLikesUnknownHabitat", "%#: species '%#' likes an unknown habitat '%#'", sourceName, species._id.c_str(), habitatID.c_str() );
             }
             for ( const hashed_string& abilityID : species._listAbility )
             {
                 if ( _abilityCatalog.find( abilityID ) == nullptr )
-                    SW_LOG_ERROR( "%#: species '%#' has an unknown ability '%#'", sourceName, species._id.c_str(), abilityID.c_str() );
+                    SW_LOG_ERROR_ID( "CreatureLifeCatalog.SpeciesUnknownAbility", "%#: species '%#' has an unknown ability '%#'", sourceName, species._id.c_str(), abilityID.c_str() );
             }
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Habitat> / <Ability> / <Species> entries", sourceName );
+            SW_LOG_WARNING_ID( "CreatureLifeCatalog.NoHabitatAbilitySpecies", "%#: no <Habitat> / <Ability> / <Species> entries", sourceName );
         return loadedCount;
     }
 
@@ -253,7 +253,7 @@ namespace sw
             rule._to   = CreatureLifeCatalogInternal::parseObject( rule._to.view() );
             if ( rule._from == rule._to )
             {
-                SW_LOG_ERROR( "%#: ability '%#' has a rule that changes nothing", sourceName, ability._id.c_str() );
+                SW_LOG_ERROR_ID( "CreatureLifeCatalog.AbilityRuleChangesNothing", "%#: ability '%#' has a rule that changes nothing", sourceName, ability._id.c_str() );
                 bValid = false;
                 continue;
             }
@@ -261,7 +261,7 @@ namespace sw
         }
         if ( ability._listRule.empty() )
         {
-            SW_LOG_ERROR( "%#: ability '%#' has no <Rule> - skipped", sourceName, ability._id.c_str() );
+            SW_LOG_ERROR_ID( "CreatureLifeCatalog.AbilityNoRuleSkipped", "%#: ability '%#' has no <Rule> - skipped", sourceName, ability._id.c_str() );
             bValid = false;
         }
         if ( bValid )
@@ -282,7 +282,7 @@ namespace sw
         species._visitCondition._phaseMask = ScheduleCondition::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, species._id.view() );
         if ( species._listHabitat.empty() )
         {
-            SW_LOG_ERROR( "%#: species '%#' likes no habitat - it would never come", sourceName, species._id.c_str() );
+            SW_LOG_ERROR_ID( "CreatureLifeCatalog.SpeciesLikesNoHabitat", "%#: species '%#' likes no habitat - it would never come", sourceName, species._id.c_str() );
             bValid = false;
         }
         if ( bValid )
@@ -304,7 +304,7 @@ namespace sw
         }
         if ( appeal._listTier.empty() )
         {
-            SW_LOG_ERROR( "%#: <Appeal> has no <Tier>", sourceName );
+            SW_LOG_ERROR_ID( "CreatureLifeCatalog.AppealNoTier", "%#: <Appeal> has no <Tier>", sourceName );
             bValid = false;
         }
         if ( bValid == false )

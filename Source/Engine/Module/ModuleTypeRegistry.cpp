@@ -111,16 +111,16 @@ namespace sw
             {
                 if ( moduleName == string_view{ pRegistrar->_pModuleName } )
                     continue;
-                SW_LOG_ERROR( "Global variable %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
-                              pRegistrar->_pName, pRegistrar->_pModuleName, moduleName );
+                SW_LOG_ERROR_ID( "ModuleTypeRegistry.GlobalVariableBelongsModule", "Global variable %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
+                                 pRegistrar->_pName, pRegistrar->_pModuleName, moduleName );
                 bMatched = false;
             }
             for ( const AssetDataKindRegistrar* pRegistrar = heads._pDataKind; pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
             {
                 if ( moduleName == string_view{ pRegistrar->_pModuleName } )
                     continue;
-                SW_LOG_ERROR( "Resource data kind %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
-                              pRegistrar->_pKind->_pLabel, pRegistrar->_pModuleName, moduleName );
+                SW_LOG_ERROR_ID( "ModuleTypeRegistry.ResourceDataKindBelongs", "Resource data kind %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
+                                 pRegistrar->_pKind->_pLabel, pRegistrar->_pModuleName, moduleName );
                 bMatched = false;
             }
             return bMatched;

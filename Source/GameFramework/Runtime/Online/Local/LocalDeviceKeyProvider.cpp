@@ -64,7 +64,7 @@ namespace sw
             {
 #if defined( SW_PLATFORM_LINUX )
                 if ( ::chmod( path.c_str(), S_IRUSR | S_IWUSR ) != 0 )
-                    SW_LOG_WARNING( "Could not restrict the local store key file to its owner: %#", path.c_str() );
+                    SW_LOG_WARNING_ID( "LocalDeviceKeyProvider.CouldNotRestrictLocal", "Could not restrict the local store key file to its owner: %#", path.c_str() );
 #else
                 (void)path; // DPAPI 가 이미 이 사용자에게만 풀린다
 #endif
@@ -102,7 +102,7 @@ namespace sw
         }
         // 로그는 잠금을 놓은 뒤 남긴다(잠금은 잎 잠금, 결정 5-3).
         if ( error.empty() == false )
-            SW_LOG_ERROR( "%#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalDeviceKeyProvider.Message", "%#", error.c_str() );
         return false;
     }
 

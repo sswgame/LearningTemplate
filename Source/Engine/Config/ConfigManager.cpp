@@ -142,7 +142,7 @@ namespace sw
             EngineConfig probe;
             if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )
             {
-                SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize - a reflection registrar was dropped at link time" );
+                SW_LOG_ERROR_ID( "ConfigManager.GeneratedEngineConfigJSONDoes", "The generated EngineConfig JSON does not deserialize - a reflection registrar was dropped at link time" );
                 return SubsystemInitResult::Failed;
             }
         }

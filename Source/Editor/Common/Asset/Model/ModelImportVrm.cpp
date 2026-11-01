@@ -127,7 +127,7 @@ namespace sw::editor
         }
         if ( bRead == false )
         {
-            SW_LOG_ERROR( "VRM '%#': %#", sourcePath, error.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.VRM", "VRM '%#': %#", sourcePath, error.c_str() );
             return false;
         }
         return true;
@@ -158,7 +158,7 @@ namespace sw::editor
         }
         Internal::collectMissingBone( skeleton, result._avatar._firstPersonBone, listMissing );
         if ( listMissing.empty() == false )
-            SW_LOG_WARNING( "VRM '%#': avatar names nodes that are not skin joints (%# bones): %#", sourcePath, listMissing.size(), Internal::joinNames( listMissing ).c_str() );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarNamesNodes", "VRM '%#': avatar names nodes that are not skin joints (%# bones): %#", sourcePath, listMissing.size(), Internal::joinNames( listMissing ).c_str() );
     }
 
     bool ModelImportVrm::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
@@ -167,15 +167,15 @@ namespace sw::editor
         if ( result._avatar.isEmpty() )
             return true;
         if ( result._listIgnoredAvatarKey.empty() == false )
-            SW_LOG_WARNING( "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarValuesNot", "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
         const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarImporter::kExtension ) );
         if ( FileUtil::ensureDirectoryExists( sideFolder ) == false || FileUtil::writeTextFile( avatarPath, VrmAvatarImporter::makeAvatarXML( result._avatar ) ) == false )
         {
-            SW_LOG_ERROR( "Failed to write avatar %#", avatarPath.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAvatar", "Failed to write avatar %#", avatarPath.c_str() );
             return false;
         }
-        SW_LOG_INFO( "VRM '%#': avatar with %# human bones, %# expressions, %# springs -> %#", sourcePath, result._avatar._listHumanBone.size(),
-                     result._avatar._listExpression.size(), result._avatar._listSpring.size(), avatarPath.c_str() );
+        SW_LOG_INFO_ID( "ModelImporter.VRMAvatarHumanBones", "VRM '%#': avatar with %# human bones, %# expressions, %# springs -> %#", sourcePath, result._avatar._listHumanBone.size(),
+                        result._avatar._listExpression.size(), result._avatar._listSpring.size(), avatarPath.c_str() );
 
         // 런타임이 읽는 형식 — 표정은 얼굴 리그, 스프링 본은 후처리 리그(VrmRuntimeAssets). 캐릭터는 이 파일을 다른 얼굴 리그 · 리그처럼 참조한다.
         vector<string> listNotConverted;
@@ -184,10 +184,10 @@ namespace sw::editor
             const string facialPath = FileUtil::joinPath( sideFolder, string( stem ) + string( FacialRig::kExtension ) );
             if ( FileUtil::writeTextFile( facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
             {
-                SW_LOG_ERROR( "Failed to write facial rig %#", facialPath.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFacialRig", "Failed to write facial rig %#", facialPath.c_str() );
                 return false;
             }
-            SW_LOG_INFO( "VRM '%#': expressions -> %#", sourcePath, facialPath.c_str() );
+            SW_LOG_INFO_ID( "ModelImporter.VRMExpressions", "VRM '%#': expressions -> %#", sourcePath, facialPath.c_str() );
         }
         const bool bHasSpringRig = result._bSkinned != SW_FALSE && VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton );
         if ( bHasSpringRig )
@@ -195,13 +195,13 @@ namespace sw::editor
             const string rigPath = FileUtil::joinPath( sideFolder, string( stem ) + string( RigAsset::kExtension ) );
             if ( FileUtil::writeTextFile( rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
             {
-                SW_LOG_ERROR( "Failed to write spring rig %#", rigPath.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSpringRig", "Failed to write spring rig %#", rigPath.c_str() );
                 return false;
             }
-            SW_LOG_INFO( "VRM '%#': springs -> %#", sourcePath, rigPath.c_str() );
+            SW_LOG_INFO_ID( "ModelImporter.VRMSprings", "VRM '%#': springs -> %#", sourcePath, rigPath.c_str() );
         }
         if ( listNotConverted.empty() == false )
-            SW_LOG_WARNING( "VRM '%#': avatar values the runtime formats cannot hold (not converted): %#", sourcePath, Internal::joinNames( listNotConverted ).c_str() );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarValuesRuntime", "VRM '%#': avatar values the runtime formats cannot hold (not converted): %#", sourcePath, Internal::joinNames( listNotConverted ).c_str() );
         return true;
     }
 
@@ -263,10 +263,10 @@ namespace sw::editor
         const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && ModelImportUtil::writeImportedMeta( assetPaths, prefabPath );
         if ( bWritten == false )
         {
-            SW_LOG_ERROR( "Failed to write character prefab %#", prefabPath.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write character prefab %#", prefabPath.c_str() );
             return false;
         }
-        SW_LOG_INFO( "Model '%#': character prefab with %# sections -> %#", meshPath, result._listSection.size(), prefabPath.c_str() );
+        SW_LOG_INFO_ID( "ModelImporter.ModelCharacterPrefabSections", "Model '%#': character prefab with %# sections -> %#", meshPath, result._listSection.size(), prefabPath.c_str() );
         return true;
     }
 

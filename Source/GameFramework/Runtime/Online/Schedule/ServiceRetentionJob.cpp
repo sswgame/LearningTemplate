@@ -30,11 +30,11 @@ namespace sw
                 const ServiceStoreResult swept = ServiceRetention::sweep( connection, rule, _nowMs, _pJob->_settings._maxScanPerRule, _pJob->_settings._maxDeletePerRule, report );
                 _deletedCount += report._deletedCount;
                 if ( report._deletedCount > 0 )
-                    SW_LOG_INFO( "Retention swept table '%#': deleted %# of %# scanned", rule._table.c_str(), report._deletedCount, report._scannedCount );
+                    SW_LOG_INFO_ID( "ServiceRetentionJob.RetentionSweptTableDeleted", "Retention swept table '%#': deleted %# of %# scanned", rule._table.c_str(), report._deletedCount, report._scannedCount );
                 if ( swept != ServiceStoreResult::Ok )
                 {
                     if ( isCancelled() == false ) // 종료 때문에 취소된 일은 오류로 남기지 않는다(취소 표시는 run 앞에 선다)
-                        SW_LOG_ERROR( "Retention sweep of table '%#' failed", rule._table.c_str() );
+                        SW_LOG_ERROR_ID( "ServiceRetentionJob.RetentionSweepTableFailed", "Retention sweep of table '%#' failed", rule._table.c_str() );
                     _result = swept; // 다른 테이블은 이어서 쓴다
                 }
             }
@@ -75,7 +75,7 @@ namespace sw
         {
             if ( rule._pfnReadTime == nullptr || rule._retentionMs <= 0 )
             {
-                SW_LOG_ERROR( "ServiceRetentionJob: the rule of table '%#' needs a time reader and a positive retention", rule._table.c_str() );
+                SW_LOG_ERROR_ID( "ServiceRetentionJob.ServiceRetentionJobRuleTableNeeds", "ServiceRetentionJob: the rule of table '%#' needs a time reader and a positive retention", rule._table.c_str() );
                 return false;
             }
         }
@@ -89,7 +89,7 @@ namespace sw
         schedule._minuteOfDay = settings._minuteOfDay;
         if ( _pScheduler->registerJob( schedule, ScheduledJobFunction::create<&ServiceRetentionJob::onScheduledRun>( this ) ) == false )
         {
-            SW_LOG_ERROR( "ServiceRetentionJob: the sweep job could not be scheduled (minute of day %#)", settings._minuteOfDay );
+            SW_LOG_ERROR_ID( "ServiceRetentionJob.ServiceRetentionJobSweepJobCould", "ServiceRetentionJob: the sweep job could not be scheduled (minute of day %#)", settings._minuteOfDay );
             return false;
         }
         return true;

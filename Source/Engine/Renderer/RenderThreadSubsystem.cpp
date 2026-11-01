@@ -31,7 +31,7 @@ namespace sw
         }
         if ( _renderThread->attach( &_rhiSubsystem.findRHI()->getDevice(), &_frameRendererSubsystem.getFrameRenderer() ) == false )
         {
-            SW_LOG_ERROR( "Failed to attach RenderThread!" );
+            SW_LOG_ERROR_ID( "RenderThread.FailedAttachRenderThread", "Failed to attach RenderThread!" );
             return SubsystemInitResult::Failed;
         }
         return SubsystemInitResult::Succeeded;

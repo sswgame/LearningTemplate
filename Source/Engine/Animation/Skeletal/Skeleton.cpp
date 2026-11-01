@@ -20,7 +20,7 @@ namespace sw
         const int32 boneCount = static_cast<int32>( _listBone.size() );
         if ( parentIndex < -1 || boneCount <= parentIndex )
         {
-            SW_LOG_ERROR( "Bone '%#' rejected: parent index %# is not an already-added bone (bone count %#)", name.c_str(), parentIndex, boneCount );
+            SW_LOG_ERROR_ID( "Skeleton.BoneRejectedParentIndex", "Bone '%#' rejected: parent index %# is not an already-added bone (bone count %#)", name.c_str(), parentIndex, boneCount );
             return -1;
         }
 
@@ -81,7 +81,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Skeleton '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "Skeleton.SkeletonCouldNotRead", "Skeleton '%#' could not be read", path );
             clear();
             return false;
         }
@@ -92,7 +92,7 @@ namespace sw
     {
         if ( _listBone.empty() )
         {
-            SW_LOG_ERROR( "Skeleton '%#': _listBone must not be empty", sourceLabel );
+            SW_LOG_ERROR_ID( "Skeleton.SkeletonListBoneMustNot", "Skeleton '%#': _listBone must not be empty", sourceLabel );
             return false;
         }
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. `addBone` 이 거르므로 그 길로 다시 쌓는다.
@@ -103,7 +103,7 @@ namespace sw
         {
             if ( addBone( bone._name, bone._parentIndex, bone._referencePose, bone._inverseBind ) < 0 )
             {
-                SW_LOG_ERROR( "Skeleton '%#': bone '%#' must name an earlier bone as its parent", sourceLabel, bone._name.c_str() );
+                SW_LOG_ERROR_ID( "Skeleton.SkeletonBoneMustName", "Skeleton '%#': bone '%#' must name an earlier bone as its parent", sourceLabel, bone._name.c_str() );
                 return false;
             }
         }
@@ -111,7 +111,7 @@ namespace sw
         {
             if ( findBoneIndex( attachment._parentBone ) < 0 )
             {
-                SW_LOG_ERROR( "Skeleton '%#': attachment '%#' names unknown bone '%#'", sourceLabel, attachment._name.c_str(), attachment._parentBone.c_str() );
+                SW_LOG_ERROR_ID( "Skeleton.SkeletonAttachmentNamesUnknown", "Skeleton '%#': attachment '%#' names unknown bone '%#'", sourceLabel, attachment._name.c_str(), attachment._parentBone.c_str() );
                 return false;
             }
             _listAttachment.push_back( attachment );

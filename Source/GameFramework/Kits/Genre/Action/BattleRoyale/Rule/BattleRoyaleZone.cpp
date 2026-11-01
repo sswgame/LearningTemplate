@@ -60,7 +60,7 @@ namespace sw
         // 맵 크기가 1 미만이면 맞추지 않고 거절한다(카탈로그의 `_mapSize` 는 `Min = 1` 이다).
         if ( mapSize < 1.0f )
         {
-            SW_LOG_ERROR( "BattleRoyaleZone: refused map size %# - it must be at least 1", mapSize );
+            SW_LOG_ERROR_ID( "BattleRoyaleZone.BattleRoyaleZoneRefusedMapSize", "BattleRoyaleZone: refused map size %# - it must be at least 1", mapSize );
             return false;
         }
         _settings = settings;

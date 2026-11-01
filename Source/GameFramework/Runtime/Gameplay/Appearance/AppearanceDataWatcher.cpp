@@ -51,8 +51,8 @@ namespace sw
         _bChanged = false;
         string report;
         if ( database.reloadFromFolder( string_view( _folder ), pItemCatalog, report ) )
-            SW_LOG_INFO( "Appearance data reloaded from '%#'", _folder.c_str() );
+            SW_LOG_INFO_ID( "AppearanceDataWatcher.AppearanceDataReloaded", "Appearance data reloaded from '%#'", _folder.c_str() );
         else
-            SW_LOG_ERROR( "Appearance data in '%#' did not pass validation - kept the running data: %#", _folder.c_str(), report.c_str() );
+            SW_LOG_ERROR_ID( "AppearanceDataWatcher.AppearanceDataDidNot", "Appearance data in '%#' did not pass validation - kept the running data: %#", _folder.c_str(), report.c_str() );
     }
 } // namespace sw

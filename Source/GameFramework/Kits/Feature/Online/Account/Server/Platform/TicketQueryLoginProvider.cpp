@@ -17,12 +17,12 @@ namespace sw
         string key;
         if ( ServerSecret::read( settings._keySecretEnvironment, key ) == false || key.empty() )
         {
-            SW_LOG_ERROR( "Login provider '%#': the key environment variable '%#' is not set", settings._name, settings._keySecretEnvironment );
+            SW_LOG_ERROR_ID( "TicketQueryLoginProvider.LoginProviderKeyEnvironment", "Login provider '%#': the key environment variable '%#' is not set", settings._name, settings._keySecretEnvironment );
             return nullptr;
         }
         if ( isQuerySafe( key ) == false )
         {
-            SW_LOG_ERROR( "Login provider '%#': the key has characters that cannot go into a query", settings._name );
+            SW_LOG_ERROR_ID( "TicketQueryLoginProvider.LoginProviderKeyCharacters", "Login provider '%#': the key has characters that cannot go into a query", settings._name );
             return nullptr;
         }
         return sw::make_unique<TicketQueryLoginProvider>( settings, std::move( key ), pHTTPClient );

@@ -36,7 +36,7 @@ namespace sw
         }
         if ( _shaderRecompiler->initialize( "Shaders" ) == false )
         {
-            SW_LOG_ERROR( "Failed to initialize ShaderRecompiler!" );
+            SW_LOG_ERROR_ID( "LiveShader.FailedInitializeShaderRecompiler", "Failed to initialize ShaderRecompiler!" );
             return SubsystemInitResult::Succeeded; // 개발 도구 하나 때문에 기동을 멈추지 않는다
         }
         _recompiledSubscription = _shaderRecompiler->bindOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &LiveShaderSubsystem::onShaderRecompiled, this ) );

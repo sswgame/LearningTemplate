@@ -204,7 +204,7 @@ namespace sw::editor
             // 이 백엔드는 Wayland 창 전용이다 — 다른 창이면 입력 이벤트가 오지 않으므로 오류로 멈춘다.
             if ( pWindow->getSurfaceKind() != NativeSurfaceKind::Wayland )
             {
-                SW_LOG_ERROR( "The ImGui Wayland platform backend needs a Wayland window" );
+                SW_LOG_ERROR_ID( "ImGuiWayland.ImGuiWaylandPlatformBackend", "The ImGui Wayland platform backend needs a Wayland window" );
                 return false;
             }
             _pWindow = pWindow;

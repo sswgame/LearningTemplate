@@ -118,8 +118,8 @@ namespace sw
             if ( s_uniqueAbsentSite.insert( siteKey ).second == false )
                 return false;
         }
-        SW_LOG_INFO( "[BindlessIndex] pass '%#' field '%#'[%#] = absent (kInvalidDescriptorIndex) — the shader must not form a descriptor address from it",
-                     passName.empty() ? "<no pass>" : passName.c_str(), fieldName.empty() ? "<unnamed>" : fieldName.c_str(), element );
+        SW_LOG_INFO_ID( "BindlessIndexValidator.PassFieldAbsentKInvalidDescriptorIndex", "[BindlessIndex] pass '%#' field '%#'[%#] = absent (kInvalidDescriptorIndex) — the shader must not form a descriptor address from it",
+                        passName.empty() ? "<no pass>" : passName.c_str(), fieldName.empty() ? "<unnamed>" : fieldName.c_str(), element );
         return true;
     }
 

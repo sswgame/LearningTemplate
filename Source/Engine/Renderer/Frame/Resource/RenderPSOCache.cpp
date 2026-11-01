@@ -183,7 +183,7 @@ namespace sw
             if ( result._handle == 0 )
             {
                 // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
-                SW_LOG_ERROR( "Material PSO variant '%#' failed to build - these batches are not drawn", result._desc._vertexShaderPath );
+                SW_LOG_ERROR_ID( "RenderPSOCache.MaterialPSOVariantFailed", "Material PSO variant '%#' failed to build - these batches are not drawn", result._desc._vertexShaderPath );
                 setMaterialPSO( result._key, MaterialPSOEntry::failed() );
                 continue;
             }

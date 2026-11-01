@@ -359,7 +359,7 @@ namespace sw::editor
             const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
             if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] view mode watch: FrameRenderer is missing" );
+                SW_LOG_ERROR_ID( "ViewportWatches.ViewModeWatchFrameRenderer", "[Scenario] view mode watch: FrameRenderer is missing" );
                 return false;
             }
             outValue = static_cast<float64>( bSceneView ? pRenderer->getSceneViewMode() : pRenderer->getViewMode() );

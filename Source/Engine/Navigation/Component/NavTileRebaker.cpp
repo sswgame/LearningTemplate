@@ -271,7 +271,7 @@ namespace sw
                 if ( job._bSucceeded && pRuntime->_pNavMesh->replaceTile( job._result ) )
                     ++_rebakedTileCount;
                 else
-                    SW_LOG_WARNING( "Navmesh '%#' tile (%#, %#) failed to rebake", pRuntime->_agentType.c_str(), job._tileX, job._tileZ );
+                    SW_LOG_WARNING_ID( "SceneNavigation.NavmeshTileFailedRebake", "Navmesh '%#' tile (%#, %#) failed to rebake", pRuntime->_agentType.c_str(), job._tileX, job._tileZ );
                 listJob[jobIndex] = std::move( listJob.back() );
                 listJob.pop_back();
             }

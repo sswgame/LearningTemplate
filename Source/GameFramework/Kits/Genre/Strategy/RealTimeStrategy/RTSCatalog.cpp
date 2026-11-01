@@ -38,16 +38,16 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Unit" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "RTSCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadUnit( node, sourceName ) )
                 ++loadedCount;
         }
         for ( const RTSUnitDef& def : getAll() )
         {
             if ( def._producedBy.empty() == false && find( def._producedBy ) == nullptr )
-                SW_LOG_ERROR( "%#: '%#' is produced by unknown '%#'", sourceName, def._id.c_str(), def._producedBy.c_str() );
+                SW_LOG_ERROR_ID( "RTSCatalog.ProducedUnknown", "%#: '%#' is produced by unknown '%#'", sourceName, def._id.c_str(), def._producedBy.c_str() );
             if ( def._requires.empty() == false && find( def._requires ) == nullptr )
-                SW_LOG_ERROR( "%#: '%#' requires unknown '%#'", sourceName, def._id.c_str(), def._requires.c_str() );
+                SW_LOG_ERROR_ID( "RTSCatalog.RequiresUnknown", "%#: '%#' requires unknown '%#'", sourceName, def._id.c_str(), def._requires.c_str() );
         }
         return loadedCount;
     }
@@ -69,7 +69,7 @@ namespace sw
                     def._bTargetsAir = true;
                 else
                 {
-                    SW_LOG_ERROR( "%#: '%#' has an unknown target '%#' (Ground, Air)", sourceName, def._id.c_str(), token );
+                    SW_LOG_ERROR_ID( "RTSCatalog.UnknownTargetGroundAir", "%#: '%#' has an unknown target '%#' (Ground, Air)", sourceName, def._id.c_str(), token );
                     bValid = false;
                 }
             } );

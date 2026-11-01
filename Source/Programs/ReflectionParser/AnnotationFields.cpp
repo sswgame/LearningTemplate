@@ -318,24 +318,24 @@ namespace sw
                 const AnnotationField<TParsed>* pField  = scope.findField( getBoundFieldID( binding ) );
                 if ( pField == nullptr )
                 {
-                    SW_LOG_ERROR( "AnnotationMeta.txt [%#] binds '%#', but PredefinedAnnotationField.xxx has no %# row for it "
-                                  "- every token spelled that way would be dropped.",
-                                  entry._scope, binding._field, getBoundFieldID( binding ) );
+                    SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtBindsBut", "AnnotationMeta.txt [%#] binds '%#', but PredefinedAnnotationField.xxx has no %# row for it "
+                                                                                   "- every token spelled that way would be dropped.",
+                                     entry._scope, binding._field, getBoundFieldID( binding ) );
                     return false;
                 }
                 if ( acceptsKind( pField->_value, binding._kind ) == false )
                 {
-                    SW_LOG_ERROR( "AnnotationMeta.txt [%#] declares '%#' as %#, but its field member in ParsedReflection.h "
-                                  "holds another kind of value.",
-                                  entry._scope, binding._field, toString( binding._kind ) );
+                    SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtDeclaresBut", "AnnotationMeta.txt [%#] declares '%#' as %#, but its field member in ParsedReflection.h "
+                                                                                      "holds another kind of value.",
+                                     entry._scope, binding._field, toString( binding._kind ) );
                     return false;
                 }
 
                 FunctionNetRole role = FunctionNetRole::Local;
                 if ( binding._kind == AnnotationBinding::Kind::NetRole && tryParseFunctionNetRole( binding._field, role ) == false )
                 {
-                    SW_LOG_ERROR( "AnnotationMeta.txt [%#] names net role '%#', which PredefinedFunctionNetRole.xxx does not define.",
-                                  entry._scope, binding._field );
+                    SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtNamesNet", "AnnotationMeta.txt [%#] names net role '%#', which PredefinedFunctionNetRole.xxx does not define.",
+                                     entry._scope, binding._field );
                     return false;
                 }
                 return true;
@@ -359,9 +359,9 @@ namespace sw
                     }
                     if ( bBound == false )
                     {
-                        SW_LOG_ERROR( "PredefinedAnnotationField.xxx has a %# '%#' row, but AnnotationMeta.txt gives it no spelling "
-                                      "- nothing can set it.",
-                                      getAnnotationScope<TParsed>()._pDesc->_pScope, field._id );
+                        SW_LOG_ERROR_ID( "AnnotationFields.PredefinedAnnotationFieldXxxRowBut", "PredefinedAnnotationField.xxx has a %# '%#' row, but AnnotationMeta.txt gives it no spelling "
+                                                                                                "- nothing can set it.",
+                                         getAnnotationScope<TParsed>()._pDesc->_pScope, field._id );
                         bValid = false;
                     }
                 }
@@ -571,8 +571,8 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR( "AnnotationMeta.txt section [%#] is not an annotation scope (REFLECT / ENUM / PROPERTY / FUNCTION).",
-                              entry._scope );
+                SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtSectionNot", "AnnotationMeta.txt section [%#] is not an annotation scope (REFLECT / ENUM / PROPERTY / FUNCTION).",
+                                 entry._scope );
                 bValid = false;
             }
         }

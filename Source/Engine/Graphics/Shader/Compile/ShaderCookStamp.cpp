@@ -412,14 +412,14 @@ namespace sw
                 vector<HeaderRoot> listHeaderRoot;
                 if ( collectHeaderRoots( resolver, shadersDir, listHeaderRoot ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to write the cook stamp: the shaders folder cannot be resolved: %#", shadersDir.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp", "Failed to write the cook stamp: the shaders folder cannot be resolved: %#", shadersDir.c_str() );
                     return false;
                 }
 
                 vector<StampedSource> listSource;
                 if ( collectStampedSources( shadersDir, listSource ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to write the cook stamp: the shader sources under '%#' could not all be listed", shadersDir.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp2", "Failed to write the cook stamp: the shader sources under '%#' could not all be listed", shadersDir.c_str() );
                     return false;
                 }
 
@@ -436,7 +436,7 @@ namespace sw
                         continue;
                     if ( source._key.find( kDependencySeparator ) != string::npos )
                     {
-                        SW_LOG_ERROR( "Failed to write the cook stamp: the shader path contains the dependency separator character: %#", source._absPath.c_str() );
+                        SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp3", "Failed to write the cook stamp: the shader path contains the dependency separator character: %#", source._absPath.c_str() );
                         return false;
                     }
                     listLine.push_back( formatHex64( hash ) + " " + source._key );
@@ -451,7 +451,7 @@ namespace sw
                         const uint64 headerHash = ContentHash::computeFile( header );
                         if ( headerKey.empty() || headerHash == 0 )
                         {
-                            SW_LOG_ERROR( "Failed to write the cook stamp: the header '%#' opened by '%#' is not under a shader include root or cannot be read", header.c_str(), source._absPath.c_str() );
+                            SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp4", "Failed to write the cook stamp: the header '%#' opened by '%#' is not under a shader include root or cannot be read", header.c_str(), source._absPath.c_str() );
                             return false;
                         }
                         string dependencyLine = formatHex64( headerHash ) + " " + source._key;
@@ -476,7 +476,7 @@ namespace sw
                 const string stampPath = FileUtil::joinPath( rhiDir, "cook.stamp" );
                 if ( FileUtil::writeTextFile( stampPath, text ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to write the cook stamp: %#", stampPath.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp5", "Failed to write the cook stamp: %#", stampPath.c_str() );
                     return false;
                 }
                 {
@@ -501,14 +501,14 @@ namespace sw
             {
                 if ( listPriority.empty() )
                 {
-                    SW_LOG_ERROR( "Shader domains cannot be found: _listResourcePriority (EngineConfig.json) is empty" );
+                    SW_LOG_ERROR_ID( "ShaderCooker.ShaderDomainsCannotFound", "Shader domains cannot be found: _listResourcePriority (EngineConfig.json) is empty" );
                     return false;
                 }
                 for ( const utf8* pKind : { constant::path::kEnginePack, constant::path::kCommonPack } )
                 {
                     if ( VectorUtil::contains( listPriority, string( pKind ) ) == false )
                     {
-                        SW_LOG_ERROR( "Shader domains cannot be found: _listResourcePriority (EngineConfig.json) has no '%#' (the shader include root kind)", pKind );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderDomainsCannotFound2", "Shader domains cannot be found: _listResourcePriority (EngineConfig.json) has no '%#' (the shader include root kind)", pKind );
                         return false;
                     }
                 }
@@ -716,11 +716,11 @@ namespace sw
             if ( FileUtil::removeFile( filePath ) )
             {
                 ++outRemovedCount;
-                SW_LOG_INFO( "Removed a shader binary no cook request makes: %#", filePath );
+                SW_LOG_INFO_ID( "ShaderCooker.RemovedShaderBinaryNo", "Removed a shader binary no cook request makes: %#", filePath );
             }
             else
             {
-                SW_LOG_ERROR( "Could not remove the stale shader binary: %#", filePath );
+                SW_LOG_ERROR_ID( "ShaderCooker.CouldNotRemoveStale", "Could not remove the stale shader binary: %#", filePath );
                 bAllRemoved = false;
             }
         }
@@ -763,7 +763,7 @@ namespace sw
             const uint64 headerHash = ContentHash::computeFile( header );
             if ( headerHash == 0 )
             {
-                SW_LOG_WARNING( "Could not hash the header '%#' for the include record '%#'", header.c_str(), string( recordPath ).c_str() );
+                SW_LOG_WARNING_ID( "ShaderCooker.CouldNotHashHeader", "Could not hash the header '%#' for the include record '%#'", header.c_str(), string( recordPath ).c_str() );
                 return false;
             }
             text += ShaderCookStampInternal::formatHex64( headerHash );

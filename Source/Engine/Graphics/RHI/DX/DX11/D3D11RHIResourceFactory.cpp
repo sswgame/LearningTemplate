@@ -25,7 +25,7 @@ namespace sw
         const bool bInvalidConstantBufferRequest = _pDevice == nullptr || _pDevice->_device == nullptr || size == 0;
         if ( bInvalidConstantBufferRequest )
         {
-            SW_LOG_ERROR( "createConstantBuffer: invalid device or size=%#", size );
+            SW_LOG_ERROR_ID( "D3D11.CreateConstantBufferInvalidDeviceSize", "createConstantBuffer: invalid device or size=%#", size );
             return 0;
         }
 
@@ -41,14 +41,14 @@ namespace sw
         const HRESULT                        hr = _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() );
         if ( FAILED( hr ) )
         {
-            SW_LOG_ERROR( "CreateBuffer(constant) failed hr=0x%# size=%# aligned=%#",
-                          static_cast<uint32>( hr ), size, alignedSize );
+            SW_LOG_ERROR_ID( "D3D11.CreateBufferConstantFailedHr", "CreateBuffer(constant) failed hr=0x%# size=%# aligned=%#",
+                             static_cast<uint32>( hr ), size, alignedSize );
             return 0;
         }
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( std::move( buffer ) );
         if ( handle == 0 )
-            SW_LOG_ERROR( "storeBuffer returned 0 after CreateBuffer success" );
+            SW_LOG_ERROR_ID( "D3D11.StoreBufferReturnedAfterCreateBuffer", "storeBuffer returned 0 after CreateBuffer success" );
         return handle;
     }
 
@@ -140,7 +140,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
         if ( isHrSuccess( _pDevice->_device->CreateBuffer( &bufferDesc, pInitData, buffer.GetAddressOf() ), "CreateBuffer" ) == false )
         {
-            SW_LOG_ERROR( "createBuffer: failed to create the indirect argument buffer (%# bytes)", sizeBytes );
+            SW_LOG_ERROR_ID( "D3D11.CreateBufferFailedCreateIndirect", "createBuffer: failed to create the indirect argument buffer (%# bytes)", sizeBytes );
             return 0;
         }
 
@@ -215,7 +215,7 @@ namespace sw
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
             if ( static_cast<uint64>( region._dstOffset ) + region._sizeBytes > desc.ByteWidth )
             {
-                SW_LOG_ERROR( "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, desc.ByteWidth );
+                SW_LOG_ERROR_ID( "D3D11.UpdateVertexBufferRegionsRegionOutsideByte", "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, desc.ByteWidth );
                 continue;
             }
             updateStructuredBufferRegions( buffer, pBaseSource, &region, 1 );
@@ -317,7 +317,7 @@ namespace sw
         const bool bNotReadback = bufferDesc.Usage != D3D11_USAGE_STAGING || ( bufferDesc.CPUAccessFlags & D3D11_CPU_ACCESS_READ ) == 0 || sizeBytes > bufferDesc.ByteWidth;
         if ( bNotReadback )
         {
-            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer of at least %# bytes", readback, sizeBytes );
+            SW_LOG_ERROR_ID( "D3D11.ReadReadbackBufferBufferNotReadback", "readReadbackBuffer: buffer %# is not a readback buffer of at least %# bytes", readback, sizeBytes );
             return false;
         }
         // Map 에서 Unmap 까지 한 덩어리로 잠근다. 부르는 쪽 계약이 "GPU 작업이 끝난 뒤" 라서(완료 콜백 안) 기다리는 Map 이다 — `DO_NOT_WAIT` 는 끝난 복사에도
@@ -338,18 +338,18 @@ namespace sw
         const bool                     bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bTextureNotUploadable )
         {
-            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device context is not usable", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadTextureDeviceContext", "submitTextureUpload: texture %# or the device context is not usable", texture );
             return RHITransferSubmit::rejected();
         }
         // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
         if ( _pDevice->isDeviceLost() )
         {
-            SW_LOG_ERROR( "submitTextureUpload: the device was lost" );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadDeviceLost", "submitTextureUpload: the device was lost" );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepth != SW_FALSE )
         {
-            SW_LOG_ERROR( "submitTextureUpload: texture %# is a depth texture", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadTextureDepthTexture", "submitTextureUpload: texture %# is a depth texture", texture );
             return RHITransferSubmit::rejected();
         }
 
@@ -357,7 +357,7 @@ namespace sw
         pRecord->_texture->GetDesc( &texDesc );
         if ( desc._arraySlice >= texDesc.ArraySize )
         {
-            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, texDesc.ArraySize );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadSliceOutRange", "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, texDesc.ArraySize );
             return RHITransferSubmit::rejected();
         }
 
@@ -366,8 +366,8 @@ namespace sw
                                                                texDesc.MipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
-                          desc._sizeBytes, texDesc.Width, texDesc.Height, texDesc.MipLevels );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureUploadUnsupportedFormatNot", "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+                             desc._sizeBytes, texDesc.Width, texDesc.Height, texDesc.MipLevels );
             return RHITransferSubmit::rejected();
         }
 
@@ -414,13 +414,13 @@ namespace sw
         const bool                     bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false || pRecord->_bDepth != SW_FALSE;
         if ( bTextureRegionNotUploadable )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device context is not usable", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureRegionUploadTextureMissingDepth", "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device context is not usable", texture );
             return RHITransferSubmit::rejected();
         }
         // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
         if ( _pDevice->isDeviceLost() )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: the device was lost" );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureRegionUploadDeviceLost", "submitTextureRegionUpload: the device was lost" );
             return RHITransferSubmit::rejected();
         }
 
@@ -469,13 +469,13 @@ namespace sw
     {
         if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
+            SW_LOG_ERROR_ID( "D3D11.TakeTextureReadbackTicketNotCompleted", "takeTextureReadback: ticket %# has not completed", ticket._serial );
             return false;
         }
         D3D11RHIDevice::TextureReadbackRecord readback;
         if ( _pDevice->_readbackTable.take( ticket._serial, readback ) == false )
         {
-            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            SW_LOG_ERROR_ID( "D3D11.TakeTextureReadbackTicketNotPending", "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
             return false;
         }
 
@@ -490,7 +490,7 @@ namespace sw
             const HRESULT                           hr      = context->Map( readback._staging.Get(), 0, D3D11_MAP_READ, 0, &mapped );
             if ( FAILED( hr ) || mapped.pData == nullptr )
             {
-                SW_LOG_ERROR( "takeTextureReadback: Map of the staging texture failed hr=0x%# for a completed ticket %#", static_cast<uint32>( hr ), ticket._serial );
+                SW_LOG_ERROR_ID( "D3D11.TakeTextureReadbackMapStagingTexture", "takeTextureReadback: Map of the staging texture failed hr=0x%# for a completed ticket %#", static_cast<uint32>( hr ), ticket._serial );
                 return false;
             }
         }
@@ -538,7 +538,7 @@ namespace sw
         const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bTextureNotReadable || _pDevice->isDeviceLost() ) // 장치를 잃었으면 진입에서 Rejected 다(계약 2)
         {
-            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
 
@@ -546,7 +546,7 @@ namespace sw
         pRecord->_texture->GetDesc( &texDesc );
         if ( mip >= texDesc.MipLevels || arraySlice >= texDesc.ArraySize )
         {
-            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, texDesc.MipLevels, texDesc.ArraySize );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureReadbackMipSliceOut", "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, texDesc.MipLevels, texDesc.ArraySize );
             return RHITransferSubmit::rejected();
         }
         // 깊이는 typeless(R24G8)로 만들어져 있다. 같은 포맷의 스테이징으로 통째로 복사하고 가져갈 때 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
@@ -554,7 +554,7 @@ namespace sw
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( texDesc.Format );
         if ( computeRHITextureMipLayout( layoutFormat, texDesc.Width, texDesc.Height, mip, outLayout ) == false )
         {
-            SW_LOG_ERROR( "submitTextureReadback: unsupported format for %#x%# mip %#", texDesc.Width, texDesc.Height, mip );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureReadbackUnsupportedFormatX", "submitTextureReadback: unsupported format for %#x%# mip %#", texDesc.Width, texDesc.Height, mip );
             return RHITransferSubmit::rejected();
         }
 
@@ -571,7 +571,7 @@ namespace sw
         D3D11RHIDevice::TextureReadbackRecord readback;
         if ( isHrSuccess( _pDevice->_device->CreateTexture2D( &stagingDesc, nullptr, readback._staging.GetAddressOf() ), "CreateTexture2D" ) == false )
         {
-            SW_LOG_ERROR( "submitTextureReadback: failed to create the staging texture (%#x%#)", outLayout._width, outLayout._height );
+            SW_LOG_ERROR_ID( "D3D11.SubmitTextureReadbackFailedCreateStaging", "submitTextureReadback: failed to create the staging texture (%#x%#)", outLayout._width, outLayout._height );
             return RHITransferSubmit::rejected();
         }
         readback._width     = outLayout._width;
@@ -598,8 +598,8 @@ namespace sw
             return 0;
         if ( isRHITextureShapeValid( desc ) == false )
         {
-            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                          desc._arraySize, desc._width, desc._height );
+            SW_LOG_ERROR_ID( "D3D11.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                             desc._arraySize, desc._width, desc._height );
             return 0;
         }
 
@@ -645,7 +645,7 @@ namespace sw
 
         if ( isHrSuccess( _pDevice->_device->CreateTexture2D( &texDesc, nullptr, record._texture.GetAddressOf() ), "CreateTexture2D" ) == false )
         {
-            SW_LOG_ERROR( "Failed to create Texture2D (%#×%#).", desc._width, desc._height );
+            SW_LOG_ERROR_ID( "D3D11.FailedCreateTexture2D", "Failed to create Texture2D (%#×%#).", desc._width, desc._height );
             return 0;
         }
 
@@ -663,7 +663,7 @@ namespace sw
                 Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
                 if ( isHrSuccess( _pDevice->_device->CreateRenderTargetView( record._texture.Get(), &rtvDesc, rtv.GetAddressOf() ), "CreateRenderTargetView" ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to create RTV for Texture2D (slice %#).", slice );
+                    SW_LOG_ERROR_ID( "D3D11.FailedCreateRTVTexture2D", "Failed to create RTV for Texture2D (slice %#).", slice );
                     return 0;
                 }
                 if ( slice == 0 )
@@ -686,7 +686,7 @@ namespace sw
                 Microsoft::WRL::ComPtr<ID3D11DepthStencilView> dsv;
                 if ( isHrSuccess( _pDevice->_device->CreateDepthStencilView( record._texture.Get(), &dsvDesc, dsv.GetAddressOf() ), "CreateDepthStencilView" ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to create DSV for Texture2D (slice %#).", slice );
+                    SW_LOG_ERROR_ID( "D3D11.FailedCreateDSVTexture2D", "Failed to create DSV for Texture2D (slice %#).", slice );
                     return 0;
                 }
                 if ( slice == 0 )
@@ -727,7 +727,7 @@ namespace sw
             }
             if ( isHrSuccess( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), &srvDesc, record._srv.GetAddressOf() ), "CreateShaderResourceView" ) == false )
             {
-                SW_LOG_ERROR( "Failed to create SRV for Texture2D." );
+                SW_LOG_ERROR_ID( "D3D11.FailedCreateSRVTexture2D", "Failed to create SRV for Texture2D." );
                 return 0;
             }
         }
@@ -778,8 +778,8 @@ namespace sw
         // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다. 배열이나 큐브 뷰를 바인딩하면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         if ( pRecord->_dimension != RHITextureDimension::Texture2D )
         {
-            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture slots yet", texture,
-                          static_cast<uint32>( pRecord->_dimension ) );
+            SW_LOG_ERROR_ID( "D3D11.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture slots yet", texture,
+                             static_cast<uint32>( pRecord->_dimension ) );
             return kInvalidDescriptorIndex;
         }
 
@@ -916,8 +916,8 @@ namespace sw
                                                  isHrSuccess( _pDevice->_device->CreatePixelShader( psResult._bytecode.data(), psResult._bytecode.size(), nullptr, pso._ps.GetAddressOf() ), "CreatePixelShader" ) == false );
             if ( bShaderCreationFailed )
             {
-                SW_LOG_WARNING( "createPipelineState: shader compile/create failed (vs=%# ps=%#) %#", vsResult._bSuccess, psResult._bSuccess,
-                                desc._vertexShaderPath.c_str() );
+                SW_LOG_WARNING_ID( "D3D11.CreatePipelineStateShaderCompileCreate", "createPipelineState: shader compile/create failed (vs=%# ps=%#) %#", vsResult._bSuccess, psResult._bSuccess,
+                                   desc._vertexShaderPath.c_str() );
                 return 0;
             }
             // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 만든다. DX12, Vulkan, GL 과 같은 테이블이다.
@@ -934,7 +934,7 @@ namespace sw
             }
             if ( isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, constant::render::kVertexAttributeCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
             {
-                SW_LOG_ERROR( "createPipelineState: CreateInputLayout failed '%#'", desc._vertexShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateCreateInputLayoutFailed", "createPipelineState: CreateInputLayout failed '%#'", desc._vertexShaderPath.c_str() );
                 return 0;
             }
         }
@@ -944,7 +944,7 @@ namespace sw
             ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
             {
-                SW_LOG_ERROR( "createPipelineState: compute shader compile/create failed '%#'", desc._computeShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateComputeShaderCompile", "createPipelineState: compute shader compile/create failed '%#'", desc._computeShaderPath.c_str() );
                 return 0;
             }
         }
@@ -962,7 +962,7 @@ namespace sw
         // 상태 객체를 못 만들면 PSO 를 만들지 않는다(핸들 0). 빈 상태로 등록하면 앞 드로우의 래스터 · 블렌드 · 깊이 상태가 남아 그 상태로 그린다.
         if ( isHrSuccess( _pDevice->_device->CreateRasterizerState( &rasterizerDesc, pso._rasterizerState.GetAddressOf() ), "CreateRasterizerState" ) == false )
         {
-            SW_LOG_ERROR( "createPipelineState: CreateRasterizerState failed '%#'", desc._vertexShaderPath.c_str() );
+            SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateCreateRasterizerStateFailed", "createPipelineState: CreateRasterizerState failed '%#'", desc._vertexShaderPath.c_str() );
             return 0;
         }
 
@@ -987,7 +987,7 @@ namespace sw
                                       isHrSuccess( _pDevice->_device->CreateDepthStencilState( &dsDesc, pso._depthStencilState.GetAddressOf() ), "CreateDepthStencilState" ) == false;
             if ( bStateFailed )
             {
-                SW_LOG_ERROR( "createPipelineState: CreateBlendState/CreateDepthStencilState failed '%#'", desc._vertexShaderPath.c_str() );
+                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateCreateBlendStateCreateDepthStencilStateFailed", "createPipelineState: CreateBlendState/CreateDepthStencilState failed '%#'", desc._vertexShaderPath.c_str() );
                 return 0;
             }
         }

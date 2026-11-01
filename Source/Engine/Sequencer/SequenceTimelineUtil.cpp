@@ -175,7 +175,7 @@ namespace sw
                 spawned._itemIndex = itemIndex;
                 if ( pObject == nullptr )
                 {
-                    SW_LOG_ERROR( "Sequence spawn '%#' could not spawn prefab '%#' - the item spawns nothing until its span is left", item._name, item._prefab );
+                    SW_LOG_ERROR_ID( "SequenceTimeline.SequenceSpawnCouldNot", "Sequence spawn '%#' could not spawn prefab '%#' - the item spawns nothing until its span is left", item._name, item._prefab );
                     inoutListSpawned.push_back( spawned ); // 실패도 기억해 구간이 끝날 때까지 다시 시도하지 않는다
                     continue;
                 }
@@ -274,7 +274,7 @@ namespace sw
                 continue;
             if ( pOutListCrossedEvent != nullptr )
                 pOutListCrossedEvent->push_back( &item );
-            SW_LOG_INFO( "Sequence event %# on %#", item._name.c_str(), item._targetObject.c_str() );
+            SW_LOG_INFO_ID( "SequenceTimeline.SequenceEvent", "Sequence event %# on %#", item._name.c_str(), item._targetObject.c_str() );
         }
     }
 

@@ -195,7 +195,7 @@ namespace sw
             {
                 entry._base = kInvalidBase;
                 if ( bWarnedFull == false )
-                    SW_LOG_WARNING( "The vertex pool is full (%# vertices) - the remaining meshes are drawn with their own vertex buffers (they cannot join multi-draw).", kMaxPoolVertices );
+                    SW_LOG_WARNING_ID( "GPUMeshVertexPool.VertexPoolFullVertices", "The vertex pool is full (%# vertices) - the remaining meshes are drawn with their own vertex buffers (they cannot join multi-draw).", kMaxPoolVertices );
                 bWarnedFull = true;
                 continue;
             }
@@ -212,7 +212,7 @@ namespace sw
         _lastUploadBytes   = bytes;
         if ( _vertexBuffer == 0 )
         {
-            SW_LOG_ERROR( "Failed to create the vertex pool buffer (%# vertices) - the batch is drawn with its own vertex buffer.", capacity );
+            SW_LOG_ERROR_ID( "GPUMeshVertexPool.FailedCreateVertexPool", "Failed to create the vertex pool buffer (%# vertices) - the batch is drawn with its own vertex buffer.", capacity );
             for ( auto& [pMesh, entry] : _mapEntry )
             {
                 entry._base = kInvalidBase;

@@ -39,7 +39,7 @@ namespace sw
         _ioThreadCount = transportSettings._ioThreadCount;
         if ( _transport->initialize( this, transportSettings ) == false || _transport->listen( settings._listenAddress ) == false )
         {
-            SW_LOG_ERROR( "HTTP server could not listen" );
+            SW_LOG_ERROR_ID( "HTTPServer.HTTPServerCouldNot", "HTTP server could not listen" );
             _transport->shutdown();
             _transport.reset();
             _settings.reset();

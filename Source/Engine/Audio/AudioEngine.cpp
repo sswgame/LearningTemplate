@@ -146,8 +146,8 @@ namespace sw
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( _pMixer->getDesc(), layout ) == false )
         {
-            SW_LOG_ERROR( "The mixer graph cannot run with %# output channels - keeping %# channels", AudioChannelLayoutUtil::getChannelCount( layout ),
-                          AudioChannelLayoutUtil::getChannelCount( _layout ) );
+            SW_LOG_ERROR_ID( "AudioEngine.MixerGraphCannotRun", "The mixer graph cannot run with %# output channels - keeping %# channels", AudioChannelLayoutUtil::getChannelCount( layout ),
+                             AudioChannelLayoutUtil::getChannelCount( _layout ) );
             return false;
         }
         _layout = layout;
@@ -191,7 +191,7 @@ namespace sw
         }
         for ( const string& error : listError )
         {
-            SW_LOG_ERROR( "%#", error.c_str() );
+            SW_LOG_ERROR_ID( "AudioEngine.Message", "%#", error.c_str() );
         }
         if ( pLibrary == nullptr )
             return false;
@@ -403,7 +403,7 @@ namespace sw
         }
         if ( pEvent == nullptr )
         {
-            SW_LOG_ERROR( "Unknown audio event '%#'", eventName.c_str() );
+            SW_LOG_ERROR_ID( "AudioEngine.UnknownAudioEvent", "Unknown audio event '%#'", eventName.c_str() );
             return 0;
         }
         for ( const AudioClipEntry& clip : pEvent->_listClip )
@@ -703,7 +703,7 @@ namespace sw
         AudioVoiceSlot* pSlot = _voicePool.allocate();
         if ( pSlot == nullptr )
         {
-            SW_LOG_WARNING( "Voice pool exhausted - dropped %#", command._path.c_str() );
+            SW_LOG_WARNING_ID( "AudioEngine.VoicePoolExhaustedDropped", "Voice pool exhausted - dropped %#", command._path.c_str() );
             return;
         }
         pSlot->_playingID        = command._playingID;
@@ -991,7 +991,7 @@ namespace sw
             {
                 if ( _mapParameter.find( parameterName ) == _mapParameter.end() )
                 {
-                    SW_LOG_ERROR( "Audio graph '%#' reads game parameter '%#', which no loaded event library declares", slot._clipPath.c_str(), parameterName.c_str() );
+                    SW_LOG_ERROR_ID( "AudioEngine.AudioGraphReadsGame", "Audio graph '%#' reads game parameter '%#', which no loaded event library declares", slot._clipPath.c_str(), parameterName.c_str() );
                     AudioVoicePool::free( slot );
                     return;
                 }
@@ -1576,7 +1576,7 @@ namespace sw
             AudioVoiceSlot*       pSlot = _voicePool.allocate();
             if ( pSlot == nullptr )
             {
-                SW_LOG_WARNING( "Voice pool exhausted - dropped event '%#'", event._name.c_str() );
+                SW_LOG_WARNING_ID( "AudioEngine.VoicePoolExhaustedDropped2", "Voice pool exhausted - dropped event '%#'", event._name.c_str() );
                 break;
             }
             pSlot->_playingID        = command._playingID;

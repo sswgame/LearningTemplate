@@ -102,7 +102,7 @@ namespace sw
         utf8 arrThreadName[64]{};
         if ( ThreadName::tryGetCurrentThreadName( arrThreadName, static_cast<uint32>( sizeof( arrThreadName ) ) ) == false )
             arrThreadName[0] = '\0';
-        SW_LOG_INFO( "[IO] open %# bytes=%# thread=%#", filePath, byteCount, static_cast<const utf8*>( arrThreadName ) );
+        SW_LOG_INFO_ID( "PlatformFileUtil.OpenBytesThread", "[IO] open %# bytes=%# thread=%#", filePath, byteCount, static_cast<const utf8*>( arrThreadName ) );
     }
 
     bool PlatformFileUtil::acceptsPathInput( string_view path )

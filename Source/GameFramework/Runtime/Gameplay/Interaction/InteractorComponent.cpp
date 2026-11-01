@@ -268,7 +268,7 @@ namespace sw
         SkeletalAnimatorComponent* pTargetAnimator = pTargetObject != nullptr ? pTargetObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
         if ( pAnimator == nullptr || pTargetAnimator == nullptr )
         {
-            SW_LOG_ERROR( "'%#': interaction paired animation needs a SkeletalAnimatorComponent on the interactor and the interactable", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            SW_LOG_ERROR_ID( "Interaction.InteractionPairedAnimationNeeds", "'%#': interaction paired animation needs a SkeletalAnimatorComponent on the interactor and the interactable", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
             _session.cancel();
             return;
         }
@@ -280,7 +280,7 @@ namespace sw
             if ( def == nullptr )
             {
                 // 읽기 오류는 로더가 줄마다 남겼다. 남은 세트로 고르지 않는다.
-                SW_LOG_ERROR( "'%#': interaction paired animation '%#' could not be loaded", pOwner->getName().c_str(), path.c_str() );
+                SW_LOG_ERROR_ID( "Interaction.InteractionPairedAnimationCould", "'%#': interaction paired animation '%#' could not be loaded", pOwner->getName().c_str(), path.c_str() );
                 _session.cancel();
                 return;
             }
@@ -296,7 +296,7 @@ namespace sw
         // 거절(자리에 맞는 세트 없음, 너무 멂, 다른 세션 중)은 진행 중인 상호작용을 취소한다 — 애니메이션 없이 진행하지 않는다. 데이터 결함은 세션이 오류로 남겼다.
         if ( result != PairedAnimationStartResult::Started )
         {
-            SW_LOG_WARNING( "'%#': interaction paired animation was refused (result %#)", pOwner->getName().c_str(), static_cast<uint32>( result ) );
+            SW_LOG_WARNING_ID( "Interaction.InteractionPairedAnimationRefused", "'%#': interaction paired animation was refused (result %#)", pOwner->getName().c_str(), static_cast<uint32>( result ) );
             _session.cancel();
             return;
         }

@@ -59,7 +59,7 @@ namespace sw
         // 컬링 디스패치의 t2 자리표 — 가림을 보지 않는 슬롯도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트). 깊이 1 은 아무것도 가리지 않는다.
         constexpr float32 kFarDepth = 1.0f;
         if ( _placeholder.ensureCapacity( pDevice, sizeof( float32 ), 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, &kFarDepth ) == false )
-            SW_LOG_ERROR( "Failed to create the occlusion tiles placeholder - GPU culling binds no buffer at t2" );
+            SW_LOG_ERROR_ID( "OcclusionTiles.FailedCreateOcclusionTiles", "Failed to create the occlusion tiles placeholder - GPU culling binds no buffer at t2" );
     }
 
     void OcclusionTiles::release( IRHIDevice* pDevice )

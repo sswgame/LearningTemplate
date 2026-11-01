@@ -77,7 +77,7 @@ namespace sw
         const CropCatalog*     pCrops = game::findSubsystem<CropCatalog>();
         if ( pState == nullptr || pCrops == nullptr )
         {
-            SW_LOG_ERROR( "[Meadow] the farm cannot start - %#", pState == nullptr ? "no SessionStateComponent in front of it on this object" : "the crop catalog is not loaded" );
+            SW_LOG_ERROR_ID( "MeadowFarm.FarmCannotStart", "[Meadow] the farm cannot start - %#", pState == nullptr ? "no SessionStateComponent in front of it on this object" : "the crop catalog is not loaded" );
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
@@ -118,7 +118,7 @@ namespace sw
 
     void MeadowFarmDirectorComponent::onGameStarted()
     {
-        SW_LOG_INFO( "[Meadow] the village is open - hold Space to fast-forward, E to talk to a visitor" );
+        SW_LOG_INFO_ID( "MeadowFarm.VillageOpenHoldSpace", "[Meadow] the village is open - hold Space to fast-forward, E to talk to a visitor" );
     }
 
     void MeadowFarmDirectorComponent::updateGame( float32 deltaTime )
@@ -171,8 +171,8 @@ namespace sw
         if ( 0 < earned )
         {
             state.getWallet().add( Wallet::getDefaultCurrency(), earned );
-            SW_LOG_INFO( "[Meadow] day %# - harvest sold for %# G (wallet %# G)", state.getClock().getDay(), earned,
-                         state.getWallet().getBalance( Wallet::getDefaultCurrency() ) );
+            SW_LOG_INFO_ID( "MeadowFarm.DayHarvestSoldG", "[Meadow] day %# - harvest sold for %# G (wallet %# G)", state.getClock().getDay(), earned,
+                            state.getWallet().getBalance( Wallet::getDefaultCurrency() ) );
         }
         _bViewsDirty = SW_TRUE;
     }

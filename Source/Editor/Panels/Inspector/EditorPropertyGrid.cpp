@@ -322,7 +322,7 @@ namespace sw::editor
             if ( SerializerUtil::applyPropertyText( prop, instance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
                 notifyPropertyEdited( prop );
             else
-                SW_LOG_WARNING( "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
+                SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
         };
         if ( pOwnerObj != nullptr )
             InspectorObjectEdit::applyObjectEdit( pOwnerObj, pUndoLabel, apply );

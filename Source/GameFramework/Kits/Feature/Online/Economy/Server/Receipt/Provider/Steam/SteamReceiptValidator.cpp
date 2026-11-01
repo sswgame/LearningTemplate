@@ -208,7 +208,7 @@ namespace sw
             result._status      = ReceiptStatus::Retry;
             result._failureText = response._bTransportFailed == SW_TRUE ? response._failureText : string( formatToString( "steam answered status %#", response._statusCode ) );
             if ( response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden )
-                SW_LOG_ERROR( "Steam rejected the publisher key (status %#) - check the key environment variable", response._statusCode );
+                SW_LOG_ERROR_ID( "SteamReceiptValidator.SteamRejectedPublisherKey", "Steam rejected the publisher key (status %#) - check the key environment variable", response._statusCode );
             return;
         }
         JSONDocument document;
@@ -270,13 +270,13 @@ namespace sw
                 JSONDocument document;
                 if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
                 {
-                    SW_LOG_WARNING( "Steam refund report failed (status %#) - the next poll reads from the last successful one", response._statusCode );
+                    SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportFailed", "Steam refund report failed (status %#) - the next poll reads from the last successful one", response._statusCode );
                     continue; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
                 }
                 _lastReportUnixMs      = _reportStartUnixMs;
                 const JSONValue orders = document.getRoot().get( "response" ).get( "params" ).get( "orders" );
                 if ( orders.isArray() && orders.size() >= static_cast<size_t>( kReportMaxResults ) )
-                    SW_LOG_WARNING( "Steam refund report returned %# orders (the limit) - some refunds may be read at the next overlapping poll only", static_cast<int32>( orders.size() ) );
+                    SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportReturned", "Steam refund report returned %# orders (the limit) - some refunds may be read at the next overlapping poll only", static_cast<int32>( orders.size() ) );
                 for ( size_t index = 0; orders.isArray() && index < orders.size(); ++index )
                 {
                     const JSONValue order = orders.at( index );

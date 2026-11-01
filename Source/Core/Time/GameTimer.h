@@ -85,7 +85,7 @@ namespace sw
         ~ScopedTimer() noexcept
         {
             (void)_pTag;
-            SW_LOG_INFO( "'%#': %# ms", _pTag, getElapsedTimeInSeconds() * constant::time::kMillisecondsPerSecond );
+            SW_LOG_INFO_ID( "GameTimer.Ms", "'%#': %# ms", _pTag, getElapsedTimeInSeconds() * constant::time::kMillisecondsPerSecond );
         }
 
         /**

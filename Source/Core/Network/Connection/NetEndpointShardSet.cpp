@@ -20,21 +20,21 @@ namespace sw
         shutdown();
         if ( listShard.empty() || connectionStride < 1 )
         {
-            SW_LOG_ERROR( "NetEndpointShardSet: %# shard(s) with connection stride %# - a shard set needs at least one shard and a stride of 1 or more",
-                          static_cast<int32>( listShard.size() ), connectionStride );
+            SW_LOG_ERROR_ID( "NetEndpointShardSet.NetEndpointShardSetShardConnectionStride", "NetEndpointShardSet: %# shard(s) with connection stride %# - a shard set needs at least one shard and a stride of 1 or more",
+                             static_cast<int32>( listShard.size() ), connectionStride );
             return false;
         }
         const int64 foldedLimit = static_cast<int64>( listShard.size() ) * static_cast<int64>( connectionStride );
         if ( foldedLimit > static_cast<int64>( MathUtil::kMaxInt32 ) )
         {
-            SW_LOG_ERROR( "NetEndpointShardSet: %# shard(s) x stride %# does not fit a connection ID", static_cast<int32>( listShard.size() ), connectionStride );
+            SW_LOG_ERROR_ID( "NetEndpointShardSet.NetEndpointShardSetShardXStride", "NetEndpointShardSet: %# shard(s) x stride %# does not fit a connection ID", static_cast<int32>( listShard.size() ), connectionStride );
             return false;
         }
         for ( const NetEndpoint* pShard : listShard )
         {
             if ( pShard == nullptr )
             {
-                SW_LOG_ERROR( "NetEndpointShardSet: a shard host is missing" );
+                SW_LOG_ERROR_ID( "NetEndpointShardSet.NetEndpointShardSetShardHostMissing", "NetEndpointShardSet: a shard host is missing" );
                 return false;
             }
         }

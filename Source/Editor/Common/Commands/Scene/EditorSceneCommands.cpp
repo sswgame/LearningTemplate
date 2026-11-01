@@ -80,7 +80,7 @@ namespace sw::editor
 
         pCreated->addComponent<SceneComponent>();
         if ( pParent != nullptr && pCreated->attachToParent( pParent ) == false )
-            SW_LOG_WARNING( "New object could not be put under '%#' - it is created at the root", pParent->getName().c_str() );
+            SW_LOG_WARNING_ID( "EditorSceneCommands.NewObjectCouldNot", "New object could not be put under '%#' - it is created at the root", pParent->getName().c_str() );
 
         EditorTransaction::recordCreation( pCreated, "Create GameObject" );
         select( pCreated, SelectionMode::Replace );
@@ -138,7 +138,7 @@ namespace sw::editor
         SW_ASSERT( bLinked );
         if ( bAllLoaded == false )
         {
-            SW_LOG_WARNING( "Duplicate of '%#' failed to read a copied state - nothing was duplicated", pSrc->getName().c_str() );
+            SW_LOG_WARNING_ID( "EditorSceneCommands.DuplicateFailedReadCopied", "Duplicate of '%#' failed to read a copied state - nothing was duplicated", pSrc->getName().c_str() );
             for ( GameObject* pCopy : listCopy )
             {
                 pManager->destroyObject( pCopy );
@@ -672,7 +672,7 @@ namespace sw::editor
         SW_ASSERT( bLinked );
         if ( bAllLoaded == false )
         {
-            SW_LOG_WARNING( "Paste failed to read a copied object - nothing was pasted" );
+            SW_LOG_WARNING_ID( "EditorSceneCommands.PasteFailedReadCopied", "Paste failed to read a copied object - nothing was pasted" );
             for ( GameObject* pCopy : listCopy )
             {
                 pManager->destroyObject( pCopy );

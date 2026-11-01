@@ -209,7 +209,7 @@ namespace sw
                 // 게임 상태는 새 라이브러리가 넘겨받을 유일한 것이다. 저장하지 못했으면 언로드하지 않는다. 옛 게임이 그대로 돈다.
                 if ( suspendModulesInternal( ModuleScope::Game, true, true, DrainReason::Reload ) == false )
                 {
-                    SW_LOG_ERROR( "The game could not serialize its state for the reload — keeping the old game modules running" );
+                    SW_LOG_ERROR_ID( "GameModuleManager.GameCouldNotSerialize", "The game could not serialize its state for the reload — keeping the old game modules running" );
                     return false;
                 }
                 return true;
@@ -283,8 +283,8 @@ namespace sw
         // 스냅샷은 **버리지 않는다.** 게임 컴포넌트는 리로드 앞에서 이미 모든 씬에서 제거했다(`destroyGameInstance`). 여기서 비우면 그
         // 상태로 저장할 때 컴포넌트가 빠진 씬이 저장된다. 고쳐서 다시 빌드하면 다음 리로드가 이 스냅샷을 복원한다(게임이 없으니 새로 저장하지 않는다).
         // 그때까지 씬 저장은 막혀 있다(`destroyGameInstance` 가 막았다).
-        SW_LOG_ERROR( "Game module faulted after the reload (code 0x%#) — the game is off; fix it and rebuild, the next reload restores the %# byte snapshot (scene saving is blocked until then)",
-                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), static_cast<uint64>( _listGameSavedState.size() ) );
+        SW_LOG_ERROR_ID( "GameModuleManager.GameModuleFaultedAfter", "Game module faulted after the reload (code 0x%#) — the game is off; fix it and rebuild, the next reload restores the %# byte snapshot (scene saving is blocked until then)",
+                         Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), static_cast<uint64>( _listGameSavedState.size() ) );
         _game    = nullptr;
         _gameAPI = {};
     }
@@ -348,7 +348,7 @@ namespace sw
     {
         if ( _game == nullptr )
         {
-            SW_LOG_ERROR( "restartGame: there is no game instance to restart" );
+            SW_LOG_ERROR_ID( "GameModuleManager.RestartGameNoGameInstance", "restartGame: there is no game instance to restart" );
             return false;
         }
         drainRenderWorkers( DrainReason::Restart );
@@ -361,10 +361,10 @@ namespace sw
             sceneManager.setWorldPlaying( false );
         if ( createGameInstance() == false )
         {
-            SW_LOG_ERROR( "restartGame: the game instance could not be created again" );
+            SW_LOG_ERROR_ID( "GameModuleManager.RestartGameGameInstanceCould", "restartGame: the game instance could not be created again" );
             return false;
         }
-        SW_LOG_INFO( "Game instance restarted" );
+        SW_LOG_INFO_ID( "GameModuleManager.GameInstanceRestarted", "Game instance restarted" );
         return true;
     }
 
@@ -398,14 +398,14 @@ namespace sw
 
         if ( _gameAPI.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
         {
-            SW_LOG_INFO( "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
+            SW_LOG_INFO_ID( "GameModuleManager.SceneObjectStateRestored", "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
             _listGameSavedState.clear();
             if ( engine::areEngineServicesBound() )
                 engine::getSubsystem<SceneManager>().setSaveBlockReason( {} );
         }
         else
         {
-            SW_LOG_ERROR( "Failed to restore game state — keeping saved state for subsequent reload." );
+            SW_LOG_ERROR_ID( "GameModuleManager.FailedRestoreGameState", "Failed to restore game state — keeping saved state for subsequent reload." );
         }
     }
 
@@ -440,7 +440,7 @@ namespace sw
         // App · Server 모두 건다 — 없으면 호스트 결함이다.
         IModuleStateStore* const pStateStore = engine::findSubsystem<IModuleStateStore>();
         if ( pStateStore == nullptr )
-            SW_LOG_ERROR( "The host scope has no IModuleStateStore - module state is not carried across reloads" );
+            SW_LOG_ERROR_ID( "GameModuleManager.HostScopeNoIModuleStateStore", "The host scope has no IModuleStateStore - module state is not carried across reloads" );
         else
             (void)outScope.bind( pStateStore );
         // 호스트 전용 서비스 — 에디터 모듈만 찾는다(게임 모듈의 범위에는 걸지 않는다).
@@ -508,7 +508,7 @@ namespace sw
             {
                 if ( _pLiveReloadManager->loadSharedModule( moduleName ) == false )
                 {
-                    SW_LOG_ERROR( "Shared module load failed (%#)", moduleName );
+                    SW_LOG_ERROR_ID( "GameModuleManager.SharedModuleLoadFailed", "Shared module load failed (%#)", moduleName );
                     return false;
                 }
                 listGameModule.push_back( moduleName );
@@ -524,7 +524,7 @@ namespace sw
             }
             if ( _pLiveReloadManager->registerModule( moduleName, listDependency ) == false )
             {
-                SW_LOG_ERROR( "Kit module register failed (%#)", moduleName );
+                SW_LOG_ERROR_ID( "GameModuleManager.KitModuleRegisterFailed", "Kit module register failed (%#)", moduleName );
                 return false;
             }
             holdReloadSubscription(
@@ -544,13 +544,13 @@ namespace sw
         _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
         if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
-            SW_LOG_ERROR( "SWGame module register failed" );
+            SW_LOG_ERROR_ID( "GameModuleManager.SWGameModuleRegisterFailed", "SWGame module register failed" );
             return false;
         }
 
         if ( _pLiveReloadManager->isGraphBroken() )
         {
-            SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
+            SW_LOG_ERROR_ID( "GameModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
             return false;
         }
 
@@ -576,7 +576,7 @@ namespace sw
                 sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &GameModuleManager::onAfterGameReload, this ) ) );
             if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
             {
-                SW_LOG_ERROR( "SWGame instance could not be started" );
+                SW_LOG_ERROR_ID( "GameModuleManager.SWGameInstanceCouldNot", "SWGame instance could not be started" );
                 return false;
             }
         }
@@ -631,7 +631,7 @@ namespace sw
     {
         if ( exportGameAPI( &_gameAPI ) == false )
         {
-            SW_LOG_ERROR( "Failed to bind GameAPI (shipping)" );
+            SW_LOG_ERROR_ID( "GameModuleManager.FailedBindGameAPIShipping", "Failed to bind GameAPI (shipping)" );
             return false;
         }
         return true;

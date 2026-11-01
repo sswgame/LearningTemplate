@@ -290,8 +290,8 @@ namespace sw
             }
             if ( texture._load.hasFailed() )
             {
-                SW_LOG_WARNING( "MaterialInstance '%#': texture '%#' for '%#' could not be loaded (%#) — the parent's texture stays.", _desc._name.c_str(),
-                                texture._assetPath.c_str(), texture._name.c_str(), texture._load.getError().c_str() );
+                SW_LOG_WARNING_ID( "MaterialInstance.MaterialInstanceTextureCouldNot", "MaterialInstance '%#': texture '%#' for '%#' could not be loaded (%#) — the parent's texture stays.", _desc._name.c_str(),
+                                   texture._assetPath.c_str(), texture._name.c_str(), texture._load.getError().c_str() );
                 texture._load.reset(); // 경로는 적어 두었다 — 다시 묻지 않는다(같은 경로를 다시 주면 `setTextureParameter` 가 다시 시도하게 한다)
             }
         }

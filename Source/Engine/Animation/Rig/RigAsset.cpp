@@ -113,7 +113,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "RigAsset", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Rig '%#': malformed XML (expected a <RigAsset> root)", sourceLabel );
+            SW_LOG_ERROR_ID( "RigAsset.RigMalformedXMLExpected", "Rig '%#': malformed XML (expected a <RigAsset> root)", sourceLabel );
             return false;
         }
         if ( parseRoot( root, sourceLabel ) )
@@ -131,7 +131,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Rig '%#' could not be read", path );
+            SW_LOG_ERROR_ID( "RigAsset.RigCouldNotRead", "Rig '%#' could not be read", path );
             clear();
             return false;
         }
@@ -151,7 +151,7 @@ namespace sw
             return false;
         if ( nodes.size() == 0 )
         {
-            SW_LOG_ERROR( "Rig '%#': 'nodes' must not be empty", sourceLabel );
+            SW_LOG_ERROR_ID( "RigAsset.RigNodesMustNot", "Rig '%#': 'nodes' must not be empty", sourceLabel );
             return false;
         }
         for ( size_t index = 0; targets.isValid() && index < targets.size(); ++index )
@@ -183,18 +183,18 @@ namespace sw
         const uint32 sourceCount = ( target._bone.empty() ? 0u : 1u ) + ( target._socket.empty() ? 0u : 1u ) + ( target._object.empty() ? 0u : 1u );
         if ( sourceCount != 1 )
         {
-            SW_LOG_ERROR( "Rig '%#': target '%#' must name exactly one of 'bone', 'socket', 'object'", sourceLabel, target._name.c_str() );
+            SW_LOG_ERROR_ID( "RigAsset.RigTargetMustName", "Rig '%#': target '%#' must name exactly one of 'bone', 'socket', 'object'", sourceLabel, target._name.c_str() );
             return false;
         }
         if ( target._object.empty() == false && target._unit.empty() == false )
         {
-            SW_LOG_ERROR( "Rig '%#': target '%#' is an object and cannot name a 'unit'", sourceLabel, target._name.c_str() );
+            SW_LOG_ERROR_ID( "RigAsset.RigTargetObjectCannot", "Rig '%#': target '%#' is an object and cannot name a 'unit'", sourceLabel, target._name.c_str() );
             return false;
         }
         target._kind = target._bone.empty() == false ? RigTargetKind::Bone : ( target._socket.empty() == false ? RigTargetKind::Socket : RigTargetKind::Object );
         if ( findTargetIndex( target._name ) >= 0 )
         {
-            SW_LOG_ERROR( "Rig '%#': duplicate target name '%#'", sourceLabel, target._name.c_str() );
+            SW_LOG_ERROR_ID( "RigAsset.RigDuplicateTargetName", "Rig '%#': duplicate target name '%#'", sourceLabel, target._name.c_str() );
             return false;
         }
         _listTarget.push_back( target );
@@ -210,7 +210,7 @@ namespace sw
         unique_ptr<RigNode> node = RigNodeRegistry::getInstance().createNode( typeName );
         if ( node == nullptr )
         {
-            SW_LOG_ERROR( "Rig '%#': unknown node type '%#'", sourceLabel, typeName.c_str() );
+            SW_LOG_ERROR_ID( "RigAsset.RigUnknownNodeType", "Rig '%#': unknown node type '%#'", sourceLabel, typeName.c_str() );
             return false;
         }
         bool bOk = node->parseCommon( reader ) && node->parse( reader );
@@ -221,7 +221,7 @@ namespace sw
         {
             if ( existing->getName() == node->getName() )
             {
-                SW_LOG_ERROR( "Rig '%#': duplicate node name '%#'", sourceLabel, node->getName().c_str() );
+                SW_LOG_ERROR_ID( "RigAsset.RigDuplicateNodeName", "Rig '%#': duplicate node name '%#'", sourceLabel, node->getName().c_str() );
                 return false;
             }
         }

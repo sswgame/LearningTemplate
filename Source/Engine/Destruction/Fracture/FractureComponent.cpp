@@ -76,7 +76,7 @@ namespace sw
         _seenReloadCount                      = SharedAssetCache<FractureAsset>::getReloadCount();
         shared_ptr<const FractureAsset> asset = SharedAssetCache<FractureAsset>::acquire( path );
         if ( asset == nullptr )
-            SW_LOG_ERROR( "'%#': fracture asset '%#' could not be read - the object stays intact", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", path.c_str() );
+            SW_LOG_ERROR_ID( "FractureComponent.FractureAssetCouldNot", "'%#': fracture asset '%#' could not be read - the object stays intact", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", path.c_str() );
         return asset;
     }
 

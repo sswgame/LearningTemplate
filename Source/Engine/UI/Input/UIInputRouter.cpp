@@ -121,7 +121,7 @@ namespace sw
         _uiInputMap->setSuppressBaseActionOnChord( true ); // Shift+Tab 이 Tab 도 함께 발화하지 않게
         if ( _uiInputMap->loadFromAsset( assetID ) == false )
         {
-            SW_LOG_ERROR( "[UI] UI input map '%#' could not be loaded - UI navigation actions stay unbound", uiInputMapPath );
+            SW_LOG_ERROR_ID( "UIInputRouter.UIInputMapCould", "[UI] UI input map '%#' could not be loaded - UI navigation actions stay unbound", uiInputMapPath );
             _uiInputMap.reset();
             return false;
         }

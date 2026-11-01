@@ -94,7 +94,7 @@ namespace sw
         const bool bNoGrid = _navWidth <= 0 || _navHeight <= 0 || _navCellSize <= 0.0f;
         if ( bNoGrid )
         {
-            SW_LOG_ERROR( "[Village] the village nav grid needs _navWidth, _navHeight and _navCellSize - the villagers stay home" );
+            SW_LOG_ERROR_ID( "FarmVillageDirector.VillageNavGridNeeds", "[Village] the village nav grid needs _navWidth, _navHeight and _navCellSize - the villagers stay home" );
             return false;
         }
         if ( _navGrid.initialize( _navWidth, _navHeight, _navCellSize, _navOrigin ) == false )
@@ -131,7 +131,7 @@ namespace sw
                 }
             }
         } );
-        SW_LOG_INFO( "[Village] nav grid %#x%# (%# m cells), %# cell(s) blocked by obstacles", _navWidth, _navHeight, _navCellSize, blockedCount );
+        SW_LOG_INFO_ID( "FarmVillageDirector.NavGridXM", "[Village] nav grid %#x%# (%# m cells), %# cell(s) blocked by obstacles", _navWidth, _navHeight, _navCellSize, blockedCount );
         return true;
     }
 
@@ -140,18 +140,18 @@ namespace sw
         const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr || pState->isInitialized() == false )
         {
-            SW_LOG_ERROR( "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
+            SW_LOG_ERROR_ID( "FarmVillageDirector.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
             return false;
         }
         _catalog.clear();
         if ( _catalog.loadFromAsset( AssetID{ _scheduleDataPath } ) == false )
         {
-            SW_LOG_ERROR( "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
+            SW_LOG_ERROR_ID( "FarmVillageDirector.CouldNotLoadedVillagers", "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
         if ( _catalog.getNPCs().empty() )
         {
-            SW_LOG_ERROR( "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
+            SW_LOG_ERROR_ID( "FarmVillageDirector.ReadButListsNo", "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
         if ( rebuildNavGrid() == false )
@@ -177,8 +177,8 @@ namespace sw
             _schedule.setNPCLOD( npcIndex, ScheduleLOD::Near );
             _listPosition[static_cast<size_t>( npcIndex )] = _schedule.getNPCView( npcIndex )._location._position;
         }
-        SW_LOG_INFO( "[Village] %# villager(s) follow %# from day %# %#:%#", _schedule.getNPCCount(), _scheduleDataPath.c_str(), clock.getDay(), clock.getHourInt(),
-                     clock.getMinute() );
+        SW_LOG_INFO_ID( "FarmVillageDirector.VillagerFollowDay", "[Village] %# villager(s) follow %# from day %# %#:%#", _schedule.getNPCCount(), _scheduleDataPath.c_str(), clock.getDay(), clock.getHourInt(),
+                        clock.getMinute() );
         return true;
     }
 
@@ -192,7 +192,7 @@ namespace sw
             _schedule.fillSaveState( state );
         // 실을 수 없으면 직렬화기가 아카이브를 오류 상태로 두어 저장 전체가 실패한다(이유는 직렬화기가 알린다).
         if ( BinarySerializer::serialize( &state, *ScheduleSaveState::StaticType(), outArchive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
-            SW_LOG_ERROR( "[Village] the schedule save state could not be written" );
+            SW_LOG_ERROR_ID( "FarmVillageDirector.ScheduleSaveStateCould", "[Village] the schedule save state could not be written" );
     }
 
     bool FarmVillageDirectorComponent::readState( Archive& archive )
@@ -205,7 +205,7 @@ namespace sw
         ScheduleSaveState state;
         if ( BinarySerializer::deserialize( &state, *ScheduleSaveState::StaticType(), archive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
         {
-            SW_LOG_ERROR( "[Village] the schedule save state could not be read" );
+            SW_LOG_ERROR_ID( "FarmVillageDirector.ScheduleSaveStateCould2", "[Village] the schedule save state could not be read" );
             return false;
         }
         if ( _schedule.getNPCCount() > 0 )

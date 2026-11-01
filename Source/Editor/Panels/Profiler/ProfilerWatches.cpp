@@ -107,7 +107,7 @@ namespace sw::editor
             const FrameProfiler* pProfiler         = editor::findSubsystem<FrameProfiler>();
             if ( pProfiler == nullptr ) // 필수 서비스: 없으면 버그
             {
-                SW_LOG_ERROR( "[Scenario] watch ProfilerTimelineThreadCount: FrameProfiler is missing" );
+                SW_LOG_ERROR_ID( "ProfilerWatches.WatchProfilerTimelineThreadCountFrameProfilerMissing", "[Scenario] watch ProfilerTimelineThreadCount: FrameProfiler is missing" );
                 return false;
             }
             outValue = static_cast<float64>( pProfiler->getTimeline().countActiveThreads( kRecentFrameCount ) );

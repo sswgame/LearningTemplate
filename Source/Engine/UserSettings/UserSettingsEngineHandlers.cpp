@@ -284,7 +284,7 @@ namespace sw
         const bool bHasSlot = context._value.empty() ? pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot ) : InputSlotUtil::tryParse( context._value, slot );
         if ( bHasSlot == false )
         {
-            SW_LOG_WARNING( "key binding '%#': action '%#' binding %# cannot take '%#'", def._id.c_str(), def._action.c_str(), def._bindIndex, context._value );
+            SW_LOG_WARNING_ID( "UserSettings.KeyBindingActionBinding", "key binding '%#': action '%#' binding %# cannot take '%#'", def._id.c_str(), def._action.c_str(), def._bindIndex, context._value );
             return false;
         }
         return pInputMap->rebindSlot( def._action, slot, def._bindIndex );
@@ -299,7 +299,7 @@ namespace sw
         {
             // 기동 적용은 게임이 언어 팩을 읽기 전이다. 게임이 읽은 뒤의 다시 적용에서 적용된다.
             if ( context._bStartup == false )
-                SW_LOG_WARNING( "language '%#' is not loaded", context._value );
+                SW_LOG_WARNING_ID( "UserSettings.LanguageNotLoaded", "language '%#' is not loaded", context._value );
             return context._bStartup;
         }
         return localization.setCurrentLanguage( context._value );

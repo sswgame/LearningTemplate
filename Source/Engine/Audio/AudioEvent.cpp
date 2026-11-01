@@ -22,7 +22,7 @@ namespace sw
         string            text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Audio event library not found: %#", assetPath );
+            SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryNot", "Audio event library not found: %#", assetPath );
             return false;
         }
         return loadFromXMLText( text, assetPath );
@@ -33,7 +33,7 @@ namespace sw
         *this = AudioEventLibrary{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
-            SW_LOG_ERROR( "%#: audio event library could not be read or holds unknown keys / values", sourceName );
+            SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryCould", "%#: audio event library could not be read or holds unknown keys / values", sourceName );
             return false;
         }
         return validate( sourceName );
@@ -47,21 +47,21 @@ namespace sw
             const AudioParameterDesc& parameter = _listParameter[parameterIndex];
             if ( parameter._name.empty() )
             {
-                SW_LOG_ERROR( "%#: parameter %# has no name", sourceName, parameterIndex );
+                SW_LOG_ERROR_ID( "AudioEventLibrary.ParameterNoName", "%#: parameter %# has no name", sourceName, parameterIndex );
                 bValid = false;
             }
             for ( size_t otherIndex = parameterIndex + 1; otherIndex < _listParameter.size(); ++otherIndex )
             {
                 if ( _listParameter[otherIndex]._name == parameter._name )
                 {
-                    SW_LOG_ERROR( "%#: parameter '%#' is declared twice", sourceName, parameter._name.c_str() );
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.ParameterDeclaredTwice", "%#: parameter '%#' is declared twice", sourceName, parameter._name.c_str() );
                     bValid = false;
                 }
             }
             const bool bRangeOrdered = parameter._minValue <= parameter._defaultValue && parameter._defaultValue <= parameter._maxValue;
             if ( bRangeOrdered == false )
             {
-                SW_LOG_ERROR( "%#: parameter '%#' needs min <= default <= max", sourceName, parameter._name.c_str() );
+                SW_LOG_ERROR_ID( "AudioEventLibrary.ParameterNeedsMinDefault", "%#: parameter '%#' needs min <= default <= max", sourceName, parameter._name.c_str() );
                 bValid = false;
             }
         }
@@ -71,7 +71,7 @@ namespace sw
             const AudioEventDesc& event = _listEvent[eventIndex];
             if ( event._name.empty() )
             {
-                SW_LOG_ERROR( "%#: event %# has no name", sourceName, eventIndex );
+                SW_LOG_ERROR_ID( "AudioEventLibrary.EventNoName", "%#: event %# has no name", sourceName, eventIndex );
                 bValid = false;
                 continue;
             }
@@ -80,13 +80,13 @@ namespace sw
             {
                 if ( _listEvent[otherIndex]._name == event._name )
                 {
-                    SW_LOG_ERROR( "%#: event '%#' is declared twice", sourceName, pName );
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.EventDeclaredTwice", "%#: event '%#' is declared twice", sourceName, pName );
                     bValid = false;
                 }
             }
             if ( event._listClip.empty() )
             {
-                SW_LOG_ERROR( "%#: event '%#' has no clips", sourceName, pName );
+                SW_LOG_ERROR_ID( "AudioEventLibrary.EventNoClips", "%#: event '%#' has no clips", sourceName, pName );
                 bValid = false;
             }
             bool bHasSubtitle = false;
@@ -94,31 +94,31 @@ namespace sw
             {
                 if ( clip._path.empty() )
                 {
-                    SW_LOG_ERROR( "%#: event '%#' has a clip with no path", sourceName, pName );
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.EventClipNoPath", "%#: event '%#' has a clip with no path", sourceName, pName );
                     bValid = false;
                 }
                 bHasSubtitle = bHasSubtitle || clip._subtitleKey.empty() == false;
             }
             if ( event._subtitleSpeakerKey.empty() == false && bHasSubtitle == false )
             {
-                SW_LOG_ERROR( "%#: event '%#' names a subtitle speaker but no clip has a subtitle key", sourceName, pName );
+                SW_LOG_ERROR_ID( "AudioEventLibrary.EventNamesSubtitleSpeaker", "%#: event '%#' names a subtitle speaker but no clip has a subtitle key", sourceName, pName );
                 bValid = false;
             }
             if ( event._volumeDbMax < event._volumeDbMin || event._pitchMax < event._pitchMin )
             {
-                SW_LOG_ERROR( "%#: event '%#' has a volume or pitch range with max below min", sourceName, pName );
+                SW_LOG_ERROR_ID( "AudioEventLibrary.EventVolumePitchRange", "%#: event '%#' has a volume or pitch range with max below min", sourceName, pName );
                 bValid = false;
             }
             for ( const AudioParameterMapping& mapping : event._listParameterMap )
             {
                 if ( findParameter( mapping._parameter ) == nullptr )
                 {
-                    SW_LOG_ERROR( "%#: event '%#' maps unknown parameter '%#'", sourceName, pName, mapping._parameter.c_str() );
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.EventMapsUnknownParameter", "%#: event '%#' maps unknown parameter '%#'", sourceName, pName, mapping._parameter.c_str() );
                     bValid = false;
                 }
                 if ( mapping._listPoint.empty() || AudioMixerDesc::isCurveSorted( mapping._listPoint ) == false )
                 {
-                    SW_LOG_ERROR( "%#: event '%#' parameter curve '%#' is empty or out of order", sourceName, pName, mapping._parameter.c_str() );
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.EventParameterCurveEmpty", "%#: event '%#' parameter curve '%#' is empty or out of order", sourceName, pName, mapping._parameter.c_str() );
                     bValid = false;
                 }
             }
@@ -145,12 +145,12 @@ namespace sw
     {
         if ( validate( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio event library not saved - it does not pass validation", absPath.str() );
+            SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryNot2", "%#: audio event library not saved - it does not pass validation", absPath.str() );
             return false;
         }
         if ( FileUtil::writeTextFile( absPath.str(), toXMLText() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio event library could not be written to '%#'", absPath.str(), absPath.str() );
+            SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryCould2", "%#: audio event library could not be written to '%#'", absPath.str(), absPath.str() );
             return false;
         }
         return true;

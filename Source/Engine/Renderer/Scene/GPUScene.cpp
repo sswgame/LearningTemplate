@@ -246,7 +246,7 @@ namespace sw
             // 인스턴스가 0 이면 버퍼를 놓는 것이라 false 가 맞다.
             const bool bVisibleBuffer = view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), visibleSlotCount, kVisibleUsage, true, true, nullptr );
             if ( bVisibleBuffer == false && visibleSlotCount > 0 )
-                SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
+                SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateVisibleInstance", "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
         }
         // 가시 목록 항목은 아래 24비트가 인스턴스 번호다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instance_data.hlsli `kVisibleEntryIDMask`).
         SW_ASSERT( instanceCount <= 0x00FFFFFFu );
@@ -263,7 +263,7 @@ namespace sw
             const RHIBufferHandle bufferBefore = view._lodState._buffer;
             const bool            bEnsured     = view._lodState.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), stateCount, kLODStateUsage, false, true, nullptr );
             if ( bEnsured == false && stateCount > 0 )
-                SW_LOG_ERROR_ONCE( "Failed to create the LOD state buffer (%# instances) of a cull view - its LOD levels switch without a crossfade", stateCount );
+                SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreateLODState", "Failed to create the LOD state buffer (%# instances) of a cull view - its LOD levels switch without a crossfade", stateCount );
             // 새 버퍼의 내용은 정해져 있지 않다 — 다음 컬링이 비운다.
             if ( view._lodState._buffer != bufferBefore )
                 view._lodStateLayoutGeneration = 0xFFFFFFFFu;
@@ -375,7 +375,7 @@ namespace sw
         _instanceSlotStream         = pDevice->getResourceFactory()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
         _instanceSlotStreamCapacity = ( _instanceSlotStream != 0 ) ? capacity : 0;
         if ( _instanceSlotStream == 0 )
-            SW_LOG_ERROR( "Failed to create the instance slot stream (%# instances) - scene draws cannot find their instances.", capacity );
+            SW_LOG_ERROR_ID( "GPUScene.FailedCreateInstanceSlot", "Failed to create the instance slot stream (%# instances) - scene draws cannot find their instances.", capacity );
     }
 
     void GPUScene::uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount )
@@ -569,7 +569,7 @@ namespace sw
         const bool   bRecreate        = ( bFits == false );
         if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
         {
-            SW_LOG_ERROR( "Failed to create the material data buffer (%#, stride %#, %# elements).", group._shaderPath.c_str(), stride, elementCount );
+            SW_LOG_ERROR_ID( "GPUScene.FailedCreateMaterialData", "Failed to create the material data buffer (%#, stride %#, %# elements).", group._shaderPath.c_str(), stride, elementCount );
             return;
         }
         // 값이 지난 업로드와 같으면 올리지 않는다. 머티리얼 수에 비례하던 프레임당 업로드가 바뀐 그룹만큼으로 준다.

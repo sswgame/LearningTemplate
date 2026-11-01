@@ -81,7 +81,7 @@ namespace sw
         if ( pScreen != nullptr )
             pScreen->setViewModel( _viewModel.get() );
         if ( pScreen != nullptr && pScreen->getDesc()._layer != UILayer::HUD )
-            SW_LOG_WARNING( "HUD document '%#' is not on the HUD layer - it takes focus and may block game input", _documentPath.c_str() );
+            SW_LOG_WARNING_ID( "HUDController.HUDDocumentNotHUD", "HUD document '%#' is not on the HUD layer - it takes focus and may block game input", _documentPath.c_str() );
     }
 
     void HUDControllerComponent::closeScreen()
@@ -106,7 +106,7 @@ namespace sw
     void HUDControllerComponent::reportViewModelTypeMismatch( const TypeInfo* pRequestedType ) const
     {
         const TypeInfo* pInstalledType = _viewModel != nullptr ? _viewModel->getTypeInfo() : nullptr;
-        SW_LOG_ERROR( "HUD '%#' already holds view model %# - %# was requested; one HUD serves one game view model", _documentPath.c_str(),
-                      pInstalledType != nullptr ? pInstalledType->_name.c_str() : "<unreflected>", pRequestedType != nullptr ? pRequestedType->_name.c_str() : "<unreflected>" );
+        SW_LOG_ERROR_ID( "HUDController.HUDAlreadyHoldsView", "HUD '%#' already holds view model %# - %# was requested; one HUD serves one game view model", _documentPath.c_str(),
+                         pInstalledType != nullptr ? pInstalledType->_name.c_str() : "<unreflected>", pRequestedType != nullptr ? pRequestedType->_name.c_str() : "<unreflected>" );
     }
 } // namespace sw

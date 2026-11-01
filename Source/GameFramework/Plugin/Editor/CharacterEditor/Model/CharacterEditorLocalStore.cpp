@@ -37,7 +37,7 @@ namespace sw::editor
         string error;
         if ( _channel.open( GameSelection::getName(), *LocalStoreLocation::tryUnderUserData( kDirectory ), nullptr, error ) == false ) // 자리는 상수라 늘 풀린다
         {
-            SW_LOG_ERROR( "Character editor local store could not open: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "CharacterEditorLocalStore.CharacterEditorLocalStore", "Character editor local store could not open: %#", error.c_str() );
             return SubsystemInitResult::Failed;
         }
         return SubsystemInitResult::Succeeded;

@@ -24,7 +24,7 @@ namespace sw::editor
                 ++bakedCount;
         }
         navigation.flushTileBakes();
-        SW_LOG_INFO( "Navigation baked: %# of %# agent type(s) have a navmesh", bakedCount, static_cast<uint32>( settings._listAgentType.size() ) );
+        SW_LOG_INFO_ID( "EditorNavigationCommands.NavigationBakedAgentType", "Navigation baked: %# of %# agent type(s) have a navmesh", bakedCount, static_cast<uint32>( settings._listAgentType.size() ) );
         return bakedCount;
     }
 

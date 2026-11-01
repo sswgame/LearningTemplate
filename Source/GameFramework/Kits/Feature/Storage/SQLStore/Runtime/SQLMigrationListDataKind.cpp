@@ -30,7 +30,7 @@ namespace sw
             string error;
             if ( SQLMigrationRunner::collectDialectDriverNames( folder, listDriverName, error ) == false )
             {
-                SW_LOG_ERROR( "SQL migration list '%#': %#", assetID.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "SQLMigrationListDataKind.SQLMigrationList", "SQL migration list '%#': %#", assetID.c_str(), error.c_str() );
                 return false;
             }
             for ( const string& driverName : listDriverName )
@@ -38,7 +38,7 @@ namespace sw
                 vector<SQLMigration> listMigration;
                 if ( SQLMigrationRunner::loadMigrations( folder, driverName, listMigration, error ) == false )
                 {
-                    SW_LOG_ERROR( "SQL migration list '%#' (%#): %#", assetID.c_str(), driverName.c_str(), error.c_str() );
+                    SW_LOG_ERROR_ID( "SQLMigrationListDataKind.SQLMigrationList2", "SQL migration list '%#' (%#): %#", assetID.c_str(), driverName.c_str(), error.c_str() );
                     return false;
                 }
             }

@@ -74,7 +74,7 @@ namespace sw
             if ( _mouseLockAction.empty() == false && wasActionTriggeredForGame( inputMap, pUI, _mouseLockAction ) )
             {
                 _bMouseLockRequested = _bMouseLockRequested == SW_TRUE ? SW_FALSE : SW_TRUE;
-                SW_LOG_INFO( "Player %# mouse lock %# (%#)", _playerIndex, _bMouseLockRequested == SW_TRUE ? "engaged" : "released", _mouseLockAction.c_str() );
+                SW_LOG_INFO_ID( "PlayerControllerComponent.PlayerMouseLock", "Player %# mouse lock %# (%#)", _playerIndex, _bMouseLockRequested == SW_TRUE ? "engaged" : "released", _mouseLockAction.c_str() );
             }
             applyMouseLock( input, _bMouseLockRequested == SW_TRUE && bUIWantsCursor == false );
             // 잠금이 실제로 걸린 동안만 시선을 쌓는다. 배타 가상 입력(시나리오)은 OS 포인터를 쥐지 않으니 잠금 요청만 본다.
@@ -216,7 +216,7 @@ namespace sw
         }
         const bool bMissingMouseLockAction = pawn.wantsMouseLock() && _mouseLockAction.empty() == false && inputMap.getActionHandle( _mouseLockAction ).isValid() == false;
         if ( bMissingMouseLockAction )
-            SW_LOG_WARNING( "Pawn '%#' locks the mouse but the InputMap has no '%#' action - the player cannot release the cursor", pPawnName, _mouseLockAction.c_str() );
+            SW_LOG_WARNING_ID( "PlayerControllerComponent.PawnLocksMouseBut", "Pawn '%#' locks the mouse but the InputMap has no '%#' action - the player cannot release the cursor", pPawnName, _mouseLockAction.c_str() );
     }
 
     void PlayerControllerComponent::applyMouseLock( InputManager& input, bool bLocked )

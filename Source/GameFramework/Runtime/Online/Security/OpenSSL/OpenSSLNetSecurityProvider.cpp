@@ -675,7 +675,7 @@ namespace sw
         arrParam[paramCount] = OSSL_PARAM_construct_end();
         const bool bDerived  = EVP_KDF_derive( pContext, pOut, static_cast<size_t>( outSize ), arrParam ) == 1;
         if ( bDerived == false )
-            SW_LOG_ERROR( "HKDF-SHA256 failed: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.HKDFSHA256Failed", "HKDF-SHA256 failed: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         EVP_KDF_CTX_free( pContext );
         return bDerived;
     }
@@ -689,7 +689,7 @@ namespace sw
         EVP_KDF_free( pKdf );
         if ( pContext == nullptr )
         {
-            SW_LOG_ERROR( "Argon2id is not available in this OpenSSL build: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.Argon2idNotAvailableOpenSSL", "Argon2id is not available in this OpenSSL build: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
             return false;
         }
         uint8      emptyPassword  = 0; // 빈 비밀번호에도 널이 아닌 포인터를 준다
@@ -707,7 +707,7 @@ namespace sw
                                       OSSL_PARAM_construct_end() };
         const bool bDerived       = EVP_KDF_derive( pContext, pOut, static_cast<size_t>( outSize ), arrParam ) == 1;
         if ( bDerived == false )
-            SW_LOG_ERROR( "Argon2id failed: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.Argon2idFailed", "Argon2id failed: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         EVP_KDF_CTX_free( pContext );
         return bDerived;
     }
@@ -718,7 +718,7 @@ namespace sw
         unique_ptr<OpenSSLAead> aead    = sw::make_unique<OpenSSLAead>( pCipher, pKey );
         if ( aead->isValid() == false )
         {
-            SW_LOG_ERROR( "Could not create an AEAD context: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.CouldNotCreateAEAD", "Could not create an AEAD context: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
             return nullptr;
         }
         return aead;
@@ -836,7 +836,7 @@ namespace sw
             BIO_free( pKeyBio );
         }
         if ( bSigned == false )
-            SW_LOG_ERROR( "Could not create a self-signed certificate: %#", Internal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.CouldNotCreateSelf", "Could not create a self-signed certificate: %#", Internal::takeErrorText().c_str() );
         X509_free( pCertificate );
         EVP_PKEY_free( pKey );
         return bSigned;
@@ -929,7 +929,7 @@ namespace sw
         }
         else
         {
-            SW_LOG_ERROR( "Could not create a signing key pair: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.CouldNotCreateSigning", "Could not create a signing key pair: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         }
         BIO_free( pKeyBio );
         EVP_PKEY_free( pKey );
@@ -957,7 +957,7 @@ namespace sw
         else if ( bSigned )
             outSignatureBytes = std::move( signature );
         if ( bSigned == false )
-            SW_LOG_ERROR( "Could not sign: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.CouldNotSign", "Could not sign: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         EVP_MD_CTX_free( pDigest );
         EVP_PKEY_free( pKey );
         BIO_free( pKeyBio );
@@ -1064,7 +1064,7 @@ namespace sw
         {
             outListChainPem.clear();
             outLeafPrivateKeyPem.clear();
-            SW_LOG_ERROR( "Could not create a test certificate chain: %#", Internal::takeErrorText().c_str() );
+            SW_LOG_ERROR_ID( "OpenSSLNetSecurity.CouldNotCreateTest", "Could not create a test certificate chain: %#", Internal::takeErrorText().c_str() );
         }
         BIO_free( pKeyBio );
         X509_free( pLeaf );

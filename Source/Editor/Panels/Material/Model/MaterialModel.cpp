@@ -80,7 +80,7 @@ namespace sw::editor
         if ( text.empty() )
             return;
         if ( _material->loadFromXML( text ) == false )
-            SW_LOG_WARNING( "Material undo snapshot could not be read - the material is left as it was" );
+            SW_LOG_WARNING_ID( "MaterialPanel.MaterialUndoSnapshotCould", "Material undo snapshot could not be read - the material is left as it was" );
         syncNameBuffers();
         applyLivePreview( path );
     }

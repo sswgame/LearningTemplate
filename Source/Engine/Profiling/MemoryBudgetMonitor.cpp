@@ -104,13 +104,13 @@ namespace sw
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_ERROR( "Cannot read the memory budget file '%#'", absolutePath );
+            SW_LOG_ERROR_ID( "MemoryBudget.CannotReadMemoryBudget", "Cannot read the memory budget file '%#'", absolutePath );
             return false;
         }
         string error;
         if ( applyBudgetJSON( text, *pProfiler, error ) == false )
         {
-            SW_LOG_ERROR( "Invalid memory budget file '%#': %#", absolutePath, error.c_str() );
+            SW_LOG_ERROR_ID( "MemoryBudget.InvalidMemoryBudgetFile", "Invalid memory budget file '%#': %#", absolutePath, error.c_str() );
             return false;
         }
         return true;
@@ -185,8 +185,8 @@ namespace sw
         const uint64 liveBytes = profiler.getLiveAllocatedBytes();
         const uint64 liveCount = profiler.getLiveAllocationCount();
         const uint64 totalX10  = toKilobytesX10( liveBytes );
-        SW_LOG_INFO( "[Memory] %# — by tag (live, sw allocator)  %#.%# KB in %# blocks   [live KB  share  blocks | peak KB  peak blocks | budget KB  use%%]", pTitle,
-                     totalX10 / 10, totalX10 % 10, liveCount );
+        SW_LOG_INFO_ID( "MemoryBudget.TagLiveSwAllocator", "[Memory] %# — by tag (live, sw allocator)  %#.%# KB in %# blocks   [live KB  share  blocks | peak KB  peak blocks | budget KB  use%%]", pTitle,
+                        totalX10 / 10, totalX10 % 10, liveCount );
         for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
         {
             const MemoryProfileStats& stats  = profiler.getStats( tag );
@@ -199,16 +199,16 @@ namespace sw
             const uint64 sharePermill = liveBytes == 0 ? 0 : ( bytes * 1000 ) / liveBytes;
             if ( budget == 0 )
             {
-                SW_LOG_INFO( "[Memory]   %#  %#.%# KB  %#.%#%%  %# blocks | peak %#.%# KB  %# blocks", MemoryProfiler::getMemoryTagName( tag ), kbX10 / 10, kbX10 % 10,
-                             sharePermill / 10, sharePermill % 10, stats._currentAllocationCount, peakX10 / 10, peakX10 % 10,
-                             stats._peakAllocationCount );
+                SW_LOG_INFO_ID( "MemoryBudget.KBBlocksPeakKB", "[Memory]   %#  %#.%# KB  %#.%#%%  %# blocks | peak %#.%# KB  %# blocks", MemoryProfiler::getMemoryTagName( tag ), kbX10 / 10, kbX10 % 10,
+                                sharePermill / 10, sharePermill % 10, stats._currentAllocationCount, peakX10 / 10, peakX10 % 10,
+                                stats._peakAllocationCount );
                 continue;
             }
             const uint64 usePermill = ( bytes * 1000 ) / budget;
-            SW_LOG_INFO( "[Memory]   %#  %#.%# KB  %#.%#%%  %# blocks | peak %#.%# KB  %# blocks | budget %# KB  %#.%#%%%#", MemoryProfiler::getMemoryTagName( tag ),
-                         kbX10 / 10, kbX10 % 10, sharePermill / 10, sharePermill % 10, stats._currentAllocationCount, peakX10 / 10,
-                         peakX10 % 10, stats._peakAllocationCount, budget / 1024, usePermill / 10, usePermill % 10,
-                         bytes > budget ? "  OVER" : "" );
+            SW_LOG_INFO_ID( "MemoryBudget.KBBlocksPeakKB2", "[Memory]   %#  %#.%# KB  %#.%#%%  %# blocks | peak %#.%# KB  %# blocks | budget %# KB  %#.%#%%%#", MemoryProfiler::getMemoryTagName( tag ),
+                            kbX10 / 10, kbX10 % 10, sharePermill / 10, sharePermill % 10, stats._currentAllocationCount, peakX10 / 10,
+                            peakX10 % 10, stats._peakAllocationCount, budget / 1024, usePermill / 10, usePermill % 10,
+                            bytes > budget ? "  OVER" : "" );
         }
 
         const uint64 platformBytes = MemoryProfiler::getPlatformHeapBytes();
@@ -216,7 +216,7 @@ namespace sw
         if ( platformBytes > swBlockBytes )
         {
             const uint64 outsideX10 = toKilobytesX10( platformBytes - swBlockBytes );
-            SW_LOG_INFO( "[Memory]   (outside the sw allocator — std::allocator · third-party · static init)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
+            SW_LOG_INFO_ID( "MemoryBudget.OutsideSwAllocatorStd", "[Memory]   (outside the sw allocator — std::allocator · third-party · static init)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
         }
 
         uint64 platformTotalBytes{ 0 };
@@ -228,7 +228,7 @@ namespace sw
             const uint64 swBytes      = profiler.getTotalAllocatedBytes() + swCount * Memory::getAllocationHeaderSize();
             const uint64 outsideCount = platformRequestCount > swCount ? platformRequestCount - swCount : 0;
             const uint64 outsideX10   = toKilobytesX10( platformTotalBytes > swBytes ? platformTotalBytes - swBytes : 0 );
-            SW_LOG_INFO( "[Memory]   (outside the sw allocator, cumulative since start)  %#.%# KB in %# allocations", outsideX10 / 10, outsideX10 % 10, outsideCount );
+            SW_LOG_INFO_ID( "MemoryBudget.OutsideSwAllocatorCumulative", "[Memory]   (outside the sw allocator, cumulative since start)  %#.%# KB in %# allocations", outsideX10 / 10, outsideX10 % 10, outsideCount );
         }
 #endif
     }

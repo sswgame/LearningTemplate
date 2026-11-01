@@ -307,7 +307,7 @@ namespace sw
                 const float3 startTangent = CoasterTrackInternal::normalizeOr( _listPoint[1]._position - startPosition, float3{ 0.0f, 0.0f, 1.0f } );
                 // 끝이 시작점을 이미 지나 있으면(시작점이 끝의 뒤) 연결 곡선이 되접혀 날카롭게 꺾인다. 레이아웃이 틀렸다고 알린다.
                 if ( ( startPosition - endPosition ).dot( endTangent ) < 0.0f )
-                    SW_LOG_WARNING( "Coaster layout ends %# m past its station - the closing connector folds back; end the layout behind the station", gap );
+                    SW_LOG_WARNING_ID( "CoasterTrack.CoasterLayoutEndsM", "Coaster layout ends %# m past its station - the closing connector folds back; end the layout behind the station", gap );
                 const float32 tangentScale = gap * 1.2f;
                 const uint32  segmentCount = static_cast<uint32>( MathUtil::ceil( gap * 1.6f / kSampleSpacing ) ) + 1u;
                 for ( uint32 segmentIndex = 1; segmentIndex < segmentCount; ++segmentIndex )
@@ -472,12 +472,12 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Layout" ) == false )
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "CoasterTrack.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadLayout( node, sourceName ) )
                 ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Layout> entries", sourceName );
+            SW_LOG_WARNING_ID( "CoasterTrack.NoLayoutEntries", "%#: no <Layout> entries", sourceName );
         return loadedCount;
     }
 
@@ -495,7 +495,7 @@ namespace sw
         }
         if ( layout._listPiece.empty() )
         {
-            SW_LOG_ERROR( "%#: layout '%#' has no pieces", sourceName, layout._id.c_str() );
+            SW_LOG_ERROR_ID( "CoasterTrack.LayoutNoPieces", "%#: layout '%#' has no pieces", sourceName, layout._id.c_str() );
             bValid = false;
         }
         if ( bValid )

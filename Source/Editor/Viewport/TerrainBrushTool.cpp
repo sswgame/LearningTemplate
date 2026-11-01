@@ -289,7 +289,7 @@ namespace sw::editor
                 }
                 if ( bWritten == false )
                 {
-                    SW_LOG_WARNING( "Terrain edit was not undone or redone - the terrain no longer has the edited size" );
+                    SW_LOG_WARNING_ID( "TerrainBrushTool.TerrainEditNotUndone", "Terrain edit was not undone or redone - the terrain no longer has the edited size" );
                     return;
                 }
                 getState()._bUnsaved = true;
@@ -489,7 +489,7 @@ namespace sw::editor
                 const std::optional<AbsolutePath> heightfieldPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
                 if ( heightfieldPath.has_value() == false || saveHeightfield( *pTerrain, heightfieldPath->str() ) == false )
                 {
-                    SW_LOG_ERROR( "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
+                    SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainHeightfieldNotSaved", "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
                     bSaved = false;
                 }
                 if ( pTerrain->getLayerWeightsPath().empty() == false )
@@ -497,14 +497,14 @@ namespace sw::editor
                     const std::optional<AbsolutePath> splatPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
                     if ( splatPath.has_value() == false || saveSplat( *pTerrain, splatPath->str() ) == false )
                     {
-                        SW_LOG_ERROR( "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
+                        SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainSplatNotSaved", "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
                         bSaved = false;
                     }
                 }
                 if ( bSaved )
                 {
                     state._bUnsaved = false;
-                    SW_LOG_INFO( "Terrain saved: %#", pTerrain->getHeightfieldPath().c_str() );
+                    SW_LOG_INFO_ID( "TerrainBrushTool.TerrainSaved", "Terrain saved: %#", pTerrain->getHeightfieldPath().c_str() );
                 }
             }
 

@@ -360,8 +360,8 @@ namespace sw
                 kitText += ", ";
             kitText += name;
         }
-        SW_LOG_INFO( "Online services listening on port %# (admin port %#, server %#, kits: %#)", parts._host.getListenPort(), parts._host.getAdminListenPort(),
-                     parts._context._serverID, kitText.empty() ? "none" : kitText.c_str() );
+        SW_LOG_INFO_ID( "OnlineServerRuntime.OnlineServicesListeningPort", "Online services listening on port %# (admin port %#, server %#, kits: %#)", parts._host.getListenPort(), parts._host.getAdminListenPort(),
+                        parts._context._serverID, kitText.empty() ? "none" : kitText.c_str() );
         return true;
     }
 

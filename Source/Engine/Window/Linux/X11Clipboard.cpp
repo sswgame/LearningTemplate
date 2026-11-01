@@ -42,12 +42,12 @@ namespace sw
         IWindow* const pWindow = findClipboardWindow();
         if ( pWindow == nullptr )
         {
-            SW_LOG_WARNING( "Clipboard write needs an active window that supports the clipboard (X11, or Wayland with a data device) to own the selection (none) - not written" );
+            SW_LOG_WARNING_ID( "PlatformClipboard.ClipboardWriteNeedsActive", "Clipboard write needs an active window that supports the clipboard (X11, or Wayland with a data device) to own the selection (none) - not written" );
             return false;
         }
         const bool bWritten = pWindow->writeClipboardText( text );
         if ( bWritten == false )
-            SW_LOG_WARNING( "Clipboard selection could not be set (X11: the server refused ownership; Wayland: no key/button input yet to take a serial from) - not written" );
+            SW_LOG_WARNING_ID( "PlatformClipboard.ClipboardSelectionCouldNot", "Clipboard selection could not be set (X11: the server refused ownership; Wayland: no key/button input yet to take a serial from) - not written" );
         return bWritten;
     }
 } // namespace sw

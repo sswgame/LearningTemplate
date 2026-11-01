@@ -175,7 +175,7 @@ namespace sw
             archive >> entryCount;
             if ( magic != kMagic || version != kVersion )
             {
-                SW_LOG_WARNING( "The reflection manifest format does not match (magic=%# version=%#): %#", magic, version, manifestRelative.c_str() );
+                SW_LOG_WARNING_ID( "ShaderReflectionLibrary.ReflectionManifestFormatDoes", "The reflection manifest format does not match (magic=%# version=%#): %#", magic, version, manifestRelative.c_str() );
                 return false;
             }
 
@@ -186,7 +186,7 @@ namespace sw
                 archive >> entryKey;
                 if ( readReflectionInternal( archive, entryData ) == false )
                 {
-                    SW_LOG_WARNING( "The reflection manifest is corrupt: %#", manifestRelative.c_str() );
+                    SW_LOG_WARNING_ID( "ShaderReflectionLibrary.ReflectionManifestCorrupt", "The reflection manifest is corrupt: %#", manifestRelative.c_str() );
                     outMapEntry.clear();
                     return false;
                 }
@@ -235,12 +235,12 @@ namespace sw
         const string outPath = FileUtil::joinPath( absDirectory, getManifestFileName() );
         if ( FileUtil::ensureDirectoryExists( absDirectory ) == false || FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write the reflection manifest: %#", outPath.c_str() );
+            SW_LOG_ERROR_ID( "ShaderReflectionLibrary.FailedWriteReflectionManifest", "Failed to write the reflection manifest: %#", outPath.c_str() );
             return false;
         }
 
-        SW_LOG_INFO( "Reflection manifest %# (%# entries, %# bytes)", outPath.c_str(),
-                     static_cast<uint32>( mapEntry.size() ), static_cast<uint32>( bytes.size() ) );
+        SW_LOG_INFO_ID( "ShaderReflectionLibrary.ReflectionManifestEntriesBytes", "Reflection manifest %# (%# entries, %# bytes)", outPath.c_str(),
+                        static_cast<uint32>( mapEntry.size() ), static_cast<uint32>( bytes.size() ) );
         return true;
     }
 
@@ -260,7 +260,7 @@ namespace sw
         const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
         if ( location.has_value() == false )
         {
-            SW_LOG_ERROR( "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
+            SW_LOG_ERROR_ID( "ShaderReflectionLibrary.ShaderSourceNotInside", "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
             return false;
         }
         const string binDirRel = location->_binDirectory + "/";

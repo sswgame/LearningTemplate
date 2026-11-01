@@ -95,7 +95,7 @@ namespace sw
             void beginShutdown( const ServerShutdownNotice& notice ) override
             {
                 // 새 일을 막는 길은 없고(클라이언트는 `kShutdownNotice` 로 먼저 사유를 받는다) 드레인이 끝나기를 기다리는 일의 수만 남긴다 — 운영자가 왜 오래 걸리는지 로그로 본다.
-                SW_LOG_INFO( "Trade kit: shutdown drain starts with %# open job(s), grace %# s", getOpenWorkCount(), notice._graceSeconds );
+                SW_LOG_INFO_ID( "TradeOnlineServerKit.TradeKitShutdownDrain", "Trade kit: shutdown drain starts with %# open job(s), grace %# s", getOpenWorkCount(), notice._graceSeconds );
             }
 
             void stop() override

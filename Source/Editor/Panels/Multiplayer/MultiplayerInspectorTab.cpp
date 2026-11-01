@@ -206,7 +206,7 @@ namespace sw::editor
                 inspector.disconnect();
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh" ) );
             if ( ImGui::Button( "Refresh" ) && inspector.refreshTree() == false )
-                SW_LOG_WARNING( "Inspector could not read the hierarchy: %#", inspector.getLastError() );
+                SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotRead", "Inspector could not read the hierarchy: %#", inspector.getLastError() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "InspectorRefresh" ) );
         }
         else if ( bSessionChannel )
@@ -216,9 +216,9 @@ namespace sw::editor
             string     reply;
             const bool bAttached = ImGui::Button( "Connect" ) && MultiplayerInspectorTabInternal::attachToSession( session, reply );
             if ( bAttached && inspector.refreshTree() == false )
-                SW_LOG_WARNING( "Inspector could not read the hierarchy: %#", inspector.getLastError() );
+                SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotRead", "Inspector could not read the hierarchy: %#", inspector.getLastError() );
             if ( reply.empty() == false )
-                SW_LOG_WARNING( "Inspector could not attach to the session server: %#", reply );
+                SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotAttach", "Inspector could not attach to the session server: %#", reply );
         }
         else
         {
@@ -240,11 +240,11 @@ namespace sw::editor
                 // 채널은 루프백에만 묶이므로 다른 주소는 붙기 전에 거절한다.
                 const bool bLoopback = NetAddress::parse( _address.c_str(), 0, remote ) && remote.isValid() && remote.isLoopback();
                 if ( bLoopback == false )
-                    SW_LOG_WARNING( "Inspector attaches only to 127.0.0.1:<port> - '%#' is not one", _address.c_str() );
+                    SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorAttachesOnlyPort", "Inspector attaches only to 127.0.0.1:<port> - '%#' is not one", _address.c_str() );
                 else if ( inspector.connect( remote, _token.c_str() ) == false )
-                    SW_LOG_WARNING( "Inspector could not attach to %#: %#", remote.toString(), inspector.getLastError() );
+                    SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotAttach2", "Inspector could not attach to %#: %#", remote.toString(), inspector.getLastError() );
                 else if ( inspector.refreshTree() == false )
-                    SW_LOG_WARNING( "Inspector could not read the hierarchy: %#", inspector.getLastError() );
+                    SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotRead", "Inspector could not read the hierarchy: %#", inspector.getLastError() );
             }
         }
     }

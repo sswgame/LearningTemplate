@@ -92,7 +92,7 @@ namespace sw::editor
         if ( outPanelVisibility.loadFile( visibilityPath ) == ConfigReadResult::Invalid )
         {
             outPanelVisibility._mapOpen.clear();
-            SW_LOG_WARNING( "Layout '%#': could not read %# - panel visibility is left as it is", string( name ).c_str(), visibilityPath.c_str() );
+            SW_LOG_WARNING_ID( "EditorLayoutStore.LayoutCouldNotRead", "Layout '%#': could not read %# - panel visibility is left as it is", string( name ).c_str(), visibilityPath.c_str() );
         }
         return true;
     }

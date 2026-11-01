@@ -45,28 +45,28 @@ namespace sw
         *this          = HeightfieldAsset{};
         if ( bytes.size() < Internal::kHeaderBytes || LittleEndianUtil::readUint32( bytes.data() ) != kMagic )
         {
-            SW_LOG_ERROR( "'%#' is not a heightfield (magic SWHF missing)", sourceName );
+            SW_LOG_ERROR_ID( "HeightfieldAsset.NotHeightfieldMagicSWHF", "'%#' is not a heightfield (magic SWHF missing)", sourceName );
             return false;
         }
         const uint32 version = LittleEndianUtil::readUint32( bytes.data() + 4 );
         if ( version != kVersion )
         {
-            SW_LOG_ERROR( "'%#' is heightfield version %# - this build reads version %# only (re-import it)", sourceName, version, kVersion );
+            SW_LOG_ERROR_ID( "HeightfieldAsset.HeightfieldVersionBuildReads", "'%#' is heightfield version %# - this build reads version %# only (re-import it)", sourceName, version, kVersion );
             return false;
         }
         const uint32 resolution = LittleEndianUtil::readUint32( bytes.data() + 8 );
         const uint32 flags      = LittleEndianUtil::readUint32( bytes.data() + 12 );
         if ( resolution < 2 || resolution > kMaxResolution )
         {
-            SW_LOG_ERROR( "'%#' has resolution %# - expected 2..%#", sourceName, resolution, kMaxResolution );
+            SW_LOG_ERROR_ID( "HeightfieldAsset.ResolutionExpected", "'%#' has resolution %# - expected 2..%#", sourceName, resolution, kMaxResolution );
             return false;
         }
         const size_t sampleCount = static_cast<size_t>( resolution ) * resolution;
         const size_t cellCount   = ( flags & kFlagHoleMask ) != 0u ? static_cast<size_t>( resolution - 1 ) * ( resolution - 1 ) : 0u;
         if ( bytes.size() != Internal::kHeaderBytes + sampleCount * 2 + cellCount )
         {
-            SW_LOG_ERROR( "'%#' has %# bytes - resolution %# needs %#", sourceName, static_cast<uint64>( bytes.size() ), resolution,
-                          static_cast<uint64>( Internal::kHeaderBytes + sampleCount * 2 + cellCount ) );
+            SW_LOG_ERROR_ID( "HeightfieldAsset.BytesResolutionNeeds", "'%#' has %# bytes - resolution %# needs %#", sourceName, static_cast<uint64>( bytes.size() ), resolution,
+                             static_cast<uint64>( Internal::kHeaderBytes + sampleCount * 2 + cellCount ) );
             return false;
         }
         _resolution = resolution;
@@ -90,7 +90,7 @@ namespace sw
         vector<uint8>     bytes;
         if ( AssetIO::readBinaryAsset( id, bytes ) == false )
         {
-            SW_LOG_ERROR( "Heightfield '%#' could not be read", assetID );
+            SW_LOG_ERROR_ID( "HeightfieldAsset.HeightfieldCouldNotRead", "Heightfield '%#' could not be read", assetID );
             return false;
         }
         return loadFromMemory( bytes, assetID );
@@ -118,7 +118,7 @@ namespace sw
     {
         if ( isValid() == false )
         {
-            SW_LOG_ERROR( "Heightfield for '%#' is malformed (resolution %#) - not written", absPath.str(), _resolution );
+            SW_LOG_ERROR_ID( "HeightfieldAsset.HeightfieldMalformedResolutionNot", "Heightfield for '%#' is malformed (resolution %#) - not written", absPath.str(), _resolution );
             return false;
         }
         vector<uint8> bytes;

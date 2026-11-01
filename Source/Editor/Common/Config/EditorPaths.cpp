@@ -66,7 +66,7 @@ namespace sw::editor
             return;
         // 같은 프로세스 번호를 썼던 지난 실행이 남긴 상태를 읽지 않게 비우고 시작하며, 끝난 실행의 상태 폴더는 거둔다.
         AutomationScratch::resetInstanceFolder( stateDir );
-        SW_LOG_INFO( "Scenario run: editor state goes to %# (Saved/Editor is neither read nor written)", stateDir.c_str() );
+        SW_LOG_INFO_ID( "EditorPaths.ScenarioRunEditorState", "Scenario run: editor state goes to %# (Saved/Editor is neither read nor written)", stateDir.c_str() );
     }
 
     string EditorPaths::getEditorStateDirectory()

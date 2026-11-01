@@ -162,7 +162,7 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     pConsole->getTagFilter().setTagVisible( kProbeTag, false );
-                    SW_LOG_INFO( "%#", kProbeMessage );
+                    SW_LOG_INFO_ID( "SelfTestDevTools.Message", "%#", kProbeMessage );
                     return EditorSelfTestStep::Continue;
                 }
                 // 로거는 비동기이므로 행이 패널에 도착할 때까지 기다린다.

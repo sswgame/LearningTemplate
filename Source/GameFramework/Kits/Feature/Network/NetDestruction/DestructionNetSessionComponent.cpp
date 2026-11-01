@@ -87,8 +87,8 @@ namespace sw
             _bTickChecked = SW_TRUE;
             if ( computeDestructionNetTickRateHz( deltaTime ) != computeDestructionNetTickRateHz( _tickInterval ) )
             {
-                SW_LOG_ERROR( "Destruction net session stopped: the server ticks every %# s but Tick Interval is %# s - pose times would drift; set Tick Interval to the server fixed step",
-                              deltaTime, _tickInterval );
+                SW_LOG_ERROR_ID( "DestructionNetSessionComponent.DestructionNetSessionStopped", "Destruction net session stopped: the server ticks every %# s but Tick Interval is %# s - pose times would drift; set Tick Interval to the server fixed step",
+                                 deltaTime, _tickInterval );
                 _session.shutdown();
                 return;
             }

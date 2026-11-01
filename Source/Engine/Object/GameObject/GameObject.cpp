@@ -260,8 +260,8 @@ namespace sw
         GameObjectManager* pManager = getManager();
         if ( pParent->getManager() != pManager || pParent->isDescendantOf( this ) )
         {
-            SW_LOG_WARNING( "attachToParent: '%#' cannot become the parent of '%#' (another scene, or its own descendant)", pParent->getName().c_str(),
-                            getName().c_str() );
+            SW_LOG_WARNING_ID( "GameObject.AttachToParentCannotBecomeParent", "attachToParent: '%#' cannot become the parent of '%#' (another scene, or its own descendant)", pParent->getName().c_str(),
+                               getName().c_str() );
             return false;
         }
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
@@ -581,7 +581,7 @@ namespace sw
             return storage;
         if ( _bBeingDestroyed )
         {
-            SW_LOG_ERROR( "Cannot add component '%#' to '%#' while it is being destroyed", pTypeInfo != nullptr ? pTypeInfo->_name.c_str() : "?", getName().c_str() );
+            SW_LOG_ERROR_ID( "GameObject.CannotAddComponentWhile", "Cannot add component '%#' to '%#' while it is being destroyed", pTypeInfo != nullptr ? pTypeInfo->_name.c_str() : "?", getName().c_str() );
             return storage;
         }
 
@@ -643,7 +643,7 @@ namespace sw
         if ( bAttachUnderPrimary )
         {
             if ( static_cast<SceneComponent*>( pComp )->attachToComponent( static_cast<SceneComponent*>( pPrimary ) ) == false )
-                SW_LOG_WARNING( "'%#': a second scene component could not be put under the primary - it stays a root", getName().c_str() );
+                SW_LOG_WARNING_ID( "GameObject.SecondSceneComponentCould", "'%#': a second scene component could not be put under the primary - it stays a root", getName().c_str() );
         }
         // 월드가 플레이 중이면 다음 틱 단계에서 onBeginPlay 를 부른다. **여기서 부르지 않는다.** 부르는 쪽(`addComponent` 뒤의 설정,
         // 이름으로 붙이는 역직렬화의 PROPERTY 채우기)이 아직 끝나지 않았다.
@@ -786,7 +786,7 @@ namespace sw
         // 바뀐 순서가 그대로 굳는다. 목록은 대개 네 개 이하다.
         if ( VectorUtil::removeFirst( _listComponent, pComp ) == 0 )
         {
-            SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", pComp->getComponentName().c_str() );
+            SW_LOG_ERROR_ID( "GameObject.FailedRemoveComponentActor", "Failed to remove component '%#' from actor list.", pComp->getComponentName().c_str() );
             return false;
         }
         // 씬 컴포넌트면 primary 였을 수 있다. 캐시로 판단하지 않는다. 지연 제거(틱 중)는 컴포넌트를 삭제 대기로 남기고, 그 사이

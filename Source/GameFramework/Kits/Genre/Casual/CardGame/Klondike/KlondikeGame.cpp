@@ -21,7 +21,7 @@ namespace sw
                 const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
                 if ( rangeError.empty() == false )
                 {
-                    SW_LOG_ERROR( "KlondikeGame: refused settings - %#", rangeError.c_str() );
+                    SW_LOG_ERROR_ID( "KlondikeGame.KlondikeGameRefusedSettings", "KlondikeGame: refused settings - %#", rangeError.c_str() );
                     return false;
                 }
                 return true;

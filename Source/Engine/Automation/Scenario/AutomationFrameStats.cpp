@@ -132,8 +132,8 @@ namespace sw
                     context.recordFailure( step, "could not write the frame stats to " + path );
                     return true;
                 }
-                SW_LOG_INFO( "[Scenario] frame stats: %# frames, avg %# ms (%# fps), p95 %# ms, p99 %# ms, max %# ms -> %#", summary._frameCount, summary._averageMilliseconds,
-                             summary._averageFramesPerSecond, summary._p95Milliseconds, summary._p99Milliseconds, summary._maxMilliseconds, path.c_str() );
+                SW_LOG_INFO_ID( "AutomationFrameStats.FrameStatsFramesAvg", "[Scenario] frame stats: %# frames, avg %# ms (%# fps), p95 %# ms, p99 %# ms, max %# ms -> %#", summary._frameCount, summary._averageMilliseconds,
+                                summary._averageFramesPerSecond, summary._p95Milliseconds, summary._p99Milliseconds, summary._maxMilliseconds, path.c_str() );
                 return true;
             }
         };

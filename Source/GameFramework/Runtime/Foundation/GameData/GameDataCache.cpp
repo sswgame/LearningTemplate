@@ -16,7 +16,7 @@ namespace sw
         AssetManager* const pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr )
         {
-            SW_LOG_ERROR( "Data cache '%#' has no asset manager to register with", cache.getAssetKindName() );
+            SW_LOG_ERROR_ID( "GameDataCache.DataCacheNoAsset", "Data cache '%#' has no asset manager to register with", cache.getAssetKindName() );
             return false;
         }
         outRegistration = pAssetManager->registerAssetCache( &cache, pReload );

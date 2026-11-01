@@ -88,20 +88,20 @@ namespace sw::editor
         outListValue.clear();
         if ( pAccessor == nullptr )
         {
-            SW_LOG_ERROR( "glTF accessor is missing" );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFAccessorMissing", "glTF accessor is missing" );
             return false;
         }
         if ( cgltf_num_components( pAccessor->type ) != componentCount )
         {
-            SW_LOG_ERROR( "glTF accessor has %# components per element, expected %#", static_cast<uint32>( cgltf_num_components( pAccessor->type ) ),
-                          static_cast<uint32>( componentCount ) );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFAccessorComponentsPer", "glTF accessor has %# components per element, expected %#", static_cast<uint32>( cgltf_num_components( pAccessor->type ) ),
+                             static_cast<uint32>( componentCount ) );
             return false;
         }
         const cgltf_size floatCount = pAccessor->count * componentCount;
         outListValue.resize( floatCount );
         if ( floatCount > 0 && cgltf_accessor_unpack_floats( pAccessor, outListValue.data(), floatCount ) != floatCount )
         {
-            SW_LOG_ERROR( "glTF accessor (%# elements) could not be read", static_cast<uint32>( pAccessor->count ) );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFAccessorElementsCould", "glTF accessor (%# elements) could not be read", static_cast<uint32>( pAccessor->count ) );
             outListValue.clear();
             return false;
         }

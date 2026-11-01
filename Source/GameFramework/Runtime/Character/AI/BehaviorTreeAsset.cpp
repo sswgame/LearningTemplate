@@ -83,7 +83,7 @@ namespace sw
                     return false;
                 if ( *value < 0.0f )
                 {
-                    SW_LOG_ERROR( "%#: <%#> attribute '%#' must not be negative (%#)", _sourceName, node.getName(), pAttribute, *value );
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.AttributeMustNotNegative", "%#: <%#> attribute '%#' must not be negative (%#)", _sourceName, node.getName(), pAttribute, *value );
                     return false;
                 }
                 outValue = *value;
@@ -100,7 +100,7 @@ namespace sw
                     return true;
                 if ( table.parse( *text, inoutValue ) )
                     return true;
-                SW_LOG_ERROR( "%#: <%#> has an unknown %# '%#' (%#)", _sourceName, node.getName(), pAttribute, text->c_str(), table.joinNames().c_str() );
+                SW_LOG_ERROR_ID( "BehaviorTreeAsset.Unknown", "%#: <%#> has an unknown %# '%#' (%#)", _sourceName, node.getName(), pAttribute, text->c_str(), table.joinNames().c_str() );
                 return false;
             }
             /** @brief 속성 `task` 의 이름을 레지스트리에서 찾습니다. 없거나 모르는 이름이면 오류이고 nullptr 입니다. */
@@ -111,7 +111,7 @@ namespace sw
                     return nullptr;
                 const BehaviorTaskFunction function = BehaviorTaskRegistry::get().findTask( *task );
                 if ( function == nullptr )
-                    SW_LOG_ERROR( "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), task->c_str(), BehaviorTaskRegistry::get().joinNames().c_str() );
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.NamesUnknownTaskRegistered", "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), task->c_str(), BehaviorTaskRegistry::get().joinNames().c_str() );
                 return function;
             }
             /** @brief Repeat 한 개를 읽어 더합니다. `count` 가 없거나 음수면 @p inoutbValid 를 false 로 둡니다. */
@@ -121,7 +121,7 @@ namespace sw
                 inoutbValid                           = countValue.has_value() && inoutbValid;
                 if ( countValue.has_value() && *countValue < 0 )
                 {
-                    SW_LOG_ERROR( "%#: <Repeat> attribute 'count' must not be negative (%#)", _sourceName, *countValue );
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.RepeatAttributeCountMust", "%#: <Repeat> attribute 'count' must not be negative (%#)", _sourceName, *countValue );
                     inoutbValid = false;
                 }
                 return _tree.addRepeat( parent, countValue.value_or( 0 ) );
@@ -175,7 +175,7 @@ namespace sw
                 inoutbValid = node.readOptionalAttribute<float32>( "repathDistance", repathDistance ) && inoutbValid;
                 if ( repathDistance.has_value() && *repathDistance < 0.0f )
                 {
-                    SW_LOG_ERROR( "%#: <MoveTo> attribute 'repathDistance' must not be negative (%#)", _sourceName, *repathDistance );
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.MoveToAttributeRepathDistanceMust", "%#: <MoveTo> attribute 'repathDistance' must not be negative (%#)", _sourceName, *repathDistance );
                     inoutbValid = false;
                 }
                 return _tree.addMoveTo( parent, hashed_string( key.value_or( string{} ) ), repathDistance.value_or( 0.5f ) );
@@ -190,13 +190,13 @@ namespace sw
             using Internal = BehaviorTreeAssetInternal;
             if ( depth > BehaviorTreeNames::kMaxDepth )
             {
-                SW_LOG_ERROR( "%#: <%#> is nested deeper than %# levels", _sourceName, node.getName(), BehaviorTreeNames::kMaxDepth );
+                SW_LOG_ERROR_ID( "BehaviorTreeAsset.NestedDeeperLevels", "%#: <%#> is nested deeper than %# levels", _sourceName, node.getName(), BehaviorTreeNames::kMaxDepth );
                 return false;
             }
             BehaviorNodeType type{};
             if ( Internal::kNodeTypeTable.parse( node.getName(), type ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown behavior tree node <%#> (%#)", _sourceName, node.getName(), Internal::kNodeTypeTable.joinNames().c_str() );
+                SW_LOG_ERROR_ID( "BehaviorTreeAsset.UnknownBehaviorTreeNode", "%#: unknown behavior tree node <%#> (%#)", _sourceName, node.getName(), Internal::kNodeTypeTable.joinNames().c_str() );
                 return false;
             }
 
@@ -264,7 +264,7 @@ namespace sw
             {
                 if ( node.findChild() )
                 {
-                    SW_LOG_ERROR( "%#: <%#> is a leaf and cannot have child nodes", _sourceName, node.getName() );
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.LeafCannotChildNodes", "%#: <%#> is a leaf and cannot have child nodes", _sourceName, node.getName() );
                     bValid = false;
                 }
                 return bValid;
@@ -372,19 +372,19 @@ namespace sw
         const XMLNode first  = root.findChild();
         if ( first.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: the behavior tree has no root node", sourceName );
+            SW_LOG_ERROR_ID( "BehaviorTreeAsset.BehaviorTreeNoRoot", "%#: the behavior tree has no root node", sourceName );
             return 0;
         }
         if ( first.findNextSibling().isValid() )
         {
-            SW_LOG_ERROR( "%#: the behavior tree has more than one root node - wrap them in a <Selector> or <Sequence>", sourceName );
+            SW_LOG_ERROR_ID( "BehaviorTreeAsset.BehaviorTreeMoreOne", "%#: the behavior tree has more than one root node - wrap them in a <Selector> or <Sequence>", sourceName );
             bValid = false;
         }
         BehaviorTreeReader reader( _tree, sourceName );
         bValid = reader.readNode( first, -1, 0 ) && bValid;
         if ( bValid && _tree.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: the behavior tree is not valid (decorators need exactly one child, composites at least one)", sourceName );
+            SW_LOG_ERROR_ID( "BehaviorTreeAsset.BehaviorTreeNotValid", "%#: the behavior tree is not valid (decorators need exactly one child, composites at least one)", sourceName );
             bValid = false;
         }
         if ( bValid == false )

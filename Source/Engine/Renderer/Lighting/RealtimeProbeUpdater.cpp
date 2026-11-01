@@ -116,7 +116,7 @@ namespace sw
             if ( _bReportedUnavailable == SW_FALSE )
             {
                 _bReportedUnavailable = SW_TRUE;
-                SW_LOG_ERROR( "Realtime light probes cannot update (%#) - the realtime volumes stay black", bPipelineReady ? "the probe buffer has no UAV" : "the probe update compute PSO is missing" );
+                SW_LOG_ERROR_ID( "RealtimeProbeUpdater.RealtimeLightProbesCannot", "Realtime light probes cannot update (%#) - the realtime volumes stay black", bPipelineReady ? "the probe buffer has no UAV" : "the probe update compute PSO is missing" );
             }
             return;
         }
@@ -145,7 +145,7 @@ namespace sw
             }
             if ( _voxelBuffer.ensureCapacity( pDevice, wordStride, layout._totalVoxelWords, kReadUsage, true, false, words.data() ) == false )
             {
-                SW_LOG_ERROR( "Failed to create the voxel buffer (%# words) - realtime light probes do not update", layout._totalVoxelWords );
+                SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateVoxelBuffer", "Failed to create the voxel buffer (%# words) - realtime light probes do not update", layout._totalVoxelWords );
                 _listHeldGrid.clear();
                 return;
             }
@@ -164,7 +164,7 @@ namespace sw
             vector<float4> zeros( layout._totalHistoryElements, float4{} );
             if ( _historyBuffer.ensureCapacity( pDevice, float4Stride, layout._totalHistoryElements, kHistoryUsage, true, true, zeros.data() ) == false || _historyBuffer._uav == kInvalidDescriptorIndex )
             {
-                SW_LOG_ERROR( "Failed to create the probe history buffer (%# elements) - realtime light probes do not update", layout._totalHistoryElements );
+                SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateProbeHistory", "Failed to create the probe history buffer (%# elements) - realtime light probes do not update", layout._totalHistoryElements );
                 return;
             }
             _historyBuffer.upload( pDevice, zeros.data(), layout._totalHistoryElements * float4Stride );
@@ -182,7 +182,7 @@ namespace sw
         const uint32 rowCount = static_cast<uint32>( _listRowScratch.size() );
         if ( _paramBuffer.ensureCapacity( pDevice, float4Stride, rowCount, kReadUsage, true, false, _listRowScratch.data() ) == false )
         {
-            SW_LOG_ERROR( "Failed to create the probe update parameter buffer - realtime light probes do not update" );
+            SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateProbeUpdate", "Failed to create the probe update parameter buffer - realtime light probes do not update" );
             return;
         }
         _paramBuffer.upload( pDevice, _listRowScratch.data(), rowCount * float4Stride );

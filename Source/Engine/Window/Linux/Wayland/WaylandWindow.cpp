@@ -424,7 +424,7 @@ namespace sw
                 }
                 close( fd );
                 if ( bCompleted == false )
-                    SW_LOG_WARNING( "Wayland clipboard: the reader stopped taking the text - %# bytes were not sent", static_cast<uint64>( remaining ) );
+                    SW_LOG_WARNING_ID( "WaylandWindow.WaylandClipboardReaderStopped", "Wayland clipboard: the reader stopped taking the text - %# bytes were not sent", static_cast<uint64>( remaining ) );
             }
 
             static void onDataSourceCancelled( void* pData, wl_data_source* pSource )
@@ -527,21 +527,21 @@ namespace sw
                 if ( format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1 )
                 {
                     close( fd );
-                    SW_LOG_ERROR( "Wayland keyboard sent a keymap that is not XKB v1 - keys are not read" );
+                    SW_LOG_ERROR_ID( "WaylandWindow.WaylandKeyboardSentKeymap", "Wayland keyboard sent a keymap that is not XKB v1 - keys are not read" );
                     return;
                 }
                 void* const pMapped = mmap( nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0 );
                 close( fd );
                 if ( pMapped == MAP_FAILED )
                 {
-                    SW_LOG_ERROR( "Wayland keymap could not be mapped - keys are not read" );
+                    SW_LOG_ERROR_ID( "WaylandWindow.WaylandKeymapCouldNot", "Wayland keymap could not be mapped - keys are not read" );
                     return;
                 }
                 xkb_keymap* const pKeymap = xkb_keymap_new_from_string( state._pXkbContext, static_cast<const utf8*>( pMapped ), XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS );
                 munmap( pMapped, size );
                 if ( pKeymap == nullptr )
                 {
-                    SW_LOG_ERROR( "Wayland keymap could not be compiled - keys are not read" );
+                    SW_LOG_ERROR_ID( "WaylandWindow.WaylandKeymapCouldNot2", "Wayland keymap could not be compiled - keys are not read" );
                     return;
                 }
                 xkb_state_unref( state._pXkbState );
@@ -958,7 +958,7 @@ namespace sw
         state._pDisplay = wl_display_connect( nullptr );
         if ( state._pDisplay == nullptr )
         {
-            SW_LOG_ERROR( "Wayland: no compositor to connect to (WAYLAND_DISPLAY) - the window is not created" );
+            SW_LOG_ERROR_ID( "WaylandWindow.WaylandNoCompositorConnect", "Wayland: no compositor to connect to (WAYLAND_DISPLAY) - the window is not created" );
             return false;
         }
         state._pXkbContext = xkb_context_new( XKB_CONTEXT_NO_FLAGS );
@@ -968,7 +968,7 @@ namespace sw
         const bool bMissingGlobals = state._pCompositor == nullptr || state._pWmBase == nullptr;
         if ( bMissingGlobals )
         {
-            SW_LOG_ERROR( "Wayland: the compositor has no wl_compositor or xdg_wm_base - the window is not created" );
+            SW_LOG_ERROR_ID( "WaylandWindow.WaylandCompositorNoWl", "Wayland: the compositor has no wl_compositor or xdg_wm_base - the window is not created" );
             destroy();
             return false;
         }
@@ -1005,7 +1005,7 @@ namespace sw
         }
         if ( state._bConfigured == false )
         {
-            SW_LOG_ERROR( "Wayland: the compositor closed the connection before configuring the window" );
+            SW_LOG_ERROR_ID( "WaylandWindow.WaylandCompositorClosedConnection", "Wayland: the compositor closed the connection before configuring the window" );
             destroy();
             return false;
         }
@@ -1020,10 +1020,10 @@ namespace sw
             state._pCursorSurface = wl_compositor_create_surface( state._pCompositor );
         }
         _bShouldClose = SW_FALSE;
-        SW_LOG_INFO( "Native Wayland Window created successfully! (%#×%#)", _width, _height );
+        SW_LOG_INFO_ID( "WaylandWindow.NativeWaylandWindowCreated", "Native Wayland Window created successfully! (%#×%#)", _width, _height );
         // 없는 확장은 오류가 아니라 능력 차이다 — 소수 배율이 없으면 정수 배율을 쓰고, 포인터 잠금이 없으면 요청하는 쪽(입력 관리자)이 알린다.
-        SW_LOG_INFO( "Wayland extensions: fractional scale %#, cursor shape %#, pointer constraints %#, relative pointer %#", state._pFractionalScaleManager != nullptr ? "yes" : "no",
-                     state._pCursorShapeManager != nullptr ? "yes" : "no", state._pPointerConstraints != nullptr ? "yes" : "no", state._pRelativePointerManager != nullptr ? "yes" : "no" );
+        SW_LOG_INFO_ID( "WaylandWindow.WaylandExtensionsFractionalScale", "Wayland extensions: fractional scale %#, cursor shape %#, pointer constraints %#, relative pointer %#", state._pFractionalScaleManager != nullptr ? "yes" : "no",
+                        state._pCursorShapeManager != nullptr ? "yes" : "no", state._pPointerConstraints != nullptr ? "yes" : "no", state._pRelativePointerManager != nullptr ? "yes" : "no" );
         return true;
     }
 
@@ -1111,7 +1111,7 @@ namespace sw
             wl_display_cancel_read( state._pDisplay );
         if ( wl_display_dispatch_pending( state._pDisplay ) == -1 )
         {
-            SW_LOG_ERROR( "Wayland: the connection to the compositor broke - closing the window" );
+            SW_LOG_ERROR_ID( "WaylandWindow.WaylandConnectionCompositorBroke", "Wayland: the connection to the compositor broke - closing the window" );
             return false;
         }
 
@@ -1164,7 +1164,7 @@ namespace sw
     void WaylandWindow::applyWindowVisibility( bool bShow )
     {
         if ( bShow == false )
-            SW_LOG_ERROR( "Wayland has no way for a client to hide its window - the window stays mapped" );
+            SW_LOG_ERROR_ID( "WaylandWindow.WaylandNoWayClient", "Wayland has no way for a client to hide its window - the window stays mapped" );
     }
 
     bool WaylandWindow::isVisible() const
@@ -1278,7 +1278,7 @@ namespace sw
         int32 arrPipeEnd[2]{ -1, -1 };
         if ( pipe( arrPipeEnd ) != 0 )
         {
-            SW_LOG_WARNING( "Wayland clipboard: a pipe could not be made - nothing pasted" );
+            SW_LOG_WARNING_ID( "WaylandWindow.WaylandClipboardPipeCould", "Wayland clipboard: a pipe could not be made - nothing pasted" );
             return false;
         }
         wl_data_offer_receive( state._pSelectionOffer, pMime, arrPipeEnd[1] );
@@ -1306,7 +1306,7 @@ namespace sw
         close( arrPipeEnd[0] );
         if ( bCompleted == false )
         {
-            SW_LOG_WARNING( "Wayland clipboard: the owner did not finish sending within %# ms (%# bytes received) - nothing pasted", Internal::kClipboardWaitMs, static_cast<uint64>( bytes.size() ) );
+            SW_LOG_WARNING_ID( "WaylandWindow.WaylandClipboardOwnerDid", "Wayland clipboard: the owner did not finish sending within %# ms (%# bytes received) - nothing pasted", Internal::kClipboardWaitMs, static_cast<uint64>( bytes.size() ) );
             return false;
         }
         outText = std::move( bytes );
@@ -1421,7 +1421,7 @@ namespace sw
         (void)pTitle;
         (void)width;
         (void)height;
-        SW_LOG_ERROR( "This build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON on Linux)" );
+        SW_LOG_ERROR_ID( "WaylandWindow.BuildNoWaylandWindow", "This build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON on Linux)" );
         return false;
     }
 

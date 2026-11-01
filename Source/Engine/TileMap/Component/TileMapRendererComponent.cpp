@@ -121,7 +121,7 @@ namespace sw
             return false;
         if ( map._tileSetPath.empty() )
         {
-            SW_LOG_ERROR( "Tile map '%#' has no tile layer (<tileLayer tileSet=...>)", _tileMapPath );
+            SW_LOG_ERROR_ID( "TileMapRenderer.TileMapNoTile", "Tile map '%#' has no tile layer (<tileLayer tileSet=...>)", _tileMapPath );
             return false;
         }
         TileSetAsset tileSet;
@@ -139,12 +139,12 @@ namespace sw
         const size_t count = static_cast<size_t>( _map._width ) * static_cast<size_t>( _map._height );
         if ( count == 0 || count > kMaxCellCount )
         {
-            SW_LOG_ERROR( "Tile map '%#' has %# cells - a tile layer holds 1..%#", _map._name, static_cast<uint32>( count ), static_cast<uint32>( kMaxCellCount ) );
+            SW_LOG_ERROR_ID( "TileMapRenderer.TileMapCellsTile", "Tile map '%#' has %# cells - a tile layer holds 1..%#", _map._name, static_cast<uint32>( count ), static_cast<uint32>( kMaxCellCount ) );
             return;
         }
         // 팔레트의 이름은 타일셋에 있어야 한다 — 모르는 이름은 데이터 오류다(그 칸은 비운다).
         if ( _map.mapTileCells( _tileSet, _listBrushIndex ) == false )
-            SW_LOG_ERROR( "Tile map '%#' paints a brush that tile set '%#' does not have - those cells are empty", _map._name, _map._tileSetPath );
+            SW_LOG_ERROR_ID( "TileMapRenderer.TileMapPaintsBrush", "Tile map '%#' paints a brush that tile set '%#' does not have - those cells are empty", _map._name, _map._tileSetPath );
         _chunkGrid = TileChunkGrid::make( _map._width, _map._height, kChunkSize );
         _listAnimatedFlag.assign( count, 0 );
         _listAnimatedCell.clear();
@@ -309,7 +309,7 @@ namespace sw
             const int32 brush = _tileSet.findBrush( hashed_string( brushName ) );
             if ( brush < 0 )
             {
-                SW_LOG_ERROR( "Tile set '%#' has no brush '%#'", _map._tileSetPath, brushName );
+                SW_LOG_ERROR_ID( "TileMapRenderer.TileSetNoBrush", "Tile set '%#' has no brush '%#'", _map._tileSetPath, brushName );
                 return false;
             }
             value = static_cast<uint16>( brush + 1 );

@@ -422,7 +422,7 @@ namespace sw
 
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
         {
-            SW_LOG_WARNING( "bindComputeUAV: index %# is not a registered UAV.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVIndexNotRegistered", "bindComputeUAV: index %# is not a registered UAV.", index );
             return;
         }
 
@@ -433,7 +433,7 @@ namespace sw
             // RW 텍스처. u5..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
             if ( slot < shaderslot::kComputeTextureUAV0 || slot >= shaderslot::kComputeTextureUAV0 + shaderslot::kComputeTextureUAVSlotCount )
             {
-                SW_LOG_WARNING( "bindComputeUAV: tried to bind an RW texture to a buffer slot (u%#).", slot );
+                SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVTriedBindRW", "bindComputeUAV: tried to bind an RW texture to a buffer slot (u%#).", slot );
                 return;
             }
             const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( record._texture );
@@ -446,7 +446,7 @@ namespace sw
 
         if ( record._buffer == 0 )
         {
-            SW_LOG_WARNING( "bindComputeUAV: the UAV record at index %# is empty.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVUAVRecordIndex", "bindComputeUAV: the UAV record at index %# is empty.", index );
             return;
         }
 
@@ -472,7 +472,7 @@ namespace sw
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) ||
              _pDevice->_listRegisteredTexture[index]._texture == 0 )
         {
-            SW_LOG_WARNING( "bindShaderResource: index %# is not a registered texture - use bindStructuredBuffer for a buffer.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindShaderResourceIndexNotRegistered", "bindShaderResource: index %# is not a registered texture - use bindStructuredBuffer for a buffer.", index );
             return;
         }
 
@@ -682,7 +682,7 @@ namespace sw
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) ||
              _pDevice->_listRegisteredBindless[index]._buffer == 0 )
         {
-            SW_LOG_WARNING( "bindStructuredBuffer: index %# is not a registered buffer - use bindShaderResource for a texture.", index );
+            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindStructuredBufferIndexNotRegistered", "bindStructuredBuffer: index %# is not a registered buffer - use bindShaderResource for a texture.", index );
             return;
         }
 

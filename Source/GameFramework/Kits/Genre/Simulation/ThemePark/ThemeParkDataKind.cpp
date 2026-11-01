@@ -30,7 +30,7 @@ namespace sw
             string            error;
             if ( GamePackDataUtil::tryMakeKindPath( packRoot, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
             {
-                SW_LOG_ERROR( "%#: the coaster layouts have no path - %#", assetID.c_str(), error.c_str() );
+                SW_LOG_ERROR_ID( "ThemeParkDataKind.CoasterLayoutsNoPath", "%#: the coaster layouts have no path - %#", assetID.c_str(), error.c_str() );
                 return false;
             }
             CoasterLayoutCatalog layouts;

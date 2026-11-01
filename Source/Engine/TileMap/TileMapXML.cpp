@@ -525,7 +525,7 @@ namespace sw
             *this = {};
             return false;
         }
-        SW_LOG_INFO( "Loaded '%#' (%#×%#) scene=%# role=%#", _name, _width, _height, _scenePath, _role );
+        SW_LOG_INFO_ID( "TileMapXML.LoadedSceneRole", "Loaded '%#' (%#×%#) scene=%# role=%#", _name, _width, _height, _scenePath, _role );
         return true;
     }
 
@@ -669,7 +669,7 @@ namespace sw
             return false;
         const bool bOk = FileUtil::writeTextFile( absPath.str(), xml );
         if ( bOk )
-            SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath.str() );
+            SW_LOG_INFO_ID( "TileMapXML.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;
     }
 

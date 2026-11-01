@@ -79,12 +79,12 @@ namespace sw
     {
         if ( ScenarioRecorder::isAllowedOutputPath( outputPath ) == false )
         {
-            SW_LOG_ERROR( "[ScenarioRecord] the output must be a relative path under Saved/Automation/ ending in .scenario.xml, got '%#'", string( outputPath ).c_str() );
+            SW_LOG_ERROR_ID( "AutomationSession.OutputMustRelativePath", "[ScenarioRecord] the output must be a relative path under Saved/Automation/ ending in .scenario.xml, got '%#'", string( outputPath ).c_str() );
             return false;
         }
         _recordPath      = string( outputPath );
         _listRecordWatch = AutomationScenarioChain::splitList( watchList );
-        SW_LOG_INFO( "[ScenarioRecord] recording the play into %# (%# checkpoint(s))", _recordPath.c_str(), static_cast<uint32>( _listRecordWatch.size() ) );
+        SW_LOG_INFO_ID( "AutomationSession.RecordingPlayCheckpoint", "[ScenarioRecord] recording the play into %# (%# checkpoint(s))", _recordPath.c_str(), static_cast<uint32>( _listRecordWatch.size() ) );
         return true;
     }
 
@@ -122,17 +122,17 @@ namespace sw
             if ( ScenarioRecorder::readCheckpoint( spec, pManager, checkpoint, error ) )
                 settings._listCheckpoint.push_back( std::move( checkpoint ) );
             else
-                SW_LOG_WARNING( "[ScenarioRecord] checkpoint %# skipped: %#", spec.c_str(), error.c_str() );
+                SW_LOG_WARNING_ID( "AutomationSession.CheckpointSkipped", "[ScenarioRecord] checkpoint %# skipped: %#", spec.c_str(), error.c_str() );
         }
         const ScenarioRecordOutput output = _recorder.stop( settings );
         if ( FileUtil::ensureParentDirectoryExists( _recordPath ) == false || FileUtil::writeTextFile( _recordPath, output._xmlText ) == false )
         {
-            SW_LOG_ERROR( "[ScenarioRecord] could not write %#", _recordPath.c_str() );
+            SW_LOG_ERROR_ID( "AutomationSession.CouldNotWrite", "[ScenarioRecord] could not write %#", _recordPath.c_str() );
             return;
         }
-        SW_LOG_INFO( "[ScenarioRecord] wrote %# (%# step(s), %# checkpoint(s), %# event(s) skipped) - replay with -scenario=%#", _recordPath.c_str(),
-                     output._writtenStepCount, static_cast<uint32>( settings._listCheckpoint.size() ), output._skippedEventCount,
-                     ScenarioRecorder::makeReplayID( _recordPath ).c_str() );
+        SW_LOG_INFO_ID( "AutomationSession.WroteStepCheckpointEvent", "[ScenarioRecord] wrote %# (%# step(s), %# checkpoint(s), %# event(s) skipped) - replay with -scenario=%#", _recordPath.c_str(),
+                        output._writtenStepCount, static_cast<uint32>( settings._listCheckpoint.size() ), output._skippedEventCount,
+                        ScenarioRecorder::makeReplayID( _recordPath ).c_str() );
     }
 
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
@@ -182,8 +182,8 @@ namespace sw
             const string currentFolder = FileUtil::getCurrentPath();
             if ( currentFolder != _workingFolder )
             {
-                SW_LOG_WARNING( "[Scenario] the working folder changed to '%#' during stage %# - restoring '%#'", currentFolder.c_str(),
-                                static_cast<uint32>( _pChain->getStageIndex() ), _workingFolder.c_str() );
+                SW_LOG_WARNING_ID( "AutomationSession.WorkingFolderChangedDuring", "[Scenario] the working folder changed to '%#' during stage %# - restoring '%#'", currentFolder.c_str(),
+                                   static_cast<uint32>( _pChain->getStageIndex() ), _workingFolder.c_str() );
                 (void)FileUtil::setCurrentPath( _workingFolder );
             }
         }
@@ -201,7 +201,7 @@ namespace sw
             // 엔진이 모르는 모듈 상태(편집기의 패널 · 팝업 · 배치)도 새 프로세스처럼 — 그 상태를 가진 모듈이 등록한 되돌리기를 부른다.
             (void)AutomationStageResetRegistry::resetAll();
             // 단계 사이 초기화가 든 시간이다 - 다음 시나리오가 시작하기까지의 프레임(새 게임 · 첫 씬)은 그 실행의 timeline `start` 가 센다.
-            SW_LOG_INFO( "[Scenario] stage reset took %#ms", static_cast<uint32>( ( static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - resetStartSeconds ) * 1000.0 ) );
+            SW_LOG_INFO_ID( "AutomationSession.StageResetTookMs", "[Scenario] stage reset took %#ms", static_cast<uint32>( ( static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - resetStartSeconds ) * 1000.0 ) );
         }
 
         _pRunner = make_unique<AutomationRunner>();
@@ -229,10 +229,10 @@ namespace sw
             }
             // 결정적 실행 — 애니메이터가 시작 클립을 기다린다(첫 포즈가 디스크 지연에 달리지 않게). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다).
             if ( globalVariables.setValueFromString( "gv_animationWaitForClips", "1" ) == false )
-                SW_LOG_WARNING( "[Scenario] this host has no gv_animationWaitForClips - the first poses depend on disk timing" );
+                SW_LOG_WARNING_ID( "AutomationSession.HostNoGvAnimationWaitForClips", "[Scenario] this host has no gv_animationWaitForClips - the first poses depend on disk timing" );
             // 결정적 실행 — 에셋 도착을 프레임에 묶는다(`AssetManager::isFinishingAssetWorkEachFrame`). 끄면 셰이더 캐시가 빈 첫 실행(느린 프레임)이 다른 그림을 낸다.
             if ( globalVariables.setValueFromString( "gv_finishAssetWorkEachFrame", "1" ) == false )
-                SW_LOG_WARNING( "[Scenario] this host has no gv_finishAssetWorkEachFrame - asset arrival depends on wall-clock timing" );
+                SW_LOG_WARNING_ID( "AutomationSession.HostNoGvFinishAssetWorkEachFrame", "[Scenario] this host has no gv_finishAssetWorkEachFrame - asset arrival depends on wall-clock timing" );
             // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.
             // 그래서 단계는 첫 단계와 같은 길로 선다(첫 씬을 선언하지 않은 단계도 체인에 든다). 재시작할 호스트가 없으면 앞 단계의 상태로 돌지 않고 멈춘다.
             if ( bLaterStage )
@@ -249,7 +249,7 @@ namespace sw
                 _pRunner->requireStartScene( startScene );
             const string fixedDelta = to_string( _pRunner->getScenario().getFixedDelta() );
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
-                SW_LOG_WARNING( "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
+                SW_LOG_WARNING_ID( "AutomationSession.HostNoGvFixedFrameDelta", "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
         }
     }
 
@@ -269,7 +269,7 @@ namespace sw
         if ( pWindow == nullptr || _startWindowWidth == 0 || ( pWindow->getWidth() == _startWindowWidth && pWindow->getHeight() == _startWindowHeight ) )
             return;
         if ( pWindow->setDisplayMode( WindowDisplayMode::Windowed, _startWindowWidth, _startWindowHeight ) == false )
-            SW_LOG_WARNING( "[Scenario] the window could not return to its start size %#x%# for the next stage", _startWindowWidth, _startWindowHeight );
+            SW_LOG_WARNING_ID( "AutomationSession.WindowCouldNotReturn", "[Scenario] the window could not return to its start size %#x%# for the next stage", _startWindowWidth, _startWindowHeight );
     }
 
     void AutomationSession::restoreStartVariables()
@@ -284,9 +284,9 @@ namespace sw
             if ( current == value )
                 continue;
             if ( pVariable->setValueFromString( value ) )
-                SW_LOG_INFO( "[Scenario] %# restored '%#' -> '%#' for the next stage", name.c_str(), current.c_str(), value.c_str() );
+                SW_LOG_INFO_ID( "AutomationSession.RestoredNextStage", "[Scenario] %# restored '%#' -> '%#' for the next stage", name.c_str(), current.c_str(), value.c_str() );
             else
-                SW_LOG_WARNING( "[Scenario] %# could not be restored to '%#' for the next stage", name.c_str(), value.c_str() );
+                SW_LOG_WARNING_ID( "AutomationSession.CouldNotRestoredNext", "[Scenario] %# could not be restored to '%#' for the next stage", name.c_str(), value.c_str() );
         }
     }
 
@@ -311,7 +311,7 @@ namespace sw
     {
         if ( isBusy() )
         {
-            SW_LOG_WARNING( "[Scenario] cannot play '%#' - a scenario, playback or recording is already running", scenarioPath.c_str() );
+            SW_LOG_WARNING_ID( "AutomationSession.CannotPlayScenarioPlayback", "[Scenario] cannot play '%#' - a scenario, playback or recording is already running", scenarioPath.c_str() );
             return false;
         }
         _bPlayback                             = true;
@@ -324,7 +324,7 @@ namespace sw
             _playPreviousFixedDelta         = pFixedDelta != nullptr ? pFixedDelta->getValueAsString() : string{};
         }
         startPlayback();
-        SW_LOG_INFO( "[Scenario] playing %#%#%#", scenarioPath.c_str(), options._bLoop ? " (loop)" : "", options._bStopOnHumanInput ? " (stops on input)" : "" );
+        SW_LOG_INFO_ID( "AutomationSession.Playing", "[Scenario] playing %#%#%#", scenarioPath.c_str(), options._bLoop ? " (loop)" : "", options._bStopOnHumanInput ? " (stops on input)" : "" );
         return true;
     }
 
@@ -354,11 +354,11 @@ namespace sw
         const ScenarioPlayFinishedDelegate onFinished = _playOptions._onFinished;
         _bPlayback                                    = false;
         _playOptions                                  = ScenarioPlayOptions{};
-        SW_LOG_INFO( "[Scenario] playback of %# ended (%#)", _playPath.c_str(),
-                     end == ScenarioPlayEnd::Completed        ? "completed"
-                     : end == ScenarioPlayEnd::Failed         ? "failed"
-                     : end == ScenarioPlayEnd::StoppedByHuman ? "a person took over"
-                                                              : "stopped" );
+        SW_LOG_INFO_ID( "AutomationSession.PlaybackEnded", "[Scenario] playback of %# ended (%#)", _playPath.c_str(),
+                        end == ScenarioPlayEnd::Completed        ? "completed"
+                        : end == ScenarioPlayEnd::Failed         ? "failed"
+                        : end == ScenarioPlayEnd::StoppedByHuman ? "a person took over"
+                                                                 : "stopped" );
         if ( onFinished.isBound() )
             onFinished( end ); // 상태를 비운 뒤에 알린다 — 알림이 다음 재생을 시작해도 된다
     }
@@ -442,9 +442,9 @@ namespace sw
             const string line = _pChain->describeStageEnd( stageIndex, result, stageName );
             // 건너뜀은 실패가 아니다 - 까닭과 등급(빌드 구성이면 Info, 환경 탓이면 Warning)은 실행기의 SKIP 줄이 이미 남겼다.
             if ( result == AutomationOutcome::Passed || result == AutomationOutcome::Skipped )
-                SW_LOG_INFO( "[Scenario] %#", line.c_str() );
+                SW_LOG_INFO_ID( "AutomationSession.Message", "[Scenario] %#", line.c_str() );
             else
-                SW_LOG_ERROR( "[Scenario] %#", line.c_str() );
+                SW_LOG_ERROR_ID( "AutomationSession.Message", "[Scenario] %#", line.c_str() );
         }
         if ( bNextStage )
         {
@@ -452,9 +452,9 @@ namespace sw
             return kEngineFrameRunning;
         }
         if ( _pChain->isChain() )
-            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", getEnumName( _pChain->getFinalResult() ),
-                         static_cast<uint32>( _pChain->getStageCount() ), static_cast<uint32>( _pChain->getFailedStageCount() ),
-                         static_cast<uint32>( _pChain->getSkippedResultCount() ), static_cast<uint32>( _pChain->getSkippedStageCount() ) );
+            SW_LOG_INFO_ID( "AutomationSession.ChainStageFailedSkipped", "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", getEnumName( _pChain->getFinalResult() ),
+                            static_cast<uint32>( _pChain->getStageCount() ), static_cast<uint32>( _pChain->getFailedStageCount() ),
+                            static_cast<uint32>( _pChain->getSkippedResultCount() ), static_cast<uint32>( _pChain->getSkippedStageCount() ) );
         return getAutomationExitCode( _pChain->getFinalResult() );
     }
 
@@ -474,8 +474,8 @@ namespace sw
         // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).
         if ( _pChain != nullptr && _pChain->onStageEnded( result ) )
         {
-            SW_LOG_ERROR( "[Scenario] the window closed with %# stage(s) still to run (put <CloseWindow> in the last scenario of a chain)",
-                          static_cast<uint32>( _pChain->getStageCount() - _pChain->getStageIndex() ) );
+            SW_LOG_ERROR_ID( "AutomationSession.WindowClosedStageStill", "[Scenario] the window closed with %# stage(s) still to run (put <CloseWindow> in the last scenario of a chain)",
+                             static_cast<uint32>( _pChain->getStageCount() - _pChain->getStageIndex() ) );
             result = AutomationOutcome::Failed;
         }
         return getAutomationExitCode( result );
@@ -558,7 +558,7 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );
         if ( options._scenarioPath.empty() || AutomationPerBackend::parseBackendList( backends, options._listBackend, error ) == false )
         {
-            SW_LOG_ERROR( "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
+            SW_LOG_ERROR_ID( "AutomationSession.Message2", "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
             inoutState._bFailed         = true;
             inoutState._failureExitCode = getAutomationExitCode( AutomationOutcome::LoadError );
             return;

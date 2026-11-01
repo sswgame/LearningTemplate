@@ -81,7 +81,7 @@ namespace sw
     {
         if ( _state == RespConnectionState::Closed )
             return;
-        SW_LOG_WARNING( "RESP connection %# aborted: %#", static_cast<uint32>( _handle._index ), pReason );
+        SW_LOG_WARNING_ID( "RespConnection.RESPConnectionAborted", "RESP connection %# aborted: %#", static_cast<uint32>( _handle._index ), pReason );
         closeForShutdown( transport );
     }
 
@@ -145,7 +145,7 @@ namespace sw
         if ( handle != _handle )
             return false;
         if ( _state != RespConnectionState::Closed )
-            SW_LOG_WARNING( "RESP connection %# closed: %#", static_cast<uint32>( handle._index ), toString( reason ) );
+            SW_LOG_WARNING_ID( "RespConnection.RESPConnectionClosed", "RESP connection %# closed: %#", static_cast<uint32>( handle._index ), toString( reason ) );
         _handle = StreamConnectionHandle{};
         _state  = RespConnectionState::Closed;
         failAwaitingTags();
@@ -209,7 +209,7 @@ namespace sw
                 _listAwaitTag.pop_front();
                 if ( value.isError() )
                 {
-                    SW_LOG_ERROR( "RESP AUTH rejected: %#", string( value.getText() ).c_str() );
+                    SW_LOG_ERROR_ID( "RespConnection.RESPAUTHRejected", "RESP AUTH rejected: %#", string( value.getText() ).c_str() );
                     _bAuthRejected = SW_TRUE;
                     return true;
                 }

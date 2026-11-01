@@ -112,13 +112,13 @@ namespace sw
         _seenTableReloadCount = ElementRuleTable::getSharedReloadCount();
         if ( _tablePath.empty() )
         {
-            SW_LOG_ERROR( "Element status '%#' has no rule table path - set Rule Table", _material.c_str() );
+            SW_LOG_ERROR_ID( "AdventureGimmicks.ElementStatusNoRule", "Element status '%#' has no rule table path - set Rule Table", _material.c_str() );
             return;
         }
         const ElementRuleTable* pTable = ElementRuleTable::findShared( _tablePath );
         if ( pTable == nullptr )
         {
-            SW_LOG_ERROR( "Element rule table %# could not be read", _tablePath.c_str() );
+            SW_LOG_ERROR_ID( "AdventureGimmicks.ElementRuleTableCould", "Element rule table %# could not be read", _tablePath.c_str() );
             return;
         }
         if ( _grid.initialize( 1, 1, pTable ) == false )
@@ -126,7 +126,7 @@ namespace sw
         const int32 material = pTable->findMaterial( _material );
         if ( material < 0 )
         {
-            SW_LOG_ERROR( "Element material '%#' is not in the rule table", _material.c_str() );
+            SW_LOG_ERROR_ID( "AdventureGimmicks.ElementMaterialNotRule", "Element material '%#' is not in the rule table", _material.c_str() );
             return; // 0 번 재질로 대신 서지 않는다
         }
         _grid.setMaterial( int2{ 0, 0 }, material );

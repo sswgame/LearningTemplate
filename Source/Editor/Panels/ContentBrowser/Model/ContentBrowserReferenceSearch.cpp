@@ -37,7 +37,7 @@ namespace sw::editor
         const EditorTaskPoll     poll = _job.take( data );
         if ( poll == EditorTaskPoll::Ready )
         {
-            SW_LOG_INFO( "Reference index ready: %# text asset(s), %# reference(s) in %# ms", data._scannedFileCount, data._listReference.size(), data._scanMilliseconds );
+            SW_LOG_INFO_ID( "ContentBrowserReferenceSearch.ReferenceIndexReadyText", "Reference index ready: %# text asset(s), %# reference(s) in %# ms", data._scannedFileCount, data._listReference.size(), data._scanMilliseconds );
             _index.assign( std::move( data ) );
             _bScanInFlight = SW_FALSE;
         }

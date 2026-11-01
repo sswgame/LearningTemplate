@@ -27,7 +27,7 @@ namespace sw
                                           0.0f <= params._brakeDeceleration && 0.0f <= params._stallSpeed && 0.0f <= params._stallSeconds && 0.0f <= params._gForceWarmupSeconds;
                 if ( bStepValid && bNonNegative )
                     return true;
-                SW_LOG_ERROR( "CoasterPhysicsParams: refused - fixedStep %# (needs %#..%#), the other constants need 0 or more", params._fixedStep, minFixedStep, maxFixedStep );
+                SW_LOG_ERROR_ID( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds", "CoasterPhysicsParams: refused - fixedStep %# (needs %#..%#), the other constants need 0 or more", params._fixedStep, minFixedStep, maxFixedStep );
                 return false;
             }
 

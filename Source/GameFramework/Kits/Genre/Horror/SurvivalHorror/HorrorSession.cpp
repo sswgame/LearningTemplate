@@ -141,7 +141,7 @@ namespace sw
     {
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR( "HorrorSession: refused - no catalog (the rules come from the catalog, there is no default set)" );
+            SW_LOG_ERROR_ID( "HorrorSession.HorrorSessionRefusedNoCatalog", "HorrorSession: refused - no catalog (the rules come from the catalog, there is no default set)" );
             return false;
         }
         const SurvivalHorrorRules& rules = pCatalog->getRules();

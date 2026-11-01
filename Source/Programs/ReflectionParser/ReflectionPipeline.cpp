@@ -303,7 +303,7 @@ namespace sw
             // `--dump` 는 무엇을 뽑았는지 보려는 실행이라 최신이어도 다시 파싱한다.
             if ( _pOptions->_bDump == false && _incrementalCheck.isUpToDate( inputFile, paths ) )
             {
-                SW_LOG_TRACE( "Up-to-date, skipping AST parsing: %#", inputFile );
+                SW_LOG_TRACE_ID( "ReflectionPipeline.UpDateSkippingAST", "Up-to-date, skipping AST parsing: %#", inputFile );
                 ++upToDate;
                 continue;
             }
@@ -313,7 +313,7 @@ namespace sw
             string       content;
             if ( FileUtil::readTextFile( inputFile, content ) == false )
             {
-                SW_LOG_ERROR( "Failed to read input: %#", inputFile );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.FailedReadInput", "Failed to read input: %#", inputFile );
                 ++errorCount;
                 continue;
             }
@@ -321,7 +321,7 @@ namespace sw
             // 리플렉션 매크로가 지워진 뒤에도 이전 registrar 가 남아 계속 컴파일되지 않도록 빈 산출물을 쓴다.
             if ( ReflectionPipelineInternal::hasReflectionKeywords( content ) == false )
             {
-                SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
+                SW_LOG_TRACE_ID( "ReflectionPipeline.NoReflectionAnnotationsFound", "No reflection annotations found, emitting empty output: %#", inputFile );
                 ++noReflect;
                 if ( writeOutputs( inputFile, paths, ParsedHeader{}, inputWriteTime, {} ) == false )
                     ++errorCount;
@@ -331,8 +331,8 @@ namespace sw
             listPending.push_back( PendingInput{ &inputFile, std::move( content ), std::move( paths ), inputWriteTime } );
         }
 
-        SW_LOG_INFO( "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size(),
-                     _pOptions->_listInputFile.size(), upToDate, noReflect );
+        SW_LOG_INFO_ID( "ReflectionPipeline.ParsingInputUpDate", "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size(),
+                        _pOptions->_listInputFile.size(), upToDate, noReflect );
         errorCount += parsePending( listPending );
 
         if ( writeFlagOpsUmbrella() == false )
@@ -364,7 +364,7 @@ namespace sw
             return errorCount;
 
         // 묶음이 clang 오류로 실패했다. 어느 헤더가 깨졌는지 헤더마다 파싱해 그 헤더의 오류로 알리고, 나머지는 그대로 만든다.
-        SW_LOG_WARNING( "One translation unit for %# input(s) did not parse; parsing them one by one.", listPending.size() );
+        SW_LOG_WARNING_ID( "ReflectionPipeline.OneTranslationUnitInput", "One translation unit for %# input(s) did not parse; parsing them one by one.", listPending.size() );
         return parseEachInParallel( listPending );
     }
 
@@ -404,7 +404,7 @@ namespace sw
             const string& inputFile = *listPending[index]._pInputFile;
             if ( index >= listHeader.size() || listHeader[index]._bHasError == SW_TRUE )
             {
-                SW_LOG_ERROR( "AST analysis failed: %#", inputFile );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile );
                 ++outErrorCount;
                 continue;
             }
@@ -417,7 +417,7 @@ namespace sw
     bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending ) const
     {
         const string& inputFile = *pending._pInputFile;
-        SW_LOG_TRACE( "── Parsing: %#", inputFile );
+        SW_LOG_TRACE_ID( "ReflectionPipeline.Parsing", "── Parsing: %#", inputFile );
 
         ParserContext                   context( _pSession->_config );
         const vector<ParserUnsavedFile> listUnsaved{
@@ -425,14 +425,14 @@ namespace sw
         };
         if ( context.parse( inputFile, _listIncludePath, listUnsaved ) == false )
         {
-            SW_LOG_ERROR( "Parse failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.ParseFailed", "Parse failed: %#", inputFile );
             return false;
         }
 
         AstVisitor visitor( context.getTranslationUnit(), *_pSession );
         if ( visitor.visit() == false || visitor.hasError() )
         {
-            SW_LOG_ERROR( "AST analysis failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile );
             return false;
         }
 
@@ -454,7 +454,7 @@ namespace sw
         TaskManager taskManager;
         if ( taskManager.initialize( workerCount ) == false )
         {
-            SW_LOG_ERROR( "Failed to initialize TaskManager." );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.FailedInitializeTaskManager", "Failed to initialize TaskManager." );
             return static_cast<int32>( listPending.size() );
         }
 
@@ -486,7 +486,7 @@ namespace sw
             ReflectionPipelineInternal::printParsedHeader( inputFile, parsed, fixedCodec );
         if ( bFixedPlanned == false )
         {
-            SW_LOG_ERROR( "Code generation failed (fixed layout annotations): %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailedFixed", "Code generation failed (fixed layout annotations): %#", inputFile );
             return false;
         }
 
@@ -494,7 +494,7 @@ namespace sw
         string              headerText;
         if ( generator.makeHeaderText( headerText ) == false )
         {
-            SW_LOG_ERROR( "Code generation failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile );
             return false;
         }
 
@@ -514,9 +514,9 @@ namespace sw
                                      FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {
-                SW_LOG_ERROR( "Generated file name collision: '%#' and '%#' both generate '%#'. "
-                              "Two reflected headers in the same module cannot share a file name.",
-                              recordedSource, inputFile, paths._cppPath );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.GeneratedFileNameCollision", "Generated file name collision: '%#' and '%#' both generate '%#'. "
+                                                                                  "Two reflected headers in the same module cannot share a file name.",
+                                 recordedSource, inputFile, paths._cppPath );
                 return false;
             }
         }
@@ -540,7 +540,7 @@ namespace sw
                               GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
                               GeneratedFileUtil::writeStamp( paths._stampPath, stamp );
         if ( bWritten == false )
-            SW_LOG_ERROR( "Code generation failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile );
         return bWritten;
     }
 
@@ -587,7 +587,7 @@ namespace sw
         text += "\n";
         if ( GeneratedFileUtil::writeIfChanged( _pOptions->_depfilePath, text ) == false )
         {
-            SW_LOG_ERROR( "Failed to write depfile %#", _pOptions->_depfilePath );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.FailedWriteDepfile", "Failed to write depfile %#", _pOptions->_depfilePath );
             return false;
         }
         return true;
@@ -607,7 +607,7 @@ namespace sw
             // 입력마다 스탬프가 있다(애노테이션이 없는 헤더도 빈 산출물과 스탬프를 쓴다). 없으면 목록이 조용히 빠지므로 실패로 알린다.
             if ( GeneratedFileUtil::readStamp( stampPath, stamp ) == false )
             {
-                SW_LOG_ERROR( "Fixed schema list is not written - '%#' has no stamp (it failed above)", stampPath );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.FixedSchemaListNot", "Fixed schema list is not written - '%#' has no stamp (it failed above)", stampPath );
                 return false;
             }
             for ( const string& schemaLine : stamp._listFixedSchema )
@@ -639,7 +639,7 @@ namespace sw
         }
         if ( bComplete == false )
         {
-            SW_LOG_ERROR( "%# is not written - some inputs have no stamp (they failed above)", sw::config::kFileReflectedTypesList );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.NotWrittenSomeInputs", "%# is not written - some inputs have no stamp (they failed above)", sw::config::kFileReflectedTypesList );
             return false;
         }
         VectorUtil::sortUnique( listLine );

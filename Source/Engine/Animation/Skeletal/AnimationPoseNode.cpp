@@ -24,7 +24,7 @@ namespace sw
     {
         if ( params._pSampler == nullptr || params._pParameter == nullptr )
         {
-            SW_LOG_ERROR( "BlendPosesNode needs a sampler and a parameter set" );
+            SW_LOG_ERROR_ID( "AnimationPoseNode.BlendPosesNodeNeedsSamplerParameter", "BlendPosesNode needs a sampler and a parameter set" );
             return false;
         }
         // 둘째 입력은 첫 입력과 같은 정규화 위치에서 샘플한다 — 길이가 달라도 위상이 맞는다.
@@ -86,7 +86,7 @@ namespace sw
             const IAnimationPlayable* pInput = clipSource.findPlayable( inputName );
             if ( pInput == nullptr )
             {
-                SW_LOG_ERROR( "Pose node '%#' input '%#' was not found", node._name.c_str(), inputName.c_str() );
+                SW_LOG_ERROR_ID( "AnimationPoseNode.PoseNodeInputNot", "Pose node '%#' input '%#' was not found", node._name.c_str(), inputName.c_str() );
                 return nullptr;
             }
             listInput.push_back( pInput );
@@ -98,7 +98,7 @@ namespace sw
                 // 로드(`AnimationGraphAsset::parsePoseNode`)가 확인하지만, 코드로 만든 그래프도 같은 규칙을 지킨다.
                 if ( listInput.size() != 2 || def._weightParameter.empty() )
                 {
-                    SW_LOG_ERROR( "Pose node '%#' blend_poses needs two inputs and a weight parameter", node._name.c_str() );
+                    SW_LOG_ERROR_ID( "AnimationPoseNode.PoseNodeBlendPoses", "Pose node '%#' blend_poses needs two inputs and a weight parameter", node._name.c_str() );
                     return nullptr;
                 }
                 return make_unique<BlendPosesNode>( *listInput[0], *listInput[1], def._weightParameter );
@@ -108,7 +108,7 @@ namespace sw
                 break;
             }
         }
-        SW_LOG_ERROR( "Pose node '%#' has no pose node type", node._name.c_str() );
+        SW_LOG_ERROR_ID( "AnimationPoseNode.PoseNodeNoPose", "Pose node '%#' has no pose node type", node._name.c_str() );
         return nullptr;
     }
 } // namespace sw

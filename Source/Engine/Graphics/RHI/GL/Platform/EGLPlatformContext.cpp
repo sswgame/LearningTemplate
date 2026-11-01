@@ -37,7 +37,7 @@ namespace sw
     {
         if ( desc._surfaceKind != NativeSurfaceKind::Wayland || desc._pWindowDisplay == nullptr || desc._pWindowHandle == nullptr )
         {
-            SW_LOG_ERROR( "EGL needs a Wayland surface (wl_display and wl_surface)" );
+            SW_LOG_ERROR_ID( "OpenGL.EGLNeedsWaylandSurface", "EGL needs a Wayland surface (wl_display and wl_surface)" );
             return false;
         }
 
@@ -45,21 +45,21 @@ namespace sw
         EGLDisplay display = eglGetPlatformDisplay( EGL_PLATFORM_WAYLAND_KHR, desc._pWindowDisplay, nullptr );
         if ( display == EGL_NO_DISPLAY )
         {
-            SW_LOG_ERROR( "eglGetPlatformDisplay(wayland) failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
+            SW_LOG_ERROR_ID( "OpenGL.EglGetPlatformDisplayWaylandFailedEGL", "eglGetPlatformDisplay(wayland) failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
             return false;
         }
         EGLint eglMajor{ 0 };
         EGLint eglMinor{ 0 };
         if ( eglInitialize( display, &eglMajor, &eglMinor ) == EGL_FALSE )
         {
-            SW_LOG_ERROR( "eglInitialize failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
+            SW_LOG_ERROR_ID( "OpenGL.EglInitializeFailedEGLError", "eglInitialize failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
             return false;
         }
         _pEGLDisplay = display;
         // 데스크톱 GL 을 쓴다(기본 API 는 GLES). 이 호출은 부른 스레드에만 걸린다.
         if ( eglBindAPI( EGL_OPENGL_API ) == EGL_FALSE )
         {
-            SW_LOG_ERROR( "eglBindAPI(EGL_OPENGL_API) failed - the EGL driver has no desktop OpenGL" );
+            SW_LOG_ERROR_ID( "OpenGL.EglBindAPIEGLOPENGLAPI", "eglBindAPI(EGL_OPENGL_API) failed - the EGL driver has no desktop OpenGL" );
             destroy();
             return false;
         }
@@ -70,7 +70,7 @@ namespace sw
         EGLint       configCount{ 0 };
         if ( eglChooseConfig( display, arrConfigAttrib, &config, 1, &configCount ) == EGL_FALSE || configCount <= 0 )
         {
-            SW_LOG_ERROR( "eglChooseConfig found no window config for desktop OpenGL (EGL error %#)", static_cast<int32>( eglGetError() ) );
+            SW_LOG_ERROR_ID( "OpenGL.EglChooseConfigFoundNoWindow", "eglChooseConfig found no window config for desktop OpenGL (EGL error %#)", static_cast<int32>( eglGetError() ) );
             destroy();
             return false;
         }
@@ -79,7 +79,7 @@ namespace sw
         wl_egl_window* pNativeWindow = wl_egl_window_create( static_cast<wl_surface*>( desc._pWindowHandle ), static_cast<int>( desc._width ), static_cast<int>( desc._height ) );
         if ( pNativeWindow == nullptr )
         {
-            SW_LOG_ERROR( "wl_egl_window_create failed (%#x%#)", desc._width, desc._height );
+            SW_LOG_ERROR_ID( "OpenGL.WlEglWindowCreate", "wl_egl_window_create failed (%#x%#)", desc._width, desc._height );
             destroy();
             return false;
         }
@@ -87,7 +87,7 @@ namespace sw
         EGLSurface surface = eglCreatePlatformWindowSurface( display, config, pNativeWindow, nullptr );
         if ( surface == EGL_NO_SURFACE )
         {
-            SW_LOG_ERROR( "eglCreatePlatformWindowSurface failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
+            SW_LOG_ERROR_ID( "OpenGL.EglCreatePlatformWindowSurfaceFailedEGLError", "eglCreatePlatformWindowSurface failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
             destroy();
             return false;
         }
@@ -116,13 +116,13 @@ namespace sw
             context = eglCreateContext( display, config, EGL_NO_CONTEXT, arrContextAttrib );
             if ( context != EGL_NO_CONTEXT )
             {
-                SW_LOG_TRACE( "EGL core context %#.%#", static_cast<int32>( ver[0] ), static_cast<int32>( ver[1] ) );
+                SW_LOG_TRACE_ID( "OpenGL.EGLCoreContext", "EGL core context %#.%#", static_cast<int32>( ver[0] ), static_cast<int32>( ver[1] ) );
                 break;
             }
         }
         if ( context == EGL_NO_CONTEXT )
         {
-            SW_LOG_ERROR( "Failed to create an EGL core OpenGL context 3.3 or newer (EGL error %#) - use the Vulkan backend", static_cast<int32>( eglGetError() ) );
+            SW_LOG_ERROR_ID( "OpenGL.FailedCreateEGLCore", "Failed to create an EGL core OpenGL context 3.3 or newer (EGL error %#) - use the Vulkan backend", static_cast<int32>( eglGetError() ) );
             destroy();
             return false;
         }
@@ -130,7 +130,7 @@ namespace sw
 
         if ( eglMakeCurrent( display, surface, surface, context ) == EGL_FALSE )
         {
-            SW_LOG_ERROR( "eglMakeCurrent failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
+            SW_LOG_ERROR_ID( "OpenGL.EglMakeCurrentFailedEGLError", "eglMakeCurrent failed (EGL error %#)", static_cast<int32>( eglGetError() ) );
             destroy();
             return false;
         }

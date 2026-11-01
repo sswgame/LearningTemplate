@@ -29,7 +29,7 @@ namespace sw
                                    HashUtil::computeStringHash64( relay._pushName.data(), relay._pushName.size() ) ^ HashUtil::computeStringHash64( pReason, StringUtil::strlen( pReason ) );
                 if ( LogOnce::tryClaim( LogOnceKind::PushRelayRejected, key ) == false )
                     return;
-                SW_LOG_ERROR( "Dropped a relayed push %#::%# (body %#): %# - logged once per push and reason", relay._pushEnum.c_str(), relay._pushName.c_str(), relay._bodyType.c_str(), pReason );
+                SW_LOG_ERROR_ID( "OnlinePushRelay.DroppedRelayedPushBody", "Dropped a relayed push %#::%# (body %#): %# - logged once per push and reason", relay._pushEnum.c_str(), relay._pushName.c_str(), relay._bodyType.c_str(), pReason );
             }
         };
     } // namespace
@@ -121,6 +121,6 @@ namespace sw
 
     void OnlinePushRelayRegistry::noteMissingPushName( const hashed_string& pushEnum, int64 value )
     {
-        SW_LOG_ERROR( "Push %# value %# has no reflected enumerator name - add ENUM( Count = Count ) to it; the push is not relayed", pushEnum.c_str(), value );
+        SW_LOG_ERROR_ID( "OnlinePushRelay.PushValueNoReflected", "Push %# value %# has no reflected enumerator name - add ENUM( Count = Count ) to it; the push is not relayed", pushEnum.c_str(), value );
     }
 } // namespace sw

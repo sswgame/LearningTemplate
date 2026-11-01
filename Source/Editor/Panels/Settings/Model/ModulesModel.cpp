@@ -63,7 +63,7 @@ namespace sw::editor
         const string         directory = ModuleLibraryUtil::getModuleDirectory();
         ModuleResolveContext context{};
         if ( _catalog.loadDirectory( directory, _loadError ) == false || _catalog.resolve( context, _resolution, _loadError ) == false )
-            SW_LOG_WARNING( "Modules: the catalog in %# could not be resolved - %#", directory.c_str(), _loadError.c_str() );
+            SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", directory.c_str(), _loadError.c_str() );
     }
 
     string ModulesModel::findInactiveReason( const string& name ) const
@@ -131,7 +131,7 @@ namespace sw::editor
         string error;
         if ( EditorModuleOverrideUtil::previewToggle( _catalog, ModuleResolveContext{}, moduleName, bEnabled, _listNewlyInactive, _listNewlyActive, error ) == false )
         {
-            SW_LOG_WARNING( "Modules: turning %# %# breaks the module graph - %#", moduleName.c_str(), bEnabled ? "on" : "off", error.c_str() );
+            SW_LOG_WARNING_ID( "ModulesPanel.ModulesTurningBreaksModule", "Modules: turning %# %# breaks the module graph - %#", moduleName.c_str(), bEnabled ? "on" : "off", error.c_str() );
             _pendingModule.clear();
             return false;
         }
@@ -150,7 +150,7 @@ namespace sw::editor
         const std::optional<AbsolutePath> manifestPath = ModulesModelInternal::getProjectManifestPath();
         if ( manifestPath.has_value() == false )
         {
-            SW_LOG_ERROR( "Modules: the running game '%#' does not name a project manifest path", GameSelection::getName().c_str() );
+            SW_LOG_ERROR_ID( "ModulesPanel.ModulesRunningGameDoes", "Modules: the running game '%#' does not name a project manifest path", GameSelection::getName().c_str() );
             return false;
         }
         const string&         path      = manifestPath->str();
@@ -159,21 +159,21 @@ namespace sw::editor
         string                rewritten;
         if ( pManifest == nullptr || FileUtil::readTextFile( path, text ) == false )
         {
-            SW_LOG_WARNING( "Modules: the project manifest %# could not be read", path.c_str() );
+            SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould", "Modules: the project manifest %# could not be read", path.c_str() );
             return false;
         }
         if ( FileUtil::isReadOnlyFile( path ) )
         {
-            SW_LOG_WARNING( "Modules: %# is read-only - check it out first", path.c_str() );
+            SW_LOG_WARNING_ID( "ModulesPanel.ModulesReadOnlyCheck", "Modules: %# is read-only - check it out first", path.c_str() );
             return false;
         }
         if ( EditorModuleOverrideUtil::setOverride( text, _pendingModule, _bPendingEnabled, pManifest->_bEnabledByDefault, rewritten ) == false ||
              FileUtil::writeTextFile( path, rewritten ) == false )
         {
-            SW_LOG_WARNING( "Modules: the project manifest %# could not be rewritten", path.c_str() );
+            SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould2", "Modules: the project manifest %# could not be rewritten", path.c_str() );
             return false;
         }
-        SW_LOG_INFO( "Modules: %# turned %# in %# - build and restart to apply", _pendingModule.c_str(), _bPendingEnabled ? "on" : "off", path.c_str() );
+        SW_LOG_INFO_ID( "ModulesPanel.ModulesTurnedBuildRestart", "Modules: %# turned %# in %# - build and restart to apply", _pendingModule.c_str(), _bPendingEnabled ? "on" : "off", path.c_str() );
         return true;
     }
 } // namespace sw::editor

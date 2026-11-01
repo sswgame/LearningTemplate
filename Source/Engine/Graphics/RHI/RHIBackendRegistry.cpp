@@ -138,13 +138,13 @@ namespace sw
             // 숫자만 찍으면(예: "backend 0") 설정 파일에 DirectX11 을 적어 둔 사람이 원인을 알 수
             // 없다. 배포본은 고른 백엔드 **하나만** 링크하므로(`SW_SHIPPING_RHI_BACKEND`), 무엇이 있는지
             // 같이 알려 준다.
-            SW_LOG_ERROR( "The %# backend is not in this build. Available: %#",
-                          RHI::getBackendTypeName( backend ), describeRegisteredBackends().c_str() );
+            SW_LOG_ERROR_ID( "RHIBackendRegistry.BackendNotBuildAvailable", "The %# backend is not in this build. Available: %#",
+                             RHI::getBackendTypeName( backend ), describeRegisteredBackends().c_str() );
             return nullptr;
         }
         if ( RHIAvailability::isAvailable( backend ) == false )
         {
-            SW_LOG_ERROR( "Backend %# is not available on this platform", static_cast<int32>( backend ) );
+            SW_LOG_ERROR_ID( "RHIBackendRegistry.BackendNotAvailablePlatform", "Backend %# is not available on this platform", static_cast<int32>( backend ) );
             return nullptr;
         }
         return pEntry->_factory();
@@ -161,7 +161,7 @@ namespace sw
         PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIVersion" ) );
         if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleABIVersion )
         {
-            SW_LOG_ERROR( "RHI MODULE ABI version mismatch or missing getRHIModuleABIVersion (%#)", modulePath );
+            SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIVersion", "RHI MODULE ABI version mismatch or missing getRHIModuleABIVersion (%#)", modulePath );
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
@@ -169,7 +169,7 @@ namespace sw
         PFN_GetRHIModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleABIStamp>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIStamp" ) );
         if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleABIStamp ) == false )
         {
-            SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleABIStamp (%#; expected %#)", modulePath, kRHIModuleABIStamp );
+            SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIStamp", "RHI MODULE ABI stamp mismatch or missing getRHIModuleABIStamp (%#; expected %#)", modulePath, kRHIModuleABIStamp );
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
@@ -189,7 +189,7 @@ namespace sw
         registerBackend( backend, factory, RHIAvailability::query( backend ) );
         _listLoadedModule.push_back( LoadedModule{ backend, pModuleHandle, string{ modulePath } } );
 
-        SW_LOG_INFO( "Loaded module %# for backend %#", modulePath, RHI::getBackendTypeName( backend ) );
+        SW_LOG_INFO_ID( "RHIBackendRegistry.LoadedModuleBackend", "Loaded module %# for backend %#", modulePath, RHI::getBackendTypeName( backend ) );
         return true;
     }
 

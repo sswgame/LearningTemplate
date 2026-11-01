@@ -72,7 +72,7 @@ namespace sw
             // 무기 표의 item · ammo 가 없는 아이템을 가리키면 이유를 남기고 게임을 띄우지 않는다
             for ( const WeaponItemReference& reference : listUnknownItem )
             {
-                SW_LOG_ERROR( "[Shooter] weapon '%#' %# names '%#', which is not in the item catalog", reference._weaponID.c_str(), reference._pField, reference._itemID.c_str() );
+                SW_LOG_ERROR_ID( "Shooter3DGame.WeaponNamesWhichNot", "[Shooter] weapon '%#' %# names '%#', which is not in the item catalog", reference._weaponID.c_str(), reference._pField, reference._itemID.c_str() );
             }
             return false;
         }
@@ -85,7 +85,7 @@ namespace sw
                 (void)_appearanceWatcher.initialize( folder );
                 return true;
             }
-            SW_LOG_ERROR( "[Shooter] appearance data report - %#", _appearanceDatabase.getReport().joined().c_str() );
+            SW_LOG_ERROR_ID( "Shooter3DGame.AppearanceDataReport", "[Shooter] appearance data report - %#", _appearanceDatabase.getReport().joined().c_str() );
             return false;
         } );
         if ( bAppearanceLoaded == false )

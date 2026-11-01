@@ -56,7 +56,7 @@ namespace sw
         close();
         if ( tickSeconds <= 0.0f || seekTicksPerFrame == 0 )
         {
-            SW_LOG_ERROR( "IntentReplayBar: refused to open - tick length %# s and %# seek ticks per frame must both be positive", tickSeconds, seekTicksPerFrame );
+            SW_LOG_ERROR_ID( "IntentReplayBar.IntentReplayBarRefusedOpenTick", "IntentReplayBar: refused to open - tick length %# s and %# seek ticks per frame must both be positive", tickSeconds, seekTicksPerFrame );
             return false;
         }
         const UIScreenHandle handle  = ui.openScreen( documentPath );
@@ -69,8 +69,8 @@ namespace sw
         const bool    bMissingWidget = pScrub == nullptr || pTime == nullptr || pPauseText == nullptr;
         if ( bMissingWidget )
         {
-            SW_LOG_ERROR( "IntentReplayBar: '%#' needs a SliderWidget '%#' and TextWidgets '%#' and '%#'", string( documentPath ).c_str(), IntentReplayBarInternal::kScrub,
-                          IntentReplayBarInternal::kTimeText, IntentReplayBarInternal::kPlayPauseLabel );
+            SW_LOG_ERROR_ID( "IntentReplayBar.IntentReplayBarNeedsSliderWidgetTextWidgets", "IntentReplayBar: '%#' needs a SliderWidget '%#' and TextWidgets '%#' and '%#'", string( documentPath ).c_str(), IntentReplayBarInternal::kScrub,
+                             IntentReplayBarInternal::kTimeText, IntentReplayBarInternal::kPlayPauseLabel );
             ui.closeScreen( handle );
             return false;
         }

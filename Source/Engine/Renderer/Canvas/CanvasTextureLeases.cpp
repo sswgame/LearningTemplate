@@ -61,8 +61,8 @@ namespace sw
             RHIPipelineStateHandle pso{ 0 };
             const bool             bHasPSO = pState->_pTexture != nullptr && psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) && pso != 0;
             if ( pState->_pTexture != nullptr && bHasPSO == false )
-                SW_LOG_ERROR( "Canvas target '%#' has format %# with no canvas PSO from setup - it is rejected and never drawn (add the format to FramePSOManager::collectOutputPSOJobs)",
-                              target._targetPath.c_str(), static_cast<uint32>( pState->_pTexture->getFormat() ) );
+                SW_LOG_ERROR_ID( "Canvas.CanvasTargetFormatNo", "Canvas target '%#' has format %# with no canvas PSO from setup - it is rejected and never drawn (add the format to FramePSOManager::collectOutputPSOJobs)",
+                                 target._targetPath.c_str(), static_cast<uint32>( pState->_pTexture->getFormat() ) );
         }
 
         // 이번 목록에 없는 대상(위젯 컴포넌트가 사라졌다)은 돌려준다.

@@ -116,7 +116,7 @@ namespace sw
         // 마커와 월드 사각형은 주 씬 컴포넌트의 월드 점을 따른다. 없으면 마커가 늘 접혀 아무것도 그리지 않으므로 조용히 넘기지 않는다.
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->getPrimarySceneComponent() == nullptr )
-            SW_LOG_ERROR( "[UI] WidgetComponent on '%#' has no scene component to follow - add a SceneComponent first; the widget is never shown", pOwner->getName().c_str() );
+            SW_LOG_ERROR_ID( "WidgetComponent.WidgetComponentNoSceneComponent", "[UI] WidgetComponent on '%#' has no scene component to follow - add a SceneComponent first; the widget is never shown", pOwner->getName().c_str() );
         UIWidgetComponentService* pService = WidgetComponentInternal::findUIService( pOwner );
         bindUIService( pService );
         if ( pService != nullptr && _space == WidgetSpace::World )

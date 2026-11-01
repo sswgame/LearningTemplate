@@ -101,21 +101,21 @@ namespace sw
             for ( const QuestStage& stage : quest._listStage )
             {
                 if ( stage._nextStage.empty() == false && quest.findStage( stage._nextStage ) == nullptr )
-                    SW_LOG_WARNING( "%#: quest '%#' stage '%#' goes to unknown '%#'", sourceName, pID, stage._id.c_str(), stage._nextStage.c_str() );
+                    SW_LOG_WARNING_ID( "QuestCatalog.QuestStageGoesUnknown", "%#: quest '%#' stage '%#' goes to unknown '%#'", sourceName, pID, stage._id.c_str(), stage._nextStage.c_str() );
                 for ( const QuestBranch& branch : stage._listBranch )
                 {
                     if ( quest.findStage( branch._nextStage ) == nullptr )
-                        SW_LOG_WARNING( "%#: quest '%#' branch '%#' goes to unknown '%#'", sourceName, pID, branch._choice.c_str(), branch._nextStage.c_str() );
+                        SW_LOG_WARNING_ID( "QuestCatalog.QuestBranchGoesUnknown", "%#: quest '%#' branch '%#' goes to unknown '%#'", sourceName, pID, branch._choice.c_str(), branch._nextStage.c_str() );
                 }
             }
             if ( quest._listStage.empty() )
             {
-                SW_LOG_WARNING( "%#: quest '%#' has no stages", sourceName, pID );
+                SW_LOG_WARNING_ID( "QuestCatalog.QuestNoStages", "%#: quest '%#' has no stages", sourceName, pID );
                 continue;
             }
             if ( bValid == false )
             {
-                SW_LOG_ERROR( "%#: quest '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "QuestCatalog.QuestInvalidFieldsSkipped", "%#: quest '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             (void)add( quest );

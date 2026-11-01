@@ -165,7 +165,7 @@ namespace sw
         if ( _columnCount < 2 || _rowCount < 2 )
         {
             // 빈 서술자는 `createSoftBody` 가 오류로 거절한다(천을 만들지 않는다).
-            SW_LOG_ERROR( "Cloth needs at least 2 x 2 vertices (got %# x %#)", _columnCount, _rowCount );
+            SW_LOG_ERROR_ID( "ClothComponent.ClothNeedsLeastX", "Cloth needs at least 2 x 2 vertices (got %# x %#)", _columnCount, _rowCount );
             return desc;
         }
 
@@ -221,7 +221,7 @@ namespace sw
         vector<float4x4> listBoneWorld;
         if ( findPinBoneWorlds( listBoneWorld ) == false )
         {
-            SW_LOG_ERROR( "Cloth pin bones are not all on the skeletal mesh - the cloth is not created" );
+            SW_LOG_ERROR_ID( "ClothComponent.ClothPinBonesNot", "Cloth pin bones are not all on the skeletal mesh - the cloth is not created" );
             return PhysicsSoftBodyDesc{}; // 빈 서술자는 `createSoftBody` 가 오류로 거절한다
         }
         const float4x4 worldToBody = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } ).invert();
@@ -263,7 +263,7 @@ namespace sw
         {
             // 정한 본이 없다 — 오브젝트 자세로 대신 걸면 엉뚱한 자리에서 흔들린다. 천을 내리고 한 번 알린다.
             if ( _bPinBoneErrorReported == SW_FALSE )
-                SW_LOG_ERROR( "Cloth pin bones (%# named) are not all on this object's skeletal mesh - the cloth is not simulated", static_cast<uint64>( _listPinBone.size() ) );
+                SW_LOG_ERROR_ID( "ClothComponent.ClothPinBonesNamed", "Cloth pin bones (%# named) are not all on this object's skeletal mesh - the cloth is not simulated", static_cast<uint64>( _listPinBone.size() ) );
             _bPinBoneErrorReported = SW_TRUE;
             releasePhysics( physics );
             return;
@@ -382,14 +382,14 @@ namespace sw
         if ( pOwner->getComponent<SkeletalMeshComponent>() == pMesh )
         {
             if ( _bPinBoneErrorReported == SW_FALSE )
-                SW_LOG_ERROR( "Cloth would replace the skeletal mesh of '%#' - put the cloth on a child object with its own mesh component", pOwner->getName().c_str() );
+                SW_LOG_ERROR_ID( "ClothComponent.ClothWouldReplaceSkeletal", "Cloth would replace the skeletal mesh of '%#' - put the cloth on a child object with its own mesh component", pOwner->getName().c_str() );
             _bPinBoneErrorReported = SW_TRUE;
             return;
         }
         vector<RHIVertex> listVertex;
         if ( makeRenderVertices( _listVertex, pMesh->getWorldMatrix().invert(), listVertex ) == false )
         {
-            SW_LOG_ERROR( "Cloth vertices (%#) do not match the %# x %# grid - the cloth mesh is not updated", static_cast<uint64>( _listVertex.size() ), _columnCount, _rowCount );
+            SW_LOG_ERROR_ID( "ClothComponent.ClothVerticesDoNot", "Cloth vertices (%#) do not match the %# x %# grid - the cloth mesh is not updated", static_cast<uint64>( _listVertex.size() ), _columnCount, _rowCount );
             return;
         }
         // 렌더 스냅샷이 옛 메시를 쥐고 있으므로 정점을 제자리에서 바꾸지 않고 새 메시를 건다.
