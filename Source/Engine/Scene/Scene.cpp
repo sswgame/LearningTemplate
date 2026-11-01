@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
+#include "Core/Time/GameTimer.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetManager.h"
@@ -568,6 +569,7 @@ namespace sw
         if ( _bRegistrationHeld == false )
             return;
         _bRegistrationHeld = false;
+        ScopedTimer registerTimer{ "Scene.load.register" }; // 받는 프레임에 드는 비용 — 길어지면 `endDeferredRegistration` 을 프레임마다 나눈다
         _objectManager->endDeferredRegistration();
     }
 
