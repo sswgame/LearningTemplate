@@ -571,52 +571,68 @@ namespace sw::editor
         meshopt_optimizeOverdraw( pIndex, pIndex, indexCount, &inoutMesh._listVertex[0]._position._x, vertexCount, sizeof( ModelImportUtil::ImportVertex ), kOverdrawThreshold );
     }
 
-    void ModelImportGeometry::expandTriangles( ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
+    void ModelImportGeometry::makeMeshData( ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
     {
-        // 메시 전체를 한 묶음으로 최적화한다 — 구간이 있는 메시는 묶음마다 최적화하고 순서를 지켜 펼친다(populateMaterialSections · expandTrianglesInOrder).
+        // 메시 전체를 한 묶음으로 최적화한다 — 구간이 있는 메시는 묶음마다 최적화하고 순서를 지켜 펼친다(populateMaterialSections · makeMeshDataInOrder).
         optimizeTriangleRange( inoutMesh, 0, inoutMesh._listIndex.size() / 3 );
-        expandTrianglesInOrder( inoutMesh, skinBoneCount, outData );
+        makeMeshDataInOrder( inoutMesh, skinBoneCount, outData );
     }
 
-    void ModelImportGeometry::expandTrianglesInOrder( const ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
+    void ModelImportGeometry::makeMeshDataInOrder( const ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
     {
         outData = MeshAssetData{};
         if ( inoutMesh._listIndex.empty() )
             return;
         const vector<uint32>& listIndex = inoutMesh._listIndex;
 
-        outData._listVertex.reserve( listIndex.size() );
+        // 원본 정점을 처음 쓰인 순서로 한 번씩 싣는다(정점 읽기 순서가 삼각형 순서를 따른다 — meshopt 의 정점 가져오기 최적화와 같은 순서).
+        // 노멀이 없는 원본 정점만 삼각형마다 나눈다 — 면 노멀이 삼각형마다 다르다. 형상 정점 순서(`CharacterMeshUtil::makeWeldedGeometry`)는
+        // 풀어 쓰던 때와 같다: 위치가 처음 나오는 모서리에서 그 정점이 처음 만들어진다.
+        vector<uint32> listSourceToOutput( inoutMesh._listVertex.size(), constant::invalid_index::kUint32 );
+        vector<uint32> listOutputSource; // 출력 정점마다 원본 정점(모프 차이를 옮길 때 쓴다)
+        outData._listVertex.reserve( inoutMesh._listVertex.size() );
+        outData._listIndex.reserve( listIndex.size() );
         if ( skinBoneCount > 0 )
-            outData._listSkinVertex.reserve( listIndex.size() );
+            outData._listSkinVertex.reserve( inoutMesh._listVertex.size() );
         for ( size_t triangleStart = 0; triangleStart + 2 < listIndex.size(); triangleStart += 3 )
         {
             const ModelImportUtil::ImportVertex* arrCorner[3] = { &inoutMesh._listVertex[listIndex[triangleStart]], &inoutMesh._listVertex[listIndex[triangleStart + 1]],
                                                                   &inoutMesh._listVertex[listIndex[triangleStart + 2]] };
             const float3                         faceNormal   = ( ( arrCorner[1]->_position - arrCorner[0]->_position ).cross( arrCorner[2]->_position - arrCorner[0]->_position ) ).normalizeOr( float3{}, MathUtil::kEpsilon );
-            for ( const ModelImportUtil::ImportVertex* pCorner : arrCorner )
+            for ( uint32 corner = 0; corner < 3; ++corner )
             {
-                outData._listVertex.push_back( makeRHIVertex( *pCorner, faceNormal ) );
+                const uint32 source  = listIndex[triangleStart + corner];
+                const bool   bShared = arrCorner[corner]->_bHasNormal;
+                if ( bShared && listSourceToOutput[source] != constant::invalid_index::kUint32 )
+                {
+                    outData._listIndex.push_back( listSourceToOutput[source] );
+                    continue;
+                }
+                const uint32 output = static_cast<uint32>( outData._listVertex.size() );
+                if ( bShared )
+                    listSourceToOutput[source] = output;
+                outData._listIndex.push_back( output );
+                outData._listVertex.push_back( makeRHIVertex( *arrCorner[corner], faceNormal ) );
+                listOutputSource.push_back( source );
                 if ( skinBoneCount > 0 )
-                    outData._listSkinVertex.push_back( makeSkinVertex( *pCorner ) );
+                    outData._listSkinVertex.push_back( makeSkinVertex( *arrCorner[corner] ) );
             }
         }
-        // 아직 꼭짓점마다 풀어 쓴다(면 노멀) — 고유 정점 용접은 StructureRefactor 10 의 임포터 단계다.
-        outData._listIndex     = Mesh::makeTriangleListIndices( static_cast<uint32>( outData._listVertex.size() ) );
         outData._skinBoneCount = skinBoneCount;
 
-        // 모프 타깃 — 풀어 쓴 정점마다(삼각형 꼭짓점 순서) 차이가 있는 것만 싣는다. 얼굴 타깃은 메시의 작은 일부만 옮긴다.
+        // 모프 타깃 — 출력 정점마다 그 원본 정점의 차이 중 움직이는 것만 싣는다. 얼굴 타깃은 메시의 작은 일부만 옮긴다.
         constexpr float32 kMinimumDelta = 1e-7f;
         for ( size_t targetIndex = 0; targetIndex < inoutMesh._listMorphName.size(); ++targetIndex )
         {
             MeshMorphTarget target{};
             target._name = inoutMesh._listMorphName[targetIndex];
-            for ( size_t corner = 0; corner < listIndex.size(); ++corner )
+            for ( uint32 output = 0; output < listOutputSource.size(); ++output )
             {
-                const float3& position = inoutMesh._listMorphPosition[targetIndex][listIndex[corner]];
-                const float3& normal   = inoutMesh._listMorphNormal[targetIndex][listIndex[corner]];
+                const float3& position = inoutMesh._listMorphPosition[targetIndex][listOutputSource[output]];
+                const float3& normal   = inoutMesh._listMorphNormal[targetIndex][listOutputSource[output]];
                 if ( position.getLengthSquared() <= kMinimumDelta && normal.getLengthSquared() <= kMinimumDelta )
                     continue;
-                target._listDelta.push_back( MeshMorphDelta{ static_cast<uint32>( corner ), position, normal } );
+                target._listDelta.push_back( MeshMorphDelta{ output, position, normal } );
             }
             outData._listMorphTarget.push_back( std::move( target ) );
         }
@@ -651,7 +667,7 @@ namespace sw::editor
             simplified._listIndex.resize( indexCount );
             optimizeTriangleRange( simplified, 0, indexCount / 3 );
             MeshAssetData expanded{};
-            expandTrianglesInOrder( simplified, skinBoneCount, expanded );
+            makeMeshDataInOrder( simplified, skinBoneCount, expanded );
             MeshLODLevel level{};
             level._listVertex     = std::move( expanded._listVertex );
             level._listIndex      = std::move( expanded._listIndex );

@@ -37,7 +37,7 @@ namespace sw::editor
         static constexpr string_view kImportStampHeader = "SWMODELIMPORT 1";
 
         /** @brief 임포터 버전입니다. 같은 원본에서 다른 결과가 나오게 바꿨다면 올립니다. 원본 해시에 섞입니다. */
-        static constexpr uint32 kImporterVersion = 4; // 4: 스킨드 모델도 텍스처 PBR 머티리얼을 쓴다 · 일반 glTF 머티리얼 구간
+        static constexpr uint32 kImporterVersion = 5; // 5: 고유 정점 + 인덱스(glTF 정점을 나눠 쓴다) · 4: 스킨드 모델도 텍스처 PBR 머티리얼을 쓴다 · 일반 glTF 머티리얼 구간
 
         /** @brief 원본 옆에 두는 부가 데이터(클립 반복, 알림, 커브) 파일의 접미사입니다. */
         static constexpr string_view kClipDataSuffix = ".clips.json";

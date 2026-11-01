@@ -215,7 +215,7 @@ namespace sw::editor
                     if ( ModelImportGeometry::appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrIdentity, nullptr, part ) == false )
                         return reportUnreadableMesh( sourcePath, node, data );
                 }
-                ModelImportGeometry::expandTriangles( part, 0, attachment._mesh );
+                ModelImportGeometry::makeMeshData( part, 0, attachment._mesh );
                 if ( attachment._mesh._listVertex.empty() == false )
                     inoutResult._listAttachment.push_back( std::move( attachment ) );
                 return true;
@@ -297,7 +297,7 @@ namespace sw::editor
                     ModelImportMaterial::populateMaterialSections( body, data, listSectionMaterialName, outResult );
                     if ( outResult._listToonMaterial.empty() == false && ModelImportMaterial::collectSectionTextures( data, sourcePath, outResult ) == false )
                         return false;
-                    ModelImportGeometry::expandTrianglesInOrder( body, boneCount, outResult._mesh );
+                    ModelImportGeometry::makeMeshDataInOrder( body, boneCount, outResult._mesh );
                     outResult._mesh._listSection = ModelImportVrm::makeMeshSections( outResult._listSection );
                 }
                 else
@@ -308,7 +308,7 @@ namespace sw::editor
                         SW_LOG_ERROR_ID( "ModelImporter.GlTFMorphTargetsImport", "glTF '%#' has morph targets - import rule '%#' asks for mesh LODs, which only meshes without morph targets take", sourcePath, rule._name.c_str() );
                         return false;
                     }
-                    ModelImportGeometry::expandTriangles( body, boneCount, outResult._mesh );
+                    ModelImportGeometry::makeMeshData( body, boneCount, outResult._mesh );
                     if ( ModelImportGeometry::makeLODLevels( body, rule, sourcePath, boneCount, outResult._mesh._listLOD ) == false )
                         return false;
                 }
@@ -549,11 +549,11 @@ namespace sw::editor
                     ModelImportMaterial::populateMaterialSections( merged, data, listSectionMaterialName, outResult );
                     if ( outResult._listToonMaterial.empty() == false && ModelImportMaterial::collectSectionTextures( data, sourcePath, outResult ) == false )
                         return false;
-                    ModelImportGeometry::expandTrianglesInOrder( merged, 0, outResult._mesh );
+                    ModelImportGeometry::makeMeshDataInOrder( merged, 0, outResult._mesh );
                     outResult._mesh._listSection = ModelImportVrm::makeMeshSections( outResult._listSection );
                     return true;
                 }
-                ModelImportGeometry::expandTriangles( merged, 0, outResult._mesh );
+                ModelImportGeometry::makeMeshData( merged, 0, outResult._mesh );
                 return ModelImportGeometry::makeLODLevels( merged, rule, sourcePath, 0, outResult._mesh._listLOD );
             }
 

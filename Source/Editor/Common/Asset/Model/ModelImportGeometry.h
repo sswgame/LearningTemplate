@@ -138,13 +138,16 @@ namespace sw::editor
         static MeshSkinVertex makeSkinVertex( const ModelImportUtil::ImportVertex& source );
 
         /**
-         * @brief 정점 캐시와 오버드로 순서로 인덱스를 최적화하고 삼각형 목록으로 펼칩니다.
-         * @param skinBoneCount 0 이 아니면 스킨 정점도 같은 순서로 펼쳐 @p outData 에 담습니다.
+         * @brief 정점 캐시와 오버드로 순서로 인덱스를 최적화하고 메시 데이터(고유 정점 · 인덱스)로 만듭니다(`makeMeshDataInOrder`).
+         * @param skinBoneCount 0 이 아니면 스킨 정점도 같은 순서로 @p outData 에 담습니다.
          */
-        static void expandTriangles( ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData );
+        static void makeMeshData( ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData );
 
-        /** @brief 인덱스 순서를 바꾸지 않고 삼각형 목록으로 펼칩니다 — 구간마다 따로 최적화한 순서(`populateMaterialSections`)를 지킨다. */
-        static void expandTrianglesInOrder( const ModelImportUtil::MergedMesh& mesh, uint32 skinBoneCount, MeshAssetData& outData );
+        /**
+         * @brief 인덱스 순서를 바꾸지 않고 메시 데이터로 만듭니다 — 구간마다 따로 최적화한 순서(`populateMaterialSections`)를 지킨다.
+         * @details 원본 정점은 처음 쓰인 순서로 한 번씩 싣고, 노멀이 없는 원본 정점만 삼각형마다 나눠 면 노멀을 준다.
+         */
+        static void makeMeshDataInOrder( const ModelImportUtil::MergedMesh& mesh, uint32 skinBoneCount, MeshAssetData& outData );
 
         /** @brief 인덱스 구간 [@p begin, @p end)(삼각형 단위)를 정점 캐시와 오버드로 순서로 최적화합니다. 구간 밖은 건드리지 않습니다. */
         static void optimizeTriangleRange( ModelImportUtil::MergedMesh& inoutMesh, size_t begin, size_t end );

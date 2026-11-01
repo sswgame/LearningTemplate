@@ -221,8 +221,8 @@ namespace sw::editor
             }
             section._fileStem         = stemIt->second;
             section._sectionName      = section._fileStem + ( visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
-            section._firstVertex      = static_cast<uint32>( begin * 3 );
-            section._vertexCount      = static_cast<uint32>( ( end - begin ) * 3 );
+            section._firstIndex       = static_cast<uint32>( begin * 3 );
+            section._indexCount       = static_cast<uint32>( ( end - begin ) * 3 );
             section._personVisibility = visibility;
             inoutResult._listSection.push_back( std::move( section ) );
             begin = end;

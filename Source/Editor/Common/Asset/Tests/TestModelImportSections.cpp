@@ -68,8 +68,8 @@ SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSectio
     SW_REQUIRE_EQUAL( size_t{ 2 }, result._listSection.size() );
     SW_EXPECT_EQUAL( string( "wood" ), result._listSection[0]._fileStem );
     SW_EXPECT_EQUAL( string( "stone" ), result._listSection[1]._fileStem );
-    SW_EXPECT_EQUAL( uint32{ 3 }, result._listSection[1]._firstVertex );
-    SW_EXPECT_EQUAL( uint32{ 3 }, result._listSection[1]._vertexCount );
+    SW_EXPECT_EQUAL( uint32{ 3 }, result._listSection[1]._firstIndex );
+    SW_EXPECT_EQUAL( uint32{ 3 }, result._listSection[1]._indexCount );
     SW_EXPECT_EQUAL( size_t{ 2 }, result._mesh._listSection.size() );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );

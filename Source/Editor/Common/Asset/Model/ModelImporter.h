@@ -70,10 +70,10 @@ namespace sw::editor
      */
     struct ModelImportSection
     {
-        string               _fileStem;    ///< 머티리얼 파일 이름(소문자, 겹치면 번호를 붙인다). 같은 머티리얼의 구간은 같은 이름이다
-        string               _sectionName; ///< 본 메시의 구간 이름(`MeshSection::_name`)
-        uint32               _firstVertex{ 0 };
-        uint32               _vertexCount{ 0 };
+        string               _fileStem;        ///< 머티리얼 파일 이름(소문자, 겹치면 번호를 붙인다). 같은 머티리얼의 구간은 같은 이름이다
+        string               _sectionName;     ///< 본 메시의 구간 이름(`MeshSection::_name`)
+        uint32               _firstIndex{ 0 }; ///< 구간의 첫 인덱스(삼각형 단위)
+        uint32               _indexCount{ 0 };
         uint32               _materialIndex{ 0 }; ///< glTF 머티리얼 번호(`ModelImportResult::_listToonMaterial` · `_listPbrMaterial` 의 칸)
         MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
     };
