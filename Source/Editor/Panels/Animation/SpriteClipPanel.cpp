@@ -55,8 +55,8 @@ namespace sw::editor
     void SpriteClipPanel::drawFileBar()
     {
         fixed_string<constant::buffer::kMax256>& atlasPath = _model.editAtlasPath();
-        ImGui::InputText( "Atlas", atlasPath.data(), atlasPath.capacity() );
-        if ( ImGui::IsItemDeactivatedAfterEdit() )
+        EditorWidgets::drawPropertyRowLabel( "Atlas" );
+        if ( EditorWidgets::drawAssetPathField( "##Atlas", atlasPath, "atlas", nullptr, nullptr )._bDeactivatedAfterEdit ) // 콘텐츠 브라우저에서 끌어 놓을 수 있다
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
         if ( ImGui::Button( "Load" ) )

@@ -401,8 +401,8 @@ namespace sw::editor
             ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 
         fixed_string<constant::buffer::kMax256>& path = _document.editPath();
-        ImGui::InputText( "Path", path.data(), path.capacity() );
-        EditorSelfTestMarks::note( "tileMap.path" );
+        EditorWidgets::drawPropertyRowLabel( "Path" );
+        (void)EditorWidgets::drawAssetPathField( "##Path", path, "tile map", ".tilemap.xml", "tileMap.path" ); // 콘텐츠 브라우저에서 끌어 놓을 수 있다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PathTip" ) );
         fixed_string<constant::buffer::kMax128>& name = _document.editName();
         ImGui::InputText( "Name", name.data(), name.capacity() );

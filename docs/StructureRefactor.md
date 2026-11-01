@@ -212,7 +212,7 @@
 | 16 | 큰 패널 · 정적 모음(SRP) | CharacterEditorPanel 1389 줄(일 8) · ContentBrowser 1174 · UIPreview 1169 + 모델 941 · ProfilerPanel 1120(도구 6) · InputMapPanel 1015(도구 6), 정적 모음 `ModelImportUtil` 78 · `EditorThemeUtil` 54 · `EditorPlaySession` 39 · `EditorWidgets` 35 | 남김 — 탭 · 도구 단위로 파일과 모델을 나눈다(빌드 시간 항목과 함께) | |
 | 17 | 큰 인터페이스 | ModuleAPI `EditorAPI` 함수 칸 22, `IEditor` 순수 가상 16(수명 · 프레임 · 입력 · 뷰포트 · 플레이 다섯 역할) | 남김 — C-ABI 판이 바뀌므로 #6 과 함께 | |
 | 18 | 층 역류 | ModuleAPI 의 `Export/GameFrameworkAPI.h`(`SW_GF_API` · `SW_KIT_API`) — 계약 층이 위층 이름을 안다 | 남김 — 내보내기 매크로를 GameFramework 쪽 헤더로. 키트 · 게임 수백 파일의 include 가 따라간다 | |
-| 19 | 위젯 우회 | 검색 칸 `InputTextWithHint` 직접, 애셋 경로 글 입력 | **끝(2026-11-01)** — 검색 칸 직접 그리기는 남지 않았다. 캐릭터 편집기의 경로 칸 넷(소켓 · 골격 · 기준 포즈 · 외형 항목)은 `EditorWidgets::drawAssetPathField`(글 입력 + 콘텐츠 브라우저 끌어 놓기, 소켓은 `.sockets.xml` 만). 라벨이 붙은 경로 칸(스프라이트 클립 아틀라스 · 타일맵 경로)은 라벨 열(`drawPropertyRowLabel`)과 함께 다음에 | 끝 |
+| 19 | 위젯 우회 | 검색 칸 `InputTextWithHint` 직접, 애셋 경로 글 입력 | **끝(2026-11-01)** — 검색 칸 직접 그리기는 남지 않았다. 캐릭터 편집기의 경로 칸 넷(소켓 · 골격 · 기준 포즈 · 외형 항목)은 `EditorWidgets::drawAssetPathField`(글 입력 + 콘텐츠 브라우저 끌어 놓기, 소켓은 `.sockets.xml` 만), 라벨이 붙은 경로 칸(스프라이트 클립 아틀라스 · 타일맵 경로 `.tilemap.xml`)은 라벨 열(`drawPropertyRowLabel`) + 같은 위젯 | 끝 |
 | 20 | Core · Engine 쪽(다른 작업자) | `normalizeOr` 넷(키트) → Core 수학, `SceneNetLink` 찾기 여섯 → Engine 정적 함수, Server 명령 해석 셋 | 보고만 | |
 
 키트 사이 장르 로직 중복은 찾지 못했다(라운드 · 차례 · 카운트다운 · 게이지 · 땅 · 격자는 이미 Runtime 하나). 게임 코드가 다른 게임 · 키트가 게임을 include 하는 역류도 없다.
