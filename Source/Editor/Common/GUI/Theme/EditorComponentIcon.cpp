@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 
+#include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -37,7 +37,7 @@ namespace sw::editor
                 uint32                                   _generation{ constant::invalid_index::kUint32 };
             };
 
-            static const EditorComponentIconTable& table() { return getSubsystem<EditorTheme>().getComponentIconTable(); }
+            static const EditorComponentIconTable& table() { return EditorIconUtil::getComponentIconTable(); }
 
             static NamedRow makeRow( string_view iconName, string_view colorName, bool bBillboard )
             {

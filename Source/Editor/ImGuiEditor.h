@@ -14,6 +14,8 @@
 
 namespace sw::editor
 {
+    struct EditorComponentIconTable;
+    struct EditorIconGlyphTable;
     struct EditorToolDefaults;
 
     class EditorContext;
@@ -122,15 +124,17 @@ namespace sw::editor
         void closeAndPublishFrame();
 
     private:
-        SubsystemCollection               _startup;    ///< 위의 기동 단계들 — 의존 순서로 초기화하고 역순으로 종료한다
-        IWindow*                          _pWindow;    ///< `initialize` 가 받은 창(기동 단계가 읽는다)
-        IRHIDevice*                       _pRHIDevice; ///< `initialize` 가 받은 디바이스(기동 단계가 읽는다)
-        unique_ptr<IImGuiPlatformBackend> _platformBackend;
-        unique_ptr<IImGuiRendererBackend> _rendererBackend;
-        unique_ptr<EditorToolDefaults>    _editorToolDefaults;
-        unique_ptr<EditorContext>         _editorContext;
-        EditorDockLayout                  _dockLayout;
-        EditorDrawDataSnapshot            _arrDrawSnapshot[constant::render::kMaxFrameCountInFlight];
+        SubsystemCollection                  _startup;    ///< 위의 기동 단계들 — 의존 순서로 초기화하고 역순으로 종료한다
+        IWindow*                             _pWindow;    ///< `initialize` 가 받은 창(기동 단계가 읽는다)
+        IRHIDevice*                          _pRHIDevice; ///< `initialize` 가 받은 디바이스(기동 단계가 읽는다)
+        unique_ptr<IImGuiPlatformBackend>    _platformBackend;
+        unique_ptr<IImGuiRendererBackend>    _rendererBackend;
+        unique_ptr<EditorToolDefaults>       _editorToolDefaults;
+        unique_ptr<EditorIconGlyphTable>     _pIconGlyphTable;     ///< 아이콘 이름 → 코드포인트(글꼴과 짝) — 에디터 데이터 단계가 읽어 `EditorIconUtil` 에 게시한다
+        unique_ptr<EditorComponentIconTable> _pComponentIconTable; ///< 컴포넌트 아이콘 표(Category → 아이콘 · 색 이름)
+        unique_ptr<EditorContext>            _editorContext;
+        EditorDockLayout                     _dockLayout;
+        EditorDrawDataSnapshot               _arrDrawSnapshot[constant::render::kMaxFrameCountInFlight];
         /// @brief `_arrDrawSnapshot` 슬롯을 UI 스레드와 렌더 스레드가 주고받는 약속입니다. 불변식은 `DrawSnapshotHandoff` 에 있습니다.
         DrawSnapshotHandoff _drawSnapshotHandoff;
         /// @brief 마지막으로 낸 draw 스냅샷 번호입니다. UI 스레드 전용이며 1 부터 시작합니다. 해제한 리소스의 해제 순서를 이 번호로 정합니다(`EditorDrawReleaseQueue`).

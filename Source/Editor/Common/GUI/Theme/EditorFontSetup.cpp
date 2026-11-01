@@ -130,7 +130,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorFontSetup::apply( const EditorToolDefaults& toolDefaults )
+    bool EditorFontSetup::apply( const EditorToolDefaults& toolDefaults, const EditorIconGlyphTable& iconTable )
     {
         ImGuiIO& io = ImGui::GetIO();
         io.Fonts->Clear();
@@ -159,12 +159,6 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorFontSetup.EditorIconFontNot", "Editor icon font '%#' not found under editor/fonts", EditorPaths::kIconFontFileName );
         const bool bFontMissing = basePath.empty() || monoPath.empty() || koreanPath.empty() || iconPath.empty();
         if ( bFontMissing )
-            return false;
-        // 아이콘 이름 → 코드포인트(글꼴과 짝)와 컴포넌트 아이콘 표는 데이터다 — 못 읽으면 아이콘이 모두 Missing 이므로 멈춘다(이유는 표 읽기가 남긴다).
-        EditorTheme&          theme     = getSubsystem<EditorTheme>();
-        EditorIconGlyphTable& iconTable = theme.getIconTable();
-        if ( iconTable.loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) == false ||
-             theme.getComponentIconTable().loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) == false )
             return false;
         EditorFontSetupInternal::FontState& fontState = EditorFontSetupInternal::state();
         if ( EditorFontSetupInternal::readEmRatio( basePath, fontState._baseEmRatio ) == false ||

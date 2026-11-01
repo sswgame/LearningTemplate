@@ -50,6 +50,8 @@ namespace sw::editor
 
         /** @brief 리소스 경로의 XML 을 엄격하게 읽고 검사합니다. 실패하면 오류를 남기고 false 이며 표는 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief XML 글을 엄격하게 읽고 검사합니다(`loadFromAsset` 의 본문 — 테스트 · 도구). @p sourceName 은 오류 글에 쓴다. */
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 이름의 글리프(UTF-8)입니다. 없으면 nullptr 입니다. */
         const utf8* findGlyph( const hashed_string& name ) const;
         /** @brief 글꼴에서 읽을 코드포인트 구간입니다. ImGui 글리프 범위 형식(짝마다 처음 · 끝, 0 으로 끝남)입니다. */
@@ -67,9 +69,18 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 아이콘 이름 → 글리프입니다. 표는 `EditorTheme` 서브시스템이 들고, 글꼴을 세울 때 읽는다(`EditorFontSetup`). */
+    struct EditorComponentIconTable;
+
+    /**
+     * @brief 아이콘 이름 → 글리프입니다. 표는 셸(`ImGuiEditor`)이 들고 글꼴을 세울 때 읽어 여기 게시한다(`EditorUIContext::publish` 와 같은 모양).
+     * @details 글꼴 설정은 에디터 컨텍스트 · 테마 서브시스템보다 먼저 돈다 — 표를 그쪽에 두면 글꼴을 세울 때 없다. 셸은 프로세스에 하나다.
+     */
     struct SW_EDITOR_API EditorIconUtil
     {
+        /** @brief 셸이 표 둘을 게시합니다(읽은 뒤). 셸을 내릴 때 nullptr 둘로 거둔다. 표는 게시가 거둘 때까지 살아 있어야 한다. */
+        static void publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable );
+        /** @brief 게시된 컴포넌트 아이콘 표입니다. 게시 전에 부르면 멈춘다(그리기는 셸이 선 뒤다). */
+        static const EditorComponentIconTable& getComponentIconTable();
         /** @brief 이름의 글리프(UTF-8)입니다. 표에 없으면 Missing 아이콘이고 오류를 남깁니다(이름마다 한 번). 늘 nullptr 이 아닙니다. */
         static const utf8* findGlyph( const hashed_string& name );
         /** @brief 데이터 · 등록 줄이 든 이름으로 찾습니다(`findGlyph` 와 같은 규칙). @p pName 이 nullptr 이거나 비면 nullptr(아이콘 없음)입니다. */

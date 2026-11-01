@@ -5,9 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
-#include "Editor/Common/Config/EditorThemeConfig.h"
-#include "Editor/Common/Workspace/EditorService.h"
-
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw::editor
@@ -34,10 +32,22 @@ namespace sw::editor
 
     bool EditorIconGlyphTable::loadFromAsset( const AssetID& assetID )
     {
-        *this = EditorIconGlyphTable{};
-        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
+        string text;
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR_ID( "EditorIcon.TableCannotRead", "Editor icon table could not be read strictly: %#", assetID.view() );
+            *this = EditorIconGlyphTable{};
+            SW_LOG_ERROR_ID( "EditorIcon.TableCannotRead", "Editor icon table could not be read: %#", assetID.view() );
+            return false;
+        }
+        return loadFromXMLText( text, assetID.view() );
+    }
+
+    bool EditorIconGlyphTable::loadFromXMLText( string_view xmlText, string_view sourceName )
+    {
+        *this = EditorIconGlyphTable{};
+        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        {
+            SW_LOG_ERROR_ID( "EditorIcon.TableCannotRead", "Editor icon table could not be read strictly: %#", sourceName );
             return false;
         }
 
@@ -108,18 +118,54 @@ namespace sw::editor
         return nullptr;
     }
 
+    namespace
+    {
+        /** @brief 셸이 게시한 표와 이미 알린 이름입니다. 셸은 프로세스에 하나이고 그리기 스레드 하나가 읽는다. */
+        struct EditorIconPublished
+        {
+            const EditorIconGlyphTable*     _pGlyphTable{ nullptr };
+            const EditorComponentIconTable* _pComponentTable{ nullptr };
+            vector<hashed_string>           _listReported;
+        };
+
+        EditorIconPublished& published()
+        {
+            static EditorIconPublished s_published;
+            return s_published;
+        }
+    } // namespace
+
+    void EditorIconUtil::publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable )
+    {
+        EditorIconPublished& state = published();
+        state._pGlyphTable         = pGlyphTable;
+        state._pComponentTable     = pComponentTable;
+        state._listReported.clear();
+    }
+
+    const EditorComponentIconTable& EditorIconUtil::getComponentIconTable()
+    {
+        const EditorComponentIconTable* pTable = published()._pComponentTable;
+        if ( pTable == nullptr )
+            SW_FATAL( "The component icon table is asked for before the editor shell published it" );
+        return *pTable;
+    }
+
     const utf8* EditorIconUtil::findGlyph( const hashed_string& name )
     {
-        EditorTheme&                theme = getSubsystem<EditorTheme>();
-        const EditorIconGlyphTable& table = theme.getIconTable();
-        if ( const utf8* pGlyph = table.findGlyph( name ) )
-            return pGlyph;
+        EditorIconPublished&       state = published();
         static const hashed_string s_missingName{ EditorIconGlyphTable::kMissingIconName };
-        const utf8* const          pMissing = table.findGlyph( s_missingName );
-        if ( theme.markMissingKey( name ) )
+        if ( state._pGlyphTable != nullptr )
         {
+            if ( const utf8* pGlyph = state._pGlyphTable->findGlyph( name ) )
+                return pGlyph;
+        }
+        const utf8* const pMissing = state._pGlyphTable != nullptr ? state._pGlyphTable->findGlyph( s_missingName ) : nullptr;
+        if ( VectorUtil::contains( state._listReported, name ) == false )
+        {
+            state._listReported.push_back( name );
             if ( pMissing == nullptr )
-                SW_LOG_ERROR_ID( "EditorIcon.TableNotLoaded", "Editor icon '%#' was asked for before the icon table was read (EditorFontSetup) - a static table must hold the name, not the glyph", name.c_str() );
+                SW_LOG_ERROR_ID( "EditorIcon.TableNotLoaded", "Editor icon '%#' was asked for before the icon table was published (EditorFontSetup) - a static table must hold the name, not the glyph", name.c_str() );
             else
                 SW_LOG_ERROR_ID( "EditorIcon.UnknownName", "Editor icon '%#' is not in the icon table (editor/fonts/sweditoricons.glyphs.xml)", name.c_str() );
         }

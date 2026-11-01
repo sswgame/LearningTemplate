@@ -106,26 +106,20 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
 
 SW_TEST_CASE( EditorIconNames, BrokenTablesAreNotRead )
 {
-    const string folder     = test::makeScratchPath( "EditorIconTables" );
-    const auto   writeTable = [&folder]( const utf8* pFileName, string_view rows ) -> AssetID
-    {
-        const string path = FileUtil::joinPath( folder, pFileName );
-        SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( folder ) );
-        SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "<EditorIconGlyphTable><_listIcon>" + string( rows ) + "</_listIcon><_listExtraCodepoint /></EditorIconGlyphTable>" ) );
-        return AssetID{ path }; // 절대 경로 — `AssetIO` 가 낱개 파일로 읽는다
-    };
+    const auto makeTable = []( string_view rows )
+    { return "<EditorIconGlyphTable><_listIcon>" + string( rows ) + "</_listIcon><_listExtraCodepoint /></EditorIconGlyphTable>"; };
     const string missingRow = R"(<EditorIconGlyph _name="Missing" _codepoint="U+E060" />)";
 
     EditorIconGlyphTable table;
     SW_EXPECT_LOG( "EditorIcon.Duplicate" );
-    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "duplicate.xml", missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E060" />)" ) ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E060" />)" ), "duplicate" ) );
     SW_EXPECT_FALSE( hasIcon( table, "Missing" ) ); // 실패한 읽기는 아무것도 남기지 않는다
     SW_EXPECT_LOG( "EditorIcon.NoMissingIcon" );
-    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "nomissing.xml", R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ) ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "nomissing" ) );
     SW_EXPECT_LOG( "EditorIcon.BadRow" );
-    SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "badcode.xml", missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="E003" />)" ) ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="E003" />)" ), "badcode" ) );
 
-    SW_REQUIRE_TRUE( table.loadFromAsset( writeTable( "good.xml", missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ) ) );
+    SW_REQUIRE_TRUE( table.loadFromXMLText( makeTable( missingRow + R"(<EditorIconGlyph _name="Save" _codepoint="U+E003" />)" ), "good" ) );
     const vector<uint16> listExpected{ 0xE003, 0xE003, 0xE060, 0xE060, 0 };
     SW_EXPECT_TRUE( table.getGlyphRanges() == listExpected );
     uint16 codepoint{ 0 };

@@ -19,7 +19,9 @@
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
+#include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -510,6 +512,8 @@ namespace sw::editor
         , _platformBackend{ nullptr }
         , _rendererBackend{ nullptr }
         , _editorToolDefaults{ nullptr }
+        , _pIconGlyphTable{ nullptr }
+        , _pComponentIconTable{ nullptr }
         , _editorContext{ nullptr }
         , _dockLayout{}
         , _arrDrawSnapshot{}
@@ -569,6 +573,13 @@ namespace sw::editor
         _editorToolDefaults = make_unique<EditorToolDefaults>();
         if ( _editorToolDefaults->loadFromHost() == false )
             return SubsystemInitResult::Failed;
+        // 아이콘 표 둘도 에디터 필수 데이터다 — 글꼴(아이콘 글리프 범위)이 이 단계 뒤에 서고, 그리기가 이름으로 찾는다. 못 읽으면 이유를 남겼고 멈춘다.
+        _pIconGlyphTable     = make_unique<EditorIconGlyphTable>();
+        _pComponentIconTable = make_unique<EditorComponentIconTable>();
+        if ( _pIconGlyphTable->loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) == false ||
+             _pComponentIconTable->loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) == false )
+            return SubsystemInitResult::Failed;
+        EditorIconUtil::publish( _pIconGlyphTable.get(), _pComponentIconTable.get() );
         // 정적 칸에 걸지 않는다 — 범위가 서기 전의 단계(글꼴)는 인자로 받고, 에디터 컨텍스트가 자기 범위에 빌려 건다(`initializeEditorContext`).
         return SubsystemInitResult::Succeeded;
     }
@@ -576,6 +587,9 @@ namespace sw::editor
     void ImGuiEditor::shutdownEditorData()
     {
         EditorPreferencesStore::close(); // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
+        EditorIconUtil::publish( nullptr, nullptr );
+        _pComponentIconTable.reset();
+        _pIconGlyphTable.reset();
         _editorToolDefaults.reset();
     }
 
@@ -604,7 +618,7 @@ namespace sw::editor
         _dockLayout.applyINIFilename();
 
         // 글꼴은 데이터(editortooldefaults.json 후보 · 테마 글자 크기)에서 온다. 못 찾으면 이유를 남겼고 기동을 멈춘다.
-        if ( EditorFontSetup::apply( *_editorToolDefaults ) == false )
+        if ( EditorFontSetup::apply( *_editorToolDefaults, *_pIconGlyphTable ) == false )
         {
             shutdownImGuiContext();
             return SubsystemInitResult::Failed;
