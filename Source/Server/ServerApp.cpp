@@ -24,7 +24,7 @@
 #include "Engine/DedicatedServer/ServerServiceManager.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Module/HostServices.h"
+#include "Engine/Module/HostInterfaces.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

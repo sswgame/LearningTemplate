@@ -1,5 +1,5 @@
 /**
- * @file Engine/Module/HostServices.h
+ * @file Engine/Module/HostInterfaces.h
  * @brief 호스트(App · Server)가 엔진에 내주는 창구의 인터페이스입니다 — 모듈 라이브러리 창구(`IModuleLoader`)와 게임 재시작 창구(`IGameRestarter`).
  * @details 호스트는 엔진 범위의 부모인 호스트 범위에 이 인터페이스를 구현한 객체를 걸어 둡니다(`ModuleLoaderSubsystem` · `GameModuleManager`).
  *          엔진은 모듈 DLL 을 어떻게 올리고 내리는지, 게임 인스턴스를 어떻게 만들고 내리는지 모르고, 호스트가 있으면 부르고 없으면(테스트 하네스 · 정적 링크 구성) 건너뜁니다.

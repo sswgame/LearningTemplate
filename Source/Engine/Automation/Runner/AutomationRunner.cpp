@@ -31,7 +31,7 @@
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Module/HostServices.h"
+#include "Engine/Module/HostInterfaces.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"

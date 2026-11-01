@@ -14,7 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Module/HostServices.h"
+#include "Engine/Module/HostInterfaces.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
 #include "ModuleAPI/ABI/GameAPI.h"

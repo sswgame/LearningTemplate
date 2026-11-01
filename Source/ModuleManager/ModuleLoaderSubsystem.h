@@ -11,7 +11,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Foundation/HostSubsystemNames.h"
-#include "Engine/Module/HostServices.h"
+#include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleCatalog.h"
 
 #include "ModuleManager/ModuleStateStore.h"
