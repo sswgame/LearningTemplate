@@ -62,10 +62,10 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Task";
         /** @brief 기동 순서 위치 — 워커 수는 논리 CPU 수입니다. 소멸자가 태스크를 기다리는 객체는 이것에 의존해 먼저 놓는다. */
-        SubsystemInitResult initializeSubsystem() override;
-        void                shutdownSubsystem() override;
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Task; }
+        SubsystemInitResult        initializeSubsystem() override;
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Task;
 
         /**
          * @brief 매개변수가 없는 기본 태스크를 만듭니다.

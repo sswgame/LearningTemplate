@@ -56,8 +56,8 @@ namespace sw
         /** @brief 씬 서비스는 만들 때(매니저의 생성자) 선다 — 따로 세울 것이 없으면 그대로 둔다. */
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         /** @brief 내릴 것은 소멸자가 놓는다(매니저가 범위를 역순으로 지운다). */
-        void      shutdownSubsystem() override {}
-        MemoryTag getSubsystemMemoryTag() const override { return MemoryTag::Scene; }
+        void                       shutdownSubsystem() override {}
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Scene;
 
     protected:
         ISceneService()                                  = default;

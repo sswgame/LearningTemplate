@@ -33,12 +33,12 @@ namespace sw
         FrameRendererSubsystem( const FrameRendererSubsystem& )            = delete;
         FrameRendererSubsystem& operator=( const FrameRendererSubsystem& ) = delete;
 
-        SubsystemInitResult     initializeSubsystem() override;
-        void                    shutdownSubsystem() override;
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        SubsystemHostMask       getSubsystemHost() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        SubsystemInitResult        initializeSubsystem() override;
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        SubsystemHostMask          getSubsystemHost() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         FrameRenderer&       getFrameRenderer() const { return *_frameRenderer; }
         RenderPacketBuilder& getPacketBuilder() const { return *_packetBuilder; }

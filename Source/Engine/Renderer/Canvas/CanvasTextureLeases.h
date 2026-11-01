@@ -50,13 +50,13 @@ namespace sw
          */
         void prepareTargets( IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache );
         /** @brief 목록의 경로 이미지 로드를 `TextureCache` 에 맡깁니다(처음 보는 경로만 — 워커가 읽고, 다 읽기 전에는 그 이미지를 그리지 않는다). 엔진 서비스가 없으면(테스트 하네스 밖) 아무것도 하지 않습니다. */
-        void acquirePathTextures( IRHIDevice& device, const CanvasDrawList& list );
+        void acquirePathTextures( const CanvasDrawList& list );
         /** @brief 경로로 대상 상태를 찾습니다. 이번 목록과 순서가 같지 않으므로 경로로 찾습니다. 없으면 nullptr 입니다. */
         CanvasTargetLease* findTarget( const hashed_string& path );
         /** @brief 경로로 빌린 이미지의 SRV 입니다. 빌리지 않았거나 아직 읽는 중이거나 읽지 못한 경로면 kInvalidDescriptorIndex 입니다. */
         RHIDescriptorIndex findPathTextureSRV( const hashed_string& path ) const;
         /** @brief 빌린 이미지와 대상을 캐시에 돌려줍니다(다음 `prepareTargets` · `acquirePathTextures` 가 다시 빌립니다). */
-        void release( IRHIDevice* pDevice );
+        void release();
 
     private:
         /** @brief 경로로 빌린 이미지 하나입니다(텍스처는 `TextureCache` 가 소유하고, 핸들이 참조를 쥐었다가 놓을 때 돌려줍니다). */

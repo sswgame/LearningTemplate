@@ -53,12 +53,12 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "AssetStreaming";
         /** @brief 기동 순서의 자리 — 종료가 걸린 읽기와 완료(태스크 워커)를 기다리므로 비동기 IO · 태스크가 이것보다 늦게 내려간다. */
-        SubsystemInitResult     initializeSubsystem() override;
-        void                    shutdownSubsystem() override { shutdown(); }
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Asset; }
-        void                    update( size_t maxCompletionsPerFrame = 32 );
+        SubsystemInitResult        initializeSubsystem() override;
+        void                       shutdownSubsystem() override { shutdown(); }
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Asset;
+        void                       update( size_t maxCompletionsPerFrame = 32 );
 
         bool requestAsset( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingCompleteDelegate& onComplete = {} );
 

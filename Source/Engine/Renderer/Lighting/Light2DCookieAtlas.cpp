@@ -135,7 +135,7 @@ namespace sw
                 ++index;
                 continue;
             }
-            pCache->release( _listEntry[index]._path.c_str(), pDevice );
+            pCache->release( _listEntry[index]._path.c_str() );
             _listEntry.erase( _listEntry.begin() + static_cast<std::ptrdiff_t>( index ) );
         }
         // 그릴 칸 — 새 칸, 텍스처가 다시 읽힌 칸(핸들이 바뀜), 아틀라스가 새로 만들어진 프레임의 모든 칸.
@@ -157,7 +157,7 @@ namespace sw
         for ( const Entry& entry : _listEntry )
         {
             if ( pCache != nullptr )
-                pCache->release( entry._path.c_str(), pDevice );
+                pCache->release( entry._path.c_str() );
         }
         _listEntry.clear();
         _listPendingDraw.clear();

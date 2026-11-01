@@ -52,12 +52,12 @@ namespace sw
         , _listSlotRequest{}
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
-        ScreenTransitionManager& screenTransition = _gameScope.addSubsystem( make_unique<ScreenTransitionManager>() );
-        LoadingScreenController& loadingScreen    = _gameScope.addSubsystem( make_unique<LoadingScreenController>() );
+        ScreenTransitionManager& screenTransition = _gameScope.emplaceSubsystem<ScreenTransitionManager>();
+        LoadingScreenController& loadingScreen    = _gameScope.emplaceSubsystem<LoadingScreenController>();
         // 씬 흐름은 이 인스턴스의 gamesettings(`_packConfig` — 범위보다 먼저 선 멤버)와 두 형제를 빌려 든다.
-        _gameScope.addSubsystem( make_unique<GameSceneFlow>( _packConfig._data, screenTransition, loadingScreen ) );
+        _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, loadingScreen );
         // 로컬 저장소(세이브 슬롯)는 게임 범위 하나다 - 게임 상태 세이브 · 자동 저장 · 계정 장치 비밀이 함께 쓴다.
-        _gameScope.addSubsystem( make_unique<GameLocalStore>() );
+        _gameScope.emplaceSubsystem<GameLocalStore>();
     }
 
     GameInstance::~GameInstance()

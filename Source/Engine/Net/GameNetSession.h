@@ -168,8 +168,8 @@ namespace sw
         /** @brief 엔진 기동 때는 열지 않습니다 — 전용 서버의 서버 문맥은 게임 인스턴스 앞에 걸리므로 `openFromLaunch` 가 엽니다. */
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         /** @brief 세션을 닫습니다(엔진 종료). */
-        void      shutdownSubsystem() override { shutdown(); }
-        MemoryTag getSubsystemMemoryTag() const override { return MemoryTag::EngineMisc; }
+        void                       shutdownSubsystem() override { shutdown(); }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
         /**
          * @brief `makeLaunchParams` 가 정한 역할(실행 인자, 없으면 전용 서버 설정)로 세션을 엽니다. 이미 열려 있으면 그대로 둡니다(리로드로 다시 선 게임 인스턴스).
          * @details 둘 다 없으면 열지 않고 true 다(혼자 하는 게임). 인자 · 설정이 틀렸거나 고른 역할을 열지 못하면(포트 사용 중) false 다 —

@@ -215,6 +215,8 @@ namespace sw
         /** @brief 이름의 유닛(명시 → 자식 → 매니저)입니다. */
         SkeletalMeshComponent* findUnitByName( const hashed_string& unitName, shared_ptr<const SocketSet>* pOutSockets ) const;
         /** @brief 이름의 명시 연결입니다. 없으면 nullptr 입니다. */
+        /** @brief 리그에 자기 유닛의 소켓을 이름으로 찾는 대상이 있으면 true 입니다(소켓 출처가 올 때까지 묶기를 미룬다 — `bindRig`). */
+        bool               needsSockets() const;
         const UnitBinding* findUnitBinding( const hashed_string& unitName ) const;
         /** @brief 이름의 오브젝트(명시 → 매니저)입니다. */
         GameObject* findObjectByName( const hashed_string& objectName ) const;

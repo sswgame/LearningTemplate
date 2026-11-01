@@ -24,12 +24,12 @@ namespace sw
         /** @brief @p rhiSubsystem 은 이것보다 오래 삽니다(이것이 그것에 의존합니다). */
         explicit SceneRHISubsystem( const RHISubsystem& rhiSubsystem );
 
-        SubsystemInitResult     initializeSubsystem() override;
-        void                    shutdownSubsystem() override;
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        SubsystemHostMask       getSubsystemHost() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        SubsystemInitResult        initializeSubsystem() override;
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        SubsystemHostMask          getSubsystemHost() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
     private:
         const RHISubsystem& _rhiSubsystem;

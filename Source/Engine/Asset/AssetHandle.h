@@ -19,6 +19,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryTag.h"
 
 namespace sw
 {
@@ -67,8 +68,12 @@ namespace sw
     class SW_API AssetLoadBlock
     {
     public:
-        /** @brief @p pKindName 은 로그에 쓰는 종류 이름(정적 문자열), @p path 는 요청 경로입니다. */
-        AssetLoadBlock( const utf8* pKindName, string_view path );
+        /**
+         * @brief @p pKindName 은 로그에 쓰는 종류 이름(정적 문자열), @p path 는 요청 경로, @p memoryTag 는 이 종류의 할당 태그입니다.
+         * @details 태그는 단계를 실행하는 곳(`executeLoad` · `executeCompletion` · `executeUploadPoll`) 한 곳이 건다 — 종류마다 단계 본문 머리에 `SW_MEMORY_SCOPE` 를
+         *          손으로 적지 않는다(언리얼 LLM 이 비동기 로드에 에셋 클래스의 태그를 거는 것과 같다).
+         */
+        AssetLoadBlock( const utf8* pKindName, string_view path, MemoryTag memoryTag );
         virtual ~AssetLoadBlock();
 
         AssetLoadBlock( const AssetLoadBlock& )            = delete;
@@ -175,6 +180,7 @@ namespace sw
         string                 _path;
         string                 _error;
         const utf8*            _pKindName;
+        MemoryTag              _memoryTag; ///< 단계를 실행하는 동안 거는 할당 태그(생성자 머리 주석)
         atomic<uint32>         _phase;
         atomic<AssetLoadState> _state;
     };

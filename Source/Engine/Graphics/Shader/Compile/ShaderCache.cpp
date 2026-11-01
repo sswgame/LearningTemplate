@@ -44,7 +44,7 @@ namespace sw
     }
 
     ShaderLoadBlock::ShaderLoadBlock( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey )
-        : AssetLoadBlock{ "Shader", desc._source.str() }
+        : AssetLoadBlock{ "Shader", desc._source.str(), MemoryTag::Shader }
         , _pCache{ pCache }
         , _desc{ desc }
         , _cacheKey{ std::move( cacheKey ) }

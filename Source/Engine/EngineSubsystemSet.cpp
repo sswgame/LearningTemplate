@@ -91,15 +91,15 @@ namespace sw::engine
     CoreParts addCoreSubsystems( SubsystemScope& coreScope, const CoreSetup& setup )
     {
         CoreParts parts;
-        parts._pDiagnostics = &coreScope.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( setup._bDiagnostics ) );
-        coreScope.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
-        parts._pCommandLine = &coreScope.addSubsystem( sw::make_unique<CommandLineSubsystem>( setup._argc, setup._ppArgv ) );
-        coreScope.addSubsystem( sw::make_unique<LoggerSubsystem>( *parts._pCommandLine ) );
-        parts._pCrashHandler = &coreScope.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( parts._pCommandLine ) );
-        parts._pContentRoot  = &coreScope.addSubsystem( sw::make_unique<ContentRootSubsystem>( *parts._pCommandLine, *parts._pCrashHandler ) );
-        coreScope.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
+        parts._pDiagnostics = &coreScope.emplaceSubsystem<DiagnosticsSubsystem>( setup._bDiagnostics );
+        coreScope.emplaceSubsystem<NamePoolSubsystem>();
+        parts._pCommandLine = &coreScope.emplaceSubsystem<CommandLineSubsystem>( setup._argc, setup._ppArgv );
+        coreScope.emplaceSubsystem<LoggerSubsystem>( *parts._pCommandLine );
+        parts._pCrashHandler = &coreScope.emplaceSubsystem<CrashHandlerSubsystem>( parts._pCommandLine );
+        parts._pContentRoot  = &coreScope.emplaceSubsystem<ContentRootSubsystem>( *parts._pCommandLine, *parts._pCrashHandler );
+        coreScope.emplaceSubsystem<StaticStorageSubsystem>();
         if ( setup._bMemoryBudget )
-            parts._pMemoryBudget = &coreScope.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( *parts._pCrashHandler ) );
+            parts._pMemoryBudget = &coreScope.emplaceSubsystem<MemoryBudgetSubsystem>( *parts._pCrashHandler );
         // 서브시스템 안의 객체도 서비스 표의 행이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
         (void)coreScope.bind( parts._pCommandLine->findCommandLine() );
         (void)coreScope.bind( parts._pCommandLine->findGlobalVariables() ); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
@@ -118,43 +118,41 @@ namespace sw::engine
     ServiceParts addServiceSubsystems( SubsystemScope& services )
     {
         // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
-        SW_MEMORY_SCOPE( EngineMisc );
         ServiceParts parts;
         // 트랜스폼 칸 저장소가 맨 먼저 선다 — 서비스 범위의 해제는 역순이라 이 범위 · 엔진 범위의 어느 컴포넌트보다 나중에 내려간다.
-        services.addSubsystem( sw::make_unique<SceneTransformStorage>() );
-        parts._pEventDispatcher = &services.addSubsystem( sw::make_unique<EventDispatcher>() );
-        services.addSubsystem( sw::make_unique<LocalizationManager>() );
-        services.addSubsystem( sw::make_unique<DebugOverlayState>() );
-        services.addSubsystem( sw::make_unique<ComponentDefaults>() );
-        FrameProfiler& frameProfiler = services.addSubsystem( sw::make_unique<FrameProfiler>() );
+        services.emplaceSubsystem<SceneTransformStorage>();
+        parts._pEventDispatcher = &services.emplaceSubsystem<EventDispatcher>();
+        services.emplaceSubsystem<LocalizationManager>();
+        services.emplaceSubsystem<DebugOverlayState>();
+        services.emplaceSubsystem<ComponentDefaults>();
+        FrameProfiler& frameProfiler = services.emplaceSubsystem<FrameProfiler>();
         // 외부 프로파일러(`-gv_tracy`) — 엔진 범위보다 먼저 켜져 기동 단계부터 타임라인에 남는다.
-        services.addSubsystem( sw::make_unique<ProfilerBackendSubsystem>( frameProfiler ) );
-        services.addSubsystem( sw::make_unique<CrashReportService>() );
-        services.addSubsystem( sw::make_unique<AssetLoadProfiler>() );
+        services.emplaceSubsystem<ProfilerBackendSubsystem>( frameProfiler );
+        services.emplaceSubsystem<CrashReportService>();
+        services.emplaceSubsystem<AssetLoadProfiler>();
         // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
-        services.addSubsystem( sw::make_unique<AssetDataKindRegistry>() );
-        services.addSubsystem( sw::make_unique<TickBatchRegistry>() ); // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다
-        services.addSubsystem( sw::make_unique<ContentHashCache>() );  // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다
-        services.addSubsystem( sw::make_unique<GameTimeScale>() );     // 정지 요청 · 이번 프레임의 실제 경과
-        services.addSubsystem( sw::make_unique<QuitRequest>() );       // 종료 요청 · 코드 — 호스트 · 엔진 · 모듈이 건다
-        services.addSubsystem( sw::make_unique<StateHashHistory>() );
+        services.emplaceSubsystem<AssetDataKindRegistry>();
+        services.emplaceSubsystem<TickBatchRegistry>(); // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다
+        services.emplaceSubsystem<ContentHashCache>();  // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다
+        services.emplaceSubsystem<GameTimeScale>();     // 정지 요청 · 이번 프레임의 실제 경과
+        services.emplaceSubsystem<QuitRequest>();       // 종료 요청 · 코드 — 호스트 · 엔진 · 모듈이 건다
+        services.emplaceSubsystem<StateHashHistory>();
         // 셸 디버그 키 맵 — 호스트 루프가 프레임마다 돌리고 개발 도구 · 개발 명령이 읽는다. 맵은 처음 돌 때 만든다(기동 단계의 입력 매니저에 붙는다).
-        parts._pDebugKeyActions = &services.addSubsystem( sw::make_unique<DebugKeyActions>() );
+        parts._pDebugKeyActions = &services.emplaceSubsystem<DebugKeyActions>();
         // 메시 셰이프 기하 표 — 메시 캐시(기동 단계의 에셋 매니저)가 비울 때 부르므로 그보다 오래 산다. 표의 멤버를 메시 캐시가 찾는 타입(`IMeshDerivedCache`)으로도 건다.
-        PhysicsMeshShapeTable& meshShapeTable = services.addSubsystem( sw::make_unique<PhysicsMeshShapeTable>() );
+        PhysicsMeshShapeTable& meshShapeTable = services.emplaceSubsystem<PhysicsMeshShapeTable>();
         const bool             bExposed       = services.exposeMember<IMeshDerivedCache>( meshShapeTable, meshShapeTable.getMeshDerivedCache() );
         SW_ASSERT( bExposed ); // 받는 쪽이 둘이면 등록의 잘못이다(`IMeshDerivedCache`)
         (void)bExposed;
         {
-            SW_MEMORY_SCOPE( RenderCPU );
-            services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
-            services.addSubsystem( sw::make_unique<VisualLogger>() );
-            services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
-            services.addSubsystem( sw::make_unique<GPUBreadcrumbLog>() ); // 디바이스 소실 보고의 패스 이름 표 — 백엔드를 바꿔도 같은 실행의 것이다
-            services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
+            services.emplaceSubsystem<DebugDrawQueue>();
+            services.emplaceSubsystem<VisualLogger>();
+            services.emplaceSubsystem<RenderTargetRegistry>();
+            services.emplaceSubsystem<GPUBreadcrumbLog>(); // 디바이스 소실 보고의 패스 이름 표 — 백엔드를 바꿔도 같은 실행의 것이다
+            services.emplaceSubsystem<RHIBackendRegistry>();
 #if defined( SW_WITH_CLIENT_CODE )
-            services.addSubsystem( sw::make_unique<RenderExtensionRegistry>() ); // 렌더러 폴더와 같이 클라이언트에만 있다
-            services.addSubsystem( sw::make_unique<ScreenshotRequestQueue>() );  // 같은 까닭 — 렌더 스레드의 스크린샷 요청이 쓰는 우편함
+            services.emplaceSubsystem<RenderExtensionRegistry>(); // 렌더러 폴더와 같이 클라이언트에만 있다
+            services.emplaceSubsystem<ScreenshotRequestQueue>();  // 같은 까닭 — 렌더 스레드의 스크린샷 요청이 쓰는 우편함
 #endif
         }
         return parts;
@@ -165,9 +163,8 @@ namespace sw::engine
     StartupParts addStartupSubsystems( SubsystemScope& startup, StartupSetup&& setup )
     {
         // 단계 객체 · 본문 델리게이트의 할당은 엔진 기타 줄로 센다(만드는 객체는 제 용도 태그를 다시 건다).
-        SW_MEMORY_SCOPE( EngineMisc );
         StartupParts parts;
-        parts._pCodecRegistry = &startup.addSubsystem( sw::make_unique<CompressionCodecRegistry>() );
+        parts._pCodecRegistry = &startup.emplaceSubsystem<CompressionCodecRegistry>();
         {
             SW_MEMORY_SCOPE( Reflection );
             if ( setup._reflection == nullptr )
@@ -177,52 +174,48 @@ namespace sw::engine
         }
         TaskManager* pTaskManager = nullptr;
         {
-            SW_MEMORY_SCOPE( Task );
-            pTaskManager = &startup.addSubsystem( sw::make_unique<TaskManager>() );
+            pTaskManager = &startup.emplaceSubsystem<TaskManager>();
         }
         {
             // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
-            SW_MEMORY_SCOPE( Asset );
             AsyncFileIOConfig fileIOSettings{};
             fileIOSettings._pTaskManager = pTaskManager;
-            startup.addSubsystem( sw::make_unique<AsyncFileIO>() ).setSubsystemSettings( fileIOSettings );
+            startup.emplaceSubsystem<AsyncFileIO>().setSubsystemSettings( fileIOSettings );
         }
         // 모듈 라이브러리 창구는 호스트 범위에 있다 — 두 단계가 자기 범위에서 부모로 올라가며 찾는다(호스트 범위가 없으면 올리고 내릴 모듈이 없다).
-        startup.addSubsystem( sw::make_unique<ModuleUnloadStageSubsystem>( &startup ) );
-        startup.addSubsystem( sw::make_unique<ModuleLoadStageSubsystem>( &startup ) );
+        startup.emplaceSubsystem<ModuleUnloadStageSubsystem>( &startup );
+        startup.emplaceSubsystem<ModuleLoadStageSubsystem>( &startup );
 #if defined( SW_WITH_CLIENT_CODE )
         // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다). 객체를 서로 참조로 넘긴다.
         // Server 타깃은 렌더러 폴더(`Engine/Renderer/`)를 짓지 않는다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`) — 단계를 넣지도 않는다.
         if ( setup._bRenderer )
         {
             // 주 창의 소유자 — RHI 가 기본 창을 만들면 여기에 넘기고, App 이 직접 만든 창도 여기로 간다. RHI 보다 먼저 서고 나중에 내려간다(RHI 가 의존한다).
-            (void)startup.addSubsystem( sw::make_unique<MainWindowSubsystem>() );
-            RHISubsystem& rhiSubsystem = startup.addSubsystem( sw::make_unique<RHISubsystem>() );
+            (void)startup.emplaceSubsystem<MainWindowSubsystem>();
+            RHISubsystem& rhiSubsystem = startup.emplaceSubsystem<RHISubsystem>();
             parts._pRHI                = &rhiSubsystem;
             unique_ptr<FrameRenderer> frameRenderer;
             {
                 SW_MEMORY_SCOPE( RenderCPU );
                 frameRenderer = make_unique<FrameRenderer>();
             }
-            FrameRendererSubsystem& frameRendererSubsystem = startup.addSubsystem( sw::make_unique<FrameRendererSubsystem>( std::move( frameRenderer ), rhiSubsystem ) );
+            FrameRendererSubsystem& frameRendererSubsystem = startup.emplaceSubsystem<FrameRendererSubsystem>( std::move( frameRenderer ), rhiSubsystem );
             parts._pFrameRendererSubsystem                 = &frameRendererSubsystem;
             (void)startup.bind( &frameRendererSubsystem.getFrameRenderer() ); // 새 범위 — 겹치지 않는다
-            parts._pRenderThread = &startup.addSubsystem( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
-            startup.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
+            parts._pRenderThread = &startup.emplaceSubsystem<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem );
+            startup.emplaceSubsystem<SceneRHISubsystem>( rhiSubsystem );
         }
 #endif
-        parts._pInputManager = &startup.addSubsystem( sw::make_unique<InputManager>() );
+        parts._pInputManager = &startup.emplaceSubsystem<InputManager>();
         // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽어 자기 자리에 둔다(Resource 가 그 뒤에 서서 팩 루트를 안다).
         {
-            SW_MEMORY_SCOPE( EngineMisc );
-            parts._pConfigManager = &startup.addSubsystem( sw::make_unique<ConfigManager>() );
+            parts._pConfigManager = &startup.emplaceSubsystem<ConfigManager>();
         }
         // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 표(`engine::getSubsystem<EngineConfig>()`)는 이 자리의 주소를 묶는다.
         (void)startup.bind( &parts._pConfigManager->getHostEngineConfig() ); // 새 범위 - 겹치지 않는다
         (void)startup.bind( &parts._pConfigManager->getHostGameConfig() );   // 새 범위 - 겹치지 않는다
         {
-            SW_MEMORY_SCOPE( Asset );
-            AssetManager& assetManager = startup.addSubsystem( sw::make_unique<AssetManager>() );
+            AssetManager& assetManager = startup.emplaceSubsystem<AssetManager>();
             (void)startup.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 표의 칸으로 찾는다
             // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 매니저와 수명이 같다.
             (void)startup.bind( &assetManager.getAssetCache<TextureCache>().getRenderTargetDeclarationSink() );
@@ -232,10 +225,10 @@ namespace sw::engine
         const EngineDefaultAssetsSubsystem& defaultAssets = startup.addSubsystem( std::move( setup._defaultAssets ) );
         (void)startup.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
         // 활성 팩의 `<Engine>` 요소(창 제목 · 스키마 · UI 규칙) — 팩을 마운트한 뒤에 읽는다. 창 · 사용자 설정 · UI 가 이 뒤에 선다.
-        const PackEngineSettingsSubsystem& packSettings = startup.addSubsystem( sw::make_unique<PackEngineSettingsSubsystem>() );
+        const PackEngineSettingsSubsystem& packSettings = startup.emplaceSubsystem<PackEngineSettingsSubsystem>();
         (void)startup.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
         // 2D 렌더 설정(정렬 레이어 · 투명 정렬 축)은 엔진 파일이다 - 마운트한 뒤에 읽는다. 2D 컴포넌트를 읽는 단계(헤드리스 쿠킹 · 렌더러)가 이 뒤에 선다.
-        const Render2DSettingsSubsystem& render2DSettings = startup.addSubsystem( sw::make_unique<Render2DSettingsSubsystem>() );
+        const Render2DSettingsSubsystem& render2DSettings = startup.emplaceSubsystem<Render2DSettingsSubsystem>();
         (void)startup.bind( &render2DSettings.getSettings() ); // 새 범위 — 겹치지 않는다
         {
             SW_MEMORY_SCOPE( Audio );
@@ -246,42 +239,39 @@ namespace sw::engine
         }
         // 스트리밍 큐의 소멸자는 태스크를 기다리므로 Task 보다 먼저 놓는다.
         {
-            SW_MEMORY_SCOPE( Asset );
-            startup.addSubsystem( sw::make_unique<AssetStreamingQueue>() );
+            startup.emplaceSubsystem<AssetStreamingQueue>();
         }
         // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다.
         {
-            SW_MEMORY_SCOPE( Scene );
-            parts._pSceneManager = &startup.addSubsystem( sw::make_unique<SceneManager>() );
+            parts._pSceneManager = &startup.emplaceSubsystem<SceneManager>();
         }
         // 헤드리스 작업(셰이더 · 씬 쿠킹, 임포트)이면 그에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다 — 결과는 호스트가 준 상태에 적는다.
-        startup.addSubsystem( sw::make_unique<HeadlessSubsystem>( setup._bDedicatedServer, setup._headlessState ) );
-        parts._pUserSettings = &startup.addSubsystem( sw::make_unique<UserSettingsManager>() );
+        startup.emplaceSubsystem<HeadlessSubsystem>( setup._bDedicatedServer, setup._headlessState );
+        parts._pUserSettings = &startup.emplaceSubsystem<UserSettingsManager>();
         {
-            SW_MEMORY_SCOPE( Shader );
-            startup.addSubsystem( sw::make_unique<ShaderCache>() );
+            startup.emplaceSubsystem<ShaderCache>();
         }
-        startup.addSubsystem( sw::make_unique<PhysicsSystem>() );
-        parts._pNetSession  = &startup.addSubsystem( sw::make_unique<GameNetSession>() ); // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다
-        parts._pFontService = &startup.addSubsystem( sw::make_unique<FontService>() );
-        parts._pTelemetry   = &startup.addSubsystem( sw::make_unique<TelemetryService>() );
+        startup.emplaceSubsystem<PhysicsSystem>();
+        parts._pNetSession  = &startup.emplaceSubsystem<GameNetSession>(); // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다
+        parts._pFontService = &startup.emplaceSubsystem<FontService>();
+        parts._pTelemetry   = &startup.emplaceSubsystem<TelemetryService>();
         // 화면 스택에 매이지 않는 UI 서비스는 따로 선 서브시스템이다 — UI 를 위한 범위를 따로 두지 않는다(수명이 엔진 범위와 같다, 언리얼 UEngineSubsystem ·
         // Godot DisplayServer 의 클립보드). 화면 스택(`UISystem`)은 변환기 표에 의존한다.
-        startup.addSubsystem( sw::make_unique<UIClipboardService>() );
-        startup.addSubsystem( sw::make_unique<UIGlobalCommandRegistry>() );
-        startup.addSubsystem( sw::make_unique<UIBindingConverterRegistry>() );
+        startup.emplaceSubsystem<UIClipboardService>();
+        startup.emplaceSubsystem<UIGlobalCommandRegistry>();
+        startup.emplaceSubsystem<UIBindingConverterRegistry>();
         // UI 문서 · 스타일 시트 캐시 — 화면 스택 · 오프스크린 화면 · 테마 · 에디터 미리보기가 같이 읽는 에셋 캐시라 화면 스택 앞에 따로 선다.
-        startup.addSubsystem( sw::make_unique<UIDocumentCache>() );
-        startup.addSubsystem( sw::make_unique<UIStyleSheetCache>() );
-        startup.addSubsystem( sw::make_unique<UIThemeController>() ); // 테마 — 화면 스택과 오프스크린 화면이 같이 본다
-        parts._pUISystem = &startup.addSubsystem( sw::make_unique<UISystem>() );
+        startup.emplaceSubsystem<UIDocumentCache>();
+        startup.emplaceSubsystem<UIStyleSheetCache>();
+        startup.emplaceSubsystem<UIThemeController>(); // 테마 — 화면 스택과 오프스크린 화면이 같이 본다
+        parts._pUISystem = &startup.emplaceSubsystem<UISystem>();
         // 화면 스택 위의 UI 서비스 — 화면 스택에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint` …)에 건다.
-        startup.addSubsystem( sw::make_unique<UIAccessibilityService>() ); // 스크린 리더 — 알림이 이것으로 읽힌다
-        startup.addSubsystem( sw::make_unique<UISubtitleService>() );
-        startup.addSubsystem( sw::make_unique<UITooltipService>() );
-        startup.addSubsystem( sw::make_unique<UINotificationService>() );
-        startup.addSubsystem( sw::make_unique<UIOffscreenScreens>() );       // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다
-        startup.addSubsystem( sw::make_unique<UIWidgetComponentService>() ); // 위젯 컴포넌트(화면 마커 · World 위젯) — 포인터 뒤 · 레이아웃 앞 · 그리기 뒤 칸에 건다
+        startup.emplaceSubsystem<UIAccessibilityService>(); // 스크린 리더 — 알림이 이것으로 읽힌다
+        startup.emplaceSubsystem<UISubtitleService>();
+        startup.emplaceSubsystem<UITooltipService>();
+        startup.emplaceSubsystem<UINotificationService>();
+        startup.emplaceSubsystem<UIOffscreenScreens>();       // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다
+        startup.emplaceSubsystem<UIWidgetComponentService>(); // 위젯 컴포넌트(화면 마커 · World 위젯) — 포인터 뒤 · 레이아웃 앞 · 그리기 뒤 칸에 건다
         return parts;
     }
 } // namespace sw::engine

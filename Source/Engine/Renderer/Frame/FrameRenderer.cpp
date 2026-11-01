@@ -1065,7 +1065,7 @@ namespace sw
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             if ( view._pOutputTexture != nullptr )
-                textures.release( view._outputPath.view(), _pDevice );
+                textures.release( view._outputPath.view() );
             textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
             // 렌더 타깃은 읽을 파일이 없어 기다림이 이 스레드의 GPU 생성뿐이라 동기로 둔다(`CanvasTextureLeases::prepareTargets` 와 같다).
             view._pOutputTexture = textures.acquire( request._renderTexture.view(), _pDevice );
@@ -1131,7 +1131,7 @@ namespace sw
         releaseViewTransparentOrder( view );
         view._commandList.reset();
         if ( view._pOutputTexture != nullptr && engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( view._outputPath.view(), _pDevice );
+            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( view._outputPath.view() );
         view._pOutputTexture = nullptr;
         view._outputPath     = hashed_string{};
     }

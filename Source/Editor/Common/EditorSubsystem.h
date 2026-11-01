@@ -21,9 +21,9 @@ namespace sw::editor
     class EditorSubsystem : public ISubsystem
     {
     public:
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        SubsystemHostMask   getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                       shutdownSubsystem() override {}
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
     };
 } // namespace sw::editor

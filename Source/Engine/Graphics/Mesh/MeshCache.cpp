@@ -83,14 +83,13 @@ namespace sw
 namespace sw
 {
     MeshLoadBlock::MeshLoadBlock( string_view path )
-        : AssetLoadBlock{ MeshCache::kAssetKindName, path }
+        : AssetLoadBlock{ MeshCache::kAssetKindName, path, MemoryTag::Mesh }
         , _pMesh{}
     {
     }
 
     bool MeshLoadBlock::runLoad( string& outError )
     {
-        SW_MEMORY_SCOPE( Mesh );
         const string_view path = getPath();
         const string      key  = MeshCacheInternal::makeKey( path );
 

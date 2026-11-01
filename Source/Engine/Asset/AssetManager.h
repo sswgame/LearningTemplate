@@ -81,11 +81,11 @@ namespace sw
          * @details 팩 루트는 GameConfig, 팩 스트림은 코덱이다. 종료(`shutdown`)가 에셋 캐시를 비운다 — 에셋을 드는 서브시스템이 모두 이 뒤에 서므로,
          *          역순 해제에서 그들의 소멸자가 에셋을 놓은 뒤다.
          */
-        SubsystemInitResult     initializeSubsystem() override;
-        void                    shutdownSubsystem() override { shutdown(); }
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Asset; }
+        SubsystemInitResult        initializeSubsystem() override;
+        void                       shutdownSubsystem() override { shutdown(); }
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Asset;
         /**
          * @brief 에셋 식별자(GUID) 테이블을 채웁니다. 반환값은 등록 수입니다.
          * @details 팩이면 쿠커가 도메인마다 넣는 `assetregistry.txt` 를 읽고(배포본은 .meta 를 싣지 않는다), 하나도

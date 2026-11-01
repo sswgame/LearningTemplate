@@ -73,10 +73,10 @@ namespace sw
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */
         static constexpr const utf8* kSubsystemName = "DebugDraw";
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                       shutdownSubsystem() override {}
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief 카테고리를 주지 않은 도형의 카테고리 이름입니다. */
         static constexpr const utf8* kDefaultCategoryName = "Default";

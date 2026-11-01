@@ -24,11 +24,11 @@ namespace sw
         /** @brief @p pScope 는 이 서브시스템이 속한 범위입니다(찾는 시작점 — 부모로 올라가 호스트 범위의 `IModuleLoader` 를 찾는다). nullptr 이면 올릴 것이 없습니다. */
         explicit ModuleLoadStageSubsystem( const ISubsystemLocator* pScope = nullptr );
 
-        SubsystemInitResult     initializeSubsystem() override;
-        void                    shutdownSubsystem() override {}
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Reflection; }
+        SubsystemInitResult        initializeSubsystem() override;
+        void                       shutdownSubsystem() override {}
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Reflection;
 
     private:
         const ISubsystemLocator* _pScope;

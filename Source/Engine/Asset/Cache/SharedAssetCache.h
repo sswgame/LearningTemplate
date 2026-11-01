@@ -127,8 +127,8 @@ namespace sw
     public:
         using AssetType = const TAsset;
 
-        SharedAssetLoadBlock( const utf8* pKindName, string_view path )
-            : AssetLoadBlock{ pKindName, path }
+        SharedAssetLoadBlock( const utf8* pKindName, string_view path, MemoryTag memoryTag )
+            : AssetLoadBlock{ pKindName, path, memoryTag }
             , _pAsset{}
         {
         }

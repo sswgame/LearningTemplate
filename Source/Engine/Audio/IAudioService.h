@@ -91,8 +91,8 @@ namespace sw
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
         /** @brief 씬 매니저는 오디오 뒤에 선다 — 낮은 층인 씬이 기능 이름을 적지 않게 기능 쪽이 적는다. */
-        span<const utf8* const> getSubsystemDependents() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Audio; }
+        span<const utf8* const>    getSubsystemDependents() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Audio;
         /** @brief 초기화가 끝났는지 반환합니다. */
         bool isInitialized() const { return _bInitialized; }
         /** @brief 출력 장치가 엔진을 당기고 있는지입니다. false 면 `update` 가 렌더합니다. */

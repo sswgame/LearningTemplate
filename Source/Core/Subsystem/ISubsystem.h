@@ -86,7 +86,17 @@ namespace sw
         virtual span<const utf8* const> getSubsystemDependents() const { return {}; }
         /** @brief 이 서브시스템이 도는 호스트 종류입니다. 호스트마다 그 의존도 돌아야 합니다(정렬이 검사). */
         virtual SubsystemHostMask getSubsystemHost() const { return SubsystemHostMask::All; }
-        /** @brief 초기화가 할당하는 메모리의 용도입니다. 초기화 · 재시작을 부르는 동안 이 태그가 걸립니다. */
-        virtual MemoryTag getSubsystemMemoryTag() const { return MemoryTag::EngineMisc; }
+        /**
+         * @brief 이 서브시스템이 할당하는 메모리의 용도입니다. 만드는 동안(`SubsystemScope::emplaceSubsystem`) · 초기화 · 재시작을 부르는 동안 이 태그가 걸립니다.
+         * @details 값은 형식 상수 `kSubsystemMemoryTag` 하나다(파생이 같은 이름으로 가린다) — 컬렉션에 넣을 때 그 형식의 값을 붙인다(`SubsystemCollection::add`).
+         *          예전에는 가상 함수와 별개로 만드는 쪽이 `SW_MEMORY_SCOPE` 를 손으로 다시 걸었다(같은 값을 두 곳에 적었다).
+         */
+        MemoryTag getSubsystemMemoryTag() const { return _memoryTag; }
+        /** @brief 기본 용도입니다. 파생이 `static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::…;` 로 가립니다. */
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
+
+    private:
+        friend class SubsystemCollection;
+        MemoryTag _memoryTag{ MemoryTag::EngineMisc }; ///< 컬렉션이 넣을 때 붙인 형식의 `kSubsystemMemoryTag`
     };
 } // namespace sw

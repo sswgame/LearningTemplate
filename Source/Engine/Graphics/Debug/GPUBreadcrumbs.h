@@ -82,7 +82,8 @@ namespace sw
     class SW_API GPUBreadcrumbLog final : public ISubsystem
     {
     public:
-        static constexpr const utf8* kSubsystemName = "GPUBreadcrumbLog";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr const utf8* kSubsystemName      = "GPUBreadcrumbLog";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}

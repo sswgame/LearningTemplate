@@ -60,10 +60,10 @@ namespace sw
             ScopedLock<mutex> _lock;
         };
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                       shutdownSubsystem() override {}
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief 확장 객체를 올립니다(소유하지 않는다 — 객체는 등록을 풀 때까지 살아 있어야 한다). nullptr 이거나 이미 있으면 false 입니다. */
         [[nodiscard]] bool registerExtension( IRenderExtension* pExtension );

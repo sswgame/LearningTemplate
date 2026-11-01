@@ -12,7 +12,6 @@
 
 namespace sw
 {
-    class IRHIDevice;
     class TextureLoadBlock;
 } // namespace sw
 
@@ -76,18 +75,18 @@ namespace sw::editor
         };
 
         /** @brief 썸네일 하나의 ImGui 등록과 텍스처 참조를 놓습니다. */
-        static void releaseEntry( Entry& entry, IRHIDevice* pDevice );
+        static void releaseEntry( Entry& entry );
         /** @brief 예약한 경로를 상한(`kMaxLoading`)까지 워커에 맡깁니다. 요청할 수 없는 경로는 실패 목록에 둡니다. */
-        void startLoads( IRHIDevice* pDevice );
+        void startLoads();
         /**
          * @brief 읽는 중인 로드를 보아 끝난 것은 등록하거나 실패 목록에 둡니다. GPU 업로드는 엔진의 렌더 쪽 로드 펌프가 한다(`TextureCache::completePendingLoads`).
          * @details 예전에는 UI 스레드가 업로드를 마무리했다(`runCompletionIfPending`) — 에디터가 디바이스를 쓰는 스레드 노릇을 했다(GL 컨텍스트를 다퉜다).
          */
-        void finishLoads( IRHIDevice* pDevice );
+        void finishLoads();
         /** @brief 끝난 로드 @p pBlock(참조를 쥔다)의 텍스처를 ImGui 에 등록합니다. 못 쓰는 텍스처면 false 이고 아무것도 쥐지 않습니다. 디바이스를 쓰지 않는다. */
         bool adoptReady( const string& assetID, const shared_ptr<TextureLoadBlock>& pBlock );
         /** @brief 이번 프레임에 쓰지 않은 것 가운데 오래된 것부터 용량까지 놓습니다. */
-        void evictOverCapacity( IRHIDevice* pDevice );
+        void evictOverCapacity();
 
         /** @brief 실패 경로를 기억하는 수의 상한입니다. 넘으면 가장 오래된 실패부터 잊어, 폴더를 계속 넘겨 보아도 목록이 끝없이 쌓이지 않습니다(잊힌 경로는 다시 보이면 한 번 더 읽어 본다). */
         static constexpr uint32 kMaxFailed = 2048;

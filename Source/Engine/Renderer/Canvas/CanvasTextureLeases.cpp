@@ -72,12 +72,12 @@ namespace sw
             if ( state._bSeen == SW_TRUE )
                 continue;
             if ( state._pTexture != nullptr && bServices )
-                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( state._path.view(), &device );
+                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( state._path.view() );
             _listTarget.erase( _listTarget.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
     }
 
-    void CanvasTextureLeases::acquirePathTextures( IRHIDevice& device, const CanvasDrawList& list )
+    void CanvasTextureLeases::acquirePathTextures( const CanvasDrawList& list )
     {
         if ( engine::areEngineServicesBound() == false )
             return;
@@ -98,7 +98,7 @@ namespace sw
                 // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 이미지를 빼고 그린다(언리얼 Slate 의 브러시도 텍스처가 스트리밍되는 동안 비어 있다).
                 PathTexture& added = _listPathTexture.emplace_back();
                 added._path        = path;
-                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), &device, AssetLoadStart::Async );
+                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), AssetLoadStart::Async );
             }
         }
     }
@@ -120,7 +120,7 @@ namespace sw
         return kInvalidDescriptorIndex;
     }
 
-    void CanvasTextureLeases::release( IRHIDevice* pDevice )
+    void CanvasTextureLeases::release()
     {
         _listPathTexture.clear(); // 경로 이미지의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
         if ( engine::areEngineServicesBound() )
@@ -129,7 +129,7 @@ namespace sw
             for ( const CanvasTargetLease& state : _listTarget )
             {
                 if ( state._pTexture != nullptr )
-                    textures.release( state._path.view(), pDevice );
+                    textures.release( state._path.view() );
             }
         }
         _listTarget.clear();

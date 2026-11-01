@@ -261,11 +261,11 @@ namespace sw::editor
         {
         }
 
-        SubsystemInitResult initializeSubsystem() override { return _editor.initializeEditorData(); }
-        void                shutdownSubsystem() override { _editor.shutdownEditorData(); }
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        SubsystemHostMask   getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemInitResult        initializeSubsystem() override { return _editor.initializeEditorData(); }
+        void                       shutdownSubsystem() override { _editor.shutdownEditorData(); }
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
 
     private:
         ImGuiEditor& _editor;
@@ -290,8 +290,8 @@ namespace sw::editor
             static constexpr const utf8* kArrDependency[] = { EditorDataSubsystem::kSubsystemName };
             return kArrDependency;
         }
-        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
 
     private:
         ImGuiEditor& _editor;
@@ -316,8 +316,8 @@ namespace sw::editor
             static constexpr const utf8* kArrDependency[] = { ImGuiContextSubsystem::kSubsystemName };
             return kArrDependency;
         }
-        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
 
     private:
         ImGuiEditor& _editor;
@@ -342,8 +342,8 @@ namespace sw::editor
             static constexpr const utf8* kArrDependency[] = { ImGuiContextSubsystem::kSubsystemName, PlatformBackendSubsystem::kSubsystemName };
             return kArrDependency;
         }
-        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
 
     private:
         ImGuiEditor& _editor;
@@ -360,11 +360,11 @@ namespace sw::editor
         {
         }
 
-        SubsystemInitResult initializeSubsystem() override { return _editor.loadSplashAssets(); }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        SubsystemHostMask   getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemInitResult        initializeSubsystem() override { return _editor.loadSplashAssets(); }
+        void                       shutdownSubsystem() override {}
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
 
     private:
         ImGuiEditor& _editor;
@@ -389,8 +389,8 @@ namespace sw::editor
             static constexpr const utf8* kArrDependency[] = { EditorDataSubsystem::kSubsystemName, ImGuiContextSubsystem::kSubsystemName, PlatformBackendSubsystem::kSubsystemName, RendererBackendSubsystem::kSubsystemName, SplashSubsystem::kSubsystemName };
             return kArrDependency;
         }
-        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
 
     private:
         ImGuiEditor& _editor;
@@ -424,8 +424,8 @@ namespace sw::editor
             static constexpr const utf8* kArrDependency[] = { EditorContextSubsystem::kSubsystemName };
             return kArrDependency;
         }
-        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
 
     private:
         ImGuiEditor& _editor;

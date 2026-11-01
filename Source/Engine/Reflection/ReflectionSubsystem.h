@@ -36,8 +36,8 @@ namespace sw
         void        shutdownSubsystem() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
         /** @brief 설정 · 엔진 데이터는 낮은 층이라 이것의 이름을 모른다 — 역방향으로 적는다. */
-        span<const utf8* const> getSubsystemDependents() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Reflection; }
+        span<const utf8* const>    getSubsystemDependents() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Reflection;
 
         TypeRegistry& getTypeRegistry() const { return *_typeRegistry; }
 

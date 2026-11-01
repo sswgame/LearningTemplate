@@ -81,7 +81,7 @@ namespace
 SW_TEST_CASE( SubsystemScopeTest, FindsOwnedAndBorrowedByType )
 {
     SubsystemScope       scope;
-    ScopeProbeSubsystem& probe = scope.addSubsystem( make_unique<ScopeProbeSubsystem>( nullptr ) );
+    ScopeProbeSubsystem& probe = scope.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
     SW_EXPECT_TRUE( scope.find<ScopeProbeSubsystem>() == &probe );
     SW_EXPECT_TRUE( &scope.get<ScopeProbeSubsystem>() == &probe );
     SW_EXPECT_TRUE( scope.find<IScopeProbeSubsystem>() == nullptr ); // 드러내기 전에는 인터페이스로 찾지 못한다
@@ -127,7 +127,7 @@ SW_TEST_CASE( SubsystemScopeTest, DestroyAllDropsOwnedEntriesOnly )
 {
     bool                 bDestroyed = false;
     SubsystemScope       scope;
-    ScopeProbeSubsystem& probe = scope.addSubsystem( make_unique<ScopeProbeSubsystem>( &bDestroyed ) );
+    ScopeProbeSubsystem& probe = scope.emplaceSubsystem<ScopeProbeSubsystem>( &bDestroyed );
     SW_EXPECT_TRUE( scope.expose<IScopeProbeSubsystem>( probe ) );
     ScopeCatalog catalog{};
     SW_EXPECT_TRUE( scope.bind( &catalog ) );
@@ -148,7 +148,7 @@ SW_TEST_CASE( SubsystemScopeTest, MountedChildPublishesIntoTheParent )
     SubsystemScope parent;
     {
         SubsystemScope&      child = parent.mountChildScope( "ModuleA" );
-        ScopeProbeSubsystem& probe = child.addSubsystem( make_unique<ScopeProbeSubsystem>( &bDestroyed ) );
+        ScopeProbeSubsystem& probe = child.emplaceSubsystem<ScopeProbeSubsystem>( &bDestroyed );
         SW_EXPECT_TRUE( &parent.mountChildScope( "ModuleA" ) == &child ); // 같은 이름은 같은 자식이다
         SW_EXPECT_TRUE( parent.find<ScopeProbeSubsystem>() == nullptr );  // 공개하기 전에는 부모가 보지 못한다
         SW_EXPECT_TRUE( child.publish<IScopeProbeSubsystem>( probe ) );
@@ -167,7 +167,7 @@ SW_TEST_CASE( SubsystemScopeTest, MountedChildPublishesIntoTheParent )
     SW_EXPECT_TRUE( parent.find<IScopeProbeSubsystem>() == nullptr );
 
     bool bSecondDestroyed = false;
-    parent.mountChildScope( "ModuleB" ).addSubsystem( make_unique<ScopeProbeSubsystem>( &bSecondDestroyed ) );
+    parent.mountChildScope( "ModuleB" ).emplaceSubsystem<ScopeProbeSubsystem>( &bSecondDestroyed );
     parent.destroyAll();
     SW_EXPECT_TRUE( bSecondDestroyed ); // 부모를 지우면 매단 자식도 먼저 사라진다
     SW_EXPECT_TRUE( parent.find<ScopeCatalog>() == &catalog );
@@ -180,7 +180,7 @@ SW_TEST_CASE( SubsystemScopeTest, PublishedPartFollowsItsOwner )
 {
     SubsystemScope           parent;
     SubsystemScope&          child = parent.mountChildScope( "ModuleA" );
-    ScopePartOwnerSubsystem& owner = child.addSubsystem( make_unique<ScopePartOwnerSubsystem>() );
+    ScopePartOwnerSubsystem& owner = child.emplaceSubsystem<ScopePartOwnerSubsystem>();
     SW_EXPECT_TRUE( child.publishPart<IScopeProbe>( owner, owner.getPart() ) );
     SW_EXPECT_EQUAL( 9, parent.find<IScopeProbe>()->getValue() );
 

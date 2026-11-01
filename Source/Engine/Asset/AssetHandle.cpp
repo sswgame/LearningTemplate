@@ -3,6 +3,7 @@
 #include "Engine/Asset/AssetHandle.h"
 
 #include "Core/Concurrency/Futex.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -14,10 +15,11 @@ namespace sw
 {
     SW_LOG_CALLER( "AssetHandle" );
 
-    AssetLoadBlock::AssetLoadBlock( const utf8* pKindName, string_view path )
+    AssetLoadBlock::AssetLoadBlock( const utf8* pKindName, string_view path, MemoryTag memoryTag )
         : _path{ path }
         , _error{}
         , _pKindName{ pKindName }
+        , _memoryTag{ memoryTag }
         , _phase{ kPhaseQueued }
         , _state{ AssetLoadState::Loading }
     {
@@ -156,8 +158,9 @@ namespace sw
 
     void AssetLoadBlock::executeLoad()
     {
-        string     error;
-        const bool bLoaded = runLoad( error );
+        const ScopedMemoryTag memoryScope{ _memoryTag };
+        string                error;
+        const bool            bLoaded = runLoad( error );
         if ( bLoaded == false )
         {
             finish( false, std::move( error ) );
@@ -175,6 +178,7 @@ namespace sw
 
     void AssetLoadBlock::executeCompletion( bool bBlocking )
     {
+        const ScopedMemoryTag     memoryScope{ _memoryTag };
         string                    error;
         const AssetCompletionStep step = beginCompletion( bBlocking, error );
         settleCompletionStep( step, std::move( error ) );
@@ -182,6 +186,7 @@ namespace sw
 
     void AssetLoadBlock::executeUploadPoll( bool bBlocking )
     {
+        const ScopedMemoryTag     memoryScope{ _memoryTag };
         string                    error;
         const AssetCompletionStep step = pollCompletion( bBlocking, error );
         settleCompletionStep( step, std::move( error ) );

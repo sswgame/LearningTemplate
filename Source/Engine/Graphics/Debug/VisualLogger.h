@@ -69,10 +69,10 @@ namespace sw
 
         VisualLogger();
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                       shutdownSubsystem() override {}
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief 기록을 켜고 끕니다. 끄면 이미 쌓인 기록은 그대로 둔다. */
         void setEnabled( bool bEnabled );

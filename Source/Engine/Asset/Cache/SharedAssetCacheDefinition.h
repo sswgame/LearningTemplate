@@ -60,7 +60,7 @@ namespace sw
     SharedAssetHandle<AssetType> SharedAssetCache<AssetType>::requestWith( string_view path, AssetLoadStart start )
     {
         bool                                        bStartLoad = false;
-        shared_ptr<SharedAssetLoadBlock<AssetType>> pBlock     = getTable().request( path, SharedAssetCacheTraits<AssetType>::kKindName, bStartLoad );
+        shared_ptr<SharedAssetLoadBlock<AssetType>> pBlock     = getTable().request( path, SharedAssetCacheTraits<AssetType>::kKindName, SharedAssetCacheTraits<AssetType>::kMemoryTag, bStartLoad );
         // 새 로드를 시작해야 하면 실패, 준비된 블록이나 읽는 중인 블록을 받았으면 적중이다. 빈 경로는 조회가 아니다.
         if ( path.empty() == false )
         {

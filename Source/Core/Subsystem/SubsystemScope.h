@@ -86,6 +86,14 @@ namespace sw
          * @brief 서브시스템을 넘겨받아 컬렉션에 더하고 타입 @p TSubsystem 으로 찾게 합니다. 넘긴 객체를 돌려줍니다(소유는 범위).
          * @details 같은 타입이 이미 걸려 있으면 컬렉션에는 더하지만 조회에는 걸지 않는다 — 부른 쪽이 잘못이라 `SW_ASSERT` 로 멈춘다.
          */
+        /** @brief @p args 로 서브시스템을 만들어 더합니다. 만드는 동안 그 형식의 용도 태그(`kSubsystemMemoryTag`)를 겁니다 — 부르는 쪽이 태그를 적지 않는다. */
+        template <class TSubsystem, class... TArgs>
+        TSubsystem& emplaceSubsystem( TArgs&&... args )
+        {
+            const ScopedMemoryTag memoryScope{ TSubsystem::kSubsystemMemoryTag };
+            return addSubsystem( sw::make_unique<TSubsystem>( std::forward<TArgs>( args )... ) );
+        }
+
         template <class TSubsystem>
         TSubsystem& addSubsystem( unique_ptr<TSubsystem> subsystem )
         {

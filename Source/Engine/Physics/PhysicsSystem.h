@@ -48,9 +48,9 @@ namespace sw
         /** @brief 병렬 스텝이 태스크를 쓰고, 에셋(메시 셰이프 캐시)을 읽으므로 에셋 매니저 뒤에 선다. */
         span<const utf8* const> getSubsystemDependencies() const override;
         /** @brief 씬 매니저는 물리 뒤에 선다 — 낮은 층인 씬이 기능 이름을 적지 않게 기능 쪽이 적는다. */
-        span<const utf8* const> getSubsystemDependents() const override;
-        SubsystemHostMask       getSubsystemHost() const override { return SubsystemHostMask::All; }
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Physics; }
+        span<const utf8* const>    getSubsystemDependents() const override;
+        SubsystemHostMask          getSubsystemHost() const override { return SubsystemHostMask::All; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Physics;
 
         /** @brief 올라와 있으면 true 입니다. */
         bool isInitialized() const { return _bInitialized; }

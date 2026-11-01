@@ -136,7 +136,8 @@ namespace sw
         shared_mutex                            _mutex;
         /// @brief 항목의 `_bLoading` 이 내려갈 때 깨운다. 태스크 대기가 아니다 — 맵 잠금 아래의 항목 상태를 기다리고, 올리는 쪽(`reload` · `resizeRenderTarget`)은 태스크 없이 디바이스 스레드에서 돈다.
         std::condition_variable_any                    _cvLoaded;
-        atomic<uint32>                                 _reloadGeneration{ 0 }; ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
+        atomic<uint32>                                 _reloadGeneration{ 0 };   ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
+        atomic<IRHIDevice*>                            _pBoundDevice{ nullptr }; ///< 엔진이 붙인 디바이스(`bindDevice`) — 게임 스레드 요청 · 해제가 쓴다
         mutex                                          _awaitingMutex;
         vector<shared_ptr<TextureLoadBlock>>           _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다, `_awaitingMutex`)
         vector<shared_ptr<TextureLoadBlock>>           _listUploading;      ///< 업로드를 제출했고 끝남 확인을 기다리는 로드(`completePendingLoads` 가 폴링한다, `_awaitingMutex`)
@@ -333,10 +334,16 @@ namespace sw
 
     TextureCache::~TextureCache() = default;
 
-    TextureHandle TextureCache::request( string_view relativePath, IRHIDevice* pDevice, AssetLoadStart start )
+    void TextureCache::bindDevice( IRHIDevice* pDevice )
+    {
+        _impl->_pBoundDevice.store( pDevice, std::memory_order_release );
+    }
+
+    TextureHandle TextureCache::request( string_view relativePath, AssetLoadStart start )
     {
         SW_MEMORY_SCOPE( Texture );
-        const string key = FileUtil::normalizePath( relativePath );
+        IRHIDevice* const pDevice = _impl->_pBoundDevice.load( std::memory_order_acquire );
+        const string      key     = FileUtil::normalizePath( relativePath );
         if ( key.empty() || pDevice == nullptr )
         {
             shared_ptr<TextureLoadBlock> pFailed = sw::make_shared<TextureLoadBlock>( key, pDevice, TextureLoadBlock::Source::File, nullptr, _impl );
@@ -429,7 +436,7 @@ namespace sw
 
     Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
     {
-        const TextureHandle handle = request( relativePath, pDevice, AssetLoadStart::OnCallingThread );
+        const TextureHandle handle = request( relativePath, AssetLoadStart::OnCallingThread );
         // 기다림이 계약이다 — `acquire` 는 포인터를 바로 돌려주는 동기 API 이고, 기다리지 않을 호출자는 `request` 핸들을 들고 뒤 프레임에 본다.
         const shared_ptr<Texture2D> pTexture = handle.wait();
         if ( pTexture == nullptr )
@@ -886,11 +893,11 @@ namespace sw
         }
         return uploadedCount;
     }
-    void TextureCache::release( string_view relativePath, IRHIDevice* pDevice )
+    void TextureCache::release( string_view relativePath )
     {
         if ( relativePath.empty() || _impl == nullptr )
             return;
-        _impl->releaseReference( FileUtil::normalizePath( relativePath ), pDevice );
+        _impl->releaseReference( FileUtil::normalizePath( relativePath ), _impl->_pBoundDevice.load( std::memory_order_acquire ) );
     }
 
     bool TextureCache::isCached( string_view relativePath ) const
@@ -948,7 +955,7 @@ namespace sw
 namespace sw
 {
     TextureLoadBlock::TextureLoadBlock( string_view key, IRHIDevice* pDevice, Source source, Texture2D* pTexture, weak_ptr<TextureCache::Impl> pCache )
-        : AssetLoadBlock{ TextureCache::kAssetKindName, key }
+        : AssetLoadBlock{ TextureCache::kAssetKindName, key, MemoryTag::Texture }
         , _pImage{}
         , _loadError{}
         , _pCache{ std::move( pCache ) }
@@ -1067,7 +1074,6 @@ namespace sw
 
     AssetCompletionStep TextureLoadBlock::beginCompletion( bool bBlocking, string& outError )
     {
-        SW_MEMORY_SCOPE( Texture );
         const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
         if ( pCache == nullptr )
         {
@@ -1111,7 +1117,6 @@ namespace sw
 
     AssetCompletionStep TextureLoadBlock::pollCompletion( bool bBlocking, string& outError )
     {
-        SW_MEMORY_SCOPE( Texture );
         const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
         if ( pCache == nullptr )
         {

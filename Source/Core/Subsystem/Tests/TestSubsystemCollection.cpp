@@ -38,20 +38,21 @@ namespace
         }
     };
 
-    /** @brief 이름 · 의존 · 대상 · 태그를 받아 불린 순서를 적는 서브시스템입니다. 소멸자도 적는다(소멸 순서를 본다). */
-    class RecordingSubsystem final : public ISubsystem
+    /** @brief 이름 · 의존 · 대상을 받아 불린 순서를 적는 서브시스템입니다. 소멸자도 적는다(소멸 순서를 본다). 할당 태그는 형식이 안다(@p TTag). */
+    template <MemoryTag TTag = MemoryTag::EngineMisc>
+    class RecordingSubsystemT final : public ISubsystem
     {
     public:
-        RecordingSubsystem( SubsystemRecorder& recorder, const utf8* pName, vector<const utf8*> listDependency, SubsystemHostMask host = SubsystemHostMask::All,
-                            MemoryTag memoryTag = MemoryTag::EngineMisc )
+        static constexpr MemoryTag kSubsystemMemoryTag = TTag;
+
+        RecordingSubsystemT( SubsystemRecorder& recorder, const utf8* pName, vector<const utf8*> listDependency, SubsystemHostMask host = SubsystemHostMask::All )
             : _recorder{ recorder }
             , _pName{ pName }
             , _listDependency{ std::move( listDependency ) }
             , _host{ host }
-            , _memoryTag{ memoryTag }
         {
         }
-        ~RecordingSubsystem() override { _recorder._listEvent.push_back( string( "D:" ) + _pName ); }
+        ~RecordingSubsystemT() override { _recorder._listEvent.push_back( string( "D:" ) + _pName ); }
 
         SubsystemInitResult initializeSubsystem() override
         {
@@ -65,15 +66,14 @@ namespace
         const utf8*             getSubsystemName() const override { return _pName; }
         span<const utf8* const> getSubsystemDependencies() const override { return _listDependency; }
         SubsystemHostMask       getSubsystemHost() const override { return _host; }
-        MemoryTag               getSubsystemMemoryTag() const override { return _memoryTag; }
 
     private:
         SubsystemRecorder&  _recorder;
         const utf8*         _pName;
         vector<const utf8*> _listDependency;
         SubsystemHostMask   _host;
-        MemoryTag           _memoryTag;
     };
+    using RecordingSubsystem = RecordingSubsystemT<>;
 
     /**
      * @brief 렌더러 모양의 그래프입니다(추가 순서는 이름과 어긋나게 둔다).
@@ -85,9 +85,9 @@ namespace
         collection.add( sw::make_unique<RecordingSubsystem>( recorder, "SceneDevice", vector<const utf8*>{ "Device", "Scene" }, kTestClient ) );
         collection.add( sw::make_unique<RecordingSubsystem>( recorder, "RenderThread", vector<const utf8*>{ "Renderer" }, kTestClient ) );
         collection.add( sw::make_unique<RecordingSubsystem>( recorder, "Renderer", vector<const utf8*>{ "Device" }, kTestClient ) );
-        collection.add( sw::make_unique<RecordingSubsystem>( recorder, "Device", vector<const utf8*>{ "Config" }, kTestClient, MemoryTag::RenderCPU ) );
-        collection.add( sw::make_unique<RecordingSubsystem>( recorder, "Scene", vector<const utf8*>{ "Resource" }, SubsystemHostMask::All, MemoryTag::Scene ) );
-        collection.add( sw::make_unique<RecordingSubsystem>( recorder, "Resource", vector<const utf8*>{ "Config" }, SubsystemHostMask::All, MemoryTag::Asset ) );
+        collection.add( sw::make_unique<RecordingSubsystemT<MemoryTag::RenderCPU>>( recorder, "Device", vector<const utf8*>{ "Config" }, kTestClient ) );
+        collection.add( sw::make_unique<RecordingSubsystemT<MemoryTag::Scene>>( recorder, "Scene", vector<const utf8*>{ "Resource" }, SubsystemHostMask::All ) );
+        collection.add( sw::make_unique<RecordingSubsystemT<MemoryTag::Asset>>( recorder, "Resource", vector<const utf8*>{ "Config" }, SubsystemHostMask::All ) );
         collection.add( sw::make_unique<RecordingSubsystem>( recorder, "Tools", vector<const utf8*>{} ) );
         collection.add( sw::make_unique<RecordingSubsystem>( recorder, "Config", vector<const utf8*>{} ) );
     }

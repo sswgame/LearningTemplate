@@ -36,11 +36,11 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 디바이스를 기다린 뒤 종료합니다. GPU 자원을 보관한 객체는 손으로 훑지 않습니다. 디바이스가 레지스트리 전체에 releaseRHI 를 부릅니다. */
-        void                    shutdownSubsystem() override;
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        SubsystemHostMask       getSubsystemHost() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        SubsystemHostMask          getSubsystemHost() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief 이 서브시스템이 시작된 뒤의 RHI 입니다(디바이스가 있습니다). 시작하지 않았으면(전용 서버, 헤드리스, 실패) nullptr 입니다. */
         RHI* findRHI() const { return _bReady ? _rhi.get() : nullptr; }

@@ -183,7 +183,7 @@ namespace sw
 
             // 진짜 텍스처는 늘 워커가 읽고, 다 읽기 전에는 로드 중 텍스처(회색)를 그리다가 `refreshTextureBindings` 가 바꾼다 — 언리얼 · 유니티도 스트리밍이 끝날
             // 때까지 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다). 못 읽으면 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
-            TextureHandle    load = textures.request( prop._assetPath, pRHI, AssetLoadStart::Async );
+            TextureHandle    load = textures.request( prop._assetPath, AssetLoadStart::Async );
             string           borrowedPath;
             const Texture2D* pTexture = load.isReady() ? load.getBlock()->getTexture() : nullptr;
             if ( pTexture == nullptr )
@@ -281,7 +281,7 @@ namespace sw
                 return;
             }
         }
-        textures.release( standIn, _pRHIDevice );
+        textures.release( standIn );
     }
 
     uint32 Material::findTextureSlot( hashed_string name ) const
@@ -313,7 +313,7 @@ namespace sw
             for ( const string& path : _listBorrowedTexturePath )
             {
                 if ( path.empty() == false )
-                    textures.release( path, pRHI );
+                    textures.release( path );
             }
         }
         _listAcquiredTexturePath.clear();

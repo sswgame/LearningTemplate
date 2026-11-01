@@ -20,8 +20,8 @@ namespace sw
     class GameInstanceSubsystem : public ISubsystem
     {
     public:
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Game; }
+        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                       shutdownSubsystem() override {}
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Game;
     };
 } // namespace sw

@@ -1092,7 +1092,7 @@ namespace sw
     }
 
     PrefabLoadBlock::PrefabLoadBlock( PrefabCache* pCache, string_view resolvedPath, string cacheKey )
-        : AssetLoadBlock{ PrefabCache::kAssetKindName, resolvedPath }
+        : AssetLoadBlock{ PrefabCache::kAssetKindName, resolvedPath, MemoryTag::Scene }
         , _pCache{ pCache }
         , _cacheKey{ std::move( cacheKey ) }
         , _pAsset{}

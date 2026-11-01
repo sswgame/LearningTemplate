@@ -36,12 +36,6 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 return pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
             }
-
-            static IRHIDevice* findDevice()
-            {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -63,7 +57,7 @@ namespace sw::editor
         clear();
     }
 
-    void EditorThumbnailCache::releaseEntry( Entry& entry, IRHIDevice* pDevice )
+    void EditorThumbnailCache::releaseEntry( Entry& entry )
     {
         IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
         if ( entry._pTextureID != nullptr && pBackend != nullptr )
@@ -71,15 +65,13 @@ namespace sw::editor
         entry._pTextureID    = nullptr;
         entry._pBlock        = nullptr; // 쥔 참조를 놓는다 — 마지막이면 엔진이 텍스처를 놓는다
         entry._textureHandle = 0;
-        (void)pDevice;
     }
 
     void EditorThumbnailCache::clear()
     {
-        IRHIDevice* pDevice = EditorThumbnailCacheInternal::findDevice();
         for ( Entry& entry : _listEntry )
         {
-            releaseEntry( entry, pDevice );
+            releaseEntry( entry );
         }
         _listEntry.clear();
         _listPendingID.clear();
@@ -117,8 +109,7 @@ namespace sw::editor
     void EditorThumbnailCache::update()
     {
         ++_frame;
-        IRHIDevice* pDevice = EditorThumbnailCacheInternal::findDevice();
-        if ( pDevice == nullptr || EditorThumbnailCacheInternal::findRendererBackend() == nullptr )
+        if ( EditorThumbnailCacheInternal::findRendererBackend() == nullptr )
             return;
 
         // 다시 읽기 · 디바이스 교체로 텍스처가 바뀐 썸네일은 놓고 다음 그리기가 다시 예약한다.
@@ -130,16 +121,16 @@ namespace sw::editor
             const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle() == entry._textureHandle;
             if ( bValid )
                 continue;
-            releaseEntry( entry, pDevice );
+            releaseEntry( entry );
             _listEntry.erase( _listEntry.begin() + static_cast<std::ptrdiff_t>( entryIndex - 1 ) );
         }
 
-        startLoads( pDevice );
-        finishLoads( pDevice );
-        evictOverCapacity( pDevice );
+        startLoads();
+        finishLoads();
+        evictOverCapacity();
     }
 
-    void EditorThumbnailCache::startLoads( IRHIDevice* pDevice )
+    void EditorThumbnailCache::startLoads()
     {
         if ( _listPendingID.empty() )
             return;
@@ -150,7 +141,7 @@ namespace sw::editor
             _listPendingID.pop_front();
 
             // 디스크 읽기와 디코드는 워커에서 한다. 이미 올라가 있는 텍스처는 준비된 핸들이 바로 온다.
-            const TextureHandle handle = textures.request( assetID, pDevice, AssetLoadStart::Async );
+            const TextureHandle handle = textures.request( assetID, AssetLoadStart::Async );
             if ( handle.isValid() == false )
             {
                 recordFailure( assetID );
@@ -160,7 +151,7 @@ namespace sw::editor
         }
     }
 
-    void EditorThumbnailCache::finishLoads( IRHIDevice* pDevice )
+    void EditorThumbnailCache::finishLoads()
     {
         for ( size_t loadingIndex = 0; loadingIndex < _listLoading.size(); )
         {
@@ -204,7 +195,7 @@ namespace sw::editor
         return true;
     }
 
-    void EditorThumbnailCache::evictOverCapacity( IRHIDevice* pDevice )
+    void EditorThumbnailCache::evictOverCapacity()
     {
         while ( _listEntry.size() > kCapacity )
         {
@@ -214,7 +205,7 @@ namespace sw::editor
             // 이번 프레임에 그린 것은 놓지 않는다 — 화면에 보이는 수가 용량보다 많으면 잠시 넘친다.
             if ( itOldest == _listEntry.end() || itOldest->_lastUsedFrame + 1 >= _frame )
                 return;
-            releaseEntry( *itOldest, pDevice );
+            releaseEntry( *itOldest );
             _listEntry.erase( itOldest );
         }
     }

@@ -11,6 +11,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -245,18 +246,10 @@ namespace sw
     void PoseModifierComponent::setSocketSetPath( string_view path )
     {
         _socketSetPath = string{ path };
-        _ownSockets.reset();
-        if ( _socketSetPath.empty() == false )
-        {
-            SocketKindTable       kinds;
-            shared_ptr<SocketSet> sockets = make_shared<SocketSet>();
-            if ( kinds.loadDefault() == false )
-                SW_LOG_ERROR_ID( "PoseModifier.DefaultSocketKindsCould", "Default socket kinds could not be loaded for the rig sockets '%#'", _socketSetPath.c_str() );
-            else if ( sockets->loadFromAsset( AssetID{ _socketSetPath }, kinds ) == false )
-                SW_LOG_ERROR_ID( "PoseModifier.SocketsCouldNotLoaded", "Sockets '%#' could not be loaded for the rig", _socketSetPath.c_str() );
-            else
-                _ownSockets = std::move( sockets );
-        }
+        // 소켓 세트는 공유 캐시 한 길로 받는다 — `SocketSetComponent` 와 같은 객체다. 예전에는 여기서 파일과 기본 소켓 종류 표를 직접 다시 읽었다(같은 일 두 벌).
+        _ownSockets = _socketSetPath.empty() ? nullptr : SharedAssetCache<SocketSet>::acquire( _socketSetPath );
+        if ( _socketSetPath.empty() == false && _ownSockets == nullptr )
+            SW_LOG_ERROR_ID( "PoseModifier.SocketsCouldNotLoaded", "Sockets '%#' could not be loaded for the rig", _socketSetPath.c_str() );
         bindRig();
     }
 
@@ -396,6 +389,10 @@ namespace sw
         // 이름으로 찾으므로 암묵 스켈레톤에는 늘 실패한다. 스켈레톤이 바뀌면 프레임 준비(prepareFrame)가 다시 묶는다.
         if ( _pUnit->hasDataSkeleton() == false )
             return;
+        // 소켓을 이름으로 찾는 대상이 있는데 소켓 출처(외형이 풀어 준 소켓 표 · 자기 소켓 세트)가 아직 없으면 묶지 않는다 — 스켈레톤과 같은 까닭이다.
+        // 외형이 시작 뒤에 입혀지면 그 사이에 묶어 "unknown socket" 을 냈다(출처가 오면 `setSocketTable` · `setOwnSockets` 가 다시 묶는다). 출처가 있는데 이름이 없으면 그때가 진짜 오류다.
+        if ( needsSockets() && _pSocketTable == nullptr && _ownSockets == nullptr )
+            return;
 
         const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath;
         if ( _instance.initialize( _asset, _pUnit->getSkeleton(), &_socketResolver, label ) == false )
@@ -410,6 +407,18 @@ namespace sw
         loadSharedColliders();
         bindExternalTargets();
         _pUnit->markPoseDirty();
+    }
+
+    bool PoseModifierComponent::needsSockets() const
+    {
+        if ( _asset == nullptr )
+            return false;
+        for ( const RigTargetDef& target : _asset->getTargets() )
+        {
+            if ( target._kind == RigTargetKind::Socket && target.isExternal() == false )
+                return true;
+        }
+        return false;
     }
 
     const PoseModifierComponent::UnitBinding* PoseModifierComponent::findUnitBinding( const hashed_string& unitName ) const

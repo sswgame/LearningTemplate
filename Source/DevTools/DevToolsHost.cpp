@@ -86,24 +86,24 @@ namespace sw
         }
         // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(전용 서버 · 렌더러를 끈 기동은 렌더 쪽이 nullptr).
         if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
-            (void)startup.addSubsystem( sw::make_unique<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread ) );
+            (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );
         // 설정 파일 리로드는 서버에도 선다.
         if ( parts._pConfigManager != nullptr )
         {
             SW_MEMORY_SCOPE( EngineMisc );
-            (void)startup.addSubsystem( sw::make_unique<ConfigReloadSubsystem>( *parts._pConfigManager ) );
+            (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *parts._pConfigManager );
         }
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         if ( parts._pNetSession != nullptr )
-            (void)startup.addSubsystem( sw::make_unique<NetLineEmulationSubsystem>( *parts._pNetSession ) );
+            (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *parts._pNetSession );
         // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
-        (void)startup.addSubsystem( sw::make_unique<ServerPoseOverlay>() );
+        (void)startup.emplaceSubsystem<ServerPoseOverlay>();
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
         if ( parts._pUserSettings != nullptr )
             parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
         // 디버그 HUD 는 런타임 UI 위에 그린다 — UI 가 있는 실행만.
         if ( parts._pUISystem != nullptr )
-            (void)startup.addSubsystem( sw::make_unique<DebugHUD>( *parts._pUISystem, parts._pUserSettings ) );
+            (void)startup.emplaceSubsystem<DebugHUD>( *parts._pUISystem, parts._pUserSettings );
     }
 
     void DevToolsHost::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )

@@ -25,6 +25,7 @@ namespace sw
     class SW_API TypeRegistry
     {
     public:
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Reflection; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
         // ------------------------------------------------------------------------------
         // 1) 수명: 모듈별 등록과 해제, 복제 금지
         // ------------------------------------------------------------------------------

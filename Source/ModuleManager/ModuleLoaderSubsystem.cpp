@@ -34,7 +34,7 @@ namespace sw
     ModuleLoaderSubsystem* ModuleLoaderSubsystem::initializeHostScope( SubsystemScope& hostScope, ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName )
     {
         SW_MEMORY_SCOPE( EngineMisc );
-        ModuleLoaderSubsystem& moduleLibraryHost = hostScope.addSubsystem( make_unique<ModuleLoaderSubsystem>( std::move( moduleTypeLoader ) ) );
+        ModuleLoaderSubsystem& moduleLibraryHost = hostScope.emplaceSubsystem<ModuleLoaderSubsystem>( std::move( moduleTypeLoader ) );
         const bool             bExposed          = hostScope.expose<IModuleLoader>( moduleLibraryHost ) &&
                               hostScope.exposeMember<IModuleStateStore>( moduleLibraryHost, moduleLibraryHost._stateStore );
         SW_ASSERT( bExposed );

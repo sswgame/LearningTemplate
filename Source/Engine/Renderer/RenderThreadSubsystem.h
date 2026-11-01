@@ -34,11 +34,11 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 남은 패킷을 기다린 뒤 스레드를 멈춥니다(객체는 다시 시작할 때 같은 것을 씁니다). */
-        void                    shutdownSubsystem() override;
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        SubsystemHostMask       getSubsystemHost() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        SubsystemHostMask          getSubsystemHost() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief 렌더 스레드입니다. 한 번도 시작하지 않았으면(전용 서버, 헤드리스) nullptr 입니다. */
         RenderThread* findRenderThread() const { return _renderThread.get(); }

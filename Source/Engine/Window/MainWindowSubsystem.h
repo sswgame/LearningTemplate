@@ -38,10 +38,10 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         /** @brief 창을 파괴합니다(네이티브 핸들을 놓고 객체를 지운다). 창을 쓰는 서브시스템은 이미 내려갔다. */
-        void              shutdownSubsystem() override;
-        const utf8*       getSubsystemName() const override { return kSubsystemName; }
-        SubsystemHostMask getSubsystemHost() const override;
-        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::EngineMisc; }
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask          getSubsystemHost() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
 
         /**
          * @brief 주 창을 넘겨받습니다. 이미 창이 있거나 @p window 가 비면 false 이고 아무것도 바꾸지 않습니다(두 번째 주 창을 조용히 바꿔 끼우지 않는다).

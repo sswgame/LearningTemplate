@@ -47,37 +47,37 @@ namespace sw::editor
     {
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
-        scope.addSubsystem( make_unique<EditorStateStore>() ); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
-        EditorSelection&    selection    = scope.addSubsystem( make_unique<EditorSelection>() );
-        EditorPanelManager& panelManager = scope.addSubsystem( make_unique<EditorPanelManager>() );
-        EditorPanelService& panelService = scope.addSubsystem( make_unique<EditorPanelService>( context, panelManager ) );
+        scope.emplaceSubsystem<EditorStateStore>(); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
+        EditorSelection&    selection    = scope.emplaceSubsystem<EditorSelection>();
+        EditorPanelManager& panelManager = scope.emplaceSubsystem<EditorPanelManager>();
+        EditorPanelService& panelService = scope.emplaceSubsystem<EditorPanelService>( context, panelManager );
         (void)scope.expose<IEditorPanelService>( panelService ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
-        scope.addSubsystem( make_unique<EditorWorkspace>( &selection ) );
-        scope.addSubsystem( make_unique<EditorNotificationManager>() );
-        scope.addSubsystem( make_unique<EditorCommandRegistry>() );
+        scope.emplaceSubsystem<EditorWorkspace>( &selection );
+        scope.emplaceSubsystem<EditorNotificationManager>();
+        scope.emplaceSubsystem<EditorCommandRegistry>();
         // 메인 되돌리기 기록과 복사 버퍼 — 인스턴스가 내려갈 때 호스트의 맡김 칸에 맡기고 새 인스턴스가 되찾는다(리로드 · 백엔드 교체).
-        EditorUndoHistory& undoHistory = scope.addSubsystem( make_unique<EditorUndoHistory>() );
+        EditorUndoHistory& undoHistory = scope.emplaceSubsystem<EditorUndoHistory>();
         const bool         bStackBound = scope.bind( &undoHistory.getStack() ); // `findSubsystem<CommandStack>()` 이 찾는다
         SW_ASSERT( bStackBound );
         (void)bStackBound;
-        scope.addSubsystem( make_unique<ObjectCopyBuffer>() );
-        scope.addSubsystem( make_unique<EditorObjectEditBindings>() ); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
-        scope.addSubsystem( make_unique<EditorInputActions>() );       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
-        scope.addSubsystem( make_unique<EditorPopupManager>() );
-        scope.addSubsystem( make_unique<AssetHotReload>() );
-        scope.addSubsystem( make_unique<EditorToolDefaultsReload>() ); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
-        scope.addSubsystem( sw::make_unique<EditorSourceControl>( ProcessRoots::get()._project.str() ) );
-        scope.addSubsystem( make_unique<InspectorComponentManager>() );
-        scope.addSubsystem( make_unique<InspectorPropertyManager>() );
-        scope.addSubsystem( make_unique<EditorDefaultObjects>() );
-        scope.addSubsystem( make_unique<EditorNetPlaySession>() );
-        scope.addSubsystem( make_unique<EditorRenderViews>() );
-        scope.addSubsystem( make_unique<EditorPlaySession>() );
-        scope.addSubsystem( make_unique<EditorTheme>() );
-        scope.addSubsystem( make_unique<EditorUICapture>() );
-        scope.addSubsystem( make_unique<EditorExtensionSubsystems>( scope ) ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
+        scope.emplaceSubsystem<ObjectCopyBuffer>();
+        scope.emplaceSubsystem<EditorObjectEditBindings>(); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
+        scope.emplaceSubsystem<EditorInputActions>();       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
+        scope.emplaceSubsystem<EditorPopupManager>();
+        scope.emplaceSubsystem<AssetHotReload>();
+        scope.emplaceSubsystem<EditorToolDefaultsReload>(); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
+        scope.emplaceSubsystem<EditorSourceControl>( ProcessRoots::get()._project.str() );
+        scope.emplaceSubsystem<InspectorComponentManager>();
+        scope.emplaceSubsystem<InspectorPropertyManager>();
+        scope.emplaceSubsystem<EditorDefaultObjects>();
+        scope.emplaceSubsystem<EditorNetPlaySession>();
+        scope.emplaceSubsystem<EditorRenderViews>();
+        scope.emplaceSubsystem<EditorPlaySession>();
+        scope.emplaceSubsystem<EditorTheme>();
+        scope.emplaceSubsystem<EditorUICapture>();
+        scope.emplaceSubsystem<EditorExtensionSubsystems>( scope ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 종료된다.
-        scope.addSubsystem( make_unique<EditorModuleUnloadListener>( context ) );
+        scope.emplaceSubsystem<EditorModuleUnloadListener>( context );
     }
 
     void EditorSubsystemSet::syncExtensionRegistrations( EditorContext& context )

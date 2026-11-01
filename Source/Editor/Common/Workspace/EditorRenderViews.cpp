@@ -24,13 +24,16 @@ namespace sw::editor
 
     void EditorRenderViews::clearViewDrawnMarks()
     {
+        // UI 프레임 시작 — 그리기 표시를 지우고, 엔진이 그사이 올린 렌더 텍스처를 받는다(패널은 크기가 바뀔 때만 `ensure*TargetSize` 를 부른다).
         for ( EditorViewTarget& view : _arrViewTarget )
         {
             view._bDrawn = SW_FALSE;
+            adoptIfReady( view );
         }
         for ( EditorPreviewViewTarget& preview : _listPreviewTarget )
         {
             preview._target._bDrawn = SW_FALSE;
+            adoptIfReady( preview._target );
         }
         _bAnimationRequested = SW_FALSE;
     }
@@ -168,7 +171,7 @@ namespace sw::editor
             destroyTarget( view );
             view._texturePath = formatToString( "%#editor/view%#", TextureCache::kRenderTargetPrefix, _nextTargetSerial++ );
             textures.declareRenderTarget( view._texturePath, width, height );
-            view._texture = textures.request( view._texturePath, _pRHIDevice, AssetLoadStart::Async );
+            view._texture = textures.request( view._texturePath, AssetLoadStart::Async );
             view._width   = width;
             view._height  = height;
             if ( view._texture.isValid() == false )
@@ -177,9 +180,14 @@ namespace sw::editor
                 return;
             }
         }
+        adoptIfReady( view );
+    }
+
+    void EditorRenderViews::adoptIfReady( EditorViewTarget& view )
+    {
         if ( view._renderTarget != 0 || view._texture.isReady() == false )
             return; // 이미 받았거나, 엔진이 아직 올리지 않았다(다음 프레임에 다시 본다)
-        const Texture2D* pTexture = textures.find( view._texturePath );
+        const Texture2D* pTexture = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>().find( view._texturePath );
         if ( pTexture == nullptr || pTexture->isRHIValid() == false )
             return;
         view._renderTarget = pTexture->getHandle();

@@ -69,8 +69,12 @@ namespace sw
          *          로드 중 텍스처를 빌려 둔 머티리얼이 새 SRV 를 받는다(`Material::refreshTextureBindings`).
          *          같은 경로를 읽는 중인 로드를 받으면 그 로드가 올릴 디바이스를 @p pDevice 로 바꾼다 — 앞서 요청한 디바이스는 이미 내려갔을 수 있다.
          * @param start 새 로드의 로드 단계(디스크 읽기)를 어디서 시작하는가입니다. `OnCallingThread` 여도 업로드는 `wait()` 나 펌프가 한다.
+         * @details 디바이스는 받지 않는다 — 엔진이 붙인 디바이스(`bindDevice`)에 올린다. 게임 스레드 · 에디터는 RHI 를 모른다(언리얼 `UTexture` 게임 스레드 API 와 같다).
+         *          예전에는 디바이스를 인자로 받아 에디터 패널 · 인스펙터 · 게임 인터페이스까지 디바이스가 관통했다.
          */
-        TextureHandle request( string_view relativePath, IRHIDevice* pDevice, AssetLoadStart start );
+        TextureHandle request( string_view relativePath, AssetLoadStart start );
+        /** @brief 올릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). 붙은 디바이스가 없으면 `request` 는 실패 핸들을 돌려준다. */
+        void bindDevice( IRHIDevice* pDevice );
         /**
          * @brief 경로의 텍스처를 확보하고 GPU 에 업로드합니다(렌더 텍스처 경로면 렌더 타깃을 만듭니다). 실패하면 nullptr 입니다.
          * @details `request` 와 같은 로드 블록을 기다린다(새 로드는 이 자리에서 읽는다) — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
@@ -185,8 +189,8 @@ namespace sw
          * @return 반영한 구간 수입니다(원본만 고친 것과 받아들여진 제출).
          */
         uint32 flushRegionUpdates( IRHIDevice* pDevice );
-        /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */
-        void release( string_view relativePath, IRHIDevice* pDevice );
+        /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(붙은 디바이스에서). */
+        void release( string_view relativePath );
         /** @brief 그 경로를 지금 캐시가 보관하고 있는지 반환합니다(`MaterialCache::isCached` 와 같은 뜻). */
         bool isCached( string_view relativePath ) const override;
         /** @brief 지금 보관 중인 항목 수입니다. */

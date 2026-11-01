@@ -47,13 +47,13 @@ namespace sw
          * @brief 경로의 로드 블록을 받습니다. 표에 살아 있으면 준비된 블록, 누가 읽는 중이면 그 블록, 아니면 새 블록입니다. 워커에서 불러도 됩니다(잠급니다).
          * @param outbStartLoad 새 블록이라 호출한 쪽이 로드를 시작해야 하면 true 가 됩니다(`AssetLoadBlock::startLoad`).
          */
-        shared_ptr<SharedAssetLoadBlock<AssetType>> request( string_view path, const utf8* pKindName, bool& outbStartLoad )
+        shared_ptr<SharedAssetLoadBlock<AssetType>> request( string_view path, const utf8* pKindName, MemoryTag memoryTag, bool& outbStartLoad )
         {
             using Block   = SharedAssetLoadBlock<AssetType>;
             outbStartLoad = false;
             if ( path.empty() )
             {
-                shared_ptr<Block> pFailed = sw::make_shared<Block>( pKindName, path );
+                shared_ptr<Block> pFailed = sw::make_shared<Block>( pKindName, path, memoryTag );
                 pFailed->markFailedWithoutLoad( "the asset path is empty" );
                 return pFailed;
             }
@@ -67,7 +67,7 @@ namespace sw
                     return pLoading;
             }
             // 진행 중 표를 잡은 채 표를 본다 — 로드는 표에 넣은 뒤 진행 중 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
-            shared_ptr<Block>     pBlock = sw::make_shared<Block>( pKindName, path );
+            shared_ptr<Block>     pBlock = sw::make_shared<Block>( pKindName, path, memoryTag );
             shared_ptr<AssetType> live   = _table.findLive( key );
             if ( live != nullptr )
             {

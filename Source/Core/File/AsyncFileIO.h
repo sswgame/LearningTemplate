@@ -221,8 +221,8 @@ namespace sw
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
         /** @brief 완료 콜백을 태스크로 싣는다 — 태스크 매니저가 이것보다 늦게 내려간다. */
-        span<const utf8* const> getSubsystemDependencies() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Asset; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Asset;
 
         /** @brief 시작했으면 true 입니다. */
         bool isInitialized() const;

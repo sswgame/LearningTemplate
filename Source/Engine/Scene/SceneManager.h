@@ -105,10 +105,10 @@ namespace sw
          */
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 로드된 씬을 모두 내리고 종료합니다(유일한 종료 길, 소멸자도 이 길을 탄다). */
-        void                    shutdownSubsystem() override;
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Scene; }
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Scene;
 
         /** @brief 새 씬을 만들고, 활성 씬이 없으면 활성으로 정합니다. */
         Scene* createScene( string_view name );

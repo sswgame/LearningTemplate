@@ -60,7 +60,8 @@ namespace sw
         TSubsystem& add( unique_ptr<TSubsystem> subsystem )
         {
             static_assert( std::is_base_of_v<ISubsystem, TSubsystem>, "SubsystemCollection::add takes an ISubsystem" );
-            TSubsystem& added = *subsystem;
+            TSubsystem& added                            = *subsystem;
+            static_cast<ISubsystem&>( added )._memoryTag = TSubsystem::kSubsystemMemoryTag; // 용도는 형식이 안다(`ISubsystem::getSubsystemMemoryTag`)
             addInternal( Entry{ subsystem.release(), &destroyAs<TSubsystem> } );
             return added;
         }

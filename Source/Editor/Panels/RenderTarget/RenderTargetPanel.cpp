@@ -240,7 +240,7 @@ namespace sw::editor
             _snapshotPath.clear();
             return;
         }
-        _snapshotHandle = textures.request( _snapshotPath, pDevice, AssetLoadStart::Async );
+        _snapshotHandle = textures.request( _snapshotPath, AssetLoadStart::Async );
         adoptSnapshotTextureIfReady();
     }
 

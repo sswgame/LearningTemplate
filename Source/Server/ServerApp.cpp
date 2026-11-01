@@ -149,7 +149,7 @@ namespace sw
         // 종료 신호 처리기도 이 범위에 둔다 — 엔진 종료가 끝날 때까지 걸려 있어야 하고, 기동 중에 온 신호는 깃발로 남아 루프 첫 바퀴가 정상 종료한다.
         {
             SW_MEMORY_SCOPE( EngineMisc );
-            _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
+            _host.emplaceSubsystem<ShutdownSignalSubsystem>();
         }
         // 개발 도구 — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(배포는 빈 구현).
         if constexpr ( build::kShipping == false ) // 개발 계층 · 개발 조종은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다

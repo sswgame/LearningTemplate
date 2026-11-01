@@ -155,6 +155,8 @@ namespace sw::editor
          *          만들기는 엔진이 렌더 쪽 로드 펌프에서 한다. 예전에는 에디터 스레드가 RHI 팩터리로 직접 만들고 색을 채웠다(GL 컨텍스트를 다퉜다).
          */
         void ensureTargetSize( EditorViewTarget& view, uint32 width, uint32 height );
+        /** @brief 엔진이 렌더 텍스처를 GPU 에 올렸으면 핸들을 받아 ImGui 에 등록합니다(받기 전에는 0 — 그리지 않는다). UI 프레임마다 부른다(`clearViewDrawnMarks`). */
+        void adoptIfReady( EditorViewTarget& view );
         /** @brief 미리보기 타깃을 찾습니다(고칠 수 있게). 없으면 nullptr 입니다. */
         EditorPreviewViewTarget* findPreviewTargetMutable( uint32 id );
 

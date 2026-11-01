@@ -687,8 +687,9 @@ namespace sw::editor
                 const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
                 editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, width, height );
                 const EditorViewTarget& view = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
-                (void)context.expect( view._width == width && view._height == height && view._pTextureID != nullptr,
-                                      "the scene view target was not recreated at the requested size" );
+                // 렌더 텍스처는 엔진이 렌더 쪽에서 만든다 — 요청한 크기는 바로 반영되고, 텍스처는 올라간 프레임부터 그린다(언리얼 `ResizeTarget` 과 같다).
+                // 이 테스트가 지키는 것은 그리던 텍스처를 매 프레임 놓아도 안전하다는 것이다(놓기는 그리기 해제 큐가 그 프레임 뒤로 미룬다).
+                (void)context.expect( view._width == width && view._height == height, "the scene view target was not requested at the requested size" );
 
                 beginProbeWindow();
                 if ( view._pTextureID != nullptr )

@@ -60,10 +60,10 @@ namespace sw
         // 2) 페이지 텍스처 — 없으면 만들고 바뀐 구간을 올린다(GPU 완료를 기다리지 않는다).
         _atlas.uploadPages( device );
         // 경로 그림 — 게임 스레드는 디바이스가 없어 경로만 실었다. 머티리얼 텍스처와 같은 캐시에서 빌린다(기록 전이라 만들 수 있다).
-        _textures.acquirePathTextures( device, inoutFrame._mainOutput );
+        _textures.acquirePathTextures( inoutFrame._mainOutput );
         for ( const CanvasTargetDrawList& target : inoutFrame._listTarget )
         {
-            _textures.acquirePathTextures( device, target._list );
+            _textures.acquirePathTextures( target._list );
         }
 
         // 3) 사각형 버퍼 — 마커 투영 컴퓨트가 앵커 원소를 쓰는 프레임이면 UAV 가 있어야 한다.
@@ -138,7 +138,7 @@ namespace sw
     void CanvasRenderer::release( IRHIDevice* pDevice )
     {
         _atlas.release( pDevice );
-        _textures.release( pDevice );
+        _textures.release();
         _quadBuffer.release( pDevice );
         _markers.release( pDevice );
     }

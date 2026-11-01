@@ -41,12 +41,12 @@ namespace sw
         LiveShaderSubsystem& operator=( const LiveShaderSubsystem& ) = delete;
 
         /** @brief 실패해도 성공으로 칩니다. 개발 도구 하나 때문에 기동을 멈추지 않습니다. */
-        SubsystemInitResult     initializeSubsystem() override;
-        void                    shutdownSubsystem() override;
-        const utf8*             getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const> getSubsystemDependencies() const override;
-        SubsystemHostMask       getSubsystemHost() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Shader; }
+        SubsystemInitResult        initializeSubsystem() override;
+        void                       shutdownSubsystem() override;
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        SubsystemHostMask          getSubsystemHost() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Shader;
 
         /** @brief 셰이더 라이브 리로드입니다. Debug 가 아니거나 시작하지 않았으면 nullptr 입니다(배포본은 DevTools 를 짓지 않는다). */
         ShaderRecompiler* findShaderRecompiler() const { return _bReady ? _shaderRecompiler.get() : nullptr; }

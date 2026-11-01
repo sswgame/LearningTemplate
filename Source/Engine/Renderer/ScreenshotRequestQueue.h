@@ -47,10 +47,10 @@ namespace sw
         ScreenshotRequestQueue( const ScreenshotRequestQueue& )            = delete;
         ScreenshotRequestQueue& operator=( const ScreenshotRequestQueue& ) = delete;
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                       shutdownSubsystem() override {}
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief 요청을 넣습니다. 아직 꺼내지 않은 앞 요청은 이 요청으로 바뀝니다. */
         void put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );

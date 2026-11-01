@@ -95,8 +95,8 @@ namespace sw
         const utf8*       getSubsystemName() const override { return kSubsystemName; }
         SubsystemHostMask getSubsystemHost() const override { return SubsystemHostMask::All; }
         /** @brief 에셋 매니저 뒤에 섭니다 — 바이트코드 공급자를 고르는 콘텐츠 정책을 그것이 정한다. */
-        span<const utf8* const> getSubsystemDependencies() const override;
-        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Shader; }
+        span<const utf8* const>    getSubsystemDependencies() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Shader;
 
         /**
          * @brief 바이트코드 로드를 요청합니다. 같은 요청(경로 · 진입점 · 스테이지 · 대상 · 코드젠 · define)을 읽는 중이면 그 로드를 받고, 아니면 워커가 읽거나
