@@ -167,6 +167,18 @@ namespace sw::editor
         return text;
     }
 
+    string ModelImportUtil::formatMaterialNumber( float32 value )
+    {
+        utf8 arrText[constant::kMaxBuffer32]{};
+        formatstring( arrText, sizeof( arrText ), "%.6g", static_cast<float64>( value ) + 0.0 );
+        return string( arrText );
+    }
+
+    string ModelImportUtil::formatMaterialColor( const float4& color )
+    {
+        return formatMaterialNumber( color._x ) + " " + formatMaterialNumber( color._y ) + " " + formatMaterialNumber( color._z ) + " " + formatMaterialNumber( color._w );
+    }
+
     bool ModelImportUtil::writeImportedMeta( const AssetPaths& assetPaths, const string& assetPath )
     {
         const string assetID = assetPaths.toAssetID( assetPath );

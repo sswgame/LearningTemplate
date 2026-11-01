@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -114,6 +115,8 @@ namespace sw::editor
          * @param toonTemplate 툰 머티리얼 템플릿의 경로입니다 — 원본은 엔진 기본 에셋 표(`EngineDefaultAssets::_toonMaterialTemplate`). 워커에서도 부르므로 서비스를 찾지 않고 호출한 쪽이 넘긴다.
          */
         static string makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate );
+        /** @brief 머티리얼 XML `_properties` 에서 그 이름의 항목을 찾습니다. 없으면 무효 노드입니다(툰 · PBR 머티리얼 임포트가 함께 쓴다). */
+        static XMLNode findMaterialProperty( const XMLNode& properties, string_view name );
 
         /** @brief 감마(sRGB) 값 하나를 선형으로 변환합니다. */
         static float32 convertGammaToLinear( float32 value );

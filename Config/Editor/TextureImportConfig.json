@@ -61,8 +61,21 @@
     {
       "name": "Normal_Maps",
       "inherits": "Base_NormalMap",
-      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*"],
+      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*", "*_nor_gl_*"],
       "exclude_paths": ["ui/", "gui/", "icons/"]
+    },
+    {
+      "name": "Scan_Textures",
+      "inherits": "Base_Default",
+      "include_patterns": ["*/textures_raw/polyhaven/*_diff_*"],
+      "format": "BC1_UNORM"
+    },
+    {
+      "name": "ORM_Maps",
+      "inherits": "Base_Default",
+      "include_patterns": ["*_orm.*", "*_arm_*"],
+      "format": "BC1_UNORM",
+      "srgb": false
     },
     {
       "name": "Roughness_Maps",

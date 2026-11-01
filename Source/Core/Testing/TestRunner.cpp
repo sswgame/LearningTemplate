@@ -526,6 +526,16 @@ namespace sw::test
         return shardCount <= 1 ? 0 : hash % shardCount;
     }
 
+    bool TestRunner::isExpectedByActiveCase( const utf8* pLogID )
+    {
+        if ( pLogID == nullptr )
+            return false;
+        TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
+        ScopedLock<mutex>              lock{ state._mutex };
+        return state._bActive && VectorUtil::containsIf( state._listExpectedLog, [&]( const TestRunnerInternal::ExpectedLog& expected )
+        { return expected._id == pLogID; } );
+    }
+
     vector<string> TestRunner::collectCaseNames()
     {
         vector<string>                listName;
@@ -634,7 +644,7 @@ namespace sw::test
             Internal::shuffle( listRound, baseSeed + roundIndex );
             for ( const TestCaseRegistration* pCase : listRound )
             {
-                Internal::CaseState& state = Internal::getState();
+                TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
                 {
                     ScopedLock<mutex> lock{ state._mutex };
                     state._pCase = pCase;
@@ -670,7 +680,7 @@ namespace sw::test
                     state._bActive = false;
                     if ( state._assertionCount == 0 )
                         listLateFailure.push_back( formatToString( "%#(%#): error: the case made no assertion - a case that checks nothing is not a pass", string( pCase->_pFile ), pCase->_line ) );
-                    for ( const Internal::ExpectedLog& expected : state._listExpectedLog )
+                    for ( const TestRunnerInternal::ExpectedLog& expected : state._listExpectedLog )
                     {
                         if ( expected._seenCount == 0 )
                             listLateFailure.push_back( formatToString( "%#(%#): error: expected log [id:%#] never appeared", string( expected._pFile ), expected._line, expected._id ) );

@@ -16,4 +16,6 @@
   `App --import-textures` 가 만든다(스탬프는 각 폴더의 `import.stamp`). 파일 이름은 원본의 camelCase · `-` 를 소문자 `_` 로 바꾼 것이다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
 - KayKit Dungeon 모델은 `models/kaykit_dungeon/<이름>.mesh` 로 임포트된다(원본의 `.gltf.glb` 를 `.glb` 로 줄인 이름). 색은 `textures/kaykit_dungeon.dds` 에서
-  읽는다. 맵(`arena.scene.xml`)은 아직 벽 · 엄폐물을 큐브로 그린다 — 쓰려면 `_meshID` 를 이 메시로 바꾸고 그 텍스처를 건다.
+  읽는다. 맵(`arena.scene.xml`)은 이 메시를 경기장 밖 전시 줄(`Cc0.*`)에만 둔다.
+- 경기장의 바닥 · 벽 · 엄폐물(블로커 크기 큐브)은 Poly Haven 스캔 텍스처(`materials/floor` · `wall` · `cover.material` — 월드 좌표 타일링), 소품(`Ph.*`)은
+  Poly Haven 스캔 모델이다 — 원본과 출처는 공용 팩(`common/credits.md`)에 있다.

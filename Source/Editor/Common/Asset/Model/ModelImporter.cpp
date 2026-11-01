@@ -521,8 +521,9 @@ namespace sw::editor
                     SW_LOG_ERROR( "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
                     return false;
                 }
-                if ( merged._baseColorTextureURI.empty() == false && listToon.empty() )
-                    SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureURI.c_str() );
+                // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePbrMaterial`).
+                if ( listToon.empty() && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
+                    return false;
 
                 ModelImportGeometry::applyRule( rule, merged );
                 // LOD 는 구간 · 모프 없는 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
@@ -776,6 +777,8 @@ namespace sw::editor
             return false;
         }
         if ( ModelImportMaterial::writeMaterialSections( assetPaths, result, sourcePath, sideFolder ) == false )
+            return false;
+        if ( ModelImportMaterial::writePbrMaterial( assetPaths, result, sourcePath, sideFolder ) == false )
             return false;
         if ( Internal::writeFractureAsset( result, rule, sourcePath, outputPath ) == false )
             return false;

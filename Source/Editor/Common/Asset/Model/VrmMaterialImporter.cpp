@@ -8,6 +8,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/Model/ModelImportUtil.h"
+
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -331,29 +333,9 @@ namespace sw::editor
                 inoutDesc._outlineMode  = ToonOutlineMode::None;
             }
 
-            /** @brief 소수 여섯 자리까지의 문자열입니다. XML 에 쓰는 값입니다. 음의 0 은 0 으로 쓴다(부호를 뒤집은 0 이 "-0" 으로 남지 않게 — -0 + 0 = +0). */
-            static string formatNumber( float32 value )
-            {
-                utf8 arrText[constant::kMaxBuffer32]{};
-                formatstring( arrText, sizeof( arrText ), "%.6g", static_cast<float64>( value ) + 0.0 );
-                return string( arrText );
-            }
-
-            static string formatColor( const float4& color )
-            {
-                return formatNumber( color._x ) + " " + formatNumber( color._y ) + " " + formatNumber( color._z ) + " " + formatNumber( color._w );
-            }
-
-            /** @brief `_properties` 에서 그 이름의 항목을 찾습니다. */
-            static XMLNode findProperty( const XMLNode& properties, string_view name )
-            {
-                for ( XMLNode item = properties.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
-                {
-                    if ( item.getAttributeText( "name" ) == name )
-                        return item;
-                }
-                return XMLNode{};
-            }
+            static string  formatNumber( float32 value ) { return ModelImportUtil::formatMaterialNumber( value ); }
+            static string  formatColor( const float4& color ) { return ModelImportUtil::formatMaterialColor( color ); }
+            static XMLNode findProperty( const XMLNode& properties, string_view name ) { return VrmMaterialImporter::findMaterialProperty( properties, name ); }
 
             static constexpr size_t kVrm0ColorCount = sizeof( kArrVrm0Color ) / sizeof( kArrVrm0Color[0] );
 
@@ -714,6 +696,16 @@ namespace sw::editor
             return false;
         }
         return true;
+    }
+
+    XMLNode VrmMaterialImporter::findMaterialProperty( const XMLNode& properties, string_view name )
+    {
+        for ( XMLNode item = properties.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+        {
+            if ( item.getAttributeText( "name" ) == name )
+                return item;
+        }
+        return XMLNode{};
     }
 
     string VrmMaterialImporter::makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate )

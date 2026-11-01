@@ -67,6 +67,20 @@ namespace sw::editor
         [[nodiscard]] static bool writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
 
         /**
+         * @brief 일반 glTF 의 첫 금속도 · 거칠기 머티리얼(기본색 텍스처가 있는 것)을 읽어 @p inoutResult 의 `_pbrMaterial` 에 담습니다. 없으면 아무것도 하지 않습니다.
+         * @details 머티리얼이 여럿이면 첫 것만 쓴다(구간 없는 정적 메시라 머티리얼 하나다) — 나머지는 경고로 알린다.
+         * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
+        /**
+         * @brief 읽은 PBR 머티리얼의 텍스처 원본(`<x>/textures_raw/<y>/<이름>_albedo|_normal|_orm.<확장자>`)과 머티리얼(`<옆 폴더>/materials/<이름>.material`)을 씁니다.
+         * @details 텍스처 이름 꼬리가 텍스처 임포트 규칙을 고른다(`_normal` → BC5 선형, `_orm` → 선형). 머티리얼은 엔진 PBR 견본(`EngineDefaultAssets::_pbrMaterialTemplate`)에 값을 채운다.
+         */
+        [[nodiscard]] static bool writePbrMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
+        /** @brief glTF 이미지 하나의 원본 바이트를 읽습니다(내장은 그대로, 바깥 파일은 원본 옆에서). 바깥 파일을 못 읽으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool readImageBytes( const cgltf_image& image, string_view sourcePath, ModelImportTexture& outTexture );
+
+        /**
          * @brief 원본 경로에서 원본 텍스처 폴더를 구합니다(`<x>/models_raw/<y>.vrm` → `<x>/textures_raw/<y>`). `models_raw/` 구간이 없으면 빈 문자열입니다.
          */
         static string makeRawTextureFolder( string_view sourcePath );

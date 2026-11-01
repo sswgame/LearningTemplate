@@ -142,630 +142,210 @@
 		<entity id="7" name="Cover">
 			<GameObject _schemaVersion="0" _name="Cover" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="-8,1,-6"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-8,1,-6"
+					               _localRotation="0,0,0"
+					               _localScale="2.4,2,2.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1,1.2" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="8" name="Crate">
-			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-1,0"
-					               _localRotation="0,0,0"
-					               _localScale="4.3636355,2.7027028,2.3999996"
-					               _attachOwner="Cover"
-					               _attachOwnerID="7"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="9" name="Crate_2">
-			<GameObject _schemaVersion="0" _name="Crate_2" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0,0"
-					               _localRotation="0,0,0"
-					               _localScale="4.3636355,2.7027028,2.3999996"
-					               _attachOwner="Cover"
-					               _attachOwnerID="7"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="Cover_2">
 			<GameObject _schemaVersion="0" _name="Cover_2" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="7,1,5"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7,1,5"
+					               _localRotation="0,0,0"
+					               _localScale="3,2,2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="11" name="Crate_3">
-			<GameObject _schemaVersion="0" _name="Crate_3" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-1,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="3.6363635,2.7027028,3"
-					               _attachOwner="Cover_2"
-					               _attachOwnerID="10"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="12" name="Crate_4">
-			<GameObject _schemaVersion="0" _name="Crate_4" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="3.6363635,2.7027028,3"
-					               _attachOwner="Cover_2"
-					               _attachOwnerID="10"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="13" name="Cover_3">
 			<GameObject _schemaVersion="0" _name="Cover_3" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="0,1.5,9"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.5,9"
+					               _localRotation="0,0,0"
+					               _localScale="6,3,1.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="3,1.5,0.6" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="14" name="Crate_5">
-			<GameObject _schemaVersion="0" _name="Crate_5" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-1.5,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="2.1818194,2.027027,6"
-					               _attachOwner="Cover_3"
-					               _attachOwnerID="13"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="15" name="Crate_6">
-			<GameObject _schemaVersion="0" _name="Crate_6" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-0.75,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="2.1818194,2.027027,6"
-					               _attachOwner="Cover_3"
-					               _attachOwnerID="13"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="16" name="Crate_7">
-			<GameObject _schemaVersion="0" _name="Crate_7" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="2.1818194,2.027027,6"
-					               _attachOwner="Cover_3"
-					               _attachOwnerID="13"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="17" name="Crate_8">
-			<GameObject _schemaVersion="0" _name="Crate_8" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0.75,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="2.1818194,2.027027,6"
-					               _attachOwner="Cover_3"
-					               _attachOwnerID="13"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="18" name="Cover_4">
 			<GameObject _schemaVersion="0" _name="Cover_4" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="-10,0.75,8"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-10,0.75,8"
+					               _localRotation="0,0,0"
+					               _localScale="2,1.5,2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,0.75,1" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="19" name="Crate_9">
-			<GameObject _schemaVersion="0" _name="Crate_9" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-0.75,0"
-					               _localRotation="0,0,0"
-					               _localScale="3.6363635,2.027027,2"
-					               _attachOwner="Cover_4"
-					               _attachOwnerID="18"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="20" name="Crate_10">
-			<GameObject _schemaVersion="0" _name="Crate_10" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0,0"
-					               _localRotation="0,0,0"
-					               _localScale="3.6363635,2.027027,2"
-					               _attachOwner="Cover_4"
-					               _attachOwnerID="18"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="21" name="Cover_5">
 			<GameObject _schemaVersion="0" _name="Cover_5" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="10,1,-9"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
-					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,1,2" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="22" name="Crate_11">
-			<GameObject _schemaVersion="0" _name="Crate_11" _bActive="true">
-				<_listComponent>
 					<MeshComponent _componentName="MeshComponent"
 					               _bActive="true"
-					               _localPosition="0,-1,0"
+					               _localPosition="10,1,-9"
 					               _localRotation="0,0,0"
-					               _localScale="3.6363635,5.4054055,4"
-					               _attachOwner="Cover_5"
-					               _attachOwnerID="21"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
+					               _localScale="2,2,4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1,1,2" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="23" name="Cover_6">
 			<GameObject _schemaVersion="0" _name="Cover_6" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="4,0.6,-4"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="4,0.6,-4"
+					               _localRotation="0,0,0"
+					               _localScale="1.2,1.2,1.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.6,0.6,0.6" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="24" name="Crate_12">
-			<GameObject _schemaVersion="0" _name="Crate_12" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-0.6,0"
-					               _localRotation="0,0,0"
-					               _localScale="2.1818178,1.081081,1.1999998"
-					               _attachOwner="Cover_6"
-					               _attachOwnerID="23"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="25" name="Crate_13">
-			<GameObject _schemaVersion="0" _name="Crate_13" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-0.20000002,0"
-					               _localRotation="0,0,0"
-					               _localScale="2.1818178,1.081081,1.1999998"
-					               _attachOwner="Cover_6"
-					               _attachOwnerID="23"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="26" name="Crate_14">
-			<GameObject _schemaVersion="0" _name="Crate_14" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0.19999999,0"
-					               _localRotation="0,0,0"
-					               _localScale="2.1818178,1.081081,1.1999998"
-					               _attachOwner="Cover_6"
-					               _attachOwnerID="23"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="27" name="Cover_7">
 			<GameObject _schemaVersion="0" _name="Cover_7" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="-4,1,3"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-4,1,3"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,2,5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.8,1,2.5" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="28" name="Crate_15">
-			<GameObject _schemaVersion="0" _name="Crate_15" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-1,0"
-					               _localRotation="0,0,0"
-					               _localScale="2.909091,2.7027028,5"
-					               _attachOwner="Cover_7"
-					               _attachOwnerID="27"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="29" name="Crate_16">
-			<GameObject _schemaVersion="0" _name="Crate_16" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0,0"
-					               _localRotation="0,0,0"
-					               _localScale="2.909091,2.7027028,5"
-					               _attachOwner="Cover_7"
-					               _attachOwnerID="27"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="30" name="Cover_8">
 			<GameObject _schemaVersion="0" _name="Cover_8" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="12,1.25,12"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="12,1.25,12"
+					               _localRotation="0,0,0"
+					               _localScale="2.4,2.5,2.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.2,1.25,1.2" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="31" name="Crate_17">
-			<GameObject _schemaVersion="0" _name="Crate_17" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-1.25,0"
-					               _localRotation="0,0,0"
-					               _localScale="4.3636355,2.252252,2.3999996"
-					               _attachOwner="Cover_8"
-					               _attachOwnerID="30"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="32" name="Crate_18">
-			<GameObject _schemaVersion="0" _name="Crate_18" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-0.4166667,0"
-					               _localRotation="0,0,0"
-					               _localScale="4.3636355,2.252252,2.3999996"
-					               _attachOwner="Cover_8"
-					               _attachOwnerID="30"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="33" name="Crate_19">
-			<GameObject _schemaVersion="0" _name="Crate_19" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0.41666663,0"
-					               _localRotation="0,0,0"
-					               _localScale="4.3636355,2.252252,2.3999996"
-					               _attachOwner="Cover_8"
-					               _attachOwnerID="30"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="34" name="Cover_9">
 			<GameObject _schemaVersion="0" _name="Cover_9" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="-13,1,-12"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-13,1,-12"
+					               _localRotation="0,0,0"
+					               _localScale="3,2,3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="1.5,1,1.5" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="35" name="Crate_20">
-			<GameObject _schemaVersion="0" _name="Crate_20" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-1,0"
-					               _localRotation="0,0,0"
-					               _localScale="5.4545455,2.7027028,3"
-					               _attachOwner="Cover_9"
-					               _attachOwnerID="34"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="36" name="Crate_21">
-			<GameObject _schemaVersion="0" _name="Crate_21" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0,0"
-					               _localRotation="0,0,0"
-					               _localScale="5.4545455,2.7027028,3"
-					               _attachOwner="Cover_9"
-					               _attachOwnerID="34"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="37" name="Cover_10">
 			<GameObject _schemaVersion="0" _name="Cover_10" _bActive="true">
 				<_listComponent>
-					<SceneComponent _componentName="SceneComponent"
-					                _bActive="true"
-					                _localPosition="0,1,-12"
-					                _localRotation="0,0,0"
-					                _localScale="1,1,1"
-					                _attachOwner="None"
-					                _attachOwnerID="0"
-					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1,-12"
+					               _localRotation="0,0,0"
+					               _localScale="8,2,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/shooter3d/materials/cover.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
 					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="4,1,0.5" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="38" name="Crate_22">
-			<GameObject _schemaVersion="0" _name="Crate_22" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-1,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="1.8181818,1.8018018,8"
-					               _attachOwner="Cover_10"
-					               _attachOwnerID="37"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="39" name="Crate_23">
-			<GameObject _schemaVersion="0" _name="Crate_23" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,-0.3333333,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="1.8181818,1.8018018,8"
-					               _attachOwner="Cover_10"
-					               _attachOwnerID="37"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
-				</_listComponent>
-			</GameObject>
-		</entity>
-		<entity id="40" name="Crate_24">
-			<GameObject _schemaVersion="0" _name="Crate_24" _bActive="true">
-				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="0,0.33333337,0"
-					               _localRotation="0,1.5707964,0"
-					               _localScale="1.8181818,1.8018018,8"
-					               _attachOwner="Cover_10"
-					               _attachOwnerID="37"
-					               _attachComponent="SceneComponent#0"
-					               _meshID="game/shooter3d/models/crate_medium.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -1537,6 +1117,466 @@
 					               _attachComponent="None"
 					               _meshID="game/shooter3d/models/kaykit_dungeon/wall_half.mesh"
 					               _materialPath="game/shooter3d/materials/kaykit_dungeon.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="75" name="Ph.concrete_road_barrier">
+			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6,0,13"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
+					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="76" name="Ph.concrete_road_barrier_2">
+			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14.5,0,-15.5"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
+					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.78,0.83,0.34" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="77" name="Ph.concrete_road_barrier_3">
+			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14,0,4"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
+					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="78" name="Ph.concrete_road_barrier_4">
+			<GameObject _schemaVersion="0" _name="Ph.concrete_road_barrier_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-15,0,0"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/concrete_road_barrier.mesh"
+					               _materialPath="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.34,0.83,0.78" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="79" name="Ph.barrel_03">
+			<GameObject _schemaVersion="0" _name="Ph.barrel_03" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-9.9,0,-7.9"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/barrel_03.mesh"
+					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="80" name="Ph.barrel_03_2">
+			<GameObject _schemaVersion="0" _name="Ph.barrel_03_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-9.2,0,-8.5"
+					               _localRotation="0,0.698132,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/barrel_03.mesh"
+					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="81" name="Ph.barrel_03_3">
+			<GameObject _schemaVersion="0" _name="Ph.barrel_03_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="11.8,0,-11.5"
+					               _localRotation="0,0.174533,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/barrel_03.mesh"
+					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="82" name="Ph.barrel_03_4">
+			<GameObject _schemaVersion="0" _name="Ph.barrel_03_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="12.5,0,-10.9"
+					               _localRotation="0,1.22173,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/barrel_03.mesh"
+					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="83" name="Ph.barrel_03_5">
+			<GameObject _schemaVersion="0" _name="Ph.barrel_03_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="12.4,0,-11.9"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/barrel_03.mesh"
+					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="84" name="Ph.barrel_03_6">
+			<GameObject _schemaVersion="0" _name="Ph.barrel_03_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18.6,0,-18.6"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/barrel_03.mesh"
+					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="85" name="Ph.barrel_03_7">
+			<GameObject _schemaVersion="0" _name="Ph.barrel_03_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="17.9,0,-18.7"
+					               _localRotation="0,0.436332,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/barrel_03.mesh"
+					               _materialPath="common/models/polyhaven/barrel_03/materials/barrel_03.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.93,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="86" name="Ph.wooden_crate_01">
+			<GameObject _schemaVersion="0" _name="Ph.wooden_crate_01" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7,0,6.6"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
+					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="87" name="Ph.wooden_crate_01_2">
+			<GameObject _schemaVersion="0" _name="Ph.wooden_crate_01_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7.1,0.35,6.6"
+					               _localRotation="0,0.10472,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
+					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.42,0.35,0.22" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="88" name="Ph.wooden_crate_01_3">
+			<GameObject _schemaVersion="0" _name="Ph.wooden_crate_01_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-4,0,-0.2"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/wooden_crate_01.mesh"
+					               _materialPath="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.22,0.35,0.42" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="89" name="Ph.propane_tank">
+			<GameObject _schemaVersion="0" _name="Ph.propane_tank" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-11.4,0,9.4"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/propane_tank.mesh"
+					               _materialPath="common/models/polyhaven/propane_tank/materials/propane_tank.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="90" name="Ph.propane_tank_2">
+			<GameObject _schemaVersion="0" _name="Ph.propane_tank_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-11,0,9.7"
+					               _localRotation="0,0.523599,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/propane_tank.mesh"
+					               _materialPath="common/models/polyhaven/propane_tank/materials/propane_tank.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.55,0.18" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="91" name="Ph.metal_jerrycan">
+			<GameObject _schemaVersion="0" _name="Ph.metal_jerrycan" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-7.5,0,-4.6"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/metal_jerrycan.mesh"
+					               _materialPath="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="92" name="Ph.metal_jerrycan_2">
+			<GameObject _schemaVersion="0" _name="Ph.metal_jerrycan_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="12.7,0,10.6"
+					               _localRotation="0,0.261799,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/metal_jerrycan.mesh"
+					               _materialPath="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.18,0.46,0.1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="93" name="Ph.industrial_pastic_container">
+			<GameObject _schemaVersion="0" _name="Ph.industrial_pastic_container" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="1.5,0,-13.2"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/industrial_pastic_container.mesh"
+					               _materialPath="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.24,0.42,0.33" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="94" name="Ph.industrial_pastic_container_2">
+			<GameObject _schemaVersion="0" _name="Ph.industrial_pastic_container_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-12.5,0,-9.8"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/industrial_pastic_container.mesh"
+					               _materialPath="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ShooterBlockerComponent _componentName="ShooterBlockerComponent" _bActive="true" _halfSize="0.33,0.42,0.24" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="95" name="Ph.power_box_01">
+			<GameObject _schemaVersion="0" _name="Ph.power_box_01" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="5,1.4,-19.95"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/power_box_01.mesh"
+					               _materialPath="common/models/polyhaven/power_box_01/materials/power_box_01.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="96" name="Ph.power_box_01_2">
+			<GameObject _schemaVersion="0" _name="Ph.power_box_01_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-19.95,1.4,6"
+					               _localRotation="0,1.5708,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="common/models/polyhaven/power_box_01.mesh"
+					               _materialPath="common/models/polyhaven/power_box_01/materials/power_box_01.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"

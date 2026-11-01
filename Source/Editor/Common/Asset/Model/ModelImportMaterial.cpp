@@ -19,6 +19,7 @@
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -242,25 +243,8 @@ namespace sw::editor
                 continue;
             ModelImportTexture& texture = inoutResult._listTexture[textureIndex];
             texture._fileStem           = listImageStem[static_cast<size_t>( pImage - data.images )];
-            const string mimeType       = pImage->mime_type != nullptr ? string( pImage->mime_type ) : string();
-            texture._extension          = ( mimeType == "image/jpeg" ) ? ".jpg" : ".png";
-            if ( pImage->buffer_view != nullptr )
-            {
-                const uint8* pBytes = cgltf_buffer_view_data( pImage->buffer_view );
-                if ( pBytes != nullptr )
-                    texture._bytes.assign( pBytes, pBytes + pImage->buffer_view->size );
-            }
-            else if ( pImage->uri != nullptr && StringUtil::startsWith( pImage->uri, "data:" ) == false )
-            {
-                texture._extension = FileUtil::getExtension( pImage->uri );
-                // 원본이 가리키는 바깥 파일을 못 읽으면 흰 텍스처로 임포트하지 않고 실패한다(빠진 파일이 결과에 말없이 묻힌다).
-                const string imagePath = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), pImage->uri );
-                if ( FileUtil::readFile( imagePath, texture._bytes ) == false )
-                {
-                    SW_LOG_ERROR( "glTF '%#': texture %# cannot read its image file %#", sourcePath, textureIndex, imagePath.c_str() );
-                    return false;
-                }
-            }
+            if ( readImageBytes( *pImage, sourcePath, texture ) == false )
+                return false;
             if ( texture._bytes.empty() )
                 SW_LOG_WARNING( "glTF '%#': texture %# has no readable image bytes - the material samples white", sourcePath, textureIndex );
         }
@@ -333,6 +317,170 @@ namespace sw::editor
             SW_LOG_WARNING( "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
         }
         SW_LOG_INFO( "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
+        return true;
+    }
+
+    bool ModelImportMaterial::readImageBytes( const cgltf_image& image, string_view sourcePath, ModelImportTexture& outTexture )
+    {
+        const string mimeType = image.mime_type != nullptr ? string( image.mime_type ) : string();
+        outTexture._extension = ( mimeType == "image/jpeg" ) ? ".jpg" : ".png";
+        if ( image.buffer_view != nullptr )
+        {
+            const uint8* pBytes = cgltf_buffer_view_data( image.buffer_view );
+            if ( pBytes != nullptr )
+                outTexture._bytes.assign( pBytes, pBytes + image.buffer_view->size );
+            return true;
+        }
+        if ( image.uri == nullptr || StringUtil::startsWith( image.uri, "data:" ) )
+            return true;
+        outTexture._extension = FileUtil::getExtension( image.uri );
+        // 원본이 가리키는 바깥 파일을 못 읽으면 흰 텍스처로 임포트하지 않고 실패한다(빠진 파일이 결과에 말없이 묻힌다).
+        string imagePath = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), image.uri );
+        string canonicalPath;
+        if ( FileUtil::makeCanonicalPath( imagePath, canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
+            imagePath = FileUtil::normalizeSeparators( canonicalPath );
+        outTexture._sourcePath = imagePath;
+        if ( FileUtil::readFile( imagePath, outTexture._bytes ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModelImport.ImageFileMissing", "glTF '%#': cannot read its image file %#", sourcePath, imagePath.c_str() );
+            return false;
+        }
+        return true;
+    }
+
+    bool ModelImportMaterial::readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    {
+        const cgltf_material* pMaterial = nullptr;
+        for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count && pMaterial == nullptr; ++materialIndex )
+        {
+            const cgltf_material& material = data.materials[materialIndex];
+            if ( material.has_pbr_metallic_roughness != 0 && material.pbr_metallic_roughness.base_color_texture.texture != nullptr )
+                pMaterial = &material;
+        }
+        if ( pMaterial == nullptr )
+            return true;
+        if ( data.materials_count > 1 )
+            SW_LOG_WARNING_ID( "ModelImport.MultipleMaterials", "glTF '%#' has %# materials - a static mesh takes one, the first textured one ('%#') is imported", sourcePath, data.materials_count,
+                               pMaterial->name != nullptr ? pMaterial->name : "" );
+        const cgltf_pbr_metallic_roughness& pbr     = pMaterial->pbr_metallic_roughness;
+        ModelImportPbrMaterial&             outPbr  = inoutResult._pbrMaterial;
+        const string                        rawName = pMaterial->name != nullptr && pMaterial->name[0] != '\0' ? string( pMaterial->name ) : string( "material" );
+        outPbr._name                                = ModelImportUtil::makeFileStem( rawName.c_str() );
+        outPbr._baseColor                           = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
+        outPbr._metallic                            = pbr.metallic_factor;
+        outPbr._roughness                           = pbr.roughness_factor;
+        auto readTexture                            = [&]( const cgltf_texture* pTexture, ModelImportTexture& outTexture, const utf8* pSuffix )
+        {
+            if ( pTexture == nullptr || pTexture->image == nullptr )
+                return true;
+            outTexture._fileStem = outPbr._name + pSuffix;
+            return readImageBytes( *pTexture->image, sourcePath, outTexture );
+        };
+        const cgltf_texture* pORM = pbr.metallic_roughness_texture.texture;
+        if ( readTexture( pbr.base_color_texture.texture, outPbr._albedo, "_albedo" ) == false || readTexture( pMaterial->normal_texture.texture, outPbr._normal, "_normal" ) == false ||
+             readTexture( pORM, outPbr._orm, "_orm" ) == false )
+            return false;
+        outPbr._normalScale           = pMaterial->normal_texture.texture != nullptr ? pMaterial->normal_texture.scale : 1.0f;
+        const cgltf_texture* pAO      = pMaterial->occlusion_texture.texture;
+        const bool           bSameORM = pAO != nullptr && pORM != nullptr && pAO->image == pORM->image;
+        outPbr._occlusionStrength     = bSameORM ? pMaterial->occlusion_texture.scale : 0.0f;
+        if ( pAO != nullptr && bSameORM == false )
+            SW_LOG_WARNING( "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath );
+        outPbr._bPresent = SW_TRUE;
+        return true;
+    }
+
+    bool ModelImportMaterial::writePbrMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
+    {
+        const ModelImportPbrMaterial& pbr = result._pbrMaterial;
+        if ( pbr._bPresent == SW_FALSE )
+            return true;
+        const string rawTextureFolder = makeRawTextureFolder( sourcePath );
+        if ( rawTextureFolder.empty() )
+        {
+            SW_LOG_ERROR( "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+            return false;
+        }
+        // 텍스처 원본을 꺼내 두고(바이트가 같으면 건드리지 않는다) 텍스처 임포트가 만들 DDS 경로를 머티리얼에 적는다.
+        auto writeSource = [&]( const ModelImportTexture& texture, string& outAssetPath )
+        {
+            if ( texture._bytes.empty() )
+                return true;
+            // 원본이 이미 텍스처 원본 폴더의 파일이면 그대로 가리킨다(같은 이미지를 두 벌 두지 않는다 — 내려받은 에셋은 이미지를 textures_raw 에 둔다).
+            const string rawMarker = "/" + string( ModelImportUtil::kRawTextureFolder ) + "/";
+            if ( texture._sourcePath.find( rawMarker ) != string::npos )
+            {
+                outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( texture._sourcePath ) );
+                return true;
+            }
+            const string  rawPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
+            vector<uint8> existingBytes;
+            const bool    bSame = FileUtil::exists( rawPath ) && FileUtil::readFile( rawPath, existingBytes ) && existingBytes == texture._bytes;
+            if ( bSame == false && ( FileUtil::ensureDirectoryExists( rawTextureFolder ) == false || FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false ) )
+            {
+                SW_LOG_ERROR( "Failed to write texture source %#", rawPath.c_str() );
+                return false;
+            }
+            outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
+            return true;
+        };
+        string albedoPath;
+        string normalPath;
+        string ormPath;
+        if ( writeSource( pbr._albedo, albedoPath ) == false || writeSource( pbr._normal, normalPath ) == false || writeSource( pbr._orm, ormPath ) == false )
+            return false;
+
+        const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
+        string                                templateText;
+        if ( pDefaultAssets == nullptr || AssetIO::readTextAsset( AssetID{ pDefaultAssets->_pbrMaterialTemplate.get() }, templateText ) == false )
+        {
+            SW_LOG_ERROR( "glTF '%#': the PBR material template could not be read", sourcePath );
+            return false;
+        }
+        XMLDocument   document;
+        const bool    bParsed    = document.parse( templateText );
+        const XMLNode root       = bParsed ? document.getRoot( "MaterialDesc" ) : XMLNode{};
+        const XMLNode properties = root.isValid() ? root.findChild( "_properties" ) : XMLNode{};
+        if ( properties.isValid() == false )
+        {
+            SW_LOG_ERROR( "glTF '%#': the PBR material template is not a material", sourcePath );
+            return false;
+        }
+        root.setAttribute( "name", string_view( pbr._name ) );
+        // 견본에 없는 프로퍼티는 조용히 건너뛰지 않는다 — 견본과 이 표가 어긋나면 값이 기본값으로 남은 머티리얼이 나온다.
+        bool bMissingProperty = false;
+        auto setAttribute     = [&]( string_view name, const utf8* pAttribute, const string& value )
+        {
+            const XMLNode item = VrmMaterialImporter::findMaterialProperty( properties, name );
+            if ( item.isValid() == false )
+            {
+                bMissingProperty = true;
+                return;
+            }
+            if ( value.empty() == false )
+                item.setAttribute( pAttribute, string_view( value ) );
+        };
+        setAttribute( "_color", "defaultValue", ModelImportUtil::formatMaterialColor( pbr._baseColor ) );
+        setAttribute( "_roughness", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._roughness ) );
+        setAttribute( "_metallic", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._metallic ) );
+        setAttribute( "_normalScale", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._normalScale ) );
+        setAttribute( "_occlusionStrength", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._occlusionStrength ) );
+        setAttribute( "_albedoMap", "assetPath", albedoPath );
+        setAttribute( "_normalMap", "assetPath", normalPath );
+        setAttribute( "_ormMap", "assetPath", ormPath );
+        if ( bMissingProperty )
+        {
+            SW_LOG_ERROR( "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
+            return false;
+        }
+        const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), pbr._name + ".material" );
+        const bool   bWritten     = FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, document.saveToString() );
+        if ( bWritten == false || ModelImportUtil::writeImportedMeta( assetPaths, materialPath ) == false )
+        {
+            SW_LOG_ERROR( "Failed to write PBR material %#", materialPath.c_str() );
+            return false;
+        }
+        SW_LOG_INFO( "glTF '%#': PBR material %# (albedo%#%#)", sourcePath, materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
         return true;
     }
 

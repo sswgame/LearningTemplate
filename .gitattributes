@@ -30,3 +30,8 @@ Content/engine/automation/editor/*/** text eol=lf
 
 # 에디터 테마 토큰은 `editor-theme` 도구가 CRLF 로 쓴다(Scripts/dev/MakeEditorTheme.py 머리말) — 리눅스 체크아웃도 CRLF 여야 도구 출력과 바이트로 같다
 Content/editor/theme/*.tokens.json text eol=crlf
+
+# Poly Haven 스캔 에셋(CC0 — credits.md)의 원본은 크다(2k 텍스처 · 메시 버퍼) — Git LFS 에 둔다. glTF 본문(.gltf JSON)은 글이라 그대로 둔다.
+Content/**/polyhaven/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+Content/**/polyhaven/**/*.png filter=lfs diff=lfs merge=lfs -text
+Content/**/polyhaven/**/*.bin filter=lfs diff=lfs merge=lfs -text

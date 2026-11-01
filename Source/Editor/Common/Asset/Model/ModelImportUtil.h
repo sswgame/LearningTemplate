@@ -158,5 +158,10 @@ namespace sw::editor
          *          캐시가 잡을 때 `.meta` 를 지어 붙이면 실행마다 GUID 가 달라 임포트 결과 해시가 어긋나므로 임포터가 미리 쓴다.
          */
         [[nodiscard]] static bool writeImportedMeta( const AssetPaths& assetPaths, const string& assetPath );
+
+        /** @brief 머티리얼 XML 에 쓰는 수입니다(소수 여섯 자리까지). 음의 0 은 0 으로 쓴다(부호를 뒤집은 0 이 "-0" 으로 남지 않게 — -0 + 0 = +0). */
+        static string formatMaterialNumber( float32 value );
+        /** @brief 머티리얼 XML 에 쓰는 색("r g b a")입니다. */
+        static string formatMaterialColor( const float4& color );
     };
 } // namespace sw::editor

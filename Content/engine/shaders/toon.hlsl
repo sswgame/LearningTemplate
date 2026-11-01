@@ -93,25 +93,7 @@ struct MaterialVaryings
     #define SW_MATERIAL_USES_TANGENT
 #endif
 #include "material_shader.hlsli"
-
-/**
- * @brief 노멀 맵을 적용한 월드 노멀입니다. 맵이 없으면 @p normal 그대로입니다.
- * @details 탄젠트를 노멀에 다시 직교화하고 바이탄젠트는 cross( N, T ) × w 다(glTF · MikkTSpace — C++ `Mesh::computeTangents`).
- */
-float3 applyNormalMap( uint normalMap, float normalScale, float2 uv, float3 normal, float4 tangent )
-{
-    if ( normalMap == kInvalidIndex )
-        return normal;
-    float3 tangentNormal = MaterialTexture::sampleIndex( normalMap, uv ).xyz * 2.0f - 1.0f;
-    tangentNormal.xy *= normalScale;
-    const float3 orthogonalTangent = tangent.xyz - normal * dot( normal, tangent.xyz );
-    const float  tangentLength     = length( orthogonalTangent );
-    if ( tangentLength < 1e-5f )
-        return normal;
-    const float3 unitTangent = orthogonalTangent / tangentLength;
-    const float3 bitangent   = cross( normal, unitTangent ) * ( tangent.w < 0.0f ? -1.0f : 1.0f );
-    return normalize( unitTangent * tangentNormal.x + bitangent * tangentNormal.y + normal * tangentNormal.z );
-}
+#include "normal_map.hlsli"
 
 /** @brief MToon 의 linearstep — [a, b] 를 [0, 1] 로 옮기고 자른다. a == b 면 계단 하나다. */
 float linearStep( float lower, float upper, float value )

@@ -87,9 +87,32 @@ namespace sw::editor
      */
     struct ModelImportTexture
     {
-        string        _fileStem;  ///< 원본 이미지 파일 이름(소문자, 확장자 없음)
-        string        _extension; ///< ".png" · ".jpg"
+        string        _fileStem;   ///< 원본 이미지 파일 이름(소문자, 확장자 없음)
+        string        _extension;  ///< ".png" · ".jpg"
+        string        _sourcePath; ///< 바깥 이미지 파일이면 그 디스크 경로(내장 이미지면 비어 있다)
         vector<uint8> _bytes;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct ModelImportPbrMaterial
+     * @brief 일반 glTF(VRM 아님)의 금속도 · 거칠기 머티리얼 하나입니다. 텍스처는 원본 이미지 바이트를 그대로 담는다(없으면 비어 있다).
+     * @details ORM 은 glTF 배치(R 가림 · G 거칠기 · B 금속도)다 — 가림 텍스처가 금속도 · 거칠기 텍스처와 다른 이미지면 가림은 쓰지 않는다(`_occlusionStrength` 0, 경고).
+     */
+    struct ModelImportPbrMaterial
+    {
+        string             _name;
+        float4             _baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+        float32            _metallic{ 1.0f };
+        float32            _roughness{ 1.0f };
+        float32            _normalScale{ 1.0f };
+        float32            _occlusionStrength{ 1.0f };
+        ModelImportTexture _albedo;
+        ModelImportTexture _normal;
+        ModelImportTexture _orm;
+        uint8              _bPresent{ SW_FALSE }; ///< 텍스처가 있는 PBR 머티리얼을 읽었다
     };
 } // namespace sw::editor
 
@@ -109,6 +132,8 @@ namespace sw::editor
         vector<ModelImportSection> _listSection;
         /** @brief glTF 텍스처 번호에서 원본 이미지로의 대응입니다. 구간 머티리얼이 쓰는 텍스처만 채워지고 나머지는 비어 있습니다. */
         vector<ModelImportTexture> _listTexture;
+        /** @brief 일반 glTF 의 PBR 머티리얼입니다(VRM 이 아니고 텍스처가 있을 때). 임포트가 모델 옆 `materials/` 에 PBR 머티리얼로 쓴다. */
+        ModelImportPbrMaterial _pbrMaterial;
         /** @brief 머티리얼이 지원하지 않는 VRM 키의 이름입니다. 값이 효과 없는 기본값이면 빠집니다. 임포트가 경고로 알립니다. */
         vector<string> _listIgnoredMaterialKey;
         /** @brief VRM 이면 humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭 정보입니다(`VrmAvatarImporter`). VRM 이 아니면 비어 있습니다. */

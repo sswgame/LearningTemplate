@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Testing/TestRunner.h"
 
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"
 
@@ -93,6 +94,9 @@ namespace sw
     {
         // 실행기 자신의 줄([Scenario])은 세지 않는다. 실패 줄이 단언 문구를 반복해 ExpectLog 를 맞추지 않게 하기 위해서다.
         if ( StringUtil::startsWith( string_view{ entry._message }, AutomationLogPolicy::kRunnerPrefix ) )
+            return;
+        // 시나리오 안에서 도는 단위 테스트(에디터 `editor.unitTests`)의 케이스가 기대한 줄은 그 케이스가 판정한다 — 두 번 세지 않는다.
+        if ( test::TestRunner::isExpectedByActiveCase( entry._pID ) )
             return;
         ScopedLock<mutex> lock{ _mutex };
         if ( _listLogLine.size() >= AutomationLogCaptureInternal::kMaxLogLine )

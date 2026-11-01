@@ -48,6 +48,7 @@
                      _waterMaterial="engine/materials/water.material"
                      _spriteMaterial="engine/materials/sprite2d.material"
                      _toonMaterialTemplate="engine/materials/toon.material"
+                     _pbrMaterialTemplate="engine/materials/pbrmaterial.material"
                      _defaultForwardPipeline="engine/pipeline/forwardpipeline.xml"
                      _defaultDeferredPipeline="engine/pipeline/deferredpipeline.xml"
                      _defaultRenderPass="engine/renderpass/defaultrenderpass.xml"
