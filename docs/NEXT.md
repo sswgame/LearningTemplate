@@ -26,8 +26,8 @@
 
 | 일 | 상태 |
 |---|---|
-| 큰 클래스의 상태 묶음 | AudioEngine 보이스 풀(`_listVoice` · 가상화 · `selectRealVoices`)만 남았다 — 슬롯이 인스턴스 · 버스 · 감쇠 번호를 엔진 표로 들고 있어 풀을 떼면 역참조가 생긴다. 뗄 때는 슬롯 표 + 고르기 정책을 `AudioVoicePool` 로, 번호 풀이는 엔진이 넘기는 문맥으로. `LockedSwapQueue`(Core) 와 같은 "잠금 + 목록" 모양이 TextureCache · GameObjectStore · DeferredDelegateQueue · RenderExtensionRegistry · ContentBrowserImportQueue · LoopbackStreamTransport · Fracture 둘에 손으로 남았다 — 같은 큐로 옮긴다 |
-| SOLID 남은 표 | StructureRefactor 7 절 8 · 9 · 10 · 11 · 12 · 13 · 15(일부) · 16, 8 절 5 ~ 8 · 10 ~ 19. 8 절 19(검색 칸)는 `drawSearchField` 가 Enter 판정을 못 주고, 지우기 단추가 마지막 항목이라 자체 시험 표시(`EditorSelfTestMarks::note`)가 단추에 붙는다 — 위젯이 Enter 결과와 표시 자리를 함께 주게 바꾼 뒤 옮긴다 |
+| 큰 클래스의 상태 묶음 | AudioEngine 보이스 풀(`_listVoice` · 가상화 · `selectRealVoices`)만 남았다 — 슬롯이 인스턴스 · 버스 · 감쇠 번호를 엔진 표로 들고 있어 풀을 떼면 역참조가 생긴다. 뗄 때는 슬롯 표 + 고르기 정책을 `AudioVoicePool` 로, 번호 풀이는 엔진이 넘기는 문맥으로. 순수 큐는 `LockedSwapQueue` 로 옮겼다(Audio · DeferredDelegateQueue · ContentBrowserImportQueue · Fracture 맞은 사건). 남은 손 잠금(GameObjectStore 시작 대기열 — 잠금 순서 주석, Loopback · FractureNetworkSync · RenderExtensionRegistry · TextureCache — 잠금 안에서 다른 상태도 만진다)은 순수 큐가 아니라 둔다 |
+| SOLID 남은 표 | StructureRefactor 7 절 8 · 9 · 10 · 11 · 12 · 13 · 15(일부) · 16, 8 절 5 ~ 8 · 10 ~ 19. 8 절 12(영수증 검증기의 재시도 규칙은 공급자마다 일부러 다르다 — 공통 바닥(전송 실패 · 429 · 5xx)만 HTTP 쪽 함수로 두고 공급자는 더하는 모양) · 19(검색 칸)는 `drawSearchField` 가 Enter 판정을 못 주고, 지우기 단추가 마지막 항목이라 자체 시험 표시(`EditorSelfTestMarks::note`)가 단추에 붙는다 — 위젯이 Enter 결과와 표시 자리를 함께 주게 바꾼 뒤 옮긴다 |
 | 키트 테스트의 구성 | Debug 는 `SW_GAMES` 가 비어 활성 게임(Empty)이 싣지 않는 키트를 짓지도 · 테스트하지도 않는다 — 키트를 고친 묶음은 Release(`UnitTests.<게임>` · `Scenario.<팩>`)가 확인한다. 테스트 폴더가 있는 키트를 싣지 않는 게임(AbilityArena · NileCity …)은 항목이 없다 |
 | 파일을 옮기면 문구 표 | `SW_LOCKEY` 가 든 파일을 옮기면 `App --gather-text` 를 다시 돌려 `Content/**/localization/*.strings.xml` 의 출처 경로를 커밋한다(아니면 ToolCheckText 가 진다) |
 
