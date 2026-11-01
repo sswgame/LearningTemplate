@@ -6,7 +6,7 @@
 
 ## 일하는 법 (요약)
 
-- 단계마다 코드 → `py -3 -m Scripts lint` → 커밋. 묶음 끝에 빌드(`cmake --build --preset Ninja-Debug`) · 단위(`build/Ninja-Debug/Bin/App.exe --test`) · 전체 `ctest`(build/Ninja-Debug, 약 5 분) 한 번.
+- 단계마다 코드 → `py -3 -m Scripts lint` → 커밋. 묶음 끝에 빌드 · 단위(`build/Ninja-Debug/Bin/App.exe --test`) · 전체 `ctest` 를 Debug(약 5 분)와 Release(지어진 게임마다 `UnitTests.<게임>` · `Scenario.<팩>`, 약 15 분) 둘 다 한 번. 배포 구성은 `py -3 -m Scripts shipping-check`.
 - **테스트마다 로그의 Error · Warning 을 모두 분류한다** — `build/Ninja-Debug/Testing/Logs/*.log`, id 없는 줄과 `[id:…]` 줄을 나눠 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
 - 느린 곳은 새로 재지 말고 로그의 `[Scenario] … timeline:` · `stage reset took` · `Backend swap took` 줄을 모은다(`Test/README.md` 의 시간 기록).
 - 규칙: 구조로 푼다 · 폴백 없음 · 게이트는 최후 · 구성 차이는 크기대로(`docs/agents/BuildConfigSwitch.md`) · 용어는 `docs/agents/NamingCpp.md` 의 표. 시나리오 체계는 `Test/README.md` 가 정본.
@@ -26,16 +26,12 @@
 
 | 일 | 상태 |
 |---|---|
-| 큰 클래스의 상태 묶음 | AudioEngine 보이스 풀(`_listVoice` · 가상화 · `selectRealVoices`)만 남았다 — 슬롯이 인스턴스 · 버스 · 감쇠 번호를 엔진 표로 들고 있어 풀을 떼면 역참조가 생긴다. 뗄 때는 슬롯 표 + 고르기 정책을 `AudioVoicePool` 로, 번호 풀이는 엔진이 넘기는 문맥으로. 순수 큐는 `LockedSwapQueue` 로 옮겼다(Audio · DeferredDelegateQueue · ContentBrowserImportQueue · Fracture 맞은 사건). 남은 손 잠금(GameObjectStore 시작 대기열 — 잠금 순서 주석, Loopback · FractureNetworkSync · RenderExtensionRegistry · TextureCache — 잠금 안에서 다른 상태도 만진다)은 순수 큐가 아니라 둔다 |
-| SOLID 남은 표 | StructureRefactor 7 절 8 · 9 · 10 · 11 · 12 · 13 · 15(일부) · 16, 8 절 5 ~ 8 · 10 ~ 19. 8 절 12(영수증 검증기의 재시도 규칙은 공급자마다 일부러 다르다 — 공통 바닥(전송 실패 · 429 · 5xx)만 HTTP 쪽 함수로 두고 공급자는 더하는 모양) · 19(검색 칸)는 `drawSearchField` 가 Enter 판정을 못 주고, 지우기 단추가 마지막 항목이라 자체 시험 표시(`EditorSelfTestMarks::note`)가 단추에 붙는다 — 위젯이 Enter 결과와 표시 자리를 함께 주게 바꾼 뒤 옮긴다 |
-| 키트 테스트의 구성 | Debug 는 `SW_GAMES` 가 비어 활성 게임(Empty)이 싣지 않는 키트를 짓지도 · 테스트하지도 않는다 — 키트를 고친 묶음은 Release(`UnitTests.<게임>` · `Scenario.<팩>`)가 확인한다. 테스트 폴더가 있는 키트를 싣지 않는 게임(AbilityArena · NileCity …)은 항목이 없다 |
-| 파일을 옮기면 문구 표 | `SW_LOCKEY` 가 든 파일을 옮기면 `App --gather-text` 를 다시 돌려 `Content/**/localization/*.strings.xml` 의 출처 경로를 커밋한다(아니면 ToolCheckText 가 진다) |
+| SOLID 남은 표 | StructureRefactor 7 절 8 · 9 · 11(높은 티어 사이) · 12 · 15(Wayland 리스너) · 16, 8 절 5 ~ 8 · 11 · 12 · 14 ~ 19 |
 
 ### 2. 테스트 · 시나리오 공백
 
 | 일 | 내용 |
 |---|---|
-| 통합 검증은 두 구성 | Debug(`ctest`) 와 Release(`ctest` — 지어진 게임마다 `Scenario.<팩>` 체인)를 모두 돈다. 배포 구성은 `py -3 -m Scripts shipping-check` |
 | 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지 |
 | 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄, Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다 |
 | 벽시계 한도와 부하 | 다른 빌드가 CPU 를 쓰는 동안 `wallTimeoutSeconds` 150 초를 넘는 시나리오가 있다(flowterrain 의 백엔드 교체 7 번이 혼자서도 19 초). 통합 ctest 는 빌드 없이 돌리고, 교체 시간을 줄이거나 한도를 교체 수에 맞춘다 |
@@ -69,6 +65,5 @@
 - 빌드 속도: `MaterialPanel` · `PrefabPanel`(각 50 초대, Release)을 `-ftime-trace` 로 나눈다.
 - 시나리오 범용화: 재생기 · 판정 층을 나눌 때 `AutomationSession`(이미 `ISubsystem` + `IScenarioPlayer`)에 인터페이스를 더 붙이지 않고 재생기를 별도 객체로. 시퀀서 이벤트 트랙이 시나리오를 부르는 쪽, 액션 단위 녹화 · 리플레이(고스트 · 킬캠). 단계 등록은 키트 · 게임이 아직 0.
 - 리로드: 배포 `IAssetCache` 에 reload 가 없게 — 리로드는 DevTools 빌드 단위의 리로더 객체가 캐시를 참조해 공개 API(무효화 · 다시 요청)로 한다(구성, 캐시에 인터페이스를 더 붙이지 않는다 — 캐시 8 개가 다중 상속이 된다). `IAssetCache` 는 이름은 `I*` 인데 상태(`_stats`)를 가진 기반이다 — 이름을 내용대로(`AssetCacheBase` 등).
-- Core 에 Engine 과 같은 층 껍데기(`#error`) 빌드 형식.
 - 창 바둑판 간격의 창 틀 두께가 Win32 대략 값이다(`AutomationPerBackend`) — 플랫폼 창 틀 API 가 생기면.
 - 전용 서버 종료 때 태그별 증가 진단(Game 약 0.5 KB) 출처.

@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternDirectorComponent.h"
 
 namespace sw
 {
@@ -22,14 +22,14 @@ namespace sw
      * @class WildWestDirectorComponent
      * @brief 레드 데드 리뎀션 2 · 젤다 BotW 식 오픈월드 승마 한 판입니다. 걷는 기수(`_player`)가 가까운 말에 상호작용 버튼으로 올라타고(`MountInteractionComponent`),
      *        말을 몰고(`MountMovementComponent` · `WesternHorseMountComponent`), 같은 버튼으로 내립니다(`VehicleExitComponent`). 이 디렉터는 그 흐름을 돌리지 않고 둘레만 맡습니다.
-     * @details 타기 · 몰기 · 내리기는 키트와 기반 컴포넌트가 하고, 말 한 마리의 상태(`WesternHorse`)는 말 오브젝트의 `WildWestHorseComponent` 가 가진다.
+     * @details 타기 · 몰기 · 내리기는 키트와 기반 컴포넌트가 하고, 말 한 마리의 상태(`WesternHorse`)는 말 오브젝트의 `WesternHorseComponent`(키트) 가 가진다.
      *          이 디렉터가 하는 일은 넷이다. 판을 열 때 서부극 카탈로그를 읽는다(경로는 PROPERTY, 없으면 판을 열지 않는다). 매 프레임 카메라 리그 초점을 기수에 둔다.
      *          기수가 걷는 동안 휘파람 버튼이 발동하면 그 기수를 주인으로 둔 말 AI(`HorseFollowAIController`)를 모두 부른다. 틱 뒤에 같은 오브젝트의 HUD 에 한 줄을 쓴다.
      *          판 상태는 없다(말 상태는 말 컴포넌트가 스냅숏에 싣는다). 자동 플레이(`-gv_wildWestAutoPlay=1`)는 기수를 가장 가까운 말에 태운다.
      *          HUD 는 게임의 `WildWestHUDViewModel` 을 HUD 컨트롤러에 건다 — 탑승 상태 글(`_rideStatus`), 말 스태미나(`_stamina` · `_staminaRatio`)이고 문서(`ui/hud.ui.xml`)가 그렇게 잇는다.
      */
     REFLECT( Category = "WildWest", DisplayName = "Wild West Director", Tooltip = "Opens the western catalog, follows the rider with the camera, whistles horses and writes the HUD line" )
-    class WildWestDirectorComponent : public GameDirectorComponent
+    class WildWestDirectorComponent : public WesternDirectorComponent
     {
     public:
         REFLECT_BODY();
@@ -43,7 +43,7 @@ namespace sw
         void writeState( Archive& outArchive ) const override;
 
         /** @brief 판이 열렸으면 읽은 서부극 카탈로그이고, 아니면 nullptr 입니다(말 컴포넌트가 품종을 찾는다). */
-        const WesternCatalog*   findWesternCatalog() const { return isStarted() ? &_westernCatalog : nullptr; }
+        const WesternCatalog*   findWesternCatalog() const override { return isStarted() ? &_westernCatalog : nullptr; }
         const GameObjectHandle& getPlayerObject() const { return _player; }
 
     protected:

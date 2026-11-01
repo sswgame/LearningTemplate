@@ -13,6 +13,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/HorseFollowAIController.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -22,7 +23,6 @@
 #include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"
 
 #include "Games/WildWest/WildWestHUDViewModel.h"
-#include "Games/WildWest/WildWestHorseComponent.h"
 
 namespace sw
 {
@@ -50,60 +50,12 @@ namespace sw
                 }
                 return "?";
             }
-
-            /** @brief 질의 대상 말의 탈것 이동입니다. 없으면 까닭을 적고 nullptr 입니다. */
-            static const MountMovementComponent* findTargetMovement( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const MountMovementComponent* pMovement = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<MountMovementComponent>() : nullptr;
-                if ( pMovement == nullptr )
-                    outValue.setText( query.findTargetObject() == nullptr ? query.getTargetProblem() : query.describeMissing( "Mount Movement" ) );
-                return pMovement;
-            }
-
-            /** @brief 감시 값 `WildWest.Gait` 입니다. 대상 말의 걸음새 번호(0 서기 .. 4 질주)입니다. */
-            [[nodiscard]] static bool readGait( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const MountMovementComponent* pMovement = findTargetMovement( query, outValue );
-                if ( pMovement == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pMovement->getGait() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `WildWest.Speed` 입니다. 대상 말이 몸 방향으로 가는 속도(m/s)입니다. */
-            [[nodiscard]] static bool readSpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const MountMovementComponent* pMovement = findTargetMovement( query, outValue );
-                if ( pMovement == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pMovement->getForwardSpeed() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `WildWest.Stamina` 입니다. 대상 말의 스태미나 비율(0..1)이고, 말을 열지 않았으면 값이 없습니다. */
-            [[nodiscard]] static bool readStamina( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const WildWestHorseComponent* pHorseComponent = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<WildWestHorseComponent>() : nullptr;
-                const WesternHorse*           pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
-                if ( pHorse == nullptr )
-                {
-                    outValue.setText( query.findTargetObject() == nullptr ? query.getTargetProblem() : query.describeMissing( "opened Wild West Horse" ) );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( pHorse->getStamina().getRatio() ) );
-                return true;
-            }
         };
     } // namespace
 
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_wildWestAutoPlay, 0, "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_wildWestAutoPlay, "WildWest", "The rider mounts the nearest horse" );
 
-    SW_AUTOMATION_QUERY_WATCH( wildWestGait, "WildWest.Gait", "Gait of the horse on target (0 standing, 1 walk, 2 trot, 3 canter, 4 gallop)",
-                               &WildWestDirectorComponentInternal::readGait, true, false );
-    SW_AUTOMATION_QUERY_WATCH( wildWestSpeed, "WildWest.Speed", "Forward speed (m/s) of the horse on target", &WildWestDirectorComponentInternal::readSpeed, true, false );
-    SW_AUTOMATION_QUERY_WATCH( wildWestStamina, "WildWest.Stamina", "Stamina ratio (0..1) of the horse on target", &WildWestDirectorComponentInternal::readStamina, true,
-                               false );
 } // namespace sw
 
 namespace sw
@@ -262,7 +214,7 @@ namespace sw
             return;
         }
         const MountMovementComponent* pMovement       = pHorseObject->getComponent<MountMovementComponent>();
-        const WildWestHorseComponent* pHorseComponent = pHorseObject->getComponent<WildWestHorseComponent>();
+        const WesternHorseComponent*  pHorseComponent = pHorseObject->getComponent<WesternHorseComponent>();
         const WesternHorse*           pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
         const MountGait               gait            = pMovement != nullptr ? pMovement->getGait() : MountGait::Idle;
         const float32                 speed           = pMovement != nullptr ? pMovement->getForwardSpeed() : 0.0f;

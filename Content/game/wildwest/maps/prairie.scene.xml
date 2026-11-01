@@ -299,7 +299,7 @@
 					                            _bActive="true"
 					                            _gallopAbility="None"
 					                            _resumeGallopRatio="0.3" />
-					<WildWestHorseComponent _componentName="WildWestHorseComponent"
+					<WesternHorseComponent _componentName="WesternHorseComponent"
 					                        _bActive="true"
 					                        _director="9"
 					                        _breed="morgan"
@@ -410,7 +410,7 @@
 					                            _bActive="true"
 					                            _gallopAbility="None"
 					                            _resumeGallopRatio="0.3" />
-					<WildWestHorseComponent _componentName="WildWestHorseComponent"
+					<WesternHorseComponent _componentName="WesternHorseComponent"
 					                        _bActive="true"
 					                        _director="9"
 					                        _breed="mustang"

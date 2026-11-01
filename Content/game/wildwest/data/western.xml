@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   WildWest 의 서부극 카탈로그(GF_OpenWorldWestern `WesternCatalog`) — 디렉터 `_westernDataPath` 가 가리킨다.
-  이 게임은 말만 쓴다: 품종 둘, 유대 단계, 유대 경험치, 생존 수치(코어 회복 배율). 말 오브젝트의 `WildWestHorseComponent::_breed` 가 `<Horse id>` 다.
+  이 게임은 말만 쓴다: 품종 둘, 유대 단계, 유대 경험치, 생존 수치(코어 회복 배율). 말 오브젝트의 `WesternHorseComponent::_breed` 가 `<Horse id>` 다.
 -->
 <WesternCatalog currency="Dollar" extraHitPenalty="1">
 	<Horse id="morgan" health="110" stamina="100" speed="1.0" courage="0.6" gallopDrain="14" coreDrain="2" gallopCoreDrain="6"/>

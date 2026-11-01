@@ -205,7 +205,7 @@
 | 10 | 자동화 탐침 보일러플레이트 | `findProbeDirector` + `read*` 감싸기 4 게임 | **끝** — `SW_AUTOMATION_COMPONENT_WATCH`(`AutomationComponentWatch::findFirst<T>` · `read<T, 읽기>`), 읽기 함수는 디렉터 참조만 받는다 | |
 | 11 | 온라인 키트 서비스 골격 복사 | LiveOps · ServerDirectory 의 다시 읽기 · 감사 쓰기 · 주기 리로드 약 150 줄씩, `makeActor` 셋 | 남김 — Runtime/Online/Service 에 "운영자가 고치는 표" 서비스 기반 | |
 | 12 | 온라인 소도우미 복사 | JSON `readText` 넷(기본값 폴백 둘), HTTP `isTransientStatus` 셋, `encodeID` 둘 | 남김 — 기본값 폴백을 지우는 일과 함께(R6) | |
-| 13 | 게임 안의 범용 기능 | `FarmSunComponent`(시각 → 해), `ArenaCameraComponent`(궤도 추적), `WildWestHorseComponent`(키트의 `WesternHorse` 소유 · 저장), WildWest 탈것 감시 값 | 남김 — Runtime/World/Environment · Runtime/Character/Camera · OpenWorldWestern 키트 · `VehicleWatches` 로 | 언리얼 SkyAtmosphere 구동은 엔진 쪽 |
+| 13 | 게임 안의 범용 기능 | `FarmSunComponent`(시각 → 해), `ArenaCameraComponent`(궤도 추적), `WildWestHorseComponent`(키트의 `WesternHorse` 소유 · 저장), WildWest 탈것 감시 값 | **끝** — Runtime `DaylightComponent`(디렉터 기반 `readDaylight`) · `FollowCameraComponent`(`readCameraFocus`), 키트 `WesternHorseComponent` + 추상 기반 `WesternDirectorComponent`(카탈로그를 답한다), 감시 값 `Mount.Gait` · `Mount.Speed`(VehicleWatches) · `Western.Stamina`(키트) | 언리얼 SkyAtmosphere 구동은 엔진 쪽 |
 | 14 | Runtime 에 장르 기믹 | `Runtime/Gameplay/Gimmick/Genre/*` 약 2.2k 줄(슈터 · 플랫포머 · 레이싱 · 공포 …), C++ 사용은 `ShooterGimmicks.h` 하나 | 남김 — 장르 키트로. 씬 데이터가 타입 이름으로 부르므로 콘텐츠 참조 확인이 먼저 | |
 | 15 | 런타임 키트에 편집기 기능 | `NetSimulation` 의 `NetSimPreviewSceneSource` · `NetSimGameRegistry`(편집기 프로세스 안 플레이) | 남김 — 키트 `Editor/` 로(헤드리스 테스트가 쓰는 하네스는 남긴다) | |
 | 16 | 큰 패널 · 정적 모음(SRP) | CharacterEditorPanel 1389 줄(일 8) · ContentBrowser 1174 · UIPreview 1169 + 모델 941 · ProfilerPanel 1120(도구 6) · InputMapPanel 1015(도구 6), 정적 모음 `ModelImportUtil` 78 · `EditorThemeUtil` 54 · `EditorPlaySession` 39 · `EditorWidgets` 35 | 남김 — 탭 · 도구 단위로 파일과 모델을 나눈다(빌드 시간 항목과 함께) | |
@@ -229,7 +229,8 @@
 
 - RTSWorld → `RTSVision`(팀 시야 · 다시 칠하기 타이머) · `RTSUnitBuckets`(이웃 버킷) · 내비 `FlowFieldCache`(목적지별 흐름장 공유 — 다른 키트도 쓴다). 유닛 슬롯은 그대로다: Core `SlotHandleTable` 은 잠금 · 원자값 동시 표이고, 여기는 슬롯 순서 · LIFO 빈 칸이 결정적 결과와 저장 바이트에 들어간다. 옮기기 전후 같은 동작은 `RTSWorldTest`(공개 조회 요약 고정값)가 묶는다.
 - InputMap → `InputTriggerRules`(바인딩 상태 · 문턱 · 홀드 · 탭 · 연타 · 끌기 · 반복 · 펄스 판정 — 언리얼 `UInputTrigger` 자리, 장치 · 레이어를 모른다) · `InputBinding.h`(스키마 형식). 맵은 장치 읽기와 액션 합산만 한다.
-- AudioEngine 명령 큐 → Core `LockedSwapQueue`(잠금과 목록을 한 형식에 — 목록을 잠금 없이 만지는 모양을 쓸 수 없다). 재생 id 는 큐에 넣는 잠금 안에서(`pushStamped`). 보이스 풀은 남김(NEXT 1 절).
+- AudioEngine 명령 큐 → Core `LockedSwapQueue`(잠금과 목록을 한 형식에 — 목록을 잠금 없이 만지는 모양을 쓸 수 없다). 재생 id 는 큐에 넣는 잠금 안에서(`pushStamped`). 같은 큐로 DeferredDelegateQueue · ContentBrowserImportQueue · Fracture 맞은 사건도. 손 잠금이 남은 곳(GameObjectStore 시작 대기열 — 잠금 순서 `SW_ACQUIRED_AFTER`, Loopback · FractureNetworkSync · RenderExtensionRegistry · TextureCache — 잠금 안에서 다른 상태도 만진다)은 순수 큐가 아니다.
+- AudioEngine 보이스 슬롯 · 잡기 · 반환 · 실제/가상 고르기 → `AudioVoicePool`(언리얼 FMixerSourceManager 자리). 버스 · 감쇠 · 인스턴스 번호 풀이는 엔진.
 - ScheduleSystem 빌린 서비스 → `Services` 묶음 하나. 경로 · 자리 제공자는 생성자부터 기본 제공자를 가리켜 null 이 없다.
 - 에디터 콘솔 명령 모음(`EditorDevCommands.cpp`) → 기능의 명령 파일 옆(언리얼 Exec 명령이 그 시스템에 있는 것과 같다). 남은 진단 도구 폴더는 `Commands/Diagnostics/` — `/Dev/` 는 빌드 규칙에서 "배포가 짓지 않는 단위" 라는 뜻이다.
 - cpp · 헤더 짝: 짝 없는 cpp 는 스스로 등록(탭 · 서버 서비스 · 데이터 종류 · 자동화 단계 · 명령), 플랫폼 · 라이브러리 · 형식별 구현, 모듈 진입점만 남았다. 하나만 include 하던 pimpl 헤더(`MaterialCacheImpl.h` · `TextureCacheImpl.h`)는 cpp 안으로, 빈 cpp(`TypedHandleTestComponent.cpp`)는 지웠다.
