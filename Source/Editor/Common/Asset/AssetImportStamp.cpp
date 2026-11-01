@@ -487,6 +487,31 @@ namespace sw::editor
         return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager );
     }
 
+    vector<string> AssetImportStampUtil::collectSourceAssetPaths( string_view resourceRoot, const IRawAssetImporter& importer )
+    {
+        const string   rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        vector<string> listFolder;
+        vector<string> listAssetPath;
+        if ( rootDir.empty() || FileUtil::collectFolders( rootDir, listFolder, true ) == false )
+            return listAssetPath;
+        for ( const string& folder : listFolder )
+        {
+            const string normalizedFolder = FileUtil::normalizeSeparators( folder );
+            if ( FileUtil::getFileNamePart( normalizedFolder ) != importer.getRawFolderName() )
+                continue;
+            vector<string> listPath;
+            (void)FileUtil::collectFiles( normalizedFolder, "", listPath, true );
+            for ( const string& path : listPath )
+            {
+                const string sourcePath = FileUtil::normalizeSeparators( path );
+                if ( importer.isSourceFile( sourcePath ) && sourcePath.size() > rootDir.size() + 1 )
+                    listAssetPath.push_back( sourcePath.substr( rootDir.size() + 1 ) );
+            }
+        }
+        VectorUtil::sort( listAssetPath );
+        return listAssetPath;
+    }
+
     AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
                                                             TaskManager* pTaskManager )
     {

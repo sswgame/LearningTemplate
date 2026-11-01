@@ -129,6 +129,8 @@ namespace sw::editor
          * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
          */
         [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager );
+        /** @brief 리소스 루트 아래 모든 원본 폴더의 원본 경로(루트 기준 — 규칙을 고르는 경로)를 정렬해 돌려줍니다(`importAll` 이 훑는 원본과 같다). */
+        [[nodiscard]] static vector<string> collectSourceAssetPaths( string_view resourceRoot, const IRawAssetImporter& importer );
 
         /**
          * @brief @p listAssetPath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.

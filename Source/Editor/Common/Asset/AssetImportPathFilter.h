@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -130,6 +131,28 @@ namespace sw::editor
                     return ruleIndex;
             }
             return listRule.size();
+        }
+
+        /**
+         * @brief 조건 있는 규칙 중 @p listAssetPath(리소스 루트 기준 원본 경로 — `select` 가 받는 경로) 어느 것에도 맞지 않는 규칙의 이름입니다.
+         * @details 그런 규칙은 죽은 패턴이다 — 원본 폴더를 옮기며 패턴만 남은 것(예: 별표 마디 + `common/...` 패턴은 맨 앞 마디 `common` 앞에 별표가 맞을 마디가 없어 맞지 않는다)이 조용히 기본 규칙으로 임포트된다.
+         *          일괄 임포트가 문제로 알려 설정을 고치게 한다. 조건 없는 규칙(나머지)은 보지 않는다.
+         */
+        template <typename Rule>
+        [[nodiscard]] static vector<string> findRulesMatchingNothing( const vector<Rule>& listRule, const vector<string>& listAssetPath )
+        {
+            vector<string> listDead;
+            for ( size_t ruleIndex = 0; ruleIndex < listRule.size(); ++ruleIndex )
+            {
+                const Rule& rule = listRule[ruleIndex];
+                if ( rule._filter.isCatchAll() )
+                    continue;
+                const bool bMatchesSome = VectorUtil::containsIf( listAssetPath, [&rule]( const string& assetPath )
+                { return rule._filter.matchesPath( assetPath ); } );
+                if ( bMatchesSome == false )
+                    listDead.push_back( describe( rule._name, ruleIndex ) );
+            }
+            return listDead;
         }
 
     private:

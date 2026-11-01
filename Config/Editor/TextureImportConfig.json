@@ -34,13 +34,6 @@
       "srgb": true,
       "invert_green": false,
       "swizzle": "RGBA"
-    },
-    "Base_Mask": {
-      "format": "R8_UNORM",
-      "generate_mips": true,
-      "srgb": false,
-      "invert_green": false,
-      "swizzle": "RGBA"
     }
   },
   "rules": [
@@ -63,12 +56,6 @@
       "inherits": "Base_NormalMap",
       "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*", "*_nor_gl_*"],
       "exclude_paths": ["ui/", "gui/", "icons/"]
-    },
-    {
-      "name": "Scan_Textures",
-      "inherits": "Base_Default",
-      "include_patterns": ["*/textures_raw/polyhaven/*_diff_*"],
-      "format": "BC1_UNORM"
     },
     {
       "name": "ORM_Maps",
@@ -112,7 +99,7 @@
     {
       "name": "Character_Atlases",
       "inherits": "Base_Default",
-      "include_patterns": ["*/common/textures_raw/kaykit_*", "*/shooter3d/textures_raw/kaykit_dungeon.*"],
+      "include_patterns": ["*/shooter3d/textures_raw/kaykit_dungeon.*"],
       "format": "BC1_UNORM"
     },
     {
@@ -131,11 +118,6 @@
       "inherits": "Base_Default",
       "include_patterns": ["**/textures_raw/avatarsample_d/**"],
       "format": "BC3_UNORM"
-    },
-    {
-      "name": "Mask_Textures",
-      "inherits": "Base_Mask",
-      "include_patterns": ["*_mask.*"]
     },
     {
       "name": "Fallback_Default",

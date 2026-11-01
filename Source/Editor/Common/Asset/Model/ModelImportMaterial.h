@@ -78,7 +78,7 @@ namespace sw::editor
 
         /**
          * @brief 일반 glTF 의 첫 금속도 · 거칠기 머티리얼(기본색 텍스처가 있는 것)을 읽어 @p inoutResult 의 `_pbrMaterial` 에 담습니다. 없으면 아무것도 하지 않습니다.
-         * @details 구간 없는 메시의 머티리얼이다 — 텍스처 머티리얼이 있는데 머티리얼이 여럿인 모델은 구간으로 나뉘어(`readSectionPbrMaterials`) 여기에 오지 않는다.
+         * @details 구간 없는 메시(정적 · 스킨드)의 머티리얼이다 — 텍스처 머티리얼이 있는데 머티리얼이 여럿인 모델은 구간으로 나뉘어(`readSectionPbrMaterials`) 여기에 오지 않는다.
          * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] static bool readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );

@@ -77,9 +77,8 @@ namespace sw::editor
         ModelRecenter  _recenter;
         uint8          _bImportAnimations;
         uint8          _bImportAttachments;
-        uint8          _bImportMaterials;  ///< glTF 머티리얼을 모델 옆 머티리얼로 옮긴다(import_materials). 끄면 머티리얼 색을 정점에 굽고 머티리얼 파일을 쓰지 않는다
-        uint8          _bMaterialSections; ///< 머티리얼이 여럿인 텍스처 glTF 를 머티리얼 구간으로 나눈다(ModelImportMaterial::readSectionPbrMaterials). 끄면 첫 텍스처 머티리얼 하나다
-        uint8          _bFracture;         ///< 규칙에 `fracture` 가 있으면 참이다. `.mesh` 옆에 `.fracture` 를 쓴다
+        uint8          _bImportMaterials; ///< glTF 머티리얼을 모델 옆 머티리얼로 옮긴다(import_materials). 끄면 머티리얼 색을 정점에 굽고 머티리얼 파일을 쓰지 않는다
+        uint8          _bFracture;        ///< 규칙에 `fracture` 가 있으면 참이다. `.mesh` 옆에 `.fracture` 를 쓴다
 
         ModelImportRule()
             : _name{}
@@ -99,7 +98,6 @@ namespace sw::editor
             , _bImportAnimations{ SW_TRUE }
             , _bImportAttachments{ SW_TRUE }
             , _bImportMaterials{ SW_TRUE }
-            , _bMaterialSections{ SW_TRUE }
             , _bFracture{ SW_FALSE }
         {
         }

@@ -241,7 +241,11 @@ namespace sw::editor
                 // 노드를 순회하며 메시를 나눈다. 이 스킨을 쓰는 메시는 몸, 관절 아래의 스킨 없는 메시는 부착, 그 밖의 스킨 없는 메시는 몸(루트 본에 가중치 1)이다.
                 ModelImportUtil::MergedMesh body;
                 const bool                  bSections = listSectionMaterialName.empty() == false;
-                body._bBakeMaterialColor              = bSections == false; // 구간 머티리얼이 색 계수를 가진다 — 정점에도 구우면 두 번 곱한다
+                // 머티리얼(구간 머티리얼 · 텍스처 PBR 머티리얼 하나)이 색 계수를 가지면 정점에 굽지 않는다 — 두 번 곱한다(정적 모델과 같은 규칙)
+                const bool bPbrMaterial  = bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::findTexturedPbrMaterial( data ) != nullptr;
+                body._bBakeMaterialColor = bSections == false && bPbrMaterial == false;
+                if ( bPbrMaterial && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
+                    return false;
                 vector<const cgltf_node*>     listStack( listRoot.rbegin(), listRoot.rend() );
                 unordered_map<string, uint32> mapStemUse;
                 float32                       arrIdentity[16]{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
@@ -528,7 +532,7 @@ namespace sw::editor
                     return false;
                 }
                 // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePbrMaterial`).
-                if ( bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
+                if ( bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false ) // 스킨드 모델도 같은 규칙(readSkinnedModel)
                     return false;
 
                 ModelImportGeometry::applyRule( rule, merged );
@@ -727,7 +731,7 @@ namespace sw::editor
         if ( ModelImportMaterial::readToonMaterials( data, sourcePath, outResult._listToonMaterial, outResult._listIgnoredMaterialKey ) == false ||
              ModelImportVrm::readVrmAvatar( data, sourcePath, outResult ) == false )
             return false;
-        const bool bPbrSections = outResult._listToonMaterial.empty() && rule._bImportMaterials == SW_TRUE && rule._bMaterialSections == SW_TRUE;
+        const bool bPbrSections = outResult._listToonMaterial.empty() && rule._bImportMaterials == SW_TRUE;
         if ( bPbrSections && ModelImportMaterial::readSectionPbrMaterials( data, sourcePath, outResult ) == false )
             return false;
         // 구간을 나누는 머티리얼 표(툰 또는 PBR)의 이름 — 비어 있으면 구간 없는 메시다.
@@ -866,7 +870,12 @@ namespace sw::editor
     AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
         const ModelRawImporter importer{ assetPaths, config };
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        AssetImportSummary     summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
+        {
+            summary._listProblem.push_back( "ModelImportConfig: rule " + rule + " matches no model source - its patterns are dead (a moved folder?)" );
+        }
+        return summary;
     }
 
     string ModelImporter::makeImportedModelPath( string_view rawModelPath )

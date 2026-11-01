@@ -540,7 +540,12 @@ namespace sw::editor
         // 작업 시스템은 여기(호출 스레드)서 한 번 찾아 값으로 넘긴다 — 임포트는 워커에서 도는데 워커는 에디터 서비스 범위를 읽지 않는다(`findEditorScope`).
         TaskManager* const       pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
         const TextureRawImporter importer{ config, pTaskManager };
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
+        AssetImportSummary       summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
+        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
+        {
+            summary._listProblem.push_back( "TextureImportConfig: rule " + rule + " matches no texture source - its patterns are dead (a moved folder?)" );
+        }
+        return summary;
     }
 
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
