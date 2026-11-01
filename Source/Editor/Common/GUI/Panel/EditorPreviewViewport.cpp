@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 
@@ -48,8 +49,6 @@ namespace sw::editor
             static constexpr float32 kRotateRadiansPerPixel = 0.01f;
             /** @brief 자유 카메라에서 휠 한 칸이 시선 방향으로 옮기는 거리(m)입니다. */
             static constexpr float32 kFreeMoveMetersPerWheel = 0.5f;
-            /** @brief 스크린샷을 찍기 전에 그릴 프레임 수입니다 — 첫 프레임은 클리어 색이고 렌더러 · PSO 를 준비하는 데 몇 프레임 걸린다. */
-            static constexpr uint32 kScreenshotWarmupFrames = 30;
         };
     } // namespace
 } // namespace sw::editor
@@ -247,7 +246,9 @@ namespace sw::editor
 
     void EditorPreviewViewport::requestScreenshotIfAsked()
     {
-        if ( gv_editorPreviewScreenshot.empty() || _submittedFrameCount < EditorPreviewViewportInternal::kScreenshotWarmupFrames )
+        // 다 그려진 그림만 찍는다 — 주 화면 캡처와 같은 판정(`CaptureReadiness` — 이 씬의 에셋 일, 이 씬을 그린 하위 렌더러가 PSO 때문에 빠뜨린 배치). 프레임 수를 어림하지 않는다.
+        const bool bNotReady = _pScene == nullptr || CaptureReadiness::countPendingWork( _pScene->getObjectManager(), _sceneKey ) != 0;
+        if ( gv_editorPreviewScreenshot.empty() || bNotReady )
             return;
         if ( requestImageFile( string_view( gv_editorPreviewScreenshot.c_str() ) ) == false )
             return;

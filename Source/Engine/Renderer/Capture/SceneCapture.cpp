@@ -9,9 +9,11 @@
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
+#include "Engine/Scene/Scene.h"
 
 namespace sw
 {
@@ -31,8 +33,8 @@ namespace sw
                 return kCaptureSceneKeyBit | ( s_nextKey.fetch_add( 1, std::memory_order_relaxed ) & ~kCaptureSceneKeyBit );
             }
 
-            /** @brief 요청 장 수를 그린 뒤 PSO 가 다 되기를 기다리는 시한(초)입니다. 첫 실행의 셰이더 캐시 없는 빌드(DX11 머티리얼 변형 하나에 수백 ms)보다 넉넉하다. */
-            static constexpr int64 kPSOWaitSeconds = 30;
+            /** @brief 다 그려진 장을 기다리는 시한(초)입니다. 첫 실행의 셰이더 캐시 없는 빌드(DX11 머티리얼 변형 하나에 수백 ms)와 텍스처 읽기보다 넉넉하다. */
+            static constexpr int64 kReadyWaitSeconds = 30;
         };
     } // namespace
 
@@ -82,31 +84,29 @@ namespace sw
     bool SceneCapture::capture( Scene& scene, const SceneCaptureRequest& request, SceneCaptureResult& outResult )
     {
         outResult = SceneCaptureResult{};
-        if ( _pRenderThread == nullptr || request._frameCount == 0 )
+        if ( _pRenderThread == nullptr )
             return false;
         // 빌더는 이 캡처의 것이다(빌더의 재구축 판단 캐시가 씬 · 시점별이다). 배치 합치기는 주 · 미리보기 빌더와 같은 규칙(디바이스가 정한다).
         GPUSceneBuilder builder;
         builder.setMergeBatchesAcrossMaterials( getDevice()->supportsNativeBindlessSampling() );
-        _job._request           = request;
-        _job._bSucceeded        = true;
-        _job._bRead             = false;
-        int64 waitDeadlineMicro = 0;
-        for ( uint32 frameIndex = 0; _job._bSucceeded && _job._bRead == false; ++frameIndex )
+        _job._request             = request;
+        _job._bSucceeded          = true;
+        _job._bRead               = false;
+        _job._pResult             = &outResult;
+        const int64 deadlineMicro = MonotonicClock::nowMicroseconds() + SceneCaptureInternal::kReadyWaitSeconds * constant::time::kMicrosecondsPerSecond;
+        while ( _job._bSucceeded && _job._bRead == false )
         {
-            const bool bReadFrame = frameIndex + 1 >= request._frameCount;
-            if ( bReadFrame && waitDeadlineMicro == 0 )
-                waitDeadlineMicro = MonotonicClock::nowMicroseconds() + SceneCaptureInternal::kPSOWaitSeconds * constant::time::kMicrosecondsPerSecond;
-            else if ( bReadFrame && MonotonicClock::nowMicroseconds() > waitDeadlineMicro )
+            if ( MonotonicClock::nowMicroseconds() > deadlineMicro )
             {
-                SW_LOG_ERROR( "The capture still had batches waiting for their material PSO after %# s - the frame was not read ('%#')", SceneCaptureInternal::kPSOWaitSeconds,
-                              _pipelinePath.c_str() );
+                SW_LOG_ERROR( "The capture never drew a complete frame within %# s (scene work %#, or batches waiting for their material PSO) - nothing was read ('%#')",
+                              SceneCaptureInternal::kReadyWaitSeconds, CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ), _pipelinePath.c_str() );
                 _job._bSucceeded = false;
                 break;
             }
             _job._packet.resetForFrame();
             _fill.fill( _job._packet, scene, request._view, builder, nullptr );
             _job._packet._sceneKey = _sceneKey;
-            _job._pResult          = bReadFrame ? &outResult : nullptr;
+            _job._bReadNow         = CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ) == 0;
             const bool bRan        = _pRenderThread->executeAndWait( SW_DELEGATE_METHOD( RenderCommandDelegate, &SceneCapture::renderFrameOnRenderThread, this ) );
             _job._bSucceeded       = bRan && _job._bSucceeded;
         }
@@ -140,8 +140,8 @@ namespace sw
             _job._bSucceeded = false;
             return;
         }
-        // 머티리얼 PSO 가 아직 만드는 중이라 빠진 배치가 있으면 읽지 않는다 — 다음 장을 그린다(`capture`).
-        if ( _job._pResult == nullptr || pRenderer->getLastPendingPSOBatchCount() != 0 )
+        // 다 그려진 장만 읽는다 — 씬 쪽 남은 일(게임 스레드가 보고 넘겼다)과 이 렌더러가 빠뜨린 배치(`CaptureReadiness`). 아니면 다음 장을 그린다(`capture`).
+        if ( _job._bReadNow == false || CaptureReadiness::isFrameComplete( *pRenderer ) == false )
             return;
         _job._bRead                = true;
         SceneCaptureResult& result = *_job._pResult;

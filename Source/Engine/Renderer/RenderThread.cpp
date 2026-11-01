@@ -214,7 +214,9 @@ namespace sw
         , _screenshotWaitStartMicroseconds{ 0 }
         , _budgetFrameCounter{ 0 }
         , _bScenarioCaptureEnabled{ false }
-        , _pendingMaterialPSOBatchCount{ 0 }
+        , _scenePendingMutex{}
+        , _arrScenePending{}
+        , _scenePendingCount{ 0 }
         , _requestedScreenshotPath{}
         , _requestedScreenshotTexture{ 0 }
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
@@ -623,14 +625,13 @@ namespace sw
             // `RT.Graph.executeParallel` 만으로는 그 차이가 테이블에서 사라진다.
             SW_PROFILE_SCOPE( "RT.ExecutePacket" );
             bGraphDrew = _pFrameRenderer->executePacket( _pDevice, packet );
-            _pendingMaterialPSOBatchCount.store( bGraphDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u, std::memory_order_relaxed );
         }
 
         // 에디터가 게임 뷰 텍스처를 샘플링한다. 읽기 상태로 바꾼다(열려 있는 렌더 패스도 여기서 닫힌다).
         if ( bOffscreen )
             pFrameStream->prepareTextureForShaderRead( packet._outputRenderTarget );
 
-        drawScenePreviews( packet, pFrameStream );
+        drawScenePreviews( packet, pFrameStream, bGraphDrew );
 
         // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린이나 백버퍼 어디에 그렸든, 여기서 타깃을
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.
@@ -715,20 +716,44 @@ namespace sw
         return true;
     }
 
-    void RenderThread::drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream )
+    void RenderThread::drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream, bool bMainDrew )
     {
+        // 씬마다 빠뜨린 배치 수를 이 프레임 것으로 다시 쓴다(캡처 준비 판정 `CaptureReadiness`). 주 화면이 그리지 않은 프레임은 기다릴 그림이 없다.
+        array<ScenePendingWork, 1 + kMaxHostSceneView> arrPending{};
+        uint32                                         pendingCount = 0;
+        arrPending[pendingCount++]                                  = ScenePendingWork{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
+
         // 미리보기 씬(에디터 툴 창)은 씬마다 하위 렌더러로 자기 타깃에 그린다(`FrameRenderer::executeOffscreenPacket` — 캡처와 같은 길).
         const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && pFrameStream != nullptr;
         if ( bCanDrawPreviews )
         {
             SW_PROFILE_SCOPE( "RT.ScenePreviews" );
-            for ( uint32 previewIndex = 0; previewIndex < packet._scenePreviewCount; ++previewIndex )
+            for ( uint32 previewIndex = 0; previewIndex < packet._scenePreviewCount && pendingCount < arrPending.size(); ++previewIndex )
             {
-                RenderFramePacket& preview = *packet._listScenePreview[previewIndex];
-                (void)_pFrameRenderer->executeOffscreenPacket( _pDevice, preview, preview._clearColor ); // 실패는 렌더러가 로그로 남기고, 타깃은 클리어 색으로 남는다
+                RenderFramePacket&   preview   = *packet._listScenePreview[previewIndex];
+                FrameRenderer* const pRenderer = _pFrameRenderer->executeOffscreenPacket( _pDevice, preview, preview._clearColor );
+                // 실패는 렌더러가 로그로 남기고 타깃은 클리어 색으로 남는다 — 기다려도 나아지지 않으니 남은 일로 세지 않는다
+                arrPending[pendingCount++] = ScenePendingWork{ preview._sceneKey, pRenderer != nullptr ? pRenderer->getLastPendingPSOBatchCount() : 0u };
             }
             _pFrameRenderer->retireScenePreviews( packet );
         }
+        ScopedLock<mutex> lock{ _scenePendingMutex };
+        _arrScenePending   = arrPending;
+        _scenePendingCount = pendingCount;
+    }
+
+    bool RenderThread::findPendingMaterialPSOBatchCount( uint32 sceneKey, uint32& outCount ) const
+    {
+        ScopedLock<mutex> lock{ _scenePendingMutex };
+        for ( uint32 index = 0; index < _scenePendingCount; ++index )
+        {
+            if ( _arrScenePending[index]._sceneKey == sceneKey )
+            {
+                outCount = _arrScenePending[index]._pendingBatchCount;
+                return true;
+            }
+        }
+        return false;
     }
 
     bool RenderThread::needsCaptureReadiness()

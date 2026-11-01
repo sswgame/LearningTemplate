@@ -41,7 +41,6 @@ namespace sw
     {
         RenderSceneViewDesc _view{};                               ///< 시점과 크기(출력 타깃은 이 객체가 정한다)
         float4              _clearColor{ 0.0f, 0.0f, 0.0f, 1.0f }; ///< 출력 타깃을 여는 색
-        uint32              _frameCount{ 3 };                      ///< 그릴 장 수 — 첫 장은 GPUScene 업로드 · 텍스처 도착이 아직이라 몇 장 그린 뒤 읽는다
         string              _attachmentName{};                     ///< 비면 출력(Present 결과, RGBA8)을, 아니면 그 이름의 첨부(예: 디퍼드의 `LitColor`)를 읽는다
     };
 
@@ -69,10 +68,10 @@ namespace sw
         IRHIDevice* getDevice() const;
 
         /**
-         * @brief @p scene 을 @p request 대로 몇 장 그리고 마지막 장을 읽어 @p outResult 에 담습니다. 그리거나 읽지 못하면 false 입니다(이유는 로그에 남는다).
+         * @brief @p scene 을 @p request 대로 다 그려진 장이 나올 때까지 그리고 그 장을 읽어 @p outResult 에 담습니다. 그리거나 읽지 못하면 false 입니다(이유는 로그에 남는다).
          * @details 씬의 월드 행렬은 부르는 쪽이 반영해 둔다(`GameObjectManager::flushSceneTransforms`) — 시점이 그 행렬로 정해져 있다.
-         *          요청 장 수를 그린 뒤에도 머티리얼 PSO 가 만드는 중인 배치가 있으면(빌더 스레드) 다 될 때까지 더 그리고 읽는다 — 덜 그린 그림을 읽지 않는다.
-         *          언리얼이 썸네일 · 스크린샷 전에 셰이더 컴파일을 마저 끝내는 것과 같다. 시한(`kPSOWaitSeconds`)을 넘기면 실패다.
+         *          다 그려졌는지는 주 화면 캡처와 같은 판정이다(`CaptureReadiness` — 씬 쪽 남은 일, 하위 렌더러가 PSO 때문에 빠뜨린 배치). 장 수를 어림하지 않는다.
+         *          시한(`kReadyWaitSeconds`)을 넘기면 실패다.
          */
         [[nodiscard]] bool capture( Scene& scene, const SceneCaptureRequest& request, SceneCaptureResult& outResult );
 
@@ -84,7 +83,8 @@ namespace sw
             SceneCaptureRequest _request;
             SceneCaptureResult* _pResult{ nullptr }; ///< 마지막 장이면 읽어 담을 곳, 아니면 nullptr
             bool                _bSucceeded{ false };
-            bool                _bRead{ false }; ///< 읽었다 — 마지막 장이라도 PSO 가 만드는 중인 배치가 있으면 읽지 않고 다음 장을 그린다
+            bool                _bReadNow{ false }; ///< 이 장을 다 그렸으면 읽는다(씬 쪽 남은 일이 0 이다 — 렌더 쪽은 렌더 스레드가 그린 뒤 본다)
+            bool                _bRead{ false };    ///< 읽었다
         };
 
         /** @brief (렌더 스레드) 일감의 패킷을 출력 타깃에 한 장 그리고, 읽을 곳이 있으면 읽습니다. */

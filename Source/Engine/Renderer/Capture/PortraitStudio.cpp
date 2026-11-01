@@ -29,8 +29,6 @@ namespace sw
     {
         struct PortraitStudioInternal
         {
-            /** @brief 첫 프레임은 GPUScene 업로드와 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다. */
-            static constexpr uint32 kWarmupFrameCount = 3;
             /**
              * @brief 도착 단계(`PrimitiveRegistry::updateAssetWaiters`)에 한 번에 넘기는 시간(초)입니다. 메시 등장 디더 시간의 상한(`MeshComponent::_appearSeconds` 최대 5 초)보다 길다.
              * @details 스튜디오는 시간을 흘리지 않는다 — 도착한 메시는 등장 비율 0 에서 오르는데 그대로 두면 0 이라 그려지지 않는다. 사진에는 다 나타난 모습을 찍는다.
@@ -188,7 +186,6 @@ namespace sw
         capture._view._width     = request._width;
         capture._view._height    = request._height;
         capture._clearColor      = request._backgroundColor;
-        capture._frameCount      = PortraitStudioInternal::kWarmupFrameCount;
         SceneCaptureResult result;
         if ( _capture.capture( studio, capture, result ) == false )
         {

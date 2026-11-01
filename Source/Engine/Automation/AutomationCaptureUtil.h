@@ -1,6 +1,6 @@
 /**
  * @file AutomationCaptureUtil.h
- * @brief 화면 캡처가 자리 잡은 그림을 찍을 수 있는지(로딩 화면 · 페이드 · 에셋 읽기가 끝났는지)를 묻는 한 곳입니다.
+ * @brief 주 화면 캡처가 자리 잡은 그림을 찍을 수 있는지 묻는 곳입니다 — 남은 일의 셈(`CaptureReadiness`)에 자동화 층의 화면 덮개(로딩 화면 · 페이드)를 더한다.
  * @details 시나리오 `<Screenshot>` 의 기다림과 시작 인자 캡처(`-gv_screenshotSettledFrames`, 골든 이미지)가 같은 판정을 씁니다.
  *          언리얼 자동화 스크린샷이 레벨 로드 · 스트리밍 · 셰이더 컴파일이 끝나기를 기다린 뒤 찍는 것과 같은 자리입니다.
  */
@@ -16,14 +16,8 @@ namespace sw
     struct SW_API AutomationCaptureUtil
     {
         /**
-         * @brief 씬이 기다리는 에셋 일의 수입니다 — 읽는 중이거나 애니메이션을 기다리거나 디더로 나타나는 중인 메시(씬 프레임 도착 단계의 대기 — 메시를 기다리는 폴리지 · VFX 포함),
-         *        메시를 기다려 미룬 내비메시 마련(`SceneNavigation::getWaitingMeshCount`), 읽거나 올리는 중인 텍스처, 머티리얼 PSO 가 아직 만드는 중이라 지난 프레임에 빠진 배치
-         *        (`RenderThread::getPendingMaterialPSOBatchCount` — 새 머티리얼 변형이 처음 나온 몇 프레임은 그 메시가 그려지지 않는다. 화면 밖 캡처 `SceneCapture` 와 같은 규칙).
-         * @details 감시 값 `Assets.Pending` 이 같은 셈을 쓴다. @p pManager 가 nullptr 이면 텍스처와 PSO 만 센다.
-         */
-        [[nodiscard]] static uint32 countPendingAssetWork( const GameObjectManager* pManager );
-        /**
-         * @brief 지금 찍으면 자리 잡은 그림인지입니다 — 캡처를 미루는 조건(로딩 화면 · 화면 페이드 · 시계 잡기, `AutomationBlockScope`)이 없고 에셋 일이 0 입니다.
+         * @brief 지금 찍으면 자리 잡은 그림인지입니다 — 캡처를 미루는 조건(로딩 화면 · 화면 페이드 · 시계 잡기, `AutomationBlockScope`)이 없고
+         *        남은 일(`CaptureReadiness::countPendingWork` — 씬 쪽 에셋 일과 주 렌더러의 PSO 대기)이 0 입니다.
          * @details 씬이 플레이를 시작했는지는 보지 않는다(편집 모드 시나리오도 찍는다). 첫 씬을 기다려야 하는 시작 인자 캡처는 그것을 따로 본다.
          */
         [[nodiscard]] static bool isReadyForCapture( const GameObjectManager* pManager );

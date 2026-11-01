@@ -2,40 +2,18 @@
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/RenderThreadSubsystem.h"
+#include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
-    uint32 AutomationCaptureUtil::countPendingAssetWork( const GameObjectManager* pManager )
-    {
-        uint32 count = 0;
-        if ( pManager != nullptr )
-        {
-            count += static_cast<uint32>( pManager->getPrimitiveRegistry().countAssetWaiters() );
-            count += pManager->getSubsystem<SceneNavigation>().getWaitingMeshCount();
-        }
-        if ( engine::areEngineServicesBound() )
-            count += engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().countLoadsInFlight();
-        const RenderThreadSubsystem* const pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
-        const RenderThread* const          pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
-        if ( pRenderThread != nullptr )
-            count += pRenderThread->getPendingMaterialPSOBatchCount();
-        return count;
-    }
-
     bool AutomationCaptureUtil::isReadyForCapture( const GameObjectManager* pManager )
     {
-        return AutomationStepRegistry::findCaptureBlocker() == nullptr && countPendingAssetWork( pManager ) == 0;
+        return AutomationStepRegistry::findCaptureBlocker() == nullptr && CaptureReadiness::countPendingWork( pManager ) == 0;
     }
 } // namespace sw
 

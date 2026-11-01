@@ -26,8 +26,6 @@ namespace sw
     {
         struct ReflectionProbeBakerInternal
         {
-            /// @brief 첫 프레임은 GPUScene 업로드와 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다(`PortraitStudio` 와 같은 수).
-            static constexpr uint32 kWarmupFrameCount = 3;
             /// @brief 찍는 카메라의 가까운 면 · 먼 면(m) — 프로브 둘레의 벽이 잘리지 않을 만큼 가깝고, 방 몇 개를 덮을 만큼 멀다.
             static constexpr float32 kCaptureNearPlane = 0.05f;
             static constexpr float32 kCaptureFarPlane  = 500.0f;
@@ -96,7 +94,6 @@ namespace sw
         request._view._cameraPos = camera.getCameraPosition();
         request._view._width     = size;
         request._view._height    = size;
-        request._frameCount      = Internal::kWarmupFrameCount;
         request._attachmentName  = string( Internal::kCaptureAttachment );
         SceneCaptureResult result;
         if ( _capture.capture( scene, request, result ) == false )
