@@ -73,6 +73,7 @@ namespace sw::editor
             uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
             uint32 _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
             uint32 _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
+            uint32 _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
         };
         const Published& getPublished() const { return _published; }
 
@@ -167,6 +168,7 @@ namespace sw::editor
         bool                                    _bBoneGizmoPlaced;        ///< `_placedBoneWorld` 가 유효하다
         bool                                    _bRigPreview;             ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`)
         Published                               _published;               ///< 감시 값이 읽는 게시 값
+        string                                  _socketResolveError;      ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)
         string                                  _thumbnailCapturePath;    ///< 요청한 썸네일 캡처의 임시 파일(비면 요청 없음)
         string                                  _thumbnailCapturePreset;  ///< 그 캡처를 붙일 프리셋 이름
         uint32                                  _thumbnailCaptureSerial;  ///< 요청할 때의 스크린샷 처리 수(`RenderThread::getCompletedScreenshotSerial`)

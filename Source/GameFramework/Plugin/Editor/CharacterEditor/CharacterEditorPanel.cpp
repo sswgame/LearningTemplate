@@ -135,6 +135,10 @@ namespace sw::editor
             {
                 return readPublished( &CharacterEditorPanel::Published::_socketCount, outValue );
             }
+            [[nodiscard]] static bool readStatusSet( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readPublished( &CharacterEditorPanel::Published::_statusSet, outValue );
+            }
             [[nodiscard]] static bool readEquippedSlotCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 return readPublished( &CharacterEditorPanel::Published::_equippedSlotCount, outValue );
@@ -175,6 +179,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( CharacterEditorPanel, CharacterEditorPanel::kPanelID, EditorPanelCategory::Custom, 9020 );
 
     SW_AUTOMATION_WATCH( editorCharacterEditorBoneCount, "Editor.CharacterEditorBoneCount", "Bones of the skeleton the Character Editor has loaded", &CharacterEditorPanelInternal::readBoneCount );
+    SW_AUTOMATION_WATCH( editorCharacterEditorStatusSet, "Editor.CharacterEditorStatusSet", "1 while the Character Editor status line holds a message (an edit error or progress)", &CharacterEditorPanelInternal::readStatusSet );
     SW_AUTOMATION_WATCH( editorCharacterEditorSocketCount, "Editor.CharacterEditorSocketCount", "Sockets in the socket file the Character Editor has loaded", &CharacterEditorPanelInternal::readSocketCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorEquippedSlotCount, "Editor.CharacterEditorEquippedSlotCount", "Slots that hold an item in the appearance selection",
                          &CharacterEditorPanelInternal::readEquippedSlotCount );
@@ -263,6 +268,7 @@ namespace sw::editor
         Published& published         = _published;
         published._boneCount         = _document.getPoseModel().getSkeleton().getBoneCount();
         published._socketCount       = static_cast<uint32>( _document.getSocketModel().getSockets().getSockets().size() );
+        published._statusSet         = _document.getStatus().empty() ? 0u : 1u;
         published._presetCount       = static_cast<uint32>( _document.getPresetStore().getPresets().size() );
         published._equippedSlotCount = _document.countEquippedSlots();
 
@@ -591,8 +597,13 @@ namespace sw::editor
         if ( bResolved == false )
         {
             _document.setStatus( resolveError ); // 모르는 부모 본 같은 편집 오류 — 축을 그리지 않고 알린다
+            _socketResolveError = resolveError;
             return;
         }
+        // 프레임마다 다시 푸는 오류라 풀리면 지운다 — 몸이 외형을 입기 전(뼈 하나짜리 스켈레톤) 프레임의 오류가 상태 줄에 남아 있었다. 다른 일이 남긴 글은 건드리지 않는다.
+        if ( _socketResolveError.empty() == false && _document.getStatus() == _socketResolveError )
+            _document.setStatus( string_view{} );
+        _socketResolveError.clear();
         const float4x4 bodyWorld       = pBodyScene->getWorldMatrix();
         const float4   arrAxisColor[3] = { SW_THEMECOLOR( "Viewport", "AxisX" ).toFloat4(), SW_THEMECOLOR( "Viewport", "AxisY" ).toFloat4(), SW_THEMECOLOR( "Viewport", "AxisZ" ).toFloat4() };
         const float3   arrAxis[3]      = {
