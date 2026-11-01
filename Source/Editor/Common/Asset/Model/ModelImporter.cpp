@@ -580,7 +580,7 @@ namespace sw::editor
                 }
                 FractureAsset fracture;
                 string        error;
-                if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
+                if ( MeshFractureUtil::fracture( result._mesh._listVertex, result._mesh._listIndex, rule._fracture, fracture, error ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FractureFailed", "Fracture of %# failed: %#", sourcePath, error.c_str() );
                     return false;
@@ -708,14 +708,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool ModelImporter::readModel( string_view sourcePath, const ModelImportRule& rule, vector<RHIVertex>& outListVertex )
-    {
-        ModelImportResult result{};
-        const bool        bRead = readModelAsset( sourcePath, rule, result );
-        outListVertex           = std::move( result._mesh._listVertex );
-        return bRead;
-    }
-
     bool ModelImporter::readModelAsset( string_view sourcePath, const ModelImportRule& rule, ModelImportResult& outResult )
     {
         using Internal = ModelImporterInternal;
@@ -759,7 +751,8 @@ namespace sw::editor
             return false;
         }
         shared_ptr<Mesh> garment = Mesh::create();
-        garment->setVerticesWithTangents( vector<RHIVertex>( inoutMesh._listVertex ) );
+        if ( garment->setGeometryWithTangents( vector<RHIVertex>( inoutMesh._listVertex ), vector<uint32>( inoutMesh._listIndex ) ) == false )
+            return false; // 메시가 까닭을 남겼다(임포트가 만든 번호라 생기지 않아야 한다)
         if ( inoutMesh._listSkinVertex.empty() == false )
             garment->setSkin( inoutMesh._listSkinVertex, body->getSkinBoneCount() );
         garment->setMorphTargets( inoutMesh._listMorphTarget );

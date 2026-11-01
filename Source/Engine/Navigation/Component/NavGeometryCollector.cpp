@@ -252,11 +252,16 @@ namespace sw
                         }
                         mesh = bMeshAsset ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
                     }
-                    if ( mesh == nullptr || mesh->getVertexCount() < 3 )
+                    if ( mesh == nullptr || mesh->getIndexCount() < 3 )
                         return;
-                    const vector<RHIVertex>& listVertex = mesh->getVertices();
-                    outGeometry.addTriangleList( &listVertex.front()._arrPosition[0], static_cast<uint32>( listVertex.size() ), sizeof( RHIVertex ),
-                                                 pMeshComponent->getWorldMatrix(), verdict._area );
+                    vector<float3> listPosition;
+                    listPosition.reserve( mesh->getVertexCount() );
+                    for ( const RHIVertex& vertex : mesh->getVertices() )
+                    {
+                        listPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
+                    }
+                    outGeometry.addTriangles( listPosition.data(), static_cast<uint32>( listPosition.size() ), mesh->getIndices().data(), mesh->getIndexCount(),
+                                              pMeshComponent->getWorldMatrix(), verdict._area );
                 } );
             }
             if ( bColliders )

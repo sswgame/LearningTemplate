@@ -1447,16 +1447,29 @@ namespace sw::editor
         return MathUtil::abs( winding ) > 0.5;
     }
 
-    bool MeshFractureUtil::fracture( vector_reference<const RHIVertex> listVertex, const FractureSettings& settings, FractureAsset& outAsset, string& outError )
+    bool MeshFractureUtil::fracture( vector_reference<const RHIVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings, FractureAsset& outAsset,
+                                     string& outError )
     {
         using Triangle = MeshFractureInternal::Triangle;
         using Build    = MeshFractureInternal;
         outAsset.clear();
         outError.clear();
-        if ( listVertex.size() < 3 || listVertex.size() % 3 != 0 )
+        if ( listMeshIndex.size() < 3 || listMeshIndex.size() % 3 != 0 )
         {
             outError = "the mesh has no triangles";
             return false;
+        }
+        // 자르기는 삼각형 목록(모서리마다 정점)으로 한다 — 아래 용접이 위치를 다시 맞춘다.
+        vector<RHIVertex> listVertex;
+        listVertex.reserve( listMeshIndex.size() );
+        for ( const uint32 index : listMeshIndex )
+        {
+            if ( index >= listMeshVertex.size() )
+            {
+                outError = "the mesh has an index past its vertices";
+                return false;
+            }
+            listVertex.push_back( listMeshVertex[index] );
         }
         const bool bProxy = settings._volume != FractureVolume::Mesh;
         if ( bProxy == false && isClosedWithinTolerance( listVertex ) == false )

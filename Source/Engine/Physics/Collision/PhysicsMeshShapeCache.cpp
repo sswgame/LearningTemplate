@@ -30,18 +30,19 @@ namespace sw
                 return s_stats;
             }
 
-            /** @brief `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. 읽지 못하면 false 입니다. */
-            [[nodiscard]] static bool loadTrianglePositions( const AssetID& assetID, vector<float3>& outListPosition )
+            /** @brief `.mesh` 의 정점 위치와 인덱스(LOD 0)를 꺼냅니다. 읽지 못하면 false 입니다. */
+            [[nodiscard]] static bool loadPositionsAndIndices( const AssetID& assetID, vector<float3>& outListPosition, vector<uint32>& outListIndex )
             {
-                vector<RHIVertex> listVertex;
-                if ( MeshAssetFormat::loadFromAsset( assetID, listVertex ) == false )
+                MeshAssetData data{};
+                if ( MeshAssetFormat::loadFromAsset( assetID, data ) == false )
                     return false;
                 outListPosition.clear();
-                outListPosition.reserve( listVertex.size() );
-                for ( const RHIVertex& vertex : listVertex )
+                outListPosition.reserve( data._listVertex.size() );
+                for ( const RHIVertex& vertex : data._listVertex )
                 {
                     outListPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
                 }
+                outListIndex = std::move( data._listIndex );
                 return true;
             }
 
@@ -89,7 +90,8 @@ namespace sw
 
         // 읽기와 합치기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
         vector<float3> listPosition;
-        const bool     bLoaded = PhysicsMeshShapeCacheInternal::loadTrianglePositions( PhysicsMeshShapeCacheInternal::toAssetID( path ), listPosition ) && listPosition.size() >= 3;
+        vector<uint32> listIndex;
+        const bool     bLoaded = PhysicsMeshShapeCacheInternal::loadPositionsAndIndices( PhysicsMeshShapeCacheInternal::toAssetID( path ), listPosition, listIndex ) && listIndex.size() >= 3;
         if ( bLoaded == false )
         {
             bool bFirstFailure = false;
@@ -106,7 +108,7 @@ namespace sw
         }
 
         shared_ptr<PhysicsMeshShapeData> loaded = make_shared<PhysicsMeshShapeData>();
-        PhysicsMeshShapeCache::makeShapeData( span<const float3>{ listPosition.data(), listPosition.size() }, *loaded );
+        PhysicsMeshShapeCache::makeShapeData( span<const float3>{ listPosition.data(), listPosition.size() }, span<const uint32>{ listIndex.data(), listIndex.size() }, *loaded );
 
         ScopedLock<mutex> lock{ _mutex };
         (void)_mapFailedPathToEpoch.erase( key ); // 이제 읽혔다 — 앞서 못 읽은 기억은 버린다
@@ -138,26 +140,29 @@ namespace sw
         return geometry;
     }
 
-    void PhysicsMeshShapeCache::makeShapeData( span<const float3> listTrianglePosition, PhysicsMeshShapeData& outData )
+    void PhysicsMeshShapeCache::makeShapeData( span<const float3> listPosition, span<const uint32> listIndex, PhysicsMeshShapeData& outData )
     {
         outData._listPoint.clear();
         outData._listIndex.clear();
-        const size_t positionCount = listTrianglePosition.size() - listTrianglePosition.size() % 3;
-        if ( positionCount == 0 )
+        const size_t indexCount = listIndex.size() - listIndex.size() % 3;
+        if ( indexCount == 0 )
             return;
 
-        // 허용 오차 안의 위치를 한 점으로 합친다. 점 순서는 처음 본 순서라 같은 입력이면 같은 점 · 인덱스가 나온다(`PositionWelder`).
+        // 허용 오차 안의 위치를 한 점으로 합친다(UV · 노멀만 다른 렌더 정점도 물리에서는 한 점이다). 점 순서는 처음 본 순서라 같은 입력이면 같은 점 · 인덱스가 나온다(`PositionWelder`).
         PositionWelder welder;
         vector<uint32> listRemap;
-        welder.weldAll( listTrianglePosition.first( positionCount ), listRemap );
+        welder.weldAll( listPosition, listRemap );
         outData._listPoint = welder.getPoints();
 
-        outData._listIndex.reserve( positionCount );
-        for ( size_t triangleStart = 0; triangleStart < positionCount; triangleStart += 3 )
+        outData._listIndex.reserve( indexCount );
+        for ( size_t triangleStart = 0; triangleStart < indexCount; triangleStart += 3 )
         {
-            const uint32 indexA      = listRemap[triangleStart];
-            const uint32 indexB      = listRemap[triangleStart + 1];
-            const uint32 indexC      = listRemap[triangleStart + 2];
+            const bool bInRange = listIndex[triangleStart] < listRemap.size() && listIndex[triangleStart + 1] < listRemap.size() && listIndex[triangleStart + 2] < listRemap.size();
+            if ( bInRange == false )
+                continue; // 메시가 범위를 보았다 — 여기서는 읽지 않기만 한다
+            const uint32 indexA      = listRemap[listIndex[triangleStart]];
+            const uint32 indexB      = listRemap[listIndex[triangleStart + 1]];
+            const uint32 indexC      = listRemap[listIndex[triangleStart + 2]];
             const bool   bDegenerate = indexA == indexB || indexB == indexC || indexA == indexC;
             if ( bDegenerate )
                 continue;

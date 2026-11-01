@@ -68,8 +68,8 @@ namespace sw
          * @details 서술자 자신의 것이면 잠그지 않는다. 메시를 읽지 못했으면 빈 창이다.
          */
         static PhysicsShapeGeometry acquireGeometry( const PhysicsShapeDesc3D& shape );
-        /** @brief 삼각형 목록(@p listTrianglePosition, 셋씩)의 허용 오차 안 위치를 합쳐(`PositionWelder`) 점과 인덱스로 만듭니다. 셋으로 나누어떨어지지 않는 끝은 버립니다. */
-        static void makeShapeData( span<const float3> listTrianglePosition, PhysicsMeshShapeData& outData );
+        /** @brief 메시 정점 위치(@p listPosition)와 인덱스(셋씩)에서 허용 오차 안 위치를 합쳐(`PositionWelder`) 점과 인덱스로 만듭니다. 셋으로 나누어떨어지지 않는 끝 · 퇴화 삼각형은 버립니다. */
+        static void makeShapeData( span<const float3> listPosition, span<const uint32> listIndex, PhysicsMeshShapeData& outData );
     };
 } // namespace sw
 

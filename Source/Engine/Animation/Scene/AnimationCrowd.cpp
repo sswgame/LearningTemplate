@@ -430,8 +430,8 @@ namespace sw
         if ( bReady )
         {
             entry._mesh = Mesh::create();
-            entry._mesh->setVertices( sourceMesh->getVertices() );
-            // 정점 순서가 원본과 같아 구간도 그대로다(구간 컴포넌트가 VAT 메시의 같은 범위를 그린다).
+            // 원본에서 이미 검사한 정점 · 인덱스다. 정점 순서가 원본과 같아 VAT 표(정점 번호)와 구간(인덱스 범위)도 그대로다.
+            (void)entry._mesh->setGeometryWithTangents( vector<RHIVertex>( sourceMesh->getVertices() ), vector<uint32>( sourceMesh->getIndices() ) );
             (void)entry._mesh->setSections( sourceMesh->getSections() );
             entry._mesh->setVertexAnimation( std::move( animation ) );
             SW_LOG_INFO_ID( "AnimationCrowd.VertexAnimationReadyFrames", "Vertex animation '%#' ready (%# frames x %# vertices)", clip.getName().c_str(), entry._mesh->findVertexAnimation()->_frameCount,

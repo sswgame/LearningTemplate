@@ -112,13 +112,14 @@ namespace sw
                                                         vector_reference<const uint16>{ &severedRegion, 1 }, outResult );
             }
 
-            /** @brief 원래 정점(이음매 그대로)을 삼각형 단위로 남은 몸과 조각으로 나누고, 각각의 캡을 스킨 정점으로 붙입니다. */
+            /** @brief 원래 정점(이음매 그대로)을 삼각형 단위로 남은 몸과 조각으로 나눠 삼각형 목록으로 풀고, 각각의 캡을 스킨 정점으로 붙입니다. */
             static void splitByTriangle( const Mesh& mesh, const DismembermentResult& result, vector<RHIVertex>& outListKeptVertex, vector<MeshSkinVertex>& outListKeptSkin,
                                          vector<RHIVertex>& outListPieceVertex, vector<MeshSkinVertex>& outListPieceSkin )
             {
                 const vector<RHIVertex>&      listVertex    = mesh.getVertices();
+                const vector<uint32>&         listIndex     = mesh.getIndices();
                 const vector<MeshSkinVertex>& listSkin      = mesh.getSkinVertices();
-                const uint32                  triangleCount = static_cast<uint32>( listVertex.size() / 3 );
+                const uint32                  triangleCount = mesh.getIndexCount() / 3;
                 for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
                 {
                     const bool              bSevered       = result._listTriangleSevered[triangle] == SW_TRUE;
@@ -126,8 +127,9 @@ namespace sw
                     vector<MeshSkinVertex>& listTargetSkin = bSevered ? outListPieceSkin : outListKeptSkin;
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
-                        listTarget.push_back( listVertex[triangle * 3 + corner] );
-                        listTargetSkin.push_back( listSkin[triangle * 3 + corner] );
+                        const uint32 vertexIndex = listIndex[triangle * 3 + corner];
+                        listTarget.push_back( listVertex[vertexIndex] );
+                        listTargetSkin.push_back( listSkin[vertexIndex] );
                     }
                 }
                 appendUnindexed( result._remainingCap, outListKeptVertex, &outListKeptSkin );

@@ -92,12 +92,12 @@ namespace sw
             /** @brief 피팅 형상 · 결과가 원본 메시와 같은 크기인지 봅니다. 아니면 까닭을 남기고 false 입니다. */
             [[nodiscard]] static bool matchesSource( const Mesh& source, const AppearanceGeometry& welded, const FitPartResult& fit )
             {
-                const uint32 vertexCount       = source.getVertexCount();
-                const bool   bGeometryMismatch = welded._listIndex.size() != vertexCount || welded.getVertexCount() != fit._listVertexDelta.size();
-                const bool   bTriangleMismatch = fit._triangleCount != vertexCount / 3 || fit._listVisibleBit.size() * 32 < fit._triangleCount;
+                const uint32 indexCount        = source.getIndexCount();
+                const bool   bGeometryMismatch = welded._listIndex.size() != indexCount || welded.getVertexCount() != fit._listVertexDelta.size();
+                const bool   bTriangleMismatch = fit._triangleCount != indexCount / 3 || fit._listVisibleBit.size() * 32 < fit._triangleCount;
                 if ( bGeometryMismatch == false && bTriangleMismatch == false )
                     return true;
-                SW_LOG_ERROR_ID( "CharacterMeshUtil.FitResultDoesNot", "Fit result does not match its mesh (%# vertices, %# welded, %# deltas, %# triangles) - the baked mesh is not made", vertexCount,
+                SW_LOG_ERROR_ID( "CharacterMeshUtil.FitResultDoesNot", "Fit result does not match its mesh (%# indices, %# welded, %# deltas, %# triangles) - the baked mesh is not made", indexCount,
                                  welded.getVertexCount(), static_cast<uint32>( fit._listVertexDelta.size() ), fit._triangleCount );
                 return false;
             }
@@ -123,30 +123,43 @@ namespace sw
             }
 
             /**
-             * @brief 남는 삼각형의 모서리를 순서대로 옮겨 오프셋과 피팅 델타를 얹습니다(구간은 연속한 정점 범위라 순서를 지키면 구간도 연속이다).
+             * @brief 남는 삼각형을 순서대로 옮기고, 그 삼각형이 쓰는 정점에 오프셋과 피팅 델타를 얹어 처음 쓰인 순서로 모읍니다(구간은 연속한 인덱스 범위라 순서를 지키면 구간도 연속이다).
              * @param pWelded 피팅을 쓸 때만 있습니다(@p pFit 과 함께 있거나 함께 없습니다).
-             * @param outListNewIndex 원본 모서리 번호마다 새 번호입니다. 버려진 모서리는 `constant::invalid_index::kUint32` 입니다.
+             * @param outListBakedIndex 남은 삼각형의 새 인덱스입니다(원본 삼각형 순서).
+             * @param outListNewIndex 원본 정점 번호마다 새 번호입니다. 남은 삼각형이 쓰지 않는 정점은 `constant::invalid_index::kUint32` 입니다.
+             * @param outListTriangleKept 원본 삼각형마다 남았으면 SW_TRUE 입니다(구간 범위를 옮길 때 쓴다).
              */
             static void bakeVertices( const Mesh& source, const vector<float3>& listPositionOffset, const vector<float3>& listNormalOffset, const AppearanceGeometry* pWelded,
-                                      const FitPartResult* pFit, vector<RHIVertex>& outListBaked, vector<MeshSkinVertex>& outListBakedSkin, vector<uint32>& outListNewIndex )
+                                      const FitPartResult* pFit, vector<RHIVertex>& outListBaked, vector<MeshSkinVertex>& outListBakedSkin, vector<uint32>& outListBakedIndex,
+                                      vector<uint32>& outListNewIndex, vector<uint8>& outListTriangleKept )
             {
                 const vector<RHIVertex>& listVertex    = source.getVertices();
-                const uint32             vertexCount   = source.getVertexCount();
-                const uint32             triangleCount = vertexCount / 3;
+                const vector<uint32>&    listIndex     = source.getIndices();
+                const uint32             triangleCount = source.getIndexCount() / 3;
                 const bool               bUseFit       = pWelded != nullptr && pFit != nullptr;
-                outListNewIndex.assign( vertexCount, constant::invalid_index::kUint32 );
-                outListBaked.reserve( vertexCount );
+                outListNewIndex.assign( source.getVertexCount(), constant::invalid_index::kUint32 );
+                outListTriangleKept.assign( triangleCount, SW_FALSE );
+                outListBaked.reserve( source.getVertexCount() );
+                outListBakedIndex.reserve( source.getIndexCount() );
                 for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
                 {
                     if ( bUseFit && pFit->isTriangleVisible( triangle ) == false )
                         continue;
+                    outListTriangleKept[triangle] = SW_TRUE;
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
-                        const uint32 vertexIndex = triangle * 3 + corner;
-                        RHIVertex    vertex      = listVertex[vertexIndex];
-                        float3       position    = getPosition( vertex ) + listPositionOffset[vertexIndex];
+                        const uint32 cornerIndex = triangle * 3 + corner;
+                        const uint32 vertexIndex = listIndex[cornerIndex];
+                        if ( outListNewIndex[vertexIndex] != constant::invalid_index::kUint32 )
+                        {
+                            outListBakedIndex.push_back( outListNewIndex[vertexIndex] );
+                            continue;
+                        }
+                        RHIVertex vertex   = listVertex[vertexIndex];
+                        float3    position = getPosition( vertex ) + listPositionOffset[vertexIndex];
+                        // 형상 정점은 위치로 합친 것이라 같은 정점을 쓰는 모서리는 모두 같은 형상 정점이다 — 처음 쓰인 모서리로 찾는다.
                         if ( bUseFit )
-                            position += pFit->_listVertexDelta[pWelded->_listIndex[vertexIndex]];
+                            position += pFit->_listVertexDelta[pWelded->_listIndex[cornerIndex]];
                         const float3 normal          = CharacterGeometryUtil::makeUnitOr( getNormal( vertex ) + listNormalOffset[vertexIndex], getNormal( vertex ) );
                         vertex._arrPosition[0]       = position._x;
                         vertex._arrPosition[1]       = position._y;
@@ -155,6 +168,7 @@ namespace sw
                         vertex._arrNormal[1]         = normal._y;
                         vertex._arrNormal[2]         = normal._z;
                         outListNewIndex[vertexIndex] = static_cast<uint32>( outListBaked.size() );
+                        outListBakedIndex.push_back( outListNewIndex[vertexIndex] );
                         outListBaked.push_back( vertex );
                         if ( source.hasSkin() )
                             outListBakedSkin.push_back( source.getSkinVertices()[vertexIndex] );
@@ -162,27 +176,26 @@ namespace sw
                 }
             }
 
-            /** @brief 구간을 새 정점 번호로 옮깁니다 — 원본 범위에서 남은 정점의 첫 번호와 수입니다(메시가 삼각형 목록이라 인덱스 범위가 곧 정점 범위다 — StructureRefactor 10 의 CPU 소비자 단계가 인덱스로 바꾼다). */
-            static vector<MeshSection> remapSections( const Mesh& source, const vector<uint32>& listNewIndex )
+            /** @brief 구간(인덱스 범위)을 남은 삼각형의 인덱스로 옮깁니다 — 구간 앞에서 남은 모서리 수가 새 시작, 구간 안에서 남은 모서리 수가 새 길이입니다. */
+            static vector<MeshSection> remapSections( const Mesh& source, const vector<uint8>& listTriangleKept )
             {
-                const uint32        vertexCount = source.getVertexCount();
+                // 남은 모서리 수의 앞 합 — 삼각형 t 앞에서 남은 모서리가 listKeptBefore[t] 개다.
+                const uint32   triangleCount = static_cast<uint32>( listTriangleKept.size() );
+                vector<uint32> listKeptBefore( triangleCount + 1, 0u );
+                for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
+                {
+                    listKeptBefore[triangle + 1] = listKeptBefore[triangle] + ( listTriangleKept[triangle] == SW_TRUE ? 3u : 0u );
+                }
                 vector<MeshSection> listSection;
                 listSection.reserve( source.getSections().size() );
                 for ( const MeshSection& section : source.getSections() )
                 {
-                    MeshSection baked = section;
-                    baked._firstIndex = 0;
-                    baked._indexCount = 0;
-                    bool bFirstFound  = false;
-                    for ( uint32 vertexIndex = section._firstIndex; vertexIndex < section._firstIndex + section._indexCount && vertexIndex < vertexCount; ++vertexIndex )
-                    {
-                        if ( listNewIndex[vertexIndex] == constant::invalid_index::kUint32 )
-                            continue;
-                        if ( bFirstFound == false )
-                            baked._firstIndex = listNewIndex[vertexIndex];
-                        bFirstFound = true;
-                        ++baked._indexCount;
-                    }
+                    // 구간은 메시가 삼각형 단위 · 범위 안으로 검사했다(`Mesh::setSections`).
+                    const uint32 firstTriangle = section._firstIndex / 3;
+                    const uint32 endTriangle   = ( section._firstIndex + section._indexCount ) / 3;
+                    MeshSection  baked         = section;
+                    baked._firstIndex          = listKeptBefore[firstTriangle];
+                    baked._indexCount          = listKeptBefore[endTriangle] - listKeptBefore[firstTriangle];
                     listSection.push_back( baked );
                 }
                 return listSection;
@@ -270,9 +283,14 @@ namespace sw
                 return true;
             }
 
-            /** @brief 부품의 정점을 뒤에 이어 붙입니다. 훅이 있으면 UV 를 옮깁니다. */
-            static void appendPartVertices( const MeshMergePart& part, const IMeshMergeHooks* pHooks, vector<RHIVertex>& inoutListVertex )
+            /** @brief 부품의 정점과 인덱스(정점 번호를 이 부품의 첫 정점만큼 밀어)를 뒤에 이어 붙입니다. 훅이 있으면 UV 를 옮깁니다. */
+            static void appendPartGeometry( const MeshMergePart& part, const IMeshMergeHooks* pHooks, vector<RHIVertex>& inoutListVertex, vector<uint32>& inoutListIndex )
             {
+                const uint32 firstVertex = static_cast<uint32>( inoutListVertex.size() );
+                for ( const uint32 index : part._pMesh->getIndices() )
+                {
+                    inoutListIndex.push_back( firstVertex + index );
+                }
                 MeshMergeSource source;
                 source._name     = part._name;
                 source._material = part._material;
@@ -327,7 +345,8 @@ namespace sw
         const vector<MeshSkinVertex>&            listSkin   = mesh.getSkinVertices();
         const bool                               bSkinned   = mesh.hasSkin();
         unordered_map<Internal::WeldKey, uint32> mapVertex;
-        outGeometry._listIndex.reserve( listVertex.size() );
+        // 메시 정점마다 형상 정점 — 위치가 같은 정점(UV · 노멀 이음매)은 한 형상 정점이다. 노멀 · UV · 스킨은 그 위치의 첫 정점 것이다.
+        vector<uint32> listVertexToWelded( listVertex.size() );
         for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
         {
             const RHIVertex&        vertex = listVertex[vertexIndex];
@@ -335,7 +354,7 @@ namespace sw
             const auto              found  = mapVertex.find( key );
             if ( found != mapVertex.end() )
             {
-                outGeometry._listIndex.push_back( found->second );
+                listVertexToWelded[vertexIndex] = found->second;
                 continue;
             }
             const uint32 welded = outGeometry.getVertexCount();
@@ -345,7 +364,13 @@ namespace sw
             outGeometry._listUv.push_back( float2{ vertex._arrUv[0], vertex._arrUv[1] } );
             if ( bSkinned )
                 outGeometry._listSkin.push_back( Internal::toInfluence( listSkin[vertexIndex] ) );
-            outGeometry._listIndex.push_back( welded );
+            listVertexToWelded[vertexIndex] = welded;
+        }
+        // 삼각형은 메시의 삼각형 순서 그대로다(삼각형 i 가 메시의 삼각형 i — 피팅 가시성 · 절단이 그 번호로 읽는다).
+        outGeometry._listIndex.reserve( mesh.getIndexCount() );
+        for ( const uint32 index : mesh.getIndices() )
+        {
+            outGeometry._listIndex.push_back( listVertexToWelded[index] );
         }
         // 모프 타깃 — 메시는 움직이는 정점만 담는다(희소). 형상 정점마다 첫 모서리의 델타를 쓴다.
         const uint32 weldedCount = outGeometry.getVertexCount();
@@ -359,9 +384,9 @@ namespace sw
             vector<uint8> listWritten( weldedCount, SW_FALSE );
             for ( const MeshMorphDelta& delta : target._listDelta )
             {
-                if ( delta._vertexIndex >= outGeometry._listIndex.size() )
+                if ( delta._vertexIndex >= listVertexToWelded.size() )
                     continue;
-                const uint32 welded = outGeometry._listIndex[delta._vertexIndex];
+                const uint32 welded = listVertexToWelded[delta._vertexIndex];
                 if ( listWritten[welded] == SW_TRUE )
                     continue;
                 listWritten[welded]              = SW_TRUE;
@@ -391,14 +416,17 @@ namespace sw
         Internal::accumulateMorphOffsets( source, listMorphWeight, listPositionOffset, listNormalOffset );
 
         vector<uint32>         listNewIndex;
+        vector<uint8>          listTriangleKept;
         vector<RHIVertex>      listBaked;
+        vector<uint32>         listBakedIndex;
         vector<MeshSkinVertex> listBakedSkin;
-        Internal::bakeVertices( source, listPositionOffset, listNormalOffset, pWelded, pFit, listBaked, listBakedSkin, listNewIndex );
-        vector<MeshSection>     listSection     = Internal::remapSections( source, listNewIndex );
+        Internal::bakeVertices( source, listPositionOffset, listNormalOffset, pWelded, pFit, listBaked, listBakedSkin, listBakedIndex, listNewIndex, listTriangleKept );
+        vector<MeshSection>     listSection     = Internal::remapSections( source, listTriangleKept );
         vector<MeshMorphTarget> listMorphTarget = Internal::remapKeptMorphTargets( source, listMorphWeight, listNewIndex );
 
         shared_ptr<Mesh> baked = Mesh::create();
-        baked->setVertices( std::move( listBaked ) ); // 위치가 바뀌었으므로 탄젠트를 다시 구한다
+        // 위치가 바뀌었으므로 탄젠트를 다시 구한다. 번호는 남은 정점 안이다(위에서 만들었다).
+        (void)baked->setGeometry( std::move( listBaked ), std::move( listBakedIndex ) );
         if ( source.hasSkin() )
             baked->setSkin( std::move( listBakedSkin ), source.getSkinBoneCount() );
         baked->setMorphTargets( std::move( listMorphTarget ) );
@@ -501,6 +529,7 @@ namespace sw
             return Internal::failMerge( pOutError, reason );
 
         vector<RHIVertex>       listVertex;
+        vector<uint32>          listIndex;
         vector<MeshSkinVertex>  listSkin;
         vector<MeshMorphTarget> listTarget;
         vector<MeshSection>     listSection;
@@ -509,7 +538,7 @@ namespace sw
         {
             MeshSection section;
             section._name       = group;
-            section._firstIndex = static_cast<uint32>( listVertex.size() ); // 병합 결과가 삼각형 목록이라 인덱스 번호가 곧 정점 번호다
+            section._firstIndex = static_cast<uint32>( listIndex.size() );
             for ( size_t partIndex = 0; partIndex < partCount; ++partIndex )
             {
                 if ( listPartGroup[partIndex] != group )
@@ -517,22 +546,23 @@ namespace sw
                 const Mesh&  mesh        = *listPart[partIndex]._pMesh;
                 const uint32 firstVertex = static_cast<uint32>( listVertex.size() );
                 bAnyGPUMorph             = bAnyGPUMorph || mesh.isGPUMorphEnabled();
-                Internal::appendPartVertices( listPart[partIndex], pHooks, listVertex );
+                Internal::appendPartGeometry( listPart[partIndex], pHooks, listVertex, listIndex );
                 if ( bSkinned )
                     listSkin.insert( listSkin.end(), mesh.getSkinVertices().begin(), mesh.getSkinVertices().end() );
                 Internal::mergeMorphTargets( mesh, firstVertex, listTarget );
             }
-            section._indexCount = static_cast<uint32>( listVertex.size() ) - section._firstIndex;
+            section._indexCount = static_cast<uint32>( listIndex.size() ) - section._firstIndex;
             listSection.push_back( section );
         }
-        if ( listVertex.empty() )
+        if ( listIndex.empty() )
             return Internal::failMerge( pOutError, "every merge part is empty - there is nothing to draw" );
 
         shared_ptr<Mesh> merged = Mesh::create();
+        // 부품마다 검사된 번호를 첫 정점만큼 밀었다 — 합친 정점 안이다.
         if ( pHooks != nullptr )
-            merged->setVertices( std::move( listVertex ) ); // UV 를 옮겼을 수 있으므로 탄젠트를 다시 구한다
+            (void)merged->setGeometry( std::move( listVertex ), std::move( listIndex ) ); // UV 를 옮겼을 수 있으므로 탄젠트를 다시 구한다
         else
-            merged->setVerticesWithTangents( std::move( listVertex ) );
+            (void)merged->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) );
         if ( bSkinned )
             merged->setSkin( std::move( listSkin ), skinBoneCount );
         merged->setMorphTargets( std::move( listTarget ) );

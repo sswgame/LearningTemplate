@@ -77,17 +77,6 @@ namespace sw
         struct StressTestSceneInternal
         {
             /**
-             * @brief 스킨 없는 메시를 본 하나(0)에 가중치 1 로 묶은 스킨드 사본을 만듭니다 — 암묵 스켈레톤 유닛(무기)이 루트 본 포즈로 움직인다.
-             */
-            static shared_ptr<Mesh> createRigidSkinnedCopy( const Mesh& source )
-            {
-                shared_ptr<Mesh> copy = Mesh::create();
-                copy->setVertices( source.getVertices() );
-                copy->setSkin( vector<MeshSkinVertex>( source.getVertices().size(), MeshSkinVertex{} ), 1 );
-                return copy;
-            }
-
-            /**
              * @brief 망토 메시를 망토 스켈레톤(`knight_cape.skeleton.xml` — 루트 + 아래로 사슬)에 높이로 나눠 묶은 스킨드 사본을 만듭니다.
              * @details 원본 망토(KayKit)는 스킨이 없는 단단한 부품이다 — 스프링 본을 보이려고 데모가 뼈 데이터를 두고 가중치를 높이로 나눈다
              *          (실제 게임은 DCC 에서 스킨한 망토). 정점 높이가 사슬 본 두 개 사이면 둘에 선형으로 나눈다.
@@ -119,7 +108,7 @@ namespace sw
                     skin._arrWeight[1]       = fraction;
                 }
                 shared_ptr<Mesh> copy = Mesh::create();
-                copy->setVertices( listVertex );
+                (void)copy->setGeometryWithTangents( vector<RHIVertex>( listVertex ), vector<uint32>( source.getIndices() ) ); // 원본에서 이미 검사한 정점 · 인덱스다
                 copy->setSkin( std::move( listSkin ), boneCount );
                 return copy;
             }
@@ -1795,7 +1784,8 @@ namespace sw
         (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
         // 리그는 데이터 스켈레톤을 받은 유닛에만 묶인다(암묵 스켈레톤이면 묶지 않아 쇠뇌가 손을 따르지 못하고 바닥에 남는다) — 루트 본 하나를 데이터로 준다.
         pWeaponUnit->setSkeleton( createSingleBoneSkeleton() );
-        pWeaponUnit->setMesh( StressTestSceneInternal::createRigidSkinnedCopy( *weaponSource ) );
+        // 본 하나(0)에 가중치 1 — 암묵 스켈레톤 유닛(무기)이 루트 본 포즈로 움직인다.
+        pWeaponUnit->setMesh( Mesh::createRigidSkinSource( *weaponSource ) );
         pWeaponUnit->resolveRenderAssets();
         PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
         if ( pWeaponRig != nullptr )

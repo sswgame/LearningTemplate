@@ -633,14 +633,6 @@ namespace sw
         MeshAssetFormatInternal::appendLODSkinChunk( outBytes, data._listLOD );
     }
 
-    void MeshAssetFormat::makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes )
-    {
-        MeshAssetData data{};
-        data._listVertex = listVertex;
-        data._listIndex  = Mesh::makeTriangleListIndices( static_cast<uint32>( listVertex.size() ) );
-        makeBytes( data, outBytes );
-    }
-
     bool MeshAssetFormat::readFromBytes( const uint8* pData, size_t size, MeshAssetData& outData, float32* pOutBoundingRadius )
     {
         using Internal = MeshAssetFormatInternal;
@@ -717,14 +709,6 @@ namespace sw
         return true;
     }
 
-    bool MeshAssetFormat::readFromBytes( const uint8* pData, size_t size, vector<RHIVertex>& outListVertex, float32* pOutBoundingRadius )
-    {
-        MeshAssetData data{};
-        const bool    bRead = readFromBytes( pData, size, data, pOutBoundingRadius );
-        outListVertex       = std::move( data._listVertex );
-        return bRead;
-    }
-
     bool MeshAssetFormat::saveToFile( const AbsolutePath& absPath, const MeshAssetData& data )
     {
         vector<uint8> bytes;
@@ -732,14 +716,6 @@ namespace sw
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
         return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
-    }
-
-    bool MeshAssetFormat::saveToFile( const AbsolutePath& absPath, const vector<RHIVertex>& listVertex )
-    {
-        MeshAssetData data{};
-        data._listVertex = listVertex;
-        data._listIndex  = Mesh::makeTriangleListIndices( static_cast<uint32>( listVertex.size() ) );
-        return saveToFile( absPath, data );
     }
 
     bool MeshAssetFormat::loadFromAsset( const AssetID& assetID, MeshAssetData& outData )
@@ -751,13 +727,6 @@ namespace sw
         return readFromBytes( bytes.data(), bytes.size(), outData );
     }
 
-    bool MeshAssetFormat::loadFromAsset( const AssetID& assetID, vector<RHIVertex>& outListVertex )
-    {
-        MeshAssetData data{};
-        const bool    bRead = loadFromAsset( assetID, data );
-        outListVertex       = std::move( data._listVertex );
-        return bRead;
-    }
 } // namespace sw
 
 namespace sw

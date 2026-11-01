@@ -80,23 +80,15 @@ namespace sw
 
         /** @brief 내용을 `.mesh` 바이트로 만듭니다. 경계 반지름과 탄젠트는 정점에서 구합니다(받은 탄젠트는 쓰지 않습니다). */
         static void makeBytes( const MeshAssetData& data, vector<uint8>& outBytes );
-        /** @brief 스킨 없는 삼각형 목록 정점(인덱스 0..n-1)을 `.mesh` 바이트로 만듭니다. */
-        static void makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes );
         /**
          * @brief `.mesh` 바이트를 읽습니다. 형식이 맞지 않으면(본 번호가 본 수를 넘는 것, 길이 1 이 아니거나 부호가 ±1 이 아닌 탄젠트 포함) false 이고 @p outData 는 비웁니다.
          * @param pOutBoundingRadius 머리의 경계 반지름을 받습니다(선택).
          */
         [[nodiscard]] static bool readFromBytes( const uint8* pData, size_t size, MeshAssetData& outData, float32* pOutBoundingRadius = nullptr );
-        /** @brief 정점만 읽습니다(스킨은 버립니다). */
-        [[nodiscard]] static bool readFromBytes( const uint8* pData, size_t size, vector<RHIVertex>& outListVertex, float32* pOutBoundingRadius = nullptr );
 
         /** @brief 내용을 @p path 에 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const MeshAssetData& data );
-        /** @brief 스킨 없는 삼각형 목록 정점(인덱스 0..n-1)을 @p path 에 씁니다. */
-        [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const vector<RHIVertex>& listVertex );
         /** @brief 리소스 경로(또는 OS 절대 경로)의 `.mesh` 를 읽습니다. 팩 파일과 느슨한 파일 모두 `AssetPaths` 로 읽습니다. */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, MeshAssetData& outData );
-        /** @brief 정점만 읽습니다(스킨은 버립니다). */
-        [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, vector<RHIVertex>& outListVertex );
     };
 } // namespace sw

@@ -182,12 +182,6 @@ namespace sw::editor
      */
     struct ModelImporter
     {
-        /**
-         * @brief glTF 파일 하나를 엔진 좌표계의 삼각형 목록으로 읽습니다. 스킨은 버립니다. 삼각형이 하나도 없으면 false 입니다.
-         * @details 파일은 쓰지 않는다. 테스트와 `importModel` 이 같은 경로(`readModelAsset`)를 쓴다.
-         */
-        [[nodiscard]] static bool readModel( string_view sourcePath, const ModelImportRule& rule, vector<RHIVertex>& outListVertex );
-
         /** @brief glTF 파일 하나를 메시, 스켈레톤, 부착 메시, 클립으로 읽습니다. 파일은 쓰지 않습니다. 규칙이나 부가 데이터가 잘못되었으면 false 입니다. */
         [[nodiscard]] static bool readModelAsset( string_view sourcePath, const ModelImportRule& rule, ModelImportResult& outResult );
 

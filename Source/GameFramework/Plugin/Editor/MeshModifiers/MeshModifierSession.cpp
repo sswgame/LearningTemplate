@@ -48,6 +48,26 @@ namespace sw::editor
                 return pScene != nullptr ? pScene->getWorldMatrix() : float4x4{};
             }
 
+            /**
+             * @brief 읽은 메시를 삼각형 목록(모서리마다 정점 · 스킨, 인덱스 0..n-1)으로 풉니다. 모디파이어 스택은 삼각형 목록을 받는다(`MeshModifierMesh` — 면 노멀이 삼각형마다다).
+             * @details 모프 타깃은 베이크가 버리고(경고) 구간은 싣지 않으므로 풀지 않는다. 읽기가 번호 범위를 봤다.
+             */
+            static void expandToTriangleList( MeshAssetData& inoutData )
+            {
+                vector<RHIVertex>      listVertex;
+                vector<MeshSkinVertex> listSkin;
+                listVertex.reserve( inoutData._listIndex.size() );
+                for ( const uint32 index : inoutData._listIndex )
+                {
+                    listVertex.push_back( inoutData._listVertex[index] );
+                    if ( inoutData._listSkinVertex.empty() == false )
+                        listSkin.push_back( inoutData._listSkinVertex[index] );
+                }
+                inoutData._listIndex      = Mesh::makeTriangleListIndices( static_cast<uint32>( listVertex.size() ) );
+                inoutData._listVertex     = std::move( listVertex );
+                inoutData._listSkinVertex = std::move( listSkin );
+            }
+
             /** @brief 원본 정점 @p listSource 에 스택 결과 @p mesh 의 위치 · 법선 · UV · 색을 덮은 정점을 만듭니다(베이크와 CPU 미리보기가 같이 쓴다). */
             static vector<RHIVertex> makeVertices( const vector<RHIVertex>& listSource, const MeshModifierMesh& mesh )
             {
@@ -277,6 +297,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierTargetCould", "Mesh modifier target '%#' could not be read", pMesh->getMeshID().c_str() );
             return false;
         }
+        MeshModifierSessionInternal::expandToTriangleList( _sourceData );
         _meshPath = pMesh->getMeshID();
         _target   = pObject->getHandle();
 
@@ -476,7 +497,8 @@ namespace sw::editor
             if ( _gpuPreviewMesh == nullptr || bPaintsColor || _bGPUPreviewColored )
             {
                 shared_ptr<Mesh> fresh = Mesh::create();
-                fresh->setVertices( bPaintsColor ? makeColoredVertices( _sourceData._listVertex, _previewMesh ) : _sourceData._listVertex );
+                // 원본을 삼각형 목록으로 풀어 두었다(`expandToTriangleList`) — 정점 수가 같으므로 인덱스가 그대로 맞는다.
+                (void)fresh->setGeometry( bPaintsColor ? makeColoredVertices( _sourceData._listVertex, _previewMesh ) : _sourceData._listVertex, vector<uint32>( _sourceData._listIndex ) );
                 fresh->setGPUMorphEnabled( true );
                 // mountPreviewMesh 가 옛 GPU 메시를 "우리 것" 으로 알아보도록 잠시 CPU 칸에 둔다
                 _cpuPreviewMesh     = std::move( _gpuPreviewMesh );
@@ -493,7 +515,7 @@ namespace sw::editor
         SW_PROFILE_SCOPE( "Editor.MeshModifiers.CPUMesh" );
         SW_PROFILE_COUNT( "Editor.MeshModifiers.CPUMeshVertices", static_cast<uint32>( _previewMesh._listPosition.size() ) );
         shared_ptr<Mesh> cpuMesh = Mesh::create();
-        cpuMesh->setVertices( MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, _previewMesh ) );
+        (void)cpuMesh->setGeometry( MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, _previewMesh ), vector<uint32>( _sourceData._listIndex ) );
         mountPreviewMesh( *pMeshComp, cpuMesh );
         _cpuPreviewMesh = std::move( cpuMesh );
     }
@@ -729,14 +751,14 @@ namespace sw::editor
         const MeshComponent* pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr || MeshAssetFormat::isMeshAssetPath( pMesh->getMeshID() ) == false )
             return false;
-        vector<RHIVertex> listVertex;
-        if ( MeshAssetFormat::loadFromAsset( AssetID{ pMesh->getMeshID() }, listVertex ) == false )
+        MeshAssetData data{};
+        if ( MeshAssetFormat::loadFromAsset( AssetID{ pMesh->getMeshID() }, data ) == false )
             return false;
         const float4x4 world = pMesh->getWorldMatrix();
-        outListPosition.reserve( listVertex.size() );
-        for ( const RHIVertex& vertex : listVertex )
+        outListPosition.reserve( data._listIndex.size() );
+        for ( const uint32 index : data._listIndex ) // 삼각형 꼭짓점마다 한 점(셋씩) — 읽기가 번호 범위를 봤다
         {
-            outListPosition.push_back( float3::transform( float3{ vertex._arrPosition }, world ) );
+            outListPosition.push_back( float3::transform( float3{ data._listVertex[index]._arrPosition }, world ) );
         }
         return true;
     }

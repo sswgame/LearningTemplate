@@ -387,7 +387,8 @@ namespace sw
                 vertex._arrColor[2] = 1.0f;
                 vertex._arrColor[3] = 1.0f;
             }
-            pMesh->setVertices( std::move( listVertex ) );
+            // 색은 탄젠트 묶기 키가 아니다 — 정점 · 인덱스 · 탄젠트는 생성기의 것 그대로다.
+            (void)pMesh->setGeometryWithTangents( std::move( listVertex ), vector<uint32>( pMesh->getIndices() ) );
         }
         return pMesh;
     }
