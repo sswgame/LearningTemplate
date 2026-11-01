@@ -35,3 +35,7 @@ Content/editor/theme/*.tokens.json text eol=crlf
 Content/**/polyhaven/**/*.jpg filter=lfs diff=lfs merge=lfs -text
 Content/**/polyhaven/**/*.png filter=lfs diff=lfs merge=lfs -text
 Content/**/polyhaven/**/*.bin filter=lfs diff=lfs merge=lfs -text
+# Quaternius 모델(CC0 — credits.md)의 원본도 크다(텍스처 · 버퍼 · glb). glTF 본문(.gltf JSON)은 글이라 그대로 둔다.
+Content/**/quaternius/**/*.png filter=lfs diff=lfs merge=lfs -text
+Content/**/quaternius/**/*.bin filter=lfs diff=lfs merge=lfs -text
+Content/**/quaternius/**/*.glb filter=lfs diff=lfs merge=lfs -text

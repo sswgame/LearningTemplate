@@ -2,6 +2,11 @@
 
 | 파일 | 원본 | 라이선스 |
 |------|------|----------|
+| `models_raw/quaternius/characters/superhero_*_fullbody.gltf` · `*.bin` · `textures_raw/quaternius/characters/*.png` | Quaternius "Universal Base Characters" Standard(무료판, <https://quaternius.itch.io/universal-base-characters>) — `Base Characters/Godot - UE` 의 glTF 둘과 텍스처. 텍스처는 `textures_raw/` 로 옮겨 glTF 의 uri 를 고쳤고, 파일 이름은 소문자로 바꿨다(노멀 둘은 묶음 glTF 가 가리키는 `*_normal_png.png` 이름). 쓰지 않는 사본(`*_BaseColor_png.png`)은 뺐다 | CC0 1.0 |
+| `models_raw/quaternius/animations/ual1_standard.glb` · `ual2_standard.glb` | Quaternius "Universal Animation Library" 1 · 2 Standard(무료판, <https://quaternius.itch.io/universal-animation-library>, <https://quaternius.itch.io/universal-animation-library-2>) — `Unreal-Godot/UAL*_Standard.glb`(위 기본 캐릭터와 같은 뼈대의 클립 묶음) | CC0 1.0 |
+| `models_raw/quaternius/nature/*.gltf` · `*.bin` · `textures_raw/quaternius/nature/*.png` | Quaternius "Stylized Nature MegaKit" Standard(무료판, <https://quaternius.itch.io/stylized-nature-megakit>) — `glTF/` 에서 나무 · 덤불 · 꽃 · 바위 22 개와 그 텍스처. 텍스처를 `textures_raw/` 로 옮겨 uri 를 고쳤고 파일 이름을 소문자로 바꿨다 | CC0 1.0 |
+| `models_raw/quaternius/village/*.gltf` · `*.bin` · `textures_raw/quaternius/village/*.png` | Quaternius "Medieval Village MegaKit" Standard(무료판, <https://quaternius.itch.io/medieval-village-megakit>) — `glTF/` 에서 나무 울타리 · 수레 · 상자 4 개와 그 텍스처(위와 같이 옮김) | CC0 1.0 |
+| `models_raw/quaternius/props/*.gltf` · `*.bin` · `textures_raw/quaternius/props/*.png` | Quaternius "Fantasy Props MegaKit" Standard(무료판, <https://quaternius.itch.io/fantasy-props-megakit>) — `Exports/glTF/` 에서 의자 · 상자 · 물약 · 동전 · 깃발 · 횃불 · 노점 등 15 개와 그 텍스처(위와 같이 옮김) | CC0 1.0 |
 | `sounds/kenney_interface_sounds/*.ogg` | Kenney "Interface Sounds" 1.0 (<https://kenney.nl/assets/interface-sounds>) — `Audio/*.ogg` 100 개 | CC0 1.0 |
 | `sounds/kenney_ui_audio/*.ogg` | Kenney "UI Audio" (<https://kenney.nl/assets/ui-audio>) — `Audio/*.ogg` 51 개(`Preview.ogg` 는 뺐다) | CC0 1.0 |
 | `sounds/kenney_impact_sounds/*.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `Audio/*.ogg` 130 개 | CC0 1.0 |
