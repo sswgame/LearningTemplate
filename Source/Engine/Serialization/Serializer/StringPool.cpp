@@ -3,9 +3,9 @@
 #include "Engine/Serialization/Serializer/StringPool.h"
 
 #include "Core/Container/VarIntUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Serializer/BinaryStream.h"
 
 namespace sw
 {
@@ -98,8 +98,8 @@ namespace sw
 
     void StringPool::saveToBinaryBuffer( vector<uint8>& outBytes ) const
     {
-        BinaryStreamWriter writer( outBytes );
-        const size_t       dynamicCount = getDynamicCount();
+        ByteWriter   writer( outBytes );
+        const size_t dynamicCount = getDynamicCount();
         writer.writeVarUint( static_cast<uint64>( dynamicCount ) );
         for ( size_t index = kPredefinedCount; index < _listString.size(); ++index )
         {

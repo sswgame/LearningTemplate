@@ -5,6 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/UUID/UUID.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
@@ -22,7 +23,6 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Serializer/BinaryStream.h"
 #include "Engine/Serialization/Serializer/Serializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
@@ -559,18 +559,18 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return false;
 
-        BinaryStreamWriter writer( outBuffer );
+        ByteWriter writer( outBuffer );
 
         // 부모는 따로 적지 않는다. 씬 컴포넌트의 부착 필드(`_attachOwnerID`, `_attachComponent`)로 상태 안에 들어 있다.
         // 본문 크기를 앞에 둔다. 세이브 게임은 오브젝트를 이어 붙여 놓고 하나씩 끊어 읽는다.
-        const size_t sizeHeaderPos = writer.getOffset();
-        writer.write( static_cast<uint32>( 0 ) );
+        const size_t sizeHeaderPos = writer.getByteCount();
+        writer.writePod( static_cast<uint32>( 0 ) );
 
-        const size_t                                                bodyStart = writer.getOffset();
+        const size_t                                                bodyStart = writer.getByteCount();
         const ObjectStateSerializerInternal::GameObjectWriteContext writeContext( pGameObject, options );
         if ( BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, writeContext.getContext() ) == false )
             return false;
-        writer.writeAt( sizeHeaderPos, static_cast<uint32>( writer.getOffset() - bodyStart ) );
+        writer.writePodAt( sizeHeaderPos, static_cast<uint32>( writer.getByteCount() - bodyStart ) );
 
         return true;
     }
@@ -585,9 +585,9 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return 0;
 
-        BinaryStreamReader reader( pData, size );
-        uint32             bodySize{ 0 };
-        if ( reader.read( bodySize ) == false )
+        ByteReader reader( pData, size );
+        uint32     bodySize{ 0 };
+        if ( reader.readPod( bodySize ) == false )
             return 0;
 
         const size_t bodyStart = reader.getOffset();
@@ -636,13 +636,13 @@ namespace sw
 
     void ObjectStateSerializer::writeIdentity( const ObjectIdentity& identity, vector<uint8>& outBuffer )
     {
-        BinaryStreamWriter writer( outBuffer );
-        writer.write( identity._objectID );
-        writer.write( static_cast<uint32>( identity._listComponent.size() ) );
+        ByteWriter writer( outBuffer );
+        writer.writePod( identity._objectID );
+        writer.writePod( static_cast<uint32>( identity._listComponent.size() ) );
         for ( const ObjectIdentity::ComponentEntry& entry : identity._listComponent )
         {
             writer.writeString( entry._typeFqn.c_str() );
-            writer.write( entry._componentID );
+            writer.writePod( entry._componentID );
             writer.writeString( entry._stableKey.c_str() );
         }
     }
@@ -653,9 +653,9 @@ namespace sw
         if ( pData == nullptr || size == 0 )
             return 0;
 
-        BinaryStreamReader reader( pData, size );
-        uint32             componentCount{ 0 };
-        if ( reader.read( outIdentity._objectID ) == false || reader.read( componentCount ) == false )
+        ByteReader reader( pData, size );
+        uint32     componentCount{ 0 };
+        if ( reader.readPod( outIdentity._objectID ) == false || reader.readPod( componentCount ) == false )
             return 0;
 
         // 항목 하나는 적어도 이름 길이(4)와 ID(8)와 키 길이(4)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
@@ -669,7 +669,7 @@ namespace sw
         {
             string                         typeName;
             ObjectIdentity::ComponentEntry entry;
-            const bool                     bEntryRead = reader.readString( typeName ) && reader.read( entry._componentID ) && reader.readString( entry._stableKey );
+            const bool                     bEntryRead = reader.readString( typeName ) && reader.readPod( entry._componentID ) && reader.readString( entry._stableKey );
             if ( bEntryRead == false )
                 return 0;
             entry._typeFqn = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );

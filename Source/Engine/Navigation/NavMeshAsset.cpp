@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/FourCcUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -14,7 +15,6 @@
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
-#include "Engine/Serialization/Serializer/BinaryStream.h"
 
 namespace sw
 {
@@ -75,24 +75,24 @@ namespace sw
     void NavMeshAsset::writeBytes( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        BinaryStreamWriter writer{ outBytes };
-        writer.write( NavMeshAssetInternal::kMagic );
-        writer.write( kVersion );
+        ByteWriter writer{ outBytes };
+        writer.writePod( NavMeshAssetInternal::kMagic );
+        writer.writePod( kVersion );
         writer.writeString( NavMeshBackend::getBackendName() );
-        writer.write( NavMeshBackend::getBackendFormatVersion() );
-        writer.write( static_cast<uint32>( _listEntry.size() ) );
+        writer.writePod( NavMeshBackend::getBackendFormatVersion() );
+        writer.writePod( static_cast<uint32>( _listEntry.size() ) );
         for ( const NavMeshAssetEntry& entry : _listEntry )
         {
             writer.writeString( entry._agentType.view() );
-            writer.write( entry._settingsHash );
-            writer.write( entry._inputHash );
-            writer.write( entry._bounds );
-            writer.write( static_cast<uint32>( entry._listTile.size() ) );
+            writer.writePod( entry._settingsHash );
+            writer.writePod( entry._inputHash );
+            writer.writePod( entry._bounds );
+            writer.writePod( static_cast<uint32>( entry._listTile.size() ) );
             for ( const NavTileData& tile : entry._listTile )
             {
-                writer.write( tile._tileX );
-                writer.write( tile._tileZ );
-                writer.writeBytes( tile._bytes );
+                writer.writePod( tile._tileX );
+                writer.writePod( tile._tileZ );
+                writer.writeByteVector( tile._bytes );
             }
         }
     }
@@ -100,14 +100,14 @@ namespace sw
     bool NavMeshAsset::readBytes( const uint8* pData, size_t size, string_view sourceLabel )
     {
         _listEntry.clear();
-        BinaryStreamReader reader{ pData, size };
-        uint32             magic   = 0;
-        uint32             version = 0;
-        string             backendName;
-        uint32             backendVersion = 0;
-        uint32             entryCount     = 0;
-        const bool         bHeader        = reader.read( magic ) && reader.read( version ) && reader.readString( backendName ) && reader.read( backendVersion ) &&
-                             reader.read( entryCount );
+        ByteReader reader{ pData, size };
+        uint32     magic   = 0;
+        uint32     version = 0;
+        string     backendName;
+        uint32     backendVersion = 0;
+        uint32     entryCount     = 0;
+        const bool bHeader        = reader.readPod( magic ) && reader.readPod( version ) && reader.readString( backendName ) && reader.readPod( backendVersion ) &&
+                             reader.readPod( entryCount );
         const bool bInvalidHeader = bHeader == false || magic != NavMeshAssetInternal::kMagic || version != kVersion;
         if ( bInvalidHeader )
         {
@@ -125,8 +125,8 @@ namespace sw
             NavMeshAssetEntry entry;
             string            agentType;
             uint32            tileCount       = 0;
-            const bool        bTruncatedEntry = reader.readString( agentType ) == false || reader.read( entry._settingsHash ) == false || reader.read( entry._inputHash ) == false ||
-                                         reader.read( entry._bounds ) == false || reader.read( tileCount ) == false;
+            const bool        bTruncatedEntry = reader.readString( agentType ) == false || reader.readPod( entry._settingsHash ) == false || reader.readPod( entry._inputHash ) == false ||
+                                         reader.readPod( entry._bounds ) == false || reader.readPod( tileCount ) == false;
             if ( bTruncatedEntry )
             {
                 SW_LOG_ERROR( "'%#' is truncated", sourceLabel );
@@ -137,7 +137,7 @@ namespace sw
             entry._listTile.resize( tileCount );
             for ( NavTileData& tile : entry._listTile )
             {
-                const bool bTruncatedTile = reader.read( tile._tileX ) == false || reader.read( tile._tileZ ) == false || reader.readBytes( tile._bytes ) == false;
+                const bool bTruncatedTile = reader.readPod( tile._tileX ) == false || reader.readPod( tile._tileZ ) == false || reader.readByteVector( tile._bytes ) == false;
                 if ( bTruncatedTile )
                 {
                     SW_LOG_ERROR( "'%#' is truncated", sourceLabel );

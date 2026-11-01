@@ -11,13 +11,13 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/BinaryStream.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/Serialization/Serializer/SerializeReflectAny.h"
 
@@ -69,14 +69,14 @@ namespace sw
 
             static void writeStringBinary( const void* pPtr, vector<uint8>& listBuf )
             {
-                BinaryStreamWriter writer{ listBuf };
+                ByteWriter writer{ listBuf };
                 writer.writeString( *static_cast<const string*>( pPtr ) );
             }
 
             [[nodiscard]] static bool readStringBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
             {
-                BinaryStreamReader reader{ pData, size };
-                if ( reader.skip( offset ) == false )
+                ByteReader reader{ pData, size };
+                if ( reader.skipBytes( offset ) == false )
                     return false;
                 if ( reader.readString( *static_cast<string*>( pPtr ) ) == false )
                     return false;
@@ -86,14 +86,14 @@ namespace sw
 
             static void writeHashedStringBinary( const void* pPtr, vector<uint8>& listBuf )
             {
-                BinaryStreamWriter writer{ listBuf };
+                ByteWriter writer{ listBuf };
                 writer.writeString( static_cast<const hashed_string*>( pPtr )->c_str() );
             }
 
             [[nodiscard]] static bool readHashedStringBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
             {
-                BinaryStreamReader reader{ pData, size };
-                if ( reader.skip( offset ) == false )
+                ByteReader reader{ pData, size };
+                if ( reader.skipBytes( offset ) == false )
                     return false;
                 string_view text;
                 if ( reader.readStringView( text ) == false )
@@ -120,16 +120,16 @@ namespace sw
 
             static void writeTagIDBinary( const void* pPtr, vector<uint8>& listBuf )
             {
-                const TagID&       tag  = *static_cast<const TagID*>( pPtr );
-                const utf8*        pStr = tag._pString != nullptr ? tag._pString : "";
-                BinaryStreamWriter writer{ listBuf };
+                const TagID& tag  = *static_cast<const TagID*>( pPtr );
+                const utf8*  pStr = tag._pString != nullptr ? tag._pString : "";
+                ByteWriter   writer{ listBuf };
                 writer.writeString( pStr );
             }
 
             [[nodiscard]] static bool readTagIDBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
             {
-                BinaryStreamReader reader{ pData, size };
-                if ( reader.skip( offset ) == false )
+                ByteReader reader{ pData, size };
+                if ( reader.skipBytes( offset ) == false )
                     return false;
                 string_view text;
                 if ( reader.readStringView( text ) == false )

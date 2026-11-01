@@ -5,11 +5,11 @@
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Serializer/BinaryStream.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/NestedObjectCodec.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
@@ -92,10 +92,10 @@ namespace sw
              * @brief 태그 스트림의 머리(버전 + 프로퍼티 수)를 읽습니다. 머리가 버전을 말한다 — 이 스트림 안의 값(컨테이너 원소, 맵 키 포함)은 그 버전으로 읽는다. 현재 버전이 아니면 읽지 않는다.
              * @return 머리를 읽지 못하거나 읽을 수 없는 버전이면 false 입니다.
              */
-            [[nodiscard]] static bool readTaggedHeader( BinaryStreamReader& reader, const TypeInfo& typeInfo, BinaryWireVersion& outWireVersion, uint32& outPropCount )
+            [[nodiscard]] static bool readTaggedHeader( ByteReader& reader, const TypeInfo& typeInfo, BinaryWireVersion& outWireVersion, uint32& outPropCount )
             {
                 uint32 header{ 0 };
-                if ( reader.read( header ) == false )
+                if ( reader.readPod( header ) == false )
                     return false;
                 const uint32 wireVersionNumber = header >> kTaggedVersionShift;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
@@ -173,13 +173,13 @@ namespace sw
              * @brief 태그 하나(태그 해시, 기록 타입 해시, 크기, 페이로드)를 읽어 인스턴스의 프로퍼티에 씁니다.
              * @param outStop 읽기를 여기서 멈춰야 하면 true 이고 반환값이 `deserializeTagged` 의 결과입니다. false 면 다음 태그로 이어 갑니다.
              */
-            static FieldReadResult readTaggedField( TaggedReadState& state, BinaryStreamReader& reader, bool& outStop )
+            static FieldReadResult readTaggedField( TaggedReadState& state, ByteReader& reader, bool& outStop )
             {
                 outStop = true;
                 uint32     tagHash{ 0 };
                 uint32     wireTypeHash{ 0 };
                 uint32     payloadSize{ 0 };
-                const bool bTruncatedTag = reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false;
+                const bool bTruncatedTag = reader.readPod( tagHash ) == false || reader.readPod( wireTypeHash ) == false || reader.readPod( payloadSize ) == false;
                 if ( bTruncatedTag )
                     return FieldReadResult::FieldFailed;
 
@@ -202,7 +202,7 @@ namespace sw
                         pushOrphanVal( state._pOutListOrphan, {}, tagHash, wireTypeHash, state._pData + payloadStart, payloadSize, state._wireVersion );
                     else
                         warnSkippedFieldOnce( state._typeInfo, tagHash );
-                    reader.skip( payloadSize );
+                    (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                     outStop = false;
                     return FieldReadResult::Read;
                 }
@@ -222,7 +222,7 @@ namespace sw
                 // 이 목적이 다루지 않는 필드(옵트인 세이브의 나머지)는 읽지 않는다. 현재 값을 덮지 않는다(쓰기도 적지 않는다).
                 if ( SerializerUtil::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
                 {
-                    reader.skip( payloadSize );
+                    (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                     outStop = false;
                     return FieldReadResult::Read;
                 }
@@ -261,7 +261,7 @@ namespace sw
                     }
                 }
 
-                reader.skip( payloadSize );
+                (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                 outStop = false;
                 return FieldReadResult::Read;
             }
@@ -285,9 +285,9 @@ namespace sw
             [[nodiscard]] static FieldReadResult deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                                     const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
             {
-                BinaryStreamReader reader( pData, dataSize );
-                BinaryWireVersion  wireVersion{};
-                uint32             propCount{ 0 };
+                ByteReader        reader( pData, dataSize );
+                BinaryWireVersion wireVersion{};
+                uint32            propCount{ 0 };
                 if ( readTaggedHeader( reader, typeInfo, wireVersion, propCount ) == false )
                     return FieldReadResult::FieldFailed;
 
@@ -366,9 +366,9 @@ namespace sw
             /** @brief 태그 스트림입니다. 머리 뒤에 필드마다 이름 해시, 타입 해시, 값 크기, 값이 이어집니다. */
             static bool measureTaggedStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
             {
-                BinaryStreamReader reader( pData, dataSize );
-                uint32             header{ 0 };
-                if ( reader.read( header ) == false )
+                ByteReader reader( pData, dataSize );
+                uint32     header{ 0 };
+                if ( reader.readPod( header ) == false )
                     return false;
                 const uint32 propCount = header & kTaggedCountMask;
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
@@ -376,10 +376,10 @@ namespace sw
                     uint32     tagHash{ 0 };
                     uint32     wireTypeHash{ 0 };
                     uint32     payloadSize{ 0 };
-                    const bool bTruncatedTagHeader = reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false;
+                    const bool bTruncatedTagHeader = reader.readPod( tagHash ) == false || reader.readPod( wireTypeHash ) == false || reader.readPod( payloadSize ) == false;
                     if ( bTruncatedTagHeader )
                         return false;
-                    if ( reader.skip( payloadSize ) == false )
+                    if ( reader.skipBytes( payloadSize ) == false )
                         return false;
                 }
                 outStreamSize = reader.getOffset();
@@ -464,8 +464,8 @@ namespace sw
                 return false;
             }
         }
-        BinaryStreamWriter writer( outListBuffer );
-        uint32             propCount{ static_cast<uint32>( listUnknown.size() ) };
+        ByteWriter writer( outListBuffer );
+        uint32     propCount{ static_cast<uint32>( listUnknown.size() ) };
         for ( const PropertyInfo& prop : listProp )
         {
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
@@ -475,7 +475,7 @@ namespace sw
         outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + static_cast<size_t>( propCount ) * 32 );
         SW_ASSERT( propCount <= BinarySerializerInternal::kTaggedCountMask );
         // 머리의 위 8비트가 버전이다(`kTaggedVersionShift` 설명 참고). 읽는 쪽이 이 스트림의 enum 을 이름으로 읽을지 값으로 읽을지 여기서 안다.
-        writer.write( propCount | ( static_cast<uint32>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kTaggedVersionShift ) );
+        writer.writePod( propCount | ( static_cast<uint32>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kTaggedVersionShift ) );
 
         for ( const PropertyInfo& prop : listProp )
         {
@@ -483,16 +483,16 @@ namespace sw
                 continue;
 
             uint32 hashVal = prop.getNameHash();
-            writer.write( hashVal );
+            writer.writePod( hashVal );
 
             uint32 typeHash = prop._typeName.getHash();
-            writer.write( typeHash );
+            writer.writePod( typeHash );
 
-            size_t sizeHeaderPos = writer.getOffset();
+            size_t sizeHeaderPos = writer.getByteCount();
             uint32 dummySize{ 0 };
-            writer.write( dummySize );
+            writer.writePod( dummySize );
 
-            size_t payloadStart = writer.getOffset();
+            size_t payloadStart = writer.getByteCount();
 
             const bool bWritten = SerializerUtil::writePropertyBinary( prop, ObjectAddress{ pInstance }, outListBuffer, context );
             if ( bWritten == false )
@@ -503,15 +503,15 @@ namespace sw
                 return false;
             }
 
-            uint32 payloadSize = static_cast<uint32>( writer.getOffset() - payloadStart );
-            writer.writeAt( sizeHeaderPos, payloadSize );
+            uint32 payloadSize = static_cast<uint32>( writer.getByteCount() - payloadStart );
+            writer.writePodAt( sizeHeaderPos, payloadSize );
         }
         // 모르는 칸은 읽을 때의 (이름 해시, 기록 타입 해시, 크기, 값) 그대로 뒤에 싣는다 — 이 칸을 아는 빌드가 다시 읽으면 제 값이다.
         for ( const SchemaOrphanValue& unknown : listUnknown )
         {
-            writer.write( unknown._nameHash );
-            writer.write( unknown._wireTypeHash );
-            writer.write( static_cast<uint32>( unknown._listBinary.size() ) );
+            writer.writePod( unknown._nameHash );
+            writer.writePod( unknown._wireTypeHash );
+            writer.writePod( static_cast<uint32>( unknown._listBinary.size() ) );
             outListBuffer.insert( outListBuffer.end(), unknown._listBinary.begin(), unknown._listBinary.end() );
         }
         return true;
@@ -563,24 +563,24 @@ namespace sw
     bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
                                                const SerializeContext& context )
     {
-        BinaryStreamWriter writer( outListBuffer );
-        writer.write( version );
+        ByteWriter writer( outListBuffer );
+        writer.writePod( version );
         return serialize( pInstance, typeInfo, outListBuffer, context );
     }
 
     bool BinarySerializer::serializeVersionedKeepingUnknown( uint32 version, const void* pInstance, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listUnknown,
                                                              vector<uint8>& outListBuffer, const SerializeContext& context )
     {
-        BinaryStreamWriter writer( outListBuffer );
-        writer.write( version );
+        ByteWriter writer( outListBuffer );
+        writer.writePod( version );
         return serializeKeepingUnknown( pInstance, typeInfo, listUnknown, outListBuffer, context );
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                  uint32 currentVersion, const SerializeContext& context )
     {
-        BinaryStreamReader reader( pData, dataSize );
-        if ( reader.read( outVersion ) == false )
+        ByteReader reader( pData, dataSize );
+        if ( reader.readPod( outVersion ) == false )
             return false;
 
         const uint8* pBody    = pData + reader.getOffset();
@@ -610,8 +610,8 @@ namespace sw
         const bool bInvalidInput = pInstance == nullptr || pData == nullptr;
         if ( bInvalidInput )
             return BinaryExactVersionResult::Unreadable;
-        BinaryStreamReader reader( pData, dataSize );
-        if ( reader.read( outReadVersion ) == false )
+        ByteReader reader( pData, dataSize );
+        if ( reader.readPod( outReadVersion ) == false )
             return BinaryExactVersionResult::Unreadable;
         if ( outReadVersion != expectedVersion )
             return BinaryExactVersionResult::VersionMismatch;
