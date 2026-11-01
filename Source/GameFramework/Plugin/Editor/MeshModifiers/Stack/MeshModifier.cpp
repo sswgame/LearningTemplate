@@ -80,7 +80,7 @@ namespace sw::editor
                     {
                         _pPosition[index] = float3::transform( _pPosition[index], _pointMatrix );
                         if ( _pNormal != nullptr )
-                            _pNormal[index] = MeshModifierUtil::normalizeOr( float3::transformVector( _pNormal[index], _normalMatrix ), float3::UnitY );
+                            _pNormal[index] = ( float3::transformVector( _pNormal[index], _normalMatrix ) ).normalizeOr( float3::UnitY, MathUtil::kEpsilon );
                     }
                 }
             };
@@ -132,14 +132,14 @@ namespace sw::editor
                         // 법선에 수직인 접선 둘을 조금 밀어 변형된 접선을 얻고, 그 외적이 새 법선이다(t1 × t2 = n 이 되게 고른다)
                         const float3      normal   = point._normal;
                         const float3      helper   = MathUtil::abs( normal._x ) < 0.9f ? float3::UnitX : float3::UnitY;
-                        const float3      tangent1 = MeshModifierUtil::normalizeOr( normal.cross( helper ), float3::UnitZ );
+                        const float3      tangent1 = ( normal.cross( helper ) ).normalizeOr( float3::UnitZ, MathUtil::kEpsilon );
                         const float3      tangent2 = normal.cross( tangent1 );
                         MeshModifierPoint shifted  = point;
                         shifted._position          = point._position + tangent1 * _step;
                         const float3 edge1         = blend( shifted._position, _pModifier->deformPoint( shifted, *_pContext ), weight ) - moved;
                         shifted._position          = point._position + tangent2 * _step;
                         const float3 edge2         = blend( shifted._position, _pModifier->deformPoint( shifted, *_pContext ), weight ) - moved;
-                        _pNormal[index]            = MeshModifierUtil::normalizeOr( edge1.cross( edge2 ), normal );
+                        _pNormal[index]            = ( edge1.cross( edge2 ) ).normalizeOr( normal, MathUtil::kEpsilon );
                     }
                 }
 
@@ -711,14 +711,6 @@ namespace sw::editor
             inoutValue._y = component;
         else
             inoutValue._z = component;
-    }
-
-    float3 MeshModifierUtil::normalizeOr( const float3& value, const float3& fallback )
-    {
-        const float32 length = value.getLength();
-        if ( length <= MathUtil::kEpsilon || MathUtil::isFinite( length ) == false )
-            return fallback;
-        return value / length;
     }
 
     float32 MeshModifierUtil::getAxisLength( const MeshModifierContext& context )

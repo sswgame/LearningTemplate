@@ -108,6 +108,8 @@ namespace sw
 
         /** @brief 정규화한 사본을 반환합니다. */
         float2 normalize() const noexcept;
+        /** @brief 정규화한 사본입니다. 길이가 @p minLength 이하이거나 유한하지 않으면 @p fallback 입니다(방향이 없는 입력 — 문턱은 부르는 쪽의 단위가 정한다). */
+        float2 normalizeOr( const float2& fallback, float32 minLength ) const noexcept;
 
         /** @brief 각 성분을 minValue ~ maxValue 로 자릅니다(clamp). */
         void clamp( const float2& minValue, const float2& maxValue ) noexcept;
@@ -413,6 +415,8 @@ namespace sw
 
         /** @brief 정규화한 사본을 반환합니다. */
         float3 normalize() const noexcept;
+        /** @brief 정규화한 사본입니다. 길이가 @p minLength 이하이거나 유한하지 않으면 @p fallback 입니다(방향이 없는 입력 — 문턱은 부르는 쪽의 단위가 정한다). */
+        float3 normalizeOr( const float3& fallback, float32 minLength ) const noexcept;
 
         /** @brief 각 성분이 [-bound, bound] 안에 있으면 true 입니다. */
         bool isInBounds( const float3& bound ) const noexcept;

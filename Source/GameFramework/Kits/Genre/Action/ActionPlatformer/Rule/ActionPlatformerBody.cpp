@@ -36,14 +36,8 @@ namespace sw
                 return false;
             }
 
-            /** @brief 길이가 있으면 단위 벡터를, 없으면 @p fallback 을 반환합니다. */
-            static float2 normalizeOr( const float2& value, const float2& fallback )
-            {
-                const float32 lengthSquared = value.getLengthSquared();
-                if ( lengthSquared < 1.0e-4f )
-                    return fallback;
-                return value * ( 1.0f / MathUtil::sqrt( lengthSquared ) );
-            }
+            /** @brief 이보다 짧은 입력 · 속도는 방향이 없다(대신값을 쓴다). */
+            static constexpr float32 kMinDirectionLength = 1.0e-2f;
         };
     } // namespace
 } // namespace sw
@@ -269,7 +263,7 @@ namespace sw
     {
         const float2  position = _motor.getPosition();
         const float2  facing{ static_cast<float32>( _motor.getFacing() ), 0.0f };
-        const float2  direction = ActionPlatformerBodyInternal::normalizeOr( input._motor._move, ActionPlatformerBodyInternal::normalizeOr( _motor.getVelocity(), facing ) );
+        const float2  direction = input._motor._move.normalizeOr( _motor.getVelocity().normalizeOr( facing, ActionPlatformerBodyInternal::kMinDirectionLength ), ActionPlatformerBodyInternal::kMinDirectionLength );
         const float2  half      = _motorSettings._halfExtents;
         const float32 reach     = MathUtil::max( half._x, half._y ) + ActionPlatformerBodyInternal::kProbeExtra;
         if ( terrain.isDirtAt( position + direction * reach ) == false )
@@ -335,8 +329,8 @@ namespace sw
     void ActionPlatformerBody::updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime )
     {
         // 방향은 입력으로 정한다(입력이 없으면 지금 진행 방향을 쓴다). 속도는 항상 일정하다.
-        const float2 heading   = ActionPlatformerBodyInternal::normalizeOr( _velocity, float2{ static_cast<float32>( _motor.getFacing() ), 0.0f } );
-        const float2 direction = ActionPlatformerBodyInternal::normalizeOr( input._motor._move, heading );
+        const float2 heading   = _velocity.normalizeOr( float2{ static_cast<float32>( _motor.getFacing() ), 0.0f }, ActionPlatformerBodyInternal::kMinDirectionLength );
+        const float2 direction = input._motor._move.normalizeOr( heading, ActionPlatformerBodyInternal::kMinDirectionLength );
         _velocity              = direction * _settings._drillSpeed;
         const float2 previous  = _position;
         const float2 next      = _position + _velocity * deltaTime;

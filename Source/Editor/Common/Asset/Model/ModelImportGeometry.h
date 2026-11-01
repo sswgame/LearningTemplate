@@ -70,8 +70,6 @@ namespace sw::editor
         [[nodiscard]] static bool appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
                                                       cgltf_size vertexCount, ModelImportUtil::MergedMesh& inoutMesh );
 
-        static float3 normalizeOrZero( const float3& value );
-
         /** @brief `unpackFloats` 의 선택 속성판입니다. 접근자가 없으면 빈 배열로 true(부르는 쪽이 뜻을 정한다), 원소가 @p elementCount 보다 적으면 오류입니다. */
         [[nodiscard]] static bool unpackOptionalFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, cgltf_size elementCount, vector<float32>& outListValue );
 

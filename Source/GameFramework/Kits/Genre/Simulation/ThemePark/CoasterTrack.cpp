@@ -41,18 +41,11 @@ namespace sw
             static float32 smoothStepSlope( float32 t ) { return 6.0f * t * ( 1.0f - t ); }
 
             /** @brief 길이가 거의 0 이면 @p fallback 을 반환하는 정규화입니다. */
-            static float3 normalizeOr( const float3& value, const float3& fallback )
-            {
-                const float32 length = value.getLength();
-                if ( length < 1.0e-6f )
-                    return fallback;
-                return value * ( 1.0f / length );
-            }
 
             /** @brief @p up 을 @p tangent 에 직교하는 단위 벡터로 맞춥니다. 퇴화하면 @p fallback 을 반환합니다. */
             static float3 orthogonalize( const float3& up, const float3& tangent, const float3& fallback )
             {
-                return normalizeOr( up - tangent * up.dot( tangent ), fallback );
+                return ( up - tangent * up.dot( tangent ) ).normalizeOr( fallback, MathUtil::kEpsilon );
             }
 
             /** @brief 요 @p heading(라디안)의 수평 앞쪽과 오른쪽을 반환합니다. */
@@ -181,7 +174,7 @@ namespace sw
             const size_t prevIndex = bFirst ? ( bClosed ? pointCount - 1 : 0 ) : pointIndex - 1;
             const size_t nextIndex = bLast ? ( bClosed ? 0 : pointIndex ) : pointIndex + 1;
             Point&       point     = _listPoint[pointIndex];
-            point._tangent         = CoasterTrackInternal::normalizeOr( _listPoint[nextIndex]._position - _listPoint[prevIndex]._position, float3{ 0.0f, 0.0f, 1.0f } );
+            point._tangent         = ( _listPoint[nextIndex]._position - _listPoint[prevIndex]._position ).normalizeOr( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kEpsilon );
             point._up              = CoasterTrackInternal::orthogonalize( point._up, point._tangent, previousUp );
             previousUp             = point._up;
         }
@@ -209,8 +202,8 @@ namespace sw
         const float32       alpha = span._alpha;
 
         frame._position = from._position + ( to._position - from._position ) * alpha;
-        frame._forward  = CoasterTrackInternal::normalizeOr( from._tangent + ( to._tangent - from._tangent ) * alpha, from._tangent );
-        const float3 up = CoasterTrackInternal::normalizeOr( from._up + ( to._up - from._up ) * alpha, from._up );
+        frame._forward  = ( from._tangent + ( to._tangent - from._tangent ) * alpha ).normalizeOr( from._tangent, MathUtil::kEpsilon );
+        const float3 up = ( from._up + ( to._up - from._up ) * alpha ).normalizeOr( from._up, MathUtil::kEpsilon );
         frame._up       = CoasterTrackInternal::orthogonalize( up, frame._forward, from._up );
         frame._right    = frame._up.cross( frame._forward );
         frame._flags    = from._flags;
@@ -301,8 +294,8 @@ namespace sw
             const float32 gap           = float3::getDistance( endPosition, startPosition );
             if ( gap > 0.5f )
             {
-                const float3 endTangent   = CoasterTrackInternal::normalizeOr( endPosition - _listPoint[pointCount - 2]._position, computeForward() );
-                const float3 startTangent = CoasterTrackInternal::normalizeOr( _listPoint[1]._position - startPosition, float3{ 0.0f, 0.0f, 1.0f } );
+                const float3 endTangent   = ( endPosition - _listPoint[pointCount - 2]._position ).normalizeOr( computeForward(), MathUtil::kEpsilon );
+                const float3 startTangent = ( _listPoint[1]._position - startPosition ).normalizeOr( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kEpsilon );
                 // 끝이 시작점을 이미 지나 있으면(시작점이 끝의 뒤) 연결 곡선이 되접혀 날카롭게 꺾인다. 레이아웃이 틀렸다고 알린다.
                 if ( ( startPosition - endPosition ).dot( endTangent ) < 0.0f )
                     SW_LOG_WARNING_ID( "CoasterTrack.CoasterLayoutEndsM", "Coaster layout ends %# m past its station - the closing connector folds back; end the layout behind the station", gap );
@@ -441,7 +434,7 @@ namespace sw
     void CoasterTrackBuilder::pushPoint( const float3& position, const float3& tangent, float32 bank, uint8 flags )
     {
         const float3 worldUp{ 0.0f, 1.0f, 0.0f };
-        const float3 unitTangent = CoasterTrackInternal::normalizeOr( tangent, computeForward() );
+        const float3 unitTangent = tangent.normalizeOr( computeForward(), MathUtil::kEpsilon );
         float3       up          = CoasterTrackInternal::orthogonalize( worldUp, unitTangent, worldUp );
         if ( bank != 0.0f )
         {

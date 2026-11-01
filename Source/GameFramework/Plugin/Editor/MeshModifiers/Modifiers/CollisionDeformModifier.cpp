@@ -28,7 +28,7 @@ namespace sw::editor
                 const float32 distance = offset.getLength();
                 if ( distance >= radius )
                     return point;
-                return center + MeshModifierUtil::normalizeOr( offset, float3::UnitY ) * radius;
+                return center + offset.normalizeOr( float3::UnitY, MathUtil::kEpsilon ) * radius;
             }
 
             /** @brief 축 정렬 상자 밖으로, 가장 가까운 면 쪽으로 밉니다. */
@@ -58,7 +58,7 @@ namespace sw::editor
             /** @brief 평면의 뒤쪽(법선 반대편)에 있는 점을 평면 위로 올립니다. */
             static float3 pushOutOfPlane( const float3& point, const float3& center, const float3& normalDirection, float32 margin )
             {
-                const float3  normal   = MeshModifierUtil::normalizeOr( normalDirection, float3::UnitY );
+                const float3  normal   = normalDirection.normalizeOr( float3::UnitY, MathUtil::kEpsilon );
                 const float32 distance = ( point - center ).dot( normal );
                 if ( distance >= margin )
                     return point;

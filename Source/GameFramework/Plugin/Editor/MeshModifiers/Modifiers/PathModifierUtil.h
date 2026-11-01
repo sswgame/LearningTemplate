@@ -54,7 +54,7 @@ namespace sw::editor
                 worldToSpace = pInputs->tryGetWorldMatrix( reference, pathWorld ) ? pathWorld.invert() : float4x4{};
             }
             outPosition = float3::transform( worldPosition, worldToSpace );
-            outTangent  = MeshModifierUtil::normalizeOr( float3::transformVector( worldTangent, worldToSpace ), float3::UnitY );
+            outTangent  = ( float3::transformVector( worldTangent, worldToSpace ) ).normalizeOr( float3::UnitY, MathUtil::kEpsilon );
             return true;
         }
 
@@ -69,14 +69,14 @@ namespace sw::editor
             if ( projected.getLength() > 1e-3f )
             {
                 outAxisV = projected.normalize();
-                outAxisU = MeshModifierUtil::normalizeOr( outAxisV.cross( tangent ), float3::UnitX );
+                outAxisU = ( outAxisV.cross( tangent ) ).normalizeOr( float3::UnitX, MathUtil::kEpsilon );
                 return;
             }
             float3 fallback{ 0.0f, 0.0f, 0.0f };
             MeshModifierUtil::setComponent( fallback, ( axisIndex + 1 ) % 3, 1.0f );
             projected = fallback - tangent * fallback.dot( tangent );
-            outAxisU  = MeshModifierUtil::normalizeOr( projected, float3::UnitX );
-            outAxisV  = MeshModifierUtil::normalizeOr( tangent.cross( outAxisU ), float3::UnitZ );
+            outAxisU  = projected.normalizeOr( float3::UnitX, MathUtil::kEpsilon );
+            outAxisV  = ( tangent.cross( outAxisU ) ).normalizeOr( float3::UnitZ, MathUtil::kEpsilon );
         }
 
         /**
@@ -101,8 +101,8 @@ namespace sw::editor
             const float32 turnSq = turn.dot( turn );
             if ( turnSq > kMinSquared )
                 axisV = axisV - turn * ( 2.0f * turn.dot( axisV ) / turnSq );
-            outAxisV = MeshModifierUtil::normalizeOr( axisV - toTangent * axisV.dot( toTangent ), fromAxisV );
-            outAxisU = MeshModifierUtil::normalizeOr( outAxisV.cross( toTangent ), float3::UnitX );
+            outAxisV = ( axisV - toTangent * axisV.dot( toTangent ) ).normalizeOr( fromAxisV, MathUtil::kEpsilon );
+            outAxisU = ( outAxisV.cross( toTangent ) ).normalizeOr( float3::UnitX, MathUtil::kEpsilon );
         }
 
         /**
@@ -388,7 +388,7 @@ namespace sw::editor
             }
             if ( bestDistance > maxDistance || bestDistance == MathUtil::kMaxFloat )
                 return false;
-            float3 normal = MeshModifierUtil::normalizeOr( bestNormal, float3::UnitY );
+            float3 normal = bestNormal.normalizeOr( float3::UnitY, MathUtil::kEpsilon );
             if ( normal.dot( point - bestPoint ) < 0.0f )
                 normal = normal * -1.0f;
             outPosition = bestPoint + normal * offset;
@@ -420,7 +420,7 @@ namespace sw::editor
                 bestPoint  = point + rayDirection * hit._distance;
                 bestNormal = hit._normal;
             }
-            float3 normal = MeshModifierUtil::normalizeOr( bestNormal, float3::UnitY );
+            float3 normal = bestNormal.normalizeOr( float3::UnitY, MathUtil::kEpsilon );
             if ( normal.dot( point - bestPoint ) < 0.0f )
                 normal = normal * -1.0f;
             outPosition = bestPoint + normal * offset;
@@ -456,7 +456,7 @@ namespace sw::editor
                     const float3 point     = _pPosition[index];
                     float3       direction = _axisDirection;
                     if ( _mode == ConformMode::Normal && _pNormal != nullptr )
-                        direction = MeshModifierUtil::normalizeOr( _pNormal[index] * -1.0f, _axisDirection );
+                        direction = ( _pNormal[index] * -1.0f ).normalizeOr( _axisDirection, MathUtil::kEpsilon );
                     float3 target{ 0.0f, 0.0f, 0.0f };
                     if ( tryConformPointBVH( *_pSurface, point, direction, _mode, _offset, _maxDistance, listScratch, target ) == false )
                         continue;

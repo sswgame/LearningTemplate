@@ -56,7 +56,7 @@ namespace sw::editor
             {
                 const float32* pItem = listNumber.data() + index * kStride;
                 const float3   center{ pItem[0], pItem[1], pItem[2] };
-                const float3   direction = MeshModifierUtil::normalizeOr( float3{ pItem[3], pItem[4], pItem[5] }, float3{ 0.0f, -1.0f, 0.0f } );
+                const float3   direction = ( float3{ pItem[3], pItem[4], pItem[5] } ).normalizeOr( float3{ 0.0f, -1.0f, 0.0f }, MathUtil::kEpsilon );
                 const float32  radius    = MathUtil::abs( pItem[6] );
                 if ( radius < MathUtil::kEpsilon )
                     continue;

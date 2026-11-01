@@ -322,7 +322,7 @@ namespace sw::editor
                         case ModifierRangeKind::Direction:
                         {
                             const float3 modifierDirection = def._kind == MeshModifierParamKind::Vector3
-                                                               ? MeshModifierUtil::normalizeOr( modifier.getVector3( index ), float3{ 0.0f, 0.0f, 0.0f } )
+                                                               ? ( modifier.getVector3( index ) ).normalizeOr( float3{ 0.0f, 0.0f, 0.0f }, MathUtil::kEpsilon )
                                                                : ModifierGizmoLogic::computeDirectionVector( frame._axisIndex, modifier.getFloat( index ) );
                             const float3 worldFrom         = toWorld( frame, center );
                             const float3 worldStep         = float3::transformVector( modifierDirection, frame._modifierToWorld );

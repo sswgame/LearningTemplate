@@ -717,7 +717,7 @@ namespace sw::editor
         const SplineSample sample = pSpline->getLocalPath().sampleAtFraction( MathUtil::saturate( fraction ) );
         const float4x4     world  = MeshModifierSessionInternal::getWorldMatrix( *pObject );
         outPosition               = float3::transform( sample._position, world );
-        outTangent                = MeshModifierUtil::normalizeOr( float3::transformVector( sample._tangent, world ), sample._tangent );
+        outTangent                = ( float3::transformVector( sample._tangent, world ) ).normalizeOr( sample._tangent, MathUtil::kEpsilon );
         return true;
     }
 

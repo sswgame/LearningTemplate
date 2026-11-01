@@ -116,6 +116,14 @@ namespace sw
         return *this;
     }
 
+    float2 float2::normalizeOr( const float2& fallback, float32 minLength ) const noexcept
+    {
+        const float32 length = getLength();
+        if ( length <= minLength || MathUtil::isFinite( length ) == false )
+            return fallback;
+        return ( *this ) / length;
+    }
+
     float2 float2::normalize() const noexcept
     {
         const float32 invLen = MathUtil::invSqrt( getLengthSquared() );
@@ -351,6 +359,14 @@ namespace sw
         else
             ( *this ) = Zero;
         return *this;
+    }
+
+    float3 float3::normalizeOr( const float3& fallback, float32 minLength ) const noexcept
+    {
+        const float32 length = getLength();
+        if ( length <= minLength || MathUtil::isFinite( length ) == false )
+            return fallback;
+        return ( *this ) / length;
     }
 
     float3 float3::normalize() const noexcept

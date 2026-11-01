@@ -491,8 +491,6 @@ namespace sw::editor
         static float32 getComponent( const float3& value, uint32 axisIndex );
         /** @brief 성분 번호로 값을 씁니다. */
         static void setComponent( float3& inoutValue, uint32 axisIndex, float32 component );
-        /** @brief 길이가 0 에 가까우면 @p fallback 을 냅니다. */
-        static float3 normalizeOr( const float3& value, const float3& fallback );
         /** @brief 문맥 상자의 주축 길이입니다(0 에 가까우면 1). */
         static float32 getAxisLength( const MeshModifierContext& context );
         /** @brief 주축 위 비율 t(상자 아래 0 · 위 1)입니다. 자르지 않습니다. */

@@ -172,7 +172,7 @@ namespace sw::editor
         const float3  cofactor2   = column0.cross( column1 );
         const float32 sign        = column0.dot( cofactor0 ) < 0.0f ? -1.0f : 1.0f;
         const float3  transformed = ( cofactor0 * normal._x + cofactor1 * normal._y + cofactor2 * normal._z ) * sign;
-        return normalizeOrZero( transformed );
+        return transformed.normalizeOr( float3{}, MathUtil::kEpsilon );
     }
 
     float3 ModelImportGeometry::transformDirection( const float32 ( &arrMatrix )[16], const float3& direction )
@@ -231,12 +231,6 @@ namespace sw::editor
             inoutMesh._listMorphNormal[targetIndex].resize( totalCount );
         }
         return true;
-    }
-
-    float3 ModelImportGeometry::normalizeOrZero( const float3& value )
-    {
-        const float32 length = value.getLength();
-        return length > MathUtil::kEpsilon ? value * ( 1.0f / length ) : float3{};
     }
 
     bool ModelImportGeometry::unpackOptionalFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, cgltf_size elementCount, vector<float32>& outListValue )
@@ -598,7 +592,7 @@ namespace sw::editor
         {
             const ModelImportUtil::ImportVertex* arrCorner[3] = { &inoutMesh._listVertex[listIndex[triangleStart]], &inoutMesh._listVertex[listIndex[triangleStart + 1]],
                                                                   &inoutMesh._listVertex[listIndex[triangleStart + 2]] };
-            const float3                         faceNormal   = normalizeOrZero( ( arrCorner[1]->_position - arrCorner[0]->_position ).cross( arrCorner[2]->_position - arrCorner[0]->_position ) );
+            const float3                         faceNormal   = ( ( arrCorner[1]->_position - arrCorner[0]->_position ).cross( arrCorner[2]->_position - arrCorner[0]->_position ) ).normalizeOr( float3{}, MathUtil::kEpsilon );
             for ( const ModelImportUtil::ImportVertex* pCorner : arrCorner )
             {
                 outData._listVertex.push_back( makeRHIVertex( *pCorner, faceNormal ) );

@@ -65,12 +65,6 @@ namespace sw
                 return length > kTiny ? flat / length : fallback;
             }
 
-            static float3 normalizeOr( const float3& direction, const float3& fallback )
-            {
-                const float32 length = direction.getLength();
-                return length > kTiny ? direction / length : fallback;
-            }
-
             static const hashed_string& getMeleeName()
             {
                 static const hashed_string name( "melee" );
@@ -262,7 +256,7 @@ namespace sw
                 const float32 ratio    = maxRadian / angle;
                 const float32 fromPart = DeterministicMathUtil::sin( ( 1.0f - ratio ) * angle ) / sinAngle;
                 const float32 toPart   = DeterministicMathUtil::sin( ratio * angle ) / sinAngle;
-                return normalizeOr( direction * fromPart + desired * toPart, direction );
+                return ( direction * fromPart + desired * toPart ).normalizeOr( direction, MechArenaWorldInternal::kTiny );
             }
 
             static bool isPressed( uint8 current, uint8 previous ) { return current == SW_TRUE && previous == SW_FALSE; }
@@ -717,7 +711,7 @@ namespace sw
             return;
         const int32  target    = findLockTarget( pilotIndex );
         const float3 origin    = computeCenter( pilot );
-        const float3 direction = target >= 0 ? MechArenaWorldInternal::normalizeOr( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin, pilot._forward )
+        const float3 direction = target >= 0 ? ( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
                                              : pilot._forward;
         WeaponShot   shot;
         if ( weapon.pullTrigger( GameRay{ origin, direction }, bPressed, shot ) != WeaponFireResult::Fired )
@@ -739,7 +733,7 @@ namespace sw
         cooldown.start( slot._cooldown );
         const int32  target    = findLockTarget( pilotIndex );
         const float3 origin    = computeCenter( pilot );
-        const float3 direction = target >= 0 ? MechArenaWorldInternal::normalizeOr( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin, pilot._forward )
+        const float3 direction = target >= 0 ? ( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
                                              : pilot._forward;
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
         launch( pilotIndex, target, direction, slot._projectileSpeed, slot._range, slot._damage, slot );
@@ -1467,7 +1461,7 @@ namespace sw
             if ( bCanHome )
             {
                 const float3 targetCenter = computeCenter( _listPilot[static_cast<size_t>( projectile._target )] );
-                const float3 desired      = Internal::normalizeOr( targetCenter - projectile._position, projectile._direction );
+                const float3 desired      = ( targetCenter - projectile._position ).normalizeOr( projectile._direction, MechArenaWorldInternal::kTiny );
                 projectile._direction     = Internal::rotateToward( projectile._direction, desired, MathUtil::toRadian( projectile._homing ) * deltaTime );
             }
             const float32 stepLength = MathUtil::min( projectile._speed * deltaTime, projectile._rangeLeft );

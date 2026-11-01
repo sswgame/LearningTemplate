@@ -13,6 +13,24 @@
 
 using namespace sw;
 
+/** @brief [MathTest] normalizeOr 는 길이가 문턱 이하이거나 유한하지 않으면 대신값을, 아니면 단위 벡터를 낸다 */
+SW_TEST_CASE( MathTest, NormalizeOrFallsBackForShortOrNonFiniteVectors )
+{
+    const float3 unit = float3( 3.0f, 0.0f, 4.0f ).normalizeOr( float3::UnitY, MathUtil::kEpsilon );
+    SW_EXPECT_NEAR( 0.6f, unit._x, 1e-6 );
+    SW_EXPECT_NEAR( 0.8f, unit._z, 1e-6 );
+    const float3 zero      = float3::Zero.normalizeOr( float3::UnitY, MathUtil::kEpsilon );
+    const float3 atLimit   = float3( 0.01f, 0.0f, 0.0f ).normalizeOr( float3::UnitY, 0.01f ); // 문턱과 같으면 방향이 없다
+    const float3 nonFinite = float3( std::numeric_limits<float32>::infinity(), 0.0f, 0.0f ).normalizeOr( float3::UnitY, MathUtil::kEpsilon );
+    SW_EXPECT_TRUE( zero == float3::UnitY );
+    SW_EXPECT_TRUE( atLimit == float3::UnitY );
+    SW_EXPECT_TRUE( nonFinite == float3::UnitY );
+    const float2 flat = float2( 0.0f, -2.0f ).normalizeOr( float2::UnitX, 1.0e-2f );
+    const float2 tiny = float2( 0.001f, 0.0f ).normalizeOr( float2::UnitY, 1.0e-2f );
+    SW_EXPECT_NEAR( -1.0f, flat._y, 1e-6 );
+    SW_EXPECT_TRUE( tiny == float2::UnitY );
+}
+
 // ------------------------------------------------------------------------------
 // 1) Core_Math — float2/3/4·행렬·쿼터니언·MathUtil
 // ------------------------------------------------------------------------------
