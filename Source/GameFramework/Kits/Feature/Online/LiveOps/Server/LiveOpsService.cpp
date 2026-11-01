@@ -139,11 +139,9 @@ namespace sw
         , _listStarted{}
         , _completionBuffer{}
         , _dependencies{}
-        , _lastReloadMs{ 0 }
         , _lastOpenHash{ 0 }
         , _pendingCount{ 0 }
-        , _bReloading{ SW_FALSE }
-        , _bReloadRequested{ SW_TRUE }
+        , _reloadSchedule{}
         , _bStateChanged{ SW_FALSE }
     {
     }
@@ -156,9 +154,9 @@ namespace sw
     void LiveOpsService::initialize( const LiveOpsDependencies& dependencies )
     {
         SW_ASSERT( dependencies._pStore != nullptr );
-        _dependencies     = dependencies;
-        _bReloadRequested = SW_TRUE;
-        _lastOpenHash     = computeOpenHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다
+        _dependencies = dependencies;
+        _reloadSchedule.request();
+        _lastOpenHash = computeOpenHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다
     }
 
     void LiveOpsService::shutdown()
@@ -170,17 +168,14 @@ namespace sw
     {
         if ( _dependencies._pStore == nullptr )
             return;
-        const bool bPeriodic = nowMs - _lastReloadMs >= LiveOpsBus::kReloadPeriodMs;
-        if ( _bReloading == SW_FALSE && ( _bReloadRequested == SW_TRUE || bPeriodic ) )
+        if ( _reloadSchedule.shouldStart( nowMs, LiveOpsBus::kReloadPeriodMs ) )
             startReload( nowMs );
         markIfChanged( nowMs ); // 시작, 끝, 회차 경계는 다시 읽지 않아도 열린 이벤트 목록이 바뀐다
     }
 
     void LiveOpsService::startReload( UnixMilliseconds nowMs )
     {
-        _bReloadRequested = SW_FALSE;
-        _bReloading       = SW_TRUE;
-        _lastReloadMs     = nowMs;
+        _reloadSchedule.markStarted( nowMs );
         ++_pendingCount;
         _dependencies._pStore->submit( make_unique<LiveOpsReloadWork>( this, nowMs ) );
     }
@@ -188,7 +183,7 @@ namespace sw
     void LiveOpsService::applyReload( vector<LiveEventDefinition>&& listEvent, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingCount;
-        _bReloading = SW_FALSE;
+        _reloadSchedule.markFinished();
         if ( bReadOk == false )
             return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listEvent = std::move( listEvent );
@@ -450,7 +445,7 @@ namespace sw
         _completionBuffer.push( LiveOpsCompletion{ requestTag, result } );
         if ( result != LiveOpsResult::Ok )
             return;
-        _bReloadRequested = SW_TRUE; // 이 서버는 다음 tick 에 다시 읽고 알린다
+        _reloadSchedule.request(); // 이 서버는 다음 tick 에 다시 읽고 알린다
         if ( _dependencies._pBus != nullptr )
             (void)LiveOpsBus::kChangedTopic.publish( *_dependencies._pBus, LiveOpsChanged{} ); // 실패는 발행이 로그로 남겼다. 다른 서버는 주기로 다시 읽는다
     }

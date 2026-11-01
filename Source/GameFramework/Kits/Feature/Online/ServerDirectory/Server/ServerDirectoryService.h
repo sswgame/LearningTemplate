@@ -26,6 +26,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRegistryReader.h"
+#include "GameFramework/Runtime/Online/Service/ServiceReloadSchedule.h"
 
 namespace sw
 {
@@ -151,12 +152,10 @@ namespace sw
         EventBuffer<ServerDirectoryCompletion>   _completionBuffer;
         ServerDirectoryServiceConfig             _settings;
         ServerDirectoryDependencies              _dependencies;
-        UnixMilliseconds                         _lastReloadMs;
         uint64                                   _lastVisibleHash;
         uint64                                   _statusRevision;
         int32                                    _pendingCount;
-        uint8                                    _bReloading;
-        uint8                                    _bReloadRequested;
+        ServiceReloadSchedule                    _reloadSchedule; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
         uint8                                    _bStatusChanged;
     };
 } // namespace sw

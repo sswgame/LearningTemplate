@@ -197,12 +197,10 @@ namespace sw
         , _completionBuffer{}
         , _settings{}
         , _dependencies{}
-        , _lastReloadMs{ 0 }
         , _lastVisibleHash{ 0 }
         , _statusRevision{ 0 }
         , _pendingCount{ 0 }
-        , _bReloading{ SW_FALSE }
-        , _bReloadRequested{ SW_TRUE }
+        , _reloadSchedule{}
         , _bStatusChanged{ SW_FALSE }
     {
     }
@@ -222,8 +220,8 @@ namespace sw
             unique_ptr<ServerRegistryReader>& reader = _listReader.emplace_back( make_unique<ServerRegistryReader>() );
             reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs );
         }
-        _bReloadRequested = SW_TRUE;
-        _lastVisibleHash  = computeVisibleHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다. 처음 읽은 내용이 있을 때부터 알린다
+        _reloadSchedule.request();
+        _lastVisibleHash = computeVisibleHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다. 처음 읽은 내용이 있을 때부터 알린다
     }
 
     void ServerDirectoryService::shutdown()
@@ -245,17 +243,14 @@ namespace sw
         {
             reader->update( nowMs );
         }
-        const bool bPeriodic = nowMs - _lastReloadMs >= _settings._reloadPeriodMs;
-        if ( _bReloading == SW_FALSE && ( _bReloadRequested == SW_TRUE || bPeriodic ) )
+        if ( _reloadSchedule.shouldStart( nowMs, _settings._reloadPeriodMs ) )
             startReload( nowMs );
         markStatusIfChanged( nowMs ); // 기간 경계(공지 시작과 끝, 점검 시작과 끝)는 다시 읽지 않아도 보이는 내용이 바뀐다
     }
 
     void ServerDirectoryService::startReload( UnixMilliseconds nowMs )
     {
-        _bReloadRequested = SW_FALSE;
-        _bReloading       = SW_TRUE;
-        _lastReloadMs     = nowMs;
+        _reloadSchedule.markStarted( nowMs );
         ++_pendingCount;
         _dependencies._pStore->submit( make_unique<ServerDirectoryReloadWork>( this, nowMs ) );
     }
@@ -263,7 +258,7 @@ namespace sw
     void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceNotice>&& listNotice, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingCount;
-        _bReloading = SW_FALSE;
+        _reloadSchedule.markFinished();
         if ( bReadOk == false )
             return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listMaintenance = std::move( listMaintenance );
@@ -274,7 +269,7 @@ namespace sw
 
     void ServerDirectoryService::notifyChanged()
     {
-        _bReloadRequested = SW_TRUE;
+        _reloadSchedule.request();
     }
 
     bool ServerDirectoryService::takeStatusChange()
@@ -563,7 +558,7 @@ namespace sw
         _completionBuffer.push( ServerDirectoryCompletion{ requestTag, result } );
         if ( result != ServerDirectoryResult::Ok )
             return;
-        _bReloadRequested = SW_TRUE; // 이 서버는 다음 tick 에 다시 읽고 알린다
+        _reloadSchedule.request(); // 이 서버는 다음 tick 에 다시 읽고 알린다
         if ( _dependencies._pBus != nullptr )
             (void)ServerDirectoryBus::kChangedTopic.publish( *_dependencies._pBus, ServerDirectoryChanged{} ); // 실패는 발행이 로그로 남겼다. 다른 서버는 주기로 다시 읽는다
     }

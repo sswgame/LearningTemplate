@@ -23,6 +23,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
+#include "GameFramework/Runtime/Online/Service/ServiceReloadSchedule.h"
 
 namespace sw
 {
@@ -105,7 +106,7 @@ namespace sw
         /** @brief 주기적인 다시 읽기와 경계 판정을 합니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
         void update( UnixMilliseconds nowMs );
         /** @brief 다른 서버가 바꿨음을 버스로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
-        void notifyChanged() { _bReloadRequested = SW_TRUE; }
+        void notifyChanged() { _reloadSchedule.request(); }
         /** @brief 열린 이벤트 목록이 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */
         [[nodiscard]] bool takeStateChange();
         /**
@@ -160,11 +161,9 @@ namespace sw
         vector<LiveEventStart>         _listStarted;
         EventBuffer<LiveOpsCompletion> _completionBuffer;
         LiveOpsDependencies            _dependencies;
-        UnixMilliseconds               _lastReloadMs;
         uint64                         _lastOpenHash;
         int32                          _pendingCount;
-        uint8                          _bReloading;
-        uint8                          _bReloadRequested;
+        ServiceReloadSchedule          _reloadSchedule; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
         uint8                          _bStateChanged;
     };
 } // namespace sw
