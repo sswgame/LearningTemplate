@@ -109,17 +109,18 @@ namespace sw
             }
         }
 
-        // 필수 칸이 빠지면 오류다. 대신 쓸 값은 없다.
+        // 필수 칸은 적혀 있어야 한다(형식을 가리지 않는다 — 예전에는 DataPath 만 봐 다른 필수 칸은 초기값으로 통과했다). DataPath 는 빈 글(비움)도 빠진 것이다.
         const hashed_string dataPathType( "DataPath" );
         for ( const PropertyInfo& prop : listProperty )
         {
             if ( prop._metadata->_bRequired == SW_FALSE )
                 continue;
+            const string    elementName{ makeElementName( prop ) };
             const DataPath* pPath    = prop._typeName == dataPathType ? prop.getValuePtr<DataPath>( this ) : nullptr;
-            const bool      bMissing = pPath != nullptr && pPath->isSet() == false;
+            const bool      bMissing = root.findChild( elementName.c_str() ).isValid() == false || ( pPath != nullptr && pPath->isSet() == false );
             if ( bMissing == false )
                 continue;
-            SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredResourceId", "GameSettings %#: <%#> is required (a resource id such as game/<pack>/maps/start.scene.xml)", sourceName, makeElementName( prop ) );
+            SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredResourceId", "GameSettings %#: <%#> is required (PROPERTY( Required ) - the initial value is not a default)", sourceName, elementName.c_str() );
             bOk = false;
         }
         if ( bOk == false )
