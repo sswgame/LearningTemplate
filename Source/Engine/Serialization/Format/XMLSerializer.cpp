@@ -921,7 +921,51 @@ namespace sw
         if ( xmlStr.empty() )
             return false;
         vector<SchemaOrphanValue> listOrphan;
-        return deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, context ) == SoftReadResult::Read && listOrphan.empty();
+        const bool                bRead = deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, context ) == SoftReadResult::Read && listOrphan.empty();
+        // 필수 칸은 초기값으로 대신하지 않는다. 문서를 한 번 더 읽는다 — 엄격한 읽기는 표 · 설정 크기이고, 씬 · 프리팹(엔티티마다)은 soft 길이다.
+        XMLDocument document;
+        if ( document.parse( xmlStr ) == false )
+            return false;
+        vector<string> listMissing;
+        collectMissingRequired( document.getRoot(), typeInfo, listMissing );
+        for ( const string& missingPath : listMissing )
+        {
+            SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "<%#> has no required '%#' (PROPERTY( Required ) - the initial value is not a default)", typeInfo._name.c_str(),
+                             missingPath.c_str() );
+        }
+        return bRead && listMissing.empty();
+    }
+
+    void XMLSerializer::collectMissingRequired( const XMLNode& element, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix )
+    {
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        {
+            const string  path     = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            const XMLNode child    = element.findChild( prop._name.c_str() );
+            const bool    bWritten = element.findAttribute( prop._name.c_str() ) != nullptr || child.isValid();
+            if ( bWritten == false )
+            {
+                if ( prop._metadata->_bRequired != SW_FALSE )
+                    outListPath.push_back( path );
+                continue;
+            }
+            if ( child.isValid() == false )
+                continue;
+            const bool      bContainer = prop._bIsContainer == SW_TRUE;
+            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            if ( pNested == nullptr )
+                continue;
+            if ( bContainer == false )
+            {
+                collectMissingRequired( child, *pNested, outListPath, path );
+                continue;
+            }
+            size_t elementIndex{ 0 };
+            for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling(), ++elementIndex )
+            {
+                collectMissingRequired( item, *pNested, outListPath, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ) );
+            }
+        }
     }
 
     bool XMLSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,

@@ -118,16 +118,17 @@ namespace
 
         /** @brief 앞의 줄이 먼저 맞습니다. */
         static constexpr ConfigKind kArrKind[] = {
-            {    "Config/Engine/EngineConfig.json",                                                 "", &loadBaseLayer<sw::EngineConfig>},
-            {    "Config/Engine/MemoryBudget.json",                                                 "",                &loadMemoryBudget},
-            {      "Config/Engine/PackConfig.json",                                                 "",   &loadBaseLayer<sw::PackConfig>},
-            {    "Config/Engine/CookContract.json",   "Scripts/generate/ConfigureFiles.py (configure)",                          nullptr},
-            {"Config/Engine/ProcessExitCodes.json", "Scripts/generate/ProcessExitCodes.py (configure)",                          nullptr},
-            {                       "Config/Game/",                                                 "",      &loadStrict<sw::GameConfig>},
-            {"Config/Server/chat_banned_words.txt",           "chat word filter (word list, not keys)",                          nullptr},
-            {                     "Config/Server/",                                                 "",    &loadStrict<sw::ServerConfig>},
-            {                "Config/Environment/",     "Scripts/setup/Environment.py - machine-local",                          nullptr},
-            {                     "Config/Editor/",         "editor types are not in the Engine image",                          nullptr},
+            {    "Config/Engine/EngineConfig.json",                                                                            "", &loadBaseLayer<sw::EngineConfig>},
+            {    "Config/Engine/MemoryBudget.json",                                                                            "",                &loadMemoryBudget},
+            {      "Config/Engine/PackConfig.json",                                                                            "",   &loadBaseLayer<sw::PackConfig>},
+            {    "Config/Engine/CookContract.json",                              "Scripts/generate/ConfigureFiles.py (configure)",                          nullptr},
+            {"Config/Engine/ProcessExitCodes.json",                            "Scripts/generate/ProcessExitCodes.py (configure)",                          nullptr},
+            {                       "Config/Game/",                                                                            "",      &loadStrict<sw::GameConfig>},
+            {"Config/Server/chat_banned_words.txt",                                      "chat word filter (word list, not keys)",                          nullptr},
+            {                     "Config/Server/",                                                                            "",    &loadStrict<sw::ServerConfig>},
+            {                "Config/Environment/",                                "Scripts/setup/Environment.py - machine-local",                          nullptr},
+            {                     "Config/Editor/",                                    "editor types are not in the Engine image",                          nullptr},
+            {                        "Config/Dev/", "DevTools types are not in the Engine image (DevTools reads them at startup)",                          nullptr},
         };
 
         static const ConfigKind* findKind( sw::string_view relativePath )

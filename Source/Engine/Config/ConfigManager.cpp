@@ -50,82 +50,6 @@ namespace sw
                     outListKey.push_back( path );
             }
         }
-
-        /**
-         * @brief `PROPERTY( Required )` 칸 가운데 @p object 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다.
-         * @details 구조체 칸과 구조체 목록(배열)의 원소 안으로 들어간다. 필수 칸의 초기값은 형식일 뿐이라, 빠진 칸을 초기값으로 읽으면
-         *          "적지 않음" 이 조용히 그럴듯한 값(루트 본의 부모 -1 같은)이 된다.
-         */
-        void collectMissingRequired( const JSONValue& object, const TypeInfo& typeInfo, const string& prefix, vector<string>& outListPath )
-        {
-            for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
-            {
-                if ( prop._bIsBitField == SW_TRUE )
-                    continue;
-                const string    path  = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-                const JSONValue value = object.get( prop._name.c_str() );
-                if ( value.isValid() == false )
-                {
-                    if ( prop._metadata->_bRequired != SW_FALSE )
-                        outListPath.push_back( path );
-                    continue;
-                }
-                const bool      bContainer = prop._bIsContainer == SW_TRUE;
-                const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                if ( pNested == nullptr )
-                    continue;
-                if ( bContainer == false && value.isObject() )
-                {
-                    collectMissingRequired( value, *pNested, path, outListPath );
-                    continue;
-                }
-                if ( bContainer == false || value.isArray() == false )
-                    continue;
-                for ( size_t elementIndex = 0; elementIndex < value.size(); ++elementIndex )
-                {
-                    const JSONValue element = value.at( elementIndex );
-                    if ( element.isObject() )
-                        collectMissingRequired( element, *pNested, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ), outListPath );
-                }
-            }
-        }
-
-        /**
-         * @brief `PROPERTY( Required )` 칸 가운데 @p element 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다. `collectMissingRequired` 의 XML 판입니다.
-         * @details 적는 자리는 속성이거나 자식 요소다. 구조체 칸은 이름이 칸 이름인 자식 요소, 구조체 목록은 칸 이름의 자식 요소 안에 원소가 차례로 들어 있다(`XMLSerializer`).
-         *          그 안으로 들어가 원소마다 본다 — 최상위만 보면 목록 원소 안의 빠진 칸이 초기값으로 읽힌다.
-         */
-        void collectMissingRequiredXML( const XMLNode& element, const TypeInfo& typeInfo, const string& prefix, vector<string>& outListPath )
-        {
-            for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
-            {
-                const string  path     = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-                const XMLNode child    = element.findChild( prop._name.c_str() );
-                const bool    bWritten = element.findAttribute( prop._name.c_str() ) != nullptr || child.isValid();
-                if ( bWritten == false )
-                {
-                    if ( prop._metadata->_bRequired != SW_FALSE )
-                        outListPath.push_back( path );
-                    continue;
-                }
-                if ( child.isValid() == false )
-                    continue;
-                const bool      bContainer = prop._bIsContainer == SW_TRUE;
-                const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                if ( pNested == nullptr )
-                    continue;
-                if ( bContainer == false )
-                {
-                    collectMissingRequiredXML( child, *pNested, path, outListPath );
-                    continue;
-                }
-                size_t elementIndex{ 0 };
-                for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling(), ++elementIndex )
-                {
-                    collectMissingRequiredXML( item, *pNested, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ), outListPath );
-                }
-            }
-        }
     } // namespace
 } // namespace sw
 
@@ -176,7 +100,7 @@ namespace sw
         }
         // 필수 칸(`PROPERTY( Required )`)이 빠졌으면 초기값으로 읽지 않고 오류다 — 초기값은 형식이지 기본값이 아니다.
         vector<string> listMissing;
-        collectMissingRequired( document.getRoot(), typeInfo, string(), listMissing );
+        JSONSerializer::collectMissingRequired( document.getRoot(), typeInfo, listMissing );
         for ( const string& missingPath : listMissing )
         {
             SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
@@ -203,7 +127,7 @@ namespace sw
         }
         // 필수 칸은 속성이나 자식으로 적혀 있어야 한다(구조체 칸 · 목록 원소 안까지) — 초기값은 형식이지 기본값이 아니다.
         vector<string> listMissing;
-        collectMissingRequiredXML( document.getRoot(), typeInfo, string(), listMissing );
+        XMLSerializer::collectMissingRequired( document.getRoot(), typeInfo, listMissing );
         for ( const string& missingPath : listMissing )
         {
             SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );

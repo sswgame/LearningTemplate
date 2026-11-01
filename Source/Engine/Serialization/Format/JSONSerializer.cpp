@@ -20,6 +20,19 @@ namespace sw
     {
         struct JSONSerializerInternal
         {
+            /** @brief 빠진 필수 칸을 경로마다 알립니다. 하나도 없으면 true 입니다(엄격한 읽기 `deserialize` · `loadFile` 의 끝). */
+            static bool reportMissingRequired( const JSONValue& root, const TypeInfo& typeInfo )
+            {
+                vector<string> listMissing;
+                JSONSerializer::collectMissingRequired( root, typeInfo, listMissing );
+                for ( const string& missingPath : listMissing )
+                {
+                    SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "%# has no required '%#' (PROPERTY( Required ) - the initial value is not a default)", typeInfo._name.c_str(),
+                                     missingPath.c_str() );
+                }
+                return listMissing.empty();
+            }
+
             /** @brief 파일의 모르는 키를 orphan 으로 담습니다. 전역 이름 표에 넣지 않는다(XML 과 같다 — 아는 이름이면 그것을, 아니면 해시만). */
             static void pushUnknownKeyOrphan( vector<SchemaOrphanValue>& outListOrphan, const string& keyRaw, const JSONValue& field )
             {
@@ -471,7 +484,46 @@ namespace sw
     bool JSONSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                       const SerializeContext& context )
     {
-        return deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, context ) == SoftReadResult::Read;
+        const bool bRead = deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, context ) == SoftReadResult::Read;
+        // 필수 칸은 초기값으로 대신하지 않는다. 문서를 한 번 더 읽는다 — 엄격한 읽기는 표 · 설정 크기다.
+        JSONDocument document;
+        if ( document.parse( jsonStr ) == false )
+            return false;
+        return JSONSerializerInternal::reportMissingRequired( document.getRoot(), typeInfo ) && bRead;
+    }
+
+    void JSONSerializer::collectMissingRequired( const JSONValue& object, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix )
+    {
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        {
+            if ( prop._bIsBitField == SW_TRUE )
+                continue;
+            const string    path  = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            const JSONValue value = object.get( prop._name.c_str() );
+            if ( value.isValid() == false )
+            {
+                if ( prop._metadata->_bRequired != SW_FALSE )
+                    outListPath.push_back( path );
+                continue;
+            }
+            const bool      bContainer = prop._bIsContainer == SW_TRUE;
+            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            if ( pNested == nullptr )
+                continue;
+            if ( bContainer == false && value.isObject() )
+            {
+                collectMissingRequired( value, *pNested, outListPath, path );
+                continue;
+            }
+            if ( bContainer == false || value.isArray() == false )
+                continue;
+            for ( size_t elementIndex = 0; elementIndex < value.size(); ++elementIndex )
+            {
+                const JSONValue element = value.at( elementIndex );
+                if ( element.isObject() )
+                    collectMissingRequired( element, *pNested, outListPath, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ) );
+            }
+        }
     }
 
     bool JSONSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
@@ -488,7 +540,8 @@ namespace sw
         JSONDocument doc;
         if ( doc.loadResource( assetID ) == false )
             return false;
-        return readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, context ) == FieldReadResult::Read;
+        const bool bRead = readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, context ) == FieldReadResult::Read;
+        return JSONSerializerInternal::reportMissingRequired( doc.getRoot(), typeInfo ) && bRead;
     }
 
     void JSONSerializer::writeObject( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo,

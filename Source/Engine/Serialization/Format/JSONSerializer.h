@@ -36,14 +36,23 @@ namespace sw
         static string serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
                                        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
-        /** @brief JSON 문자열에서 객체를 역직렬화합니다. */
+        /**
+         * @brief JSON 문자열에서 객체를 역직렬화합니다. 빠진 필수 칸(`PROPERTY( Required )`)은 경로마다 `Serialization.RequiredMissing` 으로 알리고 실패입니다.
+         * @details 층을 겹쳐 읽는 쪽(설정)은 `deserializeSoft` 로 읽고 다 겹친 뒤에 `collectMissingRequired` 로 본다.
+         */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /**
+         * @brief `PROPERTY( Required )` 칸 가운데 @p object 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다.
+         * @details 구조체 칸과 구조체 목록(배열)의 원소 안으로 들어간다. 필수 칸의 초기값은 형식일 뿐이라, 빠진 칸을 초기값으로 읽으면
+         *          "적지 않음" 이 조용히 그럴듯한 값(루트 본의 부모 -1 같은)이 된다. @p prefix 는 경로 앞부분이다(최상위는 빈 값).
+         */
+        static void collectMissingRequired( const JSONValue& object, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix = string() );
 
         /** @brief Pretty JSON 을 절대 경로에 씁니다. indentSpaces 가 0 이면 serializePretty 와 같이 4 칸을 씁니다. */
         [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
                                             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-        /** @brief 절대 · 리소스 경로에서 JSON 을 읽어 역직렬화합니다. */
+        /** @brief 절대 · 리소스 경로에서 JSON 을 읽어 역직렬화합니다. 빠진 필수 칸은 `deserialize` 와 같이 실패입니다. */
         [[nodiscard]] static bool loadFile( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 

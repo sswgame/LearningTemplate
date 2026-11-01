@@ -213,7 +213,7 @@ SW_TEST_CASE( TimeZoneTest, TableRejectsBadRowsAndUnknownNamesAreNotFound )
     SW_EXPECT_NULL( table.findZone( "UTC" ) );
     SW_EXPECT_LOG( "TimeZoneTable.MissingUTC" );
     SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "noutc.xml", R"(<TimeZoneInfo _name="Asia/Seoul" _standardOffsetMinutes="540" _daylightRule="None" />)" ) ) );
-    SW_EXPECT_LOG( "Xml.MissingRequired" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SW_EXPECT_LOG( "TimeZoneTable.CannotRead" );
     SW_EXPECT_FALSE( table.loadFromAsset( writeTable( "missing.xml", R"(<TimeZoneInfo _name="UTC" _daylightRule="None" />)" ) ) );
 
