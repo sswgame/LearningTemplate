@@ -32,6 +32,8 @@ namespace sw
 
 Name the helper after **the translation unit, not the class**: unity builds merge several `.cpp` files into one TU, and an anonymous namespace hides a name only per TU (`D3D11RHIDevice.cpp` → `D3D11RHIDeviceInternal`).
 
+**Don't split what has one user.** A helper type or function that exactly one `.cpp` uses lives in that `.cpp` (its `*Internal` struct or a plain section), not in a new `.h`/`.cpp` pair: every pair is one more translation unit (unity builds are off) and one more file to jump to. Give it its own header only when a second user appears, when reflection or a registration macro needs a header, or when a test target compiles the file directly. Small headers that many files include are fine — merging them into a bigger header slows incremental builds.
+
 | TU-only helpers | Shape |
 | --- | --- |
 | Constants only | No struct; constants stay in the anonymous namespace |
