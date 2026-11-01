@@ -139,7 +139,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR_ID( "TileSet.Message", "%#", doc.getLastError() );
+            SW_LOG_ERROR_ID( "TileSet.ParseFailed", "%#", doc.getLastError() );
             return false;
         }
         const XMLNode root = doc.getRoot( "TileSet" );

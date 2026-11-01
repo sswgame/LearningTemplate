@@ -400,7 +400,7 @@ namespace sw::editor
                 TextureImportRuleMatch match = _config.findMatchingRule( assetPath );
                 if ( match.hasError() )
                 {
-                    SW_LOG_ERROR_ID( "TextureImporter.Message", "%#", match._error.c_str() );
+                    SW_LOG_ERROR_ID( "TextureImporter.ImportRuleRejected", "%#", match._error.c_str() );
                     return false;
                 }
                 outRule = std::move( match._rule );

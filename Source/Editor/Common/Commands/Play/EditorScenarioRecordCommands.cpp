@@ -95,9 +95,9 @@ namespace sw::editor
                 string     reply;
                 const bool bOk = getState()._recorder.isRecording() ? stopRecording( reply ) : startRecording( makeDefaultOutputPath(), reply );
                 if ( bOk )
-                    SW_LOG_INFO_ID( "EditorScenarioRecord.Message", "%#", reply.c_str() );
+                    SW_LOG_INFO_ID( "EditorScenarioRecord.Reply", "%#", reply.c_str() );
                 else
-                    SW_LOG_WARNING_ID( "EditorScenarioRecord.Message", "%#", reply.c_str() );
+                    SW_LOG_WARNING_ID( "EditorScenarioRecord.Failed", "%#", reply.c_str() );
             }
 
             /** @brief 프레임 단계 — 녹화 중이면 이번 입력 프레임의 이벤트를 엔진 프레임의 실제 경과(재생과 같은 시계)와 함께 넘깁니다. */

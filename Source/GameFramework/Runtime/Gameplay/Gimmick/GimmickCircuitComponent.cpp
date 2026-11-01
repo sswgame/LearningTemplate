@@ -281,7 +281,7 @@ namespace sw
             _circuit.clear();
         for ( const string& error : _listError )
         {
-            SW_LOG_ERROR_ID( "GimmickCircuitComponent.Message", "%#", error );
+            SW_LOG_ERROR_ID( "GimmickCircuitComponent.CircuitInvalid", "%#", error );
         }
         _listBinding.clear();
         _listNodeTag.clear();
@@ -353,7 +353,7 @@ namespace sw
             {
                 const string error = string( "Gimmick node '" ) + _circuit.getNodeID( node ).c_str() + "' (" + _circuit.getKind( node )._name.c_str() + ") needs a GimmickSensorComponent on '" +
                                      pTarget->getName().c_str() + "'";
-                SW_LOG_ERROR_ID( "GimmickCircuitComponent.Message", "%#", error );
+                SW_LOG_ERROR_ID( "GimmickCircuitComponent.SensorMissing", "%#", error );
                 _listError.push_back( error );
             }
             if ( binding == Binding::Mover )
@@ -574,7 +574,7 @@ namespace sw
             formatstring( arrBuffer, constant::buffer::kMax512,
                           "Saved gimmick state of '%#' does not fit node '%#' (its kind or state version changed) - the circuit does not run until the saved state is cleared",
                           pName, pNode );
-            SW_LOG_ERROR_ID( "GimmickCircuitComponent.Message", "%#", arrBuffer );
+            SW_LOG_ERROR_ID( "GimmickCircuitComponent.SavedStateMismatch", "%#", arrBuffer );
             _listError.push_back( string( arrBuffer ) );
             _circuit.clear();
             return;

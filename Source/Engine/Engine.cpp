@@ -493,7 +493,7 @@ namespace sw
                 const hashed_string key( name );
                 const string        text = ( registry.findType( key ) == nullptr && registry.findEnum( key ) != nullptr ) ? registry.describeEnum( key )
                                                                                                                           : registry.describeType( key );
-                SW_LOG_INFO_ID( "Engine.Message", "[gv_dumpReflection]\n%#", text.c_str() );
+                SW_LOG_INFO_ID( "Engine.ReflectionDump", "[gv_dumpReflection]\n%#", text.c_str() );
             }
             gv_dumpReflection = string{}; // 한 번만
         }

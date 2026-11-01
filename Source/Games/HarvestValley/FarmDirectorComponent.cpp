@@ -712,7 +712,7 @@ namespace sw
         if ( result == FarmActionResult::Done )
             _stamina -= cost;
         else if ( isAutoPlayOn() == false )
-            SW_LOG_INFO_ID( "FarmDirector.Message", "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, getEnumName( result ) );
+            SW_LOG_INFO_ID( "FarmDirector.ToolUsed", "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, getEnumName( result ) );
     }
 
     int32 FarmDirectorComponent::shipAllProduce()

@@ -504,7 +504,7 @@ namespace sw
         if ( listSearchPriority.empty() )
         {
             // 읽지 못한 이유를 여기서 남긴다(읽는 함수는 정적 초기화 가드 안이라 로그하지 않는다). 가드 안에서 만든 값이므로 다시 읽어도 같은 문장이다.
-            SW_LOG_ERROR_ID( "AssetPaths.Message", "%#", AssetPathsInternal::readBasePriority()._error );
+            SW_LOG_ERROR_ID( "AssetPaths.BasePriorityInvalid", "%#", AssetPathsInternal::readBasePriority()._error );
             return false; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 false 를 반환한다.
         }
 

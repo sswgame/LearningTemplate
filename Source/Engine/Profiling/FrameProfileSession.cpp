@@ -240,7 +240,7 @@ namespace sw
                 const uint64              bytesFrame = site._totalBytes / frames;
                 SW_LOG_INFO_ID( "FrameProfileSession.FrameBFrameTotal", "[Profile]  #%#  %#.%# /frame  %# B/frame  (total %#)", index + 1, countX10 / 10, countX10 % 10,
                                 bytesFrame, site._totalCount );
-                SW_LOG_INFO_ID( "FrameProfileSession.Message", "%#", CallStackCapture::symbolize( site._stack ).c_str() );
+                SW_LOG_INFO_ID( "FrameProfileSession.CallSite", "%#", CallStackCapture::symbolize( site._stack ).c_str() );
             }
             pMemory->setDetailedTrackingEnabled( false );
         }

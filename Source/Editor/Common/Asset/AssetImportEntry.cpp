@@ -84,7 +84,7 @@ namespace sw::editor
 
                 for ( const string& problem : summary._listProblem )
                 {
-                    SW_LOG_ERROR_ID( "AssetImportEntry.Message", "%#", problem.c_str() );
+                    SW_LOG_ERROR_ID( "AssetImportEntry.ImportProblem", "%#", problem.c_str() );
                 }
                 SW_LOG_INFO_ID( "AssetImportEntry.SourcesImportedProblems", "%# %#: %# sources, %# imported, %# problems.", pKindLabel, bCheckOnly ? "check" : "import", summary._sourceCount,
                                 summary._importedCount, summary._listProblem.size() );

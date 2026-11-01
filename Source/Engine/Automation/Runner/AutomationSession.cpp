@@ -442,9 +442,9 @@ namespace sw
             const string line = _pChain->describeStageEnd( stageIndex, result, stageName );
             // 건너뜀은 실패가 아니다 - 까닭과 등급(빌드 구성이면 Info, 환경 탓이면 Warning)은 실행기의 SKIP 줄이 이미 남겼다.
             if ( result == AutomationOutcome::Passed || result == AutomationOutcome::Skipped )
-                SW_LOG_INFO_ID( "AutomationSession.Message", "[Scenario] %#", line.c_str() );
+                SW_LOG_INFO_ID( "AutomationSession.ChainStageEnded", "[Scenario] %#", line.c_str() );
             else
-                SW_LOG_ERROR_ID( "AutomationSession.Message", "[Scenario] %#", line.c_str() );
+                SW_LOG_ERROR_ID( "AutomationSession.ChainStageFailed", "[Scenario] %#", line.c_str() );
         }
         if ( bNextStage )
         {
@@ -558,7 +558,7 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );
         if ( options._scenarioPath.empty() || AutomationPerBackend::parseBackendList( backends, options._listBackend, error ) == false )
         {
-            SW_LOG_ERROR_ID( "AutomationSession.Message2", "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
+            SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
             inoutState._bFailed         = true;
             inoutState._failureExitCode = getAutomationExitCode( AutomationOutcome::LoadError );
             return;

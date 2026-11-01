@@ -203,7 +203,7 @@ namespace sw
             entry._loggedCount = eventCount;
             const DestructionHashRecord record{ state.computeStateHash(), entry._netID, eventCount };
             _listRecord.push_back( record );
-            SW_LOG_INFO_ID( "DestructionNetSession.Message", "%#", formatHashLine( _side, record, entry._name ).c_str() );
+            SW_LOG_INFO_ID( "DestructionNetSession.HashLine", "%#", formatHashLine( _side, record, entry._name ).c_str() );
         }
     }
 } // namespace sw

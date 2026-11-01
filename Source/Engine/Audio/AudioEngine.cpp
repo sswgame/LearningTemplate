@@ -191,7 +191,7 @@ namespace sw
         }
         for ( const string& error : listError )
         {
-            SW_LOG_ERROR_ID( "AudioEngine.Message", "%#", error.c_str() );
+            SW_LOG_ERROR_ID( "AudioEngine.EventLibraryError", "%#", error.c_str() );
         }
         if ( pLibrary == nullptr )
             return false;

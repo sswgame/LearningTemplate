@@ -101,9 +101,9 @@ namespace sw::editor
             static void appendLine( RunState& state, const string& line, bool bFailure )
             {
                 if ( bFailure )
-                    SW_LOG_ERROR_ID( "EditorSelfTest.Message", "%#", line.c_str() );
+                    SW_LOG_ERROR_ID( "EditorSelfTest.CaseFailed", "%#", line.c_str() );
                 else
-                    SW_LOG_INFO_ID( "EditorSelfTest.Message", "%#", line.c_str() );
+                    SW_LOG_INFO_ID( "EditorSelfTest.CaseLine", "%#", line.c_str() );
                 state._report += line;
                 state._report += "\n";
             }

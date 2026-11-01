@@ -134,11 +134,11 @@ namespace sw
 
             const bool bIsErrorLine = outputLine.find( "FAILED:" ) != string::npos || outputLine.find( "error:" ) != string::npos || outputLine.find( "Error" ) != string::npos;
             if ( bIsErrorLine )
-                SW_LOG_ERROR_ID( "ModuleCompiler.Message", "%#", outputLine.c_str() );
+                SW_LOG_ERROR_ID( "ModuleCompiler.CompilerError", "%#", outputLine.c_str() );
             else if ( outputLine.find( "warning:" ) != string::npos || outputLine.find( "Warning" ) != string::npos )
-                SW_LOG_WARNING_ID( "ModuleCompiler.Message", "%#", outputLine.c_str() );
+                SW_LOG_WARNING_ID( "ModuleCompiler.CompilerWarning", "%#", outputLine.c_str() );
             else
-                SW_LOG_INFO_ID( "ModuleCompiler.Message", "%#", outputLine.c_str() );
+                SW_LOG_INFO_ID( "ModuleCompiler.CompilerOutput", "%#", outputLine.c_str() );
         }
     }
 

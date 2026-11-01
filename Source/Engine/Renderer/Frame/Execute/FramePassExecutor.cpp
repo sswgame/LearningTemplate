@@ -713,7 +713,7 @@ namespace sw
             return false;
         }
         if ( gv_dumpRenderGraph )
-            SW_LOG_INFO_ID( "FramePassExecutor.Message", "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
+            SW_LOG_INFO_ID( "FramePassExecutor.RenderGraphDump", "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
         return true;
     }
 

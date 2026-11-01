@@ -219,7 +219,7 @@ namespace sw
             writer.writeVarUint( sessionID );
             (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
-            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.ServerEnd", "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
             _listAnnouncedID.erase( _listAnnouncedID.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
         // 복제하지 못한 세션은 끝나면 잊는다.
@@ -250,7 +250,7 @@ namespace sw
             }
             (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
             ++_stats._stateSentCount;
-            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.ServerStart", "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
             _listAnnouncedID.push_back( session.getID() );
         }
     }
@@ -272,7 +272,7 @@ namespace sw
                 if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
                 {
                     ++_stats._stateSentCount;
-                    SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );
+                    SW_LOG_INFO_ID( "PairedAnimationReplication.ServerJoin", "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );
                 }
                 else
                     ++_stats._sendRejectedCount;
@@ -396,7 +396,7 @@ namespace sw
         if ( result == PairedAnimationStartResult::Started )
         {
             ++_stats._appliedCount;
-            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "client", "restore", state._snapshot._sessionID, state._snapshot._anchorTime ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.ClientRestore", "%#", formatEventLine( "client", "restore", state._snapshot._sessionID, state._snapshot._anchorTime ).c_str() );
         }
         else if ( result != PairedAnimationStartResult::ParticipantNotReady ) // 클립을 읽는 중이면 정상 거절 — 보관하고 다시 한다
         {
@@ -424,7 +424,7 @@ namespace sw
                 ++_stats._endAppliedCount;
             }
             // 클라이언트 쪽 세션이 먼저 끝났어도(같은 시계로 따라 돈다) 끝 메시지를 받은 것은 남긴다.
-            SW_LOG_INFO_ID( "PairedAnimationReplication.Message", "%#", formatEventLine( "client", "end", sessionID, 0.0f ).c_str() );
+            SW_LOG_INFO_ID( "PairedAnimationReplication.ClientEnd", "%#", formatEventLine( "client", "end", sessionID, 0.0f ).c_str() );
             return NetHandleResult::Handled;
         }
         PairedAnimationNetState state{};

@@ -387,7 +387,7 @@ namespace sw
                     _run._currentStepKind   = step._kind;
                     _run._currentStepNumber = step._orderInFile;
                     const string stepLine   = AutomationRunTitleUtil::makeStepLogLine( _scenario.getName(), _run._currentStepNumber, _run._currentStepKind, _run._frameIndex );
-                    SW_LOG_INFO_ID( "Automation.Message2", "%#", stepLine.c_str() );
+                    SW_LOG_INFO_ID( "Automation.Step", "%#", stepLine.c_str() );
                     CrashHandler::addBreadcrumb( stepLine ); // 크래시 보고에 최근 단계 전환이 남는다
                     updateCrashContext();
                 }
@@ -836,7 +836,7 @@ namespace sw
             // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
             if ( _result != AutomationOutcome::UnhandledLog && _judge.getUnhandledLogs().empty() == false )
                 detail += formatToString( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _judge.getUnhandledLogs().size() ) );
-            SW_LOG_ERROR_ID( "Automation.Frame", "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
+            SW_LOG_ERROR_ID( "Automation.Finished", "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
         SW_LOG_INFO_ID( "Automation.FinishedFrames", "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getEnumName( _result ), _run._frameIndex );

@@ -483,7 +483,7 @@ namespace sw
     void AutomationJudge::addFailure( const AutomationStep& step, string_view message )
     {
         string line = step.describe() + ": " + string( message );
-        SW_LOG_WARNING_ID( "Automation.Message", "[Scenario] %#", line.c_str() );
+        SW_LOG_WARNING_ID( "Automation.JudgeWarning", "[Scenario] %#", line.c_str() );
         _listFailure.push_back( std::move( line ) );
     }
 

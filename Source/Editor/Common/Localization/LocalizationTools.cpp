@@ -605,13 +605,13 @@ namespace sw
             details.append( to_string( culture._prefilledExact ) ).append( " exact + " ).append( to_string( culture._prefilledFuzzy ) ).append( " fuzzy from translation memory" );
         }
         if ( details.empty() == false )
-            SW_LOG_INFO_ID( "LocalizationTools.Message", "[GatherText] %#%#", result._projectName.c_str(), details.c_str() );
+            SW_LOG_INFO_ID( "LocalizationTools.GatherTextDone", "[GatherText] %#%#", result._projectName.c_str(), details.c_str() );
         for ( const TextGatherIssue& issue : report._listIssue )
         {
             if ( issue._bError )
-                SW_LOG_ERROR_ID( "LocalizationTools.Message2", "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.GatherTextIssue", "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
             else
-                SW_LOG_WARNING_ID( "LocalizationTools.Message2", "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
+                SW_LOG_WARNING_ID( "LocalizationTools.GatherTextIssue", "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
         }
     }
 
@@ -691,7 +691,7 @@ namespace sw
             string error;
             if ( FileUtil::exists( translationPath ) && translation.loadFromFile( translationPath, &error ) == false )
             {
-                SW_LOG_ERROR_ID( "LocalizationTools.Message3", "[ExportPo] %#", error.c_str() );
+                SW_LOG_ERROR_ID( "LocalizationTools.ExportPoFailed", "[ExportPo] %#", error.c_str() );
                 bAllWritten = false;
                 continue;
             }
@@ -767,7 +767,7 @@ namespace sw
         translation.setCulture( culture );
         if ( FileUtil::exists( translationPath ) && translation.loadFromFile( translationPath, &error ) == false )
         {
-            SW_LOG_ERROR_ID( "LocalizationTools.Message4", "[ImportPo] %#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalizationTools.ImportPoFailed", "[ImportPo] %#", error.c_str() );
             return false;
         }
         TextGatherReport  memoryReport;
@@ -834,7 +834,7 @@ namespace sw
                 summary.append( " entries, " ).append( to_string( result._translatedCount ) ).append( " translated, " ).append( to_string( result._fuzzyCount ) );
                 summary.append( " fuzzy (" ).append( to_string( result._staleCount ) ).append( " stale)" );
             }
-            SW_LOG_INFO_ID( "LocalizationTools.Message5", "[ExportPo] %#%#", projectPath.c_str(), summary.c_str() );
+            SW_LOG_INFO_ID( "LocalizationTools.ExportPoDone", "[ExportPo] %#%#", projectPath.c_str(), summary.c_str() );
         }
         return bSucceeded;
     }

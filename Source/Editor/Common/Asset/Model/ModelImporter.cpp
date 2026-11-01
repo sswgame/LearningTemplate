@@ -683,7 +683,7 @@ namespace sw::editor
                 ModelImportRuleMatch match = _config.findMatchingRule( assetPath );
                 if ( match.hasError() )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.Message", "%#", match._error.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.ImportRuleRejected", "%#", match._error.c_str() );
                     return false;
                 }
                 outRule = std::move( match._rule );

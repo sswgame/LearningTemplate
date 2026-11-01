@@ -421,7 +421,7 @@ namespace sw
                 vector<uint8>  bytes( messageLength );
                 D3D12_MESSAGE* pMessage = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
                 if ( SUCCEEDED( infoQueue->GetMessage( messageIndex, pMessage, &messageLength ) ) && bAlreadyDeviceRemoved == false )
-                    SW_LOG_ERROR_ID( "D3D12.Message", "[%#] %#", pStage, pMessage->pDescription );
+                    SW_LOG_ERROR_ID( "D3D12.DebugLayer", "[%#] %#", pStage, pMessage->pDescription );
             }
             infoQueue->ClearStoredMessages();
         }

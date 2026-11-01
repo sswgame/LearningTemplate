@@ -188,7 +188,7 @@ namespace sw
         SW_LOG_INFO_ID( "AssetLoadProfiler.KindCountAsyncFailed", "[AssetLoad] %# — kind count async failed bytes total_ms io_ms decode_ms upload_ms max_ms", pTitle );
         for ( const AssetLoadKindSummary& summary : listSummary )
         {
-            SW_LOG_INFO_ID( "AssetLoadProfiler.Message", "[AssetLoad]   %# %# %# %# %# %# %# %# %# %#", summary._kind.c_str(), summary._count, summary._asyncCount, summary._failedCount,
+            SW_LOG_INFO_ID( "AssetLoadProfiler.KindSummary", "[AssetLoad]   %# %# %# %# %# %# %# %# %# %#", summary._kind.c_str(), summary._count, summary._asyncCount, summary._failedCount,
                             summary._bytes, Internal::toMilliseconds( Internal::computeSummaryTotal( summary ) ),
                             Internal::toMilliseconds( summary._arrPhaseNanos[0] ), Internal::toMilliseconds( summary._arrPhaseNanos[1] ),
                             Internal::toMilliseconds( summary._arrPhaseNanos[2] ), Internal::toMilliseconds( summary._maxTotalNanos ) );
@@ -196,7 +196,7 @@ namespace sw
         SW_LOG_INFO_ID( "AssetLoadProfiler.SlowestTotalMsIo", "[AssetLoad] slowest — total_ms io_ms decode_ms upload_ms bytes async kind path" );
         for ( const AssetLoadRecord& record : listSlowest )
         {
-            SW_LOG_INFO_ID( "AssetLoadProfiler.Message2", "[AssetLoad]   %# %# %# %# %# %# %# %#", Internal::toMilliseconds( record.computeTotalNanos() ),
+            SW_LOG_INFO_ID( "AssetLoadProfiler.SlowestLoad", "[AssetLoad]   %# %# %# %# %# %# %# %#", Internal::toMilliseconds( record.computeTotalNanos() ),
                             Internal::toMilliseconds( record._arrPhaseNanos[0] ), Internal::toMilliseconds( record._arrPhaseNanos[1] ),
                             Internal::toMilliseconds( record._arrPhaseNanos[2] ), record._bytes, record._bAsync != SW_FALSE ? "async" : "sync",
                             record._kind.c_str(), record._path.c_str() );

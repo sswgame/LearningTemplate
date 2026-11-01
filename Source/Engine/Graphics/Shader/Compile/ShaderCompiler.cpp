@@ -314,7 +314,7 @@ namespace sw
                         outResult._errorMessage = static_cast<const utf8*>( errorBlob->GetBufferPointer() );
                     else
                         outResult._errorMessage = "Unknown DXBC compilation error.";
-                    SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", outResult._errorMessage.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.DXBCFailed", "%#", outResult._errorMessage.c_str() );
                     return false;
                 }
 
@@ -624,7 +624,7 @@ namespace sw
                     outResult._errorMessage = errors->GetStringPointer();
                 if ( FAILED( status ) )
                 {
-                    SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", outResult._errorMessage.c_str() );
+                    SW_LOG_ERROR_ID( "ShaderCompiler.DXCFailed", "%#", outResult._errorMessage.c_str() );
                     return DxcOutcome::Rejected;
                 }
 
@@ -700,7 +700,7 @@ namespace sw
         const std::optional<ShaderCompileInput> input = resolver->resolve( desc._source, result._errorMessage );
         if ( input.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", result._errorMessage );
+            SW_LOG_ERROR_ID( "ShaderCompiler.SourceUnresolved", "%#", result._errorMessage );
             return result;
         }
 
@@ -714,7 +714,7 @@ namespace sw
             }
             if ( result._errorMessage.empty() )
                 result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
-            SW_LOG_ERROR_ID( "ShaderCompiler.Message", "%#", result._errorMessage );
+            SW_LOG_ERROR_ID( "ShaderCompiler.HeaderShadowed", "%#", result._errorMessage );
             return result;
         }
 

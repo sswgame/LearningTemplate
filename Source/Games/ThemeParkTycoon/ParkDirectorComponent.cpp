@@ -645,7 +645,7 @@ namespace sw
                         _ridingCoaster = coasterIndex;
                 }
             }
-            SW_LOG_INFO_ID( "ParkDirector.Message", "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
+            SW_LOG_INFO_ID( "ParkDirector.CoasterViewToggled", "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Park.Thoughts" ) ) )
             logThoughts();

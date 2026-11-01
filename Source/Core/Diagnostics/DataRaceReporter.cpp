@@ -29,7 +29,7 @@ namespace sw
             StringUtil::forEachLine( stackTrace, []( string_view line )
             {
                 if ( line.empty() == false )
-                    SW_LOG_ERROR_ID( "DataRaceDetector.Message", "  %s", string( line ).c_str() );
+                    SW_LOG_ERROR_ID( "DataRaceDetector.StackFrame", "  %s", string( line ).c_str() );
             } );
         }
 

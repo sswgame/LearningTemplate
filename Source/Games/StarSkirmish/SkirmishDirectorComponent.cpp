@@ -540,7 +540,7 @@ namespace sw
         if ( inputMap.wasActionTriggered( _pauseAction ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO_ID( "SkirmishDirector.Message", "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
+            SW_LOG_INFO_ID( "SkirmishDirector.PauseToggled", "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
         if ( inputMap.wasActionTriggered( _statusAction ) )
             _match.logStatus();

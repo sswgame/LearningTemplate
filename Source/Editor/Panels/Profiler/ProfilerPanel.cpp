@@ -527,7 +527,7 @@ namespace sw::editor
     void ProfilerPanel::drawTraceControls()
     {
         if ( ImGui::SmallButton( "Load Trace" ) && _timeline.loadLatestTrace() == false )
-            SW_LOG_WARNING_ID( "ProfilerPanel.Message", "%#", _timeline.getTraceStatus() );
+            SW_LOG_WARNING_ID( "ProfilerPanel.TraceStatus", "%#", _timeline.getTraceStatus() );
         EditorSelfTestMarks::note( "profiler.timeline.loadTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadTrace" ) );
         if ( _timeline.hasLoadedTrace() )

@@ -175,7 +175,7 @@ namespace sw
                     if ( level == LogLevel::Error )
                         SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#", text.substr( lineStart, lineEnd - lineStart ) );
                     else
-                        SW_LOG_INFO_ID( "OnlineLoadBot.Message", "%#", text.substr( lineStart, lineEnd - lineStart ) );
+                        SW_LOG_INFO_ID( "OnlineLoadBot.Output", "%#", text.substr( lineStart, lineEnd - lineStart ) );
                     lineStart = lineEnd + 1;
                 }
             }

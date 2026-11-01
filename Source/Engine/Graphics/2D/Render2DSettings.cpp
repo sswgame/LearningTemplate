@@ -72,7 +72,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR_ID( "Render2DSettings.Message", "%#", doc.getLastError() );
+            SW_LOG_ERROR_ID( "Render2DSettings.ParseFailed", "%#", doc.getLastError() );
             return false;
         }
         const XMLNode root = doc.getRoot( "Render2DSettings" );

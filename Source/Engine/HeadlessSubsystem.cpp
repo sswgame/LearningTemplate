@@ -112,7 +112,7 @@ namespace sw
                 ShaderCookStamp::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, format, listProblem );
                 for ( const string& problem : listProblem )
                 {
-                    SW_LOG_ERROR_ID( "Headless.Message", "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
+                    SW_LOG_ERROR_ID( "Headless.ShaderCookProblem", "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
                 }
                 return listProblem.empty();
             }

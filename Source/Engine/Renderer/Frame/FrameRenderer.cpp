@@ -306,7 +306,7 @@ namespace sw
         if ( listPass.empty() )
         {
             _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXMLPath );
-            SW_LOG_ERROR_ID( "FrameRenderer.Message", "%#", _statusMessage );
+            SW_LOG_ERROR_ID( "FrameRenderer.PipelineLoadFailed", "%#", _statusMessage );
             return false;
         }
 

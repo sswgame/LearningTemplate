@@ -760,9 +760,9 @@ namespace sw
             if ( bAll == false && getNPCID( npcIndex ) != hashed_string( _lastTraceRequest ) )
                 continue;
             explainNPC( npcIndex, text );
-            SW_LOG_INFO_ID( "ScheduleSystem.Message", "[Schedule] %#", text );
+            SW_LOG_INFO_ID( "ScheduleSystem.TraceExplain", "[Schedule] %#", text );
             dumpTimeline( npcIndex, text );
-            SW_LOG_INFO_ID( "ScheduleSystem.Message", "[Schedule] %#", text );
+            SW_LOG_INFO_ID( "ScheduleSystem.TraceTimeline", "[Schedule] %#", text );
         }
     }
 

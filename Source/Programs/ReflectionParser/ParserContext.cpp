@@ -87,9 +87,9 @@ namespace sw
             {
                 const CXString message = clang_formatDiagnostic( diagnostic, clang_defaultDiagnosticDisplayOptions() );
                 if ( bReportErrors )
-                    SW_LOG_ERROR_ID( "ParserContext.Message", "%#", clang_getCString( message ) );
+                    SW_LOG_ERROR_ID( "ParserContext.ClangError", "%#", clang_getCString( message ) );
                 else
-                    SW_LOG_TRACE_ID( "ParserContext.Message", "%#", clang_getCString( message ) );
+                    SW_LOG_TRACE_ID( "ParserContext.ClangNote", "%#", clang_getCString( message ) );
                 clang_disposeString( message );
                 bHasError = true;
             }

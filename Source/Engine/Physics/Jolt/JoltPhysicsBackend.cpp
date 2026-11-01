@@ -60,7 +60,7 @@ namespace sw
                 va_start( arguments, pFormat );
                 ::vsnprintf( arrMessage, sizeof( arrMessage ), pFormat, arguments );
                 va_end( arguments );
-                SW_LOG_INFO_ID( "JoltPhysicsBackend.Message", "%#", arrMessage );
+                SW_LOG_INFO_ID( "JoltPhysicsBackend.Trace", "%#", arrMessage );
             }
 
 #ifdef JPH_ENABLE_ASSERTS

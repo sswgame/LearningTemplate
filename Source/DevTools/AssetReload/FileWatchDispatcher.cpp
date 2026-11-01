@@ -181,7 +181,7 @@ namespace sw
                         break;
                     }
                 }
-                SW_LOG_TRACE_ID( "FileWatchDispatcher.Message", "%# : %#/%#", pActionStr, changeEvent._directory.c_str(), changeEvent._filename.c_str() );
+                SW_LOG_TRACE_ID( "FileWatchDispatcher.FileChanged", "%# : %#/%#", pActionStr, changeEvent._directory.c_str(), changeEvent._filename.c_str() );
 #endif
             }
         }

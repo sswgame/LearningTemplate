@@ -136,7 +136,7 @@ namespace sw::editor
                             candidates += candidate;
                             candidates += "  ";
                         }
-                        SW_LOG_INFO_ID( "ConsolePanel.Message", "%#", candidates.c_str() );
+                        SW_LOG_INFO_ID( "ConsolePanel.Completions", "%#", candidates.c_str() );
                     }
                     return 0;
                 }

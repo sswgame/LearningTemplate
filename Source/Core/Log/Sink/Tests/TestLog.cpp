@@ -354,7 +354,7 @@ SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
 
     // 유효하지 않은 UTF-8 바이트 시퀀스 (0xFF, 0xFE 등)
     const utf8 invalidUtf8Bytes[] = { '[', 'T', 'e', 's', 't', 'L', 'o', 'g', ']', ' ', 'B', 'a', 'd', ':', static_cast<utf8>( 0xFF ), static_cast<utf8>( 0xFE ), '\0' };
-    SW_LOG_INFO_ID( "TestLog.Message", "%#", invalidUtf8Bytes );
+    SW_LOG_INFO_ID( "TestLog.InvalidUtf8Probe", "%#", invalidUtf8Bytes );
 
     SW_REQUIRE_EQUAL( 1u, capture.getCount() );
     SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[0]._message, "[TestLog] Bad:" ) );

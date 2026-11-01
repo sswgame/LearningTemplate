@@ -795,11 +795,11 @@ namespace sw
             return VK_FALSE;
 
         if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
-            SW_LOG_ERROR_ID( "Vulkan.Message", "%#", pCallbackData->pMessage );
+            SW_LOG_ERROR_ID( "Vulkan.ValidationError", "%#", pCallbackData->pMessage );
         else if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
-            SW_LOG_WARNING_ID( "Vulkan.Message", "%#", pCallbackData->pMessage );
+            SW_LOG_WARNING_ID( "Vulkan.ValidationWarning", "%#", pCallbackData->pMessage );
         else
-            SW_LOG_INFO_ID( "Vulkan.Message", "%#", pCallbackData->pMessage );
+            SW_LOG_INFO_ID( "Vulkan.ValidationInfo", "%#", pCallbackData->pMessage );
         return VK_FALSE;
     }
 

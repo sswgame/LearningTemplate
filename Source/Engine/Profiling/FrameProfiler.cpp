@@ -299,7 +299,7 @@ namespace sw
             const uint64 avgUs       = toMicros( scope._totalNanos / scope._sampledFrames );
             const uint64 perFrameX10 = ( scope._totalCalls * 10 ) / scope._sampledFrames;
 
-            SW_LOG_INFO_ID( "FrameProfiler.Message", "[Profile] %#  %#   %#   %#   %#   %#   %#.%#",
+            SW_LOG_INFO_ID( "FrameProfiler.ScopeRow", "[Profile] %#  %#   %#   %#   %#   %#   %#.%#",
                             nameColumn.c_str(), avgUs, toMicros( getPercentileNanos( index, 50 ) ),
                             toMicros( getPercentileNanos( index, 99 ) ), toMicros( scope._minNanos ),
                             toMicros( scope._maxNanos ), perFrameX10 / 10, perFrameX10 % 10 );

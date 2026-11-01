@@ -763,7 +763,7 @@ namespace sw
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Pause" ) ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO_ID( "NileDirector.Message", "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
+            SW_LOG_INFO_ID( "NileDirector.PauseToggled", "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
         const bool bFaster = inputMap.wasActionTriggered( hashed_string( "Nile.Faster" ) );
         if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Nile.Slower" ) ) )

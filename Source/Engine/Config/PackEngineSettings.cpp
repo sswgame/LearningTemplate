@@ -33,7 +33,7 @@ namespace sw
         XMLDocument  document;
         if ( document.parse( xmlText, sourceName ) == false )
         {
-            SW_LOG_ERROR_ID( "PackEngineSettings.Message", "%#: %#", label.c_str(), document.getLastError().c_str() );
+            SW_LOG_ERROR_ID( "PackEngineSettings.ParseFailed", "%#: %#", label.c_str(), document.getLastError().c_str() );
             return false;
         }
         const XMLNode root    = document.getRoot( kRootElementName );

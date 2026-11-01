@@ -102,7 +102,7 @@ namespace sw
         }
         // 로그는 잠금을 놓은 뒤 남긴다(잠금은 잎 잠금, 결정 5-3).
         if ( error.empty() == false )
-            SW_LOG_ERROR_ID( "LocalDeviceKeyProvider.Message", "%#", error.c_str() );
+            SW_LOG_ERROR_ID( "LocalDeviceKeyProvider.KeyUnavailable", "%#", error.c_str() );
         return false;
     }
 
