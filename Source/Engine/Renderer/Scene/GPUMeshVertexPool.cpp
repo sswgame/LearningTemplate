@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -12,29 +13,32 @@ namespace sw
 {
     GPUMeshVertexPool::GPUMeshVertexPool()
         : _allocator{}
+        , _indexAllocator{}
         , _vertexBuffer{ 0 }
+        , _indexBuffer{ 0 }
         , _mapEntry{}
         , _listScratchAdded{}
         , _listScratchRetry{}
         , _listScratchRemoved{}
         , _listScratchVertex{}
+        , _listScratchIndex{}
         , _listScratchRegion{}
+        , _listScratchIndexRegion{}
         , _updateCount{ 0 }
         , _liveVertexCount{ 0 }
-        , _repackCount{ 0 }
-        , _lastUploadBytes{ 0 }
     {
     }
 
-    uint32 GPUMeshVertexPool::baseOf( const Mesh* pMesh ) const
+    GPUMeshVertexPool::Placement GPUMeshVertexPool::placementOf( const Mesh* pMesh ) const
     {
         const auto it = _mapEntry.find( pMesh );
-        return ( it != _mapEntry.end() ) ? it->second._base : kInvalidBase;
+        if ( it == _mapEntry.end() || it->second._base == kInvalidBase )
+            return Placement{};
+        return Placement{ it->second._base, it->second._indexBase };
     }
 
     bool GPUMeshVertexPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
-        _lastUploadBytes = 0;
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
 
@@ -42,13 +46,14 @@ namespace sw
         // 제출한 프레임이 모두 끝난다.
         ++_updateCount;
         _allocator.retireDeferred( _updateCount );
+        _indexAllocator.retireDeferred( _updateCount );
         const uint64 retireStamp = _updateCount + constant::render::kMaxFrameCountInFlight;
 
         const bool bMarkedChange = markListedMeshes( listMesh, retireStamp );
         const bool bChanged      = sweepUnlistedMeshes( retireStamp ) || bMarkedChange;
         if ( _mapEntry.empty() )
         {
-            // 풀을 끄거나(gv_vertexPool=false) 씬이 비었다 — 버퍼를 놓는다. 배치는 자기 정점 버퍼로 돌아간다.
+            // 풀을 끄거나(gv_vertexPool=false) 씬이 비었다 — 버퍼를 놓는다. 배치는 자기 정점 · 인덱스 버퍼로 돌아간다.
             const bool bHadBuffer = _vertexBuffer != 0;
             release( pDevice );
             return bChanged || bHadBuffer;
@@ -65,6 +70,17 @@ namespace sw
         return true;
     }
 
+    void GPUMeshVertexPool::retireEntry( Entry& inoutEntry, uint64 retireStamp )
+    {
+        if ( inoutEntry._base == kInvalidBase )
+            return;
+        _allocator.freeDeferred( inoutEntry._base, inoutEntry._count, retireStamp );
+        _indexAllocator.freeDeferred( inoutEntry._indexBase, inoutEntry._indexCount, retireStamp );
+        _liveVertexCount -= inoutEntry._count;
+        inoutEntry._base      = kInvalidBase;
+        inoutEntry._indexBase = kInvalidBase;
+    }
+
     bool GPUMeshVertexPool::markListedMeshes( const vector<Mesh*>& listMesh, uint64 retireStamp )
     {
         // 1) 표시: 이번 목록의 메시를 본다. 처음 보거나 내용이 바뀐 메시는 새 구간이 필요하다.
@@ -73,14 +89,15 @@ namespace sw
         _listScratchRetry.clear();
         for ( Mesh* pMesh : listMesh )
         {
-            if ( pMesh == nullptr || pMesh->getVertices().empty() )
+            if ( pMesh == nullptr || pMesh->getIndices().empty() )
                 continue;
             const uint64 contentID   = pMesh->getContentID();
             const uint32 vertexCount = pMesh->getDrawVertexCount(); // LOD 0 뒤에 낮은 단계까지(배치는 단계의 범위로 그린다)
+            const uint32 indexCount  = pMesh->getDrawIndexCount();
             const auto   it          = _mapEntry.find( pMesh );
             if ( it == _mapEntry.end() )
             {
-                _mapEntry.emplace( pMesh, Entry{ contentID, _updateCount, kInvalidBase, vertexCount } );
+                _mapEntry.emplace( pMesh, Entry{ contentID, _updateCount, kInvalidBase, vertexCount, kInvalidBase, indexCount } );
                 _listScratchAdded.push_back( pMesh );
                 bChanged = true;
                 continue;
@@ -95,15 +112,11 @@ namespace sw
                     _listScratchRetry.push_back( pMesh ); // 예산 때문에 못 들어간 메시
                 continue;
             }
-            // 포인터는 같고 내용이 다르다(지워진 자리에 새 메시, 또는 setVertices) — 옛 구간을 돌려주고 새 구간을 받는다.
-            if ( entry._base != kInvalidBase )
-            {
-                _allocator.freeDeferred( entry._base, entry._count, retireStamp );
-                _liveVertexCount -= entry._count;
-            }
-            entry._contentID = contentID;
-            entry._base      = kInvalidBase;
-            entry._count     = vertexCount;
+            // 포인터는 같고 내용이 다르다(지워진 자리에 새 메시, 또는 setGeometry) — 옛 구간을 돌려주고 새 구간을 받는다.
+            retireEntry( entry, retireStamp );
+            entry._contentID  = contentID;
+            entry._count      = vertexCount;
+            entry._indexCount = indexCount;
             _listScratchAdded.push_back( pMesh );
             bChanged = true;
         }
@@ -121,12 +134,7 @@ namespace sw
         }
         for ( const Mesh* pMesh : _listScratchRemoved )
         {
-            const Entry& entry = _mapEntry.find( pMesh )->second;
-            if ( entry._base != kInvalidBase )
-            {
-                _allocator.freeDeferred( entry._base, entry._count, retireStamp );
-                _liveVertexCount -= entry._count;
-            }
+            retireEntry( _mapEntry.find( pMesh )->second, retireStamp );
             _mapEntry.erase( pMesh );
         }
         return _listScratchRemoved.empty() == false;
@@ -135,27 +143,30 @@ namespace sw
     bool GPUMeshVertexPool::placeAddedMeshes( IRHIDevice* pDevice )
     {
         _listScratchVertex.clear();
+        _listScratchIndex.clear();
         _listScratchRegion.clear();
+        _listScratchIndexRegion.clear();
         for ( const Mesh* pMesh : _listScratchAdded )
         {
-            Entry&       entry = _mapEntry.find( pMesh )->second;
-            const uint32 base  = _allocator.allocate( entry._count );
-            if ( base == SpanAllocator::kInvalidOffset )
+            Entry&       entry     = _mapEntry.find( pMesh )->second;
+            const uint32 base      = _allocator.allocate( entry._count );
+            const uint32 indexBase = base != SpanAllocator::kInvalidOffset ? _indexAllocator.allocate( entry._indexCount ) : SpanAllocator::kInvalidOffset;
+            if ( indexBase == SpanAllocator::kInvalidOffset )
                 return false; // 이미 받은 구간들은 repack 이 처음부터 다시 나눈다.
-            entry._base = base;
+            entry._base      = base;
+            entry._indexBase = indexBase;
             _liveVertexCount += entry._count;
-            RHIBufferCopyRegion region{};
-            region._srcOffset = static_cast<uint32>( _listScratchVertex.size() * sizeof( RHIVertex ) );
-            region._dstOffset = base * static_cast<uint32>( sizeof( RHIVertex ) );
-            region._sizeBytes = entry._count * static_cast<uint32>( sizeof( RHIVertex ) );
-            _listScratchRegion.push_back( region );
-            appendDrawVertices( *pMesh );
+            _listScratchRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchVertex.size() * sizeof( RHIVertex ) ), base * static_cast<uint32>( sizeof( RHIVertex ) ),
+                                                               entry._count * static_cast<uint32>( sizeof( RHIVertex ) ) } );
+            _listScratchIndexRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchIndex.size() * sizeof( uint32 ) ), indexBase * static_cast<uint32>( sizeof( uint32 ) ),
+                                                                    entry._indexCount * static_cast<uint32>( sizeof( uint32 ) ) } );
+            appendDrawGeometry( *pMesh );
         }
         if ( _listScratchRegion.empty() == false )
         {
-            pDevice->getResourceFactory()->updateVertexBufferRegions( _vertexBuffer, _listScratchVertex.data(), _listScratchRegion.data(),
-                                                                      static_cast<uint32>( _listScratchRegion.size() ) );
-            _lastUploadBytes = static_cast<uint32>( _listScratchVertex.size() * sizeof( RHIVertex ) );
+            IRHIResourceFactory* pFactory = pDevice->getResourceFactory();
+            pFactory->updateGeometryBufferRegions( _vertexBuffer, _listScratchVertex.data(), _listScratchRegion.data(), static_cast<uint32>( _listScratchRegion.size() ) );
+            pFactory->updateGeometryBufferRegions( _indexBuffer, _listScratchIndex.data(), _listScratchIndexRegion.data(), static_cast<uint32>( _listScratchIndexRegion.size() ) );
         }
         return true;
     }
@@ -163,79 +174,102 @@ namespace sw
     void GPUMeshVertexPool::repack( IRHIDevice* pDevice )
     {
         // 새 버퍼는 아무 프레임도 읽지 않는다 — 대기 중인 반납까지 버리고 살아 있는 메시를 앞에서부터 잇는다.
-        uint32 liveCount = 0;
+        uint32 liveCount      = 0;
+        uint32 liveIndexCount = 0;
         for ( const auto& [pMesh, entry] : _mapEntry )
         {
             liveCount += entry._count;
+            liveIndexCount += entry._indexCount;
         }
-        uint32 capacity = liveCount + liveCount / 2u;
-        if ( capacity < kMinPoolVertices )
-            capacity = kMinPoolVertices;
-        if ( capacity > kMaxPoolVertices )
-            capacity = kMaxPoolVertices;
+        const uint32 capacity      = MathUtil::clamp( liveCount + liveCount / 2u, kMinPoolVertices, kMaxPoolVertices );
+        const uint32 indexCapacity = MathUtil::clamp( liveIndexCount + liveIndexCount / 2u, kMinPoolIndices, kMaxPoolIndices );
 
+        IRHIResourceFactory* pFactory = pDevice->getResourceFactory();
         if ( _vertexBuffer != 0 )
-            pDevice->getResourceFactory()->destroyBuffer( _vertexBuffer );
+            pFactory->destroyBuffer( _vertexBuffer );
+        if ( _indexBuffer != 0 )
+            pFactory->destroyBuffer( _indexBuffer );
         _vertexBuffer = 0;
+        _indexBuffer  = 0;
         _allocator.reset( capacity );
+        _indexAllocator.reset( indexCapacity );
         _liveVertexCount = 0;
-        ++_repackCount;
 
         // 목록 순서 = 맵의 밀집 순서다. 정렬하지 않는다 — 구간 위치는 그림에 드러나지 않는다.
         _listScratchVertex.clear();
         _listScratchVertex.reserve( capacity );
+        _listScratchIndex.clear();
+        _listScratchIndex.reserve( indexCapacity );
         bool bWarnedFull = false;
         for ( auto& [pMesh, entry] : _mapEntry )
         {
             entry._base      = _allocator.allocate( entry._count );
-            const bool bFits = entry._base != SpanAllocator::kInvalidOffset;
-            if ( bFits == false )
+            entry._indexBase = entry._base != SpanAllocator::kInvalidOffset ? _indexAllocator.allocate( entry._indexCount ) : SpanAllocator::kInvalidOffset;
+            if ( entry._indexBase == SpanAllocator::kInvalidOffset )
             {
-                entry._base = kInvalidBase;
+                if ( entry._base != SpanAllocator::kInvalidOffset )
+                    _allocator.free( entry._base, entry._count ); // 새 버퍼라 아무 프레임도 읽지 않는다 — 곧바로 돌려준다
+                entry._base      = kInvalidBase;
+                entry._indexBase = kInvalidBase;
                 if ( bWarnedFull == false )
-                    SW_LOG_WARNING_ID( "GPUMeshVertexPool.VertexPoolFullVertices", "The vertex pool is full (%# vertices) - the remaining meshes are drawn with their own vertex buffers (they cannot join multi-draw).", kMaxPoolVertices );
+                    SW_LOG_WARNING_ID( "GPUMeshVertexPool.VertexPoolFullVertices",
+                                       "The vertex pool is full (%# vertices, %# indices) - the remaining meshes are drawn with their own vertex and index buffers (they cannot join multi-draw).",
+                                       kMaxPoolVertices, kMaxPoolIndices );
                 bWarnedFull = true;
                 continue;
             }
-            // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다).
-            appendDrawVertices( *pMesh );
+            // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다). 구간은 앞에서부터 이어지므로 목록 끝이 곧 구간 시작이다.
+            appendDrawGeometry( *pMesh );
             _liveVertexCount += entry._count;
         }
         if ( _liveVertexCount == 0 )
             return;
-        // 꼬리는 비워 둔 용량이다 — 0 으로 채워 버퍼 전체를 한 번에 만든다(createVertexBuffer 는 내용 없이 만들 수 없다).
+        // 꼬리는 비워 둔 용량이다 — 0 으로 채워 버퍼 전체를 한 번에 만든다(createVertexBuffer · createIndexBuffer 는 내용 없이 만들 수 없다).
         _listScratchVertex.resize( capacity );
-        const uint32 bytes = capacity * static_cast<uint32>( sizeof( RHIVertex ) );
-        _vertexBuffer      = pDevice->getResourceFactory()->createVertexBuffer( _listScratchVertex.data(), bytes );
-        _lastUploadBytes   = bytes;
-        if ( _vertexBuffer == 0 )
+        _listScratchIndex.resize( indexCapacity );
+        _vertexBuffer = pFactory->createVertexBuffer( _listScratchVertex.data(), capacity * static_cast<uint32>( sizeof( RHIVertex ) ) );
+        _indexBuffer  = pFactory->createIndexBuffer( _listScratchIndex.data(), indexCapacity * static_cast<uint32>( sizeof( uint32 ) ) );
+        if ( _vertexBuffer == 0 || _indexBuffer == 0 )
         {
-            SW_LOG_ERROR_ID( "GPUMeshVertexPool.FailedCreateVertexPool", "Failed to create the vertex pool buffer (%# vertices) - the batch is drawn with its own vertex buffer.", capacity );
+            SW_LOG_ERROR_ID( "GPUMeshVertexPool.FailedCreateVertexPool", "Failed to create the vertex pool buffers (%# vertices, %# indices) - the batches are drawn with their own buffers.", capacity, indexCapacity );
+            if ( _vertexBuffer != 0 )
+                pFactory->destroyBuffer( _vertexBuffer );
+            if ( _indexBuffer != 0 )
+                pFactory->destroyBuffer( _indexBuffer );
+            _vertexBuffer = 0;
+            _indexBuffer  = 0;
+            // 항목은 남긴다 — 내용이 같으면 집합이 바뀐 프레임에만 다시 시도한다(매 프레임 다시 만들며 오류를 쌓지 않는다).
             for ( auto& [pMesh, entry] : _mapEntry )
             {
-                entry._base = kInvalidBase;
+                entry._base      = kInvalidBase;
+                entry._indexBase = kInvalidBase;
             }
             _allocator.reset( 0 );
+            _indexAllocator.reset( 0 );
             _liveVertexCount = 0;
         }
     }
 
-    void GPUMeshVertexPool::appendDrawVertices( const Mesh& mesh )
+    void GPUMeshVertexPool::appendDrawGeometry( const Mesh& mesh )
     {
-        const vector<RHIVertex>& listVertex    = mesh.getVertices();
-        const vector<RHIVertex>& listLODVertex = mesh.getLODVertices();
-        _listScratchVertex.insert( _listScratchVertex.end(), listVertex.begin(), listVertex.end() );
-        _listScratchVertex.insert( _listScratchVertex.end(), listLODVertex.begin(), listLODVertex.end() );
+        _listScratchVertex.insert( _listScratchVertex.end(), mesh.getVertices().begin(), mesh.getVertices().end() );
+        _listScratchVertex.insert( _listScratchVertex.end(), mesh.getLODVertices().begin(), mesh.getLODVertices().end() );
+        _listScratchIndex.insert( _listScratchIndex.end(), mesh.getIndices().begin(), mesh.getIndices().end() );
+        _listScratchIndex.insert( _listScratchIndex.end(), mesh.getLODIndices().begin(), mesh.getLODIndices().end() );
     }
 
     void GPUMeshVertexPool::release( IRHIDevice* pDevice )
     {
-        const bool bReleasableBuffer = _vertexBuffer != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
-        if ( bReleasableBuffer )
-            pDevice->getResourceFactory()->destroyBuffer( _vertexBuffer );
+        IRHIResourceFactory* pFactory = pDevice != nullptr ? pDevice->getResourceFactory() : nullptr;
+        if ( pFactory != nullptr && _vertexBuffer != 0 )
+            pFactory->destroyBuffer( _vertexBuffer );
+        if ( pFactory != nullptr && _indexBuffer != 0 )
+            pFactory->destroyBuffer( _indexBuffer );
         _vertexBuffer = 0;
+        _indexBuffer  = 0;
         _mapEntry.clear();
         _allocator.reset( 0 );
+        _indexAllocator.reset( 0 );
         _liveVertexCount = 0;
     }
 } // namespace sw

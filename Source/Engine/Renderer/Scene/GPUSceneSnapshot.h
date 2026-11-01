@@ -88,17 +88,18 @@ namespace sw
     {
         shared_ptr<Mesh> _mesh; ///< **소유권을 함께 싣는다.** RT 가 upload() 에서 이 메시를 역참조한다.
         RHIBufferHandle  _vertexBuffer{ 0 };
-        uint32           _vertexCount{ 0 };
+        RHIBufferHandle  _indexBuffer{ 0 };
+        uint32           _indexCount{ 0 }; ///< 이 배치가 그리는 인덱스 수(구간 · LOD 단계, 아니면 LOD 0 전체)
         /**
-         * @brief 정점 풀 안에서 이 메시의 시작 위치(정점 단위)입니다. 간접 인자의 startVertex 가 됩니다. 풀 밖의 메시는 0 이며 자기 정점 버퍼를 씁니다.
-         * @details RT 가 upload() 에서 채운다. 같은 풀 버퍼를 쓰는 배치들은 정점 버퍼를 다시 바인딩하지 않고 멀티 드로우로 묶인다.
+         * @brief 정점 풀 안에서 이 메시의 시작 위치(정점 단위)입니다. 간접 인자의 baseVertex 가 됩니다. 풀 밖의 메시는 0 이며 자기 정점 · 인덱스 버퍼를 씁니다.
+         * @details RT 가 upload() 에서 채운다. 같은 풀 버퍼를 쓰는 배치들은 정점 · 인덱스 버퍼를 다시 바인딩하지 않고 멀티 드로우로 묶인다.
+         *          인덱스는 메시 안 번호라 구간 · LOD 배치도 메시 시작 그대로다 — 정점 셰이더의 로컬 번호(binding.hlsli MorphPool::computeElement)가 곧 메시 안 번호다.
          */
-        uint32 _firstVertex{ 0 };
-        /**
-         * @brief 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호)입니다. 메시 전체면 0 입니다.
-         * @details RT 가 정점 풀 시작(`_firstVertex`)과 모프 풀 시작(`_morphVertexBase`)에 더하고, VAT 는 배치 표의 `_sectionVertexOffset` 으로 메시 안 번호를 되찾는다.
-         */
-        uint32 _sectionFirstVertex{ 0 };
+        uint32 _baseVertex{ 0 };
+        /// @brief 인덱스 버퍼 안에서 이 배치의 첫 인덱스입니다(풀이면 메시의 인덱스 풀 시작 + 구간 첫 인덱스). 간접 인자의 startIndex 가 됩니다. RT 가 upload() 에서 채운다.
+        uint32 _firstIndex{ 0 };
+        /// @brief 이 배치가 그리는 메시 구간 · LOD 단계의 첫 인덱스(메시의 그릴 인덱스 흐름 안 번호)입니다. 메시 전체면 0 입니다. RT 가 인덱스 풀 시작에 더한다.
+        uint32 _sectionFirstIndex{ 0 };
         /**
          * @brief 인스턴스 배열 안에서 이 배치의 구간입니다. 배치의 인스턴스는 연속이고 구간은 앞 배치의 끝에서 빈틈없이 이어집니다.
          * @details 인스턴스 구간과 가시 구간(`_visibleBase`)은 **다른 축**이다. LOD 그룹의 낮은 단계 배치는 인스턴스를 가지지 않고(`_instanceCount` 0) 그룹의 인스턴스를
@@ -443,7 +444,7 @@ namespace sw
          *          인스턴스당 55ns(엔티티 8000개면 441µs)가 들고, 그것이 정적 씬에서 **게임 스레드의 유일한 실제 작업**이 된다.
          *
          *          배치와 머티리얼 목록은 그대로 값이다. **RT 가 GPU 핸들을 거기에 덧쓰므로**
-         *          공유하면 안 된다(`GPUMeshBatch::_firstVertex`, `_materialCb` 주석 참고). 대신 개수가
+         *          공유하면 안 된다(`GPUMeshBatch::_baseVertex`, `_materialCb` 주석 참고). 대신 개수가
          *          적어 복사가 싸다. 큰 것만 공유하고 작은 것은 복사하는 것이 이 타입의 규칙이다.
          *          배치 목록은 아래 비공개 `_listBatch` 한 벌이다(불투명 · 투명은 그 구간 뷰).
          */

@@ -244,7 +244,7 @@ namespace sw
                 continue;
             }
             // 합치기가 켜져 있으면 같은 퍼뮤테이션은 머티리얼과 인스턴스가 달라도 한 키다. 파라미터는 원소 인덱스로 읽는다.
-            SortKey key{ candidate._mesh.get(), candidate._sectionFirstVertex, candidate._sectionVertexCount,
+            SortKey key{ candidate._mesh.get(), candidate._sectionFirstIndex, candidate._sectionIndexCount,
                          batchKeyMaterial( candidate._material.get(), candidate._permutationHash ),
                          _bMergeAcrossMaterials != SW_FALSE ? nullptr : candidate._instance.get(), candidate._permutationHash,
                          candidate._bReverseCulling };
@@ -267,10 +267,10 @@ namespace sw
                     return entryA._key._pMaterial < entryB._key._pMaterial;
                 if ( entryA._key._pMesh != entryB._key._pMesh )
                     return entryA._key._pMesh < entryB._key._pMesh;
-                if ( entryA._key._sectionFirstVertex != entryB._key._sectionFirstVertex )
-                    return entryA._key._sectionFirstVertex < entryB._key._sectionFirstVertex;
-                if ( entryA._key._sectionVertexCount != entryB._key._sectionVertexCount )
-                    return entryA._key._sectionVertexCount < entryB._key._sectionVertexCount;
+                if ( entryA._key._sectionFirstIndex != entryB._key._sectionFirstIndex )
+                    return entryA._key._sectionFirstIndex < entryB._key._sectionFirstIndex;
+                if ( entryA._key._sectionIndexCount != entryB._key._sectionIndexCount )
+                    return entryA._key._sectionIndexCount < entryB._key._sectionIndexCount;
                 return entryA._key._pInstance < entryB._key._pInstance;
             } );
         }
@@ -314,7 +314,7 @@ namespace sw
             const uint32         slot                 = _listCandidateToInstance[candidateIndex];
             GPUMeshBatch&        batch                = listBatch[( *pPrevious )[slot]._meshBatchIndex];
             batch._mesh                               = candidate._mesh; // 소유권은 후보의 것을 함께 싣는다(`emitBatch` 와 같다)
-            batch._vertexCount                        = candidate._sectionVertexCount > 0 ? candidate._sectionVertexCount : candidate._mesh->getVertexCount();
+            batch._indexCount                         = candidate._sectionIndexCount > 0 ? candidate._sectionIndexCount : candidate._mesh->getIndexCount();
             _listScratchOpaqueEntry[slot]._key._pMesh = candidate._mesh.get();
         }
         SW_PROFILE_COUNT( "GT.GPUScene.build.meshSwapCount", _listMeshSwapCandidate.size() );
@@ -342,8 +342,7 @@ namespace sw
         if ( pMeshComp->isVisibleInCurrentPerson() == false )
             return false;
         // 그릴 구간 — 구간 이름이 메시에 없으면 그리지 않는다(컴포넌트가 오류를 남긴다). 이름이 없으면 메시 전체(수 0).
-        // 컴포넌트는 인덱스 범위를 준다 — GPU 인덱스 풀(StructureRefactor 10)까지는 생산자가 모두 삼각형 목록(인덱스 0..n-1)이라 정점 범위와 같다.
-        if ( pMeshComp->findDrawSection( candidate._sectionFirstVertex, candidate._sectionVertexCount ) == false )
+        if ( pMeshComp->findDrawSection( candidate._sectionFirstIndex, candidate._sectionIndexCount ) == false )
             return false;
 
         // 경계는 컴포넌트와 같은 규칙이다(`MeshComponent::getWorldBounds`). 메시 반지름에 월드의 최대 축 스케일을 곱한다. 반지름을
@@ -431,10 +430,10 @@ namespace sw
         const bool   bOpaque        = static_cast<RHIBlendMode>( candidate._blendMode ) != RHIBlendMode::Transparent;
         if ( bGroupableMesh == false || bOpaque == false )
             return;
-        candidate._lodContentID       = pMesh->getContentID();
-        candidate._bLODDither         = _snapshot._lodCrossfadeSeconds > 0.0f ? SW_TRUE : SW_FALSE;
-        candidate._sectionFirstVertex = 0; // 단계 0 = 메시 전체. 낮은 단계는 컬링이 고른다
-        candidate._sectionVertexCount = 0;
+        candidate._lodContentID      = pMesh->getContentID();
+        candidate._bLODDither        = _snapshot._lodCrossfadeSeconds > 0.0f ? SW_TRUE : SW_FALSE;
+        candidate._sectionFirstIndex = 0; // 단계 0 = 메시 전체. 낮은 단계는 컬링이 고른다
+        candidate._sectionIndexCount = 0;
     }
 
     void GPUSceneBuilder::setGPUInstanceLODCrossfadeSeconds( float32 seconds )
@@ -1624,8 +1623,8 @@ namespace sw
                     const bool           bKeyMaterialChange = ( _bMergeAcrossMaterials == SW_FALSE )
                                                                 ? ( pBatchHead->_material != current._material )
                                                                 : ( ( pBatchHead->_material == nullptr ) != ( current._material == nullptr ) );
-                    const bool           bSectionChange     = pBatchHead->_sectionFirstVertex != current._sectionFirstVertex ||
-                                                pBatchHead->_sectionVertexCount != current._sectionVertexCount;
+                    const bool           bSectionChange     = pBatchHead->_sectionFirstIndex != current._sectionFirstIndex ||
+                                                pBatchHead->_sectionIndexCount != current._sectionIndexCount;
                     bKeyChange = ( pBatchHead->_mesh != current._mesh ) || bSectionChange || ( pBatchHead->_permutationHash != current._permutationHash ) ||
                                  ( pBatchHead->_bReverseCulling != current._bReverseCulling ) || bKeyMaterialChange ||
                                  ( _bMergeAcrossMaterials == SW_FALSE && pBatchHead->_instance != current._instance );
@@ -1666,8 +1665,8 @@ namespace sw
         GPUMeshBatch batch{};
         batch._mesh = headCandidate._mesh; // 소유권은 배치 머리 후보의 것이다.
         // 구간을 그리면 그 범위만이다 — 배치의 모든 후보가 같은 구간이다(배치 키).
-        batch._sectionFirstVertex = headCandidate._sectionVertexCount > 0 ? headCandidate._sectionFirstVertex : 0u;
-        batch._vertexCount        = headCandidate._sectionVertexCount > 0 ? headCandidate._sectionVertexCount : batch._mesh->getVertexCount();
+        batch._sectionFirstIndex  = headCandidate._sectionIndexCount > 0 ? headCandidate._sectionFirstIndex : 0u;
+        batch._indexCount         = headCandidate._sectionIndexCount > 0 ? headCandidate._sectionIndexCount : batch._mesh->getIndexCount();
         vector<GPUInstance>& work = instanceWork();
         batch._instanceBase       = static_cast<uint32>( work.size() );
         batch._instanceCount      = end - begin;
@@ -1732,15 +1731,15 @@ namespace sw
         const vector<MeshLOD>& listLOD = head._mesh->getLODs();
         for ( const MeshLOD& lod : listLOD )
         {
-            GPUMeshBatch level        = head;
-            level._instanceBase       = static_cast<uint32>( instanceWork().size() ); // 인스턴스는 머리 배치가 가졌다 — 구간은 비고 시작만 이어 간다
-            level._instanceCount      = 0;
-            level._visibleBase        = _snapshot.getNextVisibleBase();
-            level._visibleCapacity    = head._visibleCapacity;
-            level._lodLevelCount      = 0;
-            level._lodScreenSize      = lod._screenSize;
-            level._sectionFirstVertex = lod._firstVertex;
-            level._vertexCount        = lod._vertexCount;
+            GPUMeshBatch level       = head;
+            level._instanceBase      = static_cast<uint32>( instanceWork().size() ); // 인스턴스는 머리 배치가 가졌다 — 구간은 비고 시작만 이어 간다
+            level._instanceCount     = 0;
+            level._visibleBase       = _snapshot.getNextVisibleBase();
+            level._visibleCapacity   = head._visibleCapacity;
+            level._lodLevelCount     = 0;
+            level._lodScreenSize     = lod._screenSize;
+            level._sectionFirstIndex = lod._firstIndex;
+            level._indexCount        = lod._indexCount;
             _batchElementTable.beginBatch(); // 원소는 머리 배치에 있다. 배치 번호와 나란한 빈 구간이다
             _snapshot.appendBatch( std::move( level ) );
         }

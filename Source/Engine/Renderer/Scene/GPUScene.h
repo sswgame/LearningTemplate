@@ -66,7 +66,7 @@ namespace sw
      * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t9)가 같은 테이블을 읽습니다.
      * @details 컬링은 배치의 인스턴스 구간으로 "이 배치의 가시 목록은 어디서 시작하나" 를 알고, 정점 셰이더는
      *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 BatchData, gpu_cull.hlsl 의 GPUBatchInfo 와
-     *          레이아웃이 같아야 한다(4바이트 10칸, 40바이트).
+     *          레이아웃이 같아야 한다(4바이트 9칸, 36바이트).
      */
     struct GPUBatchInfo
     {
@@ -82,12 +82,10 @@ namespace sw
          *          하나로 낼 수 있다. 정점 셰이더는 자기 배치 번호로 이 테이블(g_SwBatches, t9)을 읽는다.
          */
         uint32 _morphVertexBase{ 0xFFFFFFFFu };
-        /// @brief 정점 풀(GPUMeshVertexPool)에서 이 배치 메시의 시작 위치(정점 단위)입니다. 풀 밖의 메시는 0입니다.
-        uint32 _firstVertex{ 0 };
+        /// @brief 정점 풀(GPUMeshVertexPool)에서 이 배치 메시의 시작 위치(정점 단위 — 간접 인자의 baseVertex)입니다. 풀 밖의 메시는 0입니다.
+        uint32 _baseVertex{ 0 };
         /// @brief 정점 애니메이션(VAT) 테이블에서 이 배치 메시의 첫 원소입니다. 0xFFFFFFFF 이면 VAT 가 없습니다(binding.hlsli `vertexAnimationBase`).
         uint32 _vertexAnimationBase{ 0xFFFFFFFFu };
-        /// @brief 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호)입니다. VAT 표는 메시 전체의 정점 순서라 배치 안 번호에 이 값을 더해 찾는다(batch_data.hlsli `sectionVertexOffset`).
-        uint32 _sectionVertexOffset{ 0 };
         /**
          * @brief 가시 목록 안에서 이 배치 구간의 시작입니다(`GPUMeshBatch::_visibleBase`). 컬링이 `_visibleBase + 자리` 에 인스턴스 번호를 쓴다.
          * @details 인스턴스 구간(`_instanceBase`)과 다른 축이다. LOD 그룹이 없는 배치는 둘이 같다.
@@ -102,7 +100,7 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUBatchInfo ) == 10 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열 칸(40바이트) — batch_data.hlsli BatchData 와 같아야 한다" );
+    static_assert( sizeof( GPUBatchInfo ) == 9 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열 칸(36바이트) — batch_data.hlsli BatchData 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer
@@ -320,9 +318,9 @@ namespace sw
             RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
             uint32             _elementCount{ 0 };
         };
-        vector<ResolvedGroup>          _listResolvedGroupScratch;
-        vector<RHIDrawIndirectCommand> _listScratchIndirectCmd;
-        vector<GPUBatchInfo>           _listScratchBatchInfo;
+        vector<ResolvedGroup>                 _listResolvedGroupScratch;
+        vector<RHIDrawIndexedIndirectCommand> _listScratchIndirectCmd;
+        vector<GPUBatchInfo>                  _listScratchBatchInfo;
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
 

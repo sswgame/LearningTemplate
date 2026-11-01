@@ -697,7 +697,7 @@ namespace sw
         return createUploadBuffer( pData, sizeBytes );
     }
 
-    void D3D12RHIResourceFactory::updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void D3D12RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
@@ -707,13 +707,13 @@ namespace sw
             return;
 
         // 정점 버퍼는 업로드 힙(createUploadBuffer)이라 복사의 목적지가 될 수 없다. 매핑해 CPU 가 직접 쓴다 — 앞 프레임이 읽는 조각이 아님은
-        // 부르는 쪽이 지킨다(IRHIResourceFactory::updateVertexBufferRegions).
+        // 부르는 쪽이 지킨다(IRHIResourceFactory::updateGeometryBufferRegions).
         const uint64      bufferBytes = pDest->GetDesc().Width;
         const D3D12_RANGE noRead{ 0, 0 };
         void*             pMapped{ nullptr };
         if ( isHrSuccess( pDest->Map( 0, &noRead, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateVertexBufferRegionsFailedMapVertex", "updateVertexBufferRegions: failed to map the vertex buffer" );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateGeometryBufferRegionsFailedMapVertex", "updateGeometryBufferRegions: failed to map the vertex or index buffer" );
             return;
         }
         const uint8* pBase = static_cast<const uint8*>( pBaseSource );
@@ -722,7 +722,7 @@ namespace sw
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
             if ( static_cast<uint64>( region._dstOffset ) + region._sizeBytes > bufferBytes )
             {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateVertexBufferRegionsRegionOutsideByte", "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, bufferBytes );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateGeometryBufferRegionsRegionOutsideByte", "updateGeometryBufferRegions: region [%#, +%#) is outside the %#-byte vertex or index buffer; skipped", region._dstOffset, region._sizeBytes, bufferBytes );
                 continue;
             }
             Memory::copy( static_cast<uint8*>( pMapped ) + region._dstOffset, pBase + region._srcOffset, region._sizeBytes );

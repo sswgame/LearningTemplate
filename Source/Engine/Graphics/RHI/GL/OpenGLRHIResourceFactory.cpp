@@ -321,7 +321,7 @@ namespace sw
         return _pDevice->storeGlBuffer( vbo, sizeBytes );
     }
 
-    void OpenGLRHIResourceFactory::updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void OpenGLRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
         const bool bInvalidVertexRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
@@ -341,7 +341,7 @@ namespace sw
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
             if ( static_cast<int64>( region._dstOffset ) + static_cast<int64>( region._sizeBytes ) > static_cast<int64>( bufferBytes ) )
             {
-                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.UpdateVertexBufferRegionsRegionOutsideByte", "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes,
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.UpdateGeometryBufferRegionsRegionOutsideByte", "updateGeometryBufferRegions: region [%#, +%#) is outside the %#-byte vertex or index buffer; skipped", region._dstOffset, region._sizeBytes,
                                  static_cast<int64>( bufferBytes ) );
                 continue;
             }

@@ -351,17 +351,19 @@ namespace sw
         /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 여러 번 불러도 결과가 같습니다. */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
 
-        /** @brief GPU 정점 버퍼 핸들을 반환합니다. */
+        /** @brief GPU 정점 버퍼 핸들을 반환합니다(그릴 정점 흐름 — LOD 0 뒤에 낮은 단계). */
         RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
+        /** @brief GPU 인덱스 버퍼(uint32) 핸들을 반환합니다(그릴 인덱스 흐름 — LOD 0 뒤에 낮은 단계, 값은 정점 흐름 번호). */
+        RHIBufferHandle getIndexBuffer() const { return _index._buffer; }
         /**
          * @brief 살아 있는 디바이스에 올라가 있는지 반환합니다.
          * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비운다. 그래서 값이 남아
          *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장된다(업로드 큐는 백엔드 교체 뒤 다시 올릴 메시를 이 값으로 고른다).
          */
-        bool isRHIValid() const { return _vertex.isResident(); }
+        bool isRHIValid() const { return _vertex.isResident() && _index.isResident(); }
 
     private:
-        /** @brief 정점 버퍼를 실제로 해제합니다. 살아 있는 디바이스면 반환하고, 아니면 버립니다. */
+        /** @brief 정점 · 인덱스 버퍼를 실제로 해제합니다. 살아 있는 디바이스면 반환하고, 아니면 버립니다. */
         void releaseVertexBuffer();
         /** @brief 새 내용 번호를 발급합니다(프로세스 전역이며 0은 쓰지 않습니다). */
         static uint64 allocateContentID();
@@ -404,7 +406,8 @@ namespace sw
         shared_ptr<const vector<float4>> _deformProgram SW_GUARDED_BY( _deformProgramMutex );
         mutable mutex                                   _deformProgramMutex;
         atomic<uint64>                                  _deformProgramGeneration{ 0 };
-        /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIResidentBuffer). */
+        /** @brief 정점 · 인덱스 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIResidentBuffer). 둘은 함께 만들고 함께 놓는다. */
         RHIResidentBuffer _vertex;
+        RHIResidentBuffer _index;
     };
 } // namespace sw

@@ -10,7 +10,7 @@
  *
  *   SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB ) { float4 color; };   // 픽스처·비 GPUScene 드로우용
  *   SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );              // 컴퓨트 읽기 t0
- *   SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 ); // 컴퓨트 쓰기 u0
+ *   SW_DECLARE_RW_STRUCTURED_BUFFER( SceneDrawArgs, g_IndirectArgs, 0 ); // 컴퓨트 쓰기 u0
  * 씬 메시 머티리얼은 binding.hlsli 의 SW_MATERIAL_BEGIN/END + SW_MATERIAL( index ) 를 쓴다 (GPUScene 버퍼).
  */
 

@@ -1919,7 +1919,7 @@ namespace sw
             }
             const uint32        batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
             const GPUMeshBatch& head             = inoutState._batches[batchIndex];
-            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head ) == false;
+            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._indexBuffer == 0 || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head ) == false;
             if ( bHeadNotDrawable )
             {
                 ++orderIndex;
@@ -1965,7 +1965,7 @@ namespace sw
         // 간접 인자 슬롯은 업로드 순서대로 불투명 다음 투명으로 놓인다.
         state._batchOffset = bTransparentPass ? static_cast<uint32>( _state._gpuScene.getOpaqueBatches().size() ) : 0u;
 
-        // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
+        // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndexedIndirect 한 번(멀티 드로우)이다.** 배치마다
         // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다. 간접 인자의 startInstance 가 배치 시작이라 입력
         // 어셈블러가 인스턴스마다 자기 전역 자리를 넘기고, 정점은 그 인스턴스의 meshBatchIndex 로 표를 읽는다. 드로우 ID 도 루트
         // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려진다. 실측이다). 멀티 드로우가 없는
@@ -2024,9 +2024,10 @@ namespace sw
     bool FramePassExecutor::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
                                              const GPUMeshBatch& other ) const
     {
-        const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other.hasDrawSlots() == false || drawsBatchInPass( passType, other ) == false;
+        const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other._indexBuffer == 0 || other.hasDrawSlots() == false || drawsBatchInPass( passType, other ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
+        // 정점 · 인덱스 버퍼는 짝이다(풀의 둘, 아니면 메시의 둘) — 정점 버퍼가 같으면 인덱스 버퍼도 같다.
         if ( other._vertexBuffer != head._vertexBuffer || _psoManager.psoForBatch( pso, other, drawMode ) != _psoManager.psoForBatch( pso, head, drawMode ) )
             return false;
         // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
@@ -2038,10 +2039,11 @@ namespace sw
                                             RHIPipelineStateHandle& ioBoundPSO,
                                             RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount )
     {
-        // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
+        // 정점 · 인덱스 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다. 둘은 짝이라 정점 버퍼로만 바뀜을 본다.
         if ( head._vertexBuffer != ioBoundVertexBuffer )
         {
             context._pCmd->setVertexBuffer( 0, head._vertexBuffer, sizeof( RHIVertex ), 0 );
+            context._pCmd->setIndexBuffer( head._indexBuffer, sizeof( uint32 ), 0 );
             ioBoundVertexBuffer = head._vertexBuffer;
         }
 
@@ -2069,7 +2071,7 @@ namespace sw
         // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
         registerMaterialBuffer( context, head, batchPSO );
         bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSRV );
-        context._pCmd->drawIndirect( argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
+        context._pCmd->drawIndexedIndirect( argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
         return true;
     }
 
@@ -2281,9 +2283,9 @@ namespace sw
                 bAllDrawn = false;
                 continue;
             }
-            const Mesh&  mesh        = *pMesh;
-            const uint32 vertexCount = mesh.getVertexCount();
-            if ( vertexCount == 0 )
+            const Mesh&  mesh       = *pMesh;
+            const uint32 indexCount = mesh.getIndexCount(); // LOD 0 전체
+            if ( indexCount == 0 )
                 continue;
             // 요소마다 상수가 다르다 — 새 패스 상수 슬롯을 잡는다(앞 요소의 슬롯을 덮으면 GPU 가 나중에 읽는 백엔드에서 모두 마지막 값을 본다). 링이 바닥나면 이 요소부터 그리지 않는다.
             if ( acquirePassCb( context ) == false )
@@ -2295,11 +2297,12 @@ namespace sw
             elementScope.apply( element._arrConstant, element._constantCount );
             context._world = element._world;
             context._pCmd->setVertexBuffer( 0, mesh.getVertexBuffer(), sizeof( RHIVertex ), 0 );
+            context._pCmd->setIndexBuffer( mesh.getIndexBuffer(), sizeof( uint32 ), 0 );
             context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
             context._pCmd->setPipelineState( pass._pso );
             commitBindlessTextureBindings( context );
             bindForDraw( context, pass._pso, kInvalidDescriptorIndex );
-            context._pCmd->drawInstanced( vertexCount, element._instanceCount );
+            context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );
         }
         setIdentityWorld( context );
         context._pCmd->endRenderPass();

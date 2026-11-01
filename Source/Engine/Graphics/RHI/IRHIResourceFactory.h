@@ -89,16 +89,16 @@ namespace sw
         virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
         /**
-         * @brief `createVertexBuffer` 로 만든 정점 버퍼의 **여러 조각**을 갱신합니다. 정점 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
+         * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 **여러 조각**을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
          * @param pBaseSource 조각들의 `_srcOffset` 이 가리키는 원본 블롭입니다.
-         * @details 정점 버퍼는 백엔드마다 다른 메모리에 산다. DX12 와 Vulkan 은 CPU 가 볼 수 있는 메모리(업로드 힙, HOST_VISIBLE)라 매핑해서
+         * @details 정점 · 인덱스 버퍼는 같은 메모리에 살고 그 메모리는 백엔드마다 다르다. DX12 와 Vulkan 은 CPU 가 볼 수 있는 메모리(업로드 힙, HOST_VISIBLE)라 매핑해서
          *          직접 쓰고, DX11 과 GL 은 즉시 컨텍스트의 갱신(UpdateSubresource, glBufferSubData)으로 쓴다. 업로드 힙은 복사의 목적지가 될 수
          *          없어 구조화 버퍼의 경로(`updateStructuredBufferRegions`)를 그대로 쓸 수 없다.
          * @warning **아직 끝나지 않은 프레임이 읽는 조각을 쓰면 안 된다.** 직접 쓰는 백엔드는 GPU 와 순서를 맞추지 않는다. 그래서 부르는 쪽이
          *          돌려받은 구간을 `constant::render::kMaxFrameCountInFlight` 프레임이 지난 뒤에야 다시 쓴다(`SpanAllocator::freeDeferred`).
          *          범위는 백엔드가 검사해 넘는 조각을 버리고 알린다.
          */
-        virtual void updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
+        virtual void updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;
 
         /**
          * @brief 범용 버퍼(구조화, UAV, 인다이렉트 인자, 인덱스)를 만듭니다.

@@ -332,7 +332,7 @@ static float4x4 View::getViewProjection()
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
-// 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(4바이트 열 칸, 40바이트, batch_data.hlsli).
+// 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(4바이트 아홉 칸, 36바이트, batch_data.hlsli).
 //    배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(InstanceData::load)의 meshBatchIndex 로 자기 배치를 찾는다.
 // ------------------------------------------------------------------------------
 // 원소 정의는 batch_data.hlsli 하나다(컬링 컴퓨트도 같은 파일을 쓴다).
@@ -351,9 +351,8 @@ static BatchData BatchData::load( uint batchIndex )
     batch._instanceCount       = 0u;
     batch._sortMode            = 0u;
     batch._morphVertexBase     = kInvalidIndex;
-    batch._firstVertex         = 0u;
+    batch._baseVertex          = 0u;
     batch._vertexAnimationBase = kInvalidIndex;
-    batch._sectionVertexOffset = 0u;
     batch._visibleBase         = 0u;
     batch._lodLevelCount       = 0u;
     batch._lodScreenSize       = 0.0f;
@@ -388,15 +387,15 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SR
 static uint MorphPool::computeElement( uint batchIndex, uint vertexID )
 {
     const BatchData batch = BatchData::load( batchIndex );
-    // **API 차이 — 이 메시의 로컬 정점 번호.** 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는지가 백엔드마다 다르다:
-    // Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 포함하고, D3D11·D3D12 는 드로우 안의 0 기반 번호다.
-    // RHIDeviceTest.SceneDrawVertexIDStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 넷 다 포함한다고 보고
-    // 빼기만 하면 DX 에서 정점 풀 첫 메시만 모프된다(RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 DX 에서만 진다).
-    // 셰이더 파일에 백엔드 분기는 없다 — 이 헤더가 흡수한다.
+    // **API 차이 — 이 메시의 로컬 정점 번호.** 씬 드로우는 인덱스 드로우이고 인덱스는 메시 안 번호다. 간접 인자의 baseVertex 를
+    // SV_VertexID 가 포함하는지가 백엔드마다 다르다: Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 인덱스 + baseVertex 이고,
+    // D3D11·D3D12 는 인덱스 값 그대로다(D3D 의 SV_VertexID 는 BaseVertexLocation 을 더하지 않는다 — SM 6.8 이 SV_StartVertexLocation 을 따로 둔 까닭). 네 백엔드의 스킨 · 모프 골든 시나리오가 이 기대를 본다 —
+    // 넷 다 포함한다고 보고 빼기만 하면 DX 에서 정점 풀 첫 메시만 모프된다.
+    // 구간 · LOD 배치도 로컬 번호는 메시 안 번호다(인덱스 범위만 다르다). 셰이더 파일에 백엔드 분기는 없다 — 이 헤더가 흡수한다.
 #if defined( DX11 ) || defined( DX12 )
     const uint local = vertexID;
 #else
-    const uint local = vertexID - batch._firstVertex; // 풀 밖 메시는 firstVertex 가 0 이라 그대로다
+    const uint local = vertexID - batch._baseVertex; // 풀 밖 메시는 baseVertex 가 0 이라 그대로다
 #endif
     const uint base    = batch._morphVertexBase;
     const uint element = base + local;
@@ -490,13 +489,12 @@ static float3 VertexAnimation::loadNormal( uint element )
 void InstanceData::computeVertexAnimationElements( uint vertexID, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha )
 {
     const BatchData batch = BatchData::load( _meshBatchIndex );
+    // VAT 표는 메시 전체의 정점 순서다 — 로컬 번호가 곧 메시 안 번호다(MorphPool::computeElement 와 같은 API 차이).
 #if defined( DX11 ) || defined( DX12 )
-    const uint local = vertexID;
+    const uint meshLocal = vertexID;
 #else
-    const uint local = vertexID - batch._firstVertex;
+    const uint meshLocal = vertexID - batch._baseVertex;
 #endif
-    // VAT 표는 메시 전체의 정점 순서다 — 구간 배치는 배치 안 번호에 구간의 첫 정점을 더해 메시 안 번호로 돌린다(모프 풀은 시작에 이미 더해 두었다).
-    const uint  meshLocal     = local + batch._sectionVertexOffset;
     const uint  base          = batch._vertexAnimationBase;
     const bool  bTable        = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base + SW_VERTEX_ANIMATION_HEADER_WORDS <= g_SwVertexAnimationCount );
     const uint  headerFrames  = bTable ? g_SwVertexAnimation[base] : 0u;

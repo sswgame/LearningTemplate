@@ -65,19 +65,18 @@ namespace sw
         if ( _bVertexPoolEnabled == enabledFlag )
             return;
         _bVertexPoolEnabled = enabledFlag;
-        _bBatchTablesDirty  = SW_TRUE; // startVertex 가 바뀐다. 표와 간접 인자를 다시 올린다
+        _bBatchTablesDirty  = SW_TRUE; // baseVertex · startIndex 가 바뀐다. 표와 간접 인자를 다시 올린다
     }
 
     void GPUScene::assignMorphBases( const GPUMeshMorphPool& pool )
     {
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
-            // 구간 배치는 메시 시작에 구간 첫 정점을 더한다 — 셰이더는 배치 안 번호(로컬)를 더해 원소를 찾는다(binding.hlsli MorphPool::computeElement).
+            // 구간 · LOD 배치도 메시 시작 그대로다 — 인덱스가 메시 안 번호라 셰이더의 로컬 번호가 곧 메시 안 번호다(binding.hlsli MorphPool::computeElement).
             const uint32 meshBase = pool.baseOf( batch._mesh.get() );
-            const uint32 base     = ( meshBase != GPUMeshMorphPool::kInvalidBase ) ? meshBase + batch._sectionFirstVertex : meshBase;
-            if ( batch._morphVertexBase != base )
+            if ( batch._morphVertexBase != meshBase )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
-            batch._morphVertexBase = base;
+            batch._morphVertexBase = meshBase;
             // 모프 · 스킨이 필요한데 풀에 없다(상한 초과 · 버퍼 실패, 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않고 이 배치를 거른다.
             // VAT 메시는 모프 풀이 아니라 VAT 풀이 판정한다(assignVertexAnimationBases).
             const Mesh* pMesh        = batch._mesh.get();
@@ -170,8 +169,8 @@ namespace sw
 
     void GPUScene::updateVertexPool( IRHIDevice* pDevice )
     {
-        // 정점 풀: 배치 메시 모두를 한 정점 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다(CPU 정점에서 올린다).
-        // 풀에 든 배치는 풀 버퍼와 시작 오프셋으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치만 자기 정점 버퍼(오프셋 0)를 만들어 그린다.
+        // 정점 풀: 배치 메시 모두를 한 정점 버퍼 · 한 인덱스 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다(CPU 사본에서 올린다).
+        // 풀에 든 배치는 풀 버퍼와 시작으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치만 자기 정점 · 인덱스 버퍼(시작 0)를 만들어 그린다.
         // 동적 메시(프레임마다 새 메시 — 천)도 풀에 든다 — 풀은 바뀐 메시를 "나감 + 들어옴" 으로 보고 그 구간만 올리고, 구간 반납 지연이 앞 프레임이 읽는
         // 위치를 지킨다. 그래서 프레임마다의 정점 버퍼 생성 · 반납이 없다(게임 스레드도 동적 메시를 업로드 큐에 넣지 않는다).
         // 이 구간의 시간이 C-43 의 전/후 측정값이다.
@@ -186,23 +185,29 @@ namespace sw
                     _listScratchPoolMesh.push_back( batch._mesh.get() );
                 }
             }
-            // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.
+            // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 · 인덱스 버퍼(시작 0)로 돌아간다.
             if ( _vertexPool.update( pDevice, _listScratchPoolMesh ) )
                 _bBatchTablesDirty = SW_TRUE;
         }
         SW_PROFILE_SCOPE( "RT.GPUScene.uploadMeshes" );
-        const RHIBufferHandle poolBuffer = _vertexPool.getVertexBuffer();
+        const RHIBufferHandle poolBuffer      = _vertexPool.getVertexBuffer();
+        const RHIBufferHandle poolIndexBuffer = _vertexPool.getIndexBuffer();
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
-            const uint32 base = _vertexPool.baseOf( batch._mesh.get() );
-            if ( base != GPUMeshVertexPool::kInvalidBase && poolBuffer != 0 )
+            const GPUMeshVertexPool::Placement placement = _vertexPool.placementOf( batch._mesh.get() );
+            if ( placement._baseVertex != GPUMeshVertexPool::kInvalidBase && poolBuffer != 0 )
             {
                 batch._vertexBuffer = poolBuffer;
-                batch._firstVertex  = base + batch._sectionFirstVertex;
+                batch._indexBuffer  = poolIndexBuffer;
+                batch._baseVertex   = placement._baseVertex;
+                batch._firstIndex   = placement._firstIndex + batch._sectionFirstIndex;
                 continue;
             }
-            // 풀 밖(풀을 껐거나 못 든 메시) — 자기 정점 버퍼로 그린다. 구간의 첫 정점부터.
-            batch._firstVertex = batch._sectionFirstVertex;
+            // 풀 밖(풀을 껐거나 못 든 메시) — 자기 정점 · 인덱스 버퍼로 그린다. 구간의 첫 인덱스부터.
+            batch._vertexBuffer = 0;
+            batch._indexBuffer  = 0;
+            batch._baseVertex   = 0;
+            batch._firstIndex   = batch._sectionFirstIndex;
             if ( batch._mesh == nullptr )
                 continue;
             // 만드는 쪽은 하나다 — 게임 스레드가 넘기기 전에 만든 스냅샷이면(동적 메시 밖) 여기서 다시 만들지 않는다. 없으면 그 쪽이 실패했다(그쪽이 이미 알렸다).
@@ -210,13 +215,19 @@ namespace sw
             if ( bCreatedBeforeHandoff )
             {
                 if ( batch._mesh->isRHIValid() )
+                {
                     batch._vertexBuffer = batch._mesh->getVertexBuffer();
+                    batch._indexBuffer  = batch._mesh->getIndexBuffer();
+                }
                 else
                     SW_LOG_ERROR_ONCE_ID( "GPUScene.MeshNotCreatedBeforeHandoff", "A mesh in the snapshot has no vertex buffer although the upload queue owns its creation - it is not drawn" );
                 continue;
             }
             if ( batch._mesh->initRHI( pDevice ) )
+            {
                 batch._vertexBuffer = batch._mesh->getVertexBuffer();
+                batch._indexBuffer  = batch._mesh->getIndexBuffer();
+            }
         }
     }
 
@@ -326,9 +337,8 @@ namespace sw
             _listScratchBatchInfo[argIndex]._lodLevelCount       = infoBatch._lodLevelCount;
             _listScratchBatchInfo[argIndex]._lodScreenSize       = infoBatch._lodScreenSize;
             _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBatch._morphVertexBase;
-            _listScratchBatchInfo[argIndex]._firstVertex         = infoBatch._firstVertex;
+            _listScratchBatchInfo[argIndex]._baseVertex          = infoBatch._baseVertex;
             _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBatch._vertexAnimationBase;
-            _listScratchBatchInfo[argIndex]._sectionVertexOffset = infoBatch._sectionFirstVertex;
             // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
             // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
             GPUBatchSortMode sortMode = GPUBatchSortMode::None;
@@ -352,15 +362,16 @@ namespace sw
         _listScratchIndirectCmd.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
-            RHIDrawIndirectCommand& cmd = _listScratchIndirectCmd[argIndex];
-            cmd._vertexCount            = _snapshot.getAllBatches()[argIndex]._vertexCount;
+            RHIDrawIndexedIndirectCommand& cmd = _listScratchIndirectCmd[argIndex];
+            cmd._indexCountPerInstance         = _snapshot.getAllBatches()[argIndex]._indexCount;
             // 컬링 컴퓨트가 개수를 만드는 배치는 **0 에서 시작**해야 한다. InterlockedAdd 로 보이는 것만 센다.
             // 압축을 포기한 배치(Preserve)와 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
             const bool bPreserve  = static_cast<GPUBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GPUBatchSortMode::Preserve;
             const bool bGPUCounts = ( _bGPUFillsIndirectCounts != SW_FALSE ) && ( bPreserve == false );
             cmd._instanceCount    = bGPUCounts ? 0u : _snapshot.getAllBatches()[argIndex]._instanceCount;
-            // 정점 풀 안의 시작. 입력 어셈블러가 그 구간을 읽는다(SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다: binding.hlsli).
-            cmd._startVertexLocation = _snapshot.getAllBatches()[argIndex]._firstVertex;
+            // 인덱스 풀 안의 시작과 메시의 정점 풀 시작. 인덱스는 메시 안 번호다(SV_VertexID 가 baseVertex 를 포함하는지는 API 마다 다르다: binding.hlsli).
+            cmd._startIndexLocation = _snapshot.getAllBatches()[argIndex]._firstIndex;
+            cmd._baseVertexLocation = static_cast<int32>( _snapshot.getAllBatches()[argIndex]._baseVertex );
             // 배치의 가시 구간 시작. 인스턴스 슬롯 스트림(슬롯 1)의 원소를 그만큼 건너뛴다. 셰이더는 SV_InstanceID 를 쓰지 않으므로
             // "SPIR-V InstanceIndex 는 포함하고 DX 는 안 한다" 는 차이에 기대지 않는다. 입력 어셈블러의 인스턴스 스텝
             // 스트림은 네 API 모두 startInstance 부터 읽는다.
@@ -395,11 +406,11 @@ namespace sw
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
         for ( GPUCullViewResources& view : _listCullView )
         {
-            if ( view._indirectArgs.ensureCapacity( pDevice, static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), argsCount,
+            if ( view._indirectArgs.ensureCapacity( pDevice, static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), argsCount,
                                                     kArgsUsage, false, true, _listScratchIndirectCmd.data() ) )
             {
                 view._indirectArgs.upload( pDevice, _listScratchIndirectCmd.data(),
-                                           argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
+                                           argsCount * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ) );
             }
         }
     }
@@ -445,7 +456,7 @@ namespace sw
             if ( view._indirectArgs._buffer == 0 )
                 continue;
             pDevice->getResourceFactory()->updateStructuredBuffer( view._indirectArgs._buffer, _listScratchIndirectCmd.data(),
-                                                                   argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
+                                                                   argsCount * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ) );
         }
     }
 
@@ -501,7 +512,9 @@ namespace sw
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
             batch._vertexBuffer = 0; // 풀을 놓았다. 다음 upload 가 다시 정한다
-            batch._firstVertex  = 0;
+            batch._indexBuffer  = 0;
+            batch._baseVertex   = 0;
+            batch._firstIndex   = 0;
         }
         for ( GPUCullViewResources& view : _listCullView )
         {

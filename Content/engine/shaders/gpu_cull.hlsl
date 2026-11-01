@@ -28,15 +28,8 @@
 // 인스턴스 원소(InstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
 #include "instance_data.hlsli"
 
-// C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertexLocation 는 정점 풀 시작,
-// startInstanceLocation 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
-struct RHIDrawIndirectCommand
-{
-    uint _vertexCount;
-    uint _instanceCount;
-    uint _startVertexLocation;
-    uint _startInstanceLocation;
-};
+// 간접 인자 원소(SceneDrawArgs)도 같은 정의 하나다 — C++ RHIDrawIndexedIndirectCommand 와 바이트 배치가 같다.
+#include "scene_draw_args.hlsli"
 
 /**
  * 배치의 인스턴스 구간. 간접 인자의 startInstanceLocation 는 **0 이어야 해서**(Vulkan 의 InstanceIndex 가
@@ -63,7 +56,7 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( float, g_OcclusionTiles, 2 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( SceneDrawArgs, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LODState, 2 );
 
