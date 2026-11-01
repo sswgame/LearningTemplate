@@ -5,8 +5,10 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Config/EditorThemeTokens.h"
 #include "Editor/Common/EditorColor.h"
@@ -19,44 +21,33 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 해석한 테마 값입니다. 색 이름은 `EditorThemeColorDef` 의 키와 같습니다(접미사 Color 는 옛 접근자 이름을 따른 것). */
+    /**
+     * @brief 해석한 테마 값입니다. 토큰 파일의 표 둘(`_color` · `_metric`)을 키(`Namespace.Key`) → 값으로 듭니다.
+     * @details 키는 `hashed_string` 이다 — 코드의 `SW_THEMECOLOR` · `SW_THEMEMETRIC` 이 리터럴을 한 번 intern 해 두고 해시로 찾는다.
+     */
     struct EditorThemeConfig
     {
+        using ColorMap  = unordered_map<hashed_string, Color, hashed_string::HashFunc>;
+        using MetricMap = unordered_map<hashed_string, float32, hashed_string::HashFunc>;
+
         string _name{};        ///< 토큰 벌 이름(`dark`)
         string _displayName{}; ///< 대화상자에 보이는 이름
 
-        Color _text{};
-        Color _textMuted{};
-        Color _accentColor{};
-        Color _windowBg{};
-        Color _panelBg{};
-        Color _headerBg{};
-        Color _frameBg{};
-        Color _border{};
-        Color _successColor{};
-        Color _warningColor{};
-        Color _errorColor{};
-        Color _infoColor{};
-        Color _scrollbarBg{};
-        Color _dockingEmptyBg{};
-        Color _tableRowBgAlt{};
-        Color _overlayBg{};
-        Color _selectionOutline{};
-        Color _highlight{};
-        Color _toggleInactive{};
-        Color _toggleActive{};
-        Color _axisX{};
-        Color _axisY{};
-        Color _axisZ{};
-        Color _colliderWire{};
-        Color _cameraWire{};
-        Color _viewportLabel{};
+        ColorMap  _mapColor{};
+        MetricMap _mapMetric{};
 
-        EditorThemeRadiusDef     _radius{};
-        EditorThemeSpacingDef    _spacing{};
-        EditorThemeStrokeDef     _stroke{};
-        EditorThemeTypographyDef _typography{};
-        float32                  _density{ 1.0f };
+        /** @brief @p key 의 색입니다. 표에 없으면 nullptr 입니다. */
+        [[nodiscard]] const Color* findColor( const hashed_string& key ) const
+        {
+            const auto it = _mapColor.find( key );
+            return it != _mapColor.end() ? &it->second : nullptr;
+        }
+        /** @brief @p key 의 수치입니다. 표에 없으면 nullptr 입니다. */
+        [[nodiscard]] const float32* findMetric( const hashed_string& key ) const
+        {
+            const auto it = _mapMetric.find( key );
+            return it != _mapMetric.end() ? &it->second : nullptr;
+        }
 
         uint8 _bAccentOverridden{ SW_FALSE }; ///< 사용자가 강조색을 바꿨다(설정에 저장한다)
         uint8 _bRadiusOverridden{ SW_FALSE }; ///< 사용자가 둥글기를 바꿨다(설정에 저장한다)
@@ -99,7 +90,20 @@ namespace sw::editor
             return bChanged;
         }
 
+        /** @brief 표에 없는 키를 처음 물었으면 true 입니다(오류는 키마다 한 번 남긴다 — 매 프레임 같은 줄로 로그를 덮지 않게). */
+        [[nodiscard]] bool markMissingKey( const hashed_string& key )
+        {
+            for ( const hashed_string& reported : _listMissingKey )
+            {
+                if ( reported == key )
+                    return false;
+            }
+            _listMissingKey.push_back( key );
+            return true;
+        }
+
     private:
+        vector<hashed_string>     _listMissingKey{};
         EditorThemeConfig         _config{};
         vector<EditorThemeConfig> _listAvailable{};
         float32                   _dpiScale{ 1.0f };

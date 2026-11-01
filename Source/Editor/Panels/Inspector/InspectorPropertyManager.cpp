@@ -621,7 +621,7 @@ namespace sw::editor
                 makePreview( manager, current, state, preview );
                 const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
                 if ( bColored )
-                    EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getErrorColor() );
+                    EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? SW_THEMECOLOR( "Signal", "Warning" ) : SW_THEMECOLOR( "Signal", "Error" ) );
                 const bool bOpen = ImGui::BeginCombo( pLabel, preview.c_str() );
                 if ( bColored )
                     EditorThemeUtil::popTextColor();

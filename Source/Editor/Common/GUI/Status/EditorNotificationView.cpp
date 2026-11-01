@@ -23,16 +23,16 @@ namespace sw::editor
             switch ( type )
             {
                 case NotificationType::Success:
-                    return EditorThemeUtil::getSuccessColor();
+                    return SW_THEMECOLOR( "Signal", "Success" );
                 case NotificationType::Warning:
-                    return EditorThemeUtil::getWarningColor();
+                    return SW_THEMECOLOR( "Signal", "Warning" );
                 case NotificationType::Error:
-                    return EditorThemeUtil::getErrorColor();
+                    return SW_THEMECOLOR( "Signal", "Error" );
                 case NotificationType::Info:
-                    return EditorThemeUtil::getInfoColor();
+                    return SW_THEMECOLOR( "Signal", "Info" );
             }
             SW_ASSERT( false ); // 열거자 밖의 값은 들어오지 않는다
-            return EditorThemeUtil::getInfoColor();
+            return SW_THEMECOLOR( "Signal", "Info" );
         }
     } // namespace
 
@@ -66,7 +66,7 @@ namespace sw::editor
             if ( remainingTime < 0.5f )
                 alpha = remainingTime / 0.5f;
 
-            const Color bgColor   = EditorThemeUtil::getOverlayBgColor().withAlpha( 0.92f * alpha );
+            const Color bgColor   = SW_THEMECOLOR( "Base", "OverlayBg" ).withAlpha( 0.92f * alpha );
             const Color typeColor = getNotificationTypeColor( item._type ).withAlpha( alpha );
 
             float32 posX = viewportPos._x + screenWidth - EditorChrome::resolveTextExtent( EditorTextExtent::ofText( toastColumns, 0.0f ) )._x - toastMargin;

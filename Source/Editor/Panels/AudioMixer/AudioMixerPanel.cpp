@@ -37,10 +37,10 @@ namespace sw::editor
             static Color getMeterColor( float32 decibel )
             {
                 if ( decibel > kClipDb )
-                    return EditorThemeUtil::getErrorColor();
+                    return SW_THEMECOLOR( "Signal", "Error" );
                 if ( decibel > kMeterWarnDb )
-                    return EditorThemeUtil::getWarningColor();
-                return EditorThemeUtil::getSuccessColor();
+                    return SW_THEMECOLOR( "Signal", "Warning" );
+                return SW_THEMECOLOR( "Signal", "Success" );
             }
 
             static void openPanel()
@@ -182,14 +182,14 @@ namespace sw::editor
         }
         pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( Color{ 0.35f, 0.35f, 0.40f, 1.0f } ) );
 
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getToggleInactiveColor() ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "M", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusMuted( status._name, status._bMuted == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.mute." + name ).c_str() );
         EditorWidgets::drawTooltip( "Mute" );
         ImGui::SameLine();
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getToggleInactiveColor() ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? SW_THEMECOLOR( "Signal", "Warning" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "S", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusSolo( status._name, status._bSolo == false );
         ImGui::PopStyleColor();

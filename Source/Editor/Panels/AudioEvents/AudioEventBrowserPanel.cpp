@@ -49,7 +49,7 @@ namespace sw::editor
                     formatstring( overlay.data(), overlay.capacity(), "%# / -", count );
                 else
                     formatstring( overlay.data(), overlay.capacity(), "%# / %#", count, limit );
-                ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getSuccessColor() ) );
+                ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? SW_THEMECOLOR( "Signal", "Warning" ) : SW_THEMECOLOR( "Signal", "Success" ) ) );
                 ImGui::ProgressBar( usage, ImVec2{ -1.0f, 0.0f }, overlay.c_str() );
                 ImGui::PopStyleColor();
             }

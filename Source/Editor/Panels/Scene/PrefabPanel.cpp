@@ -162,7 +162,7 @@ namespace sw::editor
                 ImGui::TableNextColumn();
                 if ( item._bModified )
                 {
-                    EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
+                    EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Warning" ) );
                     ImGui::Text( "* %s", item._propertyLabel.c_str() );
                     EditorThemeUtil::popTextColor();
                 }

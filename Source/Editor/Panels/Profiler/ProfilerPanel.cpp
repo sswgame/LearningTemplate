@@ -747,7 +747,7 @@ namespace sw::editor
             if ( frameOffset > 0 )
             {
                 const float32 lineX = plotMax.x - ( static_cast<float32>( frameOffset ) + 0.5f ) * frameWidth;
-                ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ) );
+                ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ) );
             }
         }
         if ( _capture.getSelectedFrameOffset() > 0 )

@@ -205,7 +205,7 @@ namespace sw::editor
         {
             const float4& uvRect = pFrame->_uvRect;
             pDrawList->AddRect( ImVec2( imageMin.x + uvRect._x * side, imageMin.y + uvRect._y * side ),
-                                ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ),
+                                ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ),
                                 0.0f, 0, 2.0f );
         }
 

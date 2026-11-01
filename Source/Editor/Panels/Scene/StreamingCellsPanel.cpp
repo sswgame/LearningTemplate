@@ -68,7 +68,7 @@ namespace sw::editor
                              settings._maxCellLoadsPerFrame );
 
         if ( _model.didLastSplitFail() )
-            ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getErrorColor() ), "%s", SW_LOCKEY( "EditorStreamingCells", "SplitFailed" ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorStreamingCells", "SplitFailed" ) );
         if ( _model.hasPreview() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorStreamingCells", "NoPreview" ) );
@@ -85,7 +85,7 @@ namespace sw::editor
     void StreamingCellsPanel::drawViolations()
     {
         const StreamingCellPreview& preview = _model.getPreview();
-        ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getErrorColor() ), "%s %u", SW_LOCKEY( "EditorStreamingCells", "ViolationHeader" ),
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s %u", SW_LOCKEY( "EditorStreamingCells", "ViolationHeader" ),
                             static_cast<uint32>( preview._listViolation.size() ) );
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
         if ( ImGui::BeginTable( "##world_cell_violations", 2, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
@@ -154,9 +154,9 @@ namespace sw::editor
             ImGui::TableSetColumnIndex( 1 );
             ImGui::Text( "%u", static_cast<uint32>( cell._listObjectID.size() ) );
             ImGui::TableSetColumnIndex( 2 );
-            const Color stateColor = state == StreamingCellPreviewState::Load ? EditorThemeUtil::getSuccessColor()
-                                   : state == StreamingCellPreviewState::Keep ? EditorThemeUtil::getWarningColor()
-                                                                              : EditorThemeUtil::getTextMutedColor();
+            const Color stateColor = state == StreamingCellPreviewState::Load ? SW_THEMECOLOR( "Signal", "Success" )
+                                   : state == StreamingCellPreviewState::Keep ? SW_THEMECOLOR( "Signal", "Warning" )
+                                                                              : SW_THEMECOLOR( "Base", "TextMuted" );
             ImGui::TextColored( EditorColorUtil::toImVec4( stateColor ), "%s", StreamingCellsModel::getStateLabel( state ) );
             ImGui::PopID();
         }

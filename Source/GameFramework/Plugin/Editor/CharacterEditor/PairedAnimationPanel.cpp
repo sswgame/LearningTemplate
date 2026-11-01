@@ -215,7 +215,7 @@ namespace sw::editor
             {
                 const PairedAnimationNotifyDef& notify = _model.getContent()._listNotify[notifyIndex];
                 ImGui::SameLine();
-                EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
+                EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Warning" ) );
                 ImGui::Text( "[%s -> %s]", notify._name.c_str(), notify._role.c_str() );
                 EditorThemeUtil::popTextColor();
             }

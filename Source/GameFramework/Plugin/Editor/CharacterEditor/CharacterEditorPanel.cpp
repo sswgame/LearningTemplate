@@ -252,7 +252,7 @@ namespace sw::editor
             ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "%s", _document.getStatus().c_str() );
         if ( _document.hasExternalChange() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getWarningColor() ), "A socket file was changed on disk while this window has unsaved edits." );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "A socket file was changed on disk while this window has unsaved edits." );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload from disk (discard edits)" ) );
             if ( ImGui::SmallButton( "Reload from disk (discard edits)" ) && _document.loadSocketFile() == false )
                 SW_LOG_WARNING( "Character Editor: the socket file '%#' could not be reloaded - the edits stay", _document.getPaths()._socketPath.c_str() ); // 까닭은 상태 줄에 남았다

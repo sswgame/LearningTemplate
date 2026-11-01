@@ -428,6 +428,8 @@
 		       text="잠겨 있습니다 - 뷰포트에서 고를 수 없습니다. 클릭하면 잠금을 풉니다" />
 		<entry source="Locked to this object - click to follow the selection"
 		       text="이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다" />
+		<entry source="Log options: auto-scroll, clear on Play, pause on error, copy and open the log file"
+		       text="로그 옵션: 자동 스크롤, Play 때 지우기, 오류에서 멈추기, 복사, 로그 파일 열기" />
 		<entry source="Loop" text="반복" />
 		<entry source="Make the paint tools clear cells instead of painting them."
 		       text="칠하기 도구가 칸을 칠하는 대신 지우게 합니다." />

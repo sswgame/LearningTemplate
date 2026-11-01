@@ -44,14 +44,14 @@ namespace sw::editor
                 switch ( level )
                 {
                     case LogLevel::Error:
-                        return EditorThemeUtil::getErrorColor();
+                        return SW_THEMECOLOR( "Signal", "Error" );
                     case LogLevel::Warning:
-                        return EditorThemeUtil::getWarningColor();
+                        return SW_THEMECOLOR( "Signal", "Warning" );
                     case LogLevel::Trace:
-                        return EditorThemeUtil::getTextMutedColor();
+                        return SW_THEMECOLOR( "Base", "TextMuted" );
                     case LogLevel::Info:
                     case LogLevel::Count:
-                        return EditorThemeUtil::getTextColor();
+                        return SW_THEMECOLOR( "Base", "Text" );
                 }
             }
 
@@ -387,8 +387,8 @@ namespace sw::editor
     void ConsolePanel::drawLevelChips( const LevelCounts& counts )
     {
         // 신호색은 오류 · 경고가 실제로 있을 때 글자에만 — 0 건이면 본문 색이다(빨간 "Error (0)" 은 문제가 있다고 읽힌다).
-        const Color* pErrorSignal   = counts._error > 0 ? &EditorThemeUtil::getErrorColor() : nullptr;
-        const Color* pWarningSignal = counts._warning > 0 ? &EditorThemeUtil::getWarningColor() : nullptr;
+        const Color* pErrorSignal   = counts._error > 0 ? &SW_THEMECOLOR( "Signal", "Error" ) : nullptr;
+        const Color* pWarningSignal = counts._warning > 0 ? &SW_THEMECOLOR( "Signal", "Warning" ) : nullptr;
         ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[0], "Error", counts._error, pErrorSignal, SW_LOCKEY( "EditorConsole", "ShowErrors" ), nullptr );
         ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[1], "Warning", counts._warning, pWarningSignal, SW_LOCKEY( "EditorConsole", "ShowWarnings" ), nullptr );
         ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[2], "Info", counts._info, nullptr, SW_LOCKEY( "EditorConsole", "ShowInfo" ), "console.level.info" );
@@ -548,7 +548,7 @@ namespace sw::editor
         }
         ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
         ImGui::SameLine( 0.0f, 0.0f );
-        EditorThemeUtil::pushTextColor( EditorThemeUtil::getTextMutedColor() ); // 태그는 줄마다 되풀이되는 열이라 강조색을 쓰지 않는다
+        EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Base", "TextMuted" ) ); // 태그는 줄마다 되풀이되는 열이라 강조색을 쓰지 않는다
         if ( entry._caller.empty() )
             ImGui::Text( " [%s]", entry._tag.c_str() );
         else

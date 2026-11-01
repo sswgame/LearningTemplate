@@ -1013,7 +1013,7 @@ namespace sw::editor
             const bool bIsLast = ( crumbIndex + 1 == listCrumb.size() );
             if ( bIsLast )
             {
-                const Color accentColor = EditorThemeUtil::getAccentColor();
+                const Color accentColor = SW_THEMECOLOR( "Base", "Accent" );
                 ImGui::TextColored( EditorColorUtil::toImVec4( accentColor.withAlpha( 1.0f ) ), "%s", editoricon::kFolderOpen );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( crumb._label.c_str() );
@@ -1068,8 +1068,8 @@ namespace sw::editor
                         ImGui::SameLine();
 
                     const bool  selected = _model.isSelected( entry, true );
-                    const Color accent   = EditorThemeUtil::getAccentColor();
-                    const Color frameBg  = EditorThemeUtil::getFrameBgColor();
+                    const Color accent   = SW_THEMECOLOR( "Base", "Accent" );
+                    const Color frameBg  = SW_THEMECOLOR( "Base", "FrameBg" );
                     ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( selected ? accent.withAlpha( 0.40f ) : frameBg.withAlpha( 0.60f ) ) );
                     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( accent.withAlpha( 0.60f ) ) );
 

@@ -66,10 +66,14 @@ namespace sw::editor
                 {
                     EditorThemeConfig config{};
                     string            error;
-                    if ( EditorThemeTokens::loadTheme( name, config, error ) )
-                        outListTheme.push_back( std::move( config ) );
-                    else
+                    string            mismatchKey;
+                    if ( EditorThemeTokens::loadTheme( name, config, error ) == false )
                         SW_LOG_ERROR( "Theme tokens '%#' were not loaded: %#", name.c_str(), error.c_str() );
+                    else if ( outListTheme.empty() == false && EditorThemeTokens::findKeyMismatch( outListTheme.front(), config, mismatchKey ) )
+                        SW_LOG_ERROR( "Theme tokens '%#' were not loaded: key '%#' is in only one of '%#' and '%#' - every theme needs the same keys", name.c_str(),
+                                      mismatchKey.c_str(), outListTheme.front()._name.c_str(), name.c_str() );
+                    else
+                        outListTheme.push_back( std::move( config ) );
                 }
                 if ( outListTheme.empty() )
                     SW_LOG_ERROR( "No editor theme token file under %# - no theme can be applied", EditorThemeTokens::getFolderPath().c_str() );
@@ -139,78 +143,84 @@ namespace sw::editor
                 outStyle                     = fresh;
             }
 
+            /** @brief 사용자가 덮어쓰는 토큰 키입니다(강조색 · 둥글기 세 슬라이더). 나머지 둥글기는 이 셋에서 정한다. */
+            static inline const hashed_string kAccentKey{ "Base.Accent" };
+
+            /** @brief 둥글기 슬라이더 셋의 값을 테마에 씁니다. 팝업은 창, 스크롤바 · 그랩은 입력 필드를 따른다. */
+            static void setRadius( float32 window, float32 frame, float32 tab, EditorThemeConfig& inoutTheme )
+            {
+                inoutTheme._mapMetric[hashed_string( "Radius.Window" )]    = window;
+                inoutTheme._mapMetric[hashed_string( "Radius.Frame" )]     = frame;
+                inoutTheme._mapMetric[hashed_string( "Radius.Tab" )]       = tab;
+                inoutTheme._mapMetric[hashed_string( "Radius.Popup" )]     = window;
+                inoutTheme._mapMetric[hashed_string( "Radius.Scrollbar" )] = frame * kScrollbarRadiusPerFrameRadius;
+                inoutTheme._mapMetric[hashed_string( "Radius.Grab" )]      = frame;
+            }
+
             /** @brief 사용자 설정(강조색 · 둥글기 덮어쓰기)을 테마 위에 얹습니다. 값이 음수면 덮어쓰지 않은 것입니다. */
             static void applyUserOverrides( const EditorConfig& editorConfig, EditorThemeConfig& inoutTheme )
             {
                 const bool bHasAccentOverride = editorConfig._themeAccentR >= 0.0f && editorConfig._themeAccentG >= 0.0f && editorConfig._themeAccentB >= 0.0f;
                 if ( bHasAccentOverride )
                 {
-                    inoutTheme._accentColor       = Color{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
-                    inoutTheme._bAccentOverridden = SW_TRUE;
+                    inoutTheme._mapColor[kAccentKey] = Color{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
+                    inoutTheme._bAccentOverridden    = SW_TRUE;
                 }
                 if ( editorConfig._themeWindowRounding >= 0.0f )
                 {
-                    inoutTheme._radius._window    = editorConfig._themeWindowRounding;
-                    inoutTheme._radius._frame     = editorConfig._themeFrameRounding;
-                    inoutTheme._radius._tab       = editorConfig._themeTabRounding;
-                    inoutTheme._radius._popup     = editorConfig._themeWindowRounding;
-                    inoutTheme._radius._scrollbar = editorConfig._themeFrameRounding * kScrollbarRadiusPerFrameRadius;
-                    inoutTheme._radius._grab      = editorConfig._themeFrameRounding;
+                    setRadius( editorConfig._themeWindowRounding, editorConfig._themeFrameRounding, editorConfig._themeTabRounding, inoutTheme );
                     inoutTheme._bRadiusOverridden = SW_TRUE;
                 }
             }
 
-            /** @brief 1 단계: 지오메트리와 레이아웃 메트릭(토큰)을 스타일에 씁니다. 여백 · 간격에는 밀도를, 크기에는 모니터 배율을 곱합니다. */
-            static void applyMetrics( const EditorThemeConfig& config, ImGuiStyle& style )
+            /** @brief 1 단계: 지오메트리와 레이아웃 메트릭(토큰)을 스타일에 씁니다. 여백 · 간격에는 밀도를, 크기에는 모니터 배율을 곱합니다. 지금 테마(`applyTheme` 이 먼저 바꿔 둔다)를 키로 읽는다. */
+            static void applyMetrics( ImGuiStyle& style )
             {
-                const EditorThemeRadiusDef&  radius  = config._radius;
-                const EditorThemeSpacingDef& spacing = config._spacing;
-                const EditorThemeStrokeDef&  stroke  = config._stroke;
-                const float32                density = config._density;
-                style.WindowRounding                 = radius._window;
-                style.ChildRounding                  = radius._frame;
-                style.FrameRounding                  = radius._frame;
-                style.PopupRounding                  = radius._popup;
-                style.ScrollbarRounding              = radius._scrollbar;
-                style.GrabRounding                   = radius._grab;
-                style.TabRounding                    = radius._tab;
+                const float32 density   = SW_THEMEMETRIC( "Layout", "Density" );
+                style.WindowRounding    = SW_THEMEMETRIC( "Radius", "Window" );
+                style.ChildRounding     = SW_THEMEMETRIC( "Radius", "Frame" );
+                style.FrameRounding     = SW_THEMEMETRIC( "Radius", "Frame" );
+                style.PopupRounding     = SW_THEMEMETRIC( "Radius", "Popup" );
+                style.ScrollbarRounding = SW_THEMEMETRIC( "Radius", "Scrollbar" );
+                style.GrabRounding      = SW_THEMEMETRIC( "Radius", "Grab" );
+                style.TabRounding       = SW_THEMEMETRIC( "Radius", "Tab" );
 
-                style.WindowBorderSize = stroke._window;
-                style.ChildBorderSize  = stroke._child;
-                style.PopupBorderSize  = stroke._popup;
-                style.FrameBorderSize  = stroke._frame;
-                style.TabBorderSize    = stroke._tab;
+                style.WindowBorderSize = SW_THEMEMETRIC( "Stroke", "Window" );
+                style.ChildBorderSize  = SW_THEMEMETRIC( "Stroke", "Child" );
+                style.PopupBorderSize  = SW_THEMEMETRIC( "Stroke", "Popup" );
+                style.FrameBorderSize  = SW_THEMEMETRIC( "Stroke", "Frame" );
+                style.TabBorderSize    = SW_THEMEMETRIC( "Stroke", "Tab" );
 
-                style.WindowPadding    = ImVec2( spacing._windowPaddingX * density, spacing._windowPaddingY * density );
-                style.FramePadding     = ImVec2( spacing._framePaddingX * density, spacing._framePaddingY * density );
-                style.ItemSpacing      = ImVec2( spacing._itemSpacingX * density, spacing._itemSpacingY * density );
-                style.ItemInnerSpacing = ImVec2( spacing._itemInnerSpacingX * density, spacing._itemInnerSpacingY * density );
-                style.IndentSpacing    = spacing._indent * density;
-                style.ScrollbarSize    = spacing._scrollbarSize;
-                style.GrabMinSize      = spacing._grabMinSize;
+                style.WindowPadding    = ImVec2( SW_THEMEMETRIC( "Spacing", "WindowPaddingX" ) * density, SW_THEMEMETRIC( "Spacing", "WindowPaddingY" ) * density );
+                style.FramePadding     = ImVec2( SW_THEMEMETRIC( "Spacing", "FramePaddingX" ) * density, SW_THEMEMETRIC( "Spacing", "FramePaddingY" ) * density );
+                style.ItemSpacing      = ImVec2( SW_THEMEMETRIC( "Spacing", "ItemSpacingX" ) * density, SW_THEMEMETRIC( "Spacing", "ItemSpacingY" ) * density );
+                style.ItemInnerSpacing = ImVec2( SW_THEMEMETRIC( "Spacing", "ItemInnerSpacingX" ) * density, SW_THEMEMETRIC( "Spacing", "ItemInnerSpacingY" ) * density );
+                style.IndentSpacing    = SW_THEMEMETRIC( "Spacing", "Indent" ) * density;
+                style.ScrollbarSize    = SW_THEMEMETRIC( "Spacing", "ScrollbarSize" );
+                style.GrabMinSize      = SW_THEMEMETRIC( "Spacing", "GrabMinSize" );
                 // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDPIScale`).
                 const float32 dpiScale = getSubsystem<EditorTheme>().getDPIScale();
                 if ( dpiScale != 1.0f )
                     style.ScaleAllSizes( dpiScale );
                 // 글자 크기도 토큰이다(em px). ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
-                style.FontSizeBase = EditorFontSetup::toBaseFontSize( config._typography._fontSize );
+                style.FontSizeBase = EditorFontSetup::toBaseFontSize( SW_THEMEMETRIC( "Typography", "FontSize" ) );
             }
 
             /** @brief 2 단계: 컬러 팔레트를 스타일에 씁니다. 상태(호버 · 활성)는 토큰에서 밝기와 알파로 만듭니다. */
-            static void applyPalette( const EditorThemeConfig& config, ImGuiStyle& style )
+            static void applyPalette( ImGuiStyle& style )
             {
                 ImVec4* pColors = style.Colors;
 
-                const Color& accent   = config._accentColor;
-                const Color& winBg    = config._windowBg;
-                const Color& panBg    = config._panelBg;
-                const Color& headerBg = config._headerBg;
-                const Color& frmBg    = config._frameBg;
-                const Color& border   = config._border;
+                const Color& accent   = SW_THEMECOLOR( "Base", "Accent" );
+                const Color& winBg    = SW_THEMECOLOR( "Base", "WindowBg" );
+                const Color& panBg    = SW_THEMECOLOR( "Base", "PanelBg" );
+                const Color& headerBg = SW_THEMECOLOR( "Base", "HeaderBg" );
+                const Color& frmBg    = SW_THEMECOLOR( "Base", "FrameBg" );
+                const Color& border   = SW_THEMECOLOR( "Base", "Border" );
 
                 // 텍스트
-                pColors[ImGuiCol_Text]         = EditorThemeInternal::toImVec4( config._text );
-                pColors[ImGuiCol_TextDisabled] = EditorThemeInternal::toImVec4( config._textMuted, 1.0f );
+                pColors[ImGuiCol_Text]         = EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "Text" ) );
+                pColors[ImGuiCol_TextDisabled] = EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "TextMuted" ), 1.0f );
 
                 // 창 및 배경
                 pColors[ImGuiCol_WindowBg]     = EditorThemeInternal::toImVec4( winBg, 1.0f );
@@ -231,7 +241,7 @@ namespace sw::editor
                 pColors[ImGuiCol_TitleBgCollapsed] = EditorThemeInternal::toImVec4( winBg, 0.75f );
 
                 // 스크롤바
-                pColors[ImGuiCol_ScrollbarBg]          = EditorThemeInternal::toImVec4( config._scrollbarBg );
+                pColors[ImGuiCol_ScrollbarBg]          = EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "ScrollbarBg" ) );
                 pColors[ImGuiCol_ScrollbarGrab]        = EditorThemeInternal::adjustBrightness( border, 1.1f, 0.8f );
                 pColors[ImGuiCol_ScrollbarGrabHovered] = EditorThemeInternal::adjustBrightness( border, 1.4f, 1.0f );
                 pColors[ImGuiCol_ScrollbarGrabActive]  = EditorThemeInternal::toImVec4( accent, 0.9f );
@@ -253,7 +263,7 @@ namespace sw::editor
                 pColors[ImGuiCol_TabUnfocused]       = EditorThemeInternal::adjustBrightness( winBg, 0.80f, 1.0f );
                 pColors[ImGuiCol_TabUnfocusedActive] = EditorThemeInternal::adjustBrightness( panBg, 0.90f, 1.0f );
                 pColors[ImGuiCol_DockingPreview]     = EditorThemeInternal::toImVec4( accent, 0.45f );
-                pColors[ImGuiCol_DockingEmptyBg]     = EditorThemeInternal::toImVec4( config._dockingEmptyBg );
+                pColors[ImGuiCol_DockingEmptyBg]     = EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "DockingEmptyBg" ) );
 
                 // 구분선 & 기타
                 pColors[ImGuiCol_Separator]         = EditorThemeInternal::toImVec4( border, 0.85f );
@@ -272,8 +282,8 @@ namespace sw::editor
                 pColors[ImGuiCol_TableHeaderBg]     = EditorThemeInternal::toImVec4( headerBg, 1.0f );
                 pColors[ImGuiCol_TableBorderStrong] = EditorThemeInternal::toImVec4( border, 1.0f );
                 pColors[ImGuiCol_TableBorderLight]  = EditorThemeInternal::toImVec4( border, 0.5f );
-                pColors[ImGuiCol_TableRowBg]        = EditorThemeInternal::toImVec4( config._tableRowBgAlt, 0.0f );
-                pColors[ImGuiCol_TableRowBgAlt]     = EditorThemeInternal::toImVec4( config._tableRowBgAlt );
+                pColors[ImGuiCol_TableRowBg]        = EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "TableRowBgAlt" ), 0.0f );
+                pColors[ImGuiCol_TableRowBgAlt]     = EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "TableRowBgAlt" ) );
             }
 
             /** @brief 종류 등록의 아이콘입니다. 종류가 없으면 일반 파일 아이콘입니다. */
@@ -283,8 +293,8 @@ namespace sw::editor
             static Color getColorOf( const EditorAssetTypeRegistration* pRegistration )
             {
                 if ( pRegistration == nullptr )
-                    return EditorThemeUtil::getTextMutedColor();
-                return pRegistration->_bAccentColor ? EditorThemeUtil::getAccentColor() : pRegistration->_color;
+                    return SW_THEMECOLOR( "Base", "TextMuted" );
+                return pRegistration->_bAccentColor ? SW_THEMECOLOR( "Base", "Accent" ) : pRegistration->_color;
             }
         };
     } // namespace
@@ -331,8 +341,8 @@ namespace sw::editor
         ImGuiStyle& style = ImGui::GetStyle();
         EditorThemeInternal::resetSizesToDefault( style );
 
-        EditorThemeInternal::applyMetrics( config, style );
-        EditorThemeInternal::applyPalette( config, style );
+        EditorThemeInternal::applyMetrics( style );
+        EditorThemeInternal::applyPalette( style );
     }
 
     void EditorThemeUtil::setDPIScale( float32 dpiScale )
@@ -377,165 +387,71 @@ namespace sw::editor
         editorConfig._themeName              = themeConfig._name;
 
         // 덮어쓰지 않은 값은 음수로 둔다. 그래야 토큰 파일이 바뀌면 그 값을 따른다.
-        const bool bAccent         = themeConfig._bAccentOverridden == SW_TRUE;
-        editorConfig._themeAccentR = bAccent ? themeConfig._accentColor._r : EditorConfig::kNotOverridden;
-        editorConfig._themeAccentG = bAccent ? themeConfig._accentColor._g : EditorConfig::kNotOverridden;
-        editorConfig._themeAccentB = bAccent ? themeConfig._accentColor._b : EditorConfig::kNotOverridden;
+        const bool   bAccent       = themeConfig._bAccentOverridden == SW_TRUE;
+        const Color& accent        = SW_THEMECOLOR( "Base", "Accent" );
+        editorConfig._themeAccentR = bAccent ? accent._r : EditorConfig::kNotOverridden;
+        editorConfig._themeAccentG = bAccent ? accent._g : EditorConfig::kNotOverridden;
+        editorConfig._themeAccentB = bAccent ? accent._b : EditorConfig::kNotOverridden;
 
         const bool bRadius                = themeConfig._bRadiusOverridden == SW_TRUE;
-        editorConfig._themeWindowRounding = bRadius ? themeConfig._radius._window : EditorConfig::kNotOverridden;
-        editorConfig._themeFrameRounding  = bRadius ? themeConfig._radius._frame : EditorConfig::kNotOverridden;
-        editorConfig._themeTabRounding    = bRadius ? themeConfig._radius._tab : EditorConfig::kNotOverridden;
+        editorConfig._themeWindowRounding = bRadius ? SW_THEMEMETRIC( "Radius", "Window" ) : EditorConfig::kNotOverridden;
+        editorConfig._themeFrameRounding  = bRadius ? SW_THEMEMETRIC( "Radius", "Frame" ) : EditorConfig::kNotOverridden;
+        editorConfig._themeTabRounding    = bRadius ? SW_THEMEMETRIC( "Radius", "Tab" ) : EditorConfig::kNotOverridden;
 
         EditorConfig::saveToPreferences();
     }
 
     void EditorThemeUtil::setAccentColor( const Color& accentColor )
     {
-        EditorThemeConfig editorConfig  = EditorThemeInternal::activeTheme();
-        editorConfig._accentColor       = accentColor;
-        editorConfig._bAccentOverridden = SW_TRUE;
+        EditorThemeConfig editorConfig                          = EditorThemeInternal::activeTheme();
+        editorConfig._mapColor[EditorThemeInternal::kAccentKey] = accentColor;
+        editorConfig._bAccentOverridden                         = SW_TRUE;
         applyTheme( editorConfig );
         saveToConfig();
     }
 
     Color EditorThemeUtil::getViewportHoverColor()
     {
-        const Color& accent = getAccentColor();
-        return Color::lerp( accent, getActiveTheme()._text, EditorThemeInternal::kHoverWhiten ).withAlpha( EditorThemeInternal::kHoverAlpha );
+        return Color::lerp( SW_THEMECOLOR( "Base", "Accent" ), SW_THEMECOLOR( "Base", "Text" ), EditorThemeInternal::kHoverWhiten ).withAlpha( EditorThemeInternal::kHoverAlpha );
     }
 
-    const Color& EditorThemeUtil::getAccentColor()
+    const Color& EditorThemeUtil::findColor( const hashed_string& key )
     {
-        return EditorThemeInternal::activeTheme()._accentColor;
+        static constexpr Color kMissingColor{ 1.0f, 0.0f, 1.0f, 1.0f };
+        const Color*           pColor = EditorThemeInternal::activeTheme().findColor( key );
+        if ( pColor != nullptr )
+            return *pColor;
+        if ( getSubsystem<EditorTheme>().markMissingKey( key ) )
+            SW_LOG_ERROR_ID( "EditorTheme.MissingKey", "Theme color '%#' is not in the '%#' token file (_color)", key.c_str(), EditorThemeInternal::activeTheme()._name.c_str() );
+        return kMissingColor;
     }
 
-    const Color& EditorThemeUtil::getTextColor()
+    float32 EditorThemeUtil::findMetric( const hashed_string& key )
     {
-        return EditorThemeInternal::activeTheme()._text;
-    }
-
-    const Color& EditorThemeUtil::getWindowBgColor()
-    {
-        return EditorThemeInternal::activeTheme()._windowBg;
-    }
-
-    const Color& EditorThemeUtil::getPanelBgColor()
-    {
-        return EditorThemeInternal::activeTheme()._panelBg;
-    }
-
-    const Color& EditorThemeUtil::getHeaderBgColor()
-    {
-        return EditorThemeInternal::activeTheme()._headerBg;
-    }
-
-    const Color& EditorThemeUtil::getFrameBgColor()
-    {
-        return EditorThemeInternal::activeTheme()._frameBg;
-    }
-
-    const Color& EditorThemeUtil::getBorderColor()
-    {
-        return EditorThemeInternal::activeTheme()._border;
-    }
-
-    const Color& EditorThemeUtil::getSuccessColor()
-    {
-        return EditorThemeInternal::activeTheme()._successColor;
-    }
-
-    const Color& EditorThemeUtil::getWarningColor()
-    {
-        return EditorThemeInternal::activeTheme()._warningColor;
-    }
-
-    const Color& EditorThemeUtil::getErrorColor()
-    {
-        return EditorThemeInternal::activeTheme()._errorColor;
-    }
-
-    const Color& EditorThemeUtil::getInfoColor()
-    {
-        return EditorThemeInternal::activeTheme()._infoColor;
-    }
-
-    const Color& EditorThemeUtil::getTextMutedColor()
-    {
-        return EditorThemeInternal::activeTheme()._textMuted;
-    }
-
-    const Color& EditorThemeUtil::getOverlayBgColor()
-    {
-        return EditorThemeInternal::activeTheme()._overlayBg;
-    }
-
-    const Color& EditorThemeUtil::getSelectionOutlineColor()
-    {
-        return EditorThemeInternal::activeTheme()._selectionOutline;
-    }
-
-    const Color& EditorThemeUtil::getHighlightColor()
-    {
-        return EditorThemeInternal::activeTheme()._highlight;
-    }
-
-    const Color& EditorThemeUtil::getToggleInactiveColor()
-    {
-        return EditorThemeInternal::activeTheme()._toggleInactive;
-    }
-
-    const Color& EditorThemeUtil::getToggleActiveColor()
-    {
-        return EditorThemeInternal::activeTheme()._toggleActive;
-    }
-
-    const Color& EditorThemeUtil::getAxisXColor()
-    {
-        return EditorThemeInternal::activeTheme()._axisX;
-    }
-
-    const Color& EditorThemeUtil::getAxisYColor()
-    {
-        return EditorThemeInternal::activeTheme()._axisY;
-    }
-
-    const Color& EditorThemeUtil::getAxisZColor()
-    {
-        return EditorThemeInternal::activeTheme()._axisZ;
-    }
-
-    const Color& EditorThemeUtil::getColliderWireColor()
-    {
-        return EditorThemeInternal::activeTheme()._colliderWire;
-    }
-
-    const Color& EditorThemeUtil::getCameraWireColor()
-    {
-        return EditorThemeInternal::activeTheme()._cameraWire;
-    }
-
-    const Color& EditorThemeUtil::getViewportLabelColor()
-    {
-        return EditorThemeInternal::activeTheme()._viewportLabel;
+        const float32* pValue = EditorThemeInternal::activeTheme().findMetric( key );
+        if ( pValue != nullptr )
+            return *pValue;
+        if ( getSubsystem<EditorTheme>().markMissingKey( key ) )
+            SW_LOG_ERROR_ID( "EditorTheme.MissingKey", "Theme metric '%#' is not in the '%#' token file (_metric)", key.c_str(), EditorThemeInternal::activeTheme()._name.c_str() );
+        return 0.0f;
     }
 
     void EditorThemeUtil::textAccent( const utf8* pText )
     {
         if ( pText != nullptr )
-            ImGui::TextColored( EditorThemeInternal::toImVec4( getAccentColor() ), "%s", pText );
+            ImGui::TextColored( EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "Accent" ) ), "%s", pText );
     }
 
     void EditorThemeUtil::textSuccess( const utf8* pText )
     {
         if ( pText != nullptr )
-            ImGui::TextColored( EditorThemeInternal::toImVec4( getSuccessColor() ), "%s", pText );
+            ImGui::TextColored( EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "%s", pText );
     }
 
     void EditorThemeUtil::textInfo( const utf8* pText )
     {
         if ( pText != nullptr )
-            ImGui::TextColored( EditorThemeInternal::toImVec4( getInfoColor() ), "%s", pText );
+            ImGui::TextColored( EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Signal", "Info" ) ), "%s", pText );
     }
 
     void EditorThemeUtil::pushTextColor( const Color& color )
@@ -551,24 +467,24 @@ namespace sw::editor
     void EditorThemeUtil::textWarning( const utf8* pText )
     {
         if ( pText != nullptr )
-            ImGui::TextColored( EditorThemeInternal::toImVec4( getWarningColor() ), "%s", pText );
+            ImGui::TextColored( EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "%s", pText );
     }
 
     void EditorThemeUtil::textError( const utf8* pText )
     {
         if ( pText != nullptr )
-            ImGui::TextColored( EditorThemeInternal::toImVec4( getErrorColor() ), "%s", pText );
+            ImGui::TextColored( EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", pText );
     }
 
     void EditorThemeUtil::textMuted( const utf8* pText )
     {
         if ( pText != nullptr )
-            ImGui::TextColored( EditorThemeInternal::toImVec4( getTextMutedColor() ), "%s", pText );
+            ImGui::TextColored( EditorThemeInternal::toImVec4( SW_THEMECOLOR( "Base", "TextMuted" ) ), "%s", pText );
     }
 
     void EditorThemeUtil::pushAccentButton( float32 alpha )
     {
-        const Color& accent = getAccentColor();
+        const Color& accent = SW_THEMECOLOR( "Base", "Accent" );
         ImGui::PushStyleColor( ImGuiCol_Button, EditorThemeInternal::toImVec4( accent, 0.70f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorThemeInternal::toImVec4( accent, 0.90f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorThemeInternal::toImVec4( accent, 1.0f * alpha ) );
@@ -581,7 +497,7 @@ namespace sw::editor
 
     void EditorThemeUtil::pushAccentHeader( float32 alpha )
     {
-        const Color& accent = getAccentColor();
+        const Color& accent = SW_THEMECOLOR( "Base", "Accent" );
         ImGui::PushStyleColor( ImGuiCol_Header, EditorThemeInternal::toImVec4( accent, 0.70f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_HeaderHovered, EditorThemeInternal::toImVec4( accent, 0.85f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_HeaderActive, EditorThemeInternal::toImVec4( accent, 1.0f * alpha ) );
@@ -625,7 +541,8 @@ namespace sw::editor
             ImGui::TextDisabled( "Color Palette Customization" );
 
             // 2) 액센트 컬러 피커
-            float32 arrAccentRaw[4] = { editorConfig._accentColor._r, editorConfig._accentColor._g, editorConfig._accentColor._b, editorConfig._accentColor._a };
+            const Color& accent          = SW_THEMECOLOR( "Base", "Accent" );
+            float32      arrAccentRaw[4] = { accent._r, accent._g, accent._b, accent._a };
             if ( ImGui::ColorEdit4( "Accent Color", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
                 setAccentColor( Color{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] } );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentColor" ) );
@@ -661,19 +578,20 @@ namespace sw::editor
             ImGui::TextDisabled( "Geometry & Rounding" );
 
             // 4) 라운딩 슬라이더
-            bool bMetricsChanged = false;
-            bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &editorConfig._radius._window, 0.0f, 12.0f, "%.0f px" );
+            float32 windowRadius    = SW_THEMEMETRIC( "Radius", "Window" );
+            float32 frameRadius     = SW_THEMEMETRIC( "Radius", "Frame" );
+            float32 tabRadius       = SW_THEMEMETRIC( "Radius", "Tab" );
+            bool    bMetricsChanged = false;
+            bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &windowRadius, 0.0f, 12.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeWindowRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &editorConfig._radius._frame, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &frameRadius, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeFrameRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &editorConfig._radius._tab, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &tabRadius, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeTabRounding" ) );
 
             if ( bMetricsChanged )
             {
-                editorConfig._radius._popup     = editorConfig._radius._window;
-                editorConfig._radius._scrollbar = editorConfig._radius._frame * EditorThemeInternal::kScrollbarRadiusPerFrameRadius;
-                editorConfig._radius._grab      = editorConfig._radius._frame;
+                EditorThemeInternal::setRadius( windowRadius, frameRadius, tabRadius, editorConfig );
                 editorConfig._bRadiusOverridden = SW_TRUE;
                 applyTheme( editorConfig );
                 saveToConfig();
@@ -695,7 +613,7 @@ namespace sw::editor
     Color EditorThemeUtil::getFolderColor()
     {
         // 폴더 색은 테마 액센트 색을 그대로 쓴다. UE5 와 Rider 처럼 액센트와 같은 파란 계열이다
-        return getAccentColor();
+        return SW_THEMECOLOR( "Base", "Accent" );
     }
 
     const utf8* EditorThemeUtil::getFolderIcon( bool bOpened )

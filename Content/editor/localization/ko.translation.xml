@@ -585,6 +585,9 @@
 		<entry key="EditorConsole.OpenLogFile"
 		       text="저장된 로그 파일(가장 최근)을 파일 탐색기에서 엽니다"
 		       sourceHash="794c89b2b3d5343a" />
+		<entry key="EditorConsole.Options"
+		       text="로그 옵션: 자동 스크롤, Play 때 지우기, 오류에서 멈추기, 복사, 로그 파일 열기"
+		       sourceHash="aa260bad705e8480" />
 		<entry key="EditorConsole.ShowErrors"
 		       text="오류(Error) 수준 로그 표시 여부를 토글합니다"
 		       sourceHash="1d0a5803c939c6e2" />

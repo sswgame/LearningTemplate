@@ -41,7 +41,7 @@ namespace sw::editor
                 const ImU32 color = ImGui::ColorConvertFloat4ToU32( ImVec4{ segment._color._x, segment._color._y, segment._color._z, segment._color._w } );
                 args._pDrawList->AddLine( screenFrom, screenTo, color, 1.5f );
             }
-            const ImU32 colorLabel = EditorColorUtil::toImU32( EditorThemeUtil::getViewportLabelColor() );
+            const ImU32 colorLabel = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "Label" ) );
             for ( const ParkRidePreview& ride : preview.getRides() )
             {
                 ImVec2       labelPos;

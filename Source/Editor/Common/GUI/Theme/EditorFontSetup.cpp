@@ -27,7 +27,7 @@ namespace sw::editor
         struct EditorFontSetupInternal
         {
             /**
-             * @brief 글꼴 크기와 아이콘 비율을 설정한 테마 토큰(`_typography`)에서 읽습니다. 테마 서브시스템보다 먼저 불리므로 파일을 직접 읽는다.
+             * @brief 글꼴 크기와 아이콘 비율을 설정한 테마 토큰(`Typography.*`)에서 읽습니다. 테마 서브시스템보다 먼저 불리므로 파일을 직접 읽는다.
              * @details 아이콘은 24 격자의 가운데 20 칸에 그려져 있어 em 의 5/6 을 차지합니다. 비율 0.8 이면 아이콘 높이가 본문 크기의 2/3 쯤입니다.
              * @return 토큰을 읽었으면 true. 못 읽으면 이유를 오류로 남기고 false 다(다른 벌이나 ImGui 기본 크기로 대신하지 않는다).
              */
@@ -41,8 +41,9 @@ namespace sw::editor
                     SW_LOG_ERROR( "Editor font size needs the theme '%#' tokens: %#", themeName.c_str(), error.c_str() );
                     return false;
                 }
-                outFontSize  = theme._typography._fontSize;
-                outIconScale = theme._typography._iconScale;
+                // 테마 서브시스템보다 먼저라 `SW_THEMEMETRIC` 이 아니라 읽은 벌에서 찾는다. 두 키는 해석이 양수로 확인했다(`EditorThemeTokens::resolve`).
+                outFontSize  = *theme.findMetric( hashed_string( "Typography.FontSize" ) );
+                outIconScale = *theme.findMetric( hashed_string( "Typography.IconScale" ) );
                 return true;
             }
 

@@ -632,7 +632,7 @@ namespace sw::editor
     {
         if ( _inspectionError.empty() == false )
         {
-            EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
+            EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Warning" ) );
             ImGui::TextWrapped( "%s", _inspectionError.c_str() );
             EditorThemeUtil::popTextColor();
             return;

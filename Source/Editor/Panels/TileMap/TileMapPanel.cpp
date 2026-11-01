@@ -315,7 +315,7 @@ namespace sw::editor
                         const int32 dataLayerIndex = _document.getDataLayerIndex();
                         int32       value          = 0;
                         if ( map.getCellData( dataLayerIndex, tileX, tileY, value ) && value != map._listDataLayer[static_cast<size_t>( dataLayerIndex )]._defaultValue )
-                            color = EditorColorUtil::toImU32( EditorThemeUtil::getAccentColor() );
+                            color = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) );
                         break;
                     }
                 }

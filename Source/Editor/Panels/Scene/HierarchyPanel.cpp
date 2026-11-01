@@ -115,7 +115,7 @@ namespace sw::editor
             static void drawDropIndicator( SiblingDropZone zone, const ImVec2& rowMin, const ImVec2& rowMax )
             {
                 ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
-                const ImU32   color     = EditorColorUtil::toImU32( EditorThemeUtil::getAccentColor() );
+                const ImU32   color     = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) );
                 const float32 thickness = 2.0f;
                 if ( zone == SiblingDropZone::Before )
                     pDrawList->AddLine( ImVec2{ rowMin.x, rowMin.y }, ImVec2{ rowMax.x, rowMin.y }, color, thickness );
@@ -593,7 +593,7 @@ namespace sw::editor
             const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
             if ( bEditsAllowed == false )
             {
-                EditorWidgets::drawChip( "Play Mode", EditorThemeUtil::getWarningColor() );
+                EditorWidgets::drawChip( "Play Mode", SW_THEMECOLOR( "Signal", "Warning" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "PlayModeRunning" ) );
                 ImGui::SameLine();
             }

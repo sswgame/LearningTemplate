@@ -259,12 +259,12 @@ namespace sw::editor
         ImGui::TextUnformatted( page._entry._relativePath.c_str() );
         ImGui::SameLine();
         if ( document.hasFile() )
-            EditorWidgets::drawChip( "File", EditorThemeUtil::getSuccessColor() );
+            EditorWidgets::drawChip( "File", SW_THEMECOLOR( "Signal", "Success" ) );
         else
-            EditorWidgets::drawChip( "No file - defaults", EditorThemeUtil::getWarningColor() );
+            EditorWidgets::drawChip( "No file - defaults", SW_THEMECOLOR( "Signal", "Warning" ) );
         const uint32 keyCount = document.countNonDefaultKeys();
         ImGui::SameLine();
-        EditorWidgets::drawChip( ( formatToString( "%# non-default", keyCount ) ).c_str(), EditorThemeUtil::getAccentColor() );
+        EditorWidgets::drawChip( ( formatToString( "%# non-default", keyCount ) ).c_str(), SW_THEMECOLOR( "Base", "Accent" ) );
         if ( document.isLoadFailed() )
             EditorThemeUtil::textError( "The file could not be read (see the log). Reset to Default replaces it when saved" );
 

@@ -115,9 +115,9 @@ namespace sw::editor
                 EditorContext&        context = editor::getSubsystem<EditorContext>();
                 const MapCheckCounts& counts  = syncStatusCounts();
                 notifyOnSceneChange( context, counts );
-                const Color                          color = counts._errorCount > 0   ? EditorThemeUtil::getErrorColor()
-                                                           : counts._warningCount > 0 ? EditorThemeUtil::getWarningColor()
-                                                                                      : EditorThemeUtil::getTextMutedColor();
+                const Color                          color = counts._errorCount > 0   ? SW_THEMECOLOR( "Signal", "Error" )
+                                                           : counts._warningCount > 0 ? SW_THEMECOLOR( "Signal", "Warning" )
+                                                                                      : SW_THEMECOLOR( "Base", "TextMuted" );
                 fixed_string<constant::kMaxBuffer64> label;
                 formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", editoricon::kWarning, counts._errorCount + counts._warningCount );
                 ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( color ) );
@@ -271,7 +271,7 @@ namespace sw::editor
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
             const bool  bError = issue._severity == ValidationSeverity::Error;
-            const Color color  = bError ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getWarningColor();
+            const Color color  = bError ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Signal", "Warning" );
             ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? editoricon::kError : editoricon::kWarning );
 
             ImGui::TableSetColumnIndex( 1 );

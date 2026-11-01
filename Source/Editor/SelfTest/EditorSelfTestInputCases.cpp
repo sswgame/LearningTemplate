@@ -328,7 +328,7 @@ namespace sw::editor
                     }
                     default:
                     {
-                        const Color& accent       = EditorThemeUtil::getAccentColor();
+                        const Color& accent       = SW_THEMECOLOR( "Base", "Accent" );
                         const bool   bIsVioletNow = accent._r == violet._r && accent._g == violet._g && accent._b == violet._b;
                         (void)context.expect( bIsVioletNow, "clicking a swatch in the light theme dialog did not change the accent" );
                         (void)context.expect( EditorThemeUtil::getActiveTheme()._name == "light", "the swatch switched the theme away from light" );

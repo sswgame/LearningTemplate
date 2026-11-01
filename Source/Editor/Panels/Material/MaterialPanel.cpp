@@ -44,7 +44,7 @@ namespace sw::editor
              */
             static bool drawUnreadableValue( const utf8* pLabel, MaterialProperty& prop )
             {
-                ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getWarningColor() ), "!" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "!" );
                 EditorWidgets::drawTooltip( "This value does not match its type (wrong count of numbers or a non-number) - fix the text" );
                 ImGui::SameLine();
                 return EditorWidgets::drawTextField( pLabel, prop._value );

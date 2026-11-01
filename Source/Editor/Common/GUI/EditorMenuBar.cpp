@@ -245,7 +245,7 @@ namespace sw::editor
             }
             else if ( state == BuildState::Success )
             {
-                EditorThemeUtil::pushTextColor( EditorThemeUtil::getSuccessColor() );
+                EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Success" ) );
                 ImGui::Text( "%s  Built (%.1fs)", editoricon::kSuccess, static_cast<float64>( pCompiler->getLastDurationSec() ) );
                 EditorThemeUtil::popTextColor();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildSucceeded" ) );

@@ -240,9 +240,9 @@ namespace sw::editor
             ImGui::Text( "%d", status._processID );
             ImGui::TableNextColumn();
             if ( status._bRunning )
-                EditorWidgets::drawChip( "running", EditorThemeUtil::getSuccessColor() );
+                EditorWidgets::drawChip( "running", SW_THEMECOLOR( "Signal", "Success" ) );
             else
-                EditorWidgets::drawChip( ( formatToString( "exited %#", status._exitCode ) ).c_str(), EditorThemeUtil::getWarningColor() );
+                EditorWidgets::drawChip( ( formatToString( "exited %#", status._exitCode ) ).c_str(), SW_THEMECOLOR( "Signal", "Warning" ) );
             ImGui::TableNextColumn();
             ImGui::TextUnformatted( processIndex == EditorNetPlaySession::kServerProcessIndex ? "server" : ( status._bConnected ? "connected" : "-" ) );
             ImGui::TableNextColumn();

@@ -103,10 +103,14 @@ namespace sw::editor
                 {
                     (void)context.expect( EditorThemeUtil::applyThemeByName( themeName ), "a listed theme could not be applied" );
                     const EditorThemeConfig& active = EditorThemeUtil::getActiveTheme();
-                    (void)context.expect( isSameColor( EditorThemeUtil::getWindowBgColor(), active._windowBg ), "getWindowBgColor does not follow the preset" );
-                    (void)context.expect( isSameColor( EditorThemeUtil::getPanelBgColor(), active._panelBg ), "getPanelBgColor does not follow the preset" );
-                    (void)context.expect( isSameColor( EditorThemeUtil::getBorderColor(), active._border ), "getBorderColor does not follow the preset" );
-                    if ( isSameColor( active._windowBg, savedTheme._windowBg ) == false )
+                    for ( const utf8* pKey : { "Base.WindowBg", "Base.PanelBg", "Base.Border" } )
+                    {
+                        const Color* pColor = active.findColor( hashed_string( pKey ) );
+                        (void)context.expect( pColor != nullptr && isSameColor( EditorThemeUtil::findColor( hashed_string( pKey ) ), *pColor ), "a theme colour key does not follow the preset" );
+                    }
+                    const Color* pWindowBg      = active.findColor( hashed_string( "Base.WindowBg" ) );
+                    const Color* pSavedWindowBg = savedTheme.findColor( hashed_string( "Base.WindowBg" ) );
+                    if ( pWindowBg != nullptr && pSavedWindowBg != nullptr && isSameColor( *pWindowBg, *pSavedWindowBg ) == false )
                         bAnyPresetDiffers = true;
                 }
                 (void)context.expect( bAnyPresetDiffers, "every preset has the same window colour - the palette getters prove nothing" );
@@ -116,12 +120,12 @@ namespace sw::editor
                 const int32         colorDepth   = imguiContext.ColorStack.Size;
 
                 EditorThemeUtil::pushAccentButton();
-                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Button ), EditorThemeUtil::getAccentColor() ), "pushAccentButton does not use the accent colour" );
+                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Button ), SW_THEMECOLOR( "Base", "Accent" ) ), "pushAccentButton does not use the accent colour" );
                 EditorThemeUtil::popAccentButton();
                 (void)context.expect( imguiContext.ColorStack.Size == colorDepth, "pushAccentButton/popAccentButton do not balance" );
 
                 EditorThemeUtil::pushAccentHeader();
-                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Header ), EditorThemeUtil::getAccentColor() ), "pushAccentHeader does not use the accent colour" );
+                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Header ), SW_THEMECOLOR( "Base", "Accent" ) ), "pushAccentHeader does not use the accent colour" );
                 EditorThemeUtil::popAccentHeader();
                 (void)context.expect( imguiContext.ColorStack.Size == colorDepth, "pushAccentHeader/popAccentHeader do not balance" );
 

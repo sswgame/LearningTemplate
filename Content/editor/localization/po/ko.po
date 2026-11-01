@@ -278,19 +278,19 @@ msgctxt "EdCommon.NoSavedLayouts"
 msgid "No saved layouts."
 msgstr "저장된 레이아웃이 없습니다."
 
-#: Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp
+#: Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp
 #: Source/Editor/Panels/BugReport/Model/BugReportModel.cpp
 msgctxt "EdCommon.NotifyBugReportFailed"
 msgid "The bug report could not be saved (see the log)"
 msgstr "버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)"
 
-#: Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp
+#: Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp
 #: Source/Editor/Panels/BugReport/Model/BugReportModel.cpp
 msgctxt "EdCommon.NotifyBugReportSaved"
 msgid "Bug report saved"
 msgstr "버그 리포트를 저장했습니다"
 
-#: Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp
+#: Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp
 #: Source/Editor/Panels/BugReport/Model/BugReportModel.cpp
 msgctxt "EdCommon.NotifyBugReportTitle"
 msgid "Bug report"
@@ -1326,6 +1326,11 @@ msgstr "아직 로그 출력이 없습니다."
 msgctxt "EditorConsole.OpenLogFile"
 msgid "Open the most recent saved log file in the file explorer"
 msgstr "저장된 로그 파일(가장 최근)을 파일 탐색기에서 엽니다"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EditorConsole.Options"
+msgid "Log options: auto-scroll, clear on Play, pause on error, copy and open the log file"
+msgstr "로그 옵션: 자동 스크롤, Play 때 지우기, 오류에서 멈추기, 복사, 로그 파일 열기"
 
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
 msgctxt "EditorConsole.ShowErrors"

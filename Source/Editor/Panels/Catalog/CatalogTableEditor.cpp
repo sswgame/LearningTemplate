@@ -341,7 +341,7 @@ namespace sw::editor
         const bool          bRedGreen  = CatalogCurveModel::sample( red, endTime, kSegmentCount + 1, listRed ) && CatalogCurveModel::sample( green, endTime, kSegmentCount + 1, listGreen );
         const bool          bBlueAlpha = CatalogCurveModel::sample( blue, endTime, kSegmentCount + 1, listBlue ) && CatalogCurveModel::sample( alpha, endTime, kSegmentCount + 1, listAlpha );
         ImDrawList*         pDrawList  = ImGui::GetWindowDrawList();
-        const ImU32         frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( EditorThemeUtil::getBorderColor() ) );
+        const ImU32         frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) ) );
         if ( bRedGreen == false || bBlueAlpha == false )
         {
             pDrawList->AddRect( origin, ImVec2{ origin.x + width, origin.y + height }, frameColor ); // 네 채널 중 키가 없는 것이 있다 - 띠 대신 빈 틀만 보인다

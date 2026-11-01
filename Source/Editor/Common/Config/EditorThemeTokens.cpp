@@ -22,42 +22,15 @@ namespace sw::editor
     {
         struct EditorThemeTokensInternal
         {
-            /** @brief 색 토큰 하나: 토큰 키, 읽은 글자, 해석한 값을 담는 필드입니다. 테이블 한 줄이 해석과 오류 문장을 함께 정한다. */
-            struct ColorRow
-            {
-                const utf8* _pKey;
-                string EditorThemeColorDef::* _pText;
-                Color EditorThemeConfig::* _pColor;
-            };
+            /** @brief 0 이 될 수 없는 수치 키입니다(글꼴 크기 · 아이콘 비율 · 밀도). 0 이면 글자가 사라지거나 여백이 무너진다. */
+            static constexpr const utf8* kArrPositiveMetric[] = { "Typography.FontSize", "Typography.IconScale", "Layout.Density" };
 
-            static constexpr ColorRow kArrColorRow[] = {
-                {            "_text",             &EditorThemeColorDef::_text,             &EditorThemeConfig::_text},
-                {       "_textMuted",        &EditorThemeColorDef::_textMuted,        &EditorThemeConfig::_textMuted},
-                {          "_accent",           &EditorThemeColorDef::_accent,      &EditorThemeConfig::_accentColor},
-                {        "_windowBg",         &EditorThemeColorDef::_windowBg,         &EditorThemeConfig::_windowBg},
-                {         "_panelBg",          &EditorThemeColorDef::_panelBg,          &EditorThemeConfig::_panelBg},
-                {        "_headerBg",         &EditorThemeColorDef::_headerBg,         &EditorThemeConfig::_headerBg},
-                {         "_frameBg",          &EditorThemeColorDef::_frameBg,          &EditorThemeConfig::_frameBg},
-                {          "_border",           &EditorThemeColorDef::_border,           &EditorThemeConfig::_border},
-                {         "_success",          &EditorThemeColorDef::_success,     &EditorThemeConfig::_successColor},
-                {         "_warning",          &EditorThemeColorDef::_warning,     &EditorThemeConfig::_warningColor},
-                {           "_error",            &EditorThemeColorDef::_error,       &EditorThemeConfig::_errorColor},
-                {            "_info",             &EditorThemeColorDef::_info,        &EditorThemeConfig::_infoColor},
-                {     "_scrollbarBg",      &EditorThemeColorDef::_scrollbarBg,      &EditorThemeConfig::_scrollbarBg},
-                {  "_dockingEmptyBg",   &EditorThemeColorDef::_dockingEmptyBg,   &EditorThemeConfig::_dockingEmptyBg},
-                {   "_tableRowBgAlt",    &EditorThemeColorDef::_tableRowBgAlt,    &EditorThemeConfig::_tableRowBgAlt},
-                {       "_overlayBg",        &EditorThemeColorDef::_overlayBg,        &EditorThemeConfig::_overlayBg},
-                {"_selectionOutline", &EditorThemeColorDef::_selectionOutline, &EditorThemeConfig::_selectionOutline},
-                {       "_highlight",        &EditorThemeColorDef::_highlight,        &EditorThemeConfig::_highlight},
-                {  "_toggleInactive",   &EditorThemeColorDef::_toggleInactive,   &EditorThemeConfig::_toggleInactive},
-                {    "_toggleActive",     &EditorThemeColorDef::_toggleActive,     &EditorThemeConfig::_toggleActive},
-                {           "_axisX",            &EditorThemeColorDef::_axisX,            &EditorThemeConfig::_axisX},
-                {           "_axisY",            &EditorThemeColorDef::_axisY,            &EditorThemeConfig::_axisY},
-                {           "_axisZ",            &EditorThemeColorDef::_axisZ,            &EditorThemeConfig::_axisZ},
-                {    "_colliderWire",     &EditorThemeColorDef::_colliderWire,     &EditorThemeConfig::_colliderWire},
-                {      "_cameraWire",       &EditorThemeColorDef::_cameraWire,       &EditorThemeConfig::_cameraWire},
-                {   "_viewportLabel",    &EditorThemeColorDef::_viewportLabel,    &EditorThemeConfig::_viewportLabel},
-            };
+            /** @brief 키가 `Namespace.Key` 모양인지 봅니다(점 하나, 양쪽이 비지 않음). 지역화 키와 같은 모양이다. */
+            static bool isValidKey( string_view key )
+            {
+                const size_t dot = key.find( '.' );
+                return dot != string_view::npos && dot > 0 && dot + 1 < key.size() && key.find( '.', dot + 1 ) == string_view::npos;
+            }
 
             /** @brief 폴더 순회 콜백입니다. 토큰 파일이면 접미사를 뺀 이름을 목록(@p pContext)에 더합니다. */
             static bool addThemeName( void* pContext, const DirectoryEntry& entry )
@@ -135,35 +108,66 @@ namespace sw::editor
 
     bool EditorThemeTokens::resolve( const EditorThemeDef& def, EditorThemeConfig& outConfig, string& outError )
     {
-        EditorThemeConfig resolved{};
-        for ( const EditorThemeTokensInternal::ColorRow& row : EditorThemeTokensInternal::kArrColorRow )
-        {
-            const string& text = def._color.*row._pText;
-            if ( text.empty() || Color::fromHex( text, resolved.*row._pColor ) == false )
-            {
-                outError = string{ "_color." } + row._pKey + " must be #RRGGBB or #RRGGBBAA, got '" + text + "'";
-                return false;
-            }
-        }
-        const bool bBadScalar = def._typography._fontSize <= 0.0f || def._typography._iconScale <= 0.0f || def._density <= 0.0f;
-        if ( bBadScalar )
-        {
-            outError = "_typography._fontSize, _typography._iconScale and _density must be positive";
-            return false;
-        }
         if ( def._name.empty() )
         {
             outError = "_name is empty";
             return false;
         }
+        if ( def._color.empty() || def._metric.empty() )
+        {
+            outError = "_color and _metric must not be empty";
+            return false;
+        }
+        EditorThemeConfig resolved{};
+        for ( const auto& [key, text] : def._color )
+        {
+            Color color{};
+            if ( EditorThemeTokensInternal::isValidKey( key ) == false || Color::fromHex( text, color ) == false )
+            {
+                outError = "_color." + key + " needs a Namespace.Key name and #RRGGBB or #RRGGBBAA, got '" + text + "'";
+                return false;
+            }
+            resolved._mapColor[hashed_string( string_view( key ) )] = color;
+        }
+        for ( const auto& [key, value] : def._metric )
+        {
+            if ( EditorThemeTokensInternal::isValidKey( key ) == false || value < 0.0f )
+            {
+                outError = "_metric." + key + " needs a Namespace.Key name and a value of 0 or more";
+                return false;
+            }
+            resolved._mapMetric[hashed_string( string_view( key ) )] = value;
+        }
+        for ( const utf8* pKey : EditorThemeTokensInternal::kArrPositiveMetric )
+        {
+            const float32* pValue = resolved.findMetric( hashed_string( pKey ) );
+            if ( pValue == nullptr || *pValue <= 0.0f )
+            {
+                outError = string( "_metric." ) + pKey + " must be present and positive";
+                return false;
+            }
+        }
         resolved._name        = def._name;
         resolved._displayName = def._displayName.empty() ? def._name : def._displayName;
-        resolved._radius      = def._radius;
-        resolved._spacing     = def._spacing;
-        resolved._stroke      = def._stroke;
-        resolved._typography  = def._typography;
-        resolved._density     = def._density;
         outConfig             = std::move( resolved );
         return true;
+    }
+
+    bool EditorThemeTokens::findKeyMismatch( const EditorThemeConfig& reference, const EditorThemeConfig& other, string& outKey )
+    {
+        const auto findMissing = []( const auto& mapFrom, const auto& mapIn, string& outMissing )
+        {
+            for ( const auto& [key, value] : mapFrom )
+            {
+                if ( mapIn.find( key ) == mapIn.end() )
+                {
+                    outMissing = key.c_str();
+                    return true;
+                }
+            }
+            return false;
+        };
+        return findMissing( reference._mapColor, other._mapColor, outKey ) || findMissing( other._mapColor, reference._mapColor, outKey ) ||
+               findMissing( reference._mapMetric, other._mapMetric, outKey ) || findMissing( other._mapMetric, reference._mapMetric, outKey );
     }
 } // namespace sw::editor

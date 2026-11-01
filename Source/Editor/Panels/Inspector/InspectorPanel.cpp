@@ -197,7 +197,7 @@ namespace sw::editor
         // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
-            EditorWidgets::drawChip( "Play Mode", EditorThemeUtil::getWarningColor() );
+            EditorWidgets::drawChip( "Play Mode", SW_THEMECOLOR( "Signal", "Warning" ) );
             ImGui::SameLine();
             ImGui::TextDisabled( "Edits revert on Stop (Play > Keep Simulation Changes keeps the selection)." );
         }
@@ -349,7 +349,7 @@ namespace sw::editor
     void InspectorPanel::drawPreviewSelection( const EditorSelection& selection )
     {
         const Scene* pScene = selection.getScene();
-        EditorWidgets::drawChip( "Preview", EditorThemeUtil::getAccentColor() );
+        EditorWidgets::drawChip( "Preview", SW_THEMECOLOR( "Base", "Accent" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", pScene != nullptr ? pScene->getName().c_str() : "?" );
         GameObject* pObj = selection.getPrimaryObject();
@@ -399,7 +399,7 @@ namespace sw::editor
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const AssetID& assetID )
     {
         const string_view prefabPath = assetID.view();
-        EditorWidgets::drawChip( "Prefab", EditorThemeUtil::getAccentColor() );
+        EditorWidgets::drawChip( "Prefab", SW_THEMECOLOR( "Base", "Accent" ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PrefabInstance" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%.*s", static_cast<int32>( prefabPath.size() ), prefabPath.data() );
@@ -612,7 +612,7 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                 {
                     ImGui::SameLine();
-                    EditorWidgets::drawChip( tag._pString, EditorThemeUtil::getSuccessColor() );
+                    EditorWidgets::drawChip( tag._pString, SW_THEMECOLOR( "Signal", "Success" ) );
                 }
             }
         }

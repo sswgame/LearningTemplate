@@ -53,10 +53,10 @@ namespace sw::editor
             static ImVec4 getTypeColor( BehaviorNodeType type )
             {
                 if ( BehaviorTreeNames::isLeaf( type ) )
-                    return EditorColorUtil::toImVec4( EditorThemeUtil::getWarningColor() );
+                    return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) );
                 if ( BehaviorTreeNames::isDecorator( type ) )
-                    return EditorColorUtil::toImVec4( EditorThemeUtil::getAccentColor() );
-                return EditorColorUtil::toImVec4( EditorThemeUtil::getInfoColor() );
+                    return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Accent" ) );
+                return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Info" ) );
             }
 
             static const utf8* getCategoryName( BehaviorNodeType type )
@@ -127,7 +127,7 @@ namespace sw::editor
         , _bLayoutPending{ true }
         , _bSelectPending{ false }
     {
-        _nodeGraph.setPinTypeColors( { EditorThemeUtil::getTextColor() } ); // 부모 → 자식 흐름 핀 하나
+        _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
     }
 
     void BehaviorTreePanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
@@ -225,7 +225,7 @@ namespace sw::editor
         }
         if ( isDocumentLoadFailed() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getErrorColor() ), "This file could not be opened: %s", _statusText.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "This file could not be opened: %s", _statusText.c_str() );
             return;
         }
 
@@ -430,7 +430,7 @@ namespace sw::editor
             }
         }
         if ( bActive )
-            ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getSuccessColor() ), "running" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "running" );
         if ( BehaviorTreeNames::isLeaf( node._type ) == false )
         {
             ed::BeginPin( toPinID( Internal::makeOutputPin( node._id ) ), ed::PinKind::Output );
@@ -710,10 +710,10 @@ namespace sw::editor
     {
         if ( _listIssue.empty() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getSuccessColor() ), "No problems" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "No problems" );
             return;
         }
-        ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getErrorColor() ), "%u problems", static_cast<uint32>( _listIssue.size() ) );
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%u problems", static_cast<uint32>( _listIssue.size() ) );
         for ( const BehaviorTreeEditIssue& issue : _listIssue )
         {
             const string where = issue._nodeID >= 0 ? _model.makeDisplayName( issue._nodeID ) : string{ "Tree" };

@@ -28,7 +28,7 @@ namespace sw::editor
         {
             if ( args._pListCollider == nullptr )
                 return;
-            const ImU32 colorWire = EditorColorUtil::toImU32( EditorThemeUtil::getColliderWireColor() );
+            const ImU32 colorWire = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "ColliderWire" ) );
 
             for ( const BoxCollider2DComponent* pBox : *args._pListCollider )
             {

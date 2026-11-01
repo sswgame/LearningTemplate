@@ -86,42 +86,17 @@ namespace sw::editor
         static void setAccentColor( const Color& accentColor );
 
         // ----------------------------------------------------------------------
-        // 1) 테마 색상 접근자(Color)
+        // 1) 테마 토큰 조회 — 키로 찾는다(`SW_THEMECOLOR` · `SW_THEMEMETRIC`)
         // ----------------------------------------------------------------------
-        static const Color& getAccentColor();
-        static const Color& getTextColor();
+        /**
+         * @brief 지금 테마의 색 토큰 @p key(`Namespace.Key`)입니다. 직접 부르지 않고 `SW_THEMECOLOR` 를 쓴다(키를 한 번만 intern 하고, 테스트가 소스에서 키를 모은다).
+         * @details 표에 없는 키면 키마다 한 번 오류를 남기고 자홍색이다(빠진 텍스처처럼 화면에서 보인다 — 지역화의 빠진 키가 키 글자로 보이는 것과 같은 자리).
+         */
+        static const Color& findColor( const hashed_string& key );
+        /** @brief 지금 테마의 수치 토큰 @p key 입니다(96 DPI 픽셀 · 비율, DPI 배율은 곱하지 않은 값). 없으면 키마다 한 번 오류를 남기고 0 입니다. `SW_THEMEMETRIC` 을 쓴다. */
+        static float32 findMetric( const hashed_string& key );
         /** @brief 씬 뷰 호버 강조 색입니다. 강조색을 밝고 반투명하게 만든 색이며 선택 주황보다 약하고 테마를 따릅니다. */
-        static Color        getViewportHoverColor();
-        static const Color& getWindowBgColor();
-        static const Color& getPanelBgColor();
-        static const Color& getHeaderBgColor();
-        static const Color& getFrameBgColor();
-        static const Color& getBorderColor();
-
-        static const Color& getSuccessColor();
-        static const Color& getWarningColor();
-        static const Color& getErrorColor();
-        static const Color& getInfoColor();
-        static const Color& getTextMutedColor();
-        /** @brief 뷰포트 위 오버레이(검색 팝업 · 알림) 바탕입니다. 알파는 쓰는 곳이 정합니다. */
-        static const Color& getOverlayBgColor();
-        /** @brief 씬 뷰 선택 외곽선입니다. 강조색(파랑 계열)은 격자 · 카메라 프러스텀과 섞여 쓰지 않습니다. */
-        static const Color& getSelectionOutlineColor();
-        /** @brief 2D 미리보기 · 그래프에서 고른 셀 · 지금 프레임을 짚는 색입니다. */
-        static const Color& getHighlightColor();
-        /** @brief 꺼진 토글 단추 색입니다. */
-        static const Color& getToggleInactiveColor();
-        /** @brief 켜진 토글 단추 색입니다 — 중립 한 단계다. 강조색은 데이터와 선택 하나에만 쓴다(앱 화면 규칙: 크롬에 색을 칠하지 않는다). */
-        static const Color& getToggleActiveColor();
-        static const Color& getAxisXColor();
-        static const Color& getAxisYColor();
-        static const Color& getAxisZColor();
-        /** @brief 씬 뷰 2D 콜라이더 와이어프레임 색입니다. */
-        static const Color& getColliderWireColor();
-        /** @brief 씬 뷰 카메라 프러스텀 색입니다. */
-        static const Color& getCameraWireColor();
-        /** @brief 씬 뷰 위에 겹쳐 그리는 시각화 레이블 색입니다. */
-        static const Color& getViewportLabelColor();
+        static Color getViewportHoverColor();
 
         // ----------------------------------------------------------------------
         // 2) UI 텍스트와 스타일 헬퍼
@@ -181,3 +156,11 @@ namespace sw::editor
         static void drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color& color, float32 sizeRatio );
     };
 } // namespace sw::editor
+
+/**
+ * @brief 테마 색 토큰 `Namespace.Key` 입니다(`Content/editor/theme/*.tokens.json` 의 `_color`). 두 인자 모두 문자열 리터럴이어야 한다 — 단위 테스트가 소스에서 키를 모아 모든 벌에 있는지 본다.
+ * @details `SW_LOCKEY` 와 같은 모양이다. 키는 호출 자리마다 한 번 intern 해 둔다.
+ */
+#define SW_THEMECOLOR( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findColor( []() -> const ::sw::hashed_string& {                                                                                    static const ::sw::hashed_string s_key{ NamespaceLiteral "." KeyLiteral };                                                                                     return s_key; }() )
+/** @brief 테마 수치 토큰 `Namespace.Key` 입니다(`_metric`, 96 DPI 픽셀 · 비율). 규칙은 `SW_THEMECOLOR` 와 같다. */
+#define SW_THEMEMETRIC( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findMetric( []() -> const ::sw::hashed_string& {                                                                                   static const ::sw::hashed_string s_key{ NamespaceLiteral "." KeyLiteral };                                                                                     return s_key; }() )

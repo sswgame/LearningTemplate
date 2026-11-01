@@ -243,7 +243,7 @@ namespace sw::editor
             const bool bDown     = inputMap.isActionDown( actionName );
             ImGui::PushID( actionName.c_str() );
             if ( bConflict )
-                EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
+                EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Error" ) );
             if ( ImGui::Selectable( actionName.c_str(), _document.getSelectedAction() == actionName.view() ) )
                 _document.selectAction( actionName.view() );
             if ( bConflict )
@@ -628,7 +628,7 @@ namespace sw::editor
                     if ( pName != nullptr )
                     {
                         ImGui::SameLine();
-                        EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
+                        EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Warning" ) );
                         ImGui::Text( "[%s]", pName );
                         EditorThemeUtil::popTextColor();
                         bAnyKey = true;
@@ -897,7 +897,7 @@ namespace sw::editor
         const InputReplay& replay = _document.getReplay();
         if ( replay.isRecording() )
         {
-            EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
+            EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Error" ) );
             ImGui::Text( "● RECORDING LIVE INPUTS... (Frames: %u)", replay.getFrameCount() );
             EditorThemeUtil::popTextColor();
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "■ Stop Recording" ) );
