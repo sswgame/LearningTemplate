@@ -544,20 +544,7 @@ namespace sw
             if ( _pDevLayer != nullptr )
                 AppDevTools::pollShellActions( frameTime._deltaTime, *_pDevLayer, _bEnableEditor == SW_TRUE );
 
-            // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
-            // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.
-            {
-                SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
-                for ( uint32 stepIndex = 0; stepIndex < frameTime._fixedStepCount; ++stepIndex )
-                {
-                    _gameModuleManager->fixedUpdateGame( frameTime._fixedDeltaTime );
-                }
-            }
-
-            {
-                SW_PROFILE_SCOPE( "GT.Game.update" );
-                _gameModuleManager->updateGame( frameTime._deltaTime );
-            }
+            _gameModuleManager->updateGameFrame( frameTime._fixedDeltaTime, frameTime._fixedStepCount, frameTime._deltaTime );
 
             {
                 // 에디터가 없으면 바로 돌아온다. 이 호출이 게임 뷰와 씬 뷰 RT, 씬 틱 여부를 확정한다.

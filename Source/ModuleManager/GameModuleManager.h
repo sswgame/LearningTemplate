@@ -151,6 +151,11 @@ namespace sw
          */
         void beginFrame();
         /** @brief 게임 업데이트를 호출합니다. */
+        /**
+         * @brief 한 프레임의 게임 걸음입니다 — 고정 스텝 @p fixedStepCount 번(`fixedUpdateGame`) 뒤 가변 갱신(`updateGame`). 호스트(App · Server)가 이것 하나로 부른다.
+         * @details 두 실행 파일이 같은 순서와 프로파일 구간(`GT.Game.fixedUpdate` · `GT.Game.update`)을 각자 적었다(StructureRefactor 8 절 7, 언리얼 `FEngineLoop::Tick` 의 게임 틱 자리).
+         */
+        void updateGameFrame( float32 fixedDeltaTime, uint32 fixedStepCount, float32 deltaTime );
         void updateGame( float32 deltaTime );
         /** @brief 물리 같은 고정 주기 게임 업데이트를 호출합니다. */
         void fixedUpdateGame( float32 fixedDeltaTime );

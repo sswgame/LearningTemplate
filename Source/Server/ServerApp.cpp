@@ -559,14 +559,7 @@ namespace sw
         // App::run 의 한 프레임에서 창, 에디터, 사용자 설정, 백엔드 교체를 뺀 것이다. 한 틱은 고정 스텝 하나다.
         _engine.beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
         _gameModuleManager->beginFrame();
-        {
-            SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
-            _gameModuleManager->fixedUpdateGame( deltaSeconds );
-        }
-        {
-            SW_PROFILE_SCOPE( "GT.Game.update" );
-            _gameModuleManager->updateGame( deltaSeconds );
-        }
+        _gameModuleManager->updateGameFrame( deltaSeconds, 1, deltaSeconds ); // 한 틱은 고정 스텝 하나다
         if ( _pDevLayer != nullptr )
             _pDevLayer->updateModuleReload();
         if ( _bRestartServerServices == SW_TRUE )
