@@ -87,7 +87,7 @@ namespace sw
         /**
          * @brief 스프링 체인(꼬리, 머리 가닥, 망토)입니다. 키는 `bones`, `stiffness`, `axis_pull`, `damping`, `gravity`, `particle_radius`, `fixed_step`, `max_substeps`,
          *        `joints`(`[{ "stiffness", "axis_pull", "damping", "gravity", "radius" }]` — 본 수 − 1 개, 입자마다 값),
-         *        `teleport_distance`, `colliders`(`[{ "bone", "shape", "a", "b", "radius" }]`),
+         *        `teleport_distance`, `colliders`(`[{ "bone" 또는 "target", "shape", "a", "b", "radius" }]` — `target` 은 리그 목표라 다른 유닛의 본(망토가 몸의 엉덩이 · 다리)에 붙는다),
          *        `use_shared_colliders`(호스트가 준 충돌체, 즉 물리 에셋의 구와 캡슐도 사용)입니다. 멀리서 끄는 것은 공통 키 `min_screen_size` 입니다.
          */
         class RigSpringChainNode final : public RigNode
@@ -124,13 +124,18 @@ namespace sw
                     RigXMLReader colliderReader( colliders.at( index ), reader.getContext() );
                     ColliderSpec spec{};
                     uint32       shape = 0;
-                    bOk                = colliderReader.readName( "bone", spec._boneName, true ) &&
+                    bOk                = colliderReader.readName( "bone", spec._boneName, false ) && colliderReader.readName( "target", spec._targetName, false ) &&
                           colliderReader.readChoice( "shape", RigSecondaryNodesInternal::kArrColliderShape, SW_COUNT_OF( RigSecondaryNodesInternal::kArrColliderShape ),
                                                      shape, true ) &&
                           colliderReader.readFloat3( "a", spec._collider._pointA, false ) && colliderReader.readFloat3( "b", spec._collider._pointB, false ) &&
                           colliderReader.readFloat( "radius", spec._collider._radius, true );
                     bOk                   = colliderReader.finish() && bOk;
                     spec._collider._shape = shape == 0 ? RigSpringColliderShape::Sphere : RigSpringColliderShape::Capsule;
+                    if ( bOk && spec._boneName.empty() == spec._targetName.empty() )
+                    {
+                        reader.fail( "a spring collider needs exactly one of 'bone' or 'target'" );
+                        return false;
+                    }
                     _listColliderSpec.push_back( spec );
                 }
                 // 입자마다의 물성(VRM 관절마다 값) — 적지 않은 키는 사슬 값이다. 길이는 본 수 − 1 이어야 한다(입자 하나에 하나).
@@ -165,8 +170,17 @@ namespace sw
                 if ( context.findBones( _listBoneName, _listBone, true ) == false )
                     return false;
                 _listCollider.clear();
+                _listTargetCollider.clear();
                 for ( const ColliderSpec& spec : _listColliderSpec )
                 {
+                    if ( spec._targetName.empty() == false )
+                    {
+                        TargetCollider targetCollider{ spec._collider, 0 };
+                        if ( context.findTarget( spec._targetName, targetCollider._target ) == false )
+                            return false;
+                        _listTargetCollider.push_back( targetCollider );
+                        continue;
+                    }
                     RigSpringCollider collider = spec._collider;
                     if ( context.findBone( spec._boneName, collider._bone ) == false )
                         return false;
@@ -178,14 +192,29 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 const vector<RigSpringCollider>& listShared = context._pInstance->getSharedColliders();
-                if ( _bUseSharedColliders == SW_TRUE && listShared.empty() == false )
+                const bool                       bShared    = _bUseSharedColliders == SW_TRUE && listShared.empty() == false;
+                if ( bShared == false && _listTargetCollider.empty() )
                 {
-                    _listScratchCollider.assign( _listCollider.begin(), _listCollider.end() );
-                    _listScratchCollider.insert( _listScratchCollider.end(), listShared.begin(), listShared.end() );
-                    _chain.simulate( *context._pPose, _listBone, _settings, _listScratchCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
+                    _chain.simulate( *context._pPose, _listBone, _settings, _listCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
                     return;
                 }
-                _chain.simulate( *context._pPose, _listBone, _settings, _listCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
+                _listScratchCollider.assign( _listCollider.begin(), _listCollider.end() );
+                if ( bShared )
+                    _listScratchCollider.insert( _listScratchCollider.end(), listShared.begin(), listShared.end() );
+                // 목표에 붙은 충돌체는 이번 프레임 목표 자리로 모델 공간에 옮긴다. 목표가 아직 풀리지 않았으면(유닛이 붙기 전) 그 충돌체는 이번 프레임에 없다.
+                for ( const TargetCollider& targetCollider : _listTargetCollider )
+                {
+                    float3     position{};
+                    quaternion rotation{};
+                    if ( context._pInstance->resolveTarget( targetCollider._target, *context._pPose, position, rotation ) == false )
+                        continue;
+                    RigSpringCollider collider = targetCollider._collider;
+                    collider._pointA           = position + float3::transform( collider._pointA, rotation );
+                    collider._pointB           = position + float3::transform( collider._pointB, rotation );
+                    collider._bone             = RigSpringCollider::kModelSpaceBone;
+                    _listScratchCollider.push_back( collider );
+                }
+                _chain.simulate( *context._pPose, _listBone, _settings, _listScratchCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.insert( inoutListBone.end(), _listBone.begin(), _listBone.end() ); }
@@ -197,12 +226,20 @@ namespace sw
             {
                 RigSpringCollider _collider{};
                 hashed_string     _boneName{};
+                hashed_string     _targetName{};
+            };
+            /** @brief 리그 목표에 붙은 충돌체입니다. 점은 목표 공간이다. */
+            struct TargetCollider
+            {
+                RigSpringCollider _collider{};
+                uint32            _target{ 0 };
             };
 
             vector<hashed_string>     _listBoneName{};
             vector<uint32>            _listBone{};
             vector<ColliderSpec>      _listColliderSpec{};
             vector<RigSpringCollider> _listCollider{};
+            vector<TargetCollider>    _listTargetCollider{}; ///< 리그 목표(다른 유닛의 본)에 붙은 충돌체
             vector<RigSpringCollider> _listScratchCollider{};
             RigSpringChain            _chain{};
             RigSpringSettings         _settings{};

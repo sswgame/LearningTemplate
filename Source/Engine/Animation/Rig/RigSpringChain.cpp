@@ -40,9 +40,10 @@ namespace sw
                 float3 result = next;
                 for ( const RigSpringCollider& collider : listCollider )
                 {
-                    if ( collider._bone >= pose.getBoneCount() )
+                    const bool bModelSpace = collider._bone == RigSpringCollider::kModelSpaceBone;
+                    if ( bModelSpace == false && collider._bone >= pose.getBoneCount() )
                         continue;
-                    const float4x4 boneWorld = pose.getModelMatrix( collider._bone ) * worldFromModel;
+                    const float4x4 boneWorld = bModelSpace ? worldFromModel : pose.getModelMatrix( collider._bone ) * worldFromModel;
                     const float3   pointA    = float3::transform( collider._pointA, boneWorld );
                     const float3   closest   = ( collider._shape == RigSpringColliderShape::Capsule ) ? findClosestOnSegment( result, pointA, float3::transform( collider._pointB, boneWorld ) ) : pointA;
                     const float3   away      = result - closest;

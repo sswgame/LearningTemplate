@@ -23,9 +23,12 @@ namespace sw
         Capsule,    ///< 선분 A-B 와 반지름으로 정한다.
     };
 
-    /** @brief 본에 붙은 충돌체 하나입니다. 점은 본 공간(본의 모델 변환으로 옮김)입니다. */
+    /** @brief 본에 붙은 충돌체 하나입니다. 점은 본 공간(본의 모델 변환으로 옮김)이고, `_bone` 이 `kModelSpaceBone` 이면 이미 모델 공간입니다. */
     struct RigSpringCollider
     {
+        /** @brief 점이 이미 모델 공간인 충돌체입니다 — 리그 목표(다른 유닛의 본)에 붙은 충돌체를 노드가 이번 프레임에 모델 공간으로 옮겨 넘긴다. */
+        static constexpr uint32 kModelSpaceBone = 0xFFFFFFFFu;
+
         float3                 _pointA{};
         float3                 _pointB{};
         uint32                 _bone{ 0 };
