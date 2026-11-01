@@ -16,6 +16,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -72,6 +73,8 @@ namespace sw
         string _scheduleDataPath;
         PROPERTY( Category = "Prefabs", DisplayName = "Villager Prefab", AssetPath, AssetType = "Prefab", Tooltip = "Body spawned for each schedule NPC (needs a FarmVillagerComponent)" )
         string _villagerPrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Villager Presets", Tooltip = "Appearance preset per NPC (cycled by NPC index, seeded by it); empty keeps the prefab's preset" )
+        vector<hashed_string> _listVillagerPreset;
         PROPERTY( Category = "Navigation", DisplayName = "Nav Origin", Tooltip = "World corner of cell (0, 0) of the village nav grid", Units = m )
         float3 _navOrigin;
         PROPERTY( Category = "Navigation", DisplayName = "Nav Width", Tooltip = "Cells along X (required)", Min = 0 )

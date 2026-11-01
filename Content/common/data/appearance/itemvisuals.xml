@@ -89,4 +89,80 @@
     <Part name="Bow" kind="SocketPrefab" prefab="common/prefabs/props/bow.prefab.xml" socket="BowGrip"/>
     <Part name="Arrow" kind="SocketPrefab" prefab="common/prefabs/props/arrow.prefab.xml" socket="BowGrip"/>
   </ItemVisual>
+
+  <!-- 마을 사람 몸 — Quaternius Universal Base Characters(전신, 65 뼈 리그 — UAL 클립과 같은 리그). 머리카락 구간(mi_hair_*)은 그리지 않고 머리 꾸미기(hair_*)가 고른다.
+       옷(outfit_*)은 Outfits 묶음의 부품이고, 덮는 몸은 피팅 표(ubc.fit.xml)의 숨김 영역 · 피부 × 천 잘라 내기가 뺀다. -->
+  <ItemVisual id="body_ubc_male">
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/characters/superhero_male_fullbody.mesh" skeleton="common/models/quaternius/characters/superhero_male_fullbody/superhero_male_fullbody.skeleton.xml"
+          sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml">
+      <Section name="mi_superhero_male" material="common/models/quaternius/characters/superhero_male_fullbody/materials/mi_superhero_male.material"/>
+      <Section name="mi_eyes" material="common/models/quaternius/characters/superhero_male_fullbody/materials/mi_eyes.material"/>
+    </Part>
+  </ItemVisual>
+  <ItemVisual id="body_ubc_female">
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/characters/superhero_female_fullbody.mesh" skeleton="common/models/quaternius/characters/superhero_female_fullbody/superhero_female_fullbody.skeleton.xml"
+          sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml">
+      <Section name="mi_superhero_female" material="common/models/quaternius/characters/superhero_female_fullbody/materials/mi_superhero_female.material"/>
+      <Section name="mi_eyes" material="common/models/quaternius/characters/superhero_female_fullbody/materials/mi_eyes.material"/>
+    </Part>
+  </ItemVisual>
+  <ItemVisual id="hair_simpleparted">
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_simpleparted.mesh" material="common/models/quaternius/hair/hair_simpleparted/materials/mi_hair_1.material"/>
+    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
+  </ItemVisual>
+  <ItemVisual id="hair_buzzed">
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/models/quaternius/hair/hair_buzzed/materials/mi_hair_1.material"/>
+    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
+  </ItemVisual>
+  <ItemVisual id="hair_bearded">
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/models/quaternius/hair/hair_buzzed/materials/mi_hair_1.material"/>
+    <Part name="Beard" kind="Skinned" mesh="common/models/quaternius/hair/hair_beard.mesh" material="common/models/quaternius/hair/hair_beard/materials/mi_hair_1.material"/>
+    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
+  </ItemVisual>
+  <ItemVisual id="hair_long">
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_long.mesh" material="common/models/quaternius/hair/hair_long/materials/mi_hair_2.material"/>
+    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
+  </ItemVisual>
+  <ItemVisual id="hair_buns">
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buns.mesh" material="common/models/quaternius/hair/hair_buns/materials/mi_hair_2.material"/>
+    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
+  </ItemVisual>
+  <ItemVisual id="hair_buzzed_female">
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buzzedfemale.mesh" material="common/models/quaternius/hair/hair_buzzedfemale/materials/mi_hair_1.material"/>
+    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
+  </ItemVisual>  <ItemVisual id="outfit_peasant_male" tags="Outfit.Peasant">
+    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_arms.mesh" fit="common/characters/ubc/outfits/male_peasant_arms.partfit.xml">
+      <Section name="mi_peasant" material="common/models/quaternius/outfits/male_peasant_arms/materials/mi_peasant.material"/>
+      <Section name="mi_regular_male" material="common/models/quaternius/outfits/male_peasant_arms/materials/mi_regular_male.material"/>
+    </Part>
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_body.mesh" fit="common/characters/ubc/outfits/male_peasant_body.partfit.xml" material="common/models/quaternius/outfits/male_peasant_body/materials/mi_peasant.material"/>
+    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_legs.mesh" fit="common/characters/ubc/outfits/male_peasant_legs.partfit.xml" material="common/models/quaternius/outfits/male_peasant_legs/materials/mi_peasant.material"/>
+    <Part name="Feet" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_feet.mesh" fit="common/characters/ubc/outfits/male_peasant_feet.partfit.xml" material="common/models/quaternius/outfits/male_peasant_feet/materials/mi_peasant.material"/>
+  </ItemVisual>
+  <ItemVisual id="outfit_peasant_female" tags="Outfit.Peasant">
+    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_arms.mesh" fit="common/characters/ubc/outfits/female_peasant_arms.partfit.xml" material="common/models/quaternius/outfits/female_peasant_arms/materials/mi_peasant.material"/>
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_body.mesh" fit="common/characters/ubc/outfits/female_peasant_body.partfit.xml" material="common/models/quaternius/outfits/female_peasant_body/materials/mi_peasant.material"/>
+    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_legs.mesh" fit="common/characters/ubc/outfits/female_peasant_legs.partfit.xml" material="common/models/quaternius/outfits/female_peasant_legs/materials/mi_peasant.material"/>
+    <Part name="Feet" kind="Skinned" mesh="common/models/quaternius/outfits/female_peasant_feet.mesh" fit="common/characters/ubc/outfits/female_peasant_feet.partfit.xml" material="common/models/quaternius/outfits/female_peasant_feet/materials/mi_peasant.material"/>
+  </ItemVisual>
+  <ItemVisual id="outfit_ranger_male" tags="Outfit.Ranger">
+    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_arms.mesh" fit="common/characters/ubc/outfits/male_ranger_arms.partfit.xml">
+      <Section name="mi_ranger" material="common/models/quaternius/outfits/male_ranger_arms/materials/mi_ranger.material"/>
+      <Section name="mi_regular_male" material="common/models/quaternius/outfits/male_ranger_arms/materials/mi_regular_male.material"/>
+    </Part>
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_body.mesh" fit="common/characters/ubc/outfits/male_ranger_body.partfit.xml" material="common/models/quaternius/outfits/male_ranger_body/materials/mi_ranger.material"/>
+    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_legs.mesh" fit="common/characters/ubc/outfits/male_ranger_legs.partfit.xml" material="common/models/quaternius/outfits/male_ranger_legs/materials/mi_ranger.material"/>
+    <Part name="Feet_boots" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_feet_boots.mesh" fit="common/characters/ubc/outfits/male_ranger_feet_boots.partfit.xml" material="common/models/quaternius/outfits/male_ranger_feet_boots/materials/mi_ranger.material"/>
+    <Part name="Pauldron" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_acc_pauldron.mesh" fit="common/characters/ubc/outfits/male_ranger_acc_pauldron.partfit.xml" material="common/models/quaternius/outfits/male_ranger_acc_pauldron/materials/mi_ranger.material"/>
+  </ItemVisual>
+  <ItemVisual id="outfit_ranger_female" tags="Outfit.Ranger">
+    <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_arms.mesh" fit="common/characters/ubc/outfits/female_ranger_arms.partfit.xml">
+      <Section name="mi_ranger" material="common/models/quaternius/outfits/female_ranger_arms/materials/mi_ranger.material"/>
+      <Section name="mi_regular_female" material="common/models/quaternius/outfits/female_ranger_arms/materials/mi_regular_female.material"/>
+    </Part>
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_body.mesh" fit="common/characters/ubc/outfits/female_ranger_body.partfit.xml" material="common/models/quaternius/outfits/female_ranger_body/materials/mi_ranger.material"/>
+    <Part name="Legs" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_legs.mesh" fit="common/characters/ubc/outfits/female_ranger_legs.partfit.xml" material="common/models/quaternius/outfits/female_ranger_legs/materials/mi_ranger.material"/>
+    <Part name="Feet" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_feet.mesh" fit="common/characters/ubc/outfits/female_ranger_feet.partfit.xml" material="common/models/quaternius/outfits/female_ranger_feet/materials/mi_ranger.material"/>
+    <Part name="Pauldrons" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_acc_pauldrons.mesh" fit="common/characters/ubc/outfits/female_ranger_acc_pauldrons.partfit.xml" material="common/models/quaternius/outfits/female_ranger_acc_pauldrons/materials/mi_ranger.material"/>
+  </ItemVisual>
 </ItemVisualCatalog>

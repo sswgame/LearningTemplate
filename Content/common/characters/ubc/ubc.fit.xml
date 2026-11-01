@@ -1,0 +1,44 @@
+<!-- Quaternius Universal Base Characters 리그(65 뼈 — UAL 클립과 같은 리그)의 몸 피팅 표. 영역은 본 가중치로 정한다(칠한 정점 그룹이 없다).
+     앞 줄이 먼저 맞으므로 손 · 발 같은 끝 영역을 팔 · 다리 앞에 둔다. 겹 · 프로필 · 상호작용은 엔진 기본 표(engine/character/default.fit.xml)와 같다 —
+     옷(Outfits 묶음, models_raw/quaternius/outfits)이 덮는 몸 삼각형은 피부 × 천 상호작용(Cut)이 잘라 낸다(전신 몸 위에 옷을 입혀도 몸이 뚫고 나오지 않는다). -->
+<FitTables>
+    <Layer name="Body" order="0"/>
+    <Layer name="Shirt" order="10"/>
+    <Layer name="Pants" order="10"/>
+    <Layer name="Armor" order="30"/>
+    <Layer name="Boots" order="35"/>
+
+    <Region name="Hand_L" bones="hand_l index_01_l index_02_l index_03_l index_04_leaf_l middle_01_l middle_02_l middle_03_l middle_04_leaf_l pinky_01_l pinky_02_l pinky_03_l pinky_04_leaf_l ring_01_l ring_02_l ring_03_l ring_04_leaf_l thumb_01_l thumb_02_l thumb_03_l thumb_04_leaf_l" minWeight="0.5"/>
+    <Region name="Hand_R" bones="hand_r index_01_r index_02_r index_03_r index_04_leaf_r middle_01_r middle_02_r middle_03_r middle_04_leaf_r pinky_01_r pinky_02_r pinky_03_r pinky_04_leaf_r ring_01_r ring_02_r ring_03_r ring_04_leaf_r thumb_01_r thumb_02_r thumb_03_r thumb_04_leaf_r" minWeight="0.5"/>
+    <Region name="Foot_L" bones="foot_l ball_l ball_leaf_l" minWeight="0.5"/>
+    <Region name="Foot_R" bones="foot_r ball_r ball_leaf_r" minWeight="0.5"/>
+    <Region name="Head" bones="Head neck_01" minWeight="0.5"/>
+    <Region name="UpperArm_L" bones="upperarm_l" minWeight="0.5"/>
+    <Region name="UpperArm_R" bones="upperarm_r" minWeight="0.5"/>
+    <Region name="Forearm_L" bones="lowerarm_l" minWeight="0.5"/>
+    <Region name="Forearm_R" bones="lowerarm_r" minWeight="0.5"/>
+    <Region name="Thigh_L" bones="thigh_l" minWeight="0.5"/>
+    <Region name="Thigh_R" bones="thigh_r" minWeight="0.5"/>
+    <Region name="Shin_L" bones="calf_l" minWeight="0.5"/>
+    <Region name="Shin_R" bones="calf_r" minWeight="0.5"/>
+    <Region name="Torso" bones="spine_02 spine_03 clavicle_l clavicle_r" minWeight="0.5"/>
+    <Region name="Belly" bones="root pelvis spine_01" minWeight="0.5"/>
+
+    <Profile name="Skin" rigidity="0" coverageDistance="0.02"/>
+    <Profile name="Cloth" rigidity="0" shrinkStrength="1" pushDistance="0.004" falloffWidth="0.05" coverageDistance="0.02"/>
+    <Profile name="Leather" rigidity="0.5" shrinkStrength="0.6" pushDistance="0.003" falloffWidth="0.04" coverageDistance="0.015"/>
+    <Profile name="Rigid" rigidity="1" pushDistance="0.002" coverageDistance="0.01"/>
+
+    <Interaction inner="Skin" outer="Cloth" operator="Cut"/>
+    <Interaction inner="Skin" outer="Leather" operator="Cut"/>
+    <Interaction inner="Skin" outer="Rigid" operator="Cut"/>
+    <Interaction inner="Cloth" outer="Rigid" operator="Shrink"/>
+    <Interaction inner="Leather" outer="Rigid" operator="Shrink"/>
+    <Interaction inner="Rigid" outer="Cloth" operator="Push"/>
+    <Interaction inner="Rigid" outer="Leather" operator="Push"/>
+    <Interaction inner="Cloth" outer="Cloth" operator="Cut"/>
+    <Interaction inner="Cloth" outer="Leather" operator="Cut"/>
+    <Interaction inner="Cloth" outer="Rigid" operator="Cut"/>
+    <Interaction inner="Leather" outer="Rigid" operator="Cut"/>
+    <Interaction inner="Rigid" outer="Rigid" operator="Report" args="tolerance=0.001"/>
+</FitTables>

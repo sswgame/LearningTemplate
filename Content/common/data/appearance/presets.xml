@@ -58,4 +58,17 @@
     <Equip slot="Back" item="cape_skeleton"/>
     <Equip slot="MainHand" items="blade_skeleton,axe_skeleton"/>
   </CharacterAppearance>
-</CharacterAppearanceCatalog>
+
+  <!-- 마을 사람 — 씨앗마다 머리 모양 · 옷을 뽑는다(HarvestValley 의 villager 프리팹이 NPC 번호를 씨앗으로 준다). 농부는 고정된 차림이다. -->
+  <CharacterAppearance id="TownsfolkMale" schema="TownsfolkMale" bodyType="Male" bodyShape="Average" body="body_ubc_male" tags="Race.Human">
+    <Value name="Hair" options="SimpleParted,Buzzed,Bearded"/>
+    <Value name="Outfit" options="Peasant,Ranger"/>
+  </CharacterAppearance>
+  <CharacterAppearance id="TownsfolkFemale" schema="TownsfolkFemale" bodyType="Female" bodyShape="Average" body="body_ubc_female" tags="Race.Human">
+    <Value name="Hair" options="Long,Buns,Buzzed"/>
+    <Value name="Outfit" options="Peasant,Ranger"/>
+  </CharacterAppearance>
+  <CharacterAppearance id="Farmer" parent="TownsfolkMale" tags="Faction.Player">
+    <Value name="Hair" option="Bearded"/>
+    <Value name="Outfit" option="Peasant"/>
+  </CharacterAppearance></CharacterAppearanceCatalog>

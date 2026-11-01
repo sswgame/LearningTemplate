@@ -27,6 +27,9 @@
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw
@@ -45,6 +48,9 @@ namespace sw
         , _pWindow{ nullptr }
         , _stateSnapshot{}
         , _gameScope{}
+        , _pItemCatalog{}
+        , _pAppearanceDatabase{}
+        , _pAppearanceWatcher{}
         , _loadedAudioEvents{}
         , _listSlotRequest{}
     {
@@ -149,7 +155,7 @@ namespace sw
                 pLinkSceneManager->setNetLink( netSession.makeNetLink() );
         }
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
-        const bool bInitialized = bSubsystemsStarted && bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
+        const bool bInitialized = bSubsystemsStarted && bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && loadDeclaredCharacterData() && onInitialize();
         // 창이 없는 호스트에는 UI 가 없다 — UI 전역 명령 표도 쓰지 않는다. 파생 초기화 뒤에 건다("타이틀로" 는 첫 씬을 요청한 뒤의 일이다).
         if ( game::findSubsystem<UISystem>() != nullptr )
             getSubsystem<GameSceneFlow>().registerSessionCommands( game::getSubsystem<UIGlobalCommandRegistry>() );
@@ -177,6 +183,10 @@ namespace sw
         if ( GameNetSession* pNetSession = game::findSubsystem<GameNetSession>() )
             pNetSession->getConnectSecurity().setProvider( nullptr );
         detachGameScope();
+        // 범위를 뗀 뒤에 놓는다 — 걸어 둔 서비스(외형 · 아이템)를 찾는 쪽이 이제 없다.
+        _pAppearanceWatcher.reset();
+        _pAppearanceDatabase.reset();
+        _pItemCatalog.reset();
         _pWindow = nullptr;
     }
 
@@ -238,6 +248,36 @@ namespace sw
         return true;
     }
 
+    bool GameInstance::loadDeclaredCharacterData()
+    {
+        const map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
+        if ( mapRequired.find( ItemCatalog::kDataKind ) != mapRequired.end() )
+        {
+            _pItemCatalog = make_unique<ItemCatalog>();
+            if ( loadRequiredCatalog( *_pItemCatalog ) == false )
+                return false;
+        }
+        if ( mapRequired.find( AppearanceDatabase::kDataKind ) == mapRequired.end() )
+            return true;
+        _pAppearanceDatabase = make_unique<AppearanceDatabase>();
+        _pAppearanceWatcher  = make_unique<AppearanceDataWatcher>();
+        const bool bLoaded   = loadRequiredData( AppearanceDatabase::kDataKind, [this]( const string& folder )
+          {
+            if ( _pAppearanceDatabase->loadFromFolder( folder, _pItemCatalog.get() ) == false )
+            {
+                SW_LOG_ERROR_ID( "GameInstance.AppearanceDataReport", "Appearance data report - %#", _pAppearanceDatabase->getReport().joined().c_str() );
+                return false;
+            }
+            // 고친 외형 파일을 실행 중에 다시 읽는다. 팩 데이터면 디스크 폴더가 없어 감시하지 않는다(그 까닭은 감시자가 알린다).
+            (void)_pAppearanceWatcher->initialize( folder );
+            return true;
+        } );
+        if ( bLoaded == false )
+            return false;
+        bindScopedService( _pAppearanceDatabase.get() );
+        return true;
+    }
+
     bool GameInstance::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
     {
         string error;
@@ -264,6 +304,8 @@ namespace sw
         getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.
         game::getSubsystem<GameNetSession>().update();
+        if ( _pAppearanceWatcher != nullptr )
+            _pAppearanceWatcher->update( *_pAppearanceDatabase, _pItemCatalog.get() );
         onUpdate( deltaTime );
     }
 

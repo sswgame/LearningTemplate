@@ -26,7 +26,10 @@ namespace sw
     struct LocalStoreCompletion;
     struct TypeInfo;
 
+    class AppearanceDatabase;
+    class AppearanceDataWatcher;
     class GameObjectManager;
+    class ItemCatalog;
     class LoadingScreenController;
 
     // ------------------------------------------------------------------------------
@@ -220,6 +223,11 @@ namespace sw
         [[nodiscard]] bool applyPackConfig();
         /** @brief gamesettings 의 사운드 이벤트 라이브러리(`_audioEvents`)를 올립니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true). */
         [[nodiscard]] bool loadAudioEvents();
+        /**
+         * @brief gamesettings 가 `<RequiredData>` 로 적은 아이템(`items`) · 외형(`appearance`) 데이터를 읽어 게임 범위에 겁니다(외형은 아이템 뒤 — 아이템을 참조한다). 적지 않은 종류는 읽지 않는다.
+         * @details 캐릭터 외형을 쓰는 게임마다 같은 로드 · 서비스 걸기 · 핫 리로드를 손으로 짜지 않게 데이터가 정한다(언리얼 GameInstance 서브시스템처럼 바탕이 세운다). 못 읽으면 false(게임을 띄우지 않는다).
+         */
+        [[nodiscard]] bool loadDeclaredCharacterData();
         /** @brief `loadRequiredData` 의 경로를 만듭니다. 못 만들면 이유를 오류로 남기고 false 입니다. */
         [[nodiscard]] bool makeRequiredDataPath( string_view kindLabel, string& outPath ) const;
         /** @brief 필수 데이터 @p path 를 읽지 못했음을 파일과 이유로 알립니다. */
@@ -229,9 +237,12 @@ namespace sw
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
         void reportScopedServiceConflict( uint64 typeHash ) const;
 
-        GameStateSnapshot    _stateSnapshot;     ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
-        SubsystemScope       _gameScope;         ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        string               _loadedAudioEvents; ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
-        vector<Subscription> _listSlotRequest;   ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
+        GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
+        SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
+        unique_ptr<ItemCatalog>           _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(게임 범위 서비스)
+        unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
+        unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;  ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
+        string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        vector<Subscription>              _listSlotRequest;     ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
     };
 } // namespace sw

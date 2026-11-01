@@ -1,0 +1,8 @@
+<PartFit layer="Shirt" profile="Cloth">
+  <Hide region="UpperArm_L"/>
+  <Hide region="UpperArm_R"/>
+  <Hide region="Forearm_L"/>
+  <Hide region="Forearm_R"/>
+  <Hide region="Hand_L"/>
+  <Hide region="Hand_R"/>
+</PartFit>

@@ -1,0 +1,17 @@
+<!-- 마을 사람(Quaternius 기본 캐릭터 · UAL 클립) — 실제로 움직인 수평 속도(Speed, m/s — MoveAnimationComponent 가 넣는다)로 서기 · 걷기 · 달리기를 섞는다.
+     표본 자리는 농장 배율(몸 0.6 배 — 1.1 m 키)에서 클립의 발 속도에 맞춘 값이다: 걷기 1.4 m/s · 달리기 3.5 m/s 의 0.6 배. 클립 폴더는 프리팹의 _clipFolder(UAL1). -->
+<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Locomotion" x="40.0" y="40.0" loop="true">
+			<blend_space x="Speed">
+				<samples>
+					<sample clip="idle_loop" x="0" />
+					<sample clip="walk_loop" x="0.84" />
+					<sample clip="jog_fwd_loop" x="2.1" />
+				</samples>
+			</blend_space>
+		</node>
+	</nodes>
+	<links>
+	</links>
+</AnimationGraphAsset>

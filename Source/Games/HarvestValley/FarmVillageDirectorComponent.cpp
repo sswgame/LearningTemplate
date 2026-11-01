@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
@@ -63,6 +64,7 @@ namespace sw
     FarmVillageDirectorComponent::FarmVillageDirectorComponent()
         : _scheduleDataPath{}
         , _villagerPrefab{}
+        , _listVillagerPreset{}
         , _navOrigin{}
         , _navWidth{ 0 }
         , _navHeight{ 0 }
@@ -252,6 +254,10 @@ namespace sw
             FarmVillagerComponent* pView = pVillager->getComponent<FarmVillagerComponent>();
             if ( pView != nullptr )
                 pView->assignVillager( director, npcIndex );
+            // 외형은 NPC 마다 다르게 — 프리셋을 번호로 돌려 고르고 번호를 씨앗으로 준다(같은 저장이면 같은 사람이 같은 차림이다).
+            CharacterAppearanceComponent* pAppearance = pVillager->getComponent<CharacterAppearanceComponent>();
+            if ( pAppearance != nullptr && _listVillagerPreset.empty() == false )
+                pAppearance->setPreset( _listVillagerPreset[static_cast<size_t>( npcIndex ) % _listVillagerPreset.size()], static_cast<uint32>( npcIndex + 1 ) );
         }
     }
 

@@ -1,0 +1,6 @@
+<PartFit layer="Pants" profile="Cloth">
+  <Hide region="Thigh_L"/>
+  <Hide region="Thigh_R"/>
+  <Hide region="Shin_L"/>
+  <Hide region="Shin_R"/>
+</PartFit>

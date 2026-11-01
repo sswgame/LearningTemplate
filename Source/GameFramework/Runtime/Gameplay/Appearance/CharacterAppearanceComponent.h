@@ -404,7 +404,8 @@ namespace sw
         uint8                                          _bMeshAssembled       : 1; ///< 유닛이 베이크한 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
         uint8                                          _bProportionTask      : 1; ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
         uint8                                          _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
-        [[maybe_unused]] uint8                         _reserved             : 2;
+        uint8                                          _bMeshApplyQueued     : 1; ///< 다 읽은 조립의 걸기를 틱 뒤로 미뤄 두었다 — 그동안 원본 내용 id 가 아직 없어 낡음 판정을 하지 않는다
+        [[maybe_unused]] uint8                         _reserved             : 1;
         hashed_string                                  _mergedBodySection;      ///< 합친 메시에서 몸이 그리는 구간 이름(몸 부품 이름)
         vector<TComponentHandle<MeshSectionComponent>> _listBodySection;        ///< 몸 부품의 `<Section>` 중 둘째부터를 그리는 구간 컴포넌트(몸 오브젝트에 붙는다 — `applyBodyPart`)
         CharacterSurfaceState                          _surface;                ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)

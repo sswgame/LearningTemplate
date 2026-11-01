@@ -21,4 +21,27 @@
       <Option name="Standard"/>
     </Choice>
   </Schema>
+  <!-- 마을 사람(Quaternius 기본 캐릭터 몸) — 머리 모양 · 옷을 고른다. 옷은 Outfits 묶음의 부품 외형이고 덮는 몸은 피팅이 뺀다. 장비 칸(Head · Back · 손)은 그대로 입힌다. -->
+  <Schema id="TownsfolkMale">
+    <Choice name="Hair" category="Head" default="SimpleParted">
+      <Option name="SimpleParted" visual="hair_simpleparted"/>
+      <Option name="Buzzed" visual="hair_buzzed"/>
+      <Option name="Bearded" visual="hair_bearded"/>
+    </Choice>
+    <Choice name="Outfit" category="Outfit" default="Peasant">
+      <Option name="Peasant" visual="outfit_peasant_male"/>
+      <Option name="Ranger" visual="outfit_ranger_male"/>
+    </Choice>
+  </Schema>
+  <Schema id="TownsfolkFemale">
+    <Choice name="Hair" category="Head" default="Long">
+      <Option name="Long" visual="hair_long"/>
+      <Option name="Buns" visual="hair_buns"/>
+      <Option name="Buzzed" visual="hair_buzzed_female"/>
+    </Choice>
+    <Choice name="Outfit" category="Outfit" default="Peasant">
+      <Option name="Peasant" visual="outfit_peasant_female"/>
+      <Option name="Ranger" visual="outfit_ranger_female"/>
+    </Choice>
+  </Schema>
 </CustomizationSchemaCatalog>

@@ -756,24 +756,47 @@
 		<entity id="33" name="Farmer">
 			<GameObject _schemaVersion="0" _name="Farmer" _bActive="true">
 				<_listComponent>
-					<MeshComponent _componentName="MeshComponent"
-					               _bActive="true"
-					               _localPosition="6,0.5,-1.2"
-					               _localRotation="0,0,0"
-					               _localScale="0.5,0.5,0.5"
-					               _attachOwner="None"
-					               _attachOwnerID="0"
-					               _attachComponent="None"
-					               _meshID="Capsule"
-					               _materialPath="game/harvestvalley/materials/farmer.material"
-					               _boundsRadius="0.866"
-					               _blendMode="Opaque"
-					               _gpuSpinSeed="0"
-					               _bVisible="true" />
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="6,0,-1.2"
+					                       _localRotation="0,0,0"
+					                       _localScale="0.6,0.6,0.6"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID=""
+					                       _materialPath="None"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath=""
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="common/data/anim/ubc_townsfolk.animgraph.xml"
+					                           _clipFolder="common/models/quaternius/animations/ual1_standard/clips"
+					                           _initialState="Locomotion"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
+					                              _bActive="true"
+					                              _presetID="Farmer"
+					                              _seed="0" />
+					<MoveAnimationComponent _componentName="MoveAnimationComponent"
+					                        _bActive="true" />
 					<FarmerComponent _componentName="FarmerComponent"
 					                 _bActive="true"
 					                 _director="35"
-					                 _heightOffset="0.5"
+					                 _heightOffset="0"
 					                 _kind="Farmer" />
 					<PawnComponent _componentName="PawnComponent"
 					               _bActive="true"
@@ -877,7 +900,12 @@
 					                              _navObstacleRadius="0.8"
 					                              _bodyCatchUpScale="1.5"
 					                              _bodySnapDistance="3"
-					                              _bAutoPlay="false" />
+					                              _bAutoPlay="false">
+						<_listVillagerPreset>
+							<item>TownsfolkMale</item>
+							<item>TownsfolkFemale</item>
+						</_listVillagerPreset>
+					</FarmVillageDirectorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

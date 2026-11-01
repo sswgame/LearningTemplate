@@ -54,6 +54,16 @@ namespace sw
             static void applyPartSections( GameObjectManager& manager, GameObject& owner, MeshComponent& main, const ResolvedPart& part,
                                            vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const string& presetID )
             {
+                // 이미 같은 구간 · 머티리얼이면 그대로 둔다 — 조립은 자주(로드를 기다리는 동안 프레임마다) 다시 불리고, 새로 만들면 머티리얼을 매번 다시 잡는다.
+                bool bSame = part._listSection.empty() == false && inoutListSection.size() + 1 == part._listSection.size() && main.getSectionName() == part._listSection.front()._name &&
+                             main.getMaterialPath() == part._listSection.front()._material;
+                for ( size_t index = 0; bSame && index < inoutListSection.size(); ++index )
+                {
+                    const MeshSectionComponent* pSection = manager.resolveComponent( inoutListSection[index] );
+                    bSame                                = pSection != nullptr && pSection->getSectionName() == part._listSection[index + 1]._name && pSection->getMaterialPath() == part._listSection[index + 1]._material;
+                }
+                if ( bSame )
+                    return;
                 for ( const TComponentHandle<MeshSectionComponent>& handle : inoutListSection )
                 {
                     MeshSectionComponent* pSection = manager.resolveComponent( handle );
@@ -216,6 +226,7 @@ namespace sw
         , _bAssembleScheduled{ SW_FALSE }
         , _bStarted{ SW_FALSE }
         , _bMeshAssemblyPending{ SW_FALSE }
+        , _bMeshApplyQueued{ SW_FALSE }
         , _bMeshAssembled{ SW_FALSE }
         , _bProportionTask{ SW_FALSE }
         , _bMeshMerged{ SW_FALSE }
@@ -255,8 +266,8 @@ namespace sw
             _surface.update( deltaTime ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
             applySurface( *pManager, false );
         }
-        if ( _bMeshAssemblyPending == SW_TRUE )
-            return; // 베이크한 메시를 기다린다(`waitMeshAssembly` 가 걸면 다시 본다)
+        if ( _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE )
+            return; // 베이크한 메시를 기다리거나(`waitMeshAssembly`) 걸기가 틱 뒤로 예약됐다 — 걸기 전의 원본 내용 id 는 0 이라 낡음으로 보이면 조립을 끝없이 다시 한다
         // 소켓 파일을 고치면 공유 캐시가 제자리에서 다시 읽는다 — 몸 소켓은 조립 때 덮어쓰기와 합쳐 사본으로 들었으므로 다시 조립해야 바뀐다.
         // 베이크한 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
         const bool bSocketsStale = _socketCache.isStale();
@@ -1109,6 +1120,7 @@ namespace sw
         if ( self.isMeshAssemblyLoading() )
             return true;
         self._bMeshAssemblyPending = SW_FALSE;
+        self._bMeshApplyQueued     = SW_TRUE;
         // 유닛의 메시 · 구간 컴포넌트를 바꾸는 일은 대기 목록을 도는 중에 하지 않는다 — 같은 프레임의 틱 뒤 큐(`ApplyPrePhysics`)가 건다.
         pManager->deferPostTickOnComponent( self, []( CharacterAppearanceComponent& appearance )
         { appearance.applyMeshAssembly(); } );
@@ -1169,6 +1181,7 @@ namespace sw
     void CharacterAppearanceComponent::applyMeshAssembly()
     {
         // 틱이 이 걸기를 예약한 뒤 같은 틱 뒤에 다시 조립했으면(새 요청) 새 것이 아직 읽는 중이다 — 다음 틱이 건다.
+        _bMeshApplyQueued                  = SW_FALSE;
         GameObjectManager* pManager        = findManager();
         const bool         bSuperseded     = _bMeshAssemblyPending == SW_TRUE || isMeshAssemblyLoading();
         const bool         bNothingToApply = _listMeshAssemblyLoad.empty() || bSuperseded;
