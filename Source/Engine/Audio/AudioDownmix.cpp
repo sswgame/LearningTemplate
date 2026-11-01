@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioDownmix" );
-
     namespace
     {
         struct AudioDownmixInternal

@@ -37,8 +37,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShooterDirector" );
-
     namespace
     {
         struct ShooterDirectorComponentInternal

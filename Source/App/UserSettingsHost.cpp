@@ -18,8 +18,6 @@ SW_TEST_GLOBAL_VARIABLE( bool, gv_userSettingsAutoConfirm, true, "gv_userSetting
 
 namespace sw
 {
-    SW_LOG_CALLER( "UserSettingsHost" );
-
     UserSettingsHost::UserSettingsHost()
         : _pEngine{ nullptr }
         , _pWindow{ nullptr }

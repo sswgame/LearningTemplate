@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DevCommandRegistry" );
-
     DevCommandRegistry& DevCommandRegistry::get()
     {
         static DevCommandRegistry s_registry;

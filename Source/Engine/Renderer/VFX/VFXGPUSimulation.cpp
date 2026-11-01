@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "VFXGPUSimulation" );
-
     namespace
     {
         struct VFXGPUSimulationInternal

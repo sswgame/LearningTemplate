@@ -8,7 +8,6 @@
 #include "Editor/Common/Localization/LocalizationTools.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
-SW_LOG_CALLER( "DataTablePanel" );
 namespace sw::editor
 {
     DataTableModel::DataTableModel()

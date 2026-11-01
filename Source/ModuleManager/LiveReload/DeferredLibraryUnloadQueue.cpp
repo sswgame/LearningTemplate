@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LiveReloadManager" );
-
     DeferredLibraryUnloadQueue::DeferredLibraryUnloadQueue( uint32 maxBatchCount )
         : _listLibrary{}
         , _batchID{ 0 }

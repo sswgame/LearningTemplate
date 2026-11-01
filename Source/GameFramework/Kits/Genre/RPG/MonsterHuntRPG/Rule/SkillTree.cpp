@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SkillTree" );
-
     const SkillDef* SkillTreeDef::findSkill( const hashed_string& skillID ) const
     {
         return VectorUtil::findBy<&SkillDef::_id>( _listSkill, skillID );

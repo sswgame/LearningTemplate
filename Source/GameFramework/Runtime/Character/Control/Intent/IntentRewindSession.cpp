@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "IntentRewindSession" );
-
     IntentRewindSession::IntentRewindSession()
         : _buffer{}
         , _pWorld{ nullptr }

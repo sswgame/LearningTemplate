@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SplineRiverPathComponent" );
-
     SplineRiverPathComponent::SplineRiverPathComponent()
         : _sampleSpacing{ 2.0f }
         , _lastRevision{ 0 }

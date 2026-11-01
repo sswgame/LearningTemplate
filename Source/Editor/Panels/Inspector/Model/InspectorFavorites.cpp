@@ -12,8 +12,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "InspectorFavorites" );
-
     string InspectorFavorites::makeKey( string_view typeName, string_view propertyName )
     {
         string key{ typeName };

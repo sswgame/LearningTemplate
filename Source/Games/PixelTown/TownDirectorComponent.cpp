@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TownDirector" );
-
     namespace
     {
         constexpr uint32 kTownStateTag     = FourCcUtil::make( "TOWN" );

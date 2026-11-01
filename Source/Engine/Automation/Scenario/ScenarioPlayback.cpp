@@ -7,8 +7,6 @@
 
 #include "Engine/Foundation/EngineServices.h"
 
-SW_LOG_CALLER( "ScenarioPlayback" );
-
 namespace sw
 {
     bool ScenarioPlayback::play( const AssetID& scenarioPath, const ScenarioPlayOptions& options )

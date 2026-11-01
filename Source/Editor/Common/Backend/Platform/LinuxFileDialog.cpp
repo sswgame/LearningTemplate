@@ -322,8 +322,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "LinuxFileDialog" );
-
     bool LinuxFileDialog::open( const FileDialogParams& params, vector<string>& outListPath )
     {
         outListPath.clear();

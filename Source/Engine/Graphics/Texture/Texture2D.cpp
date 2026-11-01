@@ -19,8 +19,6 @@ SW_GLOBAL_VARIABLE( int32, gv_textureMipDrop, 0, "텍스처를 읽을 때 버리
 
 namespace sw
 {
-    SW_LOG_CALLER( "Texture2D" );
-
     SW_ASSET_TYPE( Texture, Texture2D::kAssetType );
 
     Texture2D::Texture2D()

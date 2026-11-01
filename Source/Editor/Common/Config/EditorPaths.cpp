@@ -46,8 +46,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorPaths" );
-
     string EditorPaths::findContentFolder( string_view folderID )
     {
         const std::optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );

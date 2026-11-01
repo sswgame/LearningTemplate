@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TerrainColliderComponent" );
-
     namespace
     {
         /** @brief 셀 사각형 [@p cellMinX, @p cellEndX) × [@p cellMinZ, @p cellEndZ) 를 삼각형 메시로 만듭니다. 점은 그 셀들의 샘플만이고 샘플 (0, 0) 기준입니다. */

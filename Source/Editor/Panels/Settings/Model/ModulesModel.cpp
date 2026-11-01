@@ -15,8 +15,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ModulesPanel" );
-
     namespace
     {
         struct ModulesModelInternal

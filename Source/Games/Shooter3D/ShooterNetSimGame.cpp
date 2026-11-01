@@ -48,8 +48,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShooterNetSimGame" );
-
     namespace
     {
         /**

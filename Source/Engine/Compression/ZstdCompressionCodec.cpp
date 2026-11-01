@@ -27,8 +27,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ZstdCodec" );
-
     CompressionCodecType ZstdCompressionCodec::getCodecType() const
     {
         return CompressionCodecType::Zstd;

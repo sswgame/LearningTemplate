@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SpriteAnimator" );
-
     // 컴포넌트는 오브젝트마다 만들어진다. 필드 크기 합(베이스 + 필드 + 비트필드 한 바이트)을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다.
     static_assert( sizeof( SpriteAnimatorComponent ) <=
                        ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimationGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +

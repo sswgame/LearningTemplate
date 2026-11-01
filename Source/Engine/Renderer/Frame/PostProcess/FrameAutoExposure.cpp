@@ -27,8 +27,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameAutoExposure" );
-
     namespace
     {
         struct FrameAutoExposureInternal

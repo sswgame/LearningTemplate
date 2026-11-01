@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FileWatchDispatcher" );
-
     FileWatchDispatcher::FileWatchDispatcher() = default;
 
     FileWatchDispatcher::~FileWatchDispatcher()

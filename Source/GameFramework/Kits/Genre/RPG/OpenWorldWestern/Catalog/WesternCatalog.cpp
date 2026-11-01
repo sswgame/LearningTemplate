@@ -67,8 +67,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "WesternCatalog" );
-
     WesternCatalog::WesternCatalog()
         : _crimeCatalog{}
         , _regionCatalog{}

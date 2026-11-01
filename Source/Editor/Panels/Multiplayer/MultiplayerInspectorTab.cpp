@@ -21,8 +21,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MultiplayerInspector" );
-
     namespace
     {
         struct MultiplayerInspectorTabInternal

@@ -6,8 +6,6 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
-SW_LOG_CALLER( "CommandLineManager" );
-
 namespace sw
 {
     // ============================================================================

@@ -23,8 +23,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeadowFarm" );
-
     namespace
     {
         /** @brief 칸 상태의 색입니다 — 다 자람 · 물 줌 · 갈았음 · 갈지 않음 순서로 먼저 맞는 것(값은 디렉터의 PROPERTY). */

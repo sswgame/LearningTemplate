@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CacheStats" );
-
     namespace
     {
         struct CacheStatsInternal

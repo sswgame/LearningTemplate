@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GPUVertexAnimationPool" );
-
     void GPUVertexAnimationPool::uploadEntry( IRHIDevice* pDevice, const MeshVertexAnimation& animation, uint32 base )
     {
         vector<uint32> listWord( shaderslot::kVertexAnimationHeaderWords + animation._listFrameVertex.size() * shaderslot::kVertexAnimationWordsPerElement );

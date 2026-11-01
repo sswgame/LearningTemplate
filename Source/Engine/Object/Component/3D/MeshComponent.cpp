@@ -23,8 +23,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeshComponent" );
-
     MeshComponent::MeshComponent()
         : _mesh{}
         , _meshLoad{}

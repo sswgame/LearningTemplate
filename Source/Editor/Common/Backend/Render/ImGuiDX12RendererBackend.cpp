@@ -40,8 +40,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiDX12" );
-
     bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
         SW_LOG_TRACE_ID( "ImGuiDX12.InitializeStart", "Initialize start." );

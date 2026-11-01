@@ -23,8 +23,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ModelImporter" );
-
     BoneTransform ModelImportAnimation::readNodeLocal( const cgltf_node& node )
     {
         BoneTransform transform{};

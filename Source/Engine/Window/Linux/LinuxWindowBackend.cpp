@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Window" );
-
     bool tryReadLinuxWindowBackend( LinuxWindowBackend& outBackend )
     {
         string backend;

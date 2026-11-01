@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LiveShader" );
-
     LiveShaderSubsystem::LiveShaderSubsystem( const FrameRendererSubsystem& frameRendererSubsystem, const RenderThreadSubsystem& renderThreadSubsystem )
         : _shaderRecompiler{ nullptr }
         , _recompiledSubscription{}

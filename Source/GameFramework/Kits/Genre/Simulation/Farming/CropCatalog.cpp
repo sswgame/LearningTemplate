@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CropCatalog" );
-
     namespace
     {
         /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 오류이고 false 를 반환합니다. */

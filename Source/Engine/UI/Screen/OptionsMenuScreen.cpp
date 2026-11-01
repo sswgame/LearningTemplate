@@ -25,8 +25,6 @@ SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_uiOptionsMenu, false, "옵션 메뉴�
 
 namespace sw
 {
-    SW_LOG_CALLER( "OptionsMenuScreen" );
-
     namespace
     {
         struct OptionsMenuScreenInternal

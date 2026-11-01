@@ -16,8 +16,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "AnimationClipPreviewPanel" );
-
     AnimationClipPreviewModel::AnimationClipPreviewModel()
         : _bodyPrefabPath{}
         , _activePrefabPath{}

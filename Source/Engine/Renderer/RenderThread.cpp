@@ -29,8 +29,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderThread" );
-
     namespace
     {
         struct RenderThreadInternal

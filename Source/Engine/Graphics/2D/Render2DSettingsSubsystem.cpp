@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Render2DSettings" );
-
     Render2DSettingsSubsystem::Render2DSettingsSubsystem()
         : _settings{ make_unique<Render2DSettings>() }
     {

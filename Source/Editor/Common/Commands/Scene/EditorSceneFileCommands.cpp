@@ -91,8 +91,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorSceneFileCommands" );
-
     bool EditorSceneFileCommands::loadScene( string_view path )
     {
         // 리소스 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.

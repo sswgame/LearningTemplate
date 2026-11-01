@@ -12,8 +12,6 @@ SW_TEST_GLOBAL_VARIABLE( float32, gv_uiDebugSafeZone, 0.0f, "UI 안전 영역 �
 
 namespace sw
 {
-    SW_LOG_CALLER( "UIScale" );
-
     namespace
     {
         struct UIScaleInternal

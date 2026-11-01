@@ -463,8 +463,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "InputMap" );
-
     const utf8* BindingKinds::toName( BindingKind kind )
     {
         const BindingKindInfo* pInfo = findBindingKindInfo( kind );

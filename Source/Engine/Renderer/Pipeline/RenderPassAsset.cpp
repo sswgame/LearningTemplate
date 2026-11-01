@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderPassAsset" );
-
     bool RenderPassAsset::loadFromXMLFile( const AssetID& assetID )
     {
         _desc = {};

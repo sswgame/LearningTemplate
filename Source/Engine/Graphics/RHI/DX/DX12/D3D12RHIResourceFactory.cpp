@@ -19,8 +19,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    SW_LOG_CALLER( "D3D12RHIResourceFactory" );
-
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBuffer( uint32 size )
     {
         const UINT                             alignedSize = MathUtil::align( size, constant::render::kConstantBufferAlignment );

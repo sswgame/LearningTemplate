@@ -19,8 +19,6 @@ SW_TEST_GLOBAL_VARIABLE( bool, gv_fontMsdfGlyphs, false, "글리프 아틀라스
 
 namespace sw
 {
-    SW_LOG_CALLER( "FontService" );
-
     namespace
     {
         struct FontServiceInternal

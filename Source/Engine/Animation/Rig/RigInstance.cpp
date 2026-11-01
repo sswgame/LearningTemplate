@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RigInstance" );
-
     namespace
     {
         /** @brief 본 모델 변환 위에 본 기준 오프셋을 적용합니다(행 벡터이므로 오프셋이 먼저). @p bScaled 면 오프셋 이동에 본 스케일을 곱합니다. */

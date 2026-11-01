@@ -12,7 +12,6 @@
 
 #include <limits>
 
-SW_LOG_CALLER( "FixedCodecGenerator" );
 namespace sw
 {
     namespace

@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TerrainHeightfield" );
-
     namespace
     {
         /** @brief 스플랫 텍셀 하나(레이어 여덟 바이트)를 가중치(0..255 그대로, 합으로 나누기 전)로 읽습니다. */

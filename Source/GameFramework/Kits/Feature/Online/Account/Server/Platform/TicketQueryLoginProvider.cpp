@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TicketQueryLoginProvider" );
-
     unique_ptr<IPlatformLoginProvider> TicketQueryLoginProvider::create( const PlatformLoginProviderConfig& settings, HTTPClient* pHTTPClient )
     {
         string key;

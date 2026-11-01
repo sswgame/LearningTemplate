@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "D3D11" );
-
     D3D11ImmediateContext::ScopedLock::ScopedLock( ID3D11DeviceContext* pContext, ID3D11Multithread* pMultithread )
         : _pContext{ pContext }
         , _pMultithread{ pMultithread }

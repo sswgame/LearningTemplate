@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PrefabPool" );
-
     PrefabPool::PrefabPool( string prefabPath, uint32 maxIdleCount )
         : _prefabPath{ std::move( prefabPath ) }
         , _listIdle{}

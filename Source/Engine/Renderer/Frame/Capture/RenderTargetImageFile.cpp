@@ -13,8 +13,6 @@
 namespace sw
 {
     // 로그 접두어는 옮기기 전과 같게 둔다(로그를 읽는 스크립트와 사람이 같은 이름으로 찾는다).
-    SW_LOG_CALLER( "FrameRenderer" );
-
     namespace
     {
         /** @brief RGBA8 을 PPM(P6: 아스키 헤더 + RGB 8bit)으로 씁니다. */

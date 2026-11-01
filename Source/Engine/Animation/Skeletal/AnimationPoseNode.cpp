@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationPoseNode" );
-
     BlendPosesNode::BlendPosesNode( const IAnimationPlayable& inputA, const IAnimationPlayable& inputB, const hashed_string& weightParameter )
         : _pInputA{ &inputA }
         , _pInputB{ &inputB }

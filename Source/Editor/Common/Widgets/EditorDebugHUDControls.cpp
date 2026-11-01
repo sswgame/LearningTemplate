@@ -19,8 +19,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorDebugHUD" );
-
     namespace
     {
         /** @brief 게임 디버그 HUD 입니다(개발 도구의 기동 단계 서브시스템). 없으면(UI 없는 실행 · 테스트 호스트) nullptr 입니다. */

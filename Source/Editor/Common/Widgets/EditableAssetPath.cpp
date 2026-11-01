@@ -14,8 +14,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditableAssetPath" );
-
     EditableAssetPath::EditableAssetPath( const DataPath& initial )
         : _committed{ initial.get() }
         , _draft{ initial.get() }

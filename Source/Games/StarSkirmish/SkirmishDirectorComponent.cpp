@@ -33,8 +33,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SkirmishDirector" );
-
     namespace
     {
         struct SkirmishDirectorComponentInternal

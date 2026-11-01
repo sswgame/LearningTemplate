@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationNotify" );
-
     AnimationNotifyListenerBinding::AnimationNotifyListenerBinding( AnimationNotifyComponent& owner )
         : _owner{ owner }
     {

@@ -119,8 +119,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "FractureComponent" );
-
     namespace
     {
         /** @brief 잎 셰이프 미리 짓기가 이 스레드에서 쓴 시간이다. 창마다 다시 채워, 파괴물이 많아도 한 프레임에 예산만큼만 쓴다. */

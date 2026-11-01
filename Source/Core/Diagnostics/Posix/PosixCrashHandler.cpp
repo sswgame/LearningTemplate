@@ -16,7 +16,6 @@
     #include <pthread.h>
     #include <unistd.h>
 
-SW_LOG_CALLER( "PosixCrashHandler" );
 namespace sw
 {
     namespace

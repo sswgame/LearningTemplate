@@ -13,8 +13,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorRenderViews" );
-
     void EditorRenderViews::shutdownSubsystem()
     {
         destroyViewTargets();

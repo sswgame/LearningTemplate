@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ModelImportJSONUtil" );
-
     bool ModelImportJSONUtil::hasOnlyKnownKeys( const JSONValue& object, std::initializer_list<string_view> listKnownKey, string_view context )
     {
         if ( object.isObject() == false )

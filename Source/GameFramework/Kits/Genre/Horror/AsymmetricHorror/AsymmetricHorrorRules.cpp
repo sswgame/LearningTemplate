@@ -42,8 +42,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "AsymmetricHorrorRulesCatalog" );
-
     AsymmetricHorrorRulesCatalog::AsymmetricHorrorRulesCatalog()
         : _rules{}
         , _judge{}

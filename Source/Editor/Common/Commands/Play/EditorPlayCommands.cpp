@@ -54,8 +54,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorPlay" );
-
     SW_EDITOR_COMMAND( PlayEject, "play.eject", 4100, "Eject / Possess", editoricon::kController, "Play",
                        "플레이 중 플레이어 조종을 놓고 씬 뷰 에디터 카메라로 빠져나옵니다(다시 누르면 조종으로 돌아갑니다)",
                        "Leave the player for the scene view while playing, or take it back", "play.eject",

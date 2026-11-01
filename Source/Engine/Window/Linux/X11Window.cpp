@@ -23,8 +23,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "X11Window" );
-
     namespace
     {
         /** @brief 복원 위치의 "알아서" 값입니다. X11 에는 `CW_USEDEFAULT` 같은 약속이 없어 좌표를 하나 정해 둡니다. */

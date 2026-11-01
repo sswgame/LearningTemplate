@@ -17,8 +17,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "AsyncFileIO" );
-
         struct AsyncFileIOInternal
         {
             /** @brief 완료 콜백을 싣는 태스크의 우선순위입니다 — 파일 작업은 렌더 · 물리가 쓰는 High 큐에 싣지 않는다(`AssetStreamingQueue::toTaskPriority` 와 같은 대응). */

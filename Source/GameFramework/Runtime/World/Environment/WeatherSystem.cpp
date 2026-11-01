@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "WeatherSystem" );
-
     float32 WeatherDef::computeWeight( const hashed_string& season ) const
     {
         if ( _listSeasonWeight.empty() )

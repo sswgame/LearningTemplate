@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GridPanel" );
-
     namespace
     {
         /** @brief 자식 하나가 덮는 칸입니다(트랙 범위로 제한한 뒤). */

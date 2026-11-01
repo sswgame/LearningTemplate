@@ -39,8 +39,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ClothComponent" );
-
     ClothComponent::ClothComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Body }
         , _width{ 1.0f }

@@ -4,7 +4,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "HTTPServer" );
 } // namespace sw
 
 namespace sw

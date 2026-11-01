@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameSettings" );
-
     bool GameSettings::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetRelativePath = assetID.view();

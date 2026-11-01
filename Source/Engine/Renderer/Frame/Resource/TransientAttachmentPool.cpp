@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TransientAttachmentPool" );
-
     TransientAttachmentPool::TransientAttachmentPool()
         : _mapAttachment{}
         , _listClearedThisFrame{}

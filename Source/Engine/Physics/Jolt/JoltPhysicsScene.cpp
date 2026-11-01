@@ -35,8 +35,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "JoltPhysicsScene" );
-
     namespace
     {
         struct JoltPhysicsSceneInternal

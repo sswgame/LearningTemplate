@@ -15,8 +15,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "LocalizationToolEntry" );
-
     namespace
     {
         /** @brief 작업 하나를 돌립니다. 성공하면 true 입니다(모르는 작업은 false). */

@@ -27,8 +27,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameNetSession" );
-
     namespace
     {
         struct GameNetSessionInternal

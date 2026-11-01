@@ -18,8 +18,6 @@
 #if defined( SW_WITH_SERVER_CODE )
 namespace sw
 {
-    SW_LOG_CALLER( "OnlineServerService" );
-
     namespace
     {
         struct OnlineServerServiceInternal

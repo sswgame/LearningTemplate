@@ -26,8 +26,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameUpscale" );
-
     /**
      * @brief `-gv_upscalerSharpness=<단계>`: FSR 1 RCAS 의 선명도를 줄이는 단계입니다(0 = 가장 선명, 1 단계마다 절반 — AMD FSRRcasCon 의 sharpness). AMD 예제 기본값은 0.2 다.
      */

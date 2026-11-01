@@ -128,8 +128,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SequenceTimeline" );
-
     void SequenceTimelineUtil::applySpawns( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, vector<SequenceSpawnedObject>& inoutListSpawned )
     {
         if ( pManager == nullptr )

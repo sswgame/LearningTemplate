@@ -4,8 +4,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RHIBufferSize" );
-
     bool RHIBufferSize::computeStructuredBytes( uint32 elementSize, uint32 elementCount, uint32& outTotalBytes )
     {
         const uint64 totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );

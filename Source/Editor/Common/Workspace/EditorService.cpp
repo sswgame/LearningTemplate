@@ -20,7 +20,6 @@
 
 #include <atomic>
 
-SW_LOG_CALLER( "EditorService" );
 namespace sw::editor
 {
     /**

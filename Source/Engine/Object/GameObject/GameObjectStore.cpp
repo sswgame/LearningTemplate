@@ -34,8 +34,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameObjectStore" );
-
     atomic<uint64> GameObjectStore::_s_nextObjectID = 1;
 
     GameObjectStore::GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer )

@@ -127,8 +127,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "Engine" );
-
     Engine::Engine()
         : _coreScope{}
         , _services{}

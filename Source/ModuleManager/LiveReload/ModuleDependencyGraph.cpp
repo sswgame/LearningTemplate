@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LiveReloadManager" );
-
     ModuleDependencyGraph::ModuleDependencyGraph()
         : _mapDependsOn{}
     {

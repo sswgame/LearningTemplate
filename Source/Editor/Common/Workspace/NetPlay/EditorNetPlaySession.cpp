@@ -59,8 +59,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "NetPlay" );
-
     namespace
     {
         struct EditorNetPlaySessionInternal

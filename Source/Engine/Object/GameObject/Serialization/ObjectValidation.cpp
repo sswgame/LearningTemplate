@@ -10,7 +10,6 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
-SW_LOG_CALLER( "ObjectValidation" );
 namespace sw
 {
     uint32 ObjectValidation::validateGameObject( const GameObject& object, ValidationContext& context )

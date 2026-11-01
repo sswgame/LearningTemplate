@@ -24,7 +24,6 @@
 
 #include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"
 
-SW_LOG_CALLER( "OnlineLoadBot" );
 namespace sw
 {
     namespace

@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GPUAssert" );
-
     /**
      * @brief `-gv_gpuAssert=1`: assert 를 가진 컴퓨트 셰이더(gpu_cull · canvas_marker · mesh_morph)를 `SW_GPU_ASSERT_ENABLED` 변형으로 컴파일해 조건이 틀린 스레드가 링 버퍼에 기록을 남기고, CPU 가 몇 프레임 뒤 로그로 낸다.
      * @details 기본 끔 — 켜면 그 패스의 셰이더 변형이 하나 더 컴파일되고 u4 에 버퍼가 걸린다(Shipping 은 등록되지 않아 늘 끔).

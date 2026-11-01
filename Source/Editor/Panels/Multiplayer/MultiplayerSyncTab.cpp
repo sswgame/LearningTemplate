@@ -25,8 +25,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MultiplayerSync" );
-
     namespace
     {
         struct MultiplayerSyncTabInternal

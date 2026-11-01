@@ -68,7 +68,7 @@ namespace sw
         /** @brief 줄 하나를 판정합니다. @p id 가 비었으면 id 없는 줄입니다. */
         AutomationLogVerdict classify( LogLevel level, string_view id, string_view message ) const;
         /** @brief 줄 하나를 판정해 처리하지 않은 줄이면 @p inoutJudgement 에 더하고, 허용이 맞았으면 그 id 를 적습니다. */
-        void judge( LogLevel level, string_view caller, string_view id, string_view message, AutomationLogJudgement& inoutJudgement ) const;
+        void judge( LogLevel level, string_view id, string_view message, AutomationLogJudgement& inoutJudgement ) const;
 
     private:
         vector<string> _listExpectedID{};

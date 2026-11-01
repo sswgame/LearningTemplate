@@ -105,8 +105,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "MaterialCache" );
-
     namespace
     {
         /** @brief 고정 토큰(`MaterialCache::pinAsset`)이 놓일 때 확보한 참조를 놓는 삭제자입니다. 머티리얼 객체는 캐시가 소유하므로 지우지 않는다. */

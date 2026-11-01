@@ -44,8 +44,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImageUtil" );
-
     bool ImageUtil::loadImage( string_view filePath, RawImageData& outImage )
     {
         vector<uint8> bytes;

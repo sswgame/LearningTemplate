@@ -8,7 +8,6 @@
 #include "Programs/ReflectionParser/ParserDefines.h"
 #include "Programs/ReflectionParser/ParserUtil.h"
 
-SW_LOG_CALLER( "TypeNameMap" );
 namespace sw
 {
     TypeNameMap::TypeNameMap()

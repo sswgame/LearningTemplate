@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MonsterCatalog" );
-
     MonsterCatalog::MonsterCatalog()
         : _mapMonster{}
     {

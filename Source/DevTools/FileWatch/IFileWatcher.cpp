@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "IFileWatcher" );
-
     void IFileWatcher::pushChange( FileWatcherAction action, string_view directory, string_view filename )
     {
         ScopedLock<mutex> lock{ _eventMutex };

@@ -31,8 +31,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "RHI" );
-
     RHISubsystem::RHISubsystem()
         : _rhi{ nullptr }
         , _initResult{ RHIInitResult::NotStarted }

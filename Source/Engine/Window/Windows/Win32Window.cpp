@@ -7,8 +7,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    SW_LOG_CALLER( "Win32Window" );
-
     Win32Window::Win32Window()
         : _hWnd{ nullptr }
         , _bResizing{ SW_FALSE }

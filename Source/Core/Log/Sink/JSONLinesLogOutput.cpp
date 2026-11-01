@@ -69,8 +69,6 @@ namespace sw
         outLine.append( "\",\"ts\":" ).append( to_string( fields._unixMilliseconds ) );
         outLine.append( ",\"level\":\"" ).append( levelIndex < SW_COUNT_OF( JSONLinesInternal::kArrLevelName ) ? JSONLinesInternal::kArrLevelName[levelIndex] : "info" ).append( "\"" );
         JSONLinesInternal::appendTextField( outLine, "tag", fields._tag );
-        if ( fields._caller.empty() == false )
-            JSONLinesInternal::appendTextField( outLine, "caller", fields._caller );
         if ( fields._bHasClock )
             outLine.append( fields._clock == LogClock::Frame ? ",\"frame\":" : ",\"tick\":" ).append( to_string( fields._clockNumber ) );
         if ( fields._context._traceID.isValid() )

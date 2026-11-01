@@ -7,8 +7,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorExtensionRegistry" );
-
     namespace
     {
         /** @brief 종류 이름 → 목록입니다. 종류는 열 개 안팎이라 줄 찾기로 충분하다. 함수 정적이라 다른 TU 의 정적 등록자보다 늦게 만들어질 걱정이 없다. */

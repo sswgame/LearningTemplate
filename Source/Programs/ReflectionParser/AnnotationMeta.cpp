@@ -8,7 +8,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/string_splitter.h"
 
-SW_LOG_CALLER( "AnnotationMeta" );
 namespace sw
 {
     AnnotationMeta::AnnotationMeta()

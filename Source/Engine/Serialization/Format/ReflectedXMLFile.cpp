@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ReflectedXMLFile" );
-
     bool ReflectedXMLFile::loadDescInternal( const AssetID& assetID, void* pDesc, const TypeInfo* pTypeInfo )
     {
         // 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 읽으면 팩 전용 구성의 거절을 지나간다.

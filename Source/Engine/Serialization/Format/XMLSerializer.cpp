@@ -641,8 +641,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "XMLSerializer" );
-
     struct XMLDocumentBackend::Impl
     {
         XMLDocument     _doc;

@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneComponent" );
-
     SceneComponent::SceneComponent()
         : _attachOwner{}
         , _attachOwnerID{ 0 }

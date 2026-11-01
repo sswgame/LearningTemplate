@@ -22,8 +22,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorLayoutStore" );
-
     bool EditorLayoutStore::sanitizeName( string_view name, string& outName )
     {
         const string_view trimmed = StringUtil::trim( name );

@@ -36,8 +36,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "TerrainBrushTool" );
-
     namespace
     {
         struct TerrainBrushToolInternal

@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AutomationStepRegistry" );
-
     namespace
     {
         struct AutomationStepRegistryInternal

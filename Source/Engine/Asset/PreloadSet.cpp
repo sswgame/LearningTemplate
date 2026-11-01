@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PreloadSet" );
-
     PreloadSet::PreloadSet( vector<string> listAssetPath, StreamingPriority priority, uint32 maxInFlight )
         : _listAssetPath{ std::move( listAssetPath ) }
         , _state{ make_shared<State>() }

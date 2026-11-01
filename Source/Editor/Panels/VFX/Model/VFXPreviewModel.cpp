@@ -26,8 +26,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "VFXPreviewPanel" );
-
     VFXPreviewModel::VFXPreviewModel()
         : _listEmitterRow{}
         , _previewEffectPath{}

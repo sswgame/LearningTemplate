@@ -438,8 +438,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderCooker" );
-
     bool ShaderCookRequestCollector::collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
     {
         return ShaderCookRequestCollectorInternal::collectAllRequests( rootDir, outListRequest );

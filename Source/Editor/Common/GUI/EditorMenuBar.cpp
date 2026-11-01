@@ -61,8 +61,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "Editor" );
-
     void EditorMenuBar::draw( EditorDockLayout& dockLayout )
     {
         if ( ImGui::BeginMainMenuBar() == false )

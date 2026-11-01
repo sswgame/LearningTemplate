@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ServiceAccountTokenSource" );
-
     namespace
     {
         struct ServiceAccountTokenSourceInternal
@@ -92,7 +90,6 @@ namespace sw
 
     bool ServiceAccountTokenSource::request( UnixMilliseconds now )
     {
-        using Internal = ServiceAccountTokenSourceInternal;
         if ( _requestID != 0 )
             return true;
         const int64 issuedAtSec = now.toSeconds();

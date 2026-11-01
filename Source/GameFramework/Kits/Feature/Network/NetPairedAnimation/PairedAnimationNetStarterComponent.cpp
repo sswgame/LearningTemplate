@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PairedAnimationNetStarterComponent" );
-
     PairedAnimationNetStarterComponent::PairedAnimationNetStarterComponent()
         : _restartDelay{ 0.0f }
         , _endedSeconds{ 0.0f }

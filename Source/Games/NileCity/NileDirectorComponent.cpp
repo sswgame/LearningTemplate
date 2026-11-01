@@ -31,8 +31,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "NileDirector" );
-
     namespace
     {
         struct NileDirectorComponentInternal

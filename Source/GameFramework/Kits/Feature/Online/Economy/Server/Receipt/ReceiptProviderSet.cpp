@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ReceiptProviderSet" );
-
     namespace
     {
         struct ReceiptProviderSetInternal

@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ScavengerCatalog" );
-
     ScavengerCatalog::ScavengerCatalog()
         : _moonCatalog{}
         , _scrapCatalog{}

@@ -30,8 +30,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "D3D12" );
-
     D3D12RHIDevice::D3D12RHIDevice()
         : _device{ nullptr }
         , _memoryAdapter{ nullptr }

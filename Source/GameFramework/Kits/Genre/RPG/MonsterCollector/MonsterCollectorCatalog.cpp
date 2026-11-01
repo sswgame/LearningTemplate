@@ -88,8 +88,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "MonsterCollectorCatalog" );
-
     bool MonsterSpeciesDef::hasType( const hashed_string& type ) const
     {
         return VectorUtil::contains( _listType, type );

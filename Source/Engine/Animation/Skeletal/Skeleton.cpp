@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Skeleton" );
-
     int32 Skeleton::addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose, const float4x4& inverseBind )
     {
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. 읽을 때 걸러 낸다.

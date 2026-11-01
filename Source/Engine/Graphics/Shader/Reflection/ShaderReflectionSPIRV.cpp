@@ -525,8 +525,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderReflection" );
-
     ShaderReflectionData ShaderReflectionUtil::reflectSPIRV( const vector<uint8>& bytecode )
     {
         using Internal = ShaderReflectionSPIRVInternal;

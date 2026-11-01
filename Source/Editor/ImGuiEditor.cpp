@@ -435,8 +435,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiEditor" );
-
     // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
      * @brief `-gv_editorStartupScene=<리소스 경로>`: 에디터가 시작할 때 이 씬을 엽니다.

@@ -22,8 +22,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationNotify" );
-
     namespace
     {
         struct AnimationNotifyHandlersInternal

@@ -32,7 +32,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "WaylandWindow" );
 } // namespace sw
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )

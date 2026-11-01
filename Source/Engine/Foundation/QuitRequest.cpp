@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Engine" );
-
     void QuitRequest::request( int32 exitCode )
     {
         if ( _bRequested )

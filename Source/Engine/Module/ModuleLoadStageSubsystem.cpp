@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ModuleLoadStage" );
-
     ModuleLoadStageSubsystem::ModuleLoadStageSubsystem( const ISubsystemLocator* pScope )
         : _pScope{ pScope }
     {

@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ComponentHandleArgument" );
-
     const GameObjectManager* ComponentHandleArgument::findManager( const Component& self, string_view functionName )
     {
         const GameObject*        pOwner   = self.getOwner();

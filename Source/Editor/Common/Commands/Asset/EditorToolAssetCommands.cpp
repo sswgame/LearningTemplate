@@ -181,8 +181,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorToolAssetCommands" );
-
     ToolAssetLoadResult EditorToolAssetCommands::loadAnimationGraph( AnimationGraphAsset& outData, string_view path )
     {
         return EditorToolAssetInternal::loadToolDocument( kAnimationGraphDocument, outData, path, nullptr );

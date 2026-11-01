@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SplashWindow" );
-
     SplashWindow::SplashWindow()
         : _pImpl{ nullptr }
     {

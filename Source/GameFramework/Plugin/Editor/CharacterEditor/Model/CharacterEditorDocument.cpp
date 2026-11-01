@@ -39,8 +39,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "CharacterEditorDocument" );
-
     CharacterEditorDocument::CharacterEditorDocument()
         : _sockets{}
         , _pose{}

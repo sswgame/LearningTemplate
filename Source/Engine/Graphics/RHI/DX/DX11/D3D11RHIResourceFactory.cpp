@@ -18,8 +18,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    SW_LOG_CALLER( "D3D11" );
-
     RHIBufferHandle D3D11RHIResourceFactory::createConstantBuffer( uint32 size )
     {
         const bool bInvalidConstantBufferRequest = _pDevice == nullptr || _pDevice->_device == nullptr || size == 0;

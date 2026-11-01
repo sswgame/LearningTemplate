@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioMixer" );
-
     namespace
     {
         /** @brief 버스 데이터의 채널 구성을 출력 레이아웃 아래의 실제 레이아웃으로 풉니다. */

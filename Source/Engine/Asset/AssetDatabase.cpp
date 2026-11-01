@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AssetDatabase" );
-
     string AssetDatabase::toRootAssetID( string_view absolutePath )
     {
         // 리소스 id 로 바꾸는 계산은 `AssetPaths::toAssetID` 하나다. 붙인 디스크 도메인(시나리오의 `saved`)은 리소스 루트 밖이라 `.meta` · GUID 를 주지 않는다.

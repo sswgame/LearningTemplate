@@ -33,8 +33,6 @@ SW_TEST_GLOBAL_VARIABLE( sw::string, gv_debugHUDWatchSection, "", "자동화 감
 
 namespace sw
 {
-    SW_LOG_CALLER( "DebugHUD" );
-
     namespace
     {
         struct DebugHUDInternal

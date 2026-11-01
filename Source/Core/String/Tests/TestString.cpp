@@ -1547,11 +1547,10 @@ namespace
         void initialize() override {}
         void shutdown() override {}
 
-        void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
+        void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
         {
             (void)level;
             (void)pTag;
-            (void)pCaller;
             (void)pFile;
             (void)line;
             (void)pID;

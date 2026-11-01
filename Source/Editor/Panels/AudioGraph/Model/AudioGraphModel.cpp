@@ -11,7 +11,6 @@
 
 #include "Engine/Audio/AudioEngine.h"
 
-SW_LOG_CALLER( "AudioGraphModel" );
 namespace sw::editor
 {
     AudioGraphModel::AudioGraphModel()

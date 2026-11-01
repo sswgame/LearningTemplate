@@ -22,8 +22,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MultiplayerProfiler" );
-
     namespace
     {
         struct MultiplayerProfilerTabInternal

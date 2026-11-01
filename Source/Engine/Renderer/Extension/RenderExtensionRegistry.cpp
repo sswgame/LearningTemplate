@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ExtensionRenderPass" );
-
     bool ExtensionDrawCollector::add( const ExtensionDrawElement& element )
     {
         if ( element._mesh.empty() )

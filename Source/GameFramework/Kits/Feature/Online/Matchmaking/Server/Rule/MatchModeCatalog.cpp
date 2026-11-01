@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MatchModeCatalog" );
-
     bool MatchModeCatalog::parseCompactMode( string_view text, MatchModeDefinition& outMode, string& outError )
     {
         constexpr const utf8* kShapeError = "must be <id>:<team count>x<team size>";

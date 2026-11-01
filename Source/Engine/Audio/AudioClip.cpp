@@ -22,8 +22,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioClipCache" );
-
     SW_ASSET_TYPE( Audio, AudioClipData::kAssetType );
 
     namespace

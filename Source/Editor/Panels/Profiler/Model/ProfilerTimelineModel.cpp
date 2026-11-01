@@ -11,8 +11,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ProfilerTimelineModel" );
-
     ProfilerTimelineModel::ProfilerTimelineModel()
         : _listThread{}
         , _listRect{}

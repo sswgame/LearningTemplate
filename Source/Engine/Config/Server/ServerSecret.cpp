@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ServerSecret" );
-
     bool ServerSecret::read( string_view environmentName, string& outSecret )
     {
         outSecret.clear();

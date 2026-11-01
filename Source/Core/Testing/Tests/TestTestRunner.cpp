@@ -6,8 +6,6 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestRunner.h"
 
-SW_LOG_CALLER( "TestTestRunner" );
-
 using namespace sw;
 using sw::test::TestRunner;
 

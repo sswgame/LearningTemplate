@@ -26,8 +26,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpenSSLNetSecurity" );
-
     namespace
     {
         struct OpenSSLNetSecurityInternal

@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ServerBus" );
-
     namespace
     {
         const utf8* describeReadResult( const ServerBusReadResult result )

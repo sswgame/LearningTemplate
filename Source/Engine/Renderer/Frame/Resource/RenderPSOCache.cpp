@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderPSOCache" );
-
     RenderPSOCache::RenderPSOCache()
         : _bindingLayoutCache{}
         , _mapPSOLayout{}

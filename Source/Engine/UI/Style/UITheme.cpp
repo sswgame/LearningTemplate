@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UITheme" );
-
     bool UIThemeCatalog::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();

@@ -16,8 +16,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "InputMapDocument" );
-
     InputMapDocument::InputMapDocument()
         : _inputMap{}
         , _replay{}

@@ -135,7 +135,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "RetargetPanel" );
     SW_EDITOR_PANEL( RetargetPanel, RetargetPanel::kPanelID, EditorPanelCategory::Custom, 9040 );
 
     SW_AUTOMATION_WATCH( editorRetargetPoseCount, "Editor.RetargetPoseCount", "Retarget pose rows (target bone turns) in the profile the Retarget Profile window has open",

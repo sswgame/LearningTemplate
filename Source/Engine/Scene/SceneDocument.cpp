@@ -191,8 +191,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneDocument" );
-
     SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
 
     bool SceneDocument::loadXML( const AssetID& assetID )

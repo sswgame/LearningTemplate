@@ -21,8 +21,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "PackReader" );
-
         /** @brief 폴더 색인의 키입니다 — 아스키 소문자로 접습니다(폴더 비교가 대소문자를 무시하며 `StringUtil::startsWith` 와 같은 접기입니다). */
         string makeFolderKey( string_view folder )
         {

@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AssetDataKind" );
-
     bool AssetDataKind::matches( string_view assetID ) const
     {
         const bool bNoMatchRule = _pPrefix == nullptr && _pContains == nullptr && _pSuffix == nullptr;

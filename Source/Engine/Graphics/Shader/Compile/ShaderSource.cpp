@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderSource" );
-
     std::optional<string_view> ShaderSourceID::getShadersFolder() const
     {
         // 칸 단위로 본다 — `myshaders/` 나 `shadersx/` 는 `shaders` 칸이 아니다(예전 글자 검색 `shaders/` 는 앞을, `/shaders/` 는 둘 다 놓쳤다).

@@ -84,8 +84,8 @@ namespace sw::editor
         void updateFilteredEntries( const string& filterStr );
         /** @brief 태그 팝업의 태그 목록(그리기용 복사본에 나온 카테고리, 이름 순)을 복사본이 바뀌었을 때만 다시 짓습니다. */
         const vector<string>& getSnapshotTags() SW_REQUIRES_LOCK( _uiThread );
-        /** @brief 로그 행의 카테고리를 반환합니다. 로그를 쓴 위치(`SW_LOG_CALLER`)이고, 없으면 모듈 태그입니다. 태그 필터와 팝업이 이 이름을 씁니다. */
-        static const string& getEntryCategory( const LogEntry& entry );
+        /** @brief 로그 행의 범주입니다 — id 의 영역(`LogEntry::getCategory`)이고, id 없는 줄은 모듈 태그입니다. 태그 팝업이 이것으로 거른다. */
+        static string_view getEntryCategory( const LogEntry& entry );
         /** @brief 태그(로거 카테고리)를 켜고 끄는 팝업을 그립니다. */
         void drawTagFilterPopup();
         /** @brief 툴바 옵션 메뉴(가끔 켜는 설정 · 내보내기)를 그립니다. */

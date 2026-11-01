@@ -332,8 +332,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "PrefabOverrides" );
-
     bool PrefabOverrides::makeBaseState( const PrefabAsset& prefab, string& outStateXML )
     {
         outStateXML.clear();

@@ -27,8 +27,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorInspectorCommands" );
-
     namespace
     {
         struct EditorInspectorCommandsInternal

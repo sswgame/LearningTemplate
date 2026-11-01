@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LockstepSession" );
-
     LockstepSession::LockstepSession()
         : _listTickInput{}
         , _listTickChecksum{}

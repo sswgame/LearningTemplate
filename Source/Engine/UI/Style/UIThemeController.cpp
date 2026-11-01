@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UIThemeController" );
-
     namespace
     {
         /** @brief 시트를 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 제외합니다). */

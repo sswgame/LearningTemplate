@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameConnectSecurity" );
-
     GameConnectSecurity::GameConnectSecurity()
         : _mutex{}
         , _pProvider{ nullptr }

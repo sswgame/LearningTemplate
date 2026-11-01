@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "WidgetTree" );
-
     namespace
     {
         void collectRecursive( Widget& widget, vector<Widget*>& inoutListWidget )

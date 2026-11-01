@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Automation" );
-
     /** @brief 결정성이 깨졌을 때 원인 오브젝트를 찾는 진단 스위치입니다. 1 이면 `Scene.TransformHash` 를 읽을 때 오브젝트마다 이름과 위치를 로그로 남깁니다(두 실행의 로그를 비교한다). */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_automationHashDump, 0, "Scene.TransformHash 를 읽을 때 오브젝트마다 이름 · 위치를 로그로 (1=켜기, 결정성 진단)" );
 

@@ -21,7 +21,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CameraManagerComponent" );
 } // namespace sw
 
 namespace sw

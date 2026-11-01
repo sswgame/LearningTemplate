@@ -52,7 +52,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "PairedAnimationPanel" );
     SW_EDITOR_PANEL( PairedAnimationPanel, PairedAnimationPanel::kPanelID, EditorPanelCategory::Custom, 9030 );
 
     PairedAnimationPanel::PairedAnimationPanel()

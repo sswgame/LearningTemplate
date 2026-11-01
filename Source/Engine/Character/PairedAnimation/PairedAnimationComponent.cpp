@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PairedAnimation" );
-
     namespace
     {
         /** @brief `_bStartOnPlay` 의 시작이 참가자의 클립 로딩을 기다리는 최대 틱 수입니다(네트워크 복원의 `kMaxPendingFrames` 와 같다). */

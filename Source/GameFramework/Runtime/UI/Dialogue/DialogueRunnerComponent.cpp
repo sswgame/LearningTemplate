@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DialogueRunnerComponent" );
-
     DialogueRunnerComponent::DialogueRunnerComponent()
         : _graphPath{}
         , _bPostSubtitles{ false }

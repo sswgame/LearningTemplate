@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LaunchVelocity" );
-
     LaunchVelocityComponent::LaunchVelocityComponent()
         : _speed{ 0.0f }
         , _localDirection{ 0.0f, 0.0f, 1.0f }

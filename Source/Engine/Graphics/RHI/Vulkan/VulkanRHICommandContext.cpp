@@ -120,8 +120,6 @@ namespace sw
         return _pDevice != nullptr ? _pDevice->currentCommandBuffer() : nullptr;
     }
 
-    SW_LOG_CALLER( "Vulkan" );
-
     void VulkanRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         VkCommandBuffer cmd = commandBuffer();

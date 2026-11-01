@@ -24,8 +24,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorThemeUtil" );
-
     namespace
     {
         struct EditorThemeInternal

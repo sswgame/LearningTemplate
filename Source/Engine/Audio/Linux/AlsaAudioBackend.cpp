@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AlsaAudioBackend" );
-
     namespace
     {
         struct AlsaAudioBackendInternal

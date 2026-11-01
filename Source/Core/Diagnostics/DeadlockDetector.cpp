@@ -6,7 +6,6 @@
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 
-SW_LOG_CALLER( "DeadlockDetector" );
 namespace sw
 {
     DeadlockDetector::DeadlockDetector()

@@ -4,8 +4,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Engine" );
-
     EngineFrameHookList::EngineFrameHookList()
         : _listHook{}
     {

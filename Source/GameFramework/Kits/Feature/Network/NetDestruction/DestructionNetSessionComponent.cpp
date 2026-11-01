@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DestructionNetSessionComponent" );
-
     namespace
     {
         /** @brief 틱 간격을 정수 틱 빈도(Hz)로 바꿉니다. 서버 틱 빈도는 정수(`ServerConfig::_tickRateHz`)이므로 실수 반올림 차이 없이 비교한다. */

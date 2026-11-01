@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "InputActionCheck" );
-
     namespace
     {
         /** @brief 액션 하나가 비지 않았고 입력 맵에 있는지 봅니다. 아니면 오류를 남기고 false 입니다. */

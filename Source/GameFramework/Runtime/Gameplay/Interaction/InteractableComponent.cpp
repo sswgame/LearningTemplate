@@ -18,7 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "InteractableComponent" );
 } // namespace sw
 
 namespace sw

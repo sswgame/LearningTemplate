@@ -22,8 +22,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ModelImportConfig" );
-
     namespace
     {
         /** @brief 파일 루트입니다. */

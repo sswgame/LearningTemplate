@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Appearance" );
-
     CharacterAppearanceState::CharacterAppearanceState()
         : _spec{}
         , _resolved{}

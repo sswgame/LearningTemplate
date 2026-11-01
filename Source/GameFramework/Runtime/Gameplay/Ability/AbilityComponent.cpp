@@ -21,7 +21,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AbilityComponent" );
 } // namespace sw
 
 namespace sw

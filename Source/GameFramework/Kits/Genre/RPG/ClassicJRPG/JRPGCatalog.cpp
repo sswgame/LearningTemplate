@@ -51,8 +51,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "JRPGCatalog" );
-
     JRPGCatalog::JRPGCatalog()
         : _classCatalog{}
         , _spellCatalog{}

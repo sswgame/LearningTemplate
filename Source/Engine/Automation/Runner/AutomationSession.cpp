@@ -36,8 +36,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AutomationSession" );
-
     namespace
     {
         /** @brief 시나리오가 첫 씬을 선언하는 `<Launch>` 변수 — 게임 프레임워크가 정의하는 이름이다(`GameInstance`). 체인의 단계는 이 씬을 새로 열고 시작한다. */

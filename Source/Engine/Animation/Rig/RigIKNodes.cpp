@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RigIKNodes" );
-
     namespace
     {
         struct RigIKNodesInternal

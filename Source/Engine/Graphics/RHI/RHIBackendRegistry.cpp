@@ -59,8 +59,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "RHIBackendRegistry" );
-
     RHIStaticBackendRegistrar::RHIStaticBackendRegistrar( RHIBackend backend, CreateFunction pCreate )
         : _backend{ backend }
         , _pCreate{ pCreate }

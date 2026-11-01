@@ -46,8 +46,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameRenderer" );
-
     /**
      * @brief `-gv_deferredShading=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
      * @details `initialize` 에 파이프라인 경로를 주지 않을 때 디퍼드를 고르는 방법이다.

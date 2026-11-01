@@ -22,8 +22,6 @@
 
 #include "sw/config/CookContract.gen.h"
 
-SW_LOG_CALLER( "ScenarioPerBackend" );
-
 namespace sw
 {
     namespace

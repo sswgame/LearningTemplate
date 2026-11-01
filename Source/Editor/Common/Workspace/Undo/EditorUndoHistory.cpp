@@ -13,8 +13,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorUndoHistory" );
-
     namespace
     {
         struct EditorUndoHistoryInternal

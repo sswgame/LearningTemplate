@@ -77,9 +77,8 @@ SW_TEST_CASE( JSONLinesLogOutputTest, LineHasTheFieldsThatArePresent )
     string line;
     JSONLinesLogOutput::appendLine( line, fields );
     SW_EXPECT_TRUE_MSG( line == "{\"time\":\"2026-10-28 9:5:3\",\"ts\":1234,\"level\":\"warning\",\"tag\":\"Server\",\"msg\":\"hello \\\"world\\\"\",\"file\":\"A.cpp\",\"line\":7}\n",
-                        line.c_str() ); // 호출자 · 틱 · 추적 id · 계정 · id 칸은 없는 값이라 빠진다
+                        line.c_str() ); // 틱 · 추적 id · 계정 · id 칸은 없는 값이라 빠진다
 
-    fields._caller               = "Probe";
     fields._id                   = "Audit.Login";
     fields._bHasClock            = true;
     fields._clock                = LogClock::Tick;
@@ -88,7 +87,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, LineHasTheFieldsThatArePresent )
     fields._context._principalID = 0x42;
     line.clear();
     JSONLinesLogOutput::appendLine( line, fields );
-    SW_EXPECT_TRUE_MSG( line.find( "\"caller\":\"Probe\",\"tick\":42,\"trace\":\"0123456789abcdef0000000000000001\",\"acct\":\"0000000000000042\",\"id\":\"Audit.Login\",\"msg\"" ) != string::npos,
+    SW_EXPECT_TRUE_MSG( line.find( "\"tick\":42,\"trace\":\"0123456789abcdef0000000000000001\",\"acct\":\"0000000000000042\",\"id\":\"Audit.Login\",\"msg\"" ) != string::npos,
                         line.c_str() );
     SW_EXPECT_TRUE( line.back() == '\n' );
 }
@@ -100,7 +99,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsA
     unique_ptr<PlainCaptureOutput> plain  = make_unique<PlainCaptureOutput>();
     PlainCaptureOutput*            pPlain = plain.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( plain ) ) );
-    logger.writeLog( LogLevel::Info, "Test", "Probe", "before", __FILE__, __LINE__ );
+    logger.writeLog( LogLevel::Info, "Test", "before", __FILE__, __LINE__ );
 
     unique_ptr<JSONCaptureOutput> json  = make_unique<JSONCaptureOutput>();
     JSONCaptureOutput*            pJSON = json.get();
@@ -109,7 +108,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsA
     context._traceID = LogTraceID{ 0, 9 };
     {
         ScopedLogContext scope( context );
-        logger.writeLogWithID( LogLevel::Info, "Test", "Probe", "after", __FILE__, __LINE__, "Test.Json" );
+        logger.writeLogWithID( LogLevel::Info, "Test", "after", __FILE__, __LINE__, "Test.Json" );
     }
     logger.shutdown();
 

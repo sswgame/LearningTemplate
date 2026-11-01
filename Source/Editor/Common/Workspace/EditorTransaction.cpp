@@ -16,7 +16,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
-SW_LOG_CALLER( "EditorTransaction" );
 namespace sw::editor
 {
     namespace

@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "KeyRebindScreen" );
-
     KeyRebindScreen::KeyRebindScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _capturedSlotText{}

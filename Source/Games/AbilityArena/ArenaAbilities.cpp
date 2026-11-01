@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ArenaAbilities" );
-
     void ArenaMeleeStrikeAbility::activateAbility( const AbilityEventData* pTriggerEvent )
     {
         (void)pTriggerEvent;

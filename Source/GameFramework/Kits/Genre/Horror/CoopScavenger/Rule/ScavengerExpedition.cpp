@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ScavengerExpedition" );
-
     namespace
     {
         uint32 makeDaySeed( uint32 seed, int32 dayIndex, uint32 salt )

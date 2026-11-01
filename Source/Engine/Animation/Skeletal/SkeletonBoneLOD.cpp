@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SkeletonBoneLOD" );
-
     namespace
     {
         /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */

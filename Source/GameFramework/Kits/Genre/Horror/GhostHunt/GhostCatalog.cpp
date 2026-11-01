@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GhostCatalog" );
-
     GhostCatalog::GhostCatalog()
         : _flashlight{}
         , _vacuum{}

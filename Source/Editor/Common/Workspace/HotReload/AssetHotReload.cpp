@@ -139,8 +139,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_LOG_CALLER( "AssetHotReload" );
-
     AssetHotReload::AssetHotReload()
         : _pFileWatchDispatcher{ nullptr }
         , _pImportJob{ make_unique<EditorAssetImportJob>() }

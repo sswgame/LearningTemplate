@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "XMLNameCheck" );
-
     namespace
     {
         /** @brief 모르는 속성 이름 한 줄을 남깁니다. Error 가 아니면 Warning 이다(id 는 둘 다 `Xml.UnknownAttribute`). */

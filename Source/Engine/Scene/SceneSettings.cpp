@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneSettings" );
-
     bool SceneSettings::validate( string_view sceneName ) const
     {
         if ( _bStreaming == false )

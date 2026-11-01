@@ -76,8 +76,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderCooker" );
-
     string ShaderCooker::getStemLower( string_view filePath )
     {
         return ShaderCookerInternal::getStemLower( filePath );

@@ -89,8 +89,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_LOG_CALLER( "TextureImportConfig" );
-
     TextureImportConfig::TextureImportConfig()
         : _mapPreset{}
         , _listRule{}

@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioMusicPlayer" );
-
     void AudioMusicPlayer::start( IAudioMusicVoices& voices, shared_ptr<const AudioMusicDesc> pMusic, AudioPlayingID playingID, float32 fadeSeconds )
     {
         if ( _playback._pDesc != nullptr )

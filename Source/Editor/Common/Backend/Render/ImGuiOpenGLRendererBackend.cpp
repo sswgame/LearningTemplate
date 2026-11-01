@@ -184,8 +184,6 @@ namespace
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiOpenGL" );
-
     bool ImGuiOpenGLRendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
         _pRHIDevice.set( ( pRHIDevice != nullptr && pRHIDevice->getBackendType() == RHIBackend::OpenGL ) ? pRHIDevice : nullptr );

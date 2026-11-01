@@ -19,8 +19,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ParkLayoutPreview" );
-
     namespace
     {
         struct ParkLayoutPreviewInternal

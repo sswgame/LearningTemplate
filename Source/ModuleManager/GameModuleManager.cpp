@@ -54,8 +54,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameModuleManager" );
-
     GameModuleManager::GameModuleManager()
         : _moduleCompiler{ nullptr }
         , _gameAPI{}

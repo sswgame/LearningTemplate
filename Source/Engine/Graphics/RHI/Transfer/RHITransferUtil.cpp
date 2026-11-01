@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RHITransferUtil" );
-
     namespace
     {
         /** @brief 이 스레드에서 `ScopedForbidBlockingTransfer` 가 겹쳐 열린 수입니다. */

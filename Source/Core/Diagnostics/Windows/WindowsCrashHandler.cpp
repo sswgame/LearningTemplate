@@ -20,7 +20,6 @@
     #include <ProcessSnapshot.h>
     #include <csignal>
 
-SW_LOG_CALLER( "WindowsCrashHandler" );
 namespace sw
 {
     namespace

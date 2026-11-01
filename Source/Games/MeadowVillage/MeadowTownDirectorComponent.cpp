@@ -21,8 +21,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeadowTown" );
-
     namespace
     {
         /** @brief 마을 오브젝트의 색 — 나무 짙은 초록, 그 밖(풀) 초록. */

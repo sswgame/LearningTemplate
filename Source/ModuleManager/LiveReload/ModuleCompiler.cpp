@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ModuleCompiler" );
-
     ModuleCompiler::ModuleCompiler( LiveReloadManager* pLiveReloadManager )
         : _pLiveReloadManager{ pLiveReloadManager }
         , _pCurrentProcess{ nullptr }

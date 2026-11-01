@@ -12,8 +12,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorUtil" );
-
     void EditorUtil::appendCategoryBadge( string_view category, string& inoutBadge )
     {
         if ( category.empty() )

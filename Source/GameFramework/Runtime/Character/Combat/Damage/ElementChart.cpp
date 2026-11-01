@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ElementChart" );
-
     ElementChart::ElementChart()
         : _listElement{}
         , _mapRule{}

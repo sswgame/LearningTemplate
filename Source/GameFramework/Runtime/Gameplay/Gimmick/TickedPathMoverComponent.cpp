@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TickedPathMover" );
-
     TickedPathMoverComponent::TickedPathMoverComponent()
         : _listWaypoint{}
         , _segmentSeconds{ 2.0f }

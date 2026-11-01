@@ -12,8 +12,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorToolDefaultsReload" );
-
     SubsystemInitResult EditorToolDefaultsReload::initializeSubsystem()
     {
         // 설정 리로드는 개발 빌드의 엔진 서브시스템이다 — 없으면(감시를 끈 호스트) 손 저장만 남는다.

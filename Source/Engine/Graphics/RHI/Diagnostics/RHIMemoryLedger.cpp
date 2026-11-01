@@ -51,8 +51,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "RHIMemoryLedger" );
-
     RHIMemoryBudget::RHIMemoryBudget() noexcept
         : _usageBytes{ 0 }
         , _budgetBytes{ 0 }

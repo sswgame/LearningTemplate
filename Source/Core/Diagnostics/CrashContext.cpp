@@ -22,7 +22,6 @@
 #include <cstdio>
 #include <thread>
 
-SW_LOG_CALLER( "CrashHandler" );
 namespace sw
 {
     namespace

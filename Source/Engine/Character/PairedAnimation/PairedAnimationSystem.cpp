@@ -10,7 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PairedAnimation" );
 } // namespace sw
 
 namespace sw

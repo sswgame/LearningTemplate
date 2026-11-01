@@ -26,8 +26,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderPacketBuilder" );
-
     RenderPacketViewSetup::RenderPacketViewSetup()
         : _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }

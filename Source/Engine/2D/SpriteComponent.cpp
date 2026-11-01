@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SpriteComponent" );
-
     SpriteComponent::SpriteComponent()
         : _textureName{}
         , _normalMapName{}

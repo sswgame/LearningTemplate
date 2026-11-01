@@ -21,8 +21,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "PackManager" );
-
         struct PackManagerInternal
         {
             static constexpr int32 kPriorityStep       = 1000; ///< 우선순위 토큰 한 칸

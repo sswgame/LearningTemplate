@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneTransformStorage" );
-
     SceneTransformStorage::SceneTransformStorage()
         : _arrPage{}
         , _listFreeSlot{}

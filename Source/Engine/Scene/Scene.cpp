@@ -463,8 +463,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "Scene" );
-
     Scene::Scene( string_view name )
         : Scene( name, SceneEngineServices::makeFromBoundEngine() )
     {

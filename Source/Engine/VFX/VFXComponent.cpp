@@ -33,8 +33,6 @@ SW_GLOBAL_VARIABLE( float32, gv_effectsSpawnScale, 1.0f, "이펙트 입자 생�
 
 namespace sw
 {
-    SW_LOG_CALLER( "VFXComponent" );
-
     /**
      * @brief CPU · GPU 둘 다 되는 방출기의 시뮬레이션 대상입니다. 기본값은 Shipping 과 같은 GPU 다.
      * @details 학습용으로 두 방식을 나란히 보게 둔다. 한 곳만 되는 방출기(물리 충돌은 CPU, 깊이 충돌은 GPU)는

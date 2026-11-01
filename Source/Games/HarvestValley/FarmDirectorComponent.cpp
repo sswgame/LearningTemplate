@@ -38,8 +38,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FarmDirector" );
-
     namespace
     {
         struct FarmDirectorComponentInternal

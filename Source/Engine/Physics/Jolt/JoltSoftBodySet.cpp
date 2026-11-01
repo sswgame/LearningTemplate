@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "JoltPhysicsScene" );
-
     namespace
     {
         static_assert( PhysicsSoftBodySkinnedVertex::kMaxWeightCount == JPH::SoftBodySharedSettings::Skinned::cMaxSkinWeights, "skin weight count follows Jolt" );

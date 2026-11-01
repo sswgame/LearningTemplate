@@ -29,8 +29,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MeshPreviewPanel" );
-
     MeshPreviewModel::MeshPreviewModel()
         : _previewMeshPath{}
         , _status{}

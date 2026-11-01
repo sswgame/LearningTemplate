@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AppleLoginProvider" );
-
     namespace
     {
         struct AppleLoginProviderInternal

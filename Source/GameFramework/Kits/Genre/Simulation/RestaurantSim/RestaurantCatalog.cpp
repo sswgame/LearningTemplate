@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RestaurantCatalog" );
-
     int32 DishDef::computeQuality( int32 cookLevel ) const
     {
         int32 quality = 0;

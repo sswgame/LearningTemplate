@@ -17,8 +17,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DebugKeyActions" );
-
     namespace
     {
         constexpr const utf8* kRootElement  = "DebugKeyBindings";

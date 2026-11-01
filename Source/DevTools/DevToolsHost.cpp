@@ -30,8 +30,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DevTools" );
-
     DevToolsHost::DevToolsHost()
         : _pConsole{}
         , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }

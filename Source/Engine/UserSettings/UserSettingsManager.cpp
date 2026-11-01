@@ -32,8 +32,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UserSettings" );
-
     namespace
     {
         /** @brief 열거형 선택지의 순번입니다(전역 변수에 넘길 기본 글). */

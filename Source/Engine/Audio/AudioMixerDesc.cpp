@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioMixerDesc" );
-
     bool AudioMixerDesc::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();

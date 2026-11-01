@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ContentFolderWatch" );
-
     /** @struct ContentFolderWatchService::Watch @brief 감시 하나 — 디스크 폴더마다의 분배기 · 경로 구독, 알릴 델리게이트, 이번 프레임에 바뀌었는지입니다. */
     struct ContentFolderWatchService::Watch
     {

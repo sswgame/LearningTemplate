@@ -12,7 +12,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
 
-SW_LOG_CALLER( "FixedLayout" );
 namespace sw
 {
     namespace

@@ -17,8 +17,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "PrefabEditorPanel" );
-
     PrefabEditorModel::PrefabEditorModel()
         : _isolation{}
         , _pendingNestedPath{}

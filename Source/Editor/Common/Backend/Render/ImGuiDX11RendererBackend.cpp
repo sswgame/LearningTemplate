@@ -13,8 +13,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiDX11" );
-
     bool ImGuiDX11RendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
         _pRHIDevice.set( pRHIDevice );

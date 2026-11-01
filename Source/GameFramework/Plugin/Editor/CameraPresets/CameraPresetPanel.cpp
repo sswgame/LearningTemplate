@@ -60,7 +60,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "CameraPresetPanel" );
     SW_EDITOR_PANEL( CameraPresetPanel, CameraPresetPanel::kPanelID, EditorPanelCategory::Tool, 1330 );
     SW_AUTOMATION_WATCH( editorCameraPresetCount, "Editor.CameraPresetCount", "Presets in the file the Camera Presets panel has open (fails while the panel is closed)",
                          &CameraPresetPanelInternal::readPresetCount );

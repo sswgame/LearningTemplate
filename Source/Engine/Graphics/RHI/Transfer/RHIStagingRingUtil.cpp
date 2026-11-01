@@ -4,8 +4,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RHIStagingRingUtil" );
-
     RHISubmitResult RHIStagingRingUtil::settleAllocation( RHIStagingAllocator& ledger, const RHITransferSerials& serials, RHIStagingAllocateResult result, uint64 sizeBytes,
                                                           const utf8* pBackend, const utf8* pCaller, const RHIStagingSpan& span )
     {

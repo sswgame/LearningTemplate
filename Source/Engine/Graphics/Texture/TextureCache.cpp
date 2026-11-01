@@ -306,8 +306,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "TextureCache" );
-
     namespace
     {
         /** @brief 텍스처 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */

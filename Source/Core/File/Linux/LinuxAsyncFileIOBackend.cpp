@@ -30,8 +30,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "AsyncFileIO" );
-
         struct LinuxAsyncFileIOBackendInternal
         {
             /** @brief 깨우기용 eventfd 읽기의 user_data 입니다(읽기 연산의 포인터와 겹치지 않는 값). */

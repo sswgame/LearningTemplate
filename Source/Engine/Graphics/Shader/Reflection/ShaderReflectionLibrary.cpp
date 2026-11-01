@@ -24,8 +24,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "ShaderReflectionLibrary" );
-
         /// @brief 'SRFM' 매니페스트 매직입니다.
         constexpr uint32 kMagic = FourCcUtil::make( "SRFM" );
         /// @brief 매니페스트 포맷 버전입니다. 쿠킹하는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.

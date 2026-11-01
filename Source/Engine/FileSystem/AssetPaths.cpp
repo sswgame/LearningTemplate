@@ -454,8 +454,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "AssetPaths" );
-
     AssetPaths::AssetPaths()
         : _pState{ make_unique<State>() }
     {

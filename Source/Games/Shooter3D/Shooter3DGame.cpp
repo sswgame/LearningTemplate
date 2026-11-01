@@ -45,8 +45,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "Shooter3DGame" );
-
     Shooter3DGame::Shooter3DGame()
         : _weaponCatalog{}
         , _itemCatalog{}

@@ -4,8 +4,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ServerServiceManager" );
-
     ServerServiceManager::ServerServiceManager()
         : _listRunning{}
         , _bRunning{ SW_FALSE }

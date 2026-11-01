@@ -11,7 +11,6 @@
 #include "Programs/ReflectionParser/AnnotationMeta.h"
 #include "Programs/ReflectionParser/CodeEmit.h"
 
-SW_LOG_CALLER( "AnnotationFields" );
 namespace sw
 {
     namespace

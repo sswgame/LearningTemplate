@@ -79,7 +79,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "DialogueGraphPanel" );
     SW_EDITOR_PANEL( DialogueGraphPanel, DialogueGraphPanel::kPanelID, EditorPanelCategory::Tool, 1200 );
 
     DialogueGraphPanel::DialogueGraphPanel()

@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "D3D11" );
-
     void D3D11RHISwapChain::attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags )
     {
         _swapChain      = pSwapChain;

@@ -26,8 +26,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ModelImporter" );
-
     bool ModelImportMaterial::readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDesc>& outListToon,
                                                  vector<string>& outListIgnored )
     {

@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PhysicsSystem" );
-
     PhysicsSystem::PhysicsSystem()
         : _settings{}
         , _bInitialized{ false }

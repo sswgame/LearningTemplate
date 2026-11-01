@@ -46,8 +46,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameStateSnapshot" );
-
     GameStateSnapshot::GameStateSnapshot()
         : _listStatefulType{}
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }

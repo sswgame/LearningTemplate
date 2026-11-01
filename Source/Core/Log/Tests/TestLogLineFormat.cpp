@@ -37,8 +37,8 @@ SW_TEST_CASE( LogLineFormatTest, ParsesWhatTheSinkWrote )
     unique_ptr<LogLineCaptureOutput> output   = make_unique<LogLineCaptureOutput>();
     LogLineCaptureOutput*            pCapture = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
-    logger.writeLogWithID( LogLevel::Warning, "Test", "Probe", "value [Error] - inside", __FILE__, __LINE__, "Probe.Event" );
-    logger.writeLogWithID( LogLevel::Error, "Test", nullptr, "no caller", __FILE__, __LINE__, "Probe.NoCaller" );
+    logger.writeLogWithID( LogLevel::Warning, "Test", "value [Error] - inside", __FILE__, __LINE__, "Probe.Event" );
+    logger.writeLogWithID( LogLevel::Error, "Test", "no caller", __FILE__, __LINE__, "Probe.NoCaller" );
     logger.shutdown();
 
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( pCapture->_listFormatted.size() ) );

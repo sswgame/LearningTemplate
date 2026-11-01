@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SpawnDirector" );
-
     bool SpawnEntryDef::hasAnyTag( const vector<hashed_string>& listTag ) const
     {
         for ( const hashed_string& tag : _listTag )

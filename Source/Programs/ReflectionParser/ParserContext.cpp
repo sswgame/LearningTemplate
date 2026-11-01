@@ -7,7 +7,6 @@
 
 #include "Programs/ReflectionParser/ParserConfig.h"
 
-SW_LOG_CALLER( "ParserContext" );
 namespace sw
 {
     ParserContext::ParserContext( const ParserConfig& config )

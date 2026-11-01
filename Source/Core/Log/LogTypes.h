@@ -56,7 +56,6 @@ namespace sw
     struct LogEntry
     {
         string      _tag;
-        string      _caller;
         string      _message;
         string      _file;
         string      _timeStamp;
@@ -64,6 +63,13 @@ namespace sw
         const utf8* _pID{ nullptr }; ///< 줄의 종류 id(`SW_LOG_ERROR_ID`)의 정적 글자. id 없이 남긴 줄은 nullptr — 문구가 바뀌어도 같은 사건을 가리킨다
         int32       _line{ 0 };
         LogLevel    _level = LogLevel::Info;
+
+        /** @brief 줄의 범주 — id 의 영역(`"Automation.Step"` 의 `Automation`)입니다. id 없는 줄은 빈 글입니다. */
+        string_view getCategory() const
+        {
+            const string_view id = _pID != nullptr ? string_view{ _pID } : string_view{};
+            return id.substr( 0, id.find( '.' ) );
+        }
     };
 } // namespace sw
 

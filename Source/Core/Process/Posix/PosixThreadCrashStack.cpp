@@ -9,7 +9,6 @@
 #if defined( SW_PLATFORM_LINUX )
     #include <csignal>
 
-SW_LOG_CALLER( "PosixCrashHandler" );
 namespace sw
 {
     namespace

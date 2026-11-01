@@ -137,8 +137,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorSelfTest" );
-
     SW_EDITOR_SUBSYSTEM( EditorSelfTestSession, 9500 );
 
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).

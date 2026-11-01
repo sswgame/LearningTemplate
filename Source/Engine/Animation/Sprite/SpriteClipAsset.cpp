@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SpriteClip" );
-
     namespace
     {
         /** @brief 네 칸 중 하나라도 0 보다 크면 true 입니다. */

@@ -114,8 +114,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "App" );
-
     bool AppHeadlessTasks::runAll( const CommandLineManager* pCommandLine )
     {
         if ( pCommandLine == nullptr )

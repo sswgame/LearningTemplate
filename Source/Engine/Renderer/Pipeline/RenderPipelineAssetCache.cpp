@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderPipelineAssetCache" );
-
     RenderPipelineAssetCache::RenderPipelineAssetCache()  = default;
     RenderPipelineAssetCache::~RenderPipelineAssetCache() = default;
 

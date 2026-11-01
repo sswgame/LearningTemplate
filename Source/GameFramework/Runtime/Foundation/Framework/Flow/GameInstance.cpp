@@ -31,8 +31,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameInstance" );
-
     namespace
     {
         struct GameInstanceInternal

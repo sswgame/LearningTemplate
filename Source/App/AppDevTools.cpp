@@ -29,8 +29,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "App" );
-
     void AppDevTools::bindRenderThreadHooks( RenderThread& renderThread, RHIBackendSwitcher& backendSwitcher )
     {
         if constexpr ( build::kShipping ) // 배포는 개발 명령이 없어 장치 제거 요청이 오지 않는다

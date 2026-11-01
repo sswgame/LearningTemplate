@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "BattleRoyaleCatalog" );
-
     BattleRoyaleCatalog::BattleRoyaleCatalog()
         : _armorCatalog{}
         , _backpackCatalog{}

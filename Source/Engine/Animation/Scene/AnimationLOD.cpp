@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationLOD" );
-
     bool AnimationLODSettings::parseXML( string_view xml, string_view sourceLabel )
     {
         *this = AnimationLODSettings{};

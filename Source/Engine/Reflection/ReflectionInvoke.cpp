@@ -8,7 +8,6 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-SW_LOG_CALLER( "ReflectionInvoke" );
 namespace sw
 {
     namespace

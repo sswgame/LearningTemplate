@@ -57,8 +57,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "Editor" );
-
     void EditorCommandRegistry::clear()
     {
         _listCommand.clear();

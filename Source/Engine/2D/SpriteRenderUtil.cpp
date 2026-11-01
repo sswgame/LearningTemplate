@@ -69,8 +69,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SpriteRenderUtil" );
-
     hashed_string SpriteRenderUtil::getSpriteMaterialPath()
     {
         static const hashed_string s_spriteMaterial( engine::getSubsystem<EngineDefaultAssets>()._spriteMaterial.c_str() ); // 경로의 원본은 enginedefaultassets.xml

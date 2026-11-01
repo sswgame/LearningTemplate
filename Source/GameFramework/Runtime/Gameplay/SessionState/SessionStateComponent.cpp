@@ -17,8 +17,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SessionState" );
-
     namespace
     {
         struct SessionStateComponentInternal

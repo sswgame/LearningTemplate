@@ -13,8 +13,6 @@
 namespace sw
 {
     // 로그 머리는 렌더러와 같게 둔다(로그를 읽는 스크립트와 사람이 같은 이름으로 찾는다).
-    SW_LOG_CALLER( "FrameRenderer" );
-
     FrameCapture::FrameCapture( IRHIDevice* const& pDevice, const TransientAttachmentPool& mainPool, const RenderPipelineAsset& pipeline )
         : _pDevice{ pDevice }
         , _mainPool{ mainPool }

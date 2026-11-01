@@ -22,8 +22,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "MemoryBudget" );
-
         /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
         [[maybe_unused]] constexpr uint64 toKilobytesX10( uint64 bytes )
         {

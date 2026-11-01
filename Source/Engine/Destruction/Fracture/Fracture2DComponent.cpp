@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Fracture2DComponent" );
-
     Fracture2DComponent::Fracture2DComponent()
         : FractureComponentBase()
         , _listBorder{}

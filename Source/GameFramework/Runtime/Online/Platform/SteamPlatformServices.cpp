@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SteamPlatformServices" );
-
     unique_ptr<SteamPlatformServices> SteamPlatformServices::create( unique_ptr<ISteamAPIBridge> pBridge, string& outError )
     {
         if ( pBridge == nullptr )

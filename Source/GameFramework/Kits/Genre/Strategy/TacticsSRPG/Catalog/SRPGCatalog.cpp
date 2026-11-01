@@ -108,8 +108,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "SRPGCatalog" );
-
     int32 SRPGPilotDef::computeStat( SRPGPilotStat stat, int32 level ) const
     {
         const size_t index = static_cast<size_t>( stat );

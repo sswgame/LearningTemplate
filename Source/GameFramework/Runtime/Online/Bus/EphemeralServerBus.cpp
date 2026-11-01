@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "EphemeralServerBus" );
-
     namespace
     {
         struct EphemeralServerBusInternal

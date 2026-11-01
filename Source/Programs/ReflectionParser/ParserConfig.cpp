@@ -15,7 +15,6 @@
 
 #include <nlohmann/json.hpp>
 
-SW_LOG_CALLER( "ParserConfig" );
 namespace sw
 {
     namespace

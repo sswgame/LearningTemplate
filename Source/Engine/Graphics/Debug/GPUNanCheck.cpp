@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GPUNanCheck" );
-
     /**
      * @brief `-gv_nanCheck=1`: 그래프가 끝난 뒤 주 시점의 부동소수 패스 출력을 컴퓨트로 훑어 NaN · Inf 텍셀 수를 세고, CPU 가 몇 프레임 뒤 패스 이름과 함께 로그로 낸다(언리얼 r.CheckNaN).
      * @details 기본 끔 — 켜면 프레임마다 출력 텍스처 수만큼 풀스크린 컴퓨트가 돈다(진단용). DX12 · Vulkan 만 쓴다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다). Shipping 은 등록되지 않아 늘 끔.

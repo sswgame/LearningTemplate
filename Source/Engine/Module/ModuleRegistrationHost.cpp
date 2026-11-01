@@ -7,7 +7,6 @@
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-SW_LOG_CALLER( "ModuleRegistrationHost" );
 namespace sw
 {
     namespace

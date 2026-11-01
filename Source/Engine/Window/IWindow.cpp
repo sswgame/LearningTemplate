@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Window" );
-
     IWindow::IWindow()
         : _arrTitle{}
         , _customHandler{}

@@ -12,7 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UsableObjectComponent" );
 } // namespace sw
 
 namespace sw

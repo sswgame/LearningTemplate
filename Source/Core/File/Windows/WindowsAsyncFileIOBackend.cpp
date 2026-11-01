@@ -17,8 +17,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "AsyncFileIO" );
-
         struct WindowsAsyncFileIOBackendInternal
         {
             /** @brief 큐에 새 요청이 들어왔다는 완료 포트 패킷의 키입니다(OVERLAPPED 없음). */

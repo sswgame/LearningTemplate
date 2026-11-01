@@ -453,8 +453,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "JSONSerializer" );
-
     string JSONSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         JSONDocument doc;

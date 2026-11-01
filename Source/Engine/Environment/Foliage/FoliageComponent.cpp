@@ -27,8 +27,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FoliageComponent" );
-
     namespace
     {
         struct FoliageComponentInternal

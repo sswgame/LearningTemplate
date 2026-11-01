@@ -35,8 +35,6 @@
 namespace sw
 {
     // 안쪽 도우미(캐시 쓰기 · 컴파일 단계)도 로그를 남기므로 맨 앞에 둔다.
-    SW_LOG_CALLER( "ShaderCompiler" );
-
     namespace
     {
         struct ShaderCompilerInternal

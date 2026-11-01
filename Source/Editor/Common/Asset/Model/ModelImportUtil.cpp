@@ -19,8 +19,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ModelImporter" );
-
     bool ModelImportUtil::isSourceModel( string_view path )
     {
         return FileUtil::hasAnyExtension( path, { ".glb", ".gltf", ".vrm" } );

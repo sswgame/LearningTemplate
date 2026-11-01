@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameFlags" );
-
     namespace
     {
         /** @brief 비교 연산자입니다. */

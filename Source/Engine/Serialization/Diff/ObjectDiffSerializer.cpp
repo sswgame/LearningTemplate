@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ObjectDiff" );
-
     bool ObjectDiffSerializer::serializeDiff( vector<uint8>& outDiffBytes, const void* pCdoInstance, const void* pModifiedInstance,
                                               const TypeInfo& typeInfo, const SerializeContext& context )
     {

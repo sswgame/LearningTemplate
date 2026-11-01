@@ -97,8 +97,6 @@ namespace sw
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "PanelDump" );
-
     // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
      * @brief `-gv_editorPanelDump=<N>` 은 N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.

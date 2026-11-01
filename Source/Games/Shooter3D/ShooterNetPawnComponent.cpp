@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShooterNetPawn" );
-
     namespace
     {
         struct ShooterNetPawnComponentInternal

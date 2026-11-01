@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TaskManager" );
-
     namespace
     {
         thread_local int32 t_currentWorkerIndex = -1; ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1

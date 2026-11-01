@@ -130,8 +130,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorFontSetup" );
-
     bool EditorFontSetup::apply( const EditorToolDefaults& toolDefaults )
     {
         ImGuiIO& io = ImGui::GetIO();

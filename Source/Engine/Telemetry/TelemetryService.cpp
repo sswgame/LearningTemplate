@@ -36,8 +36,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "Telemetry" );
-
     namespace
     {
         struct TelemetryServiceInternal

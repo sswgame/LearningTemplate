@@ -93,8 +93,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "App" );
-
     App::App()
         : _host{}
         , _pModuleImageHost{ nullptr }

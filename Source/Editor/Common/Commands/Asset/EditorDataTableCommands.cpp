@@ -138,8 +138,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorDataTableCommands" );
-
     string EditorDataTableCommands::getGameDataFolderPath()
     {
         return EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kDataFolder ) );

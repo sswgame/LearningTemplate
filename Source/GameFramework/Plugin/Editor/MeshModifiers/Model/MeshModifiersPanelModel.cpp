@@ -15,8 +15,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MeshModifiers" );
-
     MeshModifiersPanelModel::MeshModifiersPanelModel()
         : _listNestedPath{}
         , _nestedRootID{ 0 }

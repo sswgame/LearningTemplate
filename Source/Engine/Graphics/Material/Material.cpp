@@ -30,8 +30,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Material" );
-
     MaterialProperty::MaterialProperty() noexcept
         : _type{ MaterialPropertyType::Unknown }
         , _shaderType{ MaterialPropertyType::Unknown }

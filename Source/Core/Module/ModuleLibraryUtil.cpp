@@ -18,7 +18,6 @@
     #include <link.h>
 #endif
 
-SW_LOG_CALLER( "ModuleLibraryUtil" );
 namespace sw
 {
     namespace

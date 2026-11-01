@@ -23,8 +23,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeshCache" );
-
     /**
      * @struct MeshCache::State
      * @brief 메시 캐시의 상태 전부입니다 — 공유 테이블(경로 → 약한 참조), 읽는 중인 로드, 경고한 경로.

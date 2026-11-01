@@ -79,7 +79,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MeshPreviewPanel" );
     SW_EDITOR_PANEL( MeshPreviewPanel, MeshPreviewPanel::kPanelID, EditorPanelCategory::Tool, 1320 );
     SW_AUTOMATION_WATCH( editorMeshPreviewVertexCount, "Editor.MeshPreviewVertexCount",
                          "LOD 0 vertices of the mesh in the Mesh Preview panel (fails while the panel is closed, has no preview scene or the mesh is not read yet)",

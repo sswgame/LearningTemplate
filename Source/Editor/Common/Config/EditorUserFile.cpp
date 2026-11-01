@@ -6,8 +6,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorUserFile" );
-
     bool EditorUserFile::quarantineCorruptFile( string_view filePath, string_view reason )
     {
         const string source( filePath );

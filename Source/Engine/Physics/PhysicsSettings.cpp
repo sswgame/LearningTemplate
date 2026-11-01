@@ -9,7 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PhysicsSettings" );
 } // namespace sw
 
 namespace sw

@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "HostServices" );
-
     bool HostServiceUtil::startAll( SubsystemCollection& outParts, vector_reference<const HostServiceID> listPart, const HostServiceStartDelegate& start,
                                     const HostServiceStopDelegate& stop, const CommandLineManager& commandLine )
     {

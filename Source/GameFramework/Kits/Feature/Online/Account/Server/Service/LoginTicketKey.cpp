@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LoginTicketKey" );
-
     namespace
     {
         struct LoginTicketKeyInternal

@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpenGL" );
-
     OpenGLRHIDevice::OpenGLRHIDevice()
         : _pHDC{ nullptr }
         , _pHRC{ nullptr }

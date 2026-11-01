@@ -14,8 +14,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ContentBrowserReferenceSearch" );
-
     ContentBrowserReferenceSearch::ContentBrowserReferenceSearch()
         : _index{}
         , _job{}

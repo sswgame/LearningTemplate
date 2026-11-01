@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "WesternHorse" );
-
     namespace
     {
         /** @brief 말 사건을 한 줄 로그로 남깁니다(유대 단계 · 능력 · 지침 · 겁). */

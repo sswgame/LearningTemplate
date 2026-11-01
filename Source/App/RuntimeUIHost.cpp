@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "App" );
-
     RuntimeUIHost::RuntimeUIHost()
         : _pEngine{ nullptr }
         , _quitCommandRegistration{}

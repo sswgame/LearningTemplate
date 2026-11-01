@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AbilityAttributeSave" );
-
     void AbilityAttributeSaveUtil::captureBaseValues( const AbilityComponent& abilitySystem, vector<SavedAttributeValue>& outListValue )
     {
         for ( const unique_ptr<AttributeSet>& pAttributeSet : abilitySystem.getAttributeSets() )

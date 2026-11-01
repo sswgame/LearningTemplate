@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "WaylandSplash" );
-
     /** @brief 컴포지터 연결과 그리기 상태입니다. 리스너는 C 콜백이라 이 값의 주소를 사용자 값으로 받는다. */
     struct WaylandSplashWindow::State
     {

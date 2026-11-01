@@ -21,8 +21,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AIDirector" );
-
     namespace
     {
         struct AIDirectorInternal

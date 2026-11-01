@@ -23,8 +23,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PoseModifier" );
-
     namespace
     {
         struct PoseModifierComponentInternal

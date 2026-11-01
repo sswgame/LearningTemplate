@@ -52,8 +52,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SocketKindTable" );
-
     bool SocketKindTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         CharacterDataReader reader( sourceName );

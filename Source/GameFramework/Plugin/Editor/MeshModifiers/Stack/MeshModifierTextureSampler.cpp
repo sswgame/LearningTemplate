@@ -22,8 +22,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MeshModifierTextureSampler" );
-
     namespace
     {
         /** @brief 디코드한 이미지 한 장입니다. 픽셀은 만든 뒤 바뀌지 않고, 다시 읽으면 새 항목으로 바꿔 끼웁니다. */

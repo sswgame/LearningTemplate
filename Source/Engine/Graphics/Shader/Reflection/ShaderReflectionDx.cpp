@@ -409,8 +409,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderReflection" );
-
     ShaderReflectionData ShaderReflectionUtil::reflectDx( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
     {
         if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )

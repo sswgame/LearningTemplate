@@ -17,8 +17,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderPipelineAsset" );
-
     bool RenderPipelineAsset::loadFromXMLFile( const AssetID& assetID )
     {
         const string_view assetRelativePath = assetID.view();

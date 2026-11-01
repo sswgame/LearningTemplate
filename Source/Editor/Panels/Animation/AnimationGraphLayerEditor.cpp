@@ -18,8 +18,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "AnimationGraphLayers" );
-
     namespace
     {
         struct AnimationGraphLayerEditorInternal

@@ -147,8 +147,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ModelImporter" );
-
     float3 ModelImportGeometry::transformPoint( const float32 ( &arrMatrix )[16], const float3& point )
     {
         return float3{ arrMatrix[0] * point._x + arrMatrix[4] * point._y + arrMatrix[8] * point._z + arrMatrix[12],

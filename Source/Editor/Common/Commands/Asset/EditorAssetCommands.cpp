@@ -27,8 +27,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorAssetCommands" );
-
     bool EditorAssetCommands::openPath( string_view relativePath )
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();

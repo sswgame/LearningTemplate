@@ -114,13 +114,13 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     LogContextEntryCapture entryCapture;
     const Subscription     subscription = logger.registerLogWrittenListener( LogWrittenDelegate::create<&LogContextEntryCapture::onLog>( &entryCapture ) );
 
-    logger.writeLog( LogLevel::Info, "Test", "Probe", "plain line", __FILE__, __LINE__ );
+    logger.writeLog( LogLevel::Info, "Test", "plain line", __FILE__, __LINE__ );
     LogContext context;
     context._traceID     = LogTraceID{ 0x0123456789abcdefull, 0x1 };
     context._principalID = 0x42;
     {
         ScopedLogContext scope( context );
-        logger.writeLog( LogLevel::Info, "Test", "Probe", "context line", __FILE__, __LINE__ );
+        logger.writeLog( LogLevel::Info, "Test", "context line", __FILE__, __LINE__ );
     }
     logger.shutdown();
 
@@ -152,7 +152,7 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
     SW_EXPECT_FALSE( Logger::getClockNumber( clock, tickNumber ) );
     SW_EXPECT_EQUAL( tickNumber, uint64( 0 ) );
     Logger::setClockNumber( LogClock::Tick, 0 ); // 0 도 꼬리표가 붙는다 — 첫 틱
-    logger.writeLog( LogLevel::Info, "Test", "Probe", "first tick", __FILE__, __LINE__ );
+    logger.writeLog( LogLevel::Info, "Test", "first tick", __FILE__, __LINE__ );
     Logger::setClockNumber( LogClock::Tick, 1234 );
     SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
     SW_EXPECT_TRUE( clock == LogClock::Tick );
@@ -161,16 +161,16 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
     context._principalID = 0x42;
     {
         ScopedLogContext scope( context );
-        logger.writeLog( LogLevel::Info, "Test", "Probe", "tick and context", __FILE__, __LINE__ );
+        logger.writeLog( LogLevel::Info, "Test", "tick and context", __FILE__, __LINE__ );
     }
     // 리슨 호스트(App)는 고정 틱이 없어 프레임 번호를 "frame" 으로 적는다(결정 기록 5-12 `D7-3.6`).
     Logger::setClockNumber( LogClock::Frame, 77 );
     SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
     SW_EXPECT_TRUE( clock == LogClock::Frame );
     SW_EXPECT_EQUAL( tickNumber, uint64( 77 ) );
-    logger.writeLog( LogLevel::Info, "Test", "Probe", "listen frame", __FILE__, __LINE__ );
+    logger.writeLog( LogLevel::Info, "Test", "listen frame", __FILE__, __LINE__ );
     Logger::clearClockNumber();
-    logger.writeLog( LogLevel::Info, "Test", "Probe", "cleared", __FILE__, __LINE__ );
+    logger.writeLog( LogLevel::Info, "Test", "cleared", __FILE__, __LINE__ );
     logger.shutdown();
 
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( pCapture->_listFormatted.size() ) );

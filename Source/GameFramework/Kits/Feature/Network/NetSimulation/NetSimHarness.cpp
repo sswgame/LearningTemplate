@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "NetSimHarness" );
-
     namespace
     {
         /** @brief 시드 하나에서 엔드포인트마다 다른 시드를 만듭니다(splitmix64 한 단계). */

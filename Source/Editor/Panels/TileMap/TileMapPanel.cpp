@@ -102,7 +102,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "TileMapPanel" );
     SW_EDITOR_PANEL( TileMapPanel, TileMapPanel::kPanelID, EditorPanelCategory::Tool, 1500 );
     SW_AUTOMATION_WATCH( editorTileMapFlagCells, "Editor.TileMapFlagCells", "Cells set in the Tile Map Tool's selected flag layer (0 on other layers)",
                          &TileMapPanelInternal::readFlagCells );

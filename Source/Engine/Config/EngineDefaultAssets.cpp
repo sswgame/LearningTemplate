@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "EngineDefaultAssets" );
-
     unique_ptr<EngineDefaultAssets> EngineDefaultAssets::load( const AssetID& assetID )
     {
         unique_ptr<EngineDefaultAssets> assets = make_unique<EngineDefaultAssets>( ConstructKey{} );

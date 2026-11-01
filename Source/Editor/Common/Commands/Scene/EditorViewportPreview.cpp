@@ -80,8 +80,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorViewportPreview" );
-
     void EditorViewportPreview::applyAnimationNode( string_view nodeName, string_view graphPath )
     {
         if ( nodeName.empty() )

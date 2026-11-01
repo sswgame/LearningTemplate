@@ -34,7 +34,7 @@ namespace sw::editor
             key += '\0';
             key += pEntry->_tag;
             key += '\0';
-            key += pEntry->_caller;
+            key += pEntry->getCategory();
             key += '\0';
             key += pEntry->_message;
             const auto found = mapRowByKey.find( key );

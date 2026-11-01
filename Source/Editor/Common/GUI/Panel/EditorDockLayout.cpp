@@ -113,8 +113,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorDockLayout" );
-
     // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
      * @brief `-gv_editorOpenPanel=<id>` 는 그 패널 하나만 열고 나머지는 닫습니다. `-gv_editorOpenPanel=all` 이면 전부 엽니다.

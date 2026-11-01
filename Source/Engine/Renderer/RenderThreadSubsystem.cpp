@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderThread" );
-
     RenderThreadSubsystem::RenderThreadSubsystem( const RHISubsystem& rhiSubsystem, const FrameRendererSubsystem& frameRendererSubsystem )
         : _renderThread{ nullptr }
         , _rhiSubsystem{ rhiSubsystem }

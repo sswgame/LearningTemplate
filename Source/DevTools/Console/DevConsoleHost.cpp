@@ -17,8 +17,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DevConsole" );
-
     /** @brief `-gv_devConsoleExec="timescale 0.5;gv_viewMode Wireframe"`: 시작 씬이 열린 뒤 개발 콘솔에서 실행할 명령입니다(`;` 로 구분). 자동화와 재현에 씁니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
     /** @brief `-gv_devConsoleOpen=1`: 에디터 없이 실행할 때 게임 창의 개발 콘솔을 연 채로 시작합니다(화면 확인용). */

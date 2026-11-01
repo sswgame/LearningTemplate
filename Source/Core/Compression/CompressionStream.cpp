@@ -79,8 +79,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "CompressionStream" );
-
     uint32 CompressionStream::computeChecksum( const void* pData, size_t dataSize )
     {
         if ( pData == nullptr || dataSize == 0 )

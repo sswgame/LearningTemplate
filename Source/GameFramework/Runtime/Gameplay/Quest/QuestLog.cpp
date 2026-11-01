@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "QuestLog" );
-
     QuestLog::QuestLog()
         : _listProgress{}
         , _eventBuffer{}

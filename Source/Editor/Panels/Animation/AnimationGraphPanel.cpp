@@ -77,7 +77,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "AnimationGraph" );
     SW_EDITOR_PANEL( AnimationGraphPanel, AnimationGraphPanel::kPanelID, EditorPanelCategory::Tool, 1100 );
 
     AnimationGraphPanel::AnimationGraphPanel()

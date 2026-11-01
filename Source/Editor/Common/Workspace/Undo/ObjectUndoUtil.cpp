@@ -64,8 +64,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ObjectUndoUtil" );
-
     namespace
     {
         struct ObjectUndoUtilInternal

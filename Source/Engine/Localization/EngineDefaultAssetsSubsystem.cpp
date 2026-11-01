@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "EngineDefaultAssets" );
-
     EngineDefaultAssetsSubsystem::EngineDefaultAssetsSubsystem()
         : _defaultAssets{ make_unique<EngineDefaultAssets>( EngineDefaultAssets::ConstructKey{} ) }
     {

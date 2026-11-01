@@ -16,7 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PartyItemSpawner" );
 } // namespace sw
 
 namespace sw

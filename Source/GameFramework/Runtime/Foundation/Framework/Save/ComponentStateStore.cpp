@@ -33,8 +33,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ComponentStateStore" );
-
     StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore )
         : _pTypeName{ pTypeName }
         , _pCapture{ pCapture }

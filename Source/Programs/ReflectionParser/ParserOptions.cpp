@@ -8,7 +8,6 @@
 
 #include "Programs/ReflectionParser/ParserDefines.h"
 
-SW_LOG_CALLER( "ParserOptions" );
 namespace sw
 {
     namespace

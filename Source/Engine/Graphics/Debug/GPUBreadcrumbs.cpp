@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GPUBreadcrumbs" );
-
     /**
      * @brief `-gv_gpuBreadcrumbs=0`: 패스마다 GPU 표지를 남기지 않는다(기본은 개발 빌드에서 켬). 끄면 DX12 의 DRED 자동 브레드크럼과 Vulkan 의 체크포인트 확장도 켜지 않는다.
      * @details 디바이스를 만들기 **전에** 읽는다(DRED 설정은 디바이스 생성 전에만 켤 수 있다). Shipping 은 등록되지 않아 늘 끔.

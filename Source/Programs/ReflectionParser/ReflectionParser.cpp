@@ -13,7 +13,6 @@
 #include "Programs/ReflectionParser/ReflectBuiltinsLoader.h"
 #include "Programs/ReflectionParser/ReflectionPipeline.h"
 
-SW_LOG_CALLER( "ReflectionParser" );
 namespace sw
 {
     namespace

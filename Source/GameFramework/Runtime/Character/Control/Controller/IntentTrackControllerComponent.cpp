@@ -11,7 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "IntentTrackControllerComponent" );
 } // namespace sw
 
 namespace sw

@@ -30,8 +30,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "D3D11" );
-
     namespace
     {
     #if defined( SW_DEBUG )

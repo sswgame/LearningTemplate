@@ -18,8 +18,6 @@
 namespace sw
 {
 
-    SW_LOG_CALLER( "RHI" );
-
     namespace
     {
         struct RHIInternal

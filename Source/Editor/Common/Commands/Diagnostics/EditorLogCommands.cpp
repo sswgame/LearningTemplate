@@ -86,8 +86,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorLog" );
-
     bool EditorLogCommands::parseSourceLocation( string_view text, EditorSourceLocation& outLocation )
     {
         for ( size_t index = 0; index < text.size(); ++index )

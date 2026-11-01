@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderBindingLayout" );
-
     namespace
     {
         /** @brief 리플렉션 문자열 타입 라벨을 ShaderBindingKind 로 바꿉니다. */

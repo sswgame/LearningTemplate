@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Vulkan" );
-
     namespace
     {
         /** @brief VkResult 를 프레임 루프가 분기하는 네 분기로 접습니다. */

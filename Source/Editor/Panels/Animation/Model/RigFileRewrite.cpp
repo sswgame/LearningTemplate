@@ -12,8 +12,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "RigFileRewrite" );
-
     bool RigFileRewrite::rewriteSettings( string_view xmlText, string_view sourceLabel, const RigSaveParams& saveParams, string& outXMLText )
     {
         XMLDocument document;

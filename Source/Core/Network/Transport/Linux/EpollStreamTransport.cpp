@@ -28,8 +28,6 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-SW_LOG_CALLER( "EpollStreamTransport" );
-
 namespace sw
 {
     namespace

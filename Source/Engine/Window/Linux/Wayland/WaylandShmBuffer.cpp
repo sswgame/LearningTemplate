@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "WaylandShmBuffer" );
-
     namespace
     {
         /** @brief 컴포지터가 버퍼를 다 읽었다고 알리는 리스너입니다(사용자 값이 `WaylandShmBuffer*`). */

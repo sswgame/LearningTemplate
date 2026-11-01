@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeshVertexAnimation" );
-
     namespace
     {
         struct MeshVertexAnimationInternal

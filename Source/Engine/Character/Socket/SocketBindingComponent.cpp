@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SocketBinding" );
-
     namespace
     {
         struct SocketBindingComponentInternal

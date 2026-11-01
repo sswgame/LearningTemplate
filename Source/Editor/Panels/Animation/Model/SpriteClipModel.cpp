@@ -16,8 +16,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "SpriteClip" );
-
     namespace
     {
         /** @brief @p index 가 @p list 범위 안이면 true 입니다. */

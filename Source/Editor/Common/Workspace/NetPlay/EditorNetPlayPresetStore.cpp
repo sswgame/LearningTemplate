@@ -12,8 +12,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "NetPlayPresets" );
-
     EditorNetPlayPresetStore::EditorNetPlayPresetStore()
         : _file{}
         , _filePath{}

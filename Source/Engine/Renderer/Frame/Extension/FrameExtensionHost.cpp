@@ -23,8 +23,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameExtensionHost" );
-
     namespace
     {
         uint64 hashText( const string& text )

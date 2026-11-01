@@ -33,8 +33,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "UIPreviewModel" );
-
     /** @brief 되돌리기 항목이 모델을 가리키는 길입니다. 모델이 사라지면 `_pModel` 이 비어 항목은 아무것도 하지 않습니다. */
     struct UIPreviewModel::EditSession
     {

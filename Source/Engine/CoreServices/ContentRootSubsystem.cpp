@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ContentRootSubsystem" );
-
     ContentRootSubsystem::ContentRootSubsystem( const CommandLineSubsystem& commandLine, const CrashHandlerSubsystem& crashHandler )
         : _commandLine{ commandLine }
         , _crashHandler{ crashHandler }

@@ -105,7 +105,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "RagdollPreviewPanel" );
     SW_EDITOR_PANEL( RagdollPreviewPanel, RagdollPreviewPanel::kPanelID, EditorPanelCategory::Tool, 1340 );
     SW_AUTOMATION_WATCH( editorRagdollPreviewDocumentBodies, "Editor.RagdollPreviewDocumentBodies",
                          "Bodies of the physics asset open in the Ragdoll Preview panel (fails while the panel is closed or the asset was not read)",

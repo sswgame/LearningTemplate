@@ -55,8 +55,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorPreviewViewport" );
-
     EditorPreviewViewport::EditorPreviewViewport()
         : _pScene{ nullptr }
         , _imagePosition{}

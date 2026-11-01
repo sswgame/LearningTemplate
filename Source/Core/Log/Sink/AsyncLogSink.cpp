@@ -126,21 +126,13 @@ namespace sw
                 return idTag;
             }
 
-            /** @brief 로그 한 줄을 @p outBuffer 에 한 번만 포맷합니다(스택 버퍼라 힙 할당이 없다). 호출자(caller)가 없으면 그 칸을 뺍니다. */
-            static void formatLine( fixed_string<constant::buffer::kMax8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pTickTag,
+            /** @brief 로그 한 줄을 @p outBuffer 에 한 번만 포맷합니다(스택 버퍼라 힙 할당이 없다). 범주는 id 꼬리표가 담는다(따로 칸이 없다). */
+            static void formatLine( fixed_string<constant::buffer::kMax8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pTickTag,
                                     const utf8* pContextTag, const utf8* pIDTag, const utf8* pMessage, const utf8* pFile, int32 line )
             {
                 const utf8* pHeader = LogLineFormat::getLevelLabel( level ); // 읽는 쪽(`LogLineFormat::tryParse`)과 같은 표
-                if ( StringUtil::isNullOrEmpty( pCaller ) == false )
-                {
-                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] [%#] %#%#- %#%#\n -> %#:%#\n", stamp._text.c_str(), pTag, pCaller, pHeader, pTickTag, pContextTag,
-                                  pIDTag, pMessage, pFile, line );
-                }
-                else
-                {
-                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#%#\n -> %#:%#\n", stamp._text.c_str(), pTag, pHeader, pTickTag, pContextTag, pIDTag,
-                                  pMessage, pFile, line );
-                }
+                formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#%#\n -> %#:%#\n", stamp._text.c_str(), pTag, pHeader, pTickTag, pContextTag, pIDTag,
+                              pMessage, pFile, line );
             }
         };
     } // namespace
@@ -236,9 +228,9 @@ namespace sw
     /**
      * @brief 로그 한 줄을 기록합니다(writeLogInternal 로 넘깁니다).
      */
-    void AsyncLogSink::writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
+    void AsyncLogSink::writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
-        writeLogInternal( level, pTag, pCaller, pMessage, pFile, line, pID );
+        writeLogInternal( level, pTag, pMessage, pFile, line, pID );
     }
 
     /**
@@ -450,7 +442,7 @@ namespace sw
             flushQueue();
     }
 
-    void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
+    void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
         using Internal = AsyncLogSinkInternal;
         if ( t_reentryDepth.deviceWrite > 0 )
@@ -486,12 +478,9 @@ namespace sw
         // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
         const Internal::DateStamp stamp = Internal::readDateStamp();
 
-        const utf8* pEffectiveTag    = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::log::kDefaultLogTag : pTag;
-        const utf8* pEffectiveFile   = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::log::kDefaultLogFile : pFile;
-        const utf8* pEffectiveMsg    = ( pMessage != nullptr ) ? pMessage : "";
-        const utf8* pEffectiveCaller = pCaller;
-        if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
-            pEffectiveCaller = Logger::getCaller( pFile );
+        const utf8* pEffectiveTag  = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::log::kDefaultLogTag : pTag;
+        const utf8* pEffectiveFile = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::log::kDefaultLogFile : pFile;
+        const utf8* pEffectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
 
         // 문맥(요청 추적 id · 주체)은 부른 스레드의 것이라 큐에 넣기 전에 읽는다. 문맥이 없으면 꼬리표가 빈 글이라 줄은 바이트가 같다.
         const LogContext& context = LogContext::getCurrent();
@@ -502,7 +491,7 @@ namespace sw
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::buffer::kMax8192> formattedBuffer{};
         const fixed_string<128>                  idTag = Internal::makeIDTag( pID );
-        Internal::formatLine( formattedBuffer, stamp, level, pEffectiveTag, pEffectiveCaller, tickTag.c_str(), arrContextTag, idTag.c_str(), pEffectiveMsg, pEffectiveFile, line );
+        Internal::formatLine( formattedBuffer, stamp, level, pEffectiveTag, tickTag.c_str(), arrContextTag, idTag.c_str(), pEffectiveMsg, pEffectiveFile, line );
 
         // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
         //        C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 빈다(glibc).
@@ -520,7 +509,6 @@ namespace sw
             LogEntry entry;
             entry._level     = level;
             entry._tag       = pEffectiveTag;
-            entry._caller    = ( pEffectiveCaller != nullptr ) ? pEffectiveCaller : "";
             entry._message   = pEffectiveMsg;
             entry._file      = pEffectiveFile;
             entry._line      = line;
@@ -540,7 +528,7 @@ namespace sw
         record._hour      = stamp._hour;
         if ( _bWantsStructured.load( std::memory_order_acquire ) )
         {
-            // 메시지만 UTF-8 이 아닐 수 있다(태그 · 호출자 · 파일은 소스의 글자 상수). 잘못된 바이트는 줄 전체와 같은 방식으로 바꾼다.
+            // 메시지만 UTF-8 이 아닐 수 있다(태그 · 파일은 소스의 글자 상수). 잘못된 바이트는 줄 전체와 같은 방식으로 바꾼다.
             string      escapedMessage;
             string_view message{ pEffectiveMsg };
             if ( StringUtil::isValidUTF8( pEffectiveMsg ) == false )
@@ -553,7 +541,6 @@ namespace sw
             fields._unixMilliseconds = WallClock::nowUnixMilliseconds().count();
             fields._level            = level;
             fields._tag              = pEffectiveTag;
-            fields._caller           = pEffectiveCaller != nullptr ? string_view{ pEffectiveCaller } : string_view{};
             fields._message          = message;
             fields._id               = pID != nullptr ? string_view{ pID } : string_view{};
             fields._file             = pEffectiveFile;

@@ -55,11 +55,11 @@ namespace sw
          * @brief 한 줄을 출력 장치와 리스너에 남깁니다. @p pID 는 줄의 종류 id 입니다(`SW_LOG_ERROR_ID` · `LogEntry::_pID`) — 정적 글자여야 하고 없으면 nullptr 입니다.
          * @details 감싸는 싱크는 @p pID 를 감싼 싱크로 그대로 넘깁니다. 넘기지 않으면 테스트가 id 로 줄을 찾지 못한다.
          */
-        virtual void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) = 0;
+        virtual void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) = 0;
         /** @brief id 가 없는 한 줄입니다(`writeLogWithID` 에 nullptr 를 넘긴다). */
-        void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
+        void writeLog( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line )
         {
-            writeLogWithID( level, pTag, pCaller, pMessage, pFile, line, nullptr );
+            writeLogWithID( level, pTag, pMessage, pFile, line, nullptr );
         }
         /**
          * @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 그 구독을 돌려줍니다. 구독이 사라지면 뗍니다(진행 중인 방송이 끝나기를 기다린다).
@@ -90,7 +90,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 3) Logger. 매크로가 부르는 전역 진입점이며 전역 싱크, 상세도, 호출자 이름 테이블을 가진다. 인스턴스는 없다.
+    // 3) Logger. 매크로가 부르는 전역 진입점이며 전역 싱크와 상세도를 가진다. 줄의 범주는 id 의 영역(`LogEntry::getCategory`)이다 — 파일마다 따로 등록하는 호출자 이름은 없다(언리얼 `UE_LOG` 의 범주 하나와 같다). 인스턴스는 없다.
     //    기본 싱크(비동기 큐와 출력 장치)는 `AsyncLogSink`(Core/Log/Sink)이고, 생성되면 전역 싱크가 비어 있을 때 자신을 등록한다.
     // ------------------------------------------------------------------------------
     /**
@@ -104,16 +104,6 @@ namespace sw
     public:
         Logger() = delete;
 
-        /**
-         * @brief 소스 파일 경로별 Caller 이름을 등록합니다. **예외를 던지지 않습니다.**
-         * @details `SW_LOG_CALLER` 가 정적 초기화 중에 부르므로 여기서 예외가 나면 잡을 곳이 없습니다(std::terminate). 내부는
-         *          고정 배열과 뮤텍스뿐이라 던질 것이 없고, 그 사실을 타입(noexcept)으로 못 박아 정적 초기화가 안전하다는 것을
-         *          계약으로 만듭니다.
-         */
-        static void registerCaller( string_view filePath, string_view callerName ) noexcept;
-        /** @brief 소스 파일 경로에 등록된 Caller 이름을 반환합니다. */
-        static const utf8* getCaller( const utf8* pFile );
-
         /** @brief 전역 싱크의 `flushForCrash` 입니다. 크래시 핸들러가 리포트를 쓴 뒤 부릅니다. */
         static void flushGlobalForCrash();
         /** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
@@ -125,7 +115,7 @@ namespace sw
         /**
          * @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 줄을 버리지 않고 stderr 에 쓰고 비웁니다(기동이 이르거나 로거가 없는 도구에서도 줄이 남는다).
          */
-        static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID = nullptr );
+        static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID = nullptr );
         /**
          * @brief `SW_LOG_ASSERT`(Debug)가 멈추기 전에 식 · 메시지 · 위치를 stderr 에 동기로 쓰고 비웁니다.
          * @details 로거는 비동기라 멈추면 큐의 메시지를 잃을 수 있습니다(`SW_ASSERT` 의 `printAssertFailure` 와 같은 이유). 매크로가 이 함수를 거치지 않고는 멈출 수 없게 한 곳에 둡니다.
@@ -204,17 +194,6 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
 /// @brief 이 수준이 이 빌드에 컴파일되는지 확인합니다. 인자는 SW_LOG_VERBOSITY_* 로 적습니다.
 #define SW_LOG_LEVEL_COMPILED( verbosity ) ( ( verbosity ) <= SW_LOG_COMPILED_VERBOSITY )
 
-/**
- * @brief 현재 파일이나 네임스페이스 스코프의 로그 Caller(클래스 · 시스템 이름)를 지정합니다.
- */
-#define SW_LOG_CALLER( name )                                                                                       \
-    namespace                                                                                                       \
-    {                                                                                                               \
-        [[maybe_unused]] static const bool SW_CONCAT( _s_logCallerRegistered_, __COUNTER__ ) = []() noexcept { \
-			::sw::Logger::registerCaller( __FILE__, name );                                    \
-			return true; }(); \
-    }
-
 namespace sw
 {
     /**
@@ -237,15 +216,15 @@ namespace sw
  * @details **런타임 상세도를 먼저 확인합니다.** 버려질 줄은 8KB 버퍼 포맷 비용도 치르지 않습니다.
  * @note 메시지 문자열을 __VA_ARGS__ 의 첫 인자로 받으므로, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
  */
-#define SW_LOG_WRITE( level, pID, ... )                                                                     \
-    do                                                                                                      \
-    {                                                                                                       \
-        if ( ::sw::Logger::shouldLog( level ) )                                                             \
-        {                                                                                                   \
-            ::utf8 arrBuffer[::sw::constant::buffer::kMax8192];                                             \
-            ::sw::formatstring( arrBuffer, ::sw::constant::buffer::kMax8192, __VA_ARGS__ );                 \
-            ::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, nullptr, arrBuffer, __FILE__, __LINE__, pID ); \
-        }                                                                                                   \
+#define SW_LOG_WRITE( level, pID, ... )                                                            \
+    do                                                                                             \
+    {                                                                                              \
+        if ( ::sw::Logger::shouldLog( level ) )                                                    \
+        {                                                                                          \
+            ::utf8 arrBuffer[::sw::constant::buffer::kMax8192];                                    \
+            ::sw::formatstring( arrBuffer, ::sw::constant::buffer::kMax8192, __VA_ARGS__ );        \
+            ::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, arrBuffer, __FILE__, __LINE__, pID ); \
+        }                                                                                          \
     } while ( false )
 
 /**

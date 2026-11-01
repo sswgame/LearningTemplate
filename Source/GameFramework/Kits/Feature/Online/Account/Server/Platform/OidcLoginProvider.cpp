@@ -6,7 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OidcLoginProvider" );
 } // namespace sw
 
 namespace sw

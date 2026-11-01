@@ -357,8 +357,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneStateHash" );
-
     // 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` = 38 바이트다.
     static_assert( 38u * StateHashHistory::kMaxReportLineSamples + 32u <= DebugReplyLine::kMaxBytes, "kMaxReportLineSamples 가 한 줄 상한 안에 들어야 한다" );
 

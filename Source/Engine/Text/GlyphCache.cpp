@@ -11,7 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GlyphCache" );
 } // namespace sw
 
 namespace sw

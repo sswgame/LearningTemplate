@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "IntentRewind" );
-
     IntentRewindBuffer::IntentRewindBuffer()
         : _listSnapshot{}
         , _byteCount{ 0 }

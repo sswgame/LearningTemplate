@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpenGL" );
-
     unique_ptr<IOpenGLPlatformContext> IOpenGLPlatformContext::create( NativeSurfaceKind surfaceKind )
     {
         // 플랫폼을 하나 더 지원하려면 **여기 한 줄과 파일 한 쌍**이면 된다.

@@ -19,7 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "IntentPlayback" );
 } // namespace sw
 
 namespace sw

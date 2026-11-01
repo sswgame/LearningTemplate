@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "StandardInputCommands" );
-
     StandardInputCommands::StandardInputCommands()
         : _reader{ nullptr }
         , _listLine{}

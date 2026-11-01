@@ -121,8 +121,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ZlibCodec" );
-
     CompressionCodecType ZlibCompressionCodec::getCodecType() const
     {
         return CompressionCodecType::Zlib;

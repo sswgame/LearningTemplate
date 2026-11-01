@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ServiceRetentionJob" );
-
     /** @brief 규칙 사본을 저장소 스레드에서 쓸고, 커서가 움직인 사본을 서비스 스레드로 돌려줍니다. */
     class ServiceRetentionJob::SweepWork final : public IServiceStoreWork
     {

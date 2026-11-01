@@ -5,7 +5,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-SW_LOG_CALLER( "EmitTemplateStore" );
 namespace sw
 {
     namespace

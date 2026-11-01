@@ -20,8 +20,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorSelection" );
-
     void EditorSelection::selectObject( GameObject* pObj, SelectionMode mode )
     {
         pruneInvalid();

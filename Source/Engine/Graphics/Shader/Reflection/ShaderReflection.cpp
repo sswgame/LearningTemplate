@@ -5,7 +5,6 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
 
-SW_LOG_CALLER( "ShaderReflection" );
 namespace sw
 {
     ShaderReflectionData ShaderReflection::reflect( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat )

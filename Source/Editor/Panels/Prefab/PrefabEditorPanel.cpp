@@ -51,7 +51,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "PrefabEditorPanel" );
     SW_EDITOR_PANEL( PrefabEditorPanel, PrefabEditorPanel::kPanelID, EditorPanelCategory::Tool, 1410 );
 
     PrefabEditorPanel::PrefabEditorPanel()

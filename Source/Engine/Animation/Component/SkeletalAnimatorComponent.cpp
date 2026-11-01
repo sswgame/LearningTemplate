@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SkeletalAnimator" );
-
     /**
      * @brief `-gv_animationWaitForClips=1`: 시작 때 비동기로 읽는 클립을 `onBeginPlay` 에서 그 자리에서 기다립니다(첫 프레임부터 포즈가 있다).
      * @details 끄면(기본) 스폰이 디스크를 기다리지 않고, 첫 포즈가 나오는 프레임이 디스크 지연에 따라 달라진다 — 그 포즈를 물리(래그돌)가 이어 받으면 이력이 갈린다.

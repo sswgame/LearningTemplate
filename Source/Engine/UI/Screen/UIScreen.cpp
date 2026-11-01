@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UIScreen" );
-
     UIScreen::UIScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
         : _tree{}
         , _desc{ desc }

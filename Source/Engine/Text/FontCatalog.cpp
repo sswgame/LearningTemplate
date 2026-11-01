@@ -10,7 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FontCatalog" );
 } // namespace sw
 
 namespace sw

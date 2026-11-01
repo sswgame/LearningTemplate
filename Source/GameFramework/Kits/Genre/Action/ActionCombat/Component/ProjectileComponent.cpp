@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ProjectileComponent" );
-
     ProjectileComponent::ProjectileComponent()
         : _velocity{ 0.0f, 0.0f }
         , _instigator{}

@@ -9,7 +9,6 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 
-SW_LOG_CALLER( "ParkLayout" );
 namespace sw
 {
     ParkLayout::ParkLayout()

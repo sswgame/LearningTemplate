@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Light2D" );
-
     static_assert( static_cast<uint32>( Light2DBlendStyle::Additive ) == shaderslot::kLight2DBlendAdditive &&
                        static_cast<uint32>( Light2DBlendStyle::Multiply ) == shaderslot::kLight2DBlendMultiply &&
                        static_cast<uint32>( Light2DBlendStyle::Subtractive ) == shaderslot::kLight2DBlendSubtractive,

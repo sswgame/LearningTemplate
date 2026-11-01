@@ -24,8 +24,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "EconomyService" );
-
     namespace
     {
         struct EconomyServiceInternal

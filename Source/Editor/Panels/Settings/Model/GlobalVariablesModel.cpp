@@ -32,8 +32,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "GlobalVariablesPanel" );
-
     GlobalVariablesModel::GlobalVariablesModel()
         : _uniquePinnedVar{}
         , _pendingPinToggle{}

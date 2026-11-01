@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "HUDController" );
-
     HUDControllerComponent::HUDControllerComponent()
         : Component{}
         , _pUISystem{ nullptr }

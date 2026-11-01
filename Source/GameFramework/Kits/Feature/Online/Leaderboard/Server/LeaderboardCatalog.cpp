@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LeaderboardCatalog" );
-
     uint32 LeaderboardCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 정의의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값 · 모르는 열거 이름은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).

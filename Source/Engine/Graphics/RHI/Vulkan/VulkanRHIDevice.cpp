@@ -46,8 +46,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Vulkan" );
-
     VulkanRHIDevice::VulkanRHIDevice()
         : _instance{ nullptr }
         , _debugMessenger{ nullptr }

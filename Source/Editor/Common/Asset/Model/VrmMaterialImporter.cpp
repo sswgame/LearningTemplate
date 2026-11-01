@@ -564,8 +564,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "VrmMaterialImporter" );
-
     float32 VrmMaterialImporter::convertGammaToLinear( float32 value )
     {
         // sRGB 전달 함수(IEC 61966-2-1)의 역함수다. 유니티가 감마 색을 선형으로 바꾸는 식과 같다.

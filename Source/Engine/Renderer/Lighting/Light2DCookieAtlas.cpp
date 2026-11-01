@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Light2DCookieAtlas" );
-
     namespace
     {
         struct Light2DCookieAtlasInternal

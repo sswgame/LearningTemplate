@@ -20,7 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "InputManager" );
 } // namespace sw
 
 namespace sw

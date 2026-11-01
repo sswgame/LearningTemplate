@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "NavMeshAsset" );
-
     namespace
     {
         struct NavMeshAssetInternal

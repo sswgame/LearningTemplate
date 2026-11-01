@@ -278,7 +278,7 @@ namespace sw::editor
             if ( _tagFilter.isTagVisible( getEntryCategory( entry ) ) == false )
                 continue;
 
-            if ( filter.matchesAny( { entry._message, entry._tag, entry._caller, entry._file } ) == false )
+            if ( filter.matchesAny( { entry._message, entry._tag, entry.getCategory(), entry._file } ) == false )
                 continue;
 
             _listVisible.push_back( &entry );
@@ -550,10 +550,7 @@ namespace sw::editor
         ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
         ImGui::SameLine( 0.0f, 0.0f );
         EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Base", "TextMuted" ) ); // 태그는 줄마다 되풀이되는 열이라 강조색을 쓰지 않는다
-        if ( entry._caller.empty() )
-            ImGui::Text( " [%s]", entry._tag.c_str() );
-        else
-            ImGui::Text( " [%s:%s]", entry._tag.c_str(), entry._caller.c_str() );
+        ImGui::Text( " [%s]", entry._tag.c_str() );
         EditorThemeUtil::popTextColor();
         ImGui::SameLine( 0.0f, 0.0f );
         ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
@@ -628,9 +625,10 @@ namespace sw::editor
         }
     }
 
-    const string& ConsolePanel::getEntryCategory( const LogEntry& entry )
+    string_view ConsolePanel::getEntryCategory( const LogEntry& entry )
     {
-        return entry._caller.empty() ? entry._tag : entry._caller;
+        const string_view category = entry.getCategory();
+        return category.empty() ? string_view{ entry._tag } : category;
     }
 
     bool ConsolePanel::isMessageInSnapshot( string_view message ) const
@@ -742,7 +740,7 @@ namespace sw::editor
         _listTagCache.reserve( _listDrawSnapshot.size() );
         for ( const LogEntry& entry : _listDrawSnapshot )
         {
-            _listTagCache.push_back( getEntryCategory( entry ) );
+            _listTagCache.push_back( string{ getEntryCategory( entry ) } );
         }
         VectorUtil::sortUnique( _listTagCache );
         _tagCacheGeneration = _snapshotGeneration;

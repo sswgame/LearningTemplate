@@ -10,7 +10,6 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "ConfigKeyDoc" );
     } // namespace
 } // namespace sw
 

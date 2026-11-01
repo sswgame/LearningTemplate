@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PhysicsAsset" );
-
     bool PhysicsAsset::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();

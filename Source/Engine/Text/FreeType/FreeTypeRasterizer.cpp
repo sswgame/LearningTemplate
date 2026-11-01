@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FreeTypeRasterizer" );
-
     namespace
     {
         /** @brief 26.6 고정소수점을 픽셀로 바꿉니다. */

@@ -4,8 +4,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorExtensionSubsystems" );
-
     EditorExtensionSubsystems::EditorExtensionSubsystems( SubsystemScope& scope )
         : _scope{ scope }
         , _listEntry{}

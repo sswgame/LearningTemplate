@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TelemetryUploader" );
-
 } // namespace sw
 
 namespace sw

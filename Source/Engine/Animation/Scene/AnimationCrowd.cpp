@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationCrowd" );
-
     namespace
     {
         struct AnimationCrowdInternal

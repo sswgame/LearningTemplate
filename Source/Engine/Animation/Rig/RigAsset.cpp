@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RigAsset" );
-
     namespace
     {
         /** @brief 다음 내용 번호입니다(0 은 "읽지 않음"). */

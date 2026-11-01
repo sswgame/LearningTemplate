@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UserAppearancePresetStore" );
-
     namespace
     {
         struct UserAppearancePresetStoreInternal

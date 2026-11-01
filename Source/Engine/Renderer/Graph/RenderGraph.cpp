@@ -197,8 +197,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "RenderGraph" );
-
     /**
      * @brief 병렬 기록 한 레벨의 패스와 그것을 기록할 리스트입니다. 리스트는 노드가 가지고 있는 것을 빌립니다(소유하지 않습니다).
      * @details 태스크는 이 엔트리의 메서드에 묶인다(`record`). 메서드 델리게이트는 포인터 둘이라 힙도 노드 팽창도 없다.

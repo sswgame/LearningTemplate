@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Rig" );
-
     namespace
     {
         /** @brief "key '<키>' <설명>" 형태의 오류 문장입니다. */

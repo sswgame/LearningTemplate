@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PairedAnimationReplication" );
-
     namespace
     {
         /** @brief 애니메이터를 가진 오브젝트의 번호(`NetObjectTable`)입니다. 핸들이 풀리지 않거나 번호가 없으면 0 입니다. */

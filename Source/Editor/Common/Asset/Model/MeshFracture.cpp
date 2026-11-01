@@ -21,8 +21,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MeshFracture" );
-
     namespace
     {
         struct MeshFractureInternal

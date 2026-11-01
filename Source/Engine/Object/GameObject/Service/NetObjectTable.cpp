@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "NetObjectTable" );
-
     SW_SCENE_SERVICE( NetObjectTable, FlushEnd )
 
     NetObjectTable::NetObjectTable( GameObjectManager& manager )

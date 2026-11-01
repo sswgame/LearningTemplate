@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "VisualLogger" );
-
     namespace
     {
         constexpr const utf8* kArrShapeName[] = { "Text", "Line", "Sphere", "Box", "Arrow" };

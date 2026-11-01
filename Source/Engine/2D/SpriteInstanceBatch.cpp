@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SpriteInstanceBatch" );
-
     SpriteInstanceBatch::SpriteInstanceBatch()
         : _batch{}
         , _pOwnerComponent{ nullptr }

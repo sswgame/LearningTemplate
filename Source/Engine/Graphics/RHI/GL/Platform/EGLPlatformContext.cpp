@@ -17,8 +17,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpenGL" );
-
     EGLPlatformContext::EGLPlatformContext()
         : _pEGLDisplay{ nullptr }
         , _pEGLSurface{ nullptr }

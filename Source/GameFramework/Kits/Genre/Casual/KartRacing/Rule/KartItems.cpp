@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "KartItems" );
-
     namespace
     {
         struct KartItemsInternal

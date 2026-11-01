@@ -22,8 +22,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MatchmakingOnlineServerKit" );
-
     namespace
     {
         struct MatchmakingOnlineServerKitInternal

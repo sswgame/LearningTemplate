@@ -13,7 +13,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
 
-SW_LOG_CALLER( "WindowsFileWatcher" );
 namespace sw
 {
     namespace

@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LiveLinkFace" );
-
     LiveLinkFaceComponent::LiveLinkFaceComponent()
         : _mappingPath{}
         , _port{ kDefaultPort }

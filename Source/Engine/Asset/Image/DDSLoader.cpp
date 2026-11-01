@@ -236,8 +236,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "DDSLoader" );
-
     bool DDSLoader::loadFromAsset( const AssetID& assetID, DDSImageData& outImage )
     {
         const string_view relativePath = assetID.view();

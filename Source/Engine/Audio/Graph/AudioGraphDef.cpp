@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioGraphDef" );
-
     SW_ASSET_TYPE( AudioGraph, AudioGraphDef::kAssetType );
 
     namespace

@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SkeletalMeshComponent" );
-
     namespace
     {
         struct SkeletalMeshComponentInternal

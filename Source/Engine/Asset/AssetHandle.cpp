@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AssetHandle" );
-
     AssetLoadBlock::AssetLoadBlock( const utf8* pKindName, string_view path, MemoryTag memoryTag )
         : _path{ path }
         , _error{}

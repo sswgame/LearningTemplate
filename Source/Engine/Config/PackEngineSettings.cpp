@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PackEngineSettings" );
-
     bool PackEngineSettings::loadFromPack( const DataPath& packRoot )
     {
         const string path = FileUtil::joinPath( FileUtil::trimTrailingSlashes( packRoot.get() ), kPackRelativePath );

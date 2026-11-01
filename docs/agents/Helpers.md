@@ -42,7 +42,7 @@ A constant declared directly in the anonymous namespace (`constexpr int32 kLimit
 
 ### One anonymous namespace per file, at the top of its scope
 
-- A `.cpp` has **at most one** anonymous namespace, at the top of the enclosing namespace (right after `SW_LOG_CALLER`, if present). Everything TU-local lives in it: helper structs, constants, `s_*` state, free functions.
+- A `.cpp` has **at most one** anonymous namespace, at the top of the enclosing namespace. Everything TU-local lives in it: helper structs, constants, `s_*` state, free functions.
 - **No free `static` functions.** The anonymous namespace already gives internal linkage.
 - The block may only sit above things it does not use: a file-scope `static` it references moves **into** the block.
 - Exceptions:

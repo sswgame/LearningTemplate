@@ -159,8 +159,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "App" );
-
     RHIBackendSwitcher::RHIBackendSwitcher()
         : _pEngine{ nullptr }
         , _pGameModuleManager{ nullptr }

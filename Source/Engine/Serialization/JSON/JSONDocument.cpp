@@ -214,8 +214,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "JSONDocument" );
-
     using JSONImpl = JSONDocumentInternal::JSONImpl;
 
     struct JSONDocument::Impl

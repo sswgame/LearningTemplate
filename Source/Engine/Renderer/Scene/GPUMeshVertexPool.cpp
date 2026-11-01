@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GPUMeshVertexPool" );
-
     GPUMeshVertexPool::GPUMeshVertexPool()
         : _allocator{}
         , _vertexBuffer{ 0 }

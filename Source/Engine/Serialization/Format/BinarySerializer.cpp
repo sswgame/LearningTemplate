@@ -436,8 +436,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "BinarySerializer" );
-
     bool BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
                                       const SerializeContext& context )
     {

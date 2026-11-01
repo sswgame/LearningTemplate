@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GimmickCircuitDef" );
-
     namespace
     {
         struct GimmickCircuitDefInternal

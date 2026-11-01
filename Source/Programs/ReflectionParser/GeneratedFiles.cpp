@@ -13,7 +13,6 @@
 
 #include "sw/config/ConfigConstants.h"
 
-SW_LOG_CALLER( "GeneratedFiles" );
 namespace sw
 {
     namespace

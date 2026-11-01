@@ -115,8 +115,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameObjectManager" );
-
     GameObjectManager::GameObjectManager()
         : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
     {

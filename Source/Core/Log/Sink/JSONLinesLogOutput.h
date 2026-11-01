@@ -20,7 +20,6 @@ namespace sw
         int64       _unixMilliseconds{ 0 }; ///< UTC 유닉스 밀리초(수집기가 시각 글을 해석하지 않아도 되게)
         LogLevel    _level{ LogLevel::Info };
         string_view _tag{};
-        string_view _caller{};  ///< 비어 있으면 칸을 뺀다
         string_view _message{}; ///< 유효한 UTF-8 이어야 한다(잘못된 바이트는 부르는 쪽이 `\xNN` 으로 바꾼다)
         string_view _id{};      ///< 줄의 종류 id(`SW_LOG_ERROR_ID`). 비어 있으면 칸을 뺀다
         string_view _file{};

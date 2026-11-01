@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeleeHitbox" );
-
     namespace
     {
         /** @brief 칼날 표본점 수입니다. 두 끝과 가운데 — 칼날이 돌며 지나간 자리를 끝점 둘만으로는 놓친다. */

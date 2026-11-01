@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Automation" );
-
     namespace
     {
         /** @brief `"key": [ "a", "b" ]` 한 멤버를 씁니다. @p pListText 가 없거나 비어 있으면 `[]` 입니다. */

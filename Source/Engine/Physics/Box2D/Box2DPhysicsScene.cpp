@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Box2DPhysicsScene" );
-
     namespace
     {
         struct Box2DPhysicsSceneInternal

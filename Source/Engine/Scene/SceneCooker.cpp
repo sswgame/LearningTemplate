@@ -406,8 +406,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneCooker" );
-
     uint32 SceneCooker::cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
     {
         if ( pOutMissingComponentCount != nullptr )

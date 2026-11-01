@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "VFXCPUSimulation" );
-
     namespace
     {
         /** @brief 난수 한 줄(입자 하나가 쓰는 splitmix64 수열)입니다. GPU 시뮬레이션이 같은 수열을 만듭니다. */

@@ -9,8 +9,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorNavigationCommands" );
-
     uint32 EditorNavigationCommands::bakeAll( GameObjectManager& manager )
     {
         SceneNavigation&      navigation = manager.getSubsystem<SceneNavigation>();

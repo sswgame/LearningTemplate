@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FileDialog" );
-
     namespace
     {
         /** @brief 열린 대화상자 하나입니다. 스레드는 결과를 담고 `_bDone` 을 올릴 뿐이고, 합류 · 전달은 메인 스레드(`pumpResults`)가 한다. */

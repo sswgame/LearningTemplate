@@ -18,8 +18,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "PackagingPanel" );
-
     namespace
     {
         /** @brief 진입점(저장소 루트 기준)입니다. */

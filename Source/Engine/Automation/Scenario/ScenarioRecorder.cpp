@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Automation" );
-
     namespace
     {
         struct ScenarioRecorderInternal

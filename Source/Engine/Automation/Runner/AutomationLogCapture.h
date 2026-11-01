@@ -22,8 +22,7 @@ namespace sw
     struct AutomationLogLine
     {
         string   _message{};
-        string   _caller{}; ///< 로그 호출자 이름(`LocalizationManager` 등) — 게이트 실패 줄에 적는다
-        string   _id{};     ///< 줄의 종류 id(`SW_LOG_WARNING_ID`). id 없이 남긴 줄은 빈 글 — 허용 목록으로 가릴 수 없다
+        string   _id{}; ///< 줄의 종류 id(`SW_LOG_WARNING_ID`). id 없이 남긴 줄은 빈 글 — 허용 목록으로 가릴 수 없다
         uint32   _frameIndex{ 0 };
         LogLevel _level{ LogLevel::Info };
     };

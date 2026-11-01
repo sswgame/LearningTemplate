@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TileMap" );
-
     TileMap::TileMap()
         : _data{}
         , _listTileSolid{}

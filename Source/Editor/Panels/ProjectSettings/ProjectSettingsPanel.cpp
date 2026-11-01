@@ -35,8 +35,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ProjectSettingsPanel" );
-
     namespace
     {
         struct ProjectSettingsPanelInternal

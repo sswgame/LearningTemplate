@@ -8,7 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LocalServerBus" );
 } // namespace sw
 
 namespace sw

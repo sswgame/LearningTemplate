@@ -514,8 +514,6 @@ namespace sw
         return false;
     }
 
-    SW_LOG_CALLER( "SchemaMigrate" );
-
     bool finishVersionedRead( uint32 fromVersion, uint32 currentVersion, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listOrphan,
                               SchemaOrphanPolicy orphanPolicy )
     {

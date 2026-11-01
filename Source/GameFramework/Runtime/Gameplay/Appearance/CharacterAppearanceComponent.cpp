@@ -37,8 +37,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CharacterAppearance" );
-
     namespace
     {
         struct CharacterAppearanceComponentInternal

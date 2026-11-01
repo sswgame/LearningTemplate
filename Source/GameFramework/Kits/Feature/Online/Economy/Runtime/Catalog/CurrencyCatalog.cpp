@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CurrencyCatalog" );
-
     namespace
     {
         /** @brief 재원이 모두 정의된 비가상 화폐이면 true 입니다. */

@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SequencePlayer" );
-
     SequencePlayerComponent::SequencePlayerComponent()
         : _sequencePath{}
         , _framesPerSecond{ 30.0f }

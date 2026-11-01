@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DialogueGraph" );
-
     namespace
     {
         /** @brief 특성 테이블이 타입 값 순서대로인지 확인합니다. `findNodeInfo` 가 값으로 바로 찾습니다. */

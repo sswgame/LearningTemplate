@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TileMapRenderer" );
-
     TileMapRendererComponent::TileMapRendererComponent()
         : _tileMapPath{}
         , _materialPath{}

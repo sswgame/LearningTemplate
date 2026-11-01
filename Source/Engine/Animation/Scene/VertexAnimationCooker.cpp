@@ -27,8 +27,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "VertexAnimationCooker" );
-
 } // namespace sw
 
 namespace sw

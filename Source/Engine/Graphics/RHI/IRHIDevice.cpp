@@ -107,8 +107,6 @@ namespace sw
 #endif
     }
 
-    SW_LOG_CALLER( "RHI" );
-
     void IRHIDevice::requireRegistryMutableNow( const utf8* pWhat ) const
     {
         if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )

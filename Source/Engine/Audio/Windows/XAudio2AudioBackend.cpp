@@ -269,8 +269,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "XAudio2AudioBackend" );
-
     /**
      * @brief XAudio2 백엔드의 상태 전부입니다. 헤더가 XAudio2 헤더를 끌어오지 않도록 여기 숨깁니다.
      */

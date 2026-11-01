@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Ability" );
-
     Ability::Ability()
         : _config{}
         , _triggerEventData{}

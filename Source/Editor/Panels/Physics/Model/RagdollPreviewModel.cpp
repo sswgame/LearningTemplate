@@ -33,8 +33,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "RagdollPreviewPanel" );
-
     RagdollPreviewModel::RagdollPreviewModel()
         : _listBodyRow{}
         , _bodyPrefabPath{}

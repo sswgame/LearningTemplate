@@ -26,8 +26,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorDocumentPanel" );
-
     void EditorDocumentPanel::updateFocusedDocument()
     {
         if ( _bConfirmSwitch == SW_TRUE )

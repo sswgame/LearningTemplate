@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "NetMessageChannel" );
-
     namespace
     {
         /** @brief 32 비트 값 하나를 FNV-1a 에 바이트 단위로 섞습니다(`NetWireVersion::combine` 과 같은 순서). */

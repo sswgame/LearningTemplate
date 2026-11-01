@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderCache" );
-
     /**
      * @brief `-gv_shaderDebugCodegen=1`: 실행 중 컴파일(소스 정책)을 디버그 코드젠으로 합니다 — RenderDoc 에서 셰이더를 한 줄씩 볼 때 켠다. 기본은 끔이다.
      * @details 기본(최적화 코드젠)은 쿠킹과 같은 바이트라, 그림이 셰이더를 어디서 얻었느냐(캐시 · 컴파일 · 쿠킹본)나 빌드 구성에 달리지 않는다 — 골든 비교가 그것에 기댄다.

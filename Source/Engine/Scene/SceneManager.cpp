@@ -34,8 +34,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneManager" );
-
     SW_GLOBAL_VARIABLE( bool, gv_scenePreload, true, "씬 로드 요청 때 쿠킹이 구운 프리로드 목록(<씬>.preload.json)의 파일을 미리 읽는다 (끄면 씬이 에셋을 잡을 때 읽는다)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadInFlight, 8, "씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadPinMegabytes, 256, "씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다)" );

@@ -43,8 +43,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioSnapshotMixer" );
-
     void AudioSnapshotMixer::startSnapshot( const AudioMixer& mixer, const hashed_string& name )
     {
         SnapshotState* pSnapshot = getOrCreateSnapshot( mixer, name );

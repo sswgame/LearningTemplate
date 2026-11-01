@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeshInstanceBatch" );
-
     MeshInstanceBatch::MeshInstanceBatch( shared_ptr<Mesh> mesh, Material* pMaterial, shared_ptr<MaterialInstance> instance, uint32 count, MeshInstanceWriter writer )
         : ScenePrimitiveBatch{ count }
         , _listEntry{ count }

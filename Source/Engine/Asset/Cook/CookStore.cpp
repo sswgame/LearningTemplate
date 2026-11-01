@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CookStore" );
-
     CookStore::CookStore( string recordRootPath, string ddcRootPath )
         : _recordRootPath{ std::move( recordRootPath ) }
         , _derivedDataCache{ std::move( ddcRootPath ) }

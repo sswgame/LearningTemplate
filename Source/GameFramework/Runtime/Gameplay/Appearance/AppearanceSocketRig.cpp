@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AppearanceSocketRig" );
-
     namespace
     {
         struct AppearanceSocketRigInternal

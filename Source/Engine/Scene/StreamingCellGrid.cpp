@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "StreamingCellGrid" );
-
     bool StreamingCellGrid::tryCreate( const StreamingCellGridDef& def, StreamingCellGrid& outGrid )
     {
         // 기본값으로 메우지 않는다 — 셀 크기가 없는 월드는 데이터가 빠진 것이다.

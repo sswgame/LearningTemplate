@@ -38,8 +38,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorUICapture" );
-
     namespace
     {
         struct EditorUICaptureInternal

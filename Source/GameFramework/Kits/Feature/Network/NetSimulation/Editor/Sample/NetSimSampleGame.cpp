@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "NetSimSampleGame" );
-
     namespace
     {
         struct NetSimSampleGameInternal

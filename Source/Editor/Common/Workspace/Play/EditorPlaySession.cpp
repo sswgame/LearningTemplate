@@ -278,8 +278,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorPlaySession" );
-
     PlaySessionState EditorPlaySession::getState()
     {
         const PlaySessionData* pData = findData();

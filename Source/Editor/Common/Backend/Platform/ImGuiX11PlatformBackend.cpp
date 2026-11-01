@@ -14,8 +14,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiX11" );
-
     class ImGuiX11PlatformBackend : public IImGuiPlatformBackend
     {
     public:

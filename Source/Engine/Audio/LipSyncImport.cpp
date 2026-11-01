@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LipSync" );
-
     bool LipSyncImport::isVoiceAudio( string_view relativePath )
     {
         const bool bAudio = StringUtil::endsWith( relativePath, ".wav", true ) || StringUtil::endsWith( relativePath, ".ogg", true );

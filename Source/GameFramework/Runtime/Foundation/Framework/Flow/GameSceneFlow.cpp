@@ -17,8 +17,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameSceneFlow" );
-
     /**
      * @brief `"-gv_firstScene=<리소스 경로>"` 인자입니다. 팩 설정(gamesettings)의 시작 씬 대신 이 씬을 처음 엽니다.
      * @details 에디터 없이 다른 씬(환경 쇼케이스 등)을 띄워 볼 때 쓴다.

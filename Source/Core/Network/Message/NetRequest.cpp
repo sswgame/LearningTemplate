@@ -9,8 +9,6 @@
 
 #include <mutex>
 
-SW_LOG_CALLER( "NetRequest" );
-
 namespace sw
 {
     namespace

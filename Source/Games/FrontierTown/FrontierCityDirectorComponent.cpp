@@ -24,8 +24,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrontierCity" );
-
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_frontierAutoPlay, 0, "FrontierTown: 시계를 빨리 감아 달 결산과 RTS 를 스스로 돌린다 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_frontierAutoPlay, "FrontierTown", "The town runs at the fast time scale" );
 } // namespace sw

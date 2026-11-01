@@ -9,8 +9,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "AdminLoginBridge" );
-
     AdminLoginBridge::AdminLoginBridge()
         : _login{}
         , _credentialsSubscription{}

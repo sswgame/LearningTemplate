@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AccountGMLogin" );
-
     AccountGMLogin::AccountGMLogin()
         : _account{}
         , _loginName{}

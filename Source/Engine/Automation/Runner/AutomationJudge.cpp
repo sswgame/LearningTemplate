@@ -44,8 +44,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Automation" );
-
     AutomationJudge::AutomationJudge()
         : _logCapture{}
         , _logPolicy{}

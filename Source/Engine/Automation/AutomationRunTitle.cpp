@@ -211,8 +211,6 @@ namespace sw
         return summary;
     }
 
-    SW_LOG_CALLER( "Automation" );
-
     AutomationRunTitleTracker::AutomationRunTitleTracker()
         : _initialTitle{}
         , _lastBase{}

@@ -8,7 +8,6 @@
 
 #include "Programs/ReflectionParser/ParserUtil.h"
 
-SW_LOG_CALLER( "ContainerTypeMap" );
 namespace sw
 {
     ContainerTypeMap::ContainerTypeMap()

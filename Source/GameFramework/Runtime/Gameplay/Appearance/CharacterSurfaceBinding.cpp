@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CharacterSurfaceBinding" );
-
     namespace
     {
         /** @brief 텍스처 캐시입니다. 에셋 서비스가 내려갔으면(종료) nullptr 입니다. */

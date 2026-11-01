@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpenGLRHIResourceFactory" );
-
     namespace
     {
         // S3TC 는 확장이라 glad 헤더에 없다. 값은 EXT_texture_compression_s3tc 그대로다.

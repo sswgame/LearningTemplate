@@ -67,7 +67,7 @@ namespace sw
         ScopedLock<mutex>      lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
-            policy.judge( line._level, line._caller, line._id, line._message, judgement );
+            policy.judge( line._level, line._id, line._message, judgement );
         }
         return judgement;
     }
@@ -92,7 +92,6 @@ namespace sw
             return;
         AutomationLogLine line{};
         line._message    = entry._message;
-        line._caller     = entry._caller;
         line._id         = entry._pID != nullptr ? entry._pID : "";
         line._level      = entry._level;
         line._frameIndex = _frameIndex.load( std::memory_order_relaxed );

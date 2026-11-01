@@ -45,8 +45,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ContentBrowserModel" );
-
     ContentBrowserModel::ContentBrowserModel() noexcept
         : _listRoot{}
         , _listEntry{}

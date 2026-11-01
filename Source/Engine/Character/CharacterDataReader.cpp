@@ -13,7 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CharacterData" );
 } // namespace sw
 
 namespace sw

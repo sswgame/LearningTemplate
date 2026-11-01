@@ -26,8 +26,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "CameraDirectorComponent" );
-
     /**
      * @brief `-gv_cameraPreset=<id>` — 시작 프리셋을 이것으로 바꿉니다(그 id 가 카탈로그에 있는 디렉터만, 캡처 카메라는 빼고).
      * @details 프리셋마다 스크린샷을 찍으려면(`-gv_screenshot`) 키를 누르지 않고 시점을 골라야 한다.

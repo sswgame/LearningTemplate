@@ -111,7 +111,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "BehaviorTreePanel" );
     SW_EDITOR_PANEL( BehaviorTreePanel, BehaviorTreePanel::kPanelID, EditorPanelCategory::Custom, 9320 );
 
     BehaviorTreePanel::BehaviorTreePanel()

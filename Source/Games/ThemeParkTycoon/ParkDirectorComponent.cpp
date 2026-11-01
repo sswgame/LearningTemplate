@@ -32,8 +32,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ParkDirector" );
-
     namespace
     {
         struct ParkDirectorComponentInternal

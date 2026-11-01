@@ -21,8 +21,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorWorkspace" );
-
     span<const utf8* const> EditorWorkspace::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { EditorSelection::kSubsystemName };

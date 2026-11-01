@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationSystem" );
-
     /**
      * @brief `-gv_animationLod=0` — 애니메이션 LOD(가시성 · 갱신 주기 · 본 LOD · 예산)를 끕니다. 비교 측정 · 진단용입니다.
      */

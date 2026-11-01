@@ -58,8 +58,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameObject" );
-
     // 오브젝트는 수천 개가 풀(16 B 단위 블록)에서 나온다. 필드 크기 합을 정렬로 올린 값을 넘으면 필드 사이에 패딩이 생긴 것이다(블록이 한 단계 커진다).
     static_assert( sizeof( GameObject ) <=
                        ( sizeof( void* ) + sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 4 + sizeof( uint32 ) +

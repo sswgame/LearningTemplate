@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SkirmishMatch" );
-
     namespace
     {
         struct SkirmishMatchInternal

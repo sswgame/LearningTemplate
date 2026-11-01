@@ -46,8 +46,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "Registration" );
-
     void reportRegistrationRejected( RegistrationResult result, const utf8* pWhat, string_view name )
     {
         switch ( result )

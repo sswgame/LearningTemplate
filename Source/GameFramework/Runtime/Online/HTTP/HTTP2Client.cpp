@@ -9,7 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "HTTP2Client" );
 } // namespace sw
 
 namespace sw

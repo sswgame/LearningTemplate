@@ -51,8 +51,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Headless" );
-
     namespace
     {
         struct HeadlessSubsystemInternal

@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UIResolutionPresetTable" );
-
     namespace
     {
         [[nodiscard]] bool loadTable( const AssetID& id )

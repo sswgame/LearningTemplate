@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SequenceAsset" );
-
     namespace
     {
         /** @brief 프레임 번호가 `kSequenceFrameLimit` 안이면 true 입니다. 밖이면 오류를 남깁니다(@p pWhat 은 칸 이름). */

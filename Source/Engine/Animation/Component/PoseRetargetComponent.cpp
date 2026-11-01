@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PoseRetarget" );
-
     PoseRetargetBinding::PoseRetargetBinding( PoseRetargetComponent& owner )
         : _owner{ owner }
     {

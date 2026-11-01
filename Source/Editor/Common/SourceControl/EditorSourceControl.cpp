@@ -11,8 +11,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "SourceControl" );
-
     EditorSourceControl::EditorSourceControl( string_view repositoryRoot )
         : _repositoryRoot{ FileUtil::normalizeSeparators( repositoryRoot ) }
         , _pProvider{ make_unique<NullSourceControlProvider>() }

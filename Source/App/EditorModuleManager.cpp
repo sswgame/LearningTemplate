@@ -38,8 +38,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "EditorModuleManager" );
-
     EditorModuleManager::EditorModuleManager()
         : GameModuleManager{}
         , _editorAPI{}

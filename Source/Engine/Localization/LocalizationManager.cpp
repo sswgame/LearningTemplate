@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LocalizationManager" );
-
     namespace
     {
         struct LocalizationManagerInternal

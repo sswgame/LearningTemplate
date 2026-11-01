@@ -18,7 +18,6 @@
 #include "Programs/ReflectionParser/ParserSession.h"
 #include "Programs/ReflectionParser/ParserUtil.h"
 
-SW_LOG_CALLER( "ReflectionPipeline" );
 namespace sw
 {
     namespace

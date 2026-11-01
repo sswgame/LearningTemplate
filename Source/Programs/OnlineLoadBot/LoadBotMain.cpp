@@ -34,7 +34,6 @@
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"
 
-SW_LOG_CALLER( "OnlineLoadBot" );
 namespace sw
 {
     namespace

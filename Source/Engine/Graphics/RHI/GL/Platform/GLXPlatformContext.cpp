@@ -27,8 +27,6 @@ typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpenGL" );
-
     namespace
     {
         /** @brief GLX 컨텍스트를 만드는 동안 X 오류를 가로채는 도우미입니다. */

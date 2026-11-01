@@ -26,8 +26,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "LinuxFileWatcher" );
-
     unique_ptr<IFileWatcher> IFileWatcher::createNative()
     {
         return make_unique<LinuxFileWatcher>();

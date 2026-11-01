@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Component" );
-
     Component::Component()
         : _pOwner{ nullptr }
         , _componentID{ _s_nextComponentID.fetch_add( 1, std::memory_order_relaxed ) }

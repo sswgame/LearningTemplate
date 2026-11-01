@@ -102,8 +102,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "AutomationFrameStats" );
-
     namespace
     {
         struct AutomationFrameStatsSteps

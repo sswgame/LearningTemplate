@@ -263,8 +263,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "XMLDocument" );
-
     struct XMLDocument::Impl
     {
         bool               _bSwAllocator{ XMLDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다)

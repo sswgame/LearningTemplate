@@ -13,7 +13,6 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-SW_LOG_CALLER( "ReflectionDocWriter" );
 namespace sw
 {
     namespace

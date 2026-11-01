@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioEventLibrary" );
-
     bool AudioEventLibrary::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();

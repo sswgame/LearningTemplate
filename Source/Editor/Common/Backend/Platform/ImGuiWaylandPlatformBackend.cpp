@@ -17,8 +17,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiWayland" );
-
     namespace
     {
         /** @brief Wayland 입력 값 · 번호를 ImGui 로 옮기는 표입니다(이 파일은 Wayland · xkbcommon 헤더 없이 짓는다 — 번호만 상수로 둔다). */

@@ -39,8 +39,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderCooker" );
-
     namespace
     {
         /** @brief `cookAllShaders` 의 단계들과 단계 사이에 넘기는 쿠킹 상태입니다. */

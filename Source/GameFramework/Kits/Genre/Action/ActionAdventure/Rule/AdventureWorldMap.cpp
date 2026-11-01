@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AdventureWorldMap" );
-
     AdventureWorldMap::AdventureWorldMap()
         : _catalog{}
         , _listActivated{}

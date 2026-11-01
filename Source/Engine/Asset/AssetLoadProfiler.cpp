@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AssetLoadProfiler" );
-
     namespace
     {
         struct AssetLoadProfilerInternal

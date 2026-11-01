@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AsyncBufferReadback" );
-
     /**
      * @brief 해제 큐 콜백과 소비자가 함께 쥐는 상태입니다. 콜백이 `shutdown` 뒤에도 도착하므로 고리와 수명을 따로 두고 `shared_ptr` 로 쥔다.
      */

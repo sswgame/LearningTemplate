@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UIAnimationPlayer" );
-
     namespace
     {
         struct UIAnimationPlayerInternal

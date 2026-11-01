@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "NetLineEmulation" );
-
     /**
      * @brief `-gv_netEmulationPreset=<이름>`: 회선 흉내를 프리셋 표(`NetEmulationPresetTable`)의 한 줄로 둡니다. 있으면 `gv_netEmulation*` 낱값을 무시합니다.
      * @details 부하 검증의 `<Load network>` 와 하드웨어 프로필이 이 하나로 넘긴다 — 프리셋 값을 밖에 다시 적지 않는다.

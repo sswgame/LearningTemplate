@@ -30,8 +30,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AutomationWindowSteps" );
-
     namespace
     {
         struct AutomationWindowStepsInternal

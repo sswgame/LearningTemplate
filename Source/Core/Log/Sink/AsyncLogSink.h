@@ -56,7 +56,7 @@ namespace sw
         void shutdown() override;
 
         /** @brief 한 줄을 포맷해 리스너와 출력 장치에 넘깁니다. */
-        void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override;
+        void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override;
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 그 구독을 돌려줍니다. 어느 스레드에서나 부를 수 있습니다(`LockedMulticastDelegate`). */
         Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
 
@@ -87,7 +87,7 @@ namespace sw
         /** @brief 큐에 남은 로그를 모두 비우고 기록합니다. */
         void flushQueue();
         /** @brief 타임스탬프를 붙여 큐에 넣거나 바로 씁니다. */
-        void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID );
+        void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID );
         /** @brief 레코드를 비동기 I/O 큐에 넣고 작업 스레드를 깨웁니다. 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 씁니다. */
         void submitRecord( LogRecord&& record );
         /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 자기 락을 가집니다. */

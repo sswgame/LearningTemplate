@@ -23,8 +23,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PortraitStudio" );
-
     namespace
     {
         struct PortraitStudioInternal

@@ -184,8 +184,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiVulkan" );
-
     bool ImGuiVulkanRendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
         if ( pRHIDevice == nullptr )

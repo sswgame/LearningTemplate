@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FacialRig" );
-
     namespace
     {
         /** @brief 포즈 이름이 모두 비지 않았고 겹치지 않는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */

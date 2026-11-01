@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "VFXEffectDef" );
-
     namespace
     {
         /** @brief 커브 키 시각이 수명 비율 0..1 안인 한계입니다. */

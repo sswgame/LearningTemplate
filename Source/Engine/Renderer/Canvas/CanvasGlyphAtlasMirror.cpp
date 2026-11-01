@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Canvas" );
-
     CanvasGlyphAtlasMirror::CanvasGlyphAtlasMirror()
         : _listPage{}
         , _regionScratchBytes{}

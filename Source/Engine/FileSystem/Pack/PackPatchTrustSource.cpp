@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PackPatchTrustSource" );
-
     namespace
     {
         struct PackPatchTrustSourceInternal

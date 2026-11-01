@@ -652,8 +652,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderCooker" );
-
     bool ShaderCookStamp::collectShaderDomains( string_view resourceRoot, const vector<string>& listPriority, vector<string>& outListDomain )
     {
         outListDomain.clear();

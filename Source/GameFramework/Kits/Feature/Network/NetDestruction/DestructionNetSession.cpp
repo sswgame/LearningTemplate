@@ -18,8 +18,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DestructionNetSession" );
-
     DestructionNetSession::DestructionNetSession()
         : _server{}
         , _client{}

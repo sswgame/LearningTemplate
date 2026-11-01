@@ -25,8 +25,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Autosave" );
-
     namespace
     {
         struct AutosaveInternal

@@ -16,8 +16,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RTSWorld" );
-
     namespace
     {
         struct RTSWorldInternal
@@ -962,8 +960,6 @@ namespace sw
         pBuilding->_rallyPoint = position;
         pBuilding->_bHasRally  = SW_TRUE;
     }
-
-    SW_LOG_CALLER( "RTSWorld" );
 
     // ------------------------------------------------------------------------------
     // 채취

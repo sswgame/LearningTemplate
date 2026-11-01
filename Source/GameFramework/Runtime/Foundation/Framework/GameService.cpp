@@ -6,7 +6,6 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 
-SW_LOG_CALLER( "GameService" );
 namespace sw
 {
     namespace

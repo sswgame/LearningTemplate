@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MaterialRenderProxy" );
-
     shared_ptr<MaterialRenderProxy> MaterialRenderProxy::create()
     {
         return sw::make_shared<MaterialRenderProxy>( CreateKey{} );

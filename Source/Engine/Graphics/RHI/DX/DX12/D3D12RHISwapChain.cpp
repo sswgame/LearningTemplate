@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "D3D12" );
-
     bool D3D12RHISwapChain::initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc )
     {
         // 이 백엔드는 Win32 전용이다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고(창 없음으로 대신하지도 않고) 오류로 멈춘다.

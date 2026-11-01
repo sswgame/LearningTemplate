@@ -51,8 +51,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "ConquestCatalog" );
-
     bool parseConquestTeam( string_view text, ConquestTeam& outTeam )
     {
         return ConquestCatalogInternal::kTeamTable.parse( text, outTeam );

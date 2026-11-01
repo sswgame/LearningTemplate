@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AreaGraph" );
-
     AreaGraph::AreaGraph()
         : _catalog{}
         , _listLink{}

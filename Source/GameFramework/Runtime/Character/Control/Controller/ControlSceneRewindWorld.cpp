@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ControlSceneRewindWorld" );
-
     ControlSceneRewindWorld::ControlSceneRewindWorld( GameInstance& instance, GameObjectManager& manager, const ControlIntentHistory& history, float32 fixedDeltaSeconds )
         : _instance{ instance }
         , _manager{ manager }

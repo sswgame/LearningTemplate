@@ -18,8 +18,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler( HWND hWnd, UINT ms
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "ImGuiWin32" );
-
     class ImGuiWin32PlatformBackend : public IImGuiPlatformBackend
     {
     public:

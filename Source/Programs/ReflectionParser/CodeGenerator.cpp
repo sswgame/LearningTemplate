@@ -16,7 +16,6 @@
 #include "Programs/ReflectionParser/ParserUtil.h"
 #include "Programs/ReflectionParser/TypeNameMap.h"
 
-SW_LOG_CALLER( "CodeGenerator" );
 namespace sw
 {
     namespace

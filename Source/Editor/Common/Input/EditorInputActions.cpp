@@ -28,8 +28,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "Editor" );
-
     namespace
     {
         /** @brief 에디터 UI 가 넘긴 키의 뗌 이벤트입니다(`_bEditorUI` — 배타 가상 입력이 OS 이벤트를 버려도 남는다). */

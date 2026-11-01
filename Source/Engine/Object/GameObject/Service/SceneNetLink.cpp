@@ -6,8 +6,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SceneNetLink" );
-
     SW_SCENE_SERVICE( SceneNetLink, FlushEnd )
 
     SceneNetLink::SceneNetLink( GameObjectManager& manager )

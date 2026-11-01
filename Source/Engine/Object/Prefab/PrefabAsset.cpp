@@ -593,8 +593,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "PrefabAsset" );
-
     string PrefabInstanceNode::makePartKey( size_t index ) const
     {
         return isResolved() ? _partPath : to_string( static_cast<uint64>( index ) );

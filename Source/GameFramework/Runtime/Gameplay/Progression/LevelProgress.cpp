@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LevelProgress" );
-
     ExperienceCurve::ExperienceCurve()
         : _listXPToNext{}
         , _base{ 100.0f }

@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AdventureCooking" );
-
     namespace
     {
         /** @brief 레시피의 재료가 냄비와 똑같은지(종류와 개수 모두) 확인합니다. */

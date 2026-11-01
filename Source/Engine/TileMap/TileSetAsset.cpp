@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "TileSet" );
-
     namespace
     {
         struct TileSetAssetInternal

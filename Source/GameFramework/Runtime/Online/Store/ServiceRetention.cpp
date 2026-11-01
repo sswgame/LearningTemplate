@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ServiceRetention" );
-
     ServiceStoreResult ServiceRetention::sweep( IServiceStoreConnection& connection, ServiceRetentionRule& inoutRule, int64 nowMs, int32 maxScanCount, int32 maxDeleteCount,
                                                 ServiceRetentionReport& outReport )
     {

@@ -10,7 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ControlIntentHistory" );
 } // namespace sw
 
 namespace sw

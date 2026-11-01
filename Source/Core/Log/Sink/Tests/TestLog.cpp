@@ -28,8 +28,6 @@
 // 옛 `ReleaseListenerCodeWithinDropsOnlyThatRange` 는 옮기지 않았다 — `removeListenerCodeWithin` 이 지금 싱크에 없다.
 // 케이스가 일부러 내는 Warning · Error 는 테스트 id(`Test.Log*`)를 붙이고 `SW_EXPECT_LOG` 로 적는다(실행기가 그 밖의 Warning · Error 를 실패로 센다).
 
-SW_LOG_CALLER( "TestLog" );
-
 namespace
 {
     // LogCapture 는 **모든 빌드**에서 쓴다 — 로그가 Debug 전용이 아니게 됐으므로 검증도 그래야 한다.
@@ -361,21 +359,21 @@ SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
 }
 
 /**
- * @brief [LogTest] Caller 지정 및 수신 검증
+ * @brief [LogTest] 줄의 범주는 id 의 영역이다(`LogEntry::getCategory`) — 파일마다 등록하는 호출자 이름은 없다
  */
-SW_TEST_CASE( LogTest, LogCallerHandling )
+SW_TEST_CASE( LogTest, LogCategoryComesFromID )
 {
     LogCapture capture;
     SW_REQUIRE_TRUE( capture.isAttached() );
 
-    SW_EXPECT_LOG( "Test.LogCallerProbe" ); // Warning 줄은 이 테스트가 호출자 전달을 보려는 대상이다
+    SW_EXPECT_LOG( "Test.LogCallerProbe" ); // Warning 줄은 이 테스트가 범주를 보려는 대상이다
     SW_LOG_INFO_ID( "TestLog.CustomCallerMessage", "[TestLog] Custom caller message" );
     SW_LOG_WARNING_ID( "Test.LogCallerProbe", "[TestLog] Warning from caller" );
 
     SW_REQUIRE_EQUAL( 2u, capture.getCount() );
-    SW_EXPECT_EQUAL( sw::string( "TestLog" ), capture.getEntries()[0]._caller );
+    SW_EXPECT_TRUE( capture.getEntries()[0].getCategory() == "TestLog" );
     SW_EXPECT_EQUAL( sw::string( "[TestLog] Custom caller message" ), capture.getEntries()[0]._message );
-    SW_EXPECT_EQUAL( sw::string( "TestLog" ), capture.getEntries()[1]._caller );
+    SW_EXPECT_TRUE( capture.getEntries()[1].getCategory() == "Test" );
     SW_EXPECT_EQUAL( sw::string( "[TestLog] Warning from caller" ), capture.getEntries()[1]._message );
 }
 
@@ -501,7 +499,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
         }
     }
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "Cap", "한 줄", __FILE__, __LINE__ ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
+    logger.writeLog( sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
     logger.shutdown();
 
     // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다.
@@ -532,28 +530,13 @@ SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
     CapturingLogOutput*                pCapture = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "Utf8", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ ); // "한글 <FF> end" - 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
+    logger.writeLog( sw::LogLevel::Info, "Test", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ ); // "한글 <FF> end" - 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
     logger.shutdown();
 
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
     const sw::string& line = pCapture->_listFormatted[0];
     SW_EXPECT_TRUE_MSG( line.find( "\xED\x95\x9C\xEA\xB8\x80 \\xFF end" ) != sw::string::npos, line.c_str() );
     SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( line.c_str() ) );
-}
-
-/**
- * @brief [LogTest] 이름이 같은 두 파일(다른 폴더)의 로그 호출자 이름이 섞이지 않는다 — 구분자가 섞여도 같은 파일은 같다
- * @details 호출자 표가 파일 이름만 키로 쓰면 `CallerBase/SameNamedFile.cpp` 와 `CallerKit/SameNamedFile.cpp` 가 같은 키라, 나중에 등록된
- *          이름이 두 파일의 로그에 모두 붙는다.
- */
-SW_TEST_CASE( LogTest, CallerNamesOfSameNamedFilesStayApart )
-{
-    sw::Logger::registerCaller( "C:/proj/Source/CallerBase/SameNamedFile.cpp", "BaseCaller" );
-    sw::Logger::registerCaller( "C:\\proj\\Source\\CallerKit\\SameNamedFile.cpp", "KitCaller" );
-    SW_EXPECT_EQUAL( sw::string( "BaseCaller" ), sw::string( sw::Logger::getCaller( "C:/proj/Source/CallerBase/SameNamedFile.cpp" ) ) );
-    SW_EXPECT_EQUAL( sw::string( "KitCaller" ), sw::string( sw::Logger::getCaller( "C:\\proj\\Source\\CallerKit\\SameNamedFile.cpp" ) ) );
-    // 앞부분 · 구분자가 달라도(헤더는 TU 마다 `__FILE__` 의 꼴이 다를 수 있다) 같은 파일이다.
-    SW_EXPECT_EQUAL( sw::string( "KitCaller" ), sw::string( sw::Logger::getCaller( "../elsewhere/CallerKit/SameNamedFile.cpp" ) ) );
 }
 
 // ------------------------------------------------------------------------------
@@ -796,7 +779,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
         SelfLoggingLogOutput*                pLogging = logging.get();
         SW_REQUIRE_TRUE( logger.addOutput( std::move( logging ) ) );
 
-        logger.writeLog( sw::LogLevel::Info, "Test", "Reentry", "한 줄", __FILE__, __LINE__ );
+        logger.writeLog( sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ );
         logger.shutdown();
 
         SW_EXPECT_EQUAL( 1u, pLogging->_writeCount );

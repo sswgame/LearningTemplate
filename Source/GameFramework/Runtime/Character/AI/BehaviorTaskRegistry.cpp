@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "BehaviorTaskRegistry" );
-
     BehaviorTaskRegistry& BehaviorTaskRegistry::get()
     {
         static BehaviorTaskRegistry s_registry;

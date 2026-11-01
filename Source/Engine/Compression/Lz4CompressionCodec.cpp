@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Lz4Codec" );
-
     CompressionCodecType Lz4CompressionCodec::getCodecType() const
     {
         return CompressionCodecType::LZ4;

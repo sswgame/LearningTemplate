@@ -8,8 +8,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioGraph" );
-
     namespace
     {
         struct AudioGraphInternal

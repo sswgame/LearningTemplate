@@ -24,8 +24,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "UIOffscreenScreens" );
-
     UIOffscreenScreens::UIOffscreenScreens()
         : _listOffscreen{}
         , _pUI{ nullptr }

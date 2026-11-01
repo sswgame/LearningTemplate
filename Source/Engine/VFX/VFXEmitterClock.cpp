@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "VFXEmitterClock" );
-
     VFXEmitterClock::VFXEmitterClock( shared_ptr<const VFXEmitterDef> pDef, float32 spawnScale )
         : _pDef{ std::move( pDef ) }
         , _listBurstFired{}

@@ -9,8 +9,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "DebugHUD" );
-
     namespace
     {
         struct DebugHUDRegistryInternal

@@ -12,8 +12,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PoseRetargeter" );
-
     namespace
     {
         struct PoseRetargeterInternal

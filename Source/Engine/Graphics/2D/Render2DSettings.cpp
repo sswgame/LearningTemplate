@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Render2DSettings" );
-
     namespace
     {
         struct Render2DSettingsInternal

@@ -26,8 +26,6 @@ namespace sw
         }
     } // namespace
 
-    SW_LOG_CALLER( "MonsterHuntCatalog" );
-
     MonsterHuntCatalog::MonsterHuntCatalog()
         : _monsterCatalog{}
         , _alchemyCatalog{}

@@ -20,7 +20,6 @@
 #include "Programs/ReflectionParser/ParserUtil.h"
 #include "Programs/ReflectionParser/TypeNameMap.h"
 
-SW_LOG_CALLER( "AstVisitor" );
 namespace sw
 {
     namespace

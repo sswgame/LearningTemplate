@@ -11,8 +11,6 @@
 #include <cstring>
 #include <mutex>
 
-SW_LOG_CALLER( "StreamMessageEndpoint" );
-
 namespace sw
 {
     namespace

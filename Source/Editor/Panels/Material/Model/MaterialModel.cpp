@@ -20,8 +20,6 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MaterialPanel" );
-
     namespace
     {
         /// @brief 미리보기 씬에 스폰하는 구 오브젝트 이름입니다.

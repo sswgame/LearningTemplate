@@ -29,8 +29,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "AssetFormat" );
-
     string AssetCookPath::toCookedPath( string_view path )
     {
         const AssetSuffixMatch match     = AssetTypeRegistry::findSuffix( path );

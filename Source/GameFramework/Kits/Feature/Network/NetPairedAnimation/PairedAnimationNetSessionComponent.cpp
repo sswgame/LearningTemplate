@@ -11,8 +11,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "PairedAnimationNetSessionComponent" );
-
     PairedAnimationNetSessionComponent::PairedAnimationNetSessionComponent()
         : _server{}
         , _client{}

@@ -50,7 +50,7 @@ namespace sw
         return VectorUtil::contains( _listAllowedID, string( id ) ) ? AutomationLogVerdict::Allowed : AutomationLogVerdict::NotAllowed;
     }
 
-    void AutomationLogPolicy::judge( LogLevel level, string_view caller, string_view id, string_view message, AutomationLogJudgement& inoutJudgement ) const
+    void AutomationLogPolicy::judge( LogLevel level, string_view id, string_view message, AutomationLogJudgement& inoutJudgement ) const
     {
         const AutomationLogVerdict verdict = classify( level, id, message );
         if ( verdict == AutomationLogVerdict::Allowed )
@@ -68,6 +68,6 @@ namespace sw
         else
             ++inoutJudgement._notAllowedCount;
         const string idText = bMissingID ? string( "(no log id)" ) : "(id=" + string( id ) + ")";
-        inoutJudgement._listUnhandled.push_back( string( level == LogLevel::Error ? "[Error] [" : "[Warning] [" ) + string( caller ) + "] " + idText + " " + string( message ) );
+        inoutJudgement._listUnhandled.push_back( string( level == LogLevel::Error ? "[Error] " : "[Warning] " ) + idText + " " + string( message ) );
     }
 } // namespace sw

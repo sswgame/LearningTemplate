@@ -20,8 +20,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AdminService" );
-
     namespace
     {
         /** @brief GM 명령 하나의 저장소 왕복입니다. */

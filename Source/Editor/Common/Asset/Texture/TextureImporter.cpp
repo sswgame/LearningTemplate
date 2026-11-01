@@ -412,8 +412,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_LOG_CALLER( "TextureImporter" );
-
     bool TextureImporter::importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult, TaskManager* pTaskManager )
     {
         if ( pOutResult != nullptr )

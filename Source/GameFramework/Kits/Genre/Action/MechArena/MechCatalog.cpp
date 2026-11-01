@@ -59,8 +59,6 @@ namespace sw
         };
     } // namespace
 
-    SW_LOG_CALLER( "MechCatalog" );
-
     int32 MechDef::computeSlotOffset( int32 mode ) const
     {
         int32 offset = 0;

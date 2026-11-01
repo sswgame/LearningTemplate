@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "QuestObjectiveMarkerComponent" );
-
     QuestObjectiveMarkerComponent::QuestObjectiveMarkerComponent()
         : ObjectiveMarkerComponent{}
         , _quest{}

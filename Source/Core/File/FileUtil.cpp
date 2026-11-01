@@ -15,8 +15,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FileUtil" );
-
     namespace
     {
         /** @brief 프로세스에 하나인 파일 쓰기 카운터 묶음입니다(정적 가변 변수 한 칸으로 묶어 둔다 — `FileUtil` 은 정적 함수 묶음이라 소유 객체가 없다).

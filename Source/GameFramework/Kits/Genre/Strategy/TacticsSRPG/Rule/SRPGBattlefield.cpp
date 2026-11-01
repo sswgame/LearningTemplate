@@ -44,8 +44,6 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SRPGBattlefield" );
-
     SRPGBattlefield::SRPGBattlefield()
         : _listTerrain{}
         , _listUnit{}

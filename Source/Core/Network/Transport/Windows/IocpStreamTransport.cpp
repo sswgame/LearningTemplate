@@ -21,8 +21,6 @@
 #include <MSWSock.h>
 #include <WS2tcpip.h>
 
-SW_LOG_CALLER( "IocpStreamTransport" );
-
 namespace sw
 {
     namespace

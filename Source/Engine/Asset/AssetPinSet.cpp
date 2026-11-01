@@ -7,8 +7,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AssetPinSet" );
-
     AssetPinSet::AssetPinSet( uint64 budgetBytes )
         : _listEntry{}
         , _budgetBytes{ budgetBytes }
