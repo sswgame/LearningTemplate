@@ -1,0 +1,13 @@
+{
+    "_minAgeSeconds": 3600,
+    "_trashFolder": ".Trash",
+    "_listRule": [
+        { "_folder": "Automation", "_keepCount": 3, "_bPerChild": true, "_listSkipChild": [ "EditorState", "UserSettings" ] },
+        { "_folder": "Logs", "_keepCount": 30, "_bPerChild": false, "_listSkipChild": [] },
+        { "_folder": "Screenshots", "_keepCount": 50, "_bPerChild": false, "_listSkipChild": [] },
+        { "_folder": "Traces", "_keepCount": 20, "_bPerChild": false, "_listSkipChild": [] },
+        { "_folder": "BugReports", "_keepCount": 20, "_bPerChild": false, "_listSkipChild": [] },
+        { "_folder": "CrashReports", "_keepCount": 20, "_bPerChild": false, "_listSkipChild": [] },
+        { "_folder": "Test", "_keepCount": 10, "_bPerChild": false, "_listSkipChild": [] }
+    ]
+}

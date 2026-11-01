@@ -11,6 +11,7 @@
 #include "DevTools/AssetReload/ContentFolderWatchService.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
@@ -82,6 +83,8 @@ namespace sw
             const CommandLineManager* const pCommandLine = locateSubsystem<CommandLineManager>( &startup );
             RenderDocCapture::initialize( pCommandLine != nullptr && pCommandLine->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
         }
+        // 오래된 실행 산출물(`Saved` — 자동화 실행 · 로그 · 스크린샷 · 트레이스 …)을 자기 스레드에서 지운다.
+        (void)startup.emplaceSubsystem<SavedRetentionSubsystem>();
         // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(전용 서버 · 렌더러를 끈 기동은 렌더 쪽이 nullptr).
         if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
             (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );

@@ -250,6 +250,11 @@ namespace sw
         /** @brief 디렉터리를 재귀적으로 삭제합니다. 없었거나 삭제했으면 true 입니다. */
         [[nodiscard]] static bool removeDirectory( string_view path );
         /**
+         * @brief 파일이나 폴더를 @p to 로 옮깁니다(같은 볼륨이면 이름만 바꿔 곧바로 끝난다). @p to 가 이미 있으면 실패입니다.
+         * @details 큰 폴더를 지울 때 먼저 버릴 자리로 옮기고 지우기는 뒤에서 하는 데 쓴다 — 옮기기는 원자적이라 반쯤 지운 폴더를 다른 쪽이 보지 않는다.
+         */
+        [[nodiscard]] static bool renamePath( string_view from, string_view to );
+        /**
          * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 복원할 수 있는 삭제). 쓰기 게이트가 거절하는 경로가 하나라도 있으면 아무것도 옮기지 않고 false 입니다.
          * @details 휴지통이 없는 플랫폼은 아무것도 건드리지 않고 false 입니다(`PlatformFileUtil::hasRecycleBin` 으로 먼저 묻는다). 일부만 옮겼어도 `getRemovalEpoch` 이 오릅니다.
          */

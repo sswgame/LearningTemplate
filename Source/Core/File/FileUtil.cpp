@@ -1180,6 +1180,16 @@ namespace sw
         return exists( path ) == false;
     }
 
+    bool FileUtil::renamePath( string_view from, string_view to )
+    {
+        if ( from.empty() || to.empty() || exists( to ) || isWriteAllowed( from ) == false || isWriteAllowed( to ) == false )
+            return false;
+        if ( PlatformFileUtil::replaceFile( string( from ).c_str(), string( to ).c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
+            return false;
+        noteFileRemoved(); // 옛 경로는 낡았다
+        return true;
+    }
+
     bool FileUtil::removeDirectory( string_view path )
     {
         if ( path.empty() )
