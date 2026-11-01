@@ -23,8 +23,8 @@
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
    `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
-   - **캐릭터 비용(먼저)**: 캐릭터당 GPU 약 0.6 ms(농장 측정 — 스키닝 컴퓨트가 대부분)라 200 명이면 120 ms 다. 까닭 셋 — 메시가 색인 없는 정점 흐름이라 스키닝이 삼각형 × 3 정점을 돈다(언리얼 · 유니티는 색인 정점을 한 번),
-     몸 · 옷 · 머리 부품마다 따로 스키닝한다(병합 `MeshMerger` 는 구간 있는 메시를 받지 않는다), 구간 메시에는 LOD 가 없다. 색인 정점(사용자 지시 — 계획 [StructureRefactor 10](StructureRefactor.md))부터, 그다음 구간 메시 병합 · 구간 LOD, 군중(`AnimationCrowd` · VAT)으로 200 명을 잰다.
+   - **캐릭터 비용(먼저)**: 캐릭터당 GPU 약 0.6 ms(농장 측정 — 스키닝 컴퓨트가 대부분)라 200 명이면 120 ms 다. 색인 정점은 끝났다(StructureRefactor 10 — 임포트 · 도형 · 지형 · 물이 정점을 나눠 쓰고 씬 드로우는 인덱스 드로우).
+     남은 까닭 둘 — 몸 · 옷 · 머리 부품마다 따로 스키닝한다(병합 `MeshMerger` 는 구간 있는 메시를 받지 않는다), 구간 메시에는 LOD 가 없다. 먼저 농장 캐릭터당 GPU 를 다시 재고(색인 정점의 몫), 구간 메시 병합 · 구간 LOD, 군중(`AnimationCrowd` · VAT)으로 200 명을 잰다. 색인 뒤 골든은 이번 묶음 ctest 가 네 백엔드에서 그대로 통과했다.
    - Shooter3D 몸을 KayKit 에서 UBC 로(리그 `player_body.rig.xml` · 1인칭 숨김 칸 · 망토 사슬 · 무기 소켓을 UBC 뼈로, 해골은 Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
