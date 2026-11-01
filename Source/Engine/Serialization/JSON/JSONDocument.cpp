@@ -309,6 +309,26 @@ namespace sw
         return get( key ).isValid();
     }
 
+    bool JSONValue::findPathText( string_view dottedPath, string& outText ) const
+    {
+        JSONValue current = *this;
+        while ( dottedPath.empty() == false )
+        {
+            const size_t      dot  = dottedPath.find( '.' );
+            const string_view part = dottedPath.substr( 0, dot );
+            dottedPath             = dot == string_view::npos ? string_view{} : dottedPath.substr( dot + 1 );
+            if ( current.isObject() == false )
+                return false;
+            current = current.get( part );
+            if ( current.isValid() == false )
+                return false;
+        }
+        if ( current.isString() == false && current.isNumber() == false )
+            return false;
+        outText = current.asString();
+        return true;
+    }
+
     JSONValue JSONValue::at( size_t index ) const
     {
         JSONImpl*  pValue             = JSONDocumentInternal::asJSON( _pValue );

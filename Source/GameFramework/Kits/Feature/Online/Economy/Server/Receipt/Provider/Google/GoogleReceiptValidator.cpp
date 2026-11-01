@@ -18,8 +18,6 @@ namespace sw
         struct GoogleReceiptValidatorInternal
         {
             static constexpr size_t kMaxFieldSize           = 512;
-            static constexpr int32  kStatusTooManyRequests  = 429;
-            static constexpr int32  kStatusServerError      = 500;
             static constexpr size_t kMaxNotifiedRefundCount = 100000;
 
             static bool isFieldText( string_view text )
@@ -36,15 +34,12 @@ namespace sw
                 return true;
             }
 
+            /** @brief 키의 글입니다. 없으면 빈 글입니다. */
             static string readText( const JSONValue& object, const utf8* pKey )
             {
-                const JSONValue value = object.get( pKey );
-                return value.isString() || value.isNumber() ? value.asString() : string();
-            }
-
-            static bool isTransientStatus( const HTTPClientResponse& response )
-            {
-                return response._bTransportFailed == SW_TRUE || response._statusCode == kStatusTooManyRequests || response._statusCode >= kStatusServerError;
+                string text;
+                (void)object.findPathText( pKey, text );
+                return text;
             }
 
             static bool isAuthFailure( const HTTPClientResponse& response )
@@ -216,7 +211,7 @@ namespace sw
             completeRetry( pending, "google rejected the access token" );
             return;
         }
-        if ( Internal::isTransientStatus( response ) )
+        if ( response.isTransientFailure() )
         {
             completeRetry( pending, response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "google is not available" );
             return;

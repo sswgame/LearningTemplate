@@ -38,6 +38,20 @@ namespace sw
         return key;
     }
 
+    vector<uint8> ServiceKeyUtil::encodeVarID( uint64 id )
+    {
+        BitWriter writer;
+        writer.writeVarUint( id );
+        return writer.releaseBytes();
+    }
+
+    uint64 ServiceKeyUtil::decodeVarID( const vector<uint8>& bytes )
+    {
+        BitReader    reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
+        const uint64 id = reader.readVarUint();
+        return reader.hasOverflowed() ? 0 : id;
+    }
+
     void ServiceKeyUtil::writeString( BitWriter& outWriter, string_view text )
     {
         outWriter.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );

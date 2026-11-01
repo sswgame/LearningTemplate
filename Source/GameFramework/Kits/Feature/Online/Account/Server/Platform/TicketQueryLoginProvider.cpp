@@ -122,8 +122,8 @@ namespace sw
                 continue;
             }
             string     result;
-            const bool bResultOk = ProfileAPILoginProvider::findPathText( document.getRoot(), _settings._resultPath, result ) && result == _settings._resultValue;
-            const bool bSubject  = bResultOk && ProfileAPILoginProvider::findPathText( document.getRoot(), _settings._subjectPath, verification._subject );
+            const bool bResultOk = document.getRoot().findPathText( _settings._resultPath, result ) && result == _settings._resultValue;
+            const bool bSubject  = bResultOk && document.getRoot().findPathText( _settings._subjectPath, verification._subject );
             if ( bSubject == false || verification._subject.empty() )
             {
                 verification._subject.clear();
@@ -131,7 +131,7 @@ namespace sw
                 continue;
             }
             if ( _settings._displayNamePath.empty() == false )
-                (void)ProfileAPILoginProvider::findPathText( document.getRoot(), _settings._displayNamePath, verification._displayName ); // 선택 값이다 — 없으면 비워 둔다
+                (void)document.getRoot().findPathText( _settings._displayNamePath, verification._displayName ); // 선택 값이다 — 없으면 비워 둔다
         }
     }
 } // namespace sw

@@ -25,15 +25,12 @@ namespace sw
             static constexpr int64       kMillisecondsPerSecond  = 1000;
             static constexpr int64       kAuthLifetimeMs         = 20 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond;
             static constexpr int64       kAuthRefreshMarginMs    = 5 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond;
-            static constexpr int32       kStatusTooManyRequests  = 429;
-            static constexpr int32       kStatusServerError      = 500;
             static constexpr size_t      kMaxNotifiedRefundCount = 100000;
             static constexpr const utf8* kEnvironmentSandbox     = "Sandbox";
 
             static bool isTransientStatus( const HTTPClientResponse& response )
             {
-                return response._bTransportFailed == SW_TRUE || response._statusCode == kStatusTooManyRequests || response._statusCode >= kStatusServerError ||
-                       response._statusCode == HTTPConstant::kStatusUnauthorized;
+                return response.isTransientFailure() || response._statusCode == HTTPConstant::kStatusUnauthorized; // 401 = 서명한 토큰이 만료됐다 — 새로 서명해 다시 보낸다
             }
         };
     } // namespace

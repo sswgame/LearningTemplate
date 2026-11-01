@@ -35,9 +35,6 @@ namespace sw
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
         void        update( UnixMilliseconds nowMs ) override;
 
-        /** @brief JSON 에서 점 경로("response.id")의 값을 문자열로 찾습니다. 숫자는 십진 문자열로 바꿉니다. */
-        [[nodiscard]] static bool findPathText( const JSONValue& root, string_view path, string& outText );
-
     private:
         PlatformLoginProviderConfig       _settings;
         unordered_map<uint64, uint64>     _mapRequestToVerification;

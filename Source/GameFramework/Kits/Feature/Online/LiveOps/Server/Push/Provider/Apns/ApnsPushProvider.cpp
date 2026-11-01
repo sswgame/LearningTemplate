@@ -21,8 +21,6 @@ namespace sw
         struct ApnsPushProviderInternal
         {
             static constexpr int32       kStatusGone            = 410;
-            static constexpr int32       kStatusTooManyRequests = 429;
-            static constexpr int32       kStatusServerError     = 500;
             static constexpr int64       kMillisecondsPerSecond = 1000;
             static constexpr size_t      kMaxDeviceTokenSize    = 200;
             static constexpr const utf8* kPushTypeAlert         = "alert";
@@ -119,9 +117,9 @@ namespace sw
             return PushDeliveryStatus::Delivered;
         if ( statusCode == Internal::kStatusGone )
             return PushDeliveryStatus::InvalidToken;
-        if ( statusCode == Internal::kStatusTooManyRequests )
+        if ( statusCode == HTTPConstant::kStatusTooManyRequests )
             return PushDeliveryStatus::RateLimited;
-        if ( statusCode >= Internal::kStatusServerError )
+        if ( statusCode >= HTTPConstant::kStatusServerError )
             return PushDeliveryStatus::Transient;
         return PushDeliveryStatus::Rejected; // 403(제공자 토큰)과 그 밖의 4xx
     }

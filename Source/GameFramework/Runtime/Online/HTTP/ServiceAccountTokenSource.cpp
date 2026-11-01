@@ -18,8 +18,6 @@ namespace sw
     {
         struct ServiceAccountTokenSourceInternal
         {
-            static constexpr int32 kStatusTooManyRequests = 429;
-            static constexpr int32 kStatusServerError     = 500;
             static constexpr int64 kMillisecondsPerSecond = 1000;
 
             [[nodiscard]] static bool readText( const JSONValue& object, const utf8* pKey, string& outText )
@@ -156,8 +154,7 @@ namespace sw
         }
         SW_LOG_WARNING( "The access token request of service account '%#' failed (status %#)", _credentials._clientEmail.c_str(), response._statusCode );
         // 서버 오류 · 한도 · 전송 실패(그리고 읽을 수 없는 성공 응답)는 곧 나아질 수 있고, 그 밖의 4xx 는 키나 범위가 틀린 것이라 다시 해도 같다.
-        const bool bRetryable = response.isSuccess() || response._bTransportFailed == SW_TRUE || response._statusCode == Internal::kStatusTooManyRequests ||
-                                response._statusCode >= Internal::kStatusServerError;
+        const bool bRetryable = response.isSuccess() || response.isTransientFailure();
         return bRetryable ? Outcome::Retryable : Outcome::Rejected;
     }
 

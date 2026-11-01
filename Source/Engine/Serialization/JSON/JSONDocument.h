@@ -94,6 +94,11 @@ namespace sw
         JSONValue get( string_view key ) const;
         /** @brief 객체에 키가 있으면 true 입니다. */
         bool has( string_view key ) const;
+        /**
+         * @brief 점으로 이은 경로(`response.params.status`)의 값을 글로 읽습니다. 글이나 수면 그 글이고, 경로가 끊기거나 다른 형식이면 false 이고 @p outText 는 그대로입니다.
+         * @details 외부 공급자 응답(로그인 프로필 · 영수증)이 경로를 설정으로 받는다 — 공급자마다 같은 걸음을 손으로 적었다.
+         */
+        [[nodiscard]] bool findPathText( string_view dottedPath, string& outText ) const;
         /** @brief 배열 원소를 반환합니다. 범위 밖이면 무효 핸들을 반환합니다. */
         JSONValue at( size_t index ) const;
         /**

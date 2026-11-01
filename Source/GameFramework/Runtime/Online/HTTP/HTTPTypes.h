@@ -46,13 +46,15 @@ namespace sw
     /** @brief HTTP 상한 값들입니다. */
     struct HTTPConstant
     {
-        static constexpr int32 kMaxHeaderBytes      = 16 * 1024;
-        static constexpr int32 kDefaultMaxBodyBytes = static_cast<int32>( constant::kBytesPerMegabyte );
-        static constexpr int64 kDefaultTimeoutMs    = 10000;
-        static constexpr int32 kStatusOk            = 200;
-        static constexpr int32 kStatusUnauthorized  = 401;
-        static constexpr int32 kStatusForbidden     = 403;
-        static constexpr int32 kStatusNotFound      = 404;
+        static constexpr int32 kMaxHeaderBytes        = 16 * 1024;
+        static constexpr int32 kDefaultMaxBodyBytes   = static_cast<int32>( constant::kBytesPerMegabyte );
+        static constexpr int64 kDefaultTimeoutMs      = 10000;
+        static constexpr int32 kStatusOk              = 200;
+        static constexpr int32 kStatusUnauthorized    = 401;
+        static constexpr int32 kStatusForbidden       = 403;
+        static constexpr int32 kStatusNotFound        = 404;
+        static constexpr int32 kStatusTooManyRequests = 429;
+        static constexpr int32 kStatusServerError     = 500; ///< 이 값과 그 위(5xx)
     };
 } // namespace sw
 
@@ -81,7 +83,15 @@ namespace sw
         int32              _statusCode{ 0 };
         uint8              _bTransportFailed{ SW_FALSE };
 
-        bool              isSuccess() const { return _bTransportFailed == SW_FALSE && 200 <= _statusCode && _statusCode <= 299; }
+        bool isSuccess() const { return _bTransportFailed == SW_FALSE && 200 <= _statusCode && _statusCode <= 299; }
+        /**
+         * @brief 나중에 다시 보내면 될 수 있는 실패입니다 — 전송 실패 · 429(너무 많은 요청) · 5xx. 외부 공급자 연동이 같은 바닥을 쓰고, 공급자마다 더하는 코드(인증 만료 401 등)만 제 자리에 둔다.
+         * @details 영수증 검증기 셋 · 푸시 공급자 둘이 같은 셋을 손으로 적었다.
+         */
+        bool isTransientFailure() const
+        {
+            return _bTransportFailed == SW_TRUE || _statusCode == HTTPConstant::kStatusTooManyRequests || _statusCode >= HTTPConstant::kStatusServerError;
+        }
         const HTTPHeader* findHeader( string_view name ) const;
         string_view       getBodyText() const { return string_view( reinterpret_cast<const utf8*>( _bodyBytes.data() ), _bodyBytes.size() ); }
     };

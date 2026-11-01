@@ -20,8 +20,6 @@ namespace sw
             static constexpr size_t kMaxOrderIDSize         = 20;
             static constexpr int64  kMillisecondsPerSecond  = 1000;
             static constexpr int64  kSecondsPerDay          = 86400;
-            static constexpr int32  kStatusTooManyRequests  = 429;
-            static constexpr int32  kStatusServerError      = 500;
             static constexpr size_t kMaxNotifiedRefundCount = 100000; ///< 겹친 조회에서 같은 주문을 두 번 알리지 않으려고 기억하는 상한
 
             /** @brief 1970-01-01 부터 (년, 월, 일) 까지의 날 수입니다(그레고리력). */
@@ -59,27 +57,17 @@ namespace sw
                 outYear               = yearOfEra + era * 400 + ( outMonth <= 2 ? 1 : 0 );
             }
 
+            /** @brief 점 경로의 글입니다. 없으면 빈 글입니다(응답 판정이 빈 글을 "다르다"로 읽는다). */
             static string readText( const JSONValue& object, string_view path )
             {
-                JSONValue current = object;
-                while ( path.empty() == false )
-                {
-                    const size_t      dot  = path.find( '.' );
-                    const string_view part = path.substr( 0, dot );
-                    path                   = dot == string_view::npos ? string_view{} : path.substr( dot + 1 );
-                    if ( current.isObject() == false )
-                        return {};
-                    current = current.get( part );
-                    if ( current.isValid() == false )
-                        return {};
-                }
-                return current.isString() || current.isNumber() ? current.asString() : string();
+                string text;
+                (void)object.findPathText( path, text );
+                return text;
             }
 
             static bool isTransientStatus( const HTTPClientResponse& response )
             {
-                return response._bTransportFailed == SW_TRUE || response._statusCode == kStatusTooManyRequests || response._statusCode >= kStatusServerError ||
-                       response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
+                return response.isTransientFailure() || response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
             }
         };
     } // namespace

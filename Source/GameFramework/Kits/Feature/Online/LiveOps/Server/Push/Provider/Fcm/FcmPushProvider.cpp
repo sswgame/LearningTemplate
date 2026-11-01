@@ -18,8 +18,6 @@ namespace sw
     {
         struct FcmPushProviderInternal
         {
-            static constexpr int32 kStatusTooManyRequests = 429;
-            static constexpr int32 kStatusServerError     = 500;
             static constexpr int64 kMillisecondsPerSecond = 1000;
         };
     } // namespace
@@ -128,9 +126,9 @@ namespace sw
             return PushDeliveryStatus::Delivered;
         if ( statusCode == HTTPConstant::kStatusNotFound || body.find( "UNREGISTERED" ) != string_view::npos )
             return PushDeliveryStatus::InvalidToken;
-        if ( statusCode == Internal::kStatusTooManyRequests )
+        if ( statusCode == HTTPConstant::kStatusTooManyRequests )
             return PushDeliveryStatus::RateLimited;
-        if ( statusCode >= Internal::kStatusServerError )
+        if ( statusCode >= HTTPConstant::kStatusServerError )
             return PushDeliveryStatus::Transient;
         return PushDeliveryStatus::Rejected; // 401 · 403 과 그 밖의 4xx
     }

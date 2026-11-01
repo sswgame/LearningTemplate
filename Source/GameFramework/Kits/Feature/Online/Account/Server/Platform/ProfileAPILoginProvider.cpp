@@ -65,34 +65,14 @@ namespace sw
                 verification._bUnavailable = SW_TRUE;
                 continue;
             }
-            if ( findPathText( document.getRoot(), _settings._subjectPath, verification._subject ) == false || verification._subject.empty() )
+            if ( document.getRoot().findPathText( _settings._subjectPath, verification._subject ) == false || verification._subject.empty() )
             {
                 verification._subject.clear();
                 verification._bRejected = SW_TRUE;
                 continue;
             }
             if ( _settings._displayNamePath.empty() == false )
-                (void)findPathText( document.getRoot(), _settings._displayNamePath, verification._displayName ); // 선택 값이다 — 없으면 비워 둔다
+                (void)document.getRoot().findPathText( _settings._displayNamePath, verification._displayName ); // 선택 값이다 — 없으면 비워 둔다
         }
-    }
-
-    bool ProfileAPILoginProvider::findPathText( const JSONValue& root, string_view path, string& outText )
-    {
-        JSONValue current = root;
-        while ( path.empty() == false )
-        {
-            const size_t      dot  = path.find( '.' );
-            const string_view part = path.substr( 0, dot );
-            path                   = dot == string_view::npos ? string_view{} : path.substr( dot + 1 );
-            if ( current.isObject() == false )
-                return false;
-            current = current.get( part );
-            if ( current.isValid() == false )
-                return false;
-        }
-        if ( current.isString() == false && current.isNumber() == false )
-            return false;
-        outText = current.asString();
-        return true;
     }
 } // namespace sw

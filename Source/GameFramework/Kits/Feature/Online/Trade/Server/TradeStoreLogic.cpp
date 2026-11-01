@@ -62,20 +62,6 @@ namespace sw
                 return key;
             }
 
-            static vector<uint8> encodeID( uint64 id )
-            {
-                BitWriter writer;
-                writer.writeVarUint( id );
-                return writer.releaseBytes();
-            }
-
-            static uint64 decodeID( const vector<uint8>& bytes )
-            {
-                BitReader    reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
-                const uint64 id = reader.readVarUint();
-                return reader.hasOverflowed() ? 0 : id;
-            }
-
             static TradeResult toClosedResult( const TradeSnapshot& trade )
             {
                 if ( trade._state == TradeState::Settled )
@@ -167,7 +153,7 @@ namespace sw
                     return TradeResult::Unavailable;
                 // 남은 링크가 있고 그 거래가 닫혔거나 시한이 지났으면 정리하고 이어 간다. 지연 만료이다.
                 SessionRead       stale;
-                const TradeResult staleRead = readSession( Internal::decodeID( linkRaw._bytes ), stale );
+                const TradeResult staleRead = readSession( ServiceKeyUtil::decodeVarID( linkRaw._bytes ), stale );
                 const bool        bOrphan   = staleRead == TradeResult::NotFound;
                 const bool        bExpired  = staleRead == TradeResult::Ok && ( stale._snapshot.isClosed() || isIdleExpired( stale._snapshot, _settings, nowMs ) );
                 if ( bOrphan == false && bExpired == false )
@@ -193,8 +179,8 @@ namespace sw
             trade._arrSide[0]._accountID = fromID;
             trade._arrSide[1]._accountID = toID;
             // 쓰기 번호 0과 1이 두 활성 링크이다. Conflict 번호로 누가 바쁜지 구분한다
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), Internal::encodeID( tradeID ), arrLinkVersion[0] );
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), Internal::encodeID( tradeID ), arrLinkVersion[1] );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), ServiceKeyUtil::encodeVarID( tradeID ), arrLinkVersion[0] );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), ServiceKeyUtil::encodeVarID( tradeID ), arrLinkVersion[1] );
             if ( Internal::stageSession( trade, _serverID, ServiceRecord::kAbsentVersion, transaction ) == false )
                 return TradeResult::Invalid;
             transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
@@ -325,7 +311,7 @@ namespace sw
             if ( linkRead != ServiceStoreResult::Ok )
                 return TradeResult::Unavailable;
             SessionRead       session;
-            const TradeResult read = readSession( Internal::decodeID( linkRaw._bytes ), session );
+            const TradeResult read = readSession( ServiceKeyUtil::decodeVarID( linkRaw._bytes ), session );
             if ( read != TradeResult::Ok )
                 return read;
             outSnapshot = session._snapshot;
