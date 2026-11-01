@@ -48,9 +48,6 @@ namespace sw::editor
             /// @brief 물리의 고정 스텝(초)입니다 — 엔진 기본보다 촘촘해 관절 한계가 덜 뚫린다(정책 `_fixedStepOverride`).
             static constexpr float32 kFixedStepSeconds = 1.0f / 120.0f;
             /// @brief 겹침 선 색입니다.
-            static constexpr float4 kSkeletonColor{ 0.75f, 0.75f, 0.75f, 1.0f };
-            static constexpr float4 kJointColor{ 1.0f, 0.85f, 0.2f, 1.0f };
-            static constexpr float4 kSelectedColor{ 0.2f, 1.0f, 0.9f, 1.0f };
             /// @brief 관절 표식(십자)의 한 변 절반(미터)입니다.
             static constexpr float32 kJointMarkRadius = 0.03f;
 
@@ -311,7 +308,7 @@ namespace sw::editor
                 if ( parentIndex < 0 || static_cast<size_t>( parentIndex ) >= boneCount )
                     continue;
                 renderer.drawLine( float3::transform( listModel[static_cast<size_t>( parentIndex )].getTranslation(), world ), float3::transform( listModel[boneIndex].getTranslation(), world ),
-                                   RagdollPreviewPanelInternal::kSkeletonColor );
+                                   SW_THEMECOLOR( "Viewport", "Bone" ).toFloat4() );
             }
         }
 
@@ -330,7 +327,7 @@ namespace sw::editor
                 if ( _model.editDrawJoints() == false || pPhysicsScene->getBodyTransform( ragdoll._listBody[bodyIndex], position, rotation ) == false )
                     continue;
                 const bool   bSelected = _model.getSelectedBody() == static_cast<int32>( bodyIndex );
-                const float4 color     = bSelected ? RagdollPreviewPanelInternal::kSelectedColor : RagdollPreviewPanelInternal::kJointColor;
+                const float4 color     = bSelected ? SW_THEMECOLOR( "Viewport", "BoneSelected" ).toFloat4() : SW_THEMECOLOR( "Viewport", "Joint" ).toFloat4();
                 const float  radius    = RagdollPreviewPanelInternal::kJointMarkRadius;
                 renderer.drawLine( position - float3{ radius, 0.0f, 0.0f }, position + float3{ radius, 0.0f, 0.0f }, color );
                 renderer.drawLine( position - float3{ 0.0f, radius, 0.0f }, position + float3{ 0.0f, radius, 0.0f }, color );

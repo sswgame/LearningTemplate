@@ -173,14 +173,14 @@ namespace sw::editor
         ImGui::Dummy( meterSize );
         ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
         const ImVec2 meterMax{ meterMin.x + meterSize.x, meterMin.y + meterSize.y };
-        pDrawList->AddRectFilled( meterMin, meterMax, EditorColorUtil::toImU32( Color{ 0.10f, 0.10f, 0.12f, 1.0f } ) );
+        pDrawList->AddRectFilled( meterMin, meterMax, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "FrameBg" ) ) );
         const float32 fill = AudioMixerModel::computeMeterFill( heldDb );
         if ( fill > 0.0f )
         {
             const ImVec2 fillMin{ meterMin.x, meterMax.y - meterSize.y * fill };
             pDrawList->AddRectFilled( fillMin, meterMax, EditorColorUtil::toImU32( Internal::getMeterColor( heldDb ) ) );
         }
-        pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( Color{ 0.35f, 0.35f, 0.40f, 1.0f } ) );
+        pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Border" ) ) );
 
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "M", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )

@@ -593,12 +593,8 @@ namespace sw::editor
             return;
         }
         const float4x4 bodyWorld       = pBodyScene->getWorldMatrix();
-        const float4   arrAxisColor[3] = {
-            float4{ 1.0f, 0.25f, 0.25f, 1.0f},
-            float4{ 0.3f,  1.0f,  0.3f, 1.0f},
-            float4{0.35f,  0.5f,  1.0f, 1.0f}
-        };
-        const float3 arrAxis[3] = {
+        const float4   arrAxisColor[3] = { SW_THEMECOLOR( "Viewport", "AxisX" ).toFloat4(), SW_THEMECOLOR( "Viewport", "AxisY" ).toFloat4(), SW_THEMECOLOR( "Viewport", "AxisZ" ).toFloat4() };
+        const float3   arrAxis[3]      = {
             float3{1.0f, 0.0f, 0.0f},
             float3{0.0f, 1.0f, 0.0f},
             float3{0.0f, 0.0f, 1.0f}

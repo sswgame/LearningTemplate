@@ -14,6 +14,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
@@ -86,9 +87,7 @@ namespace sw::editor
         , _selectedNodeID{ 0 }
         , _preview{}
     {
-        _nodeGraph.setPinTypeColors( {
-            Color{ 0.85f, 0.85f, 0.90f, 1.0f }
-        } ); // 흐름 핀 하나
+        _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Graph", "FlowPin" ) } ); // 흐름 핀 하나
     }
 
     void DialogueGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )

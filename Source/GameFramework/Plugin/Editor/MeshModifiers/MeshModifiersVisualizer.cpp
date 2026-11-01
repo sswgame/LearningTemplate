@@ -17,7 +17,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -40,21 +42,27 @@ namespace sw::editor
     {
         struct MeshModifiersVisualizerInternal
         {
-            static constexpr ImU32       kPreviewColor       = IM_COL32( 120, 220, 255, 110 );
-            static constexpr ImU32       kStageColor         = IM_COL32( 255, 120, 200, 130 );
-            static constexpr ImU32       kAxisColor          = IM_COL32( 255, 200, 60, 255 );
-            static constexpr ImU32       kHoverColor         = IM_COL32( 255, 255, 255, 255 );
-            static constexpr ImU32       kRangeColor         = IM_COL32( 120, 255, 160, 200 );
-            static constexpr ImU32       kLatticeLineColor   = IM_COL32( 255, 140, 40, 200 );
-            static constexpr ImU32       kLatticePointColor  = IM_COL32( 255, 240, 120, 255 );
-            static constexpr ImU32       kSelectedPointColor = IM_COL32( 255, 60, 60, 255 );
-            static constexpr ImU32       kArrAxisColor[3]    = { IM_COL32( 235, 70, 70, 255 ), IM_COL32( 90, 220, 90, 255 ), IM_COL32( 80, 140, 255, 255 ) };
-            static constexpr uint32      kRingSegmentCount   = 48;
-            static constexpr float32     kPickWidthRatio     = 0.06f; ///< 손잡이 길이 대비 집는 두께
-            static constexpr float32     kPointPickRatio     = 0.04f; ///< 원본 상자 대각선(월드) 대비 제어점 구 반경
-            static constexpr float32     kGizmoSizeRatio     = 0.35f; ///< 원본 상자 대각선(월드) 대비 기즈모 손잡이 길이
-            static constexpr float32     kPointHandleRatio   = 0.15f; ///< 원본 상자 대각선(월드) 대비 제어점 축 손잡이 길이
-            static constexpr const utf8* kFFD2DTypeID        = "ffd2d";
+            /** @brief 테마 색 토큰을 그리기 목록 색으로 바꿉니다. */
+            static ImU32 themeColor( const Color& color ) { return EditorColorUtil::toImU32( color ); }
+            /** @brief 손잡이 축(0 X · 1 Y · 2 Z)의 색입니다. */
+            static ImU32 axisColor( uint32 axis )
+            {
+                switch ( axis )
+                {
+                    case 0:
+                        return themeColor( SW_THEMECOLOR( "Viewport", "AxisX" ) );
+                    case 1:
+                        return themeColor( SW_THEMECOLOR( "Viewport", "AxisY" ) );
+                    default:
+                        return themeColor( SW_THEMECOLOR( "Viewport", "AxisZ" ) );
+                }
+            }
+            static constexpr uint32      kRingSegmentCount = 48;
+            static constexpr float32     kPickWidthRatio   = 0.06f; ///< 손잡이 길이 대비 집는 두께
+            static constexpr float32     kPointPickRatio   = 0.04f; ///< 원본 상자 대각선(월드) 대비 제어점 구 반경
+            static constexpr float32     kGizmoSizeRatio   = 0.35f; ///< 원본 상자 대각선(월드) 대비 기즈모 손잡이 길이
+            static constexpr float32     kPointHandleRatio = 0.15f; ///< 원본 상자 대각선(월드) 대비 제어점 축 손잡이 길이
+            static constexpr const utf8* kFFD2DTypeID      = "ffd2d";
 
             enum class DragKind : uint8
             {
@@ -289,7 +297,7 @@ namespace sw::editor
                                 {
                                     const float32 angle = MathUtil::kTwoPi * static_cast<float32>( segment ) / static_cast<float32>( kRingSegmentCount );
                                     const float3  next  = toWorld( frame, center + axisU * ( ::cosf( angle ) * radius ) + axisV * ( ::sinf( angle ) * radius ) );
-                                    drawSegment( args, previous, next, kRangeColor, 1.0f );
+                                    drawSegment( args, previous, next, themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ), 1.0f );
                                     previous = next;
                                 }
                             }
@@ -302,13 +310,13 @@ namespace sw::editor
                                 break;
                             for ( size_t corner = 0; corner < listCorner.size(); ++corner )
                             {
-                                drawSegment( args, toWorld( frame, listCorner[corner] ), toWorld( frame, listCorner[( corner + 1 ) % listCorner.size()] ), kRangeColor, 1.5f );
+                                drawSegment( args, toWorld( frame, listCorner[corner] ), toWorld( frame, listCorner[( corner + 1 ) % listCorner.size()] ), themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ), 1.5f );
                             }
                             break;
                         }
                         case ModifierRangeKind::Center:
                         {
-                            drawMarker( args, toWorld( frame, modifier.getVector3( index ) ), kRangeColor );
+                            drawMarker( args, toWorld( frame, modifier.getVector3( index ) ), themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ) );
                             break;
                         }
                         case ModifierRangeKind::Direction:
@@ -320,7 +328,7 @@ namespace sw::editor
                             const float3 worldStep         = float3::transformVector( modifierDirection, frame._modifierToWorld );
                             if ( worldStep.getLengthSquared() <= MathUtil::kEpsilonSquared )
                                 break;
-                            drawArrow( args, worldFrom, worldFrom + worldStep.normalize() * arrowLength, kRangeColor, 2.0f );
+                            drawArrow( args, worldFrom, worldFrom + worldStep.normalize() * arrowLength, themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ), 2.0f );
                             break;
                         }
                         case ModifierRangeKind::None:
@@ -400,22 +408,22 @@ namespace sw::editor
                                 continue;
                             const float3& point = set._listWorld[static_cast<size_t>( index )];
                             if ( indexX + 1 < set._countX )
-                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + 1 )], kLatticeLineColor, 1.0f );
+                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + 1 )], themeColor( SW_THEMECOLOR( "Viewport", "LatticeLine" ) ), 1.0f );
                             if ( indexY + 1 < set._countY )
-                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX )], kLatticeLineColor, 1.0f );
+                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX )], themeColor( SW_THEMECOLOR( "Viewport", "LatticeLine" ) ), 1.0f );
                             if ( indexZ + 1 < set._countZ )
-                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX * set._countY )], kLatticeLineColor, 1.0f );
+                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX * set._countY )], themeColor( SW_THEMECOLOR( "Viewport", "LatticeLine" ) ), 1.0f );
                             ImVec2 screen;
                             if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, point, args._canvasPos, args._canvasSize, screen ) == false )
                                 continue;
                             if ( index == selectedPoint )
                             {
-                                args._pDrawList->AddCircleFilled( screen, 6.0f, kSelectedPointColor );
-                                args._pDrawList->AddCircle( screen, 8.0f, kHoverColor, 0, 1.5f );
+                                args._pDrawList->AddCircleFilled( screen, 6.0f, themeColor( SW_THEMECOLOR( "Viewport", "LatticeSelected" ) ) );
+                                args._pDrawList->AddCircle( screen, 8.0f, themeColor( SW_THEMECOLOR( "Viewport", "ModifierHover" ) ), 0, 1.5f );
                             }
                             else
                             {
-                                args._pDrawList->AddCircleFilled( screen, index == hoveredPoint ? 5.0f : 3.5f, index == hoveredPoint ? kHoverColor : kLatticePointColor );
+                                args._pDrawList->AddCircleFilled( screen, index == hoveredPoint ? 5.0f : 3.5f, index == hoveredPoint ? themeColor( SW_THEMECOLOR( "Viewport", "ModifierHover" ) ) : themeColor( SW_THEMECOLOR( "Viewport", "LatticePoint" ) ) );
                             }
                         }
                     }
@@ -511,7 +519,7 @@ namespace sw::editor
 
             static void drawHandle( const EditorViewportVisualizerArgs& args, const Handle& handle, bool bHighlight )
             {
-                const ImU32 color = bHighlight ? kHoverColor : kArrAxisColor[MathUtil::min( handle._axis, 2u )];
+                const ImU32 color = bHighlight ? themeColor( SW_THEMECOLOR( "Viewport", "ModifierHover" ) ) : axisColor( handle._axis );
                 if ( handle._kind == DragKind::GizmoRotate )
                 {
                     // 고리 평면의 두 방향을 법선에서 만든다
@@ -743,7 +751,7 @@ namespace sw::editor
                 noteHandleMarks( args, listHandle );
                 ImVec2 centerScreen;
                 if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, frame._centerWorld, args._canvasPos, args._canvasSize, centerScreen ) )
-                    args._pDrawList->AddCircle( centerScreen, 6.0f, kAxisColor, 0, 2.0f );
+                    args._pDrawList->AddCircle( centerScreen, 6.0f, themeColor( SW_THEMECOLOR( "Viewport", "ModifierAxis" ) ), 0, 2.0f );
             }
 
             static void draw( const EditorViewportVisualizerArgs& args )
@@ -760,7 +768,7 @@ namespace sw::editor
 
                 vector<float3>& listSegmentPoint = getState()._listSegmentPoint; // 프레임마다 다시 채우는 재사용 버퍼
                 session.makePreviewSegments( listSegmentPoint );
-                drawSegments( args, listSegmentPoint, kPreviewColor );
+                drawSegments( args, listSegmentPoint, themeColor( SW_THEMECOLOR( "Viewport", "ModifierPreview" ) ) );
 
                 MeshModifier* pModifier = session.getStack().findModifier( session.getSelectedIndex() );
                 Frame         frame{};
@@ -774,7 +782,7 @@ namespace sw::editor
                 float3 axisDirection{ 0.0f, 0.0f, 0.0f };
                 MeshModifierUtil::setComponent( axisDirection, frame._axisIndex, frame._worldSize * 0.6f );
                 const float3 axisWorld = float3::transformVector( axisDirection, frame._modifierToWorld );
-                drawSegment( args, frame._centerWorld - axisWorld, frame._centerWorld + axisWorld, kAxisColor, 1.0f );
+                drawSegment( args, frame._centerWorld - axisWorld, frame._centerWorld + axisWorld, themeColor( SW_THEMECOLOR( "Viewport", "ModifierAxis" ) ), 1.0f );
                 drawRanges( args, frame );
 
                 PointSet& pointSet = getState()._pointSet; // 제어점 월드 목록을 프레임마다 다시 채운다
@@ -791,7 +799,7 @@ namespace sw::editor
                     return;
                 vector<float3>& listStagePoint = getState()._listStagePoint; // 프레임마다 다시 채우는 재사용 버퍼
                 pSession->makeStagePreviewSegments( listStagePoint );
-                drawSegments( args, listStagePoint, kStageColor );
+                drawSegments( args, listStagePoint, themeColor( SW_THEMECOLOR( "Viewport", "ModifierStage" ) ) );
             }
         };
 

@@ -13,6 +13,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -49,7 +50,6 @@ namespace sw::editor
     {
         struct RigDebugPanelInternal
         {
-            static constexpr float4  kMarkerColor{ 1.0f, 0.45f, 0.2f, 1.0f };
             static constexpr float32 kMarkerRadius = 0.03f;
             /** @brief 디버그 드로우 카테고리입니다(`debugdraw.category RigDebug off` 로 끈다). */
             static constexpr const utf8* kDrawCategory = "RigDebug";
@@ -267,9 +267,10 @@ namespace sw::editor
                 {
                     if ( boneIndex >= listModel.size() || boneIndex >= skeleton.getBoneCount() )
                         continue;
-                    const float3 position = float3::transform( listModel[boneIndex].getTranslation(), world );
-                    queue.drawSphere( position, kMarkerRadius, kMarkerColor, 0.0f, category );
-                    queue.drawText( position, skeleton.getBone( boneIndex )._name.c_str(), kMarkerColor, 0.0f, category );
+                    const float3 position    = float3::transform( listModel[boneIndex].getTranslation(), world );
+                    const float4 markerColor = SW_THEMECOLOR( "Viewport", "Marker" ).toFloat4();
+                    queue.drawSphere( position, kMarkerRadius, markerColor, 0.0f, category );
+                    queue.drawText( position, skeleton.getBone( boneIndex )._name.c_str(), markerColor, 0.0f, category );
                 }
             }
         };

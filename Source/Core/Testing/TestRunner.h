@@ -52,8 +52,9 @@ namespace sw::test
          * @brief 거른 케이스를 섞어 돌립니다. 모두 통과하면 true 입니다.
          * @details 거르개에 맞는 케이스가 없으면 실패다(빈 실행을 통과로 보지 않는다). 케이스 하나는 실패 단언 · 단언 0 개 · 적지 않은 Warning · Error 로그 ·
          *          적었는데 나오지 않은 로그 가운데 하나라도 있으면 실패다. 비활성 케이스는 돌지 않고 까닭과 함께 센다. 시한을 넘긴 케이스는 실행을 끝낸다(`kTestTimeoutExitCode`).
+         * @param pOutListFailure 비지 않으면 실패 줄(`<케이스>: <파일>(<줄>): error: …`)을 받는다 — 표준 출력을 남기지 않는 실행(에디터 자체 테스트)이 로그에 사유를 적는다.
          */
-        [[nodiscard]] static bool run( const TestRunOptions& options );
+        [[nodiscard]] static bool run( const TestRunOptions& options, vector<string>* pOutListFailure = nullptr );
         /**
          * @brief 지금 도는 케이스가 `SW_EXPECT_LOG` 로 적은 id 의 줄이면 true 입니다(케이스가 없거나 id 없는 줄이면 false). 세지 않는 질의라 여러 스레드 · 리스너 순서와 상관없다.
          * @details 시나리오 안에서 단위 테스트를 돌릴 때(에디터 `editor.unitTests`) 시나리오 로그 게이트가 케이스가 이미 처리한 줄을 다시 "처리 안 된 로그" 로 세지 않게 묻는다.

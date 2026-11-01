@@ -100,7 +100,7 @@ namespace sw::editor
 
                 if ( item._message.empty() == false )
                 {
-                    ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( Color{ 0.85f, 0.85f, 0.85f, alpha } ) );
+                    ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Text" ).withAlpha( alpha ) ) );
                     ImGui::TextWrapped( "%s", item._message.c_str() );
                     ImGui::PopStyleColor();
                 }

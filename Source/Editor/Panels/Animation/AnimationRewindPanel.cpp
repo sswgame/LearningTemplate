@@ -37,8 +37,6 @@ namespace sw::editor
             static constexpr Color kNotifyText{ 1.0f, 0.8f, 0.3f, 1.0f };
 
             /** @brief 뼈대 색(고른 것 · 나머지)입니다. */
-            static constexpr float4 kSelectedColor{ 1.0f, 0.75f, 0.1f, 1.0f };
-            static constexpr float4 kOtherColor{ 0.35f, 0.7f, 1.0f, 1.0f };
             /** @brief 디버그 드로우 카테고리입니다(`debugdraw.category AnimationRewind off` 로 끈다). */
             static constexpr const utf8* kDrawCategory = "AnimationRewind";
 
@@ -117,7 +115,7 @@ namespace sw::editor
                 const AnimationRewindFrame* pFrame = track.findFrame( viewTime );
                 if ( pFrame != nullptr )
                     AnimationRewindPanelInternal::drawSkeleton( queue, track, *pFrame, _listScratchPosition,
-                                                                bSelected ? AnimationRewindPanelInternal::kSelectedColor : AnimationRewindPanelInternal::kOtherColor,
+                                                                bSelected ? SW_THEMECOLOR( "Base", "Highlight" ).toFloat4() : SW_THEMECOLOR( "Base", "Accent" ).toFloat4(),
                                                                 bSelected );
             }
         }

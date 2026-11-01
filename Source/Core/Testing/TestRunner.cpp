@@ -552,7 +552,7 @@ namespace sw::test
         return listName;
     }
 
-    bool TestRunner::run( const TestRunOptions& options )
+    bool TestRunner::run( const TestRunOptions& options, vector<string>* pOutListFailure )
     {
         using Internal                                = TestRunnerInternal;
         const bool                          bChildRun = options._childRole.empty() == false;
@@ -699,6 +699,11 @@ namespace sw::test
                     state._pCase = nullptr;
                 }
                 const bool bPassed = listFailure.empty();
+                for ( const string& failure : listFailure )
+                {
+                    if ( pOutListFailure != nullptr )
+                        pOutListFailure->push_back( string( pCase->_pName ) + ": " + failure );
+                }
                 ++ranCount;
                 if ( bPassed == false )
                     ++failedCount;

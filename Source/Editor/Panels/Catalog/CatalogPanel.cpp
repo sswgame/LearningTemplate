@@ -12,6 +12,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -288,7 +289,7 @@ namespace sw::editor
         if ( _bRawMode || _document.isParsed() == false )
         {
             if ( _document.isParsed() == false )
-                ImGui::TextColored( ImVec4{ 0.95f, 0.45f, 0.35f, 1.0f }, "The file is not valid XML: %s", _document.getError().c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "The file is not valid XML: %s", _document.getError().c_str() );
             string       raw       = _document.getText();
             const uint32 lineCount = static_cast<uint32>( ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing() ) - 1;
             if ( EditorWidgets::drawTextFieldMultiline( "##catalogRaw", raw, lineCount > 4 ? lineCount : 4 ) )
@@ -312,11 +313,11 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", _statusText.c_str() );
         if ( _validationState == ValidationState::Passed )
         {
-            ImGui::TextColored( ImVec4{ 0.45f, 0.85f, 0.45f, 1.0f }, "Validation passed" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "Validation passed" );
         }
         else if ( _validationState == ValidationState::Failed )
         {
-            ImGui::TextColored( ImVec4{ 0.95f, 0.45f, 0.35f, 1.0f }, "Validation failed (%d warnings)", static_cast<int32>( _listWarning.size() ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "Validation failed (%d warnings)", static_cast<int32>( _listWarning.size() ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Restore previous file" ) );
             if ( ImGui::SmallButton( "Restore previous file" ) )
                 restorePreviousFile();

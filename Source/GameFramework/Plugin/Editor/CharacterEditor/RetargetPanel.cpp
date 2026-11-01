@@ -9,6 +9,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -43,9 +44,6 @@ namespace sw::editor
             static constexpr float32 kPoseDegreeLimit = 180.0f;
 
             /** @brief 미리보기 선 색입니다 — 원본(파랑) · 대상 레퍼런스(회색, 리타깃 포즈가 있을 때만 긋는다) · 리타깃 포즈를 얹은 대상(주황). */
-            static constexpr float4 kSourceColor{ 0.3f, 0.6f, 1.0f, 1.0f };
-            static constexpr float4 kTargetReferenceColor{ 0.6f, 0.6f, 0.6f, 0.6f };
-            static constexpr float4 kTargetPoseColor{ 1.0f, 0.55f, 0.2f, 1.0f };
 
             /** @brief 감시 값이 읽는 값 하나입니다 — 패널 인스턴스가 게시한 값 중 @p pField 를 @p outValue 에 씁니다. 패널이 없으면 false 입니다. */
             [[nodiscard]] static bool readPublished( uint32 RetargetPanel::Published::* pField, float64& outValue )
@@ -370,9 +368,9 @@ namespace sw::editor
                 getPreviewViewport().frameSphere( ( minimum + maximum ) * 0.5f, MathUtil::max( ( maximum - minimum ).getLength() * 0.5f * RetargetPanelInternal::kFramePadding, 0.5f ) );
             _bFramePending = SW_FALSE;
         }
-        ImGui::TextColored( ImVec4( RetargetPanelInternal::kSourceColor._x, RetargetPanelInternal::kSourceColor._y, RetargetPanelInternal::kSourceColor._z, 1.0f ), "source" );
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Viewport", "BoneSource" ) ), "source" );
         ImGui::SameLine();
-        ImGui::TextColored( ImVec4( RetargetPanelInternal::kTargetPoseColor._x, RetargetPanelInternal::kTargetPoseColor._y, RetargetPanelInternal::kTargetPoseColor._z, 1.0f ),
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Viewport", "BonePose" ) ),
                             "target (with retarget pose)" );
         ImGui::SameLine();
         ImGui::TextDisabled( "target reference" );
@@ -395,13 +393,13 @@ namespace sw::editor
         viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
         EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
         if ( _bPreviewSourceReady == SW_TRUE )
-            Internal::drawBones( renderer, _previewSource, _listSourcePosition, Internal::kSourceColor );
+            Internal::drawBones( renderer, _previewSource, _listSourcePosition, SW_THEMECOLOR( "Viewport", "BoneSource" ).toFloat4() );
         if ( _bPreviewTargetReady == SW_TRUE )
         {
             // 리타깃 포즈가 있을 때만 레퍼런스를 따로 긋는다 — 없으면 둘이 같아 선이 겹친다.
             if ( _profile.getTargetPose().empty() == false )
-                Internal::drawBones( renderer, _previewTarget, _listTargetReferencePosition, Internal::kTargetReferenceColor );
-            Internal::drawBones( renderer, _previewTarget, _listTargetPosePosition, Internal::kTargetPoseColor );
+                Internal::drawBones( renderer, _previewTarget, _listTargetReferencePosition, SW_THEMECOLOR( "Viewport", "BoneReference" ).toFloat4() );
+            Internal::drawBones( renderer, _previewTarget, _listTargetPosePosition, SW_THEMECOLOR( "Viewport", "BonePose" ).toFloat4() );
         }
         _published._previewSegmentCount = renderer.getDrawnSegmentCount();
     }

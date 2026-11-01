@@ -6,6 +6,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -174,8 +175,8 @@ namespace sw::editor
             }
             ParkLayoutPreviewInternal::appendBox( outListSegment, ride._position, ride._size, ride._color );
         }
-        const float4 gateColor{ 1.0f, 0.9f, 0.4f, 1.0f };
-        const float3 gateTop = _gatePosition + float3{ 0.0f, ParkLayoutPreviewInternal::kGateHeight, 0.0f };
+        const float4 gateColor = SW_THEMECOLOR( "Viewport", "ParkGate" ).toFloat4();
+        const float3 gateTop   = _gatePosition + float3{ 0.0f, ParkLayoutPreviewInternal::kGateHeight, 0.0f };
         outListSegment.push_back( EditorWorldSegment{ _gatePosition, gateTop, gateColor } );
         outListSegment.push_back( EditorWorldSegment{
             gateTop + float3{-1.0f, 0.0f, 0.0f},
@@ -187,7 +188,7 @@ namespace sw::editor
             gateTop + float3{0.0f, 0.0f,  1.0f},
             gateColor
         } );
-        const float4 trackColor{ 0.8f, 0.8f, 0.85f, 1.0f };
+        const float4 trackColor = SW_THEMECOLOR( "Viewport", "ParkTrack" ).toFloat4();
         for ( const vector<float3>& listPoint : _listTrackPoint )
         {
             for ( size_t index = 1; index < listPoint.size(); ++index )
