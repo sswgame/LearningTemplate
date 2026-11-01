@@ -6,23 +6,34 @@
 		<item name="BodyHips" bone="hips" unit="Body" />
 		<item name="BodyThighL" bone="upperleg.l" unit="Body" />
 		<item name="BodyThighR" bone="upperleg.r" unit="Body" />
+		<item name="BodyShinL" bone="lowerleg.l" unit="Body" />
+		<item name="BodyShinR" bone="lowerleg.r" unit="Body" />
 	</targets>
 	<nodes>
 		<item type="CopyTransform" name="Pin" bone="cape0" target="Shoulders" />
-		<item type="SpringChain" name="Cape" stiffness="0.06" damping="0.12" particle_radius="0.03" min_screen_size="0.07">
+		<item type="SpringChain" name="Cape" stiffness="0.06" damping="0.12" particle_radius="0.06" min_screen_size="0.07">
 			<bones>
 				<item>cape0</item>
 				<item>cape1</item>
 				<item>cape2</item>
 				<item>cape3</item>
 			</bones>
+			<!-- 관절마다 강성 — 어깨 쪽은 몸 자세(바인드 모양)를 따라 등판에 붙고 아랫단만 흔들린다. 충돌은 입자(뼈 끝)만 보므로, 윗마디가 자유로우면
+			     상체를 숙여 달릴 때 뿌리와 첫 입자 사이의 천이 등판 안으로 들어갔다. -->
+			<joints>
+				<item stiffness="0.8" />
+				<item stiffness="0.35" />
+				<item stiffness="0.06" />
+			</joints>
 			<colliders>
 				<item bone="cape0" shape="Capsule" a="0,-0.15,0.16" b="0,-0.75,0.16" radius="0.2" />
-				<!-- 몸통(가슴 뼈 기준 어깨 너비) · 엉덩이 — 가로 캡슐. 허벅지 뼈는 아래(+Y)를 향한다. -->
+				<!-- 몸통(가슴 뼈 기준 어깨 너비) · 엉덩이 — 가로 캡슐. 다리 뼈는 아래(+Y)를 향한다 — 달리며 뒤로 차는 정강이 · 발이 아랫단을 뚫지 않게 발목 아래까지 덮는다. -->
 				<item target="BodyChest" shape="Capsule" a="-0.16,0.05,0" b="0.16,0.05,0" radius="0.27" />
-				<item target="BodyHips" shape="Capsule" a="-0.12,0.05,0" b="0.12,0.05,0" radius="0.24" />
-				<item target="BodyThighL" shape="Capsule" a="0,0,0" b="0,0.22,0" radius="0.12" />
-				<item target="BodyThighR" shape="Capsule" a="0,0,0" b="0,0.22,0" radius="0.12" />
+				<item target="BodyHips" shape="Capsule" a="-0.12,0.05,0" b="0.12,0.05,0" radius="0.25" />
+				<item target="BodyThighL" shape="Capsule" a="0,0,0" b="0,0.24,0" radius="0.15" />
+				<item target="BodyThighR" shape="Capsule" a="0,0,0" b="0,0.24,0" radius="0.15" />
+				<item target="BodyShinL" shape="Capsule" a="0,0,0" b="0,0.26,0" radius="0.13" />
+				<item target="BodyShinR" shape="Capsule" a="0,0,0" b="0,0.26,0" radius="0.13" />
 			</colliders>
 		</item>
 	</nodes>
