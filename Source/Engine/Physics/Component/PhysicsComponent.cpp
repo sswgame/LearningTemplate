@@ -105,13 +105,13 @@ namespace sw
         const float32      radiusScale  = absScale._x > absScale._z ? absScale._x : absScale._z;
         const float32      uniformScale = radiusScale > absScale._y ? radiusScale : absScale._y;
         PhysicsShapeDesc3D scaled       = shape;
-        scaled._halfExtents             = float3{ shape._halfExtents._x * absScale._x, shape._halfExtents._y * absScale._y, shape._halfExtents._z * absScale._z };
+        scaled._halfExtents             = float3::multiply( shape._halfExtents, absScale );
         scaled._radius                  = shape._type == PhysicsShapeType3D::Sphere ? shape._radius * uniformScale : shape._radius * radiusScale;
         scaled._halfHeight              = shape._halfHeight * absScale._y;
-        scaled._localPosition           = float3{ shape._localPosition._x * scale._x, shape._localPosition._y * scale._y, shape._localPosition._z * scale._z };
+        scaled._localPosition           = float3::multiply( shape._localPosition, scale );
         for ( float3& point : scaled._listPoint )
         {
-            point = float3{ point._x * scale._x, point._y * scale._y, point._z * scale._z };
+            point = float3::multiply( point, scale );
         }
         return scaled;
     }

@@ -96,7 +96,7 @@ namespace sw
     {
         BoneProportionEntry& target = getOrCreateEntry( entry._bone );
         const float3         scale  = float3::lerp( float3( 1.0f ), entry._scale, weight );
-        target._scale               = float3( target._scale._x * scale._x, target._scale._y * scale._y, target._scale._z * scale._z );
+        target._scale               = float3::multiply( target._scale, scale );
         target._offset += entry._offset * weight;
     }
 
@@ -117,7 +117,7 @@ namespace sw
             quaternion rotation;
             float3     translation;
             (void)local.decompose( scale, rotation, translation );
-            scale = float3( scale._x * entry._scale._x, scale._y * entry._scale._y, scale._z * entry._scale._z );
+            scale = float3::multiply( scale, entry._scale );
             local = CharacterGeometryUtil::makeTransform( translation + entry._offset, rotation, scale );
         }
         inoutBones.computeModelTransforms();
@@ -131,7 +131,7 @@ namespace sw
             if ( boneIndex < 0 || static_cast<uint32>( boneIndex ) >= inoutPose.getBoneCount() )
                 continue;
             BoneTransform local = inoutPose.getBoneTransform( static_cast<uint32>( boneIndex ) );
-            local._scale        = float3( local._scale._x * entry._scale._x, local._scale._y * entry._scale._y, local._scale._z * entry._scale._z );
+            local._scale        = float3::multiply( local._scale, entry._scale );
             local._translation  = local._translation + entry._offset;
             inoutPose.setBoneTransform( static_cast<uint32>( boneIndex ), local );
         }

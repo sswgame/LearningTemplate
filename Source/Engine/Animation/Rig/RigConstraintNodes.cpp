@@ -469,7 +469,7 @@ namespace sw
             {
                 RigPoseBuffer& pose  = *context._pPose;
                 BoneTransform  local = pose.getLocal( _bone );
-                local._scale         = float3{ local._scale._x * _scale._x, local._scale._y * _scale._y, local._scale._z * _scale._z };
+                local._scale         = float3::multiply( local._scale, _scale );
                 pose.setLocal( _bone, local );
             }
 

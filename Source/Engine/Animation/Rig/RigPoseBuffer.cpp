@@ -12,9 +12,8 @@ namespace sw
     {
         struct RigPoseBufferInternal
         {
-            static float3 multiply( const float3& lhs, const float3& rhs ) { return float3{ lhs._x * rhs._x, lhs._y * rhs._y, lhs._z * rhs._z }; }
-
-            static float3 divide( const float3& lhs, const float3& rhs )
+            /** @brief 부모 스케일을 걷어 냅니다(성분별 나눗셈). 0 에 가까운 스케일 성분은 걷어 낼 수 없어 그 값을 그대로 둡니다 — `Pose` 의 스케일 비율(0 이면 1)과 뜻이 다르다. */
+            static float3 removeParentScale( const float3& lhs, const float3& rhs )
             {
                 const float32 x = MathUtil::abs( rhs._x ) > MathUtil::kEpsilon ? lhs._x / rhs._x : lhs._x;
                 const float32 y = MathUtil::abs( rhs._y ) > MathUtil::kEpsilon ? lhs._y / rhs._y : lhs._y;
@@ -133,10 +132,10 @@ namespace sw
             }
             const uint32      parent         = static_cast<uint32>( parentIndex );
             const quaternion& parentRotation = _listModelRotation[parent];
-            const float3      scaled         = RigPoseBufferInternal::multiply( _listLocalTranslation[boneIndex], _listModelScale[parent] );
+            const float3      scaled         = float3::multiply( _listLocalTranslation[boneIndex], _listModelScale[parent] );
             _listModelPosition[boneIndex]    = _listModelPosition[parent] + float3::transform( scaled, parentRotation );
             _listModelRotation[boneIndex]    = ( parentRotation * _listLocalRotation[boneIndex] ).normalize();
-            _listModelScale[boneIndex]       = RigPoseBufferInternal::multiply( _listLocalScale[boneIndex], _listModelScale[parent] );
+            _listModelScale[boneIndex]       = float3::multiply( _listLocalScale[boneIndex], _listModelScale[parent] );
         }
         for ( uint32 boneIndex = _firstDirty; boneIndex < boneCount; ++boneIndex )
         {
@@ -194,7 +193,7 @@ namespace sw
         const float3     parentPosition  = getModelPosition( parent );
         const quaternion parentRotation  = getModelRotation( parent );
         const float3     unrotated       = float3::transform( position - parentPosition, parentRotation.inverse() );
-        _listLocalTranslation[boneIndex] = RigPoseBufferInternal::divide( unrotated, _listModelScale[parent] );
+        _listLocalTranslation[boneIndex] = RigPoseBufferInternal::removeParentScale( unrotated, _listModelScale[parent] );
         markDirty( boneIndex );
     }
 

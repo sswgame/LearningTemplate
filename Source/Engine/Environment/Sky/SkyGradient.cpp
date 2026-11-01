@@ -173,7 +173,7 @@ namespace sw
             const float3  unit       = length > 0.0f ? direction * ( 1.0f / length ) : float3{ 1.0f, 0.0f, 0.0f };
             const float3  scattering = _atmosphere.evaluateScattering( unit, _toSunDirection, _groundColor );
             const float32 scale      = _atmosphere._sunIntensity * _intensity;
-            return float3{ scattering._x * _sunColor._x, scattering._y * _sunColor._y, scattering._z * _sunColor._z } * scale;
+            return float3::multiply( scattering, _sunColor ) * scale;
         }
         // sky.hlsl 의 evaluateSky 와 같은 식이다. 길이가 0 인 방향은 y 가 0(지평선)이다.
         const float32 y             = length > 0.0f ? MathUtil::clamp( direction._y / length, -1.0f, 1.0f ) : 0.0f;

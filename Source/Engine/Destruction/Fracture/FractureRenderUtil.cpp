@@ -70,7 +70,7 @@ namespace sw
                 {
                     RHIVertex    baked = asset._listVertex[range._firstVertex + vertex + corner];
                     const float3 local{ baked._arrPosition[0] - centroid._x, baked._arrPosition[1] - centroid._y, baked._arrPosition[2] - centroid._z };
-                    const float3 position = float3::transform( float3{ local._x * pose._scale._x, local._y * pose._scale._y, local._z * pose._scale._z }, pose._rotation ) +
+                    const float3 position = float3::transform( float3::multiply( local, pose._scale ), pose._rotation ) +
                                             pose._translation;
                     const float3 normal   = float3::transform( float3{ baked._arrNormal[0], baked._arrNormal[1], baked._arrNormal[2] }, pose._rotation );
                     baked._arrPosition[0] = position._x;

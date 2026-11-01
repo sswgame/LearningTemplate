@@ -226,6 +226,11 @@ namespace sw
         return deltaX * deltaX + deltaZ * deltaZ;
     }
 
+    float3 float3::multiply( const float3& lhs, const float3& rhs ) noexcept
+    {
+        return float3{ lhs._x * rhs._x, lhs._y * rhs._y, lhs._z * rhs._z };
+    }
+
     float3 float3::min( const float3& lhs, const float3& rhs ) noexcept
     {
         return float3{ MathUtil::min( lhs._x, rhs._x ), MathUtil::min( lhs._y, rhs._y ), MathUtil::min( lhs._z, rhs._z ) };

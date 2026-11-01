@@ -24,7 +24,7 @@ namespace sw
             if ( bScaled )
             {
                 const float3 scale = pose.getModelScale( bone );
-                local              = float3{ local._x * scale._x, local._y * scale._y, local._z * scale._z };
+                local              = float3::multiply( local, scale );
             }
             outPosition = pose.getModelPosition( bone ) + float3::transform( local, boneRotation );
             outRotation = ( boneRotation * offsetRotation ).normalize();

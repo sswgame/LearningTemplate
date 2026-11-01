@@ -12,11 +12,8 @@ namespace sw
     {
         struct PoseInternal
         {
-            /** @brief 성분별 곱입니다. */
-            static float3 multiply( const float3& lhs, const float3& rhs ) { return float3{ lhs._x * rhs._x, lhs._y * rhs._y, lhs._z * rhs._z }; }
-
             /** @brief 성분별 나눗셈입니다. 0 에 가까운 분모는 1 로 봅니다(스케일 0 인 레퍼런스는 비율이 없다). */
-            static float3 divide( const float3& lhs, const float3& rhs )
+            static float3 computeScaleRatio( const float3& lhs, const float3& rhs )
             {
                 const float32 x = MathUtil::abs( rhs._x ) > MathUtil::kEpsilon ? lhs._x / rhs._x : 1.0f;
                 const float32 y = MathUtil::abs( rhs._y ) > MathUtil::kEpsilon ? lhs._y / rhs._y : 1.0f;
@@ -170,7 +167,7 @@ namespace sw
         {
             outAdditive._listTranslation[boneIndex] = pose._listTranslation[boneIndex] - referencePose._listTranslation[boneIndex];
             outAdditive._listRotation[boneIndex]    = ( referencePose._listRotation[boneIndex].inverse() * pose._listRotation[boneIndex] ).normalize();
-            outAdditive._listScale[boneIndex]       = PoseInternal::divide( pose._listScale[boneIndex], referencePose._listScale[boneIndex] );
+            outAdditive._listScale[boneIndex]       = PoseInternal::computeScaleRatio( pose._listScale[boneIndex], referencePose._listScale[boneIndex] );
         }
     }
 
@@ -185,7 +182,7 @@ namespace sw
             _listTranslation[boneIndex] = _listTranslation[boneIndex] + additive._listTranslation[boneIndex] * boneWeight;
             _listRotation[boneIndex]    = ( _listRotation[boneIndex] * PoseInternal::scaleRotation( additive._listRotation[boneIndex], boneWeight ) ).normalize();
             const float3 scaleRatio     = float3::lerp( float3{ 1.0f, 1.0f, 1.0f }, additive._listScale[boneIndex], boneWeight );
-            _listScale[boneIndex]       = PoseInternal::multiply( _listScale[boneIndex], scaleRatio );
+            _listScale[boneIndex]       = float3::multiply( _listScale[boneIndex], scaleRatio );
         }
     }
 

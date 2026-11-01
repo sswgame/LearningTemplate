@@ -359,6 +359,9 @@ namespace sw
         /** @brief 성분별 최댓값으로 된 벡터를 반환합니다. */
         static float3 max( const float3& lhs, const float3& rhs ) noexcept;
 
+        /** @brief 성분별 곱(스케일 적용 · 색 곱)입니다. `operator*` 는 스칼라 곱만이라 손으로 세 성분을 적던 자리가 쓴다. */
+        static float3 multiply( const float3& lhs, const float3& rhs ) noexcept;
+
         /** @brief 두 벡터 사이를 t 만큼 선형 보간합니다. */
         static float3 lerp( const float3& from, const float3& to, float32 t ) noexcept;
 
