@@ -109,12 +109,12 @@ namespace sw::editor
     struct AssetReloadRoute
     {
         /**
-         * @brief 모듈이 등록한 캐시라 에디터가 이름을 모르는 항목에 쓰는 캐시 이름입니다(빈 문자열). 그 경로를 가진 캐시(`IAssetCache::isCached`)가 모두 다시 읽습니다.
+         * @brief 모듈이 등록한 캐시라 에디터가 이름을 모르는 항목에 쓰는 캐시 이름입니다(빈 문자열). 그 경로를 가진 캐시(`AssetCacheBase::isCached`)가 모두 다시 읽습니다.
          * @details GameFramework 의 데이터 테이블 캐시(`GameDataCache`: 상호작용 테이블, 원소 규칙 테이블)는 게임 서비스가 연결될 때 레지스트리에 등록된다. 에디터는 GameFramework 를 모른다.
          */
         static constexpr const utf8* kAnyCacheHoldingPath = "";
 
-        const utf8*             _pCacheKindName{ nullptr };                 ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
+        const utf8*             _pCacheKindName{ nullptr };                 ///< 다시 읽을 엔진 캐시(`AssetCacheBase::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
         AssetSourceImporterFunc _pfnImportSource{ nullptr };                ///< 캐시가 다시 읽기 전에 실행하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
         AssetImportThread       _importThread{ AssetImportThread::Editor }; ///< 임포터가 도는 스레드. 임포터가 있을 때만 뜻이 있다
     };
@@ -313,7 +313,7 @@ namespace sw::editor
         static void appendSuffixes( const EditorAssetType& kind, vector<string>& outListSuffix );
         /**
          * @brief 변경된 파일 하나를 핫 리로드가 처리하는 방법을 찾습니다. 다시 읽을 캐시와 먼저 실행할 임포터가 결과입니다. 핫 리로드 대상이 아니면 둘 다 nullptr 입니다.
-         * @details 새 에셋 종류는 엔진에 `IAssetCache` 를 등록하고 그 종류의 규칙(`EditorAssetMatchRule::_reload`)에 그 이름을 적으면 핫 리로드된다.
+         * @details 새 에셋 종류는 엔진에 `AssetCacheBase` 를 등록하고 그 종류의 규칙(`EditorAssetMatchRule::_reload`)에 그 이름을 적으면 핫 리로드된다.
          *          `AssetHotReload` 에는 종류별 코드가 없으므로 거기에 분기를 추가하지 않는다.
          */
         static AssetReloadRoute findReloadRoute( string_view path );

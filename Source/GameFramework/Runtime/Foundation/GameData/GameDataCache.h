@@ -27,7 +27,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -44,7 +44,7 @@ namespace sw
          * @brief @p cache 를 에셋 매니저의 레지스트리에 올리고 그 등록을 @p outRegistration 에 담습니다(@p pReload 는 핫 리로드 함수 — 배포는 nullptr).
          * @return 에셋 매니저가 없으면 오류를 남기고 false 입니다(올릴 곳 없이 서지 않는다).
          */
-        [[nodiscard]] static bool registerWithAssetManager( IAssetCache& cache, AssetCacheReloadFunction pReload, Subscription& outRegistration );
+        [[nodiscard]] static bool registerWithAssetManager( AssetCacheBase& cache, AssetCacheReloadFunction pReload, Subscription& outRegistration );
     };
 } // namespace sw
 
@@ -57,12 +57,12 @@ namespace sw
      * @details 읽지 못한 경로도 빈 항목으로 남긴다. 쓰는 쪽마다 같은 오류를 다시 내지 않게 하려는 것이며, 파일을 고치면 `reload` 가 그 항목을 채운다.
      */
     template <typename TableType>
-    class GameDataCache final : public IAssetCache
+    class GameDataCache final : public AssetCacheBase
     {
     public:
         /** @param pKindName 레지스트리의 종류 이름입니다. 정적 문자열이며, 에디터 핫 리로드 경로 표가 이 이름으로 찾습니다. */
         explicit GameDataCache( const utf8* pKindName )
-            : IAssetCache{ CacheTracking::counted( pKindName ) } // 캐시는 모듈 서브시스템이 소유해 엔진을 다시 세우면 다시 만들어진다 — 같은 이름의 칸을 이어 쓴다
+            : AssetCacheBase{ CacheTracking::counted( pKindName ) } // 캐시는 모듈 서브시스템이 소유해 엔진을 다시 세우면 다시 만들어진다 — 같은 이름의 칸을 이어 쓴다
             , _pKindName{ pKindName }
             , _mutex{}
             , _mapTable{}

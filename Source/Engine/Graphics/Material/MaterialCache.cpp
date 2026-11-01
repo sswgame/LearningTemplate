@@ -125,7 +125,7 @@ namespace sw
     } // namespace
 
     MaterialCache::MaterialCache()
-        : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
+        : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ make_unique<Impl>() }
     {
     }
@@ -329,7 +329,7 @@ namespace sw
     /**
      * @brief 캐시를 통째로 비웁니다. **GPU 자원을 돌려주지는 않습니다.**
      * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** 이유는 `TextureCache::clear()` 와 같습니다.
-     *          `IAssetCache::clear()` 는 디바이스를 인자로 받지 않습니다. 캐시가 디바이스를 보관하면 백엔드를 교체할 때
+     *          `AssetCacheBase::clear()` 는 디바이스를 인자로 받지 않습니다. 캐시가 디바이스를 보관하면 백엔드를 교체할 때
      *          죽은 포인터가 되기 때문입니다(이 파일 헤더의 머리말 참고). 캐시도 디바이스를 보관하지 않으므로
      *          여기서 `releaseRHI` 를 부를 방법이 없습니다.
      *

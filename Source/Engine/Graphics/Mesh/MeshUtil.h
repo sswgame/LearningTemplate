@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class IAssetCache;
+    class AssetCacheBase;
     class Mesh;
 
     /**

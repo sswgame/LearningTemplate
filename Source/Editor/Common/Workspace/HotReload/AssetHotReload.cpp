@@ -16,7 +16,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -507,7 +507,7 @@ namespace sw::editor
         }
         else
         {
-            IAssetCache* pCache = pResources->findAssetCache( route._pCacheKindName );
+            AssetCacheBase* pCache = pResources->findAssetCache( route._pCacheKindName );
             if ( pCache == nullptr )
             {
                 SW_LOG_ERROR_ID( "AssetHotReload.HotReloadNoAsset", "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
@@ -534,7 +534,7 @@ namespace sw::editor
     {
         const string_view relativePath = assetID.view();
         uint32            reloadedCount{ 0 };
-        for ( IAssetCache* pCache : resources.getAllAssetCache() )
+        for ( AssetCacheBase* pCache : resources.getAllAssetCache() )
         {
             const AssetCacheReloadFunction pReload = resources.findReloadFunction( pCache );
             if ( pReload == nullptr || pCache->isCached( relativePath ) == false )

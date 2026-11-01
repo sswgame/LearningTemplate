@@ -10,7 +10,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
@@ -19,7 +19,7 @@ namespace sw
     {
         struct CacheStatsUtilInternal
         {
-            /** @brief 보고 한 줄입니다. 계측 칸이 있으면 `_bCounted`, 없으면 레지스트리에만 있는 `IAssetCache` 입니다. */
+            /** @brief 보고 한 줄입니다. 계측 칸이 있으면 `_bCounted`, 없으면 레지스트리에만 있는 `AssetCacheBase` 입니다. */
             struct Row
             {
                 string _name{};
@@ -73,7 +73,7 @@ namespace sw
             row._bCounted        = true;
             if ( row._bItemCountKnown == false && pAssetManager != nullptr )
             {
-                const IAssetCache* pCache = pAssetManager->findAssetCache( row._name );
+                const AssetCacheBase* pCache = pAssetManager->findAssetCache( row._name );
                 if ( pCache != nullptr )
                 {
                     row._itemCount       = static_cast<int64>( pCache->getCachedCount() );
@@ -85,7 +85,7 @@ namespace sw
         // 계측 칸이 없는 캐시도 보인다 — 세지 않는 캐시가 보고에서 조용히 빠지지 않게.
         if ( pAssetManager != nullptr )
         {
-            for ( const IAssetCache* pCache : pAssetManager->getAllAssetCache() )
+            for ( const AssetCacheBase* pCache : pAssetManager->getAllAssetCache() )
             {
                 const utf8* pKindName = pCache->getAssetKindName();
                 if ( pKindName == nullptr || Internal::containsName( listRow, pKindName ) )

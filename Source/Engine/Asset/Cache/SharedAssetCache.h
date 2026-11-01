@@ -32,7 +32,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 
 namespace sw
@@ -58,11 +58,11 @@ namespace sw
 {
     /**
      * @class SharedAssetCache
-     * @brief 에셋 종류 하나의 공유 표를 들고 나눠 주며(`acquire`), 레지스트리에는 `IAssetCache` 로 보입니다. 에셋 매니저가 소유합니다.
+     * @brief 에셋 종류 하나의 공유 표를 들고 나눠 주며(`acquire`), 레지스트리에는 `AssetCacheBase` 로 보입니다. 에셋 매니저가 소유합니다.
      * @tparam AssetType 기본 생성 · 이동 대입이 되는 에셋 타입입니다.
      */
     template <typename AssetType>
-    class SharedAssetCache final : public IAssetCache
+    class SharedAssetCache final : public AssetCacheBase
     {
     public:
         /** @brief 레지스트리의 종류 이름입니다(`AssetManager::getAssetCache<T>()` 가 찾는다). 정의는 `SharedAssetCacheDefinition.h` 입니다(종류의 특수화 값). */

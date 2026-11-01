@@ -107,7 +107,7 @@ namespace sw
 
     template <typename AssetType>
     SharedAssetCache<AssetType>::SharedAssetCache()
-        : IAssetCache{ CacheTracking::counted( SharedAssetCacheTraits<AssetType>::kKindName ) }
+        : AssetCacheBase{ CacheTracking::counted( SharedAssetCacheTraits<AssetType>::kKindName ) }
         , _pTable{ make_unique<SharedAssetTable<AssetType>>() }
     {
     }

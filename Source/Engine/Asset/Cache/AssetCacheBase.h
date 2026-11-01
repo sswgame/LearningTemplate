@@ -1,5 +1,5 @@
 /**
- * @file IAssetCache.h
+ * @file AssetCacheBase.h
  * @brief 경로를 키로 에셋을 들고 있는 캐시의 공통 계약입니다. 에셋 종류를 늘리는 자리입니다.
  *
  * [왜 필요한가]
@@ -28,7 +28,7 @@ namespace sw
 {
     /**
      * @class CacheTracking
-     * @brief 캐시가 계측(`CacheStats`)에 어떻게 서는지의 선언입니다. `IAssetCache` 의 생성자가 이 값을 요구해, 계측을 정하지 않은 캐시는 지을 수 없습니다.
+     * @brief 캐시가 계측(`CacheStats`)에 어떻게 서는지의 선언입니다. `AssetCacheBase` 의 생성자가 이 값을 요구해, 계측을 정하지 않은 캐시는 지을 수 없습니다.
      * @details 캐시마다 "조회 자리에서 적중 · 실패를 센다" 는 약속을 손으로 지키면 새 캐시가 잊습니다(`[CacheStats]` 에 줄이 없는 캐시가 생김).
      *          그래서 둘 중 하나만 쓸 수 있게 한다 — 센다(`counted`, 종류 이름의 칸을 올린다) 또는 세지 않는 사유를 적는다(`uncounted`, 조회가 없는 어댑터).
      *          칸은 종류 이름이 키이고 프로세스 끝까지 살아, 엔진을 다시 세워 캐시를 다시 지어도 같은 칸을 이어 센다.
@@ -36,7 +36,7 @@ namespace sw
     class CacheTracking final
     {
     public:
-        /** @brief 종류 이름 @p kindName 의 칸을 올리거나 이어 받습니다. 캐시는 조회 자리에서 `IAssetCache::getCacheStats` 로 센다. */
+        /** @brief 종류 이름 @p kindName 의 칸을 올리거나 이어 받습니다. 캐시는 조회 자리에서 `AssetCacheBase::getCacheStats` 로 센다. */
         static CacheTracking counted( string_view kindName ) { return CacheTracking{ CacheStats::getOrCreate( kindName ), nullptr }; }
         /** @brief 세지 않습니다. @p pReason 은 왜 세지 않는지 적는 문자열 상수이고, 비어 있으면 안 됩니다(조회가 없는 어댑터가 쓴다). */
         static CacheTracking uncounted( const utf8* pReason )
@@ -65,25 +65,25 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IAssetCache
+     * @class AssetCacheBase
      * @brief 경로 키 에셋 캐시가 공통으로 답해야 하는 것들입니다.
      */
-    class SW_API IAssetCache
+    class SW_API AssetCacheBase
     {
     public:
         /** @brief 계측 선언(`CacheTracking`)을 받아 만듭니다. 선언 없이는 지을 수 없다. 나머지 상태는 구현이 갖습니다. */
-        explicit IAssetCache( const CacheTracking& tracking )
+        explicit AssetCacheBase( const CacheTracking& tracking )
             : _stats{ tracking.getHandle() }
             , _pUncountedReason{ tracking.getUncountedReason() }
         {
         }
         /** @brief 파생 캐시를 포인터로 들고 지울 수 있어야 합니다. */
-        virtual ~IAssetCache() = default;
+        virtual ~AssetCacheBase() = default;
 
         /** @brief 캐시는 복사하지 않습니다. 레지스트리가 포인터로 듭니다. */
-        IAssetCache( const IAssetCache& ) = delete;
+        AssetCacheBase( const AssetCacheBase& ) = delete;
         /** @brief 캐시는 복사 대입하지 않습니다. */
-        IAssetCache& operator=( const IAssetCache& ) = delete;
+        AssetCacheBase& operator=( const AssetCacheBase& ) = delete;
 
         /**
          * @brief 이 캐시가 다루는 에셋 종류의 이름입니다("Material" · "Texture" · "Prefab").
@@ -128,17 +128,17 @@ namespace sw
         const utf8*      _pUncountedReason;
     };
     /**
-     * @brief 캐시 하나의 핫 리로드 함수입니다 — 캐시에 있으면 디스크에서 다시 읽습니다(에디터 · 개발 도구). 런타임 계약(`IAssetCache`)에는 없다.
+     * @brief 캐시 하나의 핫 리로드 함수입니다 — 캐시에 있으면 디스크에서 다시 읽습니다(에디터 · 개발 도구). 런타임 계약(`AssetCacheBase`)에는 없다.
      * @details 캐시를 등록할 때 같이 넘긴다(`SW_BUILT_IN_ASSET_CACHE` · `AssetManager::registerAssetCache`). 배포 빌드는 `nullptr` 이라 리로드 본문이
      *          인스턴스화되지도 링크되지도 않는다(템플릿이 아닌 캐시의 본문은 개발 전용 `<캐시>Reload.cpp` 다). 디바이스는 받지 않는다 — GPU 자원을 가진
      *          캐시(텍스처 · 머티리얼 · 메시)는 엔진이 붙인 디바이스(`bindDevice`, `SceneRHISubsystem` 이 RHI 를 세울 때 붙이고 내릴 때 뗀다)를 쓴다(언리얼 리임포트도
      *          RHI 를 인자로 받지 않는다). 예전에는 부르는 쪽(에디터)이 디바이스를 찾아 캐시 여덟의 인자로 관통시켰다.
      */
-    using AssetCacheReloadFunction = void ( * )( IAssetCache& cache, const AssetID& assetID );
+    using AssetCacheReloadFunction = void ( * )( AssetCacheBase& cache, const AssetID& assetID );
 
     /** @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`). */
     template <typename TCache>
-    void reloadAssetCacheOf( IAssetCache& cache, const AssetID& assetID )
+    void reloadAssetCacheOf( AssetCacheBase& cache, const AssetID& assetID )
     {
         static_cast<TCache&>( cache ).reload( assetID );
     }

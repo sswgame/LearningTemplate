@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 
 namespace sw
@@ -55,7 +55,7 @@ namespace sw
      *
      *          메시를 다시 읽거나 비우면 엔진 범위의 `IMeshDerivedCache` 를 불러, 메시에서 기하를 만든 위 층 캐시(물리 셰이프)도 비우게 합니다.
      */
-    class SW_API MeshCache final : public IAssetCache
+    class SW_API MeshCache final : public AssetCacheBase
     {
     public:
         /** @brief 공유 테이블 · 읽는 중인 로드 · 경고 기록입니다(정의는 MeshCache.cpp). */

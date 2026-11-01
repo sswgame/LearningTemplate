@@ -8,8 +8,8 @@
  */
 #include "pch.h"
 
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -24,12 +24,12 @@ namespace sw
          * @brief 오디오 데이터 파일(`*.audiomixer.xml`, `*.audioevents.xml`)의 어댑터입니다. 그래프와 라이브러리는 `IAudioService` 가 가집니다.
          * @details 에디터의 핫 리로드 경로 표가 이 접미사를 "경로를 든 캐시가 읽는다" 경로로 돌리면 `isCached` 를 아는 이 캐시가 받는다.
          */
-        class AudioReloadCache final : public IAssetCache
+        class AudioReloadCache final : public AssetCacheBase
         {
         public:
             /** @brief 조회가 없는 어댑터라 적중 · 실패를 세지 않습니다(`CacheTracking::uncounted`). */
             AudioReloadCache()
-                : IAssetCache{ CacheTracking::uncounted( "adapter without lookups - the audio service owns the data" ) }
+                : AssetCacheBase{ CacheTracking::uncounted( "adapter without lookups - the audio service owns the data" ) }
             {
             }
 
@@ -63,12 +63,12 @@ namespace sw
          * @class LocalizationReloadCache
          * @brief 로컬라이제이션 파일(원문 테이블, 번역 테이블, 프로젝트)의 어댑터입니다. 테이블은 엔진 서비스 `LocalizationManager` 가 가집니다.
          */
-        class LocalizationReloadCache final : public IAssetCache
+        class LocalizationReloadCache final : public AssetCacheBase
         {
         public:
             /** @brief 조회가 없는 어댑터라 적중 · 실패를 세지 않습니다(`CacheTracking::uncounted`). */
             LocalizationReloadCache()
-                : IAssetCache{ CacheTracking::uncounted( "adapter without lookups - LocalizationManager owns the tables" ) }
+                : AssetCacheBase{ CacheTracking::uncounted( "adapter without lookups - LocalizationManager owns the tables" ) }
             {
             }
 

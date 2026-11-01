@@ -26,7 +26,7 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/ContentSource.h"
 
 namespace sw
@@ -118,16 +118,16 @@ namespace sw
          * @param pCache  구독보다 오래 사는 캐시.
          * @param pReload 핫 리로드 함수(`SW_ASSET_CACHE_RELOAD_FUNCTION( 캐시 형식 )`). 다시 읽을 파일이 없으면 nullptr.
          */
-        [[nodiscard]] Subscription registerAssetCache( IAssetCache* pCache, AssetCacheReloadFunction pReload );
+        [[nodiscard]] Subscription registerAssetCache( AssetCacheBase* pCache, AssetCacheReloadFunction pReload );
         /** @brief 등록된 캐시 목록을 반환합니다. 소유하지 않습니다. */
-        vector<IAssetCache*> getAllAssetCache() const;
+        vector<AssetCacheBase*> getAllAssetCache() const;
         /** @brief @p pCache 를 등록할 때 넘긴 리로드 함수입니다. 없으면(배포 · 다시 읽을 파일이 없는 캐시 · 등록하지 않은 캐시) nullptr 입니다. */
-        AssetCacheReloadFunction findReloadFunction( const IAssetCache* pCache ) const;
+        AssetCacheReloadFunction findReloadFunction( const AssetCacheBase* pCache ) const;
         /**
          * @brief 종류 이름으로 캐시를 찾습니다("Material", "Texture", "Prefab"). 없으면 nullptr 입니다.
          * @details 이름으로 도는 코드(진단, 도구)가 캐시 종류를 다시 나열하지 않게 하는 함수다.
          */
-        IAssetCache* findAssetCache( string_view assetKindName ) const;
+        AssetCacheBase* findAssetCache( string_view assetKindName ) const;
         /**
          * @brief 내장 캐시를 타입으로 받습니다(`getAssetCache<MaterialCache>()`). 타입은 `kAssetKindName` 을 제공하고, 부르는 쪽이 그 헤더를 include 합니다.
          * @details 언리얼의 `GetSubsystem<T>()` 에 해당한다. `Resource` 가 기능 캐시 타입을 모르므로 타입을 아는 쪽이 고른다. 내장 캐시는
@@ -144,7 +144,7 @@ namespace sw
             return static_cast<const TCache&>( getBuiltInAssetCache( TCache::kAssetKindName ) );
         }
         /**
-         * @brief 경로의 종류를 다루는 캐시에 로드를 걸고 그 에셋을 붙드는 토큰을 받습니다(`IAssetCache::pinAsset`). 고정하는 캐시가 없는 종류면 nullptr 입니다.
+         * @brief 경로의 종류를 다루는 캐시에 로드를 걸고 그 에셋을 붙드는 토큰을 받습니다(`AssetCacheBase::pinAsset`). 고정하는 캐시가 없는 종류면 nullptr 입니다.
          * @details 프리로드 세트의 고정(`AssetPinSet`)이 쓴다. 토큰은 이 매니저보다 먼저 놓는다.
          */
         shared_ptr<const void> pinAsset( string_view relativePath );
@@ -188,31 +188,31 @@ namespace sw
 
     private:
         /** @brief 내장 캐시(`_listBuiltInAssetCache`)인지 확인합니다. 종료 경고와 모듈 코드 순회에서 제외합니다. */
-        bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
+        bool isBuiltInAssetCache( const AssetCacheBase* pCache ) const;
         /** @brief 캐시를 목록에 올립니다(이름은 지금 복사). 올렸으면 true 입니다. 내장 캐시는 구독 없이 이것으로 올린다 — 매니저와 수명이 같다. 모듈 캐시는 `registerAssetCache` 가 구독으로 올린다. */
-        bool addAssetCache( IAssetCache* pCache );
+        bool addAssetCache( AssetCacheBase* pCache );
         /** @brief 캐시 등록 구독이 풀렸습니다. 목록과 리로드 함수 표에서 뺍니다. */
-        void releaseAssetCache( IAssetCache* pCache );
+        void releaseAssetCache( AssetCacheBase* pCache );
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
-        IAssetCache& getBuiltInAssetCache( string_view assetKindName ) const;
+        AssetCacheBase& getBuiltInAssetCache( string_view assetKindName ) const;
 
-        AssetDatabase                   _assetDatabase;
-        mutable mutex                   _loadStageMutex;
-        TaskStageHandle _loadStage      SW_GUARDED_BY( _loadStageMutex ); ///< 워커 로드 태스크의 단계(처음 낼 때 만들고 다시 쓴다 — `addLoadTask`)
-        vector<unique_ptr<IAssetCache>> _listOwnedAssetCache;             ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
-        unique_ptr<PackManager>         _pPackManager;
-        vector<IAssetCache*>            _listBuiltInAssetCache; ///< 내장 캐시 전부다(`_listOwnedAssetCache` 의 것)를 종류 이름 순으로 올린다
+        AssetDatabase                      _assetDatabase;
+        mutable mutex                      _loadStageMutex;
+        TaskStageHandle _loadStage         SW_GUARDED_BY( _loadStageMutex ); ///< 워커 로드 태스크의 단계(처음 낼 때 만들고 다시 쓴다 — `addLoadTask`)
+        vector<unique_ptr<AssetCacheBase>> _listOwnedAssetCache;             ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
+        unique_ptr<PackManager>            _pPackManager;
+        vector<AssetCacheBase*>            _listBuiltInAssetCache; ///< 내장 캐시 전부다(`_listOwnedAssetCache` 의 것)를 종류 이름 순으로 올린다
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 등록한 것은 그 모듈이 소유합니다).
          * @details 종류 이름(`getAssetKindName`)은 **등록할 때** 복사한다. 모듈이 자기 캐시를 제거하지 않고 사라지면 그 포인터의 가상 함수 테이블도
          *          같이 사라지므로, 진단에서 이름을 다시 물으면 그 진단이 죽는다. 사본이 있으면 무엇을 두고 갔는지 안전하게 말할 수 있다.
          *          같은 종류 이름의 둘째 캐시는 거절한다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않는다).
          */
-        RegistrationList<IAssetCache> _registeredAssetCache;
+        RegistrationList<AssetCacheBase> _registeredAssetCache;
         /** @struct ReloadEntry @brief 캐시 하나의 리로드 함수입니다(`registerAssetCache` · 내장 등록 줄). */
         struct ReloadEntry
         {
-            const IAssetCache*       _pCache;
+            const AssetCacheBase*    _pCache;
             AssetCacheReloadFunction _pReload;
         };
         vector<ReloadEntry> _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)

@@ -1062,7 +1062,7 @@ namespace sw
     }
 
     PrefabCache::PrefabCache()
-        : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
+        : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _mapCacheMutex{}
         , _mapCache{}
         , _mapLoading{}

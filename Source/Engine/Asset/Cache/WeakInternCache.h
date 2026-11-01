@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetID.h"
 
@@ -19,13 +19,13 @@ namespace sw
 {
     /**
      * @class WeakInternCache
-     * @brief `WeakInternTable` 하나를 들고 `IAssetCache` 로 보이는 캐시입니다. 종류마다 `kAssetKindName` 을 둔 파생 타입으로 씁니다.
+     * @brief `WeakInternTable` 하나를 들고 `AssetCacheBase` 로 보이는 캐시입니다. 종류마다 `kAssetKindName` 을 둔 파생 타입으로 씁니다.
      * @tparam KeyType   값을 정하는 키입니다.
      * @tparam ValueType 나눠 줄 값의 타입입니다.
      * @tparam KeyHash   키 해시 함수 객체입니다.
      */
     template <typename KeyType, typename ValueType, typename KeyHash = std::hash<KeyType>>
-    class WeakInternCache : public IAssetCache
+    class WeakInternCache : public AssetCacheBase
     {
     public:
         /** @brief 값을 짓는 함수입니다. 지을 수 없으면 nullptr 을 돌려줍니다. */
@@ -33,7 +33,7 @@ namespace sw
 
         /** @param pKindName 레지스트리의 종류 이름입니다(정적 문자열). */
         explicit WeakInternCache( const utf8* pKindName )
-            : IAssetCache{ CacheTracking::counted( pKindName ) } // 캐시는 에셋 매니저마다 하나라 엔진을 다시 세우면 다시 만들어진다 — 같은 칸을 이어 쓴다
+            : AssetCacheBase{ CacheTracking::counted( pKindName ) } // 캐시는 에셋 매니저마다 하나라 엔진을 다시 세우면 다시 만들어진다 — 같은 칸을 이어 쓴다
             , _pKindName{ pKindName }
             , _table{}
         {

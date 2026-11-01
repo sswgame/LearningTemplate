@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 
 namespace sw
@@ -48,7 +48,7 @@ namespace sw
      *       게임 스레드 API(`acquire` · `reload`)는 디바이스를 받지 않는다 — 리로드는 엔진이 붙인 디바이스(`bindDevice`)를 쓰고, 백엔드를 바꾸면
      *       `SceneRHISubsystem` 이 떼고 다시 붙인다(언리얼 `UMaterial` 게임 스레드 API 에 RHI 인자가 없다). 초기화는 `initializePending` 한 길이다.
      */
-    class SW_API MaterialCache final : public IAssetCache
+    class SW_API MaterialCache final : public AssetCacheBase
     {
     public:
         /** @brief 빈 캐시로 만듭니다. */

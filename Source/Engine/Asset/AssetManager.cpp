@@ -13,8 +13,8 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetStreamingQueue.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
@@ -31,13 +31,13 @@ namespace sw
     namespace
     {
         /** @brief 내장 캐시 정렬 — 종류 이름 순(비우기 순서를 링크 순서와 떼어 고정한다). */
-        bool isKindNameLess( const IAssetCache* pLeft, const IAssetCache* pRight )
+        bool isKindNameLess( const AssetCacheBase* pLeft, const AssetCacheBase* pRight )
         {
             return string_view{ pLeft->getAssetKindName() } < string_view{ pRight->getAssetKindName() };
         }
 
         /** @brief 캐시를 올릴 때 복사할 종류 이름입니다(`RegistrationList` 가 지금 복사한다 — 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다). nullptr 이면 빈 글입니다. */
-        string_view findKindName( const IAssetCache* pCache )
+        string_view findKindName( const AssetCacheBase* pCache )
         {
             const utf8* const pKindName = pCache != nullptr ? pCache->getAssetKindName() : nullptr;
             return pKindName != nullptr ? string_view{ pKindName } : string_view{};
@@ -95,7 +95,7 @@ namespace sw
         , _listOwnedAssetCache{}
         , _pPackManager{ make_unique<PackManager>() }
         , _listBuiltInAssetCache{}
-        , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<IAssetCache>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
+        , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<AssetCacheBase>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
         , _listReloadEntry{}
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 모두 여기서 만들어 소유한다(정적 창구는 `getAssetCache<T>()` 로 찾는다).
@@ -108,7 +108,7 @@ namespace sw
                 _listReloadEntry.push_back( ReloadEntry{ _listBuiltInAssetCache.back(), pRegistration->_pReload } );
         }
         VectorUtil::sort( _listBuiltInAssetCache, isKindNameLess );
-        for ( IAssetCache* pCache : _listBuiltInAssetCache )
+        for ( AssetCacheBase* pCache : _listBuiltInAssetCache )
         {
             (void)addAssetCache( pCache ); // 거절은 목록이 로그로 남겼다
         }
@@ -220,7 +220,7 @@ namespace sw
         // 여기서는 아직 할 일이 없다. 있게 되면 레지스트리를 훑는다.
     }
 
-    Subscription AssetManager::registerAssetCache( IAssetCache* pCache, AssetCacheReloadFunction pReload )
+    Subscription AssetManager::registerAssetCache( AssetCacheBase* pCache, AssetCacheReloadFunction pReload )
     {
         // nullptr · 같은 종류 이름은 목록이 거절하고 로그로 남긴다(빈 구독).
         Subscription subscription = _registeredAssetCache.addSubscribed( pCache, "Asset cache kind", findKindName( pCache ) );
@@ -229,7 +229,7 @@ namespace sw
         return subscription;
     }
 
-    AssetCacheReloadFunction AssetManager::findReloadFunction( const IAssetCache* pCache ) const
+    AssetCacheReloadFunction AssetManager::findReloadFunction( const AssetCacheBase* pCache ) const
     {
         for ( const ReloadEntry& entry : _listReloadEntry )
         {
@@ -239,16 +239,16 @@ namespace sw
         return nullptr;
     }
 
-    bool AssetManager::addAssetCache( IAssetCache* pCache )
+    bool AssetManager::addAssetCache( AssetCacheBase* pCache )
     {
         if ( pCache == nullptr )
             return false;
         return _registeredAssetCache.addLogged( pCache, "Asset cache kind", findKindName( pCache ) ) == RegistrationResult::Added;
     }
 
-    bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
+    bool AssetManager::isBuiltInAssetCache( const AssetCacheBase* pCache ) const
     {
-        for ( const IAssetCache* pBuiltIn : _listBuiltInAssetCache )
+        for ( const AssetCacheBase* pBuiltIn : _listBuiltInAssetCache )
         {
             if ( pBuiltIn == pCache )
                 return pCache != nullptr;
@@ -256,7 +256,7 @@ namespace sw
         return false;
     }
 
-    void AssetManager::releaseAssetCache( IAssetCache* pCache )
+    void AssetManager::releaseAssetCache( AssetCacheBase* pCache )
     {
         (void)_registeredAssetCache.remove( pCache ); // 구독 하나가 등록 하나라 늘 있다(주소로만 찾는다 — 역참조하지 않는다)
         _listReloadEntry.erase( std::remove_if( _listReloadEntry.begin(), _listReloadEntry.end(), [pCache]( const ReloadEntry& entry )
@@ -264,12 +264,12 @@ namespace sw
                                 _listReloadEntry.end() );
     }
 
-    vector<IAssetCache*> AssetManager::getAllAssetCache() const
+    vector<AssetCacheBase*> AssetManager::getAllAssetCache() const
     {
         return _registeredAssetCache.getItems();
     }
 
-    IAssetCache* AssetManager::findAssetCache( string_view assetKindName ) const
+    AssetCacheBase* AssetManager::findAssetCache( string_view assetKindName ) const
     {
         // 이름은 등록 시점 사본으로 맞춘다. 죽은 모듈의 가상 함수를 부르지 않는다.
         return _registeredAssetCache.findByName( assetKindName );
@@ -278,7 +278,7 @@ namespace sw
     shared_ptr<const void> AssetManager::pinAsset( string_view relativePath )
     {
         // 종류는 접미사로 갈리므로 한 캐시만 답한다 — 첫 답을 받는다.
-        for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
+        for ( AssetCacheBase* pCache : _registeredAssetCache.getItems() )
         {
             shared_ptr<const void> pin = pCache->pinAsset( relativePath );
             if ( pin != nullptr )
@@ -289,7 +289,7 @@ namespace sw
 
     void AssetManager::clearAssetCaches()
     {
-        for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
+        for ( AssetCacheBase* pCache : _registeredAssetCache.getItems() )
         {
             pCache->clear();
         }
@@ -309,9 +309,9 @@ namespace sw
         }
     }
 
-    IAssetCache& AssetManager::getBuiltInAssetCache( string_view assetKindName ) const
+    AssetCacheBase& AssetManager::getBuiltInAssetCache( string_view assetKindName ) const
     {
-        IAssetCache* pCache = _registeredAssetCache.findByName( assetKindName );
+        AssetCacheBase* pCache = _registeredAssetCache.findByName( assetKindName );
         if ( pCache == nullptr || isBuiltInAssetCache( pCache ) == false )
             SW_LOG_ERROR_ID( "AssetManager.BuiltAssetCacheNot", "Built-in asset cache '%#' is not registered - its .cpp needs SW_BUILT_IN_ASSET_CACHE", assetKindName );
         if ( pCache == nullptr )

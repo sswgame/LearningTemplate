@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -58,8 +58,8 @@ SW_TEST_CASE_F( LocalizationReloadCacheTest, HotReloadGoesThroughTheAssetCacheRe
     SW_REQUIRE_TRUE( _loc.setCurrentLanguage( "ko" ) );
     SW_EXPECT_EQUAL( sw::string( "신비의 섬" ), lookup( _loc, "ui.title" ) );
 
-    sw::AssetManager& assets = sw::engine::getSubsystem<sw::AssetManager>();
-    sw::IAssetCache*  pCache = assets.findAssetCache( "StringTable" );
+    sw::AssetManager&   assets = sw::engine::getSubsystem<sw::AssetManager>();
+    sw::AssetCacheBase* pCache = assets.findAssetCache( "StringTable" );
     SW_REQUIRE_NOT_NULL( pCache );
     const sw::AssetCacheReloadFunction pfnReload = assets.findReloadFunction( pCache );
     SW_REQUIRE_TRUE( pfnReload != nullptr );

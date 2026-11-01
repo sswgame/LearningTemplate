@@ -10,7 +10,7 @@
 namespace sw
 {
     UITextAssetCache::UITextAssetCache( const utf8* pAssetKindName, const utf8* pAssetLabel, UITextAssetParseFunction pParse )
-        : IAssetCache{ CacheTracking::counted( pAssetKindName ) } // 캐시는 엔진 범위마다 있어(엔진을 다시 세우면 새 캐시) 같은 이름의 칸을 이어 쓴다
+        : AssetCacheBase{ CacheTracking::counted( pAssetKindName ) } // 캐시는 엔진 범위마다 있어(엔진을 다시 세우면 새 캐시) 같은 이름의 칸을 이어 쓴다
         , _mapPathToAsset{}
         , _mapPathToMemoryText{}
         , _onReloaded{}

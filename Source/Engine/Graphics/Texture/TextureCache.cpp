@@ -324,7 +324,7 @@ namespace sw
     SW_GLOBAL_VARIABLE( bool, gv_textureStreaming, true, "Upload async-loaded textures with their low mips first and stream the top mips in later (false = upload every mip at once)" );
 
     TextureCache::TextureCache()
-        : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
+        : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ sw::make_shared<Impl>() }
         , _renderTargetDeclarationSink{ *this }
     {
@@ -918,7 +918,7 @@ namespace sw
 
     /**
      * @brief 표를 통째로 비웁니다. **GPU 자원을 돌려주지는 않습니다.**
-     * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** `IAssetCache::clear()` 는 디바이스를
+     * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** `AssetCacheBase::clear()` 는 디바이스를
      *          인자로 받지 않고(그 이유는 `MaterialCache.h` 머리말에 있습니다. 캐시가 디바이스를
      *          들고 있으면 백엔드 교체 때 죽은 포인터가 됩니다), 캐시도 들고 있지 않으므로 여기서
      *          `releaseRHI` 를 부를 방법이 없습니다. 살아 있는 디바이스에서 부르면 텍스처 핸들과

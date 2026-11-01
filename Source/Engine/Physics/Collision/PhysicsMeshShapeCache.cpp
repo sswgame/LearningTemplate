@@ -17,7 +17,7 @@ namespace sw
     {
         struct PhysicsMeshShapeCacheInternal
         {
-            /** @brief 물리 셰이프 캐시의 계측 칸 이름입니다(`CacheStats`). `IAssetCache` 가 아니라 레지스트리에 종류 이름이 없어 이 이름으로 올린다. */
+            /** @brief 물리 셰이프 캐시의 계측 칸 이름입니다(`CacheStats`). `AssetCacheBase` 가 아니라 레지스트리에 종류 이름이 없어 이 이름으로 올린다. */
             static constexpr const utf8* kStatsName = "PhysicsMeshShape";
 
             /** @brief 셰이프 캐시 키(메시 리소스 id 의 글)를 읽기 함수에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */

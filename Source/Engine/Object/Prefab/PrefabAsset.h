@@ -15,7 +15,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 
@@ -217,7 +217,7 @@ namespace sw
      * @brief 프리팹을 로드하고 스폰하는 캐시입니다.
      * @details 캐시는 프리팹을 `shared_ptr` 로 나눠 준다. 원시 포인터를 내주면 다시 읽기(`reload`)가 항목을 버리는 순간 쥔 쪽이 해제된 메모리를 본다.
      */
-    class SW_API PrefabCache final : public IAssetCache
+    class SW_API PrefabCache final : public AssetCacheBase
     {
     public:
         /** @brief 빈 프리팹 캐시로 만듭니다. */

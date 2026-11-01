@@ -31,7 +31,7 @@ namespace sw::editor
 
     /**
      * @class AssetHotReload
-     * @brief `Content/` 하위 변경을 폴링해, 그 파일을 가진 엔진 캐시(`IAssetCache`)가 다시 읽게 합니다.
+     * @brief `Content/` 하위 변경을 폴링해, 그 파일을 가진 엔진 캐시(`AssetCacheBase`)가 다시 읽게 합니다.
      * @details 종류별 코드가 없다. 어느 캐시가 읽을지, 먼저 쿠킹할지는 `EditorAssetTypeRegistry::findReloadRoute` 의 테이블이 정한다.
      *          엔진 캐시는 자기 런타임 파일을 그 즉시 다시 읽을 뿐이고(로드), 소스 임포트, 감시, 씬 알림은 여기(에디터)에 있다.
      *          새 에셋 종류를 추가해도 이 파일은 고치지 않는다.
@@ -131,7 +131,7 @@ namespace sw::editor
         void requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport );
 
         /**
-         * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`IAssetCache::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.
+         * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`AssetCacheBase::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.
          * @return 다시 읽게 한 캐시 수입니다.
          */
         static uint32 reloadInCachesHolding( AssetManager& resources, const AssetID& assetID );

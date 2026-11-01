@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -39,7 +39,7 @@ namespace sw
      * @note 렌더 타깃 크기를 받는 인터페이스(`IRenderTargetDeclarationSink`)는 상속하지 않는다. 캐시가 가진 어댑터 멤버가 구현해 이 캐시로 넘기고,
      *       `getRenderTargetDeclarationSink` 가 그 멤버를 준다(언리얼 `IModularFeatures` 도 기능 구현을 따로 된 객체로 건다).
      */
-    class SW_API TextureCache final : public IAssetCache
+    class SW_API TextureCache final : public AssetCacheBase
     {
     public:
         /** @brief 빈 캐시로 만듭니다. */

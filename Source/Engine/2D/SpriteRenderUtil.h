@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    class IAssetCache;
+    class AssetCacheBase;
     class Material;
     class MaterialInstance;
 

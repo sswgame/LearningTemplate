@@ -133,7 +133,7 @@ namespace sw
 namespace sw
 {
     MeshCache::MeshCache()
-        : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
+        : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _pState{ make_unique<State>() }
     {
     }

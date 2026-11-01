@@ -18,12 +18,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/Asset/Cache/AssetCacheBase.h"
 
 namespace sw
 {
     /** @brief 캐시를 하나 만듭니다. */
-    using CreateAssetCacheFunction = unique_ptr<IAssetCache> ( * )();
+    using CreateAssetCacheFunction = unique_ptr<AssetCacheBase> ( * )();
 
     /** @struct BuiltInAssetCacheRegistration @brief 등록 줄 하나입니다. 등록한 .cpp 의 정적 저장소에 있습니다. */
     struct BuiltInAssetCacheRegistration
@@ -62,7 +62,7 @@ namespace sw
 
     /** @brief 캐시를 만드는 함수입니다. 캐시 타입이 완전한 자리(그 캐시의 .cpp)에서 실체화합니다. */
     template <typename TCache>
-    unique_ptr<IAssetCache> createBuiltInAssetCache()
+    unique_ptr<AssetCacheBase> createBuiltInAssetCache()
     {
         // 기반 포인터로 지우므로 정렬 할당을 쓰는 타입이면 해제가 어긋난다.
         static_assert( kUsesAlignedAllocation<TCache> == false, "built-in asset cache must not be over-aligned" );
