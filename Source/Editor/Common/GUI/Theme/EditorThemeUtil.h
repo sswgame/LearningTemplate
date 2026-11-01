@@ -157,10 +157,12 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
+/** @brief 호출 자리마다 키 리터럴을 한 번만 intern 해 두는 식입니다(`SW_THEMECOLOR` · `SW_THEMEMETRIC` 가 쓴다). */
+#define SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) []() -> const ::sw::hashed_string& { static const ::sw::hashed_string s_key{ NamespaceLiteral "." KeyLiteral }; return s_key; }()
 /**
  * @brief 테마 색 토큰 `Namespace.Key` 입니다(`Content/editor/theme/*.tokens.json` 의 `_color`). 두 인자 모두 문자열 리터럴이어야 한다 — 단위 테스트가 소스에서 키를 모아 모든 벌에 있는지 본다.
- * @details `SW_LOCKEY` 와 같은 모양이다. 키는 호출 자리마다 한 번 intern 해 둔다.
+ * @details `SW_LOCKEY` 와 같은 모양이다.
  */
-#define SW_THEMECOLOR( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findColor( []() -> const ::sw::hashed_string& {                                                                                    static const ::sw::hashed_string s_key{ NamespaceLiteral "." KeyLiteral };                                                                                     return s_key; }() )
+#define SW_THEMECOLOR( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findColor( SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) )
 /** @brief 테마 수치 토큰 `Namespace.Key` 입니다(`_metric`, 96 DPI 픽셀 · 비율). 규칙은 `SW_THEMECOLOR` 와 같다. */
-#define SW_THEMEMETRIC( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findMetric( []() -> const ::sw::hashed_string& {                                                                                   static const ::sw::hashed_string s_key{ NamespaceLiteral "." KeyLiteral };                                                                                     return s_key; }() )
+#define SW_THEMEMETRIC( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findMetric( SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) )
