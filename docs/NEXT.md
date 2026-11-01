@@ -21,6 +21,8 @@
 1. 코드 전체를 다시 훑어 SOLID · 프로젝트 구성(층 · 책임 · 의존 방향 · 폴더)을 전면적으로 고친다 — StructureRefactor 7 · 8 절의 "남김" · "다음" 줄 포함(아래 1 절).
 2. 확인한 상태(Debug 빌드 · 단위 · ctest, Release 빌드 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
+4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). 경로(`pbr_lit` · glTF PBR 임포트 · 월드 타일링)와 Shooter3D 경기장 · 메시 벤치(`-gv_stressTestScanProps`)는 했다.
+   남은 것: 캐릭터(KayKit 기사 · 해골 — 리그 · 클립 · 망토 사슬 · 소켓이 이 뼈대에 묶였다. 후보는 CC0 사람형 베이스 + 클립 리타깃), 무기(Kenney 블래스터), 다른 게임 맵(Empty 쇼케이스 · ThemePark · HarvestValley …)의 바닥 · 벽 · 소품.
 
 ### 1. 진행 중 (2026-11-01)
 
