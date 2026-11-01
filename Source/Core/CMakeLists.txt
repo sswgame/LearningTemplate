@@ -45,7 +45,8 @@ foreach(source IN LISTS listCoreSource)
 	if(NOT DEFINED swCoreTier_${sourceFolder})
 		message(FATAL_ERROR "[Core] Core/${sourceFolder}/ 는 티어 표(Scripts/generate/rules/CoreLayers.toml 의 [tier])에 없는 폴더다 — 티어를 정해 넣는다")
 	endif()
-	if(swCoreTier_${sourceFolder} LESS swCoreTier_Log)
+	# 낮은 티어 폴더의 테스트(`<폴더>/Tests/`)는 테스트 틀(Testing, 맨 위 티어)을 쓰므로 높은 쪽으로 짓는다 — 낮은 부분의 `#error` 껍데기(아래 4)가 막는다.
+	if(swCoreTier_${sourceFolder} LESS swCoreTier_Log AND NOT relativeSource MATCHES "/Tests/")
 		list(APPEND listCoreLowSource "${source}")
 	else()
 		list(APPEND listCoreHighSource "${source}")
@@ -100,6 +101,49 @@ if(SW_ENFORCE_LEAF_LOCK_LOG)
 endif()
 
 sw_addCoreObjects(Core_low_objects corelow pchLow.h ${listCoreLowSource})
+# 4) 낮은 부분은 높은 티어(Log 와 그 위) 헤더마다 같은 경로의 `#error` 껍데기를 include 자리 맨 앞에 둔다 — 낮은 티어 .cpp 가 높은 티어 헤더를
+#    include 하면(전이 include 도) 컴파일이 멈춘다(Engine 층 부분 `sw_addEngineLayerStubs` 와 같은 방식). 낮은 티어 헤더를 높은 쪽 TU 가 포함하는 것은 정상이다.
+#    높은 티어 사이(Log · String · File …)의 역류는 아직 이 게이트가 보지 않는다 — 티어마다 부분을 지으면 pch 가 티어 수만큼 늘어난다.
+set(swCoreLowStubRoot "${CMAKE_BINARY_DIR}/generated/sw/CoreLayerStubs/low")
+set(swCoreLowStubContent "#error \"Core high-tier header (tier >= Log) cannot be included from low-tier Core code (Scripts/generate/rules/CoreLayers.toml). Move what you need down, or report through SW_LOW_LEVEL_REPORT.\"
+")
+file(GLOB_RECURSE listCoreHeader RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+set(listCoreLowStub "")
+foreach(header IN LISTS listCoreHeader)
+	string(FIND "${header}" "/" slashPosition)
+	if(slashPosition EQUAL -1)
+		continue() # Source/Core 바로 아래(pch 진입 헤더)
+	endif()
+	string(SUBSTRING "${header}" 0 ${slashPosition} headerFolder)
+	if(swCoreTier_${headerFolder} LESS swCoreTier_Log)
+		continue()
+	endif()
+	set(stubPath "${swCoreLowStubRoot}/Core/${header}")
+	set(oldStub "")
+	if(EXISTS "${stubPath}")
+		file(READ "${stubPath}" oldStub)
+	endif()
+	if(NOT oldStub STREQUAL swCoreLowStubContent)
+		file(WRITE "${stubPath}" "${swCoreLowStubContent}")
+	endif()
+	list(APPEND listCoreLowStub "${stubPath}")
+endforeach()
+# 헤더가 사라지면 그 껍데기도 지운다(남으면 옮겨 온 낮은 티어 헤더를 가린다).
+set(swCoreLowStubManifest "${swCoreLowStubRoot}.manifest")
+if(EXISTS "${swCoreLowStubManifest}")
+	file(STRINGS "${swCoreLowStubManifest}" listOldStub)
+	if(listCoreLowStub)
+		list(REMOVE_ITEM listOldStub ${listCoreLowStub})
+	endif()
+	foreach(oldStubPath IN LISTS listOldStub)
+		file(REMOVE "${oldStubPath}")
+	endforeach()
+endif()
+string(REPLACE ";" "
+" swCoreLowStubList "${listCoreLowStub}")
+file(WRITE "${swCoreLowStubManifest}" "${swCoreLowStubList}
+")
+target_include_directories(Core_low_objects BEFORE PRIVATE "${swCoreLowStubRoot}")
 # 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`).
 # 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다). Math 는 낮은 티어라 낮은 쪽에 건다.
 # 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이 libm 대신 부르는 줄 밖 함수라 같은 표시를 건다.
