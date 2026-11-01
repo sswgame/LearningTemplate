@@ -12,20 +12,10 @@ namespace sw::editor
 {
     bool EditorIconGlyphTable::parseCodepoint( string_view text, uint16& outCodepoint )
     {
-        constexpr string_view kPrefix = "U+";
-        if ( StringUtil::startsWith( text, kPrefix ) == false || text.size() != kPrefix.size() + 4 )
-            return false;
-        uint32 value{ 0 };
-        for ( const utf8 ch : text.substr( kPrefix.size() ) )
-        {
-            const bool bDigit = ch >= '0' && ch <= '9';
-            const bool bUpper = ch >= 'A' && ch <= 'F';
-            if ( bDigit == false && bUpper == false )
-                return false;
-            value = value * 16 + static_cast<uint32>( bDigit ? ch - '0' : ch - 'A' + 10 );
-        }
-        if ( value == 0 )
-            return false; // ImGui 범위 표는 0 으로 끝난다
+        constexpr uint32 kMaxBasicPlaneCodepoint = 0xFFFFu; // ImGui 글리프 범위가 16 비트다
+        uint32           value{ 0 };
+        if ( StringUtil::tryParseCodepointNotation( text, value ) == false || value == 0 || value > kMaxBasicPlaneCodepoint )
+            return false; // 0 은 ImGui 범위 표의 끝 표시다
         outCodepoint = static_cast<uint16>( value );
         return true;
     }

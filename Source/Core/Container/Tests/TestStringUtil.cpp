@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
-
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -13,6 +12,19 @@ SW_TEST_CASE( StringUtilTest, MatchesWildcardStarAndQuestionMark )
     SW_EXPECT_TRUE( StringUtil::matchesWildcard( "a?c", "abc" ) );
     SW_EXPECT_FALSE( StringUtil::matchesWildcard( "a?c", "ac" ) );
     SW_EXPECT_FALSE( StringUtil::matchesWildcard( "Core*", "EngineTest" ) );
+}
+
+/** @brief [StringUtilTest] 유니코드 표기 `U+XXXX` 는 대문자 16진 4 ~ 6 자리만 받고, 범위 밖 · 서로게이트는 거절하며 실패하면 값을 그대로 둔다 */
+SW_TEST_CASE( StringUtilTest, CodepointNotationParsesUPlusHex )
+{
+    uint32 codepoint = 7;
+    SW_EXPECT_TRUE( StringUtil::tryParseCodepointNotation( "U+E003", codepoint ) && codepoint == 0xE003u );
+    SW_EXPECT_TRUE( StringUtil::tryParseCodepointNotation( "U+1F600", codepoint ) && codepoint == 0x1F600u );
+    SW_EXPECT_TRUE( StringUtil::tryParseCodepointNotation( "U+10FFFF", codepoint ) && codepoint == 0x10FFFFu );
+    codepoint = 7;
+    for ( const utf8* pBad : { "E003", "U+e003", "U+12", "U+1234567", "U+110000", "U+D800", "u+E003", "U+E00G", "" } )
+        SW_EXPECT_FALSE_MSG( StringUtil::tryParseCodepointNotation( pBad, codepoint ), pBad );
+    SW_EXPECT_EQUAL( uint32( 7 ), codepoint );
 }
 
 SW_TEST_CASE( StringUtilTest, StartsWithHonoursIgnoreCase )

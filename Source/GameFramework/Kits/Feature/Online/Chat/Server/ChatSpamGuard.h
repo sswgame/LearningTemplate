@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatTextNormalizer.h"
 #include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 
@@ -44,15 +45,13 @@ namespace sw
     public:
         ChatSpamGuard();
 
-        void initialize( const ChatSpamConfig& settings );
+        /** @brief 설정과 정규화(반복 해시가 쓴다, 금칙어 거르개와 같은 것)를 받습니다. 정규화는 복사해 둔다. */
+        void initialize( const ChatSpamConfig& settings, const ChatTextNormalizer& normalizer );
 
         /** @brief 말하기 하나를 판정합니다. 허락하면 버킷에서 토큰을 꺼내고 반복 기록에 넣습니다. 거절하면 @p outRetryAfterMs 가 기다릴 시간입니다. */
         ChatSpamVerdict check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs );
         /** @brief 계정이 떠났을 때 반복 기록을 지웁니다. 버킷은 상한에서 저절로 정리됩니다. */
         void forget( AccountID accountID ) { _mapAccountToHistory.erase( accountID ); }
-
-        /** @brief 정규화한 글의 64비트 해시입니다. 대소문자, 전각, 끼움 글자를 정규화합니다. */
-        static uint64 computeTextHash( string_view text );
 
     private:
         static constexpr uint32 kHistorySize = 4;
@@ -70,5 +69,6 @@ namespace sw
         TokenBucketMap                    _bucketMap;
         unordered_map<AccountID, History> _mapAccountToHistory;
         ChatSpamConfig                    _settings;
+        ChatTextNormalizer                _normalizer;
     };
 } // namespace sw

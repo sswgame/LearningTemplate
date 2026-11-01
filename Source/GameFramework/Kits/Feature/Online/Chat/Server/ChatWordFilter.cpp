@@ -45,30 +45,6 @@ namespace sw
         _listNode.emplace_back(); // 루트이다. 낱말이 없어도 `apply` 가 0번 노드를 본다
     }
 
-    uint32 ChatWordFilter::normalizeCodepoint( uint32 codepoint )
-    {
-        if ( 0xFF01u <= codepoint && codepoint <= 0xFF5Eu )
-            codepoint -= 0xFEE0u; // 전각 ASCII 를 반각으로 바꾼다
-        if ( 'A' <= codepoint && codepoint <= 'Z' )
-            return codepoint - 'A' + 'a';
-        switch ( codepoint )
-        {
-            case ' ':
-            case '.':
-            case ',':
-            case '-':
-            case '_':
-            case '*':
-            case '~':
-            case '!':
-            case '|':
-            case 0x3000u: // 전각 공백이다
-                return 0;
-            default:
-                return codepoint;
-        }
-    }
-
     int32 ChatWordFilter::findChild( int32 nodeIndex, uint32 codepoint ) const
     {
         const unordered_map<uint32, int32>& mapChild = _listNode[static_cast<size_t>( nodeIndex )]._mapChild;
@@ -76,8 +52,9 @@ namespace sw
         return childIt != mapChild.end() ? childIt->second : -1;
     }
 
-    int32 ChatWordFilter::initialize( const vector<string>& listWord, ChatFilterMode mode )
+    int32 ChatWordFilter::initialize( const vector<string>& listWord, ChatFilterMode mode, const ChatTextNormalizer& normalizer )
     {
+        _normalizer = normalizer;
         _listNode.assign( 1, Node{} );
         _wordCount = 0;
         _mode      = mode;
@@ -92,7 +69,7 @@ namespace sw
             int32 length    = 0;
             for ( const uint32 rawCodepoint : listCodepoint )
             {
-                const uint32 codepoint = normalizeCodepoint( rawCodepoint );
+                const uint32 codepoint = _normalizer.normalize( rawCodepoint );
                 if ( codepoint == 0 )
                     continue;
                 int32 childIndex = findChild( nodeIndex, codepoint );
@@ -144,12 +121,12 @@ namespace sw
         }
     }
 
-    bool ChatWordFilter::loadFile( string_view path, ChatFilterMode mode )
+    bool ChatWordFilter::loadFile( string_view path, ChatFilterMode mode, const ChatTextNormalizer& normalizer )
     {
         string content;
         if ( FileUtil::readTextFile( path, content ) == false )
         {
-            initialize( vector<string>{}, mode );
+            initialize( vector<string>{}, mode, normalizer );
             return false;
         }
         vector<string> listWord;
@@ -159,7 +136,7 @@ namespace sw
             if ( line.empty() == false && line.front() != '#' )
                 listWord.emplace_back( line );
         } );
-        initialize( listWord, mode );
+        initialize( listWord, mode, normalizer );
         return true;
     }
 
@@ -169,7 +146,7 @@ namespace sw
         if ( ChatWordFilterInternal::decode( text, listCodepoint ) == false )
             return ChatFilterVerdict::InvalidText;
 
-        // 끼움 글자를 건너뛴 정규화 글의 각 글자가 원문의 몇 번째 글자인지 기록한다. 걸린 구간을 원문 위치로 되돌리는 데 쓴다.
+        // 건너뛸 글자를 건너뛴 정규화 글의 각 글자가 원문의 몇 번째 글자인지 기록한다. 걸린 구간을 원문 위치로 되돌리는 데 쓴다.
         vector<int32> listOriginalIndex;
         vector<uint8> listMasked( listCodepoint.size(), 0 );
         listOriginalIndex.reserve( listCodepoint.size() );
@@ -177,7 +154,7 @@ namespace sw
         bool  bAnyMatch = false;
         for ( int32 index = 0; index < static_cast<int32>( listCodepoint.size() ); ++index )
         {
-            const uint32 codepoint = normalizeCodepoint( listCodepoint[static_cast<size_t>( index )] );
+            const uint32 codepoint = _normalizer.normalize( listCodepoint[static_cast<size_t>( index )] );
             if ( codepoint == 0 )
                 continue;
             listOriginalIndex.push_back( index );

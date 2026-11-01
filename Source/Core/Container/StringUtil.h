@@ -96,6 +96,8 @@ namespace sw
         static void utf8ToUcs2( string_view text, vector<uint16>& outListUnit );
         /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
         static void appendUTF8( string& inoutText, uint32 codepoint );
+        /** @brief 유니코드 표기 `U+XXXX`(대문자 16진 4 ~ 6 자리)를 읽습니다. 형식이 틀리거나 유니코드 범위 밖 · 서로게이트이면 false 이고 @p outCodepoint 는 그대로입니다. */
+        [[nodiscard]] static bool tryParseCodepointNotation( string_view text, uint32& outCodepoint );
         /** @brief 글의 바이트를 그대로 @p outBytes 에 담습니다(앞 내용은 버린다 — 요청 본문 · BLOB 칸). */
         static void assignBytes( vector<uint8>& outBytes, string_view text ) { outBytes.assign( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() ); }
         /** @brief 글의 바이트를 새 `vector<uint8>` 로 돌려줍니다. */

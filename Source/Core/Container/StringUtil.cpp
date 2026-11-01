@@ -1260,6 +1260,28 @@ namespace sw
         StringUtilInternal::appendUTF8( inoutText, codepoint );
     }
 
+    bool StringUtil::tryParseCodepointNotation( string_view text, uint32& outCodepoint )
+    {
+        constexpr string_view kPrefix = "U+";
+        if ( startsWith( text, kPrefix ) == false || text.size() < kPrefix.size() + 4 || text.size() > kPrefix.size() + 6 )
+            return false;
+        uint32 value{ 0 };
+        for ( const utf8 ch : text.substr( kPrefix.size() ) )
+        {
+            const bool bDigit = ch >= '0' && ch <= '9';
+            const bool bUpper = ch >= 'A' && ch <= 'F';
+            if ( bDigit == false && bUpper == false )
+                return false;
+            value = value * 16 + static_cast<uint32>( bDigit ? ch - '0' : ch - 'A' + 10 );
+        }
+        constexpr uint32 kMaxCodepoint = 0x10FFFFu;
+        const bool       bSurrogate    = value >= 0xD800u && value <= 0xDFFFu;
+        if ( value > kMaxCodepoint || bSurrogate )
+            return false;
+        outCodepoint = value;
+        return true;
+    }
+
     string StringUtil::escapeInvalidUTF8( string_view text )
     {
         string result;

@@ -71,7 +71,8 @@ namespace sw
     struct ChatServiceConfig
     {
         ChatSpamConfig _spam{};
-        string         _bannedWordsPath{}; ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
+        string         _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
+        string         _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `Config/Server/chat_ignored_characters.txt` 를 쓴다
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
         int64          _sanctionCacheMs{ 60 * constant::time::kMillisecondsPerSecond };
         int64          _historyRetentionMs{ 30 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond };
