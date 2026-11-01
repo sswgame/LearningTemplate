@@ -31,7 +31,7 @@ namespace sw
 
     /**
      * @brief 머티리얼 GPU 자원의 준비 상태입니다. 반쯤 초기화된 상태를 구분 못 하는 `isRHIValid` 대신, 그릴 수 있는지는 이것으로 판단합니다.
-     * @details `NotRequested` → (`requestInitialize`) `Pending` → (렌더 스레드의 `initializePending`) `Ready` | `Failed`. 디바이스가 사라지면 `NotRequested` 로 돌아갑니다.
+     * @details `NotRequested` → (`requestInitialize`) `Pending` → (렌더 스레드를 비운 게임 스레드의 `initializePending`) `Ready` | `Failed`. 디바이스가 사라지면 `NotRequested` 로 돌아갑니다.
      *          패킷 빌더는 `Ready` 가 아닌 머티리얼의 배치를 만들지 않습니다.
      */
     enum class MaterialGPUState : uint8

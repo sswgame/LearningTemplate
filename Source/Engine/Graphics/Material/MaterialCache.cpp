@@ -61,41 +61,15 @@ namespace sw
         /**
          * @brief 디바이스로 머티리얼을 초기화하는 구간을 한 스레드가 쥐게 합니다. 다른 스레드가 쥐고 있으면 오류를 남기고 멈춥니다(모든 구성).
          * @details 초기화는 `_mutex` 밖에서 한다(GL 은 렌더 스레드의 프레임 끝을 기다리는데 렌더 스레드가 `_mutex` 를 잡는다). 그래서 같은 머티리얼을 두 스레드가
-         *          동시에 초기화하는 것을 막던 것이 이 구간뿐이다. 호출처는 모두 게임 스레드(`Scene::initialize` · `initializePending` · 에디터 `reload`)이고
+         *          동시에 초기화하는 것을 막던 것이 이 구간뿐이다. 호출처는 모두 게임 스레드(`Scene::initialize` · 엔진 프레임의 `initializePending` · 에디터 `reload`)이고
          *          비용은 원자 비교 한 번이라 Release 에서도 확인한다. 같은 스레드의 중첩은 허용한다.
          */
         struct DeviceInitScope
         {
             Impl& _impl;
-            bool  _bOwns{ false };
-
-            /// @brief 쥘 수 없으면 기다리지도 멈추지도 않고 `owns()` 가 false 가 되는 생성입니다(렌더 스레드의 `initializePending`).
-            struct TryTag
-            {
-            };
-
-            DeviceInitScope( Impl& impl, TryTag )
-                : _impl{ impl }
-            {
-                const std::thread::id self = std::this_thread::get_id();
-                std::thread::id       expected{};
-                if ( _impl._initOwner.compare_exchange_strong( expected, self ) )
-                {
-                    _impl._initDepth = 1;
-                    _bOwns           = true;
-                }
-                else if ( expected == self )
-                {
-                    ++_impl._initDepth;
-                    _bOwns = true;
-                }
-            }
-
-            bool owns() const { return _bOwns; }
 
             explicit DeviceInitScope( Impl& impl )
                 : _impl{ impl }
-                , _bOwns{ true }
             {
                 const std::thread::id self = std::this_thread::get_id();
                 std::thread::id       expected{};
@@ -114,8 +88,6 @@ namespace sw
 
             ~DeviceInitScope()
             {
-                if ( _bOwns == false )
-                    return;
                 if ( --_impl._initDepth == 0 )
                     _impl._initOwner.store( std::thread::id{} );
             }
@@ -267,10 +239,8 @@ namespace sw
         if ( bNoPendingMaterials )
             return;
 
-        // 다른 스레드가 초기화하는 중이면(씬 초기화 · 에디터 리로드의 게임 스레드) 이번 프레임은 넘긴다. 줄은 그대로라 다음 프레임에 이어진다.
-        const Impl::DeviceInitScope initScope{ *_impl, Impl::DeviceInitScope::TryTag{} };
-        if ( initScope.owns() == false )
-            return;
+        // 호출처는 모두 게임 스레드다(엔진 프레임 · 초상 스튜디오 · 프로브 베이커) — 다른 스레드가 쥐었으면 구간이 오류로 멈춘다.
+        const Impl::DeviceInitScope initScope{ *_impl };
 
         vector<string> listKey;
         {

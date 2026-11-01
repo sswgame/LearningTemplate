@@ -745,10 +745,18 @@ namespace sw
 
     void Engine::submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
     {
-        // 경로로 잡힌 머티리얼(메시의 저장된 참조)의 GPU 초기화는 게임 스레드가 하지 않는다 — 렌더 스레드가 셋업 구간(기록 전)에 프레임당 상한 안에서 한다
-        // (`MaterialCache::initializePending`, bindless 등록이 지난 프레임의 병렬 기록과 겹치지 않는다). 패킷 빌더는 `Ready` 가 아닌 머티리얼의 배치를 건너뛴다.
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
+            // 경로로 잡힌 머티리얼(메시의 저장된 참조)의 초기화는 게임 스레드가 렌더 스레드를 비운 뒤 한다(프레임당 상한, 패킷 빌더는 `Ready` 가 아닌 배치를 건너뛴다).
+            // 예전에는 렌더 스레드가 셋업 구간에서 했는데, 같은 Material 을 게임 스레드가 이미 쥐고 속성을 읽어(파라미터 설정) 속성 목록이 두 스레드에서 읽히고 쓰였고,
+            // GL 에서는 두 스레드가 컨텍스트를 다퉈 자원 생성이 버려졌다. 비운 동안은 Material 을 고치는 스레드가 하나이고 컨텍스트도 비어 있다
+            // (언리얼은 게임 · 렌더 쪽 객체를 나눠 같은 일을 막는다 — 여기서는 한 객체를 한 스레드만 고치게 한다). 기다림은 새 머티리얼이 있는 프레임에만 든다.
+            MaterialCache& materials = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
+            if ( materials.hasPendingInitialize() )
+            {
+                drainRenderThreadPackets();
+                materials.initializePending( &_pRHI->getDevice(), AssetManager::isFinishingAssetWorkEachFrame() ? UINT32_MAX : MaterialCache::kMaxInitsPerFrame );
+            }
             // 밉 스트리밍이 바꿔 끼운 옛 텍스처를 게임 스레드에서 해제한다 — 이미 만든 패킷이 옛 SRV 번호를 쓰는 동안은 `releaseHandle` 이 미룬다.
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseRetiredTextures( &_pRHI->getDevice() );
         }

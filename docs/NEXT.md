@@ -30,11 +30,9 @@
    - 에셋 종류 색 · 아이콘(등록 매크로의 RGBA) · 컴포넌트 분류 색을 테마 키(`Asset.*` · `Component.*`)로, 크기 리터럴(`GetFontSize() * N` 23 곳)을 `Layout.*` 수치로.
    - 아이콘 이름 → 글리프 표(`EditorIconGlyphs`)를 데이터로(아이콘 글꼴 교체 = 표 교체), 시간대 표(`TimeZoneUtil`)를 데이터 파일로.
    - `Saved/Test/<pid>/` 단위 테스트 쓰기 폴더가 실행마다 남아 수백 개다 — 끝나면 지우거나 한 폴더를 다시 쓴다.
-6. GL 백엔드의 자원 생성을 렌더 스레드로 넘긴다(언리얼 GL RHI 처럼 GL 호출을 한 스레드에) — 지금은 게임 스레드가 컨텍스트를 빌려 만들고, 렌더 스레드가 오래 쥐면 생성이 버려졌다
-   (Debug gl 단계 재설정에서 262 ms → 기본 머티리얼 상수 버퍼 실패). 시한을 교착 규모(5 초)로 올려 증상은 막았다.
-7. 데이터 경합 한 번(Debug gl, editor.flowterrain, 2026-11-01): 씬을 읽다 `WaterBodyComponent::onRegister` → `writeMaterialValues` → `MaterialInstance::setVectorParameter` 가
-   `Material::findProperty`(속성 목록 읽기)에 들어갔을 때 다른 스레드가 같은 Material 에 쓰고 있었다. 쓴 쪽 스택은 남지 않았다 — 보고에 상대 스레드 id 를 더했으니
-   다시 나면 GL 로그의 렌더 스레드 id 와 맞춰 쓴 쪽을 찾고, Material 속성 목록을 렌더 스레드가 고치는지(초기화 · 핫 리로드) 본다.
+6. 머티리얼 초기화는 렌더 스레드를 비운 게임 스레드가 한다(속성 목록 경합 · GL 컨텍스트 다툼을 함께 없앴다). 남은 틈 하나: 초기화 없이 쓰는 머티리얼(에디터 머티리얼 미리보기가
+   `acquire( path, nullptr )` 로 잡고 편집하는 것)과 셰이더 핫 리로드 뒤의 재맞춤은 렌더 스레드의 첫 사용(`GPUScene` · 인스턴스 `updateRHI` 의 `ensureShaderLayout`)이 맞춘다 —
+   게임 스레드가 패킷을 내기 전에 맞추도록(백엔드 형식만 있으면 된다) 옮긴다.
 
 ### 1. 진행 중 (2026-11-01)
 

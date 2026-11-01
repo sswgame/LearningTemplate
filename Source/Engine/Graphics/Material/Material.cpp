@@ -153,6 +153,10 @@ namespace sw
             return false;
         }
 
+        // 셰이더 레이아웃도 초기화하는 스레드(게임 스레드)에서 맞춘다 — 렌더 스레드의 첫 사용(`GPUScene` · 인스턴스 `updateRHI`)이 맞추면
+        // 게임 스레드가 읽는 속성 목록을 렌더 스레드가 고치게 된다. 결과(레거시 MaterialCB 는 stride 0)는 그 사용처가 다시 묻는다.
+        (void)ensureShaderLayout( pRHI );
+
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
         loadScope.setBytes( _data._bytes.size() );
         if ( _descriptorIndex != kInvalidDescriptorIndex )
