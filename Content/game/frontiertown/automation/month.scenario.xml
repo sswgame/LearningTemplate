@@ -23,7 +23,7 @@
 	<AdvanceGameTime hours="24"/>
 	<Wait frames="2"/>
 	<Expect watch="Clock.Day" equals="3"/>
-	<ExpectLog contains="was refused" count="0"/>
+	<ExpectLog id="Frontier.LandmarkRefused" count="0"/>
 	<Record watch="Clock.Day"/>
 	<Pass/>
 </Scenario>

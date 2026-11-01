@@ -307,8 +307,8 @@ namespace sw
             return;
 
         ModuleRecord& context = iter->second;
-        SW_LOG_INFO( "Manual Live Reload queued for %# (debounce %#ms)...",
-                     moduleName, kMtimeDebounceMs );
+        SW_LOG_INFO_ID( "LiveReload.ManualQueued", "Manual Live Reload queued for %# (debounce %#ms)...",
+                        moduleName, kMtimeDebounceMs );
         context._debounceMtime = 0;
         (void)FileUtil::tryGetFileTimestamp( context._originalModulePath, context._debounceMtime ); // 빌드 도중이라 없으면 0 - 다음 확인에서 시각이 달라 다시 기다린다
         context._debounceTimer.resetTimer();

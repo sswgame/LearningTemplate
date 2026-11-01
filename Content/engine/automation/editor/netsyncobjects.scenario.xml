@@ -17,7 +17,7 @@
 	<Wait frames="60"/>
 	<DevCommand line="netplay.sync objects server"/>
 	<Wait frames="1"/>
-	<ExpectLog contains="netplay sync objects tick" atLeast="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="netplay sync objects tick" atLeast="1"/>
 	<Expect watch="Editor.NetPlaySyncObjectsCompared" equals="1"/>
 	<Expect watch="Editor.NetPlaySyncDifferingObjects" equals="0"/>
 	<DevCommand line="netplay.command client1 state.objectline"/>
@@ -25,7 +25,7 @@
 	<Wait frames="109"/>
 	<DevCommand line="netplay.sync objects client"/>
 	<Wait frames="1"/>
-	<ExpectLog contains="differing object(s)" atLeast="2"/>
+	<ExpectLog id="DevCommand.Reply" contains="differing object(s)" atLeast="2"/>
 	<Expect watch="Editor.NetPlaySyncObjectsCompared" equals="1"/>
 	<DevCommand line="netplay.stop"/>
 	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutSeconds="20"/>

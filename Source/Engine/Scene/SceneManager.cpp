@@ -478,7 +478,7 @@ namespace sw
     {
         if ( _saveBlockReason.empty() == false )
         {
-            SW_LOG_ERROR( "Scene save refused — %#", _saveBlockReason );
+            SW_LOG_ERROR_ID( "Scene.SaveRefused", "Scene save refused — %#", _saveBlockReason );
             return false;
         }
         Scene* pScene = getActiveScene();

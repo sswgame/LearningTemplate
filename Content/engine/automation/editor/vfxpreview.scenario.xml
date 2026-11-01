@@ -23,7 +23,7 @@
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.VFXPreviewDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
-	<ExpectLog contains="VFX Preview playing 'engine/vfx/sparks.vfx.xml' (2 emitters)" count="1"/>
+	<ExpectLog id="VFXPreview.Playing" contains="'engine/vfx/sparks.vfx.xml' (2 emitters)" count="1"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.VFXPreviewParticleCount" atLeast="20" timeoutFrames="600"/>
 	<Wait frames="5"/>

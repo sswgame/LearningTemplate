@@ -125,7 +125,7 @@ namespace sw
         if ( RenderDocCaptureInternal::_s_pAPI == nullptr )
             return;
         RenderDocCaptureInternal::_s_pAPI->TriggerCapture();
-        SW_LOG_INFO( "RenderDoc capture requested for the next frame" );
+        SW_LOG_INFO_ID( "RenderDoc.CaptureRequested", "RenderDoc capture requested for the next frame" );
     }
 
     bool RenderDocCapture::launchReplayUI()

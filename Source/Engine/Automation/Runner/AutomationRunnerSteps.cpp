@@ -306,10 +306,11 @@ namespace sw
             {
                 if ( step.hasOnlyAttributes( { "id", "contains", "count", "atLeast", "since" }, outError ) == false )
                     return false;
-                // 로그 id 가 있는 줄은 id 로 센다(문구가 바뀌어도 단언이 따라온다). contains 는 id 없는 줄에만 쓴다 — 둘 중 정확히 하나.
-                if ( ( step.findAttribute( "id" ) != nullptr ) == ( step.findAttribute( "contains" ) != nullptr ) )
+                // 사건은 로그 id 로만 센다 — 문장으로 세면 문구를 고칠 때 단언이 조용히 낡는다(로그 문구를 바꾼 커밋이 미리보기 시나리오 셋을 깼다).
+                // contains 는 그 id 줄의 값(경로 · 수)을 좁히는 데만 쓴다. 세려는 줄에 id 가 없으면 소스에서 `SW_LOG_*_ID` 로 쓴다.
+                if ( step.requireAttribute( "id", outError ) == nullptr )
                 {
-                    outError = step.describe() + ": needs exactly one of id · contains (id for lines written with SW_LOG_*_ID, contains only for lines without a log id)";
+                    outError += " (count events by log id - write the line with SW_LOG_INFO_ID / SW_LOG_WARNING_ID / SW_LOG_ERROR_ID; contains only narrows that id's lines)";
                     return false;
                 }
                 if ( countComparisons( step, { "count", "atLeast" } ) == false )

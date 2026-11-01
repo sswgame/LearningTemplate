@@ -192,7 +192,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _document.canUndo() == false );
         if ( ImGui::Button( "Undo" ) )
         {
-            SW_LOG_INFO( "Catalog undo" );
+            SW_LOG_INFO_ID( "Catalog.Undo", "Catalog undo" );
             _document.undo();
             _tableEditor.reset();
             syncDirty();
@@ -354,7 +354,7 @@ namespace sw::editor
         _previousFileText = text;
         _statusText.clear();
         syncDirty();
-        SW_LOG_INFO( "Catalog opened %#", assetID.c_str() );
+        SW_LOG_INFO_ID( "Catalog.Opened", "Catalog opened %#", assetID.c_str() );
     }
 
     bool CatalogPanel::writeCurrentFile()
@@ -394,7 +394,7 @@ namespace sw::editor
         _tableEditor.reset();
         _statusText = "Reverted to the saved text";
         syncDirty();
-        SW_LOG_INFO( "Catalog reverted %#", _selectedID.c_str() );
+        SW_LOG_INFO_ID( "Catalog.Reverted", "Catalog reverted %#", _selectedID.c_str() );
     }
 
     void CatalogPanel::validateCurrentFile()
@@ -417,7 +417,7 @@ namespace sw::editor
         _statusText        = _document.isDirty() ? "Validated the saved file - unsaved edits are not included" : string();
         _validationState   = bPassed ? ValidationState::Passed : ValidationState::Failed;
         if ( bPassed )
-            SW_LOG_INFO( "Catalog validation passed (%#)", _selectedKindLabel.c_str() );
+            SW_LOG_INFO_ID( "Catalog.ValidationPassed", "Catalog validation passed (%#)", _selectedKindLabel.c_str() );
         else
             SW_LOG_INFO( "Catalog validation failed (%#): %# warnings", _selectedKindLabel.c_str(), _listWarning.size() );
     }

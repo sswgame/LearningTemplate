@@ -140,7 +140,7 @@ namespace sw::editor
         string     reply;
         const bool bSaved = ProfilerTraceExport::saveRecentFrames( profiler, _frameCount, {}, "Editor", savedPath, reply );
         if ( bSaved )
-            SW_LOG_INFO( "Timeline trace: %#", reply );
+            SW_LOG_INFO_ID( "Profiler.TimelineTrace", "Timeline trace: %#", reply );
         else
             SW_LOG_WARNING( "Timeline trace not saved: %#", reply );
     }

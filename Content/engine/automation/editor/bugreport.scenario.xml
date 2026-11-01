@@ -21,7 +21,7 @@
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<DevCommand line="bugreport scenario check"/>
 	<Wait frames="5"/>
-	<ExpectLog contains="Bug report saved to" atLeast="1"/>
+	<ExpectLog id="BugReport.Saved" atLeast="1"/>
 	<!-- 다시 왼쪽으로 옮긴다(A) — 기록과 다른 자리 -->
 	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
@@ -35,7 +35,7 @@
 	<Wait frames="10"/>
 	<DevCommand line="bugreport.goto"/>
 	<Wait frames="10"/>
-	<ExpectLog contains="bugreport.goto moved the view camera" atLeast="1"/>
+	<ExpectLog id="BugReport.GotoMoved" atLeast="1"/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<Wait frames="10"/>
 	<Pass/>

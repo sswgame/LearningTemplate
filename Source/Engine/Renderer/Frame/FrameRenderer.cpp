@@ -1335,7 +1335,7 @@ namespace sw
             SW_LOG_ERROR( "Offscreen renderer for scene key %# ('%#') could not start: %#", sceneKey, createPath.c_str(), created._renderer->getStatusMessage() );
             return nullptr;
         }
-        SW_LOG_INFO( "Offscreen renderer started for scene key %# ('%#')", sceneKey, createPath.c_str() );
+        SW_LOG_INFO_ID( "Renderer.OffscreenStarted", "Offscreen renderer started for scene key %# ('%#')", sceneKey, createPath.c_str() );
         FrameRenderer* const pRenderer = created._renderer.get();
         _listScenePreviewRenderer.push_back( std::move( created ) );
         _scenePreviewRendererCount.store( static_cast<uint32>( _listScenePreviewRenderer.size() ) );

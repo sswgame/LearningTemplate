@@ -18,13 +18,13 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
-	<ExpectLog contains="GM Tool panel opened" count="1"/>
+	<ExpectLog id="Admin.PanelOpened" count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus admin.tool"/>
 	<Wait frames="20"/>
 	<EditorClick mark="admin.lookup"/>
 	<Wait frames="15"/>
-	<ExpectLog contains="Admin command LookupAccount: Ok" count="1"/>
+	<ExpectLog id="Admin.CommandResult" contains="LookupAccount: Ok" count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.close admin.tool"/>
 	<Wait frames="5"/>

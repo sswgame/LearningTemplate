@@ -37,7 +37,7 @@
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.timeline.saveTrace"/>
 	<Wait frames="15"/>
-	<ExpectLog contains="Timeline trace: saved" atLeast="1"/>
+	<ExpectLog id="Profiler.TimelineTrace" contains="saved" atLeast="1"/>
 	<!-- 저장한 트레이스를 불러와 살아 있는 기록 아래에 겹친다 · 구간 이름으로 찾는다 · 지운다 -->
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.timeline.loadTrace"/>

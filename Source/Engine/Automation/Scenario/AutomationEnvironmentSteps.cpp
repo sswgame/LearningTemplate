@@ -70,7 +70,7 @@ namespace sw
                     runner.recordFailure( step, "dev command failed: " + ( reply.empty() ? string( pCommand->_pUsage ) : reply ) );
                     return true;
                 }
-                SW_LOG_INFO( "%# -> %#", step.describe(), reply );
+                SW_LOG_INFO_ID( "DevCommand.Reply", "%# -> %#", step.describe(), reply );
                 return true;
 #else
                 (void)runner;

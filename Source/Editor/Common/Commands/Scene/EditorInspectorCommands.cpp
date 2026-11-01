@@ -155,7 +155,7 @@ namespace sw::editor
         string newFileText;
         (void)FileUtil::readTextFile( filePath->str(), newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
 
-        SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
+        SW_LOG_INFO_ID( "Prefab.Saved", "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         if ( pPrefabCache == nullptr || pContext == nullptr )
             return true;
         // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
@@ -202,7 +202,7 @@ namespace sw::editor
         }
         EditorTransaction::endTransaction();
         if ( updatedCount > 0 )
-            SW_LOG_INFO( "Updated %# other instance(s) of %#", updatedCount, string{ prefabPath }.c_str() );
+            SW_LOG_INFO_ID( "Prefab.InstancesUpdated", "Updated %# other instance(s) of %#", updatedCount, string{ prefabPath }.c_str() );
         return true;
     }
 
@@ -339,7 +339,7 @@ namespace sw::editor
         }
         result._adoptedCount = static_cast<uint32>( listAdopt.size() );
         if ( result._adoptedCount > 0 )
-            SW_LOG_INFO( "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._adoptedCount );
+            SW_LOG_INFO_ID( "Prefab.NestedAdopted", "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._adoptedCount );
         return result;
     }
 } // namespace sw::editor

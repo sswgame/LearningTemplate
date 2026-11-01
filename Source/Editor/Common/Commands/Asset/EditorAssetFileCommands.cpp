@@ -214,7 +214,7 @@ namespace sw::editor
         }
         if ( FileUtil::writeTextFile( outAssetAbs, text ) )
         {
-            SW_LOG_INFO( "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
+            SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
         }
         SW_LOG_ERROR( "Could not write the new asset '%#'", outAssetAbs );
@@ -298,7 +298,7 @@ namespace sw::editor
             ++outFixedFileCount;
             inoutIndex.refreshFile( resourceRoot, referrerID );
         }
-        SW_LOG_INFO( "Moved '%#' to '%#' and fixed %# referencing file(s)", oldID, newID, outFixedFileCount );
+        SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", oldID, newID, outFixedFileCount );
         return true;
     }
 
@@ -316,7 +316,7 @@ namespace sw::editor
             listPath.push_back( metaPath );
         if ( FileUtil::moveToRecycleBin( listPath ) )
         {
-            SW_LOG_INFO( "Moved '%#' to the recycle bin", editor::getSubsystem<AssetPaths>().toAssetID( assetPath ) );
+            SW_LOG_INFO_ID( "Asset.Recycled", "Moved '%#' to the recycle bin", editor::getSubsystem<AssetPaths>().toAssetID( assetPath ) );
             return true;
         }
         SW_LOG_ERROR( "Could not move '%#' to the recycle bin - it is kept", assetPath );

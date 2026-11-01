@@ -11,6 +11,6 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="RenderView.HiddenCount" equals="0"/>
-	<ExpectLog contains="Quit requested" count="0"/>
+	<ExpectLog id="App.QuitRequested" count="0"/>
 	<Pass/>
 </Scenario>

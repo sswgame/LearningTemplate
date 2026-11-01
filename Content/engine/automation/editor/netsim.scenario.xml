@@ -28,7 +28,7 @@
 	<Wait frames="12"/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="120"/>
 	<Wait frames="5"/>
-	<ExpectLog contains="In-process play started: Sample: avatars with 2 client(s)" count="1"/>
+	<ExpectLog id="NetSim.PlayStarted" contains="Sample: avatars with 2 client(s)" count="1"/>
 	<Expect watch="Editor.NetSimRunning" equals="1"/>
 	<Expect watch="Editor.NetSimWorldCount" equals="3"/>
 	<Expect watch="Editor.NetSimViewportCount" equals="3"/>

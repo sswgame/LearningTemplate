@@ -99,6 +99,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 - `timeoutFrames` 는 시나리오에 적은 프레임(고정 대기 · 단계)만 센다. 시계를 붙잡는 대기(`<WaitUntil>` · `<LoadScene>` · 입력 대상 자리 잡기 · 스크린샷의 에셋 대기 …)는 저마다 제 시한이 있어 늦게 선 조건은 그 단계 이름으로 진다(언리얼 latent 명령 · 유니티 `WaitUntil` 과 같고, 전체는 벽시계 `wallTimeoutSeconds` 가 묶는다). 마지막 단계가 시한 밖이면 읽기 오류다. `<Pass/>` 가 뒤의 일(아래 끝 차단)을 기다리는 프레임은 `kMaxFinishWaitFrames` 가 따로 묶는다.
 - 이미지는 골든 비교다: 영역을 가로 160 화소 이하로 줄여 `golden/<시나리오>.<이름>.<백엔드>.ppm` 과 견주고, 색 거리 12 이상인 화소가 `tolerance`(기본 1 %)를 넘으면 실패다. 골든은 `-scenario-update-golden` 으로 뜨거나 갱신하고(보고의 `updatedGoldens`), 그림을 보고 커밋한다.
 - 로그 게이트: 시나리오 구간의 Warning · Error 는 `<ExpectLog>`(기대) 나 `<AllowLog>`(허용, 사유 필수)가 없으면 실패다. id 없는 줄은 허용할 수 없다 — 소스에 id 를 붙인다.
+- 사건 세기: `<ExpectLog id="영역.사건">` 만 쓴다 — 세려는 줄은 소스에서 `SW_LOG_INFO_ID` · `SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID` 로 쓴다. `contains` 는 그 id 줄의 값(경로 · 수)을 좁힐 때만 붙인다(문장으로 세면 문구를 고칠 때 단언이 낡는다). 개발 명령의 답은 `DevCommand.Reply` 줄이다.
 - 산출물(사진 · 보고)은 `Saved/Automation/<시나리오>/<프로세스>/` 에 쓴다. 무인 실행은 사용자 설정 파일을 읽지도 쓰지도 않고 사양 자동 프리셋을 쓰지 않는다.
 - 씬 · 연출 단계: `<LoadScene path="…" timeoutFrames="600"/>`(씬을 열고 설 때까지 붙잡는다), `<PlaySequence object="이름"/>` · `<WaitSequence object="이름"/>`(그 오브젝트의 시퀀서 재생 · 끝 기다림).
 - 벤치마크: `<BeginFrameStats/>` … `<EndFrameStats file="bench.json"/>` 사이의 벽시계 프레임 시간을 요약해 산출물 폴더에 쓴다(평균 · p95 · p99 · fps). 예: `game.empty.benchmark`.

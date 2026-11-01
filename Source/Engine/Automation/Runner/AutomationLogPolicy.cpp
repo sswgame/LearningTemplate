@@ -7,13 +7,6 @@
 
 namespace sw
 {
-    void AutomationLogPolicy::declareExpected( string_view contains )
-    {
-        if ( contains.empty() )
-            return;
-        _listExpected.push_back( string( contains ) );
-    }
-
     void AutomationLogPolicy::declareExpectedID( string_view id )
     {
         if ( id.empty() )
@@ -30,7 +23,6 @@ namespace sw
 
     void AutomationLogPolicy::clear()
     {
-        _listExpected.clear();
         _listExpectedID.clear();
         _listAllowedID.clear();
     }
@@ -38,12 +30,6 @@ namespace sw
     bool AutomationLogPolicy::isExemptMessage( string_view message )
     {
         return StringUtil::startsWith( message, kRunnerPrefix );
-    }
-
-    bool AutomationLogPolicy::isDeclared( string_view text ) const
-    {
-        return VectorUtil::containsIf( _listExpected, [&]( const string& expected )
-        { return text == string_view( expected ); } );
     }
 
     bool AutomationLogPolicy::isDeclaredID( string_view id ) const
@@ -56,8 +42,8 @@ namespace sw
     {
         if ( isGatedLevel( level ) == false || isExemptMessage( message ) )
             return AutomationLogVerdict::NotGated;
-        // 선언은 줄을 정확히 가리킨다: id 가 있는 줄은 id 로만, id 없는 줄은 본문 전체가 같을 때만(부분 문자열은 다른 줄까지 가린다).
-        if ( id.empty() ? isDeclared( message ) : isDeclaredID( id ) )
+        // 선언은 id 로만 한다(문장은 다른 줄까지 가리거나 문구를 고치면 낡는다).
+        if ( isDeclaredID( id ) )
             return AutomationLogVerdict::Declared;
         if ( id.empty() )
             return AutomationLogVerdict::MissingID;

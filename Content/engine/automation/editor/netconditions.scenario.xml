@@ -20,9 +20,9 @@
 	<Wait frames="1"/>
 	<DevCommand line="netplay.waitResent 1 30"/>
 	<Wait frames="1"/>
-	<ExpectLog contains="net emulation up [latencyMs=0 jitterMs=0 lossPercent=30" atLeast="1"/>
-	<ExpectLog contains="net traffic queued 100 reliable message(s) to 1 connection(s)" atLeast="1"/>
-	<ExpectLog contains="netplay stats from 2 of 2 process(es)" atLeast="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="net emulation up [latencyMs=0 jitterMs=0 lossPercent=30" atLeast="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="net traffic queued 100 reliable message(s) to 1 connection(s)" atLeast="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="netplay stats from 2 of 2 process(es)" atLeast="1"/>
 	<Expect watch="Editor.NetPlayEmulationDroppedPackets" atLeast="1"/>
 	<Expect watch="Editor.NetPlayResentMessages" atLeast="1"/>
 	<Wait frames="1"/>

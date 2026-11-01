@@ -12,7 +12,7 @@
 	<Wait frames="4"/>
 	<Action name="Nile.RoadTool"/>
 	<Wait frames="4"/>
-	<ExpectLog contains="[Nile] tool: " atLeast="2"/>
+	<ExpectLog id="Nile.ToolSelected" atLeast="2"/>
 	<!-- 5 초(300 프레임) -->
 	<Wait frames="272"/>
 	<Record watch="Nile.Month"/>

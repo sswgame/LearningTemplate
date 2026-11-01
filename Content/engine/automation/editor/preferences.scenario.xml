@@ -35,7 +35,7 @@
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.PreferencesSavedKeyCount" equals="1"/>
 	<Wait frames="10"/>
-	<ExpectLog contains="Editor preferences saved: 1 key(s)" atLeast="1"/>
+	<ExpectLog id="EditorSettings.Saved" contains="1 key(s)" atLeast="1"/>
 	<Expect watch="Editor.PreferencesSavedKeyCount" equals="1"/>
 	<Wait frames="10"/>
 	<Variable name="gv_editorUiScale" value="0"/>

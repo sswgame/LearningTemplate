@@ -757,7 +757,7 @@ namespace sw
         if ( bToolChanged )
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
-            SW_LOG_INFO( "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
+            SW_LOG_INFO_ID( "Nile.ToolSelected", "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
             getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventSelect );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Pause" ) ) )
@@ -787,7 +787,7 @@ namespace sw
         if ( inputMap.wasActionPressed( placeAction ) || ( _selectedTool == 0 && inputMap.isActionDown( placeAction ) ) )
             placeSelected();
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Demolish" ) ) && _city.demolish( _cursorTile._x, _cursorTile._y ) )
-            SW_LOG_INFO( "[Nile] demolished (%#, %#)", _cursorTile._x, _cursorTile._y );
+            SW_LOG_INFO_ID( "Nile.Demolished", "[Nile] demolished (%#, %#)", _cursorTile._x, _cursorTile._y );
     }
 
     void NileDirectorComponent::updateCursor( const InputManager& input )

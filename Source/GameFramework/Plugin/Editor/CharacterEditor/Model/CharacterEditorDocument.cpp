@@ -398,7 +398,7 @@ namespace sw::editor
         if ( _bStagedSelection )
             _appearance.markSaved( _stagedSelection );
         _status.clear();
-        SW_LOG_INFO( "Character Editor: presets saved to slot %# (%# presets)", completion._slot.c_str(), static_cast<uint32>( _presetStore.getPresets().size() ) );
+        SW_LOG_INFO_ID( "CharacterEditor.PresetsSaved", "Character Editor: presets saved to slot %# (%# presets)", completion._slot.c_str(), static_cast<uint32>( _presetStore.getPresets().size() ) );
     }
 
     void CharacterEditorDocument::applyPreset( string_view name )
@@ -445,7 +445,7 @@ namespace sw::editor
                           static_cast<int32>( completion._result ) );
             return;
         }
-        SW_LOG_INFO( "Character Editor: thumbnail of preset '%#' stored in slot %#", _thumbnailPresetName.c_str(), _thumbnailSlot.c_str() );
+        SW_LOG_INFO_ID( "CharacterEditor.ThumbnailStored", "Character Editor: thumbnail of preset '%#' stored in slot %#", _thumbnailPresetName.c_str(), _thumbnailSlot.c_str() );
         submitPresetWrite( std::move( staged ), nullptr );
     }
 
@@ -486,7 +486,7 @@ namespace sw::editor
             return false;
         }
         _status.clear();
-        SW_LOG_INFO( "Exported appearance preset '%#' to '%#'", presetID.c_str(), assetID.c_str() );
+        SW_LOG_INFO_ID( "CharacterEditor.PresetExported", "Exported appearance preset '%#' to '%#'", presetID.c_str(), assetID.c_str() );
         return true;
     }
 

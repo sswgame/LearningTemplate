@@ -78,7 +78,7 @@ namespace sw::editor
             }
 
             /** @brief 등록 항목 커맨드(`selftest.ping`)의 동작입니다. 로그 한 줄을 남기며, 시나리오 `commandpalette` 가 이 로그를 확인합니다. */
-            static void runPingCommand() { SW_LOG_INFO( "Self-test registration command ran" ); }
+            static void runPingCommand() { SW_LOG_INFO_ID( "SelfTest.RegistrationRan", "Self-test registration command ran" ); }
 
             static constexpr const utf8* kSceneViewPanelID = SceneViewPanel::kPanelID;
             static constexpr const utf8* kGameViewPanelID  = GameViewPanel::kPanelID;

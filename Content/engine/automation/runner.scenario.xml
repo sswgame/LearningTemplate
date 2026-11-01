@@ -14,6 +14,6 @@
 	<!-- 화면에 무언가 나갔다(완전히 검지 않다) — 첫 프레임에 그릴 것이 없는 백엔드 결함의 그물 -->
 	<Wait frames="1"/>
 	<ExpectImage file="frame30.ppm" golden="frame30"/>
-	<ExpectLog contains="Quit requested" count="0"/>
+	<ExpectLog id="App.QuitRequested" count="0"/>
 	<Pass/>
 </Scenario>

@@ -73,7 +73,7 @@ namespace sw::editor
         }
         _bCapturePaused        = SW_TRUE; // 연 캡처를 보는 동안 새 프레임이 덮어쓰지 않게 한다
         _rowQuery._frameOffset = 0;
-        SW_LOG_INFO( "Profiler capture loaded: %#", path.c_str() );
+        SW_LOG_INFO_ID( "Profiler.CaptureLoaded", "Profiler capture loaded: %#", path.c_str() );
         return true;
     }
 
@@ -106,7 +106,7 @@ namespace sw::editor
         _rowQuery._frameOffset = 0;
         if ( EditorPlaySession::isPlaying() )
             EditorPlaySession::pause();
-        SW_LOG_INFO( "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::time::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
-                     Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
+        SW_LOG_INFO_ID( "Profiler.SpikePaused", "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::time::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
+                        Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
     }
 } // namespace sw::editor

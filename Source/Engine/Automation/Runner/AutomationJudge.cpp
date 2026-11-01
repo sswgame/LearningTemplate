@@ -315,9 +315,9 @@ namespace sw
 
     void AutomationJudge::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
     {
-        const string*                         pID     = step.findAttribute( "id" );
-        const string&                         needle  = pID != nullptr ? *pID : *step.findAttribute( "contains" ); // 검사 함수가 둘 중 하나를 요구했다
-        const utf8*                           pTarget = pID != nullptr ? "ExpectLog id '" : "ExpectLog '";
+        const string&                         id        = *step.findAttribute( "id" ); // 검사 함수가 요구했다
+        const string*                         pContains = step.findAttribute( "contains" );
+        const string                          target    = pContains != nullptr ? string( id + "' containing '" + *pContains ) : id;
         string                                error;
         AutomationStepArgsUtil::ExpectLogArgs args;
         if ( AutomationStepArgsUtil::parseExpectLog( step, args, error ) == false )
@@ -325,15 +325,15 @@ namespace sw
             context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
-        const uint32 matchCount = pID != nullptr ? _logCapture.countLinesWithID( needle, args._since ) : _logCapture.countMatchingLines( needle, args._since );
+        const uint32 matchCount = _logCapture.countLinesWithID( id, pContains != nullptr ? *pContains : string{}, args._since );
         if ( args._bExactCount )
         {
             if ( matchCount != args._expected )
-                context.recordFailure( step, formatToString( "%#%#' count == %#, got %#", string( pTarget ), needle, args._expected, matchCount ) );
+                context.recordFailure( step, formatToString( "ExpectLog id '%#' count == %#, got %#", target, args._expected, matchCount ) );
             return;
         }
         if ( matchCount < args._expected )
-            context.recordFailure( step, formatToString( "%#%#' count >= %#, got %#", string( pTarget ), needle, args._expected, matchCount ) );
+            context.recordFailure( step, formatToString( "ExpectLog id '%#' count >= %#, got %#", target, args._expected, matchCount ) );
     }
 
     void AutomationJudge::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )
@@ -455,10 +455,12 @@ namespace sw
             {
                 const string line         = "Missing localized text for key '" + key + "'";
                 const bool   bAlreadySeen = _logCapture.containsLine( line ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
-                if ( bAlreadySeen || _logPolicy.isDeclared( line ) )
+                // 시나리오 앞에 남은 같은 사건(`LocalizationManager` 의 `Localization.MissingKey` 줄)이다 — 같은 id 로 판정한다
+                const AutomationLogVerdict verdict = _logPolicy.classify( LogLevel::Warning, "Localization.MissingKey", line );
+                if ( bAlreadySeen || verdict == AutomationLogVerdict::Declared || verdict == AutomationLogVerdict::Allowed )
                     continue;
-                ++judgement._missingIDCount; // 이 줄은 합성이라 id 가 없다 — `<ExpectLog>` 로만 가릴 수 있다
-                judgement._listUnhandled.push_back( "[Warning] [LocalizationManager] (no log id) " + line + " (before the scenario started)" );
+                ++judgement._notAllowedCount;
+                judgement._listUnhandled.push_back( "[Warning] [LocalizationManager] (id=Localization.MissingKey) " + line + " (before the scenario started)" );
             }
         }
         _listAllowedLogID = std::move( judgement._listAllowedID );
@@ -502,11 +504,8 @@ namespace sw
             const bool                            bParsed = AutomationStepArgsUtil::parseExpectLog( step, args, argsError );
             const bool                            bAbsent = bParsed && args._bExactCount && args._expected == 0;
             if ( bAbsent )
-                continue; // count="0" 은 "이 줄이 없어야 한다" 는 단언이지 선언이 아니다 — 그 줄이 나오면 단언과 로그 게이트가 모두 진다
-            if ( const string* pID = step.findAttribute( "id" ); pID != nullptr )
-                _logPolicy.declareExpectedID( *pID );
-            else
-                _logPolicy.declareExpected( *step.findAttribute( "contains" ) ); // 검사 함수가 id · contains 중 하나를 요구했다
+                continue;                                                // count="0" 은 "이 줄이 없어야 한다" 는 단언이지 선언이 아니다 — 그 줄이 나오면 단언과 로그 게이트가 모두 진다
+            _logPolicy.declareExpectedID( *step.findAttribute( "id" ) ); // 검사 함수가 id 를 요구했다
         }
         prepareWatches( scenario );
         _listRemembered.clear();

@@ -16,13 +16,13 @@
 	<Expect watch="Editor.NetPlayConnectedClients" equals="1"/>
 	<DevCommand line="netplay.inspect"/>
 	<Wait frames="1"/>
-	<ExpectLog contains="inspector read" atLeast="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="inspector read" atLeast="1"/>
 	<Expect watch="Editor.NetPlayInspectorObjects" atLeast="1"/>
 	<DevCommand line="netplay.inspect pause"/>
 	<Wait frames="1"/>
 	<DevCommand line="netplay.inspect scene.tree 1"/>
 	<Wait frames="1"/>
-	<ExpectLog contains="paused tick" atLeast="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="paused tick" atLeast="1"/>
 	<DevCommand line="netplay.inspect resume"/>
 	<Wait frames="1"/>
 	<DevCommand line="netplay.stop"/>

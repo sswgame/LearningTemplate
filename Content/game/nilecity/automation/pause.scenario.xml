@@ -23,11 +23,11 @@
 	<Tap slot="Gamepad.B" hold="1"/>
 	<Wait frames="22"/>
 	<ExpectUI screen="none"/>
-	<ExpectLog contains="[Nile] demolished" count="0"/>
+	<ExpectLog id="Nile.Demolished" count="0"/>
 	<!-- 메뉴를 닫은 뒤의 오른쪽 버튼은 디렉터의 것이다 -->
 	<Wait frames="4"/>
 	<Tap slot="Mouse.Right" hold="1"/>
 	<Wait frames="6"/>
-	<ExpectLog contains="[Nile] demolished" count="1"/>
+	<ExpectLog id="Nile.Demolished" count="1"/>
 	<Pass/>
 </Scenario>

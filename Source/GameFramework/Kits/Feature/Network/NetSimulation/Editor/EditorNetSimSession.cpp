@@ -78,7 +78,7 @@ namespace sw::editor
                 return false;
             }
         }
-        SW_LOG_INFO( "In-process play started: %# with %# client(s)", settings._gameName, settings._clientCount );
+        SW_LOG_INFO_ID( "NetSim.PlayStarted", "In-process play started: %# with %# client(s)", settings._gameName, settings._clientCount );
         return true;
     }
 

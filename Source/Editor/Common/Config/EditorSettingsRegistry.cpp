@@ -211,7 +211,7 @@ namespace sw::editor
             SW_LOG_WARNING( "Editor preferences could not be saved to %#", string( filePath ).c_str() );
             return false;
         }
-        SW_LOG_INFO( "Editor preferences saved: %# key(s) -> %#", keyCount, string( filePath ).c_str() );
+        SW_LOG_INFO_ID( "EditorSettings.Saved", "Editor preferences saved: %# key(s) -> %#", keyCount, string( filePath ).c_str() );
         return true;
     }
 

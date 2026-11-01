@@ -21,7 +21,7 @@
 	<Wait frames="10"/>
 	<DevCommand line="log.repeat 10 warning outputlog-collapse-probe"/>
 	<WaitUntil watch="Editor.OutputLogVisibleRows" equals="10" timeoutFrames="60"/>
-	<ExpectLog contains="outputlog-collapse-probe" atLeast="10"/>
+	<ExpectLog id="Console.LogRepeat" contains="outputlog-collapse-probe" atLeast="10"/>
 	<Wait frames="5"/>
 	<EditorClick mark="console.collapse"/>
 	<WaitUntil watch="Editor.OutputLogVisibleRows" equals="1" timeoutFrames="60"/>

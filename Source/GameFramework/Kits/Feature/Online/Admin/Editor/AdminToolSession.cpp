@@ -251,7 +251,7 @@ namespace sw::editor
         if ( reply._errorCode != 0 )
             status.appendFormat( " (error %#)", reply._errorCode );
         _statusLine = string( status.view() );
-        SW_LOG_INFO( "Admin command %#", _statusLine.c_str() );
+        SW_LOG_INFO_ID( "Admin.CommandResult", "Admin command %#", _statusLine.c_str() );
 
         if ( reply._reply._result != AdminResult::Ok )
             return;

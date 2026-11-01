@@ -44,7 +44,7 @@ namespace sw
     {
         RenderExtensionRegistry* const pRegistry = engine::findSubsystem<RenderExtensionRegistry>();
         if ( pRegistry == nullptr || pRegistry->noteFailureOnce( key ) )
-            SW_LOG_ERROR( "Extension render: %# '%#'", pReason, detail );
+            SW_LOG_ERROR_ID( "RenderExtension.Failed", "Extension render: %# '%#'", pReason, detail );
     }
 
     const Mesh* FrameExtensionHost::findMesh( const hashed_string& meshID ) const

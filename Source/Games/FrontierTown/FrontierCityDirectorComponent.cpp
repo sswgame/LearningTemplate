@@ -140,8 +140,8 @@ namespace sw
         _bLaidOut                    = SW_TRUE;
         const CityPlaceResult result = _city.placeBuilding( hashed_string( _landmarkBuilding ), _landmarkX, _landmarkY );
         if ( result != CityPlaceResult::Ok )
-            SW_LOG_ERROR( "[Frontier] landmark '%#' at (%#, %#) was refused (%#) - check the scene layout and city.xml", _landmarkBuilding, _landmarkX, _landmarkY,
-                          static_cast<int32>( result ) );
+            SW_LOG_ERROR_ID( "Frontier.LandmarkRefused", "[Frontier] landmark '%#' at (%#, %#) was refused (%#) - check the scene layout and city.xml", _landmarkBuilding, _landmarkX, _landmarkY,
+                             static_cast<int32>( result ) );
         const int32 roadCount = _city.placeRoadLine( int2{ _roadFromX, _roadFromY }, int2{ _roadToX, _roadToY } );
         if ( roadCount == 0 )
             SW_LOG_ERROR( "[Frontier] the road (%#, %#) -> (%#, %#) laid no tile - check the scene layout", _roadFromX, _roadFromY, _roadToX, _roadToY );

@@ -43,7 +43,7 @@ namespace sw
             const string_view command = StringUtil::trim( line );
             if ( command == "quit" || command == "stop" )
             {
-                SW_LOG_INFO( "Quit requested on standard input" );
+                SW_LOG_INFO_ID( "App.QuitRequested", "Quit requested on standard input" );
                 bQuitRequested = true;
                 break;
             }

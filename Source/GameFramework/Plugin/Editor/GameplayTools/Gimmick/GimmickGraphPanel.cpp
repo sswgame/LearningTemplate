@@ -729,7 +729,7 @@ namespace sw::editor
         _signature  = _model.computeSignature();
         _statusText = pLabel;
         refreshIssues();
-        SW_LOG_INFO( "Gimmick graph %#", pLabel );
+        SW_LOG_INFO_ID( "GimmickGraph.Edited", "Gimmick graph %#", pLabel );
     }
 
     void GimmickGraphPanel::editAddNode( GimmickCircuitComponent& circuit, const hashed_string& kind, const float2* pPosition )

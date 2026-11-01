@@ -75,7 +75,7 @@ namespace sw
                 constexpr uint32 kGameViewBit = static_cast<uint32>( RenderThread::CaptureKind::GameView );
                 if ( bWritten == false )
                 {
-                    SW_LOG_ERROR( "Screenshot was not written: %#", write._path.c_str() ); // 요청한 촬영이 빠졌다 - 실패다
+                    SW_LOG_ERROR_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", write._path.c_str() ); // 요청한 촬영이 빠졌다 - 실패다
                     if ( write._pMailbox != nullptr )
                         write._pMailbox->reportCaptureFailed( kGameViewBit );
                 }
@@ -105,9 +105,9 @@ namespace sw
                     return;
                 }
                 if ( bWritten )
-                    SW_LOG_INFO( "Screenshot saved: %#", write._path.c_str() );
+                    SW_LOG_INFO_ID( "Screenshot.Saved", "Screenshot saved: %#", write._path.c_str() );
                 else
-                    SW_LOG_WARNING( "Screenshot was not written: %#", write._path.c_str() );
+                    SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", write._path.c_str() );
                 if ( write._pMailbox != nullptr )
                     write._pMailbox->reportCompleted( bWritten, write._path );
                 --*write._pInFlight;
@@ -950,7 +950,7 @@ namespace sw
                 .submit();
             return;
         }
-        SW_LOG_WARNING( "Screenshot was not written: %#", pWrite->_path.c_str() );
+        SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", pWrite->_path.c_str() );
         if ( pWrite->_pMailbox != nullptr )
             pWrite->_pMailbox->reportCompleted( false, pWrite->_path ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
     }

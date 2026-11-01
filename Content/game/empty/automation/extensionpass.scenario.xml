@@ -13,6 +13,6 @@
 	<Screenshot file="extensionpass.ppm"/>
 	<Wait frames="2"/>
 	<ExpectImage file="extensionpass.ppm" golden="extensionpass"/>
-	<ExpectLog contains="Extension render" count="0"/>
+	<ExpectLog id="RenderExtension.Failed" count="0"/>
 	<Pass/>
 </Scenario>

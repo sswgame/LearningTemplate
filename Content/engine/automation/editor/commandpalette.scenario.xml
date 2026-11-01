@@ -12,7 +12,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="20"/>
-	<ExpectLog contains="Self-test registration command ran" count="1"/>
+	<ExpectLog id="SelfTest.RegistrationRan" count="1"/>
 	<Wait frames="10"/>
 	<Pass/>
 </Scenario>

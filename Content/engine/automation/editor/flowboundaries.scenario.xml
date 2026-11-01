@@ -115,6 +115,6 @@
 	<Wait frames="10"/>
 	<DevCommand line="scene.saveAs {out}/flowboundaries.scene.xml"/>
 	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
-	<ExpectLog contains="Scene save refused" count="0"/>
+	<ExpectLog id="Scene.SaveRefused" count="0"/>
 	<Pass/>
 </Scenario>

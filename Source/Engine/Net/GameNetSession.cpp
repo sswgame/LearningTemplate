@@ -562,8 +562,8 @@ namespace sw
             if ( _role == GameNetRole::Server )
             {
                 if ( event._kind == NetEndpointEvent::Kind::Connected )
-                    SW_LOG_INFO( "Net session client %# connected from %# (%# connected)", event._connectionID,
-                                 _peers.getConnectionAddress( event._connectionID ).toString(), _peers.getConnectedCount() );
+                    SW_LOG_INFO_ID( "Net.ClientConnected", "Net session client %# connected from %# (%# connected)", event._connectionID,
+                                    _peers.getConnectionAddress( event._connectionID ).toString(), _peers.getConnectedCount() );
                 else
                     SW_LOG_INFO( "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _peers.getConnectedCount() );
             }

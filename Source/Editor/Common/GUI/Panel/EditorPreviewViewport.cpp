@@ -252,7 +252,7 @@ namespace sw::editor
             return;
         if ( requestImageFile( string_view( gv_editorPreviewScreenshot.c_str() ) ) == false )
             return;
-        SW_LOG_INFO( "Preview viewport screenshot (scene key %#) -> %#", _sceneKey, gv_editorPreviewScreenshot.c_str() );
+        SW_LOG_INFO_ID( "PreviewViewport.Screenshot", "Preview viewport screenshot (scene key %#) -> %#", _sceneKey, gv_editorPreviewScreenshot.c_str() );
         gv_editorPreviewScreenshot = string{}; // 한 번만
     }
 

@@ -316,7 +316,7 @@ namespace sw::editor
         if ( bChanged == false )
             _lastActionText = inoutDocument.getError();
         else
-            SW_LOG_INFO( "Catalog %#", _lastActionText.c_str() );
+            SW_LOG_INFO_ID( "Catalog.TableEdited", "Catalog %#", _lastActionText.c_str() );
         return bChanged;
     }
 

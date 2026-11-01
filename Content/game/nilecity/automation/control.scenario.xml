@@ -14,6 +14,6 @@
 	<Tap slot="Mouse.Right" hold="1"/>
 	<!-- 허물기 로그는 감시 값이 없어 몇 프레임 뒤에 센다. -->
 	<Wait frames="4"/>
-	<ExpectLog contains="[Nile] demolished" count="1"/>
+	<ExpectLog id="Nile.Demolished" count="1"/>
 	<Pass/>
 </Scenario>

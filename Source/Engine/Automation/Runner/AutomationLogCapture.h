@@ -55,10 +55,11 @@ namespace sw
 
         /** @brief 이후 들어오는 줄에 적을 시나리오 프레임 번호입니다(게임 스레드가 프레임 시작에 정한다). */
         void setFrameIndex( uint32 frameIndex ) { _frameIndex.store( frameIndex, std::memory_order_relaxed ); }
-        /** @brief 프레임 @p sinceFrame 이후 줄 가운데 @p needle 을 포함한 줄 수입니다. */
-        uint32 countMatchingLines( const string& needle, uint32 sinceFrame ) const;
-        /** @brief 프레임 @p sinceFrame 이후 줄 가운데 종류 id 가 @p id 인 줄 수입니다(문구가 바뀌어도 같은 사건을 센다). */
-        uint32 countLinesWithID( const string& id, uint32 sinceFrame ) const;
+        /**
+         * @brief 프레임 @p sinceFrame 이후 줄 가운데 종류 id 가 @p id 이고 본문이 @p contains 를 담은 줄 수입니다(@p contains 가 비면 id 만 본다).
+         * @details 사건은 id 로 센다 — 문구가 바뀌어도 같은 사건을 센다. @p contains 는 그 사건의 값(경로 · 수)을 좁히는 데만 쓴다.
+         */
+        uint32 countLinesWithID( const string& id, const string& contains, uint32 sinceFrame ) const;
         /** @brief 모은 줄을 모두 @p policy 로 판정해 처리하지 않은 줄 · 허용 항목이 맞은 id 를 돌려줍니다. */
         AutomationLogJudgement judgeLines( const AutomationLogPolicy& policy ) const;
         /** @brief 모은 줄 가운데 @p needle 을 담은 줄이 있으면 true 입니다(프레임 무관). */

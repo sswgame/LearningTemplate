@@ -769,8 +769,8 @@ namespace sw
             return;
         _weaponIndex       = weaponIndex;
         _bWeaponModelDirty = SW_TRUE;
-        SW_LOG_INFO( "[Shooter] %# - %#/%#", _arrWeapon[weaponIndex].getDef()._name.c_str(), _arrWeapon[weaponIndex].getMagazineAmmo(),
-                     _arrWeapon[weaponIndex].getReserveAmmo() );
+        SW_LOG_INFO_ID( "Shooter.WeaponEquipped", "[Shooter] %# - %#/%#", _arrWeapon[weaponIndex].getDef()._name.c_str(), _arrWeapon[weaponIndex].getMagazineAmmo(),
+                        _arrWeapon[weaponIndex].getReserveAmmo() );
     }
 
     bool ShooterPlayerComponent::queryFirstPerson() const

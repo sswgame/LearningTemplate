@@ -55,7 +55,7 @@
 	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.exportPreset"/>
 	<WaitUntil watch="Editor.CharacterEditorExportCount" equals="1" timeoutFrames="20"/>
-	<ExpectLog contains="Exported appearance preset 'EditorKnight' to 'scratch/import/shooter3d.charactereditorscene" count="1"/>
+	<ExpectLog id="CharacterEditor.PresetExported" contains="'EditorKnight' to 'scratch/import/shooter3d.charactereditorscene" count="1"/>
 	<CaptureEditorUI file="export.png"/>
 	<Wait frames="10"/>
 	<DevCommand line="panel.close charactereditor.main"/>

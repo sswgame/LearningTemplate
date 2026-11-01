@@ -541,7 +541,7 @@ namespace sw
         }
         // 끄면 플레이어 조종자에게 돌려주고 AI 를 정리한다. 이미 다른 조종자(플레이어)가 조종하고 있으면 그대로 둔다.
         if ( ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoPlayController ) )
-            SW_LOG_INFO( "[Shooter] the player took the body back" );
+            SW_LOG_INFO_ID( "Shooter.PlayerTookBodyBack", "[Shooter] the player took the body back" );
         if ( pAIObject != nullptr )
             destroySpawned( manager, _autoPlayController );
     }

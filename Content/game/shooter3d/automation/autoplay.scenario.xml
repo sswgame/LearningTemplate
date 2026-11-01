@@ -21,7 +21,7 @@
 	<Tap slot="Key.Digit3" hold="1"/>
 	<WaitUntil watch="Shooter3D.WeaponIndex" equals="2" timeoutFrames="10"/>
 	<Expect watch="Shooter3D.PlayerControllerKind" equals="0"/>
-	<ExpectLog contains="[Shooter] the player took the body back" atLeast="1" since="1"/>
+	<ExpectLog id="Shooter.PlayerTookBodyBack" atLeast="1" since="1"/>
 	<ExpectImage file="cctv.ppm" golden="cctv"/>
 	<Pass/>
 </Scenario>

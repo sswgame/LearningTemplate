@@ -19,7 +19,7 @@ namespace sw::editor
         {
             EditorContext& editorContext = editor::getSubsystem<EditorContext>();
             if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<AdminToolPanel>( true ) )
-                SW_LOG_INFO( "GM Tool panel opened" );
+                SW_LOG_INFO_ID( "Admin.PanelOpened", "GM Tool panel opened" );
         }
     } // namespace
 

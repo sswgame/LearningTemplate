@@ -38,7 +38,7 @@
 	<Wait frames="19"/>
 	<Expect watch="Editor.ProfilerCapturedFrames" atLeast="30"/>
 	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
-	<ExpectLog contains="Profiler capture loaded" atLeast="1"/>
+	<ExpectLog id="Profiler.CaptureLoaded" atLeast="1"/>
 	<!-- 3) Pause on spike -->
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.capture.pauseOnSpike"/>
@@ -55,7 +55,7 @@
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="0" timeoutFrames="60"/>
 	<DevCommand line="profile.stall 400"/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="120"/>
-	<ExpectLog contains="Profiler paused on a spike" atLeast="1"/>
+	<ExpectLog id="Profiler.SpikePaused" atLeast="1"/>
 	<!-- 4) Call Tree -->
 	<EditorClick mark="profiler.callTree.tab" state="down"/>
 	<Wait frames="3"/>

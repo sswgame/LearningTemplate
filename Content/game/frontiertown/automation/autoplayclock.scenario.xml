@@ -9,6 +9,6 @@
 <Scenario name="game.frontiertown.autoplayclock" fixedDelta="0.0166667" timeoutFrames="2000" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_frontierAutoPlay" value="1"/>
 	<WaitUntil watch="Clock.Day" atLeast="2" timeoutSeconds="30"/>
-	<ExpectLog contains="was refused" count="0"/>
+	<ExpectLog id="Frontier.LandmarkRefused" count="0"/>
 	<Pass/>
 </Scenario>

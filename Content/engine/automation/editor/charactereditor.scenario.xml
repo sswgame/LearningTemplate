@@ -112,12 +112,12 @@
 	<Wait frames="5"/>
 	<EditorClick mark="charactereditor.savePreset"/>
 	<WaitUntil watch="Editor.CharacterEditorPresetCount" atLeast="1" timeoutFrames="120"/>
-	<ExpectLog contains="Character Editor: presets saved to slot charactereditor/presets" count="1"/>
+	<ExpectLog id="CharacterEditor.PresetsSaved" contains="charactereditor/presets" count="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="charactereditor.saveThumbnail"/>
 	<Wait frames="90"/>
-	<ExpectLog contains="Character Editor: thumbnail of preset 'MyLook' stored in slot charactereditor/thumb.mylook" count="1"/>
-	<ExpectLog contains="Character Editor: presets saved to slot charactereditor/presets" count="2"/>
+	<ExpectLog id="CharacterEditor.ThumbnailStored" contains="charactereditor/thumb.mylook" count="1"/>
+	<ExpectLog id="CharacterEditor.PresetsSaved" contains="charactereditor/presets" count="2"/>
 	<Wait frames="2"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

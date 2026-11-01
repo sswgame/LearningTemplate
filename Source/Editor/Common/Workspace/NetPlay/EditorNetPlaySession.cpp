@@ -724,12 +724,12 @@ namespace sw::editor
         }
         for ( [[maybe_unused]] const unique_ptr<ChildProcess>& pChild : _listStoppingProcess ) // Shipping 은 로그를 지워 안 쓴다
         {
-            SW_LOG_INFO( "%# exited with code %#", pChild->_label, pChild->_exitCode.load() );
+            SW_LOG_INFO_ID( "NetPlay.ChildExited", "%# exited with code %#", pChild->_label, pChild->_exitCode.load() );
         }
         _listStoppingProcess.clear();
         _mergedTracePath      = mergedTracePath;
         _bMergedTraceUnopened = _mergedTracePath.empty() == false;
         _stopPhase            = StopPhase::Idle;
-        SW_LOG_INFO( "Multiplayer session stopped%#", _mergedTracePath.empty() ? string{} : " - merged trace " + _mergedTracePath );
+        SW_LOG_INFO_ID( "NetPlay.SessionStopped", "Multiplayer session stopped%#", _mergedTracePath.empty() ? string{} : " - merged trace " + _mergedTracePath );
     }
 } // namespace sw::editor

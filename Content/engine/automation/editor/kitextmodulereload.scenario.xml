@@ -13,6 +13,6 @@
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Editor.ObjectCount" atLeast="1"/>
 	<EditorExpectDockLayout/>
-	<ExpectLog contains="Manual Live Reload queued for GF_Admin" atLeast="1"/>
+	<ExpectLog id="LiveReload.ManualQueued" contains="GF_Admin" atLeast="1"/>
 	<Pass/>
 </Scenario>

@@ -191,9 +191,9 @@ namespace sw::editor
                 for ( int32 lineIndex = 0; lineIndex < count; ++lineIndex )
                 {
                     if ( bWarning )
-                        SW_LOG_WARNING( "%#", text.c_str() );
+                        SW_LOG_WARNING_ID( "Console.LogRepeat", "%#", text.c_str() );
                     else
-                        SW_LOG_INFO( "%#", text.c_str() );
+                        SW_LOG_INFO_ID( "Console.LogRepeat", "%#", text.c_str() );
                 }
                 outReply = formatToString( "logged %# lines", count );
                 return true;

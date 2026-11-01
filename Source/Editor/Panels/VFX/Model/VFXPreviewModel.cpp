@@ -85,6 +85,6 @@ namespace sw::editor
         pVFX->setEffectPath( assetPath );
         pVFX->play();
         _previewEffectPath = assetPath;
-        SW_LOG_INFO( "VFX Preview playing '%#' (%# emitters)", _previewEffectPath, pVFX->getEmitterCount() );
+        SW_LOG_INFO_ID( "VFXPreview.Playing", "VFX Preview playing '%#' (%# emitters)", _previewEffectPath, pVFX->getEmitterCount() );
     }
 } // namespace sw::editor

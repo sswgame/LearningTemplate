@@ -31,7 +31,7 @@
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.add.material" state="up"/>
 	<Wait frames="22"/>
-	<ExpectLog contains="Created 'scratch/assetmanage/new_material.material'" count="1"/>
+	<ExpectLog id="Asset.Created" contains="scratch/assetmanage/new_material.material" count="1"/>
 	<!-- 2) 이름 바꾸기 — 타일을 고르고 F2, 입력 칸은 확장자를 뺀 이름이다 -->
 	<EditorClick mark="contentBrowser.asset.probe.material" state="down"/>
 	<Wait frames="3"/>
@@ -50,7 +50,7 @@
 	<Wait frames="15"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1"/>
 	<Wait frames="5"/>
-	<ExpectLog contains="to 'scratch/assetmanage/probe_renamed.material' and fixed 1 referencing file(s)" count="1"/>
+	<ExpectLog id="Asset.Moved" contains="to 'scratch/assetmanage/probe_renamed.material' and fixed 1 referencing file(s)" count="1"/>
 	<Expect watch="Editor.ReferenceCount" equals="0"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmanage/probe_renamed.material"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
@@ -84,7 +84,7 @@
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.delete.confirm" state="up"/>
 	<Wait frames="17"/>
-	<ExpectLog contains="Moved 'scratch/assetmanage/new_material.material' to the recycle bin" count="1"/>
+	<ExpectLog id="Asset.Recycled" contains="scratch/assetmanage/new_material.material" count="1"/>
 	<Wait frames="10"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

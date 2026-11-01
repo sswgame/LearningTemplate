@@ -158,7 +158,7 @@ namespace sw::editor
         _progress             = PackagingProgressParser::parseOutput( _listLine, result._bLaunched ? result._exitCode : -1 );
         const bool bSucceeded = _progress._state == PackagingState::Succeeded;
         if ( bSucceeded )
-            SW_LOG_INFO( "Packaging done: %# (%# bytes)", _progress._outputFolder, _progress._byteCount );
+            SW_LOG_INFO_ID( "Packaging.Done", "Packaging done: %# (%# bytes)", _progress._outputFolder, _progress._byteCount );
         else
             SW_LOG_WARNING( "Packaging failed at '%#': %#", _progress._stepName, _progress._failure );
     }

@@ -290,8 +290,11 @@ namespace sw
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
     /** @brief Info 수준으로 포맷해 남깁니다. 배포본에서는 호출이 사라집니다. */
     #define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
+    /** @brief id 가 붙은 Info 입니다(`SW_LOG_ERROR_ID` 와 같다). 시나리오 `<ExpectLog id>` 가 세는 사건 줄은 모두 이것으로 쓴다 — 문장으로 세지 않는다. */
+    #define SW_LOG_INFO_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Info, "" id, __VA_ARGS__ )
 #else
-    #define SW_LOG_INFO( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
+    #define SW_LOG_INFO( ... )        SW_LOG_DISCARDED( __VA_ARGS__ )
+    #define SW_LOG_INFO_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )

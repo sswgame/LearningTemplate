@@ -12,17 +12,17 @@
 	<Wait frames="20"/>
 	<EditorClick mark="gameView.screenshot"/>
 	<Wait frames="40"/>
-	<ExpectLog contains="Screenshot saved: " count="1"/>
+	<ExpectLog id="Screenshot.Saved" count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus scene_view"/>
 	<Wait frames="20"/>
 	<EditorClick mark="sceneView.screenshot"/>
 	<Wait frames="40"/>
-	<ExpectLog contains="Screenshot saved: " count="2"/>
+	<ExpectLog id="Screenshot.Saved" count="2"/>
 	<Wait frames="5"/>
 	<DevCommand line="screenshot {out}/devcommand.png"/>
 	<Wait frames="40"/>
-	<ExpectLog contains="Screenshot saved: {out}/devcommand.png" count="1"/>
-	<ExpectLog contains="Screenshot was not written" count="0"/>
+	<ExpectLog id="Screenshot.Saved" contains="{out}/devcommand.png" count="1"/>
+	<ExpectLog id="Screenshot.NotWritten" count="0"/>
 	<Pass/>
 </Scenario>

@@ -19,7 +19,7 @@
 	<Wait frames="10"/>
 	<EditorClick mark="toolbar.renderDoc"/>
 	<Wait frames="40"/>
-	<ExpectLog contains="RenderDoc capture requested" count="0"/>
+	<ExpectLog id="RenderDoc.CaptureRequested" count="0"/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
