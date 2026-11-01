@@ -87,6 +87,16 @@ namespace sw
         return true;
     }
 
+    string ServiceAuditLog::makeAccountActor( uint64 accountID )
+    {
+        return "acct." + ServiceKeyUtil::makeHex64( accountID );
+    }
+
+    string ServiceAuditLog::makeOperatorActor( uint64 operatorID )
+    {
+        return operatorID == 0 ? string( kSystemActor ) : "gm." + ServiceKeyUtil::makeHex64( operatorID );
+    }
+
     string ServiceAuditLog::makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow )
     {
         string key{ entry._subject };

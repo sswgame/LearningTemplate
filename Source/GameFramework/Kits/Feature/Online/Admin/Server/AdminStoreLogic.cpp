@@ -29,7 +29,6 @@ namespace sw
                 return result;
             }
 
-            static string makeActor( AccountID adminID ) { return "gm." + ServiceKeyUtil::makeHex64( adminID ); }
             static string makeSubject( AccountID accountID ) { return "acct." + ServiceKeyUtil::makeHex64( accountID ); }
 
             static string formatAmount( string_view assetID, int64 amount )
@@ -221,7 +220,7 @@ namespace sw
             {
                 const AdminRequest& request = command._request;
                 ServiceAuditEntry   audit;
-                audit._actor       = makeActor( command._adminID );
+                audit._actor       = ServiceAuditLog::makeOperatorActor( command._adminID );
                 audit._subject     = makeSubject( request._accountID );
                 audit._memo        = request._memo;
                 audit._timeMs      = command._nowMs;
@@ -448,7 +447,7 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminResult::Unavailable );
         }
 
-        const string scope = AdminStoreLogicInternal::makeActor( command._adminID );
+        const string scope = ServiceAuditLog::makeOperatorActor( command._adminID );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             vector<uint8>            listStoredReply;

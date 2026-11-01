@@ -35,7 +35,7 @@ namespace sw
         static constexpr int32 kMaxMemoSize  = 1024;
 
         PROPERTY( MaxCount = kMaxTextSize )
-        string _actor{}; ///< `acct.<16 진>`, `gm.<16 진>`, `system`
+        string _actor{}; ///< `acct.<16 진>`, `gm.<16 진>`, `system` — `ServiceAuditLog::makeAccountActor` · `makeOperatorActor` · `kSystemActor` 로 만든다
         PROPERTY( MaxCount = kMaxTextSize )
         string _action{}; ///< 동작 코드 `[0-9a-z_.]`. 예: "trade.settle", "admin.sanction", "account.link"
         PROPERTY( MaxCount = kMaxTextSize )
@@ -57,7 +57,13 @@ namespace sw
     struct SW_GF_API ServiceAuditLog
     {
         static const hashed_string& getTable(); ///< "service_audit"
-        static string               makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow );
+        /** @brief 행위자가 시스템(예약 작업 · 주기 리로드)일 때의 이름입니다. */
+        static constexpr const utf8* kSystemActor = "system";
+        /** @brief 계정 행위자 이름 `acct.<16 진>` 입니다. */
+        static string makeAccountActor( uint64 accountID );
+        /** @brief 운영자 행위자 이름 `gm.<16 진>` 입니다. @p operatorID 가 0(없는 계정)이면 시스템이 한 일이라 `kSystemActor` 입니다. */
+        static string makeOperatorActor( uint64 operatorID );
+        static string makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow );
         /** @brief 줄의 키 `<대상>/<시각 16 진 16>/<고유 16 진 32>` 에서 기록 시각을 읽습니다(보존 기간 쓸기 `ServiceRetention` 용). 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool readTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 상한, 키 규칙, 동작 코드 문자를 지키는지입니다. */

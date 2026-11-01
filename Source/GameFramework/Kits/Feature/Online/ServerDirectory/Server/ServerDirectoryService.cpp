@@ -57,8 +57,6 @@ namespace sw
 
             static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, HashUtil::computeStringHash64( text.data(), text.size(), false ) ); }
 
-            static string makeActor( AccountID actorID ) { return actorID == kInvalidAccountID ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorID ); }
-
             /** @brief 공지 정렬 기준입니다. 우선순위 내림차순, 같으면 시작 시각 내림차순, 그래도 같으면 id 오름차순이며 결과가 결정적입니다. */
             struct NoticeOrder
             {
@@ -444,7 +442,7 @@ namespace sw
         }
         work->_table               = Internal::getMaintenanceTable();
         work->_key                 = window._scope;
-        work->_auditEntry._actor   = Internal::makeActor( actorID );
+        work->_auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
         work->_auditEntry._action  = "sd.maintenance.set";
         work->_auditEntry._subject = "sd/" + window._scope;
         work->_auditEntry._memo    = string( memo );
@@ -464,7 +462,7 @@ namespace sw
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
         work->_table                              = Internal::getMaintenanceTable();
         work->_key                                = string( scope );
-        work->_auditEntry._actor                  = Internal::makeActor( actorID );
+        work->_auditEntry._actor                  = ServiceAuditLog::makeOperatorActor( actorID );
         work->_auditEntry._action                 = "sd.maintenance.clear";
         work->_auditEntry._subject                = "sd/" + string( scope );
         work->_auditEntry._memo                   = string( memo );
@@ -489,7 +487,7 @@ namespace sw
         }
         work->_table               = Internal::getNoticeTable();
         work->_key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
-        work->_auditEntry._actor   = Internal::makeActor( actorID );
+        work->_auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
         work->_auditEntry._action  = "sd.notice.post";
         work->_auditEntry._subject = "sd/notice/" + work->_key;
         work->_auditEntry._after   = notice._text;
@@ -504,7 +502,7 @@ namespace sw
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
         work->_table                              = Internal::getNoticeTable();
         work->_key                                = ServiceKeyUtil::makeHex64( noticeID );
-        work->_auditEntry._actor                  = Internal::makeActor( actorID );
+        work->_auditEntry._actor                  = ServiceAuditLog::makeOperatorActor( actorID );
         work->_auditEntry._action                 = "sd.notice.remove";
         work->_auditEntry._subject                = "sd/notice/" + work->_key;
         work->_auditEntry._timeMs                 = nowMs.count();

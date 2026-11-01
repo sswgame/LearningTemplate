@@ -452,7 +452,7 @@ namespace sw
             static ServiceAuditEntry makeAuditEntry( uint64 accountID, const utf8* pAction, int64 nowMs )
             {
                 ServiceAuditEntry entry;
-                entry._actor   = "acct." + ServiceKeyUtil::makeHex64( accountID );
+                entry._actor   = ServiceAuditLog::makeAccountActor( accountID );
                 entry._action  = pAction;
                 entry._subject = entry._actor;
                 entry._timeMs  = nowMs < 0 ? 0 : nowMs;
@@ -1216,7 +1216,7 @@ namespace sw
             transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( ServiceKeyUtil::decodeVarID( linkRaw._bytes ) ) );
         }
         ServiceAuditEntry audit = Internal::makeAuditEntry( accountID, "account.delete", nowMs );
-        audit._actor            = "system";
+        audit._actor            = ServiceAuditLog::kSystemActor;
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( profile._deletionDueMs ) );
         const ServiceStoreResult commitResult = _connection.commit( transaction );
         if ( commitResult == ServiceStoreResult::Conflict )

@@ -441,7 +441,7 @@ namespace sw
         if ( closed._state == TradeState::Cancelled )
             return true;
         ServiceAuditEntry audit;
-        audit._actor   = "system";
+        audit._actor   = ServiceAuditLog::kSystemActor;
         audit._action  = closed._state == TradeState::Settled ? "trade.settle" : "trade.fail";
         audit._subject = "trade." + ServiceKeyUtil::makeHex64( tradeID );
         audit._after   = TradeStoreLogicInternal::describeForAudit( closed );

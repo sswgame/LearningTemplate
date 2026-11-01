@@ -30,8 +30,6 @@ namespace sw
                 return s_table;
             }
 
-            static string makeActor( AccountID actorID ) { return actorID == kInvalidAccountID ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorID ); }
-
             static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, HashUtil::computeStringHash64( text.data(), text.size(), false ) ); }
         };
     } // namespace
@@ -374,7 +372,7 @@ namespace sw
             return;
         }
         work->_key                 = definition._eventID;
-        work->_auditEntry._actor   = LiveOpsServiceInternal::makeActor( actorID );
+        work->_auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
         work->_auditEntry._action  = "liveops.event.put";
         work->_auditEntry._subject = "liveops/" + definition._eventID;
         work->_auditEntry._memo    = string( memo );
@@ -430,7 +428,7 @@ namespace sw
         }
         unique_ptr<LiveOpsWriteWork> work = make_unique<LiveOpsWriteWork>();
         work->_key                        = string( eventID );
-        work->_auditEntry._actor          = LiveOpsServiceInternal::makeActor( actorID );
+        work->_auditEntry._actor          = ServiceAuditLog::makeOperatorActor( actorID );
         work->_auditEntry._action         = "liveops.event.remove";
         work->_auditEntry._subject        = "liveops/" + work->_key;
         work->_auditEntry._memo           = string( memo );
