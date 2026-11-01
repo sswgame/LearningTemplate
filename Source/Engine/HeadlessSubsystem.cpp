@@ -294,6 +294,7 @@ namespace sw
                 int32                seed        = 0;
                 int32                repeatCount = 1;
                 (void)commandLine.getArgument( CommandLineArgument::TEST_FILTER, options._filter );
+                (void)commandLine.getArgument( CommandLineArgument::TEST_SOURCE, options._sourceFolder );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_SEED, seed );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_REPEAT, repeatCount );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_REPORT, options._reportPath );

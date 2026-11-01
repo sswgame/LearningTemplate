@@ -157,6 +157,8 @@ SW_REGISTER_ARGUMENT( TEST_RUN_DISABLED, false, false, "test-run-disabled" )
 SW_REGISTER_ARGUMENT( TEST_CHILD_ROLE, "", false, "test-child-role" )
 // 자식 역할이 `test::getChildRoleArgument()` 로 받는 값(환경 변수 대신 — 자식 하나를 명령줄로 손수 다시 돌릴 수 있다).
 SW_REGISTER_ARGUMENT( TEST_CHILD_ARG, "", false, "test-child-arg" )
+// 정의한 파일 경로에 이 폴더(쉼표로 여럿, `/` 구분)가 든 케이스만 돈다 — 게임마다 그 게임이 싣는 키트 · 게임 케이스만 돌릴 때(`UnitTests.<게임>`).
+SW_REGISTER_ARGUMENT( TEST_SOURCE, "", false, "test-source" )
 // 결과 JSON(케이스 수 · 씨앗 · 케이스별 시간 · 실패 글)을 쓸 경로.
 SW_REGISTER_ARGUMENT( TEST_REPORT, CommandLineDiskPath{}, false, "test-report" )
 // 다른 스냅숏(`SW_EXPECT_SNAPSHOT`)을 지금 값으로 다시 쓴다 — 바뀐 파일을 리뷰한다.

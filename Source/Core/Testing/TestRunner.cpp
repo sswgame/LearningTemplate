@@ -45,7 +45,12 @@ namespace sw::test
                     return false;
                 string path{ pFile };
                 std::replace( path.begin(), path.end(), '\\', '/' );
-                return path.find( folder ) != string::npos;
+                for ( const string_view one : StringUtil::split( folder, ",", { ._bTrim = true, ._bDropEmpty = true } ) )
+                {
+                    if ( path.find( one.data(), 0, one.size() ) != string::npos )
+                        return true;
+                }
+                return false;
             }
 
             /** @brief 일부러 내는 로그 하나의 선언과 나온 횟수입니다. */

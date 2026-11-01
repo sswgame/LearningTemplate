@@ -45,6 +45,41 @@ else()
 	endforeach()
 endif()
 
+# 키트 · 게임 단위 테스트 — 키트 `Tests/` 의 케이스는 그 키트를 싣는 게임으로 돌 때만 등록된다(활성 게임으로 도는 `UnitTests` 에는 없다).
+# 함께 짓는 게임마다 그 게임으로 떠서 그 게임이 싣는 키트 · 게임 폴더의 케이스만 돈다(`--test-source`). 테스트 폴더가 하나도 없는 게임은 항목이 없다(빈 실행은 실패다).
+get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET)
+get_property(listCoBuiltGame GLOBAL PROPERTY SW_GAME_PACKS)
+if(swActiveGameTarget)
+	foreach(game IN LISTS listCoBuiltGame)
+		get_property(listGameDependency GLOBAL PROPERTY SW_GAME_PACK_${game}_DEPENDENCIES)
+		set(listTestFolder "")
+		foreach(dependency IN LISTS listGameDependency)
+			get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
+			if(NOT dependencyKind STREQUAL "Kit" OR NOT TARGET ${dependency})
+				continue()
+			endif()
+			get_target_property(kitFolder ${dependency} SOURCE_DIR)
+			file(GLOB_RECURSE listKitTest "${kitFolder}/*/Tests/*.cpp" "${kitFolder}/Tests/*.cpp")
+			if(listKitTest)
+				file(RELATIVE_PATH kitRelative "${CMAKE_SOURCE_DIR}" "${kitFolder}")
+				list(APPEND listTestFolder "${kitRelative}/")
+			endif()
+		endforeach()
+		file(GLOB_RECURSE listGameTest "${CMAKE_SOURCE_DIR}/Source/Games/${game}/*/Tests/*.cpp" "${CMAKE_SOURCE_DIR}/Source/Games/${game}/Tests/*.cpp")
+		if(listGameTest)
+			list(APPEND listTestFolder "Source/Games/${game}/")
+		endif()
+		if(NOT listTestFolder)
+			continue()
+		endif()
+		list(JOIN listTestFolder "," swTestSource)
+		add_test(NAME UnitTests.${game}
+			COMMAND $<TARGET_FILE:App> --test -unattended -game=${game} --test-source=${swTestSource} -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.${game}.log
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(UnitTests.${game} PROPERTIES LABELS nogpu TIMEOUT 600)
+	endforeach()
+endif()
+
 # 편집기 자체 테스트(`SW_EDITOR_SELF_TEST`)와 편집기 단위 테스트는 따로 된 항목이 없다 — 시나리오 단계 `<EditorSelfTest>`(`engine/automation/editor/selftests.scenario.xml`)로
 # `Scenario.editor` 체인 안에서 돌아 백엔드 넷과 로그 게이트를 함께 받는다(예전 EditorTests 는 기본 백엔드에서 케이스 성패만 봐 로그로만 드러나는 결함을 놓쳤다).
 if(TARGET EditorModule)
