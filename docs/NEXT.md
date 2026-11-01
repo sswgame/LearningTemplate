@@ -57,7 +57,6 @@
 
 | 일 | 위치 |
 |---|---|
-| 미리보기 씬의 외형 대기 | `CharacterAppearanceComponent` — 미리보기 씬이 틱을 돌게(언리얼 FPreviewScene) |
 | `DevCommand` 단계 평균 87 ms/프레임의 원인 | timeline 줄의 시나리오별 `DevCommand` |
 
 ### 4. 구조 개편 남은 것 ([StructureRefactor](StructureRefactor.md))
