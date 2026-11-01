@@ -105,6 +105,10 @@ namespace sw
         // 호스트 모듈과 게임을 한 번의 비우기로 언로드한다. 따로 언로드하면 drainRenderWorkers 가 두 번 돌아 종료 경로에서
         // 태스크 대기 제한 시간을 두 번까지 기다릴 수 있다.
         suspendModules( ModuleScope::Both, true, DrainReason::Shutdown );
+        // 정적 링크(배포)는 모듈을 내리는 쪽(핫 리로드 매니저)이 없다 — 등록한 쪽(`bindGameAPI`)이 뗀다. 떼지 않으면 게임 모듈이 건 캐시 · 서브시스템
+        // (`ElementRuleTable` · `InteractionCatalog` 캐시)이 에셋 매니저 종료까지 남아 "still registered" 경고가 났다.
+        if ( _pLiveReloadManager == nullptr && engine::areEngineServicesBound() )
+            engine::unregisterModuleTypes( sw::config::kTargetGameModule );
 
         // 콜백은 이 객체의 메서드를 가리킨다. 실행 파일은 호스트를 먼저 지우고 나중에 리로드 매니저를 정리하므로, 이 객체가 건 것(모듈마다의 칸 ·
         // 배치 직전 · 비우기)을 지금 놓는다. 놓는 것은 이 객체의 구독뿐이다 — 다른 쪽(서버)이 건 배치 콜백은 그쪽 수명을 따른다.
