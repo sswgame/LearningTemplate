@@ -200,7 +200,7 @@ namespace sw
         bool isVisibleInCurrentPerson() const;
         /**
          * @brief 등장 비율(0 ~ 1)입니다. 1 이면 다 보이고, 0 이면 그리지 않습니다. 그 사이는 디더로 그 비율만큼의 픽셀만 그립니다(`GPUInstance::_appearance`).
-         * @details 비동기로 읽은 메시가 도착하면 0 에서 `_appearSeconds` 동안 1 로 오른다(한 프레임에 튀지 않게). 캐릭터는 애니메이션이 준비될 때까지 0 에 머문다
+         * @details 비동기로 읽은 메시가 도착하면 0 에서 `_appearSeconds` 동안 1 로 오른다(한 프레임에 튀지 않게). 플레이 전 씬(에디터 편집 · 로드 중)은 바로 1 이다. 캐릭터는 애니메이션이 준비될 때까지 0 에 머문다
          *          (`pollReadyToAppear`). 바로 보이는 메시(내장 도형, 이미 읽은 에셋)는 1 그대로다.
          */
         float32 getAppearance() const { return _appearance; }
@@ -281,7 +281,7 @@ namespace sw
         static bool updateArrival( Component& component, float32 deltaSeconds );
         /** @brief 끝난 메시 로드의 결과를 메시로 삼고 핸들을 놓습니다. 실패면 메시 없이 둔다. */
         void applyMeshLoad();
-        /** @brief 등장(@p direction 이 양수) 또는 사라지기(음수)를 시작합니다. `_appearSeconds` 가 0 이면 바로 끝 값입니다. */
+        /** @brief 등장(@p direction 이 양수) 또는 사라지기(음수)를 시작합니다. `_appearSeconds` 가 0 이거나 씬이 플레이 전이면 바로 끝 값입니다. */
         void startAppearanceRamp( float32 direction );
         /** @brief 등장 대기와 진행을 한 프레임 나아갑니다. 아직 할 일이 있으면 true 입니다. */
         bool advanceAppearance( float32 deltaSeconds );
