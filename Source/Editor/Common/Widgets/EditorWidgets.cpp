@@ -4,17 +4,18 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
-#include "Editor/Common/Widgets/EditorAssetFilter.h"
-#include "Editor/Common/Widgets/EditorLabelLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -25,6 +26,141 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+
+// EditorAssetFilter — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
+// EditorLabelLayout — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
+namespace sw::editor
+{
+    /**
+     * @struct EditorLabelLayoutUtil
+     * @brief 이름을 폭 안의 줄로 나눕니다. 끊는 위치는 공백 · '_' · '-' · '.' 뒤가 먼저이고, 없을 때만 글자 단위입니다.
+     * @details ImGui 의 TextWrap 은 공백만 보므로 `nilecity` 같은 이름이 글자 가운데서 끊깁니다. 그리는 쪽은
+     *          `EditorWidgets::drawClampedLabel` 이고(마지막 줄 말줄임 · 전체 이름 툴팁), 여기는 어디서 끊는지만 정합니다.
+     */
+    struct EditorLabelLayoutUtil
+    {
+        /** @brief 글자열 너비를 측정하는 함수입니다(ImGui 는 CalcTextSize, 테스트는 글자 수 × 고정 폭). */
+        using MeasureFunc = float32 ( * )( string_view text, void* pUserData );
+
+        /**
+         * @brief @p text 를 @p width 안의 줄로 최대 @p maxLineCount 개 나눠 @p outListLine 에 채웁니다(먼저 비운다).
+         * @details 마지막 줄은 넘쳐도 남은 전부다 — 말줄임은 그리는 쪽이 한다. 줄 머리의 공백은 버린다. 빈 글은 빈 줄 하나다.
+         *          UTF-8 글자 가운데서 끊지 않는다.
+         */
+        static void breakLines( string_view text, float32 width, uint32 maxLineCount, MeasureFunc pfnMeasure, void* pUserData,
+                                vector<string_view>& outListLine );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorLabelLayoutInternal
+        {
+            /** @brief 이 글자 뒤에서 줄을 끊어도 되는가(단어 경계)입니다. */
+            static bool isBreakAfter( utf8 character ) { return character == ' ' || character == '_' || character == '-' || character == '.'; }
+
+            /** @brief 줄 머리의 공백을 건너뜁니다. */
+            static string_view skipLeadingSpace( string_view text )
+            {
+                size_t offset = 0;
+                while ( offset < text.size() && text[offset] == ' ' )
+                {
+                    ++offset;
+                }
+                return text.substr( offset );
+            }
+        };
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    void EditorLabelLayoutUtil::breakLines( string_view text, float32 width, uint32 maxLineCount, MeasureFunc pfnMeasure, void* pUserData,
+                                            vector<string_view>& outListLine )
+    {
+        outListLine.clear();
+        const bool bCannotWrapLabel = text.empty() || maxLineCount == 0 || pfnMeasure == nullptr;
+        if ( bCannotWrapLabel )
+        {
+            outListLine.push_back( text );
+            return;
+        }
+
+        string_view remaining = text;
+        while ( outListLine.size() + 1 < maxLineCount && pfnMeasure( remaining, pUserData ) > width )
+        {
+            // 폭에 들어가는 가장 긴 앞부분(글자 경계)을 찾는다. 첫 글자는 넘쳐도 싣는다 — 빈 줄이 끝없이 생기지 않게.
+            size_t fitEnd = 0;
+            while ( fitEnd < remaining.size() )
+            {
+                size_t next = fitEnd;
+                (void)StringUtil::decodeUTF8( remaining, next );
+                const bool bOverflows = pfnMeasure( remaining.substr( 0, next ), pUserData ) > width;
+                if ( fitEnd != 0 && bOverflows )
+                    break;
+                fitEnd = next;
+            }
+
+            // 그 안에서 마지막 단어 경계 뒤를 고른다. 없으면 글자 단위다.
+            size_t cut = fitEnd;
+            for ( size_t index = fitEnd; index > 0; --index )
+            {
+                if ( EditorLabelLayoutInternal::isBreakAfter( remaining[index - 1] ) )
+                {
+                    cut = index;
+                    break;
+                }
+            }
+            outListLine.push_back( remaining.substr( 0, cut ) );
+            remaining = EditorLabelLayoutInternal::skipLeadingSpace( remaining.substr( cut ) );
+            if ( remaining.empty() )
+                return;
+        }
+        outListLine.push_back( remaining );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct EditorAssetFilter
+     * @brief 필터는 쉼표 또는 공백으로 나눈 확장자 목록입니다. 한 개짜리(`".hlsl"`)도 같은 규칙으로 읽습니다.
+     */
+    struct EditorAssetFilter
+    {
+        /** @brief 필터 문자열을 확장자 목록으로 나눕니다. 빈 조각은 버립니다. 뷰는 @p filter 를 가리킵니다. */
+        static vector<string_view> splitExtensions( string_view filter );
+        /** @brief 필터가 비었거나 @p path 가 목록의 확장자 하나와 맞으면(대소문자 무시) true 입니다. */
+        static bool matches( string_view path, string_view filter );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        /** @brief 필터 글의 확장자 구분자(쉼표 · 공백 · 탭 · 세미콜론)입니다. */
+        constexpr const utf8* kFilterSeparators = ", \t;";
+    } // namespace
+
+    vector<string_view> EditorAssetFilter::splitExtensions( string_view filter )
+    {
+        return StringUtil::split( filter, kFilterSeparators, { ._bDropEmpty = true } );
+    }
+
+    bool EditorAssetFilter::matches( string_view path, string_view filter )
+    {
+        const vector<string_view> listExtension = splitExtensions( filter );
+        for ( const string_view extension : listExtension )
+        {
+            if ( FileUtil::hasExtension( path, extension ) )
+                return true;
+        }
+        return listExtension.empty();
+    }
+} // namespace sw::editor
 
 namespace sw::editor
 {

@@ -3,15 +3,42 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Rig/RigNodeLibrary.h"
+#include "Engine/Animation/Rig/RigConstraintNodes.h"
+#include "Engine/Animation/Rig/RigIKNodes.h"
+#include "Engine/Animation/Rig/RigSecondaryNodes.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+
+// RigNodeLibrary — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
+namespace sw
+{
+    class RigNodeRegistry;
+
+    /** @brief 엔진 노드 등록 함수 모음입니다(`RigNodeRegistry::getInstance` 가 처음 한 번 호출합니다). */
+    struct RigNodeLibrary
+    {
+        /** @brief 엔진 노드 종류를 모두 등록합니다. 늘 true 입니다(정적 초기화에 쓰려고 값을 돌려줍니다). */
+        [[nodiscard]] static bool registerEngineNodes( RigNodeRegistry& registry );
+    };
+} // namespace sw
+
+namespace sw
+{
+    bool RigNodeLibrary::registerEngineNodes( RigNodeRegistry& registry )
+    {
+        RigIKNodes::registerNodes( registry );
+        RigConstraintNodes::registerNodes( registry );
+        RigSecondaryNodes::registerNodes( registry );
+        return true;
+    }
+} // namespace sw
 
 namespace sw
 {

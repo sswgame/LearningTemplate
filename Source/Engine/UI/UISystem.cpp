@@ -3,9 +3,15 @@
 #include "Engine/UI/UISystem.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/formatString.h"
+#include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -17,6 +23,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"
@@ -29,7 +36,6 @@
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
-#include "Engine/UI/Layout/UILayoutDump.h"
 #include "Engine/UI/Screen/PauseMenuScreen.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/Style/UIStylePass.h"
@@ -37,9 +43,74 @@
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
+
+// UILayoutDump — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
+namespace sw
+{
+    class WidgetTree;
+
+    /**
+     * @struct UILayoutDump
+     * @brief 트리를 문서 순서로 한 줄씩 씁니다. 한 줄의 형식은 `<깊이 × 공백 둘><이름> <x> <y> <w> <h>` 이며, 소수 둘째 자리까지 쓰고 렌더 변환 전의 레이아웃 사각형입니다.
+     * @details 이름이 없는 위젯은 리플렉션 타입 이름을 쓴다. Collapsed 위젯은 `<이름> collapsed` 한 줄이고 자식은 쓰지 않는다.
+     */
+    struct UILayoutDump
+    {
+        /**
+         * @brief 덤프 텍스트를 만듭니다.
+         * @param physicalScale 곱할 배율입니다. 1 이면 UI 단위이고, UI 배율을 넘기면 물리 픽셀 사각형입니다.
+         */
+        static string makeDump( const WidgetTree& tree, float32 physicalScale = 1.0f );
+    };
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        void appendWidget( const Widget& widget, uint32 depth, float32 physicalScale, string& inoutText )
+        {
+            for ( uint32 level = 0; level < depth; ++level )
+            {
+                inoutText += "  ";
+            }
+            const TypeInfo* pType = widget.getTypeInfo();
+            const utf8*     pName = widget.getName().empty() == false ? widget.getName().c_str() : ( pType != nullptr ? pType->_name.c_str() : "Widget" );
+            inoutText += pName;
+            if ( widget.getVisibility() == WidgetVisibility::Collapsed )
+            {
+                inoutText += " collapsed\n";
+                return;
+            }
+            const WidgetGeometry&                   geometry = widget.getGeometry();
+            fixed_string<constant::buffer::kMax128> line{};
+            formatstring( line.data(), line.capacity(), " %.2f %.2f %.2f %.2f\n", geometry._position._x * physicalScale, geometry._position._y * physicalScale,
+                          geometry._size._x * physicalScale, geometry._size._y * physicalScale );
+            inoutText += line.c_str();
+
+            for ( const unique_ptr<Widget>& child : widget.getChildren() )
+            {
+                appendWidget( *child, depth + 1, physicalScale, inoutText );
+            }
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    string UILayoutDump::makeDump( const WidgetTree& tree, float32 physicalScale )
+    {
+        string text;
+        if ( tree.getRoot() != nullptr )
+            appendWidget( *tree.getRoot(), 0, physicalScale, text );
+        return text;
+    }
+} // namespace sw
 
 namespace sw
 {

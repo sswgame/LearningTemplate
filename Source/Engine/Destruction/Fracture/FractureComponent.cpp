@@ -2,13 +2,44 @@
 
 #include "Engine/Destruction/Fracture/FractureComponent.h"
 
+#include "Core/Foundation/Macros.h"
+
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
-#include "Engine/Destruction/Fracture/FractureAssetCache.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
+
+// FractureAssetCache — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
+namespace sw
+{
+    struct FractureAsset;
+
+    /** @brief 파일 머리말을 참고하세요. 쓰는 쪽은 `SharedAssetCache<FractureAsset>` 으로 부릅니다. */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FractureAsset>;
+} // namespace sw
+
+namespace sw
+{
+    template <>
+    struct SharedAssetCacheTraits<FractureAsset>
+    {
+        static constexpr const utf8* kKindName  = "Fracture";
+        static constexpr MemoryTag   kMemoryTag = MemoryTag::Physics;
+        /** @brief 쪼갠 조각의 바디와 렌더링이 이전 형상을 가리킨 채 내용만 바뀌면 안 되므로 제자리로 바꾸지 않고 떼어 낸다. */
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
+
+        [[nodiscard]] static bool load( const AssetID& assetID, FractureAsset& outAsset ) { return outAsset.loadFromAsset( assetID ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( FractureAsset );
+} // namespace sw
 
 namespace sw
 {

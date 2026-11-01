@@ -2,23 +2,28 @@
 
 #include "Editor/Viewport/EditorViewportClient.h"
 
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorColliderHandleTool.h"
-#include "Editor/Viewport/EditorViewportAssetDrop.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
@@ -35,6 +40,67 @@
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
+
+// EditorViewportAssetDrop — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
+namespace sw
+{
+    struct float2;
+} // namespace sw
+
+namespace sw::editor
+{
+    /**
+     * @struct EditorViewportAssetDrop
+     * @brief 씬 뷰 캔버스의 애셋 드롭입니다. 상태가 없어 정적 함수 하나입니다.
+     * @details 종류마다 무엇을 만드는지는 `EditorAssetCommands::dropAt`(에셋 종류 동작)이 정합니다. 여기서는 놓을 위치만 고릅니다.
+     */
+    struct EditorViewportAssetDrop
+    {
+        /**
+         * @brief 이번 프레임에 캔버스에 놓인 애셋을 받아 마우스 아래 바닥에 놓습니다(2D 는 Z = 0 평면, 3D 는 Y = 0).
+         * @details 캔버스 밖이거나 평면과 평행하면 원점에 놓는다. 편집이 막혔으면(Play) 놓지 않는다. 캔버스 이미지를 그린 창 안에서 부른다.
+         */
+        static void processDrop( const float2& canvasPos, const float2& canvasSize, const float32* pView, const float32* pProj, bool b2DMode );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    void EditorViewportAssetDrop::processDrop( const float2& canvasPos, const float2& canvasSize, const float32* pView, const float32* pProj, bool b2DMode )
+    {
+        string droppedAssetPath;
+        // 캔버스 사각형 전체가 타깃이다 — 캔버스 위에 그린 오버레이 · 기즈모 · HUD 아이템이 "마지막 아이템" 이 되어 놓은 것을 가로채지 않는다.
+        const float2 canvasMax{ canvasPos._x + canvasSize._x, canvasPos._y + canvasSize._y };
+        if ( EditorWidgets::acceptAssetDropInRect( canvasPos, canvasMax, "##ViewportAssetDrop", droppedAssetPath ) == false )
+            return;
+        if ( pView == nullptr || pProj == nullptr )
+            return;
+        if ( EditorPlaySession::refuseSceneEdit( "Viewport asset drop" ) )
+            return; // 드롭을 받은 순간에만 닿는다 - 거절 이유가 경고 로그로 남는다
+
+        Scene* pScene = editor::getActiveScene();
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+
+        GameObjectManager* pManager = pScene->getObjectManager();
+
+        // 마우스 아래의 바닥에 놓는다(2D 는 Z = 0 평면, 3D 는 Y = 0). 캔버스 밖이거나 평면과 평행하면 원점에 놓는다.
+        float4x4 viewProj{};
+        EditorViewportProjectionUtil::loadViewProjection( pView, pProj, viewProj );
+
+        float3        spawnPos{ 0.0f, 0.0f, 0.0f };
+        EditorPickRay mouseRay{};
+        if ( EditorViewportProjectionUtil::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) )
+        {
+            const uint32 planeAxis = b2DMode ? 2u : 1u;
+            float3       hitPt{};
+            if ( EditorViewportRayPick::rayHitsAxisPlane( mouseRay, planeAxis, hitPt ) )
+                spawnPos = hitPt;
+        }
+
+        EditorAssetCommands::dropAt( pManager, droppedAssetPath.c_str(), spawnPos );
+    }
+} // namespace sw::editor
 
 namespace sw::editor
 {
