@@ -224,6 +224,8 @@ namespace sw
         , _arrRingBuffer{}
         , _head{ 0 }
         , _tail{ 0 }
+        , _pPendingCommand{ nullptr }
+        , _bCommandSucceeded{ false }
     {
     }
 
@@ -420,12 +422,26 @@ namespace sw
 
         for ( ;; )
         {
-            uint32 currentTail = _tail.load( std::memory_order_relaxed );
-
+            uint32                       currentTail = _tail.load( std::memory_order_relaxed );
+            const RenderCommandDelegate* pCommand    = nullptr;
             {
                 UniqueLock<mutex> lock{ _mutex };
                 _cvConsume.wait( lock, [this, currentTail]() SW_REQUIRES_LOCK( _mutex )
-                { return _stop.isStopRequested() || currentTail != _head.load( std::memory_order_acquire ); } );
+                { return _stop.isStopRequested() || currentTail != _head.load( std::memory_order_acquire ) || _pPendingCommand != nullptr; } );
+                // 명령은 받은 패킷을 모두 끝낸 뒤다 — 명령을 맡긴 게임 스레드가 그 앞에 낸 프레임이 먼저 그려진다.
+                if ( _stop.isStopRequested() == false && currentTail == _head.load( std::memory_order_acquire ) )
+                    pCommand = _pPendingCommand;
+            }
+            if ( pCommand != nullptr )
+            {
+                const bool bSucceeded = runCommand( *pCommand );
+                {
+                    ScopedLock<mutex> lock{ _mutex };
+                    _bCommandSucceeded = bSucceeded;
+                    _pPendingCommand   = nullptr;
+                }
+                _cvIdle.notify_all();
+                continue;
             }
 
             if ( _stop.isStopRequested() && currentTail == _head.load( std::memory_order_acquire ) )
@@ -450,6 +466,13 @@ namespace sw
             _cvProduce.notify_one();
             _cvIdle.notify_all();
         }
+        {
+            // 멈추는 중에 맡긴 명령은 실행하지 않는다 — 기다리는 쪽을 깨운다(실패로 돌아간다).
+            ScopedLock<mutex> lock{ _mutex };
+            _bCommandSucceeded = false;
+            _pPendingCommand   = nullptr;
+        }
+        _cvIdle.notify_all();
 
         if ( _pDevice != nullptr )
         {
@@ -471,13 +494,53 @@ namespace sw
         // 다음 updateUI 가 waitForDrawSnapshotIdle 에서 끝없이 기다린다.
         if ( _postPresentHook.isBound() )
             _postPresentHook( *_pDevice, packet );
+        releaseContextAfterWork();
+    }
 
+    void RenderThread::releaseContextAfterWork()
+    {
         IRHIContextThreadBinding* pContextBinding = _pDevice->findContextThreadBinding();
         if ( pContextBinding != nullptr && _bContextBound.load( std::memory_order_relaxed ) )
         {
             pContextBinding->unbindGraphicsContext();
             _bContextBound = false;
         }
+    }
+
+    bool RenderThread::runCommand( const RenderCommandDelegate& command )
+    {
+        if ( _pDevice == nullptr || ensureContextOnCurrentThread() == false )
+            return false;
+        command( *_pDevice );
+        releaseContextAfterWork();
+        return true;
+    }
+
+    bool RenderThread::executeAndWait( const RenderCommandDelegate& command )
+    {
+        if ( _pDevice == nullptr )
+        {
+            SW_LOG_ERROR( "executeAndWait() with no bound device - the render command is not run" );
+            return false;
+        }
+        // 워커가 없으면 부른 스레드가 패킷을 실행하는 스레드다(`executeInline`). 렌더 스레드 자신이 부르면 기다릴 상대가 없다.
+        if ( _bRunning.load( std::memory_order_acquire ) == false || std::this_thread::get_id() == _thread.get_id() )
+            return runCommand( command );
+        UniqueLock<mutex> lock{ _mutex };
+        SW_ASSERT( _pPendingCommand == nullptr ); // 맡기는 쪽은 게임 스레드 하나이고 끝날 때까지 기다린다
+        _pPendingCommand   = &command;
+        _bCommandSucceeded = false;
+        _cvConsume.notify_one();
+        _cvIdle.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
+        { return _pPendingCommand == nullptr || _stop.isStopRequested(); } );
+        if ( _pPendingCommand == &command )
+        {
+            // 렌더 스레드가 멈추는 중이라 집어 가지 않았다 — 맡긴 것을 거둔다(명령의 수명은 이 함수 안이다).
+            _pPendingCommand = nullptr;
+            SW_LOG_ERROR( "The render thread stopped before running the render command" );
+            return false;
+        }
+        return _bCommandSucceeded;
     }
 
     bool RenderThread::executeFrameBody( RenderFramePacket& packet )
@@ -652,23 +715,15 @@ namespace sw
 
     void RenderThread::drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream )
     {
-        // 미리보기 씬(에디터 툴 창)은 씬마다 자기 렌더러로 자기 타깃에 그린다. 타깃의 열기 · 읽기 전환은 게임 뷰와 같은 규칙이다.
+        // 미리보기 씬(에디터 툴 창)은 씬마다 하위 렌더러로 자기 타깃에 그린다(`FrameRenderer::executeOffscreenPacket` — 캡처와 같은 길).
         const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && pFrameStream != nullptr;
         if ( bCanDrawPreviews )
         {
             SW_PROFILE_SCOPE( "RT.ScenePreviews" );
             for ( uint32 previewIndex = 0; previewIndex < packet._scenePreviewCount; ++previewIndex )
             {
-                RenderFramePacket&     preview = *packet._listScenePreview[previewIndex];
-                RHIRenderPassBeginInfo previewPass{};
-                previewPass._bBindColor        = SW_TRUE;
-                previewPass._colorTargetCount  = 1;
-                previewPass._arrColorTarget[0] = preview._outputRenderTarget;
-                previewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-                previewPass._arrClearColor[0]  = preview._clearColor;
-                pFrameStream->beginRenderPass( previewPass );
-                (void)_pFrameRenderer->executeScenePreviewPacket( _pDevice, preview ); // 실패는 렌더러가 로그로 남기고, 타깃은 클리어 색으로 남는다
-                pFrameStream->prepareTextureForShaderRead( preview._outputRenderTarget );
+                RenderFramePacket& preview = *packet._listScenePreview[previewIndex];
+                (void)_pFrameRenderer->executeOffscreenPacket( _pDevice, preview, preview._clearColor ); // 실패는 렌더러가 로그로 남기고, 타깃은 클리어 색으로 남는다
             }
             _pFrameRenderer->retireScenePreviews( packet );
         }

@@ -25,6 +25,9 @@ namespace sw
     class IRHIDevice;
     class Scene;
 
+    /** @brief 렌더 스레드에서 실행할 일 하나입니다(`RenderThread::executeAndWait`). 디바이스는 그 스레드가 컨텍스트를 잡은 것입니다. */
+    SW_DECLARE_DELEGATE( void, RenderCommandDelegate, IRHIDevice& );
+
     /**
      * @class RenderThread
      * @details RHI 그리기와 Present 를 워커(start)에서, 또는 submit() 안에서 바로 실행합니다.
@@ -73,6 +76,14 @@ namespace sw
         void drainPackets();
         /** @brief 호출한 스레드에서 패킷 하나를 처리합니다. */
         void executeInline( RenderFramePacket& packet );
+        /**
+         * @brief @p command 를 렌더 스레드에서 실행하고 끝날 때까지 기다립니다(언리얼 `ENQUEUE_RENDER_COMMAND` + `FlushRenderingCommands`). 게임 스레드에서 부릅니다.
+         * @details 받은 패킷을 먼저 끝낸 뒤 실행한다. 워커가 없으면(인라인 실행) 부른 스레드가 컨텍스트를 잡고 실행한다 — 그때는 그 스레드가 패킷을 실행하는 스레드다.
+         *          렌더 쪽 객체(렌더러 · GPUScene · 머티리얼 프록시 · 디바이스 프레임)를 다른 스레드가 직접 만지지 않게 하는 길이다. 캡처(초상화 · 프로브 굽기)가 쓴다.
+         *          예전에는 게임 스레드가 렌더 스레드를 세우고 컨텍스트를 빼앗아 직접 그렸다(`FrameRenderer::execute( scene )`) — 렌더 쪽 객체를 두 스레드가 만지는 모양이었다.
+         * @return 실행했으면 true, 디바이스가 없거나 컨텍스트를 잡지 못했거나 멈추는 중이라 실행하지 못했으면 false 입니다(컨텍스트 실패 로그는 디바이스가 남긴다).
+         */
+        [[nodiscard]] bool executeAndWait( const RenderCommandDelegate& command );
 
         /** @brief 씬 렌더 뒤, Present 전에 부를 훅을 정합니다(패킷을 실행하는 스레드에서 불립니다). */
         void setPresentHook( PresentHookDelegate hook ) { _presentHook = std::move( hook ); }
@@ -85,6 +96,10 @@ namespace sw
         bool isRunning() const { return _bRunning.load( std::memory_order_acquire ); }
         /** @brief 디바이스가 붙어 있으면 true 를 반환합니다. */
         bool isBound() const { return _pDevice != nullptr; }
+        /** @brief 붙은 디바이스입니다(없으면 nullptr). 렌더 쪽 일은 이 디바이스로 `executeAndWait` 안에서 한다. */
+        IRHIDevice* getDevice() const { return _pDevice; }
+        /** @brief 패킷을 그리는 주 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다(화면 밖 패킷: `FrameRenderer::executeOffscreenPacket`). */
+        FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
 
         /** @brief 자동화 시나리오 동안 Present 캡처를 켜 둡니다(`<Screenshot>` 이 화면에 나간 이미지를 캡처합니다). 게임 스레드에서 부릅니다. */
         void setScenarioCaptureEnabled( bool bEnabled ) { _bScenarioCaptureEnabled.store( bEnabled, std::memory_order_release ); }
@@ -132,6 +147,10 @@ namespace sw
         void threadMain();
         /** @brief 패킷을 실행하고, 중단되더라도 postPresent 훅이 호출되도록 보장합니다. */
         void executePacket( RenderFramePacket& packet );
+        /** @brief 지금 스레드(패킷을 실행하는 스레드)에서 명령 하나를 실행합니다. 패킷처럼 컨텍스트를 잡고 끝나면 놓습니다. */
+        [[nodiscard]] bool runCommand( const RenderCommandDelegate& command );
+        /** @brief 실행 스레드가 잡은 컨텍스트를 놓습니다(패킷 · 명령 하나가 끝날 때). */
+        void releaseContextAfterWork();
         /**
          * @brief 씬 렌더부터 present 훅, Present 까지의 프레임 본문입니다.
          * @details 남은 본문은 프레임 단계의 순서(컨텍스트 → beginFrame → 게임 뷰 → 미리보기 → 백버퍼 → 훅 → Present → 촬영)가 곧 의미라 더 나누지 않는다.
@@ -204,5 +223,8 @@ namespace sw
         std::condition_variable_any _cvProduce;
         std::condition_variable_any _cvConsume;
         std::condition_variable_any _cvIdle;
+        /// @brief `executeAndWait` 가 맡긴 명령입니다(받은 패킷을 끝낸 뒤 실행한다). 실행이 끝나면 비우고 `_cvIdle` 로 알린다. 맡기는 쪽은 게임 스레드 하나다.
+        const RenderCommandDelegate* _pPendingCommand SW_GUARDED_BY( _mutex );
+        bool _bCommandSucceeded                       SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

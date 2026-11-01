@@ -995,7 +995,7 @@ namespace sw
         RHITimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
     }
 
-    void OpenGLRHIDevice::beginFrame()
+    void OpenGLRHIDevice::beginFrameInternal()
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -1014,7 +1014,7 @@ namespace sw
         _arrTimestampMask[_timestampFrameIndex] = 0;
     }
 
-    void OpenGLRHIDevice::endFrame( bool vsync, bool bPresent )
+    void OpenGLRHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
         if ( _bInitialized == SW_FALSE )
             return;

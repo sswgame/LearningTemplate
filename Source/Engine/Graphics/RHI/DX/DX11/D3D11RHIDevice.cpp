@@ -960,7 +960,7 @@ namespace sw
         RHITimestamp::resolve( arrTick, readyMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
-    void D3D11RHIDevice::beginFrame()
+    void D3D11RHIDevice::beginFrameInternal()
     {
         if ( _immediateContext.isValid() == false || _swapChain.isValid() == false )
             return;
@@ -1008,7 +1008,7 @@ namespace sw
         context->RSSetScissorRects( 1, &scissor );
     }
 
-    void D3D11RHIDevice::endFrame( bool vsync, bool bPresent )
+    void D3D11RHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
     #if defined( SW_DEBUG )
         flushDebugMessages( "endFrame" );

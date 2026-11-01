@@ -10,10 +10,7 @@
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Renderer/Capture/PortraitRenderer.h"
-#include "Engine/Renderer/RenderThread.h"
+#include "Engine/Renderer/Capture/PortraitStudio.h"
 
 namespace sw
 {
@@ -36,7 +33,7 @@ namespace sw
                     {
                         const PortraitCapture& capture = _pCapture[index];
                         vector<uint8>          rgbaBytes;
-                        PortraitRenderer::makeRGBA8( capture, rgbaBytes );
+                        PortraitStudio::makeRGBA8( capture, rgbaBytes );
                         const bool bDDS  = ImageFileWriter::writeDDSRGBA8( _pBase[index] + ".dds", rgbaBytes, capture._width, capture._height );
                         const bool bPNG  = ImageFileWriter::writePNGRGBA8( _pBase[index] + ".png", rgbaBytes, capture._width, capture._height );
                         _pWritten[index] = bDDS && bPNG ? 1 : 0;
@@ -46,27 +43,17 @@ namespace sw
         };
     } // namespace
 
-    bool PortraitBatchUtil::renderPrefabList( IRHIDevice& device, const SceneEngineServices& services, RenderThread* pRenderThread, string_view prefabList,
-                                              string_view outputDirectory, uint32 size )
+    bool PortraitBatchUtil::renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, string_view outputDirectory, uint32 size )
     {
         if ( prefabList.empty() )
             return false;
-        // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL, DX11)는 이 스레드가 잡는다.
-        if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle( RHIWaitIdleReason::Capture );
-        IRHIContextThreadBinding* pContextBinding = device.findContextThreadBinding();
-        if ( pContextBinding != nullptr && pContextBinding->bindGraphicsContext() == false )
-        {
-            SW_LOG_ERROR( "Portrait: could not bind the graphics context" );
-            return false;
-        }
         const string directory = outputDirectory.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Portraits" ) : string( outputDirectory );
         (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
 
         // 그리기 · 읽기(GPU)는 이 스레드가 차례로 하고, 옮기기(RGBA8) · 인코딩 · 쓰기(DDS · PNG)는 다 읽은 뒤 장마다 워커가 제 칸에 한다(`WriteJob`).
         // shortcut: 읽은 장을 모두 들고 있다가 한 번에 쓴다 - 아주 큰 장을 수백 장 찍으면 메모리가 그만큼 오른다. 그런 목록이 생기면 몇 장씩 끊어 쓴다.
-        PortraitRenderer        portrait;
-        bool                    bAllSucceeded = portrait.initialize( &device, services );
+        PortraitStudio          portrait;
+        bool                    bAllSucceeded = portrait.initialize( renderThread, services );
         vector<PortraitCapture> listCapture;
         vector<string>          listPath;
         const string_splitter   parts( prefabList, { "," } );
@@ -89,8 +76,6 @@ namespace sw
             listPath.push_back( string( path ) );
         }
         portrait.shutdown();
-        if ( pContextBinding != nullptr )
-            pContextBinding->unbindGraphicsContext();
 
         vector<string> listBase;
         listBase.reserve( listPath.size() );

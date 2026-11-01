@@ -21,6 +21,7 @@
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -85,7 +86,6 @@ namespace sw
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
         , _state{}
-        , _sceneBuilder{}
         , _pipelineResource{}
         , _psoManager{ _pDevice, _pipelineResource, _state._gpuScene }
         , _autoExposure{ _pDevice, _pipelineResource, _psoManager }
@@ -94,15 +94,11 @@ namespace sw
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
         , _viewResources{ _pDevice, _pipelineResource, _autoExposure, _upscale }
         , _pipelinePath{}
-        , _directViewScheduler{}
-        , _listDirectViewScratch{}
         , _lastIndirectDrawCallCount{ 0 }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
         , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture }
         , _listScenePreviewRenderer{}
         , _statusMessage{}
-        , _directOutputWidth{ 0 }
-        , _directOutputHeight{ 0 }
         , _scenePreviewRendererCount{ 0 }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
@@ -182,9 +178,6 @@ namespace sw
         if ( gv_viewMode != RenderViewMode::Lit )
             setViewMode( gv_viewMode );
 
-        // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다. 패킷 경로의 빌더(Engine)에는 Engine 가 같은 값을 준다.
-        _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
-
         const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         RenderPipelineAssetCache&  rpm                 = *_renderPipelineAssetCache;
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
@@ -252,7 +245,6 @@ namespace sw
         if ( _pDevice != nullptr )
             _state._gpuScene.releaseGPU( _pDevice );
         _state._gpuScene.clear();
-        _sceneBuilder.clear();
 
         // 추가 뷰는 통째로 해제한다(빌린 렌더 텍스처, 컬링 상수 버퍼, 리스트). 주 시점의 리스트도 이 디바이스의 것이다.
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
@@ -261,7 +253,6 @@ namespace sw
         }
         _state._listExtraView.clear();
         _state._mainView._commandList.reset();
-        _directViewScheduler.clear();
         releaseTransientResources();
         releasePassResources();
         _state._graph.clear();
@@ -354,103 +345,6 @@ namespace sw
     // ---------------------------------------------------------------------------
 
     // ---------------------------------------------------------------------------
-
-    bool FrameRenderer::execute( IRHIDevice* pDevice, Scene& scene )
-    {
-        if ( isReady() == false || pDevice == nullptr )
-            return false;
-
-        // 주 시점은 씬의 게임 카메라다. 없으면 기본 카메라로 대신 그리지 않고 멈춘다 — 카메라가 없다는 씬 데이터의 결함이 화면으로 가려진다.
-        CameraComponent* pMainCamera = scene.pickActiveGameCamera() ? scene.getActiveGameCamera() : nullptr;
-        if ( pMainCamera == nullptr )
-        {
-            // 프레임마다 도는 길이라 장면 이름별로 한 번만 알린다.
-            SW_LOG_ERROR_ONCE_FOR( scene.getName(), "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );
-            return false;
-        }
-        Scene* const pScene = &scene;
-
-        _pDevice                   = pDevice;
-        _state._outputRenderTarget = 0;
-        // 주 시점의 출력 설정(사각형, 배율, 끌 기능, 컷)은 패킷 경로와 같은 규칙으로 카메라에서 읽는다.
-        _state._mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera, RenderViewCollector::kDirectPathAutoScale ); // 자동 렌더 배율은 패킷 경로(RenderPacketBuilder)만 쓴다: 직접 경로(테스트 · 초상화 베이크)는 프레임 시계가 없고 출력이 결정적이어야 한다
-        _state._mainView._settings._viewMode = getViewMode();                                                                                   // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
-        // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
-        // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
-        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie, &_listScratchRealtimeProbe );
-        // 주 광원(그림자 배치, 앰비언트)도 패킷 경로(Engine)와 **같은 규칙**으로
-        // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
-        // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
-        DirectionalLightComponent* pKeyLight    = scene.findActiveDirectionalLight();
-        DirectionalLightComponent* pShadowLight = scene.findShadowCastingDirectionalLight();
-        if ( pKeyLight != nullptr )
-        {
-            const float3 lightDir            = pKeyLight->getLightDirection();
-            const float3 lightColor          = pKeyLight->getColor();
-            _state._frameLight._dirIntensity = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
-            _state._frameLight._colorAmbient = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
-        }
-        else
-        {
-            _state._frameLight = FrameLightState{};
-        }
-        // 하늘도 패킷 경로(RenderPacketBuilder)와 같은 규칙으로 씬에서 읽는다.
-        SkyGradient sceneSky;
-        const bool  bSceneSky = scene.getObjectManager() != nullptr && SkyComponent::findSky( *scene.getObjectManager(), sceneSky );
-        applyFrameSky( bSceneSky, sceneSky );
-        // 안개도 같다 — 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
-        FogSettings sceneFog;
-        const bool  bSceneFog = scene.getObjectManager() != nullptr && FogComponent::findFog( *scene.getObjectManager(), pMainCamera->getCameraPosition(), sceneFog );
-        _fog.applyFrameFog( bSceneFog, sceneFog );
-        // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
-        ensurePassResources();
-        ensureTransientResources( _directOutputWidth, _directOutputHeight );
-        // 주 시점 뷰-투영은 하나다. 그림자 맞춤과 그리기가 같은 행렬을 쓰고, 비율은 패킷 경로(`RenderPacketBuilder`)와 같은 규칙(출력 × 사각형)이다.
-        // 둘을 따로 측정하면 출력 설정의 비율과 풀의 비율이 어긋나 그림자 볼륨이 그리는 절두체를 덮지 못한다.
-        const float4x4 mainCameraViewProj = pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _state._mainView._settings, _state._outputWidth, _state._outputHeight ) );
-        // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(Engine)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
-        ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, &mainCameraViewProj, getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight,
-                                        _state._frameShadow );
-        applyFrameShadow();
-        // 쿠키를 쓰는 2D 빛에 아틀라스 칸을 나눠 원소에 적는다(업로드 전). 칸에 그리는 것은 기록 중 프리패스(drawLight2DCookieAtlas)다.
-        _state._cookieAtlas.assignCells( pDevice, _listScratchLightCookie, _listScratchLight );
-        _state._listFrameRealtimeProbe = _listScratchRealtimeProbe;
-        _state._lightBuffer.populate( _listScratchLight, _state._frameShadow._listTileElement, _listScratchLightProbe, _state._listFrameRealtimeProbe.empty() == false );
-        resetPassCbRing();
-        _passExecutor.setIdentityWorld( _state._frameContext );
-        updatePassConstants( _state._frameContext, mainCameraViewProj );
-        _passExecutor.resetViewRecordState();
-
-        const float3 cameraPos                        = pMainCamera->getCameraPosition();
-        _state.view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다.
-        // 추가 뷰(캡처 카메라, 화면 사각형)는 패킷 경로(Engine)와 같은 수집기와 스케줄러로 고른다. 시각은 렌더러 시계를 쓴다(테스트는 고정할 수 있다).
-        _listDirectViewScratch.clear();
-        const shared_ptr<const OcclusionTileSnapshot> occlusionSnapshot = _passExecutor.getOcclusionSnapshot();
-        if ( scene.getObjectManager() != nullptr )
-        {
-            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, _state.view( RenderViewType::Main )._viewProj, cameraPos, _state._outputWidth, _state._outputHeight, RenderViewCollector::kDirectPathAutoScale,
-                                                    static_cast<float64>( _state.getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
-                                                    occlusionSnapshot.get(), _listDirectViewScratch );
-        }
-        // 추가 뷰마다 자기 카메라에 맞춘 방향광 그림자 — 패킷 경로(RenderPacketBuilder)와 같은 함수다.
-        for ( RenderViewRequest& request : _listDirectViewScratch )
-        {
-            if ( request._bRender == SW_TRUE )
-                request._shadow = ShadowSetupUtil::makeViewShadowFor( pKeyLight != nullptr ? pShadowLight : nullptr, request._viewProj, _state._frameShadow );
-        }
-        // 패킷 경로와 **같은 경로**다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GPUScene 에는 씬을 읽는 메서드가 없다.
-        // 주 카메라의 정렬 축도 패킷 경로(Engine)처럼 설정한다. 직교 카메라는 시선 축을, 원근 카메라는 거리를 쓴다.
-        _sceneBuilder.setTransparentSortAxis( engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
-        _sceneBuilder.populateFromScene( pScene, cameraPos );
-        _sceneBuilder.computeViewTransparentOrders( _listDirectViewScratch );
-        prepareExtraViews( _listDirectViewScratch );
-        {
-            // 스크래치 하나를 돌려 쓴다. 맞바꾸기라서 지난 스냅샷의 저장소가 여기로 돌아온다.
-            _sceneBuilder.exportCPUSnapshot( _sceneSnapshotScratch );
-            _state._gpuScene.adoptCPUSnapshot( _sceneSnapshotScratch );
-        }
-        return uploadSceneAndSubmit( pDevice, "execute" );
-    }
 
     bool FrameRenderer::executePacket( IRHIDevice* pDevice, RenderFramePacket& packet )
     {
@@ -1393,39 +1287,57 @@ namespace sw
         return static_cast<RenderViewMode>( _sceneViewMode.load( std::memory_order_relaxed ) );
     }
 
-    bool FrameRenderer::executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet )
+    FrameRenderer* FrameRenderer::executeOffscreenPacket( IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, string_view pipelinePath )
     {
-        const bool bCanRender      = isReady() && pDevice != nullptr && packet._bValid == SW_TRUE;
-        const bool bIsPreviewFrame = packet._sceneKey != 0 && packet._outputRenderTarget != 0;
-        if ( bCanRender == false || bIsPreviewFrame == false )
-            return false;
+        const bool          bCanRender       = isReady() && pDevice != nullptr && packet._bValid == SW_TRUE;
+        const bool          bIsOffscreenView = packet._sceneKey != 0 && packet._outputRenderTarget != 0;
+        IRHICommandContext* pFrameStream     = pDevice != nullptr ? pDevice->getFrameStreamContext() : nullptr;
+        if ( bCanRender == false || bIsOffscreenView == false || pFrameStream == nullptr )
+            return nullptr;
 
-        FrameRenderer* pRenderer = nullptr;
+        // 타깃의 열기 · 읽기 전환은 게임 뷰(`RenderThread::executeFrameBody`)와 같은 규칙이다. 그리지 못해도 타깃은 지운 색 · 읽기 상태로 남는다.
+        const RHITextureHandle outputTarget = packet._outputRenderTarget;
+        RHIRenderPassBeginInfo outputPass{};
+        outputPass._bBindColor        = SW_TRUE;
+        outputPass._colorTargetCount  = 1;
+        outputPass._arrColorTarget[0] = outputTarget;
+        outputPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
+        outputPass._arrClearColor[0]  = clearColor;
+        pFrameStream->beginRenderPass( outputPass );
+        FrameRenderer* const pRenderer = findOrCreateOffscreenRenderer( pDevice, packet._sceneKey, pipelinePath );
+        const bool           bDrew     = pRenderer != nullptr && pRenderer->executePacket( pDevice, packet ); // 보기 모드는 패킷의 뷰 설정이 정한다
+        pFrameStream->prepareTextureForShaderRead( outputTarget );
+        return bDrew ? pRenderer : nullptr;
+    }
+
+    FrameRenderer* FrameRenderer::findOrCreateOffscreenRenderer( IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath )
+    {
+        const bool        bMainPipeline = pipelinePath.empty() || pipelinePath == _pipelinePath;
+        const string_view keyPath       = bMainPipeline ? string_view{} : pipelinePath;
         for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
         {
-            if ( preview._sceneKey == packet._sceneKey )
-                pRenderer = preview._renderer.get();
+            if ( preview._sceneKey == sceneKey && preview._pipelinePath == keyPath )
+                return preview._renderer.get();
         }
-        if ( pRenderer == nullptr )
-        {
-            // 주 렌더러와 같은 파이프라인과 작업 관리자로 만든다. 계측과 공개를 끄는 표시와 PSO 캐시는 initialize 앞에 둔다(파이프라인 로드가 공개를 부른다).
-            ScenePreviewRenderer created;
-            created._renderer                 = make_unique<FrameRenderer>();
-            created._renderer->_bScenePreview = SW_TRUE;
+        // 계측과 공개를 끄는 표시와 PSO 저장소는 initialize 앞에 둔다(파이프라인 로드가 공개를 부른다). 저장소는 같은 파이프라인일 때만 함께 쓴다.
+        ScenePreviewRenderer created;
+        created._renderer                 = make_unique<FrameRenderer>();
+        created._renderer->_bScenePreview = SW_TRUE;
+        if ( bMainPipeline )
             created._renderer->_psoManager.shareCacheOf( _psoManager );
-            created._sceneKey = packet._sceneKey;
-            if ( created._renderer->initialize( pDevice, _state._pTaskManager, _pipelinePath ) == false )
-            {
-                SW_LOG_ERROR( "Scene preview renderer for scene key %# could not start: %#", packet._sceneKey, created._renderer->getStatusMessage() );
-                return false;
-            }
-            SW_LOG_INFO( "Scene preview renderer started for scene key %#", packet._sceneKey );
-            pRenderer = created._renderer.get();
-            _listScenePreviewRenderer.push_back( std::move( created ) );
-            _scenePreviewRendererCount.store( static_cast<uint32>( _listScenePreviewRenderer.size() ) );
+        created._sceneKey        = sceneKey;
+        created._pipelinePath    = string( keyPath );
+        const string& createPath = bMainPipeline ? _pipelinePath : created._pipelinePath;
+        if ( created._renderer->initialize( pDevice, _state._pTaskManager, createPath ) == false )
+        {
+            SW_LOG_ERROR( "Offscreen renderer for scene key %# ('%#') could not start: %#", sceneKey, createPath.c_str(), created._renderer->getStatusMessage() );
+            return nullptr;
         }
-        // 보기 모드는 패킷의 뷰 설정이 정한다(`HostSceneView::_settings`).
-        return pRenderer->executePacket( pDevice, packet );
+        SW_LOG_INFO( "Offscreen renderer started for scene key %# ('%#')", sceneKey, createPath.c_str() );
+        FrameRenderer* const pRenderer = created._renderer.get();
+        _listScenePreviewRenderer.push_back( std::move( created ) );
+        _scenePreviewRendererCount.store( static_cast<uint32>( _listScenePreviewRenderer.size() ) );
+        return pRenderer;
     }
 
     void FrameRenderer::retireScenePreviews( const RenderFramePacket& mainPacket )

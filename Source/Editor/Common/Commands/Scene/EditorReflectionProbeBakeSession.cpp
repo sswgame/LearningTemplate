@@ -21,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -296,10 +297,12 @@ namespace sw::editor
             reportFailure( "a reflection probe was removed before it was baked" );
             return;
         }
-        IRHIDevice* pDevice = editor::getSubsystem<EditorRenderViews>().getRHIDevice(); // 뷰 서브시스템은 필수, 장치는 헤드리스에서 없을 수 있다
-        if ( pDevice == nullptr )
+        // 찍기는 렌더 스레드가 명령으로 한다 — 장치가 붙은 렌더 스레드가 없으면(헤드리스) 찍지 않는다.
+        RenderThreadSubsystem* pRenderThreadSubsystem = editor::findSubsystem<RenderThreadSubsystem>();
+        RenderThread*          pRenderThread          = pRenderThreadSubsystem != nullptr ? pRenderThreadSubsystem->findRenderThread() : nullptr;
+        if ( pRenderThread == nullptr || pRenderThread->getDevice() == nullptr )
         {
-            reportFailure( "no graphics device" );
+            reportFailure( "no render thread with a graphics device" );
             return;
         }
         // 쓸 경로는 찍기 전에 정한다 - 씬 · 서비스는 이 스레드에서만 본다(워커는 경로 사본을 받는다). 저장 안 한 씬이면 찍지 않는다.
@@ -321,15 +324,12 @@ namespace sw::editor
             reportFailure( EditorReflectionProbeBakeSessionInternal::makeWriteError( assetPath ) );
             return;
         }
-        // 프로브 하나씩 찍는다 — 찍기마다 렌더 스레드를 비우고 이 스레드가 컨텍스트를 잡았다 놓으므로 프레임 사이에 컨텍스트를 쥐고 있지 않는다.
-        // 선택 조회(②): 렌더 스레드 없이 동기로 굽는 구성이 있어 `captureProbes` 가 nullptr 렌더 스레드를 받는다.
-        RenderThreadSubsystem*            pRenderThreadSubsystem = editor::findSubsystem<RenderThreadSubsystem>();
+        // 프로브 하나씩 찍는다 — 씬 → 패킷은 이 스레드가, 그리기 · 읽기는 렌더 스레드가 명령으로 한다(`ReflectionProbeBaker`).
         vector<ReflectionProbeComponent*> listProbe;
         listProbe.push_back( pProbe );
         vector<ReflectionProbeCapture> listCapture;
         string                         error;
-        const bool                     bCaptured = ReflectionProbeBaker::captureProbes( *pDevice, pRenderThreadSubsystem != nullptr ? pRenderThreadSubsystem->findRenderThread() : nullptr, scene,
-                                                                                        listProbe, listCapture, &error );
+        const bool                     bCaptured = ReflectionProbeBaker::captureProbes( *pRenderThread, scene, listProbe, listCapture, &error );
         if ( bCaptured == false || listCapture.empty() )
         {
             reportFailure( bCaptured ? string( "the baker captured nothing" ) : error );

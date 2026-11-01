@@ -1782,7 +1782,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
-    void VulkanRHIDevice::beginFrame()
+    void VulkanRHIDevice::beginFrameInternal()
     {
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
@@ -1935,7 +1935,7 @@ namespace sw
         // 클리어도 그 렌더패스의 loadOp 이 맡는다.
     }
 
-    void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )
+    void VulkanRHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         (void)vsync;

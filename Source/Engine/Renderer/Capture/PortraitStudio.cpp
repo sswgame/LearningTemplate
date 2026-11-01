@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Capture/PortraitRenderer.h"
+#include "Engine/Renderer/Capture/PortraitStudio.h"
 
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
@@ -15,21 +15,46 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "PortraitRenderer" );
+    SW_LOG_CALLER( "PortraitStudio" );
 
     namespace
     {
-        struct PortraitRendererInternal
+        struct PortraitStudioInternal
         {
             /** @brief 첫 프레임은 GPUScene 업로드와 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다. */
             static constexpr uint32 kWarmupFrameCount = 3;
+            /**
+             * @brief 도착 단계(`PrimitiveRegistry::updateAssetWaiters`)에 한 번에 넘기는 시간(초)입니다. 메시 등장 디더 시간의 상한(`MeshComponent::_appearSeconds` 최대 5 초)보다 길다.
+             * @details 스튜디오는 시간을 흘리지 않는다 — 도착한 메시는 등장 비율 0 에서 오르는데 그대로 두면 0 이라 그려지지 않는다. 사진에는 다 나타난 모습을 찍는다.
+             */
+            static constexpr float32 kSettleSeconds = 10.0f;
+
+            /** @brief 첫 픽셀(구석 — 배경)과 RGB 가 다른 픽셀이 하나라도 있으면 true 입니다. 캡처는 계약 포맷 RGBA8 이고 행 사이에 빈틈이 있을 수 있다. */
+            static bool hasVisibleSubject( const PortraitCapture& capture )
+            {
+                if ( capture._width == 0 || capture._height == 0 || capture._bytes.size() < static_cast<size_t>( capture._height ) * capture._rowBytes )
+                    return false;
+                const uint8* pCorner = capture._bytes.data();
+                for ( uint32 row = 0; row < capture._height; ++row )
+                {
+                    const uint8* pRow = capture._bytes.data() + static_cast<size_t>( row ) * capture._rowBytes;
+                    for ( uint32 column = 0; column < capture._width; ++column )
+                    {
+                        const uint8* pPixel = pRow + static_cast<size_t>( column ) * 4u;
+                        if ( pPixel[0] != pCorner[0] || pPixel[1] != pCorner[1] || pPixel[2] != pCorner[2] )
+                            return true;
+                    }
+                }
+                return false;
+            }
 
             /** @brief 스튜디오 씬의 그릴 메시(로컬 경계 상자를 월드로 옮긴 것)를 모두 덮는 구(중심과 반지름)입니다. 메시가 없으면 false 입니다. */
             static bool computeSubjectSphere( GameObjectManager& manager, float3& outCenter, float32& outRadius )
@@ -66,54 +91,40 @@ namespace sw
 
 namespace sw
 {
-    PortraitRenderer::PortraitRenderer()
-        : _pDevice{ nullptr }
-        , _renderer{ nullptr }
+    PortraitStudio::PortraitStudio()
+        : _capture{}
         , _services{}
     {
     }
 
-    PortraitRenderer::~PortraitRenderer()
+    PortraitStudio::~PortraitStudio()
     {
         shutdown();
     }
 
-    bool PortraitRenderer::initialize( IRHIDevice* pDevice, const SceneEngineServices& services )
+    bool PortraitStudio::initialize( RenderThread& renderThread, const SceneEngineServices& services )
     {
         shutdown();
-        if ( pDevice == nullptr )
-            return false;
         if ( services._pAssetManager == nullptr || services._pDefaultAssets == nullptr )
         {
             SW_LOG_ERROR( "Portrait: the scene services have no asset manager or default assets" );
             return false;
         }
-        _pDevice  = pDevice;
         _services = services;
-        _renderer = make_unique<FrameRenderer>();
         // 포워드 파이프라인이다. TAA 가 없어(시간 누적 없음) 한 장으로 끝나는 이미지다.
-        if ( _renderer->initialize( pDevice, services._pDefaultAssets->_defaultForwardPipeline.get() ) == false )
-        {
-            _renderer.reset();
-            return false;
-        }
-        _renderer->getCapture().setPresentEnabled( true );
-        return true;
+        return _capture.initialize( renderThread, services._pDefaultAssets->_defaultForwardPipeline.get() );
     }
 
-    void PortraitRenderer::shutdown()
+    void PortraitStudio::shutdown()
     {
-        if ( _renderer != nullptr )
-            _renderer->shutdown();
-        _renderer.reset();
-        _pDevice  = nullptr;
+        _capture.shutdown();
         _services = SceneEngineServices{};
     }
 
-    bool PortraitRenderer::renderPrefab( const PortraitRequest& request, PortraitCapture& outCapture )
+    bool PortraitStudio::renderPrefab( const PortraitRequest& request, PortraitCapture& outCapture )
     {
         outCapture               = PortraitCapture{};
-        const bool bCannotRender = _renderer == nullptr || _pDevice == nullptr || request._prefabPath.empty();
+        const bool bCannotRender = _capture.getDevice() == nullptr || request._prefabPath.empty();
         if ( bCannotRender )
             return false;
 
@@ -127,11 +138,15 @@ namespace sw
             SW_LOG_ERROR( "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
             return false;
         }
-        // 스폰이 경로로 얻은 머티리얼을 GPU 에 초기화한다. 게임 루프에서는 틱마다 하는 일(`MaterialCache::initializePending`)인데 스튜디오는 틱하지 않는다.
-        assetManager.getAssetCache<MaterialCache>().initializePending( _pDevice );
+        // 스튜디오는 틱하지 않으므로 게임 루프가 프레임마다 하는 일을 여기서 차례로 한다 — 스폰이 건 에셋(메시 · 텍스처) 일을 끝내고(`finishPendingAssetWork`),
+        // 도착한 메시를 컴포넌트에 넣고(씬 프레임의 `AssetArrival` 단계), 경로로 얻은 머티리얼을 초기화한다(게임 스레드 — 상수 버퍼는 렌더 스레드의 프록시가 만든다).
+        // 예전에는 앞의 둘이 빠져 비동기 메시(`.mesh` 경로)를 쓰는 프리팹은 "그릴 메시 없음" 으로 실패했다(그 길을 도는 테스트가 없었다 — `Bake.Portraits`).
+        assetManager.finishPendingAssetWork();
+        pManager->getPrimitiveRegistry().updateAssetWaiters( PortraitStudioInternal::kSettleSeconds );
+        assetManager.getAssetCache<MaterialCache>().initializePending( _capture.getDevice() );
         float3  center{};
         float32 radius = 1.0f;
-        if ( PortraitRendererInternal::computeSubjectSphere( *pManager, center, radius ) == false )
+        if ( PortraitStudioInternal::computeSubjectSphere( *pManager, center, radius ) == false )
         {
             SW_LOG_ERROR( "Portrait: prefab '%#' has no mesh to draw", request._prefabPath.c_str() );
             return false;
@@ -164,29 +179,38 @@ namespace sw
             pKeyLight->setAmbient( 0.35f );
         }
 
-        _renderer->setOutputSizeOverride( request._width, request._height );
-        bool bRendered = true;
-        for ( uint32 frameIndex = 0; frameIndex < PortraitRendererInternal::kWarmupFrameCount && bRendered; ++frameIndex )
-        {
-            _pDevice->beginFrame();
-            bRendered = _renderer->execute( _pDevice, studio );
-            _pDevice->endFrame( false, false );
-            _pDevice->waitIdle( RHIWaitIdleReason::Capture );
-        }
-        RHITextureMipSpan layout{};
-        if ( bRendered == false || _renderer->getCapture().readbackPresent( outCapture._bytes, layout ) == false )
+        // 스튜디오 씬 → 패킷은 게임 스레드가, 그리기 · 읽기는 렌더 스레드가 한다(`SceneCapture`).
+        pManager->flushSceneTransforms(); // 방금 둔 카메라 · 빛의 월드 행렬을 시점을 구하기 전에 반영한다
+        SceneCaptureRequest capture{};
+        capture._view._settings  = RenderViewCollector::makeMainSettings( pCamera, RenderViewCollector::kCaptureAutoScale );
+        capture._view._viewProj  = pCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( capture._view._settings, request._width, request._height ) );
+        capture._view._cameraPos = pCamera->getCameraPosition();
+        capture._view._width     = request._width;
+        capture._view._height    = request._height;
+        capture._clearColor      = request._backgroundColor;
+        capture._frameCount      = PortraitStudioInternal::kWarmupFrameCount;
+        SceneCaptureResult result;
+        if ( _capture.capture( studio, capture, result ) == false )
         {
             SW_LOG_ERROR( "Portrait: rendering '%#' failed", request._prefabPath.c_str() );
             return false;
         }
+        outCapture._bytes               = std::move( result._bytes );
+        const RHITextureMipSpan& layout = result._layout;
         // 옮기기 · 쓰기는 여기서 하지 않는다 - GPU 가 없어도 되는 CPU · IO 일이라 부른 쪽이 워커에 맡긴다(`makeRGBA8`).
         outCapture._width    = layout._width;
         outCapture._height   = layout._height;
         outCapture._rowBytes = layout._rowBytes;
+        // 대상이 한 픽셀도 보이지 않는 사진(전부 배경색)은 실패다 — 성공으로 쓰면 빈 썸네일이 조용히 남는다(등장 디더 · 시점 결함이 그렇게 숨었다).
+        if ( PortraitStudioInternal::hasVisibleSubject( outCapture ) == false )
+        {
+            SW_LOG_ERROR( "Portrait: '%#' rendered only the background - the subject is not visible", request._prefabPath.c_str() );
+            return false;
+        }
         return true;
     }
 
-    void PortraitRenderer::makeRGBA8( const PortraitCapture& capture, vector<uint8>& outRGBABytes )
+    void PortraitStudio::makeRGBA8( const PortraitCapture& capture, vector<uint8>& outRGBABytes )
     {
         // 캡처는 계약 포맷(RGBA8)이고 행 바이트가 너비 × 4 보다 클 수 있다. 빈틈없이 옮긴다.
         const size_t rowBytes = static_cast<size_t>( capture._width ) * 4u;

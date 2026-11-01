@@ -208,10 +208,10 @@ namespace sw
         void               applyVSyncInternal() override;
         [[nodiscard]] bool createRenderPass();
         /** @brief 프레임을 엽니다(펜스 대기, 스왑체인 이미지 획득, 커맨드 버퍼 기록 시작). */
-        void beginFrame() override;
+        void beginFrameInternal() override;
 
         /** @brief 프레임을 닫습니다(vkQueueSubmit, bPresent 면 vkQueuePresentKHR). */
-        void endFrame( bool vsync, bool bPresent = true ) override;
+        void endFrameInternal( bool vsync, bool bPresent ) override;
 
         void               setTimestampEnabled( bool bEnabled ) { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
         uint32             getTimestampSlotCount() const;

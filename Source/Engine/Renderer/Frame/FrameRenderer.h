@@ -136,25 +136,22 @@ namespace sw
          */
         [[nodiscard]] bool selectPipeline();
         /**
-         * @brief 컴파일된 그래프를 실행합니다. 자기 빌더로 scene 의 스냅샷을 만들고, 패킷 경로와 같은 경로로 GPU 에 올립니다.
-         * @details 주 시점은 scene 의 게임 카메라(`Scene::pickActiveGameCamera`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.
-         */
-        [[nodiscard]] bool execute( IRHIDevice* pDevice, Scene& scene );
-        /**
          * @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다.
          * @details 주 시점이 없는 패킷(`RenderFramePacket::_bHasViewProj` 가 0 — 활성 씬이 없거나 씬에 카메라가 없다)은 그리지 않고 false 입니다.
          *          3D 내용을 실은 채 주 시점이 없으면 오류로 한 번 알립니다. 주 시점은 `RenderFramePacket::setMainView` 로 싣습니다.
          */
         [[nodiscard]] bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
-         * @brief 미리보기 씬 패킷(`RenderFramePacket::_listScenePreview` 의 하나)을 그 씬 키의 렌더러로 그립니다. 렌더 스레드에서 주 패킷 뒤에 부릅니다.
-         * @details **씬마다 렌더러 하나**를 둔다 — GPUScene(인스턴스 · 배치 · 컬링 산출물) · 트랜지언트 · 패스 상수가 씬별이라 메인 씬과 섞이지 않는다.
-         *          언리얼이 미리보기 월드마다 `FScene` 을, 유니티 `PreviewRenderUtility` 가 숨은 씬을 따로 그리는 것과 같은 자리다.
-         *          미리보기 렌더러는 프로파일러 · 렌더 타깃 목록 공개 · Present 캡처를 하지 않는다(주 렌더러의 것을 덮지 않게).
-         *          출력은 패킷의 `_outputRenderTarget` 이고, 그 타깃의 상태 전환(렌더 타깃 → 셰이더 읽기)은 부르는 쪽(`RenderThread`)이 한다.
+         * @brief 화면 밖 패킷(미리보기 씬 · 캡처)을 그 (씬 키, 파이프라인)의 하위 렌더러로 패킷의 출력 타깃(`_outputRenderTarget`)에 그립니다(렌더 스레드).
+         * @details 출력 타깃을 열고(@p clearColor 로 지운다) 그린 뒤 셰이더 읽기 상태로 둔다 — 미리보기와 캡처가 이 한 길을 쓴다.
+         *          **씬마다 하위 렌더러 하나**를 둔다 — GPUScene(인스턴스 · 배치 · 컬링 산출물) · 트랜지언트 · 패스 상수가 씬별이라 메인 씬과 섞이지 않는다.
+         *          언리얼에서 미리보기 월드 · 씬 캡처가 자기 `FScene` 과 뷰로 같은 장면 렌더러를 타는 자리다(렌더러 종류를 늘리지 않는다).
+         *          하위 렌더러는 프로파일러 · 렌더 타깃 목록 공개 · Present 캡처 · 모듈 확장을 하지 않는다(주 렌더러의 것을 덮지 않게).
+         *          @p pipelinePath 가 비면 주 렌더러의 파이프라인이고 PSO 저장소를 함께 쓴다(같은 파이프라인이면 PSO 가 같다). 다른 파이프라인은 저장소를 따로 둔다.
+         * @return 그린 하위 렌더러입니다(캡처가 그 첨부를 읽는다). 그리지 못하면 nullptr 입니다(이유는 로그에 남는다).
          */
-        [[nodiscard]] bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
-        /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 렌더러를 내립니다(창을 닫았거나 가렸다). 미리보기 패킷을 다 그린 뒤 부릅니다. */
+        FrameRenderer* executeOffscreenPacket( IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, string_view pipelinePath = {} );
+        /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 하위 렌더러를 내립니다(창을 닫았거나 가렸다 · 끝난 캡처). 미리보기 패킷을 다 그린 뒤 부릅니다. */
         void retireScenePreviews( const RenderFramePacket& mainPacket );
         /**
          * @brief 지금 살아 있는 미리보기 씬 렌더러 수입니다(진단, 테스트, 자동화 감시 값 `Editor.ScenePreviewRenderers`).
@@ -269,15 +266,6 @@ namespace sw
         RHITextureHandle getTAAHistory() const { return _state._mainView._taaHistory; }
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
         const TransientAttachmentPool& getMainViewPool() const { return _state._mainView._transientPool; }
-        /**
-         * @brief 씬 직접 경로(`execute( scene )`)의 출력 크기를 정합니다. 0 이면 백버퍼 크기를 씁니다. 초상화 베이크처럼 창과 다른 크기로 그릴 때 씁니다.
-         * @details 패킷 경로는 패킷의 뷰포트 크기를 따르므로 이 값을 보지 않는다.
-         */
-        void setOutputSizeOverride( uint32 width, uint32 height )
-        {
-            _directOutputWidth  = width;
-            _directOutputHeight = height;
-        }
         /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다. 갱신 주기나 예산 때문에 쉰 뷰는 빠집니다(진단과 테스트용). */
         uint32 getLastRenderedExtraViewCount() const { return _passExecutor.getLastRenderedExtraViewCount(); }
         /** @brief 가지고 있는 추가 뷰 수입니다. 쉬는 뷰도 포함합니다. */
@@ -405,9 +393,7 @@ namespace sw
          */
         unique_ptr<RenderPipelineAssetCache> _renderPipelineAssetCache;
         /** @brief 셋업이 채우고 패스 기록이 읽는 프레임 데이터(GPUScene · 그래프 · 뷰 · 라이트 · 그림자 · 하늘 · 패스 상수 링 · 캔버스 · 입자)입니다. 협력 객체가 참조하므로 그들보다 앞에 선언한다. */
-        FrameRenderState _state;
-        /// @brief 씬 직접 경로(`execute( scene )`, 에디터와 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 Engine 의 빌더를 씁니다.
-        GPUSceneBuilder     _sceneBuilder;
+        FrameRenderState    _state;
         RenderPipelineAsset _pipelineResource;
         /**
          * @brief 이 렌더러의 PSO(엔진 패스 · 출력 · 머티리얼 변형 · 입자 · 폴백 버퍼)를 만들고 찾는 관리자입니다. 미리보기 씬 렌더러는 주 렌더러의 저장소를 빌린다(`shareCacheOf`).
@@ -433,11 +419,6 @@ namespace sw
         FrameViewResources _viewResources;
         string             _pipelinePath;
         string             _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
-        /// @brief 씬 직접 경로가 내보내는 스냅샷입니다. 맞바꾸기(swap)로 저장소를 돌려받습니다.
-        GPUSceneSnapshot _sceneSnapshotScratch;
-        /// @brief 씬 직접 경로(`execute( scene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다. 패킷 경로에서는 Engine 의 것을 씁니다.
-        RenderViewScheduler       _directViewScheduler;
-        vector<RenderViewRequest> _listDirectViewScratch;
         /** @brief 이번 프레임에 그리는 뷰들의 보기 모드를 비트 집합으로 모읍니다(주 시점은 늘 들어갑니다). */
         uint32 collectFrameViewModeMask() const;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
@@ -448,15 +429,6 @@ namespace sw
         vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
         vector<VFXGPULightRange> _listScratchGPULightRange;
-        /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
-        vector<GPULight> _listScratchLight;
-        /// @brief 씬 직접 경로에서 라이트 프로브 SH9 원소를 모으는 버퍼입니다(`collectSceneLights`). 프레임마다 재사용합니다.
-        vector<float4>         _listScratchLightProbe;
-        vector<GPULightCookie> _listScratchLightCookie; ///< 직접 경로의 쿠키 목록(`collectSceneLights`)
-        /// @brief 실시간 프로브 갱신 요청입니다 - 직접 경로가 모으는 임시 버퍼(`_listScratchRealtimeProbe`)와, 이번 프레임 기록이 읽는 사본(`_listFrameRealtimeProbe` - 패킷 경로도 여기에 받는다).
-        vector<RealtimeProbeRequest> _listScratchRealtimeProbe;
-        /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.
-        vector<uint32> _listScratchShadowLightIndex;
 
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
         FrameCapture _capture;
@@ -466,10 +438,13 @@ namespace sw
          *          언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스를 더하고 실행하는 자리다.
          */
         FramePassExecutor _passExecutor;
-        /** @brief 미리보기 씬 하나를 그리는 렌더러입니다(`executeScenePreviewPacket`). 씬 키로 찾습니다. */
+        /** @brief (씬 키, 파이프라인)의 하위 렌더러를 찾고, 없으면 만듭니다(`executeOffscreenPacket`). 만들지 못하면 nullptr 입니다(이유는 로그에 남는다). */
+        FrameRenderer* findOrCreateOffscreenRenderer( IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath );
+        /** @brief 화면 밖 씬 하나(미리보기 · 캡처)를 그리는 하위 렌더러입니다(`executeOffscreenPacket`). (씬 키, 파이프라인)으로 찾습니다. */
         struct ScenePreviewRenderer
         {
             unique_ptr<FrameRenderer> _renderer;
+            string                    _pipelinePath; ///< 비면 주 렌더러의 파이프라인
             uint32                    _sceneKey{ 0 };
         };
         /// @brief 미리보기 씬마다의 렌더러입니다. 주 렌더러가 소유하고 `shutdown` 이 함께 내립니다(디바이스가 살아 있을 때).
@@ -477,9 +452,6 @@ namespace sw
         string                       _statusMessage;
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
-        /// @brief 씬 직접 경로의 출력 크기(`setOutputSizeOverride`)입니다. 0이면 백버퍼 크기를 씁니다.
-        uint32 _directOutputWidth;
-        uint32 _directOutputHeight;
         /// @brief `_listScenePreviewRenderer` 의 크기를 렌더 스레드가 공개한 값입니다. 다른 스레드(자동화 감시 값)는 목록 대신 이것을 읽습니다.
         atomic<uint32>      _scenePreviewRendererCount;
         FrameRendererStatus _status;

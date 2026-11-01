@@ -11,14 +11,11 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/RenderThread.h"
+#include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
@@ -29,7 +26,7 @@ namespace sw
     {
         struct ReflectionProbeBakerInternal
         {
-            /// @brief 첫 프레임은 GPUScene 업로드와 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다(`PortraitRenderer` 와 같은 수).
+            /// @brief 첫 프레임은 GPUScene 업로드와 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다(`PortraitStudio` 와 같은 수).
             static constexpr uint32 kWarmupFrameCount = 3;
             /// @brief 찍는 카메라의 가까운 면 · 먼 면(m) — 프로브 둘레의 벽이 잘리지 않을 만큼 가깝고, 방 몇 개를 덮을 만큼 멀다.
             static constexpr float32 kCaptureNearPlane = 0.05f;
@@ -69,8 +66,7 @@ namespace sw
 namespace sw
 {
     ReflectionProbeBaker::ReflectionProbeBaker()
-        : _pDevice{ nullptr }
-        , _renderer{ nullptr }
+        : _capture{}
     {
     }
 
@@ -79,57 +75,44 @@ namespace sw
         shutdown();
     }
 
-    bool ReflectionProbeBaker::initialize( IRHIDevice* pDevice )
+    bool ReflectionProbeBaker::initialize( RenderThread& renderThread )
     {
-        shutdown();
-        if ( pDevice == nullptr )
-            return false;
-        _pDevice  = pDevice;
-        _renderer = make_unique<FrameRenderer>();
-        if ( _renderer->initialize( pDevice, editor::getSubsystem<EngineDefaultAssets>()._defaultDeferredPipeline.get() ) == false )
-        {
-            _renderer.reset();
-            _pDevice = nullptr;
-            return false;
-        }
-        return true;
+        return _capture.initialize( renderThread, editor::getSubsystem<EngineDefaultAssets>()._defaultDeferredPipeline.get() );
     }
 
     void ReflectionProbeBaker::shutdown()
     {
-        if ( _renderer != nullptr )
-            _renderer->shutdown();
-        _renderer.reset();
-        _pDevice = nullptr;
+        _capture.shutdown();
     }
 
-    bool ReflectionProbeBaker::captureFace( Scene& scene, uint32 size, ReflectionProbeFaceCapture& outFace, string* pOutError )
+    bool ReflectionProbeBaker::captureFace( Scene& scene, CameraComponent& camera, uint32 size, ReflectionProbeFaceCapture& outFace, string* pOutError )
     {
         using Internal = ReflectionProbeBakerInternal;
         outFace._bytes.clear();
-        bool bRendered = true;
-        for ( uint32 frameIndex = 0; frameIndex < Internal::kWarmupFrameCount && bRendered; ++frameIndex )
-        {
-            _pDevice->beginFrame();
-            bRendered = _renderer->execute( _pDevice, scene );
-            _pDevice->endFrame( false, false );
-            _pDevice->waitIdle( RHIWaitIdleReason::Capture );
-        }
-        RHITextureMipSpan layout{};
-        RHIFormat         format{ RHIFormat::R8G8B8A8_UNORM };
-        if ( bRendered == false || _renderer->getCapture().readbackTransient( Internal::kCaptureAttachment, outFace._bytes, layout, format ) == false )
+        // 씬 → 패킷은 이 스레드가, 그리기 · 읽기는 렌더 스레드가 한다(`SceneCapture`). 읽는 것은 후처리 앞의 조명 결과(`LitColor`)다.
+        SceneCaptureRequest request{};
+        request._view._settings  = RenderViewCollector::makeMainSettings( &camera, RenderViewCollector::kCaptureAutoScale );
+        request._view._viewProj  = camera.getViewProjectionMatrix( 1.0f );
+        request._view._cameraPos = camera.getCameraPosition();
+        request._view._width     = size;
+        request._view._height    = size;
+        request._frameCount      = Internal::kWarmupFrameCount;
+        request._attachmentName  = string( Internal::kCaptureAttachment );
+        SceneCaptureResult result;
+        if ( _capture.capture( scene, request, result ) == false )
         {
             Internal::setError( pOutError, "the capture renderer could not draw or read LitColor" );
             return false;
         }
-        const bool bExpectedLayout = format == RHIFormat::R16G16B16A16_FLOAT && layout._width == size && layout._height == size;
+        const bool bExpectedLayout = result._format == RHIFormat::R16G16B16A16_FLOAT && result._layout._width == size && result._layout._height == size;
         if ( bExpectedLayout == false )
         {
             Internal::setError( pOutError, "LitColor is not an RGBA16F target of the capture size - the deferred pipeline changed" );
             return false;
         }
         // 풀기(half → float)는 여기서 하지 않는다 - GPU 가 없어도 되는 CPU 일이라 워커가 접기 · 거르기와 함께 한다(`makeProbeData`).
-        outFace._rowBytes = layout._rowBytes;
+        outFace._bytes    = std::move( result._bytes );
+        outFace._rowBytes = result._layout._rowBytes;
         outFace._size     = size;
         return true;
     }
@@ -170,14 +153,14 @@ namespace sw
     {
         using Internal         = ReflectionProbeBakerInternal;
         outCapture             = ReflectionProbeCapture{};
-        const bool bCannotBake = _renderer == nullptr || _pDevice == nullptr || scene.getObjectManager() == nullptr;
+        const bool bCannotBake = _capture.getDevice() == nullptr || scene.getObjectManager() == nullptr;
         if ( bCannotBake )
         {
             Internal::setError( pOutError, "the reflection probe baker is not initialized" );
             return false;
         }
         // 찍는 카메라는 찍는 동안만 씬에 둔다. 씬의 경로로 얻은 머티리얼은 게임 루프가 틱마다 올리지만 베이크는 루프 밖이다 — 여기서 올린다.
-        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _pDevice );
+        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _capture.getDevice() );
         GameObjectManager& manager       = *scene.getObjectManager();
         GameObject*        pCameraObject = manager.createGameObject( hashed_string( "ReflectionProbeCaptureCamera" ) );
         CameraComponent*   pCamera       = pCameraObject != nullptr ? pCameraObject->addComponent<CameraComponent>() : nullptr;
@@ -194,7 +177,6 @@ namespace sw
         pCamera->setNearPlane( Internal::kCaptureNearPlane );
         pCamera->setFarPlane( Internal::kCaptureFarPlane );
         scene.setActiveGameCamera( pCamera );
-        _renderer->setOutputSizeOverride( faceSize, faceSize );
 
         outCapture._capturePosition = capturePosition;
         outCapture._resolution      = probe.getResolution();
@@ -209,30 +191,21 @@ namespace sw
             ReflectionProbeFaceCapture& face = outCapture._arrFace[faceIndex];
             face._viewProj                   = pCamera->getViewProjectionMatrix( 1.0f );
             face._forward                    = pCamera->getCameraForward();
-            bCaptured                        = captureFace( scene, faceSize, face, pOutError );
+            bCaptured                        = captureFace( scene, *pCamera, faceSize, face, pOutError );
         }
         // 카메라를 지우면 직접 고른 카메라가 풀린다(클래스 설명).
         manager.destroyObject( pCameraObject );
         return bCaptured;
     }
 
-    bool ReflectionProbeBaker::captureProbes( IRHIDevice& device, RenderThread* pRenderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
-                                              vector<ReflectionProbeCapture>& outListCapture, string* pOutError )
+    bool ReflectionProbeBaker::captureProbes( RenderThread& renderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe, vector<ReflectionProbeCapture>& outListCapture,
+                                              string* pOutError )
     {
         using Internal = ReflectionProbeBakerInternal;
         outListCapture.clear();
         outListCapture.resize( listProbe.size() );
-        // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL, DX11)는 이 스레드가 잡는다(PortraitBatchUtil 과 같은 길).
-        if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle( RHIWaitIdleReason::Capture );
-        IRHIContextThreadBinding* pContextBinding = device.findContextThreadBinding();
-        if ( pContextBinding != nullptr && pContextBinding->bindGraphicsContext() == false )
-        {
-            Internal::setError( pOutError, "could not bind the graphics context for the reflection bake" );
-            return false;
-        }
         ReflectionProbeBaker baker;
-        bool                 bAllBaked = baker.initialize( &device );
+        bool                 bAllBaked = baker.initialize( renderThread );
         if ( bAllBaked == false )
             Internal::setError( pOutError, "the capture renderer (deferred pipeline) could not be created" );
         for ( size_t probeIndex = 0; probeIndex < listProbe.size() && bAllBaked; ++probeIndex )
@@ -242,8 +215,6 @@ namespace sw
                 bAllBaked = false;
         }
         baker.shutdown();
-        if ( pContextBinding != nullptr )
-            pContextBinding->unbindGraphicsContext();
         return bAllBaked;
     }
 } // namespace sw

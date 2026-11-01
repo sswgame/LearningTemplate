@@ -63,7 +63,7 @@ namespace sw
         /**
          * @brief 이번 프레임에 그릴 미리보기 씬 패킷입니다(앞 `_scenePreviewCount` 개만 유효). 패킷마다 씬 하나, 스냅샷 하나, 출력 타깃 하나입니다.
          * @details 저장소는 남깁니다. 링을 돌며 다시 채우므로 미리보기 패킷의 스냅샷과 라이트 목록이 프레임마다 새로 할당되지 않습니다.
-         *          렌더 스레드는 씬 키(`_sceneKey`)마다 따로 둔 렌더러로 그립니다(`FrameRenderer::executeScenePreviewPacket`). 미리보기 패킷 안의 이 목록은 항상 비어 있습니다.
+         *          렌더 스레드는 씬 키(`_sceneKey`)마다 따로 둔 렌더러로 그립니다(`FrameRenderer::executeOffscreenPacket`). 미리보기 패킷 안의 이 목록은 항상 비어 있습니다.
          */
         vector<unique_ptr<RenderFramePacket>> _listScenePreview;
         uint32                                _scenePreviewCount;

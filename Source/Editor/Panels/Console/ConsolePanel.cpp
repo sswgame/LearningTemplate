@@ -433,6 +433,7 @@ namespace sw::editor
 
     void ConsolePanel::drawOptionsPopup()
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( ImGui::BeginPopup( "##ConsoleOptions" ) == false )
             return;
         ImGui::MenuItem( "Auto-scroll", nullptr, &_bAutoScroll );

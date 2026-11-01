@@ -218,11 +218,14 @@ namespace sw
             pCommandLineManager->getArgument( CommandLineArgument::PORTRAIT_DIR, portraitDir );
             splash.dismiss();
             _bQuitAfterInitialize = SW_TRUE;
-            // 렌더 스레드가 쉬는 동안 이 스레드가 그래픽스 컨텍스트를 잡고 `PortraitRenderer`(따로 만든 스튜디오 씬 · 렌더러)로 그린다. 하나라도 실패하면 실패다.
-            RHI* const pRHI = _engine.getRHI();
-            if ( pRHI == nullptr || pRHI->hasDevice() == false )
+            // 스튜디오 씬 · 패킷은 이 스레드가, 그리기 · 읽기는 렌더 스레드가 명령으로 한다(`PortraitStudio`). 하나라도 실패하면 실패다.
+            RenderThread* const pRenderThread = _engine.getRenderThread();
+            if ( pRenderThread == nullptr || pRenderThread->getDevice() == nullptr )
+            {
+                SW_LOG_ERROR( "Portrait bake needs a render thread with a device (--render-portraits)" );
                 return false;
-            return PortraitBatchUtil::renderPrefabList( pRHI->getDevice(), engine::getSubsystem<SceneManager>().getEngineServices(), _engine.getRenderThread(), portraitList, portraitDir,
+            }
+            return PortraitBatchUtil::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
                                                         static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
         }
 

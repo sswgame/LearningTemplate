@@ -31,8 +31,8 @@ namespace sw
      */
     struct SW_API RenderViewCollector
     {
-        /// 자동 렌더 배율을 쓰지 않는 경로(씬 직접 경로 `FrameRenderer::execute`: 테스트 · 초상화 베이크)가 넘기는 값입니다. 프레임 시계가 없고 출력이 결정적이어야 해 배율을 곱하지 않는다.
-        static constexpr float32 kDirectPathAutoScale = 1.0f;
+        /// 자동 렌더 배율을 쓰지 않는 경로(캡처: 초상화 · 반사 프로브 굽기)가 넘기는 값입니다. 프레임 시계가 없고 출력이 결정적이어야 해 배율을 곱하지 않는다.
+        static constexpr float32 kCaptureAutoScale = 1.0f;
 
         /** @brief 주 시점 카메라의 출력 설정입니다(사각형, 배율, 끌 기능). @p autoScale 은 자동 렌더 배율(`RenderScaleAdjuster`, 꺼졌거나 쓰지 않는 경로는 1)이다. 컷 표시는 여기서 읽고 지웁니다(`CameraComponent::consumeCut`). nullptr 이면 기본값입니다. */
         static RenderViewSettings makeMainSettings( CameraComponent* pMainCamera, float32 autoScale );

@@ -33,6 +33,7 @@ namespace sw
     {
         if ( pDevice == nullptr || data == nullptr || data->_bytes.empty() )
             return kInvalidDescriptorIndex;
+        pDevice->assumeRenderThreadRole(); // 이 객체는 렌더 스레드만 고친다
         // 백엔드가 바뀌었으면 버퍼는 옛 디바이스 것이다(죽은 디바이스면 통보가 먼저 와서 비웠다).
         if ( _constant.isResident() && _constant._pDevice != pDevice )
             releaseRHI( _constant._pDevice );

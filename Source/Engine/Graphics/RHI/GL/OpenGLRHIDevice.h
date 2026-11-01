@@ -102,10 +102,10 @@ namespace sw
         void resizeInternal( uint32 width, uint32 height ) override;
 
         /** @brief 프레임을 엽니다(컨텍스트 되찾기, 뷰포트, 타임스탬프 수거). 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
-        void beginFrame() override;
+        void beginFrameInternal() override;
 
         /** @brief 프레임을 닫고, bPresent 면 플랫폼 컨텍스트로 백버퍼를 내보냅니다(SwapBuffers 등). */
-        void endFrame( bool vsync, bool bPresent = true ) override;
+        void endFrameInternal( bool vsync, bool bPresent ) override;
 
         void               setTimestampEnabled( bool bEnabled ) { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
         uint32             getTimestampSlotCount() const;

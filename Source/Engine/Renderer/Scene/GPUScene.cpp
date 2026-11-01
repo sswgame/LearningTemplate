@@ -108,6 +108,8 @@ namespace sw
     bool GPUScene::upload( IRHIDevice* pDevice )
     {
         SW_PROFILE_SCOPE( "RT.GPUScene.upload" );
+        if ( pDevice != nullptr )
+            pDevice->assumeRenderThreadRole(); // 렌더 쪽 객체다 — 다른 스레드의 그리기는 렌더 명령으로 넘긴다(`RenderThread::executeAndWait`)
 
         const bool bNothingToUploadScene = pDevice == nullptr || _snapshot.getInstances().empty() || _snapshot.getAllBatches().empty();
         if ( bNothingToUploadScene )

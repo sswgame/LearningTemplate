@@ -96,8 +96,8 @@ namespace sw::test
         [[nodiscard]] bool   initializeInternal( const RHISwapChainDesc& ) override { return true; }
         void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
         void                 resizeInternal( uint32, uint32 ) override {}
-        void                 beginFrame() override {}
-        void                 endFrame( bool, bool ) override {}
+        void                 beginFrameInternal() override {}
+        void                 endFrameInternal( bool, bool ) override {}
         IRHICommandContext*  getFrameStreamContext() override { return nullptr; }
         RHIBackend           getBackendType() const override { return RHIBackend::DirectX12; }
         const utf8*          getBackendName() const override { return "Fake"; }

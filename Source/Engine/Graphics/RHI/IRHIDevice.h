@@ -211,6 +211,12 @@ namespace sw
          * @param renderThreadID   렌더 스레드입니다. 이 스레드에서 부른 `waitIdle` 은 자기 자신을 기다리지 않습니다.
          */
         void setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID );
+        /**
+         * @brief 이 스레드가 렌더 스레드 역할을 가졌다고 적습니다. 렌더 쪽 객체(`GPUScene`, `MaterialRenderProxy`)의 진입이 부른다.
+         * @details Debug 는 스레드를 확인한다 — 렌더 스레드가 떠 있으면 그 스레드여야 한다(다른 스레드의 렌더 일은 `RenderThread::executeAndWait` 로 넘긴다).
+         *          렌더 스레드가 없는 구성(인라인 실행)은 패킷을 실행하는 스레드가 곧 렌더 스레드라 확인하지 않는다.
+         */
+        void assumeRenderThreadRole() const SW_ASSERT_CAPABILITY_LOCK( _renderThread ) { _renderThread.assumeHeld(); }
 
         /**
          * @brief 자원 핸들 하나를 해제합니다. 렌더 스레드가 떠 있을 때 다른 스레드가 부르면, **다음에 넘길 프레임**이 끝날 때(병렬 기록 밖)까지 미룹니다.
@@ -255,9 +261,17 @@ namespace sw
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 백엔드 안의 구체 클래스
          *       `<백엔드>RHISwapChain` 이 소유합니다. 가상 인터페이스로 되돌리지 않습니다(RHI/README.md). GL 에는 없습니다.
          */
-        virtual void beginFrame() = 0;
-        /** @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 하지 않습니다. */
-        virtual void endFrame( bool vsync = true, bool bPresent = true ) = 0;
+        void beginFrame()
+        {
+            assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
+            beginFrameInternal();
+        }
+        /** @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 하지 않습니다. 렌더 스레드에서만 부른다(`beginFrame` 과 같다). */
+        void endFrame( bool vsync = true, bool bPresent = true )
+        {
+            assumeRenderThreadRole();
+            endFrameInternal( vsync, bPresent );
+        }
 
         /**
          * @brief GPU 타임스탬프 계측 능력입니다. 이 능력이 없는 디바이스(테스트 목)는 nullptr 입니다.
@@ -518,6 +532,11 @@ namespace sw
          * @details 물을 수 없으면(API 나 확장이 없음) false 를 반환한다. 아는 항목만 플래그를 켜고, 모르는 항목은 임의로 채우지 않는다.
          */
         [[nodiscard]] virtual bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) = 0;
+
+        /** @brief 백엔드의 프레임 시작입니다(`beginFrame` 이 렌더 스레드 역할을 확인한 뒤 부른다). */
+        virtual void beginFrameInternal() = 0;
+        /** @brief 백엔드의 프레임 끝입니다(`endFrame` 이 렌더 스레드 역할을 확인한 뒤 부른다). */
+        virtual void endFrameInternal( bool vsync, bool bPresent ) = 0;
 
         /** @brief 렌더 스레드 역할의 소유자가 바뀌었습니다(`setRenderThreadDrain`). 자기 역할을 따로 든 백엔드 부품(스왑체인)이 같은 소유자로 맞춥니다. 빈 id 면 풀렸다. */
         virtual void onRenderThreadRoleChanged( std::thread::id owner ) { (void)owner; }

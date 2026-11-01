@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketSceneFill.h"
 
 namespace sw
 {
@@ -40,7 +40,7 @@ namespace sw
 
         /**
          * @brief 호스트가 요청한 미리보기 씬 뷰(`HostViewTargets::_arrSceneView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다.
-         * @details 미리보기 패킷에는 주 광원, 라이트, 그림자, 카메라, 씬 스냅샷만 싣는다. 추가 뷰, 캔버스, 스크린샷은 주 패킷에만 있다.
+         * @details 미리보기 패킷에는 씬 패킷 채우기(`RenderPacketSceneFill` — 주 광원, 라이트, 그림자, 카메라, 씬 스냅샷)만 싣는다. 추가 뷰, 캔버스, 스크린샷은 주 패킷에만 있다.
          * @param sceneManager 씬 키로 씬을 찾는 곳입니다(`SceneManager::findPreviewScene`). 없는 키는 건너뜁니다.
          * @param pUploadQueue GPU 업로드 요청을 받을 큐입니다(없으면 요청하지 않는다).
          */
@@ -59,10 +59,8 @@ namespace sw
 
         /** @brief 미리보기 씬마다의 스냅샷 빌더입니다. 요청이 끊긴 씬의 것은 해제합니다. */
         vector<ScenePreviewBuilder> _listBuilder;
-        /** @brief 미리보기 씬 하나의 애니메이션 LOD · 메시 LOD 뷰입니다. 프레임마다 재사용합니다. */
-        vector<LODView> _listLODView;
-        /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
-        vector<uint32> _listShadowLightIndex;
+        /** @brief 씬 패킷 채우기(캡처와 같은 규칙)와 그 작업 배열입니다. */
+        RenderPacketSceneFill _fill;
         /** @brief 새 빌더에 줄 배치 합치기 값입니다(`setMergeBatchesAcrossMaterials`). */
         bool _bMergeBatchesAcrossMaterials;
     };
