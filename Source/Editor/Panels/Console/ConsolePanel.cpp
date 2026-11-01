@@ -407,7 +407,7 @@ namespace sw::editor
             formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
         const ImGuiStyle& style         = ImGui::GetStyle();
         const float32     trailing      = EditorChrome::measureSmallButton( tagLabel.c_str() ) + ImGui::GetFrameHeight() + style.ItemSpacing.x * 2.0f;
-        const float32     minSearch     = ImGui::GetFontSize() * 10.0f;
+        const float32     minSearch     = ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" );
         const float32     sameLineWidth = EditorChrome::getRemainingLineWidth() - trailing;
         const bool        bSameLine     = sameLineWidth >= minSearch;
         if ( bSameLine )

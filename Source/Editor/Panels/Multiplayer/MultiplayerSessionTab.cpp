@@ -93,7 +93,7 @@ namespace sw::editor
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( "Preset" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 10.0f );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
         if ( ImGui::BeginCombo( "##NetPlayPreset", selectedName.empty() ? "(none)" : selectedName.c_str() ) )
         {
             string pickedName;
@@ -110,7 +110,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "multiplayer.preset" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Preset" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 8.0f );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldComboEm" ) );
         ImGui::InputTextWithHint( "##NetPlayPresetName", SW_LOCKEY( "EditorMultiplayer", "PresetNameHint" ), _presetName.data(), _presetName.capacity() );
         ImGui::SameLine();
         const string saveName = _presetName.empty() ? selectedName : string( _presetName.c_str() );
@@ -134,7 +134,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ArrangeWindows" ) );
         if ( settings._bArrangeWindows == false )
             return;
-        const float32 fieldWidth = ImGui::GetFontSize() * 4.0f;
+        const float32 fieldWidth = ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( fieldWidth );
         ImGui::InputInt( "##WindowWidth", &settings._windowWidth, 0, 0 );
@@ -193,7 +193,7 @@ namespace sw::editor
                 (void)session.sendServerCommand( "pause" ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "PauseServer" ) );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldTinyEm" ) );
             ImGui::InputInt( "##StepTicks", &_stepTickCount, 0, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepTickCount" ) );
             _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerSessionTabInternal::kMaxStepTickCount );
@@ -263,7 +263,7 @@ namespace sw::editor
         }
         if ( _logSource >= processCount )
             _logSource = -1;
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 10.0f );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
         if ( ImGui::BeginCombo( "##LogSource", _logSource < 0 ? "All processes" : listLabel[static_cast<size_t>( _logSource )].c_str() ) )
         {
             if ( ImGui::Selectable( "All processes", _logSource < 0 ) )

@@ -384,8 +384,8 @@ namespace sw::editor
             _capture.setPauseOnSpike( bPauseOnSpike );
         EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
-        EditorChrome::sameLineIfFits( ImGui::GetFontSize() * 4.0f );
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
+        EditorChrome::sameLineIfFits( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
         ImGui::DragFloat( "##spikeMs", &_capture.editSpikeThresholdMs(), 0.1f, 0.1f, 1000.0f, "%.1f ms" );
         EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );

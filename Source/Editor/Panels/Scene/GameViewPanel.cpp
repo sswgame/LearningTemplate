@@ -165,7 +165,7 @@ namespace sw::editor
         if ( EditorChrome::beginToolbar( "##GameViewToolbar" ) )
         {
             const utf8* pCurrentLabel = EditorViewTargetUtil::getAspectLabel( _model.getAspect() );
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 8.0f );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldComboEm" ) );
             if ( ImGui::BeginCombo( "##GameViewAspect", pCurrentLabel ) )
             {
                 for ( uint32 aspectIndex = 0; aspectIndex < static_cast<uint32>( EditorGameViewAspect::Count ); ++aspectIndex )

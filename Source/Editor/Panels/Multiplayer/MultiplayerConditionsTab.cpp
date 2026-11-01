@@ -10,6 +10,7 @@
 
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
@@ -400,7 +401,7 @@ namespace sw::editor
             sendToTargets( session, targetIndex, "net.reconnect" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsReconnect" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
         ImGui::InputFloat( "##SpikeSeconds", &_spikeSeconds, 0.0f, 0.0f, "%.1f s" );
         _spikeSeconds = MathUtil::max( 0.0f, _spikeSeconds );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Spike" ) );

@@ -808,7 +808,7 @@ namespace sw::editor
         if ( StringUtil::isNullOrEmpty( pText ) == false && ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
         {
             ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos( ImGui::GetFontSize() * 35.0f );
+            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "TooltipWrapEm" ) );
             ImGui::TextUnformatted( pText );
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();

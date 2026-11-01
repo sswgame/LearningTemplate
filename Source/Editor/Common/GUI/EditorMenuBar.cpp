@@ -130,7 +130,7 @@ namespace sw::editor
             return;
 
         fixed_string<constant::buffer::kMax64>& layoutName = EditorMenuBarInternal::getState()._layoutName;
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 12.0f );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldWideEm" ) );
         const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), layoutName.data(), layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         ImGui::SameLine();
         if ( ( ImGui::Button( "Save" ) || bEnter ) && dockLayout.saveNamedLayout( layoutName.c_str() ) )
@@ -146,7 +146,7 @@ namespace sw::editor
             ImGui::PushID( name.c_str() );
             if ( ImGui::MenuItem( name.c_str() ) )
                 (void)dockLayout.requestLoadNamedLayout( name ); // 파일이 사라졌으면 경고만 남긴다
-            ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * 1.5f );
+            ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "MenuTrailingIconEm" ) );
             if ( ImGui::SmallButton( "x" ) && EditorLayoutStore::remove( EditorLayoutStore::getDefaultFolder(), name ) == false )
                 SW_LOG_WARNING_ID( "Editor.CouldNotDeleteLayout", "Could not delete layout '%#'", name.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DeleteLayout" ) );

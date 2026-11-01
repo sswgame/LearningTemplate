@@ -9,6 +9,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -203,7 +204,7 @@ namespace sw::editor
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( "Target" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 10.0f );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
         const EditorNetPlayProcessStatus target = session.getProcessStatus( _targetProcessIndex );
         if ( ImGui::BeginCombo( "##MultiplayerTarget", target._label.c_str() ) )
         {

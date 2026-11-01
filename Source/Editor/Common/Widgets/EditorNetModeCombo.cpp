@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -19,7 +20,7 @@ namespace sw::editor
         EditorNetPlaySettings& settings = session.getSettings();
         bool                   bChanged = false;
         ImGui::BeginDisabled( session.isRunning() );
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 9.0f );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldModeEm" ) );
         if ( ImGui::BeginCombo( "##NetMode", toString( settings._mode ) ) )
         {
             constexpr EditorNetMode kArrMode[] = { EditorNetMode::Standalone, EditorNetMode::DedicatedServer, EditorNetMode::ListenHost };
@@ -38,7 +39,7 @@ namespace sw::editor
         if ( settings._mode != EditorNetMode::Standalone )
         {
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
             if ( ImGui::InputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
                 bChanged = true;
             settings._clientCount = MathUtil::clamp( settings._clientCount, 1, kMaxPlayerCount );

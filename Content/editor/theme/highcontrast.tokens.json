@@ -104,6 +104,19 @@
         "Typography.FontSize": 12,
         "Typography.IconScale": 0.8,
         "Layout.Density": 1.0,
-        "Layout.PropertyLabelWidth": 120
+        "Layout.PropertyLabelWidth": 120,
+        "Layout.FieldTinyEm": 3,
+        "Layout.FieldNumberEm": 4,
+        "Layout.FieldShortEm": 5,
+        "Layout.FieldStepEm": 6,
+        "Layout.FieldComboEm": 8,
+        "Layout.FieldModeEm": 9,
+        "Layout.FieldMediumEm": 10,
+        "Layout.FieldWideEm": 12,
+        "Layout.FieldPathEm": 20,
+        "Layout.TooltipWrapEm": 35,
+        "Layout.MenuTrailingIconEm": 1.5,
+        "Layout.InputMapLayerColumnEm": 9,
+        "Layout.InputMapActionColumnEm": 15
     }
 }

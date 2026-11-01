@@ -309,9 +309,9 @@ namespace sw::editor
         const bool      bRebindable = inputMap.findRebindSlot( action, bindIndex, slot );
         const string    slotGlyph   = bRebindable ? InputGlyphResolver::makeSlotGlyph( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( binding._kind ) };
         ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
-        ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
+        ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapLayerColumnEm" ) );
         ImGui::TextDisabled( "%s", inputMap.findBindingLayer( action, bindIndex ).c_str() );
-        ImGui::SameLine( ImGui::GetFontSize() * 15.0f );
+        ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) );
         drawTriggerCombo( action, bindIndex );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind" ) );
         ImGui::BeginDisabled( bRebindable == false );
@@ -363,7 +363,7 @@ namespace sw::editor
         const bool    bWrapToSecondLine = bUsesTime || bUsesTaps || bNegateFits == false;
         if ( bWrapToSecondLine )
         {
-            ImGui::SetCursorPosX( ImGui::GetFontSize() * 15.0f );
+            ImGui::SetCursorPosX( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) );
             bLineStart = true;
         }
         if ( bUsesTime )
@@ -372,7 +372,7 @@ namespace sw::editor
             if ( bLineStart == false )
                 ImGui::SameLine();
             bLineStart = false;
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
             if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
                 markDocumentDirty();
         }
@@ -383,7 +383,7 @@ namespace sw::editor
             if ( bLineStart == false )
                 ImGui::SameLine();
             bLineStart = false;
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldTinyEm" ) );
             if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
                 markDocumentDirty();
         }

@@ -195,7 +195,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepOnce" ) );
 
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
+                ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldTinyEm" ) );
                 ImGui::InputInt( "##StepFrameCount", &getState()._stepFrameCount, 0, 0 );
                 getState()._stepFrameCount = MathUtil::clamp( getState()._stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepFrameCount" ) );
@@ -225,7 +225,7 @@ namespace sw::editor
 
                 ImGui::SameLine();
                 float32 timeScale = editor::getSubsystem<GameTimeScale>().get();
-                ImGui::SetNextItemWidth( ImGui::GetFontSize() * 5.0f );
+                ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldShortEm" ) );
                 if ( ImGui::DragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
                     editor::getSubsystem<GameTimeScale>().set( timeScale );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayTimeScale" ) );
