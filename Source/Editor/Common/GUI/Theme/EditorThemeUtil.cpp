@@ -198,6 +198,8 @@ namespace sw::editor
                 style.IndentSpacing    = SW_THEMEMETRIC( "Spacing", "Indent" ) * density;
                 style.ScrollbarSize    = SW_THEMEMETRIC( "Spacing", "ScrollbarSize" );
                 style.GrabMinSize      = SW_THEMEMETRIC( "Spacing", "GrabMinSize" );
+                // 떠 있는 창 제목줄의 접기 단추(▼)를 뺀다 — 접힌 창은 쓸 일이 없고 제목 앞 빈 단추로만 보였다.
+                style.WindowMenuButtonPosition = ImGuiDir_None;
                 // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDPIScale`).
                 const float32 dpiScale = getSubsystem<EditorTheme>().getDPIScale();
                 if ( dpiScale != 1.0f )

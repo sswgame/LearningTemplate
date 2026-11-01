@@ -17,6 +17,7 @@
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -226,8 +227,9 @@ namespace sw::editor
     {
         for ( size_t index = 0; index < _listPage.size(); ++index )
         {
-            Page&  page  = *_listPage[index];
-            string label = page._entry._page;
+            Page& page = *_listPage[index];
+            // 목록에는 형식 이름(`PackEngineSettings`)이 아닌 읽는 이름("Pack Engine Settings")을 보인다. 형식 이름은 표식 · 툴팁에 남는다.
+            string label = EditorDisplayNameUtil::makeDisplayName( page._entry._page );
             if ( page._bDirty )
                 label += " *";
             ImGui::PushID( static_cast<int32>( index ) );
@@ -344,6 +346,15 @@ namespace sw::editor
         }
 
         const float32 listWidth = EditorChrome::measureTextExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ).x;
+        // 처음 열면 쓸 수 있는 첫 페이지를 연다 — 빈 오른쪽 칸에 "왼쪽에서 고르라" 는 글만 있던 첫 화면을 없앤다(언리얼 Project Settings 도 첫 항목을 연다).
+        for ( const unique_ptr<Page>& pPage : _listPage )
+        {
+            if ( _pSelected != nullptr || pPage->_bTypeFound == false )
+                continue;
+            _pSelected = pPage.get();
+            if ( pPage->_bOpened == false )
+                openPage( *pPage );
+        }
         ImGui::BeginChild( "##ProjectSettingsPages", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
         drawPageList();
         ImGui::EndChild();

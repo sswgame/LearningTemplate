@@ -725,6 +725,11 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
+		<entry key="settings.category.debug" source="Debug" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/debughud.settings.xml</item>
+			</origins>
+		</entry>
 		<entry key="settings.category.display" source="Display" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>

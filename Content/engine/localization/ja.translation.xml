@@ -182,6 +182,7 @@
 		<entry key="settings.category.accessibility" text="アクセシビリティ" sourceHash="11fdceabe7befeff" />
 		<entry key="settings.category.audio" text="オーディオ" sourceHash="08e6bd98452e6bb9" />
 		<entry key="settings.category.controls" text="操作" sourceHash="83cd32b685ccc9b7" />
+		<entry key="settings.category.debug" text="デバッグ" sourceHash="96d2f1dc180a46d8" />
 		<entry key="settings.category.display" text="ディスプレイ" sourceHash="1125d159f7e64df5" />
 		<entry key="settings.category.gameplay" text="ゲームプレイ" sourceHash="28235c3f4dd70e95" />
 		<entry key="settings.category.graphics" text="グラフィックス" sourceHash="6cc99c2f3cbc7008" />

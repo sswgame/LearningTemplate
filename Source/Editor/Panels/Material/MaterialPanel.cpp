@@ -57,7 +57,9 @@ namespace sw::editor
             static bool drawTypedProperty( MaterialProperty& prop )
             {
                 const string label  = EditorDisplayNameUtil::chooseLabel( prop._displayName, prop._name ); // 인스펙터와 같은 이름표 규칙
+                const string id     = "##" + label;
                 const utf8*  pLabel = label.c_str();
+                const utf8*  pID    = id.c_str(); // 이름표는 왼쪽 열(`drawPropertyRowLabel`)에 둔다 — 셰이더 · 텍스처 슬롯과 같은 쪽이다(예전에는 값 오른쪽에 붙었다)
                 if ( prop._value.empty() )
                     prop._value = prop._defaultValue;
 
@@ -68,7 +70,8 @@ namespace sw::editor
                         bool bVal{ false };
                         if ( StringUtil::tryParseBool( prop._value, bVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
-                        if ( ImGui::Checkbox( pLabel, &bVal ) )
+                        EditorWidgets::drawPropertyRowLabel( pLabel );
+                        if ( ImGui::Checkbox( pID, &bVal ) )
                         {
                             prop._value = bVal ? "true" : "false";
                             return true;
@@ -82,10 +85,11 @@ namespace sw::editor
                         if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
                         bool bChanged{ false };
+                        EditorWidgets::drawPropertyRowLabel( pLabel );
                         if ( prop._type == MaterialPropertyType::Range && prop._min < prop._max )
-                            bChanged = ImGui::SliderFloat( pLabel, &arrVal[0], prop._min, prop._max );
+                            bChanged = ImGui::SliderFloat( pID, &arrVal[0], prop._min, prop._max );
                         else
-                            bChanged = ImGui::DragFloat( pLabel, &arrVal[0], 0.01f );
+                            bChanged = ImGui::DragFloat( pID, &arrVal[0], 0.01f );
                         if ( bChanged )
                             MaterialModel::writeFloats( prop._value, arrVal, 1 );
                         return bChanged;
@@ -95,7 +99,8 @@ namespace sw::editor
                         float32 arrVal[2]{};
                         if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
-                        const bool bChanged = ImGui::DragFloat2( pLabel, arrVal, 0.01f );
+                        EditorWidgets::drawPropertyRowLabel( pLabel );
+                        const bool bChanged = ImGui::DragFloat2( pID, arrVal, 0.01f );
                         if ( bChanged )
                             MaterialModel::writeFloats( prop._value, arrVal, 2 );
                         return bChanged;
@@ -105,7 +110,8 @@ namespace sw::editor
                         float32 arrVal[3]{};
                         if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
-                        const bool bChanged = ImGui::DragFloat3( pLabel, arrVal, 0.01f );
+                        EditorWidgets::drawPropertyRowLabel( pLabel );
+                        const bool bChanged = ImGui::DragFloat3( pID, arrVal, 0.01f );
                         if ( bChanged )
                             MaterialModel::writeFloats( prop._value, arrVal, 3 );
                         return bChanged;
@@ -285,7 +291,7 @@ namespace sw::editor
             return;
         }
 
-        ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
+        // 문서 경로는 위의 문서 고르기 칸이 보인다 — 같은 경로를 한 줄 더 쓰지 않는다.
         if ( ImGui::Button( "Reload" ) )
             reloadDocument();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ReloadTip" ) );
@@ -306,7 +312,8 @@ namespace sw::editor
         EditorSelfTestMarks::note( "material.previewScene" );
 
         fixed_string<constant::buffer::kMax128>& name = _model.editName();
-        ImGui::InputText( "Name", name.data(), name.capacity() );
+        EditorWidgets::drawPropertyRowLabel( "Name" );
+        ImGui::InputText( "##name", name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _model.commitName();

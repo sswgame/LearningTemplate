@@ -789,6 +789,13 @@ msgstr "操作"
 
 #. Context: Options menu label
 #. Max length: 32
+#: engine/settings/debughud.settings.xml
+msgctxt "settings.category.debug"
+msgid "Debug"
+msgstr "デバッグ"
+
+#. Context: Options menu label
+#. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.display"
 msgid "Display"

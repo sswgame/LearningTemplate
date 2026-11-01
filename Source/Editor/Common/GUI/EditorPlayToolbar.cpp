@@ -219,8 +219,9 @@ namespace sw::editor
             /** @brief 카메라에서 시작 · 시간 배율을 그립니다. */
             static void drawSessionOptions()
             {
-                ImGui::Checkbox( "Cam", &getState()._bStartAtCamera );
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStartAtCamera" ) );
+                // 예전 "Cam" 체크 상자 — 빈 상자와 줄임말만 보였다. 카메라 아이콘 토글(켜면 중립 바탕)로 두고 뜻은 툴팁이 말한다.
+                if ( EditorWidgets::drawIconToggle( "##startAtCamera", editoricon::kCamera, getState()._bStartAtCamera, SW_LOCKEY( "EdCommon", "PlayStartAtCamera" ) ) )
+                    getState()._bStartAtCamera = getState()._bStartAtCamera == false;
 
                 ImGui::SameLine();
                 float32 timeScale = editor::getSubsystem<GameTimeScale>().get();

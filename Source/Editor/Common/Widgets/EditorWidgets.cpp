@@ -407,7 +407,7 @@ namespace sw::editor
         else
         {
             const float32     avail          = ImGui::GetContentRegionAvail().x;
-            const float32     clearWidth     = bShowClear ? 28.0f : 0.0f;
+            const float32     clearWidth     = bShowClear ? ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.x : 0.0f;
             constexpr float32 kMinFieldWidth = 4.0f; ///< 지우기 단추를 빼고도 입력란에 남아야 하는 최소 폭
             ImGui::SetNextItemWidth( ( avail > clearWidth + kMinFieldWidth ) ? ( avail - clearWidth ) : avail );
         }
@@ -417,12 +417,13 @@ namespace sw::editor
         if ( bShowClear )
         {
             ImGui::SameLine();
-            if ( ImGui::Button( "X", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 3.0f, 0.0f ) ) ) && pBuffer[0] != '\0' )
+            // 글자 "X" 대신 닫기 아이콘을 상자 없이(아이콘 토글과 같은 모양) 둔다.
+            if ( drawToggleIconButton( "##clear", true, editoricon::kClose, editoricon::kClose, SW_LOCKEY( "EdCommon", "SearchClear" ), SW_LOCKEY( "EdCommon", "SearchClear" ) ) &&
+                 pBuffer[0] != '\0' )
             {
                 pBuffer[0] = '\0';
                 bChanged   = true;
             }
-            drawTooltip( SW_LOCKEY( "EdCommon", "SearchClear" ) );
         }
         ImGui::PopID();
         return bChanged;
@@ -437,11 +438,11 @@ namespace sw::editor
         ImGui::PopStyleColor( 3 );
     }
 
-    void EditorWidgets::drawPropertyRowLabel( const utf8* pLabel, float32 labelWidth )
+    void EditorWidgets::drawPropertyRowLabel( const utf8* pLabel )
     {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled( "%s", pLabel );
-        ImGui::SameLine( labelWidth );
+        ImGui::SameLine( SW_THEMEMETRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale() ); // 예전 고정 120px 은 DPI 를 몰랐다
         ImGui::SetNextItemWidth( -1.0f );
     }
 
@@ -498,13 +499,13 @@ namespace sw::editor
         return result;
     }
 
-    bool EditorWidgets::drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt, float32 labelWidth )
+    bool EditorWidgets::drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt )
     {
         ImGui::PushID( pLabel );
         bool bChanged{ false };
 
         if ( StringUtil::isNullOrEmpty( pLabel ) == false )
-            drawPropertyRowLabel( pLabel, labelWidth );
+            drawPropertyRowLabel( pLabel );
 
         const float32 availWidth    = ImGui::GetContentRegionAvail().x;
         const float32 clearBtnWidth = 24.0f;
@@ -544,11 +545,11 @@ namespace sw::editor
         return bChanged;
     }
 
-    bool EditorWidgets::drawColorEdit( const utf8* pLabel, Color& color, float32 labelWidth )
+    bool EditorWidgets::drawColorEdit( const utf8* pLabel, Color& color )
     {
         ImGui::PushID( pLabel );
         if ( StringUtil::isNullOrEmpty( pLabel ) == false )
-            drawPropertyRowLabel( pLabel, labelWidth );
+            drawPropertyRowLabel( pLabel );
         else
             ImGui::SetNextItemWidth( -1.0f );
         float32 arrColor[4]{ color._r, color._g, color._b, color._a };

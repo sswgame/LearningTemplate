@@ -379,7 +379,10 @@ namespace sw::editor
         const ImGuiID dockspaceID = ImGui::GetID( "EditorMainDockSpace_v8" );
         // 도크스페이스가 이번 프레임 크기를 나누기 전에 기준 크기를 새 뷰포트 비율로 맞춘다.
         scaleDockSizeToViewport( dockspaceID );
-        (void)ImGui::DockSpaceOverViewport( dockspaceID, pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
+        // 도크 노드마다 붙던 창 목록 단추(▼)와 노드 닫기(✕)를 뺀다 — 탭의 ✕ 가 같은 일을 해 닫기가 두 개였다(언리얼 · 유니티 탭도 탭 닫기 하나다).
+        constexpr ImGuiDockNodeFlags kDockFlags = ImGuiDockNodeFlags_PassthruCentralNode | static_cast<ImGuiDockNodeFlags>( ImGuiDockNodeFlags_NoWindowMenuButton ) |
+                                                  static_cast<ImGuiDockNodeFlags>( ImGuiDockNodeFlags_NoCloseButton );
+        (void)ImGui::DockSpaceOverViewport( dockspaceID, pViewport, kDockFlags );
 
         if ( _bApplied == SW_FALSE && isOpeningAllPanels() )
         {

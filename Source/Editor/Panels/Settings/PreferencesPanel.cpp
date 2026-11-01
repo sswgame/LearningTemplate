@@ -54,10 +54,21 @@ namespace sw::editor
         // 왼쪽: 검색어에 맞는 섹션 목록. 고른 섹션이 걸러지면 모델이 첫 섹션으로 옮긴다.
         const float32 listWidth = EditorChrome::measureTextExtent( EditorTextExtent::ofText( 24.0f, 0.0f ) ).x;
         ImGui::BeginChild( "##PreferenceSections", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
+        // 섹션 경로(`Editor/General`)의 앞 묶음은 머리글로 한 번만 쓰고 줄에는 끝 이름만 둔다 — 줄마다 "Editor/" 가 되풀이됐다(언리얼 Editor Preferences 의 묶음 목록).
+        string_view previousGroup;
         for ( const EditorSettingsRegistration* pRegistration : _model.refreshVisibleSections( _grid.getFilterText() ) )
         {
-            if ( ImGui::Selectable( pRegistration->_pLabel, _model.getSelected() == pRegistration ) )
+            const string_view path{ pRegistration->_pLabel };
+            const size_t      slash = path.rfind( '/' );
+            const string_view group = slash == string_view::npos ? string_view{} : path.substr( 0, slash );
+            if ( group.empty() == false && group != previousGroup )
+                ImGui::SeparatorText( string( group ).c_str() );
+            previousGroup     = group;
+            const string leaf = string( slash == string_view::npos ? path : path.substr( slash + 1 ) );
+            ImGui::PushID( pRegistration->_pLabel );
+            if ( ImGui::Selectable( leaf.c_str(), _model.getSelected() == pRegistration ) )
                 _model.selectSection( *pRegistration );
+            ImGui::PopID();
         }
         ImGui::EndChild();
         const EditorSettingsRegistration* pSelected = _model.getSelected();
@@ -84,7 +95,7 @@ namespace sw::editor
         target._pInstance = pSelected->_pInstance;
         target._pType     = pSelected->_pfnGetType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &PreferencesPanel::onPropertyEdited, this );
-        _grid.drawProperties( target, pSelected->_pLabel, _listHidden );
+        _grid.drawProperties( target, nullptr, _listHidden ); // 고른 섹션은 왼쪽 목록이 보인다 — 같은 이름을 머리글로 다시 쓰지 않는다
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reset Section" ) ) )
             _model.resetSelectedSection();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetSection" ) );

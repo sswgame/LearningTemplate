@@ -136,10 +136,10 @@ namespace sw::editor
         static void drawChip( const utf8* pLabel, const Color& color );
 
         /**
-         * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 @p labelWidth 부터 남은 폭을 모두 쓰게 합니다.
+         * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 라벨 열(테마 `Layout.PropertyLabelWidth` × DPI) 뒤의 남은 폭을 모두 쓰게 합니다.
          * @details 라벨이 붙는 위젯(`drawAssetSlot`, `drawColorEdit`)이 이 함수로 라벨 열을 맞춘다. 행을 열고 닫는 상태가 없어 짝 함수(end)를 두지 않는다. 다음 항목이 행의 끝이다.
          */
-        static void drawPropertyRowLabel( const utf8* pLabel, float32 labelWidth = 120.0f );
+        static void drawPropertyRowLabel( const utf8* pLabel );
 
         /**
          * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력을 그립니다. 값이 바뀌면 true 입니다.
@@ -188,13 +188,12 @@ namespace sw::editor
          * @brief 애셋 경로 표시, 드래그앤드롭 수신(Payload), 클리어/찾아보기 버튼을 지원하는 애셋 슬롯을 그립니다.
          * @param pExpectedExt 받을 확장자 목록입니다. 쉼표 또는 공백으로 나눕니다(`".png,.jpg,.tga"`). nullptr 이나 빈 문자열이면 모두 받습니다(`EditorAssetFilter`).
          */
-        static bool drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt = nullptr,
-                                   float32 labelWidth = 120.0f );
+        static bool drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt = nullptr );
 
         /**
          * @brief Color 색상을 편집할 수 있는 일관된 색상 편집기 위젯을 그립니다.
          */
-        static bool drawColorEdit( const utf8* pLabel, Color& color, float32 labelWidth = 120.0f );
+        static bool drawColorEdit( const utf8* pLabel, Color& color );
 
         /**
          * @brief 인스펙터 패널 등에서 사용할 공통 ImGui 스타일을 스택에 푸시합니다.

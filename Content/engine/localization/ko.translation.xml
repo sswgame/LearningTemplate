@@ -174,6 +174,7 @@
 		<entry key="settings.category.accessibility" text="접근성" sourceHash="11fdceabe7befeff" />
 		<entry key="settings.category.audio" text="오디오" sourceHash="08e6bd98452e6bb9" />
 		<entry key="settings.category.controls" text="조작" sourceHash="83cd32b685ccc9b7" />
+		<entry key="settings.category.debug" text="디버그" sourceHash="96d2f1dc180a46d8" />
 		<entry key="settings.category.display" text="화면" sourceHash="1125d159f7e64df5" />
 		<entry key="settings.category.gameplay" text="게임플레이" sourceHash="28235c3f4dd70e95" />
 		<entry key="settings.category.graphics" text="그래픽" sourceHash="6cc99c2f3cbc7008" />

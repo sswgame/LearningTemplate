@@ -20,6 +20,19 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct UserSettingsPanelInternal
+        {
+            /** @brief 스키마의 현지화 키(`text`)가 가리키는 이름입니다. 키가 없는 항목은 id 를 그대로 보인다(게임 옵션 메뉴와 같은 규칙 — `OptionsMenuScreen`). */
+            static const utf8* resolveText( const string& textKey, const hashed_string& id ) { return textKey.empty() ? id.c_str() : LocalizedText::find( textKey, textKey.c_str() ); }
+            static const utf8* resolveText( const string& textKey, const string& value ) { return textKey.empty() ? value.c_str() : LocalizedText::find( textKey, textKey.c_str() ); }
+        };
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
     SW_EDITOR_PANEL( UserSettingsPanel, UserSettingsPanel::kPanelID, EditorPanelCategory::Tool, 1900 );
 
     UserSettingsPanel::UserSettingsPanel()
@@ -47,7 +60,9 @@ namespace sw::editor
         for ( uint32 categoryIndex = 0; categoryIndex < static_cast<uint32>( listCategory.size() ); ++categoryIndex )
         {
             const UserSettingCategoryDef& category = listCategory[categoryIndex];
-            if ( ImGui::BeginTabItem( category._id.c_str() ) == false )
+            // 이름은 게임 옵션 메뉴와 같은 데이터(스키마의 `text` 현지화 키)다 — 예전에는 id(`display`)를 그대로 보였다. id 는 탭 ID 로 남는다.
+            const string tabLabel = string( UserSettingsPanelInternal::resolveText( category._textKey, category._id ) ) + "###" + category._id.c_str();
+            if ( ImGui::BeginTabItem( tabLabel.c_str() ) == false )
                 continue;
             _selectedCategory = categoryIndex;
             settings.collectSettings( category._id, listSetting );
@@ -119,7 +134,8 @@ namespace sw::editor
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         const bool bPending = settings.isPending( def._id );
-        ImGui::TextUnformatted( def._id.c_str() );
+        ImGui::TextUnformatted( UserSettingsPanelInternal::resolveText( def._textKey, def._id ) ); // 예전에는 키(`display.windowMode`)
+        EditorWidgets::drawTooltip( def._id.c_str() );
         if ( bPending )
         {
             ImGui::SameLine();
@@ -173,12 +189,21 @@ namespace sw::editor
             {
                 vector<UserSettingOption> listOption;
                 settings.collectOptions( def._id, listOption );
-                if ( ImGui::BeginCombo( "##value", value.empty() ? "(default)" : value.c_str() ) )
+                // 선택지도 스키마의 현지화 이름(`Borderless`)으로 보인다 — 예전에는 저장 값(`borderless`)이었다. 저장 · 비교는 값으로 한다.
+                const utf8* pPreview = value.empty() ? "(default)" : value.c_str();
+                for ( const UserSettingOption& option : listOption )
+                {
+                    if ( option._value == value )
+                        pPreview = UserSettingsPanelInternal::resolveText( option._textKey, option._value );
+                }
+                if ( ImGui::BeginCombo( "##value", pPreview ) )
                 {
                     for ( const UserSettingOption& option : listOption )
                     {
-                        if ( ImGui::Selectable( option._value.c_str(), option._value == value ) )
+                        ImGui::PushID( option._value.c_str() );
+                        if ( ImGui::Selectable( UserSettingsPanelInternal::resolveText( option._textKey, option._value ), option._value == value ) )
                             (void)settings.setPendingValue( def._id, option._value );
+                        ImGui::PopID();
                     }
                     ImGui::EndCombo();
                 }

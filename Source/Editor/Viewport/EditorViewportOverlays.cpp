@@ -255,7 +255,13 @@ namespace sw::editor
 
         // 접기 · 펴기(접으면 손잡이와 이름만)
         ImGui::SameLine();
-        if ( ImGui::ArrowButton( "##collapse", state._bCollapsed ? ImGuiDir_Right : ImGuiDir_Down ) )
+        // 손잡이 옆 작은 접기 화살표다 — 상자 없이 흐린 글자로(띠마다 앞에 빈 상자가 하나씩 보였다).
+        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+        EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Base", "TextMuted" ) );
+        const bool bToggle = ImGui::ArrowButton( "##collapse", state._bCollapsed ? ImGuiDir_Right : ImGuiDir_Down );
+        EditorThemeUtil::popTextColor();
+        ImGui::PopStyleColor();
+        if ( bToggle )
         {
             state._bCollapsed = state._bCollapsed == false;
             save();

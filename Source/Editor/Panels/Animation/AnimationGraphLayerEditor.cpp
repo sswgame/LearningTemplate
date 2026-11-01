@@ -25,7 +25,6 @@ namespace sw::editor
         struct AnimationGraphLayerEditorInternal
         {
             /** @brief 값 입력란 앞 이름의 폭입니다(DPI 배율 전). */
-            static constexpr float32 kLabelWidth = 112.0f;
             /** @brief 새 마스크의 첫 항목입니다. 상체 마스크의 흔한 모양(spine 과 그 자손)이며, 사용자가 스켈레톤의 본 이름으로 고칩니다. */
             static constexpr const utf8* kNewMaskRootBone = "spine";
             /** @brief 클립 상태가 없는 그래프에서 새 레이어가 처음 가리키는 클립입니다. */
@@ -84,7 +83,7 @@ namespace sw::editor
 
             static void drawRowLabel( const utf8* pLabel )
             {
-                EditorWidgets::drawPropertyRowLabel( pLabel, kLabelWidth * EditorThemeUtil::getDPIScale() );
+                EditorWidgets::drawPropertyRowLabel( pLabel );
             }
 
             /** @brief 목록 순서를 한 항목 옮깁니다. @p index 와 @p index + @p step 이 범위 안이어야 합니다. */
@@ -422,7 +421,7 @@ namespace sw::editor
 
         // 프리셋 파일을 고르면 그 파일을 읽어 항목을 채우고, 비우면 지금 항목을 그래프에 바로 적는다.
         string presetPath = inoutMask._filePath;
-        if ( EditorWidgets::drawAssetSlot( "Preset", presetPath, ".bonemask.xml", AnimationGraphLayerEditorInternal::kLabelWidth * EditorThemeUtil::getDPIScale() ) )
+        if ( EditorWidgets::drawAssetSlot( "Preset", presetPath, ".bonemask.xml" ) )
         {
             AnimationBoneMaskDef loaded{};
             loaded._name = inoutMask._name;

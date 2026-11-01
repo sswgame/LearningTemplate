@@ -41,6 +41,7 @@
 		<entry source="Crouch" text="しゃがみ" />
 		<entry source="Current" text="現在値" />
 		<entry source="Custom" text="カスタム" />
+		<entry source="Debug" text="デバッグ" />
 		<entry source="Debug HUD" text="デバッグ HUD" />
 		<entry source="Default" text="標準" />
 		<entry source="Defaults" text="初期設定" />

@@ -5,7 +5,7 @@
   hudSections 는 공백으로 나눈 '이름'(켬) · '-이름'(끔) 목록이고, 적지 않은 섹션은 등록의 기본을 따른다(DebugHUDSectionState).
 -->
 <UserSettingsSchema version="1">
-	<Category id="debug"/>
+	<Category id="debug" text="settings.category.debug"/>
 	<Setting id="debug.hud" category="debug" type="bool" default="false" apply="immediate" target="gv:gv_debugHUD"/>
 	<Setting id="debug.hudSections" category="debug" type="string" default="" apply="immediate" target="gv:gv_debugHUDSections"/>
 	<Setting id="debug.hudCorner" category="debug" type="enum" default="topLeft" apply="immediate" target="gv:gv_debugHUDCorner">

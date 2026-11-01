@@ -36,7 +36,7 @@ namespace sw::editor
         {
             static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboID, bool& bEnabled, float32& value,
                                              const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
-                                             float32 comboWidth, int32 fallbackIndex, bool bVertical, const utf8* pToggleTooltip,
+                                             int32 fallbackIndex, bool bVertical, const utf8* pToggleTooltip,
                                              const utf8* pValueTooltip )
             {
                 if ( EditorWidgets::drawToggleButton( pButtonLabel, bEnabled ) )
@@ -44,7 +44,13 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( pToggleTooltip );
 
                 EditorViewportToolbar::nextItem( bVertical );
-                ImGui::SetNextItemWidth( comboWidth * EditorThemeUtil::getDPIScale() );
+                // 폭은 가장 긴 값 글자 + 펼침 화살표다 — 고정 픽셀(60 · 65)은 글꼴이 바뀌자 "15 de" 로 잘렸다.
+                float32 labelWidth = 0.0f;
+                for ( int32 index = 0; index < valueCount; ++index )
+                {
+                    labelWidth = MathUtil::max( labelWidth, ImGui::CalcTextSize( arrLabel[index] ).x );
+                }
+                ImGui::SetNextItemWidth( labelWidth + ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f );
 
                 int32 currentIndex = fallbackIndex;
                 for ( int32 index = 0; index < valueCount; ++index )
@@ -241,16 +247,15 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5,
-                                                            65.0f, 2, bVertical,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
                                                             SW_LOCKEY( "EdCommon", "GridSnap" ),
                                                             SW_LOCKEY( "EdCommon", "GridSnapSize" ) );
 
         nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
-        const utf8*   arrRotLabel[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
+        const utf8*   arrRotLabel[] = { "5\xc2\xb0", "15\xc2\xb0", "45\xc2\xb0", "90\xc2\xb0" }; // 5° …(UTF-8 도 기호)
         EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
-                                                            4, 60.0f, 1, bVertical,
+                                                            4, 1, bVertical,
                                                             SW_LOCKEY( "EdCommon", "RotationSnap" ),
                                                             SW_LOCKEY( "EdCommon", "RotationSnapSize" ) );
         ImGui::EndDisabled();

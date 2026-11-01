@@ -77,6 +77,7 @@
         "Stroke.Tab": 1,
         "Typography.FontSize": 12,
         "Typography.IconScale": 0.8,
-        "Layout.Density": 1.0
+        "Layout.Density": 1.0,
+        "Layout.PropertyLabelWidth": 120
     }
 }
