@@ -93,7 +93,7 @@ namespace sw
             static constexpr utf8 kDependencySeparator{ '?' };
 
             /** @brief 컴파일 캐시 옆 의존 기록의 첫 줄입니다(`ShaderCookStamp::writeIncludeRecord`). */
-            static constexpr string_view kIncludeRecordHeader{ "SWDEPS 1" };
+            static constexpr string_view kIncludeRecordHeader{ "SWDEPS 2 " }; // 뒤에 짝 바이트코드의 내용 해시(16 hex)가 붙는다
 
             /** @brief 스탬프의 16자리 hex 를 uint64 로 바꿉니다. 형식이 맞지 않으면 0이며 불일치로 처리합니다. */
             static uint64 parseHex64( string_view hex )
@@ -752,9 +752,10 @@ namespace sw
         return HashUtil::computeStringHash64( to_string( getToolchainFingerprint() ), false, headerPart );
     }
 
-    bool ShaderCookStamp::writeIncludeRecord( string_view recordPath, const vector<string>& listIncludedFile )
+    bool ShaderCookStamp::writeIncludeRecord( string_view recordPath, const vector<string>& listIncludedFile, uint64 bytecodeHash )
     {
         string text{ ShaderCookStampInternal::kIncludeRecordHeader };
+        text += ShaderCookStampInternal::formatHex64( bytecodeHash );
         text += '\n';
         for ( const string& header : listIncludedFile )
         {
@@ -772,13 +773,20 @@ namespace sw
         return FileUtil::writeTextFile( recordPath, text );
     }
 
-    bool ShaderCookStamp::readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile )
+    bool ShaderCookStamp::readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile, uint64& outBytecodeHash )
     {
         outListIncludedFile.clear();
+        outBytecodeHash = 0;
         string text;
-        // 기록이 없는 것은 정상 상태다 - 쓰는 쪽은 바이트코드를 쓰기 전에 옛 기록을 지우고 다 쓴 뒤 새 기록을 둔다. 그 사이에 읽으면 "없음" 으로 다시 컴파일한다.
+        // 기록이 없는 것은 정상 상태다(처음 · 다른 프로세스가 쓰는 중) — "없음" 으로 다시 컴파일한다.
         if ( FileUtil::readOptionalTextFile( recordPath, text ) != OptionalFileRead::Read || StringUtil::startsWith( text, ShaderCookStampInternal::kIncludeRecordHeader ) == false )
             return false;
+        const size_t hashBegin = ShaderCookStampInternal::kIncludeRecordHeader.size();
+        if ( text.size() < hashBegin + 16 )
+            return false;
+        const uint64 bytecodeHash = ShaderCookStampInternal::parseHex64( string_view( text ).substr( hashBegin, 16 ) );
+        if ( bytecodeHash == 0 )
+            return false; // 형식이 틀렸다 — 믿지 않는다
 
         vector<string> listHeader;
         size_t         pos = text.find( '\n' );
@@ -800,6 +808,7 @@ namespace sw
             listHeader.push_back( headerPath );
         }
         outListIncludedFile = std::move( listHeader );
+        outBytecodeHash     = bytecodeHash;
         return true;
     }
 

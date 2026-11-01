@@ -14,6 +14,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -245,7 +246,8 @@ namespace sw
 
             /**
              * @brief 디스크 캐시가 켜져 있고 자리가 있으면 바이트코드와 의존 기록(연 헤더와 내용 해시)을 씁니다. 못 쓰면 경고만 남깁니다(다음 컴파일이 다시 만든다).
-             * @details 옛 의존 기록을 먼저 지운다 — 바이트코드를 쓰다 멈추면 새 바이트코드 옆에 옛 기록이 남고, 헤더가 옛 내용으로 돌아간 날 그 기록이 맞아 버린다.
+             * @details 둘은 따로 원자적으로 쓴다(`FileUtil::writeFile` — 임시 파일 바꿔치기). 기록이 바이트코드의 내용 해시를 실어 짝이 맞지 않으면 읽는 쪽이 버리므로
+             *          옛 기록을 먼저 지우지 않는다 — 지우기는 같은 셰이더를 함께 컴파일하는 프로세스(ctest 의 백엔드 넷)끼리 경쟁해 경고를 냈다.
              */
             static void saveToCacheIfEnabled( const string& cachePath, const ShaderCompileResult& result )
             {
@@ -253,17 +255,12 @@ namespace sw
                 if ( bDiskCacheWritable == false )
                     return;
                 const string recordPath = cachePath + ShaderCookStamp::kIncludeRecordSuffix;
-                if ( FileUtil::removeFile( recordPath ) == false ) // 없으면 성공이다 - 묻고 지우기를 따로 하지 않는다
-                {
-                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotReplaceShader", "Could not replace the shader cache record '%#' - the cache entry is skipped", recordPath );
-                    return;
-                }
                 if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, result._bytecode.data(), result._bytecode.size() ) == false )
                 {
                     SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader cache '%#'", cachePath );
                     return;
                 }
-                if ( ShaderCookStamp::writeIncludeRecord( recordPath, result._listIncludedFile ) == false )
+                if ( ShaderCookStamp::writeIncludeRecord( recordPath, result._listIncludedFile, ContentHash::computeBytes( result._bytecode ) ) == false )
                     SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader2", "Could not write the shader cache record '%#'", recordPath );
             }
 
@@ -721,11 +718,13 @@ namespace sw
         if ( cachePath.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
         {
             // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
+            // 바이트코드가 기록의 짝인지 내용 해시로 본다 — 다른 프로세스가 둘 중 하나만 바꾼 순간을 읽으면 맞지 않아 다시 컴파일한다.
             vector<string> listIncludedFile;
             vector<uint8>  cachedBytes;
-            const bool     bRecordCurrent = ShaderCookStamp::readIncludeRecord( cachePath + ShaderCookStamp::kIncludeRecordSuffix, listIncludedFile );
-            const bool     bBytesRead     = bRecordCurrent && FileUtil::readFile( cachePath, cachedBytes );
-            if ( bBytesRead && cachedBytes.empty() == false )
+            uint64         recordedBytecodeHash = 0;
+            const bool     bRecordCurrent       = ShaderCookStamp::readIncludeRecord( cachePath + ShaderCookStamp::kIncludeRecordSuffix, listIncludedFile, recordedBytecodeHash );
+            const bool     bBytesRead           = bRecordCurrent && FileUtil::readFile( cachePath, cachedBytes ); // 기록은 바이트코드를 쓴 뒤에 쓴다 — 기록이 있으면 바이트코드가 있다
+            if ( bBytesRead && cachedBytes.empty() == false && ContentHash::computeBytes( cachedBytes ) == recordedBytecodeHash )
             {
                 result._bytecode         = std::move( cachedBytes );
                 result._listIncludedFile = std::move( listIncludedFile );

@@ -98,15 +98,17 @@ namespace sw
          * @brief 컴파일이 연 헤더와 그 내용 해시를 @p recordPath 에 적습니다(컴파일 캐시 항목 옆의 의존 기록).
          * @details 캐시 키는 컴파일 전에 필요하고 헤더 목록은 컴파일 뒤에야 알아서(순환), 키에 헤더를 넣지 않고 캐시 항목 옆에 이 기록을 둔다.
          *          맞출 때 `readIncludeRecord` 가 기록된 헤더가 지금도 같은지 본다. 목록이 비어도 기록은 쓴다(헤더에 기대지 않는 셰이더다).
+         *          기록은 짝 바이트코드의 내용 해시(@p bytecodeHash)를 싣는다 — 바이트코드와 기록은 따로 원자적으로 쓰이므로(여러 프로세스가 같은 항목을 함께 쓴다),
+         *          짝이 맞지 않는 둘(한쪽만 바뀐 순간 · 쓰다 멈춤)을 읽는 쪽이 해시로 가려 다시 컴파일한다. 옛 기록을 먼저 지우는 단계(프로세스끼리 경쟁했다)가 필요 없다.
          * @return 헤더를 읽지 못하거나 파일을 쓰지 못했으면 false 입니다.
          */
-        [[nodiscard]] static bool writeIncludeRecord( string_view recordPath, const vector<string>& listIncludedFile );
+        [[nodiscard]] static bool writeIncludeRecord( string_view recordPath, const vector<string>& listIncludedFile, uint64 bytecodeHash );
 
         /**
-         * @brief @p recordPath 의 의존 기록을 읽어, 기록된 헤더가 **모두 지금도 같은 내용**이면 그 목록을 @p outListIncludedFile 에 담고 true 를 돌려줍니다.
+         * @brief @p recordPath 의 의존 기록을 읽어, 기록된 헤더가 **모두 지금도 같은 내용**이면 그 목록을 @p outListIncludedFile 에, 짝 바이트코드의 내용 해시를 @p outBytecodeHash 에 담고 true 를 돌려줍니다.
          * @return 기록이 없거나 형식이 틀리거나 헤더 하나라도 없어졌거나 읽지 못하거나 내용이 바뀌었으면 false 입니다(캐시 미스로 다룬다). 그때 목록은 비웁니다.
          */
-        [[nodiscard]] static bool readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile );
+        [[nodiscard]] static bool readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile, uint64& outBytecodeHash );
 
         /**
          * @brief 컴파일 옵션의 버전입니다. **`ShaderCompiler.cpp` 가 컴파일러에 넘기는 인자(플래그, 백엔드 define)를 바꾸면 올리세요.**
