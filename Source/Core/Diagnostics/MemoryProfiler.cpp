@@ -73,30 +73,6 @@ namespace sw
             }
 
             /** @brief `MemoryTag` 값 순서의 표시 이름입니다. */
-            static constexpr const utf8* kArrTagName[] = {
-                "Unknown",
-                "EngineMisc",
-                "Task",
-                "Reflection",
-                "Asset",
-                "Scene",
-                "Texture",
-                "Mesh",
-                "Material",
-                "Shader",
-                "Animation",
-                "Audio",
-                "Physics",
-                "Navigation",
-                "RenderCPU",
-                "UI",
-                "Script",
-                "Editor",
-                "Game",
-            };
-            static_assert( sizeof( kArrTagName ) / sizeof( kArrTagName[0] ) == static_cast<size_t>( MemoryTag::MaxTags ),
-                           "kArrTagName must have one name per MemoryTag" );
-
             /** @brief @p counter 를 @p value 까지 올립니다(더 크면 그대로). 새 최고치가 아니면 읽기 한 번으로 끝난다. */
             static void raiseToAtLeast( atomic<uint64>& counter, uint64 value )
             {
@@ -184,14 +160,14 @@ namespace sw
         const uint32 tagIndex = static_cast<uint32>( tag );
         if ( tagIndex >= static_cast<uint32>( MemoryTag::MaxTags ) )
             return "Invalid";
-        return MemoryProfilerInternal::kArrTagName[tagIndex];
+        return kArrMemoryTagName[tagIndex];
     }
 
     bool MemoryProfiler::findMemoryTagByName( string_view name, MemoryTag& outTag )
     {
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            if ( StringUtil::equals( name, MemoryProfilerInternal::kArrTagName[tagIndex] ) )
+            if ( StringUtil::equals( name, kArrMemoryTagName[tagIndex] ) )
             {
                 outTag = static_cast<MemoryTag>( tagIndex );
                 return true;
@@ -622,7 +598,7 @@ namespace sw
                 ++newlyExceededCount;
                 if ( pOutListNewlyExceeded != nullptr )
                     pOutListNewlyExceeded->push_back( static_cast<MemoryTag>( tagIndex ) );
-                SW_LOG_WARNING_ID( "MemoryProfiler.OverBudget", "[MemoryBudget] %# is over budget: %# KB live (peak %# KB) > %# KB budget", MemoryProfilerInternal::kArrTagName[tagIndex],
+                SW_LOG_WARNING_ID( "MemoryProfiler.OverBudget", "[MemoryBudget] %# is over budget: %# KB live (peak %# KB) > %# KB budget", kArrMemoryTagName[tagIndex],
                                    liveBytes / 1024, summary._peakAllocatedBytes.load( std::memory_order_relaxed ) / 1024, budget / 1024 );
             }
             else if ( bWasOver && liveBytes * 100 < budget * MemoryProfilerInternal::kBudgetRearmPercent )

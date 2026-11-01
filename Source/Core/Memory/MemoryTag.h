@@ -17,30 +17,44 @@ namespace sw
 {
     /**
      * @brief 할당의 용도입니다. 모듈이 아니라 "무엇을 담는가" 로 나눕니다.
-     * @details 새 줄을 더하면 `MemoryProfiler::getMemoryTagName` 의 이름 표에도 한 줄을 더합니다(줄 수는 static_assert 가 봅니다).
+     * @details 줄은 `SW_MEMORY_TAG_LIST` 한 곳에만 더한다 — 열거형과 이름 표(`kArrMemoryTagName`, 보고 · 예산 파일의 키)가 같은 목록에서 나온다.
      */
+    // clang-format off
+#define SW_MEMORY_TAG_LIST( X )                                                                                                   \
+    X( Unknown )    /* 태그를 걸지 않은 곳. 이 줄이 크면 진입점이 빠진 것이다 */                                                   \
+    X( EngineMisc ) /* 엔진 서비스의 나머지(로거 · 명령줄 · 전역 변수 · 이벤트 · 설정 · 입력 · 현지화) */                           \
+    X( Task )       /* 태스크 매니저 · 워커 큐 · 노드 풀 */                                                                         \
+    X( Reflection ) /* 타입 레지스트리 · TypeInfo · 프로퍼티 표 */                                                                  \
+    X( Asset )      /* 에셋 데이터베이스 · 팩 색인 · 스트리밍 큐(에셋 본문은 종류별 줄로 간다) */                                  \
+    X( Scene )      /* 씬 · GameObject · 컴포넌트 저장소 · 트랜스폼 계층 · 프리팹 인스턴스 */                                       \
+    X( Texture )    /* 텍스처 디코드 · 캐시 */                                                                                      \
+    X( Mesh )       /* 메시 정점 · 인덱스 · 메시 생성 */                                                                            \
+    X( Material )   /* 머티리얼 · 머티리얼 인스턴스 · 캐시 */                                                                       \
+    X( Shader )     /* 셰이더 캐시 · 컴파일 결과 · 리플렉션 매니페스트 · 바인딩 레이아웃 */                                         \
+    X( Animation )  /* 애니메이션 클립 · 스켈레톤 · 그래프 · 스프라이트 클립 */                                                     \
+    X( Audio )      /* 오디오 시스템 · 사운드 데이터 */                                                                             \
+    X( Physics )    /* 물리 월드 · 바디 · 충돌 구조 */                                                                              \
+    X( Navigation ) /* 내비메시 타일 · 베이크 중간 결과 · 질의 노드 · 군중 */                                                       \
+    X( RenderCPU )  /* 렌더러의 CPU 측(FrameRenderer · GPUScene · 렌더 그래프 · PSO 캐시 · RHI 디바이스 · 렌더 스레드) */            \
+    X( UI )         /* 런타임 UI(HUD · 위젯 · 대사 상자) — 에디터 UI 는 Editor */                                                   \
+    X( Script )     /* 데이터로 짠 실행 그래프(대사 그래프 · 시퀀스 · 이후의 스크립트 VM) */                                        \
+    X( Editor )     /* 에디터 모듈 */                                                                                               \
+    X( Game )       /* 게임 모듈 */
+    // clang-format on
+
     enum class MemoryTag : uint8
     {
-        Unknown = 0, ///< 태그를 걸지 않은 곳. 이 줄이 크면 진입점이 빠진 것이다
-        EngineMisc,  ///< 엔진 서비스의 나머지(로거 · 명령줄 · 전역 변수 · 이벤트 · 설정 · 입력 · 현지화)
-        Task,        ///< 태스크 매니저 · 워커 큐 · 노드 풀
-        Reflection,  ///< 타입 레지스트리 · TypeInfo · 프로퍼티 표
-        Asset,       ///< 에셋 데이터베이스 · 팩 색인 · 스트리밍 큐(에셋 본문은 종류별 줄로 간다)
-        Scene,       ///< 씬 · GameObject · 컴포넌트 저장소 · 트랜스폼 계층 · 프리팹 인스턴스
-        Texture,     ///< 텍스처 디코드 · 캐시
-        Mesh,        ///< 메시 정점 · 인덱스 · 메시 생성
-        Material,    ///< 머티리얼 · 머티리얼 인스턴스 · 캐시
-        Shader,      ///< 셰이더 캐시 · 컴파일 결과 · 리플렉션 매니페스트 · 바인딩 레이아웃
-        Animation,   ///< 애니메이션 클립 · 스켈레톤 · 그래프 · 스프라이트 클립
-        Audio,       ///< 오디오 시스템 · 사운드 데이터
-        Physics,     ///< 물리 월드 · 바디 · 충돌 구조
-        Navigation,  ///< 내비메시 타일 · 베이크 중간 결과 · 질의 노드 · 군중
-        RenderCPU,   ///< 렌더러의 CPU 측(FrameRenderer · GPUScene · 렌더 그래프 · PSO 캐시 · RHI 디바이스 · 렌더 스레드)
-        UI,          ///< 런타임 UI(HUD · 위젯 · 대사 상자) — 에디터 UI 는 Editor
-        Script,      ///< 데이터로 짠 실행 그래프(대사 그래프 · 시퀀스 · 이후의 스크립트 VM)
-        Editor,      ///< 에디터 모듈
-        Game,        ///< 게임 모듈
-        MaxTags
+#define SW_MEMORY_TAG_ENUMERATOR( name ) name,
+        SW_MEMORY_TAG_LIST( SW_MEMORY_TAG_ENUMERATOR )
+#undef SW_MEMORY_TAG_ENUMERATOR
+            MaxTags
+    };
+
+    /** @brief 태그마다 이름입니다(열거자 이름 그대로 — 메모리 보고 · 예산 파일의 키). */
+    inline constexpr const utf8* kArrMemoryTagName[] = {
+#define SW_MEMORY_TAG_NAME( name ) #name,
+        SW_MEMORY_TAG_LIST( SW_MEMORY_TAG_NAME )
+#undef SW_MEMORY_TAG_NAME
     };
 
     /** @brief 태그 줄 수입니다(`MaxTags` 를 뺀 값의 개수). */
