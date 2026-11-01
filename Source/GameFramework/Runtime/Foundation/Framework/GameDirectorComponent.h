@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -82,6 +83,16 @@ namespace sw
         {
             (void)outHourOfDay;
             (void)outbPrecipitating;
+            return false;
+        }
+        /**
+         * @brief 카메라가 따라갈 초점을 답합니다. @p outFocusObject 는 따라갈 오브젝트(비면 자리만), @p outFocusPosition 은 디렉터가 아는 자리(오브젝트가 없을 때 쓴다)입니다.
+         * @details `FollowCameraComponent` 가 묻는다. 초점이 없는 판은 false 입니다.
+         */
+        [[nodiscard]] virtual bool readCameraFocus( GameObjectHandle& outFocusObject, float3& outFocusPosition ) const
+        {
+            (void)outFocusObject;
+            (void)outFocusPosition;
             return false;
         }
 

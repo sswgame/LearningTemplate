@@ -21,7 +21,7 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="false" />
-					<ArenaCameraComponent _componentName="ArenaCameraComponent"
+					<FollowCameraComponent _componentName="FollowCameraComponent"
 					                      _bActive="true"
 					                      _director="334"
 					                      _offset="0,15,-11"

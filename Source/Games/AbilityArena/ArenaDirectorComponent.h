@@ -97,9 +97,15 @@ namespace sw
         /** @brief 이번 프레임 스냅샷의 플레이어 위치(틱 전)를 반환합니다. 없으면 아레나 중앙입니다. */
         const float3& getPlayerFocus() const { return _playerFocus; }
         /** @brief 이번 프레임 스냅샷의 플레이어 오브젝트를 반환합니다(없으면 빈 핸들). PostPhysics 이후 단계는 이것의 트랜스폼으로 이번 프레임 위치를 읽습니다. */
-        GameObjectHandle getPlayerObject() const { return _playerObject; }
-        float32          getArenaHalfSize() const { return _arenaHalfSize; }
-        uint32           getWave() const { return _wave; }
+        GameObjectHandle   getPlayerObject() const { return _playerObject; }
+        [[nodiscard]] bool readCameraFocus( GameObjectHandle& outFocusObject, float3& outFocusPosition ) const override
+        {
+            outFocusObject   = _playerObject;
+            outFocusPosition = _playerFocus;
+            return true;
+        }
+        float32 getArenaHalfSize() const { return _arenaHalfSize; }
+        uint32  getWave() const { return _wave; }
         /** @brief 쓰러진 뒤 정리하기까지의 시간(s)입니다. 그동안 유닛 뷰가 납작해집니다. */
         float32 getDeathLinger() const { return _deathLinger; }
         uint32  getKillCount() const { return _killCount; }

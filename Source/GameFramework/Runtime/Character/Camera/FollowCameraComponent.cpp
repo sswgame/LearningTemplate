@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/AbilityArena/ArenaCameraComponent.h"
+#include "GameFramework/Runtime/Character/Camera/FollowCameraComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -11,12 +11,11 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPoseUtil.h"
-
-#include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
 
 namespace sw
 {
-    ArenaCameraComponent::ArenaCameraComponent()
+    FollowCameraComponent::FollowCameraComponent()
         : _director{}
         , _offset{ 0.0f, 15.0f, -11.0f }
         , _minFarPlane{ 120.0f }
@@ -24,7 +23,7 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void ArenaCameraComponent::onBeginPlay()
+    void FollowCameraComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         // 플레이어 컨트롤러(DuringPhysics)가 옮긴 자리가 적용된 뒤(물리 뒤 단계)에 읽는다.
@@ -32,25 +31,27 @@ namespace sw
         applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );
     }
 
-    void ArenaCameraComponent::onTick( float32 deltaTime )
+    void FollowCameraComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*                   pOwner    = getOwner();
-        GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ArenaDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ArenaDirectorComponent>( *pManager, _director ) : nullptr;
-        if ( pDirector == nullptr )
+        GameObject*                  pOwner    = getOwner();
+        GameObjectManager*           pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<GameDirectorComponent>( *pManager, _director ) : nullptr;
+        GameObjectHandle             focusObject{};
+        float3                       focusPosition{ 0.0f, 0.0f, 0.0f };
+        if ( pDirector == nullptr || pDirector->readCameraFocus( focusObject, focusPosition ) == false )
         {
             applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );
             return;
         }
-        // 디렉터의 초점은 PrePhysics 에서 적은 틱 전 자리다 — 그대로 쓰면 한 프레임 늦게 따라간다. 이 그룹은 물리 뒤 단계라 플레이어 컨트롤러의
-        // 이번 프레임 쓰기가 이미 적용됐으므로 플레이어 메시의 자리를 바로 읽는다.
-        const GameObject*    pPlayer = pManager->resolveGameObject( pDirector->getPlayerObject() );
-        const MeshComponent* pMesh   = pPlayer != nullptr ? pPlayer->getComponent<MeshComponent>() : nullptr;
-        applyToCamera( pMesh != nullptr ? pMesh->getWorldPosition() : pDirector->getPlayerFocus() );
+        // 디렉터의 초점 자리는 PrePhysics 에서 적은 틱 전 자리다 — 그대로 쓰면 한 프레임 늦게 따라간다. 이 그룹은 물리 뒤 단계라 컨트롤러의
+        // 이번 프레임 쓰기가 이미 적용됐으므로 초점 오브젝트 메시의 자리를 바로 읽는다.
+        const GameObject*    pFocus = pManager->resolveGameObject( focusObject );
+        const MeshComponent* pMesh  = pFocus != nullptr ? pFocus->getComponent<MeshComponent>() : nullptr;
+        applyToCamera( pMesh != nullptr ? pMesh->getWorldPosition() : focusPosition );
     }
 
-    void ArenaCameraComponent::applyToCamera( const float3& focus )
+    void FollowCameraComponent::applyToCamera( const float3& focus )
     {
         GameObject*      pOwner  = getOwner();
         CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
