@@ -1,4 +1,4 @@
-# Core 폴더 티어 표 — `Source/Core/CMakeLists.txt` 가 읽는다(게이트는 없다).
+# Core 폴더 티어 표 — `Source/Core/CMakeLists.txt`(Log 아래 · 위를 빌드로 가른다)와 커밋 린트 `Scripts/lint/CoreTiers.py`(높은 티어끼리의 역류)가 읽는다.
 
 # 폴더 → 티어. 숫자가 큰 쪽이 위다.
 # 새 폴더는 티어를 정해 여기에 넣는다(표에 없는 폴더는 구성이 선다).
