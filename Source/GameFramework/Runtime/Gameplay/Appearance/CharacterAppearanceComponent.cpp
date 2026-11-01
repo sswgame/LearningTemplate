@@ -47,6 +47,39 @@ namespace sw
             }
 
             /** @brief 합친 메시에서 부품이 든 구간의 이름입니다 — 주인(슬롯)과 부품 이름을 이어 차림 안에서 겹치지 않게 한다(몸은 주인이 비어 부품 이름 그대로). */
+            /**
+             * @brief 부품의 `<Section>` 을 그립니다 — 주 메시 @p main 이 첫 구간을, 오브젝트 @p owner 의 구간 컴포넌트가 나머지를 자기 머티리얼로 그린다.
+             * @details @p inoutListSection 은 이 부품이 전에 만든 구간 컴포넌트다 — 다 지우고 새로 만든다(구간 수 · 이름이 외형마다 다르다). 구간을 적지 않은 부품은 지우기만 한다.
+             */
+            static void applyPartSections( GameObjectManager& manager, GameObject& owner, MeshComponent& main, const ResolvedPart& part,
+                                           vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const string& presetID )
+            {
+                for ( const TComponentHandle<MeshSectionComponent>& handle : inoutListSection )
+                {
+                    MeshSectionComponent* pSection = manager.resolveComponent( handle );
+                    if ( pSection != nullptr && owner.removeComponent( pSection ) == false )
+                        SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceCouldNotRemove", "Appearance '%#' could not remove a section component of part '%#'", presetID.c_str(), part._partName.c_str() );
+                }
+                inoutListSection.clear();
+                if ( part._listSection.empty() )
+                    return;
+                main.setSectionName( part._listSection.front()._name );
+                main.setMaterialPath( part._listSection.front()._material.c_str() );
+                for ( size_t index = 1; index < part._listSection.size(); ++index )
+                {
+                    MeshSectionComponent* pSection = owner.addComponent<MeshSectionComponent>();
+                    if ( pSection == nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartCouldNot2", "Appearance '%#' part '%#' could not get a section component", presetID.c_str(), part._partName.c_str() );
+                        continue;
+                    }
+                    pSection->setSectionName( part._listSection[index]._name );
+                    pSection->setMaterialPath( part._listSection[index]._material.c_str() );
+                    pSection->followSourceMesh();
+                    inoutListSection.push_back( TComponentHandle<MeshSectionComponent>{ pSection } );
+                }
+            }
+
             static hashed_string makeSectionName( const ResolvedPart& part )
             {
                 if ( part._owner.empty() )
@@ -613,6 +646,9 @@ namespace sw
                 body.setMeshID( part._asset.c_str() );
             if ( part._material.empty() == false && body.getMaterialPath() != part._material )
                 body.setMaterialPath( part._material.c_str() );
+            GameObjectManager* pManager = findManager();
+            if ( pManager != nullptr && body.getOwner() != nullptr )
+                CharacterAppearanceComponentInternal::applyPartSections( *pManager, *body.getOwner(), body, part, _listBodySection, _presetID );
             return static_cast<int32>( partIndex );
         }
         SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceNoBodyPart", "Appearance '%#' has no body part (a Skinned part without an owner)", _presetID.c_str() );
@@ -694,6 +730,8 @@ namespace sw
         pSkinned->setMeshID( part._asset.c_str() );
         if ( part._material.empty() == false )
             pSkinned->setMaterialPath( part._material.c_str() );
+        vector<TComponentHandle<MeshSectionComponent>> listSection; // 새 오브젝트라 지울 것이 없다 — 부품 오브젝트와 함께 사라진다
+        CharacterAppearanceComponentInternal::applyPartSections( manager, *pObject, *pSkinned, part, listSection, _presetID );
         if ( part._rig.empty() )
         {
             // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 기준은 몸 프리팹이다.

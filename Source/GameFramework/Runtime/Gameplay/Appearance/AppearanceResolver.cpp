@@ -423,6 +423,7 @@ namespace sw
                 resolved._kind        = part._kind;
                 resolved._asset       = part._asset;
                 resolved._material    = part._material;
+                resolved._listSection = part._listSection;
                 resolved._skeleton    = part._skeleton;
                 resolved._socketSet   = part._socketSet;
                 resolved._rig         = part._rig;

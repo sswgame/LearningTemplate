@@ -23,6 +23,7 @@ namespace sw
                                                                             "fit", "fitTables", "bodyShapes", "socket", "offset", "rotation", "deforms", "layer", "breakable", "breakStage", "impulse" };
             static constexpr const utf8* kArrVariantAttribute[]         = { "name", "mesh", "prefab", "sprite", "material" };
             static constexpr const utf8* kArrMaterialVariantAttribute[] = { "name", "material" };
+            static constexpr const utf8* kArrSectionAttribute[]         = { "name", "material" };
             static constexpr const utf8* kArrMorphAttribute[]           = { "name", "weight" };
             static constexpr const utf8* kArrMaterialAttribute[]        = { "name", "value" };
             static constexpr const utf8* kArrRegionAttribute[]          = { "name" };
@@ -113,6 +114,20 @@ namespace sw
                     else
                         inoutPart._listMaterialVariant.push_back( variant );
                 }
+                else if ( StringUtil::equals( pName, "Section" ) && inoutPart._kind == AppearancePartKind::Skinned )
+                {
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSectionAttribute, report, sourceName );
+                    AppearancePartVariantDef section;
+                    section._name                = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
+                    section._material            = AppearanceXMLUtil::readRequiredName( child, "material", report, sourceName );
+                    const bool bDuplicateSection = VectorUtil::containsIf( inoutPart._listSection, [&]( const AppearancePartVariantDef& other )
+                    { return other._name == section._name; } );
+                    if ( section._name.empty() || section._material.empty() || bDuplicateSection )
+                        report.addErrorWithID( "Appearance.SectionInvalid", "%#: visual '%#' part '%#' has a section without a name or material, or a duplicate '%#'", sourceName, visualID.c_str(),
+                                               inoutPart._name.c_str(), section._name.c_str() );
+                    else
+                        inoutPart._listSection.push_back( section );
+                }
                 else if ( StringUtil::equals( pName, "Morph" ) && bModification )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMorphAttribute, report, sourceName );
@@ -197,6 +212,9 @@ namespace sw
                 {
                     readPartChild( child, node, part, report, sourceName, inoutVisual._id );
                 }
+                if ( part._listSection.empty() == false && part._material.empty() == false )
+                    report.addErrorWithID( "Appearance.SectionWithPartMaterial", "%#: visual '%#' part '%#' has both 'material' and <Section> - give each section its material", sourceName,
+                                           inoutVisual._id.c_str(), part._name.c_str() );
                 inoutVisual._listPart.push_back( part );
             }
 

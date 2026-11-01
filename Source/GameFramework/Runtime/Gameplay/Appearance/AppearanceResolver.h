@@ -26,26 +26,27 @@ namespace sw
     /** @brief 해석된 부품 하나입니다. 스폰(풀), 부착, 병합하는 쪽이 이 값을 그대로 씁니다. */
     struct ResolvedPart
     {
-        AppearancePlacement _placement{}; ///< 소켓 부착과 스프라이트에 쓰는 배치 정보. 소켓 후보(한 이름 공간), 오프셋, 회전을 담는다
-        hashed_string       _owner{};     ///< 슬롯 또는 꾸미기 매개변수. 비어 있으면 몸
-        hashed_string       _itemID{};    ///< 장비 부품이면 아이템 id
-        hashed_string       _visualID{};
-        hashed_string       _partName{};
-        hashed_string       _variant{};         ///< 고른 메시 변형(비어 있으면 기본)
-        hashed_string       _materialVariant{}; ///< 고른 머티리얼 변형(비어 있으면 기본)
-        hashed_string       _asset{};           ///< 변형과 규칙을 반영한 메시, 프리팹, 스프라이트
-        hashed_string       _material{};        ///< 변형과 규칙을 반영한 머티리얼(비어 있으면 에셋의 것)
-        hashed_string       _skeleton{};        ///< 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
-        hashed_string       _socketSet{};
-        hashed_string       _rig{};         ///< 스킨드 부품의 자기 후처리 리그(있으면 몸을 리더로 따르지 않는다)
-        hashed_string       _fit{};         ///< 피팅 데이터(`*.partfit.xml`). 비어 있으면 피팅하지 않는다
-        hashed_string       _fitTables{};   ///< 피팅 표(`*.fit.xml`). 몸 부품만 가진다
-        hashed_string       _bodyShapes{};  ///< 체형 축 데이터(`*.bodyshape.xml`). 몸 부품만 가진다
-        hashed_string       _state{};       ///< 외형 상태
-        hashed_string       _damageStage{}; ///< 피해 단계(비어 있으면 멀쩡함)
-        int32               _layer{ 0 };
-        AppearancePartKind  _kind{ AppearancePartKind::Skinned };
-        uint8               _bDeforms{ SW_TRUE };
+        AppearancePlacement              _placement{}; ///< 소켓 부착과 스프라이트에 쓰는 배치 정보. 소켓 후보(한 이름 공간), 오프셋, 회전을 담는다
+        hashed_string                    _owner{};     ///< 슬롯 또는 꾸미기 매개변수. 비어 있으면 몸
+        hashed_string                    _itemID{};    ///< 장비 부품이면 아이템 id
+        hashed_string                    _visualID{};
+        hashed_string                    _partName{};
+        hashed_string                    _variant{};         ///< 고른 메시 변형(비어 있으면 기본)
+        hashed_string                    _materialVariant{}; ///< 고른 머티리얼 변형(비어 있으면 기본)
+        hashed_string                    _asset{};           ///< 변형과 규칙을 반영한 메시, 프리팹, 스프라이트
+        hashed_string                    _material{};        ///< 변형과 규칙을 반영한 머티리얼(비어 있으면 에셋의 것)
+        vector<AppearancePartVariantDef> _listSection{};     ///< 스킨드 부품의 구간마다 머티리얼(`AppearancePartDef::_listSection` 그대로 — 변형 · 규칙은 `_material` 만 바꾼다)
+        hashed_string                    _skeleton{};        ///< 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
+        hashed_string                    _socketSet{};
+        hashed_string                    _rig{};         ///< 스킨드 부품의 자기 후처리 리그(있으면 몸을 리더로 따르지 않는다)
+        hashed_string                    _fit{};         ///< 피팅 데이터(`*.partfit.xml`). 비어 있으면 피팅하지 않는다
+        hashed_string                    _fitTables{};   ///< 피팅 표(`*.fit.xml`). 몸 부품만 가진다
+        hashed_string                    _bodyShapes{};  ///< 체형 축 데이터(`*.bodyshape.xml`). 몸 부품만 가진다
+        hashed_string                    _state{};       ///< 외형 상태
+        hashed_string                    _damageStage{}; ///< 피해 단계(비어 있으면 멀쩡함)
+        int32                            _layer{ 0 };
+        AppearancePartKind               _kind{ AppearancePartKind::Skinned };
+        uint8                            _bDeforms{ SW_TRUE };
     };
 } // namespace sw
 

@@ -64,13 +64,19 @@ namespace sw
     /** @brief 부품 하나입니다. */
     struct SW_GF_API AppearancePartDef
     {
-        vector<AppearancePartVariantDef>   _listVariant{};         ///< 메시 변형(기본, 짧은 소매, 모자 밑 머리, 망토 구멍)
-        vector<AppearancePartVariantDef>   _listMaterialVariant{}; ///< 머티리얼 변형(위장, 사막)
-        vector<AppearanceMorphDef>         _listMorph{};           ///< 몸 수정: 몸에 적용하는 모프
-        vector<AppearanceMaterialValueDef> _listMaterialValue{};   ///< 몸 수정: 몸 머티리얼 값
-        vector<hashed_string>              _listHiddenRegion{};    ///< 몸 수정: 숨길 몸 영역
-        AppearancePlacement                _placement{};           ///< 소켓 부착과 스프라이트의 기본 배치
-        float3                             _breakImpulse{};        ///< 떨어져 나갈 때의 충격 힌트(부품 로컬)
+        vector<AppearancePartVariantDef> _listVariant{};         ///< 메시 변형(기본, 짧은 소매, 모자 밑 머리, 망토 구멍)
+        vector<AppearancePartVariantDef> _listMaterialVariant{}; ///< 머티리얼 변형(위장, 사막)
+        /**
+         * @brief 스킨드 부품의 메시 구간마다 머티리얼입니다(`<Section name material>` — `_name` 은 구간 이름). 적으면 이 구간들만 그린다.
+         * @details 머티리얼이 여럿인 모델(몸 · 머리카락 · 눈)을 임포터가 구간으로 나눈 메시다(`ModelImportMaterial::readSectionPbrMaterials`). 주 메시가 첫 구간을,
+         *          `MeshSectionComponent` 가 나머지를 그린다(임포터의 구간 프리팹과 같은 모양). 부품의 `material` 과 함께 쓸 수 없다(어느 구간의 것인지 모른다).
+         */
+        vector<AppearancePartVariantDef>   _listSection{};
+        vector<AppearanceMorphDef>         _listMorph{};         ///< 몸 수정: 몸에 적용하는 모프
+        vector<AppearanceMaterialValueDef> _listMaterialValue{}; ///< 몸 수정: 몸 머티리얼 값
+        vector<hashed_string>              _listHiddenRegion{};  ///< 몸 수정: 숨길 몸 영역
+        AppearancePlacement                _placement{};         ///< 소켓 부착과 스프라이트의 기본 배치
+        float3                             _breakImpulse{};      ///< 떨어져 나갈 때의 충격 힌트(부품 로컬)
         hashed_string                      _name{};
         hashed_string                      _asset{};      ///< 메시, 프리팹, 스프라이트 경로
         hashed_string                      _material{};   ///< 비어 있으면 메시의 것
