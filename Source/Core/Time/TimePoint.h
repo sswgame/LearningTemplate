@@ -6,7 +6,7 @@
  *          (구글 영수증 제공자가 단조 시각을 JWT `iat` 로 보내던 결함이 이 모양이다.)
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
 
         constexpr int64 count() const noexcept { return _count; }
         /** @brief 초로 내림한 값입니다(JWT 의 `iat` · `exp`, 인증서 검증 시각). */
-        constexpr int64 toSeconds() const noexcept { return _count / constant::kMillisecondsPerSecond; }
+        constexpr int64 toSeconds() const noexcept { return _count / constant::time::kMillisecondsPerSecond; }
 
         // 같은 종류끼리만 비교하고, 길이(밀리초)를 더해 시한을 만들며, 둘의 차이는 길이다 — 단조 시각과는 섞이지 않는다.
         friend constexpr bool             operator==( UnixMilliseconds left, UnixMilliseconds right ) noexcept { return left._count == right._count; }

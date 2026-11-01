@@ -72,7 +72,7 @@ namespace sw
         node._listChoice.reserve( pInfo->_defaultChoiceCount );
         for ( uint32 choiceIndex = 0; choiceIndex < pInfo->_defaultChoiceCount; ++choiceIndex )
         {
-            StringBuilder<constant::kMaxBuffer32> choiceBuilder;
+            StringBuilder<constant::buffer::kMax32> choiceBuilder;
             choiceBuilder.append( "Option " );
             choiceBuilder.append( choiceIndex + 1 );
             node._listChoice.emplace_back( choiceBuilder.c_str() );

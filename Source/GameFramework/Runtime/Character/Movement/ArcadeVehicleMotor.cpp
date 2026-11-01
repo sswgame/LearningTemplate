@@ -26,7 +26,7 @@ namespace sw
     ArcadeVehicleMotor::ArcadeVehicleMotor()
         : _settings{}
         , _eventBuffer{}
-        , _timer{ 1.0f / 60.0f, 0.25f }
+        , _timer{ constant::time::kDefaultFixedStepSeconds, 0.25f }
         , _pGround{ nullptr }
         , _position{}
         , _velocity{}

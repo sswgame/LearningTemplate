@@ -3,7 +3,7 @@
 #include "Editor/Panels/Animation/AnimationGraphLayerEditor.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -43,7 +43,7 @@ namespace sw::editor
                 hashed_string name( pBase );
                 for ( uint32 suffix = 2; isNameTaken( graph, bLayer, name ); ++suffix )
                 {
-                    fixed_string<constant::kMaxBuffer64> text;
+                    fixed_string<constant::buffer::kMax64> text;
                     formatstring( text.data(), text.capacity(), "%#%#", pBase, suffix );
                     name = hashed_string( text.c_str() );
                 }
@@ -77,7 +77,7 @@ namespace sw::editor
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
-                fixed_string<constant::kMaxBuffer64> key;
+                fixed_string<constant::buffer::kMax64> key;
                 formatstring( key.data(), key.capacity(), "%#.%#", pPrefix, static_cast<uint64>( index ) );
                 EditorSelfTestMarks::note( key.c_str() );
             }
@@ -170,8 +170,8 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationGraph", "NoLayersHint" ) );
         for ( size_t index = 0; index < listLayer.size(); ++index )
         {
-            const AnimationGraphLayerDef&         layer = listLayer[index];
-            fixed_string<constant::kMaxBuffer128> label;
+            const AnimationGraphLayerDef&           layer = listLayer[index];
+            fixed_string<constant::buffer::kMax128> label;
             formatstring( label.data(), label.capacity(), "%#  (%#, %#)", layer._name.c_str(), layer._clipName.c_str(),
                           layer._maskName.empty() ? "all bones" : layer._maskName.c_str() );
             ImGui::PushID( static_cast<int32>( index ) );
@@ -351,8 +351,8 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationGraph", "NoBoneMasksHint" ) );
         for ( size_t index = 0; index < listMask.size(); ++index )
         {
-            const AnimationBoneMaskDef&           mask = listMask[index];
-            fixed_string<constant::kMaxBuffer128> label;
+            const AnimationBoneMaskDef&             mask = listMask[index];
+            fixed_string<constant::buffer::kMax128> label;
             formatstring( label.data(), label.capacity(), "%#  (bones %#%#)", mask._name.c_str(), static_cast<uint64>( mask._listEntry.size() ),
                           mask._filePath.empty() ? "" : ", preset" );
             ImGui::PushID( static_cast<int32>( index ) );

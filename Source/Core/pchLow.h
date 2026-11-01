@@ -19,7 +19,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"

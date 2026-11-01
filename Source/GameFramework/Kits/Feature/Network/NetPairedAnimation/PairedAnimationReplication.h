@@ -65,7 +65,7 @@ namespace sw
         vector<uint32>                 _listRoleNetID{};
         PairedAnimationSessionSnapshot _snapshot{};
 
-        /** @brief 본문에 씁니다. 경로가 `constant::kMaxPathSize` 이상이거나 역할 수가 상한을 넘으면 쓰지 않고 false 입니다. */
+        /** @brief 본문에 씁니다. 경로가 `constant::file::kMaxPathSize` 이상이거나 역할 수가 상한을 넘으면 쓰지 않고 false 입니다. */
         [[nodiscard]] bool write( BitWriter& writer ) const;
         /** @brief `write` 가 쓴 본문을 읽습니다. 깨졌으면 false 이고 @p outState 는 비웁니다. 값이 에셋에 맞는지는 복원이 봅니다. */
         [[nodiscard]] static bool read( BitReader& reader, PairedAnimationNetState& outState );

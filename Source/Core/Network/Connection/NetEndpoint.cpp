@@ -873,7 +873,7 @@ namespace sw
                 const NetDisconnectReason reason = NetEndpointInternal::readDeniedReason( packet._valueA );
                 if ( reason != NetDisconnectReason::ServerFull )
                 {
-                    StringBuilder<constant::kMaxBuffer512> text;
+                    StringBuilder<constant::buffer::kMax512> text;
                     text.appendFormat( "NetEndpoint: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
                                        packet._from.toString().c_str(), toString( reason ), static_cast<uint32>( packet._valueA >> 32 ), _protocolID, _settings._gameID );
                     _listDeferredWarning.push_back( DeferredWarning{ DeferredWarningKind::ServerRefused, string( text.c_str() ) } ); // 엔드포인트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
@@ -913,7 +913,7 @@ namespace sw
             ++_mismatchLogCount;
             if ( ( _mismatchLogCount & ( _mismatchLogCount - 1 ) ) == 0 )
             {
-                StringBuilder<constant::kMaxBuffer512> text;
+                StringBuilder<constant::buffer::kMax512> text;
                 text.appendFormat( "NetEndpoint: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
                                    packet._from.toString().c_str(), toString( reason ), requestProtocolID, requestGameID, _protocolID, _settings._gameID, _mismatchLogCount );
                 _listDeferredWarning.push_back( DeferredWarning{ DeferredWarningKind::ConnectionRefused, string( text.c_str() ) } ); // 엔드포인트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다

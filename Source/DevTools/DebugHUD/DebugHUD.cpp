@@ -131,7 +131,7 @@ namespace sw
 
             static string makeFloatText( float32 value )
             {
-                fixed_string<constant::kMaxBuffer32> text;
+                fixed_string<constant::buffer::kMax32> text;
                 formatstring( text.data(), text.capacity(), "%.2f", value );
                 return string( text.c_str() );
             }
@@ -326,7 +326,7 @@ namespace sw
                 , _listView{}
                 , _listShownScratch{}
                 , _seenState{}
-                , _seenRevision{ invalid_index::kUint64 }
+                , _seenRevision{ constant::invalid_index::kUint64 }
                 , _panel{ panel }
                 , _column{ column }
                 , _secondsSinceRefresh{ DebugHUDInternal::kRefreshSeconds }
@@ -540,7 +540,7 @@ namespace sw
                 , _listSectionName{}
                 , _listCheckBox{}
                 , _listLastChecked{}
-                , _seenRevision{ invalid_index::kUint64 }
+                , _seenRevision{ constant::invalid_index::kUint64 }
             {
             }
 
@@ -576,7 +576,7 @@ namespace sw
                 return UIScreen::onCommand( command, source );
             }
 
-            void onTreeRebuilt() override { _seenRevision = invalid_index::kUint64; }
+            void onTreeRebuilt() override { _seenRevision = constant::invalid_index::kUint64; }
 
         private:
             void rebuildCheckBoxes()

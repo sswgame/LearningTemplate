@@ -63,7 +63,7 @@ namespace sw
         uint32      _location;                 ///< Vulkan location / GL 정점 속성 번호.
         uint32      _componentCount;           ///< 원소 개수 (1·2·3·4). 백엔드가 자기 포맷 enum 으로 옮긴다.
         uint32      _byteOffset;               ///< 그 슬롯 원소 안의 바이트 오프셋 (슬롯 0 은 `RHIVertex`).
-        uint32      _inputSlot{ 0 };           ///< 정점 버퍼 슬롯. 0 = 메시 정점, 1 = 인스턴스 슬롯 스트림 (`constant::kInstanceSlotStreamSlot`).
+        uint32      _inputSlot{ 0 };           ///< 정점 버퍼 슬롯. 0 = 메시 정점, 1 = 인스턴스 슬롯 스트림 (`constant::render::kInstanceSlotStreamSlot`).
         uint8       _bPerInstance{ SW_FALSE }; ///< 인스턴스마다 한 원소를 읽는다 (step rate 1).
         uint8       _bUint{ SW_FALSE };        ///< 32비트 부호 없는 정수(R32_UINT). 아니면 float.
     };
@@ -71,7 +71,7 @@ namespace sw
 
 namespace sw
 {
-    namespace constant
+    namespace constant::render
     {
         // ------------------------------------------------------------------------------
         // 백엔드 간에 값이 같아야 하는 계약 상수.
@@ -209,11 +209,11 @@ namespace sw
          */
         inline constexpr uint32 kVulkanRequiredMajor = 1;
         inline constexpr uint32 kVulkanRequiredMinor = 3;
-    } // namespace constant
+    } // namespace constant::render
 
-    /** @brief GPU 타임스탬프 슬롯마다 한 비트(기록됨 · 준비됨)입니다. 비트 폭이 `constant::kMaxGPUTimestampSlot` 이상이어야 한다. */
+    /** @brief GPU 타임스탬프 슬롯마다 한 비트(기록됨 · 준비됨)입니다. 비트 폭이 `constant::render::kMaxGPUTimestampSlot` 이상이어야 한다. */
     using GPUTimestampSlotMask = uint64;
-    static_assert( sizeof( GPUTimestampSlotMask ) * 8u >= constant::kMaxGPUTimestampSlot, "타임스탬프 슬롯 비트 집합이 슬롯 수보다 좁다" );
+    static_assert( sizeof( GPUTimestampSlotMask ) * 8u >= constant::render::kMaxGPUTimestampSlot, "타임스탬프 슬롯 비트 집합이 슬롯 수보다 좁다" );
 
     /** @brief 슬롯 @p slotIndex 의 비트입니다. 비트 연산은 이 함수로만 만든다(`1u << slot` 은 32 슬롯을 넘으면 정의되지 않는다). */
     [[nodiscard]] constexpr GPUTimestampSlotMask makeGPUTimestampSlotBit( uint32 slotIndex )
@@ -250,7 +250,7 @@ namespace sw
         uint32 _bufferCount{ 2 }; ///< 프레임버퍼 개수 (Double/Triple Buffering)
 
         /// @brief 백버퍼 컬러 포맷입니다. 백엔드는 이 값을 존중해야 하고, 못 내면 실제 값을 보고해야 합니다.
-        RHIFormat _format{ constant::kBackBufferFormat };
+        RHIFormat _format{ constant::render::kBackBufferFormat };
 
         PROPERTY()
         bool _bVSync{ true }; ///< 수직 동기화
@@ -312,10 +312,10 @@ namespace sw
         float32 _y{ 0.0f }; ///< 뷰포트 좌상단 Y
 
         PROPERTY()
-        float32 _width{ constant::kDefaultViewportWidth }; ///< 뷰포트 너비
+        float32 _width{ constant::window::kDefaultViewportWidth }; ///< 뷰포트 너비
 
         PROPERTY()
-        float32 _height{ constant::kDefaultViewportHeight }; ///< 뷰포트 높이 (양수; Vulkan이 부호 반전)
+        float32 _height{ constant::window::kDefaultViewportHeight }; ///< 뷰포트 높이 (양수; Vulkan이 부호 반전)
 
         PROPERTY()
         float32 _minDepth{ 0.0f }; ///< 최소 깊이 (0.0~1.0)

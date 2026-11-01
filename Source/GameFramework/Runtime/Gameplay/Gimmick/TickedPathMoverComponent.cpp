@@ -17,7 +17,7 @@ namespace sw
     TickedPathMoverComponent::TickedPathMoverComponent()
         : _listWaypoint{}
         , _segmentSeconds{ 2.0f }
-        , _tickSeconds{ 1.0f / 60.0f }
+        , _tickSeconds{ constant::time::kDefaultFixedStepSeconds }
         , _bPingPong{ true }
         , _startPosition{}
         , _tickOffset{ 0 }

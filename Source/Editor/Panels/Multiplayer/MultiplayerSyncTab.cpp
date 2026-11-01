@@ -48,7 +48,7 @@ namespace sw::editor
             /** @brief 클라이언트 답을 기다리는 상한(밀리초)입니다. 값은 환경설정 섹션 `EditorSyncPreferences` 가 준다. */
             static int64 getReplyTimeoutMilliseconds()
             {
-                return static_cast<int64>( getPreferences<EditorSyncPreferences>()._clientReplyTimeoutSeconds * static_cast<float32>( constant::kMillisecondsPerSecond ) );
+                return static_cast<int64>( getPreferences<EditorSyncPreferences>()._clientReplyTimeoutSeconds * static_cast<float32>( constant::time::kMillisecondsPerSecond ) );
             }
 
             static EditorNetPlaySession* findSession()
@@ -260,22 +260,22 @@ namespace sw::editor
          */
         void drawReplay();
 
-        fixed_string<constant::kMaxBuffer64>  _arrChannelName;                                                ///< 읽을 해시 줄 이름(편집 필드, `EditorStateHashCompare::setHashChannel`)
-        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
-        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 주소(편집 필드)
-        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];                ///< 슬롯마다 채널 토큰(편집 필드)
-        int32                                 _arrPendingProcess[EditorStateHashCompare::kSourceCount];       ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
-        uint32                                _arrPendingReportCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
-        bool                                  _bObjectRequest;                                                ///< "Which objects differ" 가 클라이언트 답을 기다리는 중이다
-        int32                                 _arrObjectPendingProcess[EditorStateHashCompare::kSourceCount]; ///< 슬롯마다 오브젝트 해시 답을 기다리는 클라이언트 프로세스 번호(-1 이면 안 기다린다)
-        uint32                                _arrObjectPendingCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 오브젝트 해시 답 수
-        uint64                                _arrObjectTick[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트 해시의 틱
-        vector<SceneObjectHash>               _arrObjectList[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트별 해시
-        Stopwatch                             _arrPendingWatch[EditorStateHashCompare::kSourceCount];         ///< 슬롯마다 이력 질의를 보낸 뒤 지난 시간 — 상한(`getReplyTimeoutMilliseconds`)을 넘으면 오류로 끝낸다
-        Stopwatch                             _objectWatch;                                                   ///< 오브젝트 해시 질의를 보낸 뒤 지난 시간(위와 같다)
-        string                                _errorText;                                                     ///< 마지막 질의 오류(시간 초과 포함). 새 질의가 시작되면 비운다
-        fixed_string<constant::kMaxPathSize>  _arrReplayPath;                                                 ///< 재생할 `.swintent` 경로(편집 필드)
-        int32                                 _replayStepCount;                                               ///< 재생 서버를 한 번에 진행할 틱 수(편집 필드)
+        fixed_string<constant::buffer::kMax64>     _arrChannelName;                                                ///< 읽을 해시 줄 이름(편집 필드, `EditorStateHashCompare::setHashChannel`)
+        fixed_string<constant::file::kMaxPathSize> _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
+        fixed_string<constant::buffer::kMax64>     _arrAddress[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 주소(편집 필드)
+        fixed_string<constant::buffer::kMax128>    _arrToken[EditorStateHashCompare::kSourceCount];                ///< 슬롯마다 채널 토큰(편집 필드)
+        int32                                      _arrPendingProcess[EditorStateHashCompare::kSourceCount];       ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
+        uint32                                     _arrPendingReportCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
+        bool                                       _bObjectRequest;                                                ///< "Which objects differ" 가 클라이언트 답을 기다리는 중이다
+        int32                                      _arrObjectPendingProcess[EditorStateHashCompare::kSourceCount]; ///< 슬롯마다 오브젝트 해시 답을 기다리는 클라이언트 프로세스 번호(-1 이면 안 기다린다)
+        uint32                                     _arrObjectPendingCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 오브젝트 해시 답 수
+        uint64                                     _arrObjectTick[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트 해시의 틱
+        vector<SceneObjectHash>                    _arrObjectList[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트별 해시
+        Stopwatch                                  _arrPendingWatch[EditorStateHashCompare::kSourceCount];         ///< 슬롯마다 이력 질의를 보낸 뒤 지난 시간 — 상한(`getReplyTimeoutMilliseconds`)을 넘으면 오류로 끝낸다
+        Stopwatch                                  _objectWatch;                                                   ///< 오브젝트 해시 질의를 보낸 뒤 지난 시간(위와 같다)
+        string                                     _errorText;                                                     ///< 마지막 질의 오류(시간 초과 포함). 새 질의가 시작되면 비운다
+        fixed_string<constant::file::kMaxPathSize> _arrReplayPath;                                                 ///< 재생할 `.swintent` 경로(편집 필드)
+        int32                                      _replayStepCount;                                               ///< 재생 서버를 한 번에 진행할 틱 수(편집 필드)
     };
 } // namespace sw::editor
 

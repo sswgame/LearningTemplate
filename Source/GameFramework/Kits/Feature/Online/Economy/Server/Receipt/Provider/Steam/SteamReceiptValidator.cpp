@@ -18,8 +18,6 @@ namespace sw
         struct SteamReceiptValidatorInternal
         {
             static constexpr size_t kMaxOrderIDSize         = 20;
-            static constexpr int64  kMillisecondsPerSecond  = 1000;
-            static constexpr int64  kSecondsPerDay          = 86400;
             static constexpr size_t kMaxNotifiedRefundCount = 100000; ///< 겹친 조회에서 같은 주문을 두 번 알리지 않으려고 기억하는 상한
 
             /** @brief 1970-01-01 부터 (년, 월, 일) 까지의 날 수입니다(그레고리력). */
@@ -144,16 +142,16 @@ namespace sw
         if ( bRangeOk == false )
             return false;
         const int64 days = Internal::daysFromCivil( arrField[0], arrField[1], arrField[2] );
-        outUnixMs        = ( days * Internal::kSecondsPerDay + arrField[3] * 3600 + arrField[4] * 60 + arrField[5] ) * Internal::kMillisecondsPerSecond;
+        outUnixMs        = ( days * constant::time::kSecondsPerDay + arrField[3] * 3600 + arrField[4] * 60 + arrField[5] ) * constant::time::kMillisecondsPerSecond;
         return true;
     }
 
     string SteamReceiptValidator::formatTime( int64 unixMs )
     {
         using Internal       = SteamReceiptValidatorInternal;
-        const int64 totalSec = unixMs / Internal::kMillisecondsPerSecond;
-        const int64 days     = totalSec >= 0 ? totalSec / Internal::kSecondsPerDay : -( ( -totalSec + Internal::kSecondsPerDay - 1 ) / Internal::kSecondsPerDay );
-        const int64 secOfDay = totalSec - days * Internal::kSecondsPerDay;
+        const int64 totalSec = unixMs / constant::time::kMillisecondsPerSecond;
+        const int64 days     = totalSec >= 0 ? totalSec / constant::time::kSecondsPerDay : -( ( -totalSec + constant::time::kSecondsPerDay - 1 ) / constant::time::kSecondsPerDay );
+        const int64 secOfDay = totalSec - days * constant::time::kSecondsPerDay;
         int64       year     = 0;
         int64       month    = 0;
         int64       day      = 0;

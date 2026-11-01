@@ -65,7 +65,7 @@ namespace sw
                     const auto found = _mapCellToChain.find( Internal::makeCellKey( probeX, probeY, probeZ ) );
                     if ( found == _mapCellToChain.end() )
                         continue;
-                    for ( uint32 pointIndex = found->second._first; pointIndex != invalid_index::kUint32; pointIndex = _listNextInCell[pointIndex] )
+                    for ( uint32 pointIndex = found->second._first; pointIndex != constant::invalid_index::kUint32; pointIndex = _listNextInCell[pointIndex] )
                     {
                         if ( float3::getDistanceSquared( _listPoint[pointIndex], position ) <= toleranceSquared )
                             return pointIndex;
@@ -75,7 +75,7 @@ namespace sw
         }
         const uint32 newIndex = static_cast<uint32>( _listPoint.size() );
         _listPoint.push_back( position );
-        _listNextInCell.push_back( invalid_index::kUint32 );
+        _listNextInCell.push_back( constant::invalid_index::kUint32 );
         const uint64 cellKey = Internal::makeCellKey( cellX, cellY, cellZ );
         const auto   found   = _mapCellToChain.find( cellKey );
         if ( found == _mapCellToChain.end() )

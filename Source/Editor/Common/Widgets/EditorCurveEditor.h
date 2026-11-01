@@ -3,7 +3,7 @@
  * @brief `FloatCurve` 의 작은 미리보기와 편집기를 그립니다. 편집기는 격자, 키 드래그, 접선 핸들, 메뉴, 화면 맞추기를 지원합니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -31,10 +31,10 @@ namespace sw::editor
     struct EditorCurveEditorState
     {
         EditorCurveView _view{};
-        FloatCurve      _working{};                             ///< 편집 중인 복사본
-        uint32          _selectedKey{ invalid_index::kUint32 }; ///< 선택한 키
-        uint32          _menuKey{ invalid_index::kUint32 };     ///< 오른쪽 클릭 메뉴가 가리키는 키다. 빈 곳이면 없다
-        float32         _menuTime{ 0.0f };                      ///< 오른쪽 클릭한 위치(커브 좌표)
+        FloatCurve      _working{};                                       ///< 편집 중인 복사본
+        uint32          _selectedKey{ constant::invalid_index::kUint32 }; ///< 선택한 키
+        uint32          _menuKey{ constant::invalid_index::kUint32 };     ///< 오른쪽 클릭 메뉴가 가리키는 키다. 빈 곳이면 없다
+        float32         _menuTime{ 0.0f };                                ///< 오른쪽 클릭한 위치(커브 좌표)
         float32         _menuValue{ 0.0f };
         EditorCurveDrag _drag{ EditorCurveDrag::None };
         bool            _bDragMoved{ false }; ///< 드래그하는 동안 실제로 움직였으면 true 다. 놓을 때만 편집으로 남긴다

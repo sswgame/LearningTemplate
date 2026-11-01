@@ -870,7 +870,7 @@ namespace sw::editor
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
             return 0;
 
-        StringBuilder<constant::kMaxBuffer64> versionText;
+        StringBuilder<constant::buffer::kMax64> versionText;
         versionText.appendFormat( "importer=%#;format=%#;recenter=%#;clip=%#", ModelImportUtil::kImporterVersion, MeshAssetFormat::kVersion,
                                   static_cast<uint32>( rule._recenter ), AnimationClip::kVersion );
         uint64 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );

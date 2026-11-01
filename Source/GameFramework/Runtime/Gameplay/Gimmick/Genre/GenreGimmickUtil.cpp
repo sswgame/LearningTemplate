@@ -14,7 +14,7 @@ namespace sw
 {
     int32 GenreGimmickUtil::toSteps( float32 seconds, int32 minSteps )
     {
-        return MathUtil::max( minSteps, static_cast<int32>( MathUtil::round( seconds / kStepTime ) ) );
+        return MathUtil::max( minSteps, static_cast<int32>( MathUtil::round( seconds / constant::time::kDefaultFixedStepSeconds ) ) );
     }
 
     void GenreGimmickUtil::setBodyActive( GameObject& object, bool bActive, const Component* pKeep )

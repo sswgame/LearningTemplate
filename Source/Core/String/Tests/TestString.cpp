@@ -445,7 +445,7 @@ SW_TEST_CASE( StringTest, FixedStringTruncatesInsteadOfOverflowing )
  */
 SW_TEST_CASE( StringTest, FormatStringUtility )
 {
-    utf8 buffer[sw::constant::kMaxBuffer256] = {};
+    utf8 buffer[sw::constant::buffer::kMax256] = {};
 
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "Value: %#", 42 );
     SW_EXPECT_EQUAL( sw::string( "Value: 42" ), sw::string( buffer ) );
@@ -697,7 +697,7 @@ SW_TEST_CASE( StringTest, FixedStringExtendedOperations )
 SW_TEST_CASE( StringTest, FixedStringFormatAndAutoSync )
 {
     // 1) formatstring 동작 및 자동 길이 동기화
-    sw::fixed_string<sw::constant::kMaxBuffer64> strFmt;
+    sw::fixed_string<sw::constant::buffer::kMax64> strFmt;
     sw::formatstring( strFmt.data(), strFmt.capacity(), "Item #%#: %# (%#)", 42, "Potion", sw::Fmt( 12.5, sw::Format( 2 ) ) );
     SW_EXPECT_FALSE( strFmt.empty() );
     SW_EXPECT_EQUAL( sw::string_view( "Item #42: Potion (12.50)" ), sw::string_view( strFmt.c_str() ) );
@@ -706,7 +706,7 @@ SW_TEST_CASE( StringTest, FixedStringFormatAndAutoSync )
     SW_EXPECT_EQUAL( std::string_view( "Item #42: Potion (12.50)" ), strFmt.view() );
 
     // 2) data() 버퍼에 C API 처럼 직접 쓴다
-    sw::fixed_string<sw::constant::kMaxBuffer32> rawBuf;
+    sw::fixed_string<sw::constant::buffer::kMax32> rawBuf;
     SW_EXPECT_TRUE( rawBuf.empty() );
     SW_EXPECT_EQUAL( 0u, rawBuf.size() );
 
@@ -984,7 +984,7 @@ SW_TEST_CASE( StringTest, FixedStringUnorderedContainers )
  */
 SW_TEST_CASE( StringTest, FormatStringFloatFallbackNullTerminator )
 {
-    utf8 buf[sw::constant::kMaxBuffer64]{ 0 };
+    utf8 buf[sw::constant::buffer::kMax64]{ 0 };
     sw::formatstring( buf, static_cast<uint32>( sizeof( buf ) ), "Value: %#", 123.456f );
     sw::string formattedFloat( buf );
     SW_EXPECT_FALSE( formattedFloat.empty() );
@@ -1601,7 +1601,7 @@ namespace
  */
 SW_TEST_CASE( StringTest, FormatSignPaddingSignedEnumAndUtf8Truncation )
 {
-    sw::fixed_string<sw::constant::kMaxBuffer64> text;
+    sw::fixed_string<sw::constant::buffer::kMax64> text;
     sw::formatstring( text.data(), text.capacity(), "%05d", -42 );
     SW_EXPECT_EQUAL( sw::string_view( "-0042" ), sw::string_view( text.c_str() ) );
 
@@ -1620,19 +1620,19 @@ SW_TEST_CASE( StringTest, FormatSignPaddingSignedEnumAndUtf8Truncation )
  */
 SW_TEST_CASE( StringTest, FixedStringAndBuilderSelfReference )
 {
-    sw::fixed_string<sw::constant::kMaxBuffer64> source;
+    sw::fixed_string<sw::constant::buffer::kMax64> source;
     sw::Memory::copy( source.data(), "hello", 6 ); // ImGui 입력칸처럼 버퍼에 직접 쓴다
-    sw::fixed_string<sw::constant::kMaxBuffer64> target = "world";
-    target                                              = source;
+    sw::fixed_string<sw::constant::buffer::kMax64> target = "world";
+    target                                                = source;
     SW_EXPECT_EQUAL( sw::string_view( "hello" ), sw::string_view( target.c_str() ) );
-    const sw::fixed_string<sw::constant::kMaxBuffer64> copied( source );
+    const sw::fixed_string<sw::constant::buffer::kMax64> copied( source );
     SW_EXPECT_EQUAL( sw::string_view( "hello" ), sw::string_view( copied.c_str() ) );
 
-    sw::fixed_string<sw::constant::kMaxBuffer64> selfInsert = "abc";
+    sw::fixed_string<sw::constant::buffer::kMax64> selfInsert = "abc";
     selfInsert.insert( 1, selfInsert.c_str() );
     SW_EXPECT_EQUAL( sw::string_view( "aabcbc" ), sw::string_view( selfInsert.c_str() ) );
 
-    sw::StringBuilder<sw::constant::kMaxBuffer16> builder;
+    sw::StringBuilder<sw::constant::buffer::kMax16> builder;
     builder.append( "0123456789" );
     for ( uint32 repeat = 0; repeat < 4; ++repeat )
     {
@@ -1735,8 +1735,8 @@ SW_TEST_CASE( StringTest, FixedStringTruncatesOnCharacterBoundary )
  */
 SW_TEST_CASE( StringTest, FixedStringAssignFromItsOwnInterior )
 {
-    sw::fixed_string<sw::constant::kMaxBuffer32> text = "abcdef";
-    text                                              = text.c_str() + 2;
+    sw::fixed_string<sw::constant::buffer::kMax32> text = "abcdef";
+    text                                                = text.c_str() + 2;
     SW_EXPECT_EQUAL( sw::string_view( "cdef" ), sw::string_view( text.c_str() ) );
 
     text = sw::string_view( text.c_str() + 1, 2 );

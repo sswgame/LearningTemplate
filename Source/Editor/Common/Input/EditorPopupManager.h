@@ -102,7 +102,7 @@ namespace sw::editor
 
     private:
         vector<EditorPopupEntry> _listPopup;
-        uint32                   _syncedGeneration{ invalid_index::kUint32 }; ///< 마지막으로 맞춘 등록 세대(맞춘 적이 없으면 kUint32)
+        uint32                   _syncedGeneration{ constant::invalid_index::kUint32 }; ///< 마지막으로 맞춘 등록 세대(맞춘 적이 없으면 kUint32)
     };
 } // namespace sw::editor
 

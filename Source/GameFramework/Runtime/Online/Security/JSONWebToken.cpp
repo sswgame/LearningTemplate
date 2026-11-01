@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Online/Security/JSONWebToken.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/Base64Util.h"
 
@@ -135,8 +135,8 @@ namespace sw
         {
             bAudience = bAudience || verified.hasAudience( audience );
         }
-        const bool bExpiresOk = verified.findInteger( "exp", expiresAt ) && rule._nowMs < expiresAt * constant::kMillisecondsPerSecond + rule._clockSkewMs;
-        const bool bIssuedOk  = verified.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= rule._nowMs + rule._clockSkewMs;
+        const bool bExpiresOk = verified.findInteger( "exp", expiresAt ) && rule._nowMs < expiresAt * constant::time::kMillisecondsPerSecond + rule._clockSkewMs;
+        const bool bIssuedOk  = verified.findInteger( "iat", issuedAt ) == false || issuedAt * constant::time::kMillisecondsPerSecond <= rule._nowMs + rule._clockSkewMs;
         const bool bClaimsOk  = bIssuerOk && bAudience && bExpiresOk && bIssuedOk;
         if ( bClaimsOk == false )
             return std::nullopt;

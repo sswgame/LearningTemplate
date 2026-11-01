@@ -45,7 +45,7 @@ namespace sw
             {
                 if ( IsDebuggerPresent() != FALSE )
                     return internal::AssertAction::Break;
-                StringBuilder<constant::kMaxBuffer8192> text;
+                StringBuilder<constant::buffer::kMax8192> text;
                 text.appendFormat( "Assertion failed: %s\n%s\n\n%s(%d)\n\n"
                                    "Continue  - ignore this time\nTry Again - break into the debugger (or write a crash report)\nCancel    - ignore this assert for the rest of the run",
                                    pExpression, pMessage != nullptr ? pMessage : "", pFile, line );

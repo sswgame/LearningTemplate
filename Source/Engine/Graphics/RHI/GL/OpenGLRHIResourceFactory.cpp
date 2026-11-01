@@ -179,7 +179,7 @@ namespace sw
         // 주의: 가드 없이는 glGenBuffers 가 조용히 아무것도 안 해 초기화 안 된 이름이 그대로 저장되고(0xFFFFFFFF),
         // 이후 update 도 무시돼 PS 가 color=0 을 읽어 큐브가 모두 검게 나온다. GL 에러도, 로그도 없이.
         ScopedOpenGLContext contextScope( _pDevice );
-        const uint32        alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
+        const uint32        alignedSize = MathUtil::align( size, constant::render::kConstantBufferAlignment );
         GLuint              ubo{ 0 };
         glGenBuffers( 1, &ubo );
         if ( ubo == 0 )
@@ -274,7 +274,7 @@ namespace sw
         if ( sizeBytes == 0 )
             return 0;
 
-        const uint32 alignedSize = MathUtil::align( sizeBytes, constant::kConstantBufferAlignment );
+        const uint32 alignedSize = MathUtil::align( sizeBytes, constant::render::kConstantBufferAlignment );
 
         // SSBO 할당. 같은 이름을 GL_DRAW_INDIRECT_BUFFER · GL_DISPATCH_INDIRECT_BUFFER 로도 걸 수 있다.
         //
@@ -459,9 +459,9 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        RHITextureMipSpan arrMip[constant::render::kMaxTextureMipCount]{};
         const uint32      mipCount = resolveTextureUploadMips( desc, pRecord->_format, pRecord->_width, pRecord->_height,
-                                                               pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
+                                                               pRecord->_mipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
             SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
@@ -992,14 +992,14 @@ namespace sw
                 glAttachShader( program, vertexShader );
                 if ( bHasPixelShader )
                     glAttachShader( program, pixelShader );
-                StringBuilder<constant::kMaxBuffer512> linkLabel;
+                StringBuilder<constant::buffer::kMax512> linkLabel;
                 linkLabel.appendFormat( "Graphics (%# / %#)", desc._vertexShaderPath, desc._pixelShaderPath );
                 if ( linkProgram( program, linkLabel.c_str() ) )
                     record._program = program;
             }
             else
             {
-                GLchar infoLog[constant::kMaxBuffer1024];
+                GLchar infoLog[constant::buffer::kMax1024];
                 if ( vsCompiled != GL_TRUE )
                 {
                     glGetShaderInfoLog( vertexShader, sizeof( infoLog ), nullptr, infoLog );
@@ -1069,7 +1069,7 @@ namespace sw
             }
             else
             {
-                GLchar infoLog[constant::kMaxBuffer1024];
+                GLchar infoLog[constant::buffer::kMax1024];
                 glGetShaderInfoLog( computeShader, sizeof( infoLog ), nullptr, infoLog );
                 SW_LOG_ERROR( "Compute shader specialize/compile failed: %#", infoLog );
             }
@@ -1135,7 +1135,7 @@ namespace sw
         if ( isLinked == GL_TRUE )
             return true;
 
-        GLchar infoLog[constant::kMaxBuffer1024];
+        GLchar infoLog[constant::buffer::kMax1024];
         glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
         SW_LOG_ERROR( "%# program link failed: %#", pLabel, infoLog );
         glDeleteProgram( program );

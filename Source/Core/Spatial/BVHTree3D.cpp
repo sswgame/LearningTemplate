@@ -18,7 +18,7 @@ namespace sw
              * @brief 순회 스택의 칸 수입니다. 트리는 삽입 · 삭제마다 회전으로 균형을 잡으므로 높이는 원소 수의 로그로 자라고,
              *        깊이 우선 스택은 높이 + 1 을 넘지 않습니다. 256 이면 원소 수와 상관없이 남습니다.
              */
-            static constexpr int32 kTraversalStackCapacity = static_cast<int32>( constant::kMaxBuffer256 );
+            static constexpr int32 kTraversalStackCapacity = static_cast<int32>( constant::buffer::kMax256 );
 
             /**
              * @brief 경계가 `overlaps` 를 만족하는 잎의 핸들을 모읍니다. 네 질의(상자 · 광선 · 구 · 절두체)의 공통 순회입니다.
@@ -28,7 +28,7 @@ namespace sw
             static void collectOverlapping( const vector<BVHNode3D>& listNode, int32 rootIndex, OverlapFn&& overlaps,
                                             vector<SlotHandle>& outListHandle )
             {
-                if ( rootIndex == invalid_index::kInt32 )
+                if ( rootIndex == constant::invalid_index::kInt32 )
                     return;
 
                 int32 arrStack[kTraversalStackCapacity];
@@ -45,9 +45,9 @@ namespace sw
                         continue;
                     }
                     SW_ASSERT( stackCount + 2 <= kTraversalStackCapacity );
-                    if ( node._leftChild != invalid_index::kInt32 && stackCount < kTraversalStackCapacity )
+                    if ( node._leftChild != constant::invalid_index::kInt32 && stackCount < kTraversalStackCapacity )
                         arrStack[stackCount++] = node._leftChild;
-                    if ( node._rightChild != invalid_index::kInt32 && stackCount < kTraversalStackCapacity )
+                    if ( node._rightChild != constant::invalid_index::kInt32 && stackCount < kTraversalStackCapacity )
                         arrStack[stackCount++] = node._rightChild;
                 }
             }
@@ -79,7 +79,7 @@ namespace sw
         : _listNode{}
         , _listFreeNode{}
         , _mapHandleToNode{}
-        , _rootIndex{ invalid_index::kInt32 }
+        , _rootIndex{ constant::invalid_index::kInt32 }
     {
     }
 
@@ -106,9 +106,9 @@ namespace sw
     {
         if ( 0 <= nodeIndex && static_cast<size_t>( nodeIndex ) < _listNode.size() )
         {
-            _listNode[static_cast<size_t>( nodeIndex )]._parent     = invalid_index::kInt32;
-            _listNode[static_cast<size_t>( nodeIndex )]._leftChild  = invalid_index::kInt32;
-            _listNode[static_cast<size_t>( nodeIndex )]._rightChild = invalid_index::kInt32;
+            _listNode[static_cast<size_t>( nodeIndex )]._parent     = constant::invalid_index::kInt32;
+            _listNode[static_cast<size_t>( nodeIndex )]._leftChild  = constant::invalid_index::kInt32;
+            _listNode[static_cast<size_t>( nodeIndex )]._rightChild = constant::invalid_index::kInt32;
             _listNode[static_cast<size_t>( nodeIndex )]._handle     = SlotHandle{};
             _listFreeNode.push_back( static_cast<uint32>( nodeIndex ) );
         }
@@ -117,7 +117,7 @@ namespace sw
     int32 BVHTree3D::insert( SlotHandle handle, const AABB& bounds )
     {
         if ( handle.isValid() == false )
-            return invalid_index::kInt32;
+            return constant::invalid_index::kInt32;
 
         if ( _mapHandleToNode.find( handle ) != _mapHandleToNode.end() )
             remove( handle );
@@ -152,7 +152,7 @@ namespace sw
 
     void BVHTree3D::clear()
     {
-        _rootIndex = invalid_index::kInt32;
+        _rootIndex = constant::invalid_index::kInt32;
         _listNode.clear();
         _listFreeNode.clear();
         _mapHandleToNode.clear();
@@ -197,7 +197,7 @@ namespace sw
     void BVHTree3D::refitUpward( int32 startIndex )
     {
         int32 index = startIndex;
-        while ( index != invalid_index::kInt32 )
+        while ( index != constant::invalid_index::kInt32 )
         {
             index = balance( index );
 
@@ -213,10 +213,10 @@ namespace sw
 
     void BVHTree3D::insertLeaf( int32 leafIndex )
     {
-        if ( _rootIndex == invalid_index::kInt32 )
+        if ( _rootIndex == constant::invalid_index::kInt32 )
         {
             _rootIndex                                           = leafIndex;
-            _listNode[static_cast<size_t>( _rootIndex )]._parent = invalid_index::kInt32;
+            _listNode[static_cast<size_t>( _rootIndex )]._parent = constant::invalid_index::kInt32;
             return;
         }
 
@@ -236,7 +236,7 @@ namespace sw
         _listNode[static_cast<size_t>( sibling )]._parent   = newParent;
         _listNode[static_cast<size_t>( leafIndex )]._parent = newParent;
 
-        if ( oldParent != invalid_index::kInt32 )
+        if ( oldParent != constant::invalid_index::kInt32 )
         {
             if ( _listNode[static_cast<size_t>( oldParent )]._leftChild == sibling )
                 _listNode[static_cast<size_t>( oldParent )]._leftChild = newParent;
@@ -256,7 +256,7 @@ namespace sw
     {
         if ( leafIndex == _rootIndex )
         {
-            _rootIndex = invalid_index::kInt32;
+            _rootIndex = constant::invalid_index::kInt32;
             return;
         }
 
@@ -266,7 +266,7 @@ namespace sw
                                     ? _listNode[static_cast<size_t>( parent )]._rightChild
                                     : _listNode[static_cast<size_t>( parent )]._leftChild;
 
-        if ( grandParent != invalid_index::kInt32 )
+        if ( grandParent != constant::invalid_index::kInt32 )
         {
             if ( _listNode[static_cast<size_t>( grandParent )]._leftChild == parent )
                 _listNode[static_cast<size_t>( grandParent )]._leftChild = sibling;
@@ -280,7 +280,7 @@ namespace sw
         else
         {
             _rootIndex                                        = sibling;
-            _listNode[static_cast<size_t>( sibling )]._parent = invalid_index::kInt32;
+            _listNode[static_cast<size_t>( sibling )]._parent = constant::invalid_index::kInt32;
             freeNode( parent );
         }
     }
@@ -299,7 +299,7 @@ namespace sw
         U._parent    = A._parent;
         A._parent    = upIndex;
 
-        if ( U._parent != invalid_index::kInt32 )
+        if ( U._parent != constant::invalid_index::kInt32 )
         {
             if ( _listNode[static_cast<size_t>( U._parent )]._leftChild == nodeIndex )
                 _listNode[static_cast<size_t>( U._parent )]._leftChild = upIndex;
@@ -423,7 +423,7 @@ namespace sw
 
     int32 BVHTree3D::getTreeHeight() const
     {
-        if ( _rootIndex == invalid_index::kInt32 )
+        if ( _rootIndex == constant::invalid_index::kInt32 )
             return 0;
         return _listNode[static_cast<size_t>( _rootIndex )]._height;
     }

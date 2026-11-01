@@ -494,8 +494,8 @@ namespace sw
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(링 한 바퀴 뒤)에 GL_QUERY_RESULT_AVAILABLE
          *          로 먼저 물어보고 준비된 슬롯만 읽는다. 준비되지 않은 슬롯을 바로 읽으면 GL 이 거기서 막힌다.
          */
-        uint32               _arrTimestampQuery[constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight];
-        GPUTimestampSlotMask _arrTimestampMask[constant::kMaxFrameCountInFlight];
+        uint32               _arrTimestampQuery[constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight];
+        GPUTimestampSlotMask _arrTimestampMask[constant::render::kMaxFrameCountInFlight];
         uint32               _timestampFrameIndex;
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
 
@@ -506,7 +506,7 @@ namespace sw
 
         RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 이고, 비면 nullptr 입니다.
-        void*  _arrFrameDoneSync[constant::kMaxFrameCountInFlight];
+        void*  _arrFrameDoneSync[constant::render::kMaxFrameCountInFlight];
         uint64 _frameSerial;          ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
         uint64 _completedFrameSerial; ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
 

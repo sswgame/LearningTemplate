@@ -161,7 +161,7 @@ namespace sw::test
                 Watchdog& watchdog = getWatchdog();
                 while ( stopToken.isStopRequested() == false )
                 {
-                    MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 100 * constant::kNanosecondsPerMillisecond );
+                    MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 100 * constant::time::kNanosecondsPerMillisecond );
                     const int64 deadline = watchdog._deadlineNanoseconds.load( std::memory_order_acquire );
                     if ( deadline == 0 || MonotonicClock::nowNanoseconds() < deadline )
                         continue;
@@ -339,8 +339,8 @@ namespace sw::test
         // NaN 은 어떤 비교도 거짓이라 `<=` 가 거짓 — 통과로 새지 않는다.
         if ( std::fabs( expected - actual ) <= tolerance )
             return true;
-        utf8 arrBuffer[constant::kMaxBuffer1024];
-        formatstring( arrBuffer, constant::kMaxBuffer1024, "%# — expected %#, actual %#, tolerance %#", pExpression, expected, actual, tolerance );
+        utf8 arrBuffer[constant::buffer::kMax1024];
+        formatstring( arrBuffer, constant::buffer::kMax1024, "%# — expected %#, actual %#, tolerance %#", pExpression, expected, actual, tolerance );
         reportFailure( pFile, line, arrBuffer );
         return false;
     }
@@ -410,7 +410,7 @@ namespace sw::test
                     (void)process.terminate( 1 );
                     return;
                 }
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 20 * constant::kNanosecondsPerMillisecond );
+                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 20 * constant::time::kNanosecondsPerMillisecond );
             }
         } );
         string         line;
@@ -632,9 +632,9 @@ namespace sw::test
         string         caseReport;
         vector<string> listUpdatedSnapshot;
         const int64    runStart = MonotonicClock::nowNanoseconds();
-        utf8           arrBuffer[constant::kMaxBuffer1024];
+        utf8           arrBuffer[constant::buffer::kMax1024];
 
-        formatstring( arrBuffer, constant::kMaxBuffer1024, "[==========] %# of %# registered case(s), seed %# (repeat with --test-seed=%#), %# round(s), shard %#/%#",
+        formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# of %# registered case(s), seed %# (repeat with --test-seed=%#), %# round(s), shard %#/%#",
                       static_cast<uint32>( listCase.size() ), static_cast<uint32>( collectCaseNames().size() ), baseSeed, baseSeed, repeatCount, options._shardIndex,
                       options._shardCount );
         Internal::writeLine( arrBuffer );
@@ -665,14 +665,14 @@ namespace sw::test
                 const int64         caseStart      = MonotonicClock::nowNanoseconds();
                 Internal::Watchdog& watchdog       = Internal::getWatchdog();
                 watchdog._pCaseName.store( pCase->_pName, std::memory_order_release );
-                watchdog._timeoutMilliseconds.store( timeoutNanos / constant::kNanosecondsPerMillisecond, std::memory_order_release );
+                watchdog._timeoutMilliseconds.store( timeoutNanos / constant::time::kNanosecondsPerMillisecond, std::memory_order_release );
                 watchdog._deadlineNanoseconds.store( caseStart + timeoutNanos, std::memory_order_release );
                 if ( pCase->_pfnRunIndexed != nullptr )
                     pCase->_pfnRunIndexed( pCase->_index );
                 else
                     pCase->_pfnRun();
                 watchdog._deadlineNanoseconds.store( 0, std::memory_order_release );
-                const int64 caseMilliseconds = ( MonotonicClock::nowNanoseconds() - caseStart ) / constant::kNanosecondsPerMillisecond;
+                const int64 caseMilliseconds = ( MonotonicClock::nowNanoseconds() - caseStart ) / constant::time::kNanosecondsPerMillisecond;
 
                 vector<string> listLateFailure;
                 {
@@ -707,7 +707,7 @@ namespace sw::test
                 ++ranCount;
                 if ( bPassed == false )
                     ++failedCount;
-                formatstring( arrBuffer, constant::kMaxBuffer1024, "%# %# (%# ms)", bPassed ? "[       OK ]" : "[  FAILED  ]", pCase->_pName, caseMilliseconds );
+                formatstring( arrBuffer, constant::buffer::kMax1024, "%# %# (%# ms)", bPassed ? "[       OK ]" : "[  FAILED  ]", pCase->_pName, caseMilliseconds );
                 Internal::writeLine( arrBuffer );
 
                 caseReport += caseReport.empty() ? "\n" : ",\n";
@@ -724,8 +724,8 @@ namespace sw::test
         watchThread = thread{}; // 감시를 세우고 합류한다
         CrashHandler::setContextValue( "TestCase", "" );
 
-        const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::kNanosecondsPerMillisecond;
-        formatstring( arrBuffer, constant::kMaxBuffer1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );
+        const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::time::kNanosecondsPerMillisecond;
+        formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );
         Internal::writeLine( arrBuffer );
         for ( const string& path : listUpdatedSnapshot )
         {

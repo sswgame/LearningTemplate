@@ -3,7 +3,7 @@
  * @brief 에디터의 Look & Feel 테마 설정과 실시간 스타일 적용을 담당하는 유틸리티입니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
@@ -38,7 +38,7 @@ namespace sw::editor
         operator const utf8*() const { return _arrText; }
 
     private:
-        utf8 _arrText[constant::kMaxBuffer256];
+        utf8 _arrText[constant::buffer::kMax256];
     };
 } // namespace sw::editor
 

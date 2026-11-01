@@ -166,7 +166,7 @@ namespace sw::editor
                     return;
                 if ( value <= limit )
                     return;
-                StringBuilder<constant::kMaxBuffer256> number;
+                StringBuilder<constant::buffer::kMax256> number;
                 number.appendFormat( "%#", value );
                 message.append( ", got " );
                 message.append( number.c_str() );

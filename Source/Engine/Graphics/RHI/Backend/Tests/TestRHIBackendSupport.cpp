@@ -209,7 +209,7 @@ SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
  */
 SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
 {
-    constexpr uint32 kSlotCount = constant::kMaxFrameCountInFlight;
+    constexpr uint32 kSlotCount = constant::render::kMaxFrameCountInFlight;
     constexpr uint32 kSlotBytes = 8;
     uint8            arrSlot[kSlotCount][kSlotBytes]{};
     uint32           writeCount{ 0 };

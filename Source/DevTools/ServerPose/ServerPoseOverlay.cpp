@@ -37,8 +37,8 @@ namespace sw
     {
         struct ServerPoseOverlayInternal
         {
-            static constexpr int64   kPollIntervalNanoseconds = 250 * constant::kNanosecondsPerSecond / constant::kMillisecondsPerSecond; ///< 4 Hz
-            static constexpr int64   kReconnectNanoseconds    = 500 * constant::kNanosecondsPerSecond / constant::kMillisecondsPerSecond;
+            static constexpr int64   kPollIntervalNanoseconds = 250 * constant::time::kNanosecondsPerSecond / constant::time::kMillisecondsPerSecond; ///< 4 Hz
+            static constexpr int64   kReconnectNanoseconds    = 500 * constant::time::kNanosecondsPerSecond / constant::time::kMillisecondsPerSecond;
             static constexpr int32   kRequestTimeoutMilli     = 1000;
             static constexpr float32 kVisibleDistance         = 0.01f; ///< 이보다 가까우면 어긋남으로 치지 않는다(선 · 글을 그리지 않음)
             static constexpr float32 kGhostHalfExtent         = 0.5f;
@@ -54,7 +54,7 @@ namespace sw
 
             static void appendFloat( string& outText, float32 value )
             {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
+                utf8                       arrBuffer[constant::buffer::kMax32];
                 const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
                 outText.append( arrBuffer, result.ptr );
             }

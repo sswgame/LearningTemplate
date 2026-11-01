@@ -9,7 +9,7 @@
 #include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -30,7 +30,7 @@ namespace sw
     {
     public:
         /** @brief 풀에 없는 메시가 받는 값입니다(셰이더의 kInvalidIndex). */
-        static constexpr uint32 kInvalidBase = invalid_index::kUint32;
+        static constexpr uint32 kInvalidBase = constant::invalid_index::kUint32;
 
         GPUVertexAnimationPool()                                           = default;
         ~GPUVertexAnimationPool()                                          = default;

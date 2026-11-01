@@ -128,8 +128,8 @@ namespace sw::test
         }
         else if constexpr ( std::is_arithmetic_v<TValue> || std::is_convertible_v<const TValue&, string_view> )
         {
-            utf8 arrBuffer[constant::kMaxBuffer256];
-            formatstring( arrBuffer, constant::kMaxBuffer256, "%#", value );
+            utf8 arrBuffer[constant::buffer::kMax256];
+            formatstring( arrBuffer, constant::buffer::kMax256, "%#", value );
             return string( arrBuffer );
         }
         else
@@ -170,8 +170,8 @@ namespace sw::test
             return true;
         const string expectedText = describeValue( expected );
         const string actualText   = describeValue( actual );
-        utf8         arrBuffer[constant::kMaxBuffer1024];
-        formatstring( arrBuffer, constant::kMaxBuffer1024, "%# — expected %#, actual %#", pExpression, expectedText.c_str(), actualText.c_str() );
+        utf8         arrBuffer[constant::buffer::kMax1024];
+        formatstring( arrBuffer, constant::buffer::kMax1024, "%# — expected %#, actual %#", pExpression, expectedText.c_str(), actualText.c_str() );
         reportFailure( pFile, line, arrBuffer );
         return false;
     }
@@ -184,8 +184,8 @@ namespace sw::test
         if ( ( unexpected == actual ) == false )
             return true;
         const string valueText = describeValue( actual );
-        utf8         arrBuffer[constant::kMaxBuffer1024];
-        formatstring( arrBuffer, constant::kMaxBuffer1024, "%# — both are %#", pExpression, valueText.c_str() );
+        utf8         arrBuffer[constant::buffer::kMax1024];
+        formatstring( arrBuffer, constant::buffer::kMax1024, "%# — both are %#", pExpression, valueText.c_str() );
         reportFailure( pFile, line, arrBuffer );
         return false;
     }

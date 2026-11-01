@@ -4,7 +4,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -107,7 +107,7 @@ namespace sw
         template <typename... Args>
         string makeReply( string_view format, Args&&... args )
         {
-            StringBuilder<constant::kMaxBuffer512> text;
+            StringBuilder<constant::buffer::kMax512> text;
             text.appendFormat( format, std::forward<Args>( args )... );
             return string( text.view() );
         }

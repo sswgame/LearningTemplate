@@ -194,7 +194,7 @@ namespace sw::editor
             base[0] = static_cast<utf8>( StringUtil::toLowerChar( base[0] ) );
         for ( int32 serial = 1;; ++serial )
         {
-            StringBuilder<constant::kMaxBuffer128> candidate;
+            StringBuilder<constant::buffer::kMax128> candidate;
             candidate.appendFormat( "%#_%#", base, serial );
             if ( findNodeIndexByID( hashed_string( candidate.view() ) ) < 0 )
                 return string( candidate.view() );

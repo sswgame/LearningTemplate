@@ -63,7 +63,7 @@ namespace sw
             static constexpr int32     kMaxSendBytes             = 256 * 1024;
             static constexpr int32     kCompletionBatch          = 64;
             static constexpr int32     kLoopWaitMilli            = 100;
-            static constexpr int64     kSweepIntervalNanoseconds = 100 * constant::kNanosecondsPerMillisecond;
+            static constexpr int64     kSweepIntervalNanoseconds = 100 * constant::time::kNanosecondsPerMillisecond;
             static constexpr DWORD     kAcceptAddressBytes       = sizeof( sockaddr_in ) + 16;
 
             /** @brief 확장 함수(AcceptEx, ConnectEx)를 얻습니다. 함수 포인터 변수에 바로 받으므로 객체와 함수 포인터 사이의 캐스트가 없습니다. */

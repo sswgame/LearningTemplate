@@ -26,7 +26,7 @@ namespace sw
      */
     struct SW_API BugReport
     {
-        /** @brief 저장 폴더(`path::kSavedFolder`) 아래 BugReport 폴더 이름입니다. */
+        /** @brief 저장 폴더(`constant::path::kSavedFolder`) 아래 BugReport 폴더 이름입니다. */
         static constexpr const utf8* kFolderName = "BugReports";
         /** @brief 정보 파일 이름입니다. */
         static constexpr const utf8* kInfoFileName = "info.txt";

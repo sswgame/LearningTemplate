@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -14,7 +14,7 @@ namespace sw::editor
 {
     /**
      * @class DrawSnapshotHandoff
-     * @brief draw 스냅샷 슬롯 `constant::kMaxFrameCountInFlight` 개를 두고, UI 스레드가 쓰는 슬롯과 렌더 스레드가 읽는 슬롯이 겹치지 않게 합니다.
+     * @brief draw 스냅샷 슬롯 `constant::render::kMaxFrameCountInFlight` 개를 두고, UI 스레드가 쓰는 슬롯과 렌더 스레드가 읽는 슬롯이 겹치지 않게 합니다.
      * @details 값은 둘이다. 게시 슬롯(UI 가 마지막으로 다 쓴 슬롯)과 in-flight 슬롯(렌더 대기 또는 렌더 중인 슬롯, 없으면 `kInvalidSlot`).
      *          게시 슬롯은 UI 스레드만 바꾼다. in-flight 슬롯은 UI 의 게시, 렌더 스레드의 시작과 끝, 포기가 바꾼다.
      *
@@ -44,9 +44,9 @@ namespace sw::editor
     {
     public:
         /** @brief in-flight 슬롯이 없음을 뜻하는 값입니다. */
-        static constexpr uint32 kInvalidSlot = invalid_index::kUint32;
-        // 슬롯 수는 인플라이트 프레임 수와 같은 개념이므로 constant::kMaxFrameCountInFlight 를 직접 쓴다. 별칭을 두지 않는다.
-        static_assert( constant::kMaxFrameCountInFlight >= 2, "draw 스냅샷은 최소 2개(더블 버퍼) 이상이어야 합니다." );
+        static constexpr uint32 kInvalidSlot = constant::invalid_index::kUint32;
+        // 슬롯 수는 인플라이트 프레임 수와 같은 개념이므로 constant::render::kMaxFrameCountInFlight 를 직접 쓴다. 별칭을 두지 않는다.
+        static_assert( constant::render::kMaxFrameCountInFlight >= 2, "draw 스냅샷은 최소 2개(더블 버퍼) 이상이어야 합니다." );
 
         // ------------------------------------------------------------------------------
         // 1) 수명

@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -24,8 +24,8 @@ namespace sw
         {
             static void appendNumber( string& inoutText, int32 value )
             {
-                utf8         arrBuffer[constant::kMaxBuffer32];
-                const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, value );
+                utf8         arrBuffer[constant::buffer::kMax32];
+                const uint32 length = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, value );
                 inoutText.append( arrBuffer, length );
             }
 

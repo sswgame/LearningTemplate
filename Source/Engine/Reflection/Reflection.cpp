@@ -913,7 +913,7 @@ namespace sw
             pCurrent = pParent;
         }
 
-        StringBuilder<constant::kMaxBuffer8192> out;
+        StringBuilder<constant::buffer::kMax8192> out;
         out.appendFormat( "TYPE %# (module %#, %# bytes%#)\n", pType->_fullyQualifiedName.c_str(),
                           pType->_moduleName.empty() ? "?" : pType->_moduleName.c_str(), static_cast<uint64>( pType->_size ),
                           pType->isAlive() ? "" : ", module unloaded" );
@@ -997,7 +997,7 @@ namespace sw
         if ( pEnum == nullptr )
             return string( "ENUM '" ) + nameOrFqn.c_str() + "' is not registered (no ENUM(), its module is not loaded, or a typo)\n";
 
-        StringBuilder<constant::kMaxBuffer4096> out;
+        StringBuilder<constant::buffer::kMax4096> out;
         out.appendFormat( "ENUM %# (module %#, %# bytes, %#%#)\n", pEnum->_fullyQualifiedName.c_str(),
                           pEnum->_moduleName.empty() ? "?" : pEnum->_moduleName.c_str(), static_cast<uint32>( pEnum->_size ),
                           pEnum->_bIsSigned != SW_FALSE ? "signed" : "unsigned", pEnum->_bIsBitFlag != SW_FALSE ? ", Flags" : "" );

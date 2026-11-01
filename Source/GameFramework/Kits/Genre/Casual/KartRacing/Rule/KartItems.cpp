@@ -76,7 +76,7 @@ namespace sw
         KartRankTable rank;
         rank._fromPlace = MathUtil::max( 1, MathUtil::min( fromPlace, toPlace ) );
         rank._toPlace   = MathUtil::max( rank._fromPlace, MathUtil::max( fromPlace, toPlace ) );
-        StringBuilder<constant::kMaxBuffer64> tableName;
+        StringBuilder<constant::buffer::kMax64> tableName;
         tableName.append( "kartRank" ).append( rank._fromPlace ).append( '_' ).append( rank._toPlace );
         rank._tableID = hashed_string( tableName.c_str() );
 

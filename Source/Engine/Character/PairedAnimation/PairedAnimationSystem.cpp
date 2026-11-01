@@ -126,7 +126,7 @@ namespace sw
                                                                             const vector<PairedAnimationBinding>& listBinding, uint32& outSessionID, uint32& outSetIndex )
     {
         outSessionID = 0;
-        outSetIndex  = invalid_index::kUint32;
+        outSetIndex  = constant::invalid_index::kUint32;
         for ( size_t setIndex = 0; setIndex < listDef.size(); ++setIndex )
         {
             SW_ASSERT( listDef[setIndex] != nullptr );

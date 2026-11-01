@@ -8,7 +8,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/TimePoint.h"
@@ -32,7 +32,7 @@ namespace sw
         virtual int64 nowNanoseconds() const noexcept = 0;
 
         /** @brief 지금 시각(밀리초)입니다. 단조 시각 형식이라 유닉스 시각을 받는 자리(`UnixMilliseconds`)에 넣으면 컴파일이 안 됩니다. */
-        MonotonicMilliseconds nowMilliseconds() const noexcept { return MonotonicMilliseconds{ nowNanoseconds() / constant::kNanosecondsPerMillisecond }; }
+        MonotonicMilliseconds nowMilliseconds() const noexcept { return MonotonicMilliseconds{ nowNanoseconds() / constant::time::kNanosecondsPerMillisecond }; }
     };
 } // namespace sw
 
@@ -54,16 +54,16 @@ namespace sw
     public:
         /** @param start 처음 시각입니다. 단조 시각 형식이라 유닉스 시각(`UnixMilliseconds`)을 넣으면 컴파일이 안 됩니다. */
         explicit ManualClock( MonotonicMilliseconds start ) noexcept
-            : _nowNanoseconds{ start.count() * constant::kNanosecondsPerMillisecond }
+            : _nowNanoseconds{ start.count() * constant::time::kNanosecondsPerMillisecond }
         {
         }
 
         int64 nowNanoseconds() const noexcept override { return _nowNanoseconds.load(); }
 
         /** @brief 시각을 @p now 로 옮깁니다. 테스트가 가짜 경과 시간을 정할 때 씁니다. */
-        void setMilliseconds( MonotonicMilliseconds now ) noexcept { _nowNanoseconds.store( now.count() * constant::kNanosecondsPerMillisecond ); }
+        void setMilliseconds( MonotonicMilliseconds now ) noexcept { _nowNanoseconds.store( now.count() * constant::time::kNanosecondsPerMillisecond ); }
         /** @brief 시각을 @p deltaMilliseconds 만큼 앞으로 밉니다. */
-        void advanceMilliseconds( int64 deltaMilliseconds ) noexcept { (void)_nowNanoseconds.fetch_add( deltaMilliseconds * constant::kNanosecondsPerMillisecond ); }
+        void advanceMilliseconds( int64 deltaMilliseconds ) noexcept { (void)_nowNanoseconds.fetch_add( deltaMilliseconds * constant::time::kNanosecondsPerMillisecond ); }
 
     private:
         atomic<int64> _nowNanoseconds;

@@ -112,7 +112,7 @@ namespace sw
 
     string ShaderCache::makeCacheKey( const ShaderCompileDesc& desc )
     {
-        StringBuilder<constant::kMaxBuffer256> sb;
+        StringBuilder<constant::buffer::kMax256> sb;
         sb.append( desc._source.str() ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
         sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
         for ( const auto& def : desc._listDefine )

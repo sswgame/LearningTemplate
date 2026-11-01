@@ -289,7 +289,7 @@ namespace sw
 
         /** @brief id 로 설정을 찾습니다. 없으면 nullptr 입니다. */
         const UserSettingDef* findSetting( const hashed_string& id ) const;
-        /** @brief id 로 설정의 순번(`getSettings` 안)을 찾습니다. 없으면 `invalid_index::kUint32` 입니다. */
+        /** @brief id 로 설정의 순번(`getSettings` 안)을 찾습니다. 없으면 `constant::invalid_index::kUint32` 입니다. */
         uint32 findSettingIndex( const hashed_string& id ) const;
         /** @brief id 로 카테고리를 찾습니다. 없으면 nullptr 입니다. */
         const UserSettingCategoryDef* findCategory( const hashed_string& id ) const;

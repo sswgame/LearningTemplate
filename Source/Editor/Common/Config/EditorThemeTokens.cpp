@@ -50,7 +50,7 @@ namespace sw::editor
 {
     string EditorThemeTokens::getFolderPath()
     {
-        return EditorPaths::findContentFolder( FileUtil::joinPath( path::kEditorPack, kFolderName ) );
+        return EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEditorPack, kFolderName ) );
     }
 
     void EditorThemeTokens::listThemeNames( vector<string>& outListName )

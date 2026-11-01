@@ -84,12 +84,11 @@ namespace sw
     struct SW_GF_API GenreGimmickUtil
     {
         /** @brief 기믹이 스텝 수를 세는 고정 스텝(60 Hz)입니다. */
-        static constexpr float32 kStepTime = 1.0f / 60.0f;
 
         /** @brief 초를 스텝 수로 바꿉니다. 반올림하며 최소 @p minSteps 입니다. */
         static int32 toSteps( float32 seconds, int32 minSteps );
         /** @brief 기믹 컴포넌트가 쓰는 시계입니다. 60 Hz 이고 한 프레임에 최대 0.25 초까지 진행합니다. */
-        static FixedStepTimer makeClock() { return FixedStepTimer( kStepTime, 0.25f ); }
+        static FixedStepTimer makeClock() { return FixedStepTimer( constant::time::kDefaultFixedStepSeconds, 0.25f ); }
         /**
          * @brief 오브젝트의 몸(기믹 논리 컴포넌트와 @p pKeep 을 뺀 모든 컴포넌트)을 켜고 끕니다. 무너진 발판이나 먹은 아이템 상자를 숨기고 복원할 때 씁니다.
          * @details 꺼진 콜라이더는 겹침에 포함되지 않고, 꺼진 그래픽은 그려지지 않는다. 틱 중이면 틱 뒤로 미룬다.

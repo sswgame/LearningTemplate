@@ -134,7 +134,7 @@ namespace sw
             const uint64 firstTick = reader.readVarUint();
             const uint64 tickCount = reader.readVarUint();
             // 의도 하나는 적어도 한 바이트 — 남은 바이트보다 많은 틱 수는 깨진 머리다(큰 고리를 잡기 전에 거른다).
-            const bool bCountFits = tickCount <= static_cast<uint64>( reader.getBitsRemaining() / 8 ) && firstTick <= invalid_index::kUint32 - tickCount;
+            const bool bCountFits = tickCount <= static_cast<uint64>( reader.getBitsRemaining() / 8 ) && firstTick <= constant::invalid_index::kUint32 - tickCount;
             if ( reader.hasOverflowed() || bCountFits == false )
             {
                 outError = "intent recording has a broken tick count";

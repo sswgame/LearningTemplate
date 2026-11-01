@@ -153,7 +153,7 @@ namespace sw
         for ( const PairedAnimationBinding& binding : listBinding )
         {
             const uint32 roleIndex = def.findRoleIndex( binding._role );
-            if ( roleIndex == invalid_index::kUint32 )
+            if ( roleIndex == constant::invalid_index::kUint32 )
             {
                 SW_LOG_ERROR( "Paired animation binds unknown role '%#'", binding._role.c_str() );
                 return PairedAnimationStartResult::InvalidBinding;

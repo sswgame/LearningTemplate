@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
@@ -216,7 +216,7 @@ namespace sw::editor
         bool validate( string& outReport ) const;
 
         /** @brief 아이콘과 라벨을 합친 메뉴 표시 문자열을 만듭니다. */
-        static void formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::kMaxBuffer128>& outLabel );
+        static void formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::buffer::kMax128>& outLabel );
 
     private:
         /** @brief `_listCommand` 의 메뉴 경로와 순서 필드에서 `_listMenu` 를 다시 만듭니다. */

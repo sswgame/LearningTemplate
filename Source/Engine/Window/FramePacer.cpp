@@ -45,7 +45,7 @@ namespace sw
     {
         if ( frameRateLimit <= 0 )
             return frameStartNanoseconds;
-        return frameStartNanoseconds + constant::kNanosecondsPerSecond / frameRateLimit;
+        return frameStartNanoseconds + constant::time::kNanosecondsPerSecond / frameRateLimit;
     }
 
     void FramePacer::markFrameStart()

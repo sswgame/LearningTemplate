@@ -89,7 +89,7 @@ namespace sw
         : _device{ nullptr }
         , _memoryAdapter{ nullptr }
         , _immediateContext{}
-        , _backBufferFormat{ constant::kBackBufferFormat }
+        , _backBufferFormat{ constant::render::kBackBufferFormat }
         , _swapChain{}
         , _vertexBuffer{ nullptr }
         , _gpuBuffers{}
@@ -118,7 +118,7 @@ namespace sw
         , _renderPassLedger{}
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
-        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
+        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
         , _transferSerials{}
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
@@ -660,10 +660,10 @@ namespace sw
         {
             D3D11_BUFFER_DESC vbDesc{};
             vbDesc.Usage     = D3D11_USAGE_IMMUTABLE;
-            vbDesc.ByteWidth = static_cast<UINT>( sizeof( constant::arrFallbackVertex ) );
+            vbDesc.ByteWidth = static_cast<UINT>( sizeof( constant::render::arrFallbackVertex ) );
             vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
             D3D11_SUBRESOURCE_DATA vbData{};
-            vbData.pSysMem = constant::arrFallbackVertex;
+            vbData.pSysMem = constant::render::arrFallbackVertex;
             if ( isHrSuccess( _device->CreateBuffer( &vbDesc, &vbData, _vertexBuffer.GetAddressOf() ), "CreateBuffer" ) == false )
                 SW_LOG_WARNING( "Failed to create the fullscreen triangle vertex buffer." );
         }
@@ -813,7 +813,7 @@ namespace sw
     uint32 D3D11RHIDevice::getTimestampSlotCount() const
     {
         const bool bTimestampsOn = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _bTimestampReady.load( std::memory_order_acquire ) != SW_FALSE;
-        return bTimestampsOn ? constant::kMaxGPUTimestampSlot : 0u;
+        return bTimestampsOn ? constant::render::kMaxGPUTimestampSlot : 0u;
     }
 
     bool D3D11RHIDevice::readTimestamps( RHITimestampFrame& outFrame )
@@ -858,14 +858,14 @@ namespace sw
                 return false;
             ThreadUtil::yield();
         }
-        outGPUNanos = RHITimestamp::convertTickToNanos( tick, constant::kNanosecondsPerSecond / static_cast<float64>( _lastTimestampFrequency ) );
+        outGPUNanos = RHITimestamp::convertTickToNanos( tick, constant::time::kNanosecondsPerSecond / static_cast<float64>( _lastTimestampFrequency ) );
         return true;
     }
 
     void D3D11RHIDevice::writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex )
     {
         const bool bCannotWriteTimestamp = pContext == nullptr || _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE ||
-                                           _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot;
+                                           _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || slotIndex >= constant::render::kMaxGPUTimestampSlot;
         if ( bCannotWriteTimestamp )
             return;
 
@@ -890,12 +890,12 @@ namespace sw
         D3D11_QUERY_DESC stampDesc{};
         stampDesc.Query = D3D11_QUERY_TIMESTAMP;
 
-        for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
+        for ( uint32 frameIndex = 0; frameIndex < constant::render::kMaxFrameCountInFlight; ++frameIndex )
         {
             D3D11TimestampFrame& frame = _arrTimestampFrame[frameIndex];
             if ( isHrSuccess( _device->CreateQuery( &disjointDesc, &frame._disjoint ), "CreateQuery" ) == false )
                 return;
-            for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
+            for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
             {
                 if ( isHrSuccess( _device->CreateQuery( &stampDesc, &frame._arrQuery[slotIndex] ), "CreateQuery" ) == false )
                     return;
@@ -943,9 +943,9 @@ namespace sw
         if ( disjointData.Disjoint != FALSE || disjointData.Frequency == 0 )
             return;
 
-        uint64               arrTick[constant::kMaxGPUTimestampSlot]{};
+        uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
         GPUTimestampSlotMask readyMask{ 0 };
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
+        for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
             if ( ( frame._writtenMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
                 continue;
@@ -957,7 +957,7 @@ namespace sw
             readyMask |= makeGPUTimestampSlotBit( slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
-        RHITimestamp::resolve( arrTick, readyMask, constant::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
+        RHITimestamp::resolve( arrTick, readyMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
     void D3D11RHIDevice::beginFrame()
@@ -1024,7 +1024,7 @@ namespace sw
             frame._writtenMask   = _timestampWrittenMask.load( std::memory_order_relaxed );
             frame._bPending      = ( frame._writtenMask != 0 ) ? SW_TRUE : SW_FALSE;
             _bTimestampFrameOpen = SW_FALSE;
-            _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::kMaxFrameCountInFlight;
+            _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
         }
 
         if ( _swapChain.isValid() == false )
@@ -1079,15 +1079,15 @@ namespace sw
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             const uint64                            serial  = _frameSerial + 1;
-            const uint32                            slot    = static_cast<uint32>( ( serial - 1 ) % constant::kMaxFrameCountInFlight );
+            const uint32                            slot    = static_cast<uint32>( ( serial - 1 ) % constant::render::kMaxFrameCountInFlight );
             // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
-            const bool bRingFull = serial - _completedFrameSerial > constant::kMaxFrameCountInFlight;
+            const bool bRingFull = serial - _completedFrameSerial > constant::render::kMaxFrameCountInFlight;
             if ( bRingFull )
             {
                 if ( waitForEventQuery( context, _arrFrameDoneQuery[slot].Get(), D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds ) == false )
-                    SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::kMaxFrameCountInFlight,
+                    SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::render::kMaxFrameCountInFlight,
                                   D3D11RHIDeviceInternal::kIdleWaitTimeoutMilliseconds );
-                _completedFrameSerial = serial - constant::kMaxFrameCountInFlight;
+                _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;
             }
             context->End( _arrFrameDoneQuery[slot].Get() );
             _frameSerial = serial;
@@ -1096,7 +1096,7 @@ namespace sw
             while ( _completedFrameSerial < _frameSerial )
             {
                 const uint64       next      = _completedFrameSerial + 1;
-                ID3D11Query* const pNextDone = _arrFrameDoneQuery[( next - 1 ) % constant::kMaxFrameCountInFlight].Get();
+                ID3D11Query* const pNextDone = _arrFrameDoneQuery[( next - 1 ) % constant::render::kMaxFrameCountInFlight].Get();
                 if ( isEventQueryDone( context, pNextDone, D3D11_ASYNC_GETDATA_DONOTFLUSH ) == false )
                     break;
                 _completedFrameSerial = next;

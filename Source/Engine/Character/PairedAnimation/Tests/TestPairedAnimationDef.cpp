@@ -34,7 +34,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( def.getNotifies().size() ) );
     SW_EXPECT_TRUE( def.getNotifies()[0]._name == hashed_string( "Grip" ) );
     SW_EXPECT_TRUE( def.getNotifies()[1]._name == hashed_string( "Impact" ) );
-    SW_EXPECT_EQUAL( invalid_index::kUint32, def.findRoleIndex( hashed_string( "Nobody" ) ) );
+    SW_EXPECT_EQUAL( constant::invalid_index::kUint32, def.findRoleIndex( hashed_string( "Nobody" ) ) );
 }
 
 /**

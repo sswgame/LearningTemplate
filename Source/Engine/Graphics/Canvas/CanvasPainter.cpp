@@ -113,7 +113,7 @@ namespace sw
         , _listClip{}
         , _listOpacity{}
         , _uiScale{ uiScale }
-        , _anchor{ invalid_index::kUint32 }
+        , _anchor{ constant::invalid_index::kUint32 }
         , _deferredGlyphCount{ 0 }
     {
     }
@@ -378,7 +378,7 @@ namespace sw
         // appendQuad 가 가위가 같은 일괄을 이미 끝에 두었다. 여기서는 텍스처만 본다.
         CanvasBatch& current = _pDrawList->_listBatch.back();
         if ( pTexture == nullptr )
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         for ( uint32 slot = 0; slot < current._textureCount; ++slot )
         {
             if ( current._arrTexture[slot].isEqual( *pTexture ) )

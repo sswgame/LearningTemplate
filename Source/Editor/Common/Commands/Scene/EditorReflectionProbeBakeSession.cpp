@@ -64,8 +64,8 @@ namespace sw::editor
             /** @brief "could not write <경로>" 입니다. */
             static string makeWriteError( const string& assetPath )
             {
-                utf8 arrMessage[constant::kMaxBuffer512];
-                formatstring( arrMessage, constant::kMaxBuffer512, "could not write %#", assetPath.c_str() );
+                utf8 arrMessage[constant::buffer::kMax512];
+                formatstring( arrMessage, constant::buffer::kMax512, "could not write %#", assetPath.c_str() );
                 return string{ arrMessage };
             }
 
@@ -357,19 +357,19 @@ namespace sw::editor
             editorContext.getSubsystem<EditorWorkspace>().markSceneDirty(); // 프로브의 경로가 바뀌었다 — 저장해야 남는다
         EditorNotificationManager& notification = editorContext.getSubsystem<EditorNotificationManager>();
         const uint32               probeCount   = getProbeCount();
-        utf8                       arrMessage[constant::kMaxBuffer512];
+        utf8                       arrMessage[constant::buffer::kMax512];
         if ( probeCount == 0 )
         {
             notification.push( "Bake Reflection Probes", "Nothing to bake - add a Reflection Probe", NotificationType::Warning );
         }
         else if ( bCanceled || _bakedCount < probeCount )
         {
-            formatstring( arrMessage, constant::kMaxBuffer512, "Baked %# of %# probe(s) - %#", _bakedCount, probeCount, _lastError.c_str() );
+            formatstring( arrMessage, constant::buffer::kMax512, "Baked %# of %# probe(s) - %#", _bakedCount, probeCount, _lastError.c_str() );
             notification.push( "Bake Reflection Probes", arrMessage, bCanceled ? NotificationType::Warning : NotificationType::Error );
         }
         else
         {
-            formatstring( arrMessage, constant::kMaxBuffer512, "Baked %# probe(s) - save the scene to keep the paths", _bakedCount );
+            formatstring( arrMessage, constant::buffer::kMax512, "Baked %# probe(s) - save the scene to keep the paths", _bakedCount );
             notification.push( "Bake Reflection Probes", arrMessage, NotificationType::Success );
         }
     }

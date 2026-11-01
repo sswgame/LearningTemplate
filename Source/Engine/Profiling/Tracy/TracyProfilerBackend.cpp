@@ -31,7 +31,6 @@ namespace sw
             /** @brief Tracy 기본 데이터 포트입니다(클라이언트 · 뷰어 공통). */
             static constexpr uint16 kDefaultDataPort = 8086;
             /** @brief 포트 번호 최댓값입니다. */
-            static constexpr int32 kMaxPort = 65535;
 
 #if defined( SW_PROFILER_TRACY )
             // 지점 구조체를 Tracy 의 소스 위치 구조체로 그대로 넘긴다 — 배치가 같아야 한다.
@@ -214,7 +213,7 @@ namespace sw
             return TracyProfilerBackendInternal::kDefaultDataPort;
         int32      port{ 0 };
         const bool bParsed  = StringUtil::parseInt( portText, port );
-        const bool bInRange = 0 < port && port <= TracyProfilerBackendInternal::kMaxPort;
+        const bool bInRange = 0 < port && port <= constant::network::kMaxPort;
         if ( bParsed && bInRange )
             return static_cast<uint16>( port );
         return TracyProfilerBackendInternal::kDefaultDataPort;

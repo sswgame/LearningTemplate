@@ -2,7 +2,7 @@
 
 #include "Engine/Navigation/Recast/DetourNavCrowd.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Navigation/Recast/RecastNavMesh.h"
@@ -273,7 +273,7 @@ namespace sw
         if ( pLink == nullptr )
         {
             // 한 갱신 안에서 모퉁이를 찾고 바로 올랐다 — 링크는 모르지만 건너는 중이라는 것은 알린다.
-            inoutTraversal._linkPoly = invalid_index::kUint32;
+            inoutTraversal._linkPoly = constant::invalid_index::kUint32;
             inoutTraversal._linkID   = 0;
             inoutTraversal._start    = inoutTraversal._previousPosition;
             inoutTraversal._end      = inoutTraversal._previousPosition;

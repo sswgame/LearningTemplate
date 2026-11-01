@@ -126,8 +126,8 @@ namespace sw
 
     bool AssetLoadBlock::runCompletion( string& outError )
     {
-        utf8 arrBuffer[constant::kMaxBuffer1024];
-        formatstring( arrBuffer, constant::kMaxBuffer1024, "%# '%#' has no completion step", _pKindName, _path.c_str() );
+        utf8 arrBuffer[constant::buffer::kMax1024];
+        formatstring( arrBuffer, constant::buffer::kMax1024, "%# '%#' has no completion step", _pKindName, _path.c_str() );
         outError = arrBuffer;
         return false;
     }
@@ -294,8 +294,8 @@ namespace sw
         {
             if ( pBlock->getState() != AssetLoadState::Failed )
                 continue;
-            utf8 arrBuffer[constant::kMaxBuffer1024];
-            formatstring( arrBuffer, constant::kMaxBuffer1024, "%# %#: %#", pBlock->getKindName(), pBlock->getPath().c_str(), pBlock->getError().c_str() );
+            utf8 arrBuffer[constant::buffer::kMax1024];
+            formatstring( arrBuffer, constant::buffer::kMax1024, "%# %#: %#", pBlock->getKindName(), pBlock->getPath().c_str(), pBlock->getError().c_str() );
             outListError.emplace_back( arrBuffer );
         }
     }

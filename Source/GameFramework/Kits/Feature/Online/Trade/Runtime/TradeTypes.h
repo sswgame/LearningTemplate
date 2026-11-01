@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -27,8 +27,8 @@ namespace sw
         static constexpr int32 kMaxLegsPerSide  = 8;                   ///< 원장 이동 항목은 16개이며 양쪽이 8개씩이다
         static constexpr int32 kMaxLegsOnWire   = kMaxLegsPerSide * 2; ///< 요청 · 응답 한 번이 싣는 항목 수이며 양쪽 항목 수의 합이다
         static constexpr int32 kMaxPeerNameSize = 64;                  ///< 신청 요청의 상대 표시 이름(UTF-8 바이트)이다
-        static constexpr int64 kInviteTimeoutMs = 30 * constant::kMillisecondsPerSecond;
-        static constexpr int64 kIdleTimeoutMs   = 5 * 60 * constant::kMillisecondsPerSecond;
+        static constexpr int64 kInviteTimeoutMs = 30 * constant::time::kMillisecondsPerSecond;
+        static constexpr int64 kIdleTimeoutMs   = 5 * 60 * constant::time::kMillisecondsPerSecond;
     };
 } // namespace sw
 

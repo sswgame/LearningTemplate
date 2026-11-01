@@ -829,7 +829,7 @@ namespace sw::editor
             return;
         }
 
-        fixed_string<constant::kMaxBuffer128> parent;
+        fixed_string<constant::buffer::kMax128> parent;
         parent = socket._parent.c_str();
         if ( ImGui::InputText( "Parent", parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ), status ) );
@@ -860,7 +860,7 @@ namespace sw::editor
         if ( ImGui::Combo( "Anchor", &anchorIndex, "Bone\0Surface\0" ) )
             _document.reportEdit( sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone, status ) );
 
-        fixed_string<constant::kMaxPathSize> previewMesh;
+        fixed_string<constant::file::kMaxPathSize> previewMesh;
         previewMesh = string_view( socket._previewMesh );
         if ( ImGui::InputText( "Preview mesh", previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             _document.reportEdit( sockets.setPreviewMesh( name, previewMesh.c_str(), status ) );
@@ -1046,9 +1046,9 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawSelectionHeader( const AppearanceSelection& selection )
     {
-        const AppearanceDatabase&             database   = _document.getDatabase();
-        AppearanceEditModel&                  appearance = _document.getAppearanceModel();
-        fixed_string<constant::kMaxBuffer128> text;
+        const AppearanceDatabase&               database   = _document.getDatabase();
+        AppearanceEditModel&                    appearance = _document.getAppearanceModel();
+        fixed_string<constant::buffer::kMax128> text;
         if ( _document.isDatabaseLoaded() )
         {
             vector<hashed_string> listPreset;
@@ -1086,7 +1086,7 @@ namespace sw::editor
         ImGui::TextUnformatted( "Slots" );
         if ( _document.isDatabaseLoaded() == false )
         {
-            fixed_string<constant::kMaxBuffer128> text;
+            fixed_string<constant::buffer::kMax128> text;
             for ( const AppearanceSlotRequest& request : selection._listSlot )
             {
                 ImGui::PushID( request._slot.c_str() );

@@ -236,7 +236,7 @@ namespace sw::editor
 
                     ImGui::PushID( static_cast<int32>( itemIndex ) );
 
-                    fixed_string<constant::kMaxBuffer256> labelBuf;
+                    fixed_string<constant::buffer::kMax256> labelBuf;
                     formatstring( labelBuf.data(), labelBuf.capacity(), "[%#] %#", entry._category.c_str(),
                                   entry._label.c_str() );
 

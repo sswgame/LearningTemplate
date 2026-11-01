@@ -169,7 +169,7 @@ namespace sw::editor
                     return true;
                 }
                 int32       askedCount    = 0;
-                const int32 answeredCount = askStats( *pSession, static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, askedCount );
+                const int32 answeredCount = askStats( *pSession, static_cast<int64>( seconds ) * constant::time::kMillisecondsPerSecond, askedCount );
                 outReply                  = makeStatsReply( *pSession, answeredCount, askedCount );
                 return true;
             }
@@ -194,7 +194,7 @@ namespace sw::editor
                     outReply = "no multiplayer session is running";
                     return true;
                 }
-                const Deadline deadline      = Deadline::afterMilliseconds( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond );
+                const Deadline deadline      = Deadline::afterMilliseconds( static_cast<int64>( seconds ) * constant::time::kMillisecondsPerSecond );
                 int32          askedCount    = 0;
                 int32          answeredCount = 0;
                 bool           bReached      = false;

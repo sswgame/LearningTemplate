@@ -306,8 +306,8 @@ namespace sw
                         SW_LOG_ERROR( "Cooked shader binary could not be read for the reflection manifest: %#", task._outPath );
                     }
                 }
-                ioState._summary._compileMs = static_cast<uint32>( compileNanos / constant::kNanosecondsPerMillisecond );
-                ioState._summary._reflectMs = static_cast<uint32>( reflectNanos / constant::kNanosecondsPerMillisecond );
+                ioState._summary._compileMs = static_cast<uint32>( compileNanos / constant::time::kNanosecondsPerMillisecond );
+                ioState._summary._reflectMs = static_cast<uint32>( reflectNanos / constant::time::kNanosecondsPerMillisecond );
             }
 
             /**

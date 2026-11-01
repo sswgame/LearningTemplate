@@ -20,12 +20,11 @@ namespace sw
     {
         struct ApnsPushProviderInternal
         {
-            static constexpr int32       kStatusGone            = 410;
-            static constexpr int64       kMillisecondsPerSecond = 1000;
-            static constexpr size_t      kMaxDeviceTokenSize    = 200;
-            static constexpr const utf8* kPushTypeAlert         = "alert";
-            static constexpr const utf8* kPushTypeBackground    = "background";
-            static constexpr const utf8* kBackgroundPriority    = "5"; ///< 조용한 알림은 우선순위 5 여야 한다(APNs 규칙)
+            static constexpr int32       kStatusGone         = 410;
+            static constexpr size_t      kMaxDeviceTokenSize = 200;
+            static constexpr const utf8* kPushTypeAlert      = "alert";
+            static constexpr const utf8* kPushTypeBackground = "background";
+            static constexpr const utf8* kBackgroundPriority = "5"; ///< 조용한 알림은 우선순위 5 여야 한다(APNs 규칙)
         };
     } // namespace
 } // namespace sw
@@ -186,7 +185,7 @@ namespace sw
         {
             int64 seconds = 0;
             if ( StringUtil::parseInt64( pRetryAfter->_value, seconds ) && seconds > 0 )
-                retryAfterMs = seconds * Internal::kMillisecondsPerSecond;
+                retryAfterMs = seconds * constant::time::kMillisecondsPerSecond;
         }
         if ( response._statusCode == HTTPConstant::kStatusForbidden )
         {

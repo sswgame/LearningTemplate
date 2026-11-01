@@ -231,7 +231,7 @@ namespace sw::editor
     void InputMapPanel::drawActionList()
     {
         ImGui::SeparatorText( "Actions" );
-        EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::kMaxBuffer64, SW_LOCKEY( "EditorInputMap", "FilterActionsHint" ) );
+        EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::buffer::kMax64, SW_LOCKEY( "EditorInputMap", "FilterActionsHint" ) );
         EditorSelfTestMarks::note( "inputMap.filter" );
         const EditorListFilter filter{ string_view( _arrActionFilter ) };
         const InputMap&        inputMap = _document.getInputMap();
@@ -410,7 +410,7 @@ namespace sw::editor
             const hashed_string& other      = bIsA ? conflict._actionB : conflict._actionA;
             const uint32         otherIndex = bIsA ? conflict._bindIndexB : conflict._bindIndexA;
             ImGui::PushID( static_cast<int32>( index ) );
-            fixed_string<constant::kMaxBuffer256> conflictText;
+            fixed_string<constant::buffer::kMax256> conflictText;
             formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputGlyphResolver::makeSlotGlyph( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
                           other.c_str(), conflict._layer.c_str() );
             EditorThemeUtil::textError( conflictText.c_str() );
@@ -883,8 +883,8 @@ namespace sw::editor
 
         if ( currentFrame < replay.getFrameCount() )
         {
-            const InputReplayFrame&               frame = replay.getFrames()[currentFrame];
-            fixed_string<constant::kMaxBuffer128> frameBuf;
+            const InputReplayFrame&                 frame = replay.getFrames()[currentFrame];
+            fixed_string<constant::buffer::kMax128> frameBuf;
             formatstring( frameBuf.data(), frameBuf.capacity(), "Frame #%u | DeltaTime: %#s | Events: %d", currentFrame,
                           Fmt( static_cast<float64>( frame._deltaTime ), Format().precision( 4 ) ), static_cast<int32>( frame._listRawEvent.size() ) );
             EditorThemeUtil::textInfo( frameBuf.c_str() );

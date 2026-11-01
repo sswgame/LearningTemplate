@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/fixed_string.h"
 
@@ -145,7 +145,7 @@ namespace sw::editor
         const uint32 lodCount = pMesh->getLODCount();
         for ( uint32 lod = 0; lod < lodCount; ++lod )
         {
-            fixed_string<constant::kMaxBuffer32> label;
+            fixed_string<constant::buffer::kMax32> label;
             formatstring( label.data(), label.capacity(), "LOD %u", lod );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
             ImGui::RadioButton( label.c_str(), &_model.editLODChoice(), static_cast<int32>( lod ) );

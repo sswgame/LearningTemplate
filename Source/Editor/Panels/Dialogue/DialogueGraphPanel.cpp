@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
@@ -124,14 +124,14 @@ namespace sw::editor
             {
                 if ( info._bAddable == false )
                     continue;
-                fixed_string<constant::kMaxBuffer64> label;
+                fixed_string<constant::buffer::kMax64> label;
                 formatstring( label.data(), label.capacity(), "+ %#", info._pName );
                 if ( ImGui::Button( label.c_str() ) )
                 {
                     addNode( info._type );
                     notifyDocumentEdited( "Add Dialogue Node" );
                 }
-                fixed_string<constant::kMaxBuffer64> markKey;
+                fixed_string<constant::buffer::kMax64> markKey;
                 formatstring( markKey.data(), markKey.capacity(), "dialogueGraph.add.%#", info._pName );
                 EditorSelfTestMarks::note( markKey.c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AddNodeTip" ) );
@@ -413,7 +413,7 @@ namespace sw::editor
         {
             for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
             {
-                fixed_string<constant::kMaxBuffer64> label;
+                fixed_string<constant::buffer::kMax64> label;
                 formatstring( label.data(), label.capacity(), "Choice %#", choiceIndex );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) ); // 선택지 수는 노드가 정한다 — 좁은 패널에서 뒤 단추가 창 밖에 놓이지 않게 줄을 바꾼다
                 if ( ImGui::SmallButton( label.c_str() ) )
@@ -566,7 +566,7 @@ namespace sw::editor
                     break;
                 if ( node._text.size() > 40 )
                 {
-                    StringBuilder<constant::kMaxBuffer64> previewBuilder;
+                    StringBuilder<constant::buffer::kMax64> previewBuilder;
                     previewBuilder.append( string_view{ node._text.data(), 37 } );
                     previewBuilder.append( "..." );
                     ImGui::TextDisabled( "\"%s\"", previewBuilder.c_str() );
@@ -604,7 +604,7 @@ namespace sw::editor
         {
             case DialogueNodeBody::Text:
             {
-                fixed_string<constant::kMaxBuffer512> textBuf{ node._text.c_str() };
+                fixed_string<constant::buffer::kMax512> textBuf{ node._text.c_str() };
                 if ( ImGui::InputTextMultiline( "Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
                     node._text = textBuf.c_str();
                 if ( ImGui::IsItemDeactivatedAfterEdit() )

@@ -619,8 +619,8 @@ namespace sw
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::arrVertexAttribute 의 SW_INSTANCESLOT.
-        if ( slot == constant::kInstanceSlotStreamSlot )
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::render::arrVertexAttribute 의 SW_INSTANCESLOT.
+        if ( slot == constant::render::kInstanceSlotStreamSlot )
         {
             _pState->_boundInstanceSlotVb     = buffer;
             _pState->_boundInstanceSlotOffset = offset;
@@ -664,7 +664,7 @@ namespace sw
             if ( slotIt != _pDevice->_mapCbSlotSize.end() )
             {
                 candidate._range  = slotIt->second;
-                candidate._offset = static_cast<uint64>( _pDevice->_currentFrame % constant::kMaxFrameCountInFlight ) * slotIt->second;
+                candidate._offset = static_cast<uint64>( _pDevice->_currentFrame % constant::render::kMaxFrameCountInFlight ) * slotIt->second;
             }
         }
 

@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Container/UTF8Util.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -101,7 +101,7 @@ namespace sw
 
             struct
             {
-                utf8 _arrUTF8[constant::kMaxBuffer32];
+                utf8 _arrUTF8[constant::buffer::kMax32];
             } _textData;
         } _payload{};
 
@@ -303,7 +303,7 @@ namespace sw
          */
         static void copyTextPayload( RawInputEvent& outEvent, string_view text )
         {
-            constexpr size_t kMaxTextBytes = constant::kMaxBuffer32 - 1;
+            constexpr size_t kMaxTextBytes = constant::buffer::kMax32 - 1;
             size_t           len           = text.size() < kMaxTextBytes ? text.size() : kMaxTextBytes;
             if ( len < text.size() )
             {

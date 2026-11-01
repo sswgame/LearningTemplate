@@ -15,9 +15,9 @@ namespace sw
     {
         struct DebugChannelInternal
         {
-            static constexpr int64 kPollSleepNanoseconds = 1 * constant::kNanosecondsPerSecond / constant::kMillisecondsPerSecond;
+            static constexpr int64 kPollSleepNanoseconds = 1 * constant::time::kNanosecondsPerSecond / constant::time::kMillisecondsPerSecond;
 
-            static int64 nowMilli() { return MonotonicClock::nowNanoseconds() / ( constant::kNanosecondsPerSecond / constant::kMillisecondsPerSecond ); }
+            static int64 nowMilli() { return MonotonicClock::nowNanoseconds() / ( constant::time::kNanosecondsPerSecond / constant::time::kMillisecondsPerSecond ); }
         };
     } // namespace
 

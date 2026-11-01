@@ -373,12 +373,12 @@ namespace sw::editor
         {
             const SequenceKeyTrack& track = _listTrack[static_cast<size_t>( trackIndex )];
             ImGui::PushID( trackIndex );
-            fixed_string<constant::kMaxBuffer256> label;
+            fixed_string<constant::buffer::kMax256> label;
             formatstring( label.data(), label.capacity(), "%# (%#)", track._name.empty() ? "Track" : track._name.c_str(),
                           track._targetObject.empty() ? "no target" : track._targetObject.c_str() );
             if ( ImGui::Selectable( label.c_str(), trackIndex == _selectedTrack, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
                 _selectedTrack = trackIndex;
-            fixed_string<constant::kMaxBuffer64> mark;
+            fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.track.%#", trackIndex );
             EditorSelfTestMarks::note( mark.c_str() );
             ImGui::SameLine();
@@ -518,7 +518,7 @@ namespace sw::editor
         for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
         {
             ImGui::PushID( static_cast<int32>( channelIndex ) );
-            const bool bKeyed    = track.findChannelKey( channelIndex, frame ) != invalid_index::kUint32;
+            const bool bKeyed    = track.findChannelKey( channelIndex, frame ) != constant::invalid_index::kUint32;
             const bool bRotation = SequencerPanelInternal::isRotationChannel( track, channelIndex );
             // 키가 없는 채널은 대상의 지금 값을 보인다(트랜스폼 채널만 지금 값이 있다).
             const float32                currentValue = channelIndex < kSequenceTransformChannelCount ? pArrCurrent[channelIndex] : 0.0f;
@@ -537,7 +537,7 @@ namespace sw::editor
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Key", "sequence-key" );
-            fixed_string<constant::kMaxBuffer64> mark;
+            fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
             EditorSelfTestMarks::note( mark.c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Curve" ) );

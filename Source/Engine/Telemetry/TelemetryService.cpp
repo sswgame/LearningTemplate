@@ -98,7 +98,7 @@ namespace sw
                 }
             }
 
-            static void appendValueText( StringBuilder<constant::kMaxBuffer512>& text, const TelemetryValue& value )
+            static void appendValueText( StringBuilder<constant::buffer::kMax512>& text, const TelemetryValue& value )
             {
                 switch ( value._type )
                 {
@@ -481,7 +481,7 @@ namespace sw
         root.set( "type" ).setString( "event" );
         root.set( "event" ).setString( def._id.c_str() );
         root.set( "seq" ).setUint( _sequence + static_cast<uint64>( _listPendingLine.size() ) );
-        root.set( "t" ).setFloat( MathUtil::round( _sessionSeconds * constant::kMillisecondsPerSecond ) / constant::kMillisecondsPerSecond );
+        root.set( "t" ).setFloat( MathUtil::round( _sessionSeconds * constant::time::kMillisecondsPerSecond ) / constant::time::kMillisecondsPerSecond );
         root.set( "sample" ).setFloat( static_cast<float64>( def._sampleRate ) );
         const JSONValue fields = root.set( "fields" );
         fields.setObject();
@@ -509,7 +509,7 @@ namespace sw
 
     string TelemetryService::makeSpoolFilePathLocked( uint32 fileIndex ) const
     {
-        StringBuilder<constant::kMaxBuffer256> name;
+        StringBuilder<constant::buffer::kMax256> name;
         name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
         return FileUtil::joinPath( _spoolFolder.get(), name.c_str() );
     }
@@ -519,7 +519,7 @@ namespace sw
         const uint32 capacity = _schema.getSettings()._breadcrumbCount;
         if ( capacity == 0 )
             return;
-        StringBuilder<constant::kMaxBuffer512> text;
+        StringBuilder<constant::buffer::kMax512> text;
         text.appendFormat( "%.3f %#", _sessionSeconds, event.getID().c_str() );
         for ( const TelemetryValue& value : event.getValues() )
         {
@@ -600,7 +600,7 @@ namespace sw
             emitSceneSummaryLocked();
             _currentScene.assign( sceneID.data(), sceneID.size() );
         }
-        _frames.add( deltaSeconds * constant::kMillisecondsPerSecond );
+        _frames.add( deltaSeconds * constant::time::kMillisecondsPerSecond );
     }
 
     void TelemetryService::onAfterSceneTick( const EngineFrameContext& context )
@@ -617,7 +617,7 @@ namespace sw
             TelemetryEvent summary{ hashed_string( kSceneSummaryEvent ) };
             summary.setString( "scene", _currentScene.empty() ? string_view( "(none)" ) : string_view( _currentScene ) );
             summary.setInt( "frames", _frames.getCount() );
-            summary.setFloat( "seconds", _frames.getTotalMs() / constant::kMillisecondsPerSecond );
+            summary.setFloat( "seconds", _frames.getTotalMs() / constant::time::kMillisecondsPerSecond );
             summary.setFloat( "avgMs", _frames.getTotalMs() / static_cast<float64>( _frames.getCount() ) );
             summary.setFloat( "p50Ms", static_cast<float64>( _frames.computePercentileMs( 0.5f ) ) );
             summary.setFloat( "p99Ms", static_cast<float64>( _frames.computePercentileMs( 0.99f ) ) );

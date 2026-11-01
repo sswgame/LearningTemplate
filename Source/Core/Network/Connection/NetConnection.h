@@ -31,7 +31,7 @@
 #pragma once
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/SequenceBuffer.h"
@@ -86,7 +86,7 @@ namespace sw
          *          스트림의 `StreamLimit::kDefaultMaxPendingReceiveBytes`(4 MiB, 읽기를 멈춘다)와 같은 역할이다. UDP 는 상대를 멈출 수 없어 끊는다.
          *          신뢰 순서 메시지 하나의 상한(64 KB)의 16 배다. 연결 1024 개 × 채널 넷이어도 4 GiB 안쪽이다.
          */
-        static constexpr int32 kMaxPendingReceiveBytes       = static_cast<int32>( constant::kBytesPerMegabyte );
+        static constexpr int32 kMaxPendingReceiveBytes       = static_cast<int32>( constant::memory::kBytesPerMegabyte );
         static constexpr int32 kIncomingMessageOverheadBytes = 32; ///< 빈 메시지도 큐 칸과 버퍼 머리를 쓴다. 0 바이트 메시지 홍수도 상한에 걸리게 한다.
         /**
          * @brief 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간(초)의 기본값입니다. 넘으면 싣지 않고 버립니다.

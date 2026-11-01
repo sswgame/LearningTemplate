@@ -16,7 +16,7 @@ namespace sw
 {
     string ScreenshotPathUtil::makeDefaultPath( const ScreenshotLocalTime& localTime )
     {
-        StringBuilder<constant::kMaxBuffer32> fileName;
+        StringBuilder<constant::buffer::kMax32> fileName;
         fileName.appendFormat( "%04d%02d%02d-%02d%02d%02d.png", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
                                localTime._second );
         return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), kScreenshotFolderName ), fileName.c_str() );

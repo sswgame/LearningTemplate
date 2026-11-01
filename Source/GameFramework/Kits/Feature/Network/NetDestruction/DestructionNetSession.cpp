@@ -186,7 +186,7 @@ namespace sw
 
     string DestructionNetSession::formatHashLine( DestructionNetSide side, const DestructionHashRecord& record, string_view objectName )
     {
-        StringBuilder<constant::kMaxBuffer256> text;
+        StringBuilder<constant::buffer::kMax256> text;
         text.appendFormat( "[DestructionHash] side=%# id=%# events=%# hash=%# name=%#", side == DestructionNetSide::Server ? "server" : "client", record._netID, record._eventCount,
                            Fmt( record._hash, Format( 16, Format::Padding::Zero ).hex() ), objectName );
         return string( text.c_str(), text.size() );

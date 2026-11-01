@@ -138,7 +138,7 @@ namespace sw::editor
         request._sanctionKind = kind;
         request._reasonCode   = string( reasonCode );
         request._memo         = string( memo );
-        request._untilMs      = durationSeconds > 0 ? WallClock::nowUnixMilliseconds().count() + durationSeconds * constant::kMillisecondsPerSecond : 0;
+        request._untilMs      = durationSeconds > 0 ? WallClock::nowUnixMilliseconds().count() + durationSeconds * constant::time::kMillisecondsPerSecond : 0;
         send( AdminMethod::kSetSanction, request, NetIdempotencyKey::makeRandom() );
     }
 
@@ -174,7 +174,7 @@ namespace sw::editor
         request._scope      = string( scope );
         request._messageKey = string( messageKey );
         request._startMs    = nowMs;
-        request._endMs      = durationSeconds > 0 ? nowMs + durationSeconds * constant::kMillisecondsPerSecond : 0;
+        request._endMs      = durationSeconds > 0 ? nowMs + durationSeconds * constant::time::kMillisecondsPerSecond : 0;
         request._memo       = string( memo );
         send( AdminMethod::kSetMaintenance, request, NetIdempotencyKey::makeRandom() );
     }
@@ -196,7 +196,7 @@ namespace sw::editor
         request._priority     = priority;
         request._bLiteralText = SW_TRUE;
         request._startMs      = nowMs;
-        request._endMs        = durationSeconds > 0 ? nowMs + durationSeconds * constant::kMillisecondsPerSecond : 0;
+        request._endMs        = durationSeconds > 0 ? nowMs + durationSeconds * constant::time::kMillisecondsPerSecond : 0;
         request._memo         = string( memo );
         send( AdminMethod::kPostNotice, request, NetIdempotencyKey::makeRandom() );
     }
@@ -246,7 +246,7 @@ namespace sw::editor
         _lastMethod    = reply._method;
         _bLastReplayed = reply._reply._bReplayed == SW_TRUE;
 
-        StringBuilder<constant::kMaxBuffer128> status;
+        StringBuilder<constant::buffer::kMax128> status;
         status.appendFormat( "%#: %#", getMethodName( reply._method ), getEnumName( reply._reply._result ) );
         if ( reply._errorCode != 0 )
             status.appendFormat( " (error %#)", reply._errorCode );

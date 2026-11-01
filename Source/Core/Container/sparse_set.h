@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -24,7 +24,7 @@ namespace sw
         using key_type                       = KeyType;
         using mapped_type                    = T;
         using value_type                     = T;
-        static constexpr KeyType kInvalidKey = invalid_index::kUint32;
+        static constexpr KeyType kInvalidKey = constant::invalid_index::kUint32;
 
         sparse_set()                                   = default;
         sparse_set( const sparse_set& )                = delete;

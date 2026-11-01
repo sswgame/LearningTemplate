@@ -86,7 +86,7 @@ namespace sw::editor
                 ImGui::BeginDisabled( bLocked );
                 if ( ImGui::Checkbox( "##On", &bOn ) )
                     requestToggle( manifest._name, bOn );
-                fixed_string<constant::kMaxBuffer128> mark;
+                fixed_string<constant::buffer::kMax128> mark;
                 formatstring( mark.data(), mark.capacity(), "modules.toggle.%#", manifest._name.c_str() );
                 EditorSelfTestMarks::note( mark.c_str() );
                 ImGui::EndDisabled();
@@ -95,7 +95,7 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( 1 );
                 if ( ImGui::Selectable( manifest._name.c_str(), _model.getSelectedModule() == manifest._name ) )
                     _model.selectModule( manifest._name );
-                fixed_string<constant::kMaxBuffer128> rowMark;
+                fixed_string<constant::buffer::kMax128> rowMark;
                 formatstring( rowMark.data(), rowMark.capacity(), "modules.row.%#", manifest._name.c_str() );
                 EditorSelfTestMarks::note( rowMark.c_str() ); // 시나리오가 행을 골라 상세 절(modules.detail)을 연다
                 EditorWidgets::drawTooltip( manifest._description.c_str() );

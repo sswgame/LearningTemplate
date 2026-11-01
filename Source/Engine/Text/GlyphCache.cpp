@@ -24,7 +24,7 @@ namespace sw
         , _scratchBitmap{}
         , _rasterBudgetNanoseconds{ 0 }
         , _spentNanoseconds{ 0 }
-        , _budgetFrameIndex{ invalid_index::kUint64 }
+        , _budgetFrameIndex{ constant::invalid_index::kUint64 }
         , _frameIndex{ 0 }
     {
     }

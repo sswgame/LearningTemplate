@@ -3,7 +3,7 @@
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -206,7 +206,7 @@ namespace sw
             /** @brief 클립보드 읽기 · 쓰기가 상대를 기다리는 한 번의 한도(ms)입니다(X11 의 200 ms 와 같다). */
             static constexpr int32 kClipboardWaitMs = 200;
             /** @brief 클립보드 글 한 번에 받는 최대 바이트입니다(끝없이 보내는 상대를 끊는다). */
-            static constexpr size_t kClipboardMaxBytes = 16u * constant::kBytesPerMegabyte;
+            static constexpr size_t kClipboardMaxBytes = 16u * constant::memory::kBytesPerMegabyte;
             /** @brief 휠 한 칸에 해당하는 축 값입니다(컴포지터 관례 — 마우스 휠 한 칸이 10). */
             static constexpr float32 kAxisUnitsPerNotch = 10.0f;
             /** @brief 기본 커서 테마 크기(픽셀)입니다. */

@@ -69,7 +69,7 @@ namespace sw
 
     bool AssetCookPath::isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
     {
-        if ( activePackRoot.empty() || FileUtil::startsWithPathComponent( relativePath, path::kGamePack ) == false )
+        if ( activePackRoot.empty() || FileUtil::startsWithPathComponent( relativePath, constant::path::kGamePack ) == false )
             return false;
         return FileUtil::startsWithPathComponent( relativePath, activePackRoot ) == false;
     }

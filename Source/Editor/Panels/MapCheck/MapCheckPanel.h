@@ -44,14 +44,14 @@ namespace sw::editor
         void syncRows();
 
     private:
-        vector<ValidationIssue>               _listRow;
-        fixed_string<constant::kMaxBuffer128> _searchBuffer;
-        string                                _builtSearch; ///< 줄을 만들 때의 검색어
-        MapCheckCounts                        _counts;
-        uint64                                _builtRevisionKey; ///< 줄을 만들 때의 결과 열쇠(활성 씬 세대 + 표의 결과 번호)
-        uint8                                 _bShowErrors   : 1;
-        uint8                                 _bShowWarnings : 1;
-        uint8                                 _bRowsDirty    : 1;
-        [[maybe_unused]] uint8                _reservedFlags : 5;
+        vector<ValidationIssue>                 _listRow;
+        fixed_string<constant::buffer::kMax128> _searchBuffer;
+        string                                  _builtSearch; ///< 줄을 만들 때의 검색어
+        MapCheckCounts                          _counts;
+        uint64                                  _builtRevisionKey; ///< 줄을 만들 때의 결과 열쇠(활성 씬 세대 + 표의 결과 번호)
+        uint8                                   _bShowErrors   : 1;
+        uint8                                   _bShowWarnings : 1;
+        uint8                                   _bRowsDirty    : 1;
+        [[maybe_unused]] uint8                  _reservedFlags : 5;
     };
 } // namespace sw::editor

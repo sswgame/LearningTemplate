@@ -240,8 +240,8 @@ namespace sw
                             return false;
                         }
                         ProfilerTimelineEvent loaded;
-                        loaded._beginNanos = static_cast<uint64>( *begin * constant::kNanosecondsPerMicrosecond + 0.5 );
-                        loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( *duration * constant::kNanosecondsPerMicrosecond + 0.5 );
+                        loaded._beginNanos = static_cast<uint64>( *begin * constant::time::kNanosecondsPerMicrosecond + 0.5 );
+                        loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( *duration * constant::time::kNanosecondsPerMicrosecond + 0.5 );
                         loaded._slot       = findSlot( inoutTrace, event.get( "name" ).asString() );
                         inoutTrace._listThread[findThread( inoutState, inoutTrace, pid, tid )]._listEvent.push_back( loaded );
                         ++eventCount;
@@ -262,7 +262,7 @@ namespace sw
                             outError = formatToString( "frame marker %# needs a numeric ts", index );
                             return false;
                         }
-                        inoutTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::kNanosecondsPerMicrosecond + 0.5 ) );
+                        inoutTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::time::kNanosecondsPerMicrosecond + 0.5 ) );
                     }
                 }
                 if ( eventCount == 0 )
@@ -322,7 +322,7 @@ namespace sw
             /** @brief 마이크로초(실수) 시각에 나노초 이동을 더해 나노초 정수로 돌려줍니다(음수는 0). */
             static uint64 shiftMicroseconds( float64 micro, int64 shiftNanos )
             {
-                const float64 nanos = micro * constant::kNanosecondsPerMicrosecond + static_cast<float64>( shiftNanos );
+                const float64 nanos = micro * constant::time::kNanosecondsPerMicrosecond + static_cast<float64>( shiftNanos );
                 return nanos <= 0.0 ? 0 : static_cast<uint64>( nanos + 0.5 );
             }
 
@@ -400,7 +400,7 @@ namespace sw
                     }
                     else
                     {
-                        pSource->_shiftNanos = ( pSource->_wallUnixMilliseconds - reference._wallUnixMilliseconds ) * constant::kNanosecondsPerMillisecond -
+                        pSource->_shiftNanos = ( pSource->_wallUnixMilliseconds - reference._wallUnixMilliseconds ) * constant::time::kNanosecondsPerMillisecond -
                                                ( pSource->_monotonicNanoseconds - reference._monotonicNanoseconds );
                         pSource->_alignment = "wall clock (off by the clock difference between hosts)";
                     }
@@ -1005,9 +1005,9 @@ namespace sw
             if ( --capture._slowFramesUntilSave > 0 )
                 return;
             ProfilerTraceMeta meta      = makeCurrentMeta( processName );
-            const uint64      tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / constant::kNanosecondsPerMicrosecond;
+            const uint64      tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / constant::time::kNanosecondsPerMicrosecond;
             meta._listMarker.push_back(
-                { formatToString( "Slow tick %#.%# ms", tickMicro / constant::kMicrosecondsPerMillisecond, ( tickMicro % constant::kMicrosecondsPerMillisecond ) / 100 ), capture._slowBeginNanos } );
+                { formatToString( "Slow tick %#.%# ms", tickMicro / constant::time::kMicrosecondsPerMillisecond, ( tickMicro % constant::time::kMicrosecondsPerMillisecond ) / 100 ), capture._slowBeginNanos } );
             const string path = makeDefaultTracePath( "slowtick", meta._wallUnixMilliseconds );
             string       reply;
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )

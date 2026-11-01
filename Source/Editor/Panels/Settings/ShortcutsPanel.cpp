@@ -29,9 +29,9 @@ namespace sw::editor
             static constexpr Color kConflictRowBg{ 0.55f, 0.12f, 0.12f, 0.6f };
 
             /** @brief 그 커맨드 줄의 이름입니다(`shortcuts.<동작>.<커맨드 id>`). */
-            static fixed_string<constant::kMaxBuffer128> makeMark( const utf8* pAction, const string& commandID )
+            static fixed_string<constant::buffer::kMax128> makeMark( const utf8* pAction, const string& commandID )
             {
-                fixed_string<constant::kMaxBuffer128> mark;
+                fixed_string<constant::buffer::kMax128> mark;
                 formatstring( mark.data(), mark.capacity(), "shortcuts.%#.%#", pAction, commandID.c_str() );
                 return mark;
             }

@@ -29,7 +29,7 @@ namespace sw
 namespace sw
 {
     DestructionNetSessionComponent::DestructionNetSessionComponent()
-        : _tickInterval{ 1.0f / 60.0f }
+        : _tickInterval{ constant::time::kDefaultFixedStepSeconds }
         , _hashInterval{ 1.0f }
         , _interpolationDelay{ 0.1f }
         , _session{}

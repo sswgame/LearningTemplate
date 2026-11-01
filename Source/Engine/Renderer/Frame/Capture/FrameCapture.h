@@ -31,7 +31,7 @@ namespace sw
     /**
      * @class FrameCapture
      * @brief 렌더러 하나의 캡처와 되읽기입니다. Present 캡처 텍스처를 소유하고, 트랜지언트는 렌더러의 주 시점 풀에서 빌려 읽습니다.
-     * @details Present 캡처의 포맷은 항상 계약값 `constant::kBackBufferFormat` 입니다.
+     * @details Present 캡처의 포맷은 항상 계약값 `constant::render::kBackBufferFormat` 입니다.
      */
     class SW_API FrameCapture
     {
@@ -85,7 +85,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 받아 둔 Present 결과, 즉 화면에 나간 이미지를 CPU 로 읽습니다. 꺼져 있거나 텍스처가 없으면 false 입니다.
-         * @details 포맷은 항상 `constant::kBackBufferFormat` 입니다. 테스트가 **최종 화면**을 픽셀로 비교하는 유일한 경로입니다.
+         * @details 포맷은 항상 `constant::render::kBackBufferFormat` 입니다. 테스트가 **최종 화면**을 픽셀로 비교하는 유일한 경로입니다.
          */
         bool readbackPresent( vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) const;
         /**

@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -119,15 +119,15 @@ namespace sw::editor
         void ensureContext( const utf8* pSettingsFileName );
         void destroyContext();
 
-        ax::NodeEditor::EditorContext*       _pEditor;
-        string                               _settingsPath;
-        string                               _markScope;          ///< 이번 캔버스의 레이블 앞부분(beginCanvas 가 정한다)
-        float2                               _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 측정한다)
-        float2                               _canvasSize;         ///< 이번 프레임의 캔버스 크기
-        vector<Color>                        _listPinTypeColor;   ///< 핀 타입 번호에 대응하는 색
-        vector<EditorGraphNodeIssue>         _listNodeIssue;      ///< 이번 프레임의 문제 노드
-        fixed_string<constant::kMaxBuffer64> _addNodeFilter;      ///< 노드 검색어
-        float2                               _addNodePosition;    ///< 노드 검색 팝업을 연 위치(캔버스 좌표)
-        bool                                 _bNeedsContentFit;
+        ax::NodeEditor::EditorContext*         _pEditor;
+        string                                 _settingsPath;
+        string                                 _markScope;          ///< 이번 캔버스의 레이블 앞부분(beginCanvas 가 정한다)
+        float2                                 _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 측정한다)
+        float2                                 _canvasSize;         ///< 이번 프레임의 캔버스 크기
+        vector<Color>                          _listPinTypeColor;   ///< 핀 타입 번호에 대응하는 색
+        vector<EditorGraphNodeIssue>           _listNodeIssue;      ///< 이번 프레임의 문제 노드
+        fixed_string<constant::buffer::kMax64> _addNodeFilter;      ///< 노드 검색어
+        float2                                 _addNodePosition;    ///< 노드 검색 팝업을 연 위치(캔버스 좌표)
+        bool                                   _bNeedsContentFit;
     };
 } // namespace sw::editor

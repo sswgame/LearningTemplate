@@ -58,7 +58,7 @@ SW_TEST_CHILD_ROLE( TestFrameworkTest, ChildEchoesOrHangs, ._timeoutSeconds = 60
     const string argument = test::getChildRoleArgument();
     SW_REQUIRE_FALSE( argument.empty() );
     if ( argument == "hang" )
-        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 600 * constant::kNanosecondsPerSecond );
+        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 600 * constant::time::kNanosecondsPerSecond );
     SW_EXPECT_TRUE( StandardOutput::write( "SW_CHILD_ECHO:" + argument + "\n" ) );
 }
 

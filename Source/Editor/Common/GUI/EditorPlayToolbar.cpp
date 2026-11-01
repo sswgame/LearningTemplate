@@ -118,7 +118,7 @@ namespace sw::editor
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStart" ) );
                     return true;
                 }
-                fixed_string<constant::kMaxBuffer64> chip;
+                fixed_string<constant::buffer::kMax64> chip;
                 formatstring( chip.data(), chip.capacity(), "Net %d/%d", session.getConnectedClientCount(), session.getProcessCount() - 1 );
                 EditorWidgets::drawChip( chip.c_str(), SW_THEMECOLOR( "Signal", "Success" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayClients" ) );

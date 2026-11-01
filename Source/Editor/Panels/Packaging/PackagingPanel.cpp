@@ -145,9 +145,9 @@ namespace sw::editor
     void PackagingPanel::drawProgressBar()
     {
         // 진행 — 단계 줄은 끝난 뒤 한꺼번에 오므로 도는 동안은 움직이는 막대다.
-        const PackagingProgress&              progress = _model.getProgress();
-        fixed_string<constant::kMaxBuffer256> overlay;
-        float32                               fraction = progress.computeFraction();
+        const PackagingProgress&                progress = _model.getProgress();
+        fixed_string<constant::buffer::kMax256> overlay;
+        float32                                 fraction = progress.computeFraction();
         switch ( progress._state )
         {
             case PackagingState::Idle:
@@ -163,7 +163,7 @@ namespace sw::editor
             }
             case PackagingState::Succeeded:
             {
-                formatstring( overlay.data(), overlay.capacity(), "Done - %# MB", progress._byteCount / constant::kBytesPerMegabyte );
+                formatstring( overlay.data(), overlay.capacity(), "Done - %# MB", progress._byteCount / constant::memory::kBytesPerMegabyte );
                 break;
             }
             case PackagingState::Failed:

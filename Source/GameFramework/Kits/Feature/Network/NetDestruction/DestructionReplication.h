@@ -65,11 +65,11 @@ namespace sw
     /** @brief 파괴 복제 설정입니다. */
     struct DestructionReplicationConfig
     {
-        float32 _tickInterval{ 1.0f / 60.0f }; ///< 서버 틱 간격. 자세의 시각 계산에 쓴다
-        float32 _hashInterval{ 1.0f };         ///< 서버가 상태 해시를 보내는 간격(초)
-        float32 _interpolationDelay{ 0.1f };   ///< 클라이언트가 덩어리 자세를 그리는 과거 시점의 최솟값. 실제 값은 이 값과 (가장 긴 자세 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이다
-        float32 _positionResolution{ 0.001f }; ///< 움직이는 덩어리 위치의 양자화 단위(미터)
-        float32 _positionRange{ 1024.0f };     ///< 위치 범위(±미터)
+        float32 _tickInterval{ constant::time::kDefaultFixedStepSeconds }; ///< 서버 틱 간격. 자세의 시각 계산에 쓴다
+        float32 _hashInterval{ 1.0f };                                     ///< 서버가 상태 해시를 보내는 간격(초)
+        float32 _interpolationDelay{ 0.1f };                               ///< 클라이언트가 덩어리 자세를 그리는 과거 시점의 최솟값. 실제 값은 이 값과 (가장 긴 자세 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이다
+        float32 _positionResolution{ 0.001f };                             ///< 움직이는 덩어리 위치의 양자화 단위(미터)
+        float32 _positionRange{ 1024.0f };                                 ///< 위치 범위(±미터)
     };
 } // namespace sw
 

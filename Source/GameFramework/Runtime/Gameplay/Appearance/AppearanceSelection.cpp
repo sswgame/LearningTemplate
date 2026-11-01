@@ -39,8 +39,8 @@ namespace sw
             {
                 if ( hash == 0 )
                     return hashed_string{};
-                utf8 arrBuffer[constant::kMaxBuffer16];
-                FormatString::formatstring( arrBuffer, constant::kMaxBuffer16, "#%#", Fmt( hash, Format().hex().width( 8 ).zeroPad() ) );
+                utf8 arrBuffer[constant::buffer::kMax16];
+                FormatString::formatstring( arrBuffer, constant::buffer::kMax16, "#%#", Fmt( hash, Format().hex().width( 8 ).zeroPad() ) );
                 return hashed_string( string_view( arrBuffer ) );
             }
 

@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Widgets/RotatorWidget.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
@@ -36,7 +36,7 @@ namespace sw
         , _releaseLocalX{ 0.0f }
         , _bHasReleasePoint{ false }
         , _listOption{}
-        , _selectedIndex{ invalid_index::kUint32 }
+        , _selectedIndex{ constant::invalid_index::kUint32 }
     {
         setContentPadding( float4{ RotatorWidgetInternal::kArrowSpace, 8.0f, RotatorWidgetInternal::kArrowSpace, 8.0f } );
         unique_ptr<TextWidget> label = make_unique<TextWidget>();
@@ -58,14 +58,14 @@ namespace sw
     void RotatorWidget::setOptions( const vector<string>& listOption )
     {
         _listOption = listOption;
-        if ( _selectedIndex != invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
-            _selectedIndex = invalid_index::kUint32;
+        if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+            _selectedIndex = constant::invalid_index::kUint32;
         refreshLabel();
     }
 
     void RotatorWidget::setSelectedIndex( uint32 index )
     {
-        _selectedIndex = index < _listOption.size() ? index : invalid_index::kUint32;
+        _selectedIndex = index < _listOption.size() ? index : constant::invalid_index::kUint32;
         refreshLabel();
     }
 
@@ -73,8 +73,8 @@ namespace sw
     {
         if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )
         {
-            if ( _selectedIndex != invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
-                _selectedIndex = invalid_index::kUint32;
+            if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+                _selectedIndex = constant::invalid_index::kUint32;
             refreshLabel();
             return;
         }
@@ -83,7 +83,7 @@ namespace sw
 
     void RotatorWidget::refreshLabel()
     {
-        _pLabel->setText( _selectedIndex != invalid_index::kUint32 ? string_view{ _listOption[_selectedIndex] } : string_view{} );
+        _pLabel->setText( _selectedIndex != constant::invalid_index::kUint32 ? string_view{ _listOption[_selectedIndex] } : string_view{} );
         invalidate( WidgetDirty::kPaint ); // 화살표의 켜짐은 항목 수에 따른다
     }
 
@@ -92,7 +92,7 @@ namespace sw
         const int32 count = static_cast<int32>( _listOption.size() );
         if ( count < 2 || step == 0 )
             return false;
-        const int32 current = _selectedIndex == invalid_index::kUint32 ? ( step > 0 ? -1 : 0 ) : static_cast<int32>( _selectedIndex );
+        const int32 current = _selectedIndex == constant::invalid_index::kUint32 ? ( step > 0 ? -1 : 0 ) : static_cast<int32>( _selectedIndex );
         const int32 next    = ( ( current + step ) % count + count ) % count;
         setSelectedIndex( static_cast<uint32>( next ) );
         _onSelectionChanged.broadcast( _selectedIndex );

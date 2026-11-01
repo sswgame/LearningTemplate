@@ -98,7 +98,7 @@ namespace sw::editor
              */
             static void drawLevelChip( bool& inoutEnabled, const utf8* pName, size_t count, const Color* pSignalColor, const utf8* pTooltip, const utf8* pMark )
             {
-                fixed_string<constant::kMaxBuffer32> label;
+                fixed_string<constant::buffer::kMax32> label;
                 formatstring( label.data(), label.capacity(), "%# (%#)", pName, static_cast<uint64>( count ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
                 if ( pSignalColor != nullptr )
@@ -400,7 +400,7 @@ namespace sw::editor
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         // 한 줄 툴바: 자주 쓰는 것(지우기 · 접기 · 레벨 · 검색 · 태그)만 밖에 두고 가끔 켜는 설정과 내보내기는 옵션 메뉴로 — 언리얼 Output Log 의 Filters · Settings 와 같은 나눔.
         // 예전에는 단추 열하나가 두 줄로 접혀 검색 칸이 셋째 줄로 밀렸다.
-        fixed_string<constant::kMaxBuffer32> tagLabel;
+        fixed_string<constant::buffer::kMax32> tagLabel;
         if ( _tagFilter.getHiddenCount() > 0 )
             formatstring( tagLabel.data(), tagLabel.capacity(), "Tags (-%u)", _tagFilter.getHiddenCount() );
         else
@@ -604,7 +604,7 @@ namespace sw::editor
                 full += formatToString( " (%#:%#)", entry._file, entry._line );
             ImGui::SetClipboardText( full.c_str() );
         }
-        fixed_string<constant::kMaxBuffer64> copySelectedLabel;
+        fixed_string<constant::buffer::kMax64> copySelectedLabel;
         formatstring( copySelectedLabel.data(), copySelectedLabel.capacity(), "Copy Selected (%u lines)", _selection.getCount() );
         if ( ImGui::MenuItem( copySelectedLabel.c_str(), "Ctrl+C", false, _selection.hasSelection() ) )
             copySelectedRows();
@@ -769,7 +769,7 @@ namespace sw::editor
         ++_entrySerial;
         if ( entry._level == LogLevel::Error )
             ++_errorSerial;
-        while ( _listEntry.size() > constant::kMaxBuffer2048 )
+        while ( _listEntry.size() > constant::buffer::kMax2048 )
         {
             _listEntry.pop_front();
         }

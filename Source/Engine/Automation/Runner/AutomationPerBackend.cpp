@@ -425,7 +425,7 @@ namespace sw
             if ( pChild->_bLaunched )
             {
                 while ( pChild->_process.isRunning() && killDeadline.isExpired() == false )
-                    MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 50 * constant::kNanosecondsPerMillisecond );
+                    MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 50 * constant::time::kNanosecondsPerMillisecond );
                 const bool bKilled = pChild->_process.isRunning() && pChild->_process.terminate( getAutomationExitCode( AutomationOutcome::TimedOut ) );
                 if ( bKilled )
                     SW_LOG_ERROR( "[Scenario] per-backend: %# did not finish within %# s - killed", pChild->_backend.c_str(), killSeconds );

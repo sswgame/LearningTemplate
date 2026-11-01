@@ -28,7 +28,7 @@ namespace sw
     namespace
     {
         /// @brief 덤프 · 리포트를 쓸 폴더입니다. 부팅 때 한 번 정하고 크래시 경로에서는 읽기만 합니다.
-        fixed_string<constant::kMaxBuffer1024> s_reportFolder{};
+        fixed_string<constant::buffer::kMax1024> s_reportFolder{};
 
         /// @brief 크래시 보고에 줄 시한(초)입니다(`CrashHandler::setReportDeadline`).
         constexpr uint32 kDefaultReportDeadlineSeconds = 20;
@@ -90,8 +90,8 @@ namespace sw
         /** @brief 스택이 넘칠 때까지 재귀합니다(`CrashTestKind::StackOverflow`). 프레임마다 4 KB 를 써서 금방 넘친다. */
         uint32 overflowStackInternal( uint32 depth )
         {
-            volatile uint8 arrPad[constant::kMaxBuffer4096];
-            arrPad[depth % constant::kMaxBuffer4096] = static_cast<uint8>( depth );
+            volatile uint8 arrPad[constant::buffer::kMax4096];
+            arrPad[depth % constant::buffer::kMax4096] = static_cast<uint8>( depth );
             if ( s_bStopStackOverflow )
                 return 0;
             // 재귀 뒤에 값을 더해 꼬리 호출로 바뀌지 않게 한다(꼬리 호출이면 스택이 자라지 않는다).
@@ -264,36 +264,36 @@ namespace sw
 
     void writeCrashContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processID, uint64 threadID )
     {
-        utf8 arrPath[constant::kMaxBuffer1024]{};
-        makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "txt" );
+        utf8 arrPath[constant::buffer::kMax1024]{};
+        makeCrashReportPath( arrPath, constant::buffer::kMax1024, "txt" );
 
         // 버퍼 하나에 모두 만든 뒤 **한 번에** 쓴다. 줄마다 fprintf 를 부르면 그때마다 스트림 락과 내부 버퍼가 걸리고,
         // 도중에 죽으면 반쯤 쓰인 파일이 남는다.
-        utf8   arrReport[constant::kMaxBuffer8192]{};
+        utf8   arrReport[constant::buffer::kMax8192]{};
         uint32 length{ 0 };
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "session   : %#\n", getCrashSessionID() );
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "reason    : %#\n", ( pReason != nullptr ) ? pReason : "unknown" );
+        appendLine( arrReport, constant::buffer::kMax8192, length, "session   : %#\n", getCrashSessionID() );
+        appendLine( arrReport, constant::buffer::kMax8192, length, "reason    : %#\n", ( pReason != nullptr ) ? pReason : "unknown" );
         // 주소는 16진수여야 맵 파일 · 디스어셈블리와 맞춰 볼 수 있다(CallStackCapture 도 같은 형식이다).
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "address   : 0x%#\n",
+        appendLine( arrReport, constant::buffer::kMax8192, length, "address   : 0x%#\n",
                     Fmt( reinterpret_cast<uint64>( pFaultAddress ), Format().hex() ) );
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "processId : %#\n", processID );
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "threadId  : %#\n", threadID );
+        appendLine( arrReport, constant::buffer::kMax8192, length, "processId : %#\n", processID );
+        appendLine( arrReport, constant::buffer::kMax8192, length, "threadId  : %#\n", threadID );
 
         const CrashContextStore& store = CrashContextStore::get();
         for ( uint32 entryIndex = 0; entryIndex < store._entryCount; ++entryIndex )
         {
             // 키 폭을 맞춘다. 위의 고정 항목과 세로줄이 맞아야 읽기 쉽다.
-            appendLine( arrReport, constant::kMaxBuffer8192, length, "%#: %#\n",
+            appendLine( arrReport, constant::buffer::kMax8192, length, "%#: %#\n",
                         Fmt( store._arrEntry[entryIndex]._key.c_str(), Format().width( 9 ).leftAlign() ),
                         store._arrEntry[entryIndex]._value.c_str() );
         }
 
         // 소유자가 건 글(서버의 최근 틱 이력 등)을 같은 파일 끝에 싣는다 — 새 파일을 쓰지 않는다.
         CrashExtraTextWriter pExtraWriter = s_pExtraTextWriter.load();
-        if ( pExtraWriter != nullptr && length + 1 < constant::kMaxBuffer8192 )
+        if ( pExtraWriter != nullptr && length + 1 < constant::buffer::kMax8192 )
         {
-            const uint32 extraLength = pExtraWriter( s_pExtraTextUser.load(), arrReport + length, constant::kMaxBuffer8192 - length );
-            length += extraLength < constant::kMaxBuffer8192 - length ? extraLength : 0;
+            const uint32 extraLength = pExtraWriter( s_pExtraTextUser.load(), arrReport + length, constant::buffer::kMax8192 - length );
+            length += extraLength < constant::buffer::kMax8192 - length ? extraLength : 0;
         }
 
         (void)FileUtil::writeCrashFile( arrPath, arrReport, length ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
@@ -307,8 +307,8 @@ namespace sw
         const uint32 length = CrashBreadcrumbStore::get().writeText( arrText, static_cast<uint32>( sizeof( arrText ) ) );
         if ( length == 0 )
             return;
-        utf8 arrPath[constant::kMaxBuffer1024]{};
-        makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "breadcrumbs.txt" );
+        utf8 arrPath[constant::buffer::kMax1024]{};
+        makeCrashReportPath( arrPath, constant::buffer::kMax1024, "breadcrumbs.txt" );
         (void)FileUtil::writeCrashFile( arrPath, arrText, length ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
     }
 
@@ -321,8 +321,8 @@ namespace sw
     {
         if ( pStackText == nullptr )
             return;
-        utf8 arrPath[constant::kMaxBuffer1024]{};
-        makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "stack.txt" );
+        utf8 arrPath[constant::buffer::kMax1024]{};
+        makeCrashReportPath( arrPath, constant::buffer::kMax1024, "stack.txt" );
         (void)FileUtil::writeCrashFile( arrPath, pStackText, static_cast<uint32>( StringUtil::strlen( pStackText ) ) ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
     }
 
@@ -333,7 +333,7 @@ namespace sw
         DeepCallStack stack{};
         CallStackCapture::captureFromContext( stack, pPlatformContext, pPlatformThread );
 
-        StringBuilder<constant::kMaxBuffer8192> builder;
+        StringBuilder<constant::buffer::kMax8192> builder;
         builder.append( "\n==================== CRASH ====================\n" );
         builder.append( ( pReason != nullptr ) ? pReason : "unknown fault" );
         if ( pFaultAddress != nullptr )
@@ -348,17 +348,17 @@ namespace sw
         // 들어 있어 로그와 짝지을 수도 있다.
         builder.append( "-------------- crash report files -------------\n" );
         {
-            utf8 arrReportPath[constant::kMaxBuffer1024]{};
+            utf8 arrReportPath[constant::buffer::kMax1024]{};
             if ( bMiniDumpWritten )
             {
-                makeCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "dmp" );
+                makeCrashReportPath( arrReportPath, constant::buffer::kMax1024, "dmp" );
                 builder.append( arrReportPath );
                 builder.append( "\n" );
             }
-            makeCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "txt" );
+            makeCrashReportPath( arrReportPath, constant::buffer::kMax1024, "txt" );
             builder.append( arrReportPath );
             builder.append( "\n" );
-            makeCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "stack.txt" );
+            makeCrashReportPath( arrReportPath, constant::buffer::kMax1024, "stack.txt" );
             builder.append( arrReportPath );
             builder.append( "\n" );
         }

@@ -20,7 +20,7 @@ namespace sw
             static constexpr string_view kLocalSlotDriverName = "sqlite";
 
             /** @brief 슬롯의 쓴 시각입니다 — 파일 백엔드와 같은 파일 시계(1601 기원)라 유닉스 시각이 아니다(마이그레이션 기록은 `WallClock`). */
-            static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / constant::kMillisecondsPerSecond ); }
+            static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / constant::time::kMillisecondsPerSecond ); }
         };
     } // namespace
 } // namespace sw

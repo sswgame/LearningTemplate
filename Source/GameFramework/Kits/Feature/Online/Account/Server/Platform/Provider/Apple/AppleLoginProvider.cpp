@@ -19,8 +19,8 @@ namespace sw
     {
         struct AppleLoginProviderInternal
         {
-            static constexpr int64 kSecretLifetimeMs      = 24 * constant::kSecondsPerHour * constant::kMillisecondsPerSecond;
-            static constexpr int64 kSecretRefreshMarginMs = constant::kSecondsPerHour * constant::kMillisecondsPerSecond;
+            static constexpr int64 kSecretLifetimeMs      = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
+            static constexpr int64 kSecretRefreshMarginMs = constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
             static constexpr int32 kStatusBadRequest      = 400;
         };
     } // namespace
@@ -98,7 +98,7 @@ namespace sw
         writer.key( "iat" );
         writer.valueInt( issuedAtSec );
         writer.key( "exp" );
-        writer.valueInt( expiresAtMs / constant::kMillisecondsPerSecond );
+        writer.valueInt( expiresAtMs / constant::time::kMillisecondsPerSecond );
         writer.key( "aud" );
         writer.valueString( kAudience );
         writer.key( "sub" );

@@ -46,8 +46,8 @@ namespace
         /** @brief 세션 ID 로 만들어지는 보고 파일 하나를 읽습니다. */
         [[nodiscard]] static bool readReportFile( const utf8* pExtension, string& outText )
         {
-            utf8 arrPath[constant::kMaxBuffer1024]{};
-            makeCrashReportPath( arrPath, constant::kMaxBuffer1024, pExtension );
+            utf8 arrPath[constant::buffer::kMax1024]{};
+            makeCrashReportPath( arrPath, constant::buffer::kMax1024, pExtension );
             return FileUtil::readTextFile( arrPath, outText );
         }
 
@@ -129,12 +129,12 @@ SW_TEST_CASE_F( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereI
     SW_EXPECT_LOG( "Crash.Report" ); // 보고 본문은 오류 로그로도 남는다
     SW_REQUIRE_FALSE( useReportFolder( "reports" ).empty() );
 
-    utf8 arrContextPath[constant::kMaxBuffer1024]{};
-    utf8 arrStackPath[constant::kMaxBuffer1024]{};
-    utf8 arrDumpPath[constant::kMaxBuffer1024]{};
-    makeCrashReportPath( arrContextPath, constant::kMaxBuffer1024, "txt" );
-    makeCrashReportPath( arrStackPath, constant::kMaxBuffer1024, "stack.txt" );
-    makeCrashReportPath( arrDumpPath, constant::kMaxBuffer1024, "dmp" );
+    utf8 arrContextPath[constant::buffer::kMax1024]{};
+    utf8 arrStackPath[constant::buffer::kMax1024]{};
+    utf8 arrDumpPath[constant::buffer::kMax1024]{};
+    makeCrashReportPath( arrContextPath, constant::buffer::kMax1024, "txt" );
+    makeCrashReportPath( arrStackPath, constant::buffer::kMax1024, "stack.txt" );
+    makeCrashReportPath( arrDumpPath, constant::buffer::kMax1024, "dmp" );
 
     // 1) 덤프가 없을 때 — 문맥과 스택 파일만 적혀야 한다.
     writeCrashReport( "unit test fault", reinterpret_cast<const void*>( 0x1234ull ), nullptr, false );
@@ -169,8 +169,8 @@ SW_TEST_CASE_F( CrashReportTest, SessionIDIsStableAndAppearsInReportPaths )
     const string folder = useReportFolder( "reports" );
     SW_REQUIRE_FALSE( folder.empty() );
 
-    utf8 arrPath[constant::kMaxBuffer1024]{};
-    makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "dmp" );
+    utf8 arrPath[constant::buffer::kMax1024]{};
+    makeCrashReportPath( arrPath, constant::buffer::kMax1024, "dmp" );
 
     const string path{ arrPath };
     SW_EXPECT_TRUE( path.find( folder ) != string::npos );
@@ -187,7 +187,7 @@ SW_TEST_CASE_F( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
     const CrashBreadcrumbStore& store = CrashBreadcrumbStore::get();
     for ( uint32 index = 0; index < 40; ++index )
     {
-        StringBuilder<constant::kMaxBuffer64> line;
+        StringBuilder<constant::buffer::kMax64> line;
         line.appendFormat( "event %#", index );
         CrashHandler::addBreadcrumb( line.view() );
     }

@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -64,9 +64,9 @@ namespace sw::editor
         void rebuildDynamicEntries();
 
     private:
-        vector<CommandPaletteEntry>           _listAllCommand;
-        fixed_string<constant::kMaxBuffer128> _searchBuffer;
-        int32                                 _selectedIndex;
-        bool                                  _bJustOpened;
+        vector<CommandPaletteEntry>             _listAllCommand;
+        fixed_string<constant::buffer::kMax128> _searchBuffer;
+        int32                                   _selectedIndex;
+        bool                                    _bJustOpened;
     };
 } // namespace sw::editor

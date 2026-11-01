@@ -4,7 +4,7 @@
 
 #include "Core/Container/TopologicalSortUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 
 namespace sw
 {
@@ -12,7 +12,7 @@ namespace sw
     {
         struct SubsystemCollectionInternal
         {
-            static constexpr uint32 kNotFound = invalid_index::kUint32;
+            static constexpr uint32 kNotFound = constant::invalid_index::kUint32;
 
             static uint32 findNodeIndex( const vector<SubsystemNode>& listNode, string_view name )
             {

@@ -59,7 +59,7 @@ SW_TEST_CASE( ContentHashTest, KnownInputsKeepTheirHash )
 SW_TEST_CASE( ContentHashTest, MatchesTheCopyingReferenceOnLargeBuffers )
 {
     uint64        state = 0x9E3779B97F4A7C15ull;
-    vector<uint8> bytes( 3 * constant::kBytesPerMegabyte + 5 );
+    vector<uint8> bytes( 3 * constant::memory::kBytesPerMegabyte + 5 );
     for ( size_t index = 0; index < bytes.size(); ++index )
     {
         state ^= state << 13;

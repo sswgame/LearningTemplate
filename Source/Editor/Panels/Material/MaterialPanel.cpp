@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -305,7 +305,7 @@ namespace sw::editor
         drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide }, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "material.previewScene" );
 
-        fixed_string<constant::kMaxBuffer128>& name = _model.editName();
+        fixed_string<constant::buffer::kMax128>& name = _model.editName();
         ImGui::InputText( "Name", name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
@@ -340,7 +340,7 @@ namespace sw::editor
             const bool bChanged = MaterialPanelInternal::drawTypedProperty( *pProp );
             if ( bChanged )
             {
-                fixed_string<constant::kMaxBuffer128> key;
+                fixed_string<constant::buffer::kMax128> key;
                 formatstring( key.data(), key.capacity(), "material-prop:%s", pProp->_name.c_str() );
                 notifyDocumentEdited( "Edit Material Property", key.c_str() );
                 applyLivePreview();

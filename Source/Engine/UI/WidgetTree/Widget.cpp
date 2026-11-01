@@ -50,7 +50,7 @@ namespace sw
         , _id{ s_nextWidgetID.fetch_add( 1, std::memory_order_relaxed ) }
         , _dirtyFlags{ WidgetDirty::kLayout | WidgetDirty::kPaint | WidgetDirty::kStyle }
         , _layoutSerial{ 0 }
-        , _paintAnchor{ invalid_index::kUint32 }
+        , _paintAnchor{ constant::invalid_index::kUint32 }
         , _opacity{ 1.0f }
         , _visibility{ WidgetVisibility::Visible }
         , _flowDirection{ UIFlowDirection::Inherit }

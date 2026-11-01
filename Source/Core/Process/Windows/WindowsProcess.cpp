@@ -426,7 +426,7 @@ namespace sw
             return true;
 
         // 2) 파이프에서 데이터를 더 읽는다
-        utf8  arrReadBuffer[constant::kMaxBuffer4096];
+        utf8  arrReadBuffer[constant::buffer::kMax4096];
         DWORD bytesRead = 0;
 
         while ( ReadFile( static_cast<HANDLE>( _pStdOutRead ), arrReadBuffer, sizeof( arrReadBuffer ) - 1, &bytesRead, nullptr ) != FALSE && bytesRead > 0 )

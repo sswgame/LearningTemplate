@@ -51,8 +51,8 @@ namespace sw
 
             static vector<uint8> makeIntegerText( int64 value )
             {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + constant::kMaxBuffer32, value );
+                utf8                       arrBuffer[constant::buffer::kMax32];
+                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + constant::buffer::kMax32, value );
                 vector<uint8>              bytes;
                 bytes.assign( reinterpret_cast<const uint8*>( arrBuffer ), reinterpret_cast<const uint8*>( result.ptr ) );
                 return bytes;

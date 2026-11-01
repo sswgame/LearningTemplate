@@ -22,21 +22,21 @@ namespace sw::editor
         {
             static string formatDistanceRange( float64 minDistance, float64 maxDistance )
             {
-                fixed_string<constant::kMaxBuffer128> text;
+                fixed_string<constant::buffer::kMax128> text;
                 formatstring( text.data(), text.capacity(), "%# .. %# m", Fmt( minDistance, Format().precision( 2 ) ), Fmt( maxDistance, Format().precision( 2 ) ) );
                 return string{ text.view() };
             }
 
             static string formatFade( float64 fadeInSeconds, float64 fadeOutSeconds )
             {
-                fixed_string<constant::kMaxBuffer128> text;
+                fixed_string<constant::buffer::kMax128> text;
                 formatstring( text.data(), text.capacity(), "in %# s / out %# s", Fmt( fadeInSeconds, Format().precision( 2 ) ), Fmt( fadeOutSeconds, Format().precision( 2 ) ) );
                 return string{ text.view() };
             }
 
             static string formatRange( float32 low, float32 high, const utf8* pUnit )
             {
-                fixed_string<constant::kMaxBuffer128> text;
+                fixed_string<constant::buffer::kMax128> text;
                 if ( low == high )
                     formatstring( text.data(), text.capacity(), "%# %#", Fmt( low, Format().precision( 2 ) ), pUnit );
                 else
@@ -186,7 +186,7 @@ namespace sw::editor
     {
         if ( seconds < 0.0f )
             return string{ SW_LOCKEY( "EditorAudioEvents", "RemainingLoop" ) };
-        fixed_string<constant::kMaxBuffer32> text;
+        fixed_string<constant::buffer::kMax32> text;
         formatstring( text.data(), text.capacity(), "%# s", Fmt( seconds, Format().precision( 2 ) ) );
         return string{ text.view() };
     }

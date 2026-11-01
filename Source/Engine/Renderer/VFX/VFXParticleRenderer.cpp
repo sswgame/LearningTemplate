@@ -38,9 +38,9 @@ namespace sw
             static constexpr uint32 kFlagRibbon   = 1u << 1;
 
             // 메시 없는 드로우라 장치 공용 대체 정점 버퍼가 입자 하나의 정점 수만큼 담아야 한다.
-            static_assert( GPUParticle::kVertexCount <= constant::kFallbackVertexCount, "the fallback vertex buffer must cover a particle quad (slot 0 is read past its end)" );
+            static_assert( GPUParticle::kVertexCount <= constant::render::kFallbackVertexCount, "the fallback vertex buffer must cover a particle quad (slot 0 is read past its end)" );
             /** @brief GPU 방출기의 버퍼 안 시작 위치 자리표입니다 — 자기 렌더 입력 버퍼를 0 부터 읽는다. */
-            static constexpr uint32 kNoSharedBase = invalid_index::kUint32;
+            static constexpr uint32 kNoSharedBase = constant::invalid_index::kUint32;
 
             /** @brief 입자 버퍼가 모자라면 이 배율로 키운다(입자 수가 프레임마다 조금씩 늘 때 다시 만들기를 줄인다). */
             static constexpr float32 kParticleBufferGrowth = 1.5f;

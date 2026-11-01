@@ -136,7 +136,7 @@ namespace sw::editor
             EditorViewportBillboard::collect( *pManager, viewProj, canvasPos, canvasSize, pCamera, listItem );
             const ImVec2 mouse = ImGui::GetMousePos();
             const uint32 index = EditorViewportBillboard::findAt( listItem, float2{ mouse.x, mouse.y } );
-            if ( index != invalid_index::kUint32 )
+            if ( index != constant::invalid_index::kUint32 )
             {
                 if ( workspace.isObjectLocked( listItem[index]._pObject->getObjectID() ) )
                     return false;

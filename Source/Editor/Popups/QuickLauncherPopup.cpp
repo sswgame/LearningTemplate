@@ -49,7 +49,7 @@ namespace sw::editor
             }
 
             /** @brief 검색어가 비면 모두, 아니면 제목 · 설명 · 종류 중 하나에 검색어가 든 항목만 @p outListFiltered 에 담습니다(대소문자 무시). */
-            static void filterItems( const vector<QuickLauncherItem>& listAllItem, const fixed_string<constant::kMaxBuffer128>& search, vector<const QuickLauncherItem*>& outListFiltered )
+            static void filterItems( const vector<QuickLauncherItem>& listAllItem, const fixed_string<constant::buffer::kMax128>& search, vector<const QuickLauncherItem*>& outListFiltered )
             {
                 outListFiltered.reserve( listAllItem.size() );
                 for ( const QuickLauncherItem& item : listAllItem )
@@ -77,7 +77,7 @@ namespace sw::editor
                     if ( pMeasuredCategory != nullptr && *pMeasuredCategory == pItem->_category )
                         continue;
                     pMeasuredCategory = &pItem->_category;
-                    fixed_string<constant::kMaxBuffer32> badge;
+                    fixed_string<constant::buffer::kMax32> badge;
                     formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
                     widestBadgeWidth = MathUtil::max( widestBadgeWidth, ImGui::CalcTextSize( badge.c_str() ).x );
                 }
@@ -102,8 +102,8 @@ namespace sw::editor
                     pDrawList->AddRect( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ), EditorColorUtil::toImU32( kSelectedRowBorder ), 4.0f );
                 }
 
-                const Color                          categoryColor = getCategoryColor( item );
-                fixed_string<constant::kMaxBuffer32> badge;
+                const Color                            categoryColor = getCategoryColor( item );
+                fixed_string<constant::buffer::kMax32> badge;
                 formatstring( badge.data(), badge.capacity(), "[%s]", item._category.c_str() );
 
                 pDrawList->AddText( ImVec2( cursor.x + layout._badgeX, textY ), EditorColorUtil::toImU32( categoryColor ), badge.c_str() );
@@ -195,7 +195,7 @@ namespace sw::editor
                 item._category = "GameObject";
                 item._title    = string{ pObj->getName().c_str() };
 
-                StringBuilder<constant::kMaxBuffer64> detailSb;
+                StringBuilder<constant::buffer::kMax64> detailSb;
                 detailSb.appendFormat( "Scene GameObject (ID: %#)", objID );
                 item._detail         = string{ detailSb.view() };
                 item._targetObjectID = objID;

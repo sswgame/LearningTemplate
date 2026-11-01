@@ -53,7 +53,7 @@ namespace sw
                         available += ", ";
                     available += _registeredDriver.getNameAt( driverIndex );
                 }
-                StringBuilder<constant::kMaxBuffer512> text;
+                StringBuilder<constant::buffer::kMax512> text;
                 text.appendFormat( "no SQL driver '%#' in this build target (%#) - available: %#", driverName, build::kTargetName, available.c_str() );
                 outError = string( text.view() );
                 return nullptr;

@@ -401,11 +401,11 @@ namespace sw::editor
         if ( focused.empty() == false )
             ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 
-        fixed_string<constant::kMaxBuffer256>& path = _document.editPath();
+        fixed_string<constant::buffer::kMax256>& path = _document.editPath();
         ImGui::InputText( "Path", path.data(), path.capacity() );
         EditorSelfTestMarks::note( "tileMap.path" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PathTip" ) );
-        fixed_string<constant::kMaxBuffer128>& name = _document.editName();
+        fixed_string<constant::buffer::kMax128>& name = _document.editName();
         ImGui::InputText( "Name", name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
@@ -466,7 +466,7 @@ namespace sw::editor
         }
         else if ( layer == PaintLayer::Warp )
         {
-            fixed_string<constant::kMaxBuffer128>& warpTarget = _document.editWarpTarget();
+            fixed_string<constant::buffer::kMax128>& warpTarget = _document.editWarpTarget();
             ImGui::InputText( "Warp Target", warpTarget.data(), warpTarget.capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetTip" ) );
             ImGui::InputInt( "Target TX", &_document.editWarpTileX() );
@@ -476,7 +476,7 @@ namespace sw::editor
         }
         else if ( layer == PaintLayer::Tile )
         {
-            fixed_string<constant::kMaxBuffer256>& tileSetInput = _document.editTileSetInput();
+            fixed_string<constant::buffer::kMax256>& tileSetInput = _document.editTileSetInput();
             ImGui::InputText( "Tile Set", tileSetInput.data(), tileSetInput.capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TileSetTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Use" ) );

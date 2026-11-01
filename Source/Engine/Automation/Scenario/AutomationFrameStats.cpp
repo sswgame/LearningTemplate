@@ -40,7 +40,7 @@ namespace sw
         if ( _bRecording == false )
             return;
         const int64 now = MonotonicClock::nowNanoseconds();
-        _listFrameMilliseconds.push_back( static_cast<float64>( now - _lastFrameEndNanoseconds ) / static_cast<float64>( constant::kNanosecondsPerMillisecond ) );
+        _listFrameMilliseconds.push_back( static_cast<float64>( now - _lastFrameEndNanoseconds ) / static_cast<float64>( constant::time::kNanosecondsPerMillisecond ) );
         _lastFrameEndNanoseconds = now;
     }
 

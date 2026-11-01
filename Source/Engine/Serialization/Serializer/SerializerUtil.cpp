@@ -715,7 +715,7 @@ namespace sw
         return ContainerVisitor::toFieldResult( ContainerVisitor::read( container, nested, reader, context ) );
     }
 
-    void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, ValueAddress value, const hashed_string& typeName,
+    void SerializerUtil::valueToText( StringBuilder<constant::buffer::kMax8192>& ss, ValueAddress value, const hashed_string& typeName,
                                       const SerializeContext& context )
     {
         const void* const                    pValPtr     = value.get();
@@ -973,7 +973,7 @@ namespace sw
         const void* pValue = prop.getRawPtr( pInstance );
         if ( pValue == nullptr )
             return {};
-        StringBuilder<constant::kMaxBuffer8192> ss;
+        StringBuilder<constant::buffer::kMax8192> ss;
         if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
         {
             const NestedContainerInfo shape = prop.getContainerShape();
@@ -987,7 +987,7 @@ namespace sw
 
     string SerializerUtil::formatValueText( ValueAddress value, const hashed_string& typeName, const SerializeContext& context )
     {
-        StringBuilder<constant::kMaxBuffer8192> ss;
+        StringBuilder<constant::buffer::kMax8192> ss;
         valueToText( ss, value, typeName, context );
         return ss.c_str();
     }

@@ -67,7 +67,7 @@ SW_TEST_CASE( GPUTransparentSorterTest, InsertionAndFallbackSortAgree )
         listKey[1]                              = listKey[2];
         listKey[2]                              = swapped;
     }
-    sw::vector<uint32> listNearlySorted( kCount, sw::invalid_index::kUint32 );
+    sw::vector<uint32> listNearlySorted( kCount, sw::constant::invalid_index::kUint32 );
     sorter.sortKeys( listNearlySorted );
 
     // 완전히 뒤집힌 입력: 이동 횟수가 원소당 예산을 넘어 std::sort 로 넘어간다.
@@ -79,7 +79,7 @@ SW_TEST_CASE( GPUTransparentSorterTest, InsertionAndFallbackSortAgree )
             listKey[index]              = sw::GPUTransparentSortKey{ 0u, static_cast<float32>( kCount - candidateIndex ), candidateIndex };
         }
     }
-    sw::vector<uint32> listReversed( kCount, sw::invalid_index::kUint32 );
+    sw::vector<uint32> listReversed( kCount, sw::constant::invalid_index::kUint32 );
     sorter.sortKeys( listReversed );
 
     for ( uint32 index = 0; index < kCount; ++index )

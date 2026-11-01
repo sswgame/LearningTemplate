@@ -34,7 +34,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -148,7 +148,7 @@ namespace sw
         /** @brief `TickGroup` 의 수입니다. */
         static constexpr uint32 kGroupCount = 4;
         /** @brief 목록에 없다는 표시입니다. */
-        static constexpr uint32 kNotInList = invalid_index::kUint32;
+        static constexpr uint32 kNotInList = constant::invalid_index::kUint32;
 
         /** @brief 빈 레지스트리를 만듭니다. 첫 `refresh` 가 씬 전체를 한 번 훑습니다. */
         TickRegistry();

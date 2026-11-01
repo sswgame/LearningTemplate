@@ -78,8 +78,8 @@ namespace sw
         template <typename... Args>
         void addErrorWithID( const utf8* pID, string_view format, Args&&... args )
         {
-            utf8 arrBuffer[constant::kMaxBuffer1024];
-            FormatString::formatstring( arrBuffer, constant::kMaxBuffer1024, format, std::forward<Args>( args )... );
+            utf8 arrBuffer[constant::buffer::kMax1024];
+            FormatString::formatstring( arrBuffer, constant::buffer::kMax1024, format, std::forward<Args>( args )... );
             addMessage( pID, string_view( arrBuffer ) );
         }
         void clear()

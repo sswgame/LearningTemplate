@@ -3,7 +3,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 SW_LOG_CALLER( "CommandLineManager" );

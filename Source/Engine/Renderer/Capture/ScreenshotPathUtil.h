@@ -31,7 +31,7 @@ namespace sw
      */
     struct SW_API ScreenshotPathUtil
     {
-        /** @brief 저장 폴더(`path::kSavedFolder`) 아래 스크린샷 폴더 이름입니다. */
+        /** @brief 저장 폴더(`constant::path::kSavedFolder`) 아래 스크린샷 폴더 이름입니다. */
         static constexpr const utf8* kScreenshotFolderName = "Screenshots";
 
         /** @brief @p localTime 의 기본 경로입니다. */

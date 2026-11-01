@@ -151,7 +151,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ContentLengthMatchesTheBody )
     const size_t headEnd = response.find( "\r\n\r\n" );
     SW_REQUIRE_TRUE( headEnd != string::npos );
     const string               body = response.substr( headEnd + 4 );
-    utf8                       arrLength[constant::kMaxBuffer32];
+    utf8                       arrLength[constant::buffer::kMax32];
     const std::to_chars_result result   = std::to_chars( arrLength, arrLength + sizeof( arrLength ), body.size() );
     const string               expected = string( "Content-Length: " ) + string( arrLength, result.ptr ) + "\r\n";
     SW_EXPECT_TRUE( response.find( expected ) != string::npos );

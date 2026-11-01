@@ -5,7 +5,7 @@
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
 namespace sw
@@ -54,7 +54,7 @@ namespace sw
         outListRow.reserve( _mapFloat.size() + _mapString.size() );
         for ( const auto& [key, value] : _mapFloat )
         {
-            fixed_string<constant::kMaxBuffer32> text;
+            fixed_string<constant::buffer::kMax32> text;
             formatstring( text.data(), text.capacity(), "%.2f", value );
             outListRow.push_back( DebugOverlayRow{ string( key.c_str() ), string( text.c_str() ) } );
         }

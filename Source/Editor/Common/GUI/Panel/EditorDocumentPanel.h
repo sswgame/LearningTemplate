@@ -152,19 +152,19 @@ namespace sw::editor
         /** @brief 읽지 못했음을 표시합니다. 다시 읽으려 하지 않고(`isDocumentLoaded`) 저장을 막습니다(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀립니다. */
         void markDocumentLoadFailed( string_view reason );
 
-        EditorAssetType                       _kind;
-        string                                _loadedAssetPath;
-        string                                _pendingFocusPath;
-        string                                _documentUndoBaseline;
-        string                                _lastSavedDocumentText;
-        shared_ptr<EditorDocumentPanel*>      _pUndoTarget; ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
-        UndoStepOwner                         _undoOwner;   ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다)
-        vector<string>                        _listRecentPath;
-        vector<string>                        _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
-        fixed_string<constant::kMaxBuffer128> _openFilter;
-        uint8                                 _bLoaded        : 1;
-        uint8                                 _bConfirmSwitch : 1;
-        uint8                                 _bLoadFailed    : 1;
-        [[maybe_unused]] uint8                _reserved       : 5;
+        EditorAssetType                         _kind;
+        string                                  _loadedAssetPath;
+        string                                  _pendingFocusPath;
+        string                                  _documentUndoBaseline;
+        string                                  _lastSavedDocumentText;
+        shared_ptr<EditorDocumentPanel*>        _pUndoTarget; ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
+        UndoStepOwner                           _undoOwner;   ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다)
+        vector<string>                          _listRecentPath;
+        vector<string>                          _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
+        fixed_string<constant::buffer::kMax128> _openFilter;
+        uint8                                   _bLoaded        : 1;
+        uint8                                   _bConfirmSwitch : 1;
+        uint8                                   _bLoadFailed    : 1;
+        [[maybe_unused]] uint8                  _reserved       : 5;
     };
 } // namespace sw::editor

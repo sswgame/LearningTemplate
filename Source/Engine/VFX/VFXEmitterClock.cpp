@@ -33,8 +33,8 @@ namespace sw
             return 0;
 
         _pendingSeconds += deltaSeconds;
-        const uint32 dueStepCount = static_cast<uint32>( _pendingSeconds / kFixedStepSeconds );
-        _pendingSeconds -= static_cast<float32>( dueStepCount ) * kFixedStepSeconds;
+        const uint32 dueStepCount = static_cast<uint32>( _pendingSeconds / constant::time::kDefaultFixedStepSeconds );
+        _pendingSeconds -= static_cast<float32>( dueStepCount ) * constant::time::kDefaultFixedStepSeconds;
         if ( dueStepCount <= kMaxStepsPerUpdate )
             return dueStepCount;
         if ( _bWarnedStepLimit == false )

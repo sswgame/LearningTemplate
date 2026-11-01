@@ -278,7 +278,7 @@ namespace sw
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
         ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스를 반환합니다. */
-        uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::kMaxGPUTimestampSlot; }
+        uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::render::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void markTimestampWritten( uint32 slotIndex )
         {
@@ -527,7 +527,7 @@ namespace sw
 
         // 구조 버퍼 갱신(updateStructuredBufferRegions) 전용 프레임 링 슬롯. 매 호출마다 업로드 힙과 커맨드 리스트를
         // 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에
-        // 편승한다(같은 인덱스를 다시 쓸 때는 constant::kMaxFrameCountInFlight 프레임 전 제출이 이미 GPU 에서 끝났다).
+        // 편승한다(같은 인덱스를 다시 쓸 때는 constant::render::kMaxFrameCountInFlight 프레임 전 제출이 이미 GPU 에서 끝났다).
         // 텍스처 전송(submitTexture*)은 이 슬롯을 쓰지 않는다 — 전송 작업과 스테이징 링이 따로 있다(`D3D12TransferJob`, `D3D12StagingRing`).
         /**
          * @struct StructuredUploadSlot
@@ -678,7 +678,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
-        Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _arrCommandAllocator[constant::kMaxFrameCountInFlight];
+        Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _arrCommandAllocator[constant::render::kMaxFrameCountInFlight];
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
 
         /// @brief 이번 프레임에 큐로 넘길 커맨드 리스트들입니다. 기록 순서가 곧 실행 순서입니다.
@@ -708,7 +708,7 @@ namespace sw
         FrameResourceRing                                         _frameRing;
 
         /**
-         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
+         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::render::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
          * @details 읽기는 `waitForRingSlot()` 이 그 슬롯의 펜스를 통과시킨 **직후**에 한다. 그때가
          *          "그 프레임의 GPU 작업이 끝났음" 이 이미 보장된 유일한 지점이라, 측정하려고 파이프라인을
          *          멈춰 세우는 일이 없다.
@@ -719,9 +719,9 @@ namespace sw
         /// @brief 이번 프레임에 실제로 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
         atomic<GPUTimestampSlotMask> _timestampWrittenMask;
         /// @brief 링 슬롯별로 확정한 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 슬롯이 진짜 값인지 가립니다.
-        GPUTimestampSlotMask _arrTimestampMask[constant::kMaxFrameCountInFlight];
+        GPUTimestampSlotMask _arrTimestampMask[constant::render::kMaxFrameCountInFlight];
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
-        StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
+        StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
 
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;

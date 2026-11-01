@@ -20,7 +20,7 @@ namespace sw
         /** @brief RGBA8 을 PPM(P6: 아스키 헤더 + RGB 8bit)으로 씁니다. */
         [[nodiscard]] bool writePpm( string_view outFilePath, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
         {
-            StringBuilder<constant::kMaxBuffer64> header;
+            StringBuilder<constant::buffer::kMax64> header;
             // PPM 헤더의 구분자는 아무 공백이면 된다. 공백만 써서 이스케이프 없이 적는다.
             header.appendFormat( "P6 %# %# 255 ", width, height );
             const size_t  pixelCount = static_cast<size_t>( width ) * height;

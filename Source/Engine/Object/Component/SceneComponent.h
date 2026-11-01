@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -349,7 +349,7 @@ namespace sw
          * @details 해제할 때 이 위치로 O(1) swap-remove 를 한다(선형으로 찾으면 8000 개를 지울 때 3200만 번 비교한다).
          *          위치는 플러시가 비운다.
          */
-        static constexpr uint32 kNotInList = invalid_index::kUint32;
+        static constexpr uint32 kNotInList = constant::invalid_index::kUint32;
         uint32                  _dirtyRootIndex;
         /**
          * @brief 이 컴포넌트가 속한 매니저입니다. 등록할 때 받아 둡니다.

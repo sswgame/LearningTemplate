@@ -14,7 +14,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -56,12 +56,12 @@ namespace sw::editor
         /** @brief 역할 하나의 미리보기 오브젝트입니다(역할 인덱스와 같은 순서). */
         struct RoleSlot
         {
-            fixed_string<constant::kMaxPathSize> _prefabPath{};     ///< 미리보기에 놓을 프리팹(리소스 id). 비면 놓지 않는다
-            string                               _spawnedPath{};    ///< 지금 놓은 오브젝트의 프리팹. 다르면 다시 놓는다
-            GameObjectHandle                     _object{};         ///< 놓은 오브젝트
-            float3                               _placedPosition{}; ///< 지난 그리기에 창이 놓은 자리 — 다르면 기즈모가 옮긴 것이다
-            float32                              _placedYaw{ 0.0f };
-            float32                              _clipSeconds{ 0.0f }; ///< 역할 클립 길이(못 읽었으면 0)
+            fixed_string<constant::file::kMaxPathSize> _prefabPath{};     ///< 미리보기에 놓을 프리팹(리소스 id). 비면 놓지 않는다
+            string                                     _spawnedPath{};    ///< 지금 놓은 오브젝트의 프리팹. 다르면 다시 놓는다
+            GameObjectHandle                           _object{};         ///< 놓은 오브젝트
+            float3                                     _placedPosition{}; ///< 지난 그리기에 창이 놓은 자리 — 다르면 기즈모가 옮긴 것이다
+            float32                                    _placedYaw{ 0.0f };
+            float32                                    _clipSeconds{ 0.0f }; ///< 역할 클립 길이(못 읽었으면 0)
         };
 
         bool                acceptsDocumentPath( string_view assetPath ) const override;
@@ -83,13 +83,13 @@ namespace sw::editor
         /** @brief 미리보기 씬의 매니저입니다. 씬이 없으면 nullptr 입니다. */
         GameObjectManager* findPreviewManager() const;
 
-        PairedAnimationEditModel             _model;
-        EditorPreviewGizmo                   _gizmo;
-        vector<RoleSlot>                     _listSlot;
-        vector<uint32>                       _listFiredNotify; ///< 지난 스크럽이 앞으로 지나며 울린 알림(표시용)
-        string                               _status;
-        string                               _editError;
-        fixed_string<constant::kMaxBuffer64> _newNotifyName;
-        float32                              _previousScrubTime;
+        PairedAnimationEditModel               _model;
+        EditorPreviewGizmo                     _gizmo;
+        vector<RoleSlot>                       _listSlot;
+        vector<uint32>                         _listFiredNotify; ///< 지난 스크럽이 앞으로 지나며 울린 알림(표시용)
+        string                                 _status;
+        string                                 _editError;
+        fixed_string<constant::buffer::kMax64> _newNotifyName;
+        float32                                _previousScrubTime;
     };
 } // namespace sw::editor

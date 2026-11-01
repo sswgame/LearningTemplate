@@ -6,7 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -128,9 +128,9 @@ namespace sw
         static constexpr const utf8* kSubsystemName = "SceneTransformStorage";
 
         /** @brief 슬롯이 없음을 나타냅니다. */
-        static constexpr uint32 kInvalidSlot = invalid_index::kUint32;
+        static constexpr uint32 kInvalidSlot = constant::invalid_index::kUint32;
         /** @brief 슬롯에 렌더 프리미티브가 없음을 나타냅니다(`SceneTransformPage::_arrPrimitiveIndex`). */
-        static constexpr uint32 kNoPrimitive = invalid_index::kUint32;
+        static constexpr uint32 kNoPrimitive = constant::invalid_index::kUint32;
         /**
          * @brief 페이지 테이블의 슬롯 수입니다. 페이지 16384 × 슬롯 256 = 씬 컴포넌트 약 400만 개까지입니다.
          * @details 오브젝트 테이블(`GameObjectManager` 의 id 테이블)이 약 100만 개에서 끝나므로 오브젝트마다 씬 컴포넌트가 네 개를 넘어야 닿습니다.

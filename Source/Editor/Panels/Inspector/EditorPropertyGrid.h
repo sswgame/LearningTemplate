@@ -7,7 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
@@ -175,21 +175,21 @@ namespace sw::editor
         /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 행에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 경로를 씁니다. */
         void invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method, const TaskArgs& args );
 
-        fixed_string<constant::kMaxBuffer64>                         _propertyFilter;   ///< 프로퍼티 검색 필터
-        unordered_map<string, vector<InspectorMethodArgSlot>>        _mapMethodArgSlot; ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
-        fixed_string<constant::kMaxBuffer256>                        _lastInvokeResult;
-        unordered_map<uint32, fixed_string<constant::kMaxBuffer256>> _mapContainerAddText;  ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
-        Delegate<void( const PropertyInfo& )>                        _onEdited;             ///< 지금 대상의 `_onEdited`
-        Delegate<bool( const PropertyInfo& )>                        _isMixed;              ///< 지금 대상의 `_isMixed`
-        Component*                                                   _pEditTargetComponent; ///< 현재 프로퍼티를 그리는 컴포넌트. 편집 알림을 받는다
-        GameObject*                                                  _pEditTargetObject;    ///< 현재 프로퍼티를 그리는 GameObject. 컴포넌트가 없을 때만 쓴다
-        uint32                                                       _propertyDrawDepth;    ///< 중첩과 컨테이너의 재귀 깊이. 알림은 가장 바깥에서 한 번만 보낸다
-        InspectorFavorites*                                          _pFavorites;           ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
-        int32                                                        _openAllRequest;       ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
-        bool                                                         _bFavoritesOnly;       ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
-        bool                                                         _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties)
-        InspectorLayoutCache                                         _layoutCache;          ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
-        InspectorPropertyDisplay                                     _scratchDisplay;       ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
-        uint32                                                       _layoutUseDepth;       ///< 돌려받은 묶음을 도는 `drawTypeProperties` 의 겹 수. 0 일 때만 캐시가 묶음을 비울 수 있다
+        fixed_string<constant::buffer::kMax64>                         _propertyFilter;   ///< 프로퍼티 검색 필터
+        unordered_map<string, vector<InspectorMethodArgSlot>>          _mapMethodArgSlot; ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
+        fixed_string<constant::buffer::kMax256>                        _lastInvokeResult;
+        unordered_map<uint32, fixed_string<constant::buffer::kMax256>> _mapContainerAddText;  ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
+        Delegate<void( const PropertyInfo& )>                          _onEdited;             ///< 지금 대상의 `_onEdited`
+        Delegate<bool( const PropertyInfo& )>                          _isMixed;              ///< 지금 대상의 `_isMixed`
+        Component*                                                     _pEditTargetComponent; ///< 현재 프로퍼티를 그리는 컴포넌트. 편집 알림을 받는다
+        GameObject*                                                    _pEditTargetObject;    ///< 현재 프로퍼티를 그리는 GameObject. 컴포넌트가 없을 때만 쓴다
+        uint32                                                         _propertyDrawDepth;    ///< 중첩과 컨테이너의 재귀 깊이. 알림은 가장 바깥에서 한 번만 보낸다
+        InspectorFavorites*                                            _pFavorites;           ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
+        int32                                                          _openAllRequest;       ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
+        bool                                                           _bFavoritesOnly;       ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
+        bool                                                           _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties)
+        InspectorLayoutCache                                           _layoutCache;          ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
+        InspectorPropertyDisplay                                       _scratchDisplay;       ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
+        uint32                                                         _layoutUseDepth;       ///< 돌려받은 묶음을 도는 `drawTypeProperties` 의 겹 수. 0 일 때만 캐시가 묶음을 비울 수 있다
     };
 } // namespace sw::editor

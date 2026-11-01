@@ -7,7 +7,7 @@
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -116,8 +116,8 @@ namespace sw
         }
         ThreadBuffer* pBuffer = make_unique<ThreadBuffer>().release(); // 락 없이 읽는 표(`_arrThreadBuffer`)에 올린다. 해제는 타임라인이 한다
         pBuffer->_ownerThread = currentThread;
-        utf8 arrName[constant::kMaxBuffer64]{};
-        if ( ThreadName::tryGetCurrentThreadName( arrName, constant::kMaxBuffer64 ) )
+        utf8 arrName[constant::buffer::kMax64]{};
+        if ( ThreadName::tryGetCurrentThreadName( arrName, constant::buffer::kMax64 ) )
             pBuffer->_name = arrName;
         else
             pBuffer->_name = string( "Thread " ) + to_string( index );

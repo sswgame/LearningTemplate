@@ -16,7 +16,7 @@
 #pragma once
 #include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"

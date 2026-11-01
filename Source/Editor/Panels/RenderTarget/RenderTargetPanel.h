@@ -97,8 +97,8 @@ namespace sw::editor
         void probeHoveredPixel( const RenderTargetInfo& selected, const float2& imageMin, const float2& imageSize );
 
     private:
-        vector<RenderTargetInfo>              _listTarget;
-        fixed_string<constant::kMaxBuffer128> _searchFilter;
+        vector<RenderTargetInfo>                _listTarget;
+        fixed_string<constant::buffer::kMax128> _searchFilter;
         /** @brief 선택한 타깃의 이름입니다. 인덱스가 아니라 이름으로 보관하므로 목록을 다시 만들어도 선택이 유지됩니다. */
         string _selectedName;
         /** @brief 마지막으로 읽은 레지스트리 세대입니다. 값이 같으면 다시 읽지 않습니다. */

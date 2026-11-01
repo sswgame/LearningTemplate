@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
@@ -55,7 +55,7 @@ namespace sw::editor
 
     private:
         /** @brief 목록에서 아무것도 고르지 않았음을 뜻합니다. */
-        static constexpr uint32 kNoSelection = invalid_index::kUint32;
+        static constexpr uint32 kNoSelection = constant::invalid_index::kUint32;
 
         /** @brief 외부 실행이 무엇을 하는 중인지입니다. */
         enum class ExternalRunKind : uint8
@@ -75,7 +75,7 @@ namespace sw::editor
         vector<EditorTestCaseResult>      _listUnitTestResult;     ///< 마지막 단위 테스트 실행의 결과
         vector<string>                    _listExternalLine;       ///< 마지막 외부 실행의 출력
         string                            _externalTitle;          ///< 마지막 외부 실행이 무엇이었는지
-        utf8                              _arrFilter[constant::kMaxBuffer128];
+        utf8                              _arrFilter[constant::buffer::kMax128];
         int32                             _externalExitCode;
         uint32                            _externalErrorCount;      ///< 출력의 `[Error]` 줄 수
         uint32                            _selectedScenarioIndex;   ///< 고른 시나리오(`kNoSelection` 이면 없음)

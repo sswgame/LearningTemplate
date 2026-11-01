@@ -16,7 +16,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -48,7 +48,7 @@ namespace sw
     public:
         REFLECT_BODY();
         /** @brief 등록되지 않았다는 표시입니다. */
-        static constexpr uint32 kNotRegistered = invalid_index::kUint32;
+        static constexpr uint32 kNotRegistered = constant::invalid_index::kUint32;
 
         explicit PhysicsComponent( PhysicsComponentPhase phase );
         ~PhysicsComponent() override = default;

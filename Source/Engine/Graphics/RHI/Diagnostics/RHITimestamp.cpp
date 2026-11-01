@@ -14,16 +14,16 @@ namespace sw
             return false;
 
         uint64 origin{ UINT64_MAX };
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
+        for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
             if ( ( readyMask & makeGPUTimestampSlotBit( slotIndex ) ) != 0 && pTick[slotIndex] < origin )
                 origin = pTick[slotIndex];
         }
 
-        const float64 microPerTick = nanosPerTick / constant::kNanosecondsPerMicrosecond;
+        const float64 microPerTick = nanosPerTick / constant::time::kNanosecondsPerMicrosecond;
         outFrame._originNanos      = convertTickToNanos( origin, nanosPerTick );
-        outFrame._listMicro.resize( constant::kMaxGPUTimestampSlot );
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
+        outFrame._listMicro.resize( constant::render::kMaxGPUTimestampSlot );
+        for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
             if ( ( readyMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
             {

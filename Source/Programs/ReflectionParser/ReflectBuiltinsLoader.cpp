@@ -128,7 +128,7 @@ namespace sw
 
             static string makeQualifiedName( const string_view nameSpace, const string_view name )
             {
-                StringBuilder<constant::kMaxBuffer128> qualified;
+                StringBuilder<constant::buffer::kMax128> qualified;
                 qualified.appendFormat( "%#::%#", nameSpace, name );
                 return string( qualified.view() );
             }
@@ -216,8 +216,8 @@ namespace sw
             if ( row._bContainer == SW_TRUE )
                 continue;
 
-            const string&                           canonical = row._listArgument[0];
-            StringBuilder<constant::kMaxBuffer1024> aliasRegs;
+            const string&                             canonical = row._listArgument[0];
+            StringBuilder<constant::buffer::kMax1024> aliasRegs;
             for ( const string& alias : ReflectBuiltinsLoaderInternal::makeRegistryAliases( row._listArgument ) )
             {
                 if ( alias.empty() || alias == canonical )
@@ -225,7 +225,7 @@ namespace sw
                 aliasRegs.appendFormat( "\t\t\tregistry.registerTypeAlias( \"%#\", \"%#\" );\n", alias, canonical );
             }
 
-            StringBuilder<constant::kMaxBuffer128> id;
+            StringBuilder<constant::buffer::kMax128> id;
             id.appendFormat( "Builtin_%#", canonical );
             out += tpls.render( EmitTemplate::BuiltinTypeRegistrar,
                                 {

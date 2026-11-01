@@ -380,7 +380,7 @@ namespace sw
         {
             case RHIBackBufferFormat::RGBA8:
             {
-                requestedFormat = constant::kBackBufferFormat;
+                requestedFormat = constant::render::kBackBufferFormat;
                 break;
             }
             case RHIBackBufferFormat::BGRA8:
@@ -409,10 +409,10 @@ namespace sw
         swapChainDesc._format         = requestedFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
         // 0 이하는 0 으로 넘긴다 — 스테이징 · 링을 쓰는 백엔드가 0 을 오류로 거절한다(기본값으로 바꿔 주지 않는다).
-        swapChainDesc._stagingRingBytes     = gv_rhiStagingRingMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
-        swapChainDesc._readbackRingBytes    = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
-        swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::kBytesPerKilobyte : 0u;
-        swapChainDesc._stagingSoloMaxBytes  = gv_rhiStagingSingleMaxMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingSingleMaxMegabytes ) * constant::kBytesPerMegabyte : 0u;
+        swapChainDesc._stagingRingBytes     = gv_rhiStagingRingMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingRingMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
+        swapChainDesc._readbackRingBytes    = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
+        swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte : 0u;
+        swapChainDesc._stagingSoloMaxBytes  = gv_rhiStagingSingleMaxMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
         {
             string softwareEnv;
             bool   bSoftwareEnv = false;

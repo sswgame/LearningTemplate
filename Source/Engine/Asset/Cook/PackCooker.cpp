@@ -102,7 +102,7 @@ namespace sw
                     if ( FileUtil::isDirectory( FileUtil::joinPath( params._resourceRoot, pShared ) ) )
                         outListDomain.emplace_back( pShared );
                 }
-                const string gameRoot = FileUtil::joinPath( params._resourceRoot, path::kGamePack );
+                const string gameRoot = FileUtil::joinPath( params._resourceRoot, constant::path::kGamePack );
                 if ( params._gamePackFolder.empty() == false )
                 {
                     if ( FileUtil::isDirectory( FileUtil::joinPath( gameRoot, params._gamePackFolder ) ) == false )
@@ -110,7 +110,7 @@ namespace sw
                         SW_LOG_ERROR( "Game pack folder '%#' does not exist under %#", params._gamePackFolder, gameRoot );
                         return false;
                     }
-                    outListDomain.push_back( string( path::kGamePack ) + "/" + params._gamePackFolder );
+                    outListDomain.push_back( string( constant::path::kGamePack ) + "/" + params._gamePackFolder );
                     return true;
                 }
                 // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다.
@@ -123,8 +123,8 @@ namespace sw
                 string canonical = JSONSerializer::serialize( &config, *PackConfig::StaticType() );
                 canonical.append( "\nshader=" ).append( params._shaderFolder ).append( "\ntarget=" ).append( params._buildTarget );
                 // 팩 형식 버전도 설정이다 - 형식을 올리면 옛 형식의 산출물을 재사용하지 않는다(리더가 거절할 팩을 남기지 않게).
-                utf8 arrFormat[constant::kMaxBuffer32];
-                formatstring( arrFormat, constant::kMaxBuffer32, "\nformat=%#", kPackFormatVersion );
+                utf8 arrFormat[constant::buffer::kMax32];
+                formatstring( arrFormat, constant::buffer::kMax32, "\nformat=%#", kPackFormatVersion );
                 canonical.append( arrFormat );
                 for ( const string& excludedPath : params._listExcludedSourceFile )
                 {
@@ -163,10 +163,10 @@ namespace sw
                 const PackWriteStats& write      = timing._write;
                 const int64           otherNanos = totalNanos - ( timing._readNanos + write._compressWallNanos + write._layoutNanos + hashNanos + write._writeNanos );
                 SW_LOG_INFO( "Pack cook: %# packs written or reused, %# failed (target %#) in %# ms - read %# ms, compress %# ms wall / %# ms cpu, layout %# ms, hash %# ms, write %# ms, other %# ms (%# files, %# bytes)",
-                             packCount, failedCount, target, totalNanos / constant::kNanosecondsPerMillisecond, timing._readNanos / constant::kNanosecondsPerMillisecond,
-                             write._compressWallNanos / constant::kNanosecondsPerMillisecond, write._compressCPUNanos / constant::kNanosecondsPerMillisecond,
-                             write._layoutNanos / constant::kNanosecondsPerMillisecond, hashNanos / constant::kNanosecondsPerMillisecond,
-                             write._writeNanos / constant::kNanosecondsPerMillisecond, otherNanos / constant::kNanosecondsPerMillisecond, write._entryCount, write._inputBytes );
+                             packCount, failedCount, target, totalNanos / constant::time::kNanosecondsPerMillisecond, timing._readNanos / constant::time::kNanosecondsPerMillisecond,
+                             write._compressWallNanos / constant::time::kNanosecondsPerMillisecond, write._compressCPUNanos / constant::time::kNanosecondsPerMillisecond,
+                             write._layoutNanos / constant::time::kNanosecondsPerMillisecond, hashNanos / constant::time::kNanosecondsPerMillisecond,
+                             write._writeNanos / constant::time::kNanosecondsPerMillisecond, otherNanos / constant::time::kNanosecondsPerMillisecond, write._entryCount, write._inputBytes );
             }
 
             /** @brief 도메인 하나의 팩을 @p outputPath 에 씁니다. 작업 범위 안에서 부른다. 단계별 시간은 @p ioTiming 에 더한다. */

@@ -90,14 +90,14 @@ namespace sw
 
     uint32 RHIShaderRequest::computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat )
     {
-        static_assert( constant::kVertexAttributeCount <= 32u, "정점 속성 마스크가 uint32 를 넘는다" );
+        static_assert( constant::render::kVertexAttributeCount <= 32u, "정점 속성 마스크가 uint32 를 넘는다" );
         const ShaderReflectionData reflection = ShaderReflection::reflect( vertexBytecode, targetFormat );
         uint32                     mask{ 0 };
-        for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {
             for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
             {
-                if ( input._location != constant::arrVertexAttribute[attributeIndex]._location )
+                if ( input._location != constant::render::arrVertexAttribute[attributeIndex]._location )
                     continue;
                 mask |= ( 1u << attributeIndex );
                 break;

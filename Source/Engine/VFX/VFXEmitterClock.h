@@ -33,7 +33,6 @@ namespace sw
     {
     public:
         /** @brief 단계 하나의 시간입니다. `takeDueSteps` 가 프레임 시간을 이 간격으로 나눕니다. */
-        static constexpr float32 kFixedStepSeconds = 1.0f / 60.0f;
         /** @brief `takeDueSteps` 한 번이 돌려줄 수 있는 단계의 상한입니다. 넘는 몫은 버립니다(긴 프레임 뒤 폭주 방지). */
         static constexpr uint32 kMaxStepsPerUpdate = 8;
 

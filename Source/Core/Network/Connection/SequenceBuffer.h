@@ -7,7 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
@@ -100,7 +100,7 @@ namespace sw
                        "SequenceBuffer element must declare static constexpr SequenceSlotReset kSlotReset (ReuseBuffer requires void resetForReuse())" );
 
     public:
-        static constexpr uint32 kEmpty = invalid_index::kUint32;
+        static constexpr uint32 kEmpty = constant::invalid_index::kUint32;
 
         SequenceBuffer()
         {

@@ -63,7 +63,7 @@ namespace sw::editor
              */
             struct GUIState
             {
-                uint32 _syncedGeneration{ invalid_index::kUint32 }; ///< 마지막으로 맞춘 커맨드 등록 세대
+                uint32 _syncedGeneration{ constant::invalid_index::kUint32 }; ///< 마지막으로 맞춘 커맨드 등록 세대
             };
 
             // ------------------------------------------------------------------------------
@@ -444,7 +444,7 @@ namespace sw::editor
             /** @brief 커맨드 하나를 메뉴 항목으로 그립니다. 눌렸으면 커맨드를 실행합니다. */
             static void drawCommandItem( const EditorInputActions& inputActions, const EditorCommandDesc& desc )
             {
-                fixed_string<constant::kMaxBuffer128> menuLabel;
+                fixed_string<constant::buffer::kMax128> menuLabel;
                 EditorCommandRegistry::formatMenuLabel( desc, menuLabel );
 
                 string shortcutLabel;
@@ -458,7 +458,7 @@ namespace sw::editor
 
                 if ( desc._tooltip.empty() == false )
                 {
-                    fixed_string<constant::kMaxBuffer256> tooltip;
+                    fixed_string<constant::buffer::kMax256> tooltip;
                     tooltip.append( desc._tooltip.c_str() );
                     if ( shortcutLabel.empty() == false )
                     {

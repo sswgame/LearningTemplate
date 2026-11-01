@@ -134,7 +134,7 @@ namespace sw
         uint32                  _bufferCount{ 2 };
         uint32 _backBufferIndex SW_GUARDED_BY( _renderThread ){ 0 };
         /// @brief 백버퍼 포맷입니다(요청값 = 실제값).
-        RHIFormat _format{ constant::kBackBufferFormat };
+        RHIFormat _format{ constant::render::kBackBufferFormat };
         /// @brief 생성할 때 쓴 DXGI 플래그입니다. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
         uint32 _swapChainFlags{ 0 };
         /// @brief 티어링 허용으로 만들었는지입니다. Present 플래그와 짝입니다.

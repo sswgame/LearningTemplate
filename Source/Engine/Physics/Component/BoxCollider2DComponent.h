@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -45,7 +45,7 @@ namespace sw
     public:
         REFLECT_BODY();
         /** @brief 씬 물리의 콜라이더 목록에 없다는 표시입니다. */
-        static constexpr uint32 kNotRegistered = invalid_index::kUint32;
+        static constexpr uint32 kNotRegistered = constant::invalid_index::kUint32;
 
         BoxCollider2DComponent();
         ~BoxCollider2DComponent() override = default;

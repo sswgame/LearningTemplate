@@ -3,7 +3,7 @@
 #include "Engine/Automation/Runner/AutomationReportWriter.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -31,7 +31,7 @@ namespace sw
 
         [[nodiscard]] uint32 toAutomationMilliseconds( float64 seconds )
         {
-            return static_cast<uint32>( seconds * static_cast<float64>( constant::kMillisecondsPerSecond ) );
+            return static_cast<uint32>( seconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
         }
 
         /** @brief `"timeline": { … }` 을 씁니다 — 프레임 종류마다 `<키>Frames` · `<키>Milliseconds`, 단계 앞 대기 중 가장 긴 것은 `slowestWaits[]`. */

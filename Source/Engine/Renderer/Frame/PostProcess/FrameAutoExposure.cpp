@@ -10,6 +10,8 @@
  */
 #include "pch.h"
 
+#include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
+
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -18,7 +20,6 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -168,7 +169,7 @@ namespace sw
         beginInfo._height            = 1;
         cmd.beginRenderPass( beginInfo );
         cmd.setVertexBuffer( 0, 0, 0, 0 );
-        cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        cmd.setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();

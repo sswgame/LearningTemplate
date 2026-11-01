@@ -240,7 +240,7 @@ namespace sw
                 // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).
                 hash = HashUtil::computeStringHash64( string_view{ desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" }, false, hash );
 
-                fixed_string<constant::kMaxBuffer64> buf;
+                fixed_string<constant::buffer::kMax64> buf;
                 formatstring( buf.data(), buf.capacity(), "%#.bin", Fmt( static_cast<uint64>( hash ), Format( 16, Format::Padding::Zero ).hex() ) );
                 return FileUtil::joinPath( cacheDir, buf.c_str() );
             }
@@ -434,11 +434,11 @@ namespace sw
             {
                 if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                 {
-                    // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
+                    // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::render::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
                     // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
                     static const wstring s_targetEnv = StringUtil::utf8ToUTF16(
-                        ( string( "-fspv-target-env=vulkan" ) + to_string( constant::kVulkanRequiredMajor ) + "." +
-                          to_string( constant::kVulkanRequiredMinor ) )
+                        ( string( "-fspv-target-env=vulkan" ) + to_string( constant::render::kVulkanRequiredMajor ) + "." +
+                          to_string( constant::render::kVulkanRequiredMinor ) )
                             .c_str() );
                     listArgument.push_back( L"-spirv" );
                     listArgument.push_back( s_targetEnv.c_str() );

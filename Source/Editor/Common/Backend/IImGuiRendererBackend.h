@@ -41,7 +41,7 @@ namespace sw::editor
      *          (Vulkan 검증 레이어 VUID-vkDestroyBuffer-buffer-00922, 2026-10-20 `editor.inspectorhandle`).
      *          슬롯 수를 "인플라이트 프레임 수 × 프레임당 그리는 수" 로 두면 어느 슬롯이든 인플라이트 프레임 수만큼 뒤의 프레임에서야 다시 쓰인다.
      */
-    inline constexpr uint32 kImGuiDrawBufferRingSize = constant::kMaxFrameCountInFlight * kImGuiDrawsPerViewportPerFrame;
+    inline constexpr uint32 kImGuiDrawBufferRingSize = constant::render::kMaxFrameCountInFlight * kImGuiDrawsPerViewportPerFrame;
 
     /** @brief ImGui GPU 렌더러 백엔드입니다. DX11, DX12, Vulkan, OpenGL 이 각자 구현합니다. */
     class IImGuiRendererBackend

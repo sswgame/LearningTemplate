@@ -677,9 +677,9 @@ namespace sw
         // 이름마다 **번호 상태를 기억한다**(언리얼의 MakeUniqueObjectName 에 해당). 매번 _2 부터 다시 물으면 같은
         // 이름 N 개일 때 생성 하나가 N 번 조회다(8000 개에 2.6 초). **지운 오브젝트의 번호부터 재사용한다.** 번호마다
         // 이름을 intern 하므로, 오르기만 하면 스폰과 파괴를 거듭하는 이름이 전역 intern 풀을 채운다(`NameSuffixState` 설명 참고).
-        StringBuilder<constant::kMaxBuffer128> sb;
-        const hashed_string                    baseKey( baseView.data(), static_cast<uint32>( baseView.size() ) );
-        NameSuffixState&                       suffixState = _mapNameSuffix[baseKey];
+        StringBuilder<constant::buffer::kMax128> sb;
+        const hashed_string                      baseKey( baseView.data(), static_cast<uint32>( baseView.size() ) );
+        NameSuffixState&                         suffixState = _mapNameSuffix[baseKey];
         for ( uint32 probeCount = 0; probeCount < 10000; ++probeCount )
         {
             uint32 nameSuffix = 0;

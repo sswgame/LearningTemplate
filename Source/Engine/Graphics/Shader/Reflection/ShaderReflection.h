@@ -52,7 +52,7 @@ namespace sw
      * @brief 정점 셰이더 입력 하나입니다(시맨틱과 location).
      * @details DX 는 시맨틱 이름으로 정점 버퍼에 연결하고, Vulkan 과 OpenGL 은 **선언 순서로 매긴 location** 으로 연결합니다.
      *          그래서 같은 HLSL 이 DX 에서는 맞고 두 백엔드에서만 다른 속성을 읽을 수 있습니다. 계약 검사가
-     *          이 목록을 `constant::arrVertexAttribute` 와 대조합니다. 시스템 값(SV_VertexID 등)은 들어오지 않습니다.
+     *          이 목록을 `constant::render::arrVertexAttribute` 와 대조합니다. 시스템 값(SV_VertexID 등)은 들어오지 않습니다.
      */
     struct ShaderVertexInputInfo
     {

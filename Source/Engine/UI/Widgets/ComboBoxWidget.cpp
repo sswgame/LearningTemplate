@@ -3,7 +3,7 @@
 #include "Engine/UI/Widgets/ComboBoxWidget.h"
 
 #include "Core/Container/string.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
@@ -87,7 +87,7 @@ namespace sw
         , _pLabel{ nullptr }
         , _popupScreen{ kInvalidUIScreenHandle }
         , _listOption{}
-        , _selectedIndex{ invalid_index::kUint32 }
+        , _selectedIndex{ constant::invalid_index::kUint32 }
     {
         setContentPadding( float4{ 12.0f, 8.0f, ComboBoxWidgetInternal::kArrowSpace, 8.0f } );
         unique_ptr<TextWidget> label = make_unique<TextWidget>();
@@ -108,14 +108,14 @@ namespace sw
     void ComboBoxWidget::setOptions( const vector<string>& listOption )
     {
         _listOption = listOption;
-        if ( _selectedIndex != invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
-            _selectedIndex = invalid_index::kUint32;
+        if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+            _selectedIndex = constant::invalid_index::kUint32;
         refreshLabel();
     }
 
     void ComboBoxWidget::setSelectedIndex( uint32 index )
     {
-        _selectedIndex = index < _listOption.size() ? index : invalid_index::kUint32;
+        _selectedIndex = index < _listOption.size() ? index : constant::invalid_index::kUint32;
         refreshLabel();
     }
 
@@ -123,8 +123,8 @@ namespace sw
     {
         if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )
         {
-            if ( _selectedIndex != invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
-                _selectedIndex = invalid_index::kUint32;
+            if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+                _selectedIndex = constant::invalid_index::kUint32;
             refreshLabel();
             return;
         }
@@ -133,7 +133,7 @@ namespace sw
 
     void ComboBoxWidget::refreshLabel()
     {
-        _pLabel->setText( _selectedIndex != invalid_index::kUint32 ? string_view{ _listOption[_selectedIndex] } : string_view{} );
+        _pLabel->setText( _selectedIndex != constant::invalid_index::kUint32 ? string_view{ _listOption[_selectedIndex] } : string_view{} );
     }
 
     void ComboBoxWidget::choosePopupOption( uint32 index )
@@ -206,7 +206,7 @@ namespace sw
         UIScreenDesc desc{};
         desc._layer                            = UILayer::Modal; // 메뉴 위에 놓되 입력은 막지 않는다(밖 클릭은 루트가 받아 닫는다)
         desc._bModal                           = false;
-        desc._defaultFocus                     = Internal::makeOptionName( _selectedIndex != invalid_index::kUint32 ? _selectedIndex : 0 );
+        desc._defaultFocus                     = Internal::makeOptionName( _selectedIndex != constant::invalid_index::kUint32 ? _selectedIndex : 0 );
         unique_ptr<ComboBoxPopupScreen> popup  = sw::make_unique<ComboBoxPopupScreen>( desc, std::move( root ), pScreen->getHandle(), getID() );
         ComboBoxPopupScreen* const      pPopup = popup.get();
         for ( uint32 index = 0; index < static_cast<uint32>( listButton.size() ); ++index )

@@ -83,8 +83,8 @@ namespace sw
                 string text( InputSlotUtilInternal::kGamepadPrefix );
                 if ( slot._deviceIndex != 0 )
                 {
-                    utf8 arrDigit[constant::kMaxBuffer16]{};
-                    StringUtil::formatNumber( arrDigit, constant::kMaxBuffer16, static_cast<uint32>( slot._deviceIndex ) );
+                    utf8 arrDigit[constant::buffer::kMax16]{};
+                    StringUtil::formatNumber( arrDigit, constant::buffer::kMax16, static_cast<uint32>( slot._deviceIndex ) );
                     text += arrDigit;
                 }
                 const utf8* pName = GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) );

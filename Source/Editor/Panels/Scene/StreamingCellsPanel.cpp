@@ -141,13 +141,13 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( rowIndex ) );
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
-            fixed_string<constant::kMaxBuffer64> label;
+            fixed_string<constant::buffer::kMax64> label;
             formatstring( label.data(), label.capacity(), "%#, %#", cell._cell._x, cell._cell._z );
             if ( ImGui::Selectable( label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns ) )
                 StreamingCellsModel::selectObjects( cell._listObjectID );
             if ( EditorSelfTestMarks::isEnabled() )
             {
-                fixed_string<constant::kMaxBuffer64> mark;
+                fixed_string<constant::buffer::kMax64> mark;
                 formatstring( mark.data(), mark.capacity(), "streamingCells.cell.%#", rowIndex );
                 EditorSelfTestMarks::note( mark.c_str() );
             }

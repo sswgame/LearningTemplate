@@ -23,7 +23,7 @@ namespace sw::editor
 
     uint32 DrawSnapshotHandoff::waitForWriteSlot() const
     {
-        const uint32 writeSlot = ( _publishedSlot.load( std::memory_order_acquire ) + 1u ) % constant::kMaxFrameCountInFlight;
+        const uint32 writeSlot = ( _publishedSlot.load( std::memory_order_acquire ) + 1u ) % constant::render::kMaxFrameCountInFlight;
         while ( _inFlightSlot.load( std::memory_order_acquire ) == writeSlot )
         {
             ThreadUtil::yield();

@@ -2,7 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportCanvasOverlay.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/Color.h"
 #include "Core/Math/MathUtil.h"
@@ -329,7 +329,7 @@ namespace sw::editor
                 const float3  delta = _rulerEndWorld - _rulerStartWorld;
                 const float32 dist  = delta.getLength();
 
-                fixed_string<constant::kMaxBuffer64> arrDistText;
+                fixed_string<constant::buffer::kMax64> arrDistText;
                 formatstring( arrDistText.data(), arrDistText.capacity(), "%# m (dX: %#, dZ: %#)",
                               Fmt( static_cast<float64>( dist ), Format().precision( 2 ) ), Fmt( static_cast<float64>( delta._x ), Format().precision( 2 ) ),
                               Fmt( static_cast<float64>( delta._z ), Format().precision( 2 ) ) );

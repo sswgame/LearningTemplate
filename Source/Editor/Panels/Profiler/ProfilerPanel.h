@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorTracyLauncher.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
@@ -132,7 +132,7 @@ namespace sw::editor
         ProfilerPerformanceModel _performance;       ///< Performance 탭의 프레임 시간 · 리소스 카탈로그
         vector<ProfilerScopeRow> _listScratchRow;    ///< 테이블 행(프레임마다 다시 채운다)
         vector<float32>          _listScratchSeries; ///< 그래프 값(프레임마다 다시 채운다)
-        utf8                     _arrFilter[constant::kMaxBuffer128];
+        utf8                     _arrFilter[constant::buffer::kMax128];
         EditorTracyLaunchResult  _lastTracyResult; ///< 마지막 "Open Tracy" 결과(패널에 한 줄로 보인다)
         LeakWindowReport         _leakReport;      ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
         uint8                    _bTracyTried : 1; ///< "Open Tracy" 를 한 번이라도 눌렀다

@@ -143,7 +143,7 @@ namespace sw
         /** @brief `-gv_screenshot` 촬영 차례(대기 프레임 · 자리 잡음 · 간격 · 장 수)면 화면이나 지정 첨부를 읽어 파일 쓰기를 워커에 맡깁니다. `endFrame` 뒤에 부릅니다. */
         void takeCommandLineScreenshotIfDue( const RenderFramePacket& packet );
         /**
-         * @brief 화면에 나간 이미지(Present 캡처)를 GPU 에서 읽은 그대로(포맷 `constant::kBackBufferFormat`) 받습니다. 캡처가 없으면 @p path 와 함께 오류를 남기고 false 입니다.
+         * @brief 화면에 나간 이미지(Present 캡처)를 GPU 에서 읽은 그대로(포맷 `constant::render::kBackBufferFormat`) 받습니다. 캡처가 없으면 @p path 와 함께 오류를 남기고 false 입니다.
          * @details `endFrame` 뒤에 부릅니다. RGBA 로 풀고 쓰는 일은 워커가 한다(`ScreenshotFileWrite`).
          */
         [[nodiscard]] bool readPresentedBytes( const string& path, vector<uint8>& outBytes, RHITextureMipSpan& outLayout );
@@ -191,7 +191,7 @@ namespace sw
         struct PendingRenderTargetRead;
         unique_ptr<PendingRenderTargetRead> _pPendingTargetRead; ///< 요청을 받았고 읽기가 끝나지 않은 렌더 타깃 읽기(렌더 스레드만 쓴다). 없으면 비어 있다
 
-        static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };
+        static constexpr uint32 _s_kRingCapacity{ constant::render::kRenderFrameQueueDepth };
         /// @brief 드라이버 GPU 메모리 값(`IRHIDevice::refreshGPUMemoryBudget`)을 묻는 간격입니다. DXGI 질의는 커널을 거치므로 프레임마다 묻지 않습니다.
         static constexpr uint32 _s_kBudgetRefreshFrames{ 30 };
         // 게임 스레드와 렌더 스레드가 이 링을 **동시에** 만진다. 그래서 레이스 탐지기가 붙은

@@ -177,15 +177,15 @@ namespace sw
             /** @brief 숫자를 가장 짧은 왕복 표기로 적습니다. 실수는 float32 를 한 번 거쳐 `0.15000000000000002` 같은 꼬리를 없앱니다. */
             static string formatFloat( float64 value )
             {
-                utf8 arrBuffer[constant::kMaxBuffer64]{};
-                StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, static_cast<float32>( value ) );
+                utf8 arrBuffer[constant::buffer::kMax64]{};
+                StringUtil::formatNumber( arrBuffer, constant::buffer::kMax64, static_cast<float32>( value ) );
                 return string( arrBuffer );
             }
 
             static string formatInt( int64 value )
             {
-                utf8 arrBuffer[constant::kMaxBuffer32]{};
-                StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, value );
+                utf8 arrBuffer[constant::buffer::kMax32]{};
+                StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, value );
                 return string( arrBuffer );
             }
 
@@ -829,13 +829,13 @@ namespace sw
     const UserSettingDef* UserSettingsSchema::findSetting( const hashed_string& id ) const
     {
         const uint32 settingIndex = findSettingIndex( id );
-        return settingIndex != invalid_index::kUint32 ? &_listSetting[settingIndex] : nullptr;
+        return settingIndex != constant::invalid_index::kUint32 ? &_listSetting[settingIndex] : nullptr;
     }
 
     uint32 UserSettingsSchema::findSettingIndex( const hashed_string& id ) const
     {
         const auto iter = _mapSettingIndex.find( id );
-        return iter != _mapSettingIndex.end() ? iter->second : invalid_index::kUint32;
+        return iter != _mapSettingIndex.end() ? iter->second : constant::invalid_index::kUint32;
     }
 
     const UserSettingCategoryDef* UserSettingsSchema::findCategory( const hashed_string& id ) const

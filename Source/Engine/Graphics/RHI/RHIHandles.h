@@ -4,7 +4,7 @@
  * @details 정수 별칭만 담는다. 핸들을 들고 다니기만 하는 헤더(머티리얼, 캔버스)가 서술체 전체(`RHIDescriptors.h`)를 끌지 않게 따로 둔다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -19,7 +19,7 @@ namespace sw
     using RHIDescriptorIndex = uint32;
 
     /** @brief 유효하지 않은 디스크립터 인덱스입니다. */
-    constexpr RHIDescriptorIndex kInvalidDescriptorIndex = invalid_index::kUint32;
+    constexpr RHIDescriptorIndex kInvalidDescriptorIndex = constant::invalid_index::kUint32;
 
     template <typename T>
     class Delegate;

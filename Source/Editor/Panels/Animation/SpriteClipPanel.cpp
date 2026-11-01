@@ -54,7 +54,7 @@ namespace sw::editor
 
     void SpriteClipPanel::drawFileBar()
     {
-        fixed_string<constant::kMaxBuffer256>& atlasPath = _model.editAtlasPath();
+        fixed_string<constant::buffer::kMax256>& atlasPath = _model.editAtlasPath();
         ImGui::InputText( "Atlas", atlasPath.data(), atlasPath.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
@@ -96,7 +96,7 @@ namespace sw::editor
         for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             ImGui::PushID( frameIndex );
-            fixed_string<constant::kMaxBuffer32> label;
+            fixed_string<constant::buffer::kMax32> label;
             formatstring( label.data(), label.capacity(), "Frame %#", frameIndex );
             if ( ImGui::Selectable( label.c_str(), _model.getSelectedFrame() == frameIndex ) )
                 _model.selectFrame( frameIndex );
@@ -133,7 +133,7 @@ namespace sw::editor
         for ( int32 keyIndex = 0; keyIndex < keyCount; ++keyIndex )
         {
             ImGui::PushID( 1000 + keyIndex );
-            fixed_string<constant::kMaxBuffer32> label;
+            fixed_string<constant::buffer::kMax32> label;
             formatstring( label.data(), label.capacity(), "Key %#", keyIndex );
             if ( ImGui::Selectable( label.c_str(), _model.getSelectedKey() == keyIndex ) )
                 _model.selectKey( keyIndex );
@@ -251,7 +251,7 @@ namespace sw::editor
         SpriteClipAnimation* pAnimation = _model.editSelectedAnimation();
         if ( pAnimation == nullptr )
             return;
-        fixed_string<constant::kMaxBuffer64>& animationName = _model.editAnimationName();
+        fixed_string<constant::buffer::kMax64>& animationName = _model.editAnimationName();
         ImGui::InputText( "name", animationName.data(), animationName.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationName() )
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );

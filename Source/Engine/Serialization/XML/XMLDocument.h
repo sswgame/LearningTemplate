@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringBuilder.h"
@@ -237,11 +237,11 @@ namespace sw
          *        적어도 컴파일이 되기 때문입니다. 다른 타입은 여기서 컴파일 오류가 납니다.
          */
         template <typename T>
-        static StringBuilder<constant::kMaxBuffer32> formatNumber( T value )
+        static StringBuilder<constant::buffer::kMax32> formatNumber( T value )
         {
             static_assert( std::is_same_v<T, int32> || std::is_same_v<T, uint32> || std::is_same_v<T, float32>,
                            "XMLNode number text: int32 / uint32 / float32 only" );
-            StringBuilder<constant::kMaxBuffer32> sb;
+            StringBuilder<constant::buffer::kMax32> sb;
             sb.append( value );
             return sb;
         }

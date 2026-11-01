@@ -68,7 +68,7 @@ namespace sw
             /** @brief 문제 한 줄을 남깁니다(표의 잠금 안에서 부른다). */
             static void addProblem( Table& table, string_view what, string_view first, string_view second )
             {
-                StringBuilder<constant::kMaxBuffer256> sb;
+                StringBuilder<constant::buffer::kMax256> sb;
                 sb.appendFormat( "%#: '%#' and '%#'", what, first, second );
                 table._listProblem.emplace_back( sb.c_str(), sb.size() );
             }

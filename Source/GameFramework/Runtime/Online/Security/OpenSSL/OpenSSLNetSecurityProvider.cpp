@@ -45,7 +45,7 @@ namespace sw
                 string text;
                 while ( ERR_peek_error() != 0 )
                 {
-                    utf8 arrBuffer[constant::kMaxBuffer256];
+                    utf8 arrBuffer[constant::buffer::kMax256];
                     ERR_error_string_n( ERR_get_error(), arrBuffer, sizeof( arrBuffer ) );
                     text = arrBuffer;
                 }
@@ -422,7 +422,7 @@ namespace sw
             {
                 if ( _state != TLSSessionState::Established )
                     return _state != TLSSessionState::Failed;
-                uint8 arrBuffer[constant::kMaxBuffer8192];
+                uint8 arrBuffer[constant::buffer::kMax8192];
                 for ( ;; )
                 {
                     const int32 read = SSL_read( _pSSL, arrBuffer, static_cast<int32>( sizeof( arrBuffer ) ) );

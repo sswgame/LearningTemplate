@@ -582,7 +582,7 @@ namespace sw
                     continue;
                 listScanned.push_back( attachment._texture );
 
-                utf8 arrName[constant::kMaxBuffer64];
+                utf8 arrName[constant::buffer::kMax64];
                 formatstring( arrName, sizeof( arrName ), "%#:%#", pass._name, output._attachment.view() );
                 // 컴퓨트가 엔진 텍스처로 읽도록 셰이더 읽기 상태로 옮기고, 다음 프레임의 패스가 쓰도록 렌더 타깃 상태로 돌려 둔다.
                 pCmd->prepareTextureForShaderRead( attachment._texture );
@@ -897,7 +897,7 @@ namespace sw
 
         if ( passName.empty() == false )
         {
-            utf8         arrPassName[constant::kMaxBuffer64];
+            utf8         arrPassName[constant::buffer::kMax64];
             const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
             Memory::copy( arrPassName, passName.data(), copyLen );
             arrPassName[copyLen] = '\0';
@@ -1288,7 +1288,7 @@ namespace sw
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         context._pCmd->setPipelineState( pso );
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         if ( bVolume )
@@ -1745,7 +1745,7 @@ namespace sw
         // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(LightGrid::hasGrid 가 둘 다 본다).
         const RHIStructuredBufferSlot* pGridBuffer = _state._lightBuffer.isBindable() ? _state._lightBuffer.findGridBuffer() : nullptr;
         const bool                     bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
-        const uint32                   gridBase    = bGridReady ? _state._lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;
+        const uint32                   gridBase    = bGridReady ? _state._lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : constant::invalid_index::kUint32;
         context._passValues.setUint( passConstantNames()._swLightGridBase, gridBase );
         if ( _state._lightBuffer.isBindable() == false )
             return;
@@ -1984,7 +1984,7 @@ namespace sw
         // 컬링 없는 백엔드의 추가 뷰는 꼬리를 그 뷰 순서로 다시 놓은 자기 스트림을 쓴다(GPU 정렬 백엔드는 늘 공용 스트림).
         state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _state._gpuScene.getInstanceSlotStream();
         if ( state._slotStream != 0 )
-            context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, state._slotStream, constant::kInstanceSlotStreamStride, 0 );
+            context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, state._slotStream, constant::render::kInstanceSlotStreamStride, 0 );
         // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 와 정점 슬롯을 바꾸므로
         // 메시로 돌아올 때 PSO · 정점 버퍼를 다시 건다(`drawParticleRun` 이 슬롯 스트림과 에뮬 텍스처 슬롯을, bindForDraw 가 PSO 가 바뀐 바인딩을 다시 건다).
         if ( pParticleSlot != nullptr )
@@ -2086,7 +2086,7 @@ namespace sw
             return false;
         // 메시 드로우가 읽는 패스 단위 상태를 되돌린다 — 입자 그리기가 인스턴스 슬롯 스트림을 비웠고 PSO 가 바뀌어 에뮬 텍스처 슬롯이 비었다.
         if ( slotStream != 0 )
-            context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, slotStream, constant::kInstanceSlotStreamStride, 0 );
+            context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, slotStream, constant::render::kInstanceSlotStreamStride, 0 );
         commitBindlessTextureBindings( context );
         return true;
     }
@@ -2100,7 +2100,7 @@ namespace sw
             return false;
         // 정점은 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼 슬롯과 인스턴스 슬롯 스트림은 비운다(캔버스 · 풀스크린 패스와 같다).
         context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         context._pCmd->setPipelineState( pso );
         setIdentityWorld( context );
         // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
@@ -2180,7 +2180,7 @@ namespace sw
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         context._pCmd->setPipelineState( pso );
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         context._pCmd->draw( 3, 0 );
@@ -2292,7 +2292,7 @@ namespace sw
             elementScope.apply( element._arrConstant, element._constantCount );
             context._world = element._world;
             context._pCmd->setVertexBuffer( 0, mesh.getVertexBuffer(), sizeof( RHIVertex ), 0 );
-            context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+            context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
             context._pCmd->setPipelineState( pass._pso );
             commitBindlessTextureBindings( context );
             bindForDraw( context, pass._pso, kInvalidDescriptorIndex );

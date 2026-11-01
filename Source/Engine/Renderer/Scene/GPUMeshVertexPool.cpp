@@ -44,7 +44,7 @@ namespace sw
         // 제출한 프레임이 모두 끝난다.
         ++_updateCount;
         _allocator.retireDeferred( _updateCount );
-        const uint64 retireStamp = _updateCount + constant::kMaxFrameCountInFlight;
+        const uint64 retireStamp = _updateCount + constant::render::kMaxFrameCountInFlight;
 
         const bool bMarkedChange = markListedMeshes( listMesh, retireStamp );
         const bool bChanged      = sweepUnlistedMeshes( retireStamp ) || bMarkedChange;

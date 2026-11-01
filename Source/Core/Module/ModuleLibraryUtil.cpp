@@ -27,7 +27,7 @@ namespace sw
         struct ModuleSubdirectory
         {
             utf8 _arrBaseName[64]{};
-            utf8 _arrDirectory[constant::kMaxPathSize]{};
+            utf8 _arrDirectory[constant::file::kMaxPathSize]{};
         };
 
         /**
@@ -108,7 +108,7 @@ namespace sw
 
     string ModuleLibraryUtil::formatSharedLibraryName( string_view baseName )
     {
-        StringBuilder<constant::kMaxBuffer128> sb;
+        StringBuilder<constant::buffer::kMax128> sb;
         sb.append( getSharedLibraryPrefix() ).append( baseName ).append( getSharedLibraryExtension() );
         return string( sb.view() );
     }

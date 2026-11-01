@@ -22,13 +22,13 @@ namespace sw
      */
     struct FixedStepTimer
     {
-        float32 _step{ 1.0f / 60.0f };
+        float32 _step{ constant::time::kDefaultFixedStepSeconds };
         float32 _maxFrameTime{ 0.25f };
         float32 _accumulator{ 0.0f };
 
         constexpr FixedStepTimer() = default;
         constexpr FixedStepTimer( float32 step, float32 maxFrameTime )
-            : _step{ step > 0.0f ? step : 1.0f / 60.0f }
+            : _step{ step > 0.0f ? step : constant::time::kDefaultFixedStepSeconds }
             , _maxFrameTime{ maxFrameTime }
             , _accumulator{ 0.0f }
         {

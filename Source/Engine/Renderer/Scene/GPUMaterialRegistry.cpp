@@ -155,10 +155,10 @@ namespace sw
     void GPUMaterialRegistry::freeUnusedMaterialElements( GPUSceneSnapshot& inoutSnapshot )
     {
         // 이번 빌드에서 쓰이지 않은 원소는 바로 지우지 않는다. 아직 GPU 가 읽는 중인 프레임이 있을 수 있다.
-        // 패킷 링 깊이(constant::kRenderFrameQueueDepth)와 같은 지연 기준을 쓴다. 큐에 있는 패킷이 아직 원소를 읽을 수 있다.
-        if ( _buildCounter <= constant::kRenderFrameQueueDepth )
+        // 패킷 링 깊이(constant::render::kRenderFrameQueueDepth)와 같은 지연 기준을 쓴다. 큐에 있는 패킷이 아직 원소를 읽을 수 있다.
+        if ( _buildCounter <= constant::render::kRenderFrameQueueDepth )
             return;
-        const uint64 staleBefore = _buildCounter - constant::kRenderFrameQueueDepth;
+        const uint64 staleBefore = _buildCounter - constant::render::kRenderFrameQueueDepth;
 
         const size_t groupCount = MathUtil::min( inoutSnapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
         for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )

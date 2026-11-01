@@ -177,10 +177,10 @@ namespace sw::editor
         /** @brief 입력줄 결과와 입력줄입니다. */
         void drawConsole();
 
-        fixed_string<constant::kMaxBuffer64>  _address;             ///< 주소로 붙기 — `127.0.0.1:<포트>`(편집 필드)
-        fixed_string<constant::kMaxBuffer128> _token;               ///< 주소로 붙기 — 토큰(편집 필드)
-        fixed_string<constant::kMaxBuffer512> _commandLine;         ///< 입력줄(편집 필드)
-        bool                                  _bScrollConsoleToEnd; ///< 새 결과가 왔으니 다음 그리기에서 끝으로 스크롤
+        fixed_string<constant::buffer::kMax64>  _address;             ///< 주소로 붙기 — `127.0.0.1:<포트>`(편집 필드)
+        fixed_string<constant::buffer::kMax128> _token;               ///< 주소로 붙기 — 토큰(편집 필드)
+        fixed_string<constant::buffer::kMax512> _commandLine;         ///< 입력줄(편집 필드)
+        bool                                    _bScrollConsoleToEnd; ///< 새 결과가 왔으니 다음 그리기에서 끝으로 스크롤
     };
 } // namespace sw::editor
 

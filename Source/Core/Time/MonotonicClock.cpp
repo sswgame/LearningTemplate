@@ -19,7 +19,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         timespec time{};
         clock_gettime( CLOCK_MONOTONIC, &time );
-        return static_cast<int64>( time.tv_sec ) * constant::kNanosecondsPerSecond + static_cast<int64>( time.tv_nsec );
+        return static_cast<int64>( time.tv_sec ) * constant::time::kNanosecondsPerSecond + static_cast<int64>( time.tv_nsec );
 #else
     #error "Unsupported platform"
 #endif
@@ -36,7 +36,7 @@ namespace sw
         }();
         return s_countsPerSecond;
 #else
-        return constant::kNanosecondsPerSecond; // Linux 는 readCounter 가 이미 나노초다
+        return constant::time::kNanosecondsPerSecond; // Linux 는 readCounter 가 이미 나노초다
 #endif
     }
 
@@ -67,11 +67,11 @@ namespace sw
                     continue;
                 }
             }
-            Sleep( static_cast<DWORD>( ( remaining + 999999 ) / constant::kNanosecondsPerMillisecond ) );
+            Sleep( static_cast<DWORD>( ( remaining + 999999 ) / constant::time::kNanosecondsPerMillisecond ) );
 #else
             timespec request{};
-            request.tv_sec  = static_cast<time_t>( remaining / constant::kNanosecondsPerSecond );
-            request.tv_nsec = static_cast<decltype( request.tv_nsec )>( remaining % constant::kNanosecondsPerSecond );
+            request.tv_sec  = static_cast<time_t>( remaining / constant::time::kNanosecondsPerSecond );
+            request.tv_nsec = static_cast<decltype( request.tv_nsec )>( remaining % constant::time::kNanosecondsPerSecond );
             (void)clock_nanosleep( CLOCK_MONOTONIC, 0, &request, nullptr ); // 신호에 깨면 루프가 남은 시간을 다시 측정한다
 #endif
         }

@@ -775,7 +775,7 @@ namespace sw
         const float32 origin  = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * _settings._characterSpacing;
         for ( uint32 index = 0; index < characterCount; ++index )
         {
-            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            StringBuilder<constant::buffer::kMax64> nameBuilder;
             nameBuilder.append( "StressTestCharacter_" ).append( index );
             GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
             if ( pObject == nullptr )
@@ -822,7 +822,7 @@ namespace sw
         SkeletalMeshComponent* pDeepest = pBody; // 무기의 리그 대상이 되는 가장 깊은 유닛
         for ( uint32 followerIndex = 0; followerIndex < followerCount; ++followerIndex )
         {
-            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            StringBuilder<constant::buffer::kMax64> nameBuilder;
             nameBuilder.append( "StressTestCharacterPart_" ).append( characterIndex ).append( "_" ).append( followerIndex );
             GameObject*            pPart     = objects.createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
             SkeletalMeshComponent* pFollower = ( pPart != nullptr ) ? pPart->addComponent<SkeletalMeshComponent>() : nullptr;
@@ -835,7 +835,7 @@ namespace sw
         }
         if ( bWeapon == false )
             return;
-        StringBuilder<constant::kMaxBuffer64> weaponName;
+        StringBuilder<constant::buffer::kMax64> weaponName;
         weaponName.append( "StressTestCharacterWeapon_" ).append( characterIndex );
         GameObject*            pWeapon     = objects.createGameObject( hashed_string( weaponName.c_str(), weaponName.size() ) );
         SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? pWeapon->addComponent<SkeletalMeshComponent>() : nullptr;
@@ -910,7 +910,7 @@ namespace sw
 
         for ( uint32 index = 0; index < ragdollCount; ++index )
         {
-            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            StringBuilder<constant::buffer::kMax64> nameBuilder;
             nameBuilder.append( "StressTestRagdoll_" ).append( index );
             const float3 position{ originX + static_cast<float32>( index % columns ) * spacing, 0.0f, static_cast<float32>( index / columns ) * spacing };
             GameObject*  pEnemy = StressTestCombatComponent::spawnEnemy( *pObjects, _settings, hashed_string( nameBuilder.c_str(), nameBuilder.size() ), position );
@@ -954,7 +954,7 @@ namespace sw
                 continue;
             // 서 있으면 쓰러뜨리고, 쓰러져 있으면 일으킨다(물리 자세를 읽기 전이라 실패하면 다음 주기에 다시). 일어나는 중이면 끝날 때까지 둔다.
             if ( pRagdoll->getState() == RagdollState::Animated )
-                pRagdoll->startRagdoll( float3{}, invalid_index::kInt32 ); // 충격량 없이 쓰러진다
+                pRagdoll->startRagdoll( float3{}, constant::invalid_index::kInt32 ); // 충격량 없이 쓰러진다
             else if ( pRagdoll->getState() == RagdollState::Ragdoll )
                 (void)pRagdoll->getUp();
         }
@@ -980,7 +980,7 @@ namespace sw
         const float3  lookAt{ 0.0f, _settings._faceHeight, -computeFaceCameraDistance( faceCount ) };
         for ( uint32 index = 0; index < faceCount; ++index )
         {
-            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            StringBuilder<constant::buffer::kMax64> nameBuilder;
             nameBuilder.append( "StressTestFace_" ).append( index );
             GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
             if ( pObject == nullptr )
@@ -1079,7 +1079,7 @@ namespace sw
         if ( pObjects == nullptr || _listMeshVariant.empty() )
             return nullptr;
 
-        StringBuilder<constant::kMaxBuffer64> nameBuilder;
+        StringBuilder<constant::buffer::kMax64> nameBuilder;
         nameBuilder.append( "StressTestMesh_" ).append( index );
 
         GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
@@ -1322,13 +1322,13 @@ namespace sw
         const uint32 viewCount = static_cast<uint32>( gv_stressTestViews );
         for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
         {
-            StringBuilder<constant::kMaxBuffer64> name;
+            StringBuilder<constant::buffer::kMax64> name;
             name.appendFormat( "StressTestView%#", viewIndex );
             GameObject*      pObject = pObjects->createGameObject( hashed_string( name.c_str(), name.size() ) );
             CameraComponent* pCamera = pObject != nullptr ? pObject->addComponent<CameraComponent>() : nullptr;
             if ( pCamera == nullptr )
                 continue;
-            StringBuilder<constant::kMaxBuffer64> texture;
+            StringBuilder<constant::buffer::kMax64> texture;
             texture.appendFormat( "rendertarget/bench_view%#", viewIndex );
             CameraRenderOutput output;
             output._target              = CameraOutputTarget::RenderTexture;
@@ -1832,7 +1832,7 @@ namespace sw
 
     void StressTestScene::spawnRigKnight( GameObjectManager& objects, uint32 index, float32 origin, bool bRig, const shared_ptr<SocketSet>& weaponSockets )
     {
-        StringBuilder<constant::kMaxBuffer64> name;
+        StringBuilder<constant::buffer::kMax64> name;
         name.append( "RigKnight_" ).append( index );
         GameObject* pKnight = objects.createGameObject( hashed_string( name.c_str(), name.size() ) );
         if ( pKnight == nullptr )

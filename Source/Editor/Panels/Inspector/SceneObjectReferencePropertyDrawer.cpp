@@ -50,9 +50,9 @@ namespace sw::editor
                     return false;
                 const SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
 
-                uint64                                resolvedID{ 0 };
-                const SceneObjectResolveResult        state = SceneObjectReferenceUtil::resolve( sceneManager, *pValue, resolvedID );
-                fixed_string<constant::kMaxBuffer512> preview;
+                uint64                                  resolvedID{ 0 };
+                const SceneObjectResolveResult          state = SceneObjectReferenceUtil::resolve( sceneManager, *pValue, resolvedID );
+                fixed_string<constant::buffer::kMax512> preview;
                 makePreview( sceneManager, *pValue, state, resolvedID, preview );
                 const bool bWarn = state == SceneObjectResolveResult::ObjectMissing;
                 if ( bWarn )
@@ -125,7 +125,7 @@ namespace sw::editor
 
             /** @brief 지금 값의 미리보기 글입니다: `<씬 파일> / <오브젝트>` · `(scene not loaded) …` · `(missing) …` · `(none)`. */
             static void makePreview( const SceneManager& sceneManager, const SceneObjectReference& value, SceneObjectResolveResult state, uint64 resolvedID,
-                                     fixed_string<constant::kMaxBuffer512>& outPreview )
+                                     fixed_string<constant::buffer::kMax512>& outPreview )
             {
                 switch ( state )
                 {

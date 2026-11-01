@@ -10,7 +10,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/EngineMinimal.h"
@@ -132,7 +132,7 @@ namespace sw
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
         /**
-         * @brief 렌더 프리미티브 번호(`ScenePrimitive::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 `invalid_index::kUint32` 입니다.
+         * @brief 렌더 프리미티브 번호(`ScenePrimitive::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 `constant::invalid_index::kUint32` 입니다.
          * @details 화면 마커 투영 컴퓨트가 GPUScene 인스턴스 변환을 읽는 대응입니다(`CanvasMarkerRecord::_instanceSlot`). 이번 프레임 수집(`populateFromScene`) 뒤 · 다음 수집 전에만 쓴다.
          *          프리미티브 → 후보 → 인스턴스 칸의 두 표를 따라가고, 역표(`_listInstanceSrcIndex`)가 같은 후보를 가리키는지 되짚어 어긋난 표(수집 중 · 걸러짐)를 거른다.
          *          투명 꼬리는 프레임마다 다시 정렬되어 칸이 흔들리므로 풀지 않는다(그 마커는 월드 점을 쓴다).
@@ -503,7 +503,7 @@ namespace sw
         };
 
         /** @brief 후보 배열에 실리지 않은 프리미티브의 표시입니다. */
-        static constexpr uint32 kInvalidCandidateIndex = invalid_index::kUint32;
+        static constexpr uint32 kInvalidCandidateIndex = constant::invalid_index::kUint32;
         /**
          * @brief 이번 프레임에 "바뀌었다" 고 표시된 프리미티브의 레지스트리 인덱스입니다.
          * @details 레지스트리에서 받을 때는 **렌더 상태가** 바뀐 것만 들어 있고(다시 모은다), 부분 수집이 끝나면 `_listTransformDirtyPrimitive` 를

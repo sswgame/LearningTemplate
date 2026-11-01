@@ -31,7 +31,7 @@ namespace sw
             // 보고(`report`)만 쓰는 도우미다. 보고는 Info 로그로만 나가므로 그것이 빠지는 구성(Shipping)에는 두지 않는다.
 
             /** @brief 바이트를 MB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
-            static constexpr uint64 toMegabytesX10( uint64 bytes ) { return ( bytes * 10 ) / constant::kBytesPerMegabyte; }
+            static constexpr uint64 toMegabytesX10( uint64 bytes ) { return ( bytes * 10 ) / constant::memory::kBytesPerMegabyte; }
 
             /** @brief 아는 값은 "12.3 MB", 모르는 값은 "unknown" 으로 적습니다. */
             static void formatMegabytes( uint64 bytes, bool bKnown, utf8* pOut, uint32 capacity )
@@ -275,12 +275,12 @@ namespace sw
         }
 
         const RHIMemoryBudget& budget = summary._budget;
-        utf8                   arrUsage[constant::kMaxBuffer32]{};
-        utf8                   arrBudget[constant::kMaxBuffer32]{};
-        utf8                   arrAvailable[constant::kMaxBuffer32]{};
-        RHIMemoryLedgerInternal::formatMegabytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsage, constant::kMaxBuffer32 );
-        RHIMemoryLedgerInternal::formatMegabytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudget, constant::kMaxBuffer32 );
-        RHIMemoryLedgerInternal::formatMegabytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailable, constant::kMaxBuffer32 );
+        utf8                   arrUsage[constant::buffer::kMax32]{};
+        utf8                   arrBudget[constant::buffer::kMax32]{};
+        utf8                   arrAvailable[constant::buffer::kMax32]{};
+        RHIMemoryLedgerInternal::formatMegabytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsage, constant::buffer::kMax32 );
+        RHIMemoryLedgerInternal::formatMegabytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudget, constant::buffer::kMax32 );
+        RHIMemoryLedgerInternal::formatMegabytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailable, constant::buffer::kMax32 );
         const utf8* pScope = budget._bUsageKnown == SW_FALSE          ? ""
                            : budget._scope == RHIMemoryScope::Process ? " (this process)"
                                                                       : " (whole device, including other processes)";

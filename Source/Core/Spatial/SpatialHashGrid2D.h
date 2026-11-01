@@ -8,12 +8,6 @@
 
 namespace sw
 {
-    namespace constant
-    {
-        /** @brief 기본 공간 분할 셀 크기입니다. */
-        inline constexpr float32 kDefaultSpatialCellSize = 64.0f;
-    } // namespace constant
-
     /**
      * @brief 많은 2D/2.5D 객체를 위한 O(1) 공간 분할 해시 그리드입니다.
      */
@@ -41,7 +35,10 @@ namespace sw
          */
         static constexpr int64 kMaxQueryCellCount = 4096;
 
-        explicit SpatialHashGrid2D( float32 cellSize = constant::kDefaultSpatialCellSize );
+        /** @brief 기본 공간 분할 셀 크기입니다(이 형식만 쓰는 기본값이라 형식 안에 둔다). */
+        static constexpr float32 kDefaultCellSize = 64.0f;
+
+        explicit SpatialHashGrid2D( float32 cellSize = kDefaultCellSize );
         ~SpatialHashGrid2D()                                         = default;
         SpatialHashGrid2D( const SpatialHashGrid2D& )                = default;
         SpatialHashGrid2D& operator=( const SpatialHashGrid2D& )     = default;

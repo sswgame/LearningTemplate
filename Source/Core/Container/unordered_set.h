@@ -8,7 +8,7 @@
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
@@ -52,7 +52,7 @@ namespace sw
         const key_equal& get_equal() const noexcept { return _traits.second(); }
 
         /** @brief 빈 버킷 슬롯 표식(모든 비트 1)입니다. */
-        static constexpr uint32 kEmptySlot = invalid_index::kUint32;
+        static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
 
         /** @brief 해시를 32비트 태그로 접습니다. 위쪽 절반을 아래쪽 절반에 섞습니다(`unordered_map::makeTag` 와 같음). */
         static uint32 makeTag( size_t hash ) noexcept

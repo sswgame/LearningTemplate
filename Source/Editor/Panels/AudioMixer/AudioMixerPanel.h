@@ -51,7 +51,7 @@ namespace sw::editor
         void drawBusStrip( IAudioService& audio, uint32 busIndex );
 
     private:
-        AudioMixerModel                       _model;
-        fixed_string<constant::kMaxBuffer256> _clipPath;
+        AudioMixerModel                         _model;
+        fixed_string<constant::buffer::kMax256> _clipPath;
     };
 } // namespace sw::editor

@@ -63,8 +63,8 @@ namespace sw
             {
                 const ReflectAny& any = *static_cast<const ReflectAny*>( pPtr );
                 // 텍스트 표현은 `타입FQN|16진수 바이트` 한 줄이다(JSON 오브젝트로 풀지 않는다).
-                const string                           hex = HexUtil::encodeBytes( any._bytes.data(), any._bytes.size() );
-                StringBuilder<constant::kMaxBuffer128> sb;
+                const string                             hex = HexUtil::encodeBytes( any._bytes.data(), any._bytes.size() );
+                StringBuilder<constant::buffer::kMax128> sb;
                 sb.append( any._typeFqn.view() ).append( '|' ).append( hex );
                 return string{ sb.c_str(), sb.size() };
             }

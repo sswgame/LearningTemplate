@@ -446,7 +446,7 @@ namespace sw::editor
 
             const utf8* pComponentName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
             // 카드 헤더 앞에 컴포넌트 아이콘을 둔다. 유니티 Inspector 와 언리얼 Details 의 컴포넌트 헤더에 해당한다
-            fixed_string<constant::kMaxBuffer128> cardTitle;
+            fixed_string<constant::buffer::kMax128> cardTitle;
             formatstring( cardTitle.data(), cardTitle.capacity(), "%#  %#", EditorComponentIcon::findRow( pComp->getTypeInfo() )._pGlyph, pComponentName );
             const utf8* pName = cardTitle.c_str();
             // 체크박스는 컴포넌트 자기 비트다. 실효값(isActive, 소유 오브젝트의 계층 활성까지 포함)을 읽어 그대로 다시 쓰면

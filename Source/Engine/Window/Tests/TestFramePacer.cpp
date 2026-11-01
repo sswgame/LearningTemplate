@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Window/FramePacer.h"
@@ -67,8 +67,8 @@ SW_TEST_CASE( FramePacerTest, EditorIdleNeedsSettledQuietFrames )
 
 SW_TEST_CASE( FramePacerTest, BackgroundDeadlineFollowsFrameRateLimit )
 {
-    constexpr int64 kStart = 5 * constant::kNanosecondsPerSecond;
-    SW_EXPECT_EQUAL( kStart + constant::kNanosecondsPerSecond / 30, FramePacer::computeBackgroundDeadlineNanoseconds( kStart, 30 ) );
+    constexpr int64 kStart = 5 * constant::time::kNanosecondsPerSecond;
+    SW_EXPECT_EQUAL( kStart + constant::time::kNanosecondsPerSecond / 30, FramePacer::computeBackgroundDeadlineNanoseconds( kStart, 30 ) );
     SW_EXPECT_EQUAL( kStart, FramePacer::computeBackgroundDeadlineNanoseconds( kStart, 0 ) );
     SW_EXPECT_EQUAL( kStart, FramePacer::computeBackgroundDeadlineNanoseconds( kStart, -1 ) );
 }

@@ -264,19 +264,19 @@ namespace sw::editor
             editorContext.getSubsystem<EditorWorkspace>().markSceneDirty(); // 볼륨의 경로가 바뀌었다 — 저장해야 남는다
         EditorNotificationManager& notification = editorContext.getSubsystem<EditorNotificationManager>();
         const uint32               volumeCount  = getVolumeCount();
-        utf8                       arrMessage[constant::kMaxBuffer512];
+        utf8                       arrMessage[constant::buffer::kMax512];
         if ( volumeCount == 0 )
         {
             notification.push( "Bake Light Probes", "Nothing to bake - add a Light Probe Volume", NotificationType::Warning );
         }
         else if ( bCanceled || _bakedCount < volumeCount )
         {
-            formatstring( arrMessage, constant::kMaxBuffer512, "Baked %# of %# volume(s) - %#", _bakedCount, volumeCount, _lastError.c_str() );
+            formatstring( arrMessage, constant::buffer::kMax512, "Baked %# of %# volume(s) - %#", _bakedCount, volumeCount, _lastError.c_str() );
             notification.push( "Bake Light Probes", arrMessage, bCanceled ? NotificationType::Warning : NotificationType::Error );
         }
         else
         {
-            formatstring( arrMessage, constant::kMaxBuffer512, "Baked %# volume(s) - save the scene to keep the paths", _bakedCount );
+            formatstring( arrMessage, constant::buffer::kMax512, "Baked %# volume(s) - save the scene to keep the paths", _bakedCount );
             notification.push( "Bake Light Probes", arrMessage, NotificationType::Success );
         }
     }

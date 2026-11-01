@@ -218,8 +218,8 @@ namespace sw
         const WesternHorse*           pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
         const MountGait               gait            = pMovement != nullptr ? pMovement->getGait() : MountGait::Idle;
         const float32                 speed           = pMovement != nullptr ? pMovement->getForwardSpeed() : 0.0f;
-        utf8                          arrStatus[constant::kMaxBuffer128]{};
-        formatstring( arrStatus, constant::kMaxBuffer128, "Riding %s - %s %.1f m/s - E: dismount  Shift: gallop", pHorseObject->getName().c_str(),
+        utf8                          arrStatus[constant::buffer::kMax128]{};
+        formatstring( arrStatus, constant::buffer::kMax128, "Riding %s - %s %.1f m/s - E: dismount  Shift: gallop", pHorseObject->getName().c_str(),
                       WildWestDirectorComponentInternal::findGaitName( gait ), speed );
         pViewModel->setRideStatus( arrStatus );
         pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );

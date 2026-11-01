@@ -116,7 +116,7 @@ namespace sw
                 uint32 line   = 0;
                 uint32 column = 0;
                 StringUtil::getLineAndColumn( string_view{ text.data(), text.size() }, recorder._position > 0 ? recorder._position - 1 : 0, line, column );
-                StringBuilder<constant::kMaxBuffer1024> message;
+                StringBuilder<constant::buffer::kMax1024> message;
                 message.appendFormat( "%#:%#:%#: %#", sourceName, line, column, string_view{ reason.data(), reason.size() } );
                 return sw::string( message.c_str() );
             }

@@ -81,7 +81,7 @@ namespace sw
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingDestroy{ false }
         , _bRenderHidden{ false }
-        , _managerIndex{ invalid_index::kUint32 }
+        , _managerIndex{ constant::invalid_index::kUint32 }
         , _listComponent{}
         , _pPrimaryScene{ nullptr }
         , _listTickItem{}

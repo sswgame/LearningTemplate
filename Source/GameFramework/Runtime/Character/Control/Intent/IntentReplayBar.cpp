@@ -34,7 +34,7 @@ namespace sw
         : _pUI{ nullptr }
         , _pSession{ nullptr }
         , _scrubSubscription{}
-        , _tickSeconds{ 1.0f / 60.0f }
+        , _tickSeconds{ constant::time::kDefaultFixedStepSeconds }
         , _shownMin{ 0.0f }
         , _shownMax{ 0.0f }
         , _furthestTick{ 0 }
@@ -155,7 +155,7 @@ namespace sw
         }
         if ( pTime != nullptr )
         {
-            fixed_string<constant::kMaxBuffer64> text;
+            fixed_string<constant::buffer::kMax64> text;
             formatstring( text.data(), text.capacity(), "%.1f / %.1f s", static_cast<float32>( tick ) * _tickSeconds, static_cast<float32>( _furthestTick ) * _tickSeconds );
             pTime->setText( text.c_str() );
         }

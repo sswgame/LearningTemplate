@@ -54,8 +54,8 @@ namespace sw
             template <typename... Args>
             static void appendReportFormat( string& inoutReport, string_view format, Args&&... args )
             {
-                utf8 arrMessage[constant::kMaxBuffer512]{};
-                formatstring( arrMessage, constant::kMaxBuffer512, format, std::forward<Args>( args )... );
+                utf8 arrMessage[constant::buffer::kMax512]{};
+                formatstring( arrMessage, constant::buffer::kMax512, format, std::forward<Args>( args )... );
                 appendReport( inoutReport, arrMessage );
             }
 

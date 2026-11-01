@@ -23,7 +23,7 @@ namespace sw::editor
              *          프레임까지 겹친다. 그 사이의 스냅샷이 옛 아틀라스를 아직 그릴 수 있으므로, ImGui 가 세는 미사용 프레임(`UnusedFrames`)이
              *          그 둘을 넘은 뒤에 파괴한다.
              */
-            static constexpr int32 kTextureDestroyDelayFrames = static_cast<int32>( constant::kMaxFrameCountInFlight * 2u + 1u );
+            static constexpr int32 kTextureDestroyDelayFrames = static_cast<int32>( constant::render::kMaxFrameCountInFlight * 2u + 1u );
 
             /**
              * @brief 이 텍스처의 갱신(생성 · 갱신 · 파괴)을 지금 백엔드에 넘길지 판정합니다(네 렌더러 백엔드 공통 — 넘기는 곳이 `updatePendingTextures` 하나다).

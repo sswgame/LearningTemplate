@@ -46,7 +46,7 @@
 #include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -114,7 +114,7 @@ namespace sw
     {
     public:
         /** @brief 풀에 들어가지 못한 메시가 받는 값입니다. 셰이더의 폴백 조건과 같은 의미입니다. */
-        static constexpr uint32 kInvalidBase = invalid_index::kUint32;
+        static constexpr uint32 kInvalidBase = constant::invalid_index::kUint32;
 
         GPUMeshMorphPool()                                     = default;
         ~GPUMeshMorphPool()                                    = default;

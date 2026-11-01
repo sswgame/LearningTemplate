@@ -103,7 +103,7 @@ namespace sw::editor
             const uint64 count = profiler.getLastFrameCount( slot );
             float32      value = ProfilerScopeHistoryInternal::kNoSample;
             if ( count > 0 )
-                value = bCounter ? static_cast<float32>( count ) : static_cast<float32>( static_cast<float64>( profiler.getLastFrameNanos( slot ) ) / constant::kNanosecondsPerMicrosecond );
+                value = bCounter ? static_cast<float32>( count ) : static_cast<float32>( static_cast<float64>( profiler.getLastFrameNanos( slot ) ) / constant::time::kNanosecondsPerMicrosecond );
             track._listValue[_writeIndex] = value;
         }
         // 이번 프레임에 레지스트리에 없던 트랙(아직 이름이 안 실린 항목)도 항목 하나를 비워 둔다 — 고리의 항목 번호가 모든 트랙에서 같아야 한다.
@@ -198,7 +198,7 @@ namespace sw::editor
         text += "\ncaptured ";
         text += to_string( _capturedFrameCount );
         text += "\n";
-        fixed_string<constant::kMaxBuffer32> number;
+        fixed_string<constant::buffer::kMax32> number;
         for ( const ScopeTrack& track : _listTrack )
         {
             if ( track._listValue.empty() )

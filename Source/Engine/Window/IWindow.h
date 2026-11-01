@@ -251,7 +251,7 @@ namespace sw
         /** @brief 지금 제목입니다(UTF-8, 널 종료). 창이 직접 들고 있어 힙을 쓰지 않습니다. */
         const utf8* getTitle() const { return _arrTitle; }
         /** @brief 제목이 담기는 최대 바이트(널 포함)입니다. 넘는 제목은 `setTitle` · `initializeWindow` 가 오류로 거절합니다. */
-        static constexpr uint32 kTitleCapacity = constant::kMaxBuffer256;
+        static constexpr uint32 kTitleCapacity = constant::buffer::kMax256;
 
         // ------------------------------------------------------------------------------
         // IRenderSurface: RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지

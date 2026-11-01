@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -279,7 +279,7 @@ namespace sw
         {
             AsyncReadRequest& request    = *pOperation->_pRequest;
             const uint64      remaining  = request._size - request._bytesDone;
-            const uint64      chunkBytes = remaining < constant::kMaxFileReadChunkBytes ? remaining : constant::kMaxFileReadChunkBytes;
+            const uint64      chunkBytes = remaining < constant::file::kMaxFileReadChunkBytes ? remaining : constant::file::kMaxFileReadChunkBytes;
             pOperation->_iov.iov_base    = request._result._bytes.data() + request._bytesDone;
             pOperation->_iov.iov_len     = static_cast<size_t>( chunkBytes );
 

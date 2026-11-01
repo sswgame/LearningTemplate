@@ -31,8 +31,8 @@ namespace sw
             /** @brief ` key=value` 를 덧붙입니다. 실수는 0.01 단위로 반올림해 가장 짧게 쓴다(초 → ms 처럼 단위를 바꾼 값의 끝자리 오차를 지운다). */
             static void appendValue( string& inoutText, const utf8* pKey, float64 value )
             {
-                utf8 arrBuffer[constant::kMaxBuffer32];
-                (void)StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, static_cast<float32>( MathUtil::round( value * kHundredths ) / kHundredths ) );
+                utf8 arrBuffer[constant::buffer::kMax32];
+                (void)StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, static_cast<float32>( MathUtil::round( value * kHundredths ) / kHundredths ) );
                 if ( inoutText.empty() == false )
                     inoutText += ' ';
                 inoutText += pKey;
@@ -67,7 +67,7 @@ namespace sw
         conditions._lossRate                = static_cast<float32>( MathUtil::clamp( gv_netEmulationLossPercent, 0, 100 ) ) * Internal::kPercent;
         conditions._duplicateRate           = static_cast<float32>( MathUtil::clamp( gv_netEmulationDuplicatePercent, 0, 100 ) ) * Internal::kPercent;
         conditions._reorderRate             = static_cast<float32>( MathUtil::clamp( gv_netEmulationReorderPercent, 0, 100 ) ) * Internal::kPercent;
-        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, gv_netEmulationBandwidthKilobytesPerSecond ) * static_cast<int32>( constant::kBytesPerKilobyte );
+        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, gv_netEmulationBandwidthKilobytesPerSecond ) * static_cast<int32>( constant::memory::kBytesPerKilobyte );
         return conditions;
     }
 
@@ -98,7 +98,7 @@ namespace sw
             else if ( key == "reorderPercent" )
                 parsed._reorderRate = MathUtil::min( value, 100.0f ) * Internal::kPercent;
             else if ( key == "bandwidthKBps" )
-                parsed._bandwidthBytesPerSecond = static_cast<int32>( value ) * static_cast<int32>( constant::kBytesPerKilobyte );
+                parsed._bandwidthBytesPerSecond = static_cast<int32>( value ) * static_cast<int32>( constant::memory::kBytesPerKilobyte );
             else
             {
                 outError = "unknown key '" + string( key ) + "' (latencyMs, jitterMs, lossPercent, duplicatePercent, reorderPercent, bandwidthKBps)";
@@ -121,7 +121,7 @@ namespace sw
         Internal::appendValue( text, "lossPercent", static_cast<float64>( _lossRate / Internal::kPercent ) );
         Internal::appendValue( text, "duplicatePercent", static_cast<float64>( _duplicateRate / Internal::kPercent ) );
         Internal::appendValue( text, "reorderPercent", static_cast<float64>( _reorderRate / Internal::kPercent ) );
-        Internal::appendValue( text, "bandwidthKBps", static_cast<float64>( _bandwidthBytesPerSecond ) / static_cast<float64>( constant::kBytesPerKilobyte ) );
+        Internal::appendValue( text, "bandwidthKBps", static_cast<float64>( _bandwidthBytesPerSecond ) / static_cast<float64>( constant::memory::kBytesPerKilobyte ) );
         return text;
     }
 

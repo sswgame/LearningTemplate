@@ -43,7 +43,7 @@ namespace sw
         string fixedAbsPath; // 열 때 절대 경로로 굳힌다 — 기동 중에 작업 폴더가 바뀌어도 같은 파일이다
         if ( _fixedFilePath.empty() )
         {
-            logFolderPath = FileUtil::joinPath( ProcessRoots::get()._saved.str(), path::kLogsFolder );
+            logFolderPath = FileUtil::joinPath( ProcessRoots::get()._saved.str(), constant::path::kLogsFolder );
         }
         else
         {
@@ -106,7 +106,7 @@ namespace sw
             }
 
             _lastLogHour = record._hour;
-            fixed_string<constant::kMaxBuffer128> expectedFileName{};
+            fixed_string<constant::buffer::kMax128> expectedFileName{};
             formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#_%#.txt",
                           record._year, record._month, record._day, record._hour, getCrashSessionID() );
             _currentLogFileName = expectedFileName.c_str();

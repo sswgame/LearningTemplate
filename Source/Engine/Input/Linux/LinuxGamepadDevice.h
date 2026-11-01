@@ -3,7 +3,7 @@
  * @brief Linux 커널 조이스틱 API(/dev/input/jsN) 기반 게임패드 구현입니다(GamepadDevice 상속).
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -60,9 +60,9 @@ namespace sw
         /** @brief force-feedback fd를 닫고 관련 상태를 리셋합니다. */
         void closeForceFeedback();
 
-        int32                  _fdJoystick;        /**< /dev/input/jsN 파일 디스크립터입니다. 연결 전이면 invalid_index::kInt32(POSIX open() 실패 규약과 같은 -1)입니다. */
-        int32                  _fdForceFeedback;   /**< 대응하는 /dev/input/eventN 파일 디스크립터입니다(럼블용). 없으면 invalid_index::kInt32 입니다. */
-        int16                  _ffEffectID;        /**< ioctl( EVIOCSFF ) 로 업로드한 FF_RUMBLE 이펙트 ID 입니다. 없으면 invalid_index::kInt16 입니다. */
+        int32                  _fdJoystick;        /**< /dev/input/jsN 파일 디스크립터입니다. 연결 전이면 constant::invalid_index::kInt32(POSIX open() 실패 규약과 같은 -1)입니다. */
+        int32                  _fdForceFeedback;   /**< 대응하는 /dev/input/eventN 파일 디스크립터입니다(럼블용). 없으면 constant::invalid_index::kInt32 입니다. */
+        int16                  _ffEffectID;        /**< ioctl( EVIOCSFF ) 로 업로드한 FF_RUMBLE 이펙트 ID 입니다. 없으면 constant::invalid_index::kInt16 입니다. */
         uint16                 _ffStrongMagnitude; /**< 마지막으로 업로드한 강모터 세기입니다. 같은 값이면 다시 업로드하지 않습니다. */
         uint16                 _ffWeakMagnitude;   /**< 마지막으로 업로드한 약모터 세기입니다. */
         float32                _reconnectTimer;    /**< 연결되지 않은 상태에서 다시 열기까지 남은 시간(초)입니다. XInput 과 같이 폴링 남발을 막습니다. */

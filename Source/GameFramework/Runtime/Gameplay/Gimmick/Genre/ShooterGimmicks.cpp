@@ -201,7 +201,7 @@ namespace sw
         const float32 desiredYaw = MathUtil::atan2( toTarget._x, toTarget._z );
         float3        rotation   = pScene->getLocalRotation();
         const float32 delta      = MathUtil::wrapAngle( desiredYaw - rotation._y );
-        const float32 maxTurn    = _turnSpeed * GenreGimmickUtil::kStepTime;
+        const float32 maxTurn    = _turnSpeed * constant::time::kDefaultFixedStepSeconds;
         rotation._y += MathUtil::clamp( delta, -maxTurn, maxTurn );
         pScene->setLocalRotation( rotation );
 

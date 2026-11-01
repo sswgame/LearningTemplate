@@ -906,7 +906,7 @@ namespace sw::editor
         }
 
         const uint32 slot = _drawSnapshotHandoff.beginRender();
-        if ( slot < constant::kMaxFrameCountInFlight )
+        if ( slot < constant::render::kMaxFrameCountInFlight )
         {
             ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
             if ( pDrawData != nullptr )

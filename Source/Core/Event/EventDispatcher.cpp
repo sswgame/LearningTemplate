@@ -23,7 +23,7 @@ namespace sw
         , _mapChannelDispatchTable{}
         , _mapChannelQueue{}
         , _busThreadID{}
-        , _arrFrameAllocator{ LinearAllocator{ constant::kDefaultLinearCapacity }, LinearAllocator{ constant::kDefaultLinearCapacity } }
+        , _arrFrameAllocator{ LinearAllocator{ constant::memory::kDefaultLinearCapacity }, LinearAllocator{ constant::memory::kDefaultLinearCapacity } }
         , _arrListOverflowAllocation{}
         , _activeAllocatorIndex{ 0 }
     {

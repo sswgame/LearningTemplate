@@ -529,7 +529,7 @@ namespace sw
         struct D3D11TimestampFrame
         {
             Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
-            Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::kMaxGPUTimestampSlot];
+            Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::render::kMaxGPUTimestampSlot];
             GPUTimestampSlotMask                _writtenMask{ 0 };
             uint8                               _bPending{ SW_FALSE };
         };
@@ -539,7 +539,7 @@ namespace sw
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(링 한 바퀴 뒤)에 DONOTFLUSH 로 한 번만 묻는다.
          *          아직 결과가 없으면 이번 바퀴는 건너뛴다. 기다리면 측정하려던 파이프라인을 멈춰 세운다.
          */
-        D3D11TimestampFrame _arrTimestampFrame[constant::kMaxFrameCountInFlight];
+        D3D11TimestampFrame _arrTimestampFrame[constant::render::kMaxFrameCountInFlight];
         uint32              _timestampFrameIndex;
         /// @brief 이번 프레임에 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
         atomic<GPUTimestampSlotMask> _timestampWrittenMask;
@@ -559,7 +559,7 @@ namespace sw
         /// @brief `waitIdleInternal` 이 GPU 가 앞선 일을 모두 끝냈는지 묻는 이벤트 쿼리입니다. 디바이스를 세울 때 만들고, 못 만들면 초기화가 실패합니다.
         Microsoft::WRL::ComPtr<ID3D11Query> _idleQuery;
         /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 입니다. 디바이스를 세울 때 만듭니다.
-        Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[constant::kMaxFrameCountInFlight];
+        Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[constant::render::kMaxFrameCountInFlight];
         uint64                              _frameSerial;            ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
         uint64                              _completedFrameSerial;   ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)

@@ -43,7 +43,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY( Min = 0.001, Max = 1.0 )
-        float32 _step{ 1.0f / 60.0f };
+        float32 _step{ constant::time::kDefaultFixedStepSeconds };
         PROPERTY( Min = 1.0 )
         float32 _arenaRadius{ 8.0f };
         PROPERTY( Min = 0.1 )

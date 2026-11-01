@@ -361,9 +361,9 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        RHITextureMipSpan arrMip[constant::render::kMaxTextureMipCount]{};
         const uint32      mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height,
-                                                               texDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
+                                                               texDesc.MipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
             SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
@@ -379,7 +379,7 @@ namespace sw
         if ( uploadBytes > _pDevice->_directUploadMaxBytes )
         {
             // 큰 업로드는 소스 복사를 즉시 컨텍스트 잠금 밖(스테이징 생성)으로 뺀다. 렌더 스레드의 ExecuteCommandList · Present 가 그 복사를 기다리지 않는다.
-            D3D11_SUBRESOURCE_DATA arrInitialData[constant::kMaxTextureMipCount]{};
+            D3D11_SUBRESOURCE_DATA arrInitialData[constant::render::kMaxTextureMipCount]{};
             for ( uint32 mip = 0; mip < mipCount; ++mip )
             {
                 arrInitialData[mip].pSysMem          = arrMip[mip]._pData;
@@ -678,7 +678,7 @@ namespace sw
             for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
             {
                 D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
-                dsvDesc.Format                         = toDxgiFormat( constant::kDepthStencilFormat );
+                dsvDesc.Format                         = toDxgiFormat( constant::render::kDepthStencilFormat );
                 dsvDesc.ViewDimension                  = bSliced ? D3D11_DSV_DIMENSION_TEXTURE2DARRAY : D3D11_DSV_DIMENSION_TEXTURE2D;
                 dsvDesc.Texture2DArray.MipSlice        = 0;
                 dsvDesc.Texture2DArray.FirstArraySlice = slice;
@@ -920,11 +920,11 @@ namespace sw
                                 desc._vertexShaderPath.c_str() );
                 return 0;
             }
-            // 입력 레이아웃은 **공용 테이블**(constant::arrVertexAttribute)에서 만든다. DX12, Vulkan, GL 과 같은 테이블이다.
-            D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
-            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 만든다. DX12, Vulkan, GL 과 같은 테이블이다.
+            D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
             {
-                const RHIVertexAttribute& attribute                  = constant::arrVertexAttribute[attributeIndex];
+                const RHIVertexAttribute& attribute                  = constant::render::arrVertexAttribute[attributeIndex];
                 arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
                 arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
                 arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
@@ -932,7 +932,7 @@ namespace sw
                 arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
                 arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
             }
-            if ( isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
+            if ( isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, constant::render::kVertexAttributeCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
             {
                 SW_LOG_ERROR( "createPipelineState: CreateInputLayout failed '%#'", desc._vertexShaderPath.c_str() );
                 return 0;

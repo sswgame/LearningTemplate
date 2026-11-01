@@ -64,7 +64,7 @@ namespace sw
             /** @brief 이 종료 까닭은 접속이 비기를 기다린다. 오케스트레이터의 종료 신호만 — 사람이 내린 것(콘솔 · Ctrl+C) · 테스트 틱 상한 · OS 가 시한을 주는 창 닫기 · 시스템 종료는 바로 내린다. */
             static bool shouldDrainFor( ShutdownCause cause ) { return cause == ShutdownCause::Terminate || cause == ShutdownCause::ServiceStop; }
 
-            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
+            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond; }
         };
 
         /** @brief 링커가 표식 문자열을 버리지 못하게 정적 초기화에서 한 번 읽습니다(서버 전용 모듈의 생성 표식과 같은 방식입니다). */
@@ -176,7 +176,7 @@ namespace sw
 
         if ( loadServerConfig() == false )
             return false;
-        _tickNanoseconds = constant::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
+        _tickNanoseconds = constant::time::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
         // 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostService`)이고,
         // 내리는 것은 `shutdown` 의 역순 한 줄이다.
         const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
@@ -200,7 +200,7 @@ namespace sw
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setClockNumber( LogClock::Tick, _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
-                     _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
+                     _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::time::kNanosecondsPerMillisecond );
         return true;
     }
 
@@ -429,12 +429,12 @@ namespace sw
         _bDraining = SW_TRUE;
         _observability.getHealthRegistry()->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
         const bool  bWait  = ServerAppInternal::shouldDrainFor( cause );
-        const int64 waitMs = bWait ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::kMillisecondsPerSecond : 0;
+        const int64 waitMs = bWait ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::time::kMillisecondsPerSecond : 0;
         _drainDeadlineMs   = monotonicMs + waitMs;
         // 키트에 종료를 알리고(진행 중인 일 마무리) 게임 접속자에게 끊김 사유를 보낸다. 기다리지 않는 종료(콘솔 · Ctrl+C)는 사유 패킷이 나가기 전에 내려갈 수 있어 최선만 다한다.
         ServerShutdownNotice notice;
         notice._cause        = cause;
-        notice._graceSeconds = static_cast<uint32>( waitMs / constant::kMillisecondsPerSecond );
+        notice._graceSeconds = static_cast<uint32>( waitMs / constant::time::kMillisecondsPerSecond );
         if ( _serverServices != nullptr )
             _serverServices->beginShutdown( notice );
         GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
@@ -544,7 +544,7 @@ namespace sw
                 const uint32 dropped = static_cast<uint32>( ( now - deadline ) / _tickNanoseconds );
                 if ( _droppedTickCount == 0 ||
                      _droppedTickCount / ServerAppInternal::kDroppedTickWarningInterval != ( _droppedTickCount + dropped ) / ServerAppInternal::kDroppedTickWarningInterval )
-                    SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / constant::kNanosecondsPerMicrosecond );
+                    SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / constant::time::kNanosecondsPerMicrosecond );
                 _droppedTickCount += dropped;
                 _observability.addDroppedTicks( dropped );
                 deadline = now;
@@ -603,8 +603,8 @@ namespace sw
 
     void ServerApp::logStatus() const
     {
-        const int64 uptimeSeconds   = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerSecond;
-        const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / constant::kNanosecondsPerMicrosecond : 0;
+        const int64 uptimeSeconds   = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::time::kNanosecondsPerSecond;
+        const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / constant::time::kNanosecondsPerMicrosecond : 0;
         const int32 serviceCount    = _serverServices != nullptr ? _serverServices->getRunningCount() : 0;
         const int32 connectionCount = getServiceConnectionCount();
         uint64      residentBytes   = 0;
@@ -612,8 +612,8 @@ namespace sw
         (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
         SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
                      "resident %# MiB",
-                     uptimeSeconds, _tickCount, ( _pDebugControl != nullptr && _pDebugControl->isPaused() ) ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
-                     _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::kBytesPerMegabyte ) );
+                     uptimeSeconds, _tickCount, ( _pDebugControl != nullptr && _pDebugControl->isPaused() ) ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::time::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::time::kNanosecondsPerMicrosecond,
+                     _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::memory::kBytesPerMegabyte ) );
     }
 
     void ServerApp::shutdown()

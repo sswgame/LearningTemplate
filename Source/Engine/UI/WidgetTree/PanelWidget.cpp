@@ -2,7 +2,7 @@
 
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/UI/Layout/UILayoutPass.h"
@@ -48,7 +48,7 @@ namespace sw
     unique_ptr<Widget> PanelWidget::removeChild( Widget* pChild )
     {
         const uint32 index = findChildIndex( pChild );
-        if ( index == invalid_index::kUint32 )
+        if ( index == constant::invalid_index::kUint32 )
             return nullptr;
         unique_ptr<Widget> child = std::move( _listChild[index] );
         _listChild.erase( _listChild.begin() + index );
@@ -92,7 +92,7 @@ namespace sw
             if ( _listChild[index].get() == pChild )
                 return index;
         }
-        return invalid_index::kUint32;
+        return constant::invalid_index::kUint32;
     }
 
     void PanelWidget::setClipChildren( bool bClip )

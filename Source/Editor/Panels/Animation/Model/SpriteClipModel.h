@@ -75,20 +75,20 @@ namespace sw::editor
         void addAnimation();
         bool removeSelectedAnimation();
         /** @brief 고른 구간의 이름 입력란입니다. 입력을 마치면 `commitAnimationName` 으로 구간에 옮긴다. */
-        fixed_string<constant::kMaxBuffer64>& editAnimationName() { return _animationName; }
+        fixed_string<constant::buffer::kMax64>& editAnimationName() { return _animationName; }
         /** @brief 이름 입력란을 고른 구간에 옮깁니다. 고른 것이 없으면 false 입니다. */
         bool commitAnimationName();
 
         // ------------------------------------------------------------------------------
         // 4) 아틀라스
         // ------------------------------------------------------------------------------
-        fixed_string<constant::kMaxBuffer256>& editAtlasPath() { return _atlasPath; }
-        const utf8*                            getAtlasPath() const { return _atlasPath.c_str(); }
-        bool                                   hasAtlasPath() const { return _atlasPath.empty() == false; }
-        int32&                                 editSliceColumns() { return _sliceColumns; }
-        int32&                                 editSliceRows() { return _sliceRows; }
-        int32                                  getSliceColumns() const { return _sliceColumns; }
-        int32                                  getSliceRows() const { return _sliceRows; }
+        fixed_string<constant::buffer::kMax256>& editAtlasPath() { return _atlasPath; }
+        const utf8*                              getAtlasPath() const { return _atlasPath.c_str(); }
+        bool                                     hasAtlasPath() const { return _atlasPath.empty() == false; }
+        int32&                                   editSliceColumns() { return _sliceColumns; }
+        int32&                                   editSliceRows() { return _sliceRows; }
+        int32                                    getSliceColumns() const { return _sliceColumns; }
+        int32                                    getSliceRows() const { return _sliceRows; }
         /** @brief 열 · 행 입력란을 1..`kMaxSliceCount` 로 묶습니다. 입력란을 그린 뒤 부릅니다. */
         void clampSliceGrid();
         /** @brief `pickAtlasCell` 이 한 일입니다(되돌리기 기록 이름이 갈린다). */
@@ -109,16 +109,16 @@ namespace sw::editor
         void adoptClip( SpriteClipAsset&& clip );
 
     private:
-        fixed_string<constant::kMaxBuffer256> _atlasPath;
-        string                                _status;
-        vector<SpriteClipFrame>               _listFrame;
-        vector<SpriteClipKey>                 _listKey;
-        vector<SpriteClipAnimation>           _listAnimation;
-        fixed_string<constant::kMaxBuffer64>  _animationName; ///< 고른 애니메이션 이름의 편집 칸입니다. 고름이 바뀌면 `selectAnimation` 이 함께 바꾼다
-        int32                                 _selectedFrame;
-        int32                                 _selectedKey;
-        int32                                 _selectedAnimation;
-        int32                                 _sliceColumns; ///< 아틀라스를 나눌 열 수(셀 고르기)
-        int32                                 _sliceRows;    ///< 아틀라스를 나눌 행 수
+        fixed_string<constant::buffer::kMax256> _atlasPath;
+        string                                  _status;
+        vector<SpriteClipFrame>                 _listFrame;
+        vector<SpriteClipKey>                   _listKey;
+        vector<SpriteClipAnimation>             _listAnimation;
+        fixed_string<constant::buffer::kMax64>  _animationName; ///< 고른 애니메이션 이름의 편집 칸입니다. 고름이 바뀌면 `selectAnimation` 이 함께 바꾼다
+        int32                                   _selectedFrame;
+        int32                                   _selectedKey;
+        int32                                   _selectedAnimation;
+        int32                                   _sliceColumns; ///< 아틀라스를 나눌 열 수(셀 고르기)
+        int32                                   _sliceRows;    ///< 아틀라스를 나눌 행 수
     };
 } // namespace sw::editor

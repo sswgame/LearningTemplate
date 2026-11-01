@@ -15,7 +15,7 @@ namespace sw
         struct HTTPTypesInternal
         {
             static constexpr int32 kMaxChunkLine   = 64;
-            static constexpr int64 kMaxChunkSize   = static_cast<int64>( 64 * constant::kBytesPerMegabyte );
+            static constexpr int64 kMaxChunkSize   = static_cast<int64>( 64 * constant::memory::kBytesPerMegabyte );
             static constexpr int32 kMaxTargetBytes = 8192;
 
             static bool isUnreserved( utf8 ch )

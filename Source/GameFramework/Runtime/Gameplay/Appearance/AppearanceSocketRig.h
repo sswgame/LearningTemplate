@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -82,7 +82,7 @@ namespace sw
         /** @brief 몸 유닛의 번호입니다. */
         static constexpr uint32 kBodyUnit = 0;
         /** @brief 소켓 에셋이 없는 부품의 유닛 번호입니다. */
-        static constexpr uint32 kNoUnit = invalid_index::kUint32;
+        static constexpr uint32 kNoUnit = constant::invalid_index::kUint32;
 
         AppearanceSocketRig();
 

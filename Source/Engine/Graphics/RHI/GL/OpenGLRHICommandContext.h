@@ -54,7 +54,7 @@ namespace sw
         void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
-        /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 테이블(constant::arrVertexAttribute)대로 vbo 와 인스턴스 슬롯 스트림의 속성을 설정합니다.
+        /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 테이블(constant::render::arrVertexAttribute)대로 vbo 와 인스턴스 슬롯 스트림의 속성을 설정합니다.
          *         모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다. */
         void bindMeshVaoAttribs( uint32 vbo );
         /**

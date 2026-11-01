@@ -49,7 +49,7 @@ namespace sw
             static constexpr int32  kMaxSendBytes             = 256 * 1024;
             static constexpr int32  kEventBatch               = 64;
             static constexpr int32  kLoopWaitMilli            = 100;
-            static constexpr int64  kSweepIntervalNanoseconds = 100 * constant::kNanosecondsPerMillisecond;
+            static constexpr int64  kSweepIntervalNanoseconds = 100 * constant::time::kNanosecondsPerMillisecond;
             static constexpr uint64 kListenTag                = ~0ull;      ///< epoll 데이터. 리슨 소켓이다(연결은 핸들 packed 값이며, 세대가 0xFFFFFFFF 에 닿기 전에는 겹치지 않는다).
             static constexpr uint64 kWakeTag                  = ~0ull - 1u; ///< epoll 데이터. eventfd 이다.
 

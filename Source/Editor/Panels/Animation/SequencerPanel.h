@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
@@ -75,19 +75,19 @@ namespace sw::editor
         void addKeyTrack( SequenceTrackKind kind );
 
     private:
-        fixed_string<constant::kMaxBuffer512> _cinematicNote;
-        unique_ptr<ClipSequence>              _sequence;
-        unique_ptr<sw::SequencePlayer>        _previewPlayer;
-        vector<SequenceClipTiming>            _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)
-        vector<SequenceKeyTrack>              _listTrack;        ///< 키 트랙(트랜스폼 · 프로퍼티)
-        vector<float32>                       _listKeyFrame;     ///< 키 띠가 쓰는 키 프레임(멤버라 프레임마다 할당하지 않는다)
-        EditorCurveEditorState                _curveState;       ///< 커브 단추로 연 채널의 편집기 상태
-        int32                                 _currentFrame;
-        int32                                 _selected;
-        int32                                 _firstFrame;
-        int32                                 _selectedTrack; ///< 고른 키 트랙(-1 이면 없음)
-        int32                                 _curveTrack;    ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
-        int32                                 _curveChannel;  ///< 커브 편집기가 보는 채널
-        bool                                  _bExpanded;
+        fixed_string<constant::buffer::kMax512> _cinematicNote;
+        unique_ptr<ClipSequence>                _sequence;
+        unique_ptr<sw::SequencePlayer>          _previewPlayer;
+        vector<SequenceClipTiming>              _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)
+        vector<SequenceKeyTrack>                _listTrack;        ///< 키 트랙(트랜스폼 · 프로퍼티)
+        vector<float32>                         _listKeyFrame;     ///< 키 띠가 쓰는 키 프레임(멤버라 프레임마다 할당하지 않는다)
+        EditorCurveEditorState                  _curveState;       ///< 커브 단추로 연 채널의 편집기 상태
+        int32                                   _currentFrame;
+        int32                                   _selected;
+        int32                                   _firstFrame;
+        int32                                   _selectedTrack; ///< 고른 키 트랙(-1 이면 없음)
+        int32                                   _curveTrack;    ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
+        int32                                   _curveChannel;  ///< 커브 편집기가 보는 채널
+        bool                                    _bExpanded;
     };
 } // namespace sw::editor

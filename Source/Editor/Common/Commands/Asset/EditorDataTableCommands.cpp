@@ -142,7 +142,7 @@ namespace sw::editor
 
     string EditorDataTableCommands::getGameDataFolderPath()
     {
-        return EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ) );
+        return EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kDataFolder ) );
     }
 
     bool EditorDataTableCommands::loadLocalizationProject( string_view projectPathView, LocalizationSheet& outSheet )

@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -34,8 +34,8 @@ namespace sw
 {
     struct StreamFrameConstant
     {
-        static constexpr int32 kHeaderSize          = 6;                                                 ///< 길이 4 + 종류 1 + 깃발 1
-        static constexpr int32 kDefaultMaxFrameSize = static_cast<int32>( constant::kBytesPerMegabyte ); ///< 몸 상한
+        static constexpr int32 kHeaderSize          = 6;                                                         ///< 길이 4 + 종류 1 + 깃발 1
+        static constexpr int32 kDefaultMaxFrameSize = static_cast<int32>( constant::memory::kBytesPerMegabyte ); ///< 몸 상한
     };
 } // namespace sw
 

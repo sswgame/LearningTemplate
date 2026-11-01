@@ -31,7 +31,7 @@ namespace sw
         _pPeakResidentGauge = pRegistry->registerGauge( "process_resident_memory_max_bytes", "Peak resident memory size in bytes since the process started" );
         MetricGauge* pStart = pRegistry->registerGauge( "process_start_time_seconds", "Start time of the process since the Unix epoch in seconds" );
         if ( pStart != nullptr )
-            pStart->set( static_cast<float64>( startUnixMilliseconds ) / constant::kMillisecondsPerSecond );
+            pStart->set( static_cast<float64>( startUnixMilliseconds ) / constant::time::kMillisecondsPerSecond );
         update();
     }
 
@@ -63,7 +63,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         // statm 의 둘째 값이 상주 페이지 수다. 최대값은 getrusage 의 ru_maxrss(KiB)다.
         string statmText;
-        if ( FileUtil::readStreamTextFile( "/proc/self/statm", statmText, constant::kMaxBuffer256 ) == false )
+        if ( FileUtil::readStreamTextFile( "/proc/self/statm", statmText, constant::buffer::kMax256 ) == false )
             return false;
         const string_view line{ statmText };
         const size_t      firstSpace = line.find( ' ' );

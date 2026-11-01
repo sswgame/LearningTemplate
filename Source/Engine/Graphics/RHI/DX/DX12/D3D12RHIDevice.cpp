@@ -103,7 +103,7 @@ namespace sw
         , _textureTransferMutex{}
         , _mapTextureTransferSerial{}
         , _readbackTable{}
-        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
+        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
         , _transferReleaseQueue{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
@@ -378,7 +378,7 @@ namespace sw
         // DRED 페이지 폴트 출력(flushDebugMessages)은 폴트 주소를 덮는 할당을 이 이름으로 보여 준다. 이름이 없으면 "unnamed" 뿐이다.
         // 핸들 번호를 넣어 RHI 로그(핸들로 적는다)와 맞춰 볼 수 있게 한다. 크기 · 포맷은 같은 종류의 여러 할당을 가린다.
         const D3D12_RESOURCE_DESC desc = pResource->GetDesc();
-        utf16                     arrName[constant::kMaxBuffer128]{};
+        utf16                     arrName[constant::buffer::kMax128]{};
         swprintf_s( arrName, L"SW %ls %llu (%llux%u fmt %u)", pKind, static_cast<uint64>( handle ), static_cast<uint64>( desc.Width ),
                     static_cast<uint32>( desc.Height ), static_cast<uint32>( desc.Format ) );
         pResource->SetName( arrName );
@@ -550,11 +550,11 @@ namespace sw
                 DXGI_ADAPTER_DESC1 adapterDesc{};
                 if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
                 {
-                    utf8         arrName[constant::kMaxBuffer256]{};
+                    utf8         arrName[constant::buffer::kMax256]{};
                     const string name = StringUtil::utf16ToUTF8( adapterDesc.Description );
-                    formatstring( arrName, constant::kMaxBuffer256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(),
+                    formatstring( arrName, constant::buffer::kMax256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(),
                                   adapterDesc.VendorId, adapterDesc.DeviceId,
-                                  static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::kBytesPerMegabyte ) );
+                                  static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
                     CrashHandler::setContextValue( "GPU", arrName );
                 }
             }
@@ -702,13 +702,13 @@ namespace sw
             _bOnlineHeapExhaustedLogged = SW_FALSE;
         }
 
-        for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
+        for ( uint32 frameIndex = 0; frameIndex < constant::render::kMaxFrameCountInFlight; ++frameIndex )
         {
             if ( isHrSuccess( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ), "CreateCommandAllocator" ) == false )
                 return false;
             // 디버그 레이어의 "allocator is being reset [in use]" 메시지는 객체 이름을 찍는다. 이름이 없으면
             // 어느 얼로케이터가 문제인지 주소만 남아 추적이 안 된다.
-            utf16 arrName[constant::kMaxBuffer64]{};
+            utf16 arrName[constant::buffer::kMax64]{};
             swprintf_s( arrName, L"FrameStreamAllocator%u", frameIndex );
             _arrCommandAllocator[frameIndex]->SetName( arrName );
         }
@@ -1130,7 +1130,7 @@ namespace sw
         bool         bAdvanced = _frameRing.beginFrame( completed );
         if ( bAdvanced == false )
         {
-            const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::kMaxFrameCountInFlight;
+            const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::render::kMaxFrameCountInFlight;
             const uint64 waitValue = _frameRing.getFenceValue( nextIndex );
             // 2 초가 지나도 **끝날 때까지** 기다린다(`waitForFenceValue`). 주의: 시간 초과를 무시하고 링을 넘기지 못한 채 이어가면, 방금 제출한
             // 프레임의 얼로케이터를 Reset 하고 GPU 가 읽는 상수버퍼 링 칸을 덮어쓴다. 장치가 제거됐으면(Windows 는 멈춘 GPU 를 TDR 로 제거한다)
@@ -1262,7 +1262,7 @@ namespace sw
             return entry;
         }
         const uint32 entryIndex = _cmdListEntryCreated++;
-        utf16        arrName[constant::kMaxBuffer64]{};
+        utf16        arrName[constant::buffer::kMax64]{};
         swprintf_s( arrName, L"PoolAllocator%u", entryIndex );
         entry._allocator->SetName( arrName );
         swprintf_s( arrName, L"PoolList%u", entryIndex );
@@ -1292,7 +1292,7 @@ namespace sw
     uint32 D3D12RHIDevice::getTimestampSlotCount() const
     {
         return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampFrequency != 0 )
-                 ? constant::kMaxGPUTimestampSlot
+                 ? constant::render::kMaxGPUTimestampSlot
                  : 0u;
     }
 
@@ -1317,7 +1317,7 @@ namespace sw
         uint64 cpuTick{ 0 };
         if ( FAILED( _commandQueue->GetClockCalibration( &gpuTick, &cpuTick ) ) )
             return false;
-        outGPUNanos = RHITimestamp::convertTickToNanos( gpuTick, constant::kNanosecondsPerSecond / static_cast<float64>( frequency ) );
+        outGPUNanos = RHITimestamp::convertTickToNanos( gpuTick, constant::time::kNanosecondsPerSecond / static_cast<float64>( frequency ) );
         return true;
     }
 
@@ -1334,7 +1334,7 @@ namespace sw
 
         D3D12_QUERY_HEAP_DESC heapDesc{};
         heapDesc.Type  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-        heapDesc.Count = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
+        heapDesc.Count = constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight;
         if ( isHrSuccess( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ), "CreateQueryHeap" ) == false )
             return;
 
@@ -1371,7 +1371,7 @@ namespace sw
 
         const uint32 base       = getTimestampBase();
         const size_t byteOffset = sizeof( uint64 ) * base;
-        D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::kMaxGPUTimestampSlot };
+        D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::render::kMaxGPUTimestampSlot };
 
         void* pMapped{ nullptr };
         if ( isHrSuccess( _timestampReadback->Map( 0, &range, &pMapped ), "ID3D12Resource::Map (timestamp readback)" ) == false || pMapped == nullptr )
@@ -1381,7 +1381,7 @@ namespace sw
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
         // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
-        RHITimestamp::resolve( pTicks, writtenMask, constant::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ), _timestampFrame );
+        RHITimestamp::resolve( pTicks, writtenMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ), _timestampFrame );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
         _timestampReadback->Unmap( 0, &emptyRange );
@@ -1473,7 +1473,7 @@ namespace sw
                     // 적힌 칸의 연속 구간만 옮긴다. 한 번도 적지 않은 칸을 Resolve 하면 디버그 레이어 오류(1319 "Cannot Resolve query that has never been performed")다.
                     const uint32 base = getTimestampBase();
                     uint32       slot = 0;
-                    while ( slot < constant::kMaxGPUTimestampSlot )
+                    while ( slot < constant::render::kMaxGPUTimestampSlot )
                     {
                         if ( ( writtenMask & makeGPUTimestampSlotBit( slot ) ) == 0 )
                         {
@@ -1481,7 +1481,7 @@ namespace sw
                             continue;
                         }
                         const uint32 runStart = slot;
-                        while ( slot < constant::kMaxGPUTimestampSlot && ( writtenMask & makeGPUTimestampSlotBit( slot ) ) != 0 )
+                        while ( slot < constant::render::kMaxGPUTimestampSlot && ( writtenMask & makeGPUTimestampSlotBit( slot ) ) != 0 )
                         {
                             ++slot;
                         }
@@ -1793,12 +1793,12 @@ namespace sw
         {
 
             void* pMapped{ nullptr };
-            if ( createMappedUploadBuffer( sizeof( constant::arrFallbackVertex ), _vertexBuffer, pMapped ) == false )
+            if ( createMappedUploadBuffer( sizeof( constant::render::arrFallbackVertex ), _vertexBuffer, pMapped ) == false )
             {
                 SW_LOG_ERROR( "Failed to create or map fullscreen vertex buffer." );
                 return false;
             }
-            Memory::copy( pMapped, constant::arrFallbackVertex, sizeof( constant::arrFallbackVertex ) );
+            Memory::copy( pMapped, constant::render::arrFallbackVertex, sizeof( constant::render::arrFallbackVertex ) );
             _vertexBuffer->Unmap( 0, nullptr );
         }
 

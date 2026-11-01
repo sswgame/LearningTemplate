@@ -296,7 +296,7 @@ namespace sw::editor
     void PairedAnimationPanel::drawNotifyRows()
     {
         const PairedAnimationContentDef& content     = _model.getContent();
-        uint32                           removeIndex = invalid_index::kUint32;
+        uint32                           removeIndex = constant::invalid_index::kUint32;
         for ( uint32 notifyIndex = 0; notifyIndex < static_cast<uint32>( content._listNotify.size() ); ++notifyIndex )
         {
             const PairedAnimationNotifyDef& notify = content._listNotify[notifyIndex];
@@ -326,7 +326,7 @@ namespace sw::editor
                 removeIndex = notifyIndex;
             ImGui::PopID();
         }
-        if ( removeIndex != invalid_index::kUint32 )
+        if ( removeIndex != constant::invalid_index::kUint32 )
             reportEdit( _model.removeNotify( removeIndex, _editError ) );
 
         EditorChrome::setNextItemWidthColumns( 21.0f );

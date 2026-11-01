@@ -31,7 +31,7 @@ namespace sw
 
             /** @brief 사각형 하나의 정점 수입니다 — canvas.hlsl 이 SV_VertexID 로 모서리 여섯을 만든다. 메시 없는 드로우라 장치 공용 대체 정점 버퍼가 이만큼 담아야 한다. */
             static constexpr uint32 kVerticesPerQuad = 6;
-            static_assert( kVerticesPerQuad <= constant::kFallbackVertexCount, "the fallback vertex buffer must cover a canvas quad (slot 0 is read past its end)" );
+            static_assert( kVerticesPerQuad <= constant::render::kFallbackVertexCount, "the fallback vertex buffer must cover a canvas quad (slot 0 is read past its end)" );
         };
     } // namespace
 } // namespace sw
@@ -86,7 +86,7 @@ namespace sw
 
         // 정점은 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼 슬롯은 비운다(풀스크린 패스와 같다).
         cmd.setVertexBuffer( 0, 0, 0, 0 );
-        cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        cmd.setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( pso );
         // setPipelineState 가 슬롯 상태를 비운다 — 버퍼는 PSO 뒤에 건다.
         cmd.bindStructuredBuffer( _quadBuffer.getSlot()._srv, shaderslot::kPassBuffer );
@@ -111,7 +111,7 @@ namespace sw
                     srv = findTextureSRV( batch._arrTexture[slot] );
                 if ( srv == kInvalidDescriptorIndex )
                 {
-                    arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = invalid_index::kUint32;
+                    arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = constant::invalid_index::kUint32;
                     continue;
                 }
                 if ( bNativeBindless )

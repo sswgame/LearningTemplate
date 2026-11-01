@@ -23,7 +23,7 @@ namespace sw::editor
             EditorLightProbeBakeSession* pSession = editor::findSubsystem<EditorLightProbeBakeSession>();
             if ( pSession == nullptr || pSession->isRunning() == false )
                 return;
-            fixed_string<constant::kMaxBuffer128> label;
+            fixed_string<constant::buffer::kMax128> label;
             formatstring( label.data(), label.capacity(), "Baking probes %#/%# (%# / 100)", pSession->getVolumeIndex() + 1, pSession->getVolumeCount(),
                           static_cast<uint32>( pSession->getVolumeProgress() * 100.0f ) );
             ImGui::TextUnformatted( label.c_str() );

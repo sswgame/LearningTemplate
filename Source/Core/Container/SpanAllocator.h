@@ -20,7 +20,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -34,7 +34,7 @@ namespace sw
     {
     public:
         /** @brief 할당할 수 없을 때 `allocate` 가 돌려주는 값입니다. */
-        static constexpr uint32 kInvalidOffset = invalid_index::kUint32;
+        static constexpr uint32 kInvalidOffset = constant::invalid_index::kUint32;
 
         /** @brief 빈 구간 하나입니다. */
         struct Span

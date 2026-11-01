@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -17,16 +17,15 @@ namespace sw
     {
         struct LoadBotMetricsInternal
         {
-            static constexpr size_t kActionCount           = static_cast<size_t>( LoadBotAction::Count );
-            static constexpr int32  kPercentileMedian      = 50;
-            static constexpr int32  kPercentileHigh        = 95;
-            static constexpr int32  kPercentileTail        = 99;
-            static constexpr int32  kJSONIndent            = 2;
-            static constexpr int64  kMicrosecondsPerMs     = 1000;
-            static constexpr int64  kMicrosecondsPerTenth  = 100;
-            static constexpr int64  kMillisecondsPerSecond = 1000;
-            static constexpr int32  kActionColumnWidth     = 22;
-            static constexpr int32  kNumberColumnWidth     = 10;
+            static constexpr size_t kActionCount          = static_cast<size_t>( LoadBotAction::Count );
+            static constexpr int32  kPercentileMedian     = 50;
+            static constexpr int32  kPercentileHigh       = 95;
+            static constexpr int32  kPercentileTail       = 99;
+            static constexpr int32  kJSONIndent           = 2;
+            static constexpr int64  kMicrosecondsPerMs    = 1000;
+            static constexpr int64  kMicrosecondsPerTenth = 100;
+            static constexpr int32  kActionColumnWidth    = 22;
+            static constexpr int32  kNumberColumnWidth    = 10;
 
             /** @brief 칸 하나를 너비에 맞춰 붙입니다(글은 왼쪽, 수는 오른쪽 정렬). */
             static void appendCell( string& outText, string_view cell, int32 width, bool bLeft )
@@ -42,16 +41,16 @@ namespace sw
 
             static string makeNumberText( int64 value )
             {
-                utf8 arrBuffer[constant::kMaxBuffer32];
-                formatstring( arrBuffer, constant::kMaxBuffer32, "%#", value );
+                utf8 arrBuffer[constant::buffer::kMax32];
+                formatstring( arrBuffer, constant::buffer::kMax32, "%#", value );
                 return string( arrBuffer );
             }
 
             /** @brief 마이크로초를 "밀리초.한 자리" 글로 씁니다. */
             static string makeMillisecondText( int64 microseconds )
             {
-                utf8 arrBuffer[constant::kMaxBuffer32];
-                formatstring( arrBuffer, constant::kMaxBuffer32, "%#.%#", microseconds / kMicrosecondsPerMs,
+                utf8 arrBuffer[constant::buffer::kMax32];
+                formatstring( arrBuffer, constant::buffer::kMax32, "%#.%#", microseconds / kMicrosecondsPerMs,
                               ( microseconds % kMicrosecondsPerMs ) / kMicrosecondsPerTenth );
                 return string( arrBuffer );
             }
@@ -161,19 +160,19 @@ namespace sw
             text += '\n';
         }
         const int64 completedCount = getTotalCompletedCount();
-        const int64 perSecond      = elapsedMs > 0 ? completedCount * Internal::kMillisecondsPerSecond / elapsedMs : 0;
-        utf8        arrLine[constant::kMaxBuffer512];
-        formatstring( arrLine, constant::kMaxBuffer512, "elapsed %# ms, %# actions (%#/s), errors %#, connections opened %# failed %# closed %#, matches %#\n",
+        const int64 perSecond      = elapsedMs > 0 ? completedCount * constant::time::kMillisecondsPerSecond / elapsedMs : 0;
+        utf8        arrLine[constant::buffer::kMax512];
+        formatstring( arrLine, constant::buffer::kMax512, "elapsed %# ms, %# actions (%#/s), errors %#, connections opened %# failed %# closed %#, matches %#\n",
                       elapsedMs, completedCount, perSecond, getTotalErrorCount(), _openedCount, _failedCount, _disconnectCount, getDistinctMatchCount() );
         text += arrLine;
         for ( const auto& [errorKey, count] : _mapErrorKeyToCount )
         {
-            formatstring( arrLine, constant::kMaxBuffer512, "error %# x%#\n", errorKey.c_str(), count );
+            formatstring( arrLine, constant::buffer::kMax512, "error %# x%#\n", errorKey.c_str(), count );
             text += arrLine;
         }
         for ( const auto& [pushKind, count] : _mapPushKindToCount )
         {
-            formatstring( arrLine, constant::kMaxBuffer512, "push %# x%#\n", static_cast<uint32>( pushKind ), count );
+            formatstring( arrLine, constant::buffer::kMax512, "push %# x%#\n", static_cast<uint32>( pushKind ), count );
             text += arrLine;
         }
         return text;

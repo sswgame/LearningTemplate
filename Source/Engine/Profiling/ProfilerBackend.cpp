@@ -125,7 +125,7 @@ namespace sw
                 if ( entry._key == key )
                     return entry._pSite;
 
-                fixed_string<constant::kMaxBuffer64> zoneName;
+                fixed_string<constant::buffer::kMax64> zoneName;
                 if ( kind == TaskProfileZoneKind::WaitStage )
                     zoneName.append( "Wait " );
                 zoneName.append( pName );

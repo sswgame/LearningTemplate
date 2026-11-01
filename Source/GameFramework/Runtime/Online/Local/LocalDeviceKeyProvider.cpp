@@ -115,7 +115,7 @@ namespace sw
             if ( FileUtil::readFile( _keyFilePath, bytes ) == false || Internal::unprotectKey( bytes, _arrKey, kKeySize ) == false )
             {
                 // 다른 PC · 다른 사용자에서 온 키 파일이다 — 새로 만들지 않는다(그러면 이 키로 봉인한 슬롯을 영영 못 푼다). 슬롯은 WrongKey 가 아니라 IOError 다.
-                utf8 arrError[constant::kMaxBuffer512]{};
+                utf8 arrError[constant::buffer::kMax512]{};
                 formatstring( arrError, sizeof( arrError ), "Local store key file cannot be opened on this device/user: %#", _keyFilePath.c_str() );
                 outError = arrError;
                 return false;
@@ -130,7 +130,7 @@ namespace sw
                               FileUtil::writeFile( _keyFilePath, bytes.data(), bytes.size() );
         if ( bWritten == false )
         {
-            utf8 arrError[constant::kMaxBuffer512]{};
+            utf8 arrError[constant::buffer::kMax512]{};
             formatstring( arrError, sizeof( arrError ), "Could not write the local store key file: %#", _keyFilePath.c_str() );
             outError = arrError;
             return false;

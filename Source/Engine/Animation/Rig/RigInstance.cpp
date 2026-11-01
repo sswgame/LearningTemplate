@@ -50,7 +50,7 @@ namespace sw
         , _pose{}
         , _space{}
         , _pCurveSource{ nullptr }
-        , _worldGravity{ 0.0f, -constant::kDefaultGravity, 0.0f }
+        , _worldGravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f }
         , _pendingDeltaSeconds{ 0.0f }
         , _evaluationCount{ 0 }
     {

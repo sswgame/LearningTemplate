@@ -198,7 +198,7 @@ namespace sw
 
             static void appendNumber( string& inoutText, float32 value )
             {
-                utf8         arrBuffer[constant::kMaxBuffer64];
+                utf8         arrBuffer[constant::buffer::kMax64];
                 const uint32 length = StringUtil::formatNumber( arrBuffer, static_cast<uint32>( sizeof( arrBuffer ) ), value );
                 inoutText.append( arrBuffer, length );
             }

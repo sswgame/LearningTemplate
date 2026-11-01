@@ -144,7 +144,7 @@ namespace sw
                 _writer.clear();
                 _writer.writeVarUint( requestID );
                 _writer.writeBits( method, 16 );
-                _writer.writeVarUint( static_cast<uint64>( options._timeoutSeconds * constant::kMillisecondsPerSecond ) );
+                _writer.writeVarUint( static_cast<uint64>( options._timeoutSeconds * constant::time::kMillisecondsPerSecond ) );
                 _writer.writeBool( options._idempotencyKey.isValid() );
                 if ( options._idempotencyKey.isValid() )
                 {

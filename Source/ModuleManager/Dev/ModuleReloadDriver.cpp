@@ -36,7 +36,7 @@ namespace sw
                     return false;
                 ModuleReloadDriver* pDriver = engine::findSubsystem<ModuleReloadDriver>();
                 const bool          bQueued = pDriver != nullptr && pDriver->queueReload( listArgument[0].c_str() );
-                utf8                arrReply[constant::kMaxBuffer256];
+                utf8                arrReply[constant::buffer::kMax256];
                 formatstring( arrReply, sizeof( arrReply ), bQueued ? "reload of %# queued" : "no loaded module '%#'", listArgument[0].c_str() );
                 outReply = arrReply;
                 return bQueued;

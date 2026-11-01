@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -23,7 +23,7 @@ namespace sw
         static constexpr size_t kMinCapacity = 8;
 
         /** @brief 용량을 2의 거듭제곱으로 올려 버퍼를 잡습니다. */
-        explicit WorkStealingDeque( size_t capacity = constant::kDefaultDequeCapacity )
+        explicit WorkStealingDeque( size_t capacity = constant::memory::kDefaultDequeCapacity )
             : _top{ 0 }
             , _bottom{ 0 }
             , _buffer{}

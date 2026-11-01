@@ -5,7 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 namespace sw
@@ -82,7 +82,7 @@ namespace sw
                 else
                 {
                     // std::to_string 은 힙을 쓰므로 스택 버퍼로 바꾼다
-                    StringBuilder<constant::kMaxBuffer32> sb;
+                    StringBuilder<constant::buffer::kMax32> sb;
                     sb.append( value );
                     return string( sb.view() );
                 }
@@ -215,7 +215,7 @@ namespace sw
         {
             static string formatValue( const GlobalVariableInfo& info )
             {
-                StringBuilder<constant::kMaxBuffer32> sb;
+                StringBuilder<constant::buffer::kMax32> sb;
                 sb.append( GlobalVariableInternal::readEnumValue( info._pData, info._typeSize ) );
                 return string( sb.view() );
             }

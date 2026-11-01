@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -89,7 +89,7 @@ namespace sw
         static uint32 getConflictSlotCount( BindingKind kind );
 
         /** @brief 키 하나로 바꿀 수 있는 슬롯이 없는 종류에 대해 `getRebindSlotIndex` 가 반환하는 값입니다. */
-        static constexpr uint32 kNoRebindSlot = invalid_index::kUint32;
+        static constexpr uint32 kNoRebindSlot = constant::invalid_index::kUint32;
         /**
          * @brief 키 하나를 새로 잡았을 때(`InputMap::rebindKey`, 에디터의 Rebind) 그 키가 들어갈 슬롯을 반환합니다.
          * @details 단일 슬롯과 Shortcut 은 0, Chord 는 방아쇠(1)이고 수식 키는 그대로 둔다.
@@ -232,7 +232,7 @@ namespace sw
      */
     struct ActionHandle
     {
-        static constexpr uint32 kInvalidIndex = invalid_index::kUint32;
+        static constexpr uint32 kInvalidIndex = constant::invalid_index::kUint32;
 
         uint32 _index{ kInvalidIndex };
         uint32 _generation{ 0 };
@@ -250,7 +250,7 @@ namespace sw
     struct ActionBinding
     {
         /** @brief `_cachedLayerIndex` 가 아직 정해지지 않았음을 나타내는 무효값입니다. */
-        static constexpr uint32 kInvalidLayerIndex = invalid_index::kUint32;
+        static constexpr uint32 kInvalidLayerIndex = constant::invalid_index::kUint32;
 
         hashed_string    _layer{};
         BindingKind      _kind{ BindingKind::SingleSlot };

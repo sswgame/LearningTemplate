@@ -31,7 +31,7 @@ namespace sw
         const bool bValidB             = roomB == kOutside || roomB < _listRoom.size();
         const bool bInvalidPortalRooms = bValidA == false || bValidB == false || roomA == roomB;
         if ( bInvalidPortalRooms )
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         Portal portal;
         portal._position = position;
         portal._roomA    = roomA;
@@ -89,13 +89,13 @@ namespace sw
         const size_t nodeCount = _listRoom.size() + 1;
         _listTransmittance.assign( nodeCount, 0.0f );
         _listVisited.assign( nodeCount, 0 );
-        _listViaPortal.assign( nodeCount, invalid_index::kUint32 );
+        _listViaPortal.assign( nodeCount, constant::invalid_index::kUint32 );
         _listTransmittance[fromNode] = 1.0f;
         const float32 openFactor     = 1.0f - _openPortalOcclusion;
         for ( size_t step = 0; step < nodeCount; ++step )
         {
             // 아직 안 본 노드 가운데 투과율이 가장 큰 것을 확정한다(곱이 줄기만 하므로 최대 곱 길 찾기가 맞다).
-            uint32  current     = invalid_index::kUint32;
+            uint32  current     = constant::invalid_index::kUint32;
             float32 currentBest = 0.0f;
             for ( uint32 node = 0; node < nodeCount; ++node )
             {
@@ -105,7 +105,7 @@ namespace sw
                     currentBest = _listTransmittance[node];
                 }
             }
-            if ( current == invalid_index::kUint32 || current == targetNode )
+            if ( current == constant::invalid_index::kUint32 || current == targetNode )
                 break;
             _listVisited[current] = 1;
             for ( uint32 portalIndex = 0; portalIndex < _listPortal.size(); ++portalIndex )
@@ -154,7 +154,7 @@ namespace sw
         for ( size_t hop = 0; hop <= _listRoom.size() && node != listenerNode; ++hop )
         {
             const uint32 portalIndex = _listViaPortal[node];
-            if ( portalIndex == invalid_index::kUint32 )
+            if ( portalIndex == constant::invalid_index::kUint32 )
                 return propagation; // 길 기록이 끊겼다 — 길 찾기가 목표에 닿지 않은 경우라 회절을 내지 않는다
             const Portal& portal  = _listPortal[portalIndex];
             float3        segment = previous - portal._position; // 문 → 소리 쪽(다음 점)

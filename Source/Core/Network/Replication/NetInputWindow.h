@@ -25,7 +25,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
@@ -151,7 +151,7 @@ namespace sw
     {
     public:
         /** @brief `setWindow` 의 끝을 정하지 않을 때 쓰는 값입니다. 창 첫 틱에 링 크기를 더한 곳까지 받습니다. */
-        static constexpr uint32 kNoWindowEnd = invalid_index::kUint32;
+        static constexpr uint32 kNoWindowEnd = constant::invalid_index::kUint32;
 
         NetInputReceiveBuffer();
 

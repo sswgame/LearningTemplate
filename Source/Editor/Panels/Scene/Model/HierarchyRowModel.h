@@ -89,28 +89,28 @@ namespace sw::editor
         /** @brief 남은 이름 바꾸기 요청을 꺼냅니다. 없으면 0 입니다. */
         uint64 takePendingRename();
         /** @brief "Add Component" 메뉴의 검색 칸 글입니다(메뉴를 닫았다 열어도 남는다). */
-        fixed_string<constant::kMaxBuffer64>& editAddComponentSearch() { return _addComponentSearch; }
+        fixed_string<constant::buffer::kMax64>& editAddComponentSearch() { return _addComponentSearch; }
 
     private:
         // 행 모델
-        vector<GameObject*>                   _listRoot{};            ///< 형제 순서의 루트(삭제 대기 제외)
-        unordered_set<uint64>                 _uniqueFilterMatchID{}; ///< 자기나 후손이 필터에 걸린 오브젝트 id. 필터가 꺼져 있으면 비어 있다
-        fixed_string<constant::kMaxBuffer128> _filterText{};          ///< 지을 때의 필터 글
-        const GameObjectManager*              _pManager{ nullptr };   ///< 지을 때의 매니저
-        uint64                                _structureGeneration{ 0 };
-        uint64                                _tagGeneration{ 0 };
-        uint32                                _rebuildCount{ 0 }; ///< 다시 지은 횟수(감시 값 `Editor.HierarchyRowRebuildCount`)
-        bool                                  _bFilterActive{ false };
+        vector<GameObject*>                     _listRoot{};            ///< 형제 순서의 루트(삭제 대기 제외)
+        unordered_set<uint64>                   _uniqueFilterMatchID{}; ///< 자기나 후손이 필터에 걸린 오브젝트 id. 필터가 꺼져 있으면 비어 있다
+        fixed_string<constant::buffer::kMax128> _filterText{};          ///< 지을 때의 필터 글
+        const GameObjectManager*                _pManager{ nullptr };   ///< 지을 때의 매니저
+        uint64                                  _structureGeneration{ 0 };
+        uint64                                  _tagGeneration{ 0 };
+        uint32                                  _rebuildCount{ 0 }; ///< 다시 지은 횟수(감시 값 `Editor.HierarchyRowRebuildCount`)
+        bool                                    _bFilterActive{ false };
 
         // 그린 행 · 선택
-        vector<uint64>                       _listDrawnRow{};
-        vector<uint64>                       _listPreviousRow{};
-        uint64                               _anchorObjectID{ 0 };  ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다
-        uint64                               _revealObjectID{ 0 };  ///< 펼쳐서 보여 줄 오브젝트. 뷰포트에서 선택했다
-        uint64                               _lastPrimaryID{ 0 };   ///< 지난 프레임의 주 선택. 외부에서 바뀌었는지 구분하는 데 쓴다
-        uint64                               _pendingRenameID{ 0 }; ///< 이름 바꾸기 명령이 고른 오브젝트. 다음 그리기에서 입력 칸을 연다
-        fixed_string<constant::kMaxBuffer64> _addComponentSearch{}; ///< "Add Component" 메뉴의 검색 칸 글(메뉴를 닫았다 열어도 남는다)
-        bool                                 _bClickedThisFrame{ false };
+        vector<uint64>                         _listDrawnRow{};
+        vector<uint64>                         _listPreviousRow{};
+        uint64                                 _anchorObjectID{ 0 };  ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다
+        uint64                                 _revealObjectID{ 0 };  ///< 펼쳐서 보여 줄 오브젝트. 뷰포트에서 선택했다
+        uint64                                 _lastPrimaryID{ 0 };   ///< 지난 프레임의 주 선택. 외부에서 바뀌었는지 구분하는 데 쓴다
+        uint64                                 _pendingRenameID{ 0 }; ///< 이름 바꾸기 명령이 고른 오브젝트. 다음 그리기에서 입력 칸을 연다
+        fixed_string<constant::buffer::kMax64> _addComponentSearch{}; ///< "Add Component" 메뉴의 검색 칸 글(메뉴를 닫았다 열어도 남는다)
+        bool                                   _bClickedThisFrame{ false };
     };
 
     /**

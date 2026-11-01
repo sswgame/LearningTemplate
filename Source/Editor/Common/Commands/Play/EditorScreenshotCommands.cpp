@@ -20,8 +20,8 @@ namespace sw::editor
             /** @brief 스크린샷 명령이 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
             struct CaptureState
             {
-                EditorViewKind _focusedView{ EditorViewKind::Game };  ///< 마지막으로 포커스를 받은 뷰
-                uint32         _waitSerial{ invalid_index::kUint32 }; ///< 결과를 기다리는 요청이 있으면 그 요청 전의 완료 번호, 없으면 `invalid_index::kUint32`
+                EditorViewKind _focusedView{ EditorViewKind::Game };            ///< 마지막으로 포커스를 받은 뷰
+                uint32         _waitSerial{ constant::invalid_index::kUint32 }; ///< 결과를 기다리는 요청이 있으면 그 요청 전의 완료 번호, 없으면 `constant::invalid_index::kUint32`
             };
 
             static CaptureState& getState() { return getEditorState<CaptureState>(); }
@@ -73,9 +73,9 @@ namespace sw::editor
     void EditorScreenshotCommands::update()
     {
         EditorScreenshotCommandsInternal::CaptureState& captureState = EditorScreenshotCommandsInternal::getState();
-        if ( captureState._waitSerial == invalid_index::kUint32 || RenderThread::getCompletedScreenshotSerial() == captureState._waitSerial )
+        if ( captureState._waitSerial == constant::invalid_index::kUint32 || RenderThread::getCompletedScreenshotSerial() == captureState._waitSerial )
             return;
-        captureState._waitSerial = invalid_index::kUint32;
+        captureState._waitSerial = constant::invalid_index::kUint32;
 
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         const string   path          = RenderThread::getLastScreenshotPath();

@@ -115,7 +115,7 @@ namespace sw
     {
         float4x4               _worldFromModel{};
         const IRigGroundQuery* _pGroundQuery{ nullptr };
-        float3                 _worldGravity{ 0.0f, -constant::kDefaultGravity, 0.0f }; ///< 월드 중력이다. 호스트가 설정된 물리 중력을 넣는다(애니메이션 계층은 물리를 모른다).
+        float3                 _worldGravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f }; ///< 월드 중력이다. 호스트가 설정된 물리 중력을 넣는다(애니메이션 계층은 물리를 모른다).
         float32                _deltaSeconds{ 0.0f };
         /**
          * @brief 유닛의 화면 크기(`AnimationLODState::_screenSize`, 경계 구 지름 / 화면 높이)입니다. 노드의 `min_screen_size` 와 비교합니다.
@@ -135,9 +135,9 @@ namespace sw
         float4x4             _worldFromModel{};
         float4x4             _modelFromWorld{};
         const RigSolveSpace* _pSpace{ nullptr };
-        float3               _worldGravity{ 0.0f, -constant::kDefaultGravity, 0.0f }; ///< 준비 단계가 받은 월드 중력이다.
-        float32              _deltaSeconds{ 0.0f };                                   ///< 지난 평가 뒤 흐른 시간이다(LOD 로 건너뛴 프레임 포함).
-        float32              _nodeWeight{ 1.0f };                                     ///< 현재 노드의 가중치다. 본이 아닌 출력(모프 가중치)에는 노드가 직접 곱한다.
+        float3               _worldGravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f }; ///< 준비 단계가 받은 월드 중력이다.
+        float32              _deltaSeconds{ 0.0f };                                            ///< 지난 평가 뒤 흐른 시간이다(LOD 로 건너뛴 프레임 포함).
+        float32              _nodeWeight{ 1.0f };                                              ///< 현재 노드의 가중치다. 본이 아닌 출력(모프 가중치)에는 노드가 직접 곱한다.
     };
 } // namespace sw
 

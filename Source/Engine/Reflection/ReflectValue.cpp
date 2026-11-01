@@ -258,8 +258,8 @@ namespace sw
             template <typename T>
             static string formatBuiltin( const void* pValue )
             {
-                const T&                              value = *static_cast<const T*>( pValue );
-                fixed_string<constant::kMaxBuffer512> buf;
+                const T&                                value = *static_cast<const T*>( pValue );
+                fixed_string<constant::buffer::kMax512> buf;
                 if constexpr ( std::is_same_v<T, bool> )
                     return value ? "true" : "false";
                 else if constexpr ( std::is_same_v<T, atomic<bool>> )

@@ -74,7 +74,7 @@ namespace sw
             _listMarkerRowScratch[rowAt]     = float4{ record._worldPosition._x, record._worldPosition._y, record._worldPosition._z, record._maxDistance };
             _listMarkerRowScratch[rowAt + 1] = float4{ record._screenOffset._x, record._screenOffset._y, record._referenceDistance, BitUtil::bitsToFloat( bits ) };
             _listMarkerRowScratch[rowAt + 2] = float4{ record._worldOffset._x, record._worldOffset._y, record._worldOffset._z, BitUtil::bitsToFloat( record._instanceSlot ) };
-            bAnyInstanceSlot                 = bAnyInstanceSlot || record._instanceSlot != invalid_index::kUint32;
+            bAnyInstanceSlot                 = bAnyInstanceSlot || record._instanceSlot != constant::invalid_index::kUint32;
         }
         constexpr RHIBufferUsage kRowUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         if ( _markerRowBuffer.ensureCapacity( &device, sizeof( float4 ), rowCount, kRowUsage, true, false, nullptr ) == false )

@@ -33,8 +33,7 @@ namespace sw
                                                           "baseUrl", "tokenUrl", "sandbox", "reportPollSeconds", "voidedPollSeconds", "issuerId",
                                                           "keyId", "bundleId", "signingKeySecretEnvironment", "rootCertificateFile", "historyPollSeconds" };
 
-            static constexpr int64 kMillisecondsPerSecond = 1000;
-            static constexpr int64 kMinPollSeconds        = 60;
+            static constexpr int64 kMinPollSeconds = 60;
 
             static string readText( const JSONValue& object, const utf8* pKey )
             {
@@ -59,7 +58,7 @@ namespace sw
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
                 settings._bSandbox             = config._bSandbox;
-                settings._reportPollIntervalMs = config._pollSeconds * kMillisecondsPerSecond;
+                settings._reportPollIntervalMs = config._pollSeconds * constant::time::kMillisecondsPerSecond;
                 if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;
                 return make_unique<SteamReceiptValidator>( std::move( settings ), &httpClient.get() );
@@ -90,7 +89,7 @@ namespace sw
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
                 settings._bSandboxServer        = config._bSandbox;
-                settings._historyPollIntervalMs = config._pollSeconds * kMillisecondsPerSecond;
+                settings._historyPollIntervalMs = config._pollSeconds * constant::time::kMillisecondsPerSecond;
                 if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;
                 return make_unique<AppleReceiptValidator>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
@@ -114,7 +113,7 @@ namespace sw
                     settings._credentials._tokenURL = config._tokenURL;
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
-                settings._voidedPollIntervalMs = config._pollSeconds * kMillisecondsPerSecond;
+                settings._voidedPollIntervalMs = config._pollSeconds * constant::time::kMillisecondsPerSecond;
                 if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "receiptTrustFile", outError ) == false ||
                      httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;

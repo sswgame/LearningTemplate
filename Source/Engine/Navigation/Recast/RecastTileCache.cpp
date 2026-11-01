@@ -28,7 +28,7 @@ namespace sw
             static constexpr uint32 kPackMagic   = 0x43545753u;
             static constexpr uint32 kPackVersion = 1;
             /** @brief 층에서 짓는 동안 쓰는 임시 메모리 상한(바이트)입니다. 타일 크기 256 의 층도 담는다. */
-            static constexpr size_t kBuildScratchBytes = 4u * constant::kBytesPerMegabyte;
+            static constexpr size_t kBuildScratchBytes = 4u * constant::memory::kBytesPerMegabyte;
 
             /** @brief 바이트 끝에 값 하나를 붙입니다(리틀 엔디언 — 같은 기계의 쿠킹 · 실행이 읽는다). */
             template <typename T>

@@ -140,7 +140,7 @@ namespace sw
             // PSO 는 "뎁스 있음" 으로 만들어졌다. DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만
             // 허용하므로 그런 패스의 드로우마다 검증 오류가 났다. 뎁스 테스트가 꺼져 있으면 뎁스 쓰기도
             // 의미가 없으니 같이 끈다.
-            desc._depthStencilFormat = ( desc._bEnableDepthTest != 0 ) ? constant::kDepthStencilFormat : RHIFormat::Unknown;
+            desc._depthStencilFormat = ( desc._bEnableDepthTest != 0 ) ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
             if ( desc._bEnableDepthTest == 0 )
                 desc._bEnableDepthWrite = 0;
         }
@@ -234,7 +234,7 @@ namespace sw
             desc._arrRTVFormat[0]     = colorFormat;
             desc._bEnableDepthTest    = bDepthTest ? 1 : 0;
             desc._bEnableDepthWrite   = ( bDepthTest && program._bDepthWrite ) ? 1 : 0;
-            desc._depthStencilFormat  = bDepthTest ? constant::kDepthStencilFormat : RHIFormat::Unknown;
+            desc._depthStencilFormat  = bDepthTest ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
             desc._bEnableBlend        = program._bBlend ? 1 : 0;
             desc._bPremultipliedAlpha = program._bBlend ? SW_TRUE : SW_FALSE;
             desc._cullMode            = program._bCullBack ? RHICullMode::Back : RHICullMode::None;
@@ -554,7 +554,7 @@ namespace sw
         // 주 출력에 그리는 패스(Present · Canvas · Present 를 대신하는 FSR 의 RCAS)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
         // 출력 패스는 표의 kOutputPass 가 정한다.
-        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
+        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::render::kOffscreenColorFormat, constant::render::kBackBufferFormat };
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
             const RenderPassType passType = static_cast<RenderPassType>( typeIndex );

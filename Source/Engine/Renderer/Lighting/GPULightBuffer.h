@@ -160,8 +160,8 @@ namespace sw
         uint32 getGPULightCount() const { return _gpuLightCount; }
         /** @brief GPU 구간을 쓰는 컴퓨트의 UAV 입니다. 구간이 없거나 UAV 를 만들지 못했으면 `kInvalidDescriptorIndex` 입니다. */
         RHIDescriptorIndex getGPULightUAV() const { return _gpuLightCount > 0 ? _buffer._uav : kInvalidDescriptorIndex; }
-        /** @brief `update` 에 준 뷰 @p gridIndex 의 그리드 첫 단어입니다(PassCB `g_SwLightGridBase`). 그리드가 없으면 `invalid_index::kUint32` 입니다. */
-        uint32 getGridBase( uint32 gridIndex ) const { return gridIndex < _listGridBase.size() ? _listGridBase[gridIndex] : invalid_index::kUint32; }
+        /** @brief `update` 에 준 뷰 @p gridIndex 의 그리드 첫 단어입니다(PassCB `g_SwLightGridBase`). 그리드가 없으면 `constant::invalid_index::kUint32` 입니다. */
+        uint32 getGridBase( uint32 gridIndex ) const { return gridIndex < _listGridBase.size() ? _listGridBase[gridIndex] : constant::invalid_index::kUint32; }
         /** @brief 이번 프레임의 그리드 버퍼(t12)입니다. 생산자가 CPU 면 동적 버퍼, GPU 면 기본 힙 버퍼입니다. 그리드가 없으면 nullptr 입니다. */
         const RHIStructuredBufferSlot* findGridBuffer() const;
         /** @brief 셰이더에 걸 수 있는 상태인지 확인합니다. */
@@ -211,7 +211,7 @@ namespace sw
         vector<LightGrid>       _listGrid;                                ///< 뷰마다의 라이트 그리드(CPU 생산자, 저장소를 프레임마다 다시 쓴다)
         vector<uint32>          _listGridWordScratch;                     ///< 뷰마다의 그리드 단어를 이어 붙인 업로드 임시 버퍼(CPU 생산자)
         vector<float4>          _listGridViewScratch;                     ///< 뷰마다의 뷰 정보(GPU 생산자)
-        vector<uint32>          _listGridBase;                            ///< 뷰마다 그리드의 첫 단어(없으면 invalid_index::kUint32)
+        vector<uint32>          _listGridBase;                            ///< 뷰마다 그리드의 첫 단어(없으면 constant::invalid_index::kUint32)
         uint32                  _count{ 0 };                              ///< 셰이더가 보는 라이트 수 = CPU 라이트 + GPU 구간
         uint32                  _cpuCount{ 0 };                           ///< 올라간 CPU 라이트 수(= GPU 구간의 첫 번호)
         uint32                  _gpuLightCount{ 0 };                      ///< 받은 GPU 구간의 슬롯 수

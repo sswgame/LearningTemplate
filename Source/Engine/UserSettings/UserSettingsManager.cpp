@@ -44,7 +44,7 @@ namespace sw
                 if ( StringUtil::equals( def._listOption[optionIndex]._value, value ) )
                     return optionIndex;
             }
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         }
 
         /**
@@ -200,7 +200,7 @@ namespace sw
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
         {
             const uint32 groupIndex = findIndex( group._settingID );
-            if ( groupIndex == invalid_index::kUint32 )
+            if ( groupIndex == constant::invalid_index::kUint32 )
                 continue;
             const hashed_string presetName( _listState[groupIndex]._defaultValue );
             for ( const ScalabilityPresetDef& preset : group._listPreset )
@@ -211,7 +211,7 @@ namespace sw
                 {
                     const uint32 memberIndex = findIndex( value._settingID );
                     string       normalized;
-                    if ( memberIndex == invalid_index::kUint32 ||
+                    if ( memberIndex == constant::invalid_index::kUint32 ||
                          UserSettingsSchema::normalizeValue( listSetting[memberIndex], value._value, normalized ) != UserSettingValueResult::Accepted )
                         continue;
                     SettingState& member = _listState[memberIndex];
@@ -227,7 +227,7 @@ namespace sw
     bool UserSettingsManager::setGameDefault( const hashed_string& settingID, string_view value )
     {
         const uint32 settingIndex = findIndex( settingID );
-        if ( settingIndex == invalid_index::kUint32 )
+        if ( settingIndex == constant::invalid_index::kUint32 )
         {
             SW_LOG_ERROR( "game default for an unknown setting '%#'", settingID.c_str() );
             return false;
@@ -284,7 +284,7 @@ namespace sw
         for ( const UserSettingsFileEntry& entry : listEntry )
         {
             const uint32 settingIndex = findIndex( hashed_string( entry._key ) );
-            if ( settingIndex == invalid_index::kUint32 )
+            if ( settingIndex == constant::invalid_index::kUint32 )
             {
                 SW_LOG_WARNING_ID( "UserSettings.UnknownKeyDropped", "User settings '%#': dropped unknown key '%#'", sourceName, entry._key );
                 continue;
@@ -380,7 +380,7 @@ namespace sw
             return false;
         const ScalabilityGroupDef& group      = _schema.getScalabilityGroups().front();
         const uint32               groupIndex = findIndex( group._settingID );
-        if ( groupIndex == invalid_index::kUint32 )
+        if ( groupIndex == constant::invalid_index::kUint32 )
             return false;
         _listState[groupIndex]._committedValue = presetName.c_str();
         applyScalabilityPreset( group, presetName, true );
@@ -421,19 +421,19 @@ namespace sw
     string_view UserSettingsManager::getValue( const hashed_string& settingID ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        return settingIndex != invalid_index::kUint32 ? string_view( getEffectiveValue( settingIndex ) ) : string_view{};
+        return settingIndex != constant::invalid_index::kUint32 ? string_view( getEffectiveValue( settingIndex ) ) : string_view{};
     }
 
     string_view UserSettingsManager::getAppliedValue( const hashed_string& settingID ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        return settingIndex != invalid_index::kUint32 ? string_view( _listState[settingIndex]._committedValue ) : string_view{};
+        return settingIndex != constant::invalid_index::kUint32 ? string_view( _listState[settingIndex]._committedValue ) : string_view{};
     }
 
     string_view UserSettingsManager::getDefaultValue( const hashed_string& settingID ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        return settingIndex != invalid_index::kUint32 ? string_view( _listState[settingIndex]._defaultValue ) : string_view{};
+        return settingIndex != constant::invalid_index::kUint32 ? string_view( _listState[settingIndex]._defaultValue ) : string_view{};
     }
 
     bool UserSettingsManager::getBoolValue( const UserSettingKey<bool>& key ) const
@@ -486,7 +486,7 @@ namespace sw
             return;
         }
         const uint32 settingIndex = findIndex( def._id );
-        if ( settingIndex == invalid_index::kUint32 )
+        if ( settingIndex == constant::invalid_index::kUint32 )
             return;
         const string* arrValue[] = { &_listState[settingIndex]._defaultValue, &getEffectiveValue( settingIndex ) };
         for ( const string* pValue : arrValue )
@@ -508,7 +508,7 @@ namespace sw
     UserSettingSetResult UserSettingsManager::setPendingValue( const hashed_string& settingID, string_view value )
     {
         const uint32 settingIndex = findIndex( settingID );
-        if ( settingIndex == invalid_index::kUint32 )
+        if ( settingIndex == constant::invalid_index::kUint32 )
             return UserSettingSetResult::Unknown;
         if ( isEnabledAt( settingIndex ) == false )
             return UserSettingSetResult::Disabled;
@@ -564,22 +564,22 @@ namespace sw
 
     UserSettingSetResult UserSettingsManager::setPendingIntValue( const hashed_string& settingID, int32 value )
     {
-        utf8 arrBuffer[constant::kMaxBuffer32]{};
-        StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, value );
+        utf8 arrBuffer[constant::buffer::kMax32]{};
+        StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, value );
         return setPendingValue( settingID, arrBuffer );
     }
 
     UserSettingSetResult UserSettingsManager::setPendingFloatValue( const hashed_string& settingID, float32 value )
     {
-        utf8 arrBuffer[constant::kMaxBuffer64]{};
-        StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, value );
+        utf8 arrBuffer[constant::buffer::kMax64]{};
+        StringUtil::formatNumber( arrBuffer, constant::buffer::kMax64, value );
         return setPendingValue( settingID, arrBuffer );
     }
 
     bool UserSettingsManager::isPending( const hashed_string& settingID ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        return settingIndex != invalid_index::kUint32 && _listState[settingIndex]._bPending;
+        return settingIndex != constant::invalid_index::kUint32 && _listState[settingIndex]._bPending;
     }
 
     bool UserSettingsManager::hasPendingChanges() const
@@ -591,13 +591,13 @@ namespace sw
     bool UserSettingsManager::isSettingEnabled( const hashed_string& settingID ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        return settingIndex != invalid_index::kUint32 && isEnabledAt( settingIndex );
+        return settingIndex != constant::invalid_index::kUint32 && isEnabledAt( settingIndex );
     }
 
     bool UserSettingsManager::isSettingAvailable( const hashed_string& settingID ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        return settingIndex != invalid_index::kUint32 && isAvailableAt( settingIndex );
+        return settingIndex != constant::invalid_index::kUint32 && isAvailableAt( settingIndex );
     }
 
     // ------------------------------------------------------------------------------
@@ -745,7 +745,7 @@ namespace sw
     bool UserSettingsManager::findBindingConflict( const hashed_string& settingID, string_view slotText, UserSettingBindingConflict& outConflict ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        if ( settingIndex == invalid_index::kUint32 )
+        if ( settingIndex == constant::invalid_index::kUint32 )
             return false;
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
         const UserSettingDef&         def         = listSetting[settingIndex];
@@ -796,7 +796,7 @@ namespace sw
     UserSettingSetResult UserSettingsManager::setPendingBinding( const hashed_string& settingID, string_view slotText, UserSettingBindingPolicy policy )
     {
         const uint32 settingIndex = findIndex( settingID );
-        if ( settingIndex == invalid_index::kUint32 )
+        if ( settingIndex == constant::invalid_index::kUint32 )
             return UserSettingSetResult::Unknown;
         if ( _schema.getSettings()[settingIndex]._type != UserSettingType::KeyBinding )
             return UserSettingSetResult::Rejected;
@@ -823,7 +823,7 @@ namespace sw
     {
         const uint32 settingIndex = findIndex( settingID );
         InputSlot    slot;
-        if ( settingIndex == invalid_index::kUint32 || findEffectiveSlot( settingIndex, slot ) == false )
+        if ( settingIndex == constant::invalid_index::kUint32 || findEffectiveSlot( settingIndex, slot ) == false )
             return "[ ? ]";
         return InputGlyphResolver::makeSlotGlyph( slot, style );
     }
@@ -842,23 +842,23 @@ namespace sw
     uint32 UserSettingsManager::findIndex( const hashed_string& settingID ) const
     {
         const uint32 settingIndex = _schema.findSettingIndex( settingID );
-        return settingIndex < static_cast<uint32>( _listState.size() ) ? settingIndex : invalid_index::kUint32;
+        return settingIndex < static_cast<uint32>( _listState.size() ) ? settingIndex : constant::invalid_index::kUint32;
     }
 
     uint32 UserSettingsManager::resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const
     {
         const uint32 settingIndex = findIndex( settingID );
-        if ( settingIndex == invalid_index::kUint32 )
+        if ( settingIndex == constant::invalid_index::kUint32 )
         {
             SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is not in the schema", settingID.c_str() );
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         }
         const UserSettingType actualType = _schema.getSettings()[settingIndex]._type;
         if ( actualType != expectedType )
         {
             SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is '%#', not '%#'", settingID.c_str(), UserSettingsSchema::getTypeTraits( actualType )._pName,
                              UserSettingsSchema::getTypeTraits( expectedType )._pName );
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         }
         return settingIndex;
     }
@@ -888,7 +888,7 @@ namespace sw
         for ( const UserSettingCondition& condition : _schema.getSettings()[settingIndex]._listEnabledCondition )
         {
             const uint32 otherIndex = findIndex( condition._settingID );
-            if ( otherIndex == invalid_index::kUint32 )
+            if ( otherIndex == constant::invalid_index::kUint32 )
                 return false;
             const bool bEqual     = StringUtil::equals( getEffectiveValue( otherIndex ), condition._value );
             const bool bSatisfied = condition._operator == UserSettingConditionOperator::Equal ? bEqual : bEqual == false;
@@ -926,7 +926,7 @@ namespace sw
 
                 // 열거형은 선택지의 `targetValue`, 없으면 선택지 순번을 넘긴다. 문자열 변수면 선택지 이름 그대로다.
                 const uint32 optionIndex = findOptionIndex( def, value );
-                if ( pVariable->isTextType() || optionIndex == invalid_index::kUint32 )
+                if ( pVariable->isTextType() || optionIndex == constant::invalid_index::kUint32 )
                     return pVariable->setValueFromString( value );
                 const UserSettingOption& option = def._listOption[optionIndex];
                 if ( option._targetValue.empty() == false )
@@ -974,7 +974,7 @@ namespace sw
     void UserSettingsManager::refreshScalabilityGroup( const ScalabilityGroupDef& group, bool bCommitted )
     {
         const uint32 groupIndex = findIndex( group._settingID );
-        if ( groupIndex == invalid_index::kUint32 )
+        if ( groupIndex == constant::invalid_index::kUint32 )
             return;
 
         string matchedPreset = group._customValue;
@@ -985,7 +985,7 @@ namespace sw
             {
                 const uint32 memberIndex = findIndex( value._settingID );
                 string       normalized;
-                if ( memberIndex == invalid_index::kUint32 ||
+                if ( memberIndex == constant::invalid_index::kUint32 ||
                      UserSettingsSchema::normalizeValue( _schema.getSettings()[memberIndex], value._value, normalized ) == UserSettingValueResult::Rejected )
                 {
                     bMatches = false;
@@ -1021,7 +1021,7 @@ namespace sw
             {
                 const uint32 memberIndex = findIndex( value._settingID );
                 string       normalized;
-                if ( memberIndex == invalid_index::kUint32 ||
+                if ( memberIndex == constant::invalid_index::kUint32 ||
                      UserSettingsSchema::normalizeValue( _schema.getSettings()[memberIndex], value._value, normalized ) == UserSettingValueResult::Rejected )
                     continue;
                 if ( bCommitted )

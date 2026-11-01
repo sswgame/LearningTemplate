@@ -3,7 +3,7 @@
 #include "Editor/Panels/Profiler/ProfilerPanel.h"
 
 #include "Core/Diagnostics/MemoryProfiler.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -60,15 +60,15 @@ namespace sw::editor
             template <uint32 N>
             static void formatBytes( uint64 bytes, fixed_string<N>& out )
             {
-                if ( bytes < constant::kBytesPerKilobyte )
+                if ( bytes < constant::memory::kBytesPerKilobyte )
                     formatstring( out.data(), out.capacity(), "%# B", bytes );
 
-                else if ( bytes < constant::kBytesPerMegabyte )
-                    formatstring( out.data(), out.capacity(), "%# KB", Fmt( static_cast<float64>( bytes ) / constant::kBytesPerKilobyte, Format().precision( 2 ) ) );
-                else if ( bytes < constant::kBytesPerGigabyte )
-                    formatstring( out.data(), out.capacity(), "%# MB", Fmt( static_cast<float64>( bytes ) / constant::kBytesPerMegabyte, Format().precision( 2 ) ) );
+                else if ( bytes < constant::memory::kBytesPerMegabyte )
+                    formatstring( out.data(), out.capacity(), "%# KB", Fmt( static_cast<float64>( bytes ) / constant::memory::kBytesPerKilobyte, Format().precision( 2 ) ) );
+                else if ( bytes < constant::memory::kBytesPerGigabyte )
+                    formatstring( out.data(), out.capacity(), "%# MB", Fmt( static_cast<float64>( bytes ) / constant::memory::kBytesPerMegabyte, Format().precision( 2 ) ) );
                 else
-                    formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( constant::kBytesPerGigabyte ), Format().precision( 2 ) ) );
+                    formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( constant::memory::kBytesPerGigabyte ), Format().precision( 2 ) ) );
             }
 
             /** @brief 아는 값은 `formatBytes` 로, 드라이버가 응답하지 않은 값은 "Unknown" 으로 표시합니다. */
@@ -127,8 +127,8 @@ namespace sw::editor
                 ImGui::TableSetupColumn( "Total Allocated" );
                 ImGui::TableHeadersRow();
 
-                fixed_string<constant::kMaxBuffer32> arrBytesBuf;
-                fixed_string<constant::kMaxBuffer32> arrTotalBuf;
+                fixed_string<constant::buffer::kMax32> arrBytesBuf;
+                fixed_string<constant::buffer::kMax32> arrTotalBuf;
 
                 // 현재 살아 있는 바이트가 큰 태그부터 표시한다. 한 번도 할당하지 않은 태그는 행을 만들지 않는다. Unknown 은 항상 만든다. 태그가 지정되지 않은 진입점의 할당량이기 때문이다.
                 const uint64 liveBytes = profiler.getLiveAllocatedBytes();
@@ -181,7 +181,7 @@ namespace sw::editor
                     return;
                 }
 
-                fixed_string<constant::kMaxBuffer128> summary;
+                fixed_string<constant::buffer::kMax128> summary;
                 formatstring( summary.data(), summary.capacity(), "%# B in %# blocks, %# rounds (%# blocks from other threads)", inoutReport._totalBytes, inoutReport._totalBlockCount,
                               inoutReport._roundCount, inoutReport._foreignThreadBlockCount );
                 ImGui::TextUnformatted( summary.c_str() );
@@ -199,7 +199,7 @@ namespace sw::editor
                         break;
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    fixed_string<constant::kMaxBuffer64> sizeBuf;
+                    fixed_string<constant::buffer::kMax64> sizeBuf;
                     formatstring( sizeBuf.data(), sizeBuf.capacity(), "%# B (%# blocks)", entry._bytes, entry._blockCount );
                     ImGui::TextUnformatted( sizeBuf.c_str() );
                     ImGui::TableNextColumn();
@@ -236,7 +236,7 @@ namespace sw::editor
 
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    fixed_string<constant::kMaxBuffer64> allocBuf;
+                    fixed_string<constant::buffer::kMax64> allocBuf;
                     formatstring( allocBuf.data(), allocBuf.capacity(), "%# B (%# allocs)", info._currentBytes, info._currentCount );
                     ImGui::TextUnformatted( allocBuf.c_str() );
 
@@ -464,7 +464,7 @@ namespace sw::editor
         ImGui::TextUnformatted( "Frames:" );
         for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
         {
-            fixed_string<constant::kMaxBuffer16> label;
+            fixed_string<constant::buffer::kMax16> label;
             formatstring( label.data(), label.capacity(), "%#", frameChoice );
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( label.c_str() ) );
             if ( ImGui::RadioButton( label.c_str(), _timeline.getFrameCount() == frameChoice ) )
@@ -539,7 +539,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "UnloadTrace" ) );
         }
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##traceSearch", _timeline.editTraceSearch(), constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDPIScale(), false );
+        EditorWidgets::drawSearchField( "##traceSearch", _timeline.editTraceSearch(), constant::buffer::kMax128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDPIScale(), false );
         EditorSelfTestMarks::note( "profiler.timeline.traceSearch" );
         if ( _timeline.getTraceStatus().empty() == false )
             ImGui::TextDisabled( "%s", _timeline.getTraceStatus().c_str() );
@@ -671,7 +671,7 @@ namespace sw::editor
         const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
         ImGui::BeginTooltip();
         ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
-        ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / constant::kNanosecondsPerMicrosecond, static_cast<uint32>( event._depth ) );
+        ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / constant::time::kNanosecondsPerMicrosecond, static_cast<uint32>( event._depth ) );
         ImGui::TextDisabled( "%s", listThread[hoveredRect._threadIndex]._name.c_str() );
         // 같은 구간(같은 스레드, 같은 슬롯)의 횟수, 합계, 최대를 구한다. 어느 구간이 늘었는지 한눈에 볼 수 있다.
         uint32  sameCount{ 0 };
@@ -681,7 +681,7 @@ namespace sw::editor
         {
             if ( other._slot != event._slot )
                 continue;
-            const float64 micros = static_cast<float64>( other._endNanos - other._beginNanos ) / constant::kNanosecondsPerMicrosecond;
+            const float64 micros = static_cast<float64>( other._endNanos - other._beginNanos ) / constant::time::kNanosecondsPerMicrosecond;
             ++sameCount;
             sameTotalUs += micros;
             sameMaxUs = MathUtil::max( sameMaxUs, micros );
@@ -714,7 +714,7 @@ namespace sw::editor
                 maxMicro = MathUtil::max( maxMicro, value );
             }
         }
-        const float32 maxMs = maxMicro / constant::kMicrosecondsPerMillisecond;
+        const float32 maxMs = maxMicro / constant::time::kMicrosecondsPerMillisecond;
         for ( const utf8* pSeriesName : kArrSeriesName )
         {
             if ( _capture.getHistory().copySeries( pSeriesName, _listScratchSeries ) == false || _listScratchSeries.empty() )
@@ -726,7 +726,7 @@ namespace sw::editor
             {
                 value /= 1000.0f;
             }
-            fixed_string<constant::kMaxBuffer64> overlay;
+            fixed_string<constant::buffer::kMax64> overlay;
             formatstring( overlay.data(), overlay.capacity(), "%# %# ms", pSeriesName,
                           Fmt( static_cast<float64>( _listScratchSeries.back() ), Format().precision( 2 ) ) );
             ImGui::PlotLines( pSeriesName, _listScratchSeries.data(), static_cast<int32>( _listScratchSeries.size() ), 0, overlay.c_str(), 0.0f,
@@ -761,7 +761,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawScopeTable( ProfilerScopeKind kind )
     {
-        EditorWidgets::drawSearchField( "##profilerScopeFilter", _arrFilter, constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FilterScopesHint" ) );
+        EditorWidgets::drawSearchField( "##profilerScopeFilter", _arrFilter, constant::buffer::kMax128, SW_LOCKEY( "EditorProfiler", "FilterScopesHint" ) );
         const bool            bCounter = kind == ProfilerScopeKind::Counter;
         const utf8* const     pUnit    = bCounter ? "" : " (us)";
         const ImGuiTableFlags flags    = ImGuiTableFlags_Sortable | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
@@ -769,7 +769,7 @@ namespace sw::editor
         if ( ImGui::BeginTable( "##profilerScopes", 7, flags, ImGui::GetContentRegionAvail() ) == false )
             return;
 
-        fixed_string<constant::kMaxBuffer32> header;
+        fixed_string<constant::buffer::kMax32> header;
         ImGui::TableSetupScrollFreeze( 0, 1 );
         ImGui::TableSetupColumn( "Scope", ImGuiTableColumnFlags_WidthStretch, 3.0f, static_cast<ImGuiID>( ProfilerSortColumn::Name ) );
         formatstring( header.data(), header.capacity(), "Last%#", pUnit );
@@ -913,7 +913,7 @@ namespace sw::editor
         const RHIMemoryLedger& ledger  = pDevice->getMemoryLedger();
         const RHIMemorySummary summary = ledger.makeSummary();
 
-        fixed_string<constant::kMaxBuffer32> arrBytesBuf;
+        fixed_string<constant::buffer::kMax32> arrBytesBuf;
         ProfilerPanelInternal::formatBytes( summary._trackedBytes, arrBytesBuf );
         ImGui::Text( "%s - %s size", pDevice->getBackendName(), RHIMemoryLedger::getSizeBasisName( summary._sizeBasis ) );
         ImGui::Text( "Tracked: %s  (+ %u of unknown size)", arrBytesBuf.c_str(), summary._unknownSizeCount );
@@ -954,10 +954,10 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( "Driver", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             // 드라이버가 응답하지 않은 항목은 "Unknown" 으로 표시하고, 0 으로 대체하지 않는다.
-            const RHIMemoryBudget&               budget = summary._budget;
-            fixed_string<constant::kMaxBuffer32> arrUsageBuf;
-            fixed_string<constant::kMaxBuffer32> arrBudgetBuf;
-            fixed_string<constant::kMaxBuffer32> arrAvailableBuf;
+            const RHIMemoryBudget&                 budget = summary._budget;
+            fixed_string<constant::buffer::kMax32> arrUsageBuf;
+            fixed_string<constant::buffer::kMax32> arrBudgetBuf;
+            fixed_string<constant::buffer::kMax32> arrAvailableBuf;
             ProfilerPanelInternal::formatKnownBytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsageBuf );
             ProfilerPanelInternal::formatKnownBytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudgetBuf );
             ProfilerPanelInternal::formatKnownBytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailableBuf );
@@ -1035,7 +1035,7 @@ namespace sw::editor
         for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
         {
             ImGui::SameLine();
-            fixed_string<constant::kMaxBuffer16> label;
+            fixed_string<constant::buffer::kMax16> label;
             formatstring( label.data(), label.capacity(), "%#", frameChoice );
             ImGui::PushID( "callTreeFrames" );
             if ( ImGui::RadioButton( label.c_str(), _timeline.getFrameCount() == frameChoice ) )
@@ -1102,9 +1102,9 @@ namespace sw::editor
         const bool    bOpen      = ImGui::TreeNodeEx( pName != nullptr ? pName : "?", treeFlags );
         const float64 frameCount = static_cast<float64>( MathUtil::max( callTree.getFrameCount(), 1u ) ); // 채워지는 동안은 창 크기보다 적다
         ImGui::TableNextColumn();
-        ImGui::Text( "%.3f", static_cast<float64>( node._totalNanos ) / constant::kNanosecondsPerMillisecond / frameCount );
+        ImGui::Text( "%.3f", static_cast<float64>( node._totalNanos ) / constant::time::kNanosecondsPerMillisecond / frameCount );
         ImGui::TableNextColumn();
-        ImGui::Text( "%.3f", static_cast<float64>( node._selfNanos ) / constant::kNanosecondsPerMillisecond / frameCount );
+        ImGui::Text( "%.3f", static_cast<float64>( node._selfNanos ) / constant::time::kNanosecondsPerMillisecond / frameCount );
         ImGui::TableNextColumn();
         ImGui::Text( "%u", node._callCount );
         if ( bOpen && bLeaf == false )

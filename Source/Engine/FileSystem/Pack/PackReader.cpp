@@ -7,7 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"

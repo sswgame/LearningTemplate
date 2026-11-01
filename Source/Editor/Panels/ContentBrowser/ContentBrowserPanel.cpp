@@ -614,8 +614,8 @@ namespace sw::editor
             (void)_model.createNewFolder(); // 실패는 createFolder 가 알린다
         EditorSelfTestMarks::note( "contentBrowser.add.folder" );
         ImGui::Separator();
-        StringBuilder<constant::kMaxBuffer64> mark;
-        vector<const EditorNewAssetTemplate*> listTemplate;
+        StringBuilder<constant::buffer::kMax64> mark;
+        vector<const EditorNewAssetTemplate*>   listTemplate;
         EditorAssetTypeRegistry::collectNewAssetTemplates( listTemplate );
         for ( const EditorNewAssetTemplate* pTemplate : listTemplate )
         {
@@ -866,18 +866,18 @@ namespace sw::editor
             bool        _bEngine;
         };
         static const FavFolder kArrFavorites[] = {
-            {  "Scenes",    path::kMapsFolder, false},
-            { "Prefabs", path::kPrefabsFolder, false},
-            {"Textures", path::kTextureFolder, false},
-            { "Shaders",  path::kShaderFolder,  true},
-            {    "Data",    path::kDataFolder, false}
+            {  "Scenes",    constant::path::kMapsFolder, false},
+            { "Prefabs", constant::path::kPrefabsFolder, false},
+            {"Textures", constant::path::kTextureFolder, false},
+            { "Shaders",  constant::path::kShaderFolder,  true},
+            {    "Data",    constant::path::kDataFolder, false}
         };
 
         const uint32 favoriteCount = static_cast<uint32>( sizeof( kArrFavorites ) / sizeof( kArrFavorites[0] ) );
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? EditorPaths::findContentFolder( FileUtil::joinPath( path::kEnginePack, kArrFavorites[favIdx]._pRelPath ) )
+                                         ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favIdx]._pRelPath ) )
                                          : EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ) );
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _model.getSelectedFolderPath() );
 

@@ -9,7 +9,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/hashed_string.h"
 
@@ -28,9 +28,9 @@ namespace sw
     class Mesh;
 
     /// @brief 배치에 머티리얼 데이터 그룹이 없음을 나타냅니다(GPUMeshBatch::_materialGroup).
-    inline constexpr uint32 kInvalidMaterialGroup = invalid_index::kUint32;
+    inline constexpr uint32 kInvalidMaterialGroup = constant::invalid_index::kUint32;
     /// @brief 배치에 셰이더 퍼뮤테이션이 없음을 나타냅니다. 이 경우 패스가 자기 PSO 로 그립니다(GPUMeshBatch::_shaderPermutation).
-    inline constexpr uint32 kInvalidShaderPermutation = invalid_index::kUint32;
+    inline constexpr uint32 kInvalidShaderPermutation = constant::invalid_index::kUint32;
 
     /**
      * @brief GPU 인스턴스 하나를 나타냅니다. 월드 행렬, 바운드, 배치 인덱스, 머티리얼 원소 인덱스, 블렌드, 회전 시드, 스프라이트 프레임과 색을 가집니다.
@@ -411,7 +411,7 @@ namespace sw
     struct GPUVFXMeshEmitter
     {
         VFXGPUEmitterRequest             _request;            ///< 시뮬레이션 요청(`GPUParticleBatch` 의 GPU 출처와 같은 뜻)
-        shared_ptr<const vector<uint32>> _pListInstanceSlot;  ///< 풀 자리마다 인스턴스 칸(`invalid_index::kUint32` 면 이번 프레임에 실리지 않았다)
+        shared_ptr<const vector<uint32>> _pListInstanceSlot;  ///< 풀 자리마다 인스턴스 칸(`constant::invalid_index::kUint32` 면 이번 프레임에 실리지 않았다)
         float4x4                         _world{};            ///< 방출기 행렬(행벡터 규약)
         float32                          _meshRadius{ 0.0f }; ///< 메시 원점에서 가장 먼 바운드 모서리(크기 1)
         float32                          _sizeScale{ 1.0f };  ///< 방출기 행렬의 최대 축 배율

@@ -59,7 +59,7 @@ namespace sw
                 unordered_map<uint32, uint32>                        _mapBinding;
                 unordered_map<uint32, uint32>                        _mapDescriptorSet;
                 unordered_map<uint32, uint32>                        _mapLocation; ///< OpDecorate Location. 정점 입력 변수
-                uint32                                               _executionModel{ invalid_index::kUint32 };
+                uint32                                               _executionModel{ constant::invalid_index::kUint32 };
                 unordered_map<uint32, uint32>                        _mapArrayStride;
                 unordered_map<uint32, uint32>                        _mapConstantValue;      ///< OpConstant(32비트 정수). 배열 길이 해석용
                 unordered_set<uint32>                                _uniqueBufferBlockType; ///< BufferBlock 데코레이션이 붙은 구조체 타입 id

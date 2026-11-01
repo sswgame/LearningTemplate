@@ -103,7 +103,7 @@ namespace sw::editor
 
     void MaterialModel::writeFloats( string& out, const float32* pValue, uint32 count )
     {
-        fixed_string<constant::kMaxBuffer128> buf;
+        fixed_string<constant::buffer::kMax128> buf;
         if ( count == 1 )
             formatstring( buf.data(), buf.capacity(), "%g", pValue[0] );
         else if ( count == 2 )

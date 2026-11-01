@@ -41,7 +41,7 @@ namespace sw
          * @details 기준점은 **가장 이른 시각**이지 번호가 낮은 슬롯이 아닙니다. 프레임 시작 표식은 번호가 큰 슬롯에 적히므로(패스 슬롯과
          *          겹치지 않게 뒤쪽을 씁니다), 낮은 번호를 기준으로 삼으면 그 값이 음수가 되어 0 으로 잘립니다. 어느 슬롯을 기준으로 삼든
          *          구간 차이는 같습니다.
-         * @param pTick 슬롯마다의 틱, `constant::kMaxGPUTimestampSlot` 개. 준비되지 않은 슬롯의 값은 읽지 않습니다.
+         * @param pTick 슬롯마다의 틱, `constant::render::kMaxGPUTimestampSlot` 개. 준비되지 않은 슬롯의 값은 읽지 않습니다.
          * @param readyMask 이번에 읽힌 슬롯의 비트.
          * @param nanosPerTick 틱 하나가 몇 나노초인가 (DX: 1e9 / 주파수, GL: 1, Vulkan: timestampPeriod). `readGPUClockNanos` 와 같은 환산이어야 합니다.
          * @param outFrame 슬롯 수만큼 채웁니다. 기록되지 않은 슬롯은 -1 이고, 부르는 쪽이 그 쌍을 통째로 버리는 약속입니다. readyMask 가 0 이면 비웁니다.

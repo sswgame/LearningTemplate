@@ -180,8 +180,8 @@ namespace sw
      */
     void DeadlockDetector::dumpDeadlock( const vector<std::thread::id>& listCycle )
     {
-        const ScopedLeafLockExemption           exemption; // 검출기의 보고는 잠금 상태 자체를 알리는 글이라 잎 잠금 규칙 밖이다
-        StringBuilder<constant::kMaxBuffer8192> builder;
+        const ScopedLeafLockExemption             exemption; // 검출기의 보고는 잠금 상태 자체를 알리는 글이라 잎 잠금 규칙 밖이다
+        StringBuilder<constant::buffer::kMax8192> builder;
         builder.append( "\n=======================================================\n" );
         builder.append( "[FATAL ERROR] DEADLOCK DETECTED!\n" );
         builder.append( "=======================================================\n" );

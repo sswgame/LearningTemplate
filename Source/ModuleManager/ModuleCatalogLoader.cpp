@@ -21,7 +21,7 @@ namespace sw
     {
         struct ModuleCatalogLoaderInternal
         {
-            static constexpr size_t kNotFound = invalid_index::kUint64;
+            static constexpr size_t kNotFound = constant::invalid_index::kUint64;
 
             /** @brief 매니페스트 파일 하나를 읽습니다. 못 읽거나 틀리면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool readManifest( const string& manifestPath, ModuleManifest& outManifest )

@@ -59,7 +59,7 @@ namespace sw
                 return status;
             }
 
-            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
+            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond; }
         };
     } // namespace
 } // namespace sw

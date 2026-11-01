@@ -93,7 +93,7 @@ namespace sw
 
     int32 MatchMaker::computeRatingWindow( const MatchTicket& ticket, int64 nowMs ) const
     {
-        const int64 waitedSeconds = MathUtil::max<int64>( 0, nowMs - ticket._enqueuedMs ) / constant::kMillisecondsPerSecond;
+        const int64 waitedSeconds = MathUtil::max<int64>( 0, nowMs - ticket._enqueuedMs ) / constant::time::kMillisecondsPerSecond;
         const int64 window        = static_cast<int64>( _definition._baseRatingWindow ) + waitedSeconds * _definition._ratingWindowPerSecond;
         return static_cast<int32>( MathUtil::min<int64>( window, _definition._maxRatingWindow ) );
     }

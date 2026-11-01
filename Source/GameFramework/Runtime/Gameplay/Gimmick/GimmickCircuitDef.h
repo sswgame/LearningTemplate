@@ -77,7 +77,6 @@ namespace sw
     {
     public:
         /** @brief 기본 고정 스텝(초)입니다. 60 Hz 입니다. */
-        static constexpr float32 kDefaultStepTime = 1.0f / 60.0f;
 
         /** @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다. 이름의 뜻은 `GimmickCircuit::populate` 가 검사합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
@@ -107,6 +106,6 @@ namespace sw
         vector<GimmickNodeDef> _listNode{};
         vector<GimmickWireDef> _listWire{};
         string                 _sourceName{};
-        float32                _stepTime{ kDefaultStepTime };
+        float32                _stepTime{ constant::time::kDefaultFixedStepSeconds };
     };
 } // namespace sw

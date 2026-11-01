@@ -77,7 +77,7 @@ namespace sw::editor
             struct RowCache
             {
                 unordered_map<const TypeInfo*, EditorComponentIconRow> _mapRow;
-                uint32                                                 _generation{ invalid_index::kUint32 };
+                uint32                                                 _generation{ constant::invalid_index::kUint32 };
             };
 
             static Color findColor( string_view colorName )

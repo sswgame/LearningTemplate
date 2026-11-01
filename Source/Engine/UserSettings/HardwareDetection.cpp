@@ -56,7 +56,7 @@ namespace sw
                     return;
                 result._gpuName = StringUtil::utf16ToUTF8( desc.Description );
                 if ( ( desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE ) == 0 )
-                    result._gpuMemoryMb = static_cast<uint32>( desc.DedicatedVideoMemory / constant::kBytesPerMegabyte );
+                    result._gpuMemoryMb = static_cast<uint32>( desc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte );
             }
 #elif defined( SW_PLATFORM_LINUX )
             /** @brief amdgpu 드라이버가 sysfs 에 내는 전용 비디오 메모리(바이트)를 읽습니다. 다른 드라이버는 아직 읽지 않는다(0). */
@@ -65,14 +65,14 @@ namespace sw
                 for ( int32 cardIndex = 0; cardIndex < 8; ++cardIndex )
                 {
                     string text;
-                    utf8   arrPath[constant::kMaxBuffer128]{};
-                    formatstring( arrPath, constant::kMaxBuffer128, "/sys/class/drm/card%#/device/mem_info_vram_total", cardIndex );
+                    utf8   arrPath[constant::buffer::kMax128]{};
+                    formatstring( arrPath, constant::buffer::kMax128, "/sys/class/drm/card%#/device/mem_info_vram_total", cardIndex );
                     if ( FileUtil::readOptionalTextFile( arrPath, text ) != OptionalFileRead::Read ) // 없는 카드는 오류가 아니라 건너뜀
                         continue;
                     int64 bytes{ 0 };
                     if ( StringUtil::parseInt64( StringUtil::trim( text ), bytes ) && bytes > 0 )
                     {
-                        result._gpuMemoryMb = static_cast<uint32>( bytes / static_cast<int64>( constant::kBytesPerMegabyte ) );
+                        result._gpuMemoryMb = static_cast<uint32>( bytes / static_cast<int64>( constant::memory::kBytesPerMegabyte ) );
                         return;
                     }
                 }
@@ -97,13 +97,13 @@ namespace sw
         MEMORYSTATUSEX memoryStatus{};
         memoryStatus.dwLength = sizeof( memoryStatus );
         if ( GlobalMemoryStatusEx( &memoryStatus ) != FALSE )
-            result._systemMemoryMb = static_cast<uint32>( memoryStatus.ullTotalPhys / constant::kBytesPerMegabyte );
+            result._systemMemoryMb = static_cast<uint32>( memoryStatus.ullTotalPhys / constant::memory::kBytesPerMegabyte );
         // 메모리 상한이 걸린 Job Object 안이면(부하 검증의 하드웨어 흉내) 그 상한이 이 프로세스의 메모리다.
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobLimit{};
         const bool                           bJobLimited = QueryInformationJobObject( nullptr, JobObjectExtendedLimitInformation, &jobLimit, sizeof( jobLimit ), nullptr ) != FALSE &&
                                  ( jobLimit.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_PROCESS_MEMORY ) != 0;
         if ( bJobLimited )
-            result._systemMemoryMb = MathUtil::min( result._systemMemoryMb, static_cast<uint32>( jobLimit.ProcessMemoryLimit / constant::kBytesPerMegabyte ) );
+            result._systemMemoryMb = MathUtil::min( result._systemMemoryMb, static_cast<uint32>( jobLimit.ProcessMemoryLimit / constant::memory::kBytesPerMegabyte ) );
 #elif defined( SW_PLATFORM_LINUX )
         const int64 pageCount = static_cast<int64>( sysconf( _SC_PHYS_PAGES ) );
         const int64 pageSize  = static_cast<int64>( sysconf( _SC_PAGE_SIZE ) );

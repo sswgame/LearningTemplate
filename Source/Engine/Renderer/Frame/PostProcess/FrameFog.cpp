@@ -7,6 +7,8 @@
  */
 #include "pch.h"
 
+#include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -17,7 +19,6 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
@@ -152,8 +153,8 @@ namespace sw
         listRow[Internal::kRowSunRadiance]  = float4{ keyLightColorAmbient._x * sunIntensity, keyLightColorAmbient._y * sunIntensity, keyLightColorAmbient._z * sunIntensity,
                                                      bPerspective ? 1.0f : 0.0f };
         const bool   bLights                = lightBuffer.isBindable();
-        const uint32 gridBase               = ( bLights && mainLightGridIndex != invalid_index::kUint32 ) ? lightBuffer.getGridBase( mainLightGridIndex ) : invalid_index::kUint32;
-        const bool   bGrid                  = gridBase != invalid_index::kUint32 && lightBuffer.findGridBuffer() != nullptr;
+        const uint32 gridBase               = ( bLights && mainLightGridIndex != constant::invalid_index::kUint32 ) ? lightBuffer.getGridBase( mainLightGridIndex ) : constant::invalid_index::kUint32;
+        const bool   bGrid                  = gridBase != constant::invalid_index::kUint32 && lightBuffer.findGridBuffer() != nullptr;
         listRow[Internal::kRowLightGrid]    = Internal::packBits( bLights ? lightBuffer.getCount() : 0u, bGrid ? gridBase : 0u, bGrid ? 1u : 0u, 0u );
 
         const uint32 paramRowCount = static_cast<uint32>( _listScratchFogVolumeParam.size() );

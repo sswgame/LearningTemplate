@@ -301,7 +301,7 @@ namespace sw
             // 같은 기울기를 먼저 보고, 그 안에서 굵기가 가장 가까운 면(같으면 무거운 쪽)을 고른다. CSS 폰트 매칭의 단순 버전이다.
             const FontFaceDesc* pBest           = nullptr;
             bool                bBestSlantMatch = false;
-            uint32              bestDistance    = invalid_index::kUint32;
+            uint32              bestDistance    = constant::invalid_index::kUint32;
             for ( const FontFaceDesc& face : pFamily->_listFace )
             {
                 const bool   bSlantMatch = face._slant == slant;

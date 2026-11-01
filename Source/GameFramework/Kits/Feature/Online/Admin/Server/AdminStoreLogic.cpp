@@ -34,15 +34,15 @@ namespace sw
 
             static string formatAmount( string_view assetID, int64 amount )
             {
-                utf8 arrBuffer[constant::kMaxBuffer128];
-                formatstring( arrBuffer, constant::kMaxBuffer128, "%#=%#", assetID, amount );
+                utf8 arrBuffer[constant::buffer::kMax128];
+                formatstring( arrBuffer, constant::buffer::kMax128, "%#=%#", assetID, amount );
                 return string( arrBuffer );
             }
 
             static string formatSanction( const ServiceSanctionState& state )
             {
-                utf8 arrBuffer[constant::kMaxBuffer256];
-                formatstring( arrBuffer, constant::kMaxBuffer256, "mute=%# suspend=%# ban=%# reason=%#", state._arrUntilMs[0], state._arrUntilMs[1], state._arrUntilMs[2],
+                utf8 arrBuffer[constant::buffer::kMax256];
+                formatstring( arrBuffer, constant::buffer::kMax256, "mute=%# suspend=%# ban=%# reason=%#", state._arrUntilMs[0], state._arrUntilMs[1], state._arrUntilMs[2],
                               state._reasonCode );
                 return string( arrBuffer );
             }

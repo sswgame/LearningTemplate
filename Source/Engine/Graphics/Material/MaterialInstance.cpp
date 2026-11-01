@@ -504,7 +504,7 @@ namespace sw
         ScopedLock<mutex>       lock{ _overrideMutex };
         const array<float32, 4> val = { value._x, value._y, value._z, value._w };
         MaterialInstanceInternal::insertOrAssign( _listVectorOverride, name, val );
-        StringBuilder<constant::kMaxBuffer64> sb;
+        StringBuilder<constant::buffer::kMax64> sb;
         sb.appendFormat( "%# %# %# %#", value._x, value._y, value._z, value._w );
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string{ sb.c_str(), sb.size() } );
         _bGPUDirty = SW_TRUE;

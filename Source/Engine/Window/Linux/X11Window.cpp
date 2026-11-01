@@ -43,7 +43,7 @@ namespace sw
         /** @brief 클립보드 속성을 한 번에 읽는 최대 길이(32 비트 단위)입니다. 64 MB 다. */
         constexpr int64 kClipboardMaxLongs = int64{ 1 } << 24;
         /** @brief INCR 로 보내는 중 상대가 다음 조각을 청하지 않고 기다려 주는 시간(ms)입니다. 넘으면 상대가 사라진 것으로 보고 건을 버린다. */
-        constexpr int64 kClipboardIncrIdleMilliseconds = 10 * constant::kMillisecondsPerSecond;
+        constexpr int64 kClipboardIncrIdleMilliseconds = 10 * constant::time::kMillisecondsPerSecond;
 
         struct X11ClipboardWait
         {

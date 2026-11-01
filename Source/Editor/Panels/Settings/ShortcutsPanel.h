@@ -51,10 +51,10 @@ namespace sw::editor
         void drawShortcutRow( EditorInputActions& inputActions, const EditorCommandDesc& desc, const string& shortcutLabel );
         void finishCapture();
 
-        fixed_string<constant::kMaxBuffer64> _filter;
-        string                               _captureAction;   ///< 조합을 받는 중인 액션(비면 받지 않는다)
-        string                               _conflictAction;  ///< 받은 조합과 겹친 액션(비면 충돌 없음)
-        Key                                  _pendingKey;      ///< 충돌을 물을 동안 받아 둔 키
-        uint8                                _pendingModifier; ///< 충돌을 물을 동안 받아 둔 수정 키(`ModifierKey`)
+        fixed_string<constant::buffer::kMax64> _filter;
+        string                                 _captureAction;   ///< 조합을 받는 중인 액션(비면 받지 않는다)
+        string                                 _conflictAction;  ///< 받은 조합과 겹친 액션(비면 충돌 없음)
+        Key                                    _pendingKey;      ///< 충돌을 물을 동안 받아 둔 키
+        uint8                                  _pendingModifier; ///< 충돌을 물을 동안 받아 둔 수정 키(`ModifierKey`)
     };
 } // namespace sw::editor

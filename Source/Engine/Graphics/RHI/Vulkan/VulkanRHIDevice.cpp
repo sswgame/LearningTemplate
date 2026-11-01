@@ -122,7 +122,7 @@ namespace sw
         , _listUAVSourceTexture{}
         , _listUAVFree{}
         , _gpuTextures{}
-        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
+        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
         , _renderPassCache{}
         , _listTextureUsed{}
         , _listTextureFree{}
@@ -270,7 +270,7 @@ namespace sw
             if ( createCommandBuffers() == false )
                 return false;
 
-            if ( _swapChain.createSemaphores( _device, constant::kMaxFrameCountInFlight ) == false )
+            if ( _swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight ) == false )
                 return false;
 
             if ( createFrameFences() == false )
@@ -300,7 +300,7 @@ namespace sw
         BLOCK( "Fullscreen Triangle" )
         {
             const RHIBufferHandle vbHandle =
-                createVulkanBuffer( static_cast<uint32>( sizeof( constant::arrFallbackVertex ) ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, constant::arrFallbackVertex );
+                createVulkanBuffer( static_cast<uint32>( sizeof( constant::render::arrFallbackVertex ) ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, constant::render::arrFallbackVertex );
             if ( vbHandle != 0 )
             {
                 const VulkanBufferRecord* pRecord = resolveAllocatedBuffer( vbHandle );
@@ -339,7 +339,7 @@ namespace sw
     {
         // 표 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
         ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
-        _constantBufferMirror.fillSlot( _currentFrame % constant::kMaxFrameCountInFlight,
+        _constantBufferMirror.fillSlot( _currentFrame % constant::render::kMaxFrameCountInFlight,
                                         [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
@@ -640,7 +640,7 @@ namespace sw
         if ( _device == nullptr || sizeBytes == 0 )
             return 0;
 
-        const uint32 alignedSize = MathUtil::align( sizeBytes, constant::kConstantBufferAlignment );
+        const uint32 alignedSize = MathUtil::align( sizeBytes, constant::render::kConstantBufferAlignment );
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -982,8 +982,8 @@ namespace sw
             {
                 SW_LOG_WARNING( "Skipping Vulkan device '%#': API %#.%# is below the required %#.%# (shaders are SPIR-V for that target)",
                                 candidateProperties.deviceName, VK_API_VERSION_MAJOR( candidateProperties.apiVersion ),
-                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), constant::kVulkanRequiredMajor,
-                                constant::kVulkanRequiredMinor );
+                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), constant::render::kVulkanRequiredMajor,
+                                constant::render::kVulkanRequiredMinor );
                 continue;
             }
             // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
@@ -1024,8 +1024,8 @@ namespace sw
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
-            utf8 arrGPU[constant::kMaxBuffer256]{};
-            formatstring( arrGPU, constant::kMaxBuffer256, "%# (driver %#, api %#.%#.%#)", properties.deviceName,
+            utf8 arrGPU[constant::buffer::kMax256]{};
+            formatstring( arrGPU, constant::buffer::kMax256, "%# (driver %#, api %#.%#.%#)", properties.deviceName,
                           properties.driverVersion, VK_VERSION_MAJOR( properties.apiVersion ),
                           VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
             CrashHandler::setContextValue( "GPU", arrGPU );
@@ -1038,8 +1038,8 @@ namespace sw
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
-            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::kVulkanRequiredMajor,
-                          constant::kVulkanRequiredMinor );
+            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::render::kVulkanRequiredMajor,
+                          constant::render::kVulkanRequiredMinor );
         return _physicalDevice != nullptr;
     }
 
@@ -1271,7 +1271,7 @@ namespace sw
 
     bool VulkanRHIDevice::createCommandBuffers()
     {
-        _listCommandBuffer.resize( constant::kMaxFrameCountInFlight );
+        _listCommandBuffer.resize( constant::render::kMaxFrameCountInFlight );
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool        = _commandPool;
@@ -1295,8 +1295,8 @@ namespace sw
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         // 펜스는 인플라이트 슬롯마다 하나다. 스왑체인 이미지 개수와 무관하다.
         // 이미지별 세마포어는 스왑체인이 만든다(VulkanRHISwapChain::createSemaphores).
-        _listInFlightFence.resize( constant::kMaxFrameCountInFlight );
-        _listRingFrameNumber.resize( constant::kMaxFrameCountInFlight, 0 );
+        _listInFlightFence.resize( constant::render::kMaxFrameCountInFlight );
+        _listRingFrameNumber.resize( constant::render::kMaxFrameCountInFlight, 0 );
         // "이 이미지를 마지막으로 쓴 펜스" 표는 이미지 개수만큼 필요하다.
         _listImagesInFlight.resize( _swapChain.getImageCount(), VK_NULL_HANDLE );
 
@@ -1384,7 +1384,7 @@ namespace sw
         }
         else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
             pFailedStep = "swapchain framebuffers";
-        else if ( _swapChain.createSemaphores( _device, constant::kMaxFrameCountInFlight ) == false )
+        else if ( _swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight ) == false )
             pFailedStep = "swapchain semaphores";
         else if ( createFrameFences() == false )
             pFailedStep = "frame fences";
@@ -1509,7 +1509,7 @@ namespace sw
         if ( bDeviceLost && _transferSerials.markLost() == false )
             return;
 
-        fixed_string<constant::kMaxBuffer64> lastMarker;
+        fixed_string<constant::buffer::kMax64> lastMarker;
         {
             ScopedLock<mutex> lock{ _submittedMarkerMutex };
             lastMarker = _lastSubmittedEventMarker;
@@ -1660,7 +1660,7 @@ namespace sw
     {
         _renderThread.assumeHeldByJoinedTask(); // 패스 실행(병렬 기록 태스크 포함)이 부른다 — 렌더 스레드가 합류를 기다린다
         return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
-                 ? constant::kMaxGPUTimestampSlot
+                 ? constant::render::kMaxGPUTimestampSlot
                  : 0u;
     }
 
@@ -1736,7 +1736,7 @@ namespace sw
         VkQueryPoolCreateInfo poolInfo{};
         poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         poolInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
-        poolInfo.queryCount = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
+        poolInfo.queryCount = constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight;
         if ( vkCreateQueryPool( _device, &poolInfo, nullptr, &_timestampPool ) != VK_SUCCESS )
         {
             _timestampPool = VK_NULL_HANDLE;
@@ -1756,12 +1756,12 @@ namespace sw
 
         // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다.** 이번 프레임에 안 쓰인
         // 슬롯은 리셋된 채로 남아 영영 준비되지 않고, 그것 하나 때문에 범위 전체가 VK_NOT_READY 가 된다.
-        uint64       arrResult[constant::kMaxGPUTimestampSlot * 2]{};
+        uint64       arrResult[constant::render::kMaxGPUTimestampSlot * 2]{};
         const uint32 base = getTimestampBase();
         // **기다리지 않는다**(WAIT 비트 없음). 측정하려던 파이프라인을 멈추면 숫자가 거짓이 된다.
         // 그래서 VK_NOT_READY 도 정상 응답으로 받는다(쓰인 칸의 값은 이미 채워져 있다).
         const VkResult result =
-            vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGPUTimestampSlot, sizeof( arrResult ), arrResult,
+            vkGetQueryPoolResults( _device, _timestampPool, base, constant::render::kMaxGPUTimestampSlot, sizeof( arrResult ), arrResult,
                                    sizeof( uint64 ) * 2, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT );
         if ( result == VK_ERROR_DEVICE_LOST )
             reportQueueResult( static_cast<int32>( result ), "collectTimestampsForSlot: vkGetQueryPoolResults" );
@@ -1769,9 +1769,9 @@ namespace sw
             return;
 
         // 가용 비트가 선 칸만 준비된 것이다. 값과 비트를 갈라 공통 규칙에 넘긴다.
-        uint64               arrTick[constant::kMaxGPUTimestampSlot]{};
+        uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
         GPUTimestampSlotMask readyMask{ 0 };
-        for ( uint32 index = 0; index < constant::kMaxGPUTimestampSlot; ++index )
+        for ( uint32 index = 0; index < constant::render::kMaxGPUTimestampSlot; ++index )
         {
             if ( arrResult[index * 2 + 1] == 0 )
                 continue;
@@ -1896,7 +1896,7 @@ namespace sw
         requireVk( vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo ), "beginFrame: vkBeginCommandBuffer" );
         // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
         if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
-            vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGPUTimestampSlot );
+            vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::render::kMaxGPUTimestampSlot );
 
         // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
         _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
@@ -2021,7 +2021,7 @@ namespace sw
 
         _listPendingSubmit.clear();
         _activeFrameBuffer = VK_NULL_HANDLE;
-        _currentFrame      = ( _currentFrame + 1 ) % constant::kMaxFrameCountInFlight;
+        _currentFrame      = ( _currentFrame + 1 ) % constant::render::kMaxFrameCountInFlight;
         _bFrameStarted     = SW_FALSE;
         _releaseQueue.tickFrame();
     }
@@ -2121,7 +2121,7 @@ namespace sw
 
     VkCommandBuffer VulkanRHIDevice::beginNextFrameSegment()
     {
-        if ( _device == nullptr || _currentFrame >= constant::kMaxFrameCountInFlight )
+        if ( _device == nullptr || _currentFrame >= constant::render::kMaxFrameCountInFlight )
             return VK_NULL_HANDLE;
 
         vector<VkCommandBuffer>& listSegment = _arrFrameSegment[_currentFrame];
@@ -3111,7 +3111,7 @@ namespace sw
             return false;
 
         // 공용 오프스크린 렌더패스는 계약 포맷일 때만 재사용한다. 다른 포맷은 전용 RP 를 만든다.
-        const uint32 sharedFormat = static_cast<uint32>( VulkanRHIUtil::toVulkanTextureFormat( constant::kOffscreenColorFormat ) );
+        const uint32 sharedFormat = static_cast<uint32>( VulkanRHIUtil::toVulkanTextureFormat( constant::render::kOffscreenColorFormat ) );
         if ( vkFormat != 0 && vkFormat != sharedFormat )
             return false;
 

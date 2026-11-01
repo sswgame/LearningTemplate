@@ -130,7 +130,7 @@ namespace sw::editor
         unique_ptr<EditorToolDefaults>    _editorToolDefaults;
         unique_ptr<EditorContext>         _editorContext;
         EditorDockLayout                  _dockLayout;
-        EditorDrawDataSnapshot            _arrDrawSnapshot[constant::kMaxFrameCountInFlight];
+        EditorDrawDataSnapshot            _arrDrawSnapshot[constant::render::kMaxFrameCountInFlight];
         /// @brief `_arrDrawSnapshot` 슬롯을 UI 스레드와 렌더 스레드가 주고받는 약속입니다. 불변식은 `DrawSnapshotHandoff` 에 있습니다.
         DrawSnapshotHandoff _drawSnapshotHandoff;
         /// @brief 마지막으로 낸 draw 스냅샷 번호입니다. UI 스레드 전용이며 1 부터 시작합니다. 해제한 리소스의 해제 순서를 이 번호로 정합니다(`EditorDrawReleaseQueue`).

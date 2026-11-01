@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Console/DebugHUDRegistry.h"
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
 #if SW_DEV_COMMANDS_ENABLED
@@ -15,7 +15,7 @@ namespace sw
     template <typename... Args>
     void DebugHUDSectionWriter::addLineFormat( string_view label, string_view format, Args&&... args )
     {
-        fixed_string<constant::kMaxBuffer128> text;
+        fixed_string<constant::buffer::kMax128> text;
         formatstring( text.data(), text.capacity(), format, std::forward<Args>( args )... );
         addLine( label, text.c_str() );
     }

@@ -12,7 +12,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -242,8 +242,8 @@ namespace sw
     {                                                                                                       \
         if ( ::sw::Logger::shouldLog( level ) )                                                             \
         {                                                                                                   \
-            ::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                               \
-            ::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );                   \
+            ::utf8 arrBuffer[::sw::constant::buffer::kMax8192];                                             \
+            ::sw::formatstring( arrBuffer, ::sw::constant::buffer::kMax8192, __VA_ARGS__ );                 \
             ::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, nullptr, arrBuffer, __FILE__, __LINE__, pID ); \
         }                                                                                                   \
     } while ( false )
@@ -259,8 +259,8 @@ namespace sw
 #define SW_FATAL( ... )                                                                           \
     do                                                                                            \
     {                                                                                             \
-        ::utf8 arrFatalMessage[::sw::constant::kMaxBuffer8192];                                   \
-        ::sw::formatstring( arrFatalMessage, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );       \
+        ::utf8 arrFatalMessage[::sw::constant::buffer::kMax8192];                                 \
+        ::sw::formatstring( arrFatalMessage, ::sw::constant::buffer::kMax8192, __VA_ARGS__ );     \
         ::sw::internal::reportFatal( __FILE__, static_cast<int32>( __LINE__ ), arrFatalMessage ); \
     } while ( false )
 
@@ -314,8 +314,8 @@ namespace sw
         {                                                                                                                                       \
             if ( !( expr ) )                                                                                                                    \
             {                                                                                                                                   \
-                utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                                                                  \
-                sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );                                                      \
+                utf8 _assertMsg[sw::constant::buffer::kMax8192];                                                                                \
+                sw::formatstring( _assertMsg, sw::constant::buffer::kMax8192, __VA_ARGS__ );                                                    \
                 ::sw::Logger::printAssertFailureToStderr( #expr, _assertMsg, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
                 SW_LOG_WRITE( sw::LogLevel::Error, SW_ASSERT_LOG_ID,                                                                            \
                               "ASSERT failed\n"                                                                                                 \
@@ -335,19 +335,19 @@ namespace sw
      * @brief Debug 가 아니면 **멈추지 않고 Error 로그만** 남깁니다.
      * @details no-op 으로 두지 않습니다 — 배포본에서 계약이 깨진 순간을 놓치게 됩니다.
      */
-    #define SW_LOG_ASSERT( expr, ... )                                                     \
-        do                                                                                 \
-        {                                                                                  \
-            if ( !( expr ) )                                                               \
-            {                                                                              \
-                utf8 _assertMsg[sw::constant::kMaxBuffer8192];                             \
-                sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ ); \
-                SW_LOG_ERROR_ID( SW_ASSERT_LOG_ID, "ASSERT failed\n"                       \
-                                                   "Expression : %#\n"                     \
-                                                   "Message    : %#\n"                     \
-                                                   "FileName   : %#\n"                     \
-                                                   "Line       : %#",                      \
-                                 #expr, _assertMsg, __FILE__, __LINE__ );                  \
-            }                                                                              \
+    #define SW_LOG_ASSERT( expr, ... )                                                       \
+        do                                                                                   \
+        {                                                                                    \
+            if ( !( expr ) )                                                                 \
+            {                                                                                \
+                utf8 _assertMsg[sw::constant::buffer::kMax8192];                             \
+                sw::formatstring( _assertMsg, sw::constant::buffer::kMax8192, __VA_ARGS__ ); \
+                SW_LOG_ERROR_ID( SW_ASSERT_LOG_ID, "ASSERT failed\n"                         \
+                                                   "Expression : %#\n"                       \
+                                                   "Message    : %#\n"                       \
+                                                   "FileName   : %#\n"                       \
+                                                   "Line       : %#",                        \
+                                 #expr, _assertMsg, __FILE__, __LINE__ );                    \
+            }                                                                                \
         } while ( false )
 #endif

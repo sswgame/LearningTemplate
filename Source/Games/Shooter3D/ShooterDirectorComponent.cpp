@@ -800,8 +800,8 @@ namespace sw
                 enemyHipsY = hips.getTranslation()._y;
             break;
         }
-        const float3                            feet = pPlayer->getFeetPosition();
-        StringBuilder<constant::kMaxBuffer1024> row;
+        const float3                              feet = pPlayer->getFeetPosition();
+        StringBuilder<constant::buffer::kMax1024> row;
         row.appendFormat( "%#,%.5f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", _traceFrame, deltaTime, feet._x, feet._z, pPlayer->getLookYaw(), body._x, body._y, body._z, bodyYaw );
         for ( const float3& bone : arrBone )
         {

@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
@@ -112,16 +112,16 @@ namespace sw::editor
         /** @brief 현재 그리는 공통 컴포넌트입니다. 그리드 콜백이 읽습니다. */
         EditorMultiEditComponent* _pMultiEditCurrent;
         /** @brief 이름 입력란에서 편집 중인 텍스트입니다. 편집 중이 아니면 프레임마다 오브젝트 이름으로 채우며, 입력란을 떠날 때 적용할 텍스트를 보관합니다. */
-        fixed_string<constant::kMaxBuffer256> _nameEditBuffer;
-        EditorFileCollectJob                  _componentPresetJob;
-        vector<string>                        _listComponentPresetFile;
+        fixed_string<constant::buffer::kMax256> _nameEditBuffer;
+        EditorFileCollectJob                    _componentPresetJob;
+        vector<string>                          _listComponentPresetFile;
         /** @brief `_nameEditBuffer` 가 가리키는 오브젝트입니다. 선택이 바뀌면 버립니다. */
-        uint64                               _nameEditObjectID;
-        uint64                               _lockedObjectID;     ///< 자물쇠로 잠근 오브젝트다. 0 이면 선택을 따라간다
-        fixed_string<constant::kMaxBuffer64> _addComponentSearch; ///< Add Component 팝업의 검색어
-        fixed_string<constant::kMaxBuffer64> _presetNameBuffer;   ///< Presets 메뉴의 새 프리셋 이름 칸 글
-        uint8                                _bComponentPresetDirty : 1;
-        uint8                                _bFavoritesLoaded      : 1; ///< `_favorites` 를 저장 파일에서 읽었다
-        [[maybe_unused]] uint8               _reserved              : 6;
+        uint64                                 _nameEditObjectID;
+        uint64                                 _lockedObjectID;     ///< 자물쇠로 잠근 오브젝트다. 0 이면 선택을 따라간다
+        fixed_string<constant::buffer::kMax64> _addComponentSearch; ///< Add Component 팝업의 검색어
+        fixed_string<constant::buffer::kMax64> _presetNameBuffer;   ///< Presets 메뉴의 새 프리셋 이름 칸 글
+        uint8                                  _bComponentPresetDirty : 1;
+        uint8                                  _bFavoritesLoaded      : 1; ///< `_favorites` 를 저장 파일에서 읽었다
+        [[maybe_unused]] uint8                 _reserved              : 6;
     };
 } // namespace sw::editor

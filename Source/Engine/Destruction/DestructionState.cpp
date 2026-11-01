@@ -4,7 +4,7 @@
 
 #include "Core/Container/UnionFindUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -27,7 +27,7 @@ namespace sw
         {
             static constexpr uint32 kMagic        = FourCcUtil::make( "SWDS" );
             static constexpr uint32 kVersion      = 1;
-            static constexpr uint32 kNoActiveNode = invalid_index::kUint32;
+            static constexpr uint32 kNoActiveNode = constant::invalid_index::kUint32;
 
             /** @brief 0 또는 1 인 바이트 목록을 비트로 씁니다. */
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )

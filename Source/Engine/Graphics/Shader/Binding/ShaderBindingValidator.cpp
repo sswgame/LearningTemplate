@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
@@ -208,7 +208,7 @@ namespace sw
                 uint32            _bindPoint{ 0 };
                 uint32            _bindCount{ kUnknownCount }; ///< 리소스 목록에서 왔으면 배열 크기(무제한=0), CB 목록만 있으면 모름
 
-                static constexpr uint32 kUnknownCount = invalid_index::kUint32;
+                static constexpr uint32 kUnknownCount = constant::invalid_index::kUint32;
             };
 
             /// @brief CB 목록과 리소스 목록을 (이름, 종류)로 중복 없이 합칩니다. DX 리플렉션은 cbuffer 를 양쪽에 다 넣습니다.
@@ -635,7 +635,7 @@ namespace sw
             }
 
             /**
-             * @brief 5) 정점 입력: 시맨틱이 정점 레이아웃 표(constant::arrVertexAttribute)에 있고, Vulkan · GL 은 location 까지 같은가.
+             * @brief 5) 정점 입력: 시맨틱이 정점 레이아웃 표(constant::render::arrVertexAttribute)에 있고, Vulkan · GL 은 location 까지 같은가.
              * @details DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
              *          빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 픽셀로는 늦게 드러난다.
              */
@@ -644,7 +644,7 @@ namespace sw
                 for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
                 {
                     const RHIVertexAttribute* pAttribute{ nullptr };
-                    for ( const RHIVertexAttribute& attribute : constant::arrVertexAttribute )
+                    for ( const RHIVertexAttribute& attribute : constant::render::arrVertexAttribute )
                     {
                         if ( input._semantic == attribute._pSemanticName )
                         {
@@ -655,7 +655,7 @@ namespace sw
                     const string label = input._semantic + to_string( input._semanticIndex );
                     if ( pAttribute == nullptr || input._semanticIndex != 0 )
                     {
-                        report( label, "정점 레이아웃 표(constant::arrVertexAttribute)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 VertexInput 을 쓸 것" );
+                        report( label, "정점 레이아웃 표(constant::render::arrVertexAttribute)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 VertexInput 을 쓸 것" );
                         continue;
                     }
                     if ( ( _bVulkan || _bOpenGl ) && input._location != pAttribute->_location )

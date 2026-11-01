@@ -23,7 +23,7 @@ namespace sw::editor
             const AssetHotReload* pHotReload = &editor::getSubsystem<AssetHotReload>();
             if ( pHotReload->isImportBusy() == false )
                 return;
-            fixed_string<constant::kMaxBuffer128> label;
+            fixed_string<constant::buffer::kMax128> label;
             formatstring( label.data(), label.capacity(), "Importing assets: %# running, %# queued", static_cast<uint32>( pHotReload->getRunningImportCount() ),
                           static_cast<uint32>( pHotReload->getQueuedImportCount() ) );
             ImGui::TextUnformatted( label.c_str() );

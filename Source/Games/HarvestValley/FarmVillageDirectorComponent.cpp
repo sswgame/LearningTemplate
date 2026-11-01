@@ -34,7 +34,7 @@ namespace sw
             /** @brief 시계의 지금 시각을 0 일 0:00 부터 센 분으로 바꿉니다(일정 시스템의 시간 축). */
             static int32 computeAbsoluteMinute( const WorldClock& clock )
             {
-                return clock.getDay() * kScheduleMinutesPerDay + clock.getHourInt() * static_cast<int32>( constant::kSecondsPerMinute ) + clock.getMinute();
+                return clock.getDay() * kScheduleMinutesPerDay + clock.getHourInt() * static_cast<int32>( constant::time::kSecondsPerMinute ) + clock.getMinute();
             }
 
             /** @brief @p objectName 이 장애물 이름 @p baseName 이거나 저장소가 번호를 붙인 같은 이름(`Tree_3`)이면 true 입니다. */

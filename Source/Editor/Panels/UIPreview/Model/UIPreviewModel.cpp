@@ -587,7 +587,7 @@ namespace sw::editor
             return false; // 루트는 지우지 않는다(문서에는 루트가 있어야 한다)
         PanelWidget* pParent = pWidget->getParent();
         const uint32 index   = pParent->findChildIndex( pWidget );
-        if ( index == invalid_index::kUint32 )
+        if ( index == constant::invalid_index::kUint32 )
             return false;
         const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
         _pointer.clearHover();

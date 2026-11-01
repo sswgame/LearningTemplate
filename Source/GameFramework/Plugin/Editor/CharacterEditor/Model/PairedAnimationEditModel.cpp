@@ -23,8 +23,8 @@ namespace sw::editor
             /** @brief 연속 편집을 합칠 키입니다(필드 + 인덱스). */
             static string makeCoalesceKey( const utf8* pField, uint32 index )
             {
-                utf8 arrKey[constant::kMaxBuffer64];
-                formatstring( arrKey, constant::kMaxBuffer64, "%#:%#", pField, index );
+                utf8 arrKey[constant::buffer::kMax64];
+                formatstring( arrKey, constant::buffer::kMax64, "%#:%#", pField, index );
                 return string( arrKey );
             }
         };

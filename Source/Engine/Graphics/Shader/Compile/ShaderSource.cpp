@@ -19,7 +19,7 @@ namespace sw
         // 칸 단위로 본다 — `myshaders/` 나 `shadersx/` 는 `shaders` 칸이 아니다(예전 글자 검색 `shaders/` 는 앞을, `/shaders/` 는 둘 다 놓쳤다).
         const string_view id     = _id.view();
         size_t            begin  = id.find( '/' ); // 첫 칸은 도메인이다 - `shaders` 가 맨 앞이면 도메인이 없는 id 라 받지 않는다
-        const string_view folder = path::kShaderFolder;
+        const string_view folder = constant::path::kShaderFolder;
         while ( begin != string_view::npos )
         {
             const size_t      componentBegin = begin + 1;
@@ -49,7 +49,7 @@ namespace sw
 
     ShaderBinaryLocation ShaderBinaryLocation::makeForDomain( string_view domain, ShaderTargetFormat format )
     {
-        return makeUnderShadersFolder( FileUtil::joinPath( domain, path::kShaderFolder ), format );
+        return makeUnderShadersFolder( FileUtil::joinPath( domain, constant::path::kShaderFolder ), format );
     }
 
     ShaderBinaryLocation ShaderBinaryLocation::makeUnderShadersFolder( string_view shadersFolder, ShaderTargetFormat format )
@@ -110,10 +110,10 @@ namespace sw
         vector<ShaderIncludeRootDomain> listRootDomain;
         for ( string& domain : listDomain )
         {
-            const std::optional<AbsolutePath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, path::kShaderFolder ) );
+            const std::optional<AbsolutePath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
             if ( folder.has_value() == false || FileUtil::isDirectory( folder->str() ) == false )
             {
-                SW_LOG_ERROR( "Shader include root '%#/%#' has no folder on disk - the engine headers cannot be found", domain, path::kShaderFolder );
+                SW_LOG_ERROR( "Shader include root '%#/%#' has no folder on disk - the engine headers cannot be found", domain, constant::path::kShaderFolder );
                 return std::nullopt;
             }
             listRootDomain.push_back( ShaderIncludeRootDomain{ std::move( domain ), *folder } );
@@ -161,7 +161,7 @@ namespace sw
 
     std::optional<AbsolutePath> ShaderSourceResolver::findDomainShadersFolder( string_view domain ) const
     {
-        const std::optional<AbsolutePath> folder = _pAssetPaths->toDiskPath( FileUtil::joinPath( domain, path::kShaderFolder ) );
+        const std::optional<AbsolutePath> folder = _pAssetPaths->toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
         return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder : std::nullopt;
     }
 } // namespace sw

@@ -12,7 +12,7 @@ namespace sw
         if ( ppFrame == nullptr || frameCount == 0 )
             return kEmptyCallStackText;
 
-        StringBuilder<constant::kMaxBuffer8192> sb;
+        StringBuilder<constant::buffer::kMax8192> sb;
         for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             sb.appendFormat( "  [%#] 0x%# (symbols busy)\n", frameIndex,

@@ -26,7 +26,7 @@ namespace sw
          */
         struct CallerKey
         {
-            utf8   _arrText[constant::kMaxBuffer128]{ 0 };
+            utf8   _arrText[constant::buffer::kMax128]{ 0 };
             size_t _length{ 0 };
 
             bool operator==( const CallerKey& other ) const
@@ -61,7 +61,7 @@ namespace sw
         struct CallerEntry
         {
             CallerKey _key{};
-            utf8      _arrCallerName[constant::kMaxBuffer64]{ 0 };
+            utf8      _arrCallerName[constant::buffer::kMax64]{ 0 };
         };
 
         /**
@@ -87,8 +87,8 @@ namespace sw
             const utf8* _pID{ nullptr };
             int32       _line{ 0 };
             bool        _bHasCaller{ false };
-            utf8        _arrCaller[constant::kMaxBuffer64]{ 0 };
-            utf8        _arrMessage[constant::kMaxBuffer512]{ 0 };
+            utf8        _arrCaller[constant::buffer::kMax64]{ 0 };
+            utf8        _arrMessage[constant::buffer::kMax512]{ 0 };
         };
         static constexpr uint32 kMaxBacklogLine = 64;
         BacklogLine             s_arrBacklog[kMaxBacklogLine]{};
@@ -116,7 +116,7 @@ namespace sw
         /**
          * @brief 경로의 파일 이름에서 확장자를 뺀 글을 @p arrStem 에 담습니다(`.../LinearAllocator.cpp` → `LinearAllocator`).
          */
-        void copyFileStem( const utf8* pFile, utf8 ( &arrStem )[constant::kMaxBuffer64] )
+        void copyFileStem( const utf8* pFile, utf8 ( &arrStem )[constant::buffer::kMax64] )
         {
             const string_view path{ pFile };
             const size_t      separator = path.find_last_of( "/\\" );
@@ -141,7 +141,7 @@ namespace sw
             const LogLevel logLevel = level == internal::LowLevelReportLevel::Warning ? LogLevel::Warning : LogLevel::Error;
             if ( Logger::shouldLog( logLevel ) )
             {
-                utf8        arrStem[constant::kMaxBuffer64];
+                utf8        arrStem[constant::buffer::kMax64];
                 const utf8* pCaller = Logger::getCaller( pFile );
                 if ( pCaller == nullptr )
                 {

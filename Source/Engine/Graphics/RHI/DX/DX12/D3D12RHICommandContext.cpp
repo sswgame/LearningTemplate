@@ -224,8 +224,8 @@ namespace sw
                 vbv.SizeInBytes    = static_cast<UINT>( pStream->GetDesc().Width > _pState->_boundInstanceSlotOffset
                                                             ? pStream->GetDesc().Width - _pState->_boundInstanceSlotOffset
                                                             : 0 );
-                vbv.StrideInBytes  = constant::kInstanceSlotStreamStride;
-                commandListForRecord()->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &vbv );
+                vbv.StrideInBytes  = constant::render::kInstanceSlotStreamStride;
+                commandListForRecord()->IASetVertexBuffers( constant::render::kInstanceSlotStreamSlot, 1, &vbv );
             }
         }
         return true;
@@ -237,7 +237,7 @@ namespace sw
             return;
         D3D12_VERTEX_BUFFER_VIEW vbv{};
         vbv.BufferLocation = _pDevice->_vertexBuffer->GetGPUVirtualAddress();
-        vbv.SizeInBytes    = static_cast<UINT>( sizeof( constant::arrFallbackVertex ) );
+        vbv.SizeInBytes    = static_cast<UINT>( sizeof( constant::render::arrFallbackVertex ) );
         vbv.StrideInBytes  = static_cast<UINT>( sizeof( RHIVertex ) );
         commandListForRecord()->IASetVertexBuffers( 0, 1, &vbv );
     }
@@ -516,8 +516,8 @@ namespace sw
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::arrVertexAttribute 의 SW_INSTANCESLOT.
-        if ( slot == constant::kInstanceSlotStreamSlot )
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::render::arrVertexAttribute 의 SW_INSTANCESLOT.
+        if ( slot == constant::render::kInstanceSlotStreamSlot )
         {
             _pState->_boundInstanceSlotVb     = buffer;
             _pState->_boundInstanceSlotOffset = offset;

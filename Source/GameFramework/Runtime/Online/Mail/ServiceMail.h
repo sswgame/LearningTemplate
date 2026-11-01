@@ -16,7 +16,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -71,8 +71,8 @@ namespace sw
         static constexpr int32 kMaxTitleSize          = 128;
         static constexpr int32 kMaxBodySize           = 2048;
         static constexpr int32 kMaxSenderNameSize     = 64;
-        static constexpr int32 kMaxIdempotencyKeySize = 64;                                                               ///< `[0-9a-z_.-]`
-        static constexpr int64 kDefaultRetentionMs    = 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond; ///< 기본 보관 30 일
+        static constexpr int32 kMaxIdempotencyKeySize = 64;                                                                           ///< `[0-9a-z_.-]`
+        static constexpr int64 kDefaultRetentionMs    = 30 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond; ///< 기본 보관 30 일
     };
 } // namespace sw
 

@@ -39,8 +39,8 @@ namespace sw
             /** @brief 실수 속성 하나를 소수 @p decimals 자리까지 씁니다. */
             static void writeFloatAttribute( XMLWriter& writer, string_view name, float32 value, int32 decimals = kValueDecimals )
             {
-                utf8         arrDigit[constant::kMaxBuffer32]{};
-                const uint32 length = StringUtil::formatNumber( arrDigit, constant::kMaxBuffer32, value, decimals );
+                utf8         arrDigit[constant::buffer::kMax32]{};
+                const uint32 length = StringUtil::formatNumber( arrDigit, constant::buffer::kMax32, value, decimals );
                 writer.attribute( name, string_view{ arrDigit, length } );
             }
 
@@ -289,7 +289,7 @@ namespace sw
             {
                 const utf8* pText  = event._payload._textData._arrUTF8;
                 size_t      length = 0;
-                while ( length < constant::kMaxBuffer32 && pText[length] != '\0' )
+                while ( length < constant::buffer::kMax32 && pText[length] != '\0' )
                 {
                     ++length;
                 }
@@ -510,7 +510,7 @@ namespace sw
         writer.whitespace( "\n" );
         writer.beginElement( "Scenario" );
         writer.attribute( "name", settings._name );
-        Internal::writeFloatAttribute( writer, "fixedDelta", settings._fixedDelta > 0.0f ? settings._fixedDelta : 1.0f / 60.0f, Internal::kFixedDeltaDecimals );
+        Internal::writeFloatAttribute( writer, "fixedDelta", settings._fixedDelta > 0.0f ? settings._fixedDelta : constant::time::kDefaultFixedStepSeconds, Internal::kFixedDeltaDecimals );
         writer.attributeInt( "timeoutFrames", passFrame + Internal::kTimeoutMargin );
         writer.attribute( "startAfter", settings._bStartWhenScenePlaying ? "ScenePlaying" : "Immediately" );
         writer.attribute( "input", "exclusive" );
@@ -593,8 +593,8 @@ namespace sw
             outCheckpoint._value = value._text;
             return true;
         }
-        utf8 arrDigit[constant::kMaxBuffer64]{};
-        (void)StringUtil::formatNumber( arrDigit, constant::kMaxBuffer64, value._number, 6 ); // 쓴 길이는 널 종료로 대신한다
+        utf8 arrDigit[constant::buffer::kMax64]{};
+        (void)StringUtil::formatNumber( arrDigit, constant::buffer::kMax64, value._number, 6 ); // 쓴 길이는 널 종료로 대신한다
         outCheckpoint._value = arrDigit;
         return true;
     }

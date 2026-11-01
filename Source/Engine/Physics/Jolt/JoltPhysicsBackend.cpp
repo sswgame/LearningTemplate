@@ -55,7 +55,7 @@ namespace sw
             static void
             trace( const utf8* pFormat, ... )
             {
-                utf8    arrMessage[constant::kMaxBuffer1024];
+                utf8    arrMessage[constant::buffer::kMax1024];
                 va_list arguments;
                 va_start( arguments, pFormat );
                 ::vsnprintf( arrMessage, sizeof( arrMessage ), pFormat, arguments );

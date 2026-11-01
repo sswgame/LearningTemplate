@@ -332,7 +332,7 @@ namespace sw
          */
         void   collectOptionsOf( const UserSettingDef& def, vector<UserSettingOption>& outListOption ) const;
         uint32 findIndex( const hashed_string& settingID ) const;
-        /** @brief `resolveKey` 의 본문입니다. 없거나 타입이 다르면 오류를 남기고 `invalid_index::kUint32` 입니다. */
+        /** @brief `resolveKey` 의 본문입니다. 없거나 타입이 다르면 오류를 남기고 `constant::invalid_index::kUint32` 입니다. */
         uint32 resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const;
         /** @brief 핸들이 가리키는 지금 값입니다. 다른 스키마에서 푼 핸들이면 단언으로 멈춥니다. */
         const string&        getKeyValue( const hashed_string& settingID, uint32 settingIndex ) const;
@@ -370,7 +370,7 @@ namespace sw
     {
         constexpr UserSettingType kExpectedType = std::is_same_v<T, bool> ? UserSettingType::Bool : ( std::is_same_v<T, int32> ? UserSettingType::Int : UserSettingType::Float );
         const uint32              settingIndex  = resolveKeyIndex( settingID, kExpectedType );
-        if ( settingIndex == invalid_index::kUint32 )
+        if ( settingIndex == constant::invalid_index::kUint32 )
             return std::nullopt;
         return UserSettingKey<T>( settingID, settingIndex );
     }

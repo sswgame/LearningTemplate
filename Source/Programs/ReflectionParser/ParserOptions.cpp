@@ -187,7 +187,7 @@ namespace sw
 
     void ParserOptions::printUsage()
     {
-        StringBuilder<constant::kMaxBuffer4096> out;
+        StringBuilder<constant::buffer::kMax4096> out;
         out.append( "Usage: ReflectionParser --input <header.h> ... --output <dir> --module <name> --config <file> --annotation-meta <file> --emit-templates <dir> [...]\n" );
         out.append( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --module <name> --emit-builtins-gen <file.cpp>\n" );
         for ( const OptionRow& row : kArrOptionRow )

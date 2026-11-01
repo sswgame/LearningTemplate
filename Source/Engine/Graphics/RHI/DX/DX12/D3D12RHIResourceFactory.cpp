@@ -23,10 +23,10 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBuffer( uint32 size )
     {
-        const UINT                             alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
+        const UINT                             alignedSize = MathUtil::align( size, constant::render::kConstantBufferAlignment );
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         void*                                  pMapped{ nullptr };
-        if ( _pDevice->createMappedUploadBuffer( static_cast<uint64>( alignedSize ) * constant::kMaxFrameCountInFlight, buffer, pMapped ) == false )
+        if ( _pDevice->createMappedUploadBuffer( static_cast<uint64>( alignedSize ) * constant::render::kMaxFrameCountInFlight, buffer, pMapped ) == false )
             return 0;
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
@@ -114,7 +114,7 @@ namespace sw
                 SW_LOG_ERROR( "openUploadSlot: failed to create copy command allocator" );
                 return false;
             }
-            utf16 arrName[constant::kMaxBuffer64]{};
+            utf16 arrName[constant::buffer::kMax64]{};
             swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
             slot._copyAllocator->SetName( arrName );
         }
@@ -167,7 +167,7 @@ namespace sw
             return false;
 
         // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙 · 얼로케이터 · 리스트를 새로 만들지 않는다).
-        // 이 슬롯을 다시 쓸 차례가 됐다는 것은 waitForRingSlot() 이 이미 constant::kMaxFrameCountInFlight 프레임 전 제출의
+        // 이 슬롯을 다시 쓸 차례가 됐다는 것은 waitForRingSlot() 이 이미 constant::render::kMaxFrameCountInFlight 프레임 전 제출의
         // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다. **프레임 사이에는**.
         // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
         // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
@@ -248,7 +248,7 @@ namespace sw
         uint32 slotIndex{ 0 };
         uint64 stagingOffset{ 0 };
         void*  pMapped{ nullptr };
-        if ( acquireUploadStaging( totalSize, constant::kConstantBufferAlignment, slotIndex, stagingOffset, pMapped ) == false )
+        if ( acquireUploadStaging( totalSize, constant::render::kConstantBufferAlignment, slotIndex, stagingOffset, pMapped ) == false )
             return;
 
         const uint8* pBase = static_cast<const uint8*>( pBaseSource );
@@ -334,9 +334,9 @@ namespace sw
         }
         // 서브리소스 번호 = 밉 + 면 × 밉 수(D3D12CalcSubresource 와 같은 순서).
         const UINT        firstSubresource = desc._arraySlice * resourceDesc.MipLevels;
-        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        RHITextureMipSpan arrMip[constant::render::kMaxTextureMipCount]{};
         const uint32      mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ),
-                                                               resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
+                                                               resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
             SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
@@ -345,9 +345,9 @@ namespace sw
         }
 
         // 텍스처 복사는 행 피치 256 · 서브리소스 512 정렬 풋프린트를 요구한다. 빈틈없는 입력을 풋프린트대로 다시 깐다.
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT arrFootprint[constant::kMaxTextureMipCount]{};
-        UINT                               arrRowCount[constant::kMaxTextureMipCount]{};
-        UINT64                             arrRowSize[constant::kMaxTextureMipCount]{};
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT arrFootprint[constant::render::kMaxTextureMipCount]{};
+        UINT                               arrRowCount[constant::render::kMaxTextureMipCount]{};
+        UINT64                             arrRowSize[constant::render::kMaxTextureMipCount]{};
         UINT64                             totalBytes{ 0 };
         _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, 0, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
@@ -864,7 +864,7 @@ namespace sw
 
         const bool        bDepth      = desc._bIsDepthStencil != SW_FALSE;
         const DXGI_FORMAT typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
-        const DXGI_FORMAT dsvFmt      = toDxgiFormat( constant::kDepthStencilFormat );
+        const DXGI_FORMAT dsvFmt      = toDxgiFormat( constant::render::kDepthStencilFormat );
         const DXGI_FORMAT colorFmt    = toDxgiFormat( desc._format );
 
         D3D12_RESOURCE_DESC resourceDesc{};
@@ -1402,11 +1402,11 @@ namespace sw
         ShaderCompileResult            psResult{};
         if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
         {
-            // 입력 레이아웃은 **공용 테이블**(constant::arrVertexAttribute)에서 만든다.
-            D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
-            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 만든다.
+            D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
             {
-                const RHIVertexAttribute& attribute                  = constant::arrVertexAttribute[attributeIndex];
+                const RHIVertexAttribute& attribute                  = constant::render::arrVertexAttribute[attributeIndex];
                 arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
                 arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
                 arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
@@ -1417,7 +1417,7 @@ namespace sw
             }
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
-            psoDesc.InputLayout    = { arrInputElement, constant::kVertexAttributeCount };
+            psoDesc.InputLayout    = { arrInputElement, constant::render::kVertexAttributeCount };
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
             psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
             if ( bHasPixelShader )

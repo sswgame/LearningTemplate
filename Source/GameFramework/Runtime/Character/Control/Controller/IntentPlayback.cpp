@@ -94,7 +94,7 @@ namespace sw
             template <typename... Args>
             static string makeReply( string_view format, Args&&... args )
             {
-                StringBuilder<constant::kMaxBuffer1024> text;
+                StringBuilder<constant::buffer::kMax1024> text;
                 text.appendFormat( format, std::forward<Args>( args )... );
                 return string( text.view() );
             }

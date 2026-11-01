@@ -53,7 +53,7 @@ namespace sw
             if ( lock.try_lock() == false )
                 return formatRawCallStackFrames( ppFrame, frameCount );
 
-            StringBuilder<constant::kMaxBuffer8192> sb;
+            StringBuilder<constant::buffer::kMax8192> sb;
 
             utf8** ppSymbol = backtrace_symbols( ppFrame, frameCount );
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )

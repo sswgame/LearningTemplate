@@ -95,8 +95,8 @@ namespace sw
         if ( pLog != nullptr && pLog->claimLostReport() == false )
             return;
         const utf8* pBackendName = pBackend != nullptr ? pBackend : "unknown";
-        utf8        arrLine[constant::kMaxBuffer256];
-        utf8        arrName[constant::kMaxBuffer64];
+        utf8        arrLine[constant::buffer::kMax256];
+        utf8        arrName[constant::buffer::kMax64];
 
         // GPU 가 닿은 표지 - 이름으로 푼다. 쓰지 못한 백엔드는 없다.
         uint32 reported = 0;

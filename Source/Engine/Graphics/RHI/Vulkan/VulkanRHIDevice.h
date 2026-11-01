@@ -226,7 +226,7 @@ namespace sw
             return _timestampPool;
         }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */
-        uint32 getTimestampBase() const { return _currentFrame * constant::kMaxGPUTimestampSlot; }
+        uint32 getTimestampBase() const { return _currentFrame * constant::render::kMaxGPUTimestampSlot; }
 
     protected:
         /**
@@ -330,7 +330,7 @@ namespace sw
             outHandles._queueFamily     = _graphicsQueueFamilyIndex;
             // 실제 스왑체인 이미지 수를 그대로 알린다. 매직 넘버 2 를 쓰면 백버퍼 개수 계약이 바뀔 때
             // ImGui 쪽만 옛 값으로 남는다.
-            outHandles._imageCount    = ( _swapChain.getImageCount() == 0 ) ? constant::kMaxFrameCountInFlight
+            outHandles._imageCount    = ( _swapChain.getImageCount() == 0 ) ? constant::render::kMaxFrameCountInFlight
                                                                             : _swapChain.getImageCount();
             outHandles._minImageCount = outHandles._imageCount;
             return true;
@@ -532,7 +532,7 @@ namespace sw
         /** @brief 풀 묶음의 풀을 모두 파괴합니다(shutdown). */
         void destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 디바이스 프레임 스트림이 이번 링 슬롯에서 쓰는 풀 묶음입니다. */
-        VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[_currentFrame % constant::kMaxFrameCountInFlight]; }
+        VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[_currentFrame % constant::render::kMaxFrameCountInFlight]; }
         /** @brief SRV/CB 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief UAV 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
@@ -645,7 +645,7 @@ namespace sw
         /// @brief 이번 프레임에 큐에 넣을 커맨드 버퍼들입니다. 기록 순서가 곧 실행 순서입니다.
         vector<VkCommandBuffer> _listPendingSubmit;
         /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼입니다(프레임 슬롯별로 재사용합니다).
-        vector<VkCommandBuffer> _arrFrameSegment[constant::kMaxFrameCountInFlight];
+        vector<VkCommandBuffer> _arrFrameSegment[constant::render::kMaxFrameCountInFlight];
 
         /**
          * @struct StructuredUploadSlot
@@ -665,14 +665,14 @@ namespace sw
             uint64         _uploadOffset{ 0 };
             uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 _frameFenceCounter
         };
-        StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
+        StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
         uint32               _frameSegmentCursor;
         float32              _timestampPeriod; ///< 타임스탬프 한 슬롯의 나노초(아래 `_timestampPool` 의 값)
         /// @brief 지금 기록 중인 프레임 세그먼트입니다. beginFrame 이 첫 세그먼트로 설정합니다.
         VkCommandBuffer _activeFrameBuffer;
 
         /**
-         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
+         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::render::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
          * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 한다. 그 슬롯의 GPU 작업이 이미
          *          끝났음이 보장된 유일한 지점이라, 측정하려고 파이프라인을 멈춰 세우지 않는다.
          */
@@ -720,8 +720,8 @@ namespace sw
         void* _pGetCheckpointData; ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출에서만 바인딩합니다).
         uint8         _bFrameAcquireWaitPending;
-        atomic<uint8> _bTimestampEnabled;                                                                      ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
-        uint8         _arrTimestampSubmitted[constant::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
+        atomic<uint8> _bTimestampEnabled;                                                                              ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
+        uint8         _arrTimestampSubmitted[constant::render::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
 
         VkSampler _defaultSampler;
 
@@ -763,7 +763,7 @@ namespace sw
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler
         VkDescriptorSet       _textureSet;       ///< set 1. 커맨드 버퍼마다 한 번 바인딩한다.
         /// @brief 디바이스 프레임 스트림의 링 슬롯별 풀 묶음입니다. beginFrame 이 그 슬롯의 펜스를 기다린 뒤 통째로 리셋합니다.
-        VulkanDescriptorPoolSet _arrFrameDescriptorPoolSet[constant::kMaxFrameCountInFlight];
+        VulkanDescriptorPoolSet _arrFrameDescriptorPoolSet[constant::render::kMaxFrameCountInFlight];
         /// @brief 리스트 쌍(VulkanCommandListEntry)이 빌려 쓰는 풀 묶음들의 소유자입니다. 쌍과 수명이 같으며(재사용 풀에 남고 shutdown 에서 파괴됩니다).
         vector<unique_ptr<VulkanDescriptorPoolSet>> _listCmdListDescriptorPoolSet SW_GUARDED_BY( _cmdListPoolMutex );
         VkImage                                                                   _bindlessDummyImage;
@@ -889,7 +889,7 @@ namespace sw
         TimestampProvider _timestampProvider;
 
         /// @brief 제출 순서에 마지막으로 들어간 패스 이름입니다(디바이스 손실 로그용). `_submittedMarkerMutex` 가 지킵니다.
-        fixed_string<constant::kMaxBuffer64> _lastSubmittedEventMarker SW_GUARDED_BY( _submittedMarkerMutex );
-        mutable mutex                                                  _submittedMarkerMutex;
+        fixed_string<constant::buffer::kMax64> _lastSubmittedEventMarker SW_GUARDED_BY( _submittedMarkerMutex );
+        mutable mutex                                                    _submittedMarkerMutex;
     };
 } // namespace sw

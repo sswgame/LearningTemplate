@@ -372,8 +372,8 @@ namespace sw
 
     string UserSettingsEngineHandlers::formatResolution( int32 width, int32 height )
     {
-        utf8 arrText[constant::kMaxBuffer32]{};
-        formatstring( arrText, constant::kMaxBuffer32, "%#x%#", width, height );
+        utf8 arrText[constant::buffer::kMax32]{};
+        formatstring( arrText, constant::buffer::kMax32, "%#x%#", width, height );
         return string( arrText );
     }
 

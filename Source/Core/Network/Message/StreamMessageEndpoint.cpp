@@ -164,7 +164,7 @@ namespace sw
         if ( connection._errorReason == StreamCloseReason::None )
         {
             connection._errorReason = reason;
-            StringBuilder<constant::kMaxBuffer256> text;
+            StringBuilder<constant::buffer::kMax256> text;
             text.appendFormat( "Closing stream %# (%#): %#", connection._remote.toString().c_str(), connection._handle.packed(), toString( reason ) );
             connection.deferLog( DeferredLogKind::StreamClosed, text.c_str() ); // `connection._mutex` 를 쥔 채 불린다 — 로그는 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다
         }
@@ -265,7 +265,7 @@ namespace sw
         (void)flushCiphertextLocked( connection ); // 핸드셰이크 응답, 세션 티켓, 실패 경고를 내보낸다.
         if ( bFed == false || session.getState() == TLSSessionState::Failed )
         {
-            StringBuilder<constant::kMaxBuffer256> text;
+            StringBuilder<constant::buffer::kMax256> text;
             text.appendFormat( "TLS handshake failed on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
             connection.deferLog( DeferredLogKind::TLSFailed, text.c_str() );
             closeForError( connection, StreamCloseReason::SecurityFailure );
@@ -279,7 +279,7 @@ namespace sw
         connection._plainScratch.clear();
         if ( session.readPlaintext( connection._plainScratch ) == false )
         {
-            StringBuilder<constant::kMaxBuffer256> text;
+            StringBuilder<constant::buffer::kMax256> text;
             text.appendFormat( "TLS record rejected on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
             connection.deferLog( DeferredLogKind::TLSFailed, text.c_str() );
             closeForError( connection, StreamCloseReason::SecurityFailure ); // 변조된 레코드(bad record mac).
@@ -423,7 +423,7 @@ namespace sw
         if ( bodySize > _settings->_maxFrameBodySize ||
              StreamFrameEncoder::appendFrame( connection->_frameScratch, kind, flags, pFrameBody, frameBodySize, _settings->_maxFrameBodySize ) == false )
         {
-            StringBuilder<constant::kMaxBuffer256> text;
+            StringBuilder<constant::buffer::kMax256> text;
             text.appendFormat( "Stream frame of %# bytes exceeds the limit of %# bytes - not sent", bodySize, _settings->_maxFrameBodySize );
             connection->deferLog( DeferredLogKind::FrameTooLarge, text.c_str() );
             return StreamSendResult::QueueFull;

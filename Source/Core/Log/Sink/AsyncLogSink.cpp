@@ -52,7 +52,7 @@ namespace sw
             int32       _month{ 0 };
             int32       _day{ 0 };
             int32       _hour{ 0 };
-            utf8        _arrDate[constant::kMaxBuffer32]{};
+            utf8        _arrDate[constant::buffer::kMax32]{};
         };
 
         thread_local LogDateCache t_logDateCache{};
@@ -62,11 +62,11 @@ namespace sw
             /** @brief 로그 줄에 찍는 시각 문자열과, 레코드가 나르는 달력 값(로그 파일 이름용)입니다. */
             struct DateStamp
             {
-                fixed_string<constant::kMaxBuffer32> _text{};
-                int32                                _year{ 0 };
-                int32                                _month{ 0 };
-                int32                                _day{ 0 };
-                int32                                _hour{ 0 };
+                fixed_string<constant::buffer::kMax32> _text{};
+                int32                                  _year{ 0 };
+                int32                                  _month{ 0 };
+                int32                                  _day{ 0 };
+                int32                                  _hour{ 0 };
             };
 
             /** @brief 지금 시각을 읽습니다. 같은 초 안에서는 스레드의 캐시 문자열을 재사용합니다. */
@@ -126,7 +126,7 @@ namespace sw
             }
 
             /** @brief 로그 한 줄을 @p outBuffer 에 한 번만 포맷합니다(스택 버퍼라 힙 할당이 없다). 호출자(caller)가 없으면 그 칸을 뺍니다. */
-            static void formatLine( fixed_string<constant::kMaxBuffer8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pTickTag,
+            static void formatLine( fixed_string<constant::buffer::kMax8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pTickTag,
                                     const utf8* pContextTag, const utf8* pIDTag, const utf8* pMessage, const utf8* pFile, int32 line )
             {
                 static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
@@ -457,7 +457,7 @@ namespace sw
         if ( t_reentryDepth.deviceWrite > 0 )
         {
             // 출력 장치가 `write` 안에서 로그를 남겼다 — 장치의 락과 이 줄이 되돌아갈 `write` 가 맞물려 멈추므로 장치를 거치지 않고 stderr 로 바로 쓴다.
-            utf8 arrLine[constant::kMaxBuffer32]{};
+            utf8 arrLine[constant::buffer::kMax32]{};
             formatstring( arrLine, sizeof( arrLine ), "%#", line );
             std::fputs( "[Logger] Log written from inside a log output, redirected to stderr: ", stderr );
             std::fputs( pMessage != nullptr ? pMessage : "", stderr );
@@ -487,8 +487,8 @@ namespace sw
         // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
         const Internal::DateStamp stamp = Internal::readDateStamp();
 
-        const utf8* pEffectiveTag    = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
-        const utf8* pEffectiveFile   = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
+        const utf8* pEffectiveTag    = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::log::kDefaultLogTag : pTag;
+        const utf8* pEffectiveFile   = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::log::kDefaultLogFile : pFile;
         const utf8* pEffectiveMsg    = ( pMessage != nullptr ) ? pMessage : "";
         const utf8* pEffectiveCaller = pCaller;
         if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
@@ -501,8 +501,8 @@ namespace sw
         const fixed_string<32> tickTag = Internal::makeClockTag();
 
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
-        fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
-        const fixed_string<128>                idTag = Internal::makeIDTag( pID );
+        fixed_string<constant::buffer::kMax8192> formattedBuffer{};
+        const fixed_string<128>                  idTag = Internal::makeIDTag( pID );
         Internal::formatLine( formattedBuffer, stamp, level, pEffectiveTag, pEffectiveCaller, tickTag.c_str(), arrContextTag, idTag.c_str(), pEffectiveMsg, pEffectiveFile, line );
 
         // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면

@@ -78,7 +78,7 @@ namespace sw
              */
             static string makeWrapperType( const string& containerType, const string& fqn, const string& fieldName )
             {
-                StringBuilder<constant::kMaxBuffer1024> b;
+                StringBuilder<constant::buffer::kMax1024> b;
                 b.appendFormat( "sw::%#Wrapper<decltype(std::declval<%#>().%#)>", containerType, fqn, fieldName );
                 return string( b.view() );
             }
@@ -88,7 +88,7 @@ namespace sw
              */
             static string makeNestedWrapperType( const string& containerType, int32 depth )
             {
-                StringBuilder<constant::kMaxBuffer128> b;
+                StringBuilder<constant::buffer::kMax128> b;
                 b.appendFormat( "sw::%#Wrapper<NestC%#>", containerType, depth );
                 return string( b.view() );
             }
@@ -98,7 +98,7 @@ namespace sw
              */
             static string makeCtorLookupName( const ParsedFunctionInfo& method, const ParserSession& session )
             {
-                StringBuilder<constant::kMaxBuffer1024> b;
+                StringBuilder<constant::buffer::kMax1024> b;
                 b.append( annotation::kCtorLookupName );
                 if ( method._listParameter.empty() == false )
                 {
@@ -117,7 +117,7 @@ namespace sw
             /** @brief 인자 타입의 변환 표(`ReflectTypeOpsOf<T>::kOps`) 주소 식입니다. 인자 · 반환 타입이 같은 철자를 씁니다(호출기의 `args.get<T>` 와도). */
             static string makeTypeOpsExpr( const string& normalizedType )
             {
-                StringBuilder<constant::kMaxBuffer1024> b;
+                StringBuilder<constant::buffer::kMax1024> b;
                 b.appendFormat( "&::sw::ReflectTypeOpsOf<%#>::kOps", normalizedType );
                 return string( b.view() );
             }
@@ -154,7 +154,7 @@ namespace sw
              */
             static string makeInvokerCallArgs( const vector<ParsedParameterInfo>& listParameter, const ParserSession& session )
             {
-                StringBuilder<constant::kMaxBuffer1024> b;
+                StringBuilder<constant::buffer::kMax1024> b;
                 for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
                 {
                     if ( paramIndex > 0 )
@@ -343,7 +343,7 @@ namespace sw
         // 경계는 float32 가 되돌아오는 자릿수(9)로 낸다. 6 자리로 자르면 `Max = 6.2831853` 이 6.283185f 가 되어 2π 를 담은 값이 범위 밖이 된다.
         const auto formatRangeLiteral = []( const float32 value ) -> string
         {
-            utf8 arrBuffer[constant::kMaxBuffer64]{};
+            utf8 arrBuffer[constant::buffer::kMax64]{};
             formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
             string literal( arrBuffer );
             if ( literal.find_first_of( ".eE" ) == string::npos )

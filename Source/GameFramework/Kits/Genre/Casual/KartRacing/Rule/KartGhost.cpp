@@ -35,7 +35,7 @@ namespace sw
         : _listFrame{}
         , _startPosition{}
         , _startYaw{ 0.0f }
-        , _step{ 1.0f / 60.0f }
+        , _step{ constant::time::kDefaultFixedStepSeconds }
         , _finishTime{ 0.0f }
     {
     }
@@ -96,7 +96,7 @@ namespace sw
         _listFrame.clear();
         _startPosition = startPosition;
         _startYaw      = startYaw;
-        _step          = step > 0.0f ? step : 1.0f / 60.0f;
+        _step          = step > 0.0f ? step : constant::time::kDefaultFixedStepSeconds;
         _finishTime    = 0.0f;
     }
 

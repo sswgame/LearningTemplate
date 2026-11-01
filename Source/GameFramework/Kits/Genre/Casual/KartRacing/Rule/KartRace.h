@@ -39,7 +39,7 @@ namespace sw
     /** @brief 경기 설정입니다. */
     struct KartRaceSettings
     {
-        float32 _step{ 1.0f / 60.0f };
+        float32 _step{ constant::time::kDefaultFixedStepSeconds };
         float32 _countdownTime{ 3.0f };
         float32 _finishTimeout{ 30.0f };    ///< 1등이 들어온 뒤 이 시간(초)이 지나면 남은 차를 지금 순위로 끝낸다
         float32 _gridFirstDistance{ 6.0f }; ///< 결승선 뒤 첫 줄까지의 거리(m)

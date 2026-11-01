@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -95,7 +95,7 @@ namespace sw
     class SW_KIT_SERVER_API RespParser
     {
     public:
-        static constexpr int64 kMaxBulkSize    = static_cast<int64>( constant::kBytesPerMegabyte );
+        static constexpr int64 kMaxBulkSize    = static_cast<int64>( constant::memory::kBytesPerMegabyte );
         static constexpr int64 kMaxLineSize    = 64ll * 1024;
         static constexpr int64 kMaxArrayCount  = 1 << 20;
         static constexpr int32 kMaxNestedDepth = 8;

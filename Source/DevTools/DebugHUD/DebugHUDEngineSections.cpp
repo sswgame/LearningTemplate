@@ -57,7 +57,7 @@ namespace sw
             /** @brief 프로파일러 구간 @p slot 의 마지막으로 접힌 프레임 시간(밀리초)입니다. */
             static float64 readLastFrameMilliseconds( uint32 slot )
             {
-                return static_cast<float64>( engine::getSubsystem<FrameProfiler>().getLastFrameNanos( slot ) ) / constant::kNanosecondsPerMillisecond;
+                return static_cast<float64>( engine::getSubsystem<FrameProfiler>().getLastFrameNanos( slot ) ) / constant::time::kNanosecondsPerMillisecond;
             }
 
             static const utf8* getGlyphStyleName( InputGlyphStyle style )
@@ -107,11 +107,11 @@ namespace sw
                 {
                     total += pSeconds[index];
                     worst                 = MathUtil::max( worst, pSeconds[index] );
-                    arrMillisecond[index] = pSeconds[index] * constant::kMillisecondsPerSecond;
+                    arrMillisecond[index] = pSeconds[index] * constant::time::kMillisecondsPerSecond;
                 }
                 const float32 average = total / static_cast<float32>( count );
                 writer.addLineFormat( "FPS", "%.1f", average > 0.0f ? 1.0f / average : 0.0f );
-                writer.addLineFormat( "frame", "%.2f ms (worst %.2f)", average * constant::kMillisecondsPerSecond, worst * constant::kMillisecondsPerSecond );
+                writer.addLineFormat( "frame", "%.2f ms (worst %.2f)", average * constant::time::kMillisecondsPerSecond, worst * constant::time::kMillisecondsPerSecond );
                 writer.addGraph( arrMillisecond, count, kGraphMaxMilliseconds );
             }
 
@@ -145,17 +145,17 @@ namespace sw
                 if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
                 {
                     // 태그 집계(Debug 의 MemoryProfiler)가 없는 구성이다. 운영체제 힙만 본다.
-                    writer.addLineFormat( "heap", "%.1f MB", static_cast<float64>( MemoryProfiler::getPlatformHeapBytes() ) / constant::kBytesPerMegabyte );
+                    writer.addLineFormat( "heap", "%.1f MB", static_cast<float64>( MemoryProfiler::getPlatformHeapBytes() ) / constant::memory::kBytesPerMegabyte );
                     return;
                 }
-                writer.addLineFormat( "live", "%.1f MB", static_cast<float64>( pProfiler->getLiveAllocatedBytes() ) / constant::kBytesPerMegabyte );
+                writer.addLineFormat( "live", "%.1f MB", static_cast<float64>( pProfiler->getLiveAllocatedBytes() ) / constant::memory::kBytesPerMegabyte );
                 const array<MemoryTag, kMemoryTagCount> arrTag = pProfiler->makeTagOrderByLiveBytes();
                 for ( uint32 index = 0; index < kMemoryTagLineCount && index < kMemoryTagCount; ++index )
                 {
                     const uint64 bytes = pProfiler->getStats( arrTag[index] )._currentAllocatedBytes;
                     if ( bytes == 0 )
                         break;
-                    writer.addLineFormat( MemoryProfiler::getMemoryTagName( arrTag[index] ), "%.1f MB", static_cast<float64>( bytes ) / constant::kBytesPerMegabyte );
+                    writer.addLineFormat( MemoryProfiler::getMemoryTagName( arrTag[index] ), "%.1f MB", static_cast<float64>( bytes ) / constant::memory::kBytesPerMegabyte );
                 }
             }
 

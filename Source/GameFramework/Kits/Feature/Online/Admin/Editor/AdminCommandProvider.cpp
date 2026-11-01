@@ -31,7 +31,7 @@ namespace sw::editor
 
             static string formatNumber( int64 value )
             {
-                StringBuilder<constant::kMaxBuffer64> text;
+                StringBuilder<constant::buffer::kMax64> text;
                 text.appendFormat( "%#", value );
                 return string( text.view() );
             }
@@ -39,7 +39,7 @@ namespace sw::editor
             /** @brief 서버 감사 기록의 주체 모양(`acct.<16진>/…`)입니다. 패널의 감사 열람이 같은 접두어로 거릅니다. */
             static string makeAccountSubject( AccountID accountID )
             {
-                StringBuilder<constant::kMaxBuffer64> text;
+                StringBuilder<constant::buffer::kMax64> text;
                 text.appendFormat( "acct.%#/admin", Fmt( accountID, Format( 16, Format::Padding::Zero ).hex() ) );
                 return string( text.view() );
             }

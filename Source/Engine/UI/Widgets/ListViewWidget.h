@@ -54,7 +54,7 @@ namespace sw
         void setScrollOffset( float32 scrollOffset );
         /** @brief 항목 @p itemIndex 가 보이도록 최소한만 옮깁니다. */
         void scrollToItem( uint32 itemIndex );
-        /** @brief 줄 위젯 @p row 가 지금 맡은 항목입니다(없으면 `invalid_index::kUint32`). */
+        /** @brief 줄 위젯 @p row 가 지금 맡은 항목입니다(없으면 `constant::invalid_index::kUint32`). */
         uint32 findItemIndex( const Widget& row ) const;
         /** @brief 지금까지 만든 줄 위젯 수입니다(테스트용이며, 보이는 줄 + 1 을 넘지 않습니다). */
         uint32 getCreatedRowCount() const { return static_cast<uint32>( _listRowItem.size() ); }

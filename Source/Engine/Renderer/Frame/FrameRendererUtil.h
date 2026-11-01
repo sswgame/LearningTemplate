@@ -44,14 +44,14 @@ namespace sw
         static constexpr uint32 kDefaultTransientSize = 1280;
 
         /**
-         * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::kMaxGPUTimestampSlot`(64)개입니다.
+         * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::render::kMaxGPUTimestampSlot`(64)개입니다.
          * @details 패스는 앞에서부터 인덱스 × 2 쌍을 쓴다(병렬 기록이라 흐르는 카운터가 아니라 고정 슬롯).
          *          프레임 전체와 컴퓨트 프리패스는 **뒤쪽 세 슬롯**을 쓴다. 그래서 패스는 30개까지다.
          *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
          */
-        static constexpr uint32 kGPUTimestampSlotComputeBegin = constant::kMaxGPUTimestampSlot - 3u;
-        static constexpr uint32 kGPUTimestampSlotComputeEnd   = constant::kMaxGPUTimestampSlot - 2u;
-        static constexpr uint32 kGPUTimestampSlotFrameBegin   = constant::kMaxGPUTimestampSlot - 1u;
+        static constexpr uint32 kGPUTimestampSlotComputeBegin = constant::render::kMaxGPUTimestampSlot - 3u;
+        static constexpr uint32 kGPUTimestampSlotComputeEnd   = constant::render::kMaxGPUTimestampSlot - 2u;
+        static constexpr uint32 kGPUTimestampSlotFrameBegin   = constant::render::kMaxGPUTimestampSlot - 1u;
         /// @brief 패스 쌍이 쓸 수 있는 슬롯의 끝(미포함)입니다. 위 예약 슬롯과 겹치지 않게 합니다.
         static constexpr uint32 kGPUTimestampPassSlotEnd = kGPUTimestampSlotComputeBegin;
         /// @brief GPU 시간을 측정할 수 있는 패스 수입니다(패스마다 슬롯 둘). 넘는 패스는 시간이 기록되지 않으며, 파이프라인을 로드할 때 경고합니다.
@@ -62,7 +62,7 @@ namespace sw
         {
             return passCount > kGPUTimedPassCapacity ? static_cast<uint32>( passCount - kGPUTimedPassCapacity ) : 0u;
         }
-        static_assert( kGPUTimestampSlotFrameBegin < constant::kMaxGPUTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
+        static_assert( kGPUTimestampSlotFrameBegin < constant::render::kMaxGPUTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
         static constexpr auto kDefaultMainPassName = "DefaultMainPass";
         // 첨부의 클리어 색은 파이프라인 XML 의 선언이 기준이다 — 이름으로 짐작해 첨부를 만들 때 쓰던 색(SceneColor · 깊이 · 블룸)은 지웠다.
         static constexpr float4 kBlackClear = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -565,7 +565,7 @@ namespace sw
         hashed_string _swBatchCount{ "g_SwBatchCount" };
         /// @brief 씬 라이트 버퍼의 빛 원소 수입니다. PassCB g_SwLightCount 에 대응하며, 0이면 셰이더가 빛을 돌지 않습니다(앰비언트만).
         hashed_string _swLightCount{ "g_SwLightCount" };
-        /// @brief 지금 뷰의 라이트 그리드 첫 단어입니다. PassCB g_SwLightGridBase 에 대응하며, 없으면 invalid_index::kUint32 입니다(셰이더는 목록 전체를 돕니다).
+        /// @brief 지금 뷰의 라이트 그리드 첫 단어입니다. PassCB g_SwLightGridBase 에 대응하며, 없으면 constant::invalid_index::kUint32 입니다(셰이더는 목록 전체를 돕니다).
         hashed_string _swLightGridBase{ "g_SwLightGridBase" };
         /// @brief 뷰마다의 라이트 그리드 버퍼입니다. lighting.hlsli g_SwLightGrid(t12)와 "SwLightGrid" 에 대응하며, 패스당 한 번 바인딩합니다(CPU · GPU 생산자 공통).
         hashed_string _swLightGrid{ "SwLightGrid" };

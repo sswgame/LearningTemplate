@@ -29,7 +29,7 @@ namespace sw
 
             static bool isWrongType( const RespValue& value ) { return value.isError() && value.getText().substr( 0, 9 ) == "WRONGTYPE"; }
 
-            static void sleepOneMillisecond() { MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::kNanosecondsPerMillisecond ); }
+            static void sleepOneMillisecond() { MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::time::kNanosecondsPerMillisecond ); }
         };
     } // namespace
 } // namespace sw
@@ -290,13 +290,13 @@ namespace sw
         const int64       nowNanoseconds = _clock.nowNanoseconds();
         if ( _commandConnection.handleClosed( handle, reason ) )
         {
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
             return;
         }
         if ( _subscribeConnection.handleClosed( handle, reason ) )
         {
             _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
-            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
+            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
         }
     }
 
@@ -673,7 +673,7 @@ namespace sw
         const bool        bAuth       = _settings->_password.empty() == false;
         if ( _commandConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) )
             return true;
-        _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
+        _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
         return false;
     }
 
@@ -687,7 +687,7 @@ namespace sw
         const bool        bAuth       = _settings->_password.empty() == false;
         if ( _subscribeConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) == false )
         {
-            _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
+            _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
             return false;
         }
         // 새 연결에는 구독이 없으므로 채널을 모두 다시 구독한다. 끊긴 동안의 메시지는 받지 못하며, 배달은 최대 한 번이다.
@@ -703,7 +703,7 @@ namespace sw
 
     void RespEphemeralStore::abortTimedOutRequests()
     {
-        const int64 timeoutNanoseconds = _settings->_timeoutMs * constant::kNanosecondsPerMillisecond;
+        const int64 timeoutNanoseconds = _settings->_timeoutMs * constant::time::kNanosecondsPerMillisecond;
         const int64 nowNanoseconds     = _clock.nowNanoseconds();
         bool        bExpired           = false;
         for ( const Operation& operation : _listOperation )
@@ -721,7 +721,7 @@ namespace sw
             _commandConnection.abort( *_transport.get(), "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
             // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
         }
         for ( const RespReplyRecord& record : listRecord )
         {

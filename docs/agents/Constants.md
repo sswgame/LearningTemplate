@@ -10,7 +10,7 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 | --- | --- |
 | One `.cpp` | That file's `XxxInternal` struct as `static constexpr` (or inside the function). Do not hoist it "in case" |
 | One module | The owning type (`MeshAssetFormat::kExtension`) or the module namespace in its types header (`audio::kSampleRate` in `AudioTypes.h`). No per-folder `*Constants.h` |
-| A contract between modules or backends | The contract header: `RHIDescriptors.h` `constant` block (backend ↔ backend), `binding_slots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read as `shaderslot::k*`), `Core/Foundation/Defines.h` · `Engine/Foundation/EngineDefines.h` `constant` (engine-wide). A per-side copy with a "must equal X" comment is the bug |
+| A contract between modules or backends | `sw::constant::<category>` in its layer's one file: `Core/Foundation/Constants.h` (`buffer` · `file` · `time` · `memory` · `log` · `network` · `path` · `invalid_index`), `Engine/Foundation/EngineDefines.h` (`window` · `physics` · `locale` · engine `path`), `RHIDescriptors.h` (`render`, backend ↔ backend — needs RHI types), `ReflectionConstants.h` (`reflection`); `binding_slots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read as `shaderslot::k*`). A new category goes in the layer's file, not a new header. A per-side copy with a "must equal X" comment is the bug |
 
 ### Values with one home
 
@@ -20,16 +20,18 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 | Gravity | `PhysicsSystem::getConfiguredGravity(Magnitude)` |
 | Golden ratio, splitmix64, FNV-1a | `HashUtil` |
 | Four-character tags | `FourCcUtil::make( "SWHF" )` |
-| Time and byte units | `constant::` in `Core/Foundation/Defines.h` (`kNanosecondsPerSecond`, `kBytesPerMegabyte` ...); never `1e9`, `1024 * 1024`, a local `kKilobyte` |
+| Time and byte units | `constant::time::` (`kNanosecondsPerSecond`, `kMillisecondsPerSecond` ...) · `constant::memory::` (`kBytesPerMegabyte` ...); never `1e9`, `1024 * 1024`, a local `kKilobyte` or `kMillisecondsPerSecond` |
+| Default fixed simulation step | `constant::time::kDefaultFixedStepSeconds` (60 Hz); never a retyped `1.0f / 60.0f` |
+| Port range | `constant::network::kMaxPort` |
 | Limits several online modules share | `OnlineLimit.h` |
-| Buffer and path sizes | `constant::kMaxBuffer16` .. `kMaxBuffer8192`, `kMaxPathSize`; never `char buf[64]` |
+| Buffer and path sizes | `constant::buffer::kMax16` .. `kMax8192`, `constant::file::kMaxPathSize`; never `char buf[64]` |
 
 Do not retype these literals elsewhere.
 
 ### Sentinels and aliases
 
-- A sentinel keeps a domain name but takes its value from `invalid_index` (`static constexpr uint32 kNotRegistered = invalid_index::kUint32;`). An all-bits mask (`kAllLayers`) is not a sentinel and keeps its literal.
-- **No aliases.** `kFrameCount = constant::kMaxFrameCountInFlight;` is a second name for one concept; use the original. A local name is fine only when it adds meaning (`kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2`).
+- A sentinel keeps a domain name but takes its value from `constant::invalid_index` (`static constexpr uint32 kNotRegistered = constant::invalid_index::kUint32;`). An all-bits mask (`kAllLayers`) is not a sentinel and keeps its literal.
+- **No aliases.** `kFrameCount = constant::render::kMaxFrameCountInFlight;` is a second name for one concept; use the original. A local name is fine only when it adds meaning (`kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2`).
 
 ### Tuning values are data
 
@@ -41,6 +43,7 @@ Do not retype these literals elsewhere.
 ### Names
 
 - `kPascalCase`, including `MathUtil`.
+- Format versions stay with their format even when the numbers match (`kStateVersion = 1` in seventy places is seventy formats, not one value): merging them would bump every format when one changes.
 - Same meaning, same name across formats: a file or blob format declares `kMagic` · `kVersion` · `kExtension` on its owning type; a state section declares `kStateTag` · `kStateVersion`; a second format in one scope prefixes the format (`kBinMagic`).
 - A value with a unit says it in the name unless the type does (`kTimeoutSeconds`, `kMaxBytes`).
 

@@ -114,10 +114,10 @@ namespace sw::editor
         }
 
         // 크기를 먼저 측정한다 — 제목 줄 · 이름 열 · 값 열 · 그래프.
-        const float32                        dpiScale   = EditorThemeUtil::getDPIScale();
-        const float32                        lineHeight = ImGui::GetTextLineHeight();
-        const float32                        padding    = EditorDebugHUDViewInternal::kPadding * dpiScale;
-        fixed_string<constant::kMaxBuffer64> viewLine;
+        const float32                          dpiScale   = EditorThemeUtil::getDPIScale();
+        const float32                          lineHeight = ImGui::GetTextLineHeight();
+        const float32                          padding    = EditorDebugHUDViewInternal::kPadding * dpiScale;
+        fixed_string<constant::buffer::kMax64> viewLine;
         formatstring( viewLine.data(), viewLine.capacity(), "%# x %#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
                       Fmt( static_cast<float64>( canvasSize._y ), Format().precision( 0 ) ) );
         float32 labelWidth = ImGui::CalcTextSize( "view" ).x;
@@ -186,7 +186,7 @@ namespace sw::editor
         }
         if ( _skippedProfilerSectionCount > 0 )
         {
-            fixed_string<constant::kMaxBuffer64> note;
+            fixed_string<constant::buffer::kMax64> note;
             formatstring( note.data(), note.capacity(), "%# section(s) need the profiler", _skippedProfilerSectionCount );
             pDrawList->AddText( ImVec2{ x0 + padding, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kNote ), note.c_str() );
         }

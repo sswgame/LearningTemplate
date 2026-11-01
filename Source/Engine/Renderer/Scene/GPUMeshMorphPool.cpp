@@ -134,7 +134,7 @@ namespace sw
         }
 
         // 이번 목록에 없는 원본은 구간을 미뤄 돌려준다(앞 프레임들이 아직 읽는 중일 수 있다). 포인터는 따라가지 않는다.
-        const uint64 retireStamp = _updateCount + constant::kMaxFrameCountInFlight;
+        const uint64 retireStamp = _updateCount + constant::render::kMaxFrameCountInFlight;
         _listScratchSkinRemoved.clear();
         for ( const auto& [dataID, source] : _mapSkinSource )
         {
@@ -514,7 +514,7 @@ namespace sw
 
     bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
     {
-        const uint64 retireStamp   = _updateCount + constant::kMaxFrameCountInFlight;
+        const uint64 retireStamp   = _updateCount + constant::render::kMaxFrameCountInFlight;
         const bool   bMarkedChange = markListedMorphMeshes( listMorphMesh, retireStamp );
         const bool   bChanged      = sweepUnlistedMorphMeshes( retireStamp ) || bMarkedChange;
         if ( _mapMorphEntry.empty() )
@@ -725,7 +725,7 @@ namespace sw
         for ( size_t slot = 0; slot < _listPoolMorph.size() && bSame; ++slot )
         {
             const Mesh*  pMesh      = _listPoolMorph[slot];
-            const uint64 generation = ( pMesh != nullptr ) ? pMesh->getGPUDeformProgramGeneration() : invalid_index::kUint64;
+            const uint64 generation = ( pMesh != nullptr ) ? pMesh->getGPUDeformProgramGeneration() : constant::invalid_index::kUint64;
             bSame                   = _listDeformProgramGeneration[slot] == generation;
         }
         if ( bSame )
@@ -738,7 +738,7 @@ namespace sw
             const Mesh* pMesh = _listPoolMorph[slot];
             if ( pMesh == nullptr )
             {
-                _listDeformProgramGeneration[slot] = invalid_index::kUint64;
+                _listDeformProgramGeneration[slot] = constant::invalid_index::kUint64;
                 continue;
             }
             _listDeformProgramGeneration[slot]             = pMesh->getGPUDeformProgramGeneration(); // 사본보다 먼저 읽는다 - 사이에 바뀌면 다음 프레임에 다시 올린다

@@ -62,7 +62,7 @@ namespace sw
         const uint32 stepCount = _clock.takeDueSteps( deltaSeconds );
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            step( VFXEmitterClock::kFixedStepSeconds, pCollision );
+            step( constant::time::kDefaultFixedStepSeconds, pCollision );
         }
     }
 

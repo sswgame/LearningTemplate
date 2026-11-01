@@ -25,7 +25,7 @@ namespace sw
             return false;
         }
         _intervalTicks = static_cast<uint32>( config._intervalTicks );
-        _maxBytes      = static_cast<size_t>( config._maxMegabytes ) * constant::kBytesPerMegabyte;
+        _maxBytes      = static_cast<size_t>( config._maxMegabytes ) * constant::memory::kBytesPerMegabyte;
         clear();
         return true;
     }

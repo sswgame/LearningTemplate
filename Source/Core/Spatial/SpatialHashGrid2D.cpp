@@ -117,7 +117,7 @@ namespace sw
     }
 
     SpatialHashGrid2D::SpatialHashGrid2D( float32 cellSize )
-        : _cellSize{ cellSize > 1.0f ? cellSize : constant::kDefaultSpatialCellSize }
+        : _cellSize{ cellSize > 1.0f ? cellSize : kDefaultCellSize }
         , _mapBucket{}
         , _mapHandleBound{}
         , _listOversizedHandle{}

@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Widgets/ListViewWidget.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
@@ -37,7 +37,7 @@ namespace sw
         _itemCount = itemCount;
         for ( uint32& item : _listRowItem )
         {
-            item = invalid_index::kUint32; // 모두 다시 연결한다
+            item = constant::invalid_index::kUint32; // 모두 다시 연결한다
         }
         _scrollOffset = MathUtil::clamp( _scrollOffset, 0.0f, getMaxScrollOffset() );
         invalidate( WidgetDirty::kLayout );
@@ -81,7 +81,7 @@ namespace sw
     uint32 ListViewWidget::findItemIndex( const Widget& row ) const
     {
         const uint32 rowIndex = findChildIndex( &row );
-        return rowIndex < _listRowItem.size() ? _listRowItem[rowIndex] : invalid_index::kUint32;
+        return rowIndex < _listRowItem.size() ? _listRowItem[rowIndex] : constant::invalid_index::kUint32;
     }
 
     bool ListViewWidget::scrollIntoView( const Widget& widget )
@@ -126,7 +126,7 @@ namespace sw
             if ( row == nullptr )
                 return;
             (void)addChild( std::move( row ) );
-            _listRowItem.push_back( invalid_index::kUint32 );
+            _listRowItem.push_back( constant::invalid_index::kUint32 );
         }
     }
 
@@ -148,7 +148,7 @@ namespace sw
             if ( itemIndex >= _itemCount )
             {
                 row.setVisibility( WidgetVisibility::Collapsed );
-                _listRowItem[rowIndex] = invalid_index::kUint32;
+                _listRowItem[rowIndex] = constant::invalid_index::kUint32;
                 continue;
             }
             if ( row.getVisibility() == WidgetVisibility::Collapsed )

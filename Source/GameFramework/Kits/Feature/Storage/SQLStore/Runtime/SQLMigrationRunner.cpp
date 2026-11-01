@@ -79,7 +79,7 @@ namespace sw
 
             static string makeText( string_view prefix, int32 version, string_view middle, string_view suffix )
             {
-                StringBuilder<constant::kMaxBuffer1024> text;
+                StringBuilder<constant::buffer::kMax1024> text;
                 text.appendFormat( "%#%#%#%#", prefix, version, middle, suffix );
                 return string( text.view() );
             }
@@ -88,7 +88,7 @@ namespace sw
             template <typename... Args>
             static string formatText( string_view format, Args&&... args )
             {
-                StringBuilder<constant::kMaxBuffer1024> text;
+                StringBuilder<constant::buffer::kMax1024> text;
                 text.appendFormat( format, std::forward<Args>( args )... );
                 return string( text.view() );
             }

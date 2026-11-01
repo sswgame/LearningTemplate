@@ -77,8 +77,8 @@ namespace sw
                                 float64 number{ 0.0 };
                                 if ( StringUtil::parseDouble( entry._value, number ) )
                                 {
-                                    utf8 arrBuffer[constant::kMaxBuffer64]{};
-                                    StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, number * step._scale );
+                                    utf8 arrBuffer[constant::buffer::kMax64]{};
+                                    StringUtil::formatNumber( arrBuffer, constant::buffer::kMax64, number * step._scale );
                                     entry._value = arrBuffer;
                                 }
                                 break;

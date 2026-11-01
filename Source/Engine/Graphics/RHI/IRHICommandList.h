@@ -69,7 +69,7 @@ namespace sw
          * @details 지금 씬 드로우는 이 함수가 아니라 `drawIndirect` 를 쓴다(인스턴스 슬롯은 인스턴스 슬롯 스트림이 준다).
          * @param instanceCount 인스턴스 개수입니다.
          * @param startInstance 시작 인스턴스입니다. `SV_InstanceID` 가 이 값을 포함하는지는 API 마다 다르므로, 셰이더가 인스턴스 위치를
-         *                      알아야 하면 인스턴스 슬롯 스트림(`constant::kInstanceSlotStreamSlot`)으로 받습니다.
+         *                      알아야 하면 인스턴스 슬롯 스트림(`constant::render::kInstanceSlotStreamSlot`)으로 받습니다.
          */
         virtual void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) = 0;
         virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 )                         = 0;

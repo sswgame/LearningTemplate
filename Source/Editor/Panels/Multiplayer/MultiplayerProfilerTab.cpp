@@ -86,7 +86,7 @@ namespace sw::editor
 
             static float64 nowSeconds()
             {
-                return static_cast<float64>( MonotonicClock::nowNanoseconds() ) / static_cast<float64>( constant::kNanosecondsPerSecond );
+                return static_cast<float64>( MonotonicClock::nowNanoseconds() ) / static_cast<float64>( constant::time::kNanosecondsPerSecond );
             }
 
             static EditorNetPlaySession* findSession()
@@ -126,7 +126,7 @@ namespace sw::editor
                     return true;
                 }
                 EditorNetProfilerHistory& history = getHistory();
-                pSession->updateUntil( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, [&]()
+                pSession->updateUntil( static_cast<int64>( seconds ) * constant::time::kMillisecondsPerSecond, [&]()
                 {
                     history.update( *pSession, nowSeconds() );
                     return false; // 시한까지 모은다
@@ -209,9 +209,9 @@ namespace sw::editor
         {
             const EditorNetProfilerChannel channel = static_cast<EditorNetProfilerChannel>( channelIndex );
             track._series.copyChannel( channel, _listValueScratch );
-            const float32                        latest = pLatest != nullptr ? pLatest->_arrValue[static_cast<size_t>( channelIndex )] : 0.0f;
-            const float32                        peak   = track._series.computePeak( channel );
-            fixed_string<constant::kMaxBuffer64> overlay;
+            const float32                          latest = pLatest != nullptr ? pLatest->_arrValue[static_cast<size_t>( channelIndex )] : 0.0f;
+            const float32                          peak   = track._series.computePeak( channel );
+            fixed_string<constant::buffer::kMax64> overlay;
             formatstring( overlay.data(), overlay.capacity(), "%# %# (peak %#)", Fmt( latest, Format().precision( 1 ) ), MultiplayerProfilerTabInternal::getGraphUnit( channel ),
                           Fmt( peak, Format().precision( 1 ) ) );
             ImGui::TextUnformatted( MultiplayerProfilerTabInternal::getGraphTitle( channel ) );
@@ -243,16 +243,16 @@ namespace sw::editor
             ImGui::TableSetupColumn( "Bytes" );
             ImGui::TableSetupColumn( "Share" );
             ImGui::TableHeadersRow();
-            utf8 arrNumber[constant::kMaxBuffer32];
+            utf8 arrNumber[constant::buffer::kMax32];
             for ( const EditorNetKindShare& share : _listShareScratch )
             {
                 ImGui::TableNextColumn();
                 ImGui::Text( "0x%02X", static_cast<uint32>( share._kind ) );
                 ImGui::TableNextColumn();
-                (void)StringUtil::formatNumber( arrNumber, constant::kMaxBuffer32, share._messageCount );
+                (void)StringUtil::formatNumber( arrNumber, constant::buffer::kMax32, share._messageCount );
                 ImGui::TextUnformatted( arrNumber );
                 ImGui::TableNextColumn();
-                (void)StringUtil::formatNumber( arrNumber, constant::kMaxBuffer32, share._byteCount );
+                (void)StringUtil::formatNumber( arrNumber, constant::buffer::kMax32, share._byteCount );
                 ImGui::TextUnformatted( arrNumber );
                 ImGui::TableNextColumn();
                 ImGui::ProgressBar( share._share, ImVec2( -1.0f, 0.0f ) );

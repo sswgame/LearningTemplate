@@ -49,7 +49,7 @@ namespace sw
         const int32 milliseconds = s_pendingStallMilliseconds.exchange( 0, std::memory_order_relaxed );
         if ( milliseconds <= 0 )
             return;
-        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( milliseconds ) * constant::kNanosecondsPerMillisecond );
+        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( milliseconds ) * constant::time::kNanosecondsPerMillisecond );
     }
 
     SW_DEV_COMMAND( ProfileStall, "profile.stall", "profile.stall <ms>", "Hold the next game thread frame for that many milliseconds (profiler spike checks)",

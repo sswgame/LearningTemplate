@@ -90,7 +90,7 @@ namespace sw
         if ( _frameHistory->getCapacity() > 0 )
             _crashExtraTextSubscription = bindCrashExtraTextWriter( &ServerObservabilityInternal::writeFrameCrashTail, _frameHistory.get() );
         _processMetrics = make_unique<ProcessMetrics>();
-        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - processStartNanoseconds ) / constant::kNanosecondsPerMillisecond );
+        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - processStartNanoseconds ) / constant::time::kNanosecondsPerMillisecond );
         if ( config._opsPort == 0 )
             return true;
         OpsHTTPEndpointConfig opsSettings;
@@ -153,11 +153,11 @@ namespace sw
             return;
         ServerFrameSample sample;
         sample._tick             = tickCount;
-        sample._bodyMicroseconds = tickNanoseconds / constant::kNanosecondsPerMicrosecond;
+        sample._bodyMicroseconds = tickNanoseconds / constant::time::kNanosecondsPerMicrosecond;
         sample._connectionCount  = static_cast<uint32>( connectionCount );
         sample._droppedTickTotal = droppedTickTotal;
         _frameHistory->record( sample );
-        const int64 slowNanoseconds = static_cast<int64>( _pServerConfig->_slowTickDumpMs ) * constant::kNanosecondsPerMillisecond;
+        const int64 slowNanoseconds = static_cast<int64>( _pServerConfig->_slowTickDumpMs ) * constant::time::kNanosecondsPerMillisecond;
         const bool  bSlowTick       = slowNanoseconds > 0 && tickNanoseconds >= slowNanoseconds;
         const bool  bDumpDue        = monotonicMs - _lastFrameDumpMs >= ServerObservabilityInternal::kMinFrameDumpIntervalMs;
         if ( bSlowTick && bDumpDue )
@@ -209,7 +209,7 @@ namespace sw
         const int64 windowMs = monotonicMs - _loadWindowStartMs;
         if ( windowMs <= 0 )
             return;
-        const float64 utilization  = static_cast<float64>( _loadWindowBusyNanoseconds ) / ( static_cast<float64>( windowMs ) * static_cast<float64>( constant::kNanosecondsPerMillisecond ) );
+        const float64 utilization  = static_cast<float64>( _loadWindowBusyNanoseconds ) / ( static_cast<float64>( windowMs ) * static_cast<float64>( constant::time::kNanosecondsPerMillisecond ) );
         _loadWindowStartMs         = monotonicMs;
         _loadWindowBusyNanoseconds = 0;
         if ( _pTickUtilizationGauge != nullptr )

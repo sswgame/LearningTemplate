@@ -182,7 +182,7 @@ namespace sw
 
         StreamConnectionHandle makeOuterHandle( uint32 listener, StreamConnectionHandle inner ) const
         {
-            SW_ASSERT( inner._index <= ( invalid_index::kUint32 - listener ) / _listenerCount );
+            SW_ASSERT( inner._index <= ( constant::invalid_index::kUint32 - listener ) / _listenerCount );
             return StreamConnectionHandle::make( inner._index * _listenerCount + listener, inner._generation );
         }
 

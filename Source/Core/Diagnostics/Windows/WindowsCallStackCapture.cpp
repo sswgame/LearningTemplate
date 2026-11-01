@@ -35,22 +35,22 @@ namespace sw
                 return;
             const wstring executableFolder  = StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( FileUtil::getDirectoryPart( executablePath ) ).c_str() );
             const utf16*  pExecutableFolder = executableFolder.c_str();
-            utf16         arrSearchPath[constant::kMaxBuffer4096]{};
-            if ( SymGetSearchPathW( process, arrSearchPath, constant::kMaxBuffer4096 ) == FALSE )
+            utf16         arrSearchPath[constant::buffer::kMax4096]{};
+            if ( SymGetSearchPathW( process, arrSearchPath, constant::buffer::kMax4096 ) == FALSE )
                 arrSearchPath[0] = L'\0';
             const size_t used = wcslen( arrSearchPath );
-            if ( used + 1 + wcslen( pExecutableFolder ) + 1 > constant::kMaxBuffer4096 )
+            if ( used + 1 + wcslen( pExecutableFolder ) + 1 > constant::buffer::kMax4096 )
                 return;
             if ( used > 0 )
-                wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );
-            wcscat_s( arrSearchPath, constant::kMaxBuffer4096, pExecutableFolder );
+                wcscat_s( arrSearchPath, constant::buffer::kMax4096, L";" );
+            wcscat_s( arrSearchPath, constant::buffer::kMax4096, pExecutableFolder );
             // Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(모듈 DLL 은 `Bin/Modules`) — 그 폴더도 추가한다.
             const wstring symbolFolder = StringUtil::utf8ToUTF16(
                 FileUtil::toNativeSeparators( FileUtil::joinPath( ProcessRoots::get()._binary.str(), ModuleLibraryUtil::kSymbolFolder ) ).c_str() );
-            if ( wcslen( arrSearchPath ) + 1 + symbolFolder.size() + 1 <= constant::kMaxBuffer4096 )
+            if ( wcslen( arrSearchPath ) + 1 + symbolFolder.size() + 1 <= constant::buffer::kMax4096 )
             {
-                wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );
-                wcscat_s( arrSearchPath, constant::kMaxBuffer4096, symbolFolder.c_str() );
+                wcscat_s( arrSearchPath, constant::buffer::kMax4096, L";" );
+                wcscat_s( arrSearchPath, constant::buffer::kMax4096, symbolFolder.c_str() );
             }
             (void)SymSetSearchPathW( process, arrSearchPath );
         }
@@ -69,7 +69,7 @@ namespace sw
                 return formatRawCallStackFrames( ppFrame, frameCount );
 
             // 32프레임 × (심볼 + 전체 파일 경로 + 줄 번호)는 2KB 를 쉽게 넘긴다.
-            StringBuilder<constant::kMaxBuffer8192> sb;
+            StringBuilder<constant::buffer::kMax8192> sb;
 
             HANDLE process = GetCurrentProcess();
             // 나중에 로드된 모듈(RHI_*.dll 같은 MODULE)도 심볼 변환되도록 모듈 목록을 새로 읽는다. 초기화 때 한 번만 읽으면

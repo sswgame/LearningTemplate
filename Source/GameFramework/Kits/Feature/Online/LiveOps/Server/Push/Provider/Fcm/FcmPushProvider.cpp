@@ -18,7 +18,6 @@ namespace sw
     {
         struct FcmPushProviderInternal
         {
-            static constexpr int64 kMillisecondsPerSecond = 1000;
         };
     } // namespace
 } // namespace sw
@@ -200,7 +199,7 @@ namespace sw
         {
             int64 seconds = 0;
             if ( StringUtil::parseInt64( pRetryAfter->_value, seconds ) && seconds > 0 )
-                retryAfterMs = seconds * Internal::kMillisecondsPerSecond;
+                retryAfterMs = seconds * constant::time::kMillisecondsPerSecond;
         }
         const bool bAuthFailed = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
         if ( bAuthFailed )

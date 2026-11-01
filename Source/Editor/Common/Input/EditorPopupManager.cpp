@@ -125,6 +125,6 @@ namespace sw::editor
     void EditorPopupManager::clear()
     {
         _listPopup.clear();
-        _syncedGeneration = invalid_index::kUint32;
+        _syncedGeneration = constant::invalid_index::kUint32;
     }
 } // namespace sw::editor

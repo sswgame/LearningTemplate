@@ -34,7 +34,6 @@ namespace sw
         struct GameNetSessionInternal
         {
             /** @brief UDP 포트의 가장 큰 값입니다. */
-            static constexpr int32 kMaxPort = 65535;
             /** @brief 리눅스만 한 포트를 `SO_REUSEPORT` 로 나눌 수 있습니다(`UDPPortSharing::ReusePort`). */
 #if defined( SW_PLATFORM_LINUX )
             static constexpr bool kbCanSharePort = true;
@@ -67,7 +66,7 @@ namespace sw
                     return false;
                 }
                 const int32 lastPort = params._bShardsSharePort ? static_cast<int32>( params._listenPort ) : static_cast<int32>( params._listenPort ) + params._shardCount - 1;
-                if ( kMaxPort < lastPort )
+                if ( constant::network::kMaxPort < lastPort )
                 {
                     SW_LOG_ERROR( "Net session shards %#-%# run past the UDP port range", params._listenPort, lastPort );
                     return false;
@@ -270,7 +269,7 @@ namespace sw
         }
         if ( bListen )
         {
-            const bool bPortInRange = 0 < gv_netListenPort && gv_netListenPort <= GameNetSessionInternal::kMaxPort;
+            const bool bPortInRange = 0 < gv_netListenPort && gv_netListenPort <= constant::network::kMaxPort;
             if ( bPortInRange == false )
             {
                 SW_LOG_ERROR( "gv_netListenPort %# is not a UDP port", gv_netListenPort );
@@ -309,7 +308,7 @@ namespace sw
             SW_LOG_ERROR( "Server config _listenAddress '%#' - the game port binds only 0.0.0.0 or 127.0.0.1", config._listenAddress.c_str() );
             return false;
         }
-        if ( config._gamePort < 0 || GameNetSessionInternal::kMaxPort < config._gamePort )
+        if ( config._gamePort < 0 || constant::network::kMaxPort < config._gamePort )
         {
             SW_LOG_ERROR( "Server config _gamePort %# is not a UDP port - the game port stays closed", config._gamePort );
             return false;
@@ -703,7 +702,7 @@ namespace sw
                 continue;
             report._resentMessageCount += stats._resentMessageCount;
             report._measuredLossPercent = MathUtil::max( report._measuredLossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
-            report._rttMilliseconds     = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::kMillisecondsPerSecond );
+            report._rttMilliseconds     = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::time::kMillisecondsPerSecond );
         }
         return report;
     }
@@ -727,7 +726,7 @@ namespace sw
             report._sentBytesPerSecond += stats._sentBandwidth * GameNetSessionInternal::kBytesPerKilobit;
             report._receivedBytesPerSecond += stats._receivedBandwidth * GameNetSessionInternal::kBytesPerKilobit;
             report._lossPercent     = MathUtil::max( report._lossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
-            report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::kMillisecondsPerSecond );
+            report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::time::kMillisecondsPerSecond );
         }
         NetMessageKindTallyTable sentTally;
         _peers.addSentKindTally( sentTally );

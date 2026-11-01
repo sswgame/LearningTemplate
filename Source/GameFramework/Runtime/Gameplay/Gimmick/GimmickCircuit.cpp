@@ -65,7 +65,7 @@ namespace sw
         , _initialState{}
         , _timer{}
         , _stepIndex{ 0 }
-        , _stepTime{ GimmickCircuitDef::kDefaultStepTime }
+        , _stepTime{ constant::time::kDefaultFixedStepSeconds }
     {
     }
 
@@ -92,15 +92,15 @@ namespace sw
     {
         const size_t errorBase = outListError.size();
         clear();
-        _stepTime = def.getStepTime() > 0.0f ? def.getStepTime() : GimmickCircuitDef::kDefaultStepTime;
+        _stepTime = def.getStepTime() > 0.0f ? def.getStepTime() : constant::time::kDefaultFixedStepSeconds;
         _timer    = FixedStepTimer( _stepTime, 0.25f );
 
         // 상태가 담을 수 있는 노드 수를 넘으면 다른 검증 전에 멈춘다(노드마다 할당하지 않는다).
         const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
         if ( listNodeDef.size() > GimmickCircuitState::kMaxNodeCount )
         {
-            utf8 arrBuffer[constant::kMaxBuffer256]{};
-            formatstring( arrBuffer, constant::kMaxBuffer256, "%#: %# nodes, more than the %# a circuit state holds", GimmickCircuitInternal::describeSource( def ).c_str(),
+            utf8 arrBuffer[constant::buffer::kMax256]{};
+            formatstring( arrBuffer, constant::buffer::kMax256, "%#: %# nodes, more than the %# a circuit state holds", GimmickCircuitInternal::describeSource( def ).c_str(),
                           static_cast<uint64>( listNodeDef.size() ), GimmickCircuitState::kMaxNodeCount );
             outListError.push_back( string( arrBuffer ) );
             return false;

@@ -68,18 +68,18 @@ namespace sw::editor
         void               restorePreviousFile();
         void               syncDirty();
 
-        fixed_string<constant::kMaxBuffer128> _filter;
-        vector<FileRow>                       _listFile;
-        vector<string>                        _listWarning;
-        EditorAssetIndexJob                   _indexJob;
-        CatalogDocument                       _document;
-        CatalogTableEditor                    _tableEditor;
-        string                                _selectedID;
-        string                                _selectedKindLabel;
-        string                                _previousFileText;
-        string                                _statusText;
-        ValidationState                       _validationState;
-        bool                                  _bIndexLoaded;
-        bool                                  _bRawMode;
+        fixed_string<constant::buffer::kMax128> _filter;
+        vector<FileRow>                         _listFile;
+        vector<string>                          _listWarning;
+        EditorAssetIndexJob                     _indexJob;
+        CatalogDocument                         _document;
+        CatalogTableEditor                      _tableEditor;
+        string                                  _selectedID;
+        string                                  _selectedKindLabel;
+        string                                  _previousFileText;
+        string                                  _statusText;
+        ValidationState                         _validationState;
+        bool                                    _bIndexLoaded;
+        bool                                    _bRawMode;
     };
 } // namespace sw::editor

@@ -239,7 +239,7 @@ namespace sw
         // 시동 요약 한 줄 — 단계별 ms 와 오래 걸린 서브시스템(`Test/Load/Baselines.json` 의 `startup_ms` 와 별개의 진단 값이다).
         {
             [[maybe_unused]] const int64     showEndMicro = MonotonicClock::nowMicroseconds();
-            [[maybe_unused]] constexpr int64 kMs          = constant::kMicrosecondsPerMillisecond;
+            [[maybe_unused]] constexpr int64 kMs          = constant::time::kMicrosecondsPerMillisecond;
             SW_LOG_INFO( "Startup phases: hostScope %# ms, engine %# ms, window %# ms, modules %# ms, finalize+show %# ms, total %# ms | subsystems: %#",
                          ( hostScopeEndMicro - _initializeStartMicro ) / kMs, ( engineEndMicro - hostScopeEndMicro ) / kMs, ( windowEndMicro - engineEndMicro ) / kMs,
                          ( modulesEndMicro - windowEndMicro ) / kMs, ( showEndMicro - modulesEndMicro ) / kMs, ( showEndMicro - _initializeStartMicro ) / kMs,
@@ -492,7 +492,7 @@ namespace sw
         // 시작 시간은 `initialize` 첫 줄부터 여기까지의 경과 시간이다. 표준 출력 로그는 에러가 아니면 버퍼에 머물러 있어 밖에서는 시각을 측정할 수 없다.
         [[maybe_unused]] const int64 startupMicro =
             MonotonicClock::nowMicroseconds() - _initializeStartMicro;
-        SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms, %# file opens", startupMicro / constant::kMicrosecondsPerMillisecond,
+        SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms, %# file opens", startupMicro / constant::time::kMicrosecondsPerMillisecond,
                      PlatformFileUtil::getFileOpenCount() );
 
         _fixedTimestep.start();

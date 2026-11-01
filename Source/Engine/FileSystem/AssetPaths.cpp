@@ -189,7 +189,7 @@ namespace sw
                         const string      activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get(), {} ) : string();
                         if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
                             appendFolder( FileUtil::normalizeSeparators( activePack ) );
-                        const string gameDir = findDomainFolderUnder( root, path::kGamePack, {} );
+                        const string gameDir = findDomainFolderUnder( root, constant::path::kGamePack, {} );
                         if ( gameDir.empty() == false )
                         {
                             vector<string> listPackDomain;
@@ -368,24 +368,24 @@ namespace sw
                     return false;
 
                 // 1. game/<pack>/... 형식을 쪼갠다
-                if ( FileUtil::startsWithPathComponent( lowerRel, path::kGamePack ) )
+                if ( FileUtil::startsWithPathComponent( lowerRel, constant::path::kGamePack ) )
                 {
-                    const string rest  = FileUtil::suffixAfterPathComponent( lowerRel, path::kGamePack );
+                    const string rest  = FileUtil::suffixAfterPathComponent( lowerRel, constant::path::kGamePack );
                     const size_t slash = rest.find( '/' );
                     if ( slash == string::npos )
                     {
-                        outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kGamePack ), rest );
+                        outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, constant::path::kGamePack ), rest );
                         outKeyUnderRoot = {};
                         return FileUtil::isDirectory( outRoot );
                     }
-                    outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kGamePack ), rest.substr( 0, slash ) );
+                    outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, constant::path::kGamePack ), rest.substr( 0, slash ) );
                     outKeyUnderRoot = rest.substr( slash + 1 );
                     return FileUtil::isDirectory( outRoot );
                 }
 
                 // 2. 그 밖의 도메인(<domain>/<key>)을 이름으로 푼다(engine, common, editor, dlc, mods 등). 도메인 이름만이면(`engine`) 그 도메인 루트다(빈 키) -
                 //    `game` 은 팩 이름까지가 도메인이라 이름만으로는 도메인이 아니다.
-                const bool bBareDomain = lowerRel.find( '/' ) == string_view::npos && lowerRel.find( ':' ) == string_view::npos && lowerRel != path::kGamePack;
+                const bool bBareDomain = lowerRel.find( '/' ) == string_view::npos && lowerRel.find( ':' ) == string_view::npos && lowerRel != constant::path::kGamePack;
                 if ( bBareDomain && FileUtil::isDirectory( FileUtil::joinPath( resourceRoot, lowerRel ) ) )
                 {
                     outRoot         = FileUtil::joinPath( resourceRoot, lowerRel );
@@ -881,7 +881,7 @@ namespace sw
 
     bool AssetPaths::collectGamePackDomains( string_view contentRoot, vector<string>& outListDomain )
     {
-        const string gameRoot = FileUtil::joinPath( contentRoot, path::kGamePack );
+        const string gameRoot = FileUtil::joinPath( contentRoot, constant::path::kGamePack );
         if ( FileUtil::isDirectory( gameRoot ) == false )
             return true;
         vector<string> listPackFolder;
@@ -893,7 +893,7 @@ namespace sw
         VectorUtil::sort( listPackFolder );
         for ( const string& packFolder : listPackFolder )
         {
-            outListDomain.push_back( FileUtil::joinPath( path::kGamePack, FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( packFolder ) ) ) );
+            outListDomain.push_back( FileUtil::joinPath( constant::path::kGamePack, FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( packFolder ) ) ) );
         }
         return true;
     }

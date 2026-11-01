@@ -4,7 +4,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -123,7 +123,7 @@ namespace sw::editor
                     outReply = "no multiplayer session is running";
                     return true;
                 }
-                pSession->updateUntil( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, [&]()
+                pSession->updateUntil( static_cast<int64>( seconds ) * constant::time::kMillisecondsPerSecond, [&]()
                 { return pSession->getConnectedClientCount() >= clientCount; } );
                 outReply = formatToString( "netplay connected clients %# of %#", pSession->getConnectedClientCount(), clientCount );
                 return true;
@@ -170,7 +170,7 @@ namespace sw::editor
     MultiplayerPanel::MultiplayerPanel()
         : IEditorPanel( false )
         , _listTab{}
-        , _tabGeneration{ invalid_index::kUint32 }
+        , _tabGeneration{ constant::invalid_index::kUint32 }
         , _targetProcessIndex{ EditorNetPlaySession::kServerProcessIndex }
     {
     }

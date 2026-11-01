@@ -580,7 +580,7 @@ namespace sw::editor
             ImGui::Text( "%s", pTarget->getName().c_str() );
         else
         {
-            StringBuilder<constant::kMaxBuffer64> missing;
+            StringBuilder<constant::buffer::kMax64> missing;
             missing.appendFormat( "(missing object #%#)", node._target.objectID() );
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", missing.c_str() );
         }

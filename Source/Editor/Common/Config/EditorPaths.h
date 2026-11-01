@@ -32,7 +32,7 @@ namespace sw::editor
         /** @brief 에디터 UI 문구의 로컬라이제이션 프로젝트(리소스 경로)입니다. 에디터가 시작할 때 로드하고 끝날 때 언로드합니다. 엔진 테이블과 따로 있으므로 배포본에 실리지 않습니다. */
         static constexpr const utf8* kLocalizationProject = "editor/localization/editor.locproject.xml";
 
-        /** @brief 에디터 팩(`path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
+        /** @brief 에디터 팩(`constant::path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
         static constexpr const utf8* kFontsFolderName = "fonts";
         /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`EditorIconGlyphs.h` 와 짝). */
         static constexpr const utf8* kIconFontFileName = "sweditoricons.ttf";

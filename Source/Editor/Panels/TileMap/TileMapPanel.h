@@ -3,7 +3,7 @@
  * @brief 엔진의 TileMapXMLData 를 편집하는 에디터 측 TileMap XML 페인터입니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -89,11 +89,11 @@ namespace sw::editor
         void drawTilePalette();
 
     private:
-        TileMapDocument                      _document;            ///< 편집 중인 맵과 칠하기 상태 · 명령
-        EditorThumbnailCache                 _atlasThumbnail;      ///< 타일셋 아틀라스 이미지
-        float2                               _canvasPan;           ///< 캔버스 원점에서 격자 왼쪽 위까지의 거리(px)
-        float32                              _canvasZoom;          ///< 셀 크기 배율(휠로 바꾼다)
-        fixed_string<constant::kMaxBuffer64> _newDataLayerName;    ///< 새 데이터 레이어 이름 입력란
-        int32                                _newDataLayerDefault; ///< 새 데이터 레이어의 기본값 입력란
+        TileMapDocument                        _document;            ///< 편집 중인 맵과 칠하기 상태 · 명령
+        EditorThumbnailCache                   _atlasThumbnail;      ///< 타일셋 아틀라스 이미지
+        float2                                 _canvasPan;           ///< 캔버스 원점에서 격자 왼쪽 위까지의 거리(px)
+        float32                                _canvasZoom;          ///< 셀 크기 배율(휠로 바꾼다)
+        fixed_string<constant::buffer::kMax64> _newDataLayerName;    ///< 새 데이터 레이어 이름 입력란
+        int32                                  _newDataLayerDefault; ///< 새 데이터 레이어의 기본값 입력란
     };
 } // namespace sw::editor

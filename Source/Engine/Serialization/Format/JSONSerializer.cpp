@@ -71,7 +71,7 @@ namespace sw
 
                 if ( bIsString || bIsEnum )
                 {
-                    StringBuilder<constant::kMaxBuffer8192> text;
+                    StringBuilder<constant::buffer::kMax8192> text;
                     SerializerUtil::valueToText( text, value, typeName, context );
                     dst.setString( text.view() );
                     return;
@@ -79,7 +79,7 @@ namespace sw
 
                 if ( bIsBool )
                 {
-                    StringBuilder<constant::kMaxBuffer8192> text;
+                    StringBuilder<constant::buffer::kMax8192> text;
                     SerializerUtil::valueToText( text, value, typeName, context );
                     bool bValue{ false };
                     if ( StringUtil::tryParseBool( text.view(), bValue ) )
@@ -91,7 +91,7 @@ namespace sw
 
                 if ( context.findTextWriter( resolved ) != nullptr )
                 {
-                    StringBuilder<constant::kMaxBuffer8192> text;
+                    StringBuilder<constant::buffer::kMax8192> text;
                     SerializerUtil::valueToText( text, value, typeName, context );
                     JSONDocument parsed;
                     const bool   bParsedScalar = parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false;
@@ -114,7 +114,7 @@ namespace sw
                     }
                 }
 
-                StringBuilder<constant::kMaxBuffer8192> text;
+                StringBuilder<constant::buffer::kMax8192> text;
                 SerializerUtil::valueToText( text, value, typeName, context );
                 dst.setString( text.view() );
             }
@@ -138,7 +138,7 @@ namespace sw
                 // `JSONValue` 는 빌린 포인터다 — 같은 부모에 새 키 · 원소를 더하면 앞서 꺼낸 형제 핸들이 죽으므로, 꺼낸 자리는 다 채운 뒤 버린다(스택).
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
-                    StringBuilder<constant::kMaxBuffer8192> keyText;
+                    StringBuilder<constant::buffer::kMax8192> keyText;
                     SerializerUtil::valueToText( keyText, key, keyTypeName, _context );
                     const JSONValue entry = _listSlot.back().set( keyText.view() );
                     _listSlot.push_back( entry );

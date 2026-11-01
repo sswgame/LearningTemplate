@@ -47,7 +47,7 @@ namespace sw
         // 배포본은 Info 줄을 버려(SW_LOG_DISCARDED — 인자는 평가되지 않는 sizeof 안) 이 함수를 부르는 곳이 없다.
         [[maybe_unused]] string formatEventLine( const utf8* pSide, const utf8* pEvent, uint32 sessionID, float32 anchorTime )
         {
-            StringBuilder<constant::kMaxBuffer256> text;
+            StringBuilder<constant::buffer::kMax256> text;
             text.appendFormat( "[PairedAnimationNet] side=%# event=%# session=%# anchor=%#", pSide, pEvent, sessionID, anchorTime );
             return string( text.c_str(), text.size() );
         }
@@ -58,7 +58,7 @@ namespace sw
 {
     bool PairedAnimationNetState::write( BitWriter& writer ) const
     {
-        const bool bPathFits  = _assetPath.empty() == false && _assetPath.size() < constant::kMaxPathSize;
+        const bool bPathFits  = _assetPath.empty() == false && _assetPath.size() < constant::file::kMaxPathSize;
         const bool bRoleCount = _listRoleNetID.size() <= kMaxRoleCount;
         if ( bPathFits == false || bRoleCount == false )
             return false;
@@ -81,7 +81,7 @@ namespace sw
         outState = PairedAnimationNetState{};
         PairedAnimationNetState state{};
         vector<uint8>           pathBytes;
-        if ( reader.readBlob( pathBytes, static_cast<int32>( constant::kMaxPathSize ) - 1 ) == false || pathBytes.empty() )
+        if ( reader.readBlob( pathBytes, static_cast<int32>( constant::file::kMaxPathSize ) - 1 ) == false || pathBytes.empty() )
             return false;
         state._assetPath.assign( reinterpret_cast<const utf8*>( pathBytes.data() ), pathBytes.size() );
         const uint64 roleCount = reader.readVarUint();

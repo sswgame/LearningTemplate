@@ -152,7 +152,7 @@ namespace
             std::fflush( stderr );
             std::fseek( LowLevelReportTestInternal::_s_pCapture, 0, SEEK_SET );
             string text;
-            utf8   arrChunk[constant::kMaxBuffer256];
+            utf8   arrChunk[constant::buffer::kMax256];
             size_t readCount = 0;
             while ( ( readCount = std::fread( arrChunk, 1, sizeof( arrChunk ), LowLevelReportTestInternal::_s_pCapture ) ) > 0 )
                 text.append( arrChunk, readCount );
@@ -263,7 +263,7 @@ SW_TEST_CASE( LowLevelReportTest, WithoutReporterWarningGoesToStderr )
     const int32 expectedLine = __LINE__ + 1;
     SW_LOW_LEVEL_WARNING( "no reporter %d", 5 );
 
-    utf8 arrExpectedSite[constant::kMaxBuffer64];
+    utf8 arrExpectedSite[constant::buffer::kMax64];
     std::snprintf( arrExpectedSite, sizeof( arrExpectedSite ), "TestLowLevelReport.cpp:%d", expectedLine );
     const string stderrText = capture.readStderr();
     SW_EXPECT_TRUE_MSG( LowLevelReportTestInternal::contains( stderrText, "[Warning] " ), stderrText );

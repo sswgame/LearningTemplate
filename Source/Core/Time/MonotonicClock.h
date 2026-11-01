@@ -6,7 +6,7 @@
  *          기한이 같은 시각을 봅니다. 로거를 include 하지 않는 가벼운 헤더라 동시성 · 컨테이너 헤더에서도 씁니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -30,14 +30,14 @@ namespace sw
          */
         static constexpr int64 countsToNanoseconds( int64 counts, int64 countsPerSecond ) noexcept
         {
-            if ( countsPerSecond == constant::kNanosecondsPerSecond )
+            if ( countsPerSecond == constant::time::kNanosecondsPerSecond )
                 return counts;
-            return ( counts / countsPerSecond ) * constant::kNanosecondsPerSecond + ( counts % countsPerSecond ) * constant::kNanosecondsPerSecond / countsPerSecond;
+            return ( counts / countsPerSecond ) * constant::time::kNanosecondsPerSecond + ( counts % countsPerSecond ) * constant::time::kNanosecondsPerSecond / countsPerSecond;
         }
         /** @brief 지금 시각(마이크로초)입니다. */
-        static int64 nowMicroseconds() noexcept { return nowNanoseconds() / constant::kNanosecondsPerMicrosecond; }
+        static int64 nowMicroseconds() noexcept { return nowNanoseconds() / constant::time::kNanosecondsPerMicrosecond; }
         /** @brief 설정 · 시한의 초(@p seconds)를 이 시계의 나노초 폭으로 바꿉니다(소수 아래는 버린다). 변환식을 호출부마다 두지 않는다. */
-        static constexpr int64 secondsToNanoseconds( float64 seconds ) noexcept { return static_cast<int64>( seconds * static_cast<float64>( constant::kNanosecondsPerSecond ) ); }
+        static constexpr int64 secondsToNanoseconds( float64 seconds ) noexcept { return static_cast<int64>( seconds * static_cast<float64>( constant::time::kNanosecondsPerSecond ) ); }
         /**
          * @brief `nowNanoseconds()` 기준 @p deadlineNanoseconds 까지 이 스레드를 재웁니다(이미 지났으면 바로 돌아온다). 고정 틱 루프의 잠자기입니다.
          * @details Windows 는 고해상도 대기 타이머(`CREATE_WAITABLE_TIMER_HIGH_RESOLUTION` — 없으면 `Sleep` 밀리초)로 1 ms 해상도 한계를 피하고,
@@ -68,9 +68,9 @@ namespace sw
         /** @brief 지난 시간(나노초)입니다. */
         int64 getElapsedNanoseconds() const noexcept { return MonotonicClock::nowNanoseconds() - _startNanoseconds; }
         /** @brief 지난 시간(마이크로초)입니다. */
-        int64 getElapsedMicroseconds() const noexcept { return getElapsedNanoseconds() / constant::kNanosecondsPerMicrosecond; }
+        int64 getElapsedMicroseconds() const noexcept { return getElapsedNanoseconds() / constant::time::kNanosecondsPerMicrosecond; }
         /** @brief 지난 시간(밀리초)입니다. */
-        int64 getElapsedMilliseconds() const noexcept { return getElapsedNanoseconds() / constant::kNanosecondsPerMillisecond; }
+        int64 getElapsedMilliseconds() const noexcept { return getElapsedNanoseconds() / constant::time::kNanosecondsPerMillisecond; }
 
     private:
         int64 _startNanoseconds;
@@ -87,7 +87,7 @@ namespace sw
     {
     public:
         /** @brief 지금부터 @p milliseconds 뒤가 기한입니다. */
-        static Deadline afterMilliseconds( int64 milliseconds ) noexcept { return Deadline{ MonotonicClock::nowNanoseconds() + milliseconds * constant::kNanosecondsPerMillisecond }; }
+        static Deadline afterMilliseconds( int64 milliseconds ) noexcept { return Deadline{ MonotonicClock::nowNanoseconds() + milliseconds * constant::time::kNanosecondsPerMillisecond }; }
 
         /** @brief 기한이 지났으면 true 입니다. */
         bool isExpired() const noexcept { return MonotonicClock::nowNanoseconds() >= _deadlineNanoseconds; }
@@ -95,7 +95,7 @@ namespace sw
         int64 getRemainingMilliseconds() const noexcept
         {
             const int64 remaining = _deadlineNanoseconds - MonotonicClock::nowNanoseconds();
-            return remaining > 0 ? remaining / constant::kNanosecondsPerMillisecond : 0;
+            return remaining > 0 ? remaining / constant::time::kNanosecondsPerMillisecond : 0;
         }
 
     private:

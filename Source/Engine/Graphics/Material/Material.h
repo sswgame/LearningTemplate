@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Task/TaskTypes.h"
@@ -203,7 +203,7 @@ namespace sw
          */
         const vector<RHIDescriptorIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /** @brief 빌린 텍스처가 없는 프로퍼티의 슬롯 값입니다(`findTextureSlot`). */
-        static constexpr uint32 kInvalidTextureSlot = invalid_index::kUint32;
+        static constexpr uint32 kInvalidTextureSlot = constant::invalid_index::kUint32;
         /**
          * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
          *        않았으면 kInvalidTextureSlot 입니다.

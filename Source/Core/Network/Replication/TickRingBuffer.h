@@ -14,7 +14,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -28,7 +28,7 @@ namespace sw
     class TickRingBuffer
     {
     public:
-        static constexpr uint32 kEmpty = invalid_index::kUint32;
+        static constexpr uint32 kEmpty = constant::invalid_index::kUint32;
 
         TickRingBuffer()
             : _listEntry{}

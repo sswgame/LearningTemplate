@@ -355,7 +355,7 @@ namespace sw
 
         // 단가는 표의 비용 모형이다 — 측정 평균(`_averageEvaluationMicroseconds`)을 넣으면 같은 입력이 기계 · 부하마다 다른 주기가 된다.
         _expectedEvaluationMicroseconds = AnimationLODUtil::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
-                                                                            _lodSettings._unitCostMicroseconds, _lodSettings._budgetMilliseconds * constant::kMicrosecondsPerMillisecond,
+                                                                            _lodSettings._unitCostMicroseconds, _lodSettings._budgetMilliseconds * constant::time::kMicrosecondsPerMillisecond,
                                                                             _lodSettings._maxUpdateRateDivisor );
         size_t budgetIndex              = 0;
         // 예산을 칸마다 풀어 두는 단계 — 훅이 없으니 목록이 그대로다. 예산 순번은 여기서만 센다(아래 순회가 해제된 칸을 건너뛰어도 어긋나지 않게).
@@ -452,7 +452,7 @@ namespace sw
             {
                 const SkeletalMeshComponent* pUpstream     = ( _pManager != nullptr ) ? _pManager->resolveComponent( handle ) : nullptr;
                 const uint32                 upstreamIndex = _unitList.findIndex( pUpstream );
-                if ( upstreamIndex == invalid_index::kUint32 )
+                if ( upstreamIndex == constant::invalid_index::kUint32 )
                     continue; // 사라졌거나 다른 씬의 유닛 — 순서를 강제하지 않는다
                 _listScratchEdge.push_back( AnimationDependencyEdge{ upstreamIndex, static_cast<uint32>( unitIndex ) } );
                 ++_listScratchPendingCount[unitIndex];

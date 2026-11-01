@@ -14,7 +14,7 @@
  * 빌더가 타입을 가르는 법을 함께 정해야 합니다(조용히 잘못된 캐스트가 되지 않습니다).
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -44,7 +44,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 등록되지 않은 프리미티브의 번호입니다. */
-        static constexpr uint32 kInvalidPrimitiveIndex = invalid_index::kUint32;
+        static constexpr uint32 kInvalidPrimitiveIndex = constant::invalid_index::kUint32;
 
         /** @brief 기본 소멸자입니다. */
         virtual ~ScenePrimitive() override = default;

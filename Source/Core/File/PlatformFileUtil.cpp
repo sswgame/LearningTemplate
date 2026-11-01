@@ -8,7 +8,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
@@ -76,14 +76,14 @@ namespace sw
 {
     void PlatformFileUtil::emulateReadDelay( size_t byteCount )
     {
-        int64 delayMicro = static_cast<int64>( MathUtil::max( 0, gv_ioEmulationReadLatencyMs ) ) * constant::kMicrosecondsPerMillisecond;
+        int64 delayMicro = static_cast<int64>( MathUtil::max( 0, gv_ioEmulationReadLatencyMs ) ) * constant::time::kMicrosecondsPerMillisecond;
         if ( gv_ioEmulationReadKilobytesPerSecond > 0 )
-            delayMicro += static_cast<int64>( byteCount ) * constant::kMicrosecondsPerSecond / ( static_cast<int64>( gv_ioEmulationReadKilobytesPerSecond ) * static_cast<int64>( constant::kBytesPerKilobyte ) );
+            delayMicro += static_cast<int64>( byteCount ) * constant::time::kMicrosecondsPerSecond / ( static_cast<int64>( gv_ioEmulationReadKilobytesPerSecond ) * static_cast<int64>( constant::memory::kBytesPerKilobyte ) );
         if ( delayMicro <= 0 )
             return;
         // 디스크 한 대(큐 깊이 1): 여러 스레드의 읽기가 장치에서 줄을 선다 — 스레드마다 따로 자면 읽기를 나눠 부르기만 해도 디스크가 빨라진 것처럼 보인다.
         // `sleep_for` 는 Windows 기본 타이머 해상도(약 15.6 ms)로 반올림돼 1 ms 와 8 ms 가 같은 지연이 된다 — 고해상도 마감 대기를 쓴다.
-        const int64 delayNano = delayMicro * constant::kNanosecondsPerMicrosecond;
+        const int64 delayNano = delayMicro * constant::time::kNanosecondsPerMicrosecond;
         const int64 nowNano   = MonotonicClock::nowNanoseconds();
         int64       busyUntil = PlatformFileUtilInternal::s_emulatedDiskBusyUntilNano.load( std::memory_order_relaxed );
         int64       doneNano  = 0;
@@ -128,9 +128,9 @@ namespace sw
         FILE* pFile{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )
         // 모드는 ASCII 몇 글자다("rb" · "wb" · "a+" ...). 그대로 넓힌다.
-        utf16  arrWideMode[constant::kMaxBuffer16]{};
+        utf16  arrWideMode[constant::buffer::kMax16]{};
         size_t modeLength = 0;
-        while ( pMode[modeLength] != '\0' && modeLength + 1 < constant::kMaxBuffer16 )
+        while ( pMode[modeLength] != '\0' && modeLength + 1 < constant::buffer::kMax16 )
         {
             arrWideMode[modeLength] = static_cast<utf16>( static_cast<uint8>( pMode[modeLength] ) );
             ++modeLength;
@@ -309,8 +309,8 @@ namespace sw
             return kInvalidNativeFileHandle;
 #if defined( SW_PLATFORM_WINDOWS )
         // 힙 없이 스택에서 UTF-16 으로 바꾼다(StringUtil::utf8ToUTF16 은 할당한다).
-        utf16 arrWidePath[constant::kMaxBuffer1024]{};
-        if ( MultiByteToWideChar( CP_UTF8, 0, pFilePath, -1, arrWidePath, static_cast<int32>( constant::kMaxBuffer1024 ) ) == 0 )
+        utf16 arrWidePath[constant::buffer::kMax1024]{};
+        if ( MultiByteToWideChar( CP_UTF8, 0, pFilePath, -1, arrWidePath, static_cast<int32>( constant::buffer::kMax1024 ) ) == 0 )
             return kInvalidNativeFileHandle;
         const HANDLE hFile = CreateFileW( arrWidePath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
         if ( hFile == INVALID_HANDLE_VALUE )
@@ -335,7 +335,7 @@ namespace sw
         const uint8* pCursor = static_cast<const uint8*>( pData );
         while ( size > 0 )
         {
-            const size_t chunkBytes = size < constant::kMaxFileReadChunkBytes ? size : constant::kMaxFileReadChunkBytes;
+            const size_t chunkBytes = size < constant::file::kMaxFileReadChunkBytes ? size : constant::file::kMaxFileReadChunkBytes;
 #if defined( SW_PLATFORM_WINDOWS )
             DWORD written{ 0 };
             if ( WriteFile( reinterpret_cast<HANDLE>( static_cast<intptr_t>( handle ) ), pCursor, static_cast<DWORD>( chunkBytes ), &written, nullptr ) == FALSE || written == 0 )
@@ -392,7 +392,7 @@ namespace sw
         while ( outReadBytes < size )
         {
             const size_t remaining  = size - outReadBytes;
-            const size_t chunkBytes = remaining < constant::kMaxFileReadChunkBytes ? remaining : constant::kMaxFileReadChunkBytes;
+            const size_t chunkBytes = remaining < constant::file::kMaxFileReadChunkBytes ? remaining : constant::file::kMaxFileReadChunkBytes;
             const uint64 position   = offset + outReadBytes;
 #if defined( SW_PLATFORM_WINDOWS )
             const HANDLE hEvent = PlatformFileUtilInternal::getThreadReadEvent();

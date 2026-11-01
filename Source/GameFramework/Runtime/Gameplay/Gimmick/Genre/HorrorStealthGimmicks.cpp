@@ -108,7 +108,7 @@ namespace sw
     {
         if ( _pattern.empty() )
             return 1.0f;
-        const int32 letterIndex = static_cast<int32>( static_cast<float32>( step ) * GenreGimmickUtil::kStepTime * _rate ) % static_cast<int32>( _pattern.size() );
+        const int32 letterIndex = static_cast<int32>( static_cast<float32>( step ) * constant::time::kDefaultFixedStepSeconds * _rate ) % static_cast<int32>( _pattern.size() );
         const utf8  letter      = StringUtil::toLowerChar( _pattern[static_cast<size_t>( letterIndex )] );
         if ( letter < 'a' || 'z' < letter )
             return 1.0f;

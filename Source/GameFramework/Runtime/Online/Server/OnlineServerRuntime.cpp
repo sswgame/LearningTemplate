@@ -37,7 +37,7 @@ namespace sw
 
             static bool isMemoryDriver( string_view driver ) { return driver.empty() || driver == kMemoryStoreDriverName; }
 
-            static constexpr int64 kDayMs = 24 * constant::kSecondsPerHour * constant::kMillisecondsPerSecond;
+            static constexpr int64 kDayMs = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
             /** @brief 분개를 내역보다 하루 더 남긴다 — 내역이 가리키는 분개가 먼저 사라지지 않게 한다. */
             static constexpr int64 kJournalExtraDays = 1;
 

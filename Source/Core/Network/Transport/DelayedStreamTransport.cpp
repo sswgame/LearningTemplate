@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <chrono>

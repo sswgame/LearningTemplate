@@ -625,7 +625,7 @@ namespace sw
             auto pWrite       = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
             pWrite->_path     = packet._screenshotPath;
             pWrite->_pMailbox = RenderThreadInternal::findMailbox();
-            pWrite->_format   = constant::kBackBufferFormat;
+            pWrite->_format   = constant::render::kBackBufferFormat;
             pWrite->_kind     = RenderThreadInternal::ScreenshotWriteKind::Packet;
             if ( _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout ) )
             {
@@ -726,7 +726,7 @@ namespace sw
                 string path{ gv_screenshot };
                 if ( shotCount > 1u )
                 {
-                    StringBuilder<constant::kMaxBuffer16> suffix;
+                    StringBuilder<constant::buffer::kMax16> suffix;
                     suffix.appendFormat( "_%03u", _screenshotShotCount );
                     path = FileUtil::removeExtension( path ) + suffix.c_str() + FileUtil::getExtension( path );
                 }
@@ -738,7 +738,7 @@ namespace sw
                 pWrite->_path      = std::move( path );
                 pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
                 pWrite->_pInFlight = _pCommandLineShotsLeft;
-                pWrite->_format    = constant::kBackBufferFormat;
+                pWrite->_format    = constant::render::kBackBufferFormat;
                 pWrite->_kind      = RenderThreadInternal::ScreenshotWriteKind::CommandLine;
                 const string_view attachment{ gv_screenshotAttachment };
                 const bool        bRead = attachment.empty() == false ? _pFrameRenderer->getCapture().readbackTransient( attachment, pWrite->_bytes, pWrite->_layout, pWrite->_format )
@@ -854,7 +854,7 @@ namespace sw
         pWrite->_path      = std::move( _requestedScreenshotPath );
         pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
         pWrite->_pInFlight = _pRequestedScreenshotWritesInFlight;
-        pWrite->_format    = _requestedScreenshotTexture == 0 ? constant::kBackBufferFormat : _requestedScreenshotFormat;
+        pWrite->_format    = _requestedScreenshotTexture == 0 ? constant::render::kBackBufferFormat : _requestedScreenshotFormat;
         _requestedScreenshotPath.clear();
         const bool bRead            = _requestedScreenshotTexture == 0 ? readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout )
                                                                        : _pFrameRenderer->getCapture().readbackTexture( _requestedScreenshotTexture, pWrite->_bytes, pWrite->_layout );

@@ -85,7 +85,7 @@ namespace sw
             updateStructuredBufferRange( buffer, pData, size, 0 );
         }
 
-        /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::arrVertexAttribute`)이 정합니다. */
+        /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::arrVertexAttribute`)이 정합니다. */
         virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
         /**
@@ -95,7 +95,7 @@ namespace sw
          *          직접 쓰고, DX11 과 GL 은 즉시 컨텍스트의 갱신(UpdateSubresource, glBufferSubData)으로 쓴다. 업로드 힙은 복사의 목적지가 될 수
          *          없어 구조화 버퍼의 경로(`updateStructuredBufferRegions`)를 그대로 쓸 수 없다.
          * @warning **아직 끝나지 않은 프레임이 읽는 조각을 쓰면 안 된다.** 직접 쓰는 백엔드는 GPU 와 순서를 맞추지 않는다. 그래서 부르는 쪽이
-         *          돌려받은 구간을 `constant::kMaxFrameCountInFlight` 프레임이 지난 뒤에야 다시 쓴다(`SpanAllocator::freeDeferred`).
+         *          돌려받은 구간을 `constant::render::kMaxFrameCountInFlight` 프레임이 지난 뒤에야 다시 쓴다(`SpanAllocator::freeDeferred`).
          *          범위는 백엔드가 검사해 넘는 조각을 버리고 알린다.
          */
         virtual void updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) = 0;

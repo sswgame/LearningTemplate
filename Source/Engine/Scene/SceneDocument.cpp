@@ -318,8 +318,8 @@ namespace sw
                 return false;
             }
             XMLNode      sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            utf8         arrFileIDText[constant::kMaxBuffer32]{};
-            const uint32 fileIDLength = StringUtil::formatNumber( arrFileIDText, constant::kMaxBuffer32, entity._fileID, 10 );
+            utf8         arrFileIDText[constant::buffer::kMax32]{};
+            const uint32 fileIDLength = StringUtil::formatNumber( arrFileIDText, constant::buffer::kMax32, entity._fileID, 10 );
             sceneObjectNode.appendAttribute( SceneDocumentInternal::kFileID, string_view( arrFileIDText, fileIDLength ) );
             sceneObjectNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
             if ( entity._prefab.empty() == false )

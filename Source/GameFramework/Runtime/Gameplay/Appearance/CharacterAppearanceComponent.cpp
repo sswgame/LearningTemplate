@@ -63,8 +63,8 @@ namespace sw
             template <typename... Args>
             static void appendReport( string& inoutReport, string_view format, Args&&... args )
             {
-                utf8 arrMessage[constant::kMaxBuffer512]{};
-                formatstring( arrMessage, constant::kMaxBuffer512, format, std::forward<Args>( args )... );
+                utf8 arrMessage[constant::buffer::kMax512]{};
+                formatstring( arrMessage, constant::buffer::kMax512, format, std::forward<Args>( args )... );
                 if ( inoutReport.empty() == false )
                     inoutReport += "\n";
                 inoutReport += arrMessage;
@@ -193,7 +193,7 @@ namespace sw
         , _surface{}
         , _surfaceBinding{}
         , _loadedSurfaceChannels{}
-        , _surfaceAppliedRevision{ invalid_index::kUint64 }
+        , _surfaceAppliedRevision{ constant::invalid_index::kUint64 }
         , _surfaceRegionCount{ 0 }
     {
     }
@@ -251,7 +251,7 @@ namespace sw
         _surface = CharacterSurfaceState{};
         _loadedSurfaceChannels.clear();
         _surfaceRegionCount     = 0;
-        _surfaceAppliedRevision = invalid_index::kUint64;
+        _surfaceAppliedRevision = constant::invalid_index::kUint64;
         // 끝날 때 붙은 부품은 이미 이 오브젝트의 자식으로 함께 지울 예정이다 — 풀에 넣을 수 없다(넣으려면 부르는 쪽이 지우기 전에 `stowParts`).
         despawnParts();
         GameObjectManager* pManager = findManager();
@@ -950,7 +950,7 @@ namespace sw
         _surface.initialize( channels, regionCount, partCount );
         _loadedSurfaceChannels  = _surfaceChannelsPath;
         _surfaceRegionCount     = regionCount;
-        _surfaceAppliedRevision = invalid_index::kUint64;
+        _surfaceAppliedRevision = constant::invalid_index::kUint64;
     }
 
     void CharacterAppearanceComponent::applySurface( GameObjectManager& manager, bool bForce )

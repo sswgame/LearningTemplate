@@ -24,7 +24,7 @@ namespace sw
         {
             static constexpr const utf8* kArrPhaseName[] = { "IO", "Decode", "Upload" };
 
-            [[maybe_unused]] static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / constant::kNanosecondsPerMillisecond; }
+            [[maybe_unused]] static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / constant::time::kNanosecondsPerMillisecond; }
 
             static uint64 computeSummaryTotal( const AssetLoadKindSummary& summary )
             {

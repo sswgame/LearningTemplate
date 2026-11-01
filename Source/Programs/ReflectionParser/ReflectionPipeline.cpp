@@ -26,7 +26,7 @@ namespace sw
         struct ReflectionPipelineInternal
         {
             /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
-            static void appendParameterList( StringBuilder<constant::kMaxBuffer8192>& out, const vector<ParsedParameterInfo>& listParameter )
+            static void appendParameterList( StringBuilder<constant::buffer::kMax8192>& out, const vector<ParsedParameterInfo>& listParameter )
             {
                 for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
                 {
@@ -47,7 +47,7 @@ namespace sw
              */
             static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed, const FixedCodecGenerator& fixedCodec )
             {
-                StringBuilder<constant::kMaxBuffer8192> out;
+                StringBuilder<constant::buffer::kMax8192> out;
                 out.appendFormat( "== %#\n", inputFile );
                 for ( size_t typeIndex = 0; typeIndex < parsed._listType.size(); ++typeIndex )
                 {

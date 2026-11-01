@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
 

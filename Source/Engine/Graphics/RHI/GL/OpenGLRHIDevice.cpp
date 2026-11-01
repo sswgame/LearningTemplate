@@ -52,7 +52,7 @@ namespace sw
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _renderPassLedger{}
-        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
+        , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
         , _arrFrameDoneSync{}
         , _frameSerial{ 0 }
         , _completedFrameSerial{ 0 }
@@ -115,8 +115,8 @@ namespace sw
             glGetIntegerv( OpenGLRHIUtil::kGPUMemoryInfoCurrentAvailableNvx, &currentKb );
             if ( totalKb <= 0 )
                 return false;
-            const uint64 totalBytes    = static_cast<uint64>( totalKb ) * constant::kBytesPerKilobyte;
-            const uint64 currentBytes  = currentKb > 0 ? static_cast<uint64>( currentKb ) * constant::kBytesPerKilobyte : 0;
+            const uint64 totalBytes    = static_cast<uint64>( totalKb ) * constant::memory::kBytesPerKilobyte;
+            const uint64 currentBytes  = currentKb > 0 ? static_cast<uint64>( currentKb ) * constant::memory::kBytesPerKilobyte : 0;
             outBudget._budgetBytes     = totalBytes;
             outBudget._availableBytes  = currentBytes;
             outBudget._usageBytes      = totalBytes > currentBytes ? totalBytes - currentBytes : 0;
@@ -131,7 +131,7 @@ namespace sw
         glGetIntegerv( OpenGLRHIUtil::kTextureFreeMemoryAti, arrTextureFreeKb );
         if ( arrTextureFreeKb[0] <= 0 )
             return false;
-        outBudget._availableBytes  = static_cast<uint64>( arrTextureFreeKb[0] ) * constant::kBytesPerKilobyte;
+        outBudget._availableBytes  = static_cast<uint64>( arrTextureFreeKb[0] ) * constant::memory::kBytesPerKilobyte;
         outBudget._bAvailableKnown = SW_TRUE;
         return true;
     }
@@ -479,10 +479,10 @@ namespace sw
             glGenBuffers( 1, &_vbo );
             glBindVertexArray( _vao );
             glBindBuffer( GL_ARRAY_BUFFER, _vbo );
-            glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( constant::arrFallbackVertex ) ), constant::arrFallbackVertex, GL_STATIC_DRAW );
-            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( constant::render::arrFallbackVertex ) ), constant::render::arrFallbackVertex, GL_STATIC_DRAW );
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
             {
-                const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];
+                const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
                 if ( attribute._inputSlot != 0 )
                     continue; // 인스턴스 슬롯 스트림은 씬 드로우 전용이다. 풀스크린 VAO 는 슬롯 0 뿐이다
                 glEnableVertexAttribArray( attribute._location );
@@ -495,10 +495,10 @@ namespace sw
 
             glGenVertexArrays( 1, &_meshVao );
             glBindVertexArray( _meshVao );
-            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
             {
-                if ( constant::arrVertexAttribute[attributeIndex]._inputSlot == 0 )
-                    glEnableVertexAttribArray( constant::arrVertexAttribute[attributeIndex]._location );
+                if ( constant::render::arrVertexAttribute[attributeIndex]._inputSlot == 0 )
+                    glEnableVertexAttribArray( constant::render::arrVertexAttribute[attributeIndex]._location );
             }
             glBindVertexArray( 0 );
 
@@ -912,7 +912,7 @@ namespace sw
 
     uint32 OpenGLRHIDevice::getTimestampSlotCount() const
     {
-        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _bTimestampReady.load( std::memory_order_acquire ) != SW_FALSE ) ? constant::kMaxGPUTimestampSlot : 0u;
+        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _bTimestampReady.load( std::memory_order_acquire ) != SW_FALSE ) ? constant::render::kMaxGPUTimestampSlot : 0u;
     }
 
     bool OpenGLRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
@@ -937,12 +937,12 @@ namespace sw
 
     void OpenGLRHIDevice::writeTimestampSlot( uint32 slotIndex )
     {
-        const bool bCannotWriteTimestamp = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot;
+        const bool bCannotWriteTimestamp = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || slotIndex >= constant::render::kMaxGPUTimestampSlot;
         if ( bCannotWriteTimestamp )
             return;
 
         // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
-        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
+        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::render::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
         _arrTimestampMask[_timestampFrameIndex] |= makeGPUTimestampSlotBit( slotIndex );
     }
 
@@ -956,7 +956,7 @@ namespace sw
         if ( bQueryFunctionsMissing )
             return;
 
-        constexpr uint32 kQueryCount = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
+        constexpr uint32 kQueryCount = constant::render::kMaxGPUTimestampSlot * constant::render::kMaxFrameCountInFlight;
         glGenQueries( static_cast<GLsizei>( kQueryCount ), _arrTimestampQuery );
         if ( _arrTimestampQuery[0] == 0 )
             return;
@@ -971,10 +971,10 @@ namespace sw
         if ( bNoTimestampsToRead )
             return;
 
-        const uint32         base = _timestampFrameIndex * constant::kMaxGPUTimestampSlot;
-        uint64               arrTick[constant::kMaxGPUTimestampSlot]{};
+        const uint32         base = _timestampFrameIndex * constant::render::kMaxGPUTimestampSlot;
+        uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
         GPUTimestampSlotMask readyMask{ 0 };
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
+        for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
             if ( ( writtenMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
                 continue;
@@ -1020,7 +1020,7 @@ namespace sw
             return;
 
         // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 다음 슬롯으로 넘긴다.
-        _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::kMaxFrameCountInFlight;
+        _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
 
         if ( bPresent == false )
         {
@@ -1230,18 +1230,18 @@ namespace sw
     {
         ScopedOpenGLContext contextScope( this );
         const uint64        serial     = _frameSerial + 1;
-        void*&              rpSlotSync = _arrFrameDoneSync[( serial - 1 ) % constant::kMaxFrameCountInFlight];
+        void*&              rpSlotSync = _arrFrameDoneSync[( serial - 1 ) % constant::render::kMaxFrameCountInFlight];
         // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 칸을 다시 쓴다.
-        const bool bRingFull = serial - _completedFrameSerial > constant::kMaxFrameCountInFlight;
+        const bool bRingFull = serial - _completedFrameSerial > constant::render::kMaxFrameCountInFlight;
         if ( bRingFull )
         {
             constexpr GLuint64 kRingWaitTimeoutNanoseconds = 10ull * 1000ull * 1000ull * 1000ull;
             const GLenum       waitResult                  = glClientWaitSync( static_cast<GLsync>( rpSlotSync ), GL_SYNC_FLUSH_COMMANDS_BIT, kRingWaitTimeoutNanoseconds );
             if ( waitResult == GL_TIMEOUT_EXPIRED || waitResult == GL_WAIT_FAILED )
-                SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", serial - constant::kMaxFrameCountInFlight, static_cast<uint32>( waitResult ) );
+                SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", serial - constant::render::kMaxFrameCountInFlight, static_cast<uint32>( waitResult ) );
             glDeleteSync( static_cast<GLsync>( rpSlotSync ) );
             rpSlotSync            = nullptr;
-            _completedFrameSerial = serial - constant::kMaxFrameCountInFlight;
+            _completedFrameSerial = serial - constant::render::kMaxFrameCountInFlight;
         }
         rpSlotSync   = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
         _frameSerial = serial;
@@ -1250,7 +1250,7 @@ namespace sw
         while ( _completedFrameSerial < _frameSerial )
         {
             const uint64 next       = _completedFrameSerial + 1;
-            void*&       rpNextSync = _arrFrameDoneSync[( next - 1 ) % constant::kMaxFrameCountInFlight];
+            void*&       rpNextSync = _arrFrameDoneSync[( next - 1 ) % constant::render::kMaxFrameCountInFlight];
             const GLenum pollResult = glClientWaitSync( static_cast<GLsync>( rpNextSync ), 0, 0 );
             if ( pollResult == GL_TIMEOUT_EXPIRED )
                 break;

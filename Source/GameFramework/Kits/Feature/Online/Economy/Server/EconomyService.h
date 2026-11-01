@@ -18,7 +18,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -53,12 +53,12 @@ namespace sw
     {
         const CurrencyCatalog*    _pCurrencyCatalog{ nullptr };
         const OfferCatalog*       _pOfferCatalog{ nullptr };
-        ReceiptValidatorRegistry* _pReceiptRegistry{ nullptr };                                                           ///< 없으면 RedeemReceipt 는 ReceiptInvalid 로 끝난다
-        MetricRegistry*           _pMetricRegistry{ nullptr };                                                            ///< 없으면 지표를 세지 않는다
-        int64                     _withdrawalWindowMs{ 7 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond }; ///< 청약철회 기한이다(전자상거래법의 7일)
-        ServiceScheduler*         _pScheduler{ nullptr };                                                                 ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
-        int32                     _auditMinuteOfDay{ 4 * 60 + 30 };                                                       ///< 보존 검사 시각(UTC 분)이다. 테이블 전체를 읽으므로 한가한 시간에 둔다
-        IAccountPresence*         _pPresence{ nullptr };                                                                  ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
+        ReceiptValidatorRegistry* _pReceiptRegistry{ nullptr };                                                                       ///< 없으면 RedeemReceipt 는 ReceiptInvalid 로 끝난다
+        MetricRegistry*           _pMetricRegistry{ nullptr };                                                                        ///< 없으면 지표를 세지 않는다
+        int64                     _withdrawalWindowMs{ 7 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond }; ///< 청약철회 기한이다(전자상거래법의 7일)
+        ServiceScheduler*         _pScheduler{ nullptr };                                                                             ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
+        int32                     _auditMinuteOfDay{ 4 * 60 + 30 };                                                                   ///< 보존 검사 시각(UTC 분)이다. 테이블 전체를 읽으므로 한가한 시간에 둔다
+        IAccountPresence*         _pPresence{ nullptr };                                                                              ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
         uint8                     _bAcceptSandboxReceipts{ SW_FALSE };
     };
 } // namespace sw

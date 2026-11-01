@@ -141,11 +141,11 @@ namespace sw::editor
             const EditorCommandDesc& desc = registry.getCommands()[item._commandIndex];
             if ( item._bSeparatorBefore )
                 ImGui::Separator();
-            fixed_string<constant::kMaxBuffer128> menuLabel;
+            fixed_string<constant::buffer::kMax128> menuLabel;
             EditorCommandRegistry::formatMenuLabel( desc, menuLabel );
             const bool bEnabled = EditorCommandRegistry::isEnabled( desc, state._target );
             // 시나리오가 누를 표식은 `menu.<명령 id>` 다 — 어느 창의 메뉴든 같은 명령은 같은 표식이다.
-            fixed_string<constant::kMaxBuffer128> markKey{ "menu." };
+            fixed_string<constant::buffer::kMax128> markKey{ "menu." };
             markKey.append( desc._id.c_str() );
             if ( desc._submenu.isBound() )
             {

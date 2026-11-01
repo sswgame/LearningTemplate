@@ -549,9 +549,9 @@ namespace sw::editor
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
-        const DXGI_FORMAT                      resolvedFormat = resolveFormatInternal( rule._format, rule._bSRGB == SW_TRUE );
-        const SwizzleLayout&                   layout         = swizzleLayoutInternal( rule._swizzle );
-        StringBuilder<constant::kMaxBuffer256> ruleText;
+        const DXGI_FORMAT                        resolvedFormat = resolveFormatInternal( rule._format, rule._bSRGB == SW_TRUE );
+        const SwizzleLayout&                     layout         = swizzleLayoutInternal( rule._swizzle );
+        StringBuilder<constant::buffer::kMax256> ruleText;
         ruleText.appendFormat( "importer=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",
                                TextureImporterInternal::kImporterVersion,
                                static_cast<uint32>( resolvedFormat ),

@@ -220,7 +220,7 @@ namespace sw
                     return true; // 연결은 열어 둔다 — 티켓은 이 계정 세션에 묶여 있다
                 }
             }
-            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + AccountTicketConnectInternal::kPollIntervalMilliseconds * constant::kNanosecondsPerMillisecond );
+            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + AccountTicketConnectInternal::kPollIntervalMilliseconds * constant::time::kNanosecondsPerMillisecond );
         }
         outError = bLoginSent ? ( bTicketSent ? "timed out waiting for the game ticket" : "timed out waiting for the login reply" ) : "timed out connecting to the login server";
         shutdown();

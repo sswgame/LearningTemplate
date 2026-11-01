@@ -2,7 +2,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
@@ -16,12 +16,12 @@ namespace sw
     {
         AABB       _bounds{};
         SlotHandle _handle{};
-        int32      _parent{ invalid_index::kInt32 };
-        int32      _leftChild{ invalid_index::kInt32 };
-        int32      _rightChild{ invalid_index::kInt32 };
+        int32      _parent{ constant::invalid_index::kInt32 };
+        int32      _leftChild{ constant::invalid_index::kInt32 };
+        int32      _rightChild{ constant::invalid_index::kInt32 };
         int32      _height{ 0 };
 
-        bool isLeaf() const { return _leftChild == invalid_index::kInt32; }
+        bool isLeaf() const { return _leftChild == constant::invalid_index::kInt32; }
     };
 } // namespace sw
 

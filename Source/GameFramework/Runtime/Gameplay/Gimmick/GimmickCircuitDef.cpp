@@ -72,7 +72,7 @@ namespace sw
     bool GimmickCircuitDef::loadRoot( const XMLNode& root )
     {
         clear();
-        // 적지 않으면 clear() 가 둔 기본 스텝 길이(kDefaultStepTime)다. 0 이하 · 깨진 값은 오류다.
+        // 적지 않으면 clear() 가 둔 기본 스텝 길이(constant::time::kDefaultFixedStepSeconds)다. 0 이하 · 깨진 값은 오류다.
         bool bValid = XMLReadUtil::readOptionalNumber( root, "stepTime", _sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
         if ( _stepTime <= 0.0f )
         {
@@ -145,7 +145,7 @@ namespace sw
     {
         _listNode.clear();
         _listWire.clear();
-        _stepTime = kDefaultStepTime;
+        _stepTime = constant::time::kDefaultFixedStepSeconds;
     }
 
     bool GimmickCircuitDef::splitPortReference( string_view text, hashed_string& outNode, hashed_string& outPort )

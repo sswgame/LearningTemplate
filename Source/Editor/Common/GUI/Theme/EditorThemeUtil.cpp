@@ -663,7 +663,7 @@ namespace sw::editor
     EditorIconLabel::EditorIconLabel( const utf8* pIcon, const utf8* pLabel )
         : _arrText{}
     {
-        formatstring( _arrText, constant::kMaxBuffer256, "%#  %#", pIcon, pLabel );
+        formatstring( _arrText, constant::buffer::kMax256, "%#  %#", pIcon, pLabel );
     }
 
     EditorIconLabel EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )

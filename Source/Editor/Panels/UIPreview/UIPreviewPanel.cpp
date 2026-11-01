@@ -78,7 +78,7 @@ namespace sw::editor
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
-                fixed_string<constant::kMaxBuffer128> mark;
+                fixed_string<constant::buffer::kMax128> mark;
                 formatstring( mark.data(), mark.capacity(), "%#.%#", pPrefix, pSuffix );
                 EditorSelfTestMarks::note( mark.c_str() );
             }
@@ -502,7 +502,7 @@ namespace sw::editor
         };
         for ( const NavigationButton& button : kArrNavigation )
         {
-            fixed_string<constant::kMaxBuffer32> id;
+            fixed_string<constant::buffer::kMax32> id;
             formatstring( id.data(), id.capacity(), "##uipreviewnav%#", button._pMark );
             if ( ImGui::ArrowButton( id.c_str(), button._dir ) )
                 (void)_model.navigateFocus( screen, static_cast<uint32>( button._direction ) );
@@ -731,7 +731,7 @@ namespace sw::editor
                 listCenter.push_back( bVertical ? childCenter._y : childCenter._x );
             }
             const uint32 fromIndex = pParent->findChildIndex( pWidget );
-            if ( fromIndex == invalid_index::kUint32 )
+            if ( fromIndex == constant::invalid_index::kUint32 )
                 return;
             const uint32 toIndex = UIPreviewLogic::findReorderIndex( fromIndex, UIPreviewLogic::findBoxInsertIndex( listCenter, bVertical ? point._y : point._x ) );
             if ( toIndex == fromIndex )
@@ -974,7 +974,7 @@ namespace sw::editor
                 _model.select( row._widget, ordinal );
             if ( EditorSelfTestMarks::isEnabled() )
             {
-                fixed_string<constant::kMaxBuffer32> ordinalText;
+                fixed_string<constant::buffer::kMax32> ordinalText;
                 formatstring( ordinalText.data(), ordinalText.capacity(), "%#", ordinal );
                 Internal::noteMark( "uipreview.row", ordinalText.c_str() );
                 const Widget* pWidget = screen.getTree().findWidgetByID( row._widget );
@@ -1039,9 +1039,9 @@ namespace sw::editor
         }
         else
         {
-            fixed_string<constant::kMaxBuffer32> width;
-            fixed_string<constant::kMaxBuffer32> height;
-            fixed_string<constant::kMaxBuffer32> scale;
+            fixed_string<constant::buffer::kMax32> width;
+            fixed_string<constant::buffer::kMax32> height;
+            fixed_string<constant::buffer::kMax32> scale;
             formatstring( width.data(), width.capacity(), "%#", Fmt( static_cast<float64>( viewport._size._x ), Format().precision( 0 ) ) );
             formatstring( height.data(), height.capacity(), "%#", Fmt( static_cast<float64>( viewport._size._y ), Format().precision( 0 ) ) );
             formatstring( scale.data(), scale.capacity(), "%#", Fmt( static_cast<float64>( viewport._uiScale ), Format().precision( 2 ) ) );

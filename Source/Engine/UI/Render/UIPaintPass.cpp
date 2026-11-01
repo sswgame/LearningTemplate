@@ -197,7 +197,7 @@ namespace sw
 
         // 화면 앵커 — 이 아래 사각형은 앵커 점 기준이다. 대상 픽셀의 가위는 앵커를 따라가지 않으므로 앵커 위와 아래에 자르기가 없어야 한다.
         const uint32 previousAnchor = painter.getAnchor();
-        if ( widget._paintAnchor != invalid_index::kUint32 )
+        if ( widget._paintAnchor != constant::invalid_index::kUint32 )
         {
             SW_ASSERT( painter.hasClip() == false );
             painter.setAnchor( widget._paintAnchor );
@@ -217,7 +217,7 @@ namespace sw
         if ( pPanel != nullptr && pPanel->getChildCount() > 0 )
         {
             const bool bClip = pPanel->clipsChildren();
-            SW_ASSERT( bClip == false || painter.getAnchor() == invalid_index::kUint32 );
+            SW_ASSERT( bClip == false || painter.getAnchor() == constant::invalid_index::kUint32 );
             if ( bClip )
             {
                 painter.pushTransform( makeWidgetTransform( widget.getGeometry() ) );

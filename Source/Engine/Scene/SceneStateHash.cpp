@@ -784,7 +784,7 @@ namespace sw
     {
         for ( const StateHashSample& sample : listSample )
         {
-            utf8                       arrBuffer[constant::kMaxBuffer32];
+            utf8                       arrBuffer[constant::buffer::kMax32];
             const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), sample._tick );
             outText.append( arrBuffer, result.ptr );
             outText += ' ';

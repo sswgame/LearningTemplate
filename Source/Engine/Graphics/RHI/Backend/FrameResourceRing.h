@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class FrameResourceRing
-     * @brief 프레임별 펜스 값을 보관하고 다음 슬롯으로 넘어갈지 정하는 링입니다(N = constant::kMaxFrameCountInFlight).
+     * @brief 프레임별 펜스 값을 보관하고 다음 슬롯으로 넘어갈지 정하는 링입니다(N = constant::render::kMaxFrameCountInFlight).
      * @details GPU 자원은 소유하지 않습니다. 부르는 쪽이 currentIndex() 로 자기 프레임 자원을 고릅니다.
      */
     class SW_API FrameResourceRing
@@ -48,7 +48,7 @@ namespace sw
         void setFenceValue( uint32 index, uint64 fenceValue );
 
     private:
-        uint64 _arrFenceValue[constant::kMaxFrameCountInFlight]; ///< 렌더 스레드만 읽고 쓴다
+        uint64 _arrFenceValue[constant::render::kMaxFrameCountInFlight]; ///< 렌더 스레드만 읽고 쓴다
         /// @brief 렌더 스레드만 올리고(`beginFrame`), 다른 스레드도 읽으므로 atomic 입니다.
         atomic<uint32> _frameIndex;
     };

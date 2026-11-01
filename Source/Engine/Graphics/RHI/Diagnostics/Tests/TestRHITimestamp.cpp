@@ -18,8 +18,8 @@ using namespace sw;
  */
 SW_TEST_CASE( RHITimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative )
 {
-    constexpr uint32 kLastSlot = constant::kMaxGPUTimestampSlot - 1u;
-    uint64           arrTick[constant::kMaxGPUTimestampSlot]{};
+    constexpr uint32 kLastSlot = constant::render::kMaxGPUTimestampSlot - 1u;
+    uint64           arrTick[constant::render::kMaxGPUTimestampSlot]{};
     arrTick[0]                           = 1000; // 낮은 번호지만 늦은 시각 — 이것을 기준으로 삼으면 슬롯 5 가 음수(→ 0)가 된다
     arrTick[5]                           = 400;
     arrTick[kLastSlot]                   = 1600;
@@ -28,7 +28,7 @@ SW_TEST_CASE( RHITimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative
     RHITimestampFrame frame;
     SW_REQUIRE_TRUE( RHITimestamp::resolve( arrTick, readyMask, 500.0, frame ) ); // 틱 하나 = 500 ns = 0.5 us
     const vector<float32>& listMicro = frame._listMicro;
-    SW_REQUIRE_EQUAL( size_t( constant::kMaxGPUTimestampSlot ), listMicro.size() );
+    SW_REQUIRE_EQUAL( size_t( constant::render::kMaxGPUTimestampSlot ), listMicro.size() );
     SW_EXPECT_EQUAL( int64( 400 * 500 ), frame._originNanos );
     SW_EXPECT_EQUAL( int64( 1000 * 500 ), RHITimestamp::convertTickToNanos( 1000, 500.0 ) );
     SW_EXPECT_NEAR( 300.0f, listMicro[0], 1e-3f );

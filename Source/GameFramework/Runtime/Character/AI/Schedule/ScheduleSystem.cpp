@@ -639,12 +639,12 @@ namespace sw
         outText.clear();
         if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
             return;
-        const NPCRuntime&                       npc     = _listNPC[static_cast<size_t>( npcIndex )];
-        const ScheduleNPCDef&                   def     = _pCatalog->getNPCs()[static_cast<size_t>( npc._defIndex )];
-        const ScheduleNPCView                   view    = getNPCView( npcIndex );
-        const ScheduleConditionContext          context = makeContext( npcIndex, npc._planDay, 0 );
-        const int32                             now     = Internal::toMinuteOfDay( _minute );
-        StringBuilder<constant::kMaxBuffer4096> text;
+        const NPCRuntime&                         npc     = _listNPC[static_cast<size_t>( npcIndex )];
+        const ScheduleNPCDef&                     def     = _pCatalog->getNPCs()[static_cast<size_t>( npc._defIndex )];
+        const ScheduleNPCView                     view    = getNPCView( npcIndex );
+        const ScheduleConditionContext            context = makeContext( npcIndex, npc._planDay, 0 );
+        const int32                               now     = Internal::toMinuteOfDay( _minute );
+        StringBuilder<constant::buffer::kMax4096> text;
         text.appendFormat( "npc '%#' day %# (%#, %#, day %# of season, weather '%#') ", def._id.c_str(), npc._planDay, context._weekday.c_str(), context._season.c_str(),
                            context._dayOfSeason, _weather.c_str() );
         Internal::appendClock( text, now );
@@ -722,8 +722,8 @@ namespace sw
         outText.clear();
         if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
             return;
-        const NPCRuntime&                       npc = _listNPC[static_cast<size_t>( npcIndex )];
-        StringBuilder<constant::kMaxBuffer4096> text;
+        const NPCRuntime&                         npc = _listNPC[static_cast<size_t>( npcIndex )];
+        StringBuilder<constant::buffer::kMax4096> text;
         text.appendFormat( "timeline '%#' day %# (planned at ", getNPCID( npcIndex ).c_str(), npc._planDay );
         Internal::appendClock( text, Internal::toMinuteOfDay( npc._originMinute ) );
         text.append( ")\n" );

@@ -21,8 +21,8 @@ namespace sw
 
             static void appendDecimal( vector<uint8>& outBytes, int64 value )
             {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + constant::kMaxBuffer32, value );
+                utf8                       arrBuffer[constant::buffer::kMax32];
+                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + constant::buffer::kMax32, value );
                 outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( arrBuffer ), reinterpret_cast<const uint8*>( result.ptr ) );
             }
 
@@ -117,8 +117,8 @@ namespace sw
 
     RespCommand& RespCommand::addInteger( int64 value )
     {
-        utf8                       arrBuffer[constant::kMaxBuffer32];
-        const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + constant::kMaxBuffer32, value );
+        utf8                       arrBuffer[constant::buffer::kMax32];
+        const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + constant::buffer::kMax32, value );
         return addText( string_view{ arrBuffer, static_cast<size_t>( result.ptr - arrBuffer ) } );
     }
 

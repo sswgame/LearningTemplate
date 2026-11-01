@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -65,9 +65,9 @@ namespace sw::editor
         void markSessionDirty();
 
     private:
-        GlobalVariablesModel                  _model;
-        fixed_string<constant::kMaxBuffer128> _searchFilter;
-        fixed_string<constant::kMaxBuffer64>  _presetNameBuf;
-        bool                                  _bGroupByModule;
+        GlobalVariablesModel                    _model;
+        fixed_string<constant::buffer::kMax128> _searchFilter;
+        fixed_string<constant::buffer::kMax64>  _presetNameBuf;
+        bool                                    _bGroupByModule;
     };
 } // namespace sw::editor

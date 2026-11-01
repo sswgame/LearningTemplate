@@ -13,7 +13,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -65,8 +65,8 @@ namespace sw::editor
         /** @brief 사슬 한 줄의 편집 글(쉼표로 나눈 본 이름)입니다. 프로필과 같은 순서입니다. */
         struct ChainText
         {
-            fixed_string<constant::kMaxBuffer512> _source{};
-            fixed_string<constant::kMaxBuffer512> _target{};
+            fixed_string<constant::buffer::kMax512> _source{};
+            fixed_string<constant::buffer::kMax512> _target{};
         };
 
         bool                acceptsDocumentPath( string_view assetPath ) const override;
@@ -94,27 +94,27 @@ namespace sw::editor
         /** @brief 읽어 둔 스켈레톤으로 세 자세(원본 · 대상 레퍼런스 · 리타깃 포즈를 얹은 대상)의 모델 공간 본 위치를 다시 만듭니다. 끄는 동안에도 부릅니다. */
         void rebuildPreviewPoses();
 
-        RetargetProfile                      _profile;
-        RetargetProfileInspection            _inspection;
-        Skeleton                             _previewSource;
-        Skeleton                             _previewTarget;
-        vector<float3>                       _listSourcePosition;
-        vector<float3>                       _listTargetReferencePosition;
-        vector<float3>                       _listTargetPosePosition;
-        vector<ChainText>                    _listChainText;
-        string                               _inspectionError;
-        string                               _status;
-        fixed_string<constant::kMaxPathSize> _sourceSkeleton;
-        fixed_string<constant::kMaxPathSize> _targetSkeleton;
-        fixed_string<constant::kMaxPathSize> _newDocumentPath;
-        fixed_string<constant::kMaxBuffer64> _arrPairName[4]; ///< 루트 원본 · 루트 대상 · 골반 원본 · 골반 대상
-        fixed_string<constant::kMaxBuffer64> _newChainName;
-        fixed_string<constant::kMaxBuffer64> _newPairSource;
-        fixed_string<constant::kMaxBuffer64> _newPairTarget;
-        fixed_string<constant::kMaxBuffer64> _newPoseBone;
-        Published                            _published; ///< 감시 값이 읽는 게시 값
-        uint8                                _bPreviewSourceReady : 1;
-        uint8                                _bPreviewTargetReady : 1;
-        uint8                                _bFramePending       : 1; ///< 스켈레톤을 새로 읽었다 — 다음 그리기에서 카메라를 담는다
+        RetargetProfile                            _profile;
+        RetargetProfileInspection                  _inspection;
+        Skeleton                                   _previewSource;
+        Skeleton                                   _previewTarget;
+        vector<float3>                             _listSourcePosition;
+        vector<float3>                             _listTargetReferencePosition;
+        vector<float3>                             _listTargetPosePosition;
+        vector<ChainText>                          _listChainText;
+        string                                     _inspectionError;
+        string                                     _status;
+        fixed_string<constant::file::kMaxPathSize> _sourceSkeleton;
+        fixed_string<constant::file::kMaxPathSize> _targetSkeleton;
+        fixed_string<constant::file::kMaxPathSize> _newDocumentPath;
+        fixed_string<constant::buffer::kMax64>     _arrPairName[4]; ///< 루트 원본 · 루트 대상 · 골반 원본 · 골반 대상
+        fixed_string<constant::buffer::kMax64>     _newChainName;
+        fixed_string<constant::buffer::kMax64>     _newPairSource;
+        fixed_string<constant::buffer::kMax64>     _newPairTarget;
+        fixed_string<constant::buffer::kMax64>     _newPoseBone;
+        Published                                  _published; ///< 감시 값이 읽는 게시 값
+        uint8                                      _bPreviewSourceReady : 1;
+        uint8                                      _bPreviewTargetReady : 1;
+        uint8                                      _bFramePending       : 1; ///< 스켈레톤을 새로 읽었다 — 다음 그리기에서 카메라를 담는다
     };
 } // namespace sw::editor

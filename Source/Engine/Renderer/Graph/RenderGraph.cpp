@@ -176,7 +176,7 @@ namespace sw
              */
             static void reportCycle( const vector<RenderGraphNode>& listNode, DependencyGraph& graph, size_t scheduledCount, size_t activeCount )
             {
-                StringBuilder<constant::kMaxBuffer4096> waits;
+                StringBuilder<constant::buffer::kMax4096> waits;
                 for ( const auto& [producerIndex, listConsumer] : graph._adjacency )
                 {
                     if ( graph._mapInDegree[producerIndex] == 0 )
@@ -604,7 +604,7 @@ namespace sw
         if ( _listCompiledLevel.empty() )
             return "render graph: not compiled (or the last compile failed)\n";
 
-        StringBuilder<constant::kMaxBuffer8192> out;
+        StringBuilder<constant::buffer::kMax8192> out;
         out.appendFormat( "render graph: %# passes in %# levels (passes in one level record in parallel)\n",
                           static_cast<uint32>( _listCompiledExecutionOrder.size() ), static_cast<uint32>( _listCompiledLevel.size() ) );
         const auto appendNames = [&out]( const vector<hashed_string>& listName )

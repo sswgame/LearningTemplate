@@ -22,7 +22,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
@@ -100,7 +100,7 @@ namespace sw
     {
     public:
         /** @brief 레지스트리에 없는 자리입니다. */
-        static constexpr uint32 kNotRegistered = invalid_index::kUint32;
+        static constexpr uint32 kNotRegistered = constant::invalid_index::kUint32;
 
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();

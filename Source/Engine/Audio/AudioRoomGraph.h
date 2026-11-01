@@ -11,7 +11,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -28,7 +28,7 @@ namespace sw
     {
     public:
         /** @brief 포털의 한쪽이 "어떤 방도 아닌 바깥"일 때 쓰는 방 번호입니다. */
-        static constexpr uint32 kOutside = invalid_index::kUint32;
+        static constexpr uint32 kOutside = constant::invalid_index::kUint32;
 
         AudioRoomGraph();
         ~AudioRoomGraph() override = default;
@@ -36,7 +36,7 @@ namespace sw
         /** @brief 방(축 정렬 상자)을 더하고 번호를 돌려줍니다. 방이 겹치면 부피가 작은 쪽이 그 점의 방입니다(방 안의 작은 방). */
         uint32 addRoom( const float3& center, const float3& halfExtents );
         /**
-         * @brief 두 방을 잇는 포털을 더하고 번호를 돌려줍니다. 한쪽을 `kOutside` 로 두면 바깥과 이어집니다. 방 번호가 틀리면 `invalid_index::kUint32` 입니다.
+         * @brief 두 방을 잇는 포털을 더하고 번호를 돌려줍니다. 한쪽을 `kOutside` 로 두면 바깥과 이어집니다. 방 번호가 틀리면 `constant::invalid_index::kUint32` 입니다.
          * @param position 문 가운데(세계 좌표)입니다. 소리가 이 문을 돌아 올 때 방향과 길 길이를 정합니다.
          */
         uint32 addPortal( uint32 roomA, uint32 roomB, const float3& position, float32 openness );
@@ -85,6 +85,6 @@ namespace sw
         float32                 _wallLeak;
         mutable vector<float32> _listTransmittance; ///< 길 찾기 작업 버퍼(노드마다 지금까지의 최대 투과율)
         mutable vector<uint8>   _listVisited;       ///< 길 찾기 작업 버퍼
-        mutable vector<uint32>  _listViaPortal;     ///< 길 찾기 작업 버퍼(노드마다 가장 좋은 길이 마지막으로 지난 포털, 없으면 `invalid_index::kUint32`)
+        mutable vector<uint32>  _listViaPortal;     ///< 길 찾기 작업 버퍼(노드마다 가장 좋은 길이 마지막으로 지난 포털, 없으면 `constant::invalid_index::kUint32`)
     };
 } // namespace sw

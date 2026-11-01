@@ -3,7 +3,7 @@
  * @brief 스트림(TCP) 전송의 공통 타입 — 연결 핸들 · 닫힘 까닭 · 보내기 결과 · 설정 · 통계입니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
@@ -13,8 +13,8 @@ namespace sw
     /** @brief 스트림 전송 · 메시지 층이 나눠 쓰는 기본 상한입니다. */
     struct StreamLimit
     {
-        static constexpr int32 kDefaultMaxQueuedSendBytes     = static_cast<int32>( 4 * constant::kBytesPerMegabyte ); ///< 보낼 줄의 기본 상한(4 MiB)
-        static constexpr int32 kDefaultMaxPendingReceiveBytes = static_cast<int32>( 4 * constant::kBytesPerMegabyte ); ///< 받아 쌓는 적체의 기본 상한(4 MiB)
+        static constexpr int32 kDefaultMaxQueuedSendBytes     = static_cast<int32>( 4 * constant::memory::kBytesPerMegabyte ); ///< 보낼 줄의 기본 상한(4 MiB)
+        static constexpr int32 kDefaultMaxPendingReceiveBytes = static_cast<int32>( 4 * constant::memory::kBytesPerMegabyte ); ///< 받아 쌓는 적체의 기본 상한(4 MiB)
     };
 } // namespace sw
 

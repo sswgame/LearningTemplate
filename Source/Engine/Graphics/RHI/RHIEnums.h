@@ -52,7 +52,7 @@ namespace sw
     ENUM()
     enum class RHIBackBufferFormat : uint8
     {
-        RGBA8, ///< R8G8B8A8_UNORM — 계약 기본값(`constant::kBackBufferFormat`)
+        RGBA8, ///< R8G8B8A8_UNORM — 계약 기본값(`constant::render::kBackBufferFormat`)
         BGRA8, ///< B8G8R8A8_UNORM — 백버퍼를 타깃으로 하는 PSO 가 이 포맷으로도 만들어지는지 돌려 보는 스위치
     };
 

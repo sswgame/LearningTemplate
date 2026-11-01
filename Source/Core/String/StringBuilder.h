@@ -176,7 +176,7 @@ namespace sw
          */
         SW_INLINE StringBuilder& append( const int32 val )
         {
-            if ( ensureCapacity( constant::kMaxBuffer16 ) == false )
+            if ( ensureCapacity( constant::buffer::kMax16 ) == false )
                 return *this;
 
             _length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
@@ -188,7 +188,7 @@ namespace sw
          */
         SW_INLINE StringBuilder& append( const uint32 val )
         {
-            if ( ensureCapacity( constant::kMaxBuffer16 ) == false )
+            if ( ensureCapacity( constant::buffer::kMax16 ) == false )
                 return *this;
 
             _length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
@@ -200,7 +200,7 @@ namespace sw
          */
         SW_INLINE StringBuilder& append( const int64 val )
         {
-            if ( ensureCapacity( constant::kMaxBuffer32 ) == false )
+            if ( ensureCapacity( constant::buffer::kMax32 ) == false )
                 return *this;
 
             _length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
@@ -212,7 +212,7 @@ namespace sw
          */
         SW_INLINE StringBuilder& append( const uint64 val )
         {
-            if ( ensureCapacity( constant::kMaxBuffer32 ) == false )
+            if ( ensureCapacity( constant::buffer::kMax32 ) == false )
                 return *this;
 
             _length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
@@ -222,7 +222,7 @@ namespace sw
         /** @brief 32비트 실수를 버퍼에 할당 없이 포맷해 이어 붙입니다. */
         SW_INLINE StringBuilder& append( const float32 val )
         {
-            if ( ensureCapacity( constant::kMaxBuffer32 ) == false )
+            if ( ensureCapacity( constant::buffer::kMax32 ) == false )
                 return *this;
 
             _length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
@@ -232,7 +232,7 @@ namespace sw
         /** @brief 64비트 실수를 버퍼에 할당 없이 포맷해 이어 붙입니다. */
         SW_INLINE StringBuilder& append( const float64 val )
         {
-            if ( ensureCapacity( constant::kMaxBuffer64 ) == false )
+            if ( ensureCapacity( constant::buffer::kMax64 ) == false )
                 return *this;
 
             _length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
@@ -342,7 +342,7 @@ namespace sw
     template <typename... Args>
     [[nodiscard]] string formatToString( string_view format, Args&&... args )
     {
-        StringBuilder<constant::kMaxBuffer256> builder;
+        StringBuilder<constant::buffer::kMax256> builder;
         builder.appendFormat( format, std::forward<Args>( args )... );
         return string( builder.view() );
     }

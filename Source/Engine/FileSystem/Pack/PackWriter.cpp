@@ -33,7 +33,7 @@ namespace sw
              * @brief 담은 원본이 이만큼 안 되면 압축 · CRC 를 나누지 않습니다(바이트). 디스패치 최소 비용(잠든 풀 ~34 us, 깨어 있으면 ~7 us)을 넘는 일만 병렬이 이긴다.
              *        가장 빠른 길(압축 없음, CRC 만)도 이 크기면 수십 us 라 손익분기 근처다.
              */
-            static constexpr uint64 kMinParallelBytes = 64 * constant::kBytesPerKilobyte;
+            static constexpr uint64 kMinParallelBytes = 64 * constant::memory::kBytesPerKilobyte;
             /** @brief 항목이 이 수 미만이면 나누지 않습니다. 항목 하나는 쪼갤 수 없어 하나뿐이면 직렬과 같다. */
             static constexpr uint32 kMinParallelEntryCount = 2;
 

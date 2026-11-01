@@ -13,7 +13,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -123,7 +123,7 @@ namespace sw
     class SW_GF_API ILocalStore
     {
     public:
-        static constexpr int64 kMaxSlotSize     = static_cast<int64>( 64 * constant::kBytesPerMegabyte );
+        static constexpr int64 kMaxSlotSize     = static_cast<int64>( 64 * constant::memory::kBytesPerMegabyte );
         static constexpr int32 kMaxSlotNameSize = 64;
 
         ILocalStore()          = default;

@@ -169,8 +169,8 @@ namespace sw
                 X11Window*           pX11Window  = X11Window::tryCast( pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr );
                 if ( pX11Window == nullptr )
                     return;
-                fixed_string<constant::kMaxBuffer32> utf8Buf;
-                const uint32                         byteCount = pX11Window->readCommittedText( &xev.xkey, utf8Buf.data(), static_cast<uint32>( utf8Buf.capacity() ) );
+                fixed_string<constant::buffer::kMax32> utf8Buf;
+                const uint32                           byteCount = pX11Window->readCommittedText( &xev.xkey, utf8Buf.data(), static_cast<uint32>( utf8Buf.capacity() ) );
                 if ( byteCount > 0 )
                     manager.postRawEvent( RawInputEvent::makeTextInput( string_view( utf8Buf.data(), byteCount ) ) );
             }

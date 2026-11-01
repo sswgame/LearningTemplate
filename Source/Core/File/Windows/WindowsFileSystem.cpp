@@ -7,7 +7,7 @@
  */
 #include "pch.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -171,9 +171,9 @@ namespace sw
         const wstring wide = WindowsFileSystemInternal::toWide( path );
         if ( wide.empty() )
             return false;
-        wchar_t     arrAbsolute[constant::kMaxBuffer4096];
-        const DWORD written = GetFullPathNameW( wide.c_str(), constant::kMaxBuffer4096, arrAbsolute, nullptr );
-        if ( WindowsFileSystemInternal::fits( written, constant::kMaxBuffer4096 ) == false )
+        wchar_t     arrAbsolute[constant::buffer::kMax4096];
+        const DWORD written = GetFullPathNameW( wide.c_str(), constant::buffer::kMax4096, arrAbsolute, nullptr );
+        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
             return false;
         outResult = WindowsFileSystemInternal::toUTF8( arrAbsolute );
         return true;
@@ -187,10 +187,10 @@ namespace sw
         const HANDLE handle = CreateFileW( wide.c_str(), 0, WindowsFileSystemInternal::kShareAll, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr );
         if ( handle == INVALID_HANDLE_VALUE )
             return false;
-        wchar_t     arrFinal[constant::kMaxBuffer4096];
-        const DWORD written = GetFinalPathNameByHandleW( handle, arrFinal, constant::kMaxBuffer4096, VOLUME_NAME_DOS );
+        wchar_t     arrFinal[constant::buffer::kMax4096];
+        const DWORD written = GetFinalPathNameByHandleW( handle, arrFinal, constant::buffer::kMax4096, VOLUME_NAME_DOS );
         CloseHandle( handle );
-        if ( WindowsFileSystemInternal::fits( written, constant::kMaxBuffer4096 ) == false )
+        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
             return false;
 
         // `\\?\C:\x` → `C:\x`, `\\?\UNC\server\share` → `\\server\share`
@@ -214,9 +214,9 @@ namespace sw
 
     bool PlatformFileSystem::getCurrentDirectory( string& outResult )
     {
-        wchar_t     arrCurrent[constant::kMaxBuffer4096];
-        const DWORD written = GetCurrentDirectoryW( constant::kMaxBuffer4096, arrCurrent );
-        if ( WindowsFileSystemInternal::fits( written, constant::kMaxBuffer4096 ) == false )
+        wchar_t     arrCurrent[constant::buffer::kMax4096];
+        const DWORD written = GetCurrentDirectoryW( constant::buffer::kMax4096, arrCurrent );
+        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
             return false;
         outResult = WindowsFileSystemInternal::toUTF8( arrCurrent );
         return true;
@@ -232,7 +232,7 @@ namespace sw
     {
         // `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고, 그 사실을 반환값(= 버퍼 크기)으로만 알린다. 잘린 경로를 쓰면 exe 위치를 기준으로 찾는
         // 모듈 DLL · RHI 백엔드 · 셰이더가 모두 "없다" 가 되고 원인은 남지 않는다. 그래서 다 담길 때까지 버퍼를 키운다(윈도우 경로 상한 32767 자까지).
-        wstring buffer( constant::kMaxPathSize, L'\0' );
+        wstring buffer( constant::file::kMaxPathSize, L'\0' );
         while ( buffer.size() <= WindowsFileSystemInternal::kMaxWindowsPathSize )
         {
             const DWORD written = GetModuleFileNameW( nullptr, buffer.data(), static_cast<DWORD>( buffer.size() ) );
@@ -251,9 +251,9 @@ namespace sw
 
     bool PlatformFileSystem::getTempDirectory( string& outResult )
     {
-        wchar_t     arrTemp[constant::kMaxBuffer4096];
-        const DWORD written = GetTempPathW( constant::kMaxBuffer4096, arrTemp );
-        if ( WindowsFileSystemInternal::fits( written, constant::kMaxBuffer4096 ) == false )
+        wchar_t     arrTemp[constant::buffer::kMax4096];
+        const DWORD written = GetTempPathW( constant::buffer::kMax4096, arrTemp );
+        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
             return false;
         outResult = WindowsFileSystemInternal::toUTF8( arrTemp );
         while ( outResult.size() > 1 && outResult.back() == '/' )
@@ -293,14 +293,14 @@ namespace sw
 
     string PlatformFileSystem::describeLastError()
     {
-        const DWORD code                                = GetLastError();
-        wchar_t     arrMessage[constant::kMaxBuffer512] = {};
-        const DWORD length                              = FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, code, 0, arrMessage, constant::kMaxBuffer512, nullptr );
-        string      message                             = length > 0 ? StringUtil::utf16ToUTF8( arrMessage ) : string( "unknown error" );
+        const DWORD code                                  = GetLastError();
+        wchar_t     arrMessage[constant::buffer::kMax512] = {};
+        const DWORD length                                = FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, code, 0, arrMessage, constant::buffer::kMax512, nullptr );
+        string      message                               = length > 0 ? StringUtil::utf16ToUTF8( arrMessage ) : string( "unknown error" );
         while ( message.empty() == false && ( message.back() == '\n' || message.back() == '\r' || message.back() == ' ' ) )
             message.pop_back();
-        utf8 arrCode[constant::kMaxBuffer64];
-        formatstring( arrCode, constant::kMaxBuffer64, " (%#)", static_cast<uint32>( code ) );
+        utf8 arrCode[constant::buffer::kMax64];
+        formatstring( arrCode, constant::buffer::kMax64, " (%#)", static_cast<uint32>( code ) );
         message.append( arrCode );
         return message;
     }

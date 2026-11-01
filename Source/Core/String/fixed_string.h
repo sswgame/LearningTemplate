@@ -6,7 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/UTF8Util.h"
 #include "Core/Container/string.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
@@ -90,7 +90,7 @@ namespace sw
 
     public:
         /** @brief 검색 실패 등을 나타내는 무효 인덱스(-1)입니다. */
-        static constexpr uint32 npos = invalid_index::kUint32;
+        static constexpr uint32 npos = constant::invalid_index::kUint32;
 
         using value_type      = T;
         using size_type       = uint32;

@@ -299,8 +299,8 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
  */
 SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
 {
-    using constant::kVulkanRequiredMajor;
-    using constant::kVulkanRequiredMinor;
+    using constant::render::kVulkanRequiredMajor;
+    using constant::render::kVulkanRequiredMinor;
     SW_REQUIRE_TRUE( kVulkanRequiredMinor > 0u );
 
     const uint32 belowWithPatch = VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor - 1u ) | 0xFFFu;

@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -171,7 +171,7 @@ namespace sw
         {
             AsyncReadRequest& request    = *pOperation->_pRequest;
             const uint64      remaining  = request._size - request._bytesDone;
-            const uint64      chunkBytes = remaining < constant::kMaxFileReadChunkBytes ? remaining : constant::kMaxFileReadChunkBytes;
+            const uint64      chunkBytes = remaining < constant::file::kMaxFileReadChunkBytes ? remaining : constant::file::kMaxFileReadChunkBytes;
             const uint64      position   = request._offset + request._bytesDone;
 
             Memory::set( &pOperation->_overlapped, 0, sizeof( pOperation->_overlapped ) );

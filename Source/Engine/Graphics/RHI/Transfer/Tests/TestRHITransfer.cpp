@@ -121,7 +121,7 @@ SW_TEST_CASE( RHITextureRegionUploadTest, ValidationAcceptsInsideAndRejectsTheRe
     SW_EXPECT_FALSE( validateTextureRegionUpload( RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
     bad        = good;
     bad._x     = 1;
-    bad._width = invalid_index::kUint32; // x + width 가 넘친다
+    bad._width = constant::invalid_index::kUint32; // x + width 가 넘친다
     SW_EXPECT_FALSE( validateTextureRegionUpload( RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
     bad      = good;
     bad._mip = 2;

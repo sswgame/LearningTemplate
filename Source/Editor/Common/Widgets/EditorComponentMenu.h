@@ -3,7 +3,7 @@
  * @brief "Add Component" 목록(검색 필드 + 그룹별 항목)입니다. Hierarchy 의 오른쪽 클릭 메뉴와 인스펙터의 Add Component 단추가 같이 씁니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -30,6 +30,6 @@ namespace sw::editor
          * @param outbFailed 더하기가 실패했으면 true 가 된다(부르는 쪽이 알림 창을 연다).
          * @return 컴포넌트를 더했으면 true 입니다(되돌리기에 남는다 — `EditorSceneCommands::addComponent`).
          */
-        static bool drawAddComponentList( GameObject* pObj, fixed_string<constant::kMaxBuffer64>& search, const utf8* pMarkPrefix, bool bFocusSearch, bool& outbFailed );
+        static bool drawAddComponentList( GameObject* pObj, fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch, bool& outbFailed );
     };
 } // namespace sw::editor

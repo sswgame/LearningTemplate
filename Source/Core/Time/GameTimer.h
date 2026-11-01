@@ -3,7 +3,7 @@
  * @brief 고해상도 타이머로 프레임 델타와 스코프 프로파일링을 측정합니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 
@@ -85,7 +85,7 @@ namespace sw
         ~ScopedTimer() noexcept
         {
             (void)_pTag;
-            SW_LOG_INFO( "'%#': %# ms", _pTag, getElapsedTimeInSeconds() * constant::kMillisecondsPerSecond );
+            SW_LOG_INFO( "'%#': %# ms", _pTag, getElapsedTimeInSeconds() * constant::time::kMillisecondsPerSecond );
         }
 
         /**

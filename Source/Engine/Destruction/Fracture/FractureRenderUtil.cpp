@@ -14,7 +14,7 @@ namespace sw
         shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
         for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
         {
-            StringBuilder<constant::kMaxBuffer32> name;
+            StringBuilder<constant::buffer::kMax32> name;
             name.appendFormat( "piece%#", piece );
             const float3& centroid = asset._graph._listNode[piece]._centroid;
             BoneTransform reference;

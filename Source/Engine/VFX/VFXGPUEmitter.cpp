@@ -37,7 +37,7 @@ namespace sw
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             ++_stepCount;
-            if ( _clock.spawnStep( VFXEmitterClock::kFixedStepSeconds )._count > 0 )
+            if ( _clock.spawnStep( constant::time::kDefaultFixedStepSeconds )._count > 0 )
                 _lastSpawnStep = _stepCount;
         }
     }
@@ -57,8 +57,8 @@ namespace sw
         if ( _lastSpawnStep == 0 )
             return true;
         // 마지막으로 만든 입자는 그 단계부터 단계마다 한 간격씩 나이를 먹는다. 가장 긴 수명에 한 단계를 더한 여유 — 나이는 float 덧셈으로 쌓인다.
-        const float32 oldestAgeSeconds = static_cast<float32>( _stepCount - _lastSpawnStep + 1 ) * VFXEmitterClock::kFixedStepSeconds;
-        return oldestAgeSeconds >= getDef()._lifetimeMax + VFXEmitterClock::kFixedStepSeconds;
+        const float32 oldestAgeSeconds = static_cast<float32>( _stepCount - _lastSpawnStep + 1 ) * constant::time::kDefaultFixedStepSeconds;
+        return oldestAgeSeconds >= getDef()._lifetimeMax + constant::time::kDefaultFixedStepSeconds;
     }
 
     VFXGPUEmitterRequest VFXGPUEmitter::makeRequest() const

@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -33,7 +33,7 @@ namespace sw
             /** @brief 1601-01-01(Windows FILETIME 기원)에서 유닉스 기원까지의 100 ns 눈금 수입니다. */
             static constexpr int64 kUnixEpochTicks = 116'444'736'000'000'000;
             /** @brief 복사가 한 번에 읽는 바이트 수입니다. */
-            static constexpr size_t kCopyChunkSize = 64 * constant::kBytesPerKilobyte;
+            static constexpr size_t kCopyChunkSize = 64 * constant::memory::kBytesPerKilobyte;
 
             /** @brief 구분자를 `/` 로 맞춘 경로입니다(`\` 가 섞인 경로도 Windows 와 같은 폴더를 가리킨다). */
             static string toNative( string_view path )
@@ -312,8 +312,8 @@ namespace sw
     string PlatformFileSystem::describeLastError()
     {
         const int code = errno;
-        utf8      arrCode[constant::kMaxBuffer64];
-        formatstring( arrCode, constant::kMaxBuffer64, " (%#)", code );
+        utf8      arrCode[constant::buffer::kMax64];
+        formatstring( arrCode, constant::buffer::kMax64, " (%#)", code );
         string message{ std::strerror( code ) };
         message.append( arrCode );
         return message;

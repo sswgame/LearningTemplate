@@ -42,7 +42,7 @@ namespace sw
         const InputMap*                  _pInputMap{ nullptr };
         vector<ScenarioRecordCheckpoint> _listCheckpoint{};   ///< 끝 프레임에 `<Expect>` 로 쓸 값입니다(수는 `near`, 글은 `is`).
         string                           _name{ "recorded" }; ///< 루트 `name` 속성입니다.
-        float32                          _fixedDelta{ 1.0f / 60.0f };
+        float32                          _fixedDelta{ constant::time::kDefaultFixedStepSeconds };
         float32                          _checkpointTolerance{ 1.0e-3f }; ///< 수 검사점의 `tolerance` 입니다.
         uint32                           _clientWidth{ 0 };               ///< 마우스 위치를 비율로 바꿀 창 클라이언트 크기입니다. 0 이면 `MousePosition` 을 쓰지 않습니다.
         uint32                           _clientHeight{ 0 };

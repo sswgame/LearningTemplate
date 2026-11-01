@@ -315,7 +315,7 @@ namespace sw
             return; // 읽지 못한 이유는 읽기가 남겼다. 로드는 그대로 간다
         _pScenePreload = make_unique<PreloadSet>( std::move( listAsset ), StreamingPriority::Normal, static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadInFlight ), 1 ) ) );
         if ( _services._pAssetManager != nullptr )
-            _pScenePreload->enablePinning( *_services._pAssetManager, static_cast<uint64>( MathUtil::max( static_cast<int32>( gv_scenePreloadPinMegabytes ), 0 ) ) * constant::kBytesPerMegabyte );
+            _pScenePreload->enablePinning( *_services._pAssetManager, static_cast<uint64>( MathUtil::max( static_cast<int32>( gv_scenePreloadPinMegabytes ), 0 ) ) * constant::memory::kBytesPerMegabyte );
     }
 
     void SceneManager::updateScenePreload()

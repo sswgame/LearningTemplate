@@ -140,7 +140,7 @@ namespace sw
         /** @brief UI 단위에서 물리 픽셀로의 배율입니다. */
         float32 getUIScale() const { return _uiScale; }
         /**
-         * @brief 이제부터 내는 사각형에 붙일 화면 앵커 번호입니다(`CanvasQuad::_anchor`). 없으면 invalid_index::kUint32 입니다.
+         * @brief 이제부터 내는 사각형에 붙일 화면 앵커 번호입니다(`CanvasQuad::_anchor`). 없으면 constant::invalid_index::kUint32 입니다.
          * @details 앵커 아래 사각형의 위치는 앵커 점 기준이라 자르기(가위)와 함께 쓸 수 없다. 앵커를 거는 쪽(위젯 그리기)이 자르기 없이 칠한다.
          */
         void   setAnchor( uint32 anchor ) { _anchor = anchor; }
@@ -183,7 +183,7 @@ namespace sw
         vector<ClipState>       _listClip;
         vector<float32>         _listOpacity;
         float32                 _uiScale;
-        uint32                  _anchor;             ///< 사각형에 붙일 화면 앵커 번호(없으면 invalid_index::kUint32)
+        uint32                  _anchor;             ///< 사각형에 붙일 화면 앵커 번호(없으면 constant::invalid_index::kUint32)
         uint32                  _deferredGlyphCount; ///< 래스터화 예산 때문에 미룬 글리프 수입니다(`drawGlyph` 가 올린다).
     };
 } // namespace sw

@@ -25,7 +25,7 @@ namespace sw
             template <typename... Args>
             static void appendError( vector<string>& outListError, string_view format, Args&&... args )
             {
-                utf8 arrLine[constant::kMaxBuffer512]{};
+                utf8 arrLine[constant::buffer::kMax512]{};
                 formatstring( arrLine, sizeof( arrLine ), format, std::forward<Args>( args )... );
                 outListError.emplace_back( arrLine );
             }

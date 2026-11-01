@@ -327,8 +327,8 @@ namespace sw
 
     void D3D11RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::arrVertexAttribute 의 SW_INSTANCESLOT.
-        if ( slot == constant::kInstanceSlotStreamSlot )
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::render::arrVertexAttribute 의 SW_INSTANCESLOT.
+        if ( slot == constant::render::kInstanceSlotStreamSlot )
         {
             _pState->_boundInstanceSlotVb     = buffer;
             _pState->_boundInstanceSlotOffset = offset;
@@ -347,9 +347,9 @@ namespace sw
         ID3D11Buffer* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
         if ( pStream == nullptr )
             return;
-        UINT stride = constant::kInstanceSlotStreamStride;
+        UINT stride = constant::render::kInstanceSlotStreamStride;
         UINT offset = _pState->_boundInstanceSlotOffset;
-        _pContext->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &pStream, &stride, &offset );
+        _pContext->IASetVertexBuffers( constant::render::kInstanceSlotStreamSlot, 1, &pStream, &stride, &offset );
     }
 
     bool D3D11RHICommandContext::bindGraphicsPipelineForDraw()

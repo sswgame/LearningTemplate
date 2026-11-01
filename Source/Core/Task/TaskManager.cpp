@@ -1447,7 +1447,7 @@ namespace sw
         t_currentWorkerIndex = static_cast<int32>( workerID );
         {
             // 디버거 · 프로파일러(Tracy)가 같은 이름을 본다. 번호는 워커 슬롯 번호다.
-            fixed_string<constant::kMaxBuffer32> threadName;
+            fixed_string<constant::buffer::kMax32> threadName;
             formatstring( threadName.data(), threadName.capacity(), "Worker %#", workerID );
             ThreadName::setCurrentThreadName( threadName.c_str() );
         }

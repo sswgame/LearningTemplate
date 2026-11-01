@@ -194,7 +194,7 @@ namespace sw
 
     void SQLConnectionPool::runWorker( int32 workerIndex )
     {
-        StringBuilder<constant::kMaxBuffer32> threadName;
+        StringBuilder<constant::buffer::kMax32> threadName;
         threadName.appendFormat( "SQLWorker%#", workerIndex );
         ThreadName::setCurrentThreadName( threadName.c_str() );
 

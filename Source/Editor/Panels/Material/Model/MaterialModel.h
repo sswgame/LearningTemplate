@@ -46,9 +46,9 @@ namespace sw::editor
         // 2) 편집
         // ------------------------------------------------------------------------------
         /** @brief 편집 사본입니다. 프로퍼티 위젯이 값 글을 바로 고친다. */
-        Material&                              editMaterial() { return *_material; }
-        const Material&                        getMaterial() const { return *_material; }
-        fixed_string<constant::kMaxBuffer128>& editName() { return _name; }
+        Material&                                editMaterial() { return *_material; }
+        const Material&                          getMaterial() const { return *_material; }
+        fixed_string<constant::buffer::kMax128>& editName() { return _name; }
         /** @brief 이름 입력란을 사본에 옮깁니다. */
         void        commitName();
         const utf8* getShaderPath() const { return _shaderPath.c_str(); }
@@ -81,12 +81,12 @@ namespace sw::editor
         [[nodiscard]] static MeshComponent* findPreviewSubject( Scene* pScene );
 
     private:
-        shared_ptr<Material>                  _material; ///< 편집 사본. Material 은 create() 로만 만들 수 있습니다
-        fixed_string<constant::kMaxBuffer128> _name;
-        fixed_string<constant::kMaxBuffer256> _shaderPath;
-        string                                _status;
-        string                                _previewMaterialPath; ///< 미리보기 구에 건 머티리얼 경로(비면 다음 `syncPreviewSubject` 가 다시 건다)
-        float32                               _previewRedMinusBlue; ///< 지난 그리기의 미리보기 평균 (R - B)
-        bool                                  _bPreviewDrawn;       ///< 지난 그리기에서 미리보기를 그렸다
+        shared_ptr<Material>                    _material; ///< 편집 사본. Material 은 create() 로만 만들 수 있습니다
+        fixed_string<constant::buffer::kMax128> _name;
+        fixed_string<constant::buffer::kMax256> _shaderPath;
+        string                                  _status;
+        string                                  _previewMaterialPath; ///< 미리보기 구에 건 머티리얼 경로(비면 다음 `syncPreviewSubject` 가 다시 건다)
+        float32                                 _previewRedMinusBlue; ///< 지난 그리기의 미리보기 평균 (R - B)
+        bool                                    _bPreviewDrawn;       ///< 지난 그리기에서 미리보기를 그렸다
     };
 } // namespace sw::editor

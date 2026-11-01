@@ -7,7 +7,7 @@
 namespace sw
 {
     LinearAllocator::LinearAllocator()
-        : LinearAllocator{ constant::kDefaultLinearCapacity }
+        : LinearAllocator{ constant::memory::kDefaultLinearCapacity }
     {
     }
 

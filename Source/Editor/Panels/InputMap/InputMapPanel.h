@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
@@ -103,7 +103,7 @@ namespace sw::editor
     private:
         InputMapDocument       _document; ///< 편집하는 InputMap · 리플레이와 명령
         string                 _newActionName;
-        utf8                   _arrActionFilter[constant::kMaxBuffer64]; ///< 액션 목록의 검색어
+        utf8                   _arrActionFilter[constant::buffer::kMax64]; ///< 액션 목록의 검색어
         string                 _testComboPattern;
         float32                _testVibLeft;
         float32                _testVibRight;

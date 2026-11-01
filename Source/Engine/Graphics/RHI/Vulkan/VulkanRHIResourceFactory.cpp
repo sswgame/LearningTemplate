@@ -69,8 +69,8 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResourceFactory::createConstantBuffer( uint32 size )
     {
-        const uint32          aligned = MathUtil::align( size, constant::kConstantBufferAlignment );
-        const uint32          total   = aligned * constant::kMaxFrameCountInFlight;
+        const uint32          aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
+        const uint32          total   = aligned * constant::render::kMaxFrameCountInFlight;
         const RHIBufferHandle handle  = _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr );
         if ( handle != 0 )
         {
@@ -106,7 +106,7 @@ namespace sw
             }
             return;
         }
-        _pDevice->_constantBufferMirror.write( buffer, _pDevice->_currentFrame % constant::kMaxFrameCountInFlight, pData, size,
+        _pDevice->_constantBufferMirror.write( buffer, _pDevice->_currentFrame % constant::render::kMaxFrameCountInFlight, pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
     }
@@ -140,7 +140,7 @@ namespace sw
             slot._resetFence   = _pDevice->_frameFenceCounter;
         }
 
-        uint64 offset = MathUtil::align( slot._uploadOffset, static_cast<uint64>( constant::kConstantBufferAlignment ) );
+        uint64 offset = MathUtil::align( slot._uploadOffset, static_cast<uint64>( constant::render::kConstantBufferAlignment ) );
         if ( slot._buffer == VK_NULL_HANDLE || slot._capacity < offset + sizeBytes )
         {
             const uint64 newCapacity = MathUtil::align( ( offset + sizeBytes ) * 2, 65536ull );
@@ -628,9 +628,9 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        RHITextureMipSpan arrMip[constant::render::kMaxTextureMipCount]{};
         const RHIFormat   format   = static_cast<RHIFormat>( pRecord->_rhiFormat );
-        const uint32      mipCount = resolveTextureUploadMips( desc, format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
+        const uint32      mipCount = resolveTextureUploadMips( desc, format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
             SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
@@ -652,7 +652,7 @@ namespace sw
             return RHITransferSubmit::fromUnaccepted( allocateResult );
 
         // 소스 복사는 전송 락 밖에서 한다(계약 1: 반환 전에 소스를 복사한다).
-        VkBufferImageCopy arrRegion[constant::kMaxTextureMipCount]{};
+        VkBufferImageCopy arrRegion[constant::render::kMaxTextureMipCount]{};
         uint64            ringOffset = span._offsetBytes;
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
@@ -1345,20 +1345,20 @@ namespace sw
         arrBindingDescription[0].binding   = 0;
         arrBindingDescription[0].stride    = static_cast<uint32>( sizeof( RHIVertex ) );
         arrBindingDescription[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        arrBindingDescription[1].binding   = constant::kInstanceSlotStreamSlot;
-        arrBindingDescription[1].stride    = constant::kInstanceSlotStreamStride;
+        arrBindingDescription[1].binding   = constant::render::kInstanceSlotStreamSlot;
+        arrBindingDescription[1].stride    = constant::render::kInstanceSlotStreamStride;
         arrBindingDescription[1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
+        // 정점 속성은 **공용 표**(constant::render::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
         // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다.
         const uint32                      consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
-        VkVertexInputAttributeDescription arrAttributeDescription[constant::kVertexAttributeCount]{};
+        VkVertexInputAttributeDescription arrAttributeDescription[constant::render::kVertexAttributeCount]{};
         uint32                            attributeCount{ 0 };
-        for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {
             if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
                 continue;
-            const RHIVertexAttribute&          attribute   = constant::arrVertexAttribute[attributeIndex];
+            const RHIVertexAttribute&          attribute   = constant::render::arrVertexAttribute[attributeIndex];
             VkVertexInputAttributeDescription& description = arrAttributeDescription[attributeCount++];
             description.binding                            = attribute._inputSlot;
             description.location                           = attribute._location;

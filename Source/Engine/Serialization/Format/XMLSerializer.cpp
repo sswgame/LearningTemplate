@@ -68,7 +68,7 @@ namespace sw
 
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
-                    StringBuilder<constant::kMaxBuffer8192> keyText;
+                    StringBuilder<constant::buffer::kMax8192> keyText;
                     SerializerUtil::valueToText( keyText, key, keyTypeName, _context );
                     _backend.beginMap( kXMLEntryTag );
                     _backend.writeAttribute( kXMLKeyAttr, keyText.c_str() );
@@ -120,7 +120,7 @@ namespace sw
 
                 void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
-                    StringBuilder<constant::kMaxBuffer8192> text;
+                    StringBuilder<constant::buffer::kMax8192> text;
                     SerializerUtil::valueToText( text, value, typeName, _context );
                     if ( slot == ContainerSlot::SequenceElement )
                         _backend.writeValue( kXMLItemTag, text.c_str() );
@@ -291,7 +291,7 @@ namespace sw
                         }
                         else
                         {
-                            StringBuilder<constant::kMaxBuffer8192> ss;
+                            StringBuilder<constant::buffer::kMax8192> ss;
                             SerializerUtil::valueToText( ss, propValue, prop._typeName, context );
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이

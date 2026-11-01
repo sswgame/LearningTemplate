@@ -181,18 +181,18 @@ namespace sw::editor
          * @details 멤버로 두면 용량이 남아 첫 프레임 이후로는 할당이 없다. 포인터이므로 엔트리(`string` 네 개)를 복사하지도 않는다.
          * @warning 모델의 목록이 바뀌면 이 포인터들은 무효가 된다. 그래서 프레임마다 다시 채운다.
          */
-        vector<const AssetEntry*>             _listVisibleEntry;
-        EditorThumbnailCache                  _thumbnailCache;
-        fixed_string<constant::kMaxBuffer128> _searchBuffer;
-        fixed_string<constant::kMaxBuffer256> _renameBuffer;
-        float32                               _tileSize;
-        uint32                                _fallbackGlyphCount;     /**< 이번 그리기에서 종류 아이콘으로 그린 타일 수 */
-        uint32                                _lastFallbackGlyphCount; /**< 지난 그리기의 값. 프로브가 읽는다 */
-        ViewMode                              _viewMode;
-        uint8                                 _bOpenDeleteConfirm    : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다. 우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없기 때문이다 */
-        uint8                                 _bOpenReferenceResults : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
-        uint8                                 _bFocusRenameInput     : 1; /**< 다음 그리기에서 이름 입력란에 포커스를 준다 */
-        uint8                                 _bContentVisible       : 1; /**< 마지막 그리기에서 내용을 그렸다(가려진 탭 · 접힌 창 · 닫힌 패널이 아니다) */
-        [[maybe_unused]] uint8                _reservedFlags         : 4;
+        vector<const AssetEntry*>               _listVisibleEntry;
+        EditorThumbnailCache                    _thumbnailCache;
+        fixed_string<constant::buffer::kMax128> _searchBuffer;
+        fixed_string<constant::buffer::kMax256> _renameBuffer;
+        float32                                 _tileSize;
+        uint32                                  _fallbackGlyphCount;     /**< 이번 그리기에서 종류 아이콘으로 그린 타일 수 */
+        uint32                                  _lastFallbackGlyphCount; /**< 지난 그리기의 값. 프로브가 읽는다 */
+        ViewMode                                _viewMode;
+        uint8                                   _bOpenDeleteConfirm    : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다. 우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없기 때문이다 */
+        uint8                                   _bOpenReferenceResults : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
+        uint8                                   _bFocusRenameInput     : 1; /**< 다음 그리기에서 이름 입력란에 포커스를 준다 */
+        uint8                                   _bContentVisible       : 1; /**< 마지막 그리기에서 내용을 그렸다(가려진 탭 · 접힌 창 · 닫힌 패널이 아니다) */
+        [[maybe_unused]] uint8                  _reservedFlags         : 4;
     };
 } // namespace sw::editor

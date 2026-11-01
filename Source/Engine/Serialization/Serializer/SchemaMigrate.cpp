@@ -99,7 +99,7 @@ namespace sw
                 if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ &wireValue }, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) != FieldReadResult::Read ||
                      offset != payloadSize )
                     return false;
-                StringBuilder<constant::kMaxBuffer8192> ss;
+                StringBuilder<constant::buffer::kMax8192> ss;
                 SerializerUtil::valueToText( ss, ValueAddress{ &wireValue }, wireTypeName, context );
                 outText = ss.c_str();
                 return true;

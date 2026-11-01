@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/StringBuilder.h"
 
@@ -22,9 +22,8 @@ namespace sw
         struct AppleReceiptValidatorInternal
         {
             static constexpr size_t      kMaxTransactionIDSize   = 20;
-            static constexpr int64       kMillisecondsPerSecond  = 1000;
-            static constexpr int64       kAuthLifetimeMs         = 20 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond;
-            static constexpr int64       kAuthRefreshMarginMs    = 5 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond;
+            static constexpr int64       kAuthLifetimeMs         = 20 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+            static constexpr int64       kAuthRefreshMarginMs    = 5 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
             static constexpr size_t      kMaxNotifiedRefundCount = 100000;
             static constexpr const utf8* kEnvironmentSandbox     = "Sandbox";
 
@@ -117,7 +116,7 @@ namespace sw
         writer.key( "iat" );
         writer.valueInt( issuedAtSec );
         writer.key( "exp" );
-        writer.valueInt( expiresMs / Internal::kMillisecondsPerSecond );
+        writer.valueInt( expiresMs / constant::time::kMillisecondsPerSecond );
         writer.key( "aud" );
         writer.valueString( AppleReceiptSettings::kAudience );
         writer.key( "bid" );

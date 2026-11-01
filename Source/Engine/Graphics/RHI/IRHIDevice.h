@@ -91,7 +91,7 @@ namespace sw
      *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`.
      *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 **뒤에만** 부른다. 프레임 수를 세어 짐작하지 않는다
      *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링.
-     *          - 앞서가기 제한: GPU 가 `constant::kMaxFrameCountInFlight` 프레임보다 더 뒤처지지 못한다. 링이 차면 가장 오래된 프레임을 기다린다
+     *          - 앞서가기 제한: GPU 가 `constant::render::kMaxFrameCountInFlight` 프레임보다 더 뒤처지지 못한다. 링이 차면 가장 오래된 프레임을 기다린다
      *            (DX12 · Vulkan `beginFrame` 의 링 슬롯 대기, DX11 · GL `endFrame` 의 링 대기). Present 를 하지 않는 반복에도 적용된다.
      *          - `IRHIResourceFactory::readReadbackBuffer`: 기다리지 않는다. 복사를 기록한 프레임이 끝난 뒤(위 콜백)에만 부르고, 읽기 버퍼가 아닌 핸들과
      *            버퍼를 넘는 크기는 오류를 남기고 false 다(`ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer`).
@@ -236,11 +236,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 이 디바이스가 실제로 채택한 백버퍼 컬러 포맷입니다.
-         * @details 기본은 계약값 `constant::kBackBufferFormat` 이다. 하드웨어나 서피스 제약 때문에 그 값을
+         * @details 기본은 계약값 `constant::render::kBackBufferFormat` 이다. 하드웨어나 서피스 제약 때문에 그 값을
          *          낼 수 없는 백엔드(Vulkan)만 override 해서 실제 값을 보고한다. 조용히 다른 포맷을
          *          쓰면 백버퍼를 타깃으로 하는 PSO 가 모두 렌더 패스 비호환이 된다.
          */
-        virtual RHIFormat getBackBufferFormat() const { return constant::kBackBufferFormat; }
+        virtual RHIFormat getBackBufferFormat() const { return constant::render::kBackBufferFormat; }
 
         /** @brief 백엔드 능력을 조회합니다.
          * @note 정적 테이블은 RHIAvailability::query 입니다. DX12 와 Vulkan 의 네이티브 bindless 는

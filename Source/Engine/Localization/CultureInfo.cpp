@@ -262,8 +262,8 @@ namespace sw
             /** @brief 2 자리 이상이 되도록 0 을 채운 ASCII 정수입니다. */
             static string makePadded( int64 value, uint32 width )
             {
-                utf8         arrBuffer[constant::kMaxBuffer32]{};
-                const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, value );
+                utf8         arrBuffer[constant::buffer::kMax32]{};
+                const uint32 length = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, value );
                 string       text( arrBuffer, length );
                 while ( text.size() < width )
                 {
@@ -654,9 +654,9 @@ namespace sw
 
     string CultureInfo::formatInteger( int64 value ) const
     {
-        utf8         arrBuffer[constant::kMaxBuffer32]{};
+        utf8         arrBuffer[constant::buffer::kMax32]{};
         const uint64 magnitude = value < 0 ? static_cast<uint64>( -( value + 1 ) ) + 1u : static_cast<uint64>( value );
-        const uint32 length    = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, magnitude );
+        const uint32 length    = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, magnitude );
         string       text;
         if ( value < 0 )
             text.push_back( '-' );
@@ -679,8 +679,8 @@ namespace sw
     uint32 CultureInfo::countVisibleFraction( float64 value, uint32 minFraction, uint32 maxFraction )
     {
         // 고정 소수 표기는 정수부를 모두 쓴다(1e308 은 309 자리). 64 바이트로는 큰 값이 잘려 빈 텍스트가 된다.
-        utf8         arrBuffer[constant::kMaxBuffer512]{};
-        const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer512, value < 0.0 ? -value : value, static_cast<int32>( maxFraction ) );
+        utf8         arrBuffer[constant::buffer::kMax512]{};
+        const uint32 length = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax512, value < 0.0 ? -value : value, static_cast<int32>( maxFraction ) );
         string_view  text( arrBuffer, length );
         const size_t dotPos = text.find( '.' );
         if ( dotPos == string_view::npos )
@@ -697,8 +697,8 @@ namespace sw
     {
         const uint32      visible   = countVisibleFraction( value, minFraction, maxFraction );
         const float64     magnitude = value < 0.0 ? -value : value;
-        utf8              arrBuffer[constant::kMaxBuffer512]{};
-        const uint32      length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer512, magnitude, static_cast<int32>( maxFraction ) );
+        utf8              arrBuffer[constant::buffer::kMax512]{};
+        const uint32      length = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax512, magnitude, static_cast<int32>( maxFraction ) );
         string_view       digits( arrBuffer, length );
         const size_t      dotPos      = digits.find( '.' );
         const string_view integerPart = dotPos == string_view::npos ? digits : digits.substr( 0, dotPos );

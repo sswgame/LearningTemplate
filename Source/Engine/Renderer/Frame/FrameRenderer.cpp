@@ -325,7 +325,7 @@ namespace sw
         if ( untimedPassCount > 0 )
         {
             SW_LOG_WARNING( "Pipeline '%#' has %# passes; GPU timestamps cover the first %#, so %# pass(es) from '%#' on are not timed "
-                            "(constant::kMaxGPUTimestampSlot)",
+                            "(constant::render::kMaxGPUTimestampSlot)",
                             _pipelineResource.getDesc()._name, listPass.size(), FrameRendererUtil::kGPUTimedPassCapacity, untimedPassCount,
                             listPass[FrameRendererUtil::kGPUTimedPassCapacity]._name );
         }
@@ -544,10 +544,10 @@ namespace sw
     {
         // 그리드 번호는 이 목록의 순서다 — 주 시점이 0 번, 이번 프레임에 그리는 추가 뷰가 그 뒤다. 뷰-투영은 그 뷰의 g_ViewProj 와 같은 값이다.
         _listScratchGridViewProj.clear();
-        _state._mainView._lightGridIndex = invalid_index::kUint32;
+        _state._mainView._lightGridIndex = constant::invalid_index::kUint32;
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
-            pView->_lightGridIndex = invalid_index::kUint32;
+            pView->_lightGridIndex = constant::invalid_index::kUint32;
         }
         const LightGridProducer producer = selectLightGridProducer();
         if ( producer != LightGridProducer::None )

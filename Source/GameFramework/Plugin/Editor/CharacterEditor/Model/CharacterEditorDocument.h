@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
@@ -39,16 +39,16 @@ namespace sw::editor
      */
     struct CharacterEditorPaths
     {
-        fixed_string<constant::kMaxPathSize>  _socketPath; ///< 문서인 소켓 파일(`*.sockets.xml`, 리소스 id)
-        fixed_string<constant::kMaxPathSize>  _skeletonPath;
-        fixed_string<constant::kMaxPathSize>  _refPosePath;
-        fixed_string<constant::kMaxPathSize>  _itemsPath;
-        fixed_string<constant::kMaxPathSize>  _appearanceFolder;
-        fixed_string<constant::kMaxPathSize>  _clipFolder; ///< 미리보기 몸 애니메이터의 클립 폴더(팩 데이터의 `clipFolder`)
-        fixed_string<constant::kMaxPathSize>  _rigPath;    ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
-        fixed_string<constant::kMaxBuffer128> _presetName;
-        fixed_string<constant::kMaxPathSize>  _exportFolder; ///< 데이터 프리셋을 쓸 폴더(리소스 id). 기본은 외형 폴더의 `presets/`
-        fixed_string<constant::kMaxBuffer128> _exportID;     ///< 데이터 프리셋 id — 씬의 컴포넌트가 가리키는 이름
+        fixed_string<constant::file::kMaxPathSize> _socketPath; ///< 문서인 소켓 파일(`*.sockets.xml`, 리소스 id)
+        fixed_string<constant::file::kMaxPathSize> _skeletonPath;
+        fixed_string<constant::file::kMaxPathSize> _refPosePath;
+        fixed_string<constant::file::kMaxPathSize> _itemsPath;
+        fixed_string<constant::file::kMaxPathSize> _appearanceFolder;
+        fixed_string<constant::file::kMaxPathSize> _clipFolder; ///< 미리보기 몸 애니메이터의 클립 폴더(팩 데이터의 `clipFolder`)
+        fixed_string<constant::file::kMaxPathSize> _rigPath;    ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
+        fixed_string<constant::buffer::kMax128>    _presetName;
+        fixed_string<constant::file::kMaxPathSize> _exportFolder; ///< 데이터 프리셋을 쓸 폴더(리소스 id). 기본은 외형 폴더의 `presets/`
+        fixed_string<constant::buffer::kMax128>    _exportID;     ///< 데이터 프리셋 id — 씬의 컴포넌트가 가리키는 이름
     };
 } // namespace sw::editor
 

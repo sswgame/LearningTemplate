@@ -209,7 +209,7 @@ namespace sw::editor
             EditorAssetImportResult discarded{};
             while ( _pImportJob->take( discarded ) == EditorTaskPoll::Running )
             {
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::kNanosecondsPerMillisecond );
+                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::time::kNanosecondsPerMillisecond );
             }
         }
         _listQueuedImport.clear();
@@ -310,7 +310,7 @@ namespace sw::editor
                 return false;
             }
             _bFenceWaiting            = true;
-            _fenceDeadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::kFenceTimeoutMilliseconds * constant::kNanosecondsPerMillisecond;
+            _fenceDeadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::kFenceTimeoutMilliseconds * constant::time::kNanosecondsPerMillisecond;
             return true;
         }
         const bool bTimedOut = MonotonicClock::nowNanoseconds() >= _fenceDeadlineNanoseconds;
@@ -323,7 +323,7 @@ namespace sw::editor
             // 표지 앞의 사본 쓰기가 일으킨 원본 임포트가 워커에서 돈다. 임포트가 끝나기 전에 시작하면 시나리오가 낡은 결과(옛 DDS · 메시)를 읽는다.
             const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
             if ( _fenceImportDeadlineNanoseconds == 0 )
-                _fenceImportDeadlineNanoseconds = nowNanoseconds + Internal::kFenceImportTimeoutMilliseconds * constant::kNanosecondsPerMillisecond;
+                _fenceImportDeadlineNanoseconds = nowNanoseconds + Internal::kFenceImportTimeoutMilliseconds * constant::time::kNanosecondsPerMillisecond;
             if ( nowNanoseconds < _fenceImportDeadlineNanoseconds )
                 return true;
             SW_LOG_ERROR( "[ContentWatchFence] the asset import did not finish within %# ms - the scenario starts anyway", Internal::kFenceImportTimeoutMilliseconds );

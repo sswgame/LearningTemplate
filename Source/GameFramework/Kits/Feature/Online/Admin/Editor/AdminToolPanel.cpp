@@ -45,24 +45,24 @@ namespace sw::editor
 
             static string formatAccountID( AccountID accountID )
             {
-                StringBuilder<constant::kMaxBuffer32> text;
+                StringBuilder<constant::buffer::kMax32> text;
                 text.appendFormat( "%#", Fmt( accountID, Format( 16, Format::Padding::Zero ).hex() ) );
                 return string( text.view() );
             }
 
             static string formatBalance( const LedgerBalance& balance )
             {
-                StringBuilder<constant::kMaxBuffer64> text;
+                StringBuilder<constant::buffer::kMax64> text;
                 text.appendFormat( "%#%#", balance._amount, balance.isDebt() ? " (debt)" : "" );
                 return string( text.view() );
             }
 
             static string formatClock( int64 unixMs )
             {
-                const int64                           secondOfDay = ( unixMs / constant::kMillisecondsPerSecond ) % constant::kSecondsPerDay;
-                StringBuilder<constant::kMaxBuffer32> text;
-                text.appendFormat( "%#:%#:%#", static_cast<int32>( secondOfDay / constant::kSecondsPerHour ),
-                                   static_cast<int32>( ( secondOfDay % constant::kSecondsPerHour ) / constant::kSecondsPerMinute ), static_cast<int32>( secondOfDay % constant::kSecondsPerMinute ) );
+                const int64                             secondOfDay = ( unixMs / constant::time::kMillisecondsPerSecond ) % constant::time::kSecondsPerDay;
+                StringBuilder<constant::buffer::kMax32> text;
+                text.appendFormat( "%#:%#:%#", static_cast<int32>( secondOfDay / constant::time::kSecondsPerHour ),
+                                   static_cast<int32>( ( secondOfDay % constant::time::kSecondsPerHour ) / constant::time::kSecondsPerMinute ), static_cast<int32>( secondOfDay % constant::time::kSecondsPerMinute ) );
                 return string( text.view() );
             }
 
@@ -72,10 +72,10 @@ namespace sw::editor
                     return "none";
                 if ( untilMs == ServiceSanctionState::kPermanentMs )
                     return "permanent";
-                const int64 remainingSeconds = ( untilMs - WallClock::nowUnixMilliseconds().count() ) / constant::kMillisecondsPerSecond;
+                const int64 remainingSeconds = ( untilMs - WallClock::nowUnixMilliseconds().count() ) / constant::time::kMillisecondsPerSecond;
                 if ( remainingSeconds <= 0 )
                     return "expired";
-                StringBuilder<constant::kMaxBuffer64> text;
+                StringBuilder<constant::buffer::kMax64> text;
                 text.appendFormat( "%# s left", remainingSeconds );
                 return string( text.view() );
             }

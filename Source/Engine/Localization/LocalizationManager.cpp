@@ -74,7 +74,7 @@ namespace sw
     LocalizationManager::LocalizationManager()
         : _mutex{}
         , _currentLanguage{}
-        , _fallbackLanguage{ CultureTable::normalizeCode( constant::kDefaultLanguage ) }
+        , _fallbackLanguage{ CultureTable::normalizeCode( constant::locale::kDefaultLanguage ) }
         , _cultureTable{}
         , _currentCulture{}
         , _listProject{}
@@ -476,7 +476,7 @@ namespace sw
         if ( projectPath.empty() )
             return false;
         unmountProjects( LocalizationScope::Game );
-        setFallbackLanguage( fallbackLanguage.empty() ? string_view( constant::kDefaultLanguage ) : fallbackLanguage );
+        setFallbackLanguage( fallbackLanguage.empty() ? string_view( constant::locale::kDefaultLanguage ) : fallbackLanguage );
         if ( mountProject( assetID, LocalizationScope::Game ) == false )
         {
             SW_LOG_WARNING( "Localization project '%#' is not (fully) loaded.", projectPath );

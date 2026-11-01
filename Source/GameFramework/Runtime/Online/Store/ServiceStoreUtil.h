@@ -3,7 +3,7 @@
  * @brief 서비스 저장소를 쓰는 쪽의 공통 도우미입니다. 종료할 때 요청한 저장 작업을 시간 제한 안에서 회수하는 대기를 제공합니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -17,7 +17,7 @@ namespace sw
         /** @brief 종료 대기의 시간 제한(ms)입니다. 넘기면 남은 작업은 호출부가 실패로 정리한다. */
         static constexpr int64 kShutdownWaitMilliseconds = 5000;
         /** @brief 회수한 완료가 없을 때 다음 회수까지 쉬는 시간(1 ms)입니다. */
-        static constexpr int64 kIdlePollSleepNanoseconds = constant::kNanosecondsPerMillisecond;
+        static constexpr int64 kIdlePollSleepNanoseconds = constant::time::kNanosecondsPerMillisecond;
 
         /**
          * @brief @p isIdle() 이 true 가 되거나 시간 제한이 지날 때까지 @p pStore 의 완료를 거둡니다. @p pStore 가 null 이면 바로 돌아갑니다.

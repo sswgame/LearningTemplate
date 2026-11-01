@@ -80,9 +80,9 @@ namespace sw
         static constexpr uint32 kMaxWorkerCount2D = 16;
 
         PROPERTY( Tooltip = "3D gravity", Units = "m/s2" )
-        float3 _gravity{ 0.0f, -constant::kDefaultGravity, 0.0f };
+        float3 _gravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f };
         PROPERTY( Tooltip = "2D gravity", Units = "m/s2" )
-        float2 _gravity2D{ 0.0f, -constant::kDefaultGravity };
+        float2 _gravity2D{ 0.0f, -constant::physics::kDefaultGravity };
         /** @brief 엔진 고정 스텝(`EngineConfig::_fixedDeltaTime`) 하나에 도는 물리 스텝 수입니다. 물리 스텝 = 고정 스텝 / 이 값, 프레임당 상한도 이 배수다. */
         PROPERTY( Min = 1, Max = 16, Tooltip = "Physics steps per engine fixed step (the step length comes from EngineConfig)" )
         uint32 _subStepCount{ 1 };

@@ -448,7 +448,7 @@ namespace sw
                     if ( listOption[index]._value == text )
                         return UIBindingValue::makeNumber( index, true );
                 }
-                return UIBindingValue::makeNumber( static_cast<float64>( invalid_index::kUint32 ), true );
+                return UIBindingValue::makeNumber( static_cast<float64>( constant::invalid_index::kUint32 ), true );
             }
             case UserSettingType::KeyBinding:
             case UserSettingType::String:

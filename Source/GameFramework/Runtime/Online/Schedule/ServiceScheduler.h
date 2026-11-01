@@ -11,7 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/TimePoint.h"
@@ -40,7 +40,7 @@ namespace sw
         string       _jobID{}; ///< `[0-9a-z_.]`
         int64        _windowStartMs{ 0 };
         int64        _windowEndMs{ 0 };
-        int64        _leaseMs{ 10 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };
+        int64        _leaseMs{ 10 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond };
         int32        _minuteOfDay{ 0 }; ///< UTC 0..1439
         int32        _dayOfWeek{ 0 };   ///< Weekly 에서 쓴다. 0 은 월요일(ISO)
         int64        _intervalMs{ 0 };  ///< Interval — 1 분 이상

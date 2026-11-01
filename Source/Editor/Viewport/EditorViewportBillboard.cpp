@@ -147,7 +147,7 @@ namespace sw::editor
                                             ImVec2{center.x + radius, center.y + radius}
                         },
                                         0, nullptr, ImGuiItemFlags_NoNav );
-                        fixed_string<constant::kMaxBuffer128> mark;
+                        fixed_string<constant::buffer::kMax128> mark;
                         formatstring( mark.data(), mark.capacity(), "viewport.billboard.%#", item._pObject->getName().c_str() );
                         EditorSelfTestMarks::note( mark.c_str() );
                     }
@@ -183,7 +183,7 @@ namespace sw::editor
     uint32 EditorViewportBillboard::findAt( const vector<EditorViewportBillboardItem>& listItem, const float2& point )
     {
         const float32 radius       = getDiameter() * 0.5f;
-        uint32        bestIndex    = invalid_index::kUint32;
+        uint32        bestIndex    = constant::invalid_index::kUint32;
         float32       bestDistance = radius * radius;
         for ( size_t index = 0; index < listItem.size(); ++index )
         {

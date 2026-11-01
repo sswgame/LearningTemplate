@@ -14,9 +14,9 @@ namespace sw::editor
         int32 minute = minuteOfDay % kScheduleMinutesPerDay;
         if ( minute < 0 )
             minute += kScheduleMinutesPerDay;
-        const int32                           hours   = minute / 60;
-        const int32                           minutes = minute % 60;
-        StringBuilder<constant::kMaxBuffer64> text;
+        const int32                             hours   = minute / 60;
+        const int32                             minutes = minute % 60;
+        StringBuilder<constant::buffer::kMax64> text;
         text.appendFormat( "%#%#:%#%#", hours < 10 ? "0" : "", hours, minutes < 10 ? "0" : "", minutes );
         return string( text.c_str() );
     }
@@ -56,12 +56,12 @@ namespace sw::editor
             }
             else
             {
-                StringBuilder<constant::kMaxBuffer128> place;
+                StringBuilder<constant::buffer::kMax128> place;
                 place.appendFormat( "(%#, %#, %#)", segment._target._position._x, segment._target._position._y, segment._target._position._z );
                 row._place = string( place.c_str() );
             }
             row._activity = string( segment._activity.c_str() );
-            StringBuilder<constant::kMaxBuffer256> source;
+            StringBuilder<constant::buffer::kMax256> source;
             if ( segment._sourceID.empty() )
                 source.append( toString( segment._source ) );
             else

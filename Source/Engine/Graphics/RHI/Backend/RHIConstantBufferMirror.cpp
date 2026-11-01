@@ -29,8 +29,8 @@ namespace sw
     {
         if ( pData == nullptr || size == 0 )
             return;
-        constexpr uint32 kAllSlotMask = ( 1u << constant::kMaxFrameCountInFlight ) - 1u;
-        static_assert( constant::kMaxFrameCountInFlight < 32, "칸 비트가 uint32 에 담겨야 한다" );
+        constexpr uint32 kAllSlotMask = ( 1u << constant::render::kMaxFrameCountInFlight ) - 1u;
+        static_assert( constant::render::kMaxFrameCountInFlight < 32, "칸 비트가 uint32 에 담겨야 한다" );
 
         const uint32 staleSlotMask = kAllSlotMask & ~slotBitOf( slot );
         if ( staleSlotMask == 0 )

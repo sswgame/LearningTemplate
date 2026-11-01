@@ -22,7 +22,7 @@ namespace sw::editor
             EditorReflectionProbeBakeSession* pSession = editor::findSubsystem<EditorReflectionProbeBakeSession>();
             if ( pSession == nullptr || pSession->isRunning() == false )
                 return;
-            fixed_string<constant::kMaxBuffer128> label;
+            fixed_string<constant::buffer::kMax128> label;
             formatstring( label.data(), label.capacity(), "Baking reflection probes %#/%#", pSession->getDoneProbeCount(), pSession->getProbeCount() );
             ImGui::TextUnformatted( label.c_str() );
             ImGui::SameLine();

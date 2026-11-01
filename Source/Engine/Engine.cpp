@@ -348,7 +348,7 @@ namespace sw
         StringBuilder text;
         for ( const SubsystemCollection::InitTiming& timing : listTiming )
         {
-            const int64 millis = timing._micros / constant::kMicrosecondsPerMillisecond;
+            const int64 millis = timing._micros / constant::time::kMicrosecondsPerMillisecond;
             if ( millis < 1 )
                 break; // 오래 걸린 순이라 뒤는 모두 1 ms 미만이다
             if ( text.size() > 0 )

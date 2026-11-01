@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/ThreadName.h"
 
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
@@ -19,8 +19,8 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         // SetThreadDescription 은 UTF-16 을 받는다. 이름은 짧은 고정 문자열이라 스택 버퍼로 바꾼다.
-        utf16       arrWide[constant::kMaxBuffer64]{};
-        const int32 written = MultiByteToWideChar( CP_UTF8, 0, pName, -1, arrWide, static_cast<int32>( constant::kMaxBuffer64 ) );
+        utf16       arrWide[constant::buffer::kMax64]{};
+        const int32 written = MultiByteToWideChar( CP_UTF8, 0, pName, -1, arrWide, static_cast<int32>( constant::buffer::kMax64 ) );
         if ( written <= 0 )
             return;
         SetThreadDescription( GetCurrentThread(), arrWide );

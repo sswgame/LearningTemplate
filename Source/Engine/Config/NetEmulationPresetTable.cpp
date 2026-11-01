@@ -16,7 +16,7 @@ namespace sw
     {
         struct NetEmulationPresetTableInternal
         {
-            static constexpr float64 kSecondsPerMillisecond = 1.0 / static_cast<float64>( constant::kMillisecondsPerSecond );
+            static constexpr float64 kSecondsPerMillisecond = 1.0 / static_cast<float64>( constant::time::kMillisecondsPerSecond );
             static constexpr float32 kRatePerPercent        = 0.01f;
         };
     } // namespace
@@ -33,7 +33,7 @@ namespace sw
         conditions._lossRate                = _lossPercent * Internal::kRatePerPercent;
         conditions._duplicateRate           = _duplicatePercent * Internal::kRatePerPercent;
         conditions._reorderRate             = _reorderPercent * Internal::kRatePerPercent;
-        conditions._bandwidthBytesPerSecond = _bandwidthKilobytesPerSecond * static_cast<int32>( constant::kBytesPerKilobyte );
+        conditions._bandwidthBytesPerSecond = _bandwidthKilobytesPerSecond * static_cast<int32>( constant::memory::kBytesPerKilobyte );
         return conditions;
     }
 

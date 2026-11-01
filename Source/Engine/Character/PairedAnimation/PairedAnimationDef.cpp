@@ -30,8 +30,8 @@ namespace sw
                 const bool bInRange = -180.0f <= degrees && degrees <= 180.0f;
                 if ( bInRange == false )
                 {
-                    utf8 arrMessage[constant::kMaxBuffer256];
-                    formatstring( arrMessage, constant::kMaxBuffer256, "attribute '%#' must be within -180 and 180 degrees", pName );
+                    utf8 arrMessage[constant::buffer::kMax256];
+                    formatstring( arrMessage, constant::buffer::kMax256, "attribute '%#' must be within -180 and 180 degrees", pName );
                     reader.addError( "Character.PairedHalfTurnRange", node, arrMessage );
                 }
             }
@@ -97,7 +97,7 @@ namespace sw
     PairedAnimationDef::PairedAnimationDef()
         : _content{}
         , _sourcePath{}
-        , _anchorRoleIndex{ invalid_index::kUint32 }
+        , _anchorRoleIndex{ constant::invalid_index::kUint32 }
     {
     }
 
@@ -105,7 +105,7 @@ namespace sw
     {
         _content = PairedAnimationContentDef{};
         _sourcePath.clear();
-        _anchorRoleIndex = invalid_index::kUint32;
+        _anchorRoleIndex = constant::invalid_index::kUint32;
     }
 
     string PairedAnimationDef::makeXMLText( const PairedAnimationContentDef& content )
@@ -223,7 +223,7 @@ namespace sw
             if ( _content._listRole[roleIndex]._name == roleName )
                 return static_cast<uint32>( roleIndex );
         }
-        return invalid_index::kUint32;
+        return constant::invalid_index::kUint32;
     }
 
     void PairedAnimationDef::readRoot( const XMLNode& root, CharacterDataReader& reader )
@@ -309,7 +309,7 @@ namespace sw
         {
             reader.addError( "Character.PairedWarpEndNotWarp", node, "has 'warpEnd' but align is not warp" );
         }
-        if ( role._name.empty() == false && findRoleIndex( role._name ) != invalid_index::kUint32 )
+        if ( role._name.empty() == false && findRoleIndex( role._name ) != constant::invalid_index::kUint32 )
         {
             reader.addError( "Character.PairedRoleRepeated", node, string( "repeats role '" ) + role._name.c_str() + "'" );
             return;
@@ -376,19 +376,19 @@ namespace sw
         {
             if ( notify._time > _content._duration )
                 reader.addError( "Character.PairedNotifyAfterEnd", string( "notify '" ) + notify._name.c_str() + "' is after the end of the timeline" );
-            if ( notify._role.empty() == false && findRoleIndex( notify._role ) == invalid_index::kUint32 )
+            if ( notify._role.empty() == false && findRoleIndex( notify._role ) == constant::invalid_index::kUint32 )
                 reader.addError( "Character.PairedNotifyRoleUnknown", string( "notify '" ) + notify._name.c_str() + "' names unknown role '" + notify._role.c_str() + "'" );
         }
         // 고르기 조건은 앵커 밖의 역할을 앵커에서 본다.
         if ( _content._bHasSelect && _content._select._role.empty() == false )
         {
             const uint32 selectRoleIndex = findRoleIndex( _content._select._role );
-            utf8         arrMessage[constant::kMaxBuffer256];
+            utf8         arrMessage[constant::buffer::kMax256];
             arrMessage[0] = '\0';
-            if ( selectRoleIndex == invalid_index::kUint32 )
-                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> names unknown role '%#'", _content._select._role.c_str() );
+            if ( selectRoleIndex == constant::invalid_index::kUint32 )
+                formatstring( arrMessage, constant::buffer::kMax256, "<Select> names unknown role '%#'", _content._select._role.c_str() );
             else if ( _content._listRole[selectRoleIndex]._bAnchor )
-                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> role '%#' is the anchor (select measures another role from the anchor)", _content._select._role.c_str() );
+                formatstring( arrMessage, constant::buffer::kMax256, "<Select> role '%#' is the anchor (select measures another role from the anchor)", _content._select._role.c_str() );
             if ( arrMessage[0] != '\0' )
                 reader.addError( "Character.PairedSelectRoleInvalid", arrMessage );
         }

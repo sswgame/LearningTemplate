@@ -48,10 +48,10 @@ namespace sw::editor
             /** @brief 메뉴바가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로이다. */
             struct MenuBarState
             {
-                bool                                 _bShowThemeSettings{ false };
-                float32                              _statusAreaWidth{ 0.0f };                    ///< 지난 프레임에 측정한 상태 영역 너비(0 = 아직 모름)
-                fixed_string<constant::kMaxBuffer64> _layoutName{};                               ///< 이름 붙인 레이아웃 저장 칸의 글
-                BuildState                           _lastObservedBuildState{ BuildState::Idle }; ///< 지난 프레임에 본 빌드 상태(컴파일이 끝나는 순간을 잡는다)
+                bool                                   _bShowThemeSettings{ false };
+                float32                                _statusAreaWidth{ 0.0f };                    ///< 지난 프레임에 측정한 상태 영역 너비(0 = 아직 모름)
+                fixed_string<constant::buffer::kMax64> _layoutName{};                               ///< 이름 붙인 레이아웃 저장 칸의 글
+                BuildState                             _lastObservedBuildState{ BuildState::Idle }; ///< 지난 프레임에 본 빌드 상태(컴파일이 끝나는 순간을 잡는다)
             };
 
             static MenuBarState& getState() { return getEditorState<MenuBarState>(); }
@@ -131,7 +131,7 @@ namespace sw::editor
         if ( ImGui::BeginMenu( "Layouts" ) == false )
             return;
 
-        fixed_string<constant::kMaxBuffer64>& layoutName = EditorMenuBarInternal::getState()._layoutName;
+        fixed_string<constant::buffer::kMax64>& layoutName = EditorMenuBarInternal::getState()._layoutName;
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * 12.0f );
         const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), layoutName.data(), layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         ImGui::SameLine();
@@ -194,7 +194,7 @@ namespace sw::editor
 
             if ( state == BuildState::Success )
             {
-                fixed_string<constant::kMaxBuffer32> secondsBuf;
+                fixed_string<constant::buffer::kMax32> secondsBuf;
                 formatstring( secondsBuf.data(), secondsBuf.capacity(), "%#", Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
                 const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingSucceeded", TextArgumentList().addText( "target", displayName ).addText( "seconds", secondsBuf.c_str() ) );
                 editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationType::Success, 4.0f );
@@ -223,7 +223,7 @@ namespace sw::editor
                 const float32          elapsed = pCompiler->getElapsedTimeSec();
                 ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( kCompilingButton ) );
                 ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( kCompilingButtonHovered ) );
-                fixed_string<constant::kMaxBuffer64> label;
+                fixed_string<constant::buffer::kMax64> label;
                 formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", editoricon::kSpinner, Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
                 if ( ImGui::SmallButton( label.c_str() ) )
                     pCompiler->cancel();

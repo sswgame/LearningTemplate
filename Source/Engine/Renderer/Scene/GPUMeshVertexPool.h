@@ -28,7 +28,7 @@
 #include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -47,7 +47,7 @@ namespace sw
     {
     public:
         /** @brief 풀에 들어가지 못한 메시가 받는 값입니다. 그 배치는 자기 정점 버퍼로 그립니다. */
-        static constexpr uint32 kInvalidBase = invalid_index::kUint32;
+        static constexpr uint32 kInvalidBase = constant::invalid_index::kUint32;
 
         GPUMeshVertexPool();
         ~GPUMeshVertexPool()                                     = default;

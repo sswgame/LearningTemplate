@@ -18,11 +18,11 @@ namespace sw::editor
 
     ProfilerFrameTimeStats ProfilerPerformanceModel::sampleFrame()
     {
-        const float32 dt = static_cast<float32>( _drawStopwatch.getElapsedNanoseconds() ) / static_cast<float32>( constant::kNanosecondsPerSecond );
+        const float32 dt = static_cast<float32>( _drawStopwatch.getElapsedNanoseconds() ) / static_cast<float32>( constant::time::kNanosecondsPerSecond );
         _drawStopwatch.restart();
 
         ProfilerFrameTimeStats stats;
-        stats._currentMs  = dt * constant::kMillisecondsPerSecond;
+        stats._currentMs  = dt * constant::time::kMillisecondsPerSecond;
         stats._currentFPS = ( dt > 0.0f ) ? ( 1.0f / dt ) : 0.0f;
 
         _arrFrameTimeHistory[_historyOffset] = stats._currentMs;

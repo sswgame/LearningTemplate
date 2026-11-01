@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -66,11 +66,11 @@ namespace sw::editor
         [[nodiscard]] bool resolvePendingExecute( int32 filteredCount, bool bIndexOutstanding, bool bExecute );
 
     private:
-        vector<QuickLauncherItem>             _listAllItem;
-        EditorAssetIndexJob                   _fileIndexJob;
-        fixed_string<constant::kMaxBuffer128> _searchBuffer;
-        int32                                 _selectedIndex;
-        bool                                  _bJustOpened;
-        bool                                  _bExecuteWhenIndexed; ///< 파일 목록이 오기 전에 Enter 를 눌렀다 — 목록이 오면 첫 줄을 연다
+        vector<QuickLauncherItem>               _listAllItem;
+        EditorAssetIndexJob                     _fileIndexJob;
+        fixed_string<constant::buffer::kMax128> _searchBuffer;
+        int32                                   _selectedIndex;
+        bool                                    _bJustOpened;
+        bool                                    _bExecuteWhenIndexed; ///< 파일 목록이 오기 전에 Enter 를 눌렀다 — 목록이 오면 첫 줄을 연다
     };
 } // namespace sw::editor

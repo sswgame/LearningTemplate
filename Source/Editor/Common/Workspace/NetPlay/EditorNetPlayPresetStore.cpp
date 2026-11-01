@@ -54,7 +54,7 @@ namespace sw::editor
         }
         const uint32            presetIndex = findPresetIndex( name );
         EditorNetPlayPresetFile changed     = _file;
-        if ( presetIndex == invalid_index::kUint32 )
+        if ( presetIndex == constant::invalid_index::kUint32 )
             changed._listPreset.push_back( EditorNetPlayPreset{ string( name ), settings } );
         else
             changed._listPreset[presetIndex]._settings = settings;
@@ -64,7 +64,7 @@ namespace sw::editor
 
     bool EditorNetPlayPresetStore::selectPreset( string_view name )
     {
-        if ( findPresetIndex( name ) == invalid_index::kUint32 )
+        if ( findPresetIndex( name ) == constant::invalid_index::kUint32 )
         {
             SW_LOG_ERROR( "No multiplayer preset named '%#'", string( name ) );
             return false;
@@ -77,7 +77,7 @@ namespace sw::editor
     bool EditorNetPlayPresetStore::removePreset( string_view name )
     {
         const uint32 presetIndex = findPresetIndex( name );
-        if ( presetIndex == invalid_index::kUint32 )
+        if ( presetIndex == constant::invalid_index::kUint32 )
         {
             SW_LOG_ERROR( "No multiplayer preset named '%#'", string( name ) );
             return false;
@@ -92,7 +92,7 @@ namespace sw::editor
     const EditorNetPlaySettings* EditorNetPlayPresetStore::findPreset( string_view name ) const
     {
         const uint32 presetIndex = findPresetIndex( name );
-        return presetIndex == invalid_index::kUint32 ? nullptr : &_file._listPreset[presetIndex]._settings;
+        return presetIndex == constant::invalid_index::kUint32 ? nullptr : &_file._listPreset[presetIndex]._settings;
     }
 
     string EditorNetPlayPresetStore::getDefaultFilePath()
@@ -139,7 +139,7 @@ namespace sw::editor
             if ( _file._listPreset[presetIndex]._name == name )
                 return presetIndex;
         }
-        return invalid_index::kUint32;
+        return constant::invalid_index::kUint32;
     }
 
     bool EditorNetPlayPresetStore::commitFile( EditorNetPlayPresetFile&& file )

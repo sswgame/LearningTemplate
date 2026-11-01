@@ -80,7 +80,7 @@ namespace sw::editor
         while ( inoutDef.findNodeIndex( hashed_string( string_view( name ) ) ) >= 0 )
         {
             ++number;
-            StringBuilder<constant::kMaxBuffer64> numbered;
+            StringBuilder<constant::buffer::kMax64> numbered;
             numbered.append( pTypeName ).append( number );
             name = string( numbered.view() );
         }

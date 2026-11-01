@@ -196,7 +196,7 @@ namespace sw::editor
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
                         // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
-                        fixed_string<constant::kMaxBuffer128> itemMark;
+                        fixed_string<constant::buffer::kMax128> itemMark;
                         formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", prop._name.c_str(), nameHashed.c_str() );
                         EditorSelfTestMarks::note( itemMark.c_str() );
                     }
@@ -487,7 +487,7 @@ namespace sw::editor
         ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
         EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
         // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 레이블을 남긴다(`inspector.label.<타입>.<프로퍼티>`).
-        fixed_string<constant::kMaxBuffer128> labelMark;
+        fixed_string<constant::buffer::kMax128> labelMark;
         formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
         EditorSelfTestMarks::note( labelMark.c_str() );
 
@@ -500,7 +500,7 @@ namespace sw::editor
             if ( ImGui::SmallButton( editoricon::kRefresh ) )
                 resetPropertyToDefault( instance, prop, defaultInstance );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
-            fixed_string<constant::kMaxBuffer128> resetMark;
+            fixed_string<constant::buffer::kMax128> resetMark;
             formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
             EditorSelfTestMarks::note( resetMark.c_str() );
         }
@@ -519,7 +519,7 @@ namespace sw::editor
         drawPropertyWidget( instance, prop );
         ImGui::EndDisabled();
         // 시나리오가 누를 수 있게 값 입력란에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`). 테스트를 켰을 때만 기록한다.
-        fixed_string<constant::kMaxBuffer128> mark;
+        fixed_string<constant::buffer::kMax128> mark;
         formatstring( mark.data(), mark.capacity(), "inspector.property.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
         EditorSelfTestMarks::note( mark.c_str() );
         ImGui::PopID();
@@ -693,8 +693,8 @@ namespace sw::editor
             return;
         }
 
-        const size_t                          count = pSeq->getSize( pContainer );
-        fixed_string<constant::kMaxBuffer128> headerBuf;
+        const size_t                            count = pSeq->getSize( pContainer );
+        fixed_string<constant::buffer::kMax128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
 
         const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
@@ -751,9 +751,9 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawMapContainer( const MutableValueAddress container, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly )
     {
-        void* const                           pContainer = container.get();
-        const SerializeContext&               context    = SerializeContext::getDefault( SerializePurpose::Authoring );
-        fixed_string<constant::kMaxBuffer128> headerBuf;
+        void* const                             pContainer = container.get();
+        const SerializeContext&                 context    = SerializeContext::getDefault( SerializePurpose::Authoring );
+        fixed_string<constant::buffer::kMax128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%# -> %#] (%# entries)", prop._keyTypeName.c_str(), prop._elementTypeName.c_str(),
                       mapWrapper.getSize( pContainer ) );
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
@@ -824,10 +824,10 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawKeyedSequenceContainer( const MutableValueAddress container, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly )
     {
-        void* const                           pContainer = container.get();
-        const SerializeContext&               context    = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const size_t                          count      = sequence.getSize( pContainer );
-        fixed_string<constant::kMaxBuffer128> headerBuf;
+        void* const                             pContainer = container.get();
+        const SerializeContext&                 context    = SerializeContext::getDefault( SerializePurpose::Authoring );
+        const size_t                            count      = sequence.getSize( pContainer );
+        fixed_string<constant::buffer::kMax128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
             return;
@@ -846,8 +846,8 @@ namespace sw::editor
             if ( bReadOnly == false )
                 ImGui::SameLine();
             // 원소는 텍스트 입력란이다. Enter 로 확정한 텍스트를 원소 타입으로 읽어 지우고 다시 넣는다. 원소가 곧 정렬 키이므로 제자리에 쓰면 트리가 깨진다.
-            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatValueText( ValueAddress{ sequence.getElementConst( pContainer, elemIndex ) }, elementTypeName, context ).c_str() };
-            const ImGuiInputTextFlags             flags = bElementEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly;
+            fixed_string<constant::buffer::kMax256> elementText{ SerializerUtil::formatValueText( ValueAddress{ sequence.getElementConst( pContainer, elemIndex ) }, elementTypeName, context ).c_str() };
+            const ImGuiInputTextFlags               flags = bElementEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly;
             ImGui::SetNextItemWidth( -FLT_MIN );
             if ( ImGui::InputText( "##element", elementText.data(), elementText.capacity(), flags ) && bElementEditable )
             {
@@ -888,8 +888,8 @@ namespace sw::editor
 
     bool EditorPropertyGrid::drawContainerAddRow( const utf8* pHint, string& outText )
     {
-        const ImGuiID                          rowID = ImGui::GetID( "##add" );
-        fixed_string<constant::kMaxBuffer256>& text  = _mapContainerAddText[static_cast<uint32>( rowID )];
+        const ImGuiID                            rowID = ImGui::GetID( "##add" );
+        fixed_string<constant::buffer::kMax256>& text  = _mapContainerAddText[static_cast<uint32>( rowID )];
         ImGui::SetNextItemWidth( -FLT_MIN );
         const bool bEntered = ImGui::InputTextWithHint( "##add", pHint, text.data(), text.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         if ( bEntered == false || text.empty() )
@@ -978,7 +978,7 @@ namespace sw::editor
             ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonHovered ) );
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonActive ) );
 
-            fixed_string<constant::kMaxBuffer128> buttonLabel;
+            fixed_string<constant::buffer::kMax128> buttonLabel;
             formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
             if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
             {
@@ -1036,8 +1036,8 @@ namespace sw::editor
         {
             ImGui::PushID( static_cast<int32>( paramIndex ) );
             // 선언에 인자 이름이 있으면 그것을 쓰고, 없으면 순번을 쓴다.
-            const FunctionParameterInfo&         parameter = method._listParameter[paramIndex];
-            fixed_string<constant::kMaxBuffer64> label;
+            const FunctionParameterInfo&           parameter = method._listParameter[paramIndex];
+            fixed_string<constant::buffer::kMax64> label;
             if ( parameter._name.empty() )
                 formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
             else

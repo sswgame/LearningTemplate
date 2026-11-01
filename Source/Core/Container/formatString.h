@@ -6,7 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/UTF8Util.h"
 #include "Core/Container/string.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -871,7 +871,7 @@ namespace sw
             }
 
             const uint32 len = tryFastIntConversion( pPtr, absoluteValue, format.getBase() );
-            if ( len != invalid_index::kUint32 )
+            if ( len != constant::invalid_index::kUint32 )
                 return static_cast<uint32>( pPtr - pBuf ) + len;
 
             return static_cast<uint32>( pPtr - pBuf ) + fallbackIntegerToString( pPtr, absoluteValue, format.getBase() );
@@ -907,7 +907,7 @@ namespace sw
         static uint32 tryFastIntConversion( utf8* pBuf, IntType value, Format::Base base )
         {
             if ( base == Format::Base::Binary )
-                return invalid_index::kUint32;
+                return constant::invalid_index::kUint32;
 
             int32 baseValue = ( base == Format::Base::HexUpper ) ? 16 : static_cast<int32>( base );
             auto [pPtr, ec] = std::to_chars( pBuf, pBuf + kIntegerBufferSize, value, baseValue );
@@ -925,7 +925,7 @@ namespace sw
                 *pPtr = '\0';
                 return static_cast<uint32>( pPtr - pBuf );
             }
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         }
 
         /** @brief 실수를 문자열로 바꿉니다. */

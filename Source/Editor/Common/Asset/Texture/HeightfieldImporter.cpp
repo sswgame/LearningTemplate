@@ -315,8 +315,8 @@ namespace sw::editor
         vector<uint8> bytes;
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
             return 0;
-        StringBuilder<constant::kMaxBuffer64> versionText;
-        uint64                                hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+        StringBuilder<constant::buffer::kMax64> versionText;
+        uint64                                  hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         if ( isSourceLayerWeights( sourcePath ) )
         {
             versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsAsset::kVersion );

@@ -16,7 +16,7 @@ namespace sw
     /**
      * @class RHIConstantBufferMirror
      * @brief 프레임 링 상수 버퍼(`createConstantBuffer`)의 **모든 슬롯이 마지막으로 쓴 값을 갖도록** 지킵니다.
-     * @details 링 상수 버퍼는 슬롯이 `constant::kMaxFrameCountInFlight` 개이고 `updateConstantBuffer` 는 **이번 슬롯에만** 씁니다. 매 프레임 쓰는
+     * @details 링 상수 버퍼는 슬롯이 `constant::render::kMaxFrameCountInFlight` 개이고 `updateConstantBuffer` 는 **이번 슬롯에만** 씁니다. 매 프레임 쓰는
      *          버퍼(패스, 카메라)는 그걸로 되지만, 값이 바뀔 때만 쓰는 버퍼(머티리얼, 머티리얼 인스턴스)는 나머지 슬롯이 옛 값(처음에는 0)으로
      *          남아, DX12 와 Vulkan 에서 세 프레임 중 두 프레임을 틀린 값으로 그립니다(DX11 과 GL 은 버퍼 하나를 드라이버가 이름 바꾸기로 다뤄
      *          문제가 없습니다). 언리얼의 멀티 프레임 유니폼 버퍼는 갱신마다 새 슬롯을 받아 "읽는 쪽은 늘 마지막 값"을 보장하는데,
@@ -88,7 +88,7 @@ namespace sw
         };
 
         /** @brief 슬롯 번호의 비트를 반환합니다. */
-        static uint32 slotBitOf( uint32 slot ) { return 1u << ( slot % constant::kMaxFrameCountInFlight ); }
+        static uint32 slotBitOf( uint32 slot ) { return 1u << ( slot % constant::render::kMaxFrameCountInFlight ); }
         /** @brief 쓴 값을 기억하고 나머지 슬롯을 옛 값으로 표시합니다. 락 안에서 부릅니다. */
         void rememberWrite( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size ) SW_REQUIRES_LOCK( _mutex );
 

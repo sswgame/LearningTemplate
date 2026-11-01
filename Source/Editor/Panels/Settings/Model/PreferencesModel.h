@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
@@ -51,7 +51,7 @@ namespace sw::editor
         void savePendingChanges( bool bForce );
 
         /** @brief 첫 편집 뒤 저장까지 기다리는 시간입니다. 끌기 한 번에 파일을 수십 번 쓰지 않게 묶는다. */
-        static constexpr int64 kSaveDelayNanoseconds = constant::kNanosecondsPerSecond / 2;
+        static constexpr int64 kSaveDelayNanoseconds = constant::time::kNanosecondsPerSecond / 2;
 
     private:
         /** @brief 저장을 기다리지 않고 있으면 지금을 첫 편집 시각으로 둡니다. */

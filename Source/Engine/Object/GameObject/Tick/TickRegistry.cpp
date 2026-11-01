@@ -123,7 +123,7 @@ namespace sw
             /** @brief 후보를 (구성요소 id, 서브틱 id) 로 찾는 평평한 열린 주소 표입니다. 해시맵의 노드 할당 없이 한 번 짓고 그래프와 바깥 선행 조건 검사가 함께 씁니다. */
             struct CandidateIndex
             {
-                static constexpr uint32 kNone = invalid_index::kUint32;
+                static constexpr uint32 kNone = constant::invalid_index::kUint32;
 
                 struct Slot
                 {
@@ -187,7 +187,7 @@ namespace sw
             };
 
             /** @brief 순환에 든 항목이 모이는 스테이지의 레벨입니다(어느 정상 레벨보다 뒤이고, 오류 로그와 함께 마지막에 돈다). */
-            static constexpr uint32 kCycleLevel = invalid_index::kUint32;
+            static constexpr uint32 kCycleLevel = constant::invalid_index::kUint32;
 
             /**
              * @brief 한 레벨을 오브젝트별 스테이지로 가릅니다. 같은 오브젝트의 항목은 0 번부터 차례로 찹니다.

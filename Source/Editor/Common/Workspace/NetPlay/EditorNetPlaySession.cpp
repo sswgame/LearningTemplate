@@ -642,7 +642,7 @@ namespace sw::editor
         _listProcess.clear();
         _debugChannelPort = 0;
         _debugChannelToken.clear();
-        _stopDeadline = Deadline::afterMilliseconds( static_cast<int64>( _settings._stopTimeoutSeconds * constant::kMillisecondsPerSecond ) );
+        _stopDeadline = Deadline::afterMilliseconds( static_cast<int64>( _settings._stopTimeoutSeconds * constant::time::kMillisecondsPerSecond ) );
         _stopPhase    = StopPhase::WaitingForExit;
         SW_LOG_INFO( "Multiplayer session stopping - %# process(es)", _listStoppingProcess.size() );
     }

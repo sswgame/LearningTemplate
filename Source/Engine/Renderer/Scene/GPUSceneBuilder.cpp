@@ -1098,7 +1098,7 @@ namespace sw
         const uint32               meshCount   = static_cast<uint32>( primitives.getAll().size() );
         const uint32               opaqueCount = _snapshot.getOpaqueInstanceCount();
         const uint32               firstSlot   = meshCount + pBatch->getFirstEntrySlot();
-        shared_ptr<vector<uint32>> pListSlot   = make_shared<vector<uint32>>( pBatch->getCount(), invalid_index::kUint32 );
+        shared_ptr<vector<uint32>> pListSlot   = make_shared<vector<uint32>>( pBatch->getCount(), constant::invalid_index::kUint32 );
         for ( uint32 entryIndex = 0; entryIndex < pBatch->getCount(); ++entryIndex )
         {
             const uint32 primitiveSlot  = firstSlot + entryIndex;
@@ -1506,14 +1506,14 @@ namespace sw
     uint32 GPUSceneBuilder::findOpaqueInstanceSlot( uint32 primitiveIndex ) const
     {
         if ( primitiveIndex >= _listPrimitiveToCandidate.size() )
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         const uint32 candidate = _listPrimitiveToCandidate[primitiveIndex];
         if ( candidate == kInvalidCandidateIndex || candidate >= _listCandidateToInstance.size() )
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         const uint32 slot        = _listCandidateToInstance[candidate];
         const bool   bConsistent = slot != kInvalidCandidateIndex && slot < _listInstanceSrcIndex.size() && _listInstanceSrcIndex[slot] == candidate;
         if ( bConsistent == false || slot >= _snapshot.getOpaqueInstanceCount() )
-            return invalid_index::kUint32;
+            return constant::invalid_index::kUint32;
         return slot;
     }
 

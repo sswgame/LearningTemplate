@@ -14,7 +14,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -47,7 +47,7 @@ namespace sw
     struct HTTPConstant
     {
         static constexpr int32 kMaxHeaderBytes        = 16 * 1024;
-        static constexpr int32 kDefaultMaxBodyBytes   = static_cast<int32>( constant::kBytesPerMegabyte );
+        static constexpr int32 kDefaultMaxBodyBytes   = static_cast<int32>( constant::memory::kBytesPerMegabyte );
         static constexpr int64 kDefaultTimeoutMs      = 10000;
         static constexpr int32 kStatusOk              = 200;
         static constexpr int32 kStatusUnauthorized    = 401;

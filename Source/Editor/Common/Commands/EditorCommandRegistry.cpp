@@ -252,7 +252,7 @@ namespace sw::editor
         return outReport.empty();
     }
 
-    void EditorCommandRegistry::formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::kMaxBuffer128>& outLabel )
+    void EditorCommandRegistry::formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::buffer::kMax128>& outLabel )
     {
         outLabel.clear();
         if ( desc._icon.empty() == false )

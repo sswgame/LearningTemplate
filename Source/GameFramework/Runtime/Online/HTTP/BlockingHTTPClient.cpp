@@ -11,7 +11,7 @@ namespace sw
     {
         struct BlockingHTTPClientInternal
         {
-            static constexpr int64 kPollIntervalNanoseconds = constant::kNanosecondsPerMillisecond; ///< 응답을 기다리는 동안 한 번 도는 간격
+            static constexpr int64 kPollIntervalNanoseconds = constant::time::kNanosecondsPerMillisecond; ///< 응답을 기다리는 동안 한 번 도는 간격
         };
     } // namespace
 } // namespace sw

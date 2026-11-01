@@ -132,14 +132,14 @@ namespace sw
 
             static string formatFloat( const float64 value )
             {
-                utf8 arrBuffer[constant::kMaxBuffer64]{};
+                utf8 arrBuffer[constant::buffer::kMax64]{};
                 formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", value );
                 return string( arrBuffer );
             }
 
             static string formatInteger( const int64 value )
             {
-                StringBuilder<constant::kMaxBuffer64> b;
+                StringBuilder<constant::buffer::kMax64> b;
                 b.appendFormat( "%#", value );
                 return string( b.view() );
             }
@@ -446,12 +446,12 @@ namespace sw
 
             static void emitInteger( EmitState& state, const Site& site, const Bound& minBound, const Bound& maxBound )
             {
-                const string                            minExpr = makeIntegerBound( minBound, true );
-                const string                            maxExpr = makeIntegerBound( maxBound, false );
-                const bool                              bRanged = minBound._bPresent == SW_TRUE && maxBound._bPresent == SW_TRUE;
-                const utf8*                             pWrite  = bRanged ? "writeRangedInteger" : "writeVarInteger";
-                const utf8*                             pRead   = bRanged ? "readRangedInteger" : "readVarInteger";
-                StringBuilder<constant::kMaxBuffer1024> call;
+                const string                              minExpr = makeIntegerBound( minBound, true );
+                const string                              maxExpr = makeIntegerBound( maxBound, false );
+                const bool                                bRanged = minBound._bPresent == SW_TRUE && maxBound._bPresent == SW_TRUE;
+                const utf8*                               pWrite  = bRanged ? "writeRangedInteger" : "writeVarInteger";
+                const utf8*                               pRead   = bRanged ? "readRangedInteger" : "readVarInteger";
+                StringBuilder<constant::buffer::kMax1024> call;
                 call.appendFormat( "::sw::FixedCodecUtil::%#( writer, %#, %#, %# )", pWrite, site._expr, minExpr, maxExpr );
                 emitWriteCheck( state, string( call.view() ) );
                 call.clear();
@@ -952,7 +952,7 @@ namespace sw
                 // 스키마 해시. 다른 타입의 해시는 다른 헤더 · 모듈일 수 있으므로 실행 시간에 그 코덱에서 얻어 섞습니다
                 emit.line( "static uint64 computeFixedSchemaHash()" );
                 emit.line( "{" ).push();
-                StringBuilder<constant::kMaxBuffer1024> nested;
+                StringBuilder<constant::buffer::kMax1024> nested;
                 for ( const pair<string, string>& dependency : state._listDependency )
                 {
                     if ( nested.size() > 0 )
@@ -984,7 +984,7 @@ namespace sw
                     emit.line( "{" ).push();
                     if ( pEnum->_bIsBitFlag == SW_TRUE )
                     {
-                        StringBuilder<constant::kMaxBuffer1024> mask;
+                        StringBuilder<constant::buffer::kMax1024> mask;
                         for ( const ParsedEnumeratorInfo& enumerator : pEnum->_listEnumerator )
                         {
                             if ( mask.size() > 0 )

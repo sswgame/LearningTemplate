@@ -58,9 +58,9 @@ namespace sw::editor
         void syncDocumentDirty() override;
 
     private:
-        DataTableModel                        _model;
-        fixed_string<constant::kMaxBuffer128> _localizationFilter;
-        fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
+        DataTableModel                          _model;
+        fixed_string<constant::buffer::kMax128> _localizationFilter;
+        fixed_string<constant::buffer::kMax128> _newKeyBuffer;
         /** @brief 이번 프레임에 보일 행의 인덱스입니다. 프레임마다 지우고 다시 채우는 재사용 버퍼입니다. */
         vector<size_t>     _listVisibleLocalizationIndex;
         CatalogTableEditor _gameDataTable;

@@ -409,7 +409,7 @@ namespace sw
 
             context._debounceTimer.updateTimer();
             const float32 elapsedSec = context._debounceTimer.getTotalTime();
-            if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::kMillisecondsPerSecond )
+            if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::time::kMillisecondsPerSecond )
                 continue;
 
             uint64     sourceMtime = 0;

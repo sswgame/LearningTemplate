@@ -470,8 +470,8 @@ namespace sw
             outText = "director: not initialized\n";
             return;
         }
-        const AIDirectorPhaseDef&               phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
-        StringBuilder<constant::kMaxBuffer4096> text;
+        const AIDirectorPhaseDef&                 phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
+        StringBuilder<constant::buffer::kMax4096> text;
         text.appendFormat( "director t=%.2fs phase '%#' (%.2fs) intensity %.2f calm %.2fs cycle %#\n", _time, phase._id.c_str(), _phaseTime, _intensity,
                            getIntensityModel().getCalmSeconds(), _cycle );
         if ( _pSpawnTable != nullptr )
@@ -536,7 +536,7 @@ namespace sw
         outText.clear();
         for ( const AIDirectorEvent& event : _listTrace )
         {
-            StringBuilder<constant::kMaxBuffer256> line;
+            StringBuilder<constant::buffer::kMax256> line;
             line.appendFormat( "[%.2fs] I=%.2f %# '%#'", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str() );
             if ( event._source.empty() == false )
                 line.appendFormat( " from '%#'", event._source.c_str() );

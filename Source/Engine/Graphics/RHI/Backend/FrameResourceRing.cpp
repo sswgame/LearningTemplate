@@ -6,13 +6,13 @@ namespace sw
 {
     FrameResourceRing::FrameResourceRing()
         : _arrFenceValue{}
-        , _frameIndex{ constant::kMaxFrameCountInFlight - 1 }
+        , _frameIndex{ constant::render::kMaxFrameCountInFlight - 1 }
     {
     }
 
     void FrameResourceRing::reset()
     {
-        _frameIndex.store( constant::kMaxFrameCountInFlight - 1, std::memory_order_release );
+        _frameIndex.store( constant::render::kMaxFrameCountInFlight - 1, std::memory_order_release );
         for ( uint64& fenceValue : _arrFenceValue )
         {
             fenceValue = 0;
@@ -21,7 +21,7 @@ namespace sw
 
     bool FrameResourceRing::beginFrame( uint64 completedFenceValue )
     {
-        const uint32 nextIndex = ( _frameIndex.load( std::memory_order_relaxed ) + 1 ) % constant::kMaxFrameCountInFlight;
+        const uint32 nextIndex = ( _frameIndex.load( std::memory_order_relaxed ) + 1 ) % constant::render::kMaxFrameCountInFlight;
         if ( _arrFenceValue[nextIndex] > completedFenceValue )
             return false;
 
@@ -31,14 +31,14 @@ namespace sw
 
     uint64 FrameResourceRing::getFenceValue( uint32 index ) const
     {
-        if ( index >= constant::kMaxFrameCountInFlight )
+        if ( index >= constant::render::kMaxFrameCountInFlight )
             return 0;
         return _arrFenceValue[index];
     }
 
     void FrameResourceRing::setFenceValue( uint32 index, uint64 fenceValue )
     {
-        if ( index >= constant::kMaxFrameCountInFlight )
+        if ( index >= constant::render::kMaxFrameCountInFlight )
             return;
         _arrFenceValue[index] = fenceValue;
     }

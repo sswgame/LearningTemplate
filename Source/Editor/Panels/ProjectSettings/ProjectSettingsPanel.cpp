@@ -126,7 +126,7 @@ namespace sw::editor
             pPackPage->_entry._page         = string( PackEngineSettings::StaticType()->_name.c_str() );
             pPackPage->_entry._typeName     = pPackPage->_entry._page;
             pPackPage->_entry._elementName  = PackEngineSettings::kElementName;
-            pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( path::kContentFolder, packRoot.get() ), PackEngineSettings::kPackRelativePath );
+            pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( constant::path::kContentFolder, packRoot.get() ), PackEngineSettings::kPackRelativePath );
             pPackPage->_entry._absolutePath = FileUtil::joinPath( packFolder, PackEngineSettings::kPackRelativePath );
             pPackPage->_absolutePath        = pPackPage->_entry._absolutePath;
             pPackPage->_bTypeFound          = registry.findType( PackEngineSettings::StaticType()->_name ) != nullptr;

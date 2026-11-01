@@ -9,7 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -51,7 +51,7 @@ namespace sw
             /** @brief 값 셋을 공백으로 나눈 글로 씁니다. 소수 다섯 자리(C 로캘)입니다. */
             static string formatFloat3( const float3& value )
             {
-                fixed_string<constant::kMaxBuffer128> text;
+                fixed_string<constant::buffer::kMax128> text;
                 formatstring( text.data(), text.capacity(), "%# %# %#", Fmt( value._x, Format().precision( 5 ) ), Fmt( value._y, Format().precision( 5 ) ),
                               Fmt( value._z, Format().precision( 5 ) ) );
                 return string( text.view() );
@@ -178,7 +178,7 @@ namespace sw
 
     string BugReport::makeUniqueDirectory( string_view root, const ScreenshotLocalTime& localTime )
     {
-        StringBuilder<constant::kMaxBuffer32> baseName;
+        StringBuilder<constant::buffer::kMax32> baseName;
         baseName.appendFormat( "%04d%02d%02d-%02d%02d%02d", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
                                localTime._second );
         // 같은 초에 다른 프로세스(병렬 실행)가 같은 이름을 고를 수 있다 — 만들기가 곧 자리 잡기다.

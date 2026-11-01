@@ -452,7 +452,7 @@ namespace sw
         LocalCalendarTime calendar{};
         if ( WallClock::toLocalCalendar( _startedUnixMs / 1000, calendar ) == false )
             return; // 달력으로 못 바꾸는 플랫폼이면 지역 시각 글은 비운다(유닉스 밀리초는 남는다)
-        StringBuilder<constant::kMaxBuffer64> text;
+        StringBuilder<constant::buffer::kMax64> text;
         text.appendFormat( "%04d-%02d-%02d %02d:%02d:%02d", calendar._year, calendar._month, calendar._day, calendar._hour, calendar._minute, calendar._second );
         _startedAt = text.c_str();
     }

@@ -72,7 +72,7 @@ namespace sw::editor
             float32 posX = viewportPos._x + screenWidth - EditorChrome::resolveTextExtent( EditorTextExtent::ofText( toastColumns, 0.0f ) )._x - toastMargin;
             currentY -= toastSlotHeight;
 
-            fixed_string<constant::kMaxBuffer32> windowID;
+            fixed_string<constant::buffer::kMax32> windowID;
             formatstring( windowID.data(), windowID.capacity(), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
 
             editor::EditorOverlayDesc toastDesc{};

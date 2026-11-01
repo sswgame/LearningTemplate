@@ -167,7 +167,7 @@ namespace sw::editor
         bool                     _bPanelTimesReported;  ///< 한 번 기록했으면 더 모으지 않는다
 
         /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시값입니다. */
-        static constexpr uint32 kNotSynced = invalid_index::kUint32;
+        static constexpr uint32 kNotSynced = constant::invalid_index::kUint32;
     };
 } // namespace sw::editor
 

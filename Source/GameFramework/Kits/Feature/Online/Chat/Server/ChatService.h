@@ -26,7 +26,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
@@ -73,15 +73,15 @@ namespace sw
         ChatSpamConfig _spam{};
         string         _bannedWordsPath{}; ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
-        int64          _sanctionCacheMs{ 60 * constant::kMillisecondsPerSecond };
-        int64          _historyRetentionMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond };
-        int32          _historyFlushMax{ 60 };                                           ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
-        int32          _historyTrimEvery{ 64 };                                          ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
-        int32          _maxQueuedHistory{ 4096 };                                        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
-        int32          _maxPendingSendPerMember{ 4 };                                    ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
-        int64          _pendingSendRetryAfterMs{ 1000 };                                 ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
-        int64          _reportRefillIntervalMs{ 60 * constant::kMillisecondsPerSecond }; ///< 계정마다 신고 하나가 다시 차는 간격이다
-        int32          _reportBurst{ 3 };                                                ///< 계정마다 한꺼번에 낼 수 있는 신고 수이다
+        int64          _sanctionCacheMs{ 60 * constant::time::kMillisecondsPerSecond };
+        int64          _historyRetentionMs{ 30 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond };
+        int32          _historyFlushMax{ 60 };                                                 ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
+        int32          _historyTrimEvery{ 64 };                                                ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
+        int32          _maxQueuedHistory{ 4096 };                                              ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
+        int32          _maxPendingSendPerMember{ 4 };                                          ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
+        int64          _pendingSendRetryAfterMs{ 1000 };                                       ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
+        int64          _reportRefillIntervalMs{ 60 * constant::time::kMillisecondsPerSecond }; ///< 계정마다 신고 하나가 다시 차는 간격이다
+        int32          _reportBurst{ 3 };                                                      ///< 계정마다 한꺼번에 낼 수 있는 신고 수이다
     };
 } // namespace sw
 

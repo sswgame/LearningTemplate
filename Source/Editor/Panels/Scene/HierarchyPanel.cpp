@@ -96,7 +96,7 @@ namespace sw::editor
                 const ImVec2 rowMin{ ImGui::GetCursorScreenPos().x, cursorY };
                 if ( ImGui::IsRectVisible( rowMin, ImVec2( rowMin.x + 1.0f, cursorY + rowHeight ) ) )
                     return false;
-                fixed_string<constant::kMaxBuffer64> nodeIDLabel;
+                fixed_string<constant::buffer::kMax64> nodeIDLabel;
                 formatstring( nodeIDLabel.data(), nodeIDLabel.capacity(), "###go%#", objectID );
                 ImGui::PushID( static_cast<int32>( objectID ) );
                 const ImGuiID nodeID = ImGui::GetID( nodeIDLabel.c_str() );
@@ -217,7 +217,7 @@ namespace sw::editor
                     ImGui::Separator();
                 for ( const TagID tag : listTag )
                 {
-                    fixed_string<constant::kMaxBuffer128> label;
+                    fixed_string<constant::buffer::kMax128> label;
                     formatstring( label.data(), label.capacity(), "Tag %s", tag.getString() );
                     if ( ImGui::MenuItem( label.c_str() ) == false )
                         continue;
@@ -259,8 +259,8 @@ namespace sw::editor
                                           : "SceneComponent";
 
                 // 행 앞에 컴포넌트 아이콘을 그린다. 언리얼의 Outliner 나 Godot 의 씬 트리처럼 종류를 한눈에 알 수 있다
-                const utf8*                           pIcon = EditorComponentIcon::findRow( pSceneComp->getTypeInfo() )._pGlyph;
-                fixed_string<constant::kMaxBuffer256> arrLabel;
+                const utf8*                             pIcon = EditorComponentIcon::findRow( pSceneComp->getTypeInfo() )._pGlyph;
+                fixed_string<constant::buffer::kMax256> arrLabel;
                 formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###sc%#", pIcon, pCompName, pSceneComp->getComponentID() );
 
                 bool                           hasChildOnOwner{ false };
@@ -319,7 +319,7 @@ namespace sw::editor
             }
 
             /** @brief 행 라벨(아이콘, 이름, 카테고리 배지, 오브젝트 id 꼬리)을 만듭니다. */
-            static void buildObjectLabel( const GameObject* pObj, uint64 objectID, fixed_string<constant::kMaxBuffer256>& outLabel )
+            static void buildObjectLabel( const GameObject* pObj, uint64 objectID, fixed_string<constant::buffer::kMax256>& outLabel )
             {
                 // 배지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
                 // 타입 이름을 비교하면 게임이 추가한 컴포넌트는 배지가 없다.
@@ -352,7 +352,7 @@ namespace sw::editor
             }
 
             /** @brief 그 행에서 직접 이름을 바꾸는 입력입니다. 엔터나 포커스를 잃으면 확정하고 Esc 는 취소합니다. */
-            static void drawInlineRename( GameObject* pObj, uint64 objectID, uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
+            static void drawInlineRename( GameObject* pObj, uint64 objectID, uint64& renamingObjectID, fixed_string<constant::buffer::kMax256>& renameBuffer,
                                           bool& bFocusRenameInput )
             {
                 if ( renamingObjectID != objectID || EditorPlaySession::areSceneEditsAllowed() == false )
@@ -394,7 +394,7 @@ namespace sw::editor
                                           ? pComp->getComponentName().c_str()
                                           : "Component";
 
-                fixed_string<constant::kMaxBuffer256> arrCompLabel;
+                fixed_string<constant::buffer::kMax256> arrCompLabel;
                 formatstring( arrCompLabel.data(), arrCompLabel.capacity(), "%###c%#", pCompName, pComp->getComponentID() );
 
                 if ( ImGui::Selectable( arrCompLabel.c_str(), bCompSelected ) )
@@ -406,7 +406,7 @@ namespace sw::editor
 
             /** @brief 펼친 오브젝트의 자식 오브젝트(형제 순서)와 컴포넌트 줄을 그립니다. */
             static void drawOpenNodeChildren( EditorContext* pContext, GameObject* pObj, GameObjectManager* pManager,
-                                              uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer, bool& bFocusRenameInput )
+                                              uint64& renamingObjectID, fixed_string<constant::buffer::kMax256>& renameBuffer, bool& bFocusRenameInput )
             {
                 vector<GameObject*> listChild;
                 EditorSiblingOrder::collectChildrenInOrder( *pObj, listChild );
@@ -438,7 +438,7 @@ namespace sw::editor
             }
 
             static void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager,
-                                            uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
+                                            uint64& renamingObjectID, fixed_string<constant::buffer::kMax256>& renameBuffer,
                                             bool& bFocusRenameInput )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
@@ -455,7 +455,7 @@ namespace sw::editor
 
                 drawRowToggles( &editorContext, pObj, objectID );
 
-                fixed_string<constant::kMaxBuffer256> arrLabel;
+                fixed_string<constant::buffer::kMax256> arrLabel;
                 buildObjectLabel( pObj, objectID, arrLabel );
 
                 const bool bHasChildGos   = pObj->hasChildren();

@@ -56,12 +56,10 @@ namespace sw
 
         struct LoadBotMainInternal
         {
-            static constexpr uint16  kDefaultServerPort     = OnlineServiceHostConfig::kDefaultPort;
-            static constexpr int32   kMaxPort               = 65535;
-            static constexpr int64   kIdleSleepNs           = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
-            static constexpr int32   kPercentScale          = 100;
-            static constexpr int32   kSpareConnectionCount  = 16;
-            static constexpr float32 kMillisecondsPerSecond = 1000.0f;
+            static constexpr uint16 kDefaultServerPort    = OnlineServiceHostConfig::kDefaultPort;
+            static constexpr int64  kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
+            static constexpr int32  kPercentScale         = 100;
+            static constexpr int32  kSpareConnectionCount = 16;
 
             /**
              * @brief 봇 인자를 `CommandLineManager` 로 읽습니다(엔진 표준 인자는 등록하지 않는다 — 봇 인자만 받는다).
@@ -121,7 +119,7 @@ namespace sw
                     outError = "need --scenario=<json>, --load=<.scenario.xml> and exactly one of --server=<ip:port> or --local-server=<port>";
                     return false;
                 }
-                if ( outOptions._localServerPort > kMaxPort || outOptions._maxErrorPercent < 0 )
+                if ( outOptions._localServerPort > constant::network::kMaxPort || outOptions._maxErrorPercent < 0 )
                 {
                     outError = "--local-server port must be 0..65535 (0 = any free port) and --max-error-percent not negative";
                     return false;
@@ -161,8 +159,8 @@ namespace sw
                     return false;
                 }
                 inoutScenario._botCount   = static_cast<int32>( load._clientCount );
-                inoutScenario._rampUpMs   = static_cast<int64>( load._rampUpSeconds * kMillisecondsPerSecond );
-                inoutScenario._durationMs = static_cast<int64>( load._durationSeconds * kMillisecondsPerSecond );
+                inoutScenario._rampUpMs   = static_cast<int64>( load._rampUpSeconds * constant::time::kMillisecondsPerSecond );
+                inoutScenario._durationMs = static_cast<int64>( load._durationSeconds * constant::time::kMillisecondsPerSecond );
                 return true;
             }
 

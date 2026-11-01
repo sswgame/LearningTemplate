@@ -38,13 +38,13 @@ namespace sw
         }
         if ( input._scenarioName.empty() == false && input._stepKind.empty() == false )
         {
-            utf8 arrStep[constant::kMaxBuffer64];
-            formatstring( arrStep, constant::kMaxBuffer64, " \xC2\xB7 step %# ", input._stepNumber );
+            utf8 arrStep[constant::buffer::kMax64];
+            formatstring( arrStep, constant::buffer::kMax64, " \xC2\xB7 step %# ", input._stepNumber );
             summary += arrStep;
             summary += input._stepKind;
         }
-        utf8 arrFrame[constant::kMaxBuffer64];
-        formatstring( arrFrame, constant::kMaxBuffer64, " \xC2\xB7 f%#", input._frame );
+        utf8 arrFrame[constant::buffer::kMax64];
+        formatstring( arrFrame, constant::buffer::kMax64, " \xC2\xB7 f%#", input._frame );
         summary += arrFrame;
         return summary;
     }
@@ -65,12 +65,12 @@ namespace sw
     {
         string line = "[Scenario] ";
         line += scenarioName;
-        utf8 arrStep[constant::kMaxBuffer64];
-        formatstring( arrStep, constant::kMaxBuffer64, " step %# ", stepNumber );
+        utf8 arrStep[constant::buffer::kMax64];
+        formatstring( arrStep, constant::buffer::kMax64, " step %# ", stepNumber );
         line += arrStep;
         line += stepKind;
-        utf8 arrFrame[constant::kMaxBuffer64];
-        formatstring( arrFrame, constant::kMaxBuffer64, " frame %#", frame );
+        utf8 arrFrame[constant::buffer::kMax64];
+        formatstring( arrFrame, constant::buffer::kMax64, " frame %#", frame );
         line += arrFrame;
         return line;
     }

@@ -3,7 +3,7 @@
 #include "Programs/OnlineLoadBot/LoadBot.h"
 
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -56,8 +56,8 @@ namespace sw
 
             static string makeNumberText( int64 value )
             {
-                utf8 arrBuffer[constant::kMaxBuffer32];
-                formatstring( arrBuffer, constant::kMaxBuffer32, "%#", value );
+                utf8 arrBuffer[constant::buffer::kMax32];
+                formatstring( arrBuffer, constant::buffer::kMax32, "%#", value );
                 return string( arrBuffer );
             }
 

@@ -56,7 +56,7 @@ namespace sw::editor
 
     string EditorPaths::getSceneDialogFolderPath()
     {
-        return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kMapsFolder ) );
+        return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kMapsFolder ) );
     }
 
     void EditorPaths::prepareAutomationStateDirectory()

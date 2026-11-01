@@ -66,7 +66,7 @@ namespace sw
         RHITextureDesc captureDesc{};
         captureDesc._width             = width;
         captureDesc._height            = height;
-        captureDesc._format            = constant::kBackBufferFormat;
+        captureDesc._format            = constant::render::kBackBufferFormat;
         captureDesc._bIsRenderTarget   = SW_TRUE;
         captureDesc._bIsShaderResource = SW_TRUE;
         _texture                       = _pDevice->getResourceFactory()->createTexture2D( captureDesc );
@@ -85,7 +85,7 @@ namespace sw
     {
         // 캡처는 계약 포맷(kBackBufferFormat)으로 출력 크기에 맞춰 만든다(ensurePresent). 게임 뷰 RT 도 같은 포맷이라 그대로 복사된다.
         const bool bSameSize   = _width == width && _height == height;
-        const bool bSameFormat = format == constant::kBackBufferFormat;
+        const bool bSameFormat = format == constant::render::kBackBufferFormat;
         if ( bSameSize && bSameFormat )
             return true;
         // 포맷을 모르는 출력은 아직(또는 이미) 없는 렌더 타깃이다. 에디터 모듈을 다시 로드하는 프레임의 게임 뷰가 그 예다. 어긋남이 아니라 건너뛸 프레임이다.
@@ -93,7 +93,7 @@ namespace sw
             return false;
         if ( _bMismatchLogged.exchange( 1 ) == 0 )
             SW_LOG_WARNING( "Present capture skipped - the output render target (%#x%#, format %#) does not match the capture (%#x%#, format %#)",
-                            width, height, static_cast<uint32>( format ), _width, _height, static_cast<uint32>( constant::kBackBufferFormat ) );
+                            width, height, static_cast<uint32>( format ), _width, _height, static_cast<uint32>( constant::render::kBackBufferFormat ) );
         return false;
     }
 

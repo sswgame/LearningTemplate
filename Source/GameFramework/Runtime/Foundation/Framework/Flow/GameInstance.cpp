@@ -190,8 +190,8 @@ namespace sw
         // 컴포넌트 기본값 경로의 주인은 엔진 범위의 `ComponentDefaults` 다(정적 칸을 두지 않는다). 선택 조회: 엔진 서비스 없이 도는 하네스에서는 기본값을 쓰지 않는다.
         ComponentDefaults* const pComponentDefaults = game::findSubsystem<ComponentDefaults>();
         if ( pComponentDefaults != nullptr )
-            pComponentDefaults->setPath( _packConfig.resolve( path::kGameSettingsFile ) );
-        return _packConfig.load( path::kGameSettingsFile );
+            pComponentDefaults->setPath( _packConfig.resolve( constant::path::kGameSettingsFile ) );
+        return _packConfig.load( constant::path::kGameSettingsFile );
     }
 
     bool GameInstance::applyPackConfig()

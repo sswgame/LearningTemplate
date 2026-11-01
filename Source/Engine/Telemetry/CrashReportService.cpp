@@ -58,7 +58,7 @@ namespace sw
 
             static string makeCrashFilePath( const string& folder, string_view sessionID, const utf8* pExtension )
             {
-                StringBuilder<constant::kMaxBuffer256> name;
+                StringBuilder<constant::buffer::kMax256> name;
                 name.appendFormat( "crash_%#.%#", sessionID, pExtension );
                 return FileUtil::joinPath( folder, name.c_str() );
             }
@@ -161,7 +161,7 @@ namespace sw
                 }
                 if ( log.size() > maxBytes )
                 {
-                    StringBuilder<constant::kMaxBuffer128> header;
+                    StringBuilder<constant::buffer::kMax128> header;
                     header.appendFormat( "[... %# earlier bytes dropped ...]\n", static_cast<uint64>( log.size() - maxBytes ) );
                     log = string( header.c_str() ) + log.substr( log.size() - static_cast<size_t>( maxBytes ) );
                 }

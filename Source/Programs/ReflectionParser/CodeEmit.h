@@ -7,7 +7,7 @@
 
 namespace sw
 {
-    using CodeEmitBuffer = StringBuilder<constant::kMaxBuffer8192>;
+    using CodeEmitBuffer = StringBuilder<constant::buffer::kMax8192>;
 
     // ------------------------------------------------------------------------------
     // 1) emit — 들여쓰기·한 줄 서식 (.gen.cpp)
@@ -97,7 +97,7 @@ namespace sw
         /** @brief `::sw::hashed_string( "name" )` 표현식을 만듭니다. 이름은 이스케이프해서 넣습니다. */
         static string hs( const string_view name )
         {
-            StringBuilder<constant::kMaxBuffer1024> b;
+            StringBuilder<constant::buffer::kMax1024> b;
             b.appendFormat( "::sw::hashed_string( \"%#\" )", escapeCppString( string( name ) ) );
             return string( b.view() );
         }
@@ -105,7 +105,7 @@ namespace sw
         /** @brief 이스케이프된 C++ 문자열 리터럴 `"..."` 을 만듭니다. */
         static string quoted( const string_view value )
         {
-            StringBuilder<constant::kMaxBuffer1024> b;
+            StringBuilder<constant::buffer::kMax1024> b;
             b.appendFormat( "\"%#\"", escapeCppString( string( value ) ) );
             return string( b.view() );
         }

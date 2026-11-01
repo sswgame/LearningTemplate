@@ -16,7 +16,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -73,7 +73,7 @@ namespace sw
     class SW_KIT_API LockstepSession : public INetMessageHandler
     {
     public:
-        static constexpr uint32 kNoLeaveTick   = invalid_index::kUint32;
+        static constexpr uint32 kNoLeaveTick   = constant::invalid_index::kUint32;
         static constexpr int32  kMaxInputDelay = 64;
         /** @brief 받는 입력 틱 창 [지금, 지금 + 창)의 크기입니다. */
         static constexpr uint32 kInputWindow = 256;

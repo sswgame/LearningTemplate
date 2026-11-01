@@ -81,7 +81,7 @@ namespace sw
                         continue;
                     }
                     ++outParamCount;
-                    StringBuilder<constant::kMaxBuffer16> placeholder;
+                    StringBuilder<constant::buffer::kMax16> placeholder;
                     placeholder.appendFormat( "$%#", outParamCount );
                     text.append( placeholder.c_str() );
                 }
@@ -181,7 +181,7 @@ namespace sw
                             }
                             case SQLValueType::Int64:
                             {
-                                StringBuilder<constant::kMaxBuffer32> number;
+                                StringBuilder<constant::buffer::kMax32> number;
                                 number.append( value._integer );
                                 listText[index]         = string( number.view() );
                                 listValuePointer[index] = listText[index].c_str();
@@ -250,9 +250,9 @@ namespace sw
                     const auto   statementIt = _mapStatementName.find( key );
                     if ( statementIt != _mapStatementName.end() )
                         return &statementIt->second;
-                    PreparedStatement                     statement;
-                    const string                          converted = convertPlaceholders( sql, statement._paramCount );
-                    StringBuilder<constant::kMaxBuffer32> name;
+                    PreparedStatement                       statement;
+                    const string                            converted = convertPlaceholders( sql, statement._paramCount );
+                    StringBuilder<constant::buffer::kMax32> name;
                     name.appendFormat( "sw_s%#", _nextStatementIndex++ );
                     statement._name = string( name.view() );
                     ScopedResult    result{ PQprepare( _pConnection, statement._name.c_str(), converted.c_str(), statement._paramCount, nullptr ) };

@@ -44,7 +44,7 @@ namespace sw::editor
             {
                 ImGui::TextUnformatted( pLabel );
                 ImGui::SameLine( 160.0f * EditorThemeUtil::getDPIScale() );
-                fixed_string<constant::kMaxBuffer64> overlay;
+                fixed_string<constant::buffer::kMax64> overlay;
                 if ( limit == 0 )
                     formatstring( overlay.data(), overlay.capacity(), "%# / -", count );
                 else
@@ -358,7 +358,7 @@ namespace sw::editor
                      static_cast<uint64>( profile._droppedEventCount ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "PlayedDroppedTip" ) );
         // 이 창이 읽는 사본(인스턴스 × 보이스)을 오디오 스레드가 블록마다 만드는 비용이다(E6 측정).
-        const float64 nanosecondsPerMicrosecond = static_cast<float64>( constant::kNanosecondsPerMicrosecond );
+        const float64 nanosecondsPerMicrosecond = static_cast<float64>( constant::time::kNanosecondsPerMicrosecond );
         ImGui::Text( "%s: %.1f / %.1f us", SW_LOCKEY( "EditorAudioEvents", "PublishCost" ), static_cast<float64>( stats._publishNanoseconds ) / nanosecondsPerMicrosecond,
                      static_cast<float64>( stats._peakPublishNanoseconds ) / nanosecondsPerMicrosecond );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "PublishCostTip" ) );

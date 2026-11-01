@@ -7,7 +7,7 @@
 #pragma once
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Memory/Memory.h"

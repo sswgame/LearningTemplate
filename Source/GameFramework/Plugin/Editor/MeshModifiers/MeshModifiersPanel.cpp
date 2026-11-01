@@ -7,7 +7,7 @@
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -43,13 +43,13 @@ namespace sw::editor
 
             static bool drawTextInput( const utf8* pLabel, const string& value, string& outValue )
             {
-                utf8         arrBuffer[constant::kMaxPathSize] = {};
-                const size_t copyCount                         = MathUtil::min( value.size(), static_cast<size_t>( constant::kMaxPathSize - 1 ) );
+                utf8         arrBuffer[constant::file::kMaxPathSize] = {};
+                const size_t copyCount                               = MathUtil::min( value.size(), static_cast<size_t>( constant::file::kMaxPathSize - 1 ) );
                 for ( size_t index = 0; index < copyCount; ++index )
                 {
                     arrBuffer[index] = value[index];
                 }
-                if ( ImGui::InputText( pLabel, arrBuffer, constant::kMaxPathSize ) == false )
+                if ( ImGui::InputText( pLabel, arrBuffer, constant::file::kMaxPathSize ) == false )
                     return false;
                 outValue = string( arrBuffer );
                 return true;

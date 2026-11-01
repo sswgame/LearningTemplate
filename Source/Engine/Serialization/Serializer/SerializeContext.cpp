@@ -298,7 +298,7 @@ namespace sw
             template <typename TElem, int32 kCount>
             static string writeNumberList( const TElem* pElem )
             {
-                StringBuilder<( kCount > 4 ) ? constant::kMaxBuffer512 : constant::kMaxBuffer64> sb;
+                StringBuilder<( kCount > 4 ) ? constant::buffer::kMax512 : constant::buffer::kMax64> sb;
                 for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
                 {
                     if ( axisIndex > 0 )
@@ -390,8 +390,8 @@ namespace sw
                     hashed_string( "ComponentHandle" ),
                     []( const void* pPtr )
                 {
-                    const auto&                           handle = *static_cast<const ComponentHandle*>( pPtr );
-                    StringBuilder<constant::kMaxBuffer64> sb;
+                    const auto&                             handle = *static_cast<const ComponentHandle*>( pPtr );
+                    StringBuilder<constant::buffer::kMax64> sb;
                     sb.append( handle.objectID() ).append( ':' ).append( handle.componentID() );
                     return string{ sb.c_str(), sb.size() };
                 },

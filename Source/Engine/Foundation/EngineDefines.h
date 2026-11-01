@@ -3,35 +3,40 @@
  * @brief 엔진 기본 상수(뷰포트 크기 · 기본 언어)와 팩 · 폴더 이름입니다. 에셋 경로는 EngineDefaultAssets(enginedefaultassets.xml)가 정합니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 
 namespace sw
 {
-    namespace constant
+    // 렌더 백엔드 계약 상수(`constant::render` — 프레임 수 · 형식 · 정렬)는 RHI 형식 값이 필요해 `RHIDescriptors.h` 에 있다. 분류 목록은 `Core/Foundation/Constants.h`.
+    namespace constant::window
     {
-        // 렌더링 프레임 상수(kMaxFrameCountInFlight / kGPUReleaseFrameLatency /
-        // kRenderFrameQueueDepth)는 RHITypes.h 의 constant 블록에 있다. 백엔드 간 계약 상수들과
-        // 같은 자리에 모아 두는 편이 "한쪽만 바꾸면 깨진다" 를 알아보기 쉽다.
-
         /** @brief 기본 뷰포트 너비입니다. */
         inline constexpr float32 kDefaultViewportWidth = 1280.0f;
         /** @brief 기본 뷰포트 높이입니다. */
         inline constexpr float32 kDefaultViewportHeight = 720.0f;
+    } // namespace constant::window
+
+    namespace constant::physics
+    {
         /** @brief 기본 중력 가속도의 크기(m/s²)입니다. 물리 세계 · 탄도 · 파괴 하중 · 코스터가 같은 값을 씁니다. */
         inline constexpr float32 kDefaultGravity = 9.81f;
+    } // namespace constant::physics
+
+    namespace constant::locale
+    {
         /** @brief 기본 언어 코드입니다. */
         inline constexpr const utf8* kDefaultLanguage = "en_US";
-    } // namespace constant
+    } // namespace constant::locale
 
     /**
      * @brief Resource 아래 팩 · 폴더 이름입니다.
      * @details XML 보다 먼저 리소스 루트를 찾아야 하므로 컴파일 상수로 둡니다.
      *          파이프라인 · 셰이더 · InputMap 경로는 EngineDefaultAssets 가 정합니다.
      */
-    namespace path
+    namespace constant::path
     {
         // `inline static` 이 아니라 `inline` 이다. 네임스페이스 스코프에서 `static` 은 내부 연결을
-        // 주므로 `inline` 이 하는 일이 없어지고, TU 마다 사본이 하나씩 생긴다. 바로 위 `constant`
+        // 주므로 `inline` 이 하는 일이 없어지고, TU 마다 사본이 하나씩 생긴다. 위 `constant::*`
         // 블록도 `inline constexpr` 로 적는다. 한 파일에 두 철자를 두지 않는다.
 
         /** @brief 엔진 기본 제공 에셋 팩입니다. */
@@ -66,5 +71,5 @@ namespace sw
         inline constexpr const utf8* kGameSettingsFile = "data/gamesettings.xml";
         /** @brief 에셋 메타 파일 확장자입니다. */
         inline constexpr const utf8* kMetaExtension = ".meta";
-    } // namespace path
+    } // namespace constant::path
 } // namespace sw

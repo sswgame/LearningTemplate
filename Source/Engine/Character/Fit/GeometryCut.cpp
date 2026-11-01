@@ -3,7 +3,7 @@
 #include "Engine/Character/Fit/GeometryCut.h"
 
 #include "Core/Container/unordered_map.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Spatial/PositionWelder.h"
 
@@ -13,7 +13,7 @@ namespace sw
     {
         struct GeometryCutInternal
         {
-            static constexpr uint32 kNoVertex = invalid_index::kUint32;
+            static constexpr uint32 kNoVertex = constant::invalid_index::kUint32;
 
             static uint64 makeEdgeKey( uint32 from, uint32 to ) { return ( static_cast<uint64>( from ) << 32 ) | static_cast<uint64>( to ); }
 

@@ -20,7 +20,7 @@ namespace sw
     {
         struct ModuleBuildIDInternal
         {
-            static void appendHex( StringBuilder<constant::kMaxBuffer256>& text, const uint8* pBytes, size_t count, bool bUpper )
+            static void appendHex( StringBuilder<constant::buffer::kMax256>& text, const uint8* pBytes, size_t count, bool bUpper )
             {
                 text.append( HexUtil::encodeBytes( pBytes, count, bUpper ? HexCase::Upper : HexCase::Lower ) );
             }
@@ -85,7 +85,7 @@ namespace sw
                         const bool   bValidGnuBuildIDNote = pNote->n_type == NT_GNU_BUILD_ID && bGnu && pDesc + pNote->n_descsz <= pEnd;
                         if ( bValidGnuBuildIDNote )
                         {
-                            StringBuilder<constant::kMaxBuffer256> text;
+                            StringBuilder<constant::buffer::kMax256> text;
                             appendHex( text, pDesc, pNote->n_descsz, false );
                             pQuery->_result._id = text.c_str();
                             return 1;
@@ -115,8 +115,8 @@ namespace sw
             return result;
         if ( hModule == nullptr )
             return result;
-        utf16 arrPath[constant::kMaxPathSize]{};
-        if ( GetModuleFileNameW( hModule, arrPath, constant::kMaxPathSize ) > 0 )
+        utf16 arrPath[constant::file::kMaxPathSize]{};
+        if ( GetModuleFileNameW( hModule, arrPath, constant::file::kMaxPathSize ) > 0 )
             result._modulePath = StringUtil::utf16ToUTF8( arrPath );
         const uint8*            pBase = reinterpret_cast<const uint8*>( hModule );
         const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
@@ -136,7 +136,7 @@ namespace sw
             if ( pRecord->_signature != Internal::kRsdsSignature )
                 continue;
             // symstore 의 열쇠: GUID 를 Data1 · Data2 · Data3 은 수로, Data4 는 바이트로 대문자 16진 32 자리 + age 16진.
-            StringBuilder<constant::kMaxBuffer256> text;
+            StringBuilder<constant::buffer::kMax256> text;
             text.appendFormat( "%#%#%#", Fmt( static_cast<uint32>( pRecord->_guid.Data1 ), Format().hexUpper().width( 8 ).zeroPad() ),
                                Fmt( static_cast<uint32>( pRecord->_guid.Data2 ), Format().hexUpper().width( 4 ).zeroPad() ),
                                Fmt( static_cast<uint32>( pRecord->_guid.Data3 ), Format().hexUpper().width( 4 ).zeroPad() ) );

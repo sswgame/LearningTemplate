@@ -232,8 +232,8 @@ namespace sw::editor
                 value = keyValue;
             }
         }
-        StringBuilder<constant::kMaxBuffer32> timeText;
-        StringBuilder<constant::kMaxBuffer32> valueText;
+        StringBuilder<constant::buffer::kMax32> timeText;
+        StringBuilder<constant::buffer::kMax32> valueText;
         timeText.append( time );
         valueText.append( value );
         vector<CatalogXMLNewAttribute> listAttribute;

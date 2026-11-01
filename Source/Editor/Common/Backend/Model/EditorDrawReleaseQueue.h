@@ -21,7 +21,7 @@ namespace sw::editor
      * @class EditorDrawReleaseQueue
      * @brief 에디터가 UI 스레드에서 해제한 리소스를 draw 스냅샷 번호 순서로 보관했다가, 렌더 스레드에서 디바이스의 해제 큐로 넘깁니다.
      * @details 리소스를 해제하는 쪽은 UI 스레드이고 그 리소스를 그리는 쪽은 렌더 스레드다. 렌더 스레드는 UI 가 마지막으로 낸 draw 스냅샷을 그리고,
-     *          패킷 링(`constant::kRenderFrameQueueDepth`) 때문에 UI 가 다음 스냅샷을 내기 전까지 같은 스냅샷을 여러 프레임에 걸쳐 다시 그린다.
+     *          패킷 링(`constant::render::kRenderFrameQueueDepth`) 때문에 UI 가 다음 스냅샷을 내기 전까지 같은 스냅샷을 여러 프레임에 걸쳐 다시 그린다.
      *          그래서 UI 스레드에서는 그 리소스가 어느 프레임까지 쓰이는지 알 수 없고, 거기서 읽은 펜스 값으로 해제하면 뒤에 대기 중인 프레임이
      *          해제된 리소스를 쓰게 된다.
      *

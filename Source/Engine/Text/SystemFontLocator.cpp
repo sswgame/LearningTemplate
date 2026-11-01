@@ -60,8 +60,8 @@ namespace sw
     {
         vector<string> listDirectory;
 #if defined( SW_PLATFORM_WINDOWS )
-        utf16 windowsDirectory[constant::kMaxPathSize];
-        if ( GetWindowsDirectoryW( reinterpret_cast<LPWSTR>( windowsDirectory ), constant::kMaxPathSize ) != 0 )
+        utf16 windowsDirectory[constant::file::kMaxPathSize];
+        if ( GetWindowsDirectoryW( reinterpret_cast<LPWSTR>( windowsDirectory ), constant::file::kMaxPathSize ) != 0 )
             SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::joinPath( StringUtil::utf16ToUTF8( windowsDirectory ), "Fonts" ) );
         // 관리자 권한 없이 설치한 글꼴(Windows 10 1809+)은 사용자 폴더에 있다.
         string localAppData;

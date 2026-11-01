@@ -838,7 +838,7 @@ namespace sw
         {
             context._pGlyphCache = &_pFontService->getGlyphCache();
             context._frameIndex  = context._pGlyphCache->getFrameIndex(); // 글리프 캐시의 시계다(프로파일러 프레임 수는 꺼지면 늘 0 이라 예산이 되살아나지 않는다)
-            context._pGlyphCache->setRasterBudgetNanoseconds( static_cast<int64>( gv_uiGlyphRasterBudgetMicros ) * constant::kNanosecondsPerMicrosecond );
+            context._pGlyphCache->setRasterBudgetNanoseconds( static_cast<int64>( gv_uiGlyphRasterBudgetMicros ) * constant::time::kNanosecondsPerMicrosecond );
             context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
         }
         return context;

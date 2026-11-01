@@ -3,7 +3,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -63,11 +63,11 @@ namespace sw
          */
         uint64 toMicros( uint64 nanos )
         {
-            return nanos / constant::kNanosecondsPerMicrosecond;
+            return nanos / constant::time::kNanosecondsPerMicrosecond;
         }
 
         /** @brief 표가 어긋나지 않게 이름을 고정 폭으로 맞춥니다. */
-        void padRight( fixed_string<constant::kMaxBuffer64>& out, const utf8* pText, size_t width )
+        void padRight( fixed_string<constant::buffer::kMax64>& out, const utf8* pText, size_t width )
         {
             out.clear();
             out.append( pText != nullptr ? pText : "" );
@@ -279,7 +279,7 @@ namespace sw
             return;
         }
 
-        fixed_string<constant::kMaxBuffer64> nameColumn;
+        fixed_string<constant::buffer::kMax64> nameColumn;
         padRight( nameColumn, "scope", 32 );
 
         SW_LOG_INFO( "[Profile] ===== %# — %# frames =====", pTitle != nullptr ? pTitle : "", frames );

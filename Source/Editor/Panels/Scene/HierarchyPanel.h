@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
@@ -64,13 +64,13 @@ namespace sw::editor
         void drawTreeEmptyArea( GameObjectManager* pManager );
 
         // 루트 순서 · 필터 결과 · 그린 행 순서 · 선택 명령은 `HierarchyRowModel`(Model/, ImGui 없음)이 들고, 구조 세대가 바뀔 때만 다시 짓는다(`HierarchyRowModel::refresh`).
-        uint64                                _renamingObjectID;
-        uint64                                _lastDrawnRootID; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootID`)
-        fixed_string<constant::kMaxBuffer128> _filterBuffer;
-        fixed_string<constant::kMaxBuffer256> _renameBuffer;
-        uint32                                _visibleRootCount; ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)
-        uint32                                _drawnRootCount;   ///< 마지막 프레임에 실제로 그린 루트 수(`getDrawnRootCount`)
-        bool                                  _bFocusRenameInput;
-        bool                                  _bSkipOffscreenRows; ///< 화면 밖의 접힌 루트를 빈 공간으로 둔다(`setOffscreenRowSkipEnabled`)
+        uint64                                  _renamingObjectID;
+        uint64                                  _lastDrawnRootID; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootID`)
+        fixed_string<constant::buffer::kMax128> _filterBuffer;
+        fixed_string<constant::buffer::kMax256> _renameBuffer;
+        uint32                                  _visibleRootCount; ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)
+        uint32                                  _drawnRootCount;   ///< 마지막 프레임에 실제로 그린 루트 수(`getDrawnRootCount`)
+        bool                                    _bFocusRenameInput;
+        bool                                    _bSkipOffscreenRows; ///< 화면 밖의 접힌 루트를 빈 공간으로 둔다(`setOffscreenRowSkipEnabled`)
     };
 } // namespace sw::editor

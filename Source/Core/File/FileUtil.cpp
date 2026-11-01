@@ -78,7 +78,7 @@ namespace sw
                     return false;
                 const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
                 // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
-                StringBuilder<constant::kMaxPathSize> tempPathBuilder;
+                StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
                 tempPathBuilder.append( filePath.c_str() )
                     .append( ".tmp" )
                     .append( processID )
@@ -475,7 +475,7 @@ namespace sw
         if ( ext.empty() )
             return string( base );
 
-        StringBuilder<constant::kMaxBuffer256> sb;
+        StringBuilder<constant::buffer::kMax256> sb;
         sb.append( base );
         if ( ext.front() != '.' )
             sb.append( '.' );
@@ -587,7 +587,7 @@ namespace sw
             rel.remove_prefix( 1 );
         }
 
-        StringBuilder<constant::kMaxBuffer512> sb;
+        StringBuilder<constant::buffer::kMax512> sb;
         (void)sb.ensureCapacity( static_cast<uint32>( r.size() + 1 + rel.size() ) ); // 미리 잡기일 뿐이다 — 못 잡으면 append 가 저마다 다시 잡는다
         for ( const utf8 ch : r )
         {
@@ -725,7 +725,7 @@ namespace sw
             return false;
         }
         // 크기를 재지 않고 끝(EOF)까지 덩이로 읽는다 — 의사 파일은 크기를 0 으로 알린다.
-        utf8 arrChunk[constant::kMaxBuffer4096];
+        utf8 arrChunk[constant::buffer::kMax4096];
         bool bWithinLimit = true;
         while ( bWithinLimit )
         {
@@ -999,8 +999,8 @@ namespace sw
             string path{ basePath };
             if ( attempt > 1 )
             {
-                utf8 arrNumber[constant::kMaxBuffer64];
-                formatstring( arrNumber, constant::kMaxBuffer64, "%#%#", numberSeparator, attempt );
+                utf8 arrNumber[constant::buffer::kMax64];
+                formatstring( arrNumber, constant::buffer::kMax64, "%#%#", numberSeparator, attempt );
                 path.append( arrNumber );
             }
             path.append( extension );

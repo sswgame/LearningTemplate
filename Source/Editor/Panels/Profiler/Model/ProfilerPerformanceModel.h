@@ -3,7 +3,7 @@
  * @brief 프로파일러 패널 Performance 탭의 상태입니다 — 벽시계 프레임 시간 기록과 그 통계, 리소스 카탈로그 개수 잡(ImGui 없음).
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 

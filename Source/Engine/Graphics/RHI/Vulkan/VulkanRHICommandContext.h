@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -101,7 +101,7 @@ namespace sw
         /// @brief 슬롯 세트를 할당받는 풀 그룹입니다. nullptr 이면 디바이스 프레임 스트림의 이번 링 슬롯 그룹을 씁니다.
         VulkanDescriptorPoolSet* _pDescriptorPoolSet;
         /// @brief 마지막으로 연 이벤트 마커(패스 이름)입니다. 디바이스를 잃었을 때 "마지막으로 제출한 패스" 를 로그에 적는 데 씁니다.
-        fixed_string<constant::kMaxBuffer64> _lastEventMarker;
+        fixed_string<constant::buffer::kMax64> _lastEventMarker;
 
         /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 것이 있으면 그것, 없으면 디바이스의 현재 버퍼). */
         VkCommandBuffer commandBuffer() const;

@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/ASCIIUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -435,8 +435,8 @@ namespace sw
         template <typename T>
         static void appendNumber( string& inoutText, T value, int32 precisionOrBase = -1 )
         {
-            utf8         arrBuffer[constant::kMaxBuffer64];
-            const uint32 length = formatNumber( arrBuffer, constant::kMaxBuffer64, value, precisionOrBase );
+            utf8         arrBuffer[constant::buffer::kMax64];
+            const uint32 length = formatNumber( arrBuffer, constant::buffer::kMax64, value, precisionOrBase );
             inoutText.append( arrBuffer, length );
         }
     };

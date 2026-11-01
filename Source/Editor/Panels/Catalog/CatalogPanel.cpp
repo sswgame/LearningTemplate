@@ -244,7 +244,7 @@ namespace sw::editor
             {
                 ++end;
             }
-            StringBuilder<constant::kMaxBuffer128> header;
+            StringBuilder<constant::buffer::kMax128> header;
             header.appendFormat( "%# (%#)###kind_%#", _listFile[index]._kindLabel, end - index, _listFile[index]._kindLabel );
             if ( ImGui::CollapsingHeader( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) )
             {

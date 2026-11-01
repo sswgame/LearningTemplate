@@ -40,8 +40,8 @@ namespace sw::editor
         void drawPreview();
         void requestToggle( const string& moduleName, bool bEnabled );
 
-        ModulesModel                         _model;
-        bool                                 _bOpenPreview; ///< 이번 프레임에 확인 창을 연다(테이블 밖 ID 로 열려고 미룬다)
-        fixed_string<constant::kMaxBuffer64> _filter;       ///< 이름 · 설명 검색
+        ModulesModel                           _model;
+        bool                                   _bOpenPreview; ///< 이번 프레임에 확인 창을 연다(테이블 밖 ID 로 열려고 미룬다)
+        fixed_string<constant::buffer::kMax64> _filter;       ///< 이름 · 설명 검색
     };
 } // namespace sw::editor

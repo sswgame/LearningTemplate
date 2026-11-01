@@ -9,7 +9,7 @@
  * 라이브러리 타입을 하나도 쓰지 않으므로 Tracy 를 다른 뷰어로 바꿔도 호출부는 그대로입니다.
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -62,7 +62,7 @@ namespace sw
     {
     public:
         /** @brief GPU 컨텍스트를 만들지 못했을 때의 값입니다. */
-        static constexpr uint32 kInvalidGPUContext = invalid_index::kUint32;
+        static constexpr uint32 kInvalidGPUContext = constant::invalid_index::kUint32;
 
         IProfilerBackend()          = default;
         virtual ~IProfilerBackend() = default;

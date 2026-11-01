@@ -7,7 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -62,9 +62,9 @@ namespace sw::editor
         /** @brief 엣지 워프 프리셋 하나(N · E · S · W)의 대상 맵과 대상 셀 입력칸입니다. */
         struct EdgeWarpPreset
         {
-            fixed_string<constant::kMaxBuffer128> _target{};
-            int32                                 _tileX{ 1 };
-            int32                                 _tileY{ 1 };
+            fixed_string<constant::buffer::kMax128> _target{};
+            int32                                   _tileX{ 1 };
+            int32                                   _tileY{ 1 };
         };
         static constexpr int32 kEdgeCount = 4;
 
@@ -117,28 +117,28 @@ namespace sw::editor
         /** @brief Rect 도구로 누른 채 끌고 있으면 그 시작 셀을 채우고 true 입니다. */
         bool readRectStart( int2& outCell ) const;
 
-        bool&                                  editErase() { return _bErase; }
-        bool                                   isErase() const { return _bErase; }
-        int32&                                 editPaintHeight() { return _paintHeight; }
-        int32&                                 editAtlasID() { return _atlasID; }
-        float32*                               editTint() { return _arrTint; }
-        int32&                                 editPaintDataValue() { return _paintDataValue; }
-        int32&                                 editBrushIndex() { return _brushIndex; }
-        int32                                  getBrushIndex() const { return _brushIndex; }
-        fixed_string<constant::kMaxBuffer128>& editWarpTarget() { return _warpTarget; }
-        int32&                                 editWarpTileX() { return _warpTx; }
-        int32&                                 editWarpTileY() { return _warpTy; }
-        EdgeWarpPreset&                        editEdgePreset( int32 edge ) { return _arrEdgePreset[edge]; }
+        bool&                                    editErase() { return _bErase; }
+        bool                                     isErase() const { return _bErase; }
+        int32&                                   editPaintHeight() { return _paintHeight; }
+        int32&                                   editAtlasID() { return _atlasID; }
+        float32*                                 editTint() { return _arrTint; }
+        int32&                                   editPaintDataValue() { return _paintDataValue; }
+        int32&                                   editBrushIndex() { return _brushIndex; }
+        int32                                    getBrushIndex() const { return _brushIndex; }
+        fixed_string<constant::buffer::kMax128>& editWarpTarget() { return _warpTarget; }
+        int32&                                   editWarpTileX() { return _warpTx; }
+        int32&                                   editWarpTileY() { return _warpTy; }
+        EdgeWarpPreset&                          editEdgePreset( int32 edge ) { return _arrEdgePreset[edge]; }
 
         // ------------------------------------------------------------------------------
         // 4) 입력칸 · 맵 읽기
         // ------------------------------------------------------------------------------
-        fixed_string<constant::kMaxBuffer256>& editPath() { return _pathBuffer; }
-        const utf8*                            getPath() const { return _pathBuffer.c_str(); }
-        fixed_string<constant::kMaxBuffer128>& editName() { return _nameBuffer; }
-        fixed_string<constant::kMaxBuffer256>& editTileSetInput() { return _tileSetBuffer; }
-        int32&                                 editInputWidth() { return _inputWidth; }
-        int32&                                 editInputHeight() { return _inputHeight; }
+        fixed_string<constant::buffer::kMax256>& editPath() { return _pathBuffer; }
+        const utf8*                              getPath() const { return _pathBuffer.c_str(); }
+        fixed_string<constant::buffer::kMax128>& editName() { return _nameBuffer; }
+        fixed_string<constant::buffer::kMax256>& editTileSetInput() { return _tileSetBuffer; }
+        int32&                                   editInputWidth() { return _inputWidth; }
+        int32&                                   editInputHeight() { return _inputHeight; }
 
         const TileMapXMLData& getMap() const { return _map; }
         const TileSetAsset&   getTileSet() const { return _tileSet; }
@@ -177,35 +177,35 @@ namespace sw::editor
         void pickCell( int32 x, int32 y );
 
     private:
-        fixed_string<constant::kMaxBuffer256> _pathBuffer;
-        fixed_string<constant::kMaxBuffer128> _nameBuffer; ///< 맵 이름 입력칸. 저장할 때 맵으로 옮긴다
-        fixed_string<constant::kMaxBuffer128> _warpTarget;
-        EdgeWarpPreset                        _arrEdgePreset[kEdgeCount];
-        string                                _status;
-        TileMapXMLData                        _map;            ///< 편집 중인 맵(파일 스키마 그대로). 이름은 `_nameBuffer` 가 보관하고 저장할 때 옮긴다.
-        fixed_string<constant::kMaxBuffer256> _tileSetBuffer;  ///< Tile 레이어의 타일셋 경로 입력란
-        TileSetAsset                          _tileSet;        ///< 읽은 타일셋
-        string                                _loadedTileSet;  ///< `_tileSet` 을 읽은 경로. 읽기에 실패한 경로도 기록해서 같은 실패를 반복하지 않는다
-        vector<uint16>                        _listBrushIndex; ///< 그릴 때마다 맵에서 옮겨 둔 셀별 브러시 번호 + 1
-        vector<int2>                          _listStrokeCell; ///< 이번 프레임에 칠할 셀(지난 셀에서 이번 셀까지의 선분). 멤버로 두어 프레임마다 할당하지 않는다
-        vector<uint64>                        _listCellValue;  ///< 채우기 도구가 비교할 셀 값. 멤버로 두어 누를 때마다 할당하지 않는다
-        int32                                 _brushIndex;     ///< 칠할 브러시(타일셋 순번)
-        float32                               _arrTint[3];
-        int32                                 _inputWidth;
-        int32                                 _inputHeight;
-        int32                                 _paintHeight;
-        int32                                 _atlasID;
-        int32                                 _warpTx;
-        int32                                 _warpTy;
-        int2                                  _lastPaintCell;  ///< 지난 프레임에 칠한 셀. `_bStrokeActive` 일 때만 의미가 있다
-        int2                                  _rectStartCell;  ///< Rect 도구로 누른 셀. `_bRectActive` 일 때만 의미가 있다
-        int32                                 _dataLayerIndex; ///< 칠할 데이터 레이어(`_map._listDataLayer` 번호). `_layer == Data` 일 때만 의미가 있다
-        int32                                 _paintDataValue; ///< 데이터 레이어에 칠할 값(지우기는 그 레이어의 기본값)
-        PaintLayer                            _layer;
-        TileFlagLayer                         _flagLayer;
-        PaintTool                             _tool;
-        bool                                  _bErase;
-        bool                                  _bStrokeActive; ///< 지난 프레임에 칠하고 있었다. 이번 프레임은 `_lastPaintCell` 에서 이어서 칠한다
-        bool                                  _bRectActive;   ///< Rect 도구로 누른 채 드래그하고 있다
+        fixed_string<constant::buffer::kMax256> _pathBuffer;
+        fixed_string<constant::buffer::kMax128> _nameBuffer; ///< 맵 이름 입력칸. 저장할 때 맵으로 옮긴다
+        fixed_string<constant::buffer::kMax128> _warpTarget;
+        EdgeWarpPreset                          _arrEdgePreset[kEdgeCount];
+        string                                  _status;
+        TileMapXMLData                          _map;            ///< 편집 중인 맵(파일 스키마 그대로). 이름은 `_nameBuffer` 가 보관하고 저장할 때 옮긴다.
+        fixed_string<constant::buffer::kMax256> _tileSetBuffer;  ///< Tile 레이어의 타일셋 경로 입력란
+        TileSetAsset                            _tileSet;        ///< 읽은 타일셋
+        string                                  _loadedTileSet;  ///< `_tileSet` 을 읽은 경로. 읽기에 실패한 경로도 기록해서 같은 실패를 반복하지 않는다
+        vector<uint16>                          _listBrushIndex; ///< 그릴 때마다 맵에서 옮겨 둔 셀별 브러시 번호 + 1
+        vector<int2>                            _listStrokeCell; ///< 이번 프레임에 칠할 셀(지난 셀에서 이번 셀까지의 선분). 멤버로 두어 프레임마다 할당하지 않는다
+        vector<uint64>                          _listCellValue;  ///< 채우기 도구가 비교할 셀 값. 멤버로 두어 누를 때마다 할당하지 않는다
+        int32                                   _brushIndex;     ///< 칠할 브러시(타일셋 순번)
+        float32                                 _arrTint[3];
+        int32                                   _inputWidth;
+        int32                                   _inputHeight;
+        int32                                   _paintHeight;
+        int32                                   _atlasID;
+        int32                                   _warpTx;
+        int32                                   _warpTy;
+        int2                                    _lastPaintCell;  ///< 지난 프레임에 칠한 셀. `_bStrokeActive` 일 때만 의미가 있다
+        int2                                    _rectStartCell;  ///< Rect 도구로 누른 셀. `_bRectActive` 일 때만 의미가 있다
+        int32                                   _dataLayerIndex; ///< 칠할 데이터 레이어(`_map._listDataLayer` 번호). `_layer == Data` 일 때만 의미가 있다
+        int32                                   _paintDataValue; ///< 데이터 레이어에 칠할 값(지우기는 그 레이어의 기본값)
+        PaintLayer                              _layer;
+        TileFlagLayer                           _flagLayer;
+        PaintTool                               _tool;
+        bool                                    _bErase;
+        bool                                    _bStrokeActive; ///< 지난 프레임에 칠하고 있었다. 이번 프레임은 `_lastPaintCell` 에서 이어서 칠한다
+        bool                                    _bRectActive;   ///< Rect 도구로 누른 채 드래그하고 있다
     };
 } // namespace sw::editor

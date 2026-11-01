@@ -112,37 +112,37 @@ namespace sw::editor
         void updatePlayReactions();
 
     private:
-        deque<LogEntry> _listEntry            SW_GUARDED_BY( _entriesMutex );
-        ThreadRole                            _uiThread;                  ///< UI 스레드 역할 — 그리기용 사본 · 행 · 선택은 패널을 그리는 스레드만 만진다(잠금이 아니라 분석용 능력)
-        deque<LogEntry> _listDrawSnapshot     SW_GUARDED_BY( _uiThread ); ///< 꽉 찬 뒤에도 새 줄마다 앞줄을 O(1) 로 뺀다(vector 앞 지우기는 전체를 민다)
-        vector<string> _listTagCache          SW_GUARDED_BY( _uiThread ); ///< 태그 팝업이 보이는 태그 목록. `_snapshotGeneration` 이 바뀐 뒤 팝업을 열 때만 다시 짓는다
-        vector<const LogEntry*> _listVisible  SW_GUARDED_BY( _uiThread );
-        vector<ConsoleLogRow> _listRow        SW_GUARDED_BY( _uiThread );
-        ConsoleLogSelection _selection        SW_GUARDED_BY( _uiThread );
-        string                                _cachedFilter;
-        EditorLogTagFilter                    _tagFilter;
-        uint32                                _cachedTagRevision;
-        mutex                                 _entriesMutex;
-        Subscription                          _logListenerSubscription; ///< 전역 로그 리스너. 소멸자 · `shutdown` 이 항목보다 먼저 푼다(콜백이 항목을 만진다)
-        uint64                                _errorSerial;             ///< 받은 오류 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                _entrySerial;             ///< 받은 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                _snapshotSerial;          ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
-        uint64                                _seenErrorSerial;         ///< Error Pause 가 마지막으로 확인한 누계
-        uint64                                _snapshotGeneration;      ///< 그리기용 복사본이 바뀔 때(새 줄 · 지우기)마다 오른다. UI 스레드만 쓴다
-        uint64                                _tagCacheGeneration;      ///< `_listTagCache` 를 지은 때의 `_snapshotGeneration`
-        fixed_string<constant::kMaxBuffer128> _filterBuffer;
-        DevConsole                            _devConsole;
-        fixed_string<constant::kMaxBuffer512> _commandBuffer;
-        bool                                  _arrLevelEnabled[4];
-        bool                                  _arrCachedLevelEnabled[4];
-        bool                                  _bAutoScroll;
-        uint8                                 _bHasNewLogs   : 1 SW_GUARDED_BY( _entriesMutex );
-        uint8                                 _bCollapse     : 1; ///< 같은 행을 한 행으로 접는다(유니티의 Collapse)
-        uint8                                 _bClearOnPlay  : 1; ///< Play 를 시작하면 지운다
-        uint8                                 _bErrorPause   : 1; ///< Play 중 오류 행이 들어오면 멈춘다
-        uint8                                 _bScrollToEnd  : 1; ///< 다음 그리기에서 맨 아래로 내린다. 명령을 입력한 뒤에 켠다
-        uint8                                 _bWasStopped   : 1; ///< 지난 그리기에 Play 가 정지 상태였다
-        uint8                                 _bRowsChanged  : 1; ///< 행을 다시 만들었다. 선택 범위를 자른다
-        [[maybe_unused]] uint8                _reservedFlags : 1;
+        deque<LogEntry> _listEntry              SW_GUARDED_BY( _entriesMutex );
+        ThreadRole                              _uiThread;                  ///< UI 스레드 역할 — 그리기용 사본 · 행 · 선택은 패널을 그리는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        deque<LogEntry> _listDrawSnapshot       SW_GUARDED_BY( _uiThread ); ///< 꽉 찬 뒤에도 새 줄마다 앞줄을 O(1) 로 뺀다(vector 앞 지우기는 전체를 민다)
+        vector<string> _listTagCache            SW_GUARDED_BY( _uiThread ); ///< 태그 팝업이 보이는 태그 목록. `_snapshotGeneration` 이 바뀐 뒤 팝업을 열 때만 다시 짓는다
+        vector<const LogEntry*> _listVisible    SW_GUARDED_BY( _uiThread );
+        vector<ConsoleLogRow> _listRow          SW_GUARDED_BY( _uiThread );
+        ConsoleLogSelection _selection          SW_GUARDED_BY( _uiThread );
+        string                                  _cachedFilter;
+        EditorLogTagFilter                      _tagFilter;
+        uint32                                  _cachedTagRevision;
+        mutex                                   _entriesMutex;
+        Subscription                            _logListenerSubscription; ///< 전역 로그 리스너. 소멸자 · `shutdown` 이 항목보다 먼저 푼다(콜백이 항목을 만진다)
+        uint64                                  _errorSerial;             ///< 받은 오류 행의 누계. `_entriesMutex` 가 보호한다
+        uint64                                  _entrySerial;             ///< 받은 행의 누계. `_entriesMutex` 가 보호한다
+        uint64                                  _snapshotSerial;          ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
+        uint64                                  _seenErrorSerial;         ///< Error Pause 가 마지막으로 확인한 누계
+        uint64                                  _snapshotGeneration;      ///< 그리기용 복사본이 바뀔 때(새 줄 · 지우기)마다 오른다. UI 스레드만 쓴다
+        uint64                                  _tagCacheGeneration;      ///< `_listTagCache` 를 지은 때의 `_snapshotGeneration`
+        fixed_string<constant::buffer::kMax128> _filterBuffer;
+        DevConsole                              _devConsole;
+        fixed_string<constant::buffer::kMax512> _commandBuffer;
+        bool                                    _arrLevelEnabled[4];
+        bool                                    _arrCachedLevelEnabled[4];
+        bool                                    _bAutoScroll;
+        uint8                                   _bHasNewLogs   : 1 SW_GUARDED_BY( _entriesMutex );
+        uint8                                   _bCollapse     : 1; ///< 같은 행을 한 행으로 접는다(유니티의 Collapse)
+        uint8                                   _bClearOnPlay  : 1; ///< Play 를 시작하면 지운다
+        uint8                                   _bErrorPause   : 1; ///< Play 중 오류 행이 들어오면 멈춘다
+        uint8                                   _bScrollToEnd  : 1; ///< 다음 그리기에서 맨 아래로 내린다. 명령을 입력한 뒤에 켠다
+        uint8                                   _bWasStopped   : 1; ///< 지난 그리기에 Play 가 정지 상태였다
+        uint8                                   _bRowsChanged  : 1; ///< 행을 다시 만들었다. 선택 범위를 자른다
+        [[maybe_unused]] uint8                  _reservedFlags : 1;
     };
 } // namespace sw::editor

@@ -179,7 +179,7 @@ namespace sw
             return;
         for ( CanvasMarkerRecord& record : packet._canvas._listMarker )
         {
-            if ( record._bActive != 0 && record._primitiveIndex != invalid_index::kUint32 )
+            if ( record._bActive != 0 && record._primitiveIndex != constant::invalid_index::kUint32 )
                 record._instanceSlot = _gpuSceneBuilder->findOpaqueInstanceSlot( record._primitiveIndex );
         }
     }

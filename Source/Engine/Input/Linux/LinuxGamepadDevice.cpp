@@ -133,9 +133,9 @@ namespace sw
 {
     LinuxGamepadDevice::LinuxGamepadDevice( uint32 userIndex )
         : GamepadDevice{ userIndex }
-        , _fdJoystick{ invalid_index::kInt32 }
-        , _fdForceFeedback{ invalid_index::kInt32 }
-        , _ffEffectID{ invalid_index::kInt16 }
+        , _fdJoystick{ constant::invalid_index::kInt32 }
+        , _fdForceFeedback{ constant::invalid_index::kInt32 }
+        , _ffEffectID{ constant::invalid_index::kInt16 }
         , _ffStrongMagnitude{ 0 }
         , _ffWeakMagnitude{ 0 }
         , _reconnectTimer{ 1.0f }
@@ -153,7 +153,7 @@ namespace sw
 
     void LinuxGamepadDevice::tryOpenJoystick()
     {
-        StringBuilder<constant::kMaxPathSize> pathBuilder;
+        StringBuilder<constant::file::kMaxPathSize> pathBuilder;
         pathBuilder.appendFormat( "/dev/input/js%#", _deviceIndex );
 
         const int32 fd = open( pathBuilder.c_str(), O_RDONLY | O_NONBLOCK );
@@ -189,7 +189,7 @@ namespace sw
         if ( _fdJoystick >= 0 )
         {
             close( _fdJoystick );
-            _fdJoystick = invalid_index::kInt32;
+            _fdJoystick = constant::invalid_index::kInt32;
         }
     }
 
@@ -197,7 +197,7 @@ namespace sw
     {
         // /sys/class/input/jsN/device/ 는 실제 입력 장치 디렉터리를 가리키고, 같은 물리 컨트롤러의
         // evdev 노드(eventM)가 그 안에 형제 항목으로 있다. 그것을 찾아 /dev/input/eventM 을 연다.
-        StringBuilder<constant::kMaxPathSize> sysfsPathBuilder;
+        StringBuilder<constant::file::kMaxPathSize> sysfsPathBuilder;
         sysfsPathBuilder.appendFormat( "/sys/class/input/js%#/device", _deviceIndex );
 
         DIR* pDir = opendir( sysfsPathBuilder.c_str() );
@@ -253,10 +253,10 @@ namespace sw
             if ( _ffEffectID >= 0 )
             {
                 ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectID );
-                _ffEffectID = invalid_index::kInt16;
+                _ffEffectID = constant::invalid_index::kInt16;
             }
             close( _fdForceFeedback );
-            _fdForceFeedback = invalid_index::kInt32;
+            _fdForceFeedback = constant::invalid_index::kInt32;
         }
         _ffStrongMagnitude = 0;
         _ffWeakMagnitude   = 0;
@@ -389,7 +389,7 @@ namespace sw
         if ( _ffEffectID >= 0 )
         {
             ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectID );
-            _ffEffectID = invalid_index::kInt16;
+            _ffEffectID = constant::invalid_index::kInt16;
         }
 
         if ( strongMagnitude == 0 && weakMagnitude == 0 )
@@ -438,7 +438,7 @@ namespace sw
         if ( _fdForceFeedback >= 0 && _ffEffectID >= 0 )
         {
             ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectID );
-            _ffEffectID = invalid_index::kInt16;
+            _ffEffectID = constant::invalid_index::kInt16;
         }
         _ffStrongMagnitude = 0;
         _ffWeakMagnitude   = 0;

@@ -236,10 +236,10 @@ namespace sw
         }
         LiveLinkFaceInternal::Reader reader( pData, size );
         const uint8                  version = reader.readUint8();
-        utf8                         arrMessage[constant::kMaxBuffer256]{};
+        utf8                         arrMessage[constant::buffer::kMax256]{};
         if ( reader.hasFailed() == false && static_cast<int32>( version ) != layout._packetVersion )
         {
-            formatstring( arrMessage, constant::kMaxBuffer256, "packet version %# but the layout reads version %#", static_cast<uint32>( version ), layout._packetVersion );
+            formatstring( arrMessage, constant::buffer::kMax256, "packet version %# but the layout reads version %#", static_cast<uint32>( version ), layout._packetVersion );
             outError = arrMessage;
             return false;
         }
@@ -250,7 +250,7 @@ namespace sw
         const uint8 channelCount = reader.readUint8();
         if ( reader.hasFailed() == false && channelCount != layout._listChannel.size() )
         {
-            formatstring( arrMessage, constant::kMaxBuffer256, "packet carries %# channels but the layout has %#", static_cast<uint32>( channelCount ),
+            formatstring( arrMessage, constant::buffer::kMax256, "packet carries %# channels but the layout has %#", static_cast<uint32>( channelCount ),
                           static_cast<uint32>( layout._listChannel.size() ) );
             outError = arrMessage;
             return false;
@@ -268,7 +268,7 @@ namespace sw
             }
             else
             {
-                formatstring( arrMessage, constant::kMaxBuffer256, "packet has %# bytes past its last channel", static_cast<uint64>( reader.getRemaining() ) );
+                formatstring( arrMessage, constant::buffer::kMax256, "packet has %# bytes past its last channel", static_cast<uint64>( reader.getRemaining() ) );
                 outError = arrMessage;
             }
             outFrame = LiveLinkFaceFrame{};

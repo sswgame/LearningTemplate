@@ -156,10 +156,10 @@ namespace sw
         uint32 _extentHeight{ 0 };
         uint32 _imageIndex{ 0 };
 
-        /// @brief 요청한 백버퍼 포맷입니다(계약값 `constant::kBackBufferFormat`).
-        RHIFormat _requestedFormat{ constant::kBackBufferFormat };
+        /// @brief 요청한 백버퍼 포맷입니다(계약값 `constant::render::kBackBufferFormat`).
+        RHIFormat _requestedFormat{ constant::render::kBackBufferFormat };
         /// @brief 실제로 채택된 포맷입니다. 요청과 다르면 `IRHIDevice::getBackBufferFormat` 으로 드러납니다.
-        RHIFormat _actualBackBufferFormat{ constant::kBackBufferFormat };
+        RHIFormat _actualBackBufferFormat{ constant::render::kBackBufferFormat };
         /// @brief 요청한 백버퍼 개수입니다. 0 이면 서피스 최소값 + 1 을 씁니다.
         uint32 _requestedBufferCount{ 0 };
         /// @brief 요청한 VSync 입니다. Vulkan 에서는 present 모드가 이 역할을 합니다(FIFO = 켬).

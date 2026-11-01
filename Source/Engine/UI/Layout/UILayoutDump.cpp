@@ -3,7 +3,7 @@
 #include "Engine/UI/Layout/UILayoutDump.h"
 
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -29,8 +29,8 @@ namespace sw
                 inoutText += " collapsed\n";
                 return;
             }
-            const WidgetGeometry&                 geometry = widget.getGeometry();
-            fixed_string<constant::kMaxBuffer128> line{};
+            const WidgetGeometry&                   geometry = widget.getGeometry();
+            fixed_string<constant::buffer::kMax128> line{};
             formatstring( line.data(), line.capacity(), " %.2f %.2f %.2f %.2f\n", geometry._position._x * physicalScale, geometry._position._y * physicalScale,
                           geometry._size._x * physicalScale, geometry._size._y * physicalScale );
             inoutText += line.c_str();

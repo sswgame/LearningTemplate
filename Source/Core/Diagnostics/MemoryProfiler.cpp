@@ -66,7 +66,7 @@ namespace sw
             template <typename... Args>
             [[maybe_unused]] static void printLeakMessage( const utf8* pFormat, Args&&... args )
             {
-                utf8 arrBuf[constant::kMaxBuffer1024]{};
+                utf8 arrBuf[constant::buffer::kMax1024]{};
                 formatstring( arrBuf, static_cast<uint32>( sizeof( arrBuf ) ), pFormat, std::forward<Args>( args )... );
                 std::fputs( arrBuf, stderr );
                 std::fputc( '\n', stderr );

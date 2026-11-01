@@ -25,9 +25,8 @@ namespace sw
     {
         struct AutomationScenarioInternal
         {
-            static constexpr float32 kDefaultFixedDelta         = 1.0f / 60.0f;
-            static constexpr uint32  kDefaultTimeoutFrames      = 3600;
-            static constexpr uint32  kDefaultStartTimeoutFrames = 1200;
+            static constexpr uint32 kDefaultTimeoutFrames      = 3600;
+            static constexpr uint32 kDefaultStartTimeoutFrames = 1200;
 
             /**
              * @brief 파일을 찾지 못한 이유를 막힌 단계(`[read]`)와 함께 적습니다. 리소스 ID 가 안 풀리는 원인(리소스 루트 · 작업 폴더 · 낱개 파일 금지 구성)이 로그 한 줄에 보이게 한다.
@@ -224,7 +223,7 @@ namespace sw
         , _testOptions{}
         , _name{}
         , _sourcePath{}
-        , _fixedDelta{ AutomationScenarioInternal::kDefaultFixedDelta }
+        , _fixedDelta{ constant::time::kDefaultFixedStepSeconds }
         , _wallTimeoutSeconds{ kDefaultWallTimeoutSeconds }
         , _timeoutFrames{ AutomationScenarioInternal::kDefaultTimeoutFrames }
         , _startTimeoutFrames{ AutomationScenarioInternal::kDefaultStartTimeoutFrames }

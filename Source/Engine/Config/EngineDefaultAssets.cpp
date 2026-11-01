@@ -29,7 +29,7 @@ namespace sw
     bool EngineDefaultAssets::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetRelativePath = assetID.view();
-        const string      path              = assetRelativePath.empty() ? string( path::kEngineDefaultAssets ) : string( assetRelativePath );
+        const string      path              = assetRelativePath.empty() ? string( constant::path::kEngineDefaultAssets ) : string( assetRelativePath );
 
         // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다. 그래서 레지스트리를 이름으로 뒤질
         // 필요가 없고, Engine 내부 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.

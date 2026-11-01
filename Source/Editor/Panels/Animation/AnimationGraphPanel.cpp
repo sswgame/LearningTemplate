@@ -594,12 +594,12 @@ namespace sw::editor
         ImGui::SeparatorText( "Transitions" );
         for ( size_t index = 0; index < _graph._listLink.size(); ++index )
         {
-            const GraphLink&                      link   = _graph._listLink[index];
-            const auto                            itFrom = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
-                                       { return node._id == link._fromNode; } );
-            const auto                            itTo   = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
-                                         { return node._id == link._toNode; } );
-            fixed_string<constant::kMaxBuffer128> label;
+            const GraphLink&                        link   = _graph._listLink[index];
+            const auto                              itFrom = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
+                                         { return node._id == link._fromNode; } );
+            const auto                              itTo   = std::find_if( _graph._listNode.begin(), _graph._listNode.end(), [&link]( const GraphNode& node )
+                                           { return node._id == link._toNode; } );
+            fixed_string<constant::buffer::kMax128> label;
             formatstring( label.data(), label.capacity(), "%s -> %s%s", itFrom != _graph._listNode.end() ? itFrom->_name.c_str() : "?", itTo != _graph._listNode.end() ? itTo->_name.c_str() : "?",
                           link._op != AnimationConditionOp::None ? "  [if]" : "" );
             ImGui::PushID( static_cast<int32>( link._id ) );

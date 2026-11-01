@@ -99,14 +99,14 @@ namespace sw::editor
     {
         float32    frameMicro{ 0.0f };
         const bool bHasFrame = _scopeHistory.readValue( "GT.Frame", 0, frameMicro );
-        const bool bSpike    = bHasFrame && frameMicro >= _spikeThresholdMs * constant::kMicrosecondsPerMillisecond;
+        const bool bSpike    = bHasFrame && frameMicro >= _spikeThresholdMs * constant::time::kMicrosecondsPerMillisecond;
         if ( _bPauseOnSpike == SW_FALSE || bSpike == false )
             return;
         _bCapturePaused        = SW_TRUE;
         _rowQuery._frameOffset = 0;
         if ( EditorPlaySession::isPlaying() )
             EditorPlaySession::pause();
-        SW_LOG_INFO( "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
+        SW_LOG_INFO( "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::time::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
                      Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
     }
 } // namespace sw::editor

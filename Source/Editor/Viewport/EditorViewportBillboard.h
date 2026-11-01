@@ -49,7 +49,7 @@ namespace sw::editor
         /** @brief 레지스트리의 빌보드 종류 컴포넌트 중 화면에 들어오는 것을 모읍니다(먼저 비운다). 한 오브젝트에 둘이면 먼저 찾은 하나만입니다. */
         static void collect( const GameObjectManager& manager, const float4x4& viewProj, const float2& canvasPos, const float2& canvasSize,
                              const CameraComponent* pSkipCamera, vector<EditorViewportBillboardItem>& outListItem );
-        /** @brief 화면 점 @p point 에서 배지 반지름 안의 가장 가까운 빌보드 위치입니다. 없으면 `invalid_index::kUint32` 입니다. */
+        /** @brief 화면 점 @p point 에서 배지 반지름 안의 가장 가까운 빌보드 위치입니다. 없으면 `constant::invalid_index::kUint32` 입니다. */
         static uint32 findAt( const vector<EditorViewportBillboardItem>& listItem, const float2& point );
         /** @brief 배지 지름(픽셀 — 26 × DPI 배율)입니다. */
         static float32 getDiameter();

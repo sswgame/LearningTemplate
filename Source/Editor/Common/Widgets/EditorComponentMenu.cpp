@@ -25,7 +25,7 @@
 
 namespace sw::editor
 {
-    bool EditorComponentMenu::drawAddComponentList( GameObject* pObj, fixed_string<constant::kMaxBuffer64>& search, const utf8* pMarkPrefix, bool bFocusSearch,
+    bool EditorComponentMenu::drawAddComponentList( GameObject* pObj, fixed_string<constant::buffer::kMax64>& search, const utf8* pMarkPrefix, bool bFocusSearch,
                                                     bool& outbFailed )
     {
         vector<hashed_string> listType;

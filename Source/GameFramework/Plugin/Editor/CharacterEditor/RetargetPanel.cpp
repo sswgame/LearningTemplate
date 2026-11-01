@@ -456,7 +456,7 @@ namespace sw::editor
     void RetargetPanel::drawChainRows()
     {
         vector<RetargetChain> listChain   = _profile.getChains(); // 사본을 고쳐 바뀌었을 때 넣는다
-        uint32                removeIndex = invalid_index::kUint32;
+        uint32                removeIndex = constant::invalid_index::kUint32;
         bool                  bChanged    = false;
         for ( uint32 chainIndex = 0; chainIndex < static_cast<uint32>( listChain.size() ) && chainIndex < _listChainText.size(); ++chainIndex )
         {
@@ -491,7 +491,7 @@ namespace sw::editor
                 removeIndex = chainIndex;
             ImGui::PopID();
         }
-        if ( removeIndex != invalid_index::kUint32 )
+        if ( removeIndex != constant::invalid_index::kUint32 )
         {
             listChain.erase( listChain.begin() + removeIndex );
             bChanged = true;
@@ -527,7 +527,7 @@ namespace sw::editor
     {
         using Internal                       = RetargetPanelInternal;
         vector<RetargetPoseBone> listPose    = _profile.getTargetPose(); // 사본을 고쳐 바뀌었을 때 넣는다
-        uint32                   removeIndex = invalid_index::kUint32;
+        uint32                   removeIndex = constant::invalid_index::kUint32;
         bool                     bChanged    = false;
         bool                     bDragged    = false;
         const float32            fieldWidth  = 220.0f * EditorThemeUtil::getDPIScale();
@@ -552,7 +552,7 @@ namespace sw::editor
                 removeIndex = poseIndex;
             ImGui::PopID();
         }
-        if ( removeIndex != invalid_index::kUint32 )
+        if ( removeIndex != constant::invalid_index::kUint32 )
         {
             listPose.erase( listPose.begin() + removeIndex );
             bChanged = true;
@@ -588,7 +588,7 @@ namespace sw::editor
     void RetargetPanel::drawBonePairRows()
     {
         vector<RetargetBonePair> listPair    = _profile.getBonePairs(); // 사본을 고쳐 바뀌었을 때 넣는다
-        uint32                   removeIndex = invalid_index::kUint32;
+        uint32                   removeIndex = constant::invalid_index::kUint32;
         for ( uint32 pairIndex = 0; pairIndex < static_cast<uint32>( listPair.size() ); ++pairIndex )
         {
             ImGui::PushID( static_cast<int32>( pairIndex ) );
@@ -599,7 +599,7 @@ namespace sw::editor
             ImGui::PopID();
         }
         bool bChanged = false;
-        if ( removeIndex != invalid_index::kUint32 )
+        if ( removeIndex != constant::invalid_index::kUint32 )
         {
             listPair.erase( listPair.begin() + removeIndex );
             bChanged = true;

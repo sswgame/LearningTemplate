@@ -27,7 +27,7 @@ namespace sw
 {
     string ShadowCopyName::make( string_view moduleName, int32 processID, uint32 serial, uint64 sourceMtime )
     {
-        StringBuilder<constant::kMaxPathSize> nameBuilder;
+        StringBuilder<constant::file::kMaxPathSize> nameBuilder;
         nameBuilder.append( moduleName ).append( kMarker ).append( kProcessPrefix ).append( processID ).append( '_' ).append( serial ).append( '_' ).append( sourceMtime );
         return string{ nameBuilder.c_str() };
     }

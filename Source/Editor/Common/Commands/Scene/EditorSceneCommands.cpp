@@ -146,8 +146,8 @@ namespace sw::editor
             return nullptr;
         }
 
-        GameObject*                           pNewObj = listCopy.front();
-        fixed_string<constant::kMaxBuffer256> newName;
+        GameObject*                             pNewObj = listCopy.front();
+        fixed_string<constant::buffer::kMax256> newName;
         formatstring( newName.data(), newName.capacity(), "%#_Copy", pSrc->getName().c_str() );
         pNewObj->setName( hashed_string( newName.c_str() ) );
 

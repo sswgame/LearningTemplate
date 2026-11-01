@@ -26,7 +26,7 @@ namespace sw
                 string folder = startFolder;
                 while ( folder.empty() == false )
                 {
-                    if ( FileUtil::isDirectory( FileUtil::joinPath( folder, path::kContentFolder ) ) )
+                    if ( FileUtil::isDirectory( FileUtil::joinPath( folder, constant::path::kContentFolder ) ) )
                         return folder;
                     const string parent = FileUtil::getDirectoryPart( folder );
                     if ( parent.empty() || parent == folder )
@@ -47,18 +47,18 @@ namespace sw
                 const string binary  = findBinaryFolder();
                 string       project = findProjectRoot( binary );
                 // 패키지(배포 스테이징)는 `Content` 없이 실행 파일 옆에 `Packs` 만 둔다 - 그때 프로젝트 루트는 바이너리 폴더다. 둘 다 없으면 리소스를 찾을 곳이 없다.
-                if ( project.empty() && FileUtil::isDirectory( FileUtil::joinPath( binary, path::kPacksFolder ) ) )
+                if ( project.empty() && FileUtil::isDirectory( FileUtil::joinPath( binary, constant::path::kPacksFolder ) ) )
                     project = binary;
                 if ( project.empty() )
-                    SW_FATAL( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", path::kContentFolder, binary, path::kPacksFolder );
+                    SW_FATAL( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", constant::path::kContentFolder, binary, constant::path::kPacksFolder );
 
                 ProcessRoots roots{
                     requireAbsolute( binary, "binary" ),
                     requireAbsolute( project, "project" ),
-                    requireAbsolute( FileUtil::joinPath( project, path::kContentFolder ), "content" ),
-                    requireAbsolute( FileUtil::joinPath( binary, path::kPacksFolder ), "packs" ),
-                    requireAbsolute( FileUtil::joinPath( binary, path::kSavedFolder ), "saved" ),
-                    requireAbsolute( FileUtil::joinPath( project, path::kSavedFolder ), "derived data" ),
+                    requireAbsolute( FileUtil::joinPath( project, constant::path::kContentFolder ), "content" ),
+                    requireAbsolute( FileUtil::joinPath( binary, constant::path::kPacksFolder ), "packs" ),
+                    requireAbsolute( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "saved" ),
+                    requireAbsolute( FileUtil::joinPath( project, constant::path::kSavedFolder ), "derived data" ),
                 };
                 return roots;
             }

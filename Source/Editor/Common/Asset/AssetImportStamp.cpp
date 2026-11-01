@@ -60,7 +60,7 @@ namespace sw::editor
 
             static string formatHash( uint64 hash )
             {
-                StringBuilder<constant::kMaxBuffer32> text;
+                StringBuilder<constant::buffer::kMax32> text;
                 text.appendFormat( "%#", Fmt( hash, Format( 16, Format::Padding::Zero ).hex() ) );
                 return string( text.c_str(), text.size() );
             }

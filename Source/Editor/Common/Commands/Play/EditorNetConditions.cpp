@@ -26,10 +26,10 @@ namespace sw::editor
     {
         using Internal = EditorNetConditionsInternal;
         EditorNetLinkSettings settings;
-        settings._latencyMilliseconds         = static_cast<float32>( conditions._latency * constant::kMillisecondsPerSecond );
-        settings._jitterMilliseconds          = static_cast<float32>( conditions._jitter * constant::kMillisecondsPerSecond );
+        settings._latencyMilliseconds         = static_cast<float32>( conditions._latency * constant::time::kMillisecondsPerSecond );
+        settings._jitterMilliseconds          = static_cast<float32>( conditions._jitter * constant::time::kMillisecondsPerSecond );
         settings._lossPercent                 = conditions._lossRate * Internal::kPercent;
-        settings._bandwidthKilobytesPerSecond = conditions._bandwidthBytesPerSecond / static_cast<int32>( constant::kBytesPerKilobyte );
+        settings._bandwidthKilobytesPerSecond = conditions._bandwidthBytesPerSecond / static_cast<int32>( constant::memory::kBytesPerKilobyte );
         return settings;
     }
 
@@ -37,10 +37,10 @@ namespace sw::editor
     {
         using Internal = EditorNetConditionsInternal;
         NetEmulationConditions conditions;
-        conditions._latency                 = static_cast<float64>( MathUtil::max( 0.0f, settings._latencyMilliseconds ) ) / constant::kMillisecondsPerSecond;
-        conditions._jitter                  = static_cast<float64>( MathUtil::max( 0.0f, settings._jitterMilliseconds ) ) / constant::kMillisecondsPerSecond;
+        conditions._latency                 = static_cast<float64>( MathUtil::max( 0.0f, settings._latencyMilliseconds ) ) / constant::time::kMillisecondsPerSecond;
+        conditions._jitter                  = static_cast<float64>( MathUtil::max( 0.0f, settings._jitterMilliseconds ) ) / constant::time::kMillisecondsPerSecond;
         conditions._lossRate                = MathUtil::clamp( settings._lossPercent, 0.0f, Internal::kPercent ) / Internal::kPercent;
-        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, settings._bandwidthKilobytesPerSecond ) * static_cast<int32>( constant::kBytesPerKilobyte );
+        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, settings._bandwidthKilobytesPerSecond ) * static_cast<int32>( constant::memory::kBytesPerKilobyte );
         return conditions;
     }
 
@@ -70,8 +70,8 @@ namespace sw::editor
 
     string EditorNetConditionsUtil::makeSpikeCommand( float32 seconds )
     {
-        utf8 arrBuffer[constant::kMaxBuffer32];
-        (void)StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, MathUtil::max( 0.0f, seconds ) );
+        utf8 arrBuffer[constant::buffer::kMax32];
+        (void)StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, MathUtil::max( 0.0f, seconds ) );
         return string( "net.emulation spike " ) + arrBuffer;
     }
 

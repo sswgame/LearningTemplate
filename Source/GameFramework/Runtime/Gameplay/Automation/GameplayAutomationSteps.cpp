@@ -94,7 +94,7 @@ namespace sw
                     if ( bToHour )
                         clock.advanceToHour( toHour );
                     else
-                        clock.advanceMinutes( bHours ? hours * static_cast<float32>( constant::kSecondsPerHour / constant::kSecondsPerMinute ) : minutes );
+                        clock.advanceMinutes( bHours ? hours * static_cast<float32>( constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute ) : minutes );
                     ++count;
                 }
                 if ( count == 0 )

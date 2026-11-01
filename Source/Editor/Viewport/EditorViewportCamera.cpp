@@ -3,7 +3,7 @@
 #include "Editor/Viewport/EditorViewportCamera.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -183,9 +183,9 @@ namespace sw::editor
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         for ( int32 keyIndex = 0; keyIndex < 9; ++keyIndex )
         {
-            fixed_string<constant::kMaxBuffer32> setAction;
+            fixed_string<constant::buffer::kMax32> setAction;
             formatstring( setAction.data(), setAction.capacity(), "viewport.setBookmark%d", keyIndex + 1 );
-            fixed_string<constant::kMaxBuffer32> goAction;
+            fixed_string<constant::buffer::kMax32> goAction;
             formatstring( goAction.data(), goAction.capacity(), "viewport.bookmark%d", keyIndex + 1 );
             if ( EditorInputGUI::wasActionTriggered( setAction.c_str() ) )
             {
@@ -193,7 +193,7 @@ namespace sw::editor
                 bm._position      = _position;
                 bm._rotation      = _rotation;
                 bm._orbitDistance = _orbitDistance;
-                fixed_string<constant::kMaxBuffer32> arrName;
+                fixed_string<constant::buffer::kMax32> arrName;
                 formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
                 bm._name = arrName.c_str();
                 editorContext.getSubsystem<EditorWorkspace>().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );

@@ -448,7 +448,7 @@ namespace sw
             SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
         outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editor::EditorPaths::kLocalizationProject ) ); // 에디터 UI 문구
 
-        const string   localizationFolder = FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder );
+        const string   localizationFolder = FileUtil::joinPath( constant::path::kDataFolder, constant::path::kLocalizationFolder );
         vector<string> listGameFolder;
         if ( bAllGames )
         {

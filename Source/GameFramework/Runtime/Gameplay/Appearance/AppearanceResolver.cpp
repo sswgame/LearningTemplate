@@ -90,8 +90,8 @@ namespace sw
             template <typename... Args>
             static void addTrace( ResolvedAppearance& out, AppearanceTraceStep step, const hashed_string& source, string_view format, Args&&... args )
             {
-                utf8 arrBuffer[constant::kMaxBuffer512];
-                FormatString::formatstring( arrBuffer, constant::kMaxBuffer512, format, std::forward<Args>( args )... );
+                utf8 arrBuffer[constant::buffer::kMax512];
+                FormatString::formatstring( arrBuffer, constant::buffer::kMax512, format, std::forward<Args>( args )... );
                 AppearanceTraceEntry entry;
                 entry._step    = step;
                 entry._source  = source;

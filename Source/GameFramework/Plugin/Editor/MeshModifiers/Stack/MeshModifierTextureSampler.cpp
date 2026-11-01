@@ -46,12 +46,12 @@ namespace sw::editor
             /** @brief 파일 시각을 다시 보는 최소 간격입니다. 정점마다 파일 시스템을 묻지 않으려는 것입니다. */
             static constexpr int64 kRecheckIntervalMilliseconds = 1000;
             /** @brief 디코드한 텍셀 캐시의 상한(바이트)입니다. 넘으면 가장 오래 안 쓴 이미지부터 내린다(방금 읽은 것은 남긴다). 4096² 두 장이 들어간다. */
-            static constexpr size_t kMaxCacheBytes = constant::kBytesPerGigabyte / 2;
+            static constexpr size_t kMaxCacheBytes = constant::memory::kBytesPerGigabyte / 2;
 
             /** @brief 경로 키로 디코드한 이미지를 담는 캐시입니다. 표본기 인스턴스가 잠금과 함께 소유한다(`MeshModifierTextureSampler::State`). */
             using TextureCache = unordered_map<string, std::shared_ptr<DecodedTexture>>;
 
-            static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::kMicrosecondsPerMillisecond; }
+            static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::time::kMicrosecondsPerMillisecond; }
 
             /**
              * @brief 텍스처 리소스 id 를 디스크의 낱개 파일로 풉니다(다시 읽기가 파일 시각을 본다 - 원본 트리에서 도는 에디터 도구다). 못 찾으면 빈 문자열입니다.
@@ -175,7 +175,7 @@ namespace sw::editor
                     }
                     if ( oldest == cache.end() )
                         break; // 남은 것은 방금 읽었거나 지금 쓰는 이미지뿐이다
-                    SW_LOG_INFO( "Mesh modifier texture cache over %# MB - dropping '%#'", kMaxCacheBytes / constant::kBytesPerMegabyte, oldest->first.c_str() );
+                    SW_LOG_INFO( "Mesh modifier texture cache over %# MB - dropping '%#'", kMaxCacheBytes / constant::memory::kBytesPerMegabyte, oldest->first.c_str() );
                     total -= oldest->second->getByteSize();
                     cache.erase( oldest );
                 }

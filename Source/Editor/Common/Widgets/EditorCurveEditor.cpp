@@ -76,14 +76,14 @@ namespace sw::editor
             /** @brief 격자(시간 · 값 눈금)와 눈금 글을 그립니다. */
             static void drawGrid( ImDrawList& drawList, const EditorCurveView& view )
             {
-                const ImU32                          lineColor = ImGui::GetColorU32( ImGuiCol_Border );
-                const ImU32                          textColor = ImGui::GetColorU32( ImGuiCol_TextDisabled );
-                const float32                        scale     = EditorThemeUtil::getDPIScale();
-                const float32                        left      = view._frameMin._x;
-                const float32                        top       = view._frameMin._y;
-                const float32                        right     = left + view._frameSize._x;
-                const float32                        bottom    = top + view._frameSize._y;
-                fixed_string<constant::kMaxBuffer32> label;
+                const ImU32                            lineColor = ImGui::GetColorU32( ImGuiCol_Border );
+                const ImU32                            textColor = ImGui::GetColorU32( ImGuiCol_TextDisabled );
+                const float32                          scale     = EditorThemeUtil::getDPIScale();
+                const float32                          left      = view._frameMin._x;
+                const float32                          top       = view._frameMin._y;
+                const float32                          right     = left + view._frameSize._x;
+                const float32                          bottom    = top + view._frameSize._y;
+                fixed_string<constant::buffer::kMax32> label;
 
                 const float32 timeStep = EditorCurveView::computeGridStep( view._timeMax - view._timeMin, view._frameSize._x, kGridMinPixels * scale );
                 for ( float32 time = std::ceil( view._timeMin / timeStep ) * timeStep; time <= view._timeMax; time += timeStep )
@@ -175,7 +175,7 @@ namespace sw::editor
                     if ( ImGui::MenuItem( "Delete Key" ) )
                     {
                         curve._listKey.erase( curve._listKey.begin() + static_cast<ptrdiff_t>( state._menuKey ) );
-                        state._selectedKey = invalid_index::kUint32;
+                        state._selectedKey = constant::invalid_index::kUint32;
                         bEdited            = true;
                     }
                     const utf8* const        arrName[] = { "Constant", "Linear", "Cubic" };
@@ -237,7 +237,7 @@ namespace sw::editor
                     if ( state._drag == EditorCurveDrag::None )
                     {
                         state._selectedKey = view.findKeyAt( curve, mouse, pickRadius );
-                        if ( state._selectedKey != invalid_index::kUint32 )
+                        if ( state._selectedKey != constant::invalid_index::kUint32 )
                             state._drag = EditorCurveDrag::Key;
                     }
                 }
@@ -351,12 +351,12 @@ namespace sw::editor
         EditorCurveEditorInternal::drawGrid( drawList, view );
         EditorCurveEditorInternal::drawCurveLine( drawList, view, state._working, ImGui::GetColorU32( ImGuiCol_PlotLines ), 2.0f, 2.0f );
 
-        const float32                        scale        = EditorThemeUtil::getDPIScale();
-        const ImU32                          keyColor     = ImGui::GetColorU32( ImGuiCol_Text );
-        const ImU32                          selectColor  = ImGui::GetColorU32( ImGuiCol_PlotLinesHovered );
-        const float32                        keyRadius    = EditorCurveEditorInternal::kKeyRadius * scale;
-        const float32                        handleLength = EditorCurveEditorInternal::kTangentLength * scale;
-        fixed_string<constant::kMaxBuffer32> keyMark;
+        const float32                          scale        = EditorThemeUtil::getDPIScale();
+        const ImU32                            keyColor     = ImGui::GetColorU32( ImGuiCol_Text );
+        const ImU32                            selectColor  = ImGui::GetColorU32( ImGuiCol_PlotLinesHovered );
+        const float32                          keyRadius    = EditorCurveEditorInternal::kKeyRadius * scale;
+        const float32                          handleLength = EditorCurveEditorInternal::kTangentLength * scale;
+        fixed_string<constant::buffer::kMax32> keyMark;
         for ( size_t index = 0; index < state._working._listKey.size(); ++index )
         {
             const FloatCurveKey& key       = state._working._listKey[index];

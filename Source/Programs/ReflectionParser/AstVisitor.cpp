@@ -68,7 +68,7 @@ namespace sw
                     current = clang_getCursorSemanticParent( current );
                 }
 
-                StringBuilder<constant::kMaxBuffer1024> fqn;
+                StringBuilder<constant::buffer::kMax1024> fqn;
                 for ( auto it = listPart.rbegin(); it != listPart.rend(); ++it )
                 {
                     if ( fqn.size() > 0 )
@@ -81,7 +81,7 @@ namespace sw
             /** @brief 오류 메시지에 쓸 `타입::멤버` 이름입니다. */
             static string makeMemberOwnerName( const string_view ownerFQN, const string_view memberName )
             {
-                StringBuilder<constant::kMaxBuffer1024> b;
+                StringBuilder<constant::buffer::kMax1024> b;
                 b.appendFormat( "%#::%#", ownerFQN, memberName );
                 return string( b.view() );
             }
@@ -270,7 +270,7 @@ namespace sw
                 if ( macroPos != string_view::npos && hasNoDeclarationBoundary( source._window.substr( macroPos ) ) )
                     return true;
 
-                StringBuilder<constant::kMaxBuffer128> needle;
+                StringBuilder<constant::buffer::kMax128> needle;
                 needle.appendFormat( "annotate(\"%#", desc._pPrefix );
                 const size_t annotatePos = rfindOutsideComments( source._window, needle.view() );
                 return annotatePos != string_view::npos && hasNoDeclarationBoundary( source._window.substr( annotatePos ) );
@@ -322,7 +322,7 @@ namespace sw
                 if ( depth != 0 || charIndex <= argsStart )
                     return {}; // 괄호가 닫히지 않았다(파일 끝) — 컴파일러가 먼저 알린다
 
-                StringBuilder<constant::kMaxBuffer1024> b;
+                StringBuilder<constant::buffer::kMax1024> b;
                 b.append( desc._pPrefix );
                 b.append( string_view( content.data() + argsStart, charIndex - argsStart - 1 ) );
                 return string( b.view() );

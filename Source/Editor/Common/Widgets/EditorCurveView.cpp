@@ -75,7 +75,7 @@ namespace sw::editor
 
     uint32 EditorCurveView::findKeyAt( const FloatCurve& curve, const float2& screen, float32 radius ) const
     {
-        uint32  bestIndex    = invalid_index::kUint32;
+        uint32  bestIndex    = constant::invalid_index::kUint32;
         float32 bestDistance = radius * radius;
         for ( size_t index = 0; index < curve._listKey.size(); ++index )
         {

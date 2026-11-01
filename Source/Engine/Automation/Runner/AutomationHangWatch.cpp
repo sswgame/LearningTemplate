@@ -28,7 +28,7 @@ namespace sw
         struct AutomationHangWatchInternal
         {
             /** @brief 감시 스레드가 시한을 다시 보는 간격(나노초)입니다. 합류가 이만큼 늦을 수 있다. */
-            static constexpr int64 kPollNanoseconds = 10 * constant::kNanosecondsPerMillisecond;
+            static constexpr int64 kPollNanoseconds = 10 * constant::time::kNanosecondsPerMillisecond;
             /** @brief 행 보고 글 버퍼의 크기(바이트)입니다. 재현 명령(1 KB)과 이름들을 이스케이프해도 넉넉하다. */
             static constexpr uint32 kReportCapacity = 8192;
 
@@ -72,7 +72,7 @@ namespace sw
                     outReply = formatToString( "hang must be 1..%# s", kMaxHangSeconds );
                     return true;
                 }
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds ) * constant::kNanosecondsPerSecond );
+                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds ) * constant::time::kNanosecondsPerSecond );
                 outReply = formatToString( "the game thread was held for %# s", seconds );
                 return true;
             }

@@ -8,7 +8,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Foundation/Defines.h"
+    #include "Core/Foundation/Constants.h"
     #include "Core/Concurrency/atomic.h"
     #include "Core/Container/StringUtil.h"
     #include "Core/String/fixed_string.h"
@@ -135,7 +135,7 @@ namespace sw
          * @brief 활성 창의 IME 조합 중인 문자열을 UTF-8 로 읽습니다.
          * @return 읽었으면 true 입니다(빈 조합 문자열도 읽은 것입니다). 활성 창 · IME 컨텍스트가 없거나 길이가 버퍼를 넘으면 false 입니다.
          */
-        [[nodiscard]] bool readIMECompositionInternal( LPARAM lParam, fixed_string<constant::kMaxBuffer512>& outUTF8, int32& outLength )
+        [[nodiscard]] bool readIMECompositionInternal( LPARAM lParam, fixed_string<constant::buffer::kMax512>& outUTF8, int32& outLength )
         {
             MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
             IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
@@ -151,8 +151,8 @@ namespace sw
             // `ImmGetCompositionStringW` 가 반환하는 값은 바이트 수이고 버퍼는
             // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다(바이트 상수와 문자 상수를
             // 따로 두면 어느 한쪽만 고칠 때 조용히 넘친다).
-            using CompositionBuffer                  = fixed_wstring<constant::kMaxBuffer256>;
-            constexpr LONG kMaxCompositionByteLength = static_cast<LONG>( constant::kMaxBuffer256 * sizeof( utf16 ) );
+            using CompositionBuffer                  = fixed_wstring<constant::buffer::kMax256>;
+            constexpr LONG kMaxCompositionByteLength = static_cast<LONG>( constant::buffer::kMax256 * sizeof( utf16 ) );
 
             bool       bRead = false;
             const LONG size  = ImmGetCompositionStringW( hImc, GCS_COMPSTR, nullptr, 0 );
@@ -355,8 +355,8 @@ namespace sw
             }
             case WM_IME_COMPOSITION:
             {
-                fixed_string<constant::kMaxBuffer512> utf8Buf;
-                int32                                 utf8Length{ 0 };
+                fixed_string<constant::buffer::kMax512> utf8Buf;
+                int32                                   utf8Length{ 0 };
                 if ( readIMECompositionInternal( event._lParam, utf8Buf, utf8Length ) )
                     postRawEvent( RawInputEvent::makeTextComposition( string_view( utf8Buf.data(), static_cast<size_t>( utf8Length ) ) ) );
                 break;

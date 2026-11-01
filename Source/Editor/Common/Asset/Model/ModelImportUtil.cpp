@@ -169,7 +169,7 @@ namespace sw::editor
 
     string ModelImportUtil::formatMaterialNumber( float32 value )
     {
-        utf8 arrText[constant::kMaxBuffer32]{};
+        utf8 arrText[constant::buffer::kMax32]{};
         formatstring( arrText, sizeof( arrText ), "%.6g", static_cast<float64>( value ) + 0.0 );
         return string( arrText );
     }
@@ -186,6 +186,6 @@ namespace sw::editor
         meta._guid       = makeImportedGUID( assetID );
         meta._sourcePath = assetID;
         meta._bImported  = true;
-        return FileUtil::writeTextFile( assetPath + path::kMetaExtension, meta.toXML() );
+        return FileUtil::writeTextFile( assetPath + constant::path::kMetaExtension, meta.toXML() );
     }
 } // namespace sw::editor

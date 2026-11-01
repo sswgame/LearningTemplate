@@ -255,7 +255,7 @@ namespace sw
 
     void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer, uint32 requestedGPULightSlotCount )
     {
-        _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
+        _listGridBase.assign( listGridViewProj.size(), constant::invalid_index::kUint32 );
         _gpuGridViewCount  = 0;
         _gridProducer      = LightGridProducer::None;
         _probeElementCount = 0;
@@ -409,7 +409,7 @@ namespace sw
         if ( _cpuGridBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), wordCount, kUsage, true, false, _listGridWordScratch.data() ) == false )
         {
             reportGridFailure( "could not allocate the CPU grid buffer", 0 );
-            _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
+            _listGridBase.assign( listGridViewProj.size(), constant::invalid_index::kUint32 );
             return;
         }
         _cpuGridBuffer.upload( pDevice, _listGridWordScratch.data(), wordCount * static_cast<uint32>( sizeof( uint32 ) ) );
@@ -458,7 +458,7 @@ namespace sw
         if ( bViewReady == false || bGridReady == false )
         {
             reportGridFailure( "could not allocate the GPU grid buffers (UAV)", 0 );
-            _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
+            _listGridBase.assign( listGridViewProj.size(), constant::invalid_index::kUint32 );
             return;
         }
         _gpuGridViewBuffer.upload( pDevice, _listGridViewScratch.data(), viewCount * static_cast<uint32>( sizeof( float4 ) ) );

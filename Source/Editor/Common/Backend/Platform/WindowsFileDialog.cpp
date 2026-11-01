@@ -40,13 +40,13 @@ namespace sw
     bool WindowsFileDialog::open( const FileDialogParams& params, vector<string>& outListPath )
     {
         // 다중 선택 결과는 "dir\0file1\0file2\0\0" 처럼 널이 구분자라 맨 배열로 받는다.
-        utf16 arrFileBuffer[constant::kMaxBuffer8192]{};
+        utf16 arrFileBuffer[constant::buffer::kMax8192]{};
 
         OPENFILENAMEW ofn{};
         ofn.lStructSize  = sizeof( ofn );
         ofn.hwndOwner    = nullptr;
         ofn.lpstrFile    = arrFileBuffer;
-        ofn.nMaxFile     = static_cast<DWORD>( constant::kMaxBuffer8192 );
+        ofn.nMaxFile     = static_cast<DWORD>( constant::buffer::kMax8192 );
         ofn.nFilterIndex = 1;
 
         wstring titleW;

@@ -3,7 +3,7 @@
  * @brief 각도 · 보간 · 클램프 · 난수 같은 스칼라 수학 도우미입니다(전부 static).
  */
 #pragma once
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -51,18 +51,18 @@ namespace sw
         static constexpr float32 kMinFloat   = std::numeric_limits<float32>::lowest();
         static constexpr float64 kMaxFloat64 = std::numeric_limits<float64>::max();
         static constexpr float64 kMinFloat64 = std::numeric_limits<float64>::lowest();
-        static constexpr int8    kMaxInt8    = static_cast<int8>( invalid_index::kUint8 >> 1 );
-        static constexpr int8    kMinInt8    = -kMaxInt8 + invalid_index::kInt8;
-        static constexpr int16   kMaxInt16   = static_cast<int16>( invalid_index::kUint16 >> 1 );
-        static constexpr int16   kMinInt16   = -kMaxInt16 + invalid_index::kInt16;
-        static constexpr int32   kMaxInt32   = static_cast<int32>( invalid_index::kUint32 >> 1 );
-        static constexpr int32   kMinInt32   = -kMaxInt32 + invalid_index::kInt32;
-        static constexpr int64   kMaxInt64   = static_cast<int64>( invalid_index::kUint64 >> 1 );
-        static constexpr int64   kMinInt64   = -kMaxInt64 + invalid_index::kInt64;
-        static constexpr uint8   kMaxUInt8   = invalid_index::kUint8;
-        static constexpr uint16  kMaxUInt16  = invalid_index::kUint16;
-        static constexpr uint32  kMaxUInt32  = invalid_index::kUint32;
-        static constexpr uint64  kMaxUInt64  = invalid_index::kUint64;
+        static constexpr int8    kMaxInt8    = static_cast<int8>( constant::invalid_index::kUint8 >> 1 );
+        static constexpr int8    kMinInt8    = -kMaxInt8 + constant::invalid_index::kInt8;
+        static constexpr int16   kMaxInt16   = static_cast<int16>( constant::invalid_index::kUint16 >> 1 );
+        static constexpr int16   kMinInt16   = -kMaxInt16 + constant::invalid_index::kInt16;
+        static constexpr int32   kMaxInt32   = static_cast<int32>( constant::invalid_index::kUint32 >> 1 );
+        static constexpr int32   kMinInt32   = -kMaxInt32 + constant::invalid_index::kInt32;
+        static constexpr int64   kMaxInt64   = static_cast<int64>( constant::invalid_index::kUint64 >> 1 );
+        static constexpr int64   kMinInt64   = -kMaxInt64 + constant::invalid_index::kInt64;
+        static constexpr uint8   kMaxUInt8   = constant::invalid_index::kUint8;
+        static constexpr uint16  kMaxUInt16  = constant::invalid_index::kUint16;
+        static constexpr uint32  kMaxUInt32  = constant::invalid_index::kUint32;
+        static constexpr uint64  kMaxUInt64  = constant::invalid_index::kUint64;
 
         /** @brief 최솟값을 반환합니다. */
         template <typename T>

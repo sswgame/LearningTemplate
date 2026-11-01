@@ -776,7 +776,7 @@ namespace sw
         // 그래서 옛 인덱스를 새 텍스처가 곧바로 물려받아 이전 프레임을 오염시키는 일이 없다. 세대를 올려 빌려 간 머티리얼이 새 인덱스를 다시 받게 한다(아래).
         Texture2DRetiredResource retired{};
         pTexture->detachRHI( retired );
-        const bool bReady = pTexture->createRenderTarget( pDevice, key, width, height, constant::kOffscreenColorFormat );
+        const bool bReady = pTexture->createRenderTarget( pDevice, key, width, height, constant::render::kOffscreenColorFormat );
         if ( bReady == false )
             SW_LOG_ERROR( "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
 
@@ -1084,7 +1084,7 @@ namespace sw
             case Source::RenderTarget:
             {
                 // 렌더 타깃은 올릴 내용이 없다 — 만들고 바로 등록한다.
-                const bool bReady = _pTexture->createRenderTarget( pDevice, getPath(), _renderTargetWidth, _renderTargetHeight, constant::kOffscreenColorFormat );
+                const bool bReady = _pTexture->createRenderTarget( pDevice, getPath(), _renderTargetWidth, _renderTargetHeight, constant::render::kOffscreenColorFormat );
                 return concludeCompletion( *pCache, bReady, outError );
             }
             case Source::File:

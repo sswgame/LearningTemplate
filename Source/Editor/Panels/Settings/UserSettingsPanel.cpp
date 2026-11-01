@@ -93,7 +93,7 @@ namespace sw::editor
             }
             if ( _lastRejectedCount > 0 )
             {
-                StringBuilder<constant::kMaxBuffer64> status;
+                StringBuilder<constant::buffer::kMax64> status;
                 status.appendFormat( "%# setting(s) rejected - see the log", _lastRejectedCount );
                 ImGui::SameLine();
                 EditorWidgets::drawPanelStatus( status.c_str() );

@@ -52,7 +52,7 @@ namespace sw
              */
             static constexpr size_t kInlineSpawnDepth = 8;
             /** @brief 로드 검증에서 순환이 없다는 값입니다(`PrefabThreadChain::_cycleFloor`). */
-            static constexpr size_t kNoCycle = static_cast<size_t>( invalid_index::kUint64 );
+            static constexpr size_t kNoCycle = static_cast<size_t>( constant::invalid_index::kUint64 );
 
             /** @brief 지금 펼치는 중인 프리팹 경로의 스택입니다(순환 검사). */
             using PrefabPathStack = small_vector<hashed_string, kInlineSpawnDepth>;

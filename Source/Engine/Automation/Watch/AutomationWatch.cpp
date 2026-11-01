@@ -71,7 +71,7 @@ namespace sw
             static constexpr size_t kSiblingNameLimit = 4;
 
             /** @brief 실패 까닭 한 줄의 버퍼 크기입니다. */
-            static constexpr uint32 kProblemCapacity = constant::kMaxBuffer512;
+            static constexpr uint32 kProblemCapacity = constant::buffer::kMax512;
 
             static string describeSiblings( const vector<GameObject*>& listObject )
             {

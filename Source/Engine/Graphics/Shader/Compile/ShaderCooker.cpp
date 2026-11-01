@@ -152,7 +152,7 @@ namespace sw
 
         if ( permutationHash != 0 )
         {
-            StringBuilder<constant::kMaxBuffer16> sb;
+            StringBuilder<constant::buffer::kMax16> sb;
             sb.appendFormat( "_%#", Fmt( static_cast<uint32>( permutationHash & 0xFFFFFFFFu ), Format( 8, Format::Padding::Zero ).hex() ) );
             basePart += sb.view();
         }

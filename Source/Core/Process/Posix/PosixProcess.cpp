@@ -444,7 +444,7 @@ namespace sw
         if ( _pStdOutRead == nullptr )
             return false;
 
-        utf8 arrLineBuffer[constant::kMaxBuffer4096];
+        utf8 arrLineBuffer[constant::buffer::kMax4096];
         if ( fgets( arrLineBuffer, sizeof( arrLineBuffer ), asOutputStream( _pStdOutRead ) ) != nullptr )
         {
             outLine = arrLineBuffer;
@@ -588,7 +588,7 @@ namespace sw
         const int32 descriptor = ::open( "/proc/self/status", O_RDONLY | O_CLOEXEC );
         if ( descriptor < 0 )
             return false;
-        utf8          arrText[constant::kMaxBuffer4096]{};
+        utf8          arrText[constant::buffer::kMax4096]{};
         const ssize_t readSize = ::read( descriptor, arrText, sizeof( arrText ) );
         ::close( descriptor );
         if ( readSize <= 0 )

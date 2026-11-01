@@ -158,13 +158,13 @@ namespace sw::editor
 
             nextItem( bVertical );
             ImGui::PushID( visualizer._pID );
-            fixed_string<constant::kMaxBuffer256> tooltip;
+            fixed_string<constant::buffer::kMax256> tooltip;
             formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", visualizer._pToggleLabel, visualizer._pTooltip );
             const bool bPressed = visualizer._pIcon != nullptr ? EditorWidgets::drawIconToggle( "##visualizer", visualizer._pIcon, bOn, tooltip.c_str() )
                                                                : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
             if ( bPressed )
                 settings._visualizerToggles.setOn( visualizer, bOn == false );
-            fixed_string<constant::kMaxBuffer64> mark;
+            fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
             EditorSelfTestMarks::note( mark.c_str() );
             if ( visualizer._pIcon == nullptr )
@@ -193,8 +193,8 @@ namespace sw::editor
                 EditorWorkspace& ws = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
                 for ( uint32 slot = 0; slot < 9; ++slot )
                 {
-                    const bool                           bHas = ws.hasCameraBookmark( slot );
-                    fixed_string<constant::kMaxBuffer64> arrLabel;
+                    const bool                             bHas = ws.hasCameraBookmark( slot );
+                    fixed_string<constant::buffer::kMax64> arrLabel;
                     formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1, bHas ? ws.getCameraBookmark( slot )->_name.c_str() : "<Empty>" );
                     if ( ImGui::Selectable( arrLabel.c_str(), false ) && bHas )
                         settings._requestedBookmarkSlot = static_cast<int32>( slot );
@@ -203,7 +203,7 @@ namespace sw::editor
                         const CameraBookmark* pBm = ws.getCameraBookmark( slot );
                         if ( pBm != nullptr )
                         {
-                            fixed_string<constant::kMaxBuffer128> positionText;
+                            fixed_string<constant::buffer::kMax128> positionText;
                             formatstring( positionText.data(), positionText.capacity(), "(%.1f, %.1f, %.1f)", static_cast<float64>( pBm->_position._x ),
                                           static_cast<float64>( pBm->_position._y ), static_cast<float64>( pBm->_position._z ) );
                             const string tooltipText = SW_LOCKEYFORMAT( "EdCommon", "CameraBookmarkPosition", TextArgumentList().addText( "position", positionText.c_str() ) );

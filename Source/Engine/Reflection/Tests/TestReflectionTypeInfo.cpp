@@ -1149,7 +1149,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrat
 
     for ( uint32 index = 0; index < 200; ++index )
     {
-        sw::StringBuilder<sw::constant::kMaxBuffer64> name;
+        sw::StringBuilder<sw::constant::buffer::kMax64> name;
         name.append( "swtest::StableFiller" ).append( index );
         sw::TypeInfo typeFiller;
         typeFiller._fullyQualifiedName = sw::hashed_string( name.c_str() );

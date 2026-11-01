@@ -64,7 +64,7 @@ namespace sw
         VFXCPUSimulation( shared_ptr<const VFXEmitterDef> pDef, uint64 seed, float32 spawnScale );
 
         /**
-         * @brief 프레임 시간 @p deltaSeconds 만큼 나아갑니다. 고정 간격(`VFXEmitterClock::kFixedStepSeconds`)으로 나눠 `step` 을 부르고, 남는 시간은 다음 호출로 넘깁니다.
+         * @brief 프레임 시간 @p deltaSeconds 만큼 나아갑니다. 고정 간격(`constant::time::kDefaultFixedStepSeconds`)으로 나눠 `step` 을 부르고, 남는 시간은 다음 호출로 넘깁니다.
          * @param pCollision 충돌 질의(물리 씬이 없으면 nullptr). 방출기의 충돌이 꺼져 있으면 보지 않는다.
          */
         void update( float32 deltaSeconds, const IVFXCollisionScene* pCollision );

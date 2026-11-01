@@ -34,8 +34,8 @@ namespace sw
             /** @brief "names unknown <종류> '<이름>'" 오류를 덧붙입니다(피팅 표에 없는 이름). */
             static void appendNameError( string* pOutError, const utf8* pKind, const hashed_string& name )
             {
-                utf8 arrMessage[constant::kMaxBuffer256]{};
-                formatstring( arrMessage, constant::kMaxBuffer256, "names unknown %# '%#'", pKind, name.c_str() );
+                utf8 arrMessage[constant::buffer::kMax256]{};
+                formatstring( arrMessage, constant::buffer::kMax256, "names unknown %# '%#'", pKind, name.c_str() );
                 appendError( pOutError, string( arrMessage ) );
             }
         };
@@ -176,8 +176,8 @@ namespace sw
                     if ( delta._vertex < pGeometry->getVertexCount() )
                         continue;
                     bValid = false;
-                    utf8         arrNumber[constant::kMaxBuffer16]{};
-                    const uint32 numberLength = StringUtil::formatNumber( arrNumber, constant::kMaxBuffer16, delta._vertex );
+                    utf8         arrNumber[constant::buffer::kMax16]{};
+                    const uint32 numberLength = StringUtil::formatNumber( arrNumber, constant::buffer::kMax16, delta._vertex );
                     string       message( "corrective delta names vertex " );
                     message += string_view( arrNumber, numberLength );
                     message += " beyond the mesh";

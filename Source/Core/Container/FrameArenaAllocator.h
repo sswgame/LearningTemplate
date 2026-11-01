@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -31,7 +31,7 @@ namespace sw
          * @brief 첫 청크를 잡고 할당자를 준비합니다.
          * @param defaultCapacity 초기 청크 크기(바이트)
          */
-        explicit FrameArenaAllocator( size_t defaultCapacity = constant::kDefaultFrameArenaCapacity );
+        explicit FrameArenaAllocator( size_t defaultCapacity = constant::memory::kDefaultFrameArenaCapacity );
         /** @brief 소유한 청크 버퍼를 해제합니다. */
         ~FrameArenaAllocator();
 
@@ -175,7 +175,7 @@ namespace sw
     {
     public:
         /** @brief 양쪽 아레나를 같은 용량으로 준비합니다. */
-        explicit FrameDoubleBuffer( size_t arenaCapacity = constant::kDefaultFrameArenaCapacity )
+        explicit FrameDoubleBuffer( size_t arenaCapacity = constant::memory::kDefaultFrameArenaCapacity )
             : _arrArena{ FrameArenaAllocator{ arenaCapacity }, FrameArenaAllocator{ arenaCapacity } }
             , _activeBufferIndex{ 0 } {}
 

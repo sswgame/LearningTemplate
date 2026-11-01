@@ -59,7 +59,7 @@ namespace sw
         addKey( canonical, canonical );
         if ( nameSpace.empty() == false )
         {
-            StringBuilder<constant::kMaxBuffer128> qualified;
+            StringBuilder<constant::buffer::kMax128> qualified;
             qualified.appendFormat( "%#::%#", nameSpace, canonical );
             addKey( string( qualified.view() ), canonical );
         }
@@ -69,7 +69,7 @@ namespace sw
             addKey( alias, canonical );
             if ( nameSpace.empty() == false )
             {
-                StringBuilder<constant::kMaxBuffer128> qualified;
+                StringBuilder<constant::buffer::kMax128> qualified;
                 qualified.appendFormat( "%#::%#", nameSpace, alias );
                 addKey( string( qualified.view() ), canonical );
             }

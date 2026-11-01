@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
@@ -282,13 +282,13 @@ namespace sw
             if ( _iterationDepth == 0 )
                 compact();
         }
-        /** @brief 원소가 `getItems()` 의 몇 번째인지 반환합니다. 없으면 `invalid_index::kUint32` 입니다. */
+        /** @brief 원소가 `getItems()` 의 몇 번째인지 반환합니다. 없으면 `constant::invalid_index::kUint32` 입니다. */
         uint32 findIndex( const T* pItem ) const
         {
             SW_ASSERT( _iterationDepth == 0 );
             compact();
             const auto it = _mapIndex.find( pItem );
-            return it != _mapIndex.end() ? it->second : invalid_index::kUint32;
+            return it != _mapIndex.end() ? it->second : constant::invalid_index::kUint32;
         }
 
     private:

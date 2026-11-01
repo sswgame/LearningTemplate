@@ -127,7 +127,7 @@ namespace sw
             /**
              * @brief 남는 삼각형의 모서리를 순서대로 옮겨 오프셋과 피팅 델타를 얹습니다(구간은 연속한 정점 범위라 순서를 지키면 구간도 연속이다).
              * @param pWelded 피팅을 쓸 때만 있습니다(@p pFit 과 함께 있거나 함께 없습니다).
-             * @param outListNewIndex 원본 모서리 번호마다 새 번호입니다. 버려진 모서리는 `invalid_index::kUint32` 입니다.
+             * @param outListNewIndex 원본 모서리 번호마다 새 번호입니다. 버려진 모서리는 `constant::invalid_index::kUint32` 입니다.
              */
             static void bakeVertices( const Mesh& source, const vector<float3>& listPositionOffset, const vector<float3>& listNormalOffset, const AppearanceGeometry* pWelded,
                                       const FitPartResult* pFit, vector<RHIVertex>& outListBaked, vector<MeshSkinVertex>& outListBakedSkin, vector<uint32>& outListNewIndex )
@@ -136,7 +136,7 @@ namespace sw
                 const uint32             vertexCount   = source.getVertexCount();
                 const uint32             triangleCount = vertexCount / 3;
                 const bool               bUseFit       = pWelded != nullptr && pFit != nullptr;
-                outListNewIndex.assign( vertexCount, invalid_index::kUint32 );
+                outListNewIndex.assign( vertexCount, constant::invalid_index::kUint32 );
                 outListBaked.reserve( vertexCount );
                 for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
                 {
@@ -178,7 +178,7 @@ namespace sw
                     bool bFirstFound   = false;
                     for ( uint32 vertexIndex = section._firstVertex; vertexIndex < section._firstVertex + section._vertexCount && vertexIndex < vertexCount; ++vertexIndex )
                     {
-                        if ( listNewIndex[vertexIndex] == invalid_index::kUint32 )
+                        if ( listNewIndex[vertexIndex] == constant::invalid_index::kUint32 )
                             continue;
                         if ( bFirstFound == false )
                             baked._firstVertex = listNewIndex[vertexIndex];
@@ -203,7 +203,7 @@ namespace sw
                     kept._name = target._name;
                     for ( const MeshMorphDelta& delta : target._listDelta )
                     {
-                        if ( delta._vertexIndex >= vertexCount || listNewIndex[delta._vertexIndex] == invalid_index::kUint32 )
+                        if ( delta._vertexIndex >= vertexCount || listNewIndex[delta._vertexIndex] == constant::invalid_index::kUint32 )
                             continue;
                         MeshMorphDelta moved = delta;
                         moved._vertexIndex   = listNewIndex[delta._vertexIndex];

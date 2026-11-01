@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
@@ -249,7 +249,7 @@ namespace sw::editor
         if ( pContainer != nullptr )
         {
             const uint32 targetIndex = pContainer->findChildIndex( pTarget );
-            outIndex                 = targetIndex == invalid_index::kUint32 ? pContainer->getChildCount() : targetIndex + 1; // 패널이 아닌 위젯에 놓으면 그 바로 뒤에 끼운다
+            outIndex                 = targetIndex == constant::invalid_index::kUint32 ? pContainer->getChildCount() : targetIndex + 1; // 패널이 아닌 위젯에 놓으면 그 바로 뒤에 끼운다
             return pContainer;
         }
         Widget* pRoot = tree.getRoot();
@@ -467,7 +467,7 @@ namespace sw::editor
 
     string UIPreviewLogic::makeTimeLabel( float32 time, float32 duration )
     {
-        fixed_string<constant::kMaxBuffer64> label;
+        fixed_string<constant::buffer::kMax64> label;
         formatstring( label.data(), label.capacity(), "%.2f / %.2f s", static_cast<float64>( time ), static_cast<float64>( duration ) );
         return string( label.c_str() );
     }

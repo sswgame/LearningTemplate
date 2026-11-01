@@ -71,7 +71,7 @@ namespace sw
 
             static bool isDepthAttachment( const RenderPassAttachment* pAttachment )
             {
-                return pAttachment != nullptr && engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) == constant::kDepthStencilFormat;
+                return pAttachment != nullptr && engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) == constant::render::kDepthStencilFormat;
             }
 
             /** @brief 1) 첨부: 포맷 표기가 RHIFormat 으로 해석되는가, 렌더 타깃이 될 수 있는가, 이름이 겹치지 않는가, 나눗수 · 역할 표기가 맞는가. */

@@ -154,8 +154,8 @@ namespace sw
 
     string LocalizationTextUtil::formatSourceHash( uint64 sourceHash )
     {
-        utf8         arrBuffer[constant::kMaxBuffer32]{};
-        const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, sourceHash, 16 );
+        utf8         arrBuffer[constant::buffer::kMax32]{};
+        const uint32 length = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, sourceHash, 16 );
         string       text( arrBuffer, length );
         while ( text.size() < 16 )
         {

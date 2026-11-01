@@ -18,7 +18,6 @@ namespace sw
     {
         struct ServiceAccountTokenSourceInternal
         {
-            static constexpr int64 kMillisecondsPerSecond = 1000;
 
             [[nodiscard]] static bool readText( const JSONValue& object, const utf8* pKey, string& outText )
             {
@@ -97,7 +96,7 @@ namespace sw
         if ( _requestID != 0 )
             return true;
         const int64 issuedAtSec = now.toSeconds();
-        const int64 expiresSec  = issuedAtSec + kJWTLifetimeMs / Internal::kMillisecondsPerSecond;
+        const int64 expiresSec  = issuedAtSec + kJWTLifetimeMs / constant::time::kMillisecondsPerSecond;
         JSONWriter  writer;
         writer.beginObject();
         writer.key( "iss" );
@@ -149,7 +148,7 @@ namespace sw
         {
             Memory::set( _accessToken.data(), 0, _accessToken.size() );
             _accessToken = std::move( token );
-            _expiresMs   = now.count() + expiresInSec * Internal::kMillisecondsPerSecond;
+            _expiresMs   = now.count() + expiresInSec * constant::time::kMillisecondsPerSecond;
             return Outcome::Granted;
         }
         SW_LOG_WARNING( "The access token request of service account '%#' failed (status %#)", _credentials._clientEmail.c_str(), response._statusCode );

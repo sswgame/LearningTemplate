@@ -34,7 +34,7 @@ namespace sw::editor
 
             static bool fail( string_view text, size_t offset, string_view what, string& outError )
             {
-                StringBuilder<constant::kMaxBuffer256> message;
+                StringBuilder<constant::buffer::kMax256> message;
                 message.appendFormat( "line %#: %#", computeLineNumber( text, offset ), what );
                 outError = string( message.view() );
                 return false;

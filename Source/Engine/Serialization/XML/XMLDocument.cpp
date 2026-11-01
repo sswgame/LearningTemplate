@@ -583,7 +583,7 @@ namespace sw
             uint32 line   = 0;
             uint32 column = 0;
             StringUtil::getLineAndColumn( xmlText, result.offset > 0 ? static_cast<size_t>( result.offset ) : 0, line, column );
-            StringBuilder<constant::kMaxBuffer1024> message;
+            StringBuilder<constant::buffer::kMax1024> message;
             message.appendFormat( "%#:%#:%#: %#", source, line, column, result.description() );
             _lastError = message.c_str();
             SW_LOG_ERROR_ID( "Xml.ParseError", "XML parse error at %#", _lastError );
@@ -688,7 +688,7 @@ namespace sw
 
     string XMLDocument::unescapeString( string_view text )
     {
-        StringBuilder<constant::kMaxBuffer1024> out;
+        StringBuilder<constant::buffer::kMax1024> out;
         for ( size_t index = 0; index < text.size(); ++index )
         {
             if ( text[index] == '&' )

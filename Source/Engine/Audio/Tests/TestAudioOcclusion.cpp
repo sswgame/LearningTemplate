@@ -104,7 +104,7 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphUsesPortalOpenness )
     const uint32       roomA = graph.addRoom( sw::float3( 5.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );  // x 0..10
     const uint32       roomB = graph.addRoom( sw::float3( 15.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) ); // x 10..20
     const uint32       door  = graph.addPortal( roomA, roomB, sw::float3( 10.0f, 0.0f, 0.0f ), 1.0f );
-    SW_REQUIRE_TRUE( door != sw::invalid_index::kUint32 );
+    SW_REQUIRE_TRUE( door != sw::constant::invalid_index::kUint32 );
 
     const sw::float3 inA( 2.0f, 0.0f, 0.0f );
     const sw::float3 inA2( 8.0f, 0.0f, 0.0f );
@@ -138,7 +138,7 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphPicksTheBestPath )
     const uint32       roomC = graph.addRoom( sw::float3( 25.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );
     const uint32       ab    = graph.addPortal( roomA, roomB, sw::float3( 10.0f, 0.0f, 0.0f ), 1.0f );
     const uint32       bc    = graph.addPortal( roomB, roomC, sw::float3( 20.0f, 0.0f, 0.0f ), 1.0f );
-    SW_REQUIRE_TRUE( ab != sw::invalid_index::kUint32 && bc != sw::invalid_index::kUint32 );
+    SW_REQUIRE_TRUE( ab != sw::constant::invalid_index::kUint32 && bc != sw::constant::invalid_index::kUint32 );
 
     const sw::float3 inA( 2.0f, 0.0f, 0.0f );
     const sw::float3 inC( 28.0f, 0.0f, 0.0f );
@@ -154,12 +154,12 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphPicksTheBestPath )
     const sw::float3 outdoors( 100.0f, 0.0f, 0.0f );
     SW_EXPECT_NEAR( 1.0f, graph.computePropagation( inA, outdoors )._occlusion, 1e-6f );
     const uint32 front = graph.addPortal( roomC, sw::AudioRoomGraph::kOutside, sw::float3( 30.0f, 0.0f, 0.0f ), 1.0f );
-    SW_REQUIRE_TRUE( front != sw::invalid_index::kUint32 );
+    SW_REQUIRE_TRUE( front != sw::constant::invalid_index::kUint32 );
     SW_EXPECT_NEAR( 1.0f - 0.85f * 0.85f, graph.computePropagation( inA, outdoors )._occlusion, 1e-5f ); // A -> C(열린 AC) -> 바깥
 
     // 잘못된 포털은 거절한다.
-    SW_EXPECT_TRUE( graph.addPortal( roomA, roomA, sw::float3( 0.0f, 0.0f, 0.0f ), 1.0f ) == sw::invalid_index::kUint32 );
-    SW_EXPECT_TRUE( graph.addPortal( roomA, 77, sw::float3( 0.0f, 0.0f, 0.0f ), 1.0f ) == sw::invalid_index::kUint32 );
+    SW_EXPECT_TRUE( graph.addPortal( roomA, roomA, sw::float3( 0.0f, 0.0f, 0.0f ), 1.0f ) == sw::constant::invalid_index::kUint32 );
+    SW_EXPECT_TRUE( graph.addPortal( roomA, 77, sw::float3( 0.0f, 0.0f, 0.0f ), 1.0f ) == sw::constant::invalid_index::kUint32 );
 }
 
 /**
@@ -170,7 +170,7 @@ SW_TEST_CASE( AudioOcclusionTest, RoomGraphDiffractsAroundPortals )
     sw::AudioRoomGraph graph;
     const uint32       roomA = graph.addRoom( sw::float3( 5.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) );  // x 0..10
     const uint32       roomB = graph.addRoom( sw::float3( 15.0f, 0.0f, 0.0f ), sw::float3( 5.0f, 5.0f, 5.0f ) ); // x 10..20
-    SW_REQUIRE_TRUE( graph.addPortal( roomA, roomB, sw::float3( 10.0f, 0.0f, 4.0f ), 1.0f ) != sw::invalid_index::kUint32 );
+    SW_REQUIRE_TRUE( graph.addPortal( roomA, roomB, sw::float3( 10.0f, 0.0f, 4.0f ), 1.0f ) != sw::constant::invalid_index::kUint32 );
 
     // 리스너 (2,0,0) → 문 (10,0,4) → 에미터 (18,0,0): 두 토막 √80 씩, 꺾임 acos(0.6).
     const sw::AudioPropagation around = graph.computePropagation( sw::float3( 2.0f, 0.0f, 0.0f ), sw::float3( 18.0f, 0.0f, 0.0f ) );
@@ -202,7 +202,7 @@ SW_TEST_CASE( AudioOcclusionTest, NestedRoomsPreferTheSmallest )
     SW_EXPECT_EQUAL( hall, graph.findRoom( sw::float3( 10.0f, 0.0f, 0.0f ) ) );
 
     SW_EXPECT_NEAR( 1.0f, graph.computePropagation( sw::float3( 1.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f ); // 이어 주는 문이 없다
-    SW_EXPECT_TRUE( graph.addPortal( hall, closet, sw::float3( 2.0f, 0.0f, 0.0f ), 1.0f ) != sw::invalid_index::kUint32 );
+    SW_EXPECT_TRUE( graph.addPortal( hall, closet, sw::float3( 2.0f, 0.0f, 0.0f ), 1.0f ) != sw::constant::invalid_index::kUint32 );
     SW_EXPECT_NEAR( 0.15f, graph.computePropagation( sw::float3( 1.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-5f );
     graph.clear();
     SW_EXPECT_EQUAL( uint32( 0 ), graph.getRoomCount() );

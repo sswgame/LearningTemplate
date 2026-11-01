@@ -25,9 +25,9 @@ SW_TEST_CASE( NetEmulationPresetTableTest, ShippedTableMakesConditionsByName )
     SW_REQUIRE_NOT_NULL( pLTE );
     NetEmulationConditions conditions;
     SW_REQUIRE_TRUE( table.tryGetConditions( "lte", conditions ) );
-    SW_EXPECT_NEAR( static_cast<float64>( pLTE->_latencyMs ) / static_cast<float64>( constant::kMillisecondsPerSecond ), conditions._latency, 1.0e-9 );
+    SW_EXPECT_NEAR( static_cast<float64>( pLTE->_latencyMs ) / static_cast<float64>( constant::time::kMillisecondsPerSecond ), conditions._latency, 1.0e-9 );
     SW_EXPECT_NEAR( pLTE->_lossPercent / 100.0f, conditions._lossRate, 1.0e-6 );
-    SW_EXPECT_EQUAL( pLTE->_bandwidthKilobytesPerSecond * static_cast<int32>( constant::kBytesPerKilobyte ), conditions._bandwidthBytesPerSecond );
+    SW_EXPECT_EQUAL( pLTE->_bandwidthKilobytesPerSecond * static_cast<int32>( constant::memory::kBytesPerKilobyte ), conditions._bandwidthBytesPerSecond );
 
     SW_REQUIRE_TRUE( table.tryGetConditions( "off", conditions ) );
     SW_EXPECT_FALSE( conditions.isActive() );

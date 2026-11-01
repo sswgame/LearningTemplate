@@ -155,7 +155,7 @@ namespace sw
         {
             bValid = Internal::reportUnknownNames( node, Internal::kArrPipelineAttribute, sourceName ) && bValid;
             // 적지 않은 칸은 TelemetryPipelineConfig 의 초기값이다. 깨진 값 · 범위 밖 값은 자르지 않고 오류이며, 파일 전체를 받지 않는다.
-            constexpr uint32 kAnyCount = invalid_index::kUint32;
+            constexpr uint32 kAnyCount = constant::invalid_index::kUint32;
             bValid                     = node.readOptionalAttributeInRange( "batchEvents", 1u, kAnyCount, settings._batchEvents ) && bValid;
             bValid                     = node.readOptionalAttributeInRange( "flushSeconds", 0.0f, MathUtil::kMaxFloat, settings._flushSeconds ) && bValid;
             bValid                     = node.readOptionalAttributeInRange( "maxFileBytes", Internal::kMinFileBytes, kAnyCount, settings._maxFileBytes ) && bValid;

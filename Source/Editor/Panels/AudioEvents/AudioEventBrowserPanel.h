@@ -72,24 +72,24 @@ namespace sw::editor
         void drawVoiceProfiler( const AudioEngineStats& stats );
 
     private:
-        AudioEventLibrary                     _editLibrary;      ///< 고치는 중인 라이브러리 사본(파일에서 다시 읽음)
-        EditorPropertyGrid                    _grid;             ///< 사본 이벤트의 속성 그리드
-        EditorPropertyGrid                    _libraryGrid;      ///< 사본 라이브러리의 파라미터 · 감쇠 프리셋 그리드
-        vector<hashed_string>                 _listEventName;    ///< 엔진이 준 이벤트 이름(순서 없음)
-        vector<hashed_string>                 _listVisibleEvent; ///< 필터를 거친 사전순 이름
-        vector<AudioEventFieldRow>            _listFieldRow;
-        vector<AudioInstanceStatus>           _listInstanceStatus;
-        vector<AudioInstanceStatus>           _listInstanceRow;
-        hashed_string                         _selectedEvent;
-        hashed_string                         _selectedLibrary; ///< 고른 이벤트가 들어 있는 라이브러리(리소스 경로)
-        hashed_string                         _editLibraryName; ///< `_editLibrary` 를 읽은 리소스 경로(저장할 곳)입니다. 비면 고치기 중이 아닙니다.
-        hashed_string                         _editEvent;       ///< 사본에서 고치는 이벤트 이름(복제한 새 이벤트일 수 있다)
-        fixed_string<constant::kMaxBuffer128> _filter;
-        bool                                  _bOnlySelectedEvent;  ///< 재생 중 목록을 고른 이벤트로 거른다.
-        bool                                  _bEditDirty;          ///< 사본을 고친 뒤 아직 저장하지 않았다.
-        const AudioEngine*                    _pEventNameEngine;    ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
-        uint32                                _eventNameGeneration; ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
-        string                                _visibleEventFilter;  ///< `_listVisibleEvent` 를 거른 검색 글
-        bool                                  _bVisibleEventStale;  ///< 이름 목록이 바뀌어 다시 걸러야 한다
+        AudioEventLibrary                       _editLibrary;      ///< 고치는 중인 라이브러리 사본(파일에서 다시 읽음)
+        EditorPropertyGrid                      _grid;             ///< 사본 이벤트의 속성 그리드
+        EditorPropertyGrid                      _libraryGrid;      ///< 사본 라이브러리의 파라미터 · 감쇠 프리셋 그리드
+        vector<hashed_string>                   _listEventName;    ///< 엔진이 준 이벤트 이름(순서 없음)
+        vector<hashed_string>                   _listVisibleEvent; ///< 필터를 거친 사전순 이름
+        vector<AudioEventFieldRow>              _listFieldRow;
+        vector<AudioInstanceStatus>             _listInstanceStatus;
+        vector<AudioInstanceStatus>             _listInstanceRow;
+        hashed_string                           _selectedEvent;
+        hashed_string                           _selectedLibrary; ///< 고른 이벤트가 들어 있는 라이브러리(리소스 경로)
+        hashed_string                           _editLibraryName; ///< `_editLibrary` 를 읽은 리소스 경로(저장할 곳)입니다. 비면 고치기 중이 아닙니다.
+        hashed_string                           _editEvent;       ///< 사본에서 고치는 이벤트 이름(복제한 새 이벤트일 수 있다)
+        fixed_string<constant::buffer::kMax128> _filter;
+        bool                                    _bOnlySelectedEvent;  ///< 재생 중 목록을 고른 이벤트로 거른다.
+        bool                                    _bEditDirty;          ///< 사본을 고친 뒤 아직 저장하지 않았다.
+        const AudioEngine*                      _pEventNameEngine;    ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
+        uint32                                  _eventNameGeneration; ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
+        string                                  _visibleEventFilter;  ///< `_listVisibleEvent` 를 거른 검색 글
+        bool                                    _bVisibleEventStale;  ///< 이름 목록이 바뀌어 다시 걸러야 한다
     };
 } // namespace sw::editor

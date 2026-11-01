@@ -101,7 +101,7 @@ namespace sw::editor
         uint32                                                       _cacheTypeGeneration; ///< `_mapTypeInspector` 를 모은 타입 레지스트리 세대
 
         /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
-        static constexpr uint32 kNotSynced = invalid_index::kUint32;
+        static constexpr uint32 kNotSynced = constant::invalid_index::kUint32;
     };
 } // namespace sw::editor
 

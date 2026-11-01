@@ -3,7 +3,7 @@
 #include "Engine/UI/Binding/UIBindingValue.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -297,7 +297,7 @@ namespace sw
             }
             case UIBindingValueKind::Number:
             {
-                utf8 arrBuffer[constant::kMaxBuffer64];
+                utf8 arrBuffer[constant::buffer::kMax64];
                 if ( _bInteger )
                     StringUtil::formatNumber( arrBuffer, sizeof( arrBuffer ), static_cast<int64>( MathUtil::round( _number ) ) );
                 else

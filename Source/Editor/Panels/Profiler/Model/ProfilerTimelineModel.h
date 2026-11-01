@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
@@ -155,7 +155,7 @@ namespace sw::editor
         vector<ProfilerTimelineThread> _listDraw;            ///< 이번 프레임에 그릴 스레드(살아 있는 것과 불러온 것, 프레임마다 다시 채운다)
         vector<uint64>                 _listLoadedFrameDraw; ///< 불러온 트레이스의 프레임 경계(살아 있는 기록의 시각으로 변환한 것)
         string                         _traceStatus;         ///< 마지막 불러오기 결과 한 줄
-        utf8                           _arrTraceSearch[constant::kMaxBuffer128];
+        utf8                           _arrTraceSearch[constant::buffer::kMax128];
         uint32                         _traceSearchMatched;
         uint8                          _bLoadedTrace       : 1;
         uint8                          _bSelectTimelineTab : 1; ///< 다음 그리기에서 Timeline 탭을 고른다(`ProfilerPanel::openTraceInTimeline`)

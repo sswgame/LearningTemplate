@@ -69,8 +69,8 @@ namespace sw::editor
         /** @brief 에셋 선택 팝업의 상태입니다. 열린 팝업은 하나뿐이므로 상태도 하나만 보관합니다. */
         struct AssetPickerState
         {
-            vector<EditorAssetIndexEntry>        _listEntry; ///< 팝업을 열 때 한 번 모은 리소스다. 파일 목록을 프레임마다 스캔하지 않는다
-            fixed_string<constant::kMaxBuffer64> _search;
+            vector<EditorAssetIndexEntry>          _listEntry; ///< 팝업을 열 때 한 번 모은 리소스다. 파일 목록을 프레임마다 스캔하지 않는다
+            fixed_string<constant::buffer::kMax64> _search;
         };
 
         /** @brief 열린 선택 팝업의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
@@ -97,8 +97,8 @@ namespace sw::editor
             /** @brief 내장 타입 값을 테이블의 형식(`InspectorBuiltinValue::_pFormatValue`)으로 읽기 전용 표시합니다. */
             void drawReadOnlyValue( const PropertyInfo& prop, const ValueAddress value )
             {
-                fixed_string<constant::kMaxBuffer512> buf;
-                const InspectorBuiltinValue*          pRow = InspectorBuiltinValueUtil::findBuiltin( prop._typeName.c_str() );
+                fixed_string<constant::buffer::kMax512> buf;
+                const InspectorBuiltinValue*            pRow = InspectorBuiltinValueUtil::findBuiltin( prop._typeName.c_str() );
                 if ( pRow != nullptr )
                     pRow->_pFormatValue( value.get(), buf.data(), buf.capacity() );
                 drawReadOnlyText( prop, buf.c_str() );
@@ -259,7 +259,7 @@ namespace sw::editor
         /** @brief Enter 로 확정하는 입력란입니다. 키 입력마다 인턴하지 않으려는 용도입니다. 확정했으면 true 입니다. */
         bool drawNameInput( const utf8* pID, hashed_string& value )
         {
-            fixed_string<constant::kMaxBuffer256> buf{ value.c_str() };
+            fixed_string<constant::buffer::kMax256> buf{ value.c_str() };
             if ( ImGui::InputText( pID, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
                 return false;
             value = hashed_string( buf.c_str() );
@@ -359,7 +359,7 @@ namespace sw::editor
         template <typename T>
         bool drawTagWidget( const utf8* pLabel, T& value )
         {
-            fixed_string<constant::kMaxBuffer256> buf{ value.isValid() ? value.getString() : "" };
+            fixed_string<constant::buffer::kMax256> buf{ value.isValid() ? value.getString() : "" };
             if ( ImGui::InputText( pLabel, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
                 return false;
             value = buf.empty() ? TagID{} : TagID::request( buf.c_str() );
@@ -467,7 +467,7 @@ namespace sw::editor
                 const float32               dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    fixed_string<constant::kMaxBuffer64> buf;
+                    fixed_string<constant::buffer::kMax64> buf;
                     if constexpr ( kIsInteger )
                         formatstring( buf.data(), buf.capacity(), "%#", *pPtr );
                     else
@@ -587,8 +587,8 @@ namespace sw::editor
 
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    const InspectorHandleState            state = InspectorComponentPickerUtil::computeHandleState( *pManager, *pTargetType, *pValue );
-                    fixed_string<constant::kMaxBuffer512> preview;
+                    const InspectorHandleState              state = InspectorComponentPickerUtil::computeHandleState( *pManager, *pTargetType, *pValue );
+                    fixed_string<constant::buffer::kMax512> preview;
                     makePreview( *pManager, *pValue, state, preview );
                     drawReadOnlyText( prop, preview.c_str() );
                     return true;
@@ -616,8 +616,8 @@ namespace sw::editor
             static bool drawPicker( const utf8* pLabel, const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle current,
                                     vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
             {
-                const InspectorHandleState            state = InspectorComponentPickerUtil::computeHandleState( manager, targetType, current );
-                fixed_string<constant::kMaxBuffer512> preview;
+                const InspectorHandleState              state = InspectorComponentPickerUtil::computeHandleState( manager, targetType, current );
+                fixed_string<constant::buffer::kMax512> preview;
                 makePreview( manager, current, state, preview );
                 const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
                 if ( bColored )
@@ -655,7 +655,7 @@ namespace sw::editor
 
         private:
             /** @brief 현재 값의 미리보기 글입니다. */
-            static void makePreview( const GameObjectManager& manager, ComponentHandle value, InspectorHandleState state, fixed_string<constant::kMaxBuffer512>& outPreview )
+            static void makePreview( const GameObjectManager& manager, ComponentHandle value, InspectorHandleState state, fixed_string<constant::buffer::kMax512>& outPreview )
             {
                 switch ( state )
                 {
@@ -683,7 +683,7 @@ namespace sw::editor
             /** @brief 선택기를 그릴 수 없을 때의 오류 글입니다. 필드마다 한 번만 로그를 남깁니다. */
             void drawUnavailable( const PropertyInfo& prop, bool bUnknownType )
             {
-                fixed_string<constant::kMaxBuffer512> text;
+                fixed_string<constant::buffer::kMax512> text;
                 if ( bUnknownType )
                     formatstring( text.data(), text.capacity(), "(unknown component type '%#')", prop._handleTargetTypeName.c_str() );
                 else
@@ -793,8 +793,8 @@ namespace sw::editor
                 const InspectorDisplayUnit& unit = grid.getDisplayUnit( prop );
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    const float3                          shown = *pPtr * unit._scale;
-                    fixed_string<constant::kMaxBuffer128> buf;
+                    const float3                            shown = *pPtr * unit._scale;
+                    fixed_string<constant::buffer::kMax128> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#)",
                                   Fmt( shown._x, Format( 2 ) ), Fmt( shown._y, Format( 2 ) ), Fmt( shown._z, Format( 2 ) ) );
                     drawReadOnlyText( prop, buf.c_str() );
@@ -826,7 +826,7 @@ namespace sw::editor
                     return true;
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    fixed_string<constant::kMaxBuffer128> buf;
+                    fixed_string<constant::buffer::kMax128> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#)",
                                   Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ) );
                     drawReadOnlyText( prop, buf.c_str() );
@@ -849,7 +849,7 @@ namespace sw::editor
                     return true;
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    fixed_string<constant::kMaxBuffer256> buf;
+                    fixed_string<constant::buffer::kMax256> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#, %#, %#)",
                                   Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ),
                                   Fmt( pPtr->_z, Format( 2 ) ), Fmt( pPtr->_w, Format( 2 ) ) );
@@ -907,7 +907,7 @@ namespace sw::editor
     InspectorPropertyManager::InspectorPropertyManager()
         : _registry{}
         , _listRegistration{}
-        , _syncedGeneration{ invalid_index::kUint32 }
+        , _syncedGeneration{ constant::invalid_index::kUint32 }
     {
     }
 
@@ -928,7 +928,7 @@ namespace sw::editor
     {
         registerBuiltins();
         _listRegistration.clear();
-        _syncedGeneration = invalid_index::kUint32;
+        _syncedGeneration = constant::invalid_index::kUint32;
         syncWithRegistry();
     }
 

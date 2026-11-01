@@ -45,7 +45,7 @@ namespace sw::editor
 
             static string describe( string_view verb, string_view groupName, string_view column )
             {
-                StringBuilder<constant::kMaxBuffer256> text;
+                StringBuilder<constant::buffer::kMax256> text;
                 if ( column.empty() )
                     text.appendFormat( "%# %#", verb, groupName );
                 else
@@ -109,7 +109,7 @@ namespace sw::editor
     {
         const float32 dpiScale = EditorThemeUtil::getDPIScale();
         ImGui::PushID( group._name.c_str() );
-        StringBuilder<constant::kMaxBuffer64> subtitle;
+        StringBuilder<constant::buffer::kMax64> subtitle;
         subtitle.appendFormat( "%# rows", group._listRow.size() );
         EditorWidgets::drawSectionHeader( group._name.c_str(), subtitle.c_str() );
 

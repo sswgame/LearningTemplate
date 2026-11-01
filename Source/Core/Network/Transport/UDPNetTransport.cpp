@@ -107,7 +107,7 @@ namespace sw
     {
         if ( isOpen() == false )
             return INetTransport::waitForReceive( timeoutSeconds );
-        const int32 timeoutMilli = static_cast<int32>( timeoutSeconds * constant::kMillisecondsPerSecond + 0.5 );
+        const int32 timeoutMilli = static_cast<int32>( timeoutSeconds * constant::time::kMillisecondsPerSecond + 0.5 );
         return PlatformSocketUtil::waitReadable( _socketHandle, timeoutMilli > 0 ? timeoutMilli : 0 );
     }
 

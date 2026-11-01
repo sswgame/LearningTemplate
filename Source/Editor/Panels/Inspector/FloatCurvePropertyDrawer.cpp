@@ -46,7 +46,7 @@ namespace sw::editor
                     _openPopupID          = popupID;
                     EditorInputGUI::openPopup( "CurveEditor" ); // 같은 id(위의 GetID 와 같은 이름)
                 }
-                fixed_string<constant::kMaxBuffer128> mark;
+                fixed_string<constant::buffer::kMax128> mark;
                 formatstring( mark.data(), mark.capacity(), "inspector.curve.%#", prop._name.c_str() );
                 EditorSelfTestMarks::note( mark.c_str() );
 

@@ -230,7 +230,7 @@ namespace sw
                 static const uint64 s_fingerprint = []
                 {
                     // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)은 Vulkan 요구 판이다.
-                    constexpr uint32 kVulkanTargetVersion = constant::kVulkanRequiredMajor * 1000 + constant::kVulkanRequiredMinor;
+                    constexpr uint32 kVulkanTargetVersion = constant::render::kVulkanRequiredMajor * 1000 + constant::render::kVulkanRequiredMinor;
                     uint64           hash                 = ShaderCookStamp::makeToolchainFingerprint( ShaderCookStamp::kCompileOptionsRevision, kVulkanTargetVersion, ShaderCookStamp::kCompilerVersion );
                     // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 요청 desc 로 키를 만드는 캐시도 표가 바뀌면 낡는다.
                     vector<ShaderMacroDefine> listDefine;
@@ -491,7 +491,7 @@ namespace sw
             template <typename... Args>
             static void appendProblem( vector<string>& outListProblem, const utf8* pFormat, const Args&... args )
             {
-                StringBuilder<constant::kMaxBuffer512> sb;
+                StringBuilder<constant::buffer::kMax512> sb;
                 sb.appendFormat( pFormat, args... );
                 outListProblem.emplace_back( sb.c_str(), sb.size() );
             }
@@ -504,7 +504,7 @@ namespace sw
                     SW_LOG_ERROR( "Shader domains cannot be found: _listResourcePriority (EngineConfig.json) is empty" );
                     return false;
                 }
-                for ( const utf8* pKind : { path::kEnginePack, path::kCommonPack } )
+                for ( const utf8* pKind : { constant::path::kEnginePack, constant::path::kCommonPack } )
                 {
                     if ( VectorUtil::contains( listPriority, string( pKind ) ) == false )
                     {
@@ -661,7 +661,7 @@ namespace sw
             return false;
         for ( const string& token : listPriority )
         {
-            if ( token != path::kGamePack )
+            if ( token != constant::path::kGamePack )
             {
                 if ( VectorUtil::contains( outListDomain, token ) == false )
                     outListDomain.push_back( token );
@@ -686,8 +686,8 @@ namespace sw
         outListDomain.clear();
         if ( ShaderCookStampInternal::validatePriority( listPriority ) == false )
             return false;
-        outListDomain.emplace_back( path::kEnginePack );
-        outListDomain.emplace_back( path::kCommonPack );
+        outListDomain.emplace_back( constant::path::kEnginePack );
+        outListDomain.emplace_back( constant::path::kCommonPack );
         return true;
     }
 

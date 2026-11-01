@@ -56,7 +56,7 @@ namespace sw
 
         float32                          _tolerance;
         vector<float3>                   _listPoint;
-        vector<uint32>                   _listNextInCell; ///< 점 번호 → 같은 셀의 다음 점(넣은 순서). 끝이면 `invalid_index::kUint32`
+        vector<uint32>                   _listNextInCell; ///< 점 번호 → 같은 셀의 다음 점(넣은 순서). 끝이면 `constant::invalid_index::kUint32`
         unordered_map<uint64, CellChain> _mapCellToChain; ///< 셀 키 → 그 셀의 사슬. 찾기에만 쓰고 순회하지 않는다.
     };
 } // namespace sw

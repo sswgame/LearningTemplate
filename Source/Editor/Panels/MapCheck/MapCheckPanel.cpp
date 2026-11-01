@@ -115,10 +115,10 @@ namespace sw::editor
                 EditorContext&        context = editor::getSubsystem<EditorContext>();
                 const MapCheckCounts& counts  = syncStatusCounts();
                 notifyOnSceneChange( context, counts );
-                const Color                          color = counts._errorCount > 0   ? SW_THEMECOLOR( "Signal", "Error" )
-                                                           : counts._warningCount > 0 ? SW_THEMECOLOR( "Signal", "Warning" )
-                                                                                      : SW_THEMECOLOR( "Base", "TextMuted" );
-                fixed_string<constant::kMaxBuffer64> label;
+                const Color                            color = counts._errorCount > 0   ? SW_THEMECOLOR( "Signal", "Error" )
+                                                             : counts._warningCount > 0 ? SW_THEMECOLOR( "Signal", "Warning" )
+                                                                                        : SW_THEMECOLOR( "Base", "TextMuted" );
+                fixed_string<constant::buffer::kMax64> label;
                 formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", editoricon::kWarning, counts._errorCount + counts._warningCount );
                 ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( color ) );
                 const bool bOpen = ImGui::SmallButton( label.c_str() );
@@ -217,8 +217,8 @@ namespace sw::editor
         EditorSelfTestMarks::note( "mapCheck.checkMap" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "CheckMap" ) );
 
-        bool                                 bShowErrors = _bShowErrors == SW_TRUE;
-        fixed_string<constant::kMaxBuffer64> errorLabel;
+        bool                                   bShowErrors = _bShowErrors == SW_TRUE;
+        fixed_string<constant::buffer::kMax64> errorLabel;
         formatstring( errorLabel.data(), errorLabel.capacity(), "Errors (%#)", _counts._errorCount );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( errorLabel.c_str() ) );
         if ( ImGui::Checkbox( errorLabel.c_str(), &bShowErrors ) )
@@ -227,8 +227,8 @@ namespace sw::editor
             _bRowsDirty  = SW_TRUE;
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "ShowErrors" ) );
-        bool                                 bShowWarnings = _bShowWarnings == SW_TRUE;
-        fixed_string<constant::kMaxBuffer64> warningLabel;
+        bool                                   bShowWarnings = _bShowWarnings == SW_TRUE;
+        fixed_string<constant::buffer::kMax64> warningLabel;
         formatstring( warningLabel.data(), warningLabel.capacity(), "Warnings (%#)", _counts._warningCount );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( warningLabel.c_str() ) );
         if ( ImGui::Checkbox( warningLabel.c_str(), &bShowWarnings ) )
@@ -286,7 +286,7 @@ namespace sw::editor
             }
             if ( EditorSelfTestMarks::isEnabled() )
             {
-                fixed_string<constant::kMaxBuffer64> mark;
+                fixed_string<constant::buffer::kMax64> mark;
                 formatstring( mark.data(), mark.capacity(), "mapCheck.row.%#", rowIndex );
                 EditorSelfTestMarks::note( mark.c_str() );
             }

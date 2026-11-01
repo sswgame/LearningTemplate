@@ -3,7 +3,7 @@
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -18,7 +18,7 @@ namespace sw
             /** @brief 0..1 비율을 "75%" 로 씁니다(반올림). */
             [[nodiscard]] static bool convertPercent( const UIBindingValue& in, UIBindingValue& outValue )
             {
-                utf8 arrBuffer[constant::kMaxBuffer64];
+                utf8 arrBuffer[constant::buffer::kMax64];
                 StringUtil::formatNumber( arrBuffer, sizeof( arrBuffer ), static_cast<int64>( MathUtil::round( in.toNumber() * kPercentScale ) ) );
                 outValue = UIBindingValue::makeText( string( arrBuffer ) + "%" );
                 return true;
@@ -46,10 +46,10 @@ namespace sw
             [[nodiscard]] static bool convertSeconds( const UIBindingValue& in, UIBindingValue& outValue )
             {
                 const int64 totalSeconds = static_cast<int64>( MathUtil::ceil( MathUtil::max( 0.0, in.toNumber() ) ) );
-                const int64 minutes      = totalSeconds / constant::kSecondsPerMinute;
-                const int64 seconds      = totalSeconds % constant::kSecondsPerMinute;
-                utf8        arrMinuteText[constant::kMaxBuffer32];
-                utf8        arrSecondText[constant::kMaxBuffer32];
+                const int64 minutes      = totalSeconds / constant::time::kSecondsPerMinute;
+                const int64 seconds      = totalSeconds % constant::time::kSecondsPerMinute;
+                utf8        arrMinuteText[constant::buffer::kMax32];
+                utf8        arrSecondText[constant::buffer::kMax32];
                 StringUtil::formatNumber( arrMinuteText, sizeof( arrMinuteText ), minutes );
                 StringUtil::formatNumber( arrSecondText, sizeof( arrSecondText ), seconds );
                 outValue = UIBindingValue::makeText( string( arrMinuteText ) + ( seconds < 10 ? ":0" : ":" ) + arrSecondText );

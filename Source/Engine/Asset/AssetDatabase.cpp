@@ -35,10 +35,10 @@ namespace sw
     {
         string p( relativePath );
         string result;
-        if ( FileUtil::hasExtension( p, path::kMetaExtension ) )
+        if ( FileUtil::hasExtension( p, constant::path::kMetaExtension ) )
             result = std::move( p );
         else
-            result = p + path::kMetaExtension;
+            result = p + constant::path::kMetaExtension;
         return result;
     }
 
@@ -46,7 +46,7 @@ namespace sw
     {
         UUID   result{};
         string path = FileUtil::normalizePath( relativePath );
-        if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
+        if ( path.empty() || FileUtil::hasExtension( path, constant::path::kMetaExtension ) )
             return result;
 
         // **리소스 루트 밖의 절대 경로에는 식별자를 주지 않는다**(null GUID). 그런 경로(테스트의 임시 프리팹, 사용자가 연 바깥 파일)에
@@ -126,7 +126,7 @@ namespace sw
     bool AssetDatabase::registerExisting( string_view relativePath )
     {
         string path = FileUtil::normalizePath( relativePath );
-        if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
+        if ( path.empty() || FileUtil::hasExtension( path, constant::path::kMetaExtension ) )
             return false;
 
         UUID guid{};
@@ -185,7 +185,7 @@ namespace sw
             BLOCK( "Filter and Normalize Path" )
             {
                 const string name = FileUtil::getFileNamePart( filePath );
-                if ( FileUtil::hasExtension( name, path::kMetaExtension ) )
+                if ( FileUtil::hasExtension( name, constant::path::kMetaExtension ) )
                     continue;
 
                 const string abs = FileUtil::normalizeSeparators( filePath );
@@ -220,15 +220,15 @@ namespace sw
         // 소문자화는 상대 경로가 된 뒤 toRootAssetID 안에서 한 번만 한다.
         vector<string> listMeta;
         // 더하기만 하는 등록이라 모은 데까지 등록한다(`refreshFolder` 와 같다) — 도중에 멈춘 것은 collectFiles 가 경로와 함께 알린다.
-        (void)FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true );
+        (void)FileUtil::collectFiles( absoluteRoot, constant::path::kMetaExtension, listMeta, true );
 
         uint32 count{ 0 };
         for ( const string& metaAbs : listMeta )
         {
             const string metaRel = toRootAssetID( metaAbs );
-            if ( metaRel.size() <= string_view( path::kMetaExtension ).size() )
+            if ( metaRel.size() <= string_view( constant::path::kMetaExtension ).size() )
                 continue;
-            const string assetRel = metaRel.substr( 0, metaRel.size() - string_view( path::kMetaExtension ).size() );
+            const string assetRel = metaRel.substr( 0, metaRel.size() - string_view( constant::path::kMetaExtension ).size() );
             if ( registerExisting( assetRel ) )
                 ++count;
         }
@@ -250,16 +250,16 @@ namespace sw
         const string domainRoot = FileUtil::joinPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) ), domain );
         // 목록과 각 .meta 는 쿠킹 작업 안이면 그 작업의 입력이다 — .meta 가 생기거나 사라져도 레지스트리를 다시 만든다.
         vector<string> listMeta;
-        if ( CookJob::collectFiles( domainRoot, path::kMetaExtension, listMeta ) == false )
+        if ( CookJob::collectFiles( domainRoot, constant::path::kMetaExtension, listMeta ) == false )
         {
             SW_LOG_ERROR( "Asset registry: the .meta files under '%#' could not all be listed - no registry is written for it", domainRoot );
             ++outFailedCount;
             return {};
         }
 
-        const string_view                       metaExtension( path::kMetaExtension );
-        const string                            domainPrefix = FileUtil::normalizePath( domain );
-        StringBuilder<constant::kMaxBuffer8192> sb;
+        const string_view                         metaExtension( constant::path::kMetaExtension );
+        const string                              domainPrefix = FileUtil::normalizePath( domain );
+        StringBuilder<constant::buffer::kMax8192> sb;
         sb.append( "# <guid> <sourcePath> - AssetDatabase::makeRegistryText (path = where the .meta sits)\n" );
         uint32 lineCount{ 0 };
         for ( const string& metaAbs : listMeta )
@@ -306,7 +306,7 @@ namespace sw
         for ( const string& topFolder : listTopFolder )
         {
             const string name = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( topFolder ) );
-            if ( StringUtil::equals( name, path::kGamePack, true ) == false )
+            if ( StringUtil::equals( name, constant::path::kGamePack, true ) == false )
             {
                 listDomain.push_back( name );
                 continue;
