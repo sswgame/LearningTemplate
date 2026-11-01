@@ -8,6 +8,19 @@ if(NOT TARGET App)
 	return()   # 전용 서버 타깃은 App 을 짓지 않는다
 endif()
 
+# 에셋 임포트 — 테스트는 임포트한 산출물(`.mesh` · `.dds` · 높이장)을 읽는다. 형식 · 임포터 버전을 올리면 스탬프가 낡아 다시 임포트해야 하는데,
+# 손으로 돌리지 않으면 테스트가 낡은 산출물을 거절하며 돈다(2026-11-02 — `.mesh` 5 판에서 모델이 모두 빠진 채 시나리오가 돌았다). 그래서 ctest 가 먼저
+# 낡은 것만 임포트한다(스탬프가 맞으면 곧바로 끝난다). 모든 테스트가 이 고정 단계를 요구한다(`ImportedAssets` — 이 파일과 Scenario 의 맨 아래).
+# 라벨로 거른 실행(`-L hostgpu`)도 ctest 가 고정 단계를 함께 넣는다.
+set(swPreviousImportTest "")
+foreach(swImportKind IN ITEMS heightfields textures models)
+	add_test(NAME Import.${swImportKind}
+		COMMAND $<TARGET_FILE:App> --import-${swImportKind} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Import.${swImportKind}.log
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(Import.${swImportKind} PROPERTIES LABELS import TIMEOUT 3600 RUN_SERIAL TRUE FIXTURES_SETUP ImportedAssets DEPENDS "${swPreviousImportTest}")
+	set(swPreviousImportTest Import.${swImportKind})
+endforeach()
+
 # 단위 테스트 — 헤드리스(창 · GPU 없음)라 nogpu. 순서는 매번 섞이고 씨앗을 찍는다. 보고는 실행마다 다른 폴더(`Saved/Test/<프로세스>/report.json`, 찍힌다).
 # 몫(SW_UNIT_TEST_SHARDS)이 1 보다 크면 케이스를 이름 해시로 나눠 몫마다 프로세스 하나(`UnitTests.<i>`)가 돈다 — `ctest -j` 가 나란히 돌린다.
 # 몫마다 엔진 기동(약 1 초)이 붙으므로 케이스 시간이 기동보다 커질 때 올린다. 지금(케이스 수십 개 · 합계 수십 ms)은 1 이다.
@@ -141,5 +154,10 @@ if(TARGET OnlineLoadBot)
 		set_tests_properties(UnitTests.OnlineKits PROPERTIES LABELS nogpu TIMEOUT 300)
 	endif()
 endif()
+
+# 임포트 밖의 모든 테스트가 임포트한 산출물을 요구한다(맨 위 `Import.*`).
+get_property(swAllTest DIRECTORY PROPERTY TESTS)
+list(FILTER swAllTest EXCLUDE REGEX "^Import\.")
+set_tests_properties(${swAllTest} PROPERTIES FIXTURES_REQUIRED ImportedAssets)
 
 add_subdirectory(Scenario)

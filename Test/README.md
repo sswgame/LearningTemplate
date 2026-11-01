@@ -11,6 +11,8 @@
 | 순수 식 · 형식 · 파일 형식 · 등록표 · 엔진 서비스(창 · GPU 없음) | `Source/<…>/<기능>/Tests/Test<이름>.cpp` | `App --test`(`ctest -L nogpu`) |
 | 화면 · 입력 · 씬 · 백엔드 | `Content/<도메인>/automation/<이름>.scenario.xml` | `App -scenario=<리소스 경로> -unattended`(`ctest -L hostgpu`) |
 
+모든 ctest 항목은 먼저 `Import.heightfields` · `Import.textures` · `Import.models`(고정 단계 `ImportedAssets`)를 거친다 — 스탬프가 낡은 원본만 다시 임포트하고 맞으면 곧바로 끝난다. 형식 · 임포터 버전을 올린 묶음도 손으로 임포트하지 않는다.
+
 ## 단위 테스트
 
 ```cpp

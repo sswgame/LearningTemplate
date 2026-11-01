@@ -191,3 +191,7 @@ if(TARGET EditorModule)
 		set_tests_properties(Scenario.editor.statedir.${pairName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 	endforeach()
 endif()
+
+# 모든 시나리오가 임포트한 산출물을 요구한다(Test/CMakeLists.txt 의 `Import.*`).
+get_property(swAllScenarioTest DIRECTORY PROPERTY TESTS)
+set_tests_properties(${swAllScenarioTest} PROPERTIES FIXTURES_REQUIRED ImportedAssets)
