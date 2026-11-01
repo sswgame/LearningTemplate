@@ -38,10 +38,7 @@
       `RenderPacketSceneFill` 은 아직 둘이다(주 패킷은 추가 뷰 · 정렬 축 · LOD 뷰가 더 있다).
    3. **렌더러 셋으로 가르기**(언리얼 `FSceneRenderer` / `FScene` / `FSceneViewState`): `FrameRenderer` 가 렌더러(그래프 · PSO) · 씬 GPU 데이터(GPUScene) · 뷰 기록을 한 몸에
       들어 씬마다 인스턴스를 늘린다(하위 렌더러 목록 `_listScenePreviewRenderer`). 씬 GPU 데이터를 씬 키별 객체로, 렌더러는 하나로.
-   4. **DX11 화면 밖 결함**: 하위 렌더러(미리보기 · 캡처)가 DX11 에서 메시를 그리지 않는다 — 패킷에 인스턴스 1 · 배치 1, 디버그 레이어 오류 없음, 출력은 지운 색을 톤맵한
-      값(27,33,39). `-gv_vertexPool=0` · `-gv_gpuUploadQueue=0` · `-gv_gpuCulling=0` · 렌더 스레드 토글로 안 바뀐다. 재현: `App --render-portraits=common/prefabs/blaster_a.prefab.xml
-      -gv_rhiBackend=DirectX11`. `Bake.Portraits` 는 기본 백엔드(DX12)만 돈다 — 고치면 네 백엔드로.
-   5. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
+   4. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
       같은 3185 프레임에 dx11 40 초 · dx12 78 초 · gl 111 초). timeline 줄을 모아 어디서 시간이 드는지 재고(기다림 · 단계 재설정 · 기동), 프레임 고정 진행 · 단계 묶기 · 백엔드별 슬롯을 판단한다.
 
 ### 1. 진행 중 (2026-11-01)
@@ -54,7 +51,7 @@
 
 | 일 | 내용 |
 |---|---|
-| 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지 |
+| 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지. 머티리얼 PSO 를 만드는 중인 프레임은 이제 자리 잡음에서 뺀다(`Assets.Pending`) — 남는 흔들림만 본다 |
 | 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄, Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다 |
 | 벽시계 한도와 부하 | 다른 빌드가 CPU 를 쓰는 동안 `wallTimeoutSeconds` 150 초를 넘는 시나리오가 있다(flowterrain 의 백엔드 교체 7 번이 혼자서도 19 초). 통합 ctest 는 빌드 없이 돌리고, 교체 시간을 줄이거나 한도를 교체 수에 맞춘다 |
 | 바깥 시한 < 안쪽 대기 합 | 바깥 `timeoutFrames` 가 고정 대기와 `WaitUntil` 시한의 합보다 작은 시나리오가 45 개다(예: shooter3d cctvmonitor 1800 < 2135). 조건이 늦게 서면 crowd 처럼 덜 구체적인 "timeoutFrames reached" 로 진다 — 바깥 시한이 조건 대기 프레임을 세지 않게 하거나 읽을 때 거절(`AutomationStepValidation`) |
