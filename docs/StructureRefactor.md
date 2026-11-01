@@ -213,7 +213,7 @@
 | 17 | 큰 인터페이스 | ModuleAPI `EditorAPI` 함수 칸 22, `IEditor` 순수 가상 16 | **닫음(2026-11-01, 두기로)** — 호스트 ↔ 에디터 모듈 경계의 C ABI 표 하나다(수명 · 프레임 · 입력 · 뷰포트 · 플레이). 역할별 하위 표로 가르면 간접 참조와 ABI 판 변경만 늘고 얻는 검사가 없다 — 호출하는 쪽은 호스트 하나(`EditorModuleManager`)뿐이다. 언리얼 모듈 · 플러그인 경계도 모듈마다 인터페이스 하나다 | 끝 |
 | 18 | 층 역류 | ModuleAPI 의 `Export/GameFrameworkAPI.h`(`SW_GF_API` · `SW_KIT_API`) — 계약 층이 위층 이름을 알았다 | **끝(2026-11-01)** — 매크로 정의는 `GameFramework/GameFrameworkExports.h` 로. 계약 층에서 쓰던 곳은 게임 서비스 선언 하나뿐이라 그 매크로(`SW_GAMESERVICE_API`)는 자기 빌드 정의(`SW_GAMESERVICE_EXPORTS` / `IMPORTS`, GF 줄이 준다)로 선다. 키트 · 게임은 원래 `GameFrameworkExports.h` 를 거쳐 받아 include 가 따라가지 않았다 | 끝 |
 | 19 | 위젯 우회 | 검색 칸 `InputTextWithHint` 직접, 애셋 경로 글 입력 | **끝(2026-11-01)** — 검색 칸 직접 그리기는 남지 않았다. 캐릭터 편집기의 경로 칸 넷(소켓 · 골격 · 기준 포즈 · 외형 항목)은 `EditorWidgets::drawAssetPathField`(글 입력 + 콘텐츠 브라우저 끌어 놓기, 소켓은 `.sockets.xml` 만), 라벨이 붙은 경로 칸(스프라이트 클립 아틀라스 · 타일맵 경로 `.tilemap.xml`)은 라벨 열(`drawPropertyRowLabel`) + 같은 위젯 | 끝 |
-| 20 | Core · Engine 쪽(다른 작업자) | `normalizeOr` 넷(키트) → Core 수학, `SceneNetLink` 찾기 여섯 → Engine 정적 함수, Server 명령 해석 셋 | 보고만 | |
+| 20 | Core · Engine 쪽(다른 작업자) | `normalizeOr` 넷(키트) → Core 수학, `SceneNetLink` 찾기 여섯 → Engine 정적 함수, Server 명령 해석 셋 | **끝(2026-11-02)** — `float2` · `float3::normalizeOr( fallback, minLength )`(키트 셋 · 메시 수정자 · 모델 임포트, 문턱은 자리마다 그대로), `SceneNetLink::findFor( component )`, 서버 명령은 이미 개발 콘솔 한 길(`DevConsole::execute`)이다 | 끝 |
 
 키트 사이 장르 로직 중복은 찾지 못했다(라운드 · 차례 · 카운트다운 · 게이지 · 땅 · 격자는 이미 Runtime 하나). 게임 코드가 다른 게임 · 키트가 게임을 include 하는 역류도 없다.
 
