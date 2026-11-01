@@ -351,8 +351,8 @@ namespace sw::editor
         };
         static constexpr GizmoButton kArrGizmoButton[] = {
             {"##gizmoTranslate", SW_EDITORICON_NAME( "Translate" ), ".translate"},
-            {   "##gizmoRotate",         SW_EDITORICON( "Rotate" ),    ".rotate"},
-            {    "##gizmoScale",          SW_EDITORICON( "Scale" ),     ".scale"},
+            {   "##gizmoRotate",    SW_EDITORICON_NAME( "Rotate" ),    ".rotate"},
+            {    "##gizmoScale",     SW_EDITORICON_NAME( "Scale" ),     ".scale"},
         };
         // 툴팁은 지금 문화권의 글이라 상수 테이블에 넣지 않고 그릴 때 찾는다.
         const utf8* const arrTooltip[] = {

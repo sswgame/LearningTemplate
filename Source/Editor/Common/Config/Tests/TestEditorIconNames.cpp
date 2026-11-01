@@ -11,9 +11,8 @@
 #include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -93,7 +92,7 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
         SW_EXPECT_TRUE_MSG( hasIcon( table, row._icon ), ( "category '" + row._category + "' names icon '" + row._icon + "'" ).c_str() );
 
     uint32 metaCount{ 0 };
-    engine::getSubsystem<TypeRegistry>().forEachType(
+    editor::getSubsystem<TypeRegistry>().forEachType(
         [&]( const TypeInfo& type )
     {
         const string* pIcon = type.findCustomMeta( "Icon" );
@@ -107,13 +106,13 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
 
 SW_TEST_CASE( EditorIconNames, BrokenTablesAreNotRead )
 {
-    const test::ScopedScratchDomain domain;
-    const string&                   folder     = domain.getFolder();
-    const auto                      writeTable = [&folder]( const utf8* pFileName, string_view rows ) -> AssetID
+    const string folder     = test::makeScratchPath( "EditorIconTables" );
+    const auto   writeTable = [&folder]( const utf8* pFileName, string_view rows ) -> AssetID
     {
-        const string path = folder + "/" + pFileName;
+        const string path = FileUtil::joinPath( folder, pFileName );
+        SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( folder ) );
         SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "<EditorIconGlyphTable><_listIcon>" + string( rows ) + "</_listIcon><_listExtraCodepoint /></EditorIconGlyphTable>" ) );
-        return test::ScopedScratchDomain::toID( path );
+        return AssetID{ path }; // 절대 경로 — `AssetIO` 가 낱개 파일로 읽는다
     };
     const string missingRow = R"(<EditorIconGlyph _name="Missing" _codepoint="U+E060" />)";
 

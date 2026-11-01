@@ -297,7 +297,7 @@ namespace sw::editor
             {
                 if ( pRegistration == nullptr )
                     return SW_THEMECOLOR( "Base", "TextMuted" );
-                return findColor( hashed_string{ pRegistration->_pColorKey } );
+                return EditorThemeUtil::findColor( hashed_string{ pRegistration->_pColorKey } );
             }
         };
     } // namespace

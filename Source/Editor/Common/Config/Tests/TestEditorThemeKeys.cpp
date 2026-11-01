@@ -13,8 +13,8 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorThemeTokens.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -94,7 +94,7 @@ namespace
         scan._setColorKey.insert( EditorComponentIconTable::makeColorKey( componentTable._neutralColor ) );
         for ( const EditorComponentCategoryIcon& row : componentTable._listCategory )
             scan._setColorKey.insert( EditorComponentIconTable::makeColorKey( row._color ) );
-        engine::getSubsystem<TypeRegistry>().forEachType(
+        editor::getSubsystem<TypeRegistry>().forEachType(
             [&scan]( const TypeInfo& type )
         {
             if ( const string* pColor = type.findCustomMeta( "IconColor" ) )
