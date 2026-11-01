@@ -93,11 +93,14 @@ if(TARGET EditorModule)
 
 	# 초상화 굽기 — 스튜디오 씬 → 패킷(게임 스레드)과 그리기 · 읽기(렌더 스레드 명령 `RenderThread::executeAndWait`)를 한 번 지난다.
 	# 예전에는 게임 스레드가 렌더 스레드를 세우고 직접 그렸고, 그 길을 도는 테스트가 없었다. 창 · GPU 가 필요해 hostgpu 다.
-	add_test(NAME Bake.Portraits
-		COMMAND $<TARGET_FILE:App> --render-portraits=common/prefabs/blaster_a.prefab.xml -portrait-size=64 -portrait-dir=${CMAKE_BINARY_DIR}/Testing/Portraits -unattended
-			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Bake.Portraits.log
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(Bake.Portraits PROPERTIES LABELS hostgpu TIMEOUT 300)
+	# 백엔드마다 돈다 — 기본 백엔드(DX12)만 돌 때 DX11 에서 머티리얼 PSO 가 만드는 중인 프레임을 읽어 빈 사진이 되던 결함이 숨었다.
+	foreach(backend DirectX11 DirectX12 Vulkan OpenGL)
+		add_test(NAME Bake.Portraits.${backend}
+			COMMAND $<TARGET_FILE:App> --render-portraits=common/prefabs/blaster_a.prefab.xml -portrait-size=64 -portrait-dir=${CMAKE_BINARY_DIR}/Testing/Portraits/${backend}
+				-gv_rhiBackend=${backend} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Bake.Portraits.${backend}.log
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(Bake.Portraits.${backend} PROPERTIES LABELS hostgpu TIMEOUT 300)
+	endforeach()
 endif()
 
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어

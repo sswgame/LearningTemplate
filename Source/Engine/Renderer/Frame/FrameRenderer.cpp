@@ -95,6 +95,7 @@ namespace sw
         , _viewResources{ _pDevice, _pipelineResource, _autoExposure, _upscale }
         , _pipelinePath{}
         , _lastIndirectDrawCallCount{ 0 }
+        , _lastPendingPSOBatchCount{ 0 }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
         , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture }
         , _listScenePreviewRenderer{}
@@ -553,6 +554,7 @@ namespace sw
 
         const bool bOk             = _passExecutor.submitGraph( pDevice );
         _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
+        _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         if ( _bScenePreview == SW_FALSE )
             _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );

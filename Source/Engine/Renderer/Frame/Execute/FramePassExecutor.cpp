@@ -186,6 +186,7 @@ namespace sw
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
         , _indirectDrawCallCount{ 0 }
+        , _pendingPSOBatchCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
@@ -268,6 +269,7 @@ namespace sw
 
         _pCmd->beginCommandList();
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
+        _pendingPSOBatchCount.store( 0, std::memory_order_relaxed );
         _state._deform._animationTimer.updateTimer();
 
 #if SW_PROFILE_COMPILED
@@ -2054,7 +2056,10 @@ namespace sw
         if ( batchPSO == 0 )
         {
             if ( psoState == RenderPSOCache::MaterialPSOState::Building )
+            {
                 SW_PROFILE_COUNT( "RT.PSO.pendingBatches", 1 );
+                _pendingPSOBatchCount.fetch_add( 1, std::memory_order_relaxed );
+            }
             return false;
         }
         if ( batchPSO != ioBoundPSO )

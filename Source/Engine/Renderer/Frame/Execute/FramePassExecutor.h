@@ -136,6 +136,8 @@ namespace sw
         shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _prepass.getOcclusionSnapshot(); }
         /** @brief 지난 `submitGraph` 가 낸 씬 간접 드로우 호출 수입니다(모든 패스 합). */
         uint32 getIndirectDrawCallCount() const { return _indirectDrawCallCount.load( std::memory_order_relaxed ); }
+        /** @brief 지난 `submitGraph` 가 PSO 가 아직 만드는 중이라 건너뛴 배치 묶음 수입니다. 0 이 아니면 그 프레임은 덜 그린 그림이다. */
+        uint32 getPendingPSOBatchCount() const { return _pendingPSOBatchCount.load( std::memory_order_relaxed ); }
         /** @brief 지난 `submitGraph` 가 실제로 그린 추가 뷰 수입니다. */
         uint32 getLastRenderedExtraViewCount() const { return _lastRenderedExtraViewCount; }
 
@@ -446,6 +448,8 @@ namespace sw
         const FrameViewTarget* _pMainOutputCanvasView;
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스를 병렬로 기록하므로 atomic 으로 둡니다.
         atomic<uint32> _indirectDrawCallCount;
+        /// @brief 이번 프레임에 PSO 가 만드는 중이라 건너뛴 묶음 수입니다(`getPendingPSOBatchCount`). 같은 이유로 atomic 입니다.
+        atomic<uint32> _pendingPSOBatchCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 바인딩하지 않습니다.
         uint32 _disabledInputRoleMask;
         /// @brief 지난 프레임에 그린 추가 뷰 수입니다.

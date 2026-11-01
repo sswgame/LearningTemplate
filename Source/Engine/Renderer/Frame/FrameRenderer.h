@@ -167,6 +167,8 @@ namespace sw
 
         /** @brief 마지막 프레임에서 씬이 낸 간접 드로우 호출 수입니다(모든 패스 합). 배치 수보다 작으면 묶인 호출이 있다는 뜻입니다. */
         uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
+        /** @brief 마지막 프레임에서 머티리얼 PSO 가 아직 만드는 중이라 그리지 못한 배치 묶음 수입니다. 캡처는 0 인 프레임만 읽는다(`SceneCapture`). */
+        uint32 getLastPendingPSOBatchCount() const { return _lastPendingPSOBatchCount; }
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 **않게** 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽고 폴백한다(AO 는 1). 같은 프레임 안에서 "이 입력이 실제로 이미지를 바꾸는가" 를 비교할 수 있다.
@@ -426,7 +428,8 @@ namespace sw
 
         /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
         uint32           _lastIndirectDrawCallCount;
-        vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
+        uint32           _lastPendingPSOBatchCount; ///< 마지막 프레임의 값입니다(getLastPendingPSOBatchCount).
+        vector<float4x4> _listScratchGridViewProj;  ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
         vector<VFXGPULightRange> _listScratchGPULightRange;
 

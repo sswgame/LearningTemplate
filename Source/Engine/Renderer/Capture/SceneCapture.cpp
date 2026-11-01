@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Capture/SceneCapture.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -29,6 +30,9 @@ namespace sw
                 static atomic<uint32> s_nextKey{ 1 };
                 return kCaptureSceneKeyBit | ( s_nextKey.fetch_add( 1, std::memory_order_relaxed ) & ~kCaptureSceneKeyBit );
             }
+
+            /** @brief 요청 장 수를 그린 뒤 PSO 가 다 되기를 기다리는 시한(초)입니다. 첫 실행의 셰이더 캐시 없는 빌드(DX11 머티리얼 변형 하나에 수백 ms)보다 넉넉하다. */
+            static constexpr int64 kPSOWaitSeconds = 30;
         };
     } // namespace
 
@@ -83,14 +87,26 @@ namespace sw
         // 빌더는 이 캡처의 것이다(빌더의 재구축 판단 캐시가 씬 · 시점별이다). 배치 합치기는 주 · 미리보기 빌더와 같은 규칙(디바이스가 정한다).
         GPUSceneBuilder builder;
         builder.setMergeBatchesAcrossMaterials( getDevice()->supportsNativeBindlessSampling() );
-        _job._request    = request;
-        _job._bSucceeded = true;
-        for ( uint32 frameIndex = 0; frameIndex < request._frameCount && _job._bSucceeded; ++frameIndex )
+        _job._request           = request;
+        _job._bSucceeded        = true;
+        _job._bRead             = false;
+        int64 waitDeadlineMicro = 0;
+        for ( uint32 frameIndex = 0; _job._bSucceeded && _job._bRead == false; ++frameIndex )
         {
+            const bool bReadFrame = frameIndex + 1 >= request._frameCount;
+            if ( bReadFrame && waitDeadlineMicro == 0 )
+                waitDeadlineMicro = MonotonicClock::nowMicroseconds() + SceneCaptureInternal::kPSOWaitSeconds * constant::time::kMicrosecondsPerSecond;
+            else if ( bReadFrame && MonotonicClock::nowMicroseconds() > waitDeadlineMicro )
+            {
+                SW_LOG_ERROR( "The capture still had batches waiting for their material PSO after %# s - the frame was not read ('%#')", SceneCaptureInternal::kPSOWaitSeconds,
+                              _pipelinePath.c_str() );
+                _job._bSucceeded = false;
+                break;
+            }
             _job._packet.resetForFrame();
             _fill.fill( _job._packet, scene, request._view, builder, nullptr );
             _job._packet._sceneKey = _sceneKey;
-            _job._pResult          = ( frameIndex + 1 == request._frameCount ) ? &outResult : nullptr;
+            _job._pResult          = bReadFrame ? &outResult : nullptr;
             const bool bRan        = _pRenderThread->executeAndWait( SW_DELEGATE_METHOD( RenderCommandDelegate, &SceneCapture::renderFrameOnRenderThread, this ) );
             _job._bSucceeded       = bRan && _job._bSucceeded;
         }
@@ -124,8 +140,10 @@ namespace sw
             _job._bSucceeded = false;
             return;
         }
-        if ( _job._pResult == nullptr )
+        // 머티리얼 PSO 가 아직 만드는 중이라 빠진 배치가 있으면 읽지 않는다 — 다음 장을 그린다(`capture`).
+        if ( _job._pResult == nullptr || pRenderer->getLastPendingPSOBatchCount() != 0 )
             return;
+        _job._bRead                = true;
         SceneCaptureResult& result = *_job._pResult;
         if ( request._attachmentName.empty() )
         {
