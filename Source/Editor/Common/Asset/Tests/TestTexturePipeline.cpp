@@ -7,6 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -62,4 +63,37 @@ SW_TEST_CASE( EditorTexturePipelineTest, DDSFormatFileMatchesTheImportTable )
             SW_EXPECT_TRUE_MSG( hasSize( dxgiFormat ), "import writes DXGI " + to_string( dxgiFormat ) + " which DDSLoader cannot size" );
         }
     }
+}
+
+/**
+ * @brief [EditorTexturePipelineTest] 맨 위 크기가 4 의 배수가 아닌 원본을 BC 로 임포트하면 4 의 배수로 다시 표본해 쓰는지 검증
+ * @details D3D11 은 맨 위 크기가 4 의 배수가 아닌 BC 텍스처를 만들지 못한다(1008x981 꽃 아틀라스가 DX11 에서만 체크무늬였다).
+ */
+SW_TEST_CASE( EditorTexturePipelineTest, BlockCompressedImportAlignsTheTopLevelToFour )
+{
+    // 6x5 비압축 32 비트 TGA(머리 18 바이트 — 형식 2, 아래에서 위로).
+    constexpr uint32 kWidth  = 6;
+    constexpr uint32 kHeight = 5;
+    vector<uint8>    bytes( 18 + kWidth * kHeight * 4, 0x80 );
+    for ( uint32 index = 0; index < 18; ++index )
+    {
+        bytes[index] = 0;
+    }
+    bytes[2]                = 2;
+    bytes[12]               = static_cast<uint8>( kWidth );
+    bytes[14]               = static_cast<uint8>( kHeight );
+    bytes[16]               = 32;
+    bytes[17]               = 8; // 알파 8 비트
+    const string root       = test::makeScratchPath( "TextureBlockAlign" );
+    const string sourcePath = FileUtil::joinPath( root, "textures_raw/odd.tga" );
+    const string outputPath = FileUtil::joinPath( root, "textures/odd.dds" );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) && FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( outputPath ) );
+
+    TextureImportResult result{};
+    SW_REQUIRE_TRUE( TextureImporter::importTexture( sourcePath, outputPath, TextureImportRule{}, &result ) ); // 기본 규칙은 BC7 · 밉
+    SW_EXPECT_EQUAL( 8u, result._width );
+    SW_EXPECT_EQUAL( 8u, result._height );
+
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
