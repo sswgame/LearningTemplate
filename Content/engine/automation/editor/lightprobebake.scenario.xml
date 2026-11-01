@@ -21,7 +21,6 @@
 	<Expect watch="Editor.LightProbeBakeCount" equals="1"/>
 	<Wait frames="2"/>
 	<Expect watch="Editor.BakedLightProbeVolumeCount" equals="0"/>
-	<Wait frames="8"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<Wait frames="15"/>
 	<DevCommand line="component.add LightProbeVolumeComponent"/>

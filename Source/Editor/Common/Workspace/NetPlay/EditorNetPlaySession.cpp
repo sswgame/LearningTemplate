@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/Log/LogLineFormat.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -15,12 +16,14 @@
 #include "Core/Process/Process.h"
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/hashed_string.h"
 #include "Core/Time/WallClock.h"
 
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
 #include <thread>
@@ -62,8 +65,6 @@ namespace sw::editor
     {
         struct EditorNetPlaySessionInternal
         {
-            /** @brief 클라이언트가 서버에 붙었을 때 남기는 줄(`GameNetSession`)입니다. */
-            static constexpr const utf8* kConnectedLine = "Net session connected to ";
             /** @brief 로그 출력이 사건 줄 다음에 붙이는 소스 위치 줄의 머리입니다. */
             static constexpr const utf8* kSourceLocationPrefix = " -> ";
             /** @brief 트레이스 파일 확장자입니다. `ProfilerTraceExport::kFileExtension` 과 같은 값을 따로 둡니다. 트레이스가 빠진 빌드에도 이름은 있어야 하기 때문입니다. */
@@ -560,13 +561,22 @@ namespace sw::editor
                 ++child._objectHashReportCount;
                 continue;
             }
-            // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 줄에는 자식의 로그 수준 레이블이 그대로 있다.
-            if ( line.find( "[Error]" ) != string::npos )
-                SW_LOG_WARNING_ID( "NetPlay.Message", "[%#] %#", child._label, line );
+            // 자식의 로그 줄은 그 수준 · id 로 다시 쓴다 — 시나리오 · 게이트가 자식 줄도 id 로 센다(`LogLineFormat` 이 쓰는 쪽과 같은 모양으로 읽는다).
+            // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 로그 줄이 아닌 출력은 `NetPlay.ChildOutput` 이다.
+            ParsedLogLine parsed;
+            if ( LogLineFormat::tryParse( line, parsed ) )
+            {
+                // id 는 정적 글자여야 한다(`LogEntry::_pID`) — intern 한 이름의 글자는 프로세스가 끝날 때까지 산다.
+                const utf8*    pID   = parsed._id.empty() ? "NetPlay.ChildOutput" : hashed_string( parsed._id ).c_str();
+                const LogLevel level = parsed._level == LogLevel::Error ? LogLevel::Warning : parsed._level;
+                SW_LOG_WRITE( level, pID, "[%#] %#", child._label, parsed._message );
+                if ( processIndex > 0 && parsed._id == SW_LOG_ID_NET_SESSION_CONNECTED )
+                    child._bConnected = true; // 0 번은 서버(전용 서버나 리슨 호스트)다
+            }
             else
-                SW_LOG_INFO_ID( "NetPlay.Message", "[%#] %#", child._label, line );
-            if ( processIndex > 0 && line.find( EditorNetPlaySessionInternal::kConnectedLine ) != string::npos )
-                child._bConnected = true; // 0 번은 서버(전용 서버나 리슨 호스트)다
+            {
+                SW_LOG_INFO_ID( "NetPlay.ChildOutput", "[%#] %#", child._label, line );
+            }
             if ( NetEmulationReport::tryParseLine( line, child._emulationReport ) )
                 ++child._emulationReportCount;
             child._lastLine = line;

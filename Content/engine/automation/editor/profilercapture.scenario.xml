@@ -18,18 +18,15 @@
 	<DevCommand line="panel.focus profiler"/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" atLeast="30" timeoutFrames="240"/>
 	<Expect watch="Editor.ProfilerSelectedFrame" equals="0"/>
-	<Wait frames="5"/>
 	<EditorClick mark="profiler.graph.GT.Frame" anchor="0.5,0.5"/>
 	<WaitUntil watch="Editor.ProfilerSelectedFrame" atLeast="1" timeoutFrames="60"/>
 	<!-- 2) Pause · Save · Clear · Load -->
-	<Wait frames="5"/>
 	<EditorClick mark="profiler.capture.pause"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="300"/>
 	<Wait frames="14"/>
 	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
 	<EditorClick mark="profiler.capture.save"/>
-	<Wait frames="15"/>
 	<EditorClick mark="profiler.capture.clear"/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="profiler.capture.load"/>
@@ -40,17 +37,11 @@
 	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
 	<ExpectLog id="Profiler.CaptureLoaded" atLeast="1"/>
 	<!-- 3) Pause on spike -->
-	<Wait frames="5"/>
 	<EditorClick mark="profiler.capture.pauseOnSpike"/>
-	<Wait frames="10"/>
 	<EditorClick mark="profiler.capture.spikeMs" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="250"/>
-	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="10"/>
 	<EditorClick mark="profiler.capture.pause"/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="0" timeoutFrames="60"/>
 	<DevCommand line="profile.stall 400"/>
@@ -58,12 +49,9 @@
 	<ExpectLog id="Profiler.SpikePaused" atLeast="1"/>
 	<!-- 4) Call Tree -->
 	<EditorClick mark="profiler.callTree.tab" state="down"/>
-	<Wait frames="3"/>
 	<EditorClick mark="profiler.callTree.tab" state="up"/>
-	<Wait frames="12"/>
 	<EditorClick mark="profiler.callTree.record"/>
 	<WaitUntil watch="Editor.ProfilerCallTreeNodes" atLeast="3" timeoutFrames="225"/>
-	<Wait frames="5"/>
 	<EditorClick mark="profiler.callTree.record"/>
 	<Wait frames="15"/>
 	<Variable name="gv_editorUiScale" value="0"/>

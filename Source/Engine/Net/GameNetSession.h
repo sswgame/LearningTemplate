@@ -59,6 +59,9 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+/** @brief 클라이언트가 서버에 붙었을 때 남기는 줄의 로그 id 입니다. 에디터 멀티플레이 세션이 자식 클라이언트의 이 줄로 접속을 안다(`EditorNetPlaySession`). */
+#define SW_LOG_ID_NET_SESSION_CONNECTED "Net.SessionConnected"
+
 namespace sw
 {
     struct NetStatsReport;

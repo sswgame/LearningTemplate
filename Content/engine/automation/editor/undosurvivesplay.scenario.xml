@@ -8,21 +8,16 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="30"/>
 	<DevCommand line="editor scene.new"/>
-	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
 	<EditorClick mark="toolbar.play"/>
-	<Wait frames="15"/>
 	<EditorClick mark="toolbar.playAnyway"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
-	<Wait frames="5"/>
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Expect watch="Editor.UndoIndex" equals="1"/>
 	<EditorExpectObject name="GameObject"/>
-	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
 	<EditorExpectObject name="GameObject" count="0"/>

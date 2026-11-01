@@ -14,24 +14,18 @@
 	<Variable name="gv_editorWatchObject" value="TestMesh"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.toggle.TestMesh"/>
 	<WaitUntil watch="Editor.ObjectHiddenInEditor" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.ObjectActive" equals="1"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.toggle.TestMesh"/>
 	<WaitUntil watch="Editor.ObjectHiddenInEditor" equals="0" timeoutFrames="60"/>
-	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.lock.GameCamera"/>
-	<Wait frames="15"/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.SelectionCount" equals="0"/>
-	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.lock.GameCamera"/>
-	<Wait frames="15"/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>

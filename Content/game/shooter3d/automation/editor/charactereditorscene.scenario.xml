@@ -23,36 +23,22 @@
 	<!-- ① 창 — 외형 탭, 데이터, 기준 프리셋, 세트 -->
 	<Wait frames="20"/>
 	<DevCommand line="panel.focus charactereditor.main"/>
-	<Wait frames="30"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="down"/>
-	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="up"/>
-	<Wait frames="19"/>
 	<EditorClick mark="charactereditor.loadData"/>
-	<Wait frames="15"/>
 	<EditorClick mark="charactereditor.basePreset"/>
-	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.basePreset.first"/>
-	<Wait frames="15"/>
 	<EditorClick mark="charactereditor.equipSet"/>
-	<Wait frames="20"/>
 	<EditorClick mark="charactereditor.equipSet.first"/>
 	<WaitUntil watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1" timeoutFrames="25"/>
 
 	<!-- ② 데이터 프리셋으로 내보내기 -->
-	<Wait frames="5"/>
 	<EditorClick mark="charactereditor.exportFolder"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="scratch/import/shooter3d.charactereditorscene"/>
-	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.exportID"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="EditorKnight"/>
-	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.exportPreset"/>
 	<WaitUntil watch="Editor.CharacterEditorExportCount" equals="1" timeoutFrames="20"/>
 	<ExpectLog id="CharacterEditor.PresetExported" contains="'EditorKnight' to 'scratch/import/shooter3d.charactereditorscene" count="1"/>
@@ -61,27 +47,18 @@
 	<DevCommand line="panel.close charactereditor.main"/>
 
 	<!-- ③ 씬의 캐릭터 — 외형 컴포넌트가 내보낸 id 를 가리킨다 -->
-	<Wait frames="20"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="Dummy"/>
-	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="component.add CharacterAppearanceComponent"/>
 	<Wait frames="10"/>
 	<DevCommand line="component.add SkeletalMeshComponent"/>
-	<Wait frames="20"/>
 	<EditorClick mark="inspector.property.CharacterAppearanceComponent._presetID"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="EditorKnight"/>
-	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Object.Property" target="Dummy" key="CharacterAppearanceComponent._presetID" is="EditorKnight" timeoutFrames="20"/>
 

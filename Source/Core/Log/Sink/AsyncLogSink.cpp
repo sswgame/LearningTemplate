@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogContext.h"
+#include "Core/Log/LogLineFormat.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Log/Sink/FileLogOutput.h"
 #include "Core/Log/Sink/ILogOutput.h"
@@ -129,9 +130,7 @@ namespace sw
             static void formatLine( fixed_string<constant::buffer::kMax8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pTickTag,
                                     const utf8* pContextTag, const utf8* pIDTag, const utf8* pMessage, const utf8* pFile, int32 line )
             {
-                static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
-                static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
-                const utf8* pHeader = kArrHeader[static_cast<size_t>( level )];
+                const utf8* pHeader = LogLineFormat::getLevelLabel( level ); // 읽는 쪽(`LogLineFormat::tryParse`)과 같은 표
                 if ( StringUtil::isNullOrEmpty( pCaller ) == false )
                 {
                     formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] [%#] %#%#- %#%#\n -> %#:%#\n", stamp._text.c_str(), pTag, pCaller, pHeader, pTickTag, pContextTag,

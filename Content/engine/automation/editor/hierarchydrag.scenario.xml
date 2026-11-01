@@ -15,7 +15,6 @@
 	<Wait frames="10"/>
 	<Expect watch="Editor.ObjectDepth" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<Wait frames="5"/>
 	<EditorDrag mark="hierarchy.row.TestKeyLight" toMark="hierarchy.row.TestParent"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.ObjectDepth" equals="1" timeoutFrames="180"/>

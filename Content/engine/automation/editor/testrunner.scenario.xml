@@ -15,16 +15,11 @@
 	<Wait frames="20"/>
 	<Expect watch="Editor.TestRunnerPassCount" equals="0"/>
 	<EditorClick mark="testRunner.filter"/>
-	<Wait frames="5"/>
 	<EditorText value="hierarchy.tagFilter"/>
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="down"/>
-	<Wait frames="3"/>
 	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="up"/>
-	<Wait frames="7"/>
 	<EditorClick mark="testRunner.runSelected" state="down"/>
-	<Wait frames="3"/>
 	<EditorClick mark="testRunner.runSelected" state="up"/>
 	<Wait frames="12"/>
 	<WaitUntil watch="Editor.TestRunnerPassCount" equals="1"/>

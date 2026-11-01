@@ -12,20 +12,15 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="20"/>
 	<DevCommand line="panel.focus console"/>
-	<Wait frames="15"/>
 	<EditorClick mark="console.level.info"/>
-	<Wait frames="10"/>
 	<EditorClick mark="console.filter"/>
-	<Wait frames="10"/>
 	<EditorText value="outputlog-collapse-probe"/>
 	<Wait frames="10"/>
 	<DevCommand line="log.repeat 10 warning outputlog-collapse-probe"/>
 	<WaitUntil watch="Editor.OutputLogVisibleRows" equals="10" timeoutFrames="60"/>
 	<ExpectLog id="Console.LogRepeat" contains="outputlog-collapse-probe" atLeast="10"/>
-	<Wait frames="5"/>
 	<EditorClick mark="console.collapse"/>
 	<WaitUntil watch="Editor.OutputLogVisibleRows" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
 	<EditorClick mark="console.clear"/>
 	<WaitUntil watch="Editor.OutputLogVisibleRows" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>

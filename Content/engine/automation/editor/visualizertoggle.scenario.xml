@@ -13,7 +13,6 @@
 	<Wait frames="35"/>
 	<Variable name="gv_editorWatchVisualizer" value="camera_frustum"/>
 	<Expect watch="Editor.VisualizerOn" equals="1"/>
-	<Wait frames="5"/>
 	<EditorClick mark="viewport.visualizer.camera_frustum"/>
 	<WaitUntil watch="Editor.VisualizerOn" equals="0" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchVisualizer" value="box_collider_2d"/>

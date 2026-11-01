@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogLineFormat.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -46,13 +47,14 @@ namespace sw::editor
             /** @brief 이 실행 파일이 있는 폴더(Bin)입니다. 테스트 실행 파일 · 시나리오 실행의 작업 폴더입니다. */
             static string getBinDirectory() { return FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ); }
 
-            /** @brief 출력의 `[Error]` 줄 수입니다. */
+            /** @brief 출력의 Error 수준 로그 줄 수입니다(쓰는 쪽과 같은 모양으로 읽는다 — `LogLineFormat`). */
             static uint32 countErrorLines( const vector<string>& listLine )
             {
-                uint32 count{ 0 };
+                uint32        count{ 0 };
+                ParsedLogLine parsed;
                 for ( const string& line : listLine )
                 {
-                    if ( line.find( "[Error]" ) != string::npos )
+                    if ( LogLineFormat::tryParse( line, parsed ) && parsed._level == LogLevel::Error )
                         ++count;
                 }
                 return count;

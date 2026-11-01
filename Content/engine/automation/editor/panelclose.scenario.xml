@@ -22,13 +22,9 @@
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<!-- ① 편집 -->
 	<EditorClick mark="inputMap.filter"/>
-	<Wait frames="5"/>
 	<EditorText value="Confirm"/>
-	<Wait frames="10"/>
 	<EditorClick mark="inputMap.action.Confirm"/>
-	<Wait frames="20"/>
 	<EditorClick mark="inputMap.binding.0.trigger"/>
-	<Wait frames="20"/>
 	<EditorClick mark="inputMap.trigger.4"/>
 	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
@@ -39,7 +35,6 @@
 	<Wait frames="20"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<CaptureEditorUI file="panelclose/confirm.png"/>
-	<Wait frames="5"/>
 	<EditorClick mark="unsaved.cancel"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
@@ -48,12 +43,10 @@
 	<!-- ③ 창을 줄인 뒤 X → 확인 → Don't Save. 확인은 창 크기가 바뀌어도 그때의 가운데에 뜬다(처음 위치를 붙들고 있지 않는다). -->
 	<Wait frames="1"/>
 	<ResizeWindow width="1600" height="900"/>
-	<Wait frames="10"/>
 	<EditorClick mark="panel.close.Input Map Editor"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<CaptureEditorUI file="panelclose/confirmX.png"/>
-	<Wait frames="5"/>
 	<EditorClick mark="unsaved.discard"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="300"/>

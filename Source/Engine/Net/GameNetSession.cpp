@@ -816,7 +816,7 @@ namespace sw
         _connectFuture                = TaskFuture<NetConnectResult>{};
         if ( result.isConnected() )
         {
-            SW_LOG_INFO_ID( "GameNetSession.NetSessionConnectedClient", "Net session connected to %# as client %#", _serverAddress.toString(), result._clientIndex );
+            SW_LOG_INFO_ID( SW_LOG_ID_NET_SESSION_CONNECTED, "Net session connected to %# as client %#", _serverAddress.toString(), result._clientIndex );
             return;
         }
         // 시간 초과는 다시 시도한다 — 같이 띄운 서버가 아직 기동 중일 수 있다(멀티 프로세스 재생 · 느린 Debug 기동). 거절 · 판 불일치는 다시 해도 같다.

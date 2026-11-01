@@ -12,7 +12,6 @@
 	<DevCommand line="panel.focus prefab_editor"/>
 	<WaitUntil watch="Editor.SceneViewDrawn" equals="0" timeoutFrames="75"/>
 	<DevCommand line="editor editor.themeSettings"/>
-	<Wait frames="15"/>
 	<EditorClick mark="theme.swatch.violet"/>
 	<WaitUntil watch="Editor.AccentColor" equals="10902002" timeoutFrames="60"/>
 	<Wait frames="10"/>

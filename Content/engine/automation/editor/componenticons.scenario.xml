@@ -21,7 +21,6 @@
 	<Wait frames="5"/>
 	<Variable name="gv_editorWatchObject" value="TestMesh"/>
 	<WaitUntil watch="Editor.HierarchyRowIcon" equals="57414" timeoutFrames="60"/>
-	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.row.TestKeyLight"/>
 	<Wait frames="20"/>
 	<CaptureEditorUI file="hierarchy.png"/>

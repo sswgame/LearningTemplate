@@ -18,15 +18,10 @@
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
 	<!-- ① 안쪽 프리팹 lamp -->
-	<Wait frames="20"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="Lamp"/>
-	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="component.add PointLightComponent"/>
@@ -37,17 +32,11 @@
 	<Remember watch="Object.Property" target="Lamp" key="PointLightComponent._radius" as="templateRadius"/>
 	<!-- ② 바깥 프리팹 post — Lamp 를 자식으로 둔다 -->
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="Post"/>
-	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
 	<EditorDrag mark="hierarchy.row.Lamp" toMark="hierarchy.row.Post"/>
-	<Wait frames="30"/>
 	<EditorClick mark="hierarchy.row.Post"/>
 	<WaitUntil watch="Editor.SelectedNames" is="Post" timeoutFrames="60"/>
 	<DevCommand line="prefab.create {out}/post.prefab.xml"/>
@@ -56,21 +45,13 @@
 	<!-- ③ 둘째 lamp 를 고쳐 프리팹에 쓴다 -->
 	<Wait frames="10"/>
 	<DevCommand line="prefab.spawn {out}/lamp.prefab.xml"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="LampTop"/>
-	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.property.PointLightComponent._radius" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
 	<EditorText value="7"/>
-	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.SelectedNames" is="LampTop"/>

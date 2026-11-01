@@ -14,7 +14,6 @@
 	<!-- 에디터 카메라를 오른쪽으로 3 m 남짓(오른쪽 단추 + D) -->
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="D" state="down"/>
-	<Wait frames="42"/>
 	<EditorKey key="D" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
 	<Wait frames="8"/>
@@ -23,10 +22,8 @@
 	<Wait frames="5"/>
 	<ExpectLog id="BugReport.Saved" atLeast="1"/>
 	<!-- 다시 왼쪽으로 옮긴다(A) — 기록과 다른 자리 -->
-	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="A" state="down"/>
-	<Wait frames="70"/>
 	<EditorKey key="A" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
 	<Wait frames="10"/>
