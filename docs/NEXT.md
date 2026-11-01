@@ -33,15 +33,9 @@
 6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
    끝낸 경계는 StructureRefactor 9 절(GPU 자원은 프록시 / 한 번 만들기 / 게시, 스레드 경계 표). 끝낸 경계: 머티리얼 · 메시 · 텍스처 · 에디터 텍스처 · 오디오 ·
    애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:
-   1. **렌더러 셋으로 가르기 — 남은 것: 씬 데이터와 렌더러 장치**(언리얼 `FScene` / `FSceneRenderer` / `FSceneViewState`). 끝: 화면 밖 씬 렌더러는 씬 키별 소유자
-      `OffscreenSceneRenderers` 가 갖고 수명은 씬의 수명(`_listRetiredSceneKey` · 캡처 `shutdown`), 역할 표시는 주입(`FrameRendererHost`).
-      남음: 화면 밖 씬마다 아직 `FrameRenderer` 통째(그래프 · 패스 상수 링 · 캔버스 · 파이프라인 자원)를 하나씩 든다. `FrameRenderState` 를 씬 키마다의 `SceneRenderData`
-      (`_gpuScene` · `_mainView` · `_listExtraView` · `_lightBuffer` · `_deform` · `_probeUpdater` · `_particleRenderer` · 프레임 빛 · 하늘)와 렌더러 하나(`_graph` · `_passCbRing` ·
-      `_gpuPassTimeline` · `_canvasRenderer` · PSO · 파이프라인)로 나누고, 패킷의 `_sceneKey` 로 씬 데이터를 고른다(`_state._gpuScene` 같은 참조 약 166 곳이 `scene()` 을 거친다).
-      파이프라인이 다른 씬(캡처의 디퍼드)은 파이프라인 키로 렌더러를 고른다.
-   2. **시나리오 고정 대기를 조건으로**: 에디터 입력 앞 `<Wait frames>` 784 곳(98 파일)은 한꺼번에 지우면 진다(2026-11-01 시도 — 앞 단계의 비동기 일을 기다리던 것이 섞였다).
+   1. **시나리오 고정 대기를 조건으로**: 에디터 입력 앞 `<Wait frames>` 784 곳(98 파일)은 한꺼번에 지우면 진다(2026-11-01 시도 — 앞 단계의 비동기 일을 기다리던 것이 섞였다).
       시나리오마다 무엇을 기다리는지 보고 `WaitUntil`(감시 값)로 바꾼다. 입력 단계가 스스로 기다리는 것(대상 위젯 · 키보드 초점)과 겹치는 것만 지운다.
-   3. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
+   2. **시나리오 속도**(사용자 질문): 체인 하나가 백엔드 넷을 동시에 띄워 실제 시간이 부하에 묶인다(Release `Scenario.shooter3d` vk 가 crowd 단계 150 초 시한을 넘김 —
       같은 3185 프레임에 dx11 40 초 · dx12 78 초 · gl 111 초). timeline 줄을 모아 어디서 시간이 드는지 재고(기다림 · 단계 재설정 · 기동), 프레임 고정 진행 · 단계 묶기 · 백엔드별 슬롯을 판단한다.
 
 ### 1. 진행 중 (2026-11-01)
