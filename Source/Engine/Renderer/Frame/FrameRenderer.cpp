@@ -96,11 +96,11 @@ namespace sw
         , _lastPendingPSOBatchCount{ 0 }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
         , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture }
+        , _host{}
         , _statusMessage{}
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
-        , _bScenePreview{ SW_FALSE }
         , _bLightGridPSOMissingLogged{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
@@ -136,10 +136,8 @@ namespace sw
             bindServices( pTaskManager );
         else if ( engine::areEngineServicesBound() )
             bindServices( &engine::getSubsystem<TaskManager>() );
-        // 패스별 GPU 시간을 보고할 프로파일러다. 서비스가 없는 실행(서비스 없이 렌더러만 쓰는 도구)은 계측하지 않는다.
-        // 미리보기 씬 렌더러는 계측하지 않는다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 주 렌더러의 것이다).
-        const bool bProfile = engine::areEngineServicesBound() && _bScenePreview == SW_FALSE;
-        _state._gpuPassTimeline.bindProfiler( bProfile ? &engine::getSubsystem<FrameProfiler>() : nullptr );
+        // 패스별 GPU 시간을 보고할 프로파일러다 — 호스트가 건 렌더러 하나만 계측한다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 하나다).
+        _state._gpuPassTimeline.bindProfiler( _host._pProfiler );
 
         _renderPipelineAssetCache = make_unique<RenderPipelineAssetCache>();
         if ( _renderPipelineAssetCache->initialize() == false )
@@ -473,7 +471,7 @@ namespace sw
     {
         // 모듈 구간(ExtensionRenderPass M3) — 확장 훅부터 기록 · 제출까지 모듈 코드가 도는 동안 레지스트리의 렌더 잠금을 쥔다(등록 해제의 flush 가 이 잠금을 기다린다).
         // 미리보기 씬 렌더러는 모듈 확장을 받지 않는다(확장은 주 렌더러의 파이프라인에 붙는다). 구간이 끝나면 모듈이 넣은 콜백을 모두 놓는다(소멸 코드가 모듈 안에 있다).
-        RenderExtensionRegistry* const pExtensionRegistry = _bScenePreview == SW_FALSE ? engine::findSubsystem<RenderExtensionRegistry>() : nullptr;
+        RenderExtensionRegistry* const pExtensionRegistry = _host._pExtensions;
         if ( pExtensionRegistry == nullptr )
             return uploadSceneAndSubmitFrame( pDevice, pCallerName );
         RenderExtensionRegistry::RenderScope moduleScope( *pExtensionRegistry );
@@ -526,8 +524,8 @@ namespace sw
         const uint32 viewModeMask = collectFrameViewModeMask();
         _psoManager.ensureMaterialPSOs( viewModeMask );
         // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다(급하지 않은 줄). 줄은 하나라 주 렌더러만 꺼낸다 — 미리보기 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
-        if ( _bScenePreview == SW_FALSE )
-            _psoManager.warmPinnedMaterialPSOs( viewModeMask );
+        if ( _host._pPinnedMaterials != nullptr )
+            _psoManager.warmPinnedMaterialPSOs( *_host._pPinnedMaterials, viewModeMask );
         // 빌더 스레드를 쓰지 않는 경로(GL · `-gv_psoAsync=0`)는 방금 넣은 줄을 이 자리에서 만들어 같은 프레임에 그린다.
         _psoManager.pumpMaterialPSOBuilds();
 
@@ -544,7 +542,7 @@ namespace sw
         _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
         _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
-        if ( _bScenePreview == SW_FALSE )
+        if ( _host._pProfiler != nullptr )
             _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
         return bOk;
     }
@@ -854,8 +852,8 @@ namespace sw
     void FrameRenderer::releaseTransientResources()
     {
         // 목록을 먼저 비운다. 놓는 도중에 UI 가 죽은 핸들을 집어 가면 안 된다.
-        if ( RenderTargetRegistry* pRegistry = engine::findSubsystem<RenderTargetRegistry>(); pRegistry != nullptr )
-            pRegistry->clear();
+        if ( _host._pRenderTargets != nullptr )
+            _host._pRenderTargets->clear();
 
         _viewResources.releaseViewTransients( _state._mainView );
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
@@ -907,9 +905,8 @@ namespace sw
 
     void FrameRenderer::publishRenderTargets() const
     {
-        RenderTargetRegistry* pRegistry = engine::findSubsystem<RenderTargetRegistry>();
-        // 목록은 주 렌더러의 것이다 — 미리보기 씬 렌더러가 공개하면 렌더 타깃 패널이 미리보기 첨부를 보인다.
-        if ( pRegistry == nullptr || _bScenePreview == SW_TRUE )
+        RenderTargetRegistry* const pRegistry = _host._pRenderTargets; // 목록은 주 렌더러의 것이다(화면 밖 렌더러는 호스트가 없다)
+        if ( pRegistry == nullptr )
             return;
 
         // 화면에 나가는 것이 무엇인지 함께 실어 준다. 패널이 열리자마자 **지금 보이는 그림**을
@@ -1272,8 +1269,7 @@ namespace sw
 
     bool FrameRenderer::initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath )
     {
-        // 계측과 공개를 끄는 표시와 PSO 저장소는 initialize 앞에 둔다(파이프라인 로드가 공개를 부른다). 저장소는 같은 파이프라인일 때만 함께 쓴다.
-        _bScenePreview = SW_TRUE;
+        // 호스트는 걸지 않는다(주 렌더러의 일). PSO 저장소는 initialize 앞에 둔다 — 같은 파이프라인일 때만 함께 쓴다.
         if ( pipelinePath.empty() )
             _psoManager.shareCacheOf( mainRenderer._psoManager );
         return initialize( pDevice, mainRenderer._state._pTaskManager, pipelinePath.empty() ? string_view{ mainRenderer._pipelinePath } : pipelinePath );

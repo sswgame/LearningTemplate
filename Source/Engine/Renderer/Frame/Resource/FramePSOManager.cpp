@@ -874,14 +874,13 @@ namespace sw
             ensureMaterialFallbackBuffers();
     }
 
-    void FramePSOManager::warmPinnedMaterialPSOs( uint32 viewModeMask )
+    void FramePSOManager::warmPinnedMaterialPSOs( MaterialCache& pinnedMaterials, uint32 viewModeMask )
     {
-        // 줄은 하나라 주 렌더러만 부른다(`FrameRenderer::uploadSceneAndSubmitFrame`) — 미리보기 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
-        const bool bNoWarm = _pDevice == nullptr || engine::areEngineServicesBound() == false;
-        if ( bNoWarm )
+        // 줄은 하나라 호스트가 건 렌더러만 부른다(`FrameRendererHost::_pPinnedMaterials`) — 화면 밖 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
+        if ( _pDevice == nullptr )
             return;
         vector<MaterialPSOWarmEntry>& listEntry = _listPSOWarmEntryScratch;
-        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().takePSOWarmEntries( listEntry );
+        pinnedMaterials.takePSOWarmEntries( listEntry );
         if ( listEntry.empty() )
             return;
         SW_PROFILE_SCOPE( "RT.PSO.warmPinned" );

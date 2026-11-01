@@ -5,12 +5,17 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
@@ -47,6 +52,13 @@ namespace sw
     {
         IRHIDevice& device = _rhiSubsystem.findRHI()->getDevice();
         _packetBuilder->initialize( device, &engine::getSubsystem<TaskManager>() );
+        // 주 렌더러만 하는 일의 상대 — 화면 밖 씬 렌더러는 걸지 않는다(`FrameRendererHost`). initialize 앞이다(파이프라인 로드가 렌더 타깃을 공개한다).
+        FrameRendererHost host{};
+        host._pProfiler        = &engine::getSubsystem<FrameProfiler>();
+        host._pExtensions      = engine::findSubsystem<RenderExtensionRegistry>();
+        host._pRenderTargets   = engine::findSubsystem<RenderTargetRegistry>();
+        host._pPinnedMaterials = &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
+        _frameRenderer->bindHost( host );
         if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>() ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.FailedInitializeFrameRenderer", "Failed to initialize FrameRenderer!" );

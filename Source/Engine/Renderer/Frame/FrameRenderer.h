@@ -64,7 +64,10 @@ namespace sw
     class Material;
     class Mesh;
     class RenderExtensionRegistry;
+    class FrameProfiler;
+    class MaterialCache;
     class MaterialInstance;
+    class RenderTargetRegistry;
     class RenderPipelineAssetCache;
     class Scene;
     class ShaderBindingLayout;
@@ -84,6 +87,20 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct FrameRendererHost
+     * @brief 주 렌더러만 하는 일의 상대입니다 — 호스트(`FrameRendererSubsystem`)가 엔진 서비스로 채워 `FrameRenderer::bindHost` 로 넘긴다.
+     * @details 화면 밖 씬 렌더러(`OffscreenSceneRenderers`) · 도구 · 테스트의 렌더러는 비어 있다. 예전에는 렌더러가 스스로 전역에서 찾고 역할 표시(`_bScenePreview`)로
+     *          다섯 곳을 갈랐다 — 표시를 빠뜨린 자리(트랜지언트를 놓을 때 렌더 타깃 목록 비우기)는 화면 밖 렌더러가 내려갈 때 주 렌더러의 목록을 지웠다.
+     */
+    struct FrameRendererHost
+    {
+        FrameProfiler*           _pProfiler{ nullptr };        ///< 패스별 GPU 시간 보고(타임스탬프 슬롯은 디바이스에 하나 — 렌더러 하나만 계측한다)
+        RenderExtensionRegistry* _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
+        RenderTargetRegistry*    _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
+        MaterialCache*           _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
+    };
+
     /**
      * @class FrameRenderer
      * @brief 프레임 경로를 담당합니다. RenderPipeline XML 에서 RenderGraph 를 만들고, GPUScene 과 MeshComponent 를 IRHIDevice 로 그립니다.
@@ -120,10 +137,12 @@ namespace sw
         /** @brief 디바이스, TaskManager, 파이프라인 XML 로 초기화합니다. */
         [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
                                        string_view pipelineXMLPath = {} );
+        /** @brief 주 렌더러만 하는 일의 상대를 겁니다(`FrameRendererHost`). `initialize` 앞에 부릅니다(파이프라인 로드가 렌더 타깃을 공개한다). */
+        void bindHost( const FrameRendererHost& host ) { _host = host; }
         /**
          * @brief 화면 밖 씬(미리보기 · 캡처) 하나를 그리는 렌더러로 초기화합니다(`OffscreenSceneRenderers` 가 만든다).
          * @details @p mainRenderer 의 TaskManager 를 쓰고, @p pipelinePath 가 비면 그 파이프라인과 PSO 저장소를 함께 쓴다(같은 파이프라인이면 PSO 가 같다).
-         *          프로파일러 보고 · 렌더 타깃 목록 공개 · 모듈 확장 · 고정 PSO 미리 만들기는 하지 않는다(주 렌더러의 것을 덮지 않게).
+         *          호스트(`FrameRendererHost`)는 걸지 않는다 — 프로파일러 보고 · 렌더 타깃 목록 · 모듈 확장 · 고정 PSO 미리 만들기는 주 렌더러의 일이다.
          */
         [[nodiscard]] bool initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath );
         /** @brief 핫패스에서 쓰는 TaskManager 를 연결합니다. */
@@ -429,13 +448,13 @@ namespace sw
          *          언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스를 더하고 실행하는 자리다.
          */
         FramePassExecutor _passExecutor;
+        FrameRendererHost _host; ///< 주 렌더러만 하는 일의 상대(`bindHost`). 화면 밖 렌더러는 비어 있다
         string            _statusMessage;
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameRendererStatus _status;
         uint8               _bCallbacksBound            : 1;
         uint8               _bPassResourcesReady        : 1;
-        uint8               _bScenePreview              : 1; ///< 화면 밖 씬 렌더러다(`initializeOffscreen`) — 프로파일러 보고 · 렌더 타깃 공개 · 모듈 확장 · 고정 PSO 미리 만들기를 하지 않는다
         uint8               _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
