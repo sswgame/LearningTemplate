@@ -42,8 +42,8 @@ namespace sw
                 return engine::areEngineServicesBound() && engine::getSubsystem<IAudioService>().isDataFile( relativePath );
             }
 
-            /** @brief 그 파일을 다시 읽어 바꿉니다(`IAudioService::reloadDataFile`). 실패하면 지금 것을 그대로 씁니다. 디바이스는 쓰지 않습니다. */
-            void reload( const AssetID& assetID, IRHIDevice* /*pDevice*/ )
+            /** @brief 그 파일을 다시 읽어 바꿉니다(`IAudioService::reloadDataFile`). 실패하면 지금 것을 그대로 씁니다. */
+            void reload( const AssetID& assetID )
             {
                 if ( engine::areEngineServicesBound() )
                     (void)engine::getSubsystem<IAudioService>().reloadDataFile( assetID ); // 실패는 서비스가 오류로 남기고 지금 것을 유지한다
@@ -81,8 +81,8 @@ namespace sw
                 return engine::areEngineServicesBound() && engine::getSubsystem<LocalizationManager>().isProjectFile( relativePath );
             }
 
-            /** @brief 그 파일이 든 프로젝트를 다시 읽습니다(`LocalizationManager::reloadChangedFile`). 디바이스는 쓰지 않습니다. */
-            void reload( const AssetID& assetID, IRHIDevice* /*pDevice*/ )
+            /** @brief 그 파일이 든 프로젝트를 다시 읽습니다(`LocalizationManager::reloadChangedFile`). */
+            void reload( const AssetID& assetID )
             {
                 const string_view relativePath = assetID.view();
                 if ( engine::areEngineServicesBound() )

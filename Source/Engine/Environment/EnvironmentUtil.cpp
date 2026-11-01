@@ -56,7 +56,7 @@ namespace sw
             return false;
         const hashed_string hashedPath( string{ path }.c_str() );
         MaterialCache&      cache = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
-        _pMaterial                = cache.acquire( hashedPath.c_str(), nullptr );
+        _pMaterial                = cache.acquire( hashedPath.c_str() );
         if ( _pMaterial == nullptr )
         {
             SW_LOG_WARNING_ID( "EnvironmentUtil.MaterialCouldNotAcquired", "Material '%#' could not be acquired - the scene default material is used", hashedPath.c_str() );

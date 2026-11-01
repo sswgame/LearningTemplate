@@ -182,7 +182,7 @@ namespace sw::editor
                 // 그 머티리얼은 캐시에서 영영 지워지지 않는다.
                 EditorViewportPreviewInternal::PreviewMaterialState& heldMaterial = getEditorState<EditorViewportPreviewInternal::PreviewMaterialState>();
                 const bool                                           bAlreadyHeld = ( heldMaterial._acquiredPath == assetPath );
-                Material*                                            pCached      = pResources->getAssetCache<MaterialCache>().acquire( assetPath, nullptr );
+                Material*                                            pCached      = pResources->getAssetCache<MaterialCache>().acquire( assetPath );
                 if ( pCached != nullptr )
                 {
                     if ( bAlreadyHeld )

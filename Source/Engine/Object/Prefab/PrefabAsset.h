@@ -279,9 +279,8 @@ namespace sw
          *          씬을 다시 읽을 때가 그렇다. 씬은 프리팹 인스턴스의 덮어쓴 값만 저장하므로(`PrefabOverrides`) 다시 읽은 씬의 인스턴스에는
          *          고친 프리팹의 값이 퍼지고, 인스턴스가 덮어쓴 값은 그대로 남는다. 중첩 인스턴스를 가진 프리팹도 함께 버린다 — 고친 원본이 순환을
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).
-         * @param pDevice 쓰지 않습니다. 프리팹은 GPU 리소스를 가지지 않습니다(`IAssetCache` 계약).
          */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice = nullptr );
+        void reload( const AssetID& assetID );
 
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Prefab";

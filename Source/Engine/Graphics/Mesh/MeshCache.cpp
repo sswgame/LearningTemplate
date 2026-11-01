@@ -42,7 +42,8 @@ namespace sw
 
         WeakInternTable<string, Mesh> _sharedTable{};
         InFlightTable                 _inFlight{};
-        OnceKeySet                    _warned{}; ///< 읽지 못해 경고한 경로(캐시를 비우면 잊는다)
+        OnceKeySet                    _warned{};                ///< 읽지 못해 경고한 경로(캐시를 비우면 잊는다)
+        atomic<IRHIDevice*>           _pBoundDevice{ nullptr }; ///< 엔진이 붙인 디바이스(`bindDevice`) — 다시 읽기 전 대기
     };
 
     namespace
@@ -238,7 +239,7 @@ namespace sw
             pDerived->onMeshesInvalidated();
     }
 
-    bool MeshCache::reloadShared( string_view path, IRHIDevice* pDevice )
+    bool MeshCache::reloadShared( string_view path )
     {
         if ( path.empty() )
             return false;
@@ -255,6 +256,7 @@ namespace sw
         }
 
         // 지난 프레임이 아직 이전 정점 버퍼로 그리고 있을 수 있다. setVertices 는 버퍼를 곧바로 반환하므로 먼저 기다린다(TextureCache::reload 와 같은 이유).
+        IRHIDevice* const pDevice = MeshCacheInternal::getState()._pBoundDevice.load( std::memory_order_acquire );
         if ( pDevice != nullptr )
             pDevice->waitIdle( RHIWaitIdleReason::HotReload );
         live->setVerticesWithTangents( std::move( data._listVertex ) );
@@ -263,10 +265,15 @@ namespace sw
         return live->setSections( std::move( data._listSection ) ) && live->setLODs( std::move( data._listLOD ) );
     }
 
-    void MeshCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
+    void MeshCache::bindDevice( IRHIDevice* pDevice )
+    {
+        _pState->_pBoundDevice.store( pDevice, std::memory_order_release );
+    }
+
+    void MeshCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        (void)reloadShared( relativePath, pDevice ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
-        invalidateDerivedCaches();                   // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
+        (void)reloadShared( relativePath ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
+        invalidateDerivedCaches();          // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
     }
 } // namespace sw

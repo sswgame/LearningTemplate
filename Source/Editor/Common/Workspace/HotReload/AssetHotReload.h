@@ -21,7 +21,6 @@ namespace sw
 {
     class AssetManager;
     class GameObjectManager;
-    class IRHIDevice;
 } // namespace sw
 
 namespace sw::editor
@@ -135,7 +134,7 @@ namespace sw::editor
          * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`IAssetCache::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.
          * @return 다시 읽게 한 캐시 수입니다.
          */
-        static uint32 reloadInCachesHolding( AssetManager& resources, const AssetID& assetID, IRHIDevice* pDevice );
+        static uint32 reloadInCachesHolding( AssetManager& resources, const AssetID& assetID );
 
         /**
          * @brief @p objects 에서 그 에셋을 쓰는 컴포넌트를 찾아, 인스펙터에서 그 프로퍼티를 고쳤을 때처럼 `onPropertyChanged` 를 호출합니다. 언리얼의 PostEditChange 에 해당합니다.

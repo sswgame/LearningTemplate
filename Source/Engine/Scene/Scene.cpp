@@ -500,14 +500,10 @@ namespace sw
             if ( _pMaterial == nullptr || _defaultMaterialPath != materialPath )
             {
                 releaseDefaultMaterial();
-                _defaultMaterialPath = materialPath;
-                _pMaterial           = _services._pAssetManager->getAssetCache<MaterialCache>().acquire( materialPath, pRHIDevice );
-                if ( _pMaterial == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "Scene.FailedAcquireMaterial", "Failed to acquire Material from %#", materialPath );
-                    _defaultMaterialPath.clear();
-                    return false;
-                }
+                _defaultMaterialPath         = materialPath;
+                MaterialCache& materialCache = _services._pAssetManager->getAssetCache<MaterialCache>();
+                _pMaterial                   = materialCache.acquire( materialPath ); // 빈 경로가 아니면 실패하지 않는다 — 초기화 실패는 `initializePending` 이 알린다
+                materialCache.requestInitialize( materialPath );                      // 아래 `bindSceneMeshDefaults` 의 `initializePending` 이 초기화한다
             }
         }
         // 카메라는 프레임마다 다시 고른다 — 여기서 못 고르면(오브젝트 관리자 없음) 렌더 경로가 "카메라 없음" 으로 알린다.

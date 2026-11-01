@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class IRHIDevice;
     class Mesh;
 
     /**
@@ -84,11 +85,12 @@ namespace sw
 
         /**
          * @brief 사용 중인 메시를 파일에서 **제자리에서** 다시 읽습니다. 그 메시를 가진 컴포넌트 모두가 새 정점을 봅니다.
-         * @param pDevice 살아 있는 디바이스면 정점을 바꾸기 전에 `waitIdle` 합니다 — 지난 프레임이 아직 옛 정점 버퍼로 그리고 있을 수 있습니다.
          * @details 틱 밖(게임 스레드)에서만 부릅니다. `Mesh::setVertices` 가 내용 번호를 바꾸므로 정점 풀과 업로드 큐가 다시 업로드합니다.
          * @return 사용 중이었고 다시 읽었으면 true. 아무도 쓰지 않거나 읽을 수 없으면(옛 정점 그대로) false 입니다.
          */
-        [[nodiscard]] static bool reloadShared( string_view path, IRHIDevice* pDevice );
+        [[nodiscard]] static bool reloadShared( string_view path );
+        /** @brief 다시 읽기 전에 기다릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr). 붙은 디바이스가 있으면 정점을 바꾸기 전에 `waitIdle` 한다 — 지난 프레임이 아직 옛 정점 버퍼로 그리고 있을 수 있다. */
+        void bindDevice( IRHIDevice* pDevice );
 
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Mesh";
@@ -97,7 +99,7 @@ namespace sw
         /** @brief 그 경로의 메시가 사용 중이면 true 입니다. */
         bool isCached( string_view relativePath ) const override;
         /** @brief 사용 중이면 제자리에서 다시 읽습니다(`reloadShared`). 물리 셰이프 캐시는 사용 중인 메시가 없어도 비웁니다(다음 셰이프가 새 정점을 읽습니다). */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice );
+        void reload( const AssetID& assetID );
         /** @brief 지금 사용 중인 메시 수입니다. */
         size_t getCachedCount() const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */

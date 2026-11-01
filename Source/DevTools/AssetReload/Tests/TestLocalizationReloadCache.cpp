@@ -67,7 +67,7 @@ SW_TEST_CASE_F( LocalizationReloadCacheTest, HotReloadGoesThroughTheAssetCacheRe
     const sw::AssetID translationID = sw::test::ScopedScratchDomain::toID( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) );
     SW_EXPECT_TRUE( pCache->isCached( translationID.view() ) );
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
-    pfnReload( *pCache, translationID, nullptr );
+    pfnReload( *pCache, translationID );
     SW_EXPECT_EQUAL( sw::string( "수수께끼 섬" ), lookup( _loc, "ui.title" ) );
 
     pCache->clear(); // 캐시 비우기(재초기화)는 화면의 글을 지우지 않는다

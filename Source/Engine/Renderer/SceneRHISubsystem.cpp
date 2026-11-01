@@ -5,6 +5,8 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -22,14 +24,21 @@ namespace sw
     {
         IRHIDevice* const pDevice = &_rhiSubsystem.findRHI()->getDevice();
         engine::getSubsystem<SceneManager>().setRHIDevice( pDevice );
-        engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().bindDevice( pDevice ); // 게임 스레드 텍스처 요청이 올릴 디바이스
+        // GPU 자원을 가진 캐시가 쓸 디바이스 — 게임 스레드 요청(텍스처)과 다시 로드(텍스처 · 머티리얼 · 메시)는 디바이스를 인자로 받지 않는다
+        AssetManager& assetManager = engine::getSubsystem<AssetManager>();
+        assetManager.getAssetCache<TextureCache>().bindDevice( pDevice );
+        assetManager.getAssetCache<MaterialCache>().bindDevice( pDevice );
+        assetManager.getAssetCache<MeshCache>().bindDevice( pDevice );
         return SubsystemInitResult::Succeeded;
     }
 
     void SceneRHISubsystem::shutdownSubsystem()
     {
         engine::getSubsystem<SceneManager>().setRHIDevice( nullptr );
-        engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().bindDevice( nullptr );
+        AssetManager& assetManager = engine::getSubsystem<AssetManager>();
+        assetManager.getAssetCache<TextureCache>().bindDevice( nullptr );
+        assetManager.getAssetCache<MaterialCache>().bindDevice( nullptr );
+        assetManager.getAssetCache<MeshCache>().bindDevice( nullptr );
     }
 
     span<const utf8* const> SceneRHISubsystem::getSubsystemDependencies() const

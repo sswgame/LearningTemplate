@@ -1702,7 +1702,7 @@ namespace sw
     SW_BUILT_IN_ASSET_CACHE( PrefabCache );
     SW_ASSET_TYPE( Prefab, PrefabAsset::kAssetType );
 
-    void PrefabCache::reload( const AssetID& assetID, IRHIDevice* )
+    void PrefabCache::reload( const AssetID& assetID )
     {
         const string_view assetRelativePath = assetID.view();
         if ( assetRelativePath.empty() )

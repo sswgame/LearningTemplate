@@ -1135,10 +1135,11 @@ namespace sw
 {
     SW_BUILT_IN_ASSET_CACHE( TextureCache );
 
-    void TextureCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
+    void TextureCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
         SW_MEMORY_SCOPE( Texture );
+        IRHIDevice* const pDevice = _impl != nullptr ? _impl->_pBoundDevice.load( std::memory_order_acquire ) : nullptr;
         // 렌더 텍스처 · CPU 텍스처는 디스크에 없다 — 다시 읽을 것이 없다.
         const bool bNotOnDisk = relativePath.empty() || isRenderTargetPath( relativePath ) || isCPUTexturePath( relativePath );
         const bool bCanReload = _impl != nullptr && pDevice != nullptr;

@@ -128,9 +128,8 @@ namespace sw
     }
 
     template <typename AssetType>
-    void SharedAssetCache<AssetType>::reload( const AssetID& assetID, IRHIDevice* pDevice )
+    void SharedAssetCache<AssetType>::reload( const AssetID& assetID )
     {
-        (void)pDevice;
         (void)reloadIn( *_pTable, assetID.view() ); // 아무도 쥐지 않으면 다음 acquire 가 새로 읽고, 읽지 못하면 읽는 함수가 오류를 남기고 옛 내용을 지킨다
     }
 

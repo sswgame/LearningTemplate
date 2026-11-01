@@ -37,12 +37,13 @@ namespace sw
         };
 
         unordered_map<string, Entry> _mapEntry;
-        vector<string>               _listPendingKey;    ///< `requestInitialize` 가 등록한, GPU 자원을 초기화할 경로(`_mutex` 아래)
-        vector<string>               _listPSOWarmKey;    ///< 고정(`pinAsset`)이 넣은, 초기화를 기다리는 PSO 미리 만들기 경로(`_mutex` 아래)
-        vector<MaterialPSOWarmEntry> _listPSOWarmEntry;  ///< 초기화를 마쳐 렌더 스레드가 꺼내 갈 PSO 미리 만들기 값(`_mutex` 아래)
-        atomic<uint32>               _pendingCount;      ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
-        atomic<uint32>               _psoWarmCount;      ///< `_listPSOWarmKey` 의 크기. 0 이면 `initializePending` 이 줄을 보지 않는다
-        atomic<uint32>               _psoWarmEntryCount; ///< `_listPSOWarmEntry` 의 크기. 0 이면 `takePSOWarmEntries` 가 잠그지 않는다(매 프레임 불린다)
+        vector<string>               _listPendingKey;          ///< `requestInitialize` 가 등록한, GPU 자원을 초기화할 경로(`_mutex` 아래)
+        atomic<IRHIDevice*>          _pBoundDevice{ nullptr }; ///< 엔진이 붙인 디바이스(`bindDevice`) — 다시 로드가 쓴다
+        vector<string>               _listPSOWarmKey;          ///< 고정(`pinAsset`)이 넣은, 초기화를 기다리는 PSO 미리 만들기 경로(`_mutex` 아래)
+        vector<MaterialPSOWarmEntry> _listPSOWarmEntry;        ///< 초기화를 마쳐 렌더 스레드가 꺼내 갈 PSO 미리 만들기 값(`_mutex` 아래)
+        atomic<uint32>               _pendingCount;            ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
+        atomic<uint32>               _psoWarmCount;            ///< `_listPSOWarmKey` 의 크기. 0 이면 `initializePending` 이 줄을 보지 않는다
+        atomic<uint32>               _psoWarmEntryCount;       ///< `_listPSOWarmEntry` 의 크기. 0 이면 `takePSOWarmEntries` 가 잠그지 않는다(매 프레임 불린다)
         shared_mutex                 _mutex;
         /// @brief 디바이스로 머티리얼을 초기화하는 구간(`DeviceInitScope`)을 지금 쥔 스레드입니다. 비어 있으면 아무도 안 쥐었습니다.
         atomic<std::thread::id> _initOwner;
@@ -65,7 +66,7 @@ namespace sw
         /**
          * @brief 디바이스로 머티리얼을 초기화하는 구간을 한 스레드가 쥐게 합니다. 다른 스레드가 쥐고 있으면 오류를 남기고 멈춥니다(모든 구성).
          * @details 초기화는 `_mutex` 밖에서 한다(텍스처 요청이 GL 컨텍스트를 기다릴 수 있는데 렌더 스레드가 `_mutex` 를 잡는다). 그래서 같은 머티리얼을 두 스레드가
-         *          동시에 초기화하는 것을 막던 것이 이 구간뿐이다. 호출처는 모두 게임 스레드(`Scene::initialize` · 엔진 프레임의 `initializePending` · 에디터 `reload`)이고
+         *          동시에 초기화하는 것을 막던 것이 이 구간뿐이다. 호출처는 모두 게임 스레드(`initializePending` · `reload`)이고
          *          비용은 원자 비교 한 번이라 Release 에서도 확인한다. 같은 스레드의 중첩은 허용한다.
          */
         struct DeviceInitScope
@@ -133,7 +134,7 @@ namespace sw
 
     MaterialCache::~MaterialCache() = default;
 
-    Material* MaterialCache::acquire( string_view relativePath, IRHIDevice* pDevice )
+    Material* MaterialCache::acquire( string_view relativePath )
     {
         SW_MEMORY_SCOPE( Material );
         if ( relativePath.empty() || _impl == nullptr )
@@ -156,33 +157,7 @@ namespace sw
         }
         ++entry._refCount;
 
-        // 초기화됐는지는 머티리얼에게 묻는다. 캐시가 따로 기록하면 디바이스가 죽었을 때 그 기록이 틀려진다.
-        if ( pDevice == nullptr || entry._material->getInitState() == MaterialInitState::Ready )
-            return entry._material.get();
-
-        // 초기화(파일 읽기 · 텍스처 요청)는 잠금 밖에서 한다. 텍스처 요청이 GL 컨텍스트를 기다릴 수 있는데, 렌더 스레드는 프레임 안에서
-        // `takePSOWarmEntries` 로 이 잠금을 잡는다. 소유를 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다(`initializePending` 과 같다).
-        // 같은 머티리얼을 두 스레드가 동시에 초기화하는 것은 `DeviceInitScope` 가 오류로 멈춘다.
-        const shared_ptr<Material> material = entry._material;
-        lock.unlock();
-        bool bInitialized{ false };
-        {
-            const Impl::DeviceInitScope initScope{ *_impl };
-            bInitialized = material->initialize( pDevice, AssetID{ key } );
-        }
-        if ( bInitialized )
-            return material.get();
-
-        SW_LOG_ERROR_ID( "MaterialCache.FailedInitializeMaterial", "Failed to initialize Material %#", key.c_str() );
-        lock.lock();
-        const auto failedIt = _impl->_mapEntry.find( key );
-        if ( failedIt != _impl->_mapEntry.end() )
-        {
-            --failedIt->second._refCount;
-            if ( failedIt->second._refCount == 0 )
-                _impl->_mapEntry.erase( key );
-        }
-        return nullptr;
+        return entry._material.get();
     }
 
     void MaterialCache::release( string_view relativePath )
@@ -241,7 +216,7 @@ namespace sw
         SW_MEMORY_SCOPE( Material );
         if ( pDevice == nullptr || _impl == nullptr )
             return;
-        promoteReadyPSOWarmKeys(); // 지난 프레임까지 초기화를 마친 고정 머티리얼(`acquire` 가 바로 초기화한 것 포함)
+        promoteReadyPSOWarmKeys(); // 지난 프레임까지 초기화를 마친 고정 머티리얼
         if ( _impl->_pendingCount.load( std::memory_order_acquire ) == 0 )
             return;
 
@@ -329,8 +304,8 @@ namespace sw
     {
         if ( AssetTypeRegistry::isPathOfType( relativePath, Material::kAssetType ) == false )
             return {};
-        // 디바이스 없이 확보하면 항목만 만든다(실패는 빈 경로뿐인데 접미사가 맞았으니 비지 않았다).
-        const Material* pMaterial = acquire( relativePath, nullptr );
+        // 확보는 항목만 만든다(실패는 빈 경로뿐인데 접미사가 맞았으니 비지 않았다).
+        const Material* pMaterial = acquire( relativePath );
         SW_ASSERT( pMaterial != nullptr );
         requestInitialize( relativePath );
         const string key = FileUtil::normalizePath( relativePath );
@@ -384,7 +359,12 @@ namespace sw
     SW_BUILT_IN_ASSET_CACHE( MaterialCache );
     SW_ASSET_TYPE( Material, Material::kAssetType );
 
-    void MaterialCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
+    void MaterialCache::bindDevice( IRHIDevice* pDevice )
+    {
+        _impl->_pBoundDevice.store( pDevice, std::memory_order_release );
+    }
+
+    void MaterialCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
         SW_MEMORY_SCOPE( Material );
@@ -403,6 +383,7 @@ namespace sw
                 return;
             material = it->second._material;
         }
+        IRHIDevice* const pDevice = _impl->_pBoundDevice.load( std::memory_order_acquire );
         if ( pDevice == nullptr )
             return;
 

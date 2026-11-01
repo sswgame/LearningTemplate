@@ -39,7 +39,7 @@ namespace sw::editor
                 if ( FileUtil::writeTextFile( filePath, text ) == false )
                     SW_LOG_ERROR_ID( "EditorInspectorCommands.CouldNotWriteBack", "Could not write '%#' back", filePath.c_str() );
                 // 이 단계는 에셋 관리자가 있을 때만 기록된다(`applyToPrefab`) - 여기서는 필수다.
-                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabPath }, nullptr );
+                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabPath } );
             }
 
             /**
@@ -160,7 +160,7 @@ namespace sw::editor
             return true;
         // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
         PrefabCache& prefabCache = *pPrefabCache;
-        prefabCache.reload( assetID, nullptr );
+        prefabCache.reload( assetID );
 
         // 같은 프리팹의 다른 인스턴스에 퍼뜨린다(덮어쓴 값은 남긴다). 파일 쓰기와 인스턴스 갱신을 되돌리기 하나로 묶는다.
         // 인스턴스는 두 종류다. 씬에 놓은 인스턴스(에디터 작업 공간이 경로를 기록)와 다른 프리팹 인스턴스가 스폰한 중첩 부품이다.

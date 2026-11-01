@@ -111,11 +111,10 @@ namespace sw
         }
 
         /** @brief 읽은 적 있는 경로면 새 테이블로 다시 읽어 항목을 바꿉니다. 읽지 못하면 옛 테이블을 그대로 두고 오류를 남깁니다. 틱 밖(게임 스레드)에서 불러야 합니다. */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice )
+        void reload( const AssetID& assetID )
         {
             const string_view relativePath = assetID.view();
-            (void)pDevice;
-            const string key = makeKey( relativePath );
+            const string      key          = makeKey( relativePath );
             {
                 ScopedLock<mutex> lock{ _mutex };
                 if ( _mapTable.find( key ) == _mapTable.end() )

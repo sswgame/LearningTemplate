@@ -48,7 +48,7 @@ namespace sw
         {
             const hashed_string resolvedPath = materialPath.empty() ? SpriteRenderUtil::getSpriteMaterialPath() : hashed_string( materialPath );
             MaterialCache&      cache        = _pAssetManager->getAssetCache<MaterialCache>();
-            pMaterial                        = cache.acquire( resolvedPath.c_str(), nullptr );
+            pMaterial                        = cache.acquire( resolvedPath.c_str() );
             if ( pMaterial != nullptr )
             {
                 cache.requestInitialize( resolvedPath.c_str() );

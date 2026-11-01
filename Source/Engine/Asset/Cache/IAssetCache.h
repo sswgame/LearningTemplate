@@ -26,8 +26,6 @@
 
 namespace sw
 {
-    class IRHIDevice;
-
     /**
      * @class CacheTracking
      * @brief 캐시가 계측(`CacheStats`)에 어떻게 서는지의 선언입니다. `IAssetCache` 의 생성자가 이 값을 요구해, 계측을 정하지 않은 캐시는 지을 수 없습니다.
@@ -132,16 +130,17 @@ namespace sw
     /**
      * @brief 캐시 하나의 핫 리로드 함수입니다 — 캐시에 있으면 디스크에서 다시 읽습니다(에디터 · 개발 도구). 런타임 계약(`IAssetCache`)에는 없다.
      * @details 캐시를 등록할 때 같이 넘긴다(`SW_BUILT_IN_ASSET_CACHE` · `AssetManager::registerAssetCache`). 배포 빌드는 `nullptr` 이라 리로드 본문이
-     *          인스턴스화되지도 링크되지도 않는다(템플릿이 아닌 캐시의 본문은 개발 전용 `<캐시>Reload.cpp` 다). **디바이스를 인자로 받는다** —
-     *          캐시가 마지막으로 본 디바이스를 들고 있으면 백엔드를 바꾼 뒤 그 포인터가 사라진 디바이스를 가리킨다.
+     *          인스턴스화되지도 링크되지도 않는다(템플릿이 아닌 캐시의 본문은 개발 전용 `<캐시>Reload.cpp` 다). 디바이스는 받지 않는다 — GPU 자원을 가진
+     *          캐시(텍스처 · 머티리얼 · 메시)는 엔진이 붙인 디바이스(`bindDevice`, `SceneRHISubsystem` 이 RHI 를 세울 때 붙이고 내릴 때 뗀다)를 쓴다(언리얼 리임포트도
+     *          RHI 를 인자로 받지 않는다). 예전에는 부르는 쪽(에디터)이 디바이스를 찾아 캐시 여덟의 인자로 관통시켰다.
      */
-    using AssetCacheReloadFunction = void ( * )( IAssetCache& cache, const AssetID& assetID, IRHIDevice* pDevice );
+    using AssetCacheReloadFunction = void ( * )( IAssetCache& cache, const AssetID& assetID );
 
-    /** @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID, pDevice )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`). */
+    /** @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`). */
     template <typename TCache>
-    void reloadAssetCacheOf( IAssetCache& cache, const AssetID& assetID, IRHIDevice* pDevice )
+    void reloadAssetCacheOf( IAssetCache& cache, const AssetID& assetID )
     {
-        static_cast<TCache&>( cache ).reload( assetID, pDevice );
+        static_cast<TCache&>( cache ).reload( assetID );
     }
 } // namespace sw
 

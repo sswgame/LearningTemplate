@@ -13,7 +13,6 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -502,13 +501,10 @@ namespace sw::editor
         AssetManager* pResources = findSubsystem<AssetManager>();
         if ( pResources == nullptr )
             return ReloadOutcome::NotTracked;
-        // 디바이스는 **지금 것을** 넘긴다 — 캐시가 마지막으로 본 디바이스는 백엔드 교체 뒤 사라졌을 수 있다.
-        EditorContext* pContext = editor::findSubsystem<EditorContext>();
-        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
         if ( route._pCacheKindName[0] == '\0' )
         {
             // 모듈이 로드한 캐시 — 이름 대신 그 경로를 가진 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
-            if ( reloadInCachesHolding( *pResources, assetID, pDevice ) == 0 )
+            if ( reloadInCachesHolding( *pResources, assetID ) == 0 )
                 return ReloadOutcome::NotTracked;
         }
         else
@@ -526,7 +522,7 @@ namespace sw::editor
                 return ReloadOutcome::Failed;
             }
             SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset", "Hot-Reloading asset: %#", relativePath );
-            pReload( *pCache, assetID, pDevice );
+            pReload( *pCache, assetID );
         }
 
         Scene*             pScene   = getActiveScene();
@@ -536,7 +532,7 @@ namespace sw::editor
         return ReloadOutcome::Reloaded;
     }
 
-    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, const AssetID& assetID, IRHIDevice* pDevice )
+    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
         uint32            reloadedCount{ 0 };
@@ -546,7 +542,7 @@ namespace sw::editor
             if ( pReload == nullptr || pCache->isCached( relativePath ) == false )
                 continue;
             SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset2", "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
-            pReload( *pCache, assetID, pDevice );
+            pReload( *pCache, assetID );
             ++reloadedCount;
         }
         return reloadedCount;

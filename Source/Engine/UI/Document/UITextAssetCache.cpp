@@ -82,12 +82,11 @@ namespace sw
         return AssetIO::readTextAsset( assetID, outText );
     }
 
-    void UITextAssetCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
+    void UITextAssetCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        (void)pDevice;
-        const string key = FileUtil::normalizePath( relativePath );
-        string       text;
+        const string      key          = FileUtil::normalizePath( relativePath );
+        string            text;
         if ( readText( key, assetID, text ) == false )
         {
             SW_LOG_ERROR_ID( "UITextAssetCache.ReloadFailedNotFound", "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );

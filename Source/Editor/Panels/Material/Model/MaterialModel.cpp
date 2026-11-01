@@ -6,7 +6,6 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -64,7 +63,7 @@ namespace sw::editor
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;
         }
-        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ path }, editor::getSubsystem<EditorRenderViews>().getRHIDevice() );
+        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ path } );
         applyLivePreview( path );
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         return true;

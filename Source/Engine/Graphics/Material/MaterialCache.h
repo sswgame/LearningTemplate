@@ -45,8 +45,8 @@ namespace sw
      *          그래서 `release` 는 GPU 자원을 해제하지 않습니다. 마지막 `shared_ptr` 이 놓일 때 해제됩니다.
      *          `TextureCache` 는 `unique_ptr` 이라 참조가 0 이면 그 자리에서 해제합니다.
      *       2. `acquire` 가 먼저 세고 실패하면 되돌립니다. `TextureCache` 는 성공한 뒤에 셉니다.
-     *       디바이스는 기억하지 않고 `IAssetCache` 의 계약대로 인자로 받습니다. 기억한 포인터는 백엔드를 바꾸면 죽은
-     *       디바이스를 가리킵니다.
+     *       게임 스레드 API(`acquire` · `reload`)는 디바이스를 받지 않는다 — 리로드는 엔진이 붙인 디바이스(`bindDevice`)를 쓰고, 백엔드를 바꾸면
+     *       `SceneRHISubsystem` 이 떼고 다시 붙인다(언리얼 `UMaterial` 게임 스레드 API 에 RHI 인자가 없다). 초기화는 `initializePending` 한 길이다.
      */
     class SW_API MaterialCache final : public IAssetCache
     {
@@ -65,17 +65,23 @@ namespace sw
         static constexpr const utf8* kAssetKindName = "Material";
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
         const utf8* getAssetKindName() const override { return kAssetKindName; }
-        /** @brief 경로의 Material 을 확보하고 GPU 자원까지 만듭니다. */
-        Material* acquire( string_view relativePath, IRHIDevice* pDevice );
-        /** @brief 경로의 Material 을 다시 로드하고 GPU 자원을 다시 만듭니다. */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice );
+        /**
+         * @brief 경로의 Material 참조를 하나 확보합니다(없으면 빈 머티리얼 항목을 만든다). 빈 경로면 nullptr 입니다.
+         * @details 초기화하지 않는다 — 그릴 머티리얼은 `requestInitialize` 로 줄에 넣고 `initializePending` 이 초기화한다(한 길). 머티리얼 편집기의 미리보기는
+         *          줄에 넣지 않고 편집 중인 내용을 넣는다(초기화하면 파일 내용으로 덮인다).
+         */
+        Material* acquire( string_view relativePath );
+        /** @brief 경로의 Material 을 다시 로드합니다(붙은 디바이스가 없으면 하지 않는다). */
+        void reload( const AssetID& assetID );
+        /** @brief 다시 로드에 쓸 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). */
+        void bindDevice( IRHIDevice* pDevice );
         /** @brief 경로의 Material 참조를 하나 놓습니다. */
         void release( string_view relativePath );
         /**
          * @brief 디바이스 없이 확보한 경로의 머티리얼을 다음 `initializePending` 이 GPU 자원으로 초기화하도록 표시합니다. 이미 초기화되어 있으면 아무 일도 없습니다.
          * @details 컴포넌트는 디바이스를 모릅니다(레이어 규칙: Object 는 Scene 을 include 하지 않습니다). 메시가 경로로 머티리얼을 확보할 때 부르고,
          *          게임 스레드가 렌더 패킷을 내기 전(`Engine`)과 씬 초기화가 디바이스로 초기화합니다(언리얼의 `BeginInitResource` 에 해당합니다).
-         *          `acquire( path, nullptr )` 만으로는 표시하지 않습니다. 머티리얼 편집기의 미리보기가 그렇게 확보해 편집 중인 내용을 넣는데,
+         *          `acquire` 만으로는 표시하지 않습니다. 머티리얼 편집기의 미리보기가 그렇게 확보해 편집 중인 내용을 넣는데,
          *          초기화하면 파일 내용으로 덮이기 때문입니다.
          */
         void requestInitialize( string_view relativePath );
@@ -100,7 +106,7 @@ namespace sw
         /** @brief 캐시를 비웁니다. GPU 자원은 돌려주지 않습니다(디바이스가 죽은 뒤에만 부릅니다). */
         void clear() override;
         /**
-         * @brief 머티리얼 경로(`Material::kAssetType`)면 참조 하나를 확보하고(`acquire( path, nullptr )`) 다음 `initializePending` 에 초기화를 맡긴 뒤,
+         * @brief 머티리얼 경로(`Material::kAssetType`)면 참조 하나를 확보하고(`acquire`) 다음 `initializePending` 에 초기화를 맡긴 뒤,
          *        놓을 때 `release` 하는 토큰을 돌려줍니다. 아니면 nullptr 입니다.
          * @details 초기화가 머티리얼의 텍스처를 확보하므로(비동기 로드) 머티리얼 고정이 그 텍스처도 붙든다.
          */
