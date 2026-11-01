@@ -10,6 +10,8 @@
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Renderer/RenderThread.h"
+#include "Engine/Renderer/RenderThreadSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -24,6 +26,10 @@ namespace sw
         }
         if ( engine::areEngineServicesBound() )
             count += engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().countLoadsInFlight();
+        const RenderThreadSubsystem* const pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
+        const RenderThread* const          pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
+        if ( pRenderThread != nullptr )
+            count += pRenderThread->getPendingMaterialPSOBatchCount();
         return count;
     }
 

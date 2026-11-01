@@ -214,6 +214,7 @@ namespace sw
         , _screenshotWaitStartMicroseconds{ 0 }
         , _budgetFrameCounter{ 0 }
         , _bScenarioCaptureEnabled{ false }
+        , _pendingMaterialPSOBatchCount{ 0 }
         , _requestedScreenshotPath{}
         , _requestedScreenshotTexture{ 0 }
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
@@ -622,6 +623,7 @@ namespace sw
             // `RT.Graph.executeParallel` 만으로는 그 차이가 테이블에서 사라진다.
             SW_PROFILE_SCOPE( "RT.ExecutePacket" );
             bGraphDrew = _pFrameRenderer->executePacket( _pDevice, packet );
+            _pendingMaterialPSOBatchCount.store( bGraphDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u, std::memory_order_relaxed );
         }
 
         // 에디터가 게임 뷰 텍스처를 샘플링한다. 읽기 상태로 바꾼다(열려 있는 렌더 패스도 여기서 닫힌다).

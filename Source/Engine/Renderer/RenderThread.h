@@ -100,6 +100,8 @@ namespace sw
         IRHIDevice* getDevice() const { return _pDevice; }
         /** @brief 패킷을 그리는 주 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다(화면 밖 패킷: `FrameRenderer::executeOffscreenPacket`). */
         FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
+        /** @brief 지난 주 프레임에서 머티리얼 PSO 가 아직 만드는 중이라 그리지 못한 배치 묶음 수입니다. 어느 스레드에서 불러도 됩니다(캡처 준비 판정 `AutomationCaptureUtil`). */
+        uint32 getPendingMaterialPSOBatchCount() const { return _pendingMaterialPSOBatchCount.load( std::memory_order_relaxed ); }
 
         /** @brief 자동화 시나리오 동안 Present 캡처를 켜 둡니다(`<Screenshot>` 이 화면에 나간 이미지를 캡처합니다). 게임 스레드에서 부릅니다. */
         void setScenarioCaptureEnabled( bool bEnabled ) { _bScenarioCaptureEnabled.store( bEnabled, std::memory_order_release ); }
@@ -201,6 +203,7 @@ namespace sw
         int64                      _screenshotWaitStartMicroseconds;    ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
         uint32                     _budgetFrameCounter;                 ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
         atomic<bool>               _bScenarioCaptureEnabled;            ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
+        atomic<uint32>             _pendingMaterialPSOBatchCount;       ///< 지난 주 프레임의 `FrameRenderer::getLastPendingPSOBatchCount`(렌더 스레드가 쓰고 게임 스레드가 읽는다)
         string                     _requestedScreenshotPath;            ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
         RHITextureHandle           _requestedScreenshotTexture;         ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
         RHIFormat                  _requestedScreenshotFormat;          ///< `_requestedScreenshotTexture` 의 포맷
