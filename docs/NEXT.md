@@ -23,6 +23,13 @@
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). 경로(`pbr_lit` · glTF PBR 임포트 · 월드 타일링)와 Shooter3D 경기장 · 메시 벤치(`-gv_stressTestScanProps`)는 했다.
    남은 것: 캐릭터(KayKit 기사 · 해골 — 리그 · 클립 · 망토 사슬 · 소켓이 이 뼈대에 묶였다. 후보는 CC0 사람형 베이스 + 클립 리타깃), 무기(Kenney 블래스터), 다른 게임 맵(Empty 쇼케이스 · ThemePark · HarvestValley …)의 바닥 · 벽 · 소품.
+   캐릭터 후보 Quaternius Universal Base Characters · Universal Animation Library(둘 다 CC0, itch.io 무료판 Standard)는 스크립트 내려받기가 봇 차단으로 막혔다 — 사용자가 내려받아 `Content/common/models_raw/quaternius/` 에 zip 을 두면 이어서 한다.
+5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
+   - 창마다 UX 2차: `editor/uiaudit.scenario.xml` 캡처 38 장 중 이번에 본 것은 인스펙터 · 콘텐츠 브라우저 · 프로파일러 · 환경설정 · 입력 맵 · 머티리얼 · 프로젝트 · 사용자 설정뿐이다. 나머지 30 장(그래프 · 시퀀서 · 데이터 표 · 멀티플레이 · 캐릭터 에디터 …)을 같은 눈으로 본다.
+   - 에디터 코드의 영어 화면 글 약 500 줄(`ImGui::Text( "…" )` 등)을 `SW_LOCKEY` + `editor.strings.xml` 로 — 창 UX 를 고칠 때 그 창 것을 함께 옮긴다.
+   - 에셋 종류 색 · 아이콘(등록 매크로의 RGBA) · 컴포넌트 분류 색을 테마 키(`Asset.*` · `Component.*`)로, 크기 리터럴(`GetFontSize() * N` 23 곳)을 `Layout.*` 수치로.
+   - 아이콘 이름 → 글리프 표(`EditorIconGlyphs`)를 데이터로(아이콘 글꼴 교체 = 표 교체), 시간대 표(`TimeZoneUtil`)를 데이터 파일로.
+   - `Saved/Test/<pid>/` 단위 테스트 쓰기 폴더가 실행마다 남아 수백 개다 — 끝나면 지우거나 한 폴더를 다시 쓴다.
 
 ### 1. 진행 중 (2026-11-01)
 
