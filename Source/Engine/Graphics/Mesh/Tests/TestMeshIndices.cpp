@@ -1,6 +1,7 @@
 // MeshIndicesTest — 메시의 인덱스(고유 정점 + 삼각형마다 번호 셋): 검사, LOD 인덱스의 정점 흐름 번호, `.mesh` 왕복. 디바이스 없음(nogpu).
 #include "pch.h"
 
+#include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -112,4 +113,31 @@ SW_TEST_CASE( MeshIndicesTest, AssetRoundTripKeepsIndicesAndSections )
     bytes[lastIndexOffset]       = 9;
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetIndexOutOfRange" );
     SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+}
+
+/**
+ * @brief [MeshIndicesTest] 삼각형 목록을 합치면 모든 칸이 비트까지 같은 정점만 하나가 되고(UV 만 다른 정점은 남는다), 고유 정점은 처음 쓰인 순서인지 검증
+ */
+SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
+{
+    // 사각형 두 삼각형 (0, 1, 2) · (0, 2, 3) 을 풀어 쓴 것 — 마지막 모서리만 UV 를 조금 바꿔 다른 정점으로 둔다.
+    const sw::vector<sw::RHIVertex> listQuad = makeQuadVertices();
+    sw::vector<sw::RHIVertex>       listTriangle{ listQuad[0], listQuad[1], listQuad[2], listQuad[0], listQuad[2], listQuad[3] };
+    listTriangle[4]._arrUv[0] += 0.25f;
+    sw::vector<sw::RHIVertex> listVertex;
+    sw::vector<uint32>        listIndex;
+    sw::Mesh::weldTriangleList( listTriangle, listVertex, listIndex );
+    SW_EXPECT_EQUAL( 5u, static_cast<uint32>( listVertex.size() ) );
+    SW_EXPECT_TRUE( listIndex == ( sw::vector<uint32>{ 0, 1, 2, 0, 3, 4 } ) );
+
+    // 탄젠트를 구한 뒤 합치는 메시는 그림이 같다 — 모서리마다 다시 풀면 원래 정점(탄젠트 포함)과 비트까지 같다.
+    sw::shared_ptr<sw::Mesh> welded = sw::Mesh::create();
+    welded->setTriangleListWelded( sw::vector<sw::RHIVertex>( listTriangle ) );
+    sw::vector<sw::RHIVertex> listExpected = listTriangle;
+    sw::Mesh::computeTangents( listExpected );
+    SW_REQUIRE_EQUAL( 6u, welded->getIndexCount() );
+    for ( uint32 corner = 0; corner < 6; ++corner )
+    {
+        SW_EXPECT_TRUE( sw::Memory::compare( &welded->getVertices()[welded->getIndices()[corner]], &listExpected[corner], sizeof( sw::RHIVertex ) ) == 0 );
+    }
 }

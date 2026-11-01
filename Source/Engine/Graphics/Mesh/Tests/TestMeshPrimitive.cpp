@@ -9,6 +9,21 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
+namespace
+{
+    /** @brief 메시의 삼각형을 인덱스 순서로 푼 모서리 정점입니다(셋이 삼각형 하나). 도형은 정점을 나눠 쓰므로 삼각형은 인덱스로 읽는다. */
+    sw::vector<sw::RHIVertex> makeCornerVertices( const sw::Mesh& mesh )
+    {
+        sw::vector<sw::RHIVertex> listCorner;
+        listCorner.reserve( mesh.getIndexCount() );
+        for ( const uint32 index : mesh.getIndices() )
+        {
+            listCorner.push_back( mesh.getVertices()[index] );
+        }
+        return listCorner;
+    }
+} // namespace
+
 /**
  * @brief [MeshPrimitiveTest] 같은 id 는 **같은 메시 객체**를 돌려주고, create 는 매번 새로 만드는지 검증
  *
@@ -99,10 +114,10 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
         SW_EXPECT_TRUE_MSG( mesh != nullptr, testCase._pID );
         SW_REQUIRE_TRUE( mesh != nullptr );
 
-        const sw::vector<sw::RHIVertex>& listVertex = mesh->getVertices();
+        const sw::vector<sw::RHIVertex> listVertex = makeCornerVertices( *mesh );
         SW_EXPECT_TRUE_MSG( listVertex.empty() == false, testCase._pID );
         SW_REQUIRE_TRUE( listVertex.size() >= 3 );
-        SW_EXPECT_TRUE_MSG( ( listVertex.size() % 3 ) == 0, "a triangle list must have a multiple of 3 vertices" );
+        SW_EXPECT_TRUE_MSG( ( listVertex.size() % 3 ) == 0, "the index list must hold whole triangles" );
 
         uint32 inwardCount{ 0 };
         uint32 degenerateCount{ 0 };
@@ -241,7 +256,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
     // 평면(XZ, 노멀 +Y): 탄젠트가 위치의 u 기울기 방향이고, 바이탄젠트가 v 가 줄어드는 쪽이다.
     sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
     SW_REQUIRE_TRUE( plane != nullptr );
-    const sw::vector<sw::RHIVertex>& listVertex = plane->getVertices();
+    const sw::vector<sw::RHIVertex> listVertex = makeCornerVertices( *plane );
     SW_REQUIRE_TRUE( listVertex.size() >= 3 );
     const sw::RHIVertex& vertex0 = listVertex[0];
     const sw::RHIVertex& vertex1 = listVertex[1];
@@ -278,7 +293,7 @@ SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
     sw::shared_ptr<sw::Mesh> sharedSprite = sw::MeshUtil::acquirePrimitive( "Sprite" );
     SW_EXPECT_TRUE( sharedSprite != nullptr && sharedSprite == sw::MeshUtil::acquirePrimitive( "Sprite" ) );
     SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "sprite" ) == nullptr ); // 철자는 정확히 맞춘다 — 소문자는 다른 이름이다
-    const sw::vector<sw::RHIVertex>& listVertex = sprite->getVertices();
+    const sw::vector<sw::RHIVertex> listVertex = makeCornerVertices( *sprite );
     SW_REQUIRE_EQUAL( 12u, static_cast<uint32>( listVertex.size() ) );
 
     uint32 frontCount{ 0 };
@@ -340,7 +355,7 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
     // 검증 색을 고르면 큐브의 면이 서로 다른 색이다(벤치 · 렌더 테스트가 면을 가려 본다).
     const sw::shared_ptr<sw::Mesh> diagnostic = sw::MeshUtil::createPrimitive( "Cube", sw::PrimitiveVertexColor::Diagnostic );
     SW_REQUIRE_NOT_NULL( diagnostic.get() );
-    const sw::vector<sw::RHIVertex>& listVertex = diagnostic->getVertices();
+    const sw::vector<sw::RHIVertex> listVertex = makeCornerVertices( *diagnostic ); // 모서리 0 · 6 은 다른 면이다
     SW_REQUIRE_TRUE( listVertex.size() >= 12u );
     SW_EXPECT_TRUE( listVertex[0]._arrColor[0] != listVertex[6]._arrColor[0] || listVertex[0]._arrColor[1] != listVertex[6]._arrColor[1] ||
                     listVertex[0]._arrColor[2] != listVertex[6]._arrColor[2] );

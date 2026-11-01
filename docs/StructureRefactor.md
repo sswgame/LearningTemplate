@@ -282,5 +282,5 @@
 | RHI | `drawIndexedInstanced` · 여러 개 `drawIndexedIndirect`(DX12 커맨드 시그니처 · VK `vkCmdDrawIndexedIndirect` · GL `glMultiDrawElementsIndirect` · DX11 반복) |
 | 확인 | 모든 골든(정점 순서가 같으면 그림이 같아야 한다 — 차이는 버그로 본다), 농장 · 군중 측정(캐릭터당 GPU 를 다시 잰다) |
 
-순서: RHI(네 백엔드, 끝) → 데이터 · 형식(끝 — `Mesh::setGeometry` · `getIndices`, `.mesh` 5 판) → GPU(끝 — 정점 풀 옆 인덱스 풀, 배치는 baseVertex + startIndex 의 `drawIndexedIndirect`, 모프 · VAT 는 메시 안 번호) → CPU 소비자(끝 — 외형 굽기 · 병합 · 절단 · 파쇄 · 물리 · 내비 · 복셀은 인덱스로 읽고, 모디파이어는 읽을 때 삼각형 목록으로 푼다) → 생산자(임포터 끝 — glTF 정점을 처음 쓰인 순서로 나눠 쓰고 노멀 없는 정점만 삼각형마다 나눈다, 형상 정점 순서는 그대로라 보정 조각이 맞다. 남은 것: 내장 도형 · 지형 · 물은 아직 삼각형 목록) → 골든 · 측정. 단계마다 빌드가 서는 상태로 커밋한다.
+순서: RHI(네 백엔드, 끝) → 데이터 · 형식(끝 — `Mesh::setGeometry` · `getIndices`, `.mesh` 5 판) → GPU(끝 — 정점 풀 옆 인덱스 풀, 배치는 baseVertex + startIndex 의 `drawIndexedIndirect`, 모프 · VAT 는 메시 안 번호) → CPU 소비자(끝 — 외형 굽기 · 병합 · 절단 · 파쇄 · 물리 · 내비 · 복셀은 인덱스로 읽고, 모디파이어는 읽을 때 삼각형 목록으로 푼다) → 생산자(임포터 끝 — glTF 정점을 처음 쓰인 순서로 나눠 쓰고 노멀 없는 정점만 삼각형마다 나눈다, 형상 정점 순서는 그대로라 보정 조각이 맞다. 내장 도형 · 지형 · 물은 `Mesh::weldTriangleList` — 비트까지 같은 정점만 합쳐 그림이 같다. 정점마다 스킨 · 모프를 뒤따라 붙이는 생산자(절단 조각)는 삼각형 목록 그대로) → 골든 · 측정. 단계마다 빌드가 서는 상태로 커밋한다.
 옮기는 동안의 규칙: 용접 단계 전까지 모든 생산자가 삼각형 목록(인덱스 0..n-1, `Mesh::setVertices` · `makeTriangleListIndices`)이라 인덱스 범위가 정점 범위와 같다. 소비자는 모두 인덱스로 읽으므로 이제 생산자가 정점을 나눠 써도 된다.

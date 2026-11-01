@@ -215,6 +215,17 @@ namespace sw
         static void computeTangents( vector<RHIVertex>& inoutListVertex );
         /** @brief 삼각형 목록(정점 셋이 삼각형 하나)의 인덱스 0..@p vertexCount-1 입니다. */
         static vector<uint32> makeTriangleListIndices( uint32 vertexCount );
+        /**
+         * @brief 삼각형 목록에서 모든 칸(위치 · 노멀 · UV · 색 · 탄젠트)이 비트까지 같은 정점을 하나로 합쳐 고유 정점과 인덱스로 만듭니다. 마지막 덜 찬 삼각형은 버립니다.
+         * @details 그림은 비트까지 같다 — 합치는 정점은 셰이더가 받는 값이 같다. 고유 정점은 처음 쓰인 순서다(정점 읽기가 삼각형 순서를 따른다).
+         *          탄젠트를 먼저 구한 정점을 넘긴다(구하기 전에 합치면 이웃 면의 탄젠트가 합쳐진 정점 하나에 모여 값이 달라진다 — 결과는 같지만 순서를 고정한다).
+         */
+        static void weldTriangleList( const vector<RHIVertex>& listTriangleVertex, vector<RHIVertex>& outListVertex, vector<uint32>& outListIndex );
+        /**
+         * @brief 삼각형 목록 정점을 탄젠트를 구한 뒤 합쳐(`weldTriangleList`) 설정합니다. 정점마다의 스킨 · 모프를 뒤따라 붙이지 않는 생산자(도형 · 지형 · 물)가 씁니다.
+         * @details 정점 번호가 바뀌므로, 삼각형 목록 순서로 스킨 · 모프를 만든 생산자는 `setVertices` 를 쓴다.
+         */
+        void setTriangleListWelded( vector<RHIVertex>&& listTriangleVertex );
         /** @brief CPU 고유 정점 배열입니다. GPU 업로드 뒤에도 원본은 여기 남습니다. */
         const vector<RHIVertex>& getVertices() const { return _listVertex; }
         /** @brief 삼각형마다 정점 번호 셋입니다(LOD 0). */

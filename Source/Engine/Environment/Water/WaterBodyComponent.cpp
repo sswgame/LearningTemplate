@@ -325,14 +325,22 @@ namespace sw
         const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._waterMaterial.get() : _materialPath;
         if ( _material.getInstance() == nullptr )
             (void)_material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)
-        _surfaceVertexCount   = static_cast<uint32>( listVertex.size() );
         shared_ptr<Mesh> mesh = Mesh::create();
         // 호수는 평평해 탄젠트를 정점이 이미 들었다 — 정점 9 만 개의 탄젠트 구하기(Debug 0.6~1 초)를 씬 열기 · 플레이 · 백엔드 교체마다 하지 않는다.
+        // 둘 다 격자라 이웃 삼각형이 나눠 쓰는 같은 정점을 합친다.
         if ( _shape == WaterBodyShape::River )
-            mesh->setVertices( std::move( listVertex ) );
+        {
+            mesh->setTriangleListWelded( std::move( listVertex ) );
+        }
         else
-            mesh->setVerticesWithTangents( std::move( listVertex ) );
-        _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
+        {
+            vector<RHIVertex> listWelded;
+            vector<uint32>    listIndex;
+            Mesh::weldTriangleList( listVertex, listWelded, listIndex );
+            (void)mesh->setGeometryWithTangents( std::move( listWelded ), std::move( listIndex ) ); // 번호는 방금 합친 정점 안이다
+        }
+        _surfaceVertexCount = mesh->getVertexCount();
+        _batch              = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
         _batch->setOwnerComponent( this );
         _batch->setWorld( 0, float4x4::makeTranslation( _surfaceOrigin ) );
         _batch->setBoundsRadius( 0, boundsRadius );

@@ -192,6 +192,52 @@ namespace sw
         return listIndex;
     }
 
+    void Mesh::weldTriangleList( const vector<RHIVertex>& listTriangleVertex, vector<RHIVertex>& outListVertex, vector<uint32>& outListIndex )
+    {
+        const uint32 cornerCount = static_cast<uint32>( listTriangleVertex.size() - listTriangleVertex.size() % 3 );
+        outListVertex.clear();
+        outListIndex.clear();
+        // 정점 전체 바이트로 세워 같은 정점을 이웃하게 하고, 무리마다 가장 앞 모서리를 대표로 삼는다(정렬은 같은 키 안에서 번호 순 — 결정적이다).
+        vector<uint32> listOrder( cornerCount );
+        for ( uint32 corner = 0; corner < cornerCount; ++corner )
+        {
+            listOrder[corner] = corner;
+        }
+        VectorUtil::sort( listOrder, [&listTriangleVertex]( uint32 lhs, uint32 rhs )
+        {
+            const int32 order = Memory::compare( &listTriangleVertex[lhs], &listTriangleVertex[rhs], sizeof( RHIVertex ) );
+            return order != 0 ? order < 0 : lhs < rhs;
+        } );
+        vector<uint32> listRepresentative( cornerCount );
+        for ( uint32 orderIndex = 0; orderIndex < cornerCount; ++orderIndex )
+        {
+            const bool bSameAsPrevious                = orderIndex > 0 && Memory::compare( &listTriangleVertex[listOrder[orderIndex]], &listTriangleVertex[listOrder[orderIndex - 1]], sizeof( RHIVertex ) ) == 0;
+            listRepresentative[listOrder[orderIndex]] = bSameAsPrevious ? listRepresentative[listOrder[orderIndex - 1]] : listOrder[orderIndex];
+        }
+        // 대표 모서리를 처음 쓰인 순서로 번호 매긴다.
+        vector<uint32> listOutput( cornerCount, constant::invalid_index::kUint32 );
+        outListIndex.reserve( cornerCount );
+        for ( uint32 corner = 0; corner < cornerCount; ++corner )
+        {
+            const uint32 representative = listRepresentative[corner];
+            if ( listOutput[representative] == constant::invalid_index::kUint32 )
+            {
+                listOutput[representative] = static_cast<uint32>( outListVertex.size() );
+                outListVertex.push_back( listTriangleVertex[representative] );
+            }
+            outListIndex.push_back( listOutput[representative] );
+        }
+    }
+
+    void Mesh::setTriangleListWelded( vector<RHIVertex>&& listTriangleVertex )
+    {
+        computeTangents( listTriangleVertex );
+        vector<RHIVertex> listVertex;
+        vector<uint32>    listIndex;
+        weldTriangleList( listTriangleVertex, listVertex, listIndex );
+        (void)setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ); // 번호는 방금 만든 고유 정점 안이다
+    }
+
     void Mesh::clearLODs()
     {
         _listLOD.clear();

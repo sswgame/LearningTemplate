@@ -103,7 +103,8 @@ namespace sw
                 const TerrainHeightfield* _pHeightfield{ nullptr };
                 const TerrainChunkLayout* _pLayout{ nullptr };
                 const ChunkMeshRequest*   _pRequest{ nullptr };
-                vector<RHIVertex>*        _pListVertex{ nullptr };
+                vector<RHIVertex>*        _pListVertex{ nullptr };      ///< 청크마다 고유 정점(삼각형 목록으로 만든 뒤 합친다)
+                vector<uint32>*           _pListIndex{ nullptr };       ///< 청크마다 인덱스
                 float32                   _geomorphLODDistance{ 0.0f }; ///< 0 보다 크면 정점에 지오모프 값을 쓴다(`TerrainMeshBuilder::applyGeomorph`)
 
                 void run( uint32 start, uint32 end )
@@ -119,6 +120,9 @@ namespace sw
                             TerrainMeshBuilder::applyGeomorph( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, _geomorphLODDistance, _pListVertex[index] );
                         else
                             Mesh::computeTangents( _pListVertex[index] );
+                        // 격자 정점은 이웃 삼각형 여섯이 나눠 쓴다 — 비트까지 같은 정점을 합친다(지오모프 값도 정점 칸이라 같이 본다). 정점 셰이더 · 업로드가 약 1/6 이다.
+                        const vector<RHIVertex> listTriangleVertex = std::move( _pListVertex[index] );
+                        Mesh::weldTriangleList( listTriangleVertex, _pListVertex[index], _pListIndex[index] );
                     }
                 }
             };
@@ -812,6 +816,7 @@ namespace sw
             return;
         vector<Internal::ChunkMeshRequest> listRequest( rebuildCount );
         vector<vector<RHIVertex>>          listChunkVertex( rebuildCount );
+        vector<vector<uint32>>             listChunkTriangleIndex( rebuildCount );
         for ( uint32 index = 0; index < rebuildCount; ++index )
         {
             const Chunk&                chunk   = _listChunk[listChunkIndex[index]];
@@ -828,6 +833,7 @@ namespace sw
         job._pLayout             = &_layout;
         job._pRequest            = listRequest.data();
         job._pListVertex         = listChunkVertex.data();
+        job._pListIndex          = listChunkTriangleIndex.data();
         job._geomorphLODDistance = _bGeomorph == SW_TRUE ? _lodDistance : 0.0f;
         engine::runParallel( rebuildCount, Internal::kParallelChunkMeshCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::ChunkVertexJob::run, &job ) );
 
@@ -838,7 +844,8 @@ namespace sw
             chunk._vertexCount    = static_cast<uint32>( listChunkVertex[index].size() );
             chunk._bMeshStale     = false;
             shared_ptr<Mesh> mesh = Mesh::create();
-            mesh->setVerticesWithTangents( std::move( listChunkVertex[index] ) ); // 탄젠트(또는 지오모프 값)는 워커가 채웠다
+            // 탄젠트(또는 지오모프 값)와 인덱스는 워커가 채웠다 — 번호는 합친 정점 안이다.
+            (void)mesh->setGeometryWithTangents( std::move( listChunkVertex[index] ), std::move( listChunkTriangleIndex[index] ) );
             chunk._batch->setMesh( std::move( mesh ) );
         }
     }

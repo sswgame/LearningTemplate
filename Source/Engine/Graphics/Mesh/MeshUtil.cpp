@@ -321,7 +321,7 @@ namespace sw
             }
         }
 
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -432,7 +432,7 @@ namespace sw
             }
         }
 
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -456,7 +456,7 @@ namespace sw
             pushFlatTriangle( listVert, float3{ 0.0f, -kHalfY, 0.0f }, quad._lower1, quad._lower0 );
         }
 
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -505,7 +505,7 @@ namespace sw
             }
         }
 
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -542,7 +542,7 @@ namespace sw
             pushFlatTriangle( listVert, float3{ 0.0f, -kHalfY, 0.0f }, base1, base0 );
         }
 
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -557,7 +557,7 @@ namespace sw
             makeRectVertex( 0.5f, 0.5f ),
             makeRectVertex( -0.5f, 0.5f ),
         };
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -579,7 +579,7 @@ namespace sw
             makeSpriteVertex( 0.5f, 0.5f, 1.0f ),
             makeSpriteVertex( -0.5f, 0.5f, 1.0f ),
         };
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -620,7 +620,7 @@ namespace sw
             }
         }
 
-        mesh->setVertices( std::move( listVert ) );
+        mesh->setTriangleListWelded( std::move( listVert ) );
         return mesh;
     }
 
@@ -676,7 +676,7 @@ namespace sw
             }
         }
         shared_ptr<Mesh> mesh = Mesh::create();
-        mesh->setVertices( std::move( listVertex ) );
+        mesh->setTriangleListWelded( std::move( listVertex ) );
         return mesh;
     }
 } // namespace sw

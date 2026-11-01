@@ -93,7 +93,7 @@ namespace sw
          *          칸 배치(월드 값): 색 = (거친 LOD 높이 - 지금 높이, 섞기 시작 거리, 섞기 끝 거리, 청크 최소 x), 탄젠트 = (청크 최소 z, 청크 최대 x, 청크 최대 z, 중앙 샘플 높이).
          *          섞기 구간은 이 LOD 의 교체 임계값(@p lodDistance × 2^@p lod)의 `kMorphStartRatio` ~ `kMorphEndRatio` 배다. 더 거친 LOD 가 없는 청크(`_maxLOD`)는 섞이지 않는다.
          *          거친 LOD 가 삼각형을 나누는 대각선((x, z)-(x+1, z+1))이 같아서 거친 메시의 높이와 정확히 같다. 이 칸들은 지오모프를 쓰는 머티리얼만 읽는다 -
-         *          메시는 `Mesh::setVerticesWithTangents` 로 넣어 탄젠트를 다시 구하지 않게 한다.
+         *          메시는 비트까지 같은 정점을 합쳐(`Mesh::weldTriangleList`) `Mesh::setGeometryWithTangents` 로 넣어 탄젠트를 다시 구하지 않게 한다.
          * @param lodDistance 컴포넌트의 LOD 거리(`selectLOD` 의 첫 임계값)
          */
         static void applyGeomorph( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod, float32 lodDistance,
