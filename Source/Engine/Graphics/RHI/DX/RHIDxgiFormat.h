@@ -81,6 +81,32 @@ namespace sw
     }
 
     /**
+     * @brief 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성(@p consumedMask)만 골라 입력 요소를 채우고 그 수를 반환합니다(DX11, DX12 공유).
+     * @details D3D11 · D3D12 의 입력 요소 구조는 칸이 같고 분류 값만 제 enum 이다 — 정점 · 인스턴스 분류 값을 받아 한 몸으로 채운다.
+     */
+    template <auto kPerVertexClass, auto kPerInstanceClass, typename TElement>
+    uint32 fillDxgiInputElements( RHIMeshVertexFormat format, uint32 consumedMask, TElement ( &outArrElement )[constant::render::kVertexAttributeCount] )
+    {
+        const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( format );
+        uint32                          elementCount{ 0 };
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
+        {
+            if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
+                continue;
+            const RHIVertexAttribute& attribute = pAttributeTable[attributeIndex];
+            const bool                bInstance = attribute._bPerInstance != SW_FALSE;
+            TElement&                 element   = outArrElement[elementCount++];
+            element.SemanticName                = attribute._pSemanticName;
+            element.Format                      = toDxgiVertexFormat( attribute );
+            element.AlignedByteOffset           = attribute._byteOffset;
+            element.InputSlot                   = attribute._inputSlot;
+            element.InputSlotClass              = bInstance ? kPerInstanceClass : kPerVertexClass;
+            element.InstanceDataStepRate        = bInstance ? 1u : 0u;
+        }
+        return elementCount;
+    }
+
+    /**
      * @brief DXGI_FORMAT 을 RHIFormat 으로 되돌립니다. 대응이 없으면(typeless 등) Unknown 입니다.
      * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부입니다. 대응이 없는 값은 `default:` 가
      *          Unknown 으로 돌립니다(새 DXGI 포맷도 Unknown 이 맞는 답입니다). 반대 방향인 toDxgiFormat 은 `default:` 없이 모든
