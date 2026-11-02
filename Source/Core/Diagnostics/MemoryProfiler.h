@@ -265,13 +265,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 프로세스 시작 직후에 플랫폼 누수 추적을 켭니다. */
         static void enableMemoryLeakChecks();
-        /** @brief 의도적인 수명 할당을 마친 뒤 힙 스냅샷을 저장하고, 활성 프로파일러의 태그 합계 누수 창을 엽니다(`beginLeakWindow`). */
-        static void captureMemoryLeakBaseline();
         /**
-         * @brief 기준선 창의 기록 수준을 고릅니다. `FullStacks` 이면 종료 보고가 줄마다 첫 프레임을 적습니다(Debug 실행이 느려진다 — 누수 출처를 찾을 때만 켠다).
-         * @details 켜는 쪽(`gv_*` 읽기)은 호출하는 엔진 기동이 정합니다. 인자 없는 `captureMemoryLeakBaseline()` 은 `TagTotals` 입니다.
+         * @brief 의도적인 수명 할당을 마친 뒤 힙 스냅샷을 저장하고, 활성 프로파일러의 누수 창을 엽니다(`beginLeakWindow`).
+         * @details 기록 수준은 여기 한 곳이 `-gv_leakWindowFullStacks` 로 정한다(기본 `TagTotals`, 켜면 `FullStacks` — 종료 보고가 줄마다 첫 프레임을 적는다).
+         *          예전에는 수준을 부르는 쪽이 골라 헤드리스 작업(`--test` 등)이 그 옵션을 무시했다.
          */
-        static void captureMemoryLeakBaseline( LeakWindowDetail detail );
+        static void captureMemoryLeakBaseline();
         /** @brief 종료 후 플랫폼 누수를 보고합니다. 힙이 늘었으면 0 이 아닌 값을 반환합니다. */
         static int32 reportMemoryLeaks( const utf8* pPhaseTag = "shutdown" );
 

@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
@@ -36,6 +37,12 @@ extern "C" int32 __lsan_do_recoverable_leak_check( void );
 
 namespace sw
 {
+    /**
+     * @brief `-gv_leakWindowFullStacks`: 기준선 창을 `FullStacks` 로 엽니다(`MemoryProfiler::captureMemoryLeakBaseline`). 종료 누수 보고가 줄마다 첫 프레임(누가 할당했나)을 적습니다.
+     * @details 창 안의 모든 할당이 스택을 잡아 Debug 실행이 느려진다 — 누수 출처를 찾을 때만 켠다. 꺼 두면 `TagTotals`(태그별 바이트 · 개수만)다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_leakWindowFullStacks, false, "기동 뒤 누수 기준선 창을 FullStacks 로 연다 - 종료 보고가 줄마다 할당한 코드의 첫 프레임을 적는다(Debug 가 느려지므로 누수 출처를 찾을 때만)" );
+
     namespace
     {
         struct MemoryProfilerInternal
@@ -231,12 +238,8 @@ namespace sw
 
     void MemoryProfiler::captureMemoryLeakBaseline()
     {
-        // 긴 창이라 스택은 잡지 않는다. 출처를 찾을 때는 아래 오버로드로 `FullStacks` 를 고른다.
-        captureMemoryLeakBaseline( LeakWindowDetail::TagTotals );
-    }
-
-    void MemoryProfiler::captureMemoryLeakBaseline( LeakWindowDetail detail )
-    {
+        // 긴 창이라 기본은 태그 합계다. 출처를 찾을 때만 `-gv_leakWindowFullStacks` 로 스택을 잡는다 — 기준선을 여는 길(보통 기동 · 헤드리스 작업)이 모두 이 한 곳을 지난다.
+        const LeakWindowDetail detail = gv_leakWindowFullStacks ? LeakWindowDetail::FullStacks : LeakWindowDetail::TagTotals;
         // 태그별 기준선은 플랫폼 검사와 따로 잡는다 — 기동 뒤부터 종료까지 하나의 누수 창을 열어 두고,
         // 종료 끝에 어느 용도가 늘었는지(`endLeakWindow` → `printLeakWindowReport`) 본다.
         MemoryProfiler* pActive = getActive();
