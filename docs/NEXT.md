@@ -41,6 +41,7 @@
 | 일 | 상태 |
 |---|---|
 | SOLID 남은 표 | StructureRefactor 7 절 15(Wayland 리스너 — Linux 빌드에서) |
+| 에디터 ImGui 를 RHI 렌더러 하나로(2026-11-02, 사용자 결정) | 목적: 플로팅 창(ImGui 보조 뷰포트)이 RHI 밖에서 제 스왑체인 · 동기화를 짓는 사본을 없앤다(Vulkan 세마포어 재사용 결함 — 지금은 `ThirdParty/imgui/vcpkg-port` 패치로 막았다). RHI 쪽은 끝났다: `IRHISwapChain` · `IRHIDevice::createSwapChain` · `resizeSwapChain` · `destroySwapChain` · `acquireSwapChainImage`, `RHIRenderPassBeginInfo::_pSwapChain`, `endFrame` 이 그 프레임에 그린 창을 모두 표시(31f82ae2a9, 네 백엔드). 막힌 곳: ImGui DX12 · Vulkan 백엔드의 `RenderDrawData` 는 정점 링을 `OwnerViewport->RendererUserData`(백엔드 내부 구조체, 제 스왑체인을 만들 때만 생긴다)에서 꺼내 쓰므로 "그리기는 ImGui 백엔드, 스왑체인은 RHI" 로 나눌 수 없다. 할 일: (1) RHI 위 ImGui 렌더러 하나(언리얼 Slate RHI 렌더러 · Godot 캔버스 렌더러 자리) — 셰이더(위치 · UV · 색, 알파 블렌드, 가위), 프레임마다 정점 · 인덱스 업로드, 그리기 명령의 텍스처는 RHI 텍스처 핸들(bindless 번호), ImGui 1.92 동적 텍스처(`ImTextureData` 생성 · 갱신 · 파괴)는 RHI 텍스처 · 구간 업로드, GL 행 순서(`rendersTargetRowsBottomUp`) · 캡처(`EditorUICapture::renderJob`)도 같은 렌더러로. (2) 보조 뷰포트 훅 한 벌(`Renderer_CreateWindow` · `DestroyWindow` · `SetWindowSize` → 스왑체인 생성 · 파괴 · 크기, 그리기는 렌더 스레드의 `ImGuiEditor::render` 에서 `acquireSwapChainImage` → `_pSwapChain` 패스) — 네 백엔드 모두 렌더 스레드에서 그린다(지금 GL 만 그렇다, UI 스레드가 `waitForDrawSnapshotIdle` 로 기다리는 동안이라 ImGui 상태가 멈춰 있다). (3) 지운다: `ImGui{DX11,DX12,Vulkan,OpenGL}RendererBackend`, `ImGuiViewportSizeGuard`, Vulkan 뷰포트 가드 · `Platform_CreateVkSurface`, GL WGL · GLX 훅, DX11 `OMSetRenderTargets` 뒷정리, `getSubmissionQueueMutex` 의 플랫폼 창 잠금, imgui 오버레이 포트와 패치. (4) 시나리오: 패널을 메인 창 밖으로 끌어내기 → 크기 바꾸기 → 닫기를 네 백엔드에서, 검증 레이어 경고 0 |
 
 ### 2. 테스트 · 시나리오 공백
 

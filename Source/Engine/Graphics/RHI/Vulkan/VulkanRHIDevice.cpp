@@ -1421,6 +1421,7 @@ namespace sw
 
     VulkanRHISwapChain* VulkanRHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
     {
+        _renderThread.assumeHeldByJoinedTask(); // 렌더 패스를 여는 기록(렌더 스레드와 그 병렬 기록 태스크)이 부른다 — 다른 창은 프레임 스트림만 고른다
         if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
             return &_swapChain;
         VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
