@@ -50,7 +50,11 @@ namespace sw::editor
              */
             static constexpr int32 kTextureDestroyDelayFrames = static_cast<int32>( constant::render::kMaxFrameCountInFlight + 1u );
 
+            /** @brief 인스턴스 하나가 그리는 정점 수 — 삼각형 둘(셰이더 `kImGuiVerticesPerInstance`). */
+            static constexpr uint32 kVerticesPerInstance = 6u;
+
             static_assert( sizeof( ImDrawVert ) == kVertexWords * sizeof( uint32 ), "ImDrawVert must be pos float2 + uv float2 + col uint (imgui.hlsl)" );
+            static_assert( kVerticesPerInstance <= constant::render::kFallbackVertexCount, "the fallback vertex buffer must cover an ImGui instance (slot 0 is read past its end)" );
 
             /** @brief ImGui 텍스처 ID ↔ 칸 번호(0 은 ImGui 의 무효 ID 라 하나를 더한다). */
             static ImTextureID makeTextureID( uint32 slotIndex ) { return static_cast<ImTextureID>( slotIndex ) + 1u; }
@@ -270,9 +274,11 @@ namespace sw::editor
                 _listWord.resize( _listWord.size() + vertexWordCount );
                 Memory::copy( _listWord.data() + base._vertexWord, pList->VtxBuffer.Data, vertexWordCount * sizeof( uint32 ) );
                 base._indexWord = static_cast<uint32>( _listWord.size() );
-                for ( const ImDrawIdx index : pList->IdxBuffer )
+                _listWord.resize( _listWord.size() + static_cast<size_t>( pList->IdxBuffer.Size ) );
+                uint32* const pIndexWord = _listWord.data() + base._indexWord;
+                for ( int32 index = 0; index < pList->IdxBuffer.Size; ++index )
                 {
-                    _listWord.push_back( static_cast<uint32>( index ) );
+                    pIndexWord[index] = static_cast<uint32>( pList->IdxBuffer.Data[index] );
                 }
                 _mapListBase[pList] = base;
             }
@@ -319,6 +325,7 @@ namespace sw::editor
         arrRoot[Internal::kRootOffsetX] = BitUtil::floatToBits( -1.0f - drawData.DisplayPos.x * scaleX );
         arrRoot[Internal::kRootOffsetY] = BitUtil::floatToBits( 1.0f - drawData.DisplayPos.y * scaleY );
 
+        RHIDescriptorIndex boundSRV{ kInvalidDescriptorIndex }; // 에뮬 백엔드의 t16 — 명령 대부분이 글꼴 아틀라스 하나라 바뀔 때만 다시 건다
         for ( const ImDrawList* pList : drawData.CmdLists )
         {
             const auto it = _mapListBase.find( pList );
@@ -334,6 +341,7 @@ namespace sw::editor
                     // 상태를 되돌리라는 표지는 다음 명령이 PSO · 버퍼를 다시 걸지 않아도 된다 — 이 렌더러는 명령마다 루트 상수 · 가위만 바꾼다.
                     if ( cmd.UserCallback != ImDrawCallback_ResetRenderState )
                         cmd.UserCallback( pList, &cmd );
+                    boundSRV = kInvalidDescriptorIndex; // 콜백이 t16 을 바꿨을 수 있다
                     continue;
                 }
                 const float32 clipMinX = MathUtil::max( 0.0f, ( cmd.ClipRect.x - drawData.DisplayPos.x ) * drawData.FramebufferScale.x );
@@ -356,12 +364,23 @@ namespace sw::editor
                 else
                 {
                     // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t16 에 서수 0 으로 건다 — MaterialTexture::sampleIndexTexture 가 서수로 고른다.
-                    pCmd->bindShaderResource( srv, shaderslot::kMaterialTexture0 );
+                    if ( srv != boundSRV )
+                        pCmd->bindShaderResource( srv, shaderslot::kMaterialTexture0 );
+                    boundSRV                        = srv;
                     arrRoot[Internal::kRootTexture] = 0;
                 }
                 pCmd->setGraphicsRootConstants( 0, Internal::kRootConstantCount, arrRoot );
-                // 삼각형마다 인스턴스 하나(셰이더 VSMain) — 한 드로우가 만드는 정점을 셋으로 둔다(메시 없는 드로우의 슬롯 0 버퍼 크기 안).
-                pCmd->drawInstanced( 3, cmd.ElemCount / 3u, 0, 0 );
+                // 삼각형 둘(ImGui 사각형 하나)마다 인스턴스 하나(셰이더 VSMain) — 인스턴스의 정점 수가 메시 없는 드로우의 슬롯 0 버퍼 크기 안이어야 한다.
+                const uint32 triangleCount = cmd.ElemCount / 3u;
+                if ( triangleCount >= 2u )
+                    pCmd->drawInstanced( Internal::kVerticesPerInstance, triangleCount / 2u, 0, 0 );
+                if ( ( triangleCount & 1u ) != 0u )
+                {
+                    // 남은 삼각형 하나 — D3D 의 SV_InstanceID 는 시작 인스턴스를 더하지 않으므로 시작 인덱스를 옮겨 인스턴스 0 으로 그린다.
+                    arrRoot[Internal::kRootIndexBase] += ( triangleCount - 1u ) * 3u;
+                    pCmd->setGraphicsRootConstants( 0, Internal::kRootConstantCount, arrRoot );
+                    pCmd->drawInstanced( 3, 1, 0, 0 );
+                }
             }
         }
         // 가위를 대상 전체로 되돌린다(같은 패스에서 뒤에 그리는 것이 있어도 잘리지 않게).
@@ -553,7 +572,7 @@ namespace sw::editor
             return;
         }
 
-        // ImTextureStatus_WantUpdates — 바뀐 구간만 올린다.
+        // ImTextureStatus_WantUpdates — 바뀐 구간을 감싼 사각형(UpdateRect) 하나를 올린다. 구간마다 올리면 구간마다 GPU 를 기다린다(새 글리프가 한 프레임에 여럿 붙는다).
         uint32           slotIndex{ 0 };
         RHITextureHandle handle{ 0 };
         if ( Internal::tryGetSlotIndex( static_cast<uint64>( texture.TexID ), slotIndex ) )
@@ -561,7 +580,8 @@ namespace sw::editor
             ScopedLock<mutex> lock{ _textureMutex };
             handle = slotIndex < _listTextureSlot.size() ? _listTextureSlot[slotIndex]._texture : 0;
         }
-        for ( const ImTextureRect& rect : texture.Updates )
+        const ImTextureRect& rect = texture.UpdateRect;
+        if ( rect.w > 0 && rect.h > 0 )
         {
             copyRegion( rect.x, rect.y, rect.w, rect.h, listByte );
             RHITextureRegionUploadDesc region{};

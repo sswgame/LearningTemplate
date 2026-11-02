@@ -6,7 +6,8 @@
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
 
-static const uint kImGuiVertexWords = 5u; // ImDrawVert 하나 = uint 다섯
+static const uint kImGuiVertexWords         = 5u; // ImDrawVert 하나 = uint 다섯
+static const uint kImGuiVerticesPerInstance = 6u; // 인스턴스 하나 = 삼각형 둘(C++ kVerticesPerInstance)
 
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwImGuiWords, SW_SLOT_PASS_SRV );
 
@@ -29,13 +30,13 @@ struct PSInput
     float4 _color : COLOR0;
 };
 
-// 삼각형 하나 = 인스턴스 하나(정점 셋)로 그린다 — 메시가 없는 드로우의 슬롯 0 버퍼(kFallbackVertexCount 여섯)보다 많은 정점을 한 드로우에 만들면
-// D3D12 디버그 레이어가 버퍼가 짧다고 알린다(id 210). 시작 인스턴스는 0 이다(D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다).
+// 삼각형 둘(ImGui 사각형 하나) = 인스턴스 하나(정점 여섯)로 그린다 — 메시가 없는 드로우의 슬롯 0 버퍼(kFallbackVertexCount 여섯)보다 많은 정점을 한 인스턴스에 만들면
+// D3D12 디버그 레이어가 버퍼가 짧다고 알린다(id 210). 홀수 개의 마지막 삼각형은 정점 셋 · 인스턴스 하나로 그린다. 시작 인스턴스는 0 이다(D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다).
 PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID )
 {
     PSInput output;
     input._position    = input._position;
-    const uint   index = g_SwImGuiWords[SW_ROOT( g_SwImGuiIndexBase ) + instanceID * 3u + vertexID];
+    const uint   index = g_SwImGuiWords[SW_ROOT( g_SwImGuiIndexBase ) + instanceID * kImGuiVerticesPerInstance + vertexID];
     const uint   word  = SW_ROOT( g_SwImGuiVertexBase ) + index * kImGuiVertexWords;
     const float2 pos   = float2( asfloat( g_SwImGuiWords[word] ), asfloat( g_SwImGuiWords[word + 1u] ) );
     output._uv         = float2( asfloat( g_SwImGuiWords[word + 2u] ), asfloat( g_SwImGuiWords[word + 3u] ) );
