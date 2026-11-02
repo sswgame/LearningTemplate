@@ -87,10 +87,8 @@ namespace sw
         CallStack stack{};
         CallStackCapture::capture( stack, 2 );
         SW_LOG_ERROR_ID( "RHI.RegisterBeforeTransferDone",
-                         "registerBindlessTexture: texture %# has an unfinished first upload (serial %#, watermark %#): register only after pollTransfer returns Complete
-                             % #", texture,
-                             firstUploadSerial,
-                         getWatermark(), CallStackCapture::symbolize( stack ).c_str() );
+                         "registerBindlessTexture: texture %# has an unfinished first upload (serial %#, watermark %#): register only after pollTransfer returns Complete\n%#",
+                         texture, firstUploadSerial, getWatermark(), CallStackCapture::symbolize( stack ).c_str() );
         return false;
     }
 } // namespace sw
