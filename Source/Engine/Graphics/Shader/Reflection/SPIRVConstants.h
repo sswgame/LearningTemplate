@@ -10,9 +10,20 @@ namespace sw::spirv
 {
     inline constexpr uint32 kMagic = 0x07230203u;
 
+    inline constexpr uint32 kOpSourceContinued  = 2u;
+    inline constexpr uint32 kOpSource           = 3u;
+    inline constexpr uint32 kOpSourceExtension  = 4u;
     inline constexpr uint32 kOpName             = 5u;
     inline constexpr uint32 kOpMemberName       = 6u;
+    inline constexpr uint32 kOpString           = 7u;
+    inline constexpr uint32 kOpExtension        = 10u;
+    inline constexpr uint32 kOpExtInstImport    = 11u;
+    inline constexpr uint32 kOpMemoryModel      = 14u;
     inline constexpr uint32 kOpEntryPoint       = 15u;
+    inline constexpr uint32 kOpExecutionMode    = 16u;
+    inline constexpr uint32 kOpCapability       = 17u;
+    inline constexpr uint32 kOpModuleProcessed  = 330u;
+    inline constexpr uint32 kOpExecutionModeId  = 331u;
     inline constexpr uint32 kOpTypeBool         = 20u;
     inline constexpr uint32 kOpTypeInt          = 21u;
     inline constexpr uint32 kOpTypeFloat        = 22u;

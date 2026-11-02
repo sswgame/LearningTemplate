@@ -314,6 +314,12 @@ namespace sw
             (void)pUserParam;
             if ( pMessage == nullptr || severity == GL_DEBUG_SEVERITY_NOTIFICATION )
                 return;
+            // 성능 안내(상태에 따른 셰이더 재컴파일 · 픽셀 전송 동기화 — NVIDIA 가 낸다)는 결함이 아니라 정보다. 언리얼도 GL 성능 메시지는 상세 로그다 — 따로 id 로 남긴다.
+            if ( type == GL_DEBUG_TYPE_PERFORMANCE && severity != GL_DEBUG_SEVERITY_HIGH )
+            {
+                SW_LOG_INFO_ID( "OpenGL.GLDebugPerformance", "GL performance note %#: %#", static_cast<uint32>( id ), pMessage );
+                return;
+            }
             if ( type == GL_DEBUG_TYPE_ERROR || severity == GL_DEBUG_SEVERITY_HIGH )
                 SW_LOG_ERROR_ID( "OpenGL.GLDebug", "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
             else if ( severity == GL_DEBUG_SEVERITY_MEDIUM )

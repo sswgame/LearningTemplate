@@ -19,9 +19,9 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
-#include "Engine/Graphics/Shader/Reflection/SPIRVConstants.h"
 
 #include <algorithm>
 
@@ -104,47 +104,6 @@ namespace sw
                 vector<string>               _listIncludedFile;
             };
 #endif
-
-            /**
-             * @brief OpenGL 용 SPIR-V 의 Vulkan 전용 내장 변수를 GL 것으로 바꿉니다(InstanceIndex→InstanceId, VertexIndex→VertexId).
-             * @details DXC 는 SV_InstanceID/SV_VertexID 를 Vulkan 의 InstanceIndex/VertexIndex 로 냅니다. ARB_gl_spirv 는 그 둘을
-             *          지원하지 않아 바꾸지 않으면 드라이버가 조용히 0 을 반환합니다(인스턴스드 드로우가 모두 원소 0 을 읽어 한
-             *          자리에 겹칩니다). 지금 셰이더는 인스턴스 자리를 정점 스트림(`SW_INSTANCESLOT`)으로 받아 SV_InstanceID 를 쓰지
-             *          않습니다 — 다시 쓰게 되면 gl_InstanceID 는 startInstance 를 빼고 센다는 점(Vulkan InstanceIndex 와 다르다)에
-             *          주의하십시오. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댑니다.
-             */
-            static void patchSPIRVBuiltinsForOpenGL( vector<uint8>& ioBytecode )
-            {
-                if ( ioBytecode.size() < 20 || ( ioBytecode.size() % 4 ) != 0 )
-                    return;
-                uint32*      pWord     = reinterpret_cast<uint32*>( ioBytecode.data() );
-                const size_t wordCount = ioBytecode.size() / 4;
-                if ( pWord[0] != spirv::kMagic )
-                    return;
-                size_t offset = 5;
-                while ( offset < wordCount )
-                {
-                    const uint32 opcode = pWord[offset] & 0xFFFFu;
-                    const uint32 length = pWord[offset] >> 16;
-                    if ( length == 0 || offset + length > wordCount )
-                        break;
-                    uint32*    pValue             = nullptr;
-                    const bool bMemberBuiltIn     = opcode == spirv::kOpMemberDecorate && length >= 5 && pWord[offset + 3] == spirv::kDecorationBuiltIn;
-                    const bool bBuiltInDecoration = opcode == spirv::kOpDecorate && length >= 4 && pWord[offset + 2] == spirv::kDecorationBuiltIn;
-                    if ( bBuiltInDecoration )
-                        pValue = &pWord[offset + 3];
-                    else if ( bMemberBuiltIn )
-                        pValue = &pWord[offset + 4];
-                    if ( pValue != nullptr )
-                    {
-                        if ( *pValue == spirv::kBuiltInInstanceIndex )
-                            *pValue = spirv::kBuiltInInstanceID;
-                        else if ( *pValue == spirv::kBuiltInVertexIndex )
-                            *pValue = spirv::kBuiltInVertexID;
-                    }
-                    offset += length;
-                }
-            }
 
             /**
              * @brief 셰이더 스테이지와 타깃 포맷에 맞는 프로파일 문자열을 반환합니다.
@@ -631,7 +590,7 @@ namespace sw
                 const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
                 if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                    patchSPIRVBuiltinsForOpenGL( outResult._bytecode );
+                    SPIRVOpenGLPatch::apply( outResult._bytecode );
                 outResult._listIncludedFile = pIncludeRecorder->takeIncludedFiles();
                 outResult._bSuccess         = true;
     #if defined( SW_DEBUG )

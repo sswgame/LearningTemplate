@@ -115,7 +115,7 @@ namespace sw
          * @details 이 값은 `getToolchainFingerprint` 에 들어가 쿠킹 스탬프와 디스크 캐시 키를 바꾼다. 올리지 않으면 소스가 그대로라
          *          옛 옵션으로 만든 바이너리가 "최신"으로 남는다.
          */
-        inline static constexpr uint32 kCompileOptionsRevision = 1;
+        inline static constexpr uint32 kCompileOptionsRevision = 2; // 2: GL SPIR-V 의 이름 없는 구조체 멤버에 이름(SPIRVOpenGLPatch::nameStructMembers)
 
         /**
          * @brief 쿠킹에 쓰는 셰이더 컴파일러의 버전 식별자입니다 — vcpkg 포트 `directx-dxc` 의 버전(`build/vcpkg_installed/vcpkg/status`)과 같은 글이어야 한다.
