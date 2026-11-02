@@ -351,11 +351,13 @@ namespace sw
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
         /**
-         * @brief 메시 공간 원점에서 가장 먼 정점까지의 거리입니다(원점 중심 경계 구의 반지름). `setVertices` 가 구합니다.
-         * @details 컴포넌트의 경계(`MeshComponent::getBoundsRadius`)와 GPU 컬링이 이 값을 쓴다. 고정 반지름(단위 상자의 0.866)을 쓰면
-         *          그보다 큰 도형(캡슐 끝, 평면)이 화면 가장자리에서 보이는데도 잘린다.
+         * @brief 경계 상자 중심(`getLocalBoundsCenter`)에서 가장 먼 정점까지의 거리입니다(상자 중심 경계 구의 반지름). `setVertices` 가 구합니다.
+         * @details 언리얼 `FBoxSphereBounds` 처럼 구의 중심은 원점이 아니라 상자 중심이다 — 발밑 피벗 캐릭터를 원점 중심 구로 감싸면 반지름이 키만큼이라
+         *          LOD 화면 크기가 두 배, 컬링 구가 몇 배로 부푼다. 컴포넌트의 경계(`MeshComponent::getWorldBounds`)와 GPU 컬링이 이 구를 쓴다.
          */
         float32 getBoundingRadius() const { return _boundingRadius; }
+        /** @brief 메시 공간 경계 상자의 중심입니다(경계 구의 중심). 정점이 없으면 원점입니다. */
+        const float3& getLocalBoundsCenter() const { return _localBoundsCenter; }
         /** @brief 메시 공간의 축 정렬 경계(최소)입니다. 정점이 없으면 원점입니다. `setVertices` 가 구합니다. */
         const float3& getLocalBoundsMin() const { return _localBoundsMin; }
         /** @brief 메시 공간의 축 정렬 경계(최대)입니다. */
@@ -411,6 +413,7 @@ namespace sw
         shared_ptr<const MeshVertexAnimation> _vertexAnimation;
         /// @brief getBoundingRadius 를 참고하세요. setVertices 가 구합니다.
         float32 _boundingRadius{ 0.0f };
+        float3  _localBoundsCenter{};
         float3  _localBoundsMin{};
         float3  _localBoundsMax{};
         /// @brief getContentID 를 참고하세요. 만들 때와 setVertices 때 새로 받습니다.

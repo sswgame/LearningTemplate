@@ -110,14 +110,15 @@ namespace sw
                 const float32  scaleY     = float3{ world._21, world._22, world._23 }.getLength();
                 const float32  scaleZ     = float3{ world._31, world._32, world._33 }.getLength();
                 const float32  radius     = ( pMesh != nullptr ? pMesh->getBoundsRadius() : 1.0f ) * MathUtil::max( scaleX, MathUtil::max( scaleY, scaleZ ) );
+                const float3   center     = pMesh != nullptr ? float3::transform( pMesh->getLocalBoundsCenter(), world ) : world.getTranslation();
                 float32        screenSize = 0.0f;
                 for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
                 {
                     // 첫 화면이 주 시점이다. 가림 타일은 주 시점의 깊이에서 지었으므로 다른 화면에는 쓰지 않는다.
-                    const bool bOccludedInMain = viewIndex == 0 && pMainOcclusion != nullptr && OcclusionTileQuery::isSphereOccluded( *pMainOcclusion, world.getTranslation(), radius );
+                    const bool bOccludedInMain = viewIndex == 0 && pMainOcclusion != nullptr && OcclusionTileQuery::isSphereOccluded( *pMainOcclusion, center, radius );
                     if ( bOccludedInMain )
                         continue;
-                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( pView[viewIndex], world.getTranslation(), radius ) );
+                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( pView[viewIndex], center, radius ) );
                 }
                 return screenSize;
             }

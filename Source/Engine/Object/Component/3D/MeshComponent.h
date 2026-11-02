@@ -167,7 +167,9 @@ namespace sw
         void setBoundsRadius( float32 radius );
         /** @brief 바운드 반지름(메시 공간)입니다. 설정한 값과 메시의 경계(`Mesh::getBoundingRadius`) 중 큰 쪽입니다. 월드 반지름은 `getWorldBounds` 가 반환합니다. */
         float32 getBoundsRadius() const;
-        /** @brief 월드 위치를 중심으로, 메시 반지름에 월드 행렬의 최대 축 스케일을 곱한 구를 반환합니다. GPU 컬링도 같은 값을 씁니다. */
+        /** @brief 경계 구의 중심(메시 공간 — 메시 경계 상자의 중심, 메시가 없으면 원점)입니다. */
+        float3 getLocalBoundsCenter() const;
+        /** @brief 메시 상자 중심을 월드로 옮긴 점을 중심으로, 반지름(`getBoundsRadius`)에 월드 행렬의 최대 축 스케일을 곱한 구를 반환합니다. GPU 컬링도 같은 값을 씁니다. */
         bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
         /** @brief 메시 공간의 경계(`Mesh::getLocalBoundsMin/Max`, 메시가 없으면 단위 상자)를 월드로 옮긴 상자를 반환합니다. */
         bool getWorldBox( AABB& outBox ) const override;

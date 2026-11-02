@@ -330,7 +330,7 @@ namespace sw
             float3   _boundsCenter{};
             float32  _boundsRadius{ 1.0f };      ///< 월드 반지름(메시 반지름 × 월드의 최대 축 스케일). 컬링이 읽는다.
             float32  _localBoundsRadius{ 1.0f }; ///< 메시 공간 반지름. 트랜스폼만 바뀐 프레임에는 이 값으로 월드 반지름을 다시 만든다.
-            uint32   _blendMode{ 0 };
+            float3   _localBoundsCenter{};       ///< 메시 공간 구 중심(메시 상자 중심). 트랜스폼만 바뀐 프레임에는 이 점으로 월드 중심을 다시 만든다.
             /**
              * @brief 그리는 메시 구간(`MeshSection`)의 첫 인덱스와 인덱스 수입니다. 수가 0 이면 메시 전체입니다. **배치 키**입니다 — 같은 메시의 다른 구간은
              *        머티리얼이 같아도 다른 배치(다른 인덱스 범위)다(`MeshComponent::findDrawSection`).
@@ -340,6 +340,8 @@ namespace sw
             shared_ptr<Mesh>             _mesh;
             shared_ptr<Material>         _material;
             shared_ptr<MaterialInstance> _instance;
+            // 4 바이트 필드는 공유 포인터 앞뒤에서 각각 8 바이트로 짝이 맞게 둔다 — 홀수면 포인터 · 64 비트 필드 앞에 구멍이 생긴다(아래 static_assert).
+            uint32 _blendMode{ 0 };
             /// @brief GPU 회전 애니메이션 시드입니다(0이면 없음). MeshComponent 가 주고 GPUInstance::_spinSeed 로 전달됩니다.
             uint32 _spinSeed{ 0 };
             /**
@@ -442,7 +444,7 @@ namespace sw
             }
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
-        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 7 +
+        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) * 2 + sizeof( float32 ) * 2 + sizeof( uint32 ) * 7 +
                                                     sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) * 2 +
                                                     sizeof( uint8 ) * 2 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),

@@ -513,8 +513,8 @@ namespace sw
     bool MeshComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const
     {
         const float4x4 world = getWorldMatrix();
-        outCenter            = world.getTranslation();
-        outRadius            = getBoundsRadius() * world.getMaximumAxisScale(); // GPU 컬링(`GPUSceneBuilder`)과 같은 반지름
+        outCenter            = float3::transform( getLocalBoundsCenter(), world ); // 구의 중심은 메시 상자 중심이다(`Mesh::getBoundingRadius`)
+        outRadius            = getBoundsRadius() * world.getMaximumAxisScale();    // GPU 컬링(`GPUSceneBuilder`)과 같은 구
         return true;
     }
 
@@ -526,6 +526,11 @@ namespace sw
                                                                                : AABB{ float3{ -0.5f, -0.5f, -0.5f }, float3{ 0.5f, 0.5f, 0.5f } };
         outBox           = local.transformedBy( getWorldMatrix() );
         return true;
+    }
+
+    float3 MeshComponent::getLocalBoundsCenter() const
+    {
+        return ( _mesh != nullptr ) ? _mesh->getLocalBoundsCenter() : float3{};
     }
 
     float32 MeshComponent::getBoundsRadius() const

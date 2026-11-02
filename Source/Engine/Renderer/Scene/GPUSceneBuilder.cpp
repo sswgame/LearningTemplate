@@ -350,7 +350,8 @@ namespace sw
         // 그대로 싣으면 부모나 자기 스케일로 키운 메시가 화면에 있는데도 절두체 컬링에 잘린다.
         const float4x4 world            = pMeshComp->getWorldMatrix();
         candidate._world                = world;
-        candidate._boundsCenter         = world.getTranslation();
+        candidate._localBoundsCenter    = pMeshComp->getLocalBoundsCenter();
+        candidate._boundsCenter         = float3::transform( candidate._localBoundsCenter, world );
         candidate._localBoundsRadius    = pMeshComp->getBoundsRadius();
         candidate._boundsRadius         = candidate._localBoundsRadius * world.getMaximumAxisScale();
         candidate._bReverseCulling      = GPUSceneBuilderInternal::computeReverseCulling( world );
@@ -396,6 +397,7 @@ namespace sw
             return false;
         const MeshInstanceBatch::Entry& item = pBatch->getEntry( entry._index );
         candidate._world                     = item._world;
+        candidate._localBoundsCenter         = float3{}; // 배치 항목의 반지름은 부르는 쪽이 원점 기준으로 준다(`MeshInstanceBatch::setBoundsRadius`)
         candidate._boundsCenter              = item._world.getTranslation();
         candidate._localBoundsRadius         = item._boundsRadius;
         candidate._boundsRadius              = item._boundsRadius * item._world.getMaximumAxisScale();
@@ -529,7 +531,7 @@ namespace sw
                         continue;
                     DrawCandidate& candidate    = _pCandidate[_pMap[primitiveIndex]];
                     candidate._world            = pPage->_arrWorldMatrix[transformSlot & SceneTransformPage::kSlotMask];
-                    candidate._boundsCenter     = candidate._world.getTranslation();
+                    candidate._boundsCenter     = float3::transform( candidate._localBoundsCenter, candidate._world );
                     candidate._boundsRadius     = candidate._localBoundsRadius * candidate._world.getMaximumAxisScale();
                     const uint8 bReverseCulling = GPUSceneBuilderInternal::computeReverseCulling( candidate._world );
                     if ( bReverseCulling != candidate._bReverseCulling )

@@ -544,19 +544,25 @@ namespace sw
 
     void Mesh::refreshBoundingRadius()
     {
-        float32 maxLengthSquared = 0.0f;
-        float3  boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
-        float3  boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
+        float3 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+        float3 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
         for ( const RHIVertex& vertex : _listVertex )
         {
             const float3 position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
-            maxLengthSquared = MathUtil::max( maxLengthSquared, position.getLengthSquared() );
-            boundsMin        = float3{ MathUtil::min( boundsMin._x, position._x ), MathUtil::min( boundsMin._y, position._y ), MathUtil::min( boundsMin._z, position._z ) };
-            boundsMax        = float3{ MathUtil::max( boundsMax._x, position._x ), MathUtil::max( boundsMax._y, position._y ), MathUtil::max( boundsMax._z, position._z ) };
+            boundsMin = float3{ MathUtil::min( boundsMin._x, position._x ), MathUtil::min( boundsMin._y, position._y ), MathUtil::min( boundsMin._z, position._z ) };
+            boundsMax = float3{ MathUtil::max( boundsMax._x, position._x ), MathUtil::max( boundsMax._y, position._y ), MathUtil::max( boundsMax._z, position._z ) };
+        }
+        _localBoundsMin    = _listVertex.empty() ? float3{} : boundsMin;
+        _localBoundsMax    = _listVertex.empty() ? float3{} : boundsMax;
+        _localBoundsCenter = ( _localBoundsMin + _localBoundsMax ) * 0.5f;
+        // 구는 상자 중심에서 가장 먼 정점까지 — 상자 반대각선보다 작거나 같다(언리얼 FBoxSphereBounds 의 구와 같다).
+        float32 maxLengthSquared = 0.0f;
+        for ( const RHIVertex& vertex : _listVertex )
+        {
+            const float3 position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
+            maxLengthSquared = MathUtil::max( maxLengthSquared, ( position - _localBoundsCenter ).getLengthSquared() );
         }
         _boundingRadius = MathUtil::sqrt( maxLengthSquared );
-        _localBoundsMin = _listVertex.empty() ? float3{} : boundsMin;
-        _localBoundsMax = _listVertex.empty() ? float3{} : boundsMax;
     }
 
     uint64 Mesh::allocateContentID()
