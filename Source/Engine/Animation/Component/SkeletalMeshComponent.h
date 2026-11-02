@@ -266,6 +266,13 @@ namespace sw
         void enterCrowdBucket( AnimationCrowd& crowd, AnimationCrowdBucket& bucket, bool bVisible );
         /** @brief 묶음 참조와 사본을 해제합니다(@p pCrowd 가 있으면 사본을 풀에 반환합니다). */
         void leaveCrowd( AnimationCrowd* pCrowd );
+        /**
+         * @brief 그리는 칸(`getSkinSlot`)이 지난번과 다르면 이 컴포넌트와 같은 오브젝트의 구간 컴포넌트를 렌더 더티로 표시합니다.
+         * @details 묶음 · 혼자 · 자기 사이를 오가도 메시는 원본 그대로라(사본이 없다) 메시 교체가 더티를 내지 않는다 — 칸만 바뀐다.
+         */
+        void refreshDrawnSkinSlot();
+        /** @brief 군중 상태(묶음 · 혼자 · VAT)를 정합니다. `updateCrowdMembership` 이 부르고 칸 변화를 알린다. */
+        void updateCrowdState( AnimationCrowd& crowd );
         /** @brief 작업을 뗍니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다(작업 구독이 풀릴 때). */
         void detachAnimationPhaseTask( IAnimationPhaseTask* pTask );
 
@@ -303,10 +310,10 @@ namespace sw
         uint32                                          _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
         vector<float32>                                 _listMorphWeight;       ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
         AnimationCrowdBucket*                           _pCrowdBucket;          ///< 나누는 묶음이다. 군중이 소유하며 참조 수로 보호된다
-        shared_ptr<Mesh>                                _soloMesh;              ///< 혼자 평가할 때 빌린 사본
         const AnimationClip*                            _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
         AnimationCrowdMode                              _crowdMode;
-        AnimationSkinSlot                               _skinSlot; ///< 이 유닛의 스킨 결과 칸(`getSkinSlot`)
+        AnimationSkinSlot                               _skinSlot;      ///< 이 유닛의 스킨 결과 칸(`getSkinSlot`)
+        uint32                                          _drawnSkinSlot; ///< 지난번 알린 그리는 칸 — 바뀌면 인스턴스를 다시 싣게 한다(`refreshDrawnSkinSlot`)
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )
         uint8 _bFollowParentPose : 1;
         PROPERTY( Category = "Animation", DisplayName = "Animate When Offscreen", Tooltip = "Keep building the pose while not visible" )

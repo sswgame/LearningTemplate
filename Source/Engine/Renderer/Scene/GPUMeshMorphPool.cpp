@@ -107,7 +107,7 @@ namespace sw
 
     void GPUMeshMorphPool::rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh )
     {
-        // 원본 = 스킨 데이터 번호. 사본(`Mesh::createSkinInstance`)은 원본의 번호를 나누므로 구간이 한 벌만 올라간다(`_refCount` 가 나눠 쓰는 수).
+        // 원본 = 스킨 데이터 번호. 같은 메시를 그리는 칸들은 구간 한 벌을 나눠 쓴다(`_refCount` 가 나눠 쓰는 수).
         for ( auto& [dataID, source] : _mapSkinSource )
         {
             source._refCount = 0;

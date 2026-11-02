@@ -13,6 +13,7 @@
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -129,9 +130,9 @@ namespace sw
         , _effectiveDivisor{ 1 }
         , _listMorphWeight{}
         , _pCrowdBucket{ nullptr }
-        , _soloMesh{}
         , _pVertexAnimationClip{ nullptr }
         , _crowdMode{ AnimationCrowdMode::Own }
+        , _drawnSkinSlot{ AnimationSkinSlot::kNone }
         , _bFollowParentPose{ SW_FALSE }
         , _bAnimateWhenOffscreen{ SW_FALSE }
         , _bVisibleHint{ SW_TRUE }
@@ -361,35 +362,33 @@ namespace sw
                 return;
             setMesh( Mesh::createRigidSkinSource( *getMesh() ) );
         }
-        const shared_ptr<Mesh>& current = getMesh();
-        if ( _bShareCrowdPose == SW_TRUE )
-        {
-            // 군중 공유 — 사본을 두지 않는다. 지금 메시가 원본이거나 군중이 준 것(묶음 · 사본)이고 원본이 그대로면 둔다.
-            const bool bCrowdMesh   = ( _pCrowdBucket != nullptr && current == _pCrowdBucket->getMesh() ) || ( _soloMesh != nullptr && current == _soloMesh );
-            const bool bSourceFresh = _skinSourceMesh != nullptr && _skinSourceMesh->getContentID() == _skinSourceContentID;
-            if ( bSourceFresh && ( current == _skinSourceMesh || bCrowdMesh ) )
-                return;
-            // 원본이 바뀌었다(핫 리로드 · 다른 id) — 묶음을 놓고 새 원본을 그린다. 다음 평가가 다시 묶는다.
-            shared_ptr<Mesh> source = bCrowdMesh ? _skinSourceMesh : current;
-            leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
-            _skinSourceMesh      = source;
-            _skinSourceContentID = source->getContentID();
-            setBoundsRadius( source->getBoundingRadius() * SkeletalMeshComponentInternal::kSkinnedBoundsScale );
-            setMesh( std::move( source ) );
+        // 사본을 두지 않는다 — 스킨 결과는 칸마다라(AnimationSkinSlot) 원본 메시를 그대로 그린다(군중 묶음도 원본을 그린다).
+        // 지금 메시가 원본이거나 VAT 메시이고 원본이 그대로면 둔다. 원본이 바뀌었으면(핫 리로드 · 다른 id) 군중을 놓고 새 원본을 그린다 — 다음 평가가 다시 묶는다.
+        const shared_ptr<Mesh>& current      = getMesh();
+        const bool              bSourceFresh = _skinSourceMesh != nullptr && _skinSourceMesh->getContentID() == _skinSourceContentID;
+        const bool              bCrowdMesh   = _crowdMode == AnimationCrowdMode::VertexAnimation && current != _skinSourceMesh;
+        if ( bSourceFresh && ( current == _skinSourceMesh || bCrowdMesh ) )
             return;
-        }
-        // 지금 메시가 이미 이 컴포넌트의 복사본이고 원본이 그대로면 둔다. 원본이 바뀌었으면(핫 리로드 · 다른 id) 새 복사본을 만든다 —
-        // 옛 복사본은 스냅샷이 쥔 동안 산다(정점 버퍼를 제자리에서 바꾸지 않는다).
-        const bool bOwnCopy = _skinSourceMesh != nullptr && current != _skinSourceMesh && _skinSourceMesh->getContentID() == _skinSourceContentID;
-        if ( bOwnCopy )
-            return;
-
-        shared_ptr<Mesh> source   = ( _skinSourceMesh != nullptr && current != _skinSourceMesh ) ? _skinSourceMesh : current;
-        shared_ptr<Mesh> instance = Mesh::createSkinInstance( *source );
-        _skinSourceMesh           = source;
-        _skinSourceContentID      = source->getContentID();
+        shared_ptr<Mesh> source = bCrowdMesh ? _skinSourceMesh : current;
+        leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
+        _skinSourceMesh      = source;
+        _skinSourceContentID = source->getContentID();
         setBoundsRadius( source->getBoundingRadius() * SkeletalMeshComponentInternal::kSkinnedBoundsScale );
-        setMesh( std::move( instance ) );
+        if ( current != source )
+            setMesh( std::move( source ) );
+        refreshDrawnSkinSlot();
+    }
+
+    void SkeletalMeshComponent::refreshDrawnSkinSlot()
+    {
+        const uint32 skinSlot = getSkinSlot();
+        if ( skinSlot == _drawnSkinSlot )
+            return;
+        _drawnSkinSlot = skinSlot;
+        markRenderStateDirty();
+        if ( getOwner() != nullptr )
+            getOwner()->forEachComponentOfType<MeshSectionComponent>( []( MeshSectionComponent* pSection )
+            { pSection->markRenderStateDirty(); } );
     }
 
     void SkeletalMeshComponent::resetPoseBuffers()
@@ -493,19 +492,15 @@ namespace sw
         _bShareCrowdPose = shareFlag;
         if ( bShare )
         {
-            // 자기 사본을 원본으로 되돌린다 — 다음 평가가 묶음 · 사본 · VAT 를 정한다.
-            if ( _skinSourceMesh != nullptr && getMesh() != _skinSourceMesh )
-                setMesh( _skinSourceMesh );
+            // 다음 평가가 묶음 · 혼자 · VAT 를 정한다.
             _bPoseDirty = SW_TRUE;
             return;
         }
         leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
-        // 공유를 끄면 예전처럼 자기 사본을 둔다.
-        if ( _skinSourceMesh != nullptr )
-        {
+        // 공유를 끄면 원본을 자기 칸으로 그린다(VAT 메시였으면 원본으로 되돌린다).
+        if ( _skinSourceMesh != nullptr && getMesh() != _skinSourceMesh )
             setMesh( _skinSourceMesh );
-            resolveSkinInstanceMesh();
-        }
+        refreshDrawnSkinSlot();
         _bPoseDirty = SW_TRUE;
     }
 
@@ -595,6 +590,7 @@ namespace sw
             _pCrowdBucket = &bucket;
         }
         _crowdMode = AnimationCrowdMode::Shared;
+        // 묶음 메시는 원본이다 — VAT 에서 넘어왔을 때만 바뀐다.
         if ( getMesh() != bucket.getMesh() )
             setMesh( bucket.getMesh() );
         AnimationCrowd::countMember( bucket, bVisible );
@@ -610,17 +606,18 @@ namespace sw
             AnimationCrowd::releaseReference( _pCrowdBucket );
             _pCrowdBucket = nullptr;
         }
-        if ( _soloMesh != nullptr )
-        {
-            if ( pCrowd != nullptr )
-                pCrowd->releaseSoloMesh( std::move( _soloMesh ) );
-            _soloMesh = nullptr;
-        }
+        (void)pCrowd; // 묶음의 참조만 놓는다 — 군중이 빌려준 메시는 없다(묶음 · 혼자 모두 원본을 그린다)
         _pVertexAnimationClip = nullptr;
         _crowdMode            = AnimationCrowdMode::Own;
     }
 
     void SkeletalMeshComponent::updateCrowdMembership( AnimationCrowd& crowd )
+    {
+        updateCrowdState( crowd );
+        refreshDrawnSkinSlot();
+    }
+
+    void SkeletalMeshComponent::updateCrowdState( AnimationCrowd& crowd )
     {
         if ( _bShareCrowdPose == SW_FALSE || _skinSourceMesh == nullptr )
         {
@@ -685,7 +682,7 @@ namespace sw
             }
         }
 
-        // 혼자 — 사본을 빌려 평가한다. 묶음 · VAT 에서 막 넘어왔으면 이번 프레임 포즈를 만든다(가진 포즈가 없다).
+        // 혼자 — 원본을 자기 칸으로 평가한다. 묶음 · VAT 에서 막 넘어왔으면 이번 프레임 포즈를 만든다(가진 포즈가 없다).
         const bool bWasShared = _crowdMode != AnimationCrowdMode::Solo;
         if ( _pCrowdBucket != nullptr )
         {
@@ -695,10 +692,8 @@ namespace sw
             _pCrowdBucket = nullptr;
         }
         _pVertexAnimationClip = nullptr;
-        if ( _soloMesh == nullptr )
-            _soloMesh = crowd.acquireSoloMesh( _skinSourceMesh );
-        if ( _soloMesh != nullptr && getMesh() != _soloMesh )
-            setMesh( _soloMesh );
+        if ( getMesh() != _skinSourceMesh )
+            setMesh( _skinSourceMesh );
         _crowdMode = AnimationCrowdMode::Solo;
         if ( bWasShared )
         {

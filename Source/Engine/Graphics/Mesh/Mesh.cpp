@@ -101,25 +101,6 @@ namespace sw
         return sw::make_shared<Mesh>( CreateKey{} );
     }
 
-    shared_ptr<Mesh> Mesh::createSkinInstance( const Mesh& source )
-    {
-        shared_ptr<Mesh> instance = create();
-        // 원본에서 이미 검사한 정점 · 인덱스라 그대로 맞는다.
-        (void)instance->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
-        instance->setSkin( source._listSkinVertex, source._skinBoneCount );
-        instance->setMorphTargets( source._listMorphTarget );
-        // 구간은 원본에서 이미 검사했다 — 같은 정점이라 그대로 맞는다.
-        (void)instance->setSections( source._listSection );
-        // 낮은 단계도 원본과 같은 정점 · 스킨이다(스킨 데이터 번호를 나누는 사본이 같은 구간을 그린다). `setSkin` 이 뗀 단계를 그대로 다시 건다.
-        instance->_listLOD           = source._listLOD;
-        instance->_listLODVertex     = source._listLODVertex;
-        instance->_listLODIndex      = source._listLODIndex;
-        instance->_listLODSkinVertex = source._listLODSkinVertex;
-        // 정점과 스킨이 원본과 같다. 모프 풀이 원본 데이터를 한 번만 업로드하도록 번호를 공유한다(setVertices 와 setSkin 이 지운 뒤에 적는다).
-        instance->_sharedSkinDataID = source.getSkinDataID();
-        return instance;
-    }
-
     shared_ptr<Mesh> Mesh::createRigidSkinSource( const Mesh& source )
     {
         shared_ptr<Mesh> rigid = create();
@@ -161,7 +142,6 @@ namespace sw
         // 낮은 단계는 옛 LOD 0 에서 만든 것이다 — 정점이 바뀌면 맞지 않으므로 뗀다(읽기는 정점 뒤에 `setLODs` 로 다시 건다).
         clearLODs();
         _contentID               = allocateContentID();
-        _sharedSkinDataID        = 0;
         const uint32 vertexCount = static_cast<uint32>( listVertex.size() );
         bool         bValid      = listIndex.size() % 3 == 0;
         for ( size_t index = 0; bValid && index < listIndex.size(); ++index )
@@ -416,8 +396,7 @@ namespace sw
         _skinBoneCount      = bMatches ? boneCount : 0u;
         // 낮은 단계는 옛 스킨(뼈 번호 · 있고 없음)에 맞춘 것이다 — 스킨을 바꾸면 뗀다(읽기는 스킨 뒤에 `setLODs` 로 다시 건다).
         clearLODs();
-        _contentID        = allocateContentID();
-        _sharedSkinDataID = 0;
+        _contentID = allocateContentID();
     }
 
     bool Mesh::setSections( vector<MeshSection> listSection )
@@ -470,9 +449,8 @@ namespace sw
             VectorUtil::removeIf( target._listDelta, [vertexCount]( const MeshMorphDelta& delta )
             { return delta._vertexIndex >= vertexCount; } );
         }
-        _listMorphTarget  = std::move( listTarget );
-        _contentID        = allocateContentID();
-        _sharedSkinDataID = 0;
+        _listMorphTarget = std::move( listTarget );
+        _contentID       = allocateContentID();
     }
 
     int32 Mesh::findMorphTargetIndex( const hashed_string& name ) const

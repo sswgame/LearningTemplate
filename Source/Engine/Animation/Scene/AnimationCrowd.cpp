@@ -172,7 +172,6 @@ namespace sw
         , _listBucket{}
         , _mapBucket{}
         , _listScratchEvaluate{}
-        , _mapFreeSoloMesh{}
         , _listVertexAnimation{}
         , _clock{ 0.0 }
         , _frameIndex{ 0 }
@@ -221,7 +220,7 @@ namespace sw
         if ( pCurrent != nullptr && pCurrent->_key.isSameState( key ) )
             return pCurrent;
         key._variation = selectVariation( request, clip->getDuration() );
-        return findOrCreateBucket( key, skeleton, clip, nullptr, *sourceMesh );
+        return findOrCreateBucket( key, skeleton, clip, nullptr, sourceMesh );
     }
 
     AnimationCrowdBucket* AnimationCrowd::joinBlendBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
@@ -258,7 +257,7 @@ namespace sw
         key._variation                  = bFromSameState ? pCurrent->_key._variation : selectVariation( request, clip->getDuration() );
         key._blendStartFrame            = _frameIndex;
         const bool            bCreated  = _mapBucket.find( key ) == _mapBucket.end();
-        AnimationCrowdBucket* pBucket   = findOrCreateBucket( key, skeleton, clip, nextClip, *sourceMesh );
+        AnimationCrowdBucket* pBucket   = findOrCreateBucket( key, skeleton, clip, nextClip, sourceMesh );
         if ( bCreated )
         {
             pBucket->_blendStartClock = _clock;
@@ -282,7 +281,7 @@ namespace sw
         if ( pBucket == nullptr )
         {
             const bool bCreated = _mapBucket.find( key ) == _mapBucket.end();
-            pBucket             = findOrCreateBucket( key, skeleton, leaderBucket._clip, leaderBucket._nextClip, *sourceMesh );
+            pBucket             = findOrCreateBucket( key, skeleton, leaderBucket._clip, leaderBucket._nextClip, sourceMesh );
             if ( bCreated )
             {
                 pBucket->_blendStartClock = leaderBucket._blendStartClock;
@@ -296,12 +295,13 @@ namespace sw
 
     AnimationCrowdBucket* AnimationCrowd::findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton,
                                                               const shared_ptr<const AnimationClip>& clip, const shared_ptr<const AnimationClip>& nextClip,
-                                                              const Mesh& sourceMesh )
+                                                              const shared_ptr<Mesh>& sourceMesh )
     {
         const auto found = _mapBucket.find( key );
         if ( found != _mapBucket.end() )
             return found->second;
-        unique_ptr<AnimationCrowdBucket> bucket = sw::make_unique<AnimationCrowdBucket>( key, skeleton, clip, nextClip, Mesh::createSkinInstance( sourceMesh ) );
+        // 묶음은 원본 메시를 그린다 — 결과는 묶음의 스킨 칸 하나라 사본이 필요 없다(AnimationSkinSlot).
+        unique_ptr<AnimationCrowdBucket> bucket = sw::make_unique<AnimationCrowdBucket>( key, skeleton, clip, nextClip, sourceMesh );
         bucket->_variationSpan                  = static_cast<float64>( clip->getDuration() ) / static_cast<float64>( MathUtil::max( _settings._variationsPerClip, 1u ) );
         bucket->_idleSince                      = _clock;
         AnimationCrowdBucket* pBucket           = bucket.get();
@@ -372,27 +372,6 @@ namespace sw
         }
     }
 
-    shared_ptr<Mesh> AnimationCrowd::acquireSoloMesh( const shared_ptr<Mesh>& sourceMesh )
-    {
-        if ( sourceMesh == nullptr )
-            return nullptr;
-        vector<shared_ptr<Mesh>>& listFree = _mapFreeSoloMesh[sourceMesh->getSkinDataID()];
-        if ( listFree.empty() == false )
-        {
-            shared_ptr<Mesh> mesh = std::move( listFree.back() );
-            listFree.pop_back();
-            return mesh;
-        }
-        return Mesh::createSkinInstance( *sourceMesh );
-    }
-
-    void AnimationCrowd::releaseSoloMesh( shared_ptr<Mesh> mesh )
-    {
-        if ( mesh == nullptr )
-            return;
-        _mapFreeSoloMesh[mesh->getSkinDataID()].push_back( std::move( mesh ) );
-    }
-
     shared_ptr<Mesh> AnimationCrowd::findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimationClip& clip, bool bAnchorRootMotion,
                                                               string_view meshPath )
     {
@@ -446,7 +425,6 @@ namespace sw
         _mapBucket.clear();
         _listBucket.clear();
         _listScratchEvaluate.clear();
-        _mapFreeSoloMesh.clear();
         _listVertexAnimation.clear();
         _evaluatedBucketCount = 0;
     }

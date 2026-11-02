@@ -173,12 +173,6 @@ namespace sw
          */
         static shared_ptr<Mesh> create();
         /**
-         * @brief 스킨드 메시의 그릴 사본을 만듭니다(정점과 스킨을 복사하고 **스킨 데이터 번호는 원본과 공유합니다**).
-         * @details GPU 스키닝 결과(모프 풀의 결과 구간)는 메시 객체마다 하나라, 포즈가 다른 캐릭터와 군중 묶음은 사본을 그린다. 사본은 원본과
-         *          레스트 정점과 가중치가 같으므로 모프 풀은 스킨 데이터 번호(`getSkinDataID`)로 원본 데이터를 **한 번만** 올리고 사본은 결과 구간만 받는다.
-         */
-        static shared_ptr<Mesh> createSkinInstance( const Mesh& source );
-        /**
          * @brief 스킨 없는 모프 메시(블렌드 셰이프만 있는 소품 · 얼굴)를 본 하나에 가중치 1 로 묶은 스킨 원본으로 만듭니다(정점 · 모프 타깃 복사).
          * @details 모프 가중치는 GPU 스키닝 컴퓨트가 스키닝 앞에 건다. 스킨이 없으면 그 길에 들지 못하므로 고정 본 하나를 준다(임포트가 몸에 합칠 때와 같은 규칙).
          *          `SkeletalMeshComponent` 가 이런 메시를 받으면 이 함수로 원본을 바꿔 그린다 — 스켈레톤이 없으면 암묵 스켈레톤(본 하나)이다.
@@ -328,10 +322,11 @@ namespace sw
         /** @brief 이름으로 모프 타깃 번호를 찾습니다. 없으면 -1 입니다. */
         int32 findMorphTargetIndex( const hashed_string& name ) const;
         /**
-         * @brief 스킨 데이터(레스트 정점과 가중치)의 식별자입니다. 보통은 내용 번호이고, `createSkinInstance` 의 사본은 원본의 번호를 공유합니다.
-         * @details 모프 풀이 같은 번호의 메시들을 한 원본 구간으로 묶는다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 공유하는 것과 같은 방식이다).
+         * @brief 스킨 데이터(레스트 정점과 가중치)의 식별자입니다 — 내용 번호입니다.
+         * @details 모프 풀이 같은 번호의 스킨 인스턴스(칸)들을 한 원본 구간으로 묶는다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 공유하는 것과 같은 방식이다).
+         *          캐릭터마다 사본을 두지 않는다 — 결과는 스킨 칸(`AnimationSkinSlot`)마다다.
          */
-        uint64 getSkinDataID() const { return _sharedSkinDataID != 0 ? _sharedSkinDataID : _contentID; }
+        uint64 getSkinDataID() const { return _contentID; }
 
         /**
          * @brief 정점 애니메이션 테이블(VAT)을 설정합니다. 설정한 메시는 스키닝 대신 정점 셰이더가 테이블을 인스턴스마다의 시각으로 읽습니다(먼 군중). 내용 번호가 바뀝니다.
@@ -399,8 +394,6 @@ namespace sw
         vector<RHIVertex>      _listLODVertex;
         vector<uint32>         _listLODIndex;
         vector<MeshSkinVertex> _listLODSkinVertex;
-        /// @brief `createSkinInstance` 사본이 공유하는 원본의 스킨 데이터 번호입니다. 0이면 자기 내용 번호를 씁니다(정점이나 스킨을 바꾸면 0으로 돌아갑니다).
-        uint64 _sharedSkinDataID{ 0 };
         /// @brief setVertexAnimation 을 참고하세요.
         shared_ptr<const MeshVertexAnimation> _vertexAnimation;
         /// @brief getBoundingRadius 를 참고하세요. setVertices 가 구합니다.

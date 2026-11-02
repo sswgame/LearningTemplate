@@ -3,9 +3,9 @@
  * @brief 군중 포즈 공유입니다. 같은 상태의 캐릭터들이 평가한 포즈 하나와 스키닝 결과 구간 하나를 나눕니다(언리얼의 Animation Sharing 에 해당).
  * @details 묶음(`AnimationCrowdBucket`)의 키는 (스켈레톤, 스킨 원본 메시, 클립, 재생 속도, 루트 고정, 변형 번호)입니다. 변형 번호는 클립 한 바퀴를
  *          `variations_per_clip` 개의 위상으로 나눈 것이고, 묶음의 시간은 군중 시계에 그 위상을 더한 값이라 어긋나지 않습니다(캐릭터의 시간과 반 구간 안쪽).
- *          묶음은 렌더 메시(스킨 원본의 사본) 하나를 가지고, 멤버는 그 메시를 그려 한 배치, 한 결과 구간, 한 팔레트가 됩니다.
+ *          묶음은 스킨 원본 메시와 스킨 칸(`AnimationSkinSlot`) 하나를 가지고, 멤버는 그 칸을 그려 한 결과 구간, 한 팔레트가 됩니다(배치는 같은 메시의 모든 캐릭터와 하나다).
  *          반복 클립 둘 사이를 섞는 중인 유닛은 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터)을 나눈다 — 같은 출발 묶음에서 같은 프레임에 같은 전이를
- *          시작한 유닛들이 한 묶음이다(`joinBlendBucket`). 레이어, 시퀀서 덮어쓰기, 반복하지 않는 클립처럼 나눌 수 없는 프레임의 유닛은 사본 풀(`acquireSoloMesh`)에서 메시를 빌려
+ *          시작한 유닛들이 한 묶음이다(`joinBlendBucket`). 레이어, 시퀀서 덮어쓰기, 반복하지 않는 클립처럼 나눌 수 없는 프레임의 유닛은 원본을 자기 칸으로
  *          혼자 평가합니다. LOD 가 아주 멀다고 판단한 유닛은 정점 애니메이션(VAT) 메시로 넘어가 CPU 포즈도 GPU 스키닝도 없습니다(`findVertexAnimationMesh`).
  */
 #pragma once
@@ -251,10 +251,6 @@ namespace sw
         /** @brief 프레임을 닫습니다. 멤버와 참조가 없고 오래 쉰 묶음을 지웁니다. */
         void endFrame();
 
-        /** @brief 혼자 평가할 유닛에 스킨 원본의 사본을 빌려줍니다(돌려받은 사본을 다시 쓰므로 결과 구간 집합이 덜 흔들립니다). */
-        shared_ptr<Mesh> acquireSoloMesh( const shared_ptr<Mesh>& sourceMesh );
-        /** @brief 빌린 사본을 돌려받습니다. */
-        void releaseSoloMesh( shared_ptr<Mesh> mesh );
         /**
          * @brief 스킨 원본, 스켈레톤, 클립의 VAT 메시입니다. 쿠킹본(`<메시 경로>.<클립>.vat`, 배포본의 팩)이 있으면 읽고, 없으면 처음 쓸 때 베이크합니다
          *        (`MeshVertexAnimationBaker`. 쿠커와 같은 함수입니다). 베이크하지 못하면 nullptr 입니다.
@@ -284,7 +280,7 @@ namespace sw
         uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
         /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. */
         AnimationCrowdBucket* findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
-                                                  const shared_ptr<const AnimationClip>& nextClip, const Mesh& sourceMesh );
+                                                  const shared_ptr<const AnimationClip>& nextClip, const shared_ptr<Mesh>& sourceMesh );
 
         /** @brief 베이크한 VAT 메시 하나입니다. */
         struct VertexAnimationEntry
@@ -300,7 +296,6 @@ namespace sw
         vector<unique_ptr<AnimationCrowdBucket>>                                                   _listBucket;
         unordered_map<AnimationCrowdBucketKey, AnimationCrowdBucket*, AnimationCrowdBucketKeyHash> _mapBucket;
         vector<AnimationCrowdBucket*>                                                              _listScratchEvaluate;
-        unordered_map<uint64, vector<shared_ptr<Mesh>>>                                            _mapFreeSoloMesh; ///< 스킨 데이터 번호에서 돌려받은 사본 목록으로 가는 맵이다
         vector<VertexAnimationEntry>                                                               _listVertexAnimation;
         float64                                                                                    _clock;
         uint32                                                                                     _frameIndex; ///< `beginFrame` 마다 오른다(섞기 묶음의 시작 프레임)
