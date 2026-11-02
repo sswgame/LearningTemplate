@@ -23,9 +23,6 @@ namespace sw
     class IRHIDevice;
     class PassConstantValues;
     class ShaderBindingLayout;
-
-    RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
-};
 } // namespace sw
 
 namespace sw
