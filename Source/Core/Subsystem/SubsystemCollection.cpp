@@ -58,9 +58,10 @@ namespace sw
         , _listInitialized{}
         , _listStopped{}
         , _listInitTiming{}
+        , _listShutdownTiming{}
         , _error{}
         , _bSorted{ false }
-        , _pInitClockNanos{ nullptr }
+        , _pClockNanos{ nullptr }
     {
     }
 
@@ -148,10 +149,10 @@ namespace sw
                 continue;
             }
 
-            const int64               startNanos = _pInitClockNanos != nullptr ? _pInitClockNanos() : 0;
+            const int64               startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
             const SubsystemInitResult result     = initializeAt( index );
-            if ( _pInitClockNanos != nullptr )
-                _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pInitClockNanos() - startNanos ) / 1000 } );
+            if ( _pClockNanos != nullptr )
+                _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / 1000 } );
             if ( result == SubsystemInitResult::Failed )
             {
                 _error = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to initialize";
@@ -167,15 +168,23 @@ namespace sw
     void SubsystemCollection::shutdownAll()
     {
         // 모두를 멈춘 뒤에 놓는다 — 한 서브시스템이 비우는 남은 일(완료 콜백)이 먼저 놓인 다른 서브시스템을 부르지 않게.
+        _listShutdownTiming.clear();
+        _listShutdownTiming.resize( _listInitialized.size() );
         for ( size_t order = _listInitialized.size(); order > 0; --order )
         {
-            _listEntry[_listInitialized[order - 1]]._pSubsystem->stopSubsystem();
+            ISubsystem* const pSubsystem = _listEntry[_listInitialized[order - 1]]._pSubsystem;
+            const int64       startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
+            pSubsystem->stopSubsystem();
+            _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), _pClockNanos != nullptr ? ( _pClockNanos() - startNanos ) / 1000 : 0 };
         }
         while ( _listInitialized.empty() == false )
         {
             const uint32 index = _listInitialized.back();
             _listInitialized.pop_back();
+            const int64 startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
             _listEntry[index]._pSubsystem->shutdownSubsystem();
+            if ( _pClockNanos != nullptr )
+                _listShutdownTiming[_listInitialized.size()]._micros += ( _pClockNanos() - startNanos ) / 1000;
         }
     }
 
@@ -204,6 +213,8 @@ namespace sw
         _listStopped.shrink_to_fit();
         _listInitTiming.clear();
         _listInitTiming.shrink_to_fit();
+        _listShutdownTiming.clear();
+        _listShutdownTiming.shrink_to_fit();
         _bSorted = false;
     }
 
