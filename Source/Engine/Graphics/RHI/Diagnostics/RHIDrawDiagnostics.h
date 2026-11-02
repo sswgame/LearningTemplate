@@ -28,6 +28,10 @@ namespace sw
          *          횟수는 백엔드 이름마다 따로 센다. 백엔드를 바꾸면 그 백엔드는 다시 처음부터 센다.
          */
         static void reportDestroyedVertexBuffer( const utf8* pBackendName, RHIBufferHandle handle );
+        /** @brief 인덱스 드로우에 인덱스 버퍼를 걸지 않아 그 드로우를 버렸음을 알립니다(네 백엔드가 같다 — 앞 드로우의 인덱스 버퍼로 그리지 않는다). */
+        static void reportIndexBufferUnbound( const utf8* pBackendName );
+        /** @brief 인덱스 드로우에 건 인덱스 버퍼가 해제돼 핸들로 찾을 수 없어 그 드로우를 버렸음을 알립니다. */
+        static void reportDestroyedIndexBuffer( const utf8* pBackendName, RHIBufferHandle handle );
 
         /**
          * @brief PSO 가 읽는 정점 버퍼 슬롯(@p input 의 슬롯, `RHIShaderRequest::toVertexSlotMask`)에 버퍼가 모두 걸렸고 원소 크기가 PSO 의 메시 정점 형식과 같은지 봅니다.

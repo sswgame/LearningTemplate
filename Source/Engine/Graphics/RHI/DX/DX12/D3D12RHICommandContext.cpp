@@ -206,18 +206,21 @@ namespace sw
         } );
     }
 
-    void D3D12RHICommandContext::bindBoundIndexBuffer()
+    bool D3D12RHICommandContext::bindIndexBufferForDraw()
     {
-        ID3D12Resource* pIb = _pDevice->resolveBuffer( _pState->_boundIndexBuffer );
-        if ( pIb == nullptr )
-            return;
-        D3D12_INDEX_BUFFER_VIEW ibv{};
-        ibv.BufferLocation = pIb->GetGPUVirtualAddress() + _pState->_boundIndexOffset;
-        ibv.SizeInBytes    = static_cast<UINT>( pIb->GetDesc().Width > _pState->_boundIndexOffset
-                                                    ? pIb->GetDesc().Width - _pState->_boundIndexOffset
-                                                    : 0 );
-        ibv.Format         = ( _pState->_boundIndexStride == 2 ) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
-        commandListForRecord()->IASetIndexBuffer( &ibv );
+        return _pState->_indexBuffer.bindForDraw( "DX12", [this]( const RHIIndexBufferBinding& binding )
+        {
+            ID3D12Resource* const pIb = _pDevice->resolveBuffer( binding._buffer );
+            if ( pIb == nullptr )
+                return false;
+            const UINT64            width = pIb->GetDesc().Width;
+            D3D12_INDEX_BUFFER_VIEW ibv{};
+            ibv.BufferLocation = pIb->GetGPUVirtualAddress() + binding._offset;
+            ibv.SizeInBytes    = static_cast<UINT>( width > binding._offset ? width - binding._offset : 0 );
+            ibv.Format         = ( binding._stride == 2 ) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+            commandListForRecord()->IASetIndexBuffer( &ibv );
+            return true;
+        } );
     }
 
     void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState )
@@ -660,14 +663,15 @@ namespace sw
 
     void D3D12RHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
-        const bool bNothingToDraw = _pCmdList == nullptr || indexCount == 0 || instanceCount == 0 || _pState->_boundIndexBuffer == 0;
+        const bool bNothingToDraw = _pCmdList == nullptr || indexCount == 0 || instanceCount == 0;
         if ( bNothingToDraw )
             return;
         if ( flushSlotTables( false ) == false )
             return;
         if ( bindMeshVertexBufferForDraw() == false )
             return;
-        bindBoundIndexBuffer();
+        if ( bindIndexBufferForDraw() == false )
+            return;
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         commandListForRecord()->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
     }
@@ -677,8 +681,6 @@ namespace sw
     {
         const bool bCannotDrawIndexedIndirect = _pCmdList == nullptr || _pDevice->_drawIndexedCommandSignature == nullptr || argumentBuffer == 0 || drawCount == 0;
         if ( bCannotDrawIndexedIndirect )
-            return;
-        if ( _pState->_boundIndexBuffer == 0 )
             return;
 
         ID3D12Resource* pArgs = _pDevice->resolveBuffer( argumentBuffer );
@@ -691,7 +693,8 @@ namespace sw
         // 슬롯 1 이 한 번도 안 걸렸을 때 인스턴스 자리를 0 으로 읽는다.
         if ( bindMeshVertexBufferForDraw() == false )
             return;
-        bindBoundIndexBuffer();
+        if ( bindIndexBufferForDraw() == false )
+            return;
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         // 개수 버퍼가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한) — `drawIndirect` 와 같다.
         ID3D12Resource* pCountResource = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
@@ -909,12 +912,7 @@ namespace sw
 
     void D3D12RHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pState->_boundIndexBuffer = buffer;
-        _pState->_boundIndexStride = ( indexStride == 2 ) ? 2u : 4u;
-        _pState->_boundIndexOffset = offset;
-        if ( _pCmdList == nullptr || buffer == 0 )
-            return;
-        bindBoundIndexBuffer();
+        _pState->_indexBuffer.set( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw)
     }
 
     void D3D12RHICommandContext::uavBarrier( RHIBufferHandle buffer )

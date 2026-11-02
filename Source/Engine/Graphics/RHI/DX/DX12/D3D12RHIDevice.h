@@ -73,9 +73,7 @@ namespace sw
         uint32                  _onlineCursor;
         uint32                  _onlineEnd;
         RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 PSO 가 읽는 것만 건다)
-        RHIBufferHandle         _boundIndexBuffer;
-        uint32                  _boundIndexStride;
-        uint32                  _boundIndexOffset;
+        RHIIndexBufferBinding   _indexBuffer;   ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
         RHIPipelineStateHandle  _activeGraphicsPSO;
         RHIPipelineStateHandle  _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
@@ -101,9 +99,6 @@ namespace sw
             , _onlineCursor{ 0 }
             , _onlineEnd{ 0 }
             , _vertexBuffers{}
-            , _boundIndexBuffer{ 0 }
-            , _boundIndexStride{ 4 }
-            , _boundIndexOffset{ 0 }
             , _activeGraphicsPSO{ 0 }
             , _activeComputePSO{ 0 }
             , _boundNativeGraphicsPSO{ 0 }

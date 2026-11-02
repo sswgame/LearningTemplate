@@ -115,9 +115,7 @@ namespace sw
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
         uint8                  _bTextureSetBound : 1;
         [[maybe_unused]] uint8 _reserved         : 6;
-        RHIBufferHandle        _boundIndexBuffer;
-        uint32                 _boundIndexStride;
-        uint32                 _boundIndexOffset;
+        RHIIndexBufferBinding  _indexBuffer; ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
 
         /// @brief 바인드 포인트별 슬롯 세트 상태입니다([0] 그래픽스, [1] 컴퓨트). 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않습니다.
         VulkanSlotState _arrSlotState[2];
@@ -130,9 +128,6 @@ namespace sw
             , _bRenderPassActive{ SW_FALSE }
             , _bTextureSetBound{ SW_FALSE }
             , _reserved{ 0 }
-            , _boundIndexBuffer{ 0 }
-            , _boundIndexStride{ 4 }
-            , _boundIndexOffset{ 0 }
             , _arrSlotState{}
         {
         }

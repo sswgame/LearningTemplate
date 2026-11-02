@@ -357,8 +357,7 @@ namespace sw
 
         ScopedOpenGLContext contextScope( _pDevice );
         _pDevice->_recordingState._vertexBuffers.forget( buffer );
-        if ( buffer == _pDevice->_recordingState._boundIndexBuffer )
-            _pDevice->_recordingState._boundIndexBuffer = 0;
+        _pDevice->_recordingState._indexBuffer.forget( buffer );
 
         uint32 glName{ 0 };
         if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )

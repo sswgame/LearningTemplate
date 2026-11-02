@@ -374,9 +374,7 @@ namespace sw
                 slot = StructuredUploadSlot{};
             }
             _recordingState._vertexBuffers.clear();
-            _recordingState._boundIndexBuffer = 0;
-            _recordingState._boundIndexStride = 4;
-            _recordingState._boundIndexOffset = 0;
+            _recordingState._indexBuffer = RHIIndexBufferBinding{};
 
             _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
             {

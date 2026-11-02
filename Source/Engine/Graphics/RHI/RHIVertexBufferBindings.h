@@ -1,6 +1,6 @@
 /**
  * @file RHIVertexBufferBindings.h
- * @brief 커맨드 컨텍스트가 건 정점 버퍼 슬롯들입니다. 네 백엔드가 같은 칸 · 같은 규칙으로 들고, 드로우 때 PSO 가 읽는 슬롯만 겁니다.
+ * @brief 커맨드 컨텍스트가 건 정점 버퍼 슬롯들과 인덱스 버퍼입니다. 네 백엔드가 같은 칸 · 같은 규칙으로 들고 드로우 때 겁니다 — 비었거나 부서졌으면 알리고 그 드로우를 버린다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -66,6 +66,52 @@ namespace sw
                     RHIDrawDiagnostics::reportDestroyedVertexBuffer( pBackendName, _arrSlot[slot]._buffer );
                     return false;
                 }
+            }
+            return true;
+        }
+    };
+
+    /**
+     * @struct RHIIndexBufferBinding
+     * @brief `setIndexBuffer` 로 건 인덱스 버퍼 · 원소 크기(2 또는 4) · 시작 바이트입니다. 네 백엔드의 기록 상태가 하나씩 들고 인덱스 드로우 때 겁니다.
+     * @details 정점 버퍼와 같은 규칙이다 — 걸지 않았거나 건 버퍼가 부서졌으면 알리고 그 드로우를 버린다(직전 드로우의 인덱스 버퍼로 그리지 않는다). 예전에는 DX11 이
+     *          `setIndexBuffer` 에서 곧바로 걸고 풀지 못하면 조용히 넘겼고, DX12 는 부서진 버퍼를 조용히 건너뛰어 앞 드로우의 인덱스로 그렸다.
+     */
+    struct RHIIndexBufferBinding
+    {
+        RHIBufferHandle _buffer{ 0 };
+        uint32          _stride{ 4 }; ///< 인덱스 하나의 바이트 수(2 = 16비트, 그 밖은 4 = 32비트)
+        uint32          _offset{ 0 };
+
+        /** @brief 겁니다. 원소 크기는 2 가 아니면 4 로 둡니다. */
+        void set( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
+        {
+            _buffer = buffer;
+            _stride = indexStride == 2 ? 2u : 4u;
+            _offset = offset;
+        }
+        /** @brief 그 버퍼를 걸었으면 비웁니다(버퍼를 지울 때 — 다음 드로우가 지운 핸들을 걸지 않게). */
+        void forget( RHIBufferHandle buffer )
+        {
+            if ( _buffer == buffer )
+                *this = RHIIndexBufferBinding{};
+        }
+        /**
+         * @brief 인덱스 드로우 때 겁니다. 버퍼를 실제로 거는 일은 백엔드의 @p bindIndex( binding ) 이 하고, 걸 버퍼가 없으면 false 를 돌려준다.
+         * @return 걸지 않았거나 건 버퍼가 부서졌으면 알리고 false 입니다 — 부르는 쪽은 그 드로우를 버린다.
+         */
+        template <typename BindIndexFn>
+        [[nodiscard]] bool bindForDraw( const utf8* pBackendName, BindIndexFn&& bindIndex ) const
+        {
+            if ( _buffer == 0 )
+            {
+                RHIDrawDiagnostics::reportIndexBufferUnbound( pBackendName );
+                return false;
+            }
+            if ( bindIndex( *this ) == false )
+            {
+                RHIDrawDiagnostics::reportDestroyedIndexBuffer( pBackendName, _buffer );
+                return false;
             }
             return true;
         }

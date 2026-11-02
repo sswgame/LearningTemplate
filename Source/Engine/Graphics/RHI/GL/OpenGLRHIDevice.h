@@ -50,10 +50,8 @@ namespace sw
     {
         RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 PSO 가 읽는 것만 VAO 에 건다)
         /// @brief 지금 텍스처가 바인딩된 유닛의 비트마스크(비트 i는 유닛 i)입니다. beginRenderPass 가 이 유닛들만 해제합니다.
-        uint32          _boundTextureUnitMask{ 0 };
-        RHIBufferHandle _boundIndexBuffer{ 0 };
-        uint32          _boundIndexStride{ 4 };
-        uint32          _boundIndexOffset{ 0 };
+        uint32                _boundTextureUnitMask{ 0 };
+        RHIIndexBufferBinding _indexBuffer; ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
 
         RHIPipelineStateHandle _boundGraphicsPSO{ 0 };
         RHIPipelineStateHandle _boundComputePSO{ 0 }; ///< setComputePipelineState 가 마지막으로 설정한 컴퓨트 PSO. dispatchCompute 가 이 프로그램을 쓴다.

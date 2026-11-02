@@ -37,6 +37,20 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
     }
 
+    void RHIDrawDiagnostics::reportIndexBufferUnbound( const utf8* pBackendName )
+    {
+        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        if ( count < kMaxReportedDraw )
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferUnbound", "%# indexed draw skipped: no index buffer is bound - call setIndexBuffer before an indexed draw", pBackendName );
+    }
+
+    void RHIDrawDiagnostics::reportDestroyedIndexBuffer( const utf8* pBackendName, RHIBufferHandle handle )
+    {
+        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        if ( count < kMaxReportedDraw )
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferDestroyed", "%# indexed draw skipped: its index buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
+    }
+
     bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, const RHIVertexInputState& input, const RHIVertexBufferBindings& bindings )
     {
         const uint32              vertexSlotMask   = input._slotMask;

@@ -227,13 +227,7 @@ namespace sw
 
     void D3D11RHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        if ( _pContext == nullptr || buffer == 0 )
-            return;
-        ID3D11Buffer* pIb = _pDevice->resolveBuffer( buffer );
-        if ( pIb == nullptr )
-            return;
-        const DXGI_FORMAT format = ( indexStride == 2 ) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
-        _pContext->IASetIndexBuffer( pIb, format, offset );
+        _pState->_indexBuffer.set( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw — 네 백엔드가 같다)
     }
 
     void D3D11RHICommandContext::uavBarrier( RHIBufferHandle buffer )
@@ -602,12 +596,24 @@ namespace sw
         }
     }
 
+    bool D3D11RHICommandContext::bindIndexBufferForDraw()
+    {
+        return _pState->_indexBuffer.bindForDraw( "DX11", [this]( const RHIIndexBufferBinding& binding )
+        {
+            ID3D11Buffer* const pIb = _pDevice->resolveBuffer( binding._buffer );
+            if ( pIb == nullptr )
+                return false;
+            _pContext->IASetIndexBuffer( pIb, ( binding._stride == 2 ) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, binding._offset );
+            return true;
+        } );
+    }
+
     void D3D11RHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
         const bool bNothingToDraw = _pContext == nullptr || indexCount == 0 || instanceCount == 0;
         if ( bNothingToDraw )
             return;
-        if ( bindGraphicsPipelineForDraw() == false )
+        if ( bindGraphicsPipelineForDraw() == false || bindIndexBufferForDraw() == false )
             return;
         _pContext->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
     }
@@ -625,8 +631,8 @@ namespace sw
         if ( pBuf == nullptr )
             return;
 
-        // 다른 드로우 진입점과 같이 파이프라인을 여기서 건다. 엔진에서 부르는 곳이 없어 빠뜨려도 드러나지 않는 자리다.
-        if ( bindGraphicsPipelineForDraw() == false )
+        // 다른 드로우 진입점과 같이 파이프라인 · 인덱스 버퍼를 여기서 건다. 엔진에서 부르는 곳이 없어 빠뜨려도 드러나지 않는 자리다.
+        if ( bindGraphicsPipelineForDraw() == false || bindIndexBufferForDraw() == false )
             return;
 
         for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )

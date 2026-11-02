@@ -1230,6 +1230,7 @@ namespace sw
     void D3D11RHIDevice::forgetBufferInRecordingStates( RHIBufferHandle buffer )
     {
         _recordingState._vertexBuffers.forget( buffer );
+        _recordingState._indexBuffer.forget( buffer );
 
         ScopedLock<mutex> lock{ _liveCmdListMutex };
         for ( D3D11RHICommandList* pList : _listLiveCmd )
@@ -1237,6 +1238,7 @@ namespace sw
             if ( pList == nullptr )
                 continue;
             pList->getRecordingState()._vertexBuffers.forget( buffer );
+            pList->getRecordingState()._indexBuffer.forget( buffer );
         }
     }
 

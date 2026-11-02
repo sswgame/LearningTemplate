@@ -63,6 +63,7 @@ namespace sw
         uint32                               _arrRootConstantShadow[shaderslot::kRootConstantDwords]{};
 
         RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 PSO 가 읽는 것만 건다)
+        RHIIndexBufferBinding   _indexBuffer;   ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
         RHIPipelineStateHandle  _activeGraphicsPSO{ 0 };
         RHIPipelineStateHandle  _activeComputePSO{ 0 }; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /**

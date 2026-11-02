@@ -527,9 +527,7 @@ namespace sw
 
     void OpenGLRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pState->_boundIndexBuffer = buffer;
-        _pState->_boundIndexStride = ( indexStride == 2 ) ? 2u : 4u;
-        _pState->_boundIndexOffset = offset;
+        _pState->_indexBuffer.set( buffer, indexStride, offset );
     }
 
     bool OpenGLRHICommandContext::bindVertexInputsForDraw()
@@ -830,11 +828,22 @@ namespace sw
         resolveDrawProgram( program, outMode );
         glUseProgram( program );
         // 정점 슬롯은 PSO 가 읽는 것만 건다(다른 드로우 진입점 · 세 백엔드와 같다). 인덱스 버퍼는 VAO 상태라 VAO 를 건 뒤에 건다.
-        const GLuint ibo = _pDevice->resolveGlBuffer( _pState->_boundIndexBuffer );
-        if ( ibo == 0 || bindVertexInputsForDraw() == false )
+        if ( bindVertexInputsForDraw() == false )
             return false;
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
-        outIndexType = ( _pState->_boundIndexStride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+        const bool bIndexBound = _pState->_indexBuffer.bindForDraw( "OpenGL", [this]( const RHIIndexBufferBinding& binding )
+        {
+            const GLuint ibo = _pDevice->resolveGlBuffer( binding._buffer );
+            if ( ibo == 0 )
+                return false;
+            glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
+            return true;
+        } );
+        if ( bIndexBound == false )
+        {
+            unbindIndexedMesh(); // 건 VAO 를 남기지 않는다
+            return false;
+        }
+        outIndexType = ( _pState->_indexBuffer._stride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
         return true;
     }
 
@@ -855,7 +864,7 @@ namespace sw
         if ( bNothingToDraw || bindIndexedMeshForDraw( mode, indexType ) == false )
             return;
         const uint32 indexBytes = ( indexType == GL_UNSIGNED_SHORT ) ? 2u : 4u;
-        const void*  pOffset    = reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundIndexOffset + startIndex * indexBytes ) );
+        const void*  pOffset    = reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_indexBuffer._offset + startIndex * indexBytes ) );
         glDrawElementsInstancedBaseVertex( mode, static_cast<GLsizei>( indexCount ), indexType, pOffset, static_cast<GLsizei>( instanceCount ), static_cast<GLint>( baseVertex ) );
         unbindIndexedMesh();
     }

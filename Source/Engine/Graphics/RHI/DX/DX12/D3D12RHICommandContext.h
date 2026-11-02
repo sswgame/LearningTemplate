@@ -117,8 +117,9 @@ namespace sw
         [[nodiscard]] bool bindActiveGraphicsPSO();
         /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
         void requireComputePipelineForDispatch() const;
-        void bindBoundIndexBuffer();
-        void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
+        /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIIndexBufferBinding::bindForDraw`). */
+        [[nodiscard]] bool bindIndexBufferForDraw();
+        void               transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
 
         D3D12RHIDevice*            _pDevice;
         ID3D12GraphicsCommandList* _pCmdList;

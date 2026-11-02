@@ -624,9 +624,7 @@ namespace sw
 
     void VulkanRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pState->_boundIndexBuffer = buffer;
-        _pState->_boundIndexStride = ( indexStride == 2 ) ? 2u : 4u;
-        _pState->_boundIndexOffset = offset;
+        _pState->_indexBuffer.set( buffer, indexStride, offset );
     }
 
     void VulkanRHICommandContext::setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer )
@@ -918,9 +916,8 @@ namespace sw
 
     bool VulkanRHICommandContext::bindIndexedMeshForDraw()
     {
-        VkCommandBuffer                            cmd = commandBuffer();
-        const VulkanRHIDevice::VulkanBufferRecord* pIb = _pDevice->resolveAllocatedBuffer( _pState->_boundIndexBuffer );
-        if ( cmd == VK_NULL_HANDLE || pIb == nullptr || pIb->_buffer == VK_NULL_HANDLE )
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE )
             return false;
         if ( bindActiveGraphicsPipeline() == false )
             return false;
@@ -928,9 +925,14 @@ namespace sw
         // 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸을 때 정의되지 않은 값을 읽는다.
         if ( bindMeshVertexBufferForDraw() == false )
             return false;
-        const VkIndexType indexType = ( _pState->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-        vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pState->_boundIndexOffset, indexType );
-        return true;
+        return _pState->_indexBuffer.bindForDraw( "Vulkan", [this, cmd]( const RHIIndexBufferBinding& binding )
+        {
+            const VulkanRHIDevice::VulkanBufferRecord* pIb = _pDevice->resolveAllocatedBuffer( binding._buffer );
+            if ( pIb == nullptr || pIb->_buffer == VK_NULL_HANDLE )
+                return false;
+            vkCmdBindIndexBuffer( cmd, pIb->_buffer, binding._offset, ( binding._stride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32 );
+            return true;
+        } );
     }
 
     void VulkanRHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
