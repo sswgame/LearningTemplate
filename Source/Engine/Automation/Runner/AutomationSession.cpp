@@ -134,6 +134,14 @@ namespace sw
                         ScenarioRecorder::makeReplayID( _recordPath ).c_str() );
     }
 
+    void AutomationSession::applyPresentPolicy()
+    {
+        if ( _pRenderThread == nullptr || _pRunner == nullptr )
+            return;
+        // 보는 사람이 없으면 내보내지 않는다(그림 · 사진은 같다). 표시 경로를 보는 시나리오는 내보낸다. 지켜보는 실행(-unattended 없음)은 늘 보인다.
+        _pRenderThread->setPresentSkipped( _bUnattended && _pRunner->getScenario().getTestOptions()._bPresents == false );
+    }
+
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
     {
         _reportPath    = string( reportPath );
@@ -208,6 +216,7 @@ namespace sw
         _pRunner->armHangWatchdog(); // 실제 프로세스를 구동하는 세션만 행 감시를 켠다(상한 + 유예 뒤 보고를 쓰고 종료 코드 12 로 끝낸다)
         _pRunner->startFromPath( AssetID{ _pChain->getCurrentPath() }, AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
         _screenshotBaseline = completedScreenshotCount;
+        applyPresentPolicy();
         if ( _pRunner->isActive() )
         {
             // 단계의 `<Launch>` 값을 건다(첫 단계는 명령줄로 이미 같다). 실행 중에 걸어도 다 듣는다 — 렌더 파이프라인은 다시 고르고(`FrameRendererSubsystem`),
@@ -514,15 +523,14 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
         RenderThread* pRenderThread = engine.getRenderThread();
         const bool    bKeepGoing    = commandLine.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
-        const bool    bScenario     = commandLine.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
-        const bool    bStarted      = bScenario && _owner.begin( scenarioPath, reportPath, bKeepGoing );
+        _owner._bUnattended         = commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED );
+        const bool bScenario        = commandLine.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
+        const bool bStarted         = bScenario && _owner.begin( scenarioPath, reportPath, bKeepGoing );
         if ( bStarted && pRenderThread != nullptr )
-        {
             pRenderThread->setScenarioCaptureEnabled( true );
-            // 무인 실행은 보는 사람이 없다 — 화면에 내보내지 않는다(그림 · 사진은 같다). 지켜보는 실행(-unattended 없음)은 그대로 보인다.
-            pRenderThread->setPresentSkipped( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) );
-        }
         _owner._pRenderThread = pRenderThread; // 재생(`ScenarioPlayback::play`)도 사진을 찍으므로 시작 여부와 무관하게 건다
+        if ( bStarted )
+            _owner.applyPresentPolicy(); // 첫 단계는 렌더 스레드를 받기 전에 시작했다 — 다음 단계는 시작할 때 다시 정한다
 
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
         _frameSubscription = engine.getFrameHooks().add( _owner.makeFrameHooks() );

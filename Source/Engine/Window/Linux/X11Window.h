@@ -78,6 +78,7 @@ namespace sw
 
         /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
+        bool setMinimized( bool bMinimized ) override;
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
         /**

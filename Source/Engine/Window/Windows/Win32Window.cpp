@@ -123,6 +123,15 @@ namespace sw
         return dpi > 0 ? static_cast<float32>( dpi ) / kReferenceDPI : 1.0f;
     }
 
+    bool Win32Window::setMinimized( bool bMinimized )
+    {
+        if ( _hWnd == nullptr )
+            return false;
+        // 상태는 이 호출 안에서 오는 WM_SIZE(SIZE_MINIMIZED · SIZE_RESTORED)가 바꾼다(`trackActivityMessage`).
+        ShowWindow( _hWnd, bMinimized ? SW_MINIMIZE : SW_RESTORE );
+        return true;
+    }
+
     bool Win32Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
     {
         if ( _hWnd == nullptr )
@@ -389,6 +398,12 @@ namespace sw
     void Win32Window::destroy()
     {
         _hWnd = nullptr;
+    }
+
+    bool Win32Window::setMinimized( bool bMinimized )
+    {
+        (void)bMinimized;
+        return false;
     }
 
     bool Win32Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )

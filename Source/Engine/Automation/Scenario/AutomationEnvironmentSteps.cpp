@@ -1,6 +1,6 @@
 /**
  * @file AutomationEnvironmentSteps.cpp
- * @brief 자동화 시나리오의 환경 단계를 구현합니다. 개발 명령 한 줄(`DevCommand`, 언리얼 자동화의 콘솔 명령 실행에 해당)과 창 크기 바꾸기(`ResizeWindow`)입니다.
+ * @brief 자동화 시나리오의 환경 단계를 구현합니다. 개발 명령 한 줄(`DevCommand`, 언리얼 자동화의 콘솔 명령 실행에 해당)과 창 크기 바꾸기(`ResizeWindow`) · 최소화와 되돌리기(`MinimizeWindow` · `RestoreWindow`)입니다.
  * @details 개발 명령은 게임, 키트, 에디터 모듈이 `SW_DEV_COMMAND` 로 등록한 것이다(에디터의 `play`, `stop`, `editor <커맨드 id>`, `scene.saveAs` 등).
  *          Shipping 에는 개발 명령이 없으므로 `DevCommand` 를 쓴 시나리오는 시작할 때 읽기 오류다.
  */
@@ -104,6 +104,20 @@ namespace sw
                 return true;
             }
 
+            static bool validateNoAttribute( const AutomationStep& step, string& outError ) { return step.hasRequiredAttributes( {}, {}, outError ); }
+
+            /** @brief 창을 최소화하거나(@p bMinimized) 되돌립니다. 최소화 중에도 시나리오 프레임은 돈다(자동화 실행의 페이싱이 최소화보다 앞선다 — `FramePacer`). */
+            static bool setMinimized( AutomationStepContext& runner, const AutomationStep& step, bool bMinimized )
+            {
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow == nullptr || pWindow->setMinimized( bMinimized ) == false )
+                    runner.recordFailure( step, "this platform could not minimize or restore the window" );
+                return true;
+            }
+            static bool runMinimize( AutomationStepContext& runner, const AutomationStep& step ) { return setMinimized( runner, step, true ); }
+            static bool runRestore( AutomationStepContext& runner, const AutomationStep& step ) { return setMinimized( runner, step, false ); }
+
             /** @brief 창을 창 모드의 그 클라이언트 크기로 바꿉니다. 창의 최소 크기보다 작으면 창이 최소 크기에서 멈춘다(그것을 보는 단언은 뒤 단계가 한다). */
             static bool runResize( AutomationStepContext& runner, const AutomationStep& step )
             {
@@ -126,4 +140,6 @@ namespace sw
     SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand,
                         false );
     SW_AUTOMATION_STEP( resizeWindow, "ResizeWindow", &AutomationEnvironmentStepsInternal::runResize, &AutomationEnvironmentStepsInternal::validateResize, false );
+    SW_AUTOMATION_STEP( minimizeWindow, "MinimizeWindow", &AutomationEnvironmentStepsInternal::runMinimize, &AutomationEnvironmentStepsInternal::validateNoAttribute, false );
+    SW_AUTOMATION_STEP( restoreWindow, "RestoreWindow", &AutomationEnvironmentStepsInternal::runRestore, &AutomationEnvironmentStepsInternal::validateNoAttribute, false );
 } // namespace sw

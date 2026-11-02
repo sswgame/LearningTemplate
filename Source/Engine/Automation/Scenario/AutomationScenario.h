@@ -125,6 +125,11 @@ namespace sw
         /** @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다. */
         bool _bRequiresEditor{ false };
         /**
+         * @brief 무인 실행(`-unattended`)에서도 그린 프레임을 화면에 내보내는 시나리오입니다(루트 `present="true"`). 표시 경로 자체(스왑체인 획득 · 표시 · 크기 · 최소화)를 보는 시나리오가 쓴다.
+         * @details 무인 실행은 기본으로 내보내지 않는다(`RenderThread::setPresentSkipped` — 언리얼 -RenderOffScreen 자리). 그 길만 도는 체인은 표시 경로를 한 번도 지나지 않는다.
+         */
+        bool _bPresents{ false };
+        /**
          * @brief 창이 전경이어야 도는 시나리오입니다(루트 `requireForeground="true"` — 실제 커서 클립 · 화면 복사를 본다. 데스크톱 전역 상태라 `input="mixed"` 시나리오에서만 쓸 수 있다).
          * @details 실행기가 시작 조건을 기다리는 프레임부터 창을 전경으로 가져온다. 시작하는 프레임까지 전경을 얻지 못하면 건너뜀(13)으로 끝낸다.
          *          단계가 아니라 루트 속성인 이유: 시작 뒤의 단계는 게임의 첫 틱보다 늦다.

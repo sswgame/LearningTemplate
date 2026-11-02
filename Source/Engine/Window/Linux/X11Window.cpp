@@ -226,6 +226,17 @@ namespace sw
         return false;
     }
 
+    bool X11Window::setMinimized( bool bMinimized )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        // 아이콘화는 창 관리자에게 하는 요청이다 — 상태는 다음 `processMessages` 의 상태 통보가 바꾼다. 되돌리기는 다시 매핑이다(ICCCM).
+        const bool bRequested = bMinimized ? XIconifyWindow( pDisplay, _x11Window, DefaultScreen( pDisplay ) ) != 0 : ( XMapRaised( pDisplay, _x11Window ), true );
+        XFlush( pDisplay );
+        return bRequested;
+    }
+
     bool X11Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
     {
         if ( _pX11Display == nullptr || _x11Window == 0 )
@@ -754,6 +765,12 @@ namespace sw
 
     void X11Window::destroy()
     {
+    }
+
+    bool X11Window::setMinimized( bool bMinimized )
+    {
+        (void)bMinimized;
+        return false;
     }
 
     bool X11Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )

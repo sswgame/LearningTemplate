@@ -66,6 +66,8 @@ namespace sw
          * @return 돌릴 시나리오가 하나라도 있으면 true 입니다(없으면 아무것도 하지 않고 체인도 남기지 않는다).
          */
         [[nodiscard]] bool begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing );
+        /** @brief 지금 시나리오가 그린 프레임을 화면에 내보낼지 정합니다 — 무인 실행은 시나리오가 `present="true"` 일 때만 내보낸다. 렌더 스레드가 없으면(헤드리스) 할 일이 없다. */
+        void applyPresentPolicy();
         /**
          * @brief 플레이를 시나리오로 녹화합니다(`-scenario-record=<Saved/Automation/...scenario.xml>`). 활성 씬이 플레이를 시작한 첫 프레임부터 입력을 적고,
          *        시나리오가 끝나거나 창이 닫힐 때 파일을 씁니다.
@@ -186,6 +188,7 @@ namespace sw
         vector<pair<string, string>>        _listStartVariable;         ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
         AutomationReproduceInput            _reproduceInput;            ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline;        ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
+        bool                                _bUnattended{ false };      ///< `-unattended` — 보는 사람이 없다. 시나리오가 `present="true"` 가 아니면 내보내지 않는다(`applyPresentPolicy`)
         RenderThread*                       _pRenderThread{ nullptr };  ///< 사진을 실은 패킷을 단계 앞에서 비운다(`onFrameEnd`). `Runtime::start` 가 건다, 없으면(헤드리스) 비울 것이 없다
         ScenarioPlayer                      _scenarioPlayer;            ///< 재생기(`Runtime::start` 가 호스트 범위에 건다)
         Runtime                             _runtime;                   ///< 바깥 창구(`getPublishedPart`)

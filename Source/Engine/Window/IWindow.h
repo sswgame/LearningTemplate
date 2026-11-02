@@ -210,6 +210,16 @@ namespace sw
             (void)height;
             return false;
         }
+        /**
+         * @brief 창을 최소화하거나 되돌립니다. 최소화 상태(`isMinimized`)는 플랫폼의 통보가 바꾼다.
+         * @details 자동화 시나리오(`MinimizeWindow` · `RestoreWindow`)가 최소화 중의 프레임 · 스왑체인 경로를 볼 때 쓴다. **창 스레드(메인 스레드)에서만 부른다.**
+         * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 되돌리기 요청이 프로토콜에 없다).
+         */
+        virtual bool setMinimized( bool bMinimized )
+        {
+            (void)bMinimized;
+            return false;
+        }
         /** @brief 마지막 `setDisplayMode` 가 고른 창 방식입니다. */
         WindowDisplayMode getDisplayMode() const { return _displayMode; }
         /**

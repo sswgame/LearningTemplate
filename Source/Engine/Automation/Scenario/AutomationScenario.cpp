@@ -334,6 +334,8 @@ namespace sw
             return Internal::readBool( "requireForeground", pText, _testOptions._bRequiresForeground, outReason );
         if ( name == "editor" )
             return Internal::readBool( "editor", pText, _testOptions._bRequiresEditor, outReason );
+        if ( name == "present" )
+            return Internal::readBool( "present", pText, _testOptions._bPresents, outReason );
         if ( name == "requiresModule" )
         {
             _testOptions._listRequiredModule.clear();

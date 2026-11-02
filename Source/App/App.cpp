@@ -76,6 +76,17 @@ namespace sw
                 outValue = static_cast<float64>( static_cast<uint32>( pWindowHost->getFramePacer().getState() ) );
                 return true;
             }
+
+            /** @brief 감시 값 `Window.Minimized` — 주 창이 최소화돼 있으면 1 입니다(플랫폼 통보 기준). 주 창이 없으면(헤드리스) 값이 없습니다. */
+            [[nodiscard]] static bool readWindowMinimized( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow == nullptr )
+                    return false;
+                outValue = pWindow->isMinimized() ? 1.0 : 0.0;
+                return true;
+            }
         };
     } // namespace
 
@@ -89,6 +100,7 @@ namespace sw
     SW_AUTOMATION_WATCH( engineFramePacingState, "Engine.FramePacingState",
                          "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
                          &AppInternal::readFramePacingState );
+    SW_AUTOMATION_WATCH( windowMinimized, "Window.Minimized", "1 while the main window is minimized (as the platform reported it)", &AppInternal::readWindowMinimized );
 } // namespace sw
 
 namespace sw
