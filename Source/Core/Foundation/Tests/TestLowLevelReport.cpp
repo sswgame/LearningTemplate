@@ -130,15 +130,17 @@ namespace
 
         ~ScopedLowLevelCapture()
         {
-            LowLevelReportTestInternal::_s_received = {}; // 받은 글(파일 · 메시지)을 케이스와 함께 놓는다 — 정적 칸에 남으면 종료 누수 보고에 찍힌다
-            if ( LowLevelReportTestInternal::_s_pCapture == nullptr )
-                return;
-            (void)internal::setLowLevelReporter( _pPreviousReporter );
-            std::fflush( stderr );
-            LowLevelReportTestInternal::redirectDescriptor( _savedStderr, LowLevelReportTestInternal::descriptorOf( stderr ) );
-            LowLevelReportTestInternal::closeDescriptor( _savedStderr );
-            std::fclose( LowLevelReportTestInternal::_s_pCapture );
-            LowLevelReportTestInternal::_s_pCapture = nullptr;
+            if ( LowLevelReportTestInternal::_s_pCapture != nullptr )
+            {
+                (void)internal::setLowLevelReporter( _pPreviousReporter );
+                std::fflush( stderr );
+                LowLevelReportTestInternal::redirectDescriptor( _savedStderr, LowLevelReportTestInternal::descriptorOf( stderr ) );
+                LowLevelReportTestInternal::closeDescriptor( _savedStderr );
+                std::fclose( LowLevelReportTestInternal::_s_pCapture );
+                LowLevelReportTestInternal::_s_pCapture = nullptr;
+            }
+            // 받은 글(파일 · 메시지)은 보고자를 되돌린 뒤 놓는다 — 정적 칸에 남으면 종료 누수 보고에 찍힌다
+            LowLevelReportTestInternal::_s_received = {};
         }
 
         ScopedLowLevelCapture( const ScopedLowLevelCapture& )            = delete;

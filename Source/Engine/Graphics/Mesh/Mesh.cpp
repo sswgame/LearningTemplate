@@ -3,19 +3,39 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 #include "Core/Concurrency/ScopedLock.h"
-#include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
+#include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 강체 스킨 원본 표입니다(키: 원본의 내용 번호) — 에셋 매니저가 내장 캐시로 만들어 소유한다(`Mesh::acquireRigidSkinSource`). */
+        class RigidSkinMeshCache final : public WeakInternCache<uint64, Mesh>
+        {
+        public:
+            static constexpr const utf8* kAssetKindName = "RigidSkinMesh";
+            RigidSkinMeshCache()
+                : WeakInternCache{ kAssetKindName }
+            {
+            }
+        };
+    } // namespace
+
+    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( RigidSkinMeshCache );
+} // namespace sw
 
 namespace sw
 {
@@ -107,14 +127,15 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::acquireRigidSkinSource( const Mesh& source )
     {
-        static SpinLock                              s_spinLock;
-        static unordered_map<uint64, weak_ptr<Mesh>> s_mapRigid;
-        ScopedLock<SpinLock>                         lock{ s_spinLock };
-        const auto                                   found = s_mapRigid.find( source._contentID );
-        shared_ptr<Mesh>                             rigid = found != s_mapRigid.end() ? found->second.lock() : nullptr;
-        if ( rigid != nullptr )
-            return rigid;
-        rigid = create();
+        // 표는 에셋 매니저가 소유하는 내장 캐시다(내장 도형과 같은 길) — 함수 안 static 표였을 때는 프로세스 끝까지 살아, 다 쓴 원본의 make_shared 블록을
+        // 만료된 weak_ptr 가 붙들어 종료 누수 보고에 찍혔다. 엔진 수명이면 종료와 재초기화가 다른 캐시와 같이 비운다.
+        return engine::getSubsystem<AssetManager>().getAssetCache<RigidSkinMeshCache>().acquire( source._contentID, [&source]( uint64 )
+        { return createRigidSkinSource( source ); } );
+    }
+
+    shared_ptr<Mesh> Mesh::createRigidSkinSource( const Mesh& source )
+    {
+        shared_ptr<Mesh> rigid = create();
         (void)rigid->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
         // 기본 영향이 본 0 에 가중치 1 이다(`MeshSkinVertex`).
         rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), 1u );
@@ -142,11 +163,6 @@ namespace sw
         }
         if ( listLevel.empty() == false )
             (void)rigid->setLODs( std::move( listLevel ) ); // 원본이 받은 단계라 거절되지 않는다
-        for ( auto it = s_mapRigid.begin(); it != s_mapRigid.end(); )
-        {
-            it = it->second.expired() ? s_mapRigid.erase( it ) : std::next( it );
-        }
-        s_mapRigid[source._contentID] = rigid;
         return rigid;
     }
 

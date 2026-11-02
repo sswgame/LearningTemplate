@@ -28,9 +28,6 @@ namespace sw
     class WeakInternCache : public AssetCacheBase
     {
     public:
-        /** @brief 값을 짓는 함수입니다. 지을 수 없으면 nullptr 을 돌려줍니다. */
-        using CreateFunction = shared_ptr<ValueType> ( * )( const KeyType& key );
-
         /** @param pKindName 레지스트리의 종류 이름입니다(정적 문자열). */
         explicit WeakInternCache( const utf8* pKindName )
             : AssetCacheBase{ CacheTracking::counted( pKindName ) } // 캐시는 에셋 매니저마다 하나라 엔진을 다시 세우면 다시 만들어진다 — 같은 칸을 이어 쓴다
@@ -39,8 +36,12 @@ namespace sw
         {
         }
 
-        /** @brief 그 키의 값을 나눠 받습니다. 처음이면 @p create 로 짓습니다. 워커에서 불러도 됩니다(잠급니다). */
-        shared_ptr<ValueType> acquire( const KeyType& key, CreateFunction create )
+        /**
+         * @brief 그 키의 값을 나눠 받습니다. 처음이면 @p create( key ) 로 짓습니다(지을 수 없으면 nullptr). 워커에서 불러도 됩니다(잠급니다).
+         * @details 짓는 쪽은 함수 객체라 키 밖의 입력(원본 메시 등)을 잡을 수 있다(`Mesh::acquireRigidSkinSource`).
+         */
+        template <typename CreateFunction>
+        shared_ptr<ValueType> acquire( const KeyType& key, CreateFunction&& create )
         {
             shared_ptr<ValueType> live = _table.findLive( key );
             if ( live != nullptr )
@@ -49,7 +50,7 @@ namespace sw
                 return live;
             }
             getCacheStats().recordMiss();
-            return _table.acquire( key, create ); // 표가 한 번 더 찾는다(둘이 같은 키를 지으면 먼저 넣은 쪽을 받는다)
+            return _table.acquire( key, std::forward<CreateFunction>( create ) ); // 표가 한 번 더 찾는다(둘이 같은 키를 지으면 먼저 넣은 쪽을 받는다)
         }
 
         const utf8* getAssetKindName() const override { return _pKindName; }

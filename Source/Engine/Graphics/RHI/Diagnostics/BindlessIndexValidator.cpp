@@ -136,7 +136,8 @@ namespace sw
     void BindlessIndexValidator::clearReports()
     {
         ScopedLock<mutex> lock{ s_reportMutex };
-        s_uniqueReportedSite.clear();
-        s_uniqueAbsentSite.clear();
+        // 저장소까지 놓는다 — clear 는 버킷을 남겨 테스트가 비운 뒤에도 종료 누수 보고에 찍혔다.
+        s_uniqueReportedSite = unordered_set<BindlessSiteKey>{};
+        s_uniqueAbsentSite   = unordered_set<BindlessSiteKey>{};
     }
 } // namespace sw

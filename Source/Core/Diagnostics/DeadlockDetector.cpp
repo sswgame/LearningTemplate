@@ -43,6 +43,12 @@ namespace sw
             return;
 
         mutex::unregisterLockObserver( this );
+        {
+            // 꺼진 탐지기는 표를 쥘 까닭이 없다 — 저장소까지 놓는다(케이스 밖에 사는 테스트 탐지기의 표가 종료 누수 보고에 찍혔다).
+            ScopedLock<mutex> lock{ _mutex };
+            _mapThreadState = unordered_map<std::thread::id, ThreadState>{};
+            _mapLockOwner   = unordered_map<void*, std::thread::id>{};
+        }
 
         CallStackCapture::shutdown();
     }

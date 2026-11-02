@@ -190,6 +190,8 @@ namespace sw
          *          약한 참조라 그리는 유닛이 없으면 사라지고, 핫 리로드한 원본은 내용 번호가 바뀌어 새 것을 받는다. 어느 스레드에서 불러도 된다.
          */
         static shared_ptr<Mesh> acquireRigidSkinSource( const Mesh& source );
+        /** @brief 강체 스킨 원본 한 벌을 새로 짓습니다(`acquireRigidSkinSource` 의 캐시가 없을 때 부른다). */
+        static shared_ptr<Mesh> createRigidSkinSource( const Mesh& source );
 
         /**
          * @brief 고유 정점과 인덱스를 설정합니다. 탄젠트는 받은 값을 버리고 `computeTangents` 로 다시 구합니다.
