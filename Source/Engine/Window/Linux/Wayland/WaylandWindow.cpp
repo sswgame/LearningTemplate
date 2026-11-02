@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
+#include "Engine/Window/Linux/Wayland/WaylandShell.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
@@ -491,19 +492,6 @@ namespace sw
                 (void)name; // 합성기 · 셸이 사라지는 일은 세션 끝이다 — 다음 요청이 실패로 알린다
             }
 
-            static void onWmBasePing( void* pData, xdg_wm_base* pWmBase, uint32 serial )
-            {
-                (void)pData;
-                xdg_wm_base_pong( pWmBase, serial );
-            }
-
-            static void onXdgSurfaceConfigure( void* pData, xdg_surface* pXdgSurface, uint32 serial )
-            {
-                State& state = *static_cast<State*>( pData );
-                xdg_surface_ack_configure( pXdgSurface, serial );
-                state._bConfigured = true;
-            }
-
             static void onToplevelConfigure( void* pData, xdg_toplevel* pToplevel, int32 width, int32 height, wl_array* pStates )
             {
                 (void)pToplevel;
@@ -725,20 +713,6 @@ namespace sw
                 return listener;
             }
 
-            static xdg_wm_base_listener makeWmBaseListener()
-            {
-                xdg_wm_base_listener listener{};
-                listener.ping = &onWmBasePing;
-                return listener;
-            }
-
-            static xdg_surface_listener makeXdgSurfaceListener()
-            {
-                xdg_surface_listener listener{};
-                listener.configure = &onXdgSurfaceConfigure;
-                return listener;
-            }
-
             static xdg_toplevel_listener makeToplevelListener()
             {
                 // 판 1 의 두 이벤트만 채운다 — 판 1 로 바인드해 그 뒤 이벤트(configure_bounds · wm_capabilities)는 오지 않는다.
@@ -865,8 +839,6 @@ namespace sw
 
             // 리스너는 객체가 사는 동안 그 자리에 있어야 한다 — 정적 상수로 둔다(상태를 갖지 않는다).
             static const wl_registry_listener             s_registryListener;
-            static const xdg_wm_base_listener             s_wmBaseListener;
-            static const xdg_surface_listener             s_xdgSurfaceListener;
             static const xdg_toplevel_listener            s_toplevelListener;
             static const wl_keyboard_listener             s_keyboardListener;
             static const wl_pointer_listener              s_pointerListener;
@@ -883,8 +855,6 @@ namespace sw
         };
 
         const wl_registry_listener             WaylandWindowInternal::s_registryListener        = WaylandWindowInternal::makeRegistryListener();
-        const xdg_wm_base_listener             WaylandWindowInternal::s_wmBaseListener          = WaylandWindowInternal::makeWmBaseListener();
-        const xdg_surface_listener             WaylandWindowInternal::s_xdgSurfaceListener      = WaylandWindowInternal::makeXdgSurfaceListener();
         const xdg_toplevel_listener            WaylandWindowInternal::s_toplevelListener        = WaylandWindowInternal::makeToplevelListener();
         const wl_keyboard_listener             WaylandWindowInternal::s_keyboardListener        = WaylandWindowInternal::makeKeyboardListener();
         const wl_pointer_listener              WaylandWindowInternal::s_pointerListener         = WaylandWindowInternal::makePointerListener();
@@ -971,7 +941,7 @@ namespace sw
             destroy();
             return false;
         }
-        xdg_wm_base_add_listener( state._pWmBase, &Internal::s_wmBaseListener, &state );
+        WaylandShell::answerPings( state._pWmBase );
         if ( state._pSeat != nullptr )
             wl_seat_add_listener( state._pSeat, &Internal::s_seatListener, &state );
         if ( state._pSeat != nullptr && state._pDataDeviceManager != nullptr )
@@ -989,20 +959,14 @@ namespace sw
             wp_fractional_scale_v1_add_listener( state._pFractionalScale, &Internal::s_fractionalScaleListener, &state );
         }
         state._pXdgSurface = xdg_wm_base_get_xdg_surface( state._pWmBase, state._pSurface );
-        xdg_surface_add_listener( state._pXdgSurface, &Internal::s_xdgSurfaceListener, &state );
+        WaylandShell::acknowledgeConfigures( state._pXdgSurface, &state._bConfigured );
         state._pToplevel = xdg_surface_get_toplevel( state._pXdgSurface );
         xdg_toplevel_add_listener( state._pToplevel, &Internal::s_toplevelListener, &state );
         xdg_toplevel_set_app_id( state._pToplevel, "sw.engine" );
         applyTitle();
         applyMinimumClientSize();
         wl_surface_commit( state._pSurface );
-        // 첫 configure 를 기다린다 — 그 전에는 그림을 붙이면 안 된다(xdg-shell 규약).
-        int32 dispatchResult = 0;
-        while ( state._bConfigured == false && dispatchResult != -1 )
-        {
-            dispatchResult = wl_display_dispatch( state._pDisplay );
-        }
-        if ( state._bConfigured == false )
+        if ( WaylandShell::waitForFirstConfigure( state._pDisplay, state._bConfigured ) == false )
         {
             SW_LOG_ERROR_ID( "WaylandWindow.WaylandCompositorClosedConnection", "Wayland: the compositor closed the connection before configuring the window" );
             destroy();
@@ -1096,19 +1060,7 @@ namespace sw
         if ( state._pDisplay == nullptr )
             return _bShouldClose == SW_FALSE;
 
-        // 막지 않고 읽는다: 쌓인 것을 처리 → 읽을 준비 → 보낼 것을 보냄 → 읽을 것이 있으면 읽음(없으면 취소) → 다시 처리.
-        wl_display_dispatch_pending( state._pDisplay );
-        while ( wl_display_prepare_read( state._pDisplay ) != 0 )
-        {
-            wl_display_dispatch_pending( state._pDisplay );
-        }
-        wl_display_flush( state._pDisplay );
-        pollfd pollEntry{ wl_display_get_fd( state._pDisplay ), POLLIN, 0 };
-        if ( poll( &pollEntry, 1, 0 ) > 0 )
-            (void)wl_display_read_events( state._pDisplay ); // 실패는 다음 dispatch 가 -1 로 알린다
-        else
-            wl_display_cancel_read( state._pDisplay );
-        if ( wl_display_dispatch_pending( state._pDisplay ) == -1 )
+        if ( WaylandShell::pumpEvents( state._pDisplay ) == false )
         {
             SW_LOG_ERROR_ID( "WaylandWindow.WaylandConnectionCompositorBroke", "Wayland: the connection to the compositor broke - closing the window" );
             return false;

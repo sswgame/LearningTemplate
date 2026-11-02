@@ -5,10 +5,10 @@
 #include "Core/Container/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
+    #include "Engine/Window/Linux/Wayland/WaylandShell.h"
     #include "Engine/Window/Linux/Wayland/WaylandShmBuffer.h"
     #include "Engine/Window/Linux/Wayland/WaylandTextPainter.h"
 
-    #include <poll.h>
     #include <wayland-client.h>
 
     // 구성 때 wayland-scanner 가 만든다(cmake/Modules/Platform/Linux.cmake 의 프로토콜 XML 목록)
@@ -83,18 +83,6 @@ namespace sw
                 (void)name;
             }
 
-            static void onWmBasePing( void* pData, xdg_wm_base* pWmBase, uint32 serial )
-            {
-                (void)pData;
-                xdg_wm_base_pong( pWmBase, serial );
-            }
-
-            static void onXdgSurfaceConfigure( void* pData, xdg_surface* pXdgSurface, uint32 serial )
-            {
-                xdg_surface_ack_configure( pXdgSurface, serial );
-                static_cast<State*>( pData )->_bConfigured = true;
-            }
-
             static void onToplevelConfigure( void* pData, xdg_toplevel* pToplevel, int32 width, int32 height, wl_array* pStates )
             {
                 (void)pData;
@@ -118,20 +106,6 @@ namespace sw
                 return listener;
             }
 
-            static xdg_wm_base_listener makeWmBaseListener()
-            {
-                xdg_wm_base_listener listener{};
-                listener.ping = &onWmBasePing;
-                return listener;
-            }
-
-            static xdg_surface_listener makeXdgSurfaceListener()
-            {
-                xdg_surface_listener listener{};
-                listener.configure = &onXdgSurfaceConfigure;
-                return listener;
-            }
-
             static xdg_toplevel_listener makeToplevelListener()
             {
                 xdg_toplevel_listener listener{};
@@ -139,29 +113,10 @@ namespace sw
                 listener.close     = &onToplevelClose;
                 return listener;
             }
-
-            /** @brief 쌓인 연결 이벤트(핑 · 버퍼 반납)를 막지 않고 처리합니다 — 스플래시에는 이벤트 루프가 없어 그릴 때마다 한 번 돈다(`WaylandWindow::processMessages` 와 같은 순서). */
-            static void pumpEvents( wl_display* pDisplay )
-            {
-                wl_display_dispatch_pending( pDisplay );
-                while ( wl_display_prepare_read( pDisplay ) != 0 )
-                {
-                    wl_display_dispatch_pending( pDisplay );
-                }
-                wl_display_flush( pDisplay );
-                pollfd pollEntry{ wl_display_get_fd( pDisplay ), POLLIN, 0 };
-                if ( poll( &pollEntry, 1, 0 ) > 0 )
-                    (void)wl_display_read_events( pDisplay );
-                else
-                    wl_display_cancel_read( pDisplay );
-                wl_display_dispatch_pending( pDisplay );
-            }
         };
 
-        const wl_registry_listener  s_registryListener   = WaylandSplashWindowInternal::makeRegistryListener();
-        const xdg_wm_base_listener  s_wmBaseListener     = WaylandSplashWindowInternal::makeWmBaseListener();
-        const xdg_surface_listener  s_xdgSurfaceListener = WaylandSplashWindowInternal::makeXdgSurfaceListener();
-        const xdg_toplevel_listener s_toplevelListener   = WaylandSplashWindowInternal::makeToplevelListener();
+        const wl_registry_listener  s_registryListener = WaylandSplashWindowInternal::makeRegistryListener();
+        const xdg_toplevel_listener s_toplevelListener = WaylandSplashWindowInternal::makeToplevelListener();
     } // namespace
 
     WaylandSplashWindow::WaylandSplashWindow()
@@ -204,12 +159,12 @@ namespace sw
             dismiss();
             return false;
         }
-        xdg_wm_base_add_listener( state._pWmBase, &s_wmBaseListener, &state );
+        WaylandShell::answerPings( state._pWmBase );
 
         state._pSurface    = wl_compositor_create_surface( state._pCompositor );
         state._pXdgSurface = xdg_wm_base_get_xdg_surface( state._pWmBase, state._pSurface );
         state._pToplevel   = xdg_surface_get_toplevel( state._pXdgSurface );
-        xdg_surface_add_listener( state._pXdgSurface, &s_xdgSurfaceListener, &state );
+        WaylandShell::acknowledgeConfigures( state._pXdgSurface, &state._bConfigured );
         xdg_toplevel_add_listener( state._pToplevel, &s_toplevelListener, &state );
         xdg_toplevel_set_title( state._pToplevel, StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle );
         xdg_toplevel_set_app_id( state._pToplevel, Internal::kAppID );
@@ -218,12 +173,7 @@ namespace sw
         xdg_toplevel_set_max_size( state._pToplevel, static_cast<int32>( _width ), static_cast<int32>( _height ) );
         wl_surface_commit( state._pSurface ); // 버퍼 없는 첫 commit 이 첫 configure 를 부른다
 
-        int32 dispatchResult = 0;
-        while ( state._bConfigured == false && dispatchResult != -1 )
-        {
-            dispatchResult = wl_display_dispatch( state._pDisplay );
-        }
-        if ( state._bConfigured == false )
+        if ( WaylandShell::waitForFirstConfigure( state._pDisplay, state._bConfigured ) == false )
         {
             SW_LOG_ERROR_ID( "WaylandSplash.WaylandSplashCompositorClosed", "Wayland splash: the compositor closed the connection before configuring the window" );
             dismiss();
@@ -253,7 +203,7 @@ namespace sw
         if ( bNotDrawable )
             return;
 
-        Internal::pumpEvents( state._pDisplay ); // 앞서 보낸 버퍼의 반납과 핑 응답
+        (void)WaylandShell::pumpEvents( state._pDisplay ); // 앞서 보낸 버퍼의 반납과 핑 응답 — 끊긴 연결은 다음 그리기가 버퍼를 못 받아 멈춘다
         WaylandShmBuffer* const pBuffer = state._pPool->acquire( state._pShm, _width, _height );
         if ( pBuffer == nullptr )
             return; // 전부 컴포지터가 쥐고 있다 — 다음 갱신이 그린다
