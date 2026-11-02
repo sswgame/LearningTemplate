@@ -726,8 +726,10 @@ namespace sw::test
             state._listExpectedLog     = vector<TestRunnerInternal::ExpectedLog>{};
             state._listFailure         = vector<string>{};
             state._listUpdatedSnapshot = vector<string>{};
-            state._scratchFolder       = string{};
-            state._childArgument       = string{};
+            state._scratchFolder.clear();
+            state._scratchFolder.shrink_to_fit(); // `= string{}` 는 libstdc++ 에서 버퍼를 남긴다(짧은 글의 이동 대입)
+            state._childArgument.clear();
+            state._childArgument.shrink_to_fit();
         }
 
         const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::time::kNanosecondsPerMillisecond;

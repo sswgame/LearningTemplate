@@ -623,7 +623,9 @@ namespace sw
         _gameModuleManager.reset();
         // 호스트 서비스가 모두 내려갔다 — 기동 뒤에 잡은 호스트 값(설정 경로 · 서버 문맥)을 엔진 종료(누수 보고)보다 먼저 놓는다.
         _serverServiceContext = ServerServiceContext{};
-        _serverConfigPath     = string{};
+        _serverServiceContext._serverConfigPath.shrink_to_fit(); // 이동 대입은 libstdc++ 에서 버퍼를 남긴다(짧은 글)
+        _serverConfigPath.clear();
+        _serverConfigPath.shrink_to_fit();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO_ID( "Server.DedicatedServerShutdownComplete", "Dedicated server shutdown complete" );
         // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
