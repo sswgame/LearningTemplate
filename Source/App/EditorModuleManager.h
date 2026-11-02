@@ -78,6 +78,8 @@ namespace sw
         CameraComponent* getSceneViewCamera() const;
 
         /** @brief 렌더 스레드의 Present 훅에서 에디터 UI 를 그립니다(`render`). 에디터가 없으면 아무것도 하지 않습니다. */
+        /** @brief 렌더 패스 밖에서 에디터 UI 의 업로드를 합니다(렌더 스레드가 백버퍼 패스를 열기 직전 — `IEditor::prepareRender`). */
+        void prepareRenderEditor( IRHIDevice& renderDevice );
         void renderEditor( IRHIDevice& renderDevice );
         /** @brief Present 뒤에 에디터의 멀티 뷰포트 · 플랫폼 창을 처리합니다. 에디터가 없으면 아무것도 하지 않습니다. */
         void postPresentEditor( IRHIDevice& renderDevice );

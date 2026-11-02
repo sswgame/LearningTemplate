@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -321,6 +322,9 @@ namespace sw
         }
         else if ( _pDevice->_recordingState._bRenderPassActive == SW_TRUE )
         {
+            // 패스 안에는 복사를 기록할 수 없어 닫는다. 부르는 쪽은 그 패스에 이어 그리던 것을 잃는다(패스가 없으면 드로우를 버린다) — 계약 위반이라 알린다(전송 계약 3:
+            // 업로드는 그리기 기록 전에). 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에 UI 가 그려지지 않았다.
+            SW_LOG_ERROR_ONCE_ID( "Vulkan.BufferUpdateInsideRenderPass", "updateStructuredBufferRegions: a buffer update inside an open render pass ended that pass - draws recorded after it in the same pass are dropped. Upload before beginRenderPass" );
             vkCmdEndRenderPass( cmd );
             _pDevice->_recordingState._bRenderPassActive = SW_FALSE;
         }

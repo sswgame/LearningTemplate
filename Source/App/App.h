@@ -94,7 +94,9 @@ namespace sw
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 네이티브 창 이벤트를 전달합니다. */
         bool onWindowMessage( const NativeWindowEvent& event );
-        /** @brief 에디터 렌더 훅 콜백입니다(렌더 스레드). EditorModuleManager 로 넘깁니다. */
+        /** @brief 에디터 준비 훅 콜백입니다(렌더 스레드, 백버퍼 패스를 열기 전 — UI 업로드). EditorModuleManager 로 넘깁니다. */
+        void onEditorPrepareRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
+        /** @brief 에디터 렌더 훅 콜백입니다(렌더 스레드, 열린 백버퍼 패스 안 — 그리기만). EditorModuleManager 로 넘깁니다. */
         void onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
         /** @brief 에디터 멀티 뷰포트 · 플랫폼 창 훅 콜백입니다(Present 뒤에 실행됩니다). */
         void onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );

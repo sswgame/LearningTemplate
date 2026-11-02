@@ -50,6 +50,7 @@ namespace sw::editor
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
         void render( IRHIDevice* pRHIDevice ) override;
         /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */
+        void prepareRender( IRHIDevice* pRHIDevice ) override;
         void postPresent( IRHIDevice* pRHIDevice ) override;
         /** @brief 렌더 대기 중인 draw 스냅샷 표시를 버립니다. 에디터 인스턴스를 없앨 때만 부릅니다(`DrawSnapshotHandoff::abandon`). */
         void abandonPendingDraw() override;
@@ -144,6 +145,8 @@ namespace sw::editor
         EditorUICapture* _pUICapture;
         /// @brief 이번 프레임에 그릴 그리기 목록(메인 · 캡처 · 보조 창)입니다. 렌더 스레드 전용이며 present 훅이 프레임마다 다시 채운다 — 저장소를 남겨 할당하지 않는다.
         vector<ImDrawData*> _listFrameDrawData;
+        /// @brief 이번 프레임에 그릴 스냅샷 칸입니다. 렌더 스레드 전용 — `prepareRender` 가 집고(`DrawSnapshotHandoff::beginRender`) `render` 가 그린다. 집지 않았으면 무효입니다.
+        uint32 _renderSlot;
 
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;

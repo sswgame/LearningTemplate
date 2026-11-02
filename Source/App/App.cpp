@@ -472,6 +472,7 @@ namespace sw
         // 렌더 스레드 훅은 렌더 스레드에 바로 건다(엔진은 렌더 스레드를 빌려 줄 뿐 훅을 중계하지 않는다). 헤드리스가 아닌 클라이언트에는 늘 있다.
         if ( RenderThread* const pRenderThread = _engine.getRenderThread() )
         {
+            pRenderThread->setPrepareHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPrepareRender, this ) );
             pRenderThread->setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
             pRenderThread->setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
             AppDevTools::bindRenderThreadHooks( *pRenderThread, _backendSwap );
@@ -655,6 +656,13 @@ namespace sw
 
         // Win32 OS 수준의 포커스와 활성화(DefWindowProc)가 정상적으로 동작하도록 false 를 반환한다.
         return false;
+    }
+
+    void App::onEditorPrepareRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
+    {
+        if ( _gameModuleManager == nullptr ) // 아래 onEditorRender 와 같은 까닭이다
+            return;
+        _gameModuleManager->prepareRenderEditor( renderDevice );
     }
 
     void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )

@@ -34,11 +34,16 @@ namespace sw
         virtual void shutdown() = 0;
 
         // ------------------------------------------------------------------------------
-        // 2) 프레임. updateUI 는 메인 스레드에서, render 와 postPresent 는 렌더 스레드에서 실행한다
+        // 2) 프레임. updateUI 는 메인 스레드에서, prepareRender · render · postPresent 는 렌더 스레드에서 실행한다
         // ------------------------------------------------------------------------------
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         virtual void updateUI() = 0;
-        /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
+        /**
+         * @brief 렌더 패스 밖에서 이번 프레임 UI 의 업로드(그리기 목록 버퍼 · 텍스처 연산 · bindless 등록)를 합니다. 렌더 스레드가 백버퍼 패스를 열기 직전에 부릅니다.
+         * @details 업로드를 `render`(열린 패스 안)에서 하면 Vulkan 은 패스 안에 복사를 기록할 수 없어 패스를 닫고, 그 뒤의 UI 드로우가 버려졌다(화면에 지우기 색만 남았다).
+         */
+        virtual void prepareRender( IRHIDevice* pRHIDevice ) = 0;
+        /** @brief 열린 백버퍼 패스 안에서 에디터 UI 를 그립니다. 업로드는 `prepareRender` 가 이미 했습니다. */
         virtual void render( IRHIDevice* pRHIDevice ) = 0;
         /** @brief 메인 스왑체인 Present 뒤에 호출합니다. 멀티 뷰포트의 보조 창을 그립니다. */
         virtual void postPresent( IRHIDevice* pRHIDevice ) = 0;

@@ -541,6 +541,7 @@ namespace sw::editor
         , _lastDrawSnapshotSequence{ 0 }
         , _pUICapture{ nullptr }
         , _listFrameDrawData{}
+        , _renderSlot{ DrawSnapshotHandoff::kInvalidSlot }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
@@ -976,30 +977,39 @@ namespace sw::editor
         closeAndPublishFrame();
     }
 
-    void ImGuiEditor::render( IRHIDevice* pRHIDevice )
+    void ImGuiEditor::prepareRender( IRHIDevice* pRHIDevice )
     {
-        if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr )
+        _renderSlot = DrawSnapshotHandoff::kInvalidSlot;
+        if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr || _renderer == nullptr )
             return;
 
-        // 렌더 스레드의 present 훅이다. UI 스레드는 그동안 다음 UI 프레임을 만든다 — 여기서는 살아 있는 ImGui 상태를 읽지 않고 스냅샷(그리기 목록 · 보조 창)과
-        // UI 스레드가 낸 텍스처 연산만 읽는다. 네 백엔드 모두 텍스처 갱신과 그리기를 여기서 한다.
+        // 렌더 스레드가 백버퍼 패스를 열기 직전이다 — 업로드(그리기 목록 버퍼 · 텍스처 연산 · bindless 등록)는 여기서 한다. 열린 패스 안에서 하면 Vulkan 은 복사를 위해
+        // 패스를 닫고, 그 뒤의 UI 드로우가 버려졌다. UI 스레드는 그동안 다음 UI 프레임을 만든다 — 여기서는 살아 있는 ImGui 상태를 읽지 않고 스냅샷과 텍스처 연산만 읽는다.
         const uint32 slot = _drawSnapshotHandoff.beginRender();
-        if ( slot >= constant::render::kMaxFrameCountInFlight || _renderer == nullptr )
+        if ( slot >= constant::render::kMaxFrameCountInFlight )
             return;
+        _renderSlot = slot;
 
         // 이 프레임에 그릴 목록(메인 · 캡처 · 보조 창)을 버퍼 하나에 한 번 올린다.
-        EditorDrawDataSnapshot& snapshot         = _arrDrawSnapshot[slot];
-        ImDrawData* const       pDrawData        = snapshot.getMainDrawData();
-        ImDrawData* const       pCaptureDrawData = snapshot.findCaptureDrawData();
+        EditorDrawDataSnapshot& snapshot = _arrDrawSnapshot[slot];
         _listFrameDrawData.clear();
-        _listFrameDrawData.push_back( pDrawData );
-        _listFrameDrawData.push_back( pCaptureDrawData );
+        _listFrameDrawData.push_back( snapshot.getMainDrawData() );
+        _listFrameDrawData.push_back( snapshot.findCaptureDrawData() );
         for ( uint32 windowIndex = 0; windowIndex < snapshot.getPlatformWindowCount(); ++windowIndex )
         {
             _listFrameDrawData.push_back( snapshot.getPlatformWindowDrawData( windowIndex ) );
         }
         _renderer->prepareFrame( *pRHIDevice, _listFrameDrawData );
+    }
 
+    void ImGuiEditor::render( IRHIDevice* pRHIDevice )
+    {
+        // 열린 백버퍼 패스 안이다. 그리기만 한다 — 업로드는 `prepareRender` 가 했다.
+        if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr || _renderer == nullptr || _renderSlot == DrawSnapshotHandoff::kInvalidSlot )
+            return;
+        EditorDrawDataSnapshot& snapshot         = _arrDrawSnapshot[_renderSlot];
+        ImDrawData* const       pDrawData        = snapshot.getMainDrawData();
+        ImDrawData* const       pCaptureDrawData = snapshot.findCaptureDrawData();
         if ( pDrawData != nullptr )
             renderBackend( pRHIDevice, pDrawData );
         // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. `renderJob` 은 자기가 연 패스를 닫고 돌아온다.
@@ -1018,6 +1028,7 @@ namespace sw::editor
         if ( _pUICapture != nullptr && pRHIDevice != nullptr )
             _pUICapture->finishJob( *pRHIDevice );
         // 메인 스냅샷 렌더가 끝났으므로 UI 스레드가 다음 슬롯을 쓸 수 있게 해제한다.
+        _renderSlot = DrawSnapshotHandoff::kInvalidSlot;
         // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더하고 present 했다.
         _drawSnapshotHandoff.endRender();
     }

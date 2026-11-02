@@ -200,6 +200,7 @@ namespace sw
         : _pDevice{ nullptr }
         , _pFrameRenderer{ nullptr }
         , _pOffscreenRenderers{ nullptr }
+        , _prepareHook{}
         , _presentHook{}
         , _postPresentHook{}
         , _beginFrameHook{}
@@ -632,6 +633,13 @@ namespace sw
             pFrameStream->prepareTextureForShaderRead( packet._outputRenderTarget );
 
         drawScenePreviews( packet, pFrameStream, bGraphDrew );
+
+        // UI 의 업로드는 백버퍼 패스를 열기 전에 한다 — 열린 패스 안의 복사는 Vulkan 이 패스를 닫아 그 뒤의 UI 드로우를 버린다.
+        if ( _prepareHook.isBound() )
+        {
+            SW_PROFILE_SCOPE( "RT.PrepareHook" );
+            _prepareHook( *_pDevice, packet );
+        }
 
         // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린이나 백버퍼 어디에 그렸든, 여기서 타깃을
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.

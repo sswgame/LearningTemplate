@@ -86,7 +86,12 @@ namespace sw
          */
         [[nodiscard]] bool executeAndWait( const RenderCommandDelegate& command );
 
-        /** @brief 씬 렌더 뒤, Present 전에 부를 훅을 정합니다(패킷을 실행하는 스레드에서 불립니다). */
+        /**
+         * @brief 씬 렌더 뒤, 백버퍼 패스를 열기 직전에 부를 훅을 정합니다 — 렌더 패스 밖이라 업로드(버퍼 · 텍스처 · bindless 등록)를 한다.
+         * @details 열린 패스 안의 업로드는 Vulkan 이 패스를 닫아 그 뒤의 드로우를 버린다(전송 계약 3 — 업로드는 그리기 기록 전에). present 훅은 그리기만 한다.
+         */
+        void setPrepareHook( PresentHookDelegate hook ) { _prepareHook = std::move( hook ); }
+        /** @brief 씬 렌더 뒤, Present 전에 열린 백버퍼 패스 안에서 부를 훅을 정합니다(패킷을 실행하는 스레드에서 불립니다). 그리기만 한다 — 업로드는 `setPrepareHook` 의 훅이 한다. */
         void setPresentHook( PresentHookDelegate hook ) { _presentHook = std::move( hook ); }
         /** @brief Present 뒤에 부를 훅을 정합니다(멀티 뷰포트와 플랫폼 창 처리용). */
         void setPostPresentHook( PresentHookDelegate hook ) { _postPresentHook = std::move( hook ); }
@@ -205,6 +210,7 @@ namespace sw
         IRHIDevice*              _pDevice;
         FrameRenderer*           _pFrameRenderer;
         OffscreenSceneRenderers* _pOffscreenRenderers;
+        PresentHookDelegate      _prepareHook;
         PresentHookDelegate      _presentHook;
         PresentHookDelegate      _postPresentHook;
         BeginFrameHookDelegate   _beginFrameHook;

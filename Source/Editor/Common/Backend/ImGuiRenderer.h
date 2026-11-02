@@ -70,8 +70,8 @@ namespace sw::editor
         void queueTextureUpdates();
         /**
          * @brief 이번 프레임에 그릴 그리기 목록들을 버퍼 하나에 올리고, UI 스레드가 낸 텍스처 연산과 텍스처 칸(bindless 번호)을 처리합니다.
-         * @details 렌더 스레드에서, 이 프레임의 `render` 앞에 한 번 부른다. 버퍼는 프레임에 한 번만 올린다(같은 프레임에 같은 버퍼를 두 번 올리지 않는다 — 캔버스와 같은 규칙).
-         *          nullptr 항목은 건너뛴다.
+         * @details 렌더 스레드에서, **렌더 패스 밖**(`IEditor::prepareRender`)에서 이 프레임의 `render` 앞에 한 번 부른다 — 열린 패스 안에서 올리면 Vulkan 이 패스를 닫아
+         *          그 뒤의 그리기가 버려진다. 버퍼는 프레임에 한 번만 올린다(같은 프레임에 같은 버퍼를 두 번 올리지 않는다 — 캔버스와 같은 규칙). nullptr 항목은 건너뛴다.
          */
         void prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData );
         /** @brief @p drawData 를 지금 열린 렌더 패스에 그립니다. `prepareFrame` 이 이번 프레임에 올린 목록만 그린다(올리지 않은 목록은 오류를 남기고 건너뛴다). */

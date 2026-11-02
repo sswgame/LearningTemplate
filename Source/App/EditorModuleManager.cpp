@@ -195,6 +195,15 @@ namespace sw
         return static_cast<CameraComponent*>( _editorAPI.getSceneViewCamera( _editor ) );
     }
 
+    void EditorModuleManager::prepareRenderEditor( IRHIDevice& renderDevice )
+    {
+        SW_MEMORY_SCOPE( Editor );
+        if ( hasEditor() == false )
+            return;
+        if ( _editorAPI.prepareRender != nullptr )
+            _editorAPI.prepareRender( _editor, &renderDevice );
+    }
+
     void EditorModuleManager::renderEditor( IRHIDevice& renderDevice )
     {
         SW_MEMORY_SCOPE( Editor );
