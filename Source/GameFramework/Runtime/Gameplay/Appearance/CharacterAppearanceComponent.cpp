@@ -97,6 +97,57 @@ namespace sw
                 return hashed_string( ( string( part._owner.c_str() ) + "." + part._partName.c_str() ).c_str() );
             }
 
+            /**
+             * @brief 부품을 병합에 넣는 모양으로 만듭니다 — `<Section>` 이 없으면 부품의 구간 이름(`makeSectionName`) 조각 하나, 있으면 적은 구간마다 조각 하나다(적지 않은 구간은 빠진다).
+             * @details 몸(@p bBody)의 조각은 원본 구간 이름 그대로다 — 몸의 주 메시와 `_listBodySection` 이 이미 그 이름으로 그려, 병합을 걸고 풀 때 이름을 다시 매기지 않는다.
+             *          다른 부품의 조각은 부품의 구간 이름 뒤에 `/구간` 을 붙여 차림 안에서 겹치지 않게 한다.
+             */
+            static MeshMergePart makeMergePart( const ResolvedPart& part, const Mesh& mesh, bool bBody )
+            {
+                MeshMergePart merge{ makeSectionName( part ), part._material, &mesh };
+                for ( const AppearancePartVariantDef& section : part._listSection )
+                {
+                    const hashed_string name = bBody ? section._name : hashed_string( ( string( merge._name.c_str() ) + "/" + section._name.c_str() ).c_str() );
+                    merge._listSection.push_back( MeshMergeSectionPick{ section._name, name, section._material } );
+                }
+                return merge;
+            }
+
+            /** @brief 합친 부품의 조각마다 몸 오브젝트 @p owner 의 구간 컴포넌트를 맞춥니다 — 모자라면 더하고 남으면 지우고, 이름 · 머티리얼을 조각의 것으로 한다. */
+            static void applyMergedSections( GameObjectManager& manager, GameObject& owner, const MeshMergePart& merge, const ResolvedPart& part,
+                                             vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const string& presetID )
+            {
+                vector<MeshMergeSectionPick> listPiece = merge._listSection;
+                if ( listPiece.empty() )
+                    listPiece.push_back( MeshMergeSectionPick{ hashed_string{}, merge._name, merge._material } );
+                while ( inoutListSection.size() > listPiece.size() )
+                {
+                    MeshSectionComponent* pExtra = manager.resolveComponent( inoutListSection.back() );
+                    if ( pExtra != nullptr && owner.removeComponent( pExtra ) == false )
+                        SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceCouldNotRemove", "Appearance '%#' could not remove a section component of part '%#'", presetID.c_str(), part._partName.c_str() );
+                    inoutListSection.pop_back();
+                }
+                inoutListSection.resize( listPiece.size() );
+                for ( size_t index = 0; index < listPiece.size(); ++index )
+                {
+                    MeshSectionComponent* pSection = manager.resolveComponent( inoutListSection[index] );
+                    if ( pSection == nullptr )
+                    {
+                        pSection = owner.addComponent<MeshSectionComponent>();
+                        if ( pSection == nullptr )
+                        {
+                            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartCouldNot2", "Appearance '%#' part '%#' could not get a section component", presetID.c_str(), part._partName.c_str() );
+                            continue;
+                        }
+                        inoutListSection[index] = TComponentHandle<MeshSectionComponent>{ pSection };
+                    }
+                    pSection->setSectionName( listPiece[index]._name );
+                    if ( listPiece[index]._material.empty() == false )
+                        pSection->setMaterialPath( listPiece[index]._material.c_str() );
+                    pSection->followSourceMesh();
+                }
+            }
+
             /** @brief 병합한 메시를 같은 차림끼리 나누는 캐시 키에 섞는 값입니다(구운 메시와 키가 겹치지 않게). */
             static constexpr uint64 kMergedMeshKeySalt = 0x4D45524745ull; // "MERGE"
 
@@ -231,7 +282,6 @@ namespace sw
         , _bMeshMerged{ SW_FALSE }
         , _bMeshApplyQueued{ SW_FALSE }
         , _reserved{ 0 }
-        , _mergedBodySection{}
         , _surface{}
         , _surfaceBinding{}
         , _loadedSurfaceChannels{}
@@ -457,11 +507,14 @@ namespace sw
 
     void CharacterAppearanceComponent::retireMergedPart( GameObjectManager& manager, const SpawnedPart& spawned ) const
     {
-        MeshSectionComponent* pSection   = manager.resolveComponent( spawned._section );
-        GameObject*           pOwner     = getOwner();
-        const bool            bRemovable = pSection != nullptr && pOwner != nullptr;
-        if ( bRemovable && pOwner->removeComponent( pSection ) == false )
-            SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceCouldNotRemove", "Appearance '%#' could not remove the section component of a merged part", _presetID.c_str() );
+        GameObject* pOwner = getOwner();
+        for ( const TComponentHandle<MeshSectionComponent>& handle : spawned._listSection )
+        {
+            MeshSectionComponent* pSection   = manager.resolveComponent( handle );
+            const bool            bRemovable = pSection != nullptr && pOwner != nullptr;
+            if ( bRemovable && pOwner->removeComponent( pSection ) == false )
+                SW_LOG_WARNING_ID( "CharacterAppearance.AppearanceCouldNotRemove", "Appearance '%#' could not remove the section component of a merged part", _presetID.c_str() );
+        }
     }
 
     template <typename Func>
@@ -469,9 +522,12 @@ namespace sw
     {
         if ( spawned._bMerged == SW_TRUE )
         {
-            MeshSectionComponent* pSection = manager.resolveComponent( spawned._section );
-            if ( pSection != nullptr )
-                func( *pSection ); // 아직 합친 메시를 걸기 전이면 구간 컴포넌트가 없다
+            for ( const TComponentHandle<MeshSectionComponent>& handle : spawned._listSection )
+            {
+                MeshSectionComponent* pSection = manager.resolveComponent( handle );
+                if ( pSection != nullptr )
+                    func( *pSection ); // 아직 합친 메시를 걸기 전이면 구간 컴포넌트가 없다
+            }
             return;
         }
         GameObject* pObject = manager.resolveGameObject( spawned._object );
@@ -1157,11 +1213,13 @@ namespace sw
             SkeletalMeshComponent* pUnit = findSkinnedUnit( manager, partIndex );
             shared_ptr<Mesh>       mesh  = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
             bAnyBaked                    = bAnyBaked || listBaked[index] != nullptr;
-            // 합쳤던 몸이 합치지 않게 되면 구간 이름을 풀고 원본(또는 베이크한 사본)으로 되돌린다.
+            // 합쳤던 몸이 합치지 않게 되면 구간 이름을 몸의 첫 `<Section>`(없으면 메시 전체)으로 되돌리고 원본(또는 베이크한 사본)으로 되돌린다.
+            // 몸의 구간은 합친 메시에서도 원본 이름이라(`makeMergePart`) 메시를 바꾸기 전에 걸어도 된다.
             const bool bUnmerge = pUnit != nullptr && pUnit == pBodyUnit && _bMeshMerged == SW_TRUE;
             if ( bUnmerge )
             {
-                pUnit->setSectionName( hashed_string{} );
+                const ResolvedPart& body = _state.getResolved()._listPart[partIndex];
+                pUnit->setSectionName( body._listSection.empty() ? hashed_string{} : body._listSection.front()._name );
                 _bMeshMerged = SW_FALSE;
             }
             // 지난번에도 원본이었고 이번에도 원본이면 건드리지 않는다(사본 · 군중 묶음을 다시 만들지 않게).
@@ -1265,10 +1323,12 @@ namespace sw
         GameObject*               pOwner   = getOwner();
         // 몸이 먼저, 그 뒤 합치는 부품(로드 순서). 읽지 못한 메시가 있으면 합치지 않는다 — 읽기 오류는 이미 알렸다.
         vector<MeshMergePart> listMergePart;
+        vector<uint32>        listMergePartIndex; // listMergePart 마다 해석의 부품 번호
         for ( size_t index = 0; index < _listMeshAssemblyLoad.size() && pOwner != nullptr; ++index )
         {
             const uint32 partIndex = _listMeshAssemblyLoad[index]._partIndex;
-            bool         bMember   = static_cast<int32>( partIndex ) == _bodyPart;
+            const bool   bBody     = static_cast<int32>( partIndex ) == _bodyPart;
+            bool         bMember   = bBody;
             for ( const SpawnedPart& spawned : _listSpawnedPart )
             {
                 bMember = bMember || ( spawned._bMerged == SW_TRUE && spawned._partIndex == partIndex );
@@ -1281,10 +1341,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceCannotMergeParts", "Appearance '%#' cannot merge parts - part '%#' has no mesh", _presetID.c_str(), resolved._listPart[partIndex]._partName.c_str() );
                 return false;
             }
-            const ResolvedPart& part = resolved._listPart[partIndex];
-            listMergePart.push_back( MeshMergePart{ Internal::makeSectionName( part ), part._material, mesh.get() } );
+            listMergePart.push_back( Internal::makeMergePart( resolved._listPart[partIndex], *mesh, bBody ) );
+            listMergePartIndex.push_back( partIndex );
         }
-        if ( listMergePart.empty() )
+        const std::optional<size_t> bodyMergeIndex = VectorUtil::findIndex( listMergePartIndex, static_cast<uint32>( _bodyPart ) );
+        if ( bodyMergeIndex.has_value() == false )
             return false;
 
         // 같은 차림이면 합친 메시도 나눈다(구운 메시와 같은 키에 값을 섞은 키).
@@ -1309,34 +1370,21 @@ namespace sw
             AppearanceBakedMeshCache::store( mergedKey, { merged } );
         }
 
-        // 몸 유닛에 합친 메시를 걸고, 몸은 자기 구간만 그린다. 옛 구간 이름은 새 메시에 없을 수 있어 먼저 푼다(없는 이름 오류를 남기지 않게).
+        // 몸 유닛에 합친 메시를 걸고, 몸은 자기 첫 조각을 그린다(나머지 몸 구간은 `_listBodySection` 이 원본 이름 그대로 그린다).
+        // 옛 구간 이름은 새 메시에 없을 수 있어 먼저 푼다(없는 이름 오류를 남기지 않게).
+        const MeshMergePart& bodyMerge = listMergePart[*bodyMergeIndex];
         body.setSectionName( hashed_string{} );
         body.setSkinSourceMesh( merged );
-        body.setSectionName( listMergePart[0]._name );
-        _mergedBodySection = listMergePart[0]._name;
-        _bMeshMerged       = SW_TRUE;
+        body.setSectionName( bodyMerge._listSection.empty() ? bodyMerge._name : bodyMerge._listSection.front()._name );
+        _bMeshMerged = SW_TRUE;
 
-        // 합친 부품마다 몸 오브젝트에 구간 컴포넌트를 둔다(있으면 그대로 두고 이름 · 머티리얼만 맞춘다).
+        // 합친 부품의 조각마다 몸 오브젝트에 구간 컴포넌트를 둔다(있으면 그대로 두고 이름 · 머티리얼만 맞춘다).
         for ( SpawnedPart& spawned : _listSpawnedPart )
         {
-            if ( spawned._bMerged == SW_FALSE )
+            const std::optional<size_t> mergeIndex = VectorUtil::findIndex( listMergePartIndex, spawned._partIndex );
+            if ( spawned._bMerged == SW_FALSE || mergeIndex.has_value() == false )
                 continue;
-            const ResolvedPart&   part     = resolved._listPart[spawned._partIndex];
-            MeshSectionComponent* pSection = manager.resolveComponent( spawned._section );
-            if ( pSection == nullptr )
-            {
-                pSection = pOwner->addComponent<MeshSectionComponent>();
-                if ( pSection == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartCouldNot2", "Appearance '%#' part '%#' could not get a section component", _presetID.c_str(), part._partName.c_str() );
-                    continue;
-                }
-                spawned._section = TComponentHandle<MeshSectionComponent>{ pSection };
-            }
-            pSection->setSectionName( Internal::makeSectionName( part ) );
-            if ( part._material.empty() == false )
-                pSection->setMaterialPath( part._material.c_str() );
-            pSection->followSourceMesh();
+            Internal::applyMergedSections( manager, *pOwner, listMergePart[*mergeIndex], resolved._listPart[spawned._partIndex], spawned._listSection, _presetID );
         }
         // 구간 컴포넌트가 이제 생겼으니 염색을 부품마다 다시 입힌다.
         applyMaterialValues( manager, body );
@@ -1414,15 +1462,16 @@ namespace sw
 
     uint32 CharacterAppearanceComponent::getMergedSectionCount() const
     {
-        if ( _bMeshMerged == SW_FALSE )
+        if ( _bMeshMerged == SW_FALSE || _bodyPart < 0 )
             return 0;
-        uint32 count = 1; // 몸의 구간
+        const size_t bodySectionCount = _state.getResolved()._listPart[static_cast<size_t>( _bodyPart )]._listSection.size();
+        size_t       count            = bodySectionCount > 0 ? bodySectionCount : 1u; // 몸의 조각
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             if ( spawned._bMerged == SW_TRUE )
-                ++count;
+                count += spawned._listSection.size();
         }
-        return count;
+        return static_cast<uint32>( count );
     }
 
     GameObjectManager* CharacterAppearanceComponent::findManager() const

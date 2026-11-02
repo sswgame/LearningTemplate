@@ -223,16 +223,16 @@ namespace sw
         /** @brief 스폰한 부품 하나입니다. */
         struct SpawnedPart
         {
-            GameObjectHandle                       _object{};
-            hashed_string                          _owner{};
-            hashed_string                          _partName{};
-            hashed_string                          _asset{};
-            uint32                                 _partIndex{ 0 };
-            uint32                                 _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
-            uint8                                  _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
-            uint8                                  _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
-            uint8                                  _bMerged{ SW_FALSE };                        ///< 몸 메시에 합쳐 구간으로 그린다(오브젝트가 없다). `_section` 은 병합한 메시를 건 뒤에 생긴다
-            TComponentHandle<MeshSectionComponent> _section{};                                  ///< 병합한 부품의 구간 컴포넌트(몸 오브젝트에 붙는다)
+            GameObjectHandle                               _object{};
+            hashed_string                                  _owner{};
+            hashed_string                                  _partName{};
+            hashed_string                                  _asset{};
+            uint32                                         _partIndex{ 0 };
+            uint32                                         _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
+            uint8                                          _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
+            uint8                                          _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
+            uint8                                          _bMerged{ SW_FALSE };                        ///< 몸 메시에 합쳐 구간으로 그린다(오브젝트가 없다). `_listSection` 은 병합한 메시를 건 뒤에 생긴다
+            vector<TComponentHandle<MeshSectionComponent>> _listSection{};                              ///< 병합한 부품의 조각마다 구간 컴포넌트(몸 오브젝트에 붙는다 — `<Section>` 이 없으면 하나)
         };
 
         /** @brief 슬롯 덮어쓰기 하나입니다. */
@@ -406,7 +406,6 @@ namespace sw
         uint8                                          _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
         uint8                                          _bMeshApplyQueued     : 1; ///< 다 읽은 조립의 걸기를 틱 뒤로 미뤄 두었다 — 그동안 원본 내용 id 가 아직 없어 낡음 판정을 하지 않는다
         [[maybe_unused]] uint8                         _reserved             : 1;
-        hashed_string                                  _mergedBodySection;      ///< 합친 메시에서 몸이 그리는 구간 이름(몸 부품 이름)
         vector<TComponentHandle<MeshSectionComponent>> _listBodySection;        ///< 몸 부품의 `<Section>` 중 둘째부터를 그리는 구간 컴포넌트(몸 오브젝트에 붙는다 — `applyBodyPart`)
         CharacterSurfaceState                          _surface;                ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
         CharacterSurfaceBinding                        _surfaceBinding;         ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다
