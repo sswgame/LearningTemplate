@@ -222,6 +222,61 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
+            // panels.everyPanelDraws: 등록된 패널(에디터 확장 · 키트 패널 포함)을 하나씩 앞으로 꺼내 그 프레임에 창이 그려지는지 본다. 시나리오도 자체 테스트도 없는
+            // 패널이 생겨도 한 번은 열려 그려진다 — 빈 상태로 열 때의 오류 로그 · 크래시를 시나리오 로그 게이트가 잡는다(언리얼 자동화의 "모든 에디터 열기" 연기 검사).
+            // 열려 있지 않던 패널은 다시 닫는다. 패널마다 kStepsPerPanel 프레임이다(꺼내기 요청 → 그리기 → 확인). 앞으로 꺼낸 탭이 다른 탭을 가리므로
+            // 순번을 맨 끝에 둔다 — 뒤에 도는 자체 테스트(콘솔 줄이 보이는지 보는 console.*)가 가려진 탭을 보지 않게.
+            // ------------------------------------------------------------------------------
+            struct EveryPanelProbe
+            {
+                struct Item
+                {
+                    string _id;
+                    string _title;
+                    bool   _bWasOpen{ false };
+                };
+                vector<Item> _listItem;
+            };
+
+            static EditorSelfTestStep runEveryPanelDraws( EditorSelfTestContext& context )
+            {
+                static constexpr uint32 kStepsPerPanel = 3;
+                EditorContext&          editorContext  = editor::getSubsystem<EditorContext>();
+                EditorPanelManager&     panels         = editorContext.getSubsystem<EditorPanelManager>();
+                EveryPanelProbe&        probe          = context.getTestState<EveryPanelProbe>();
+                if ( context.getStepIndex() == 0 )
+                {
+                    for ( const EditorPanelEntry& entry : panels.getPanels() )
+                    {
+                        if ( entry._pInstance != nullptr )
+                            probe._listItem.push_back( EveryPanelProbe::Item{ entry._id, entry._title, entry._pInstance->isOpen() } );
+                    }
+                    if ( context.expect( probe._listItem.empty() == false, "no editor panel is registered" ) == false )
+                        return EditorSelfTestStep::Done;
+                }
+                const uint32 itemIndex = context.getStepIndex() / kStepsPerPanel;
+                if ( itemIndex >= probe._listItem.size() )
+                    return EditorSelfTestStep::Done;
+                const EveryPanelProbe::Item& item  = probe._listItem[itemIndex];
+                const uint32                 phase = context.getStepIndex() % kStepsPerPanel;
+                if ( phase == 0 )
+                {
+                    editorContext.getSubsystem<EditorWorkspace>().requestOpenPanelByID( item._id );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( phase + 1 < kStepsPerPanel )
+                    return EditorSelfTestStep::Continue;
+                // 앞으로 꺼낸 다음 프레임에 그 창이 그려졌다(지난 프레임에 살아 있고 그린 정점이 있다) — 탭 뒤에 숨거나 바인더가 틀려 다른 ImGui 컨텍스트로 가면 없다.
+                const ImGuiWindow* pWindow = ImGui::FindWindowByName( item._title.c_str() );
+                const bool         bDrew   = pWindow != nullptr && pWindow->LastFrameActive >= ImGui::GetFrameCount() - 1 && pWindow->DrawList->VtxBuffer.Size > 0;
+                const string       what    = "panel did not draw when brought to the front: " + item._id;
+                (void)context.expect( bDrew, what.c_str() );
+                if ( item._bWasOpen == false )
+                    (void)panels.setPanelOpen( item._id, false ); // 닫히지 않으면(닫기 확인) 다음 테스트가 그 창을 본다 — 빈 상태로 연 패널은 미저장 편집이 없다
+                return EditorSelfTestStep::Continue;
+            }
+
+            // ------------------------------------------------------------------------------
             // dock.corePanelsAreDocked: 영역을 밝힌 열린 패널(`IEditorPanel::getDefaultDockSlot`)이 기본 배치에서 실제로 도킹됐는지 확인한다(열린 채 시작하는 도구 패널 포함)
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runCorePanelsAreDocked( EditorSelfTestContext& context )
@@ -941,6 +996,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( HelpMarker, "widgets.helpMarker", 200, &EditorSelfTestCasesInternal::runHelpMarkerDrawsTheMarker );
     SW_EDITOR_SELF_TEST( PropertyRow, "widgets.propertyRow", 210, &EditorSelfTestCasesInternal::runPropertyRowPlacesTheValueColumn );
     SW_EDITOR_SELF_TEST( CoreDock, "dock.corePanelsAreDocked", 300, &EditorSelfTestCasesInternal::runCorePanelsAreDocked );
+    SW_EDITOR_SELF_TEST( EveryPanel, "panels.everyPanelDraws", 99000, &EditorSelfTestCasesInternal::runEveryPanelDraws );
     SW_EDITOR_SELF_TEST( DockResize, "dock.followsWindowSize", 310, &EditorSelfTestCasesInternal::runDockFollowsWindowSize );
     SW_EDITOR_SELF_TEST( InspectorEnum, "inspector.drawLeavesTheObjectAlone", 400, &EditorSelfTestCasesInternal::runInspectorDrawLeavesTheObjectAlone );
     SW_EDITOR_SELF_TEST( MaterialPreview, "preview.materialHoldsOneReference", 500, &EditorSelfTestCasesInternal::runMaterialPreviewHoldsOneReference );
