@@ -347,6 +347,9 @@ namespace sw
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
     // 켜고 끄는 값이라 종류가 아니라 bool 이다(`-gv_rhiSoftwareAdapter=true`, `=1` 도 받는다).
     SW_TEST_GLOBAL_VARIABLE( bool, gv_rhiSoftwareAdapter, false, "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
+    // 하드웨어 어댑터는 고성능 순서(OS 의 GPU 선호 · Vulkan 장치 종류 — 제조사와 무관)로 고른다. 켜면 저전력 순서다(하이브리드 노트북의 내장 GPU) — 언리얼 -preferIntel 처럼
+    // 같은 기계에서 다른 GPU 로 그림을 비교한다. GL 은 어댑터를 고르는 API 가 없어 실행 파일 내보내기(NvOptimusEnablement · AmdPowerXpress…)를 따른다.
+    SW_GLOBAL_VARIABLE( bool, gv_rhiPreferMinimumPower, false, "하드웨어 어댑터를 저전력 순서로 고른다(DX11 · DX12 · Vulkan): false=고성능(외장 GPU), true=저전력(내장 GPU). GL 은 드라이버가 정한다" );
     // 업로드 스테이징 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RHIAsyncUploads 2.2, M1 이 조정한다).
     // GL · Vulkan 링보다 큰 업로드 하나는 링이 빌 때 혼자 일회성 버퍼로 들어간다(gv_rhiStagingSingleMaxMegabytes 까지). DX11 은 스테이징을 업로드마다 만들어, 이보다 큰 업로드 하나가
     // 예산 전부를 잡고 혼자 들어간다.
@@ -420,7 +423,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "RHI.SWRHISOFTWAREADAPTER", "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
                 return false;
             }
-            swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter || bSoftwareEnv;
+            swapChainDesc._bSoftwareAdapter    = gv_rhiSoftwareAdapter || bSoftwareEnv;
+            swapChainDesc._bPreferMinimumPower = gv_rhiPreferMinimumPower;
         }
         _bSoftwareAdapter = false;
         if ( engine::areEngineServicesBound() )

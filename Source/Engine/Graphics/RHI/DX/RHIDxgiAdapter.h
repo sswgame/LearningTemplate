@@ -19,10 +19,11 @@
 namespace sw
 {
     /**
-     * @brief 고성능 순서의 첫 하드웨어 어댑터입니다(소프트웨어 어댑터는 건너뛴다).
+     * @brief OS 의 GPU 선호 순서(@p bMinimumPower 가 아니면 고성능 — 외장 GPU, 맞으면 저전력 — 내장 GPU)의 첫 하드웨어 어댑터입니다(소프트웨어 어댑터는 건너뛴다).
+     * @details 제조사를 보지 않는다 — 외장이 Radeon 이든 GeForce 든 OS 가 매긴 순서를 따른다(사용자가 Windows 그래픽 설정으로 바꾼 선호도 이 순서에 든다).
      * @return `IDXGIFactory6` 가 없거나(Windows 10 1803 이전) 하드웨어 어댑터가 없으면 nullptr 입니다 — 부르는 쪽이 오류로 멈춘다(기본 어댑터로 대신하지 않는다).
      */
-    inline Microsoft::WRL::ComPtr<IDXGIAdapter1> findDxgiHighPerformanceAdapter( IDXGIFactory1* pFactory )
+    inline Microsoft::WRL::ComPtr<IDXGIAdapter1> findDxgiPreferredAdapter( IDXGIFactory1* pFactory, bool bMinimumPower )
     {
         Microsoft::WRL::ComPtr<IDXGIFactory6> factory6;
         if ( pFactory == nullptr || FAILED( pFactory->QueryInterface( IID_PPV_ARGS( factory6.GetAddressOf() ) ) ) )
@@ -30,7 +31,8 @@ namespace sw
         for ( UINT index = 0;; ++index )
         {
             Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-            if ( FAILED( factory6->EnumAdapterByGpuPreference( index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS( adapter.GetAddressOf() ) ) ) )
+            const DXGI_GPU_PREFERENCE             preference = bMinimumPower ? DXGI_GPU_PREFERENCE_MINIMUM_POWER : DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
+            if ( FAILED( factory6->EnumAdapterByGpuPreference( index, preference, IID_PPV_ARGS( adapter.GetAddressOf() ) ) ) )
                 return nullptr;
             DXGI_ADAPTER_DESC1 desc{};
             if ( SUCCEEDED( adapter->GetDesc1( &desc ) ) && ( desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE ) == 0 )

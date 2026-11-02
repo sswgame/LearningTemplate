@@ -542,7 +542,7 @@ namespace sw
         }
 
         // 하드웨어는 고성능 순서의 첫 어댑터다 — nullptr(기본 어댑터)은 하이브리드 노트북에서 내장 GPU 다(RHIDxgiAdapter.h).
-        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDxgiHighPerformanceAdapter( factory.Get() );
+        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDxgiPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
         if ( adapter == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );

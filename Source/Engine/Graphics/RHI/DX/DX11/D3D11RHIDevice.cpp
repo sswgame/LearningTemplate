@@ -542,7 +542,7 @@ namespace sw
         if ( desc._bSoftwareAdapter == false )
         {
             if ( SUCCEEDED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
-                adapter = findDxgiHighPerformanceAdapter( factory.Get() );
+                adapter = findDxgiPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
             if ( adapter == nullptr )
             {
                 SW_LOG_ERROR_ID( "D3D11.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );

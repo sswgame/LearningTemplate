@@ -232,7 +232,7 @@ namespace sw
             if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _wsiKind ) == false )
                 return false;
 
-            if ( pickPhysicalDevice( desc._bSoftwareAdapter ) == false )
+            if ( pickPhysicalDevice( desc._bSoftwareAdapter, desc._bPreferMinimumPower ) == false )
                 return false;
 
             if ( selectDepthFormat() == false )
@@ -963,19 +963,20 @@ namespace sw
             _debugMessenger = VK_NULL_HANDLE;
     }
 
-    bool VulkanRHIDevice::pickPhysicalDevice( bool bSoftwareAdapter )
+    bool VulkanRHIDevice::pickPhysicalDevice( bool bSoftwareAdapter, bool bPreferMinimumPower )
     {
         vector<VkPhysicalDevice> listDevice;
         const bool               bEnumerated = enumerateVk( listDevice, "vkEnumeratePhysicalDevices", [this]( uint32* pCount, VkPhysicalDevice* pData )
                       { return vkEnumeratePhysicalDevices( _instance, pCount, pData ); } );
         if ( bEnumerated == false || listDevice.empty() )
             return false;
-        // 외장 GPU 를 먼저 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가 먼저 나온다(DX 의 고성능 순서 · RHIDxgiAdapter.h 와 같은 규칙).
-        std::stable_partition( listDevice.begin(), listDevice.end(), []( VkPhysicalDevice device )
+        // 외장 GPU(저전력 선호면 내장 GPU)를 먼저 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가 먼저 나온다(DX 의 OS 선호 순서 · RHIDxgiAdapter.h 와 같은 규칙, 제조사와 무관).
+        const VkPhysicalDeviceType preferredType = bPreferMinimumPower ? VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+        std::stable_partition( listDevice.begin(), listDevice.end(), [preferredType]( VkPhysicalDevice device )
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( device, &properties );
-            return properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+            return properties.deviceType == preferredType;
         } );
 
         for ( const VkPhysicalDevice& device : listDevice )

@@ -260,6 +260,8 @@ namespace sw
 
         PROPERTY( Transient )
         bool _bSoftwareAdapter{ false }; ///< 소프트웨어 래스터라이저로 띄운다(DX12, DX11 WARP, Vulkan CPU 디바이스). CI 러너와 같은 조건을 재현하는 진단 스위치다.
+        PROPERTY( Transient )
+        bool _bPreferMinimumPower{ false }; ///< 하드웨어 어댑터를 저전력 순서로 고른다(하이브리드 노트북의 내장 GPU — 언리얼 -preferIntel 자리). 기본은 고성능 순서(제조사와 무관)
 
         /// @brief 업로드 스테이징 용량(바이트)입니다(`gv_rhiStagingRingMegabytes`). GL · Vulkan 은 링 크기, DX11 은 GPU 가 아직 복사 중인 스테이징 텍스처의 합의 상한으로 읽고,
         ///        0 이면 그 백엔드가 초기화를 거절합니다. 실행마다 정하는 설정이라 리플렉션하지 않는다.
