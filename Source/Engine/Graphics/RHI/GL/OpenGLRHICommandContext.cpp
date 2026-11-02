@@ -116,7 +116,7 @@ namespace sw
     {
         // 등록되지 않은 핸들도 기록한다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 resolveDrawProgram 에서 멈춘다.
         _pDevice->_recordingState._boundGraphicsPSO = pso;
-        _pState->_vertexBuffers.clear(); // 정점 버퍼는 PSO 뒤에 건다(IRHICommandList::setPipelineState 계약)
+        _pState->_geometry.clearVertexBuffers(); // 정점 버퍼는 PSO 뒤에 건다(IRHICommandList::setPipelineState 계약)
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_program == 0 )
             return;
@@ -522,21 +522,21 @@ namespace sw
 
     void OpenGLRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
+        _pState->_geometry.setVertexBuffer( slot, buffer, stride, offset );
     }
 
     void OpenGLRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pState->_indexBuffer.set( buffer, indexStride, offset );
+        _pState->_geometry.setIndexBuffer( buffer, indexStride, offset );
     }
 
     bool OpenGLRHICommandContext::bindVertexInputsForDraw()
     {
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO  = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
-        const RHIVertexInputState                         input = pPSO != nullptr ? pPSO->_vertexInput : RHIVertexInputState{}; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
+        const RHIVertexLayout                             input = pPSO != nullptr ? pPSO->_vertexLayout : RHIVertexLayout{}; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
         // GL 은 슬롯마다 버퍼를 걸지 않고 속성마다 포인터를 건다 — 순회는 슬롯의 GL 버퍼만 풀어 두고, 속성은 아래 공용 표로 건다.
         GLuint     arrBuffer[constant::render::kVertexBufferSlotCount]{};
-        const bool bResolved = _pState->_vertexBuffers.bindForDraw( "OpenGL", input, [this, &arrBuffer]( uint32 slot, const RHIVertexBufferBinding& binding )
+        const bool bResolved = _pState->_geometry.bindVertexBuffersForDraw( "OpenGL", input, [this, &arrBuffer]( uint32 slot, const RHIBufferBinding& binding )
         {
             arrBuffer[slot] = _pDevice->resolveGlBuffer( binding._buffer );
             return arrBuffer[slot] != 0;
@@ -564,26 +564,26 @@ namespace sw
                 glDisableVertexAttribArray( attribute._location );
                 continue;
             }
-            const RHIVertexBufferBinding& binding = _pState->_vertexBuffers._arrSlot[attribute._inputSlot];
-            const GLsizei                 stride  = static_cast<GLsizei>( binding._stride );
-            const void* const             pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( binding._offset + attribute._byteOffset ) );
+            const RHIBufferBinding& binding = _pState->_geometry._arrVertexSlot[attribute._inputSlot];
+            const GLsizei           stride  = static_cast<GLsizei>( binding._stride );
+            const void* const       pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( binding._offset + attribute._byteOffset ) );
             glBindBuffer( GL_ARRAY_BUFFER, arrBuffer[attribute._inputSlot] );
             glEnableVertexAttribArray( attribute._location );
             switch ( attribute._format )
             {
-                case RHIVertexElementFormat::Float2:
+                case RHIVertexAttributeFormat::Float2:
                     glVertexAttribPointer( attribute._location, 2, GL_FLOAT, GL_FALSE, stride, pOffset );
                     break;
-                case RHIVertexElementFormat::Float3:
+                case RHIVertexAttributeFormat::Float3:
                     glVertexAttribPointer( attribute._location, 3, GL_FLOAT, GL_FALSE, stride, pOffset );
                     break;
-                case RHIVertexElementFormat::Float4:
+                case RHIVertexAttributeFormat::Float4:
                     glVertexAttribPointer( attribute._location, 4, GL_FLOAT, GL_FALSE, stride, pOffset );
                     break;
-                case RHIVertexElementFormat::Uint1:
+                case RHIVertexAttributeFormat::Uint1:
                     glVertexAttribIPointer( attribute._location, 1, GL_UNSIGNED_INT, stride, pOffset );
                     break;
-                case RHIVertexElementFormat::Snorm8x4:
+                case RHIVertexAttributeFormat::Snorm8x4:
                     glVertexAttribPointer( attribute._location, 4, GL_BYTE, GL_TRUE, stride, pOffset );
                     break;
             }
@@ -830,7 +830,7 @@ namespace sw
         // 정점 슬롯은 PSO 가 읽는 것만 건다(다른 드로우 진입점 · 세 백엔드와 같다). 인덱스 버퍼는 VAO 상태라 VAO 를 건 뒤에 건다.
         if ( bindVertexInputsForDraw() == false )
             return false;
-        const bool bIndexBound = _pState->_indexBuffer.bindForDraw( "OpenGL", [this]( const RHIIndexBufferBinding& binding )
+        const bool bIndexBound = _pState->_geometry.bindIndexBufferForDraw( "OpenGL", [this]( const RHIBufferBinding& binding )
         {
             const GLuint ibo = _pDevice->resolveGlBuffer( binding._buffer );
             if ( ibo == 0 )
@@ -843,7 +843,7 @@ namespace sw
             unbindIndexedMesh(); // 건 VAO 를 남기지 않는다
             return false;
         }
-        outIndexType = ( _pState->_indexBuffer._stride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+        outIndexType = ( _pState->_geometry._index._stride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
         return true;
     }
 
@@ -864,7 +864,7 @@ namespace sw
         if ( bNothingToDraw || bindIndexedMeshForDraw( mode, indexType ) == false )
             return;
         const uint32 indexBytes = ( indexType == GL_UNSIGNED_SHORT ) ? 2u : 4u;
-        const void*  pOffset    = reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_indexBuffer._offset + startIndex * indexBytes ) );
+        const void*  pOffset    = reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_geometry._index._offset + startIndex * indexBytes ) );
         glDrawElementsInstancedBaseVertex( mode, static_cast<GLsizei>( indexCount ), indexType, pOffset, static_cast<GLsizei>( instanceCount ), static_cast<GLint>( baseVertex ) );
         unbindIndexedMesh();
     }

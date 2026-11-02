@@ -1490,7 +1490,7 @@ namespace sw
         if ( pso == nullptr )
             return 0;
         return _pDevice->_pipelineStates.insert( {
-            pso, RHIVertexInputState{ vertexSlotMask, desc._meshVertexFormat }
+            pso, RHIVertexLayout{ vertexSlotMask, desc._meshVertexFormat }
         } );
     }
 

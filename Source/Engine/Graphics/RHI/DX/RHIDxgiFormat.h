@@ -65,18 +65,18 @@ namespace sw
     {
         switch ( attribute._format )
         {
-            case RHIVertexElementFormat::Float2:
+            case RHIVertexAttributeFormat::Float2:
                 return DXGI_FORMAT_R32G32_FLOAT;
-            case RHIVertexElementFormat::Float3:
+            case RHIVertexAttributeFormat::Float3:
                 return DXGI_FORMAT_R32G32B32_FLOAT;
-            case RHIVertexElementFormat::Float4:
+            case RHIVertexAttributeFormat::Float4:
                 return DXGI_FORMAT_R32G32B32A32_FLOAT;
-            case RHIVertexElementFormat::Uint1:
+            case RHIVertexAttributeFormat::Uint1:
                 return DXGI_FORMAT_R32_UINT;
-            case RHIVertexElementFormat::Snorm8x4:
+            case RHIVertexAttributeFormat::Snorm8x4:
                 return DXGI_FORMAT_R8G8B8A8_SNORM;
         }
-        SW_LOG_ASSERT( false, "Unsupported RHIVertexElementFormat: %#", static_cast<uint32>( attribute._format ) );
+        SW_LOG_ASSERT( false, "Unsupported RHIVertexAttributeFormat: %#", static_cast<uint32>( attribute._format ) );
         return DXGI_FORMAT_UNKNOWN;
     }
 

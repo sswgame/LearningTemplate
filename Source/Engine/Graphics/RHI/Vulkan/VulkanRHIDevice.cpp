@@ -373,8 +373,7 @@ namespace sw
                     vkFreeMemory( _device, slot._memory, nullptr );
                 slot = StructuredUploadSlot{};
             }
-            _recordingState._vertexBuffers.clear();
-            _recordingState._indexBuffer = RHIIndexBufferBinding{};
+            _recordingState._geometry = RHIGeometryBindings{};
 
             _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
             {

@@ -63,11 +63,11 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
 SW_TEST_CASE( RHIMeshVertexStreamsTest, FullKeepsDataCarriedInTangent )
 {
     const RHIVertex vertex = makeVertex( 1.0f, 1.0f, 1.0f, 4096.0f ); // 지형 형태 변환이 탄젠트에 싣는 경계 좌표
-    vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Full, 1 ) );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Full, &vertex, 1, 0, 1, listByte.data() );
+    vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::HighPrecision, 1 ) );
+    RHIMeshVertexStreams::write( RHIMeshVertexFormat::HighPrecision, &vertex, 1, 0, 1, listByte.data() );
 
     SW_EXPECT_EQUAL( 12u + 52u, static_cast<uint32>( listByte.size() ) );
-    const RHIFullMeshAttributes* pAttributes = reinterpret_cast<const RHIFullMeshAttributes*>( listByte.data() + 12 );
+    const RHIHighPrecisionMeshAttributes* pAttributes = reinterpret_cast<const RHIHighPrecisionMeshAttributes*>( listByte.data() + 12 );
     SW_EXPECT_NEAR( 4096.0f, pAttributes->_arrTangent[0], 0.0f );
     SW_EXPECT_NEAR( 1.0f, pAttributes->_arrNormal[1], 0.0f );
     SW_EXPECT_NEAR( 16.0f, pAttributes->_arrColor[0], 0.0f );

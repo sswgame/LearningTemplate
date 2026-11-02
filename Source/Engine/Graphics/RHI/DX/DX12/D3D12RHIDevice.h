@@ -24,7 +24,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
+#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -70,12 +70,11 @@ namespace sw
         /// @brief 이 리스트가 빌린 온라인 힙 블록들입니다. 리스트가 닫힐 때 GPU 펜스 뒤에 반납합니다(releaseOnlineBlocksDeferred).
         vector<uint32> _listOnlineBlock;
         /// @brief 지금 쓰는 온라인 블록의 커서와 끝입니다(셰이더 가시 힙 인덱스). 같으면 블록이 없다는 뜻입니다.
-        uint32                  _onlineCursor;
-        uint32                  _onlineEnd;
-        RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 PSO 가 읽는 것만 건다)
-        RHIIndexBufferBinding   _indexBuffer;   ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
-        RHIPipelineStateHandle  _activeGraphicsPSO;
-        RHIPipelineStateHandle  _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
+        uint32                 _onlineCursor;
+        uint32                 _onlineEnd;
+        RHIGeometryBindings    _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
+        RHIPipelineStateHandle _activeGraphicsPSO;
+        RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
          *  드로우가 _activeGraphicsPSO 와 같으면 다시 설정하지 않습니다. Reset() 직후에는
          *  0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 설정되지 않아 캐시가 무효입니다). */
@@ -98,7 +97,7 @@ namespace sw
             , _listOnlineBlock{}
             , _onlineCursor{ 0 }
             , _onlineEnd{ 0 }
-            , _vertexBuffers{}
+            , _geometry{}
             , _activeGraphicsPSO{ 0 }
             , _activeComputePSO{ 0 }
             , _boundNativeGraphicsPSO{ 0 }
@@ -501,7 +500,7 @@ namespace sw
         struct D3D12PipelineStateRecord
         {
             Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
-            RHIVertexInputState                         _vertexInput; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIVertexBufferBindings::bindForDraw` 에 넘긴다)
+            RHIVertexLayout                             _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
         };
 
         // 셰이더 가시 힙 하나는 [레지스트리 구간 | 온라인 블록 구간]으로 나뉜다. 레지스트리는 bindless 인덱스가 곧 힙 슬롯이다(텍스처 배열이 힙 시작을
@@ -846,7 +845,7 @@ namespace sw
         /// @brief 텍스처 핸들에서 마지막 전송(업로드 또는 읽기 원본)의 시리얼을 찾는 표를 지킵니다(DX12 텍스처는 레코드 없이 리소스 포인터만 들고 있다).
         mutex _textureTransferMutex;
         /// @brief 텍스처 핸들에서 마지막 전송의 시리얼을 찾는 표입니다. `_textureTransferMutex` 가 지킵니다.
-        unordered_map<RHITextureHandle, RHITextureTransferMarks> _mapTextureTransferMarks SW_GUARDED_BY( _textureTransferMutex );
+        unordered_map<RHITextureHandle, RHITextureUploadSerials> _mapTextureTransferMarks SW_GUARDED_BY( _textureTransferMutex );
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
 

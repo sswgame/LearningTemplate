@@ -22,7 +22,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
+#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -48,10 +48,9 @@ namespace sw
      */
     struct OpenGLRecordingState
     {
-        RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 PSO 가 읽는 것만 VAO 에 건다)
+        RHIGeometryBindings _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
         /// @brief 지금 텍스처가 바인딩된 유닛의 비트마스크(비트 i는 유닛 i)입니다. beginRenderPass 가 이 유닛들만 해제합니다.
-        uint32                _boundTextureUnitMask{ 0 };
-        RHIIndexBufferBinding _indexBuffer; ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
+        uint32 _boundTextureUnitMask{ 0 };
 
         RHIPipelineStateHandle _boundGraphicsPSO{ 0 };
         RHIPipelineStateHandle _boundComputePSO{ 0 }; ///< setComputePipelineState 가 마지막으로 설정한 컴퓨트 PSO. dispatchCompute 가 이 프로그램을 쓴다.
@@ -391,7 +390,7 @@ namespace sw
             uint32              _arraySize{ 1 };      ///< 면 수(배열 원소, 큐브 면)
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            RHITextureTransferMarks _transferMarks;
+            RHITextureUploadSerials _uploadSerials;
             uint8                   _bDepthStencil : 1;
             uint8                   _bUAV          : 1;
             uint8                   _reserved      : 6;
@@ -463,7 +462,7 @@ namespace sw
             uint8                _bEnableBlend        : 1;
             uint8                _bPremultipliedAlpha : 1; ///< 블렌드 색 원본 계수가 One 이다(아니면 SrcAlpha 이다).
             uint8                _reserved            : 4;
-            RHIVertexInputState  _vertexInput; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIVertexBufferBindings::bindForDraw` 에 넘긴다)
+            RHIVertexLayout      _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
         };
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)입니다. 생성, 바인딩, 프레젠트, VSync 를 모두 여기가 압니다. */

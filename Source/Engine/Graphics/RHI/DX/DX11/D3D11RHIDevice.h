@@ -23,7 +23,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
+#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingBudget.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -62,10 +62,9 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Buffer> _rootConstantCb;
         uint32                               _arrRootConstantShadow[shaderslot::kRootConstantDwords]{};
 
-        RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 PSO 가 읽는 것만 건다)
-        RHIIndexBufferBinding   _indexBuffer;   ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
-        RHIPipelineStateHandle  _activeGraphicsPSO{ 0 };
-        RHIPipelineStateHandle  _activeComputePSO{ 0 }; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
+        RHIGeometryBindings    _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
+        RHIPipelineStateHandle _activeGraphicsPSO{ 0 };
+        RHIPipelineStateHandle _activeComputePSO{ 0 }; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /**
          * @brief CS UAV 슬롯마다 지금 바인딩되어 있는 버퍼입니다(0이면 없음).
          * @details D3D11 은 같은 리소스를 출력(UAV)과 입력(SRV)에 동시에 바인딩할 수 없다. UAV 를 해제하지 않으면
@@ -387,7 +386,7 @@ namespace sw
             uint32                                                 _arraySize; ///< 면 수
             RHITextureDimension                                    _dimension;
             /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            RHITextureTransferMarks _transferMarks;
+            RHITextureUploadSerials _uploadSerials;
             uint8                   _bDepth   : 1;
             uint8                   _reserved : 7;
             /** @brief 빈 텍스처 레코드로 만듭니다. */
@@ -492,8 +491,8 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11VertexShader>      _vs;
             Microsoft::WRL::ComPtr<ID3D11PixelShader>       _ps;
             Microsoft::WRL::ComPtr<ID3D11ComputeShader>     _cs;
-            Microsoft::WRL::ComPtr<ID3D11InputLayout>       _inputLayout; ///< 셰이더가 읽는 속성만 담는다. 정점 입력이 없는 셰이더는 비어 있다(nullptr)
-            RHIVertexInputState                             _vertexInput; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIVertexBufferBindings::bindForDraw` 에 넘긴다)
+            Microsoft::WRL::ComPtr<ID3D11InputLayout>       _inputLayout;  ///< 셰이더가 읽는 속성만 담는다. 정점 입력이 없는 셰이더는 비어 있다(nullptr)
+            RHIVertexLayout                                 _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
             Microsoft::WRL::ComPtr<ID3D11RasterizerState>   _rasterizerState;
             Microsoft::WRL::ComPtr<ID3D11BlendState>        _blendState;
             Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;

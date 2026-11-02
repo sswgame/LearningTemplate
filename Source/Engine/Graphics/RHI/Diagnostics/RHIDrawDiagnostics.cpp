@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
-#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
+#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 
 namespace sw
 {
@@ -51,7 +51,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferDestroyed", "%# indexed draw skipped: its index buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
     }
 
-    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, const RHIVertexInputState& input, const RHIVertexBufferBindings& bindings )
+    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, const RHIVertexLayout& input, const RHIGeometryBindings& bindings )
     {
         const uint32              vertexSlotMask   = input._slotMask;
         const RHIMeshVertexFormat meshVertexFormat = input._format;
@@ -59,8 +59,8 @@ namespace sw
         {
             if ( ( vertexSlotMask & ( 1u << slot ) ) == 0 )
                 continue;
-            const RHIVertexBufferBinding& binding        = bindings._arrSlot[slot];
-            const uint32                  expectedStride = constant::render::getVertexSlotStride( meshVertexFormat, slot );
+            const RHIBufferBinding& binding        = bindings._arrVertexSlot[slot];
+            const uint32            expectedStride = constant::render::getVertexSlotStride( meshVertexFormat, slot );
             if ( binding._buffer != 0 && binding._stride == expectedStride )
                 continue;
             const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );

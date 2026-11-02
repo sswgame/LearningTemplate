@@ -191,8 +191,8 @@ namespace sw
     {
         // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
         const D3D12RHIDevice::D3D12PipelineStateRecord* pPSORecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
-        const RHIVertexInputState                       input      = pPSORecord != nullptr ? pPSORecord->_vertexInput : RHIVertexInputState{}; // 없는 PSO 는 bindActiveGraphicsPSO 가 멈췄다
-        return _pState->_vertexBuffers.bindForDraw( "DX12", input, [this]( uint32 slot, const RHIVertexBufferBinding& binding )
+        const RHIVertexLayout                           input      = pPSORecord != nullptr ? pPSORecord->_vertexLayout : RHIVertexLayout{}; // 없는 PSO 는 bindActiveGraphicsPSO 가 멈췄다
+        return _pState->_geometry.bindVertexBuffersForDraw( "DX12", input, [this]( uint32 slot, const RHIBufferBinding& binding )
         {
             ID3D12Resource* const pVb = _pDevice->resolveBuffer( binding._buffer );
             if ( pVb == nullptr )
@@ -208,7 +208,7 @@ namespace sw
 
     bool D3D12RHICommandContext::bindIndexBufferForDraw()
     {
-        return _pState->_indexBuffer.bindForDraw( "DX12", [this]( const RHIIndexBufferBinding& binding )
+        return _pState->_geometry.bindIndexBufferForDraw( "DX12", [this]( const RHIBufferBinding& binding )
         {
             ID3D12Resource* const pIb = _pDevice->resolveBuffer( binding._buffer );
             if ( pIb == nullptr )
@@ -483,7 +483,7 @@ namespace sw
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
+        _pState->_geometry.setVertexBuffer( slot, buffer, stride, offset );
     }
 
     bool D3D12RHICommandContext::bindActiveGraphicsPSO()
@@ -760,7 +760,7 @@ namespace sw
         _pState->_activeGraphicsPSO = pso;
         // PSO 가 바뀌면 그래픽스 슬롯 상태와 정점 버퍼를 비운다. 이전 패스의 t 슬롯 · 스트림이 다음 드로우로 새지 않게 한다(Vulkan setPipelineState 와 같다).
         _pState->_arrSlotState[0] = D3D12SlotTableState{};
-        _pState->_vertexBuffers.clear();
+        _pState->_geometry.clearVertexBuffers();
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
@@ -912,7 +912,7 @@ namespace sw
 
     void D3D12RHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pState->_indexBuffer.set( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw)
+        _pState->_geometry.setIndexBuffer( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw)
     }
 
     void D3D12RHICommandContext::uavBarrier( RHIBufferHandle buffer )

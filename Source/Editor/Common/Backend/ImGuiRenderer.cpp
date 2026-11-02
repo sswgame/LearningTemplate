@@ -266,7 +266,7 @@ namespace sw::editor
         _listApplyingOp.clear();
 
         // 2) 칸의 bindless 번호 — 패스 기록 밖(present 훅)이라 등록할 수 있다. 패널이 넘긴 텍스처는 주인이 첫 업로드를 끝내고 내보낸 것이라 받아 준다(뒤의 구간 갱신은 막지 않는다 —
-        //    `RHITextureTransferMarks`). 이 렌더러가 만든 텍스처는 연산을 적용할 때 등록했다.
+        //    `RHITextureUploadSerials`). 이 렌더러가 만든 텍스처는 연산을 적용할 때 등록했다.
         {
             ScopedLock<mutex> lock{ _textureMutex };
             _listFrameSRV.resize( _listTextureSlot.size() );

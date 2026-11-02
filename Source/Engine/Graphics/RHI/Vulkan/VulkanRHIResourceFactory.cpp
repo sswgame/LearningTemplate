@@ -65,22 +65,22 @@ namespace sw
         }
 
         /** @brief 정점 속성 형식을 VkFormat 으로 옮깁니다. `default:` 를 두지 않는다 — 형식을 더하면 `-Werror=switch` 가 여기를 가리킨다. */
-        VkFormat toVkVertexFormat( RHIVertexElementFormat format )
+        VkFormat toVkVertexFormat( RHIVertexAttributeFormat format )
         {
             switch ( format )
             {
-                case RHIVertexElementFormat::Float2:
+                case RHIVertexAttributeFormat::Float2:
                     return VK_FORMAT_R32G32_SFLOAT;
-                case RHIVertexElementFormat::Float3:
+                case RHIVertexAttributeFormat::Float3:
                     return VK_FORMAT_R32G32B32_SFLOAT;
-                case RHIVertexElementFormat::Float4:
+                case RHIVertexAttributeFormat::Float4:
                     return VK_FORMAT_R32G32B32A32_SFLOAT;
-                case RHIVertexElementFormat::Uint1:
+                case RHIVertexAttributeFormat::Uint1:
                     return VK_FORMAT_R32_UINT;
-                case RHIVertexElementFormat::Snorm8x4:
+                case RHIVertexAttributeFormat::Snorm8x4:
                     return VK_FORMAT_R8G8B8A8_SNORM;
             }
-            SW_LOG_ASSERT( false, "Unsupported RHIVertexElementFormat: %#", static_cast<uint32>( format ) );
+            SW_LOG_ASSERT( false, "Unsupported RHIVertexAttributeFormat: %#", static_cast<uint32>( format ) );
             return VK_FORMAT_UNDEFINED;
         }
     } // namespace
@@ -735,7 +735,7 @@ namespace sw
             ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
-        pRecord->_transferMarks.recordWrite( serial );
+        pRecord->_uploadSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -819,7 +819,7 @@ namespace sw
             ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
-        pRecord->_transferMarks.recordWrite( serial );
+        pRecord->_uploadSerials.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -1073,7 +1073,7 @@ namespace sw
 
         // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 끝나면 그때의 다음 프레임 펜스까지 한 번 더 미뤄 이 텍스처를 그린 프레임도 지나게 한다.
         // 지금은 전송과 프레임이 같은 큐라 다음 프레임 펜스도 앞서 낸 전송을 덮지만, 해제가 그 큐 공유에 기대지 않게 전송 완료를 직접 본다(DX12 와 같은 규칙).
-        const uint64 lastWriteSerial     = owned._transferMarks._lastSerial.load();
+        const uint64 lastWriteSerial     = owned._uploadSerials._lastSerial.load();
         const uint64 lastReadSerial      = owned._lastReadbackSerial.load();
         const uint64 lastSerial          = lastWriteSerial > lastReadSerial ? lastWriteSerial : lastReadSerial;
         const bool   bUnfinishedTransfer = lastSerial != 0 && _pDevice->_transferSerials.isComplete( lastSerial ) == false;
@@ -1120,8 +1120,8 @@ namespace sw
 
         VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
         // 등록마다 새 번호다(DX11 · DX12 · GL 과 같다). 같은 텍스처의 번호를 나눠 주면 한쪽의 해제(에디터의 ImGui 등록)가 다른 쪽(엔진)이 쓰는 번호를 놓는다.
-        // 첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — RHITextureTransferMarks). 뒤의 구간 갱신은 막지 않는다.
-        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._transferMarks, texture ) == false )
+        // 첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — RHITextureUploadSerials). 뒤의 구간 갱신은 막지 않는다.
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._uploadSerials, texture ) == false )
             return kInvalidDescriptorIndex;
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -1507,8 +1507,8 @@ namespace sw
         }
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
-        record._pipeline    = newPipeline;
-        record._vertexInput = RHIVertexInputState{ vertexSlotMask, desc._meshVertexFormat };
+        record._pipeline     = newPipeline;
+        record._vertexLayout = RHIVertexLayout{ vertexSlotMask, desc._meshVertexFormat };
         return _pDevice->_pipelineStates.insert( record );
     }
 

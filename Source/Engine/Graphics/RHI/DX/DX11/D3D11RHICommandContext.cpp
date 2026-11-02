@@ -87,7 +87,7 @@ namespace sw
     {
         // 등록되지 않은 핸들도 기록한다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 bindGraphicsPipelineForDraw 에서 멈춘다.
         _pState->_activeGraphicsPSO = pso;
-        _pState->_vertexBuffers.clear(); // 정점 버퍼는 PSO 뒤에 건다(IRHICommandList::setPipelineState 계약)
+        _pState->_geometry.clearVertexBuffers(); // 정점 버퍼는 PSO 뒤에 건다(IRHICommandList::setPipelineState 계약)
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || _pContext == nullptr )
             return;
@@ -227,7 +227,7 @@ namespace sw
 
     void D3D11RHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pState->_indexBuffer.set( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw — 네 백엔드가 같다)
+        _pState->_geometry.setIndexBuffer( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw — 네 백엔드가 같다)
     }
 
     void D3D11RHICommandContext::uavBarrier( RHIBufferHandle buffer )
@@ -324,7 +324,7 @@ namespace sw
 
     void D3D11RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
+        _pState->_geometry.setVertexBuffer( slot, buffer, stride, offset );
     }
 
     bool D3D11RHICommandContext::bindGraphicsPipelineForDraw()
@@ -347,7 +347,7 @@ namespace sw
 
         // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 버퍼가 부서졌으면(세대가 달라 풀리지 않는다)
         // 드로우를 버린다 — IASetVertexBuffers 를 건너뛰면 직전 드로우의 버퍼로 그린다.
-        const bool bBound = _pState->_vertexBuffers.bindForDraw( "DX11", pPSO->_vertexInput, [this]( uint32 slot, const RHIVertexBufferBinding& binding )
+        const bool bBound = _pState->_geometry.bindVertexBuffersForDraw( "DX11", pPSO->_vertexLayout, [this]( uint32 slot, const RHIBufferBinding& binding )
         {
             ID3D11Buffer* const pVb = _pDevice->resolveBuffer( binding._buffer );
             if ( pVb == nullptr )
@@ -598,7 +598,7 @@ namespace sw
 
     bool D3D11RHICommandContext::bindIndexBufferForDraw()
     {
-        return _pState->_indexBuffer.bindForDraw( "DX11", [this]( const RHIIndexBufferBinding& binding )
+        return _pState->_geometry.bindIndexBufferForDraw( "DX11", [this]( const RHIBufferBinding& binding )
         {
             ID3D11Buffer* const pIb = _pDevice->resolveBuffer( binding._buffer );
             if ( pIb == nullptr )

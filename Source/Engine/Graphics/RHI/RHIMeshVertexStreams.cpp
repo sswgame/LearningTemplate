@@ -35,14 +35,14 @@ namespace sw
         {
             const RHIVertex& vertex = pSource[vertexIndex];
             Memory::copy( pOutPosition + static_cast<size_t>( vertexIndex ) * constant::render::kMeshPositionStride, vertex._arrPosition, constant::render::kMeshPositionStride );
-            if ( format == RHIMeshVertexFormat::Full )
+            if ( format == RHIMeshVertexFormat::HighPrecision )
             {
-                RHIFullMeshAttributes attributes{};
+                RHIHighPrecisionMeshAttributes attributes{};
                 Memory::copy( attributes._arrNormal, vertex._arrNormal, sizeof( attributes._arrNormal ) );
                 Memory::copy( attributes._arrUv, vertex._arrUv, sizeof( attributes._arrUv ) );
                 Memory::copy( attributes._arrColor, vertex._arrColor, sizeof( attributes._arrColor ) );
                 Memory::copy( attributes._arrTangent, vertex._arrTangent, sizeof( attributes._arrTangent ) );
-                Memory::copy( pOutAttribute + static_cast<size_t>( vertexIndex ) * sizeof( RHIFullMeshAttributes ), &attributes, sizeof( attributes ) );
+                Memory::copy( pOutAttribute + static_cast<size_t>( vertexIndex ) * sizeof( RHIHighPrecisionMeshAttributes ), &attributes, sizeof( attributes ) );
                 continue;
             }
             RHIPackedMeshAttributes attributes{};

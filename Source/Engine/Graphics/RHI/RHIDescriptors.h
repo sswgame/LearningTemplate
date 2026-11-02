@@ -56,8 +56,8 @@ namespace sw
      */
     enum class RHIMeshVertexFormat : uint8
     {
-        Packed, ///< 노멀 · 탄젠트 snorm8x4, UV float2, 색 float4(32 B). 노멀 · 탄젠트가 단위 벡터인 일반 메시
-        Full,   ///< 노멀 float3, UV float2, 색 float4, 탄젠트 float4(52 B). 색 · 탄젠트 칸에 단위 벡터가 아닌 데이터를 싣는 메시(지형 형태 변환)
+        Packed,        ///< 노멀 · 탄젠트 snorm8x4, UV float2, 색 float4(32 B). 노멀 · 탄젠트가 단위 벡터인 일반 메시
+        HighPrecision, ///< 노멀 float3, UV float2, 색 float4, 탄젠트 float4(52 B). 색 · 탄젠트 칸에 단위 벡터가 아닌 데이터를 싣는 메시(지형 형태 변환) — 언리얼의 고정밀 탄젠트 옵션 자리
         Count,
     };
 
@@ -71,15 +71,15 @@ namespace sw
     };
     static_assert( sizeof( RHIPackedMeshAttributes ) == 32, "packed mesh attributes are 32 bytes (imported by four backends' layouts)" );
 
-    /** @brief `RHIMeshVertexFormat::Full` 의 속성 스트림 원소입니다(슬롯 2). `RHIVertex` 에서 위치를 뺀 모양이다. */
-    struct RHIFullMeshAttributes
+    /** @brief `RHIMeshVertexFormat::HighPrecision` 의 속성 스트림 원소입니다(슬롯 2). `RHIVertex` 에서 위치를 뺀 모양이다. */
+    struct RHIHighPrecisionMeshAttributes
     {
         float32 _arrNormal[3];
         float32 _arrUv[2];
         float32 _arrColor[4];
         float32 _arrTangent[4];
     };
-    static_assert( sizeof( RHIFullMeshAttributes ) == 52, "full mesh attributes are 52 bytes" );
+    static_assert( sizeof( RHIHighPrecisionMeshAttributes ) == 52, "full mesh attributes are 52 bytes" );
 } // namespace sw
 
 namespace sw
@@ -93,7 +93,7 @@ namespace sw
      *       DX 는 시맨틱 이름으로 연결하므로 `_pSemanticName` 이 그 역할을 한다.
      */
     /** @brief 정점 속성 하나의 메모리 형식입니다. 백엔드가 자기 포맷 enum 으로 옮긴다(DXGI · VkFormat · GL 크기 · 형 · 정규화). */
-    enum class RHIVertexElementFormat : uint8
+    enum class RHIVertexAttributeFormat : uint8
     {
         Float2,
         Float3,
@@ -104,12 +104,12 @@ namespace sw
 
     struct RHIVertexAttribute
     {
-        const utf8*            _pSemanticName;            ///< DX 시맨틱 이름. HLSL 의 `: POSITION` 등과 같아야 한다.
-        uint32                 _location;                 ///< Vulkan location / GL 정점 속성 번호(셰이더의 `SW_VK_LOCATION`).
-        RHIVertexElementFormat _format;                   ///< 메모리 형식
-        uint32                 _byteOffset;               ///< 그 슬롯 원소 안의 바이트 오프셋
-        uint32                 _inputSlot{ 0 };           ///< 정점 버퍼 슬롯(`constant::render::kMeshPositionSlot` · `kInstanceSlotStreamSlot` · `kMeshAttributeSlot`)
-        uint8                  _bPerInstance{ SW_FALSE }; ///< 인스턴스마다 한 원소를 읽는다 (step rate 1).
+        const utf8*              _pSemanticName;            ///< DX 시맨틱 이름. HLSL 의 `: POSITION` 등과 같아야 한다.
+        uint32                   _location;                 ///< Vulkan location / GL 정점 속성 번호(셰이더의 `SW_VK_LOCATION`).
+        RHIVertexAttributeFormat _format;                   ///< 메모리 형식
+        uint32                   _byteOffset;               ///< 그 슬롯 원소 안의 바이트 오프셋
+        uint32                   _inputSlot{ 0 };           ///< 정점 버퍼 슬롯(`constant::render::kMeshPositionSlot` · `kInstanceSlotStreamSlot` · `kMeshAttributeSlot`)
+        uint8                    _bPerInstance{ SW_FALSE }; ///< 인스턴스마다 한 원소를 읽는다 (step rate 1).
     };
 } // namespace sw
 
@@ -186,34 +186,34 @@ namespace sw
          * @note 오프셋은 손으로 적지 않는다. `SW_OFFSET_OF` 를 쓰므로 구조체를 바꾸면 자동으로 따라온다.
          */
         inline constexpr RHIVertexAttribute arrPackedMeshVertexAttribute[] = {
-            { "POSITION", 0, RHIVertexElementFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
-            { "NORMAL", 1, RHIVertexElementFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
-            { "TEXCOORD", 2, RHIVertexElementFormat::Float2, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
-            { "COLOR", 3, RHIVertexElementFormat::Float4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
-            { "TANGENT", 4, RHIVertexElementFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
-            { "SW_INSTANCESLOT", 5, RHIVertexElementFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
+            { "POSITION", 0, RHIVertexAttributeFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
+            { "NORMAL", 1, RHIVertexAttributeFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
+            { "TEXCOORD", 2, RHIVertexAttributeFormat::Float2, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
+            { "COLOR", 3, RHIVertexAttributeFormat::Float4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
+            { "TANGENT", 4, RHIVertexAttributeFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
+            { "SW_INSTANCESLOT", 5, RHIVertexAttributeFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
         };
-        inline constexpr RHIVertexAttribute arrFullMeshVertexAttribute[] = {
-            { "POSITION", 0, RHIVertexElementFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
-            { "NORMAL", 1, RHIVertexElementFormat::Float3, SW_OFFSET_OF( RHIFullMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
-            { "TEXCOORD", 2, RHIVertexElementFormat::Float2, SW_OFFSET_OF( RHIFullMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
-            { "COLOR", 3, RHIVertexElementFormat::Float4, SW_OFFSET_OF( RHIFullMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
-            { "TANGENT", 4, RHIVertexElementFormat::Float4, SW_OFFSET_OF( RHIFullMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
-            { "SW_INSTANCESLOT", 5, RHIVertexElementFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
+        inline constexpr RHIVertexAttribute arrHighPrecisionMeshVertexAttribute[] = {
+            { "POSITION", 0, RHIVertexAttributeFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
+            { "NORMAL", 1, RHIVertexAttributeFormat::Float3, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
+            { "TEXCOORD", 2, RHIVertexAttributeFormat::Float2, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
+            { "COLOR", 3, RHIVertexAttributeFormat::Float4, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
+            { "TANGENT", 4, RHIVertexAttributeFormat::Float4, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
+            { "SW_INSTANCESLOT", 5, RHIVertexAttributeFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
         };
         /// @brief 정점 속성 수입니다(두 표가 같다). 백엔드가 배열 크기를 직접 세지 않도록 함께 둡니다.
         inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrPackedMeshVertexAttribute ) / sizeof( arrPackedMeshVertexAttribute[0] ) );
-        static_assert( kVertexAttributeCount == sizeof( arrFullMeshVertexAttribute ) / sizeof( arrFullMeshVertexAttribute[0] ), "the two mesh vertex tables must list the same attributes" );
+        static_assert( kVertexAttributeCount == sizeof( arrHighPrecisionMeshVertexAttribute ) / sizeof( arrHighPrecisionMeshVertexAttribute[0] ), "the two mesh vertex tables must list the same attributes" );
 
         /** @brief 메시 정점 형식의 속성 표입니다(`kVertexAttributeCount` 칸). */
         constexpr const RHIVertexAttribute* getMeshVertexAttributes( RHIMeshVertexFormat format )
         {
-            return format == RHIMeshVertexFormat::Full ? arrFullMeshVertexAttribute : arrPackedMeshVertexAttribute;
+            return format == RHIMeshVertexFormat::HighPrecision ? arrHighPrecisionMeshVertexAttribute : arrPackedMeshVertexAttribute;
         }
         /** @brief 메시 정점 형식의 속성 스트림 원소 크기(바이트)입니다. */
         constexpr uint32 getMeshAttributeStride( RHIMeshVertexFormat format )
         {
-            return format == RHIMeshVertexFormat::Full ? static_cast<uint32>( sizeof( RHIFullMeshAttributes ) ) : static_cast<uint32>( sizeof( RHIPackedMeshAttributes ) );
+            return format == RHIMeshVertexFormat::HighPrecision ? static_cast<uint32>( sizeof( RHIHighPrecisionMeshAttributes ) ) : static_cast<uint32>( sizeof( RHIPackedMeshAttributes ) );
         }
         /** @brief 정점 버퍼 슬롯 하나의 원소 크기(바이트)입니다. 속성 슬롯은 메시 정점 형식이 정한다. */
         constexpr uint32 getVertexSlotStride( RHIMeshVertexFormat format, uint32 slot )
@@ -225,7 +225,7 @@ namespace sw
             for ( uint32 index = 0; index < kVertexAttributeCount; ++index )
             {
                 const RHIVertexAttribute& packed = arrPackedMeshVertexAttribute[index];
-                const RHIVertexAttribute& full   = arrFullMeshVertexAttribute[index];
+                const RHIVertexAttribute& full   = arrHighPrecisionMeshVertexAttribute[index];
                 if ( packed._location != full._location || packed._inputSlot != full._inputSlot || packed._bPerInstance != full._bPerInstance || packed._location != index )
                     return false;
             }

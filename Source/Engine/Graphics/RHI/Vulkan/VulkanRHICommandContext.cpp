@@ -307,7 +307,7 @@ namespace sw
         // PSO 가 바뀌면 그래픽스 슬롯 상태와 정점 버퍼를 비운다. 이전 패스가 건 t/u 슬롯 · 스트림이 다음 드로우로 새지 않게 한다(언리얼의 파이프라인별 상태).
         _pState->_arrSlotState[0]   = VulkanSlotState{};
         _pState->_activeGraphicsPSO = pso;
-        _pState->_vertexBuffers.clear();
+        _pState->_geometry.clearVertexBuffers();
         // 등록되지 않은 핸들은 걸지 않는다. 그 뒤의 드로우가 bindActiveGraphicsPipeline 에서 멈춘다.
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord != nullptr && pRecord->_pipeline != VK_NULL_HANDLE )
@@ -619,12 +619,12 @@ namespace sw
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
+        _pState->_geometry.setVertexBuffer( slot, buffer, stride, offset );
     }
 
     void VulkanRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pState->_indexBuffer.set( buffer, indexStride, offset );
+        _pState->_geometry.setIndexBuffer( buffer, indexStride, offset );
     }
 
     void VulkanRHICommandContext::setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer )
@@ -746,8 +746,8 @@ namespace sw
         // 파이프라인이 선언한 바인딩(셰이더가 읽는 슬롯)에만 버퍼를 건다 — 정점 입력이 없는 셰이더는 바인딩이 없어 아무것도 걸지 않는다.
         // 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
-        const RHIVertexInputState                         input   = pRecord != nullptr ? pRecord->_vertexInput : RHIVertexInputState{}; // 없는 PSO 는 bindActiveGraphicsPipeline 이 멈췄다
-        return _pState->_vertexBuffers.bindForDraw( "Vulkan", input, [this, cmd]( uint32 slot, const RHIVertexBufferBinding& binding )
+        const RHIVertexLayout                             input   = pRecord != nullptr ? pRecord->_vertexLayout : RHIVertexLayout{}; // 없는 PSO 는 bindActiveGraphicsPipeline 이 멈췄다
+        return _pState->_geometry.bindVertexBuffersForDraw( "Vulkan", input, [this, cmd]( uint32 slot, const RHIBufferBinding& binding )
         {
             const VulkanRHIDevice::VulkanBufferRecord* pBuffer = _pDevice->resolveAllocatedBuffer( binding._buffer );
             if ( pBuffer == nullptr || pBuffer->_buffer == VK_NULL_HANDLE )
@@ -925,7 +925,7 @@ namespace sw
         // 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸을 때 정의되지 않은 값을 읽는다.
         if ( bindMeshVertexBufferForDraw() == false )
             return false;
-        return _pState->_indexBuffer.bindForDraw( "Vulkan", [this, cmd]( const RHIIndexBufferBinding& binding )
+        return _pState->_geometry.bindIndexBufferForDraw( "Vulkan", [this, cmd]( const RHIBufferBinding& binding )
         {
             const VulkanRHIDevice::VulkanBufferRecord* pIb = _pDevice->resolveAllocatedBuffer( binding._buffer );
             if ( pIb == nullptr || pIb->_buffer == VK_NULL_HANDLE )

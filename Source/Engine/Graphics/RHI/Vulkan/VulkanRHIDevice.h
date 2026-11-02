@@ -14,7 +14,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
+#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
@@ -109,13 +109,12 @@ namespace sw
         RHIPipelineStateHandle _activeGraphicsPSO;
         RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
 
-        RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 파이프라인이 선언한 바인딩만 건다)
+        RHIGeometryBindings _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
         /// @brief 이 스트림에 렌더 패스가 열려 있는지 여부입니다.
         uint8 _bRenderPassActive : 1;
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
         uint8                  _bTextureSetBound : 1;
         [[maybe_unused]] uint8 _reserved         : 6;
-        RHIIndexBufferBinding  _indexBuffer; ///< setIndexBuffer 로 건 인덱스 버퍼(인덱스 드로우 때 건다 — RHIIndexBufferBinding::bindForDraw)
 
         /// @brief 바인드 포인트별 슬롯 세트 상태입니다([0] 그래픽스, [1] 컴퓨트). 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않습니다.
         VulkanSlotState _arrSlotState[2];
@@ -124,7 +123,7 @@ namespace sw
         VulkanRecordingState()
             : _activeGraphicsPSO{ 0 }
             , _activeComputePSO{ 0 }
-            , _vertexBuffers{}
+            , _geometry{}
             , _bRenderPassActive{ SW_FALSE }
             , _bTextureSetBound{ SW_FALSE }
             , _reserved{ 0 }
@@ -476,7 +475,7 @@ namespace sw
             uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            RHITextureTransferMarks _transferMarks;
+            RHITextureUploadSerials _uploadSerials;
             /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
             atomic<uint64> _lastReadbackSerial{ 0 };
             uint8          _bRenderTarget : 1;
@@ -507,8 +506,8 @@ namespace sw
         /// @brief VkPipeline 과 레이아웃입니다.
         struct VulkanPipelineStateRecord
         {
-            VkPipeline          _pipeline{ nullptr };
-            RHIVertexInputState _vertexInput; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIVertexBufferBindings::bindForDraw` 에 넘긴다)
+            VkPipeline      _pipeline{ nullptr };
+            RHIVertexLayout _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
         };
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 을 반환합니다. */

@@ -459,7 +459,7 @@ namespace sw
             context->CopySubresourceRegion( record._texture.Get(), firstDestinationSubresource + mip, destinationX, destinationY, 0, staging.getTexture(), mip, nullptr );
         }
         const uint64 serial = endTransfer( context, std::move( query ), std::move( staging ) );
-        record._transferMarks.recordWrite( serial );
+        record._uploadSerials.recordWrite( serial );
         return _transferSerials.makeAccepted( serial );
     }
 
@@ -1229,16 +1229,14 @@ namespace sw
 
     void D3D11RHIDevice::forgetBufferInRecordingStates( RHIBufferHandle buffer )
     {
-        _recordingState._vertexBuffers.forget( buffer );
-        _recordingState._indexBuffer.forget( buffer );
+        _recordingState._geometry.forget( buffer );
 
         ScopedLock<mutex> lock{ _liveCmdListMutex };
         for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
             if ( pList == nullptr )
                 continue;
-            pList->getRecordingState()._vertexBuffers.forget( buffer );
-            pList->getRecordingState()._indexBuffer.forget( buffer );
+            pList->getRecordingState()._geometry.forget( buffer );
         }
     }
 

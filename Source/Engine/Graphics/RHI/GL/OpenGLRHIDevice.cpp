@@ -727,8 +727,7 @@ namespace sw
                 name = 0;
             }
         } );
-        _recordingState._vertexBuffers.clear();
-        _recordingState._indexBuffer = RHIIndexBufferBinding{};
+        _recordingState._geometry = RHIGeometryBindings{};
         _listRegisteredBindless.clear();
         _listRegisteredUAV.clear();
         _listRegisteredTexture.clear();

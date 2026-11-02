@@ -793,7 +793,7 @@ namespace sw
                 neighborLOD = 0;
             }
             shared_ptr<Mesh> placeholder = Mesh::create();
-            placeholder->setVertexFormat( RHIMeshVertexFormat::Full ); // 청크 메시와 같은 형식(아래 setMesh)
+            placeholder->setVertexFormat( RHIMeshVertexFormat::HighPrecision ); // 청크 메시와 같은 형식(아래 setMesh)
             chunk._batch = sw::make_unique<MeshInstanceBatch>( std::move( placeholder ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
             chunk._batch->setOwnerComponent( this );
             chunk._batch->setWorld( 0, float4x4::makeTranslation( TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkX, chunkZ ) ) );
@@ -847,7 +847,7 @@ namespace sw
             chunk._bMeshStale     = false;
             shared_ptr<Mesh> mesh = Mesh::create();
             // 지오모프는 색 · 탄젠트 칸에 단위 벡터가 아닌 값(델타 · 청크 경계 · 지면 높이)을 싣는다 — 노멀 · 탄젠트를 줄이는 기본 형식에 넣지 않는다(언리얼 랜드스케이프 전용 vertex factory 자리).
-            mesh->setVertexFormat( RHIMeshVertexFormat::Full );
+            mesh->setVertexFormat( RHIMeshVertexFormat::HighPrecision );
             // 탄젠트(또는 지오모프 값)와 인덱스는 워커가 채웠다 — 번호는 합친 정점 안이다.
             (void)mesh->setGeometryWithTangents( std::move( listChunkVertex[index] ), std::move( listChunkTriangleIndex[index] ) );
             chunk._batch->setMesh( std::move( mesh ) );
