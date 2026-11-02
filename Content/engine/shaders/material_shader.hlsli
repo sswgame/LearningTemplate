@@ -62,6 +62,13 @@
     #define SW_MATERIAL_DEPTH_ONLY 1 // 깊이만 쓰고 픽셀이 읽을 것이 없다 — 보간 칸이 위치뿐이다
 #endif
 
+// 위치 스트림만 읽는 변형(언리얼의 위치 전용 정점 스트림) — 깊이만 쓰고 정점 변형 훅도 없으면 위치 말고 읽을 속성이 없다. DX 는 선언한 정점 입력을 모두
+// 입력 레이아웃에 넣으므로 `VertexInput` 을 받으면 쓰지 않아도 속성 스트림(슬롯 2)을 읽는다 — 그래서 입력 구조를 바꾼다. 정점 변형 훅(지형 지오모프 ·
+// 바람 · 파도)은 깊이 패스에서도 색 · UV · 탄젠트를 읽으므로 전체 입력을 받는다(그림자가 본 패스와 같은 자리여야 한다).
+#if defined( SW_MATERIAL_DEPTH_ONLY ) && !defined( MATERIAL_VERTEX_DEFORM )
+    #define SW_MATERIAL_POSITION_ONLY 1
+#endif
+
 #if defined( SW_MATERIAL_NONE )
     #if defined( SW_MATERIAL_READ_IN_VERTEX )
         #error "SW_MATERIAL_NONE has no material to read: SW_MATERIAL_READ_IN_VERTEX is invalid"

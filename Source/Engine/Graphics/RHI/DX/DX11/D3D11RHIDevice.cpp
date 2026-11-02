@@ -1229,21 +1229,14 @@ namespace sw
 
     void D3D11RHIDevice::forgetBufferInRecordingStates( RHIBufferHandle buffer )
     {
-        if ( _recordingState._boundMeshVb == buffer )
-            _recordingState._boundMeshVb = 0;
-        if ( _recordingState._boundInstanceSlotVb == buffer )
-            _recordingState._boundInstanceSlotVb = 0;
+        _recordingState._vertexBuffers.forget( buffer );
 
         ScopedLock<mutex> lock{ _liveCmdListMutex };
         for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
             if ( pList == nullptr )
                 continue;
-            D3D11RecordingState& state = pList->getRecordingState();
-            if ( state._boundMeshVb == buffer )
-                state._boundMeshVb = 0;
-            if ( state._boundInstanceSlotVb == buffer )
-                state._boundInstanceSlotVb = 0;
+            pList->getRecordingState()._vertexBuffers.forget( buffer );
         }
     }
 

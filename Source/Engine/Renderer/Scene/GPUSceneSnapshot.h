@@ -90,8 +90,9 @@ namespace sw
     /// @brief 같은 메시, 머티리얼, 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
     struct GPUMeshBatch
     {
-        shared_ptr<Mesh> _mesh; ///< **소유권을 함께 싣는다.** RT 가 upload() 에서 이 메시를 역참조한다.
-        RHIBufferHandle  _vertexBuffer{ 0 };
+        shared_ptr<Mesh> _mesh;                 ///< **소유권을 함께 싣는다.** RT 가 upload() 에서 이 메시를 역참조한다.
+        RHIBufferHandle  _vertexBuffer{ 0 };    ///< [위치 구간][속성 구간] 정점 버퍼(RHIMeshVertexStreams) — 형식은 `_mesh->getVertexFormat()`
+        uint32           _attributeOffset{ 0 }; ///< `_vertexBuffer` 에서 속성 구간이 시작하는 바이트(슬롯 2 를 여기서 건다)
         RHIBufferHandle  _indexBuffer{ 0 };
         uint32           _indexCount{ 0 }; ///< 이 배치가 그리는 인덱스 수(구간 · LOD 단계, 아니면 LOD 0 전체)
         /**

@@ -618,16 +618,7 @@ namespace sw
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::render::arrVertexAttribute 의 SW_INSTANCESLOT.
-        if ( slot == constant::render::kInstanceSlotStreamSlot )
-        {
-            _pState->_boundInstanceSlotVb     = buffer;
-            _pState->_boundInstanceSlotOffset = offset;
-            return;
-        }
-        _pState->_boundMeshVb     = buffer;
-        _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
-        _pState->_boundMeshOffset = offset;
+        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
     }
 
     void VulkanRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
@@ -757,25 +748,23 @@ namespace sw
         // 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         const uint32                                      slotMask = pRecord != nullptr ? pRecord->_vertexSlotMask : 0u; // 없는 PSO 는 bindActiveGraphicsPipeline 이 멈췄다
-        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "Vulkan", slotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+        const RHIMeshVertexFormat                         format   = pRecord != nullptr ? pRecord->_meshVertexFormat : RHIMeshVertexFormat::Packed;
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "Vulkan", slotMask, format, _pState->_vertexBuffers ) == false )
             return false;
-        const auto bindSlot = [this, cmd]( uint32 slot, RHIBufferHandle buffer, uint32 offset )
+        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
         {
-            const VulkanRHIDevice::VulkanBufferRecord* pBuffer = _pDevice->resolveAllocatedBuffer( buffer );
+            if ( ( slotMask & ( 1u << slot ) ) == 0 )
+                continue;
+            const RHIVertexBufferBinding&              binding = _pState->_vertexBuffers._arrSlot[slot];
+            const VulkanRHIDevice::VulkanBufferRecord* pBuffer = _pDevice->resolveAllocatedBuffer( binding._buffer );
             if ( pBuffer == nullptr || pBuffer->_buffer == VK_NULL_HANDLE )
             {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "Vulkan", buffer );
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "Vulkan", binding._buffer );
                 return false;
             }
-            const VkDeviceSize vkOffset = static_cast<VkDeviceSize>( offset );
+            const VkDeviceSize vkOffset = static_cast<VkDeviceSize>( binding._offset ); // stride 는 파이프라인의 바인딩이 가진다(checkVertexSlotsBound 가 같은지 봤다)
             vkCmdBindVertexBuffers( cmd, slot, 1, &pBuffer->_buffer, &vkOffset );
-            return true;
-        };
-        if ( ( slotMask & 1u ) != 0 && bindSlot( 0, _pState->_boundMeshVb, _pState->_boundMeshOffset ) == false )
-            return false;
-        const bool bReadsStream = ( slotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0;
-        if ( bReadsStream && bindSlot( constant::render::kInstanceSlotStreamSlot, _pState->_boundInstanceSlotVb, _pState->_boundInstanceSlotOffset ) == false )
-            return false;
+        }
         return true;
     }
 

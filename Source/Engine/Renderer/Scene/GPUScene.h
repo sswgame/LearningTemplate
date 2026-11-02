@@ -242,8 +242,6 @@ namespace sw
         RHIDescriptorIndex getBatchInfoSRV() const { return _batchInfo._srv; }
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
-        /** @brief 씬 메시 정점 풀(RT 소유)을 반환합니다. */
-        const GPUMeshVertexPool& getVertexPool() const { return _vertexPool; }
         /** @brief 인스턴스 슬롯 스트림 정점 버퍼(슬롯 1)를 반환합니다. 0이면 아직 없습니다. */
         RHIBufferHandle getInstanceSlotStream() const { return _instanceSlotStream; }
         /**
@@ -347,10 +345,10 @@ namespace sw
         vector<GPUCullViewResources> _listCullView = vector<GPUCullViewResources>( static_cast<size_t>( RenderViewType::Count ) );
         RHIStructuredBufferSlot      _batchInfo;
         /**
-         * @brief 씬 메시 정점을 모은 풀입니다(RT 소유). 배치는 이 버퍼와 자기 시작 오프셋으로 그립니다.
+         * @brief 씬 메시 정점을 모은 풀입니다(RT 소유) — 정점 형식마다 하나(속성 원소 크기가 다르다). 배치는 자기 형식의 풀 버퍼와 자기 시작 오프셋으로 그립니다.
          * @details 메시 집합이 바뀔 때만 다시 만든다. 풀에 들어가지 못한 메시는 자기 정점 버퍼로 그린다(멀티 드로우로는 묶이지 않는다).
          */
-        GPUMeshVertexPool _vertexPool;
+        GPUMeshVertexPool _arrVertexPool[static_cast<size_t>( RHIMeshVertexFormat::Count )]{ GPUMeshVertexPool{ RHIMeshVertexFormat::Packed }, GPUMeshVertexPool{ RHIMeshVertexFormat::Full } };
         /// @brief 풀에 넣을 메시 목록의 스크래치입니다. 프레임마다 할당하지 않습니다.
         vector<Mesh*> _listScratchPoolMesh;
         /// @brief setVertexPoolEnabled 의 값입니다. 0이면 풀을 비우고 배치가 자기 정점 버퍼로 그립니다.

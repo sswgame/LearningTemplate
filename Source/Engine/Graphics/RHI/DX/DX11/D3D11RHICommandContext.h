@@ -51,8 +51,6 @@ namespace sw
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
         void setScissorRect( const RHIScissorRect& rect ) override;
-        /** @brief 슬롯 1(인스턴스 슬롯 스트림)을 바인딩합니다(설정되어 있을 때만). */
-        void bindInstanceSlotStream();
 
         /**
          * @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 바인딩합니다**. 바인딩할 수 없으면 false 입니다(드로우하지 말 것).

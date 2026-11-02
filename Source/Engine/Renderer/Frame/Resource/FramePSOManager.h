@@ -147,8 +147,9 @@ namespace sw
         /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */
         struct MaterialPSORequest
         {
-            uint32 _shaderPermutation{ kInvalidShaderPermutation };
-            uint8  _bReverseCulling{ SW_FALSE };
+            uint32              _shaderPermutation{ kInvalidShaderPermutation };
+            uint8               _bReverseCulling{ SW_FALSE };
+            RHIMeshVertexFormat _vertexFormat{ RHIMeshVertexFormat::Packed }; ///< 배치 메시의 정점 형식(입력 레이아웃이 다른 변형)
         };
         /**
          * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. **내용이 다른 원소마다 하나**씩 있습니다.
@@ -213,8 +214,8 @@ namespace sw
          * @details 렌더 상태(블렌드, 뎁스, RT 포맷)는 **패스의 것을 그대로 물려받고** 셰이더만 교체한다. 예외는 컬 모드 하나다(`bReverseCulling` 이면 Back 과 Front 를 맞바꾼다).
          */
         RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
-                                                                   RenderViewMode viewMode, bool bReverseCulling, RHIPipelineStateDesc* pOutDeferredDesc );
-        /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
+                                                                   RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc );
+        /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전, 정점 형식) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
         static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
         [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
@@ -224,7 +225,7 @@ namespace sw
          * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */
         [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
-                                                     bool bReverseCulling, RenderViewMode viewMode, bool bUrgent = true );
+                                                     bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent = true );
 
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고). nullptr 이면 아무것도 만들지 않는다

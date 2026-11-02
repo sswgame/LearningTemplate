@@ -24,6 +24,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -69,18 +70,14 @@ namespace sw
         /// @brief 이 리스트가 빌린 온라인 힙 블록들입니다. 리스트가 닫힐 때 GPU 펜스 뒤에 반납합니다(releaseOnlineBlocksDeferred).
         vector<uint32> _listOnlineBlock;
         /// @brief 지금 쓰는 온라인 블록의 커서와 끝입니다(셰이더 가시 힙 인덱스). 같으면 블록이 없다는 뜻입니다.
-        uint32                 _onlineCursor;
-        uint32                 _onlineEnd;
-        RHIBufferHandle        _boundMeshVb;
-        uint32                 _boundMeshStride;
-        uint32                 _boundMeshOffset;
-        RHIBufferHandle        _boundInstanceSlotVb; ///< 슬롯 1: 인스턴스 슬롯 스트림(0이면 바인딩 안 됨)
-        uint32                 _boundInstanceSlotOffset;
-        RHIBufferHandle        _boundIndexBuffer;
-        uint32                 _boundIndexStride;
-        uint32                 _boundIndexOffset;
-        RHIPipelineStateHandle _activeGraphicsPSO;
-        RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
+        uint32                  _onlineCursor;
+        uint32                  _onlineEnd;
+        RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 PSO 가 읽는 것만 건다)
+        RHIBufferHandle         _boundIndexBuffer;
+        uint32                  _boundIndexStride;
+        uint32                  _boundIndexOffset;
+        RHIPipelineStateHandle  _activeGraphicsPSO;
+        RHIPipelineStateHandle  _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
          *  드로우가 _activeGraphicsPSO 와 같으면 다시 설정하지 않습니다. Reset() 직후에는
          *  0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 설정되지 않아 캐시가 무효입니다). */
@@ -103,11 +100,7 @@ namespace sw
             , _listOnlineBlock{}
             , _onlineCursor{ 0 }
             , _onlineEnd{ 0 }
-            , _boundMeshVb{ 0 }
-            , _boundMeshStride{ 0 }
-            , _boundMeshOffset{ 0 }
-            , _boundInstanceSlotVb{ 0 }
-            , _boundInstanceSlotOffset{ 0 }
+            , _vertexBuffers{}
             , _boundIndexBuffer{ 0 }
             , _boundIndexStride{ 4 }
             , _boundIndexOffset{ 0 }
@@ -501,7 +494,8 @@ namespace sw
         struct D3D12PipelineStateRecord
         {
             Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
-            uint32                                      _vertexSlotMask{ 0 }; ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask)
+            uint32                                      _vertexSlotMask{ 0 };                             ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask)
+            RHIMeshVertexFormat                         _meshVertexFormat{ RHIMeshVertexFormat::Packed }; ///< 입력 레이아웃을 지은 메시 정점 형식
         };
 
         // 셰이더 가시 힙 하나는 [레지스트리 구간 | 온라인 블록 구간]으로 나뉜다. 레지스트리는 bindless 인덱스가 곧 힙 슬롯이다(텍스처 배열이 힙 시작을

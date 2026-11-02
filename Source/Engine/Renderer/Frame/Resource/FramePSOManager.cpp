@@ -17,6 +17,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -590,7 +591,8 @@ namespace sw
         // 칸에 옮겨 그리는 PSO — 전체 화면 블릿 셰이더(쿠킹되는 Present 기본 셰이더)를 아틀라스 포맷으로. 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다
         // (입자 PSO 와 같은 방식 — 디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
         const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get();
-        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "CKAT" ) ), RenderViewMode::Lit, false );
+        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "CKAT" ) ), RenderViewMode::Lit, false,
+                                                                   RHIMeshVertexFormat::Packed );
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
             // 셰이더는 셋업이 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
@@ -737,8 +739,8 @@ namespace sw
     }
 
     RenderPSOCache::MaterialPSOEntry FramePSOManager::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,
-                                                                                const GPUShaderPermutation* pPermutation,
-                                                                                RenderViewMode viewMode, bool bReverseCulling, RHIPipelineStateDesc* pOutDeferredDesc )
+                                                                                const GPUShaderPermutation* pPermutation, RenderViewMode viewMode, bool bReverseCulling,
+                                                                                RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc )
     {
         if ( passPSO == 0 || _pDevice == nullptr )
             return RenderPSOCache::MaterialPSOEntry::failed();
@@ -801,6 +803,13 @@ namespace sw
                     bChanged = true;
                 }
             }
+        }
+
+        // 메시 정점 형식이 다르면 입력 레이아웃만 다른 PSO 다(지형의 Full 형식).
+        if ( desc._meshVertexFormat != vertexFormat )
+        {
+            desc._meshVertexFormat = vertexFormat;
+            bChanged               = true;
         }
 
         // 뷰 모드는 머티리얼 퍼뮤테이션 **뒤에** 적용한다. 순서가 반대면 머티리얼이 셰이더 경로를
@@ -903,7 +912,7 @@ namespace sw
                     {
                         if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
                             continue;
-                        if ( ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), false ) )
+                        if ( ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), RHIMeshVertexFormat::Packed, false ) )
                             bCreatedVariant = true;
                     }
                 }
@@ -921,17 +930,18 @@ namespace sw
         outListRequest.clear();
         for ( const GPUMeshBatch& batch : listBatch )
         {
-            bool bFound{ false };
+            const RHIMeshVertexFormat batchFormat = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            bool                      bFound{ false };
             for ( const MaterialPSORequest& existing : outListRequest )
             {
-                if ( existing._shaderPermutation == batch._shaderPermutation && existing._bReverseCulling == batch._bReverseCulling )
+                if ( existing._shaderPermutation == batch._shaderPermutation && existing._bReverseCulling == batch._bReverseCulling && existing._vertexFormat == batchFormat )
                 {
                     bFound = true;
                     break;
                 }
             }
             if ( bFound == false )
-                outListRequest.push_back( MaterialPSORequest{ batch._shaderPermutation, batch._bReverseCulling } );
+                outListRequest.push_back( MaterialPSORequest{ batch._shaderPermutation, batch._bReverseCulling, batchFormat } );
         }
     }
 
@@ -954,29 +964,29 @@ namespace sw
                 // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
                 // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
                 const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && FrameRendererUtil::appliesViewMode( passType );
-                const bool bNeedsVariant    = bAppliesViewMode || bReverseCulling;
-                if ( bNeedsVariant && ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode ) )
+                const bool bNeedsVariant    = bAppliesViewMode || bReverseCulling || request._vertexFormat != RHIMeshVertexFormat::Packed;
+                if ( bNeedsVariant && ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode, request._vertexFormat ) )
                     bCreatedVariant = true;
                 continue;
             }
             if ( pRequestPermutation == nullptr )
                 continue;
-            if ( ensureMaterialPSOVariant( passPSO, passType, pRequestPermutation, pRequestPermutation->_hash, bReverseCulling, viewMode ) )
+            if ( ensureMaterialPSOVariant( passPSO, passType, pRequestPermutation, pRequestPermutation->_hash, bReverseCulling, viewMode, request._vertexFormat ) )
                 bCreatedVariant = true;
         }
         return bCreatedVariant;
     }
 
     bool FramePSOManager::ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
-                                                    uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, bool bUrgent )
+                                                    uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent )
     {
         // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 셰이더 컴파일이 낄 수 있는 변형은 desc 만 정해 빌더 줄에 넣고(렌더 스레드의 임계 경로에서 뺀다),
         // 결과는 `pumpMaterialPSOBuilds` 가 기록 전에 합친다. 드로우 경로는 `Building` 배치를 이번 프레임만 건너뛴다(`RT.PSO.pendingBatches`).
-        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
+        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling, vertexFormat );
         if ( _pCache->beginMaterialPSO( key ) == false )
             return false;
         RHIPipelineStateDesc                   deferredDesc{};
-        const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling, &deferredDesc );
+        const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling, vertexFormat, &deferredDesc );
         if ( entry._state == RenderPSOCache::MaterialPSOState::Building )
         {
             _pCache->requestMaterialPSO( _pDevice, key, std::move( deferredDesc ), bUrgent, usesAsyncMaterialPSOBuilder() );
@@ -1020,7 +1030,7 @@ namespace sw
         // 머티리얼 변형 캐시의 키 공간을 빌린다 — 퍼뮤테이션 해시 자리에 입자 셰이더 경로와 태그를 섞어 머티리얼 퍼뮤테이션과 겹치지 않게 한다.
         const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderParticle.get();
         const uint64  shaderHash = HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "VFXP" ) );
-        _particlePSOKey          = RenderPSOCache::materialPSOKey( transparentPSO, shaderHash, RenderViewMode::Lit, false );
+        _particlePSOKey          = RenderPSOCache::materialPSOKey( transparentPSO, shaderHash, RenderViewMode::Lit, false, RHIMeshVertexFormat::Packed );
         if ( _pCache->hasMaterialPSO( _particlePSOKey ) )
             return;
 
@@ -1064,15 +1074,16 @@ namespace sw
         // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOs 도 이 키를 만들지 않는다.
         // (해시 0은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0이 되더라도 같은 키로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
-        viewMode                   = getRenderViewModePipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
-        const bool bReverseCulling = ( batch._bReverseCulling != SW_FALSE );
-        const bool bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false;
+        viewMode                                  = getRenderViewModePipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
+        const bool                bReverseCulling = ( batch._bReverseCulling != SW_FALSE );
+        const RHIMeshVertexFormat vertexFormat    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+        const bool                bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false && vertexFormat == RHIMeshVertexFormat::Packed;
         if ( bDefaultPassPSO )
             return passPSO;
 
         // `Ready` 가 아닌 변형(만드는 중 · 실패 · 없음)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOs 가 기록 전에
         // 채우므로 동기 생성에서는 항상 `Ready` 나 `Failed` 이고(`Failed` 는 그때 오류를 남겼다), `Building` 은 빌더 스레드(U12)가 아직 못 끝낸 배치다.
-        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
+        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling, vertexFormat );
         if ( pOutState != nullptr )
             *pOutState = _pCache->findMaterialPSOState( key );
         return _pCache->findMaterialPSO( key );

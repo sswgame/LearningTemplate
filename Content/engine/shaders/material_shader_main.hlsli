@@ -148,16 +148,22 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 }
 #endif // SW_MATERIAL_DEPTH_ONLY
 
-MaterialInterpolants VSMain( VertexInput input, uint instanceSlot : SW_INSTANCESLOT, uint vertexID : SV_VertexID )
+#if defined( SW_MATERIAL_POSITION_ONLY )
+typedef VertexPositionInput MaterialVertexInput; // 위치 스트림만 — material_shader.hlsli 1 절
+#else
+typedef VertexInput MaterialVertexInput;
+#endif
+
+MaterialInterpolants VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), uint vertexID : SV_VertexID )
 {
     MaterialInterpolants output;
     VertexContext        context;
-    context._input    = input;
+    context._input    = toVertexInput( input );
     context._vertexID = vertexID;
     // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
     context._instance = InstanceData::load( instanceSlot );
     // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
-    context._instance.loadAnimatedVertex( vertexID, input._position, input._normal, context._localPosition, context._localNormal );
+    context._instance.loadAnimatedVertex( vertexID, context._input._position, context._input._normal, context._localPosition, context._localNormal );
     // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
     float4 worldPosition   = Transform::computeWorldPosition( context._localPosition, context._instance._world );
     context._worldPosition = worldPosition.xyz;

@@ -22,7 +22,9 @@ namespace sw
 
     /**
      * @struct RHIVertex
-     * @brief 메시 정점 하나를 나타냅니다. 위치, 노멀, UV, 색, 탄젠트를 가지며 정점 버퍼 슬롯 0 의 원소입니다.
+     * @brief CPU 쪽 메시 정점 하나입니다(임포트 · 지형 · 파괴 · 천 등 기하 처리가 쓰는 형식). 위치, 노멀, UV, 색, 탄젠트를 가집니다.
+     * @details GPU 에는 이 모양 그대로 올리지 않는다 — 올릴 때 위치 스트림과 속성 스트림으로 나누고 메시의 정점 형식(`RHIMeshVertexFormat`)으로
+     *          바꾼다(`RHIMeshVertexStreams`). 언리얼의 빌드 정점(`FStaticMeshBuildVertex`)과 GPU 정점 버퍼의 관계와 같다.
      */
     struct RHIVertex
     {
@@ -47,6 +49,37 @@ namespace sw
          */
         float32 _arrTangent[4];
     };
+
+    /**
+     * @brief GPU 메시 정점의 속성 스트림 형식입니다. 메시마다 고르고(`Mesh::setVertexFormat`), PSO 가 같은 형식으로 레이아웃을 짓는다(`RHIPipelineStateDesc::_meshVertexFormat`).
+     * @details 위치 스트림(슬롯 0, float3)은 두 형식이 같다. 언리얼이 메시 종류마다 vertex factory 로 정점 선언을 고르는 자리다.
+     */
+    enum class RHIMeshVertexFormat : uint8
+    {
+        Packed, ///< 노멀 · 탄젠트 snorm8x4, UV float2, 색 float4(32 B). 노멀 · 탄젠트가 단위 벡터인 일반 메시
+        Full,   ///< 노멀 float3, UV float2, 색 float4, 탄젠트 float4(52 B). 색 · 탄젠트 칸에 단위 벡터가 아닌 데이터를 싣는 메시(지형 형태 변환)
+        Count,
+    };
+
+    /** @brief `RHIMeshVertexFormat::Packed` 의 속성 스트림 원소입니다(슬롯 2). */
+    struct RHIPackedMeshAttributes
+    {
+        int8    _arrNormal[4];  ///< snorm8 — w 는 0
+        int8    _arrTangent[4]; ///< snorm8 — w 는 바이탄젠트 부호(±127 = ±1)
+        float32 _arrUv[2];      ///< 물이 월드 좌표를 싣는다 — half 로 줄이지 않는다
+        float32 _arrColor[4];
+    };
+    static_assert( sizeof( RHIPackedMeshAttributes ) == 32, "packed mesh attributes are 32 bytes (imported by four backends' layouts)" );
+
+    /** @brief `RHIMeshVertexFormat::Full` 의 속성 스트림 원소입니다(슬롯 2). `RHIVertex` 에서 위치를 뺀 모양이다. */
+    struct RHIFullMeshAttributes
+    {
+        float32 _arrNormal[3];
+        float32 _arrUv[2];
+        float32 _arrColor[4];
+        float32 _arrTangent[4];
+    };
+    static_assert( sizeof( RHIFullMeshAttributes ) == 52, "full mesh attributes are 52 bytes" );
 } // namespace sw
 
 namespace sw
@@ -59,15 +92,24 @@ namespace sw
      * @note `_location` 은 HLSL 선언 **순서**와 같아야 한다(Vulkan location, GL 정점 속성 번호).
      *       DX 는 시맨틱 이름으로 연결하므로 `_pSemanticName` 이 그 역할을 한다.
      */
+    /** @brief 정점 속성 하나의 메모리 형식입니다. 백엔드가 자기 포맷 enum 으로 옮긴다(DXGI · VkFormat · GL 크기 · 형 · 정규화). */
+    enum class RHIVertexElementFormat : uint8
+    {
+        Float2,
+        Float3,
+        Float4,
+        Uint1,    ///< 32비트 부호 없는 정수 하나(셰이더는 uint 로 받는다)
+        Snorm8x4, ///< 부호 있는 8비트 넷, [-1, 1] 로 정규화(셰이더는 float 로 받는다)
+    };
+
     struct RHIVertexAttribute
     {
-        const utf8* _pSemanticName;            ///< DX 시맨틱 이름. HLSL 의 `: POSITION` 등과 같아야 한다.
-        uint32      _location;                 ///< Vulkan location / GL 정점 속성 번호.
-        uint32      _componentCount;           ///< 원소 개수 (1·2·3·4). 백엔드가 자기 포맷 enum 으로 옮긴다.
-        uint32      _byteOffset;               ///< 그 슬롯 원소 안의 바이트 오프셋 (슬롯 0 은 `RHIVertex`).
-        uint32      _inputSlot{ 0 };           ///< 정점 버퍼 슬롯. 0 = 메시 정점, 1 = 인스턴스 슬롯 스트림 (`constant::render::kInstanceSlotStreamSlot`).
-        uint8       _bPerInstance{ SW_FALSE }; ///< 인스턴스마다 한 원소를 읽는다 (step rate 1).
-        uint8       _bUint{ SW_FALSE };        ///< 32비트 부호 없는 정수(R32_UINT). 아니면 float.
+        const utf8*            _pSemanticName;            ///< DX 시맨틱 이름. HLSL 의 `: POSITION` 등과 같아야 한다.
+        uint32                 _location;                 ///< Vulkan location / GL 정점 속성 번호(셰이더의 `SW_VK_LOCATION`).
+        RHIVertexElementFormat _format;                   ///< 메모리 형식
+        uint32                 _byteOffset;               ///< 그 슬롯 원소 안의 바이트 오프셋
+        uint32                 _inputSlot{ 0 };           ///< 정점 버퍼 슬롯(`constant::render::kMeshPositionSlot` · `kInstanceSlotStreamSlot` · `kMeshAttributeSlot`)
+        uint8                  _bPerInstance{ SW_FALSE }; ///< 인스턴스마다 한 원소를 읽는다 (step rate 1).
     };
 } // namespace sw
 
@@ -125,27 +167,71 @@ namespace sw
          */
         inline constexpr uint32 kInstanceSlotStreamSlot   = 1;
         inline constexpr uint32 kInstanceSlotStreamStride = static_cast<uint32>( sizeof( uint32 ) );
+        /** @brief 메시 위치 스트림(float3)의 슬롯 · 원소 크기입니다. 깊이 · 그림자 패스는 이 스트림만 읽는다(언리얼의 위치 전용 스트림). */
+        inline constexpr uint32 kMeshPositionSlot   = 0;
+        inline constexpr uint32 kMeshPositionStride = static_cast<uint32>( sizeof( float32 ) * 3u );
+        /** @brief 메시 속성 스트림(노멀 · UV · 색 · 탄젠트)의 슬롯입니다. 원소 크기는 메시 정점 형식이 정한다(`getMeshAttributeStride`). */
+        inline constexpr uint32 kMeshAttributeSlot = 2;
+        /** @brief 정점 버퍼 슬롯 수입니다(위치 · 인스턴스 슬롯 스트림 · 속성). */
+        inline constexpr uint32 kVertexBufferSlotCount = 3;
 
         /**
-         * @brief 정점 입력 레이아웃의 **기준**입니다. 네 백엔드가 이 테이블만 읽습니다.
-         * @details 순서가 곧 HLSL 의 선언 순서이고 `_location` 이다. 속성을 추가하려면 여기에 한 줄을 더하고
-         *          `RHIVertex` 멤버를 하나 추가하면 되며, 백엔드는 수정하지 않는다.
-         *          PSO 의 입력 레이아웃은 이 표에서 **그 정점 셰이더가 읽는 속성만** 골라 만든다(`RHIShaderRequest::computeConsumedVertexAttributeMask`).
+         * @brief 정점 입력 레이아웃의 **기준**입니다 — 메시 정점 형식마다 하나. 네 백엔드가 PSO 의 형식(`RHIPipelineStateDesc::_meshVertexFormat`)으로 표를 고른다.
+         * @details 두 표는 순서 · 시맨틱 · location · 슬롯이 같고 형식 · 오프셋만 다르다(아래 static_assert) — 그래서 리플렉션이 준 "읽는 속성" 마스크가
+         *          어느 표에도 같은 칸을 가리킨다. location 은 셰이더의 `SW_VK_LOCATION` 과 같다(선언 순서에 기대지 않는다).
+         *          PSO 의 입력 레이아웃은 표에서 **그 정점 셰이더가 읽는 속성만** 골라 만든다(`RHIShaderRequest::computeConsumedVertexAttributeMask`).
          *          정점을 SV_VertexID 로 만드는 셰이더(`VertexInput` 을 받지 않는다 — 풀스크린 · 캔버스 · 입자 · 에디터 UI)는 레이아웃이 비어 정점 버퍼 없이
-         *          몇 정점이든 그린다(언리얼의 빈 정점 선언 · Godot 의 빈 정점 포맷). 읽는 슬롯에 버퍼가 없는 드로우는 대체 버퍼로 그리지 않고 버린다
-         *          (`RHIDrawDiagnostics::checkVertexSlotsBound`).
+         *          몇 정점이든 그린다(언리얼의 빈 정점 선언 · Godot 의 빈 정점 포맷). 읽는 슬롯에 버퍼가 없거나 속성 스트림의 원소 크기가 PSO 의 형식과 다른
+         *          드로우는 버린다(`RHIDrawDiagnostics::checkVertexSlotsBound`).
          * @note 오프셋은 손으로 적지 않는다. `SW_OFFSET_OF` 를 쓰므로 구조체를 바꾸면 자동으로 따라온다.
          */
-        inline constexpr RHIVertexAttribute arrVertexAttribute[] = {
-            { "POSITION", 0, 3, SW_OFFSET_OF( RHIVertex, _arrPosition ), 0, SW_FALSE, SW_FALSE },
-            { "NORMAL", 1, 3, SW_OFFSET_OF( RHIVertex, _arrNormal ), 0, SW_FALSE, SW_FALSE },
-            { "TEXCOORD", 2, 2, SW_OFFSET_OF( RHIVertex, _arrUv ), 0, SW_FALSE, SW_FALSE },
-            { "COLOR", 3, 4, SW_OFFSET_OF( RHIVertex, _arrColor ), 0, SW_FALSE, SW_FALSE },
-            { "TANGENT", 4, 4, SW_OFFSET_OF( RHIVertex, _arrTangent ), 0, SW_FALSE, SW_FALSE },
-            { "SW_INSTANCESLOT", 5, 1, 0, kInstanceSlotStreamSlot, SW_TRUE, SW_TRUE },
+        inline constexpr RHIVertexAttribute arrPackedMeshVertexAttribute[] = {
+            { "POSITION", 0, RHIVertexElementFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
+            { "NORMAL", 1, RHIVertexElementFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
+            { "TEXCOORD", 2, RHIVertexElementFormat::Float2, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
+            { "COLOR", 3, RHIVertexElementFormat::Float4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
+            { "TANGENT", 4, RHIVertexElementFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
+            { "SW_INSTANCESLOT", 5, RHIVertexElementFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
         };
-        /// @brief 정점 속성 수입니다. 백엔드가 배열 크기를 직접 세지 않도록 함께 둡니다.
-        inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrVertexAttribute ) / sizeof( arrVertexAttribute[0] ) );
+        inline constexpr RHIVertexAttribute arrFullMeshVertexAttribute[] = {
+            { "POSITION", 0, RHIVertexElementFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
+            { "NORMAL", 1, RHIVertexElementFormat::Float3, SW_OFFSET_OF( RHIFullMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
+            { "TEXCOORD", 2, RHIVertexElementFormat::Float2, SW_OFFSET_OF( RHIFullMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
+            { "COLOR", 3, RHIVertexElementFormat::Float4, SW_OFFSET_OF( RHIFullMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
+            { "TANGENT", 4, RHIVertexElementFormat::Float4, SW_OFFSET_OF( RHIFullMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
+            { "SW_INSTANCESLOT", 5, RHIVertexElementFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
+        };
+        /// @brief 정점 속성 수입니다(두 표가 같다). 백엔드가 배열 크기를 직접 세지 않도록 함께 둡니다.
+        inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrPackedMeshVertexAttribute ) / sizeof( arrPackedMeshVertexAttribute[0] ) );
+        static_assert( kVertexAttributeCount == sizeof( arrFullMeshVertexAttribute ) / sizeof( arrFullMeshVertexAttribute[0] ), "the two mesh vertex tables must list the same attributes" );
+
+        /** @brief 메시 정점 형식의 속성 표입니다(`kVertexAttributeCount` 칸). */
+        constexpr const RHIVertexAttribute* getMeshVertexAttributes( RHIMeshVertexFormat format )
+        {
+            return format == RHIMeshVertexFormat::Full ? arrFullMeshVertexAttribute : arrPackedMeshVertexAttribute;
+        }
+        /** @brief 메시 정점 형식의 속성 스트림 원소 크기(바이트)입니다. */
+        constexpr uint32 getMeshAttributeStride( RHIMeshVertexFormat format )
+        {
+            return format == RHIMeshVertexFormat::Full ? static_cast<uint32>( sizeof( RHIFullMeshAttributes ) ) : static_cast<uint32>( sizeof( RHIPackedMeshAttributes ) );
+        }
+        /** @brief 정점 버퍼 슬롯 하나의 원소 크기(바이트)입니다. 속성 슬롯은 메시 정점 형식이 정한다. */
+        constexpr uint32 getVertexSlotStride( RHIMeshVertexFormat format, uint32 slot )
+        {
+            return slot == kMeshPositionSlot ? kMeshPositionStride : ( slot == kInstanceSlotStreamSlot ? kInstanceSlotStreamStride : getMeshAttributeStride( format ) );
+        }
+        constexpr bool areMeshVertexTablesAligned()
+        {
+            for ( uint32 index = 0; index < kVertexAttributeCount; ++index )
+            {
+                const RHIVertexAttribute& packed = arrPackedMeshVertexAttribute[index];
+                const RHIVertexAttribute& full   = arrFullMeshVertexAttribute[index];
+                if ( packed._location != full._location || packed._inputSlot != full._inputSlot || packed._bPerInstance != full._bPerInstance || packed._location != index )
+                    return false;
+            }
+            return true;
+        }
+        static_assert( areMeshVertexTablesAligned(), "the mesh vertex tables must agree on location (= row) and slot, and differ only in format and offset" );
 
         /** @brief submitTextureUpload 가 한 번에 받는 밉 수의 상한입니다. 2^16 텍스처의 전체 체인(17단계)을 덮습니다. */
         inline constexpr uint32 kMaxTextureMipCount = 17;
@@ -449,6 +535,12 @@ namespace sw
          */
         uint8                  _bPremultipliedAlpha : 1;
         [[maybe_unused]] uint8 _reservedFlags       : 4;
+        /**
+         * @brief 정점 셰이더가 메시 속성을 읽을 때 쓸 속성 스트림 형식입니다(입력 레이아웃 표를 고른다). 정점 입력이 없는 셰이더는 쓰지 않는다.
+         * @details 그리는 메시의 형식과 같아야 한다 — 머티리얼 PSO 는 배치의 형식으로 짓는다(`RenderPSOCache::materialPSOKey`). 다르면 속성 스트림 원소 크기가 달라
+         *          드로우가 버려진다(`RHIDrawDiagnostics::checkVertexSlotsBound`). 언리얼에서 정점 선언이 vertex factory 로 PSO 에 드는 자리다.
+         */
+        RHIMeshVertexFormat _meshVertexFormat;
 
         /** @brief 기본 토폴로지, 컬링, 깊이 플래그로 만듭니다. */
         RHIPipelineStateDesc() noexcept;

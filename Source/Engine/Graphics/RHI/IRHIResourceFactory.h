@@ -85,7 +85,7 @@ namespace sw
             updateStructuredBufferRange( buffer, pData, size, 0 );
         }
 
-        /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::arrVertexAttribute`)이 정합니다. */
+        /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::getMeshVertexAttributes`)이 정합니다. */
         virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
         /**

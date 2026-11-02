@@ -1410,7 +1410,8 @@ namespace sw
         ShaderCompileResult            psResult{};
         if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
         {
-            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 셰이더가 읽는 속성만 골라 만든다(DX11 · Vulkan · GL 과 같은 규칙).
+            // 입력 레이아웃은 **공용 테이블**(메시 정점 형식의 표 — constant::render::getMeshVertexAttributes)에서 셰이더가 읽는 속성만 골라 만든다(DX11 · Vulkan · GL 과 같은 규칙).
+            const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( desc._meshVertexFormat );
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
             const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXIL_D3D12 );
             D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
@@ -1419,7 +1420,7 @@ namespace sw
             {
                 if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
                     continue;
-                const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
+                const RHIVertexAttribute& attribute = pAttributeTable[attributeIndex];
                 D3D12_INPUT_ELEMENT_DESC& element   = arrInputElement[elementCount++];
                 element.SemanticName                = attribute._pSemanticName;
                 element.Format                      = toDxgiVertexFormat( attribute );
@@ -1502,7 +1503,7 @@ namespace sw
         // 있는 줄 알고 그리다가 드로우 계약(PSO 없는 드로우는 멈춤)에 걸린다 — 0 이면 렌더러가 그 패스를 건너뛴다.
         if ( pso == nullptr )
             return 0;
-        return _pDevice->_pipelineStates.insert( { pso, vertexSlotMask } );
+        return _pDevice->_pipelineStates.insert( { pso, vertexSlotMask, desc._meshVertexFormat } );
     }
 
     RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )

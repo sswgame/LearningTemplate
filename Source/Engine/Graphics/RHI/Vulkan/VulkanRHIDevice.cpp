@@ -373,9 +373,7 @@ namespace sw
                     vkFreeMemory( _device, slot._memory, nullptr );
                 slot = StructuredUploadSlot{};
             }
-            _recordingState._boundMeshVb      = 0;
-            _recordingState._boundMeshStride  = sizeof( RHIVertex );
-            _recordingState._boundMeshOffset  = 0;
+            _recordingState._vertexBuffers.clear();
             _recordingState._boundIndexBuffer = 0;
             _recordingState._boundIndexStride = 4;
             _recordingState._boundIndexOffset = 0;

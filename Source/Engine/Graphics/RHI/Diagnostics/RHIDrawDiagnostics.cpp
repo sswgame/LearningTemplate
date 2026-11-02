@@ -36,16 +36,29 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
     }
 
-    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, uint32 vertexSlotMask, RHIBufferHandle meshVertexBuffer, RHIBufferHandle instanceSlotStream )
+    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, uint32 vertexSlotMask, RHIMeshVertexFormat meshVertexFormat, const RHIVertexBufferBindings& bindings )
     {
-        const bool bMissingMesh   = ( vertexSlotMask & 1u ) != 0 && meshVertexBuffer == 0;
-        const bool bMissingStream = ( vertexSlotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 && instanceSlotStream == 0;
-        if ( bMissingMesh == false && bMissingStream == false )
-            return true;
-        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
-        if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexSlotUnbound", "%# draw skipped: its vertex shader reads vertex buffer slot %# but no buffer is bound - bind the mesh (slot 0) or instance slot stream (slot 1), or drop VertexInput from a shader that builds its vertices",
-                             pBackendName, bMissingMesh ? 0u : constant::render::kInstanceSlotStreamSlot );
-        return false;
+        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
+        {
+            if ( ( vertexSlotMask & ( 1u << slot ) ) == 0 )
+                continue;
+            const RHIVertexBufferBinding& binding        = bindings._arrSlot[slot];
+            const uint32                  expectedStride = constant::render::getVertexSlotStride( meshVertexFormat, slot );
+            if ( binding._buffer != 0 && binding._stride == expectedStride )
+                continue;
+            const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+            if ( count >= kMaxReportedDraw )
+                return false;
+            if ( binding._buffer == 0 )
+                SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexSlotUnbound",
+                                 "%# draw skipped: its vertex shader reads vertex buffer slot %# but no buffer is bound - bind the mesh streams (slots 0 and 2) or instance slot stream (slot 1), or drop VertexInput from a shader that builds its vertices",
+                                 pBackendName, slot );
+            else
+                SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexStrideMismatch",
+                                 "%# draw skipped: vertex buffer slot %# has %#-byte elements but the PSO's mesh vertex format (%#) reads %#-byte elements - build the PSO with the mesh's vertex format",
+                                 pBackendName, slot, binding._stride, static_cast<uint32>( meshVertexFormat ), expectedStride );
+            return false;
+        }
+        return true;
     }
 } // namespace sw

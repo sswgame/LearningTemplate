@@ -58,25 +58,26 @@ namespace sw
 
     /**
      * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다(DX11, DX12 공유).
-     * @details 입력 레이아웃은 **공용 테이블**(`constant::render::arrVertexAttribute`)에서 만들고, 그 테이블의 한 항목을
-     *          DXGI 포맷으로 옮기는 판단은 두 백엔드가 이 함수 하나를 씁니다. 주의: 성분 수를 하나 더할 때
-     *          (예: 스칼라 float 속성) 여기를 빠뜨리면 **D3D 백엔드만 정점이 어긋난 채로 그려집니다.**
+     * @details 입력 레이아웃은 **공용 테이블**(`constant::render::getMeshVertexAttributes`)에서 만들고, 그 테이블의 한 항목을
+     *          DXGI 포맷으로 옮기는 판단은 두 백엔드가 이 함수 하나를 씁니다. `default:` 를 두지 않는다 — 형식을 더하면 `-Werror=switch` 가 여기를 가리킨다.
      */
     inline DXGI_FORMAT toDxgiVertexFormat( const RHIVertexAttribute& attribute )
     {
-        if ( attribute._bUint != SW_FALSE )
-            return DXGI_FORMAT_R32_UINT;
-
-        switch ( attribute._componentCount )
+        switch ( attribute._format )
         {
-            case 4:
-                return DXGI_FORMAT_R32G32B32A32_FLOAT;
-            case 2:
+            case RHIVertexElementFormat::Float2:
                 return DXGI_FORMAT_R32G32_FLOAT;
-            default:
-                break;
+            case RHIVertexElementFormat::Float3:
+                return DXGI_FORMAT_R32G32B32_FLOAT;
+            case RHIVertexElementFormat::Float4:
+                return DXGI_FORMAT_R32G32B32A32_FLOAT;
+            case RHIVertexElementFormat::Uint1:
+                return DXGI_FORMAT_R32_UINT;
+            case RHIVertexElementFormat::Snorm8x4:
+                return DXGI_FORMAT_R8G8B8A8_SNORM;
         }
-        return DXGI_FORMAT_R32G32B32_FLOAT;
+        SW_LOG_ASSERT( false, "Unsupported RHIVertexElementFormat: %#", static_cast<uint32>( attribute._format ) );
+        return DXGI_FORMAT_UNKNOWN;
     }
 
     /**

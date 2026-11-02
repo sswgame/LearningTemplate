@@ -8,11 +8,13 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 
 namespace sw
 {
-    GPUMeshVertexPool::GPUMeshVertexPool()
-        : _allocator{}
+    GPUMeshVertexPool::GPUMeshVertexPool( RHIMeshVertexFormat format )
+        : _format{ format }
+        , _allocator{}
         , _indexAllocator{}
         , _vertexBuffer{ 0 }
         , _indexBuffer{ 0 }
@@ -21,12 +23,25 @@ namespace sw
         , _listScratchRetry{}
         , _listScratchRemoved{}
         , _listScratchVertex{}
+        , _listScratchByte{}
         , _listScratchIndex{}
         , _listScratchRegion{}
         , _listScratchIndexRegion{}
         , _updateCount{ 0 }
         , _liveVertexCount{ 0 }
     {
+    }
+
+    uint32 GPUMeshVertexPool::getAttributeOffset() const
+    {
+        return RHIMeshVertexStreams::computeAttributeOffset( _allocator.getCapacity() );
+    }
+
+    void GPUMeshVertexPool::writeScratchStreams( uint32 vertexCapacity )
+    {
+        _listScratchByte.assign( RHIMeshVertexStreams::computeBufferBytes( _format, vertexCapacity ), uint8{ 0 } ); // 꼬리(빈 용량)는 0 — 앞 호출의 내용을 남기지 않는다
+        const uint32 writeCount = MathUtil::min( vertexCapacity, static_cast<uint32>( _listScratchVertex.size() ) );
+        RHIMeshVertexStreams::write( _format, _listScratchVertex.data(), writeCount, _listScratchByte.data(), _listScratchByte.data() + RHIMeshVertexStreams::computeAttributeOffset( vertexCapacity ) );
     }
 
     GPUMeshVertexPool::Placement GPUMeshVertexPool::placementOf( const Mesh* pMesh ) const
@@ -89,8 +104,8 @@ namespace sw
         _listScratchRetry.clear();
         for ( Mesh* pMesh : listMesh )
         {
-            if ( pMesh == nullptr || pMesh->getIndices().empty() )
-                continue;
+            if ( pMesh == nullptr || pMesh->getIndices().empty() || pMesh->getVertexFormat() != _format )
+                continue; // 다른 형식은 그 형식의 풀이 담는다
             const uint64 contentID   = pMesh->getContentID();
             const uint32 vertexCount = pMesh->getDrawVertexCount(); // LOD 0 뒤에 낮은 단계까지(배치는 단계의 범위로 그린다)
             const uint32 indexCount  = pMesh->getDrawIndexCount();
@@ -156,16 +171,31 @@ namespace sw
             entry._base      = base;
             entry._indexBase = indexBase;
             _liveVertexCount += entry._count;
-            _listScratchRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchVertex.size() * sizeof( RHIVertex ) ), base * static_cast<uint32>( sizeof( RHIVertex ) ),
-                                                               entry._count * static_cast<uint32>( sizeof( RHIVertex ) ) } );
+            // 정점 조각은 아래에서 스트림으로 바꾼 뒤 위치 · 속성 두 조각으로 낸다 — 여기서는 원본 안 정점 위치(_srcOffset)와 풀 안 시작(_dstOffset)을 정점 단위로 적어 둔다.
+            _listScratchRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchVertex.size() ), base, entry._count } );
             _listScratchIndexRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchIndex.size() * sizeof( uint32 ) ), indexBase * static_cast<uint32>( sizeof( uint32 ) ),
                                                                     entry._indexCount * static_cast<uint32>( sizeof( uint32 ) ) } );
             appendDrawGeometry( *pMesh );
         }
         if ( _listScratchRegion.empty() == false )
         {
+            // 올릴 원본 = 이번에 들어온 정점들의 [위치 구간][속성 구간], 목적 = 풀 버퍼의 같은 두 구간.
+            const uint32 addedCount      = static_cast<uint32>( _listScratchVertex.size() );
+            const uint32 attributeStride = constant::render::getMeshAttributeStride( _format );
+            const uint32 srcAttribute    = RHIMeshVertexStreams::computeAttributeOffset( addedCount );
+            const uint32 dstAttribute    = getAttributeOffset();
+            writeScratchStreams( addedCount );
+            const size_t meshCount = _listScratchRegion.size();
+            for ( size_t meshIndex = 0; meshIndex < meshCount; ++meshIndex )
+            {
+                const RHIBufferCopyRegion vertexSpan = _listScratchRegion[meshIndex];
+                _listScratchRegion[meshIndex]        = RHIBufferCopyRegion{ vertexSpan._srcOffset * constant::render::kMeshPositionStride, vertexSpan._dstOffset * constant::render::kMeshPositionStride,
+                                                                     vertexSpan._sizeBytes * constant::render::kMeshPositionStride };
+                _listScratchRegion.push_back( RHIBufferCopyRegion{ srcAttribute + vertexSpan._srcOffset * attributeStride, dstAttribute + vertexSpan._dstOffset * attributeStride,
+                                                                   vertexSpan._sizeBytes * attributeStride } );
+            }
             IRHIResourceFactory* pFactory = pDevice->getResourceFactory();
-            pFactory->updateGeometryBufferRegions( _vertexBuffer, _listScratchVertex.data(), _listScratchRegion.data(), static_cast<uint32>( _listScratchRegion.size() ) );
+            pFactory->updateGeometryBufferRegions( _vertexBuffer, _listScratchByte.data(), _listScratchRegion.data(), static_cast<uint32>( _listScratchRegion.size() ) );
             pFactory->updateGeometryBufferRegions( _indexBuffer, _listScratchIndex.data(), _listScratchIndexRegion.data(), static_cast<uint32>( _listScratchIndexRegion.size() ) );
         }
         return true;
@@ -225,9 +255,9 @@ namespace sw
         if ( _liveVertexCount == 0 )
             return;
         // 꼬리는 비워 둔 용량이다 — 0 으로 채워 버퍼 전체를 한 번에 만든다(createVertexBuffer · createIndexBuffer 는 내용 없이 만들 수 없다).
-        _listScratchVertex.resize( capacity );
         _listScratchIndex.resize( indexCapacity );
-        _vertexBuffer = pFactory->createVertexBuffer( _listScratchVertex.data(), capacity * static_cast<uint32>( sizeof( RHIVertex ) ) );
+        writeScratchStreams( capacity ); // 꼬리(빈 용량)는 0 바이트다
+        _vertexBuffer = pFactory->createVertexBuffer( _listScratchByte.data(), static_cast<uint32>( _listScratchByte.size() ) );
         _indexBuffer  = pFactory->createIndexBuffer( _listScratchIndex.data(), indexCapacity * static_cast<uint32>( sizeof( uint32 ) ) );
         if ( _vertexBuffer == 0 || _indexBuffer == 0 )
         {

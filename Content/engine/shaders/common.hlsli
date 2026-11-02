@@ -160,29 +160,64 @@ static const float kHalfPi = 1.57079632679489661923f;
 static const float kInvPi  = 0.31830988618379067154f;
 
 // ------------------------------------------------------------------------------
-// 6) 정점 입력 — **정본은 C++ 의 `constant::arrVertexAttribute` 다.** 이 구조체는 그 표와
-//       순서·개수가 같아야 한다.
+// 6) 정점 입력 — **정본은 C++ 의 메시 정점 표(`constant::render::getMeshVertexAttributes`)다.** location 은 표의 칸 번호와 같다.
 // ------------------------------------------------------------------------------
-// **쓰지 않는 속성도 반드시 선언한다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·OpenGL 은 **선언 순서로
-// location 을 매긴다** — 중간 속성을 빼면 그 뒤가 통째로 한 칸씩 당겨져, 색을 읽으려던 셰이더가
-// 노멀을 읽는다. DX 에서는 멀쩡하고 그 둘에서만 조용히 틀리는, 이 저장소에서 가장 비싼 종류의 버그다.
-// 그래서 정점을 받는 셰이더는 전부(풀스크린 패스도) 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
+// DX 는 시맨틱 이름으로 묶지만 Vulkan·OpenGL 은 location 으로 묶는다. location 을 `SW_VK_LOCATION` 으로 **명시**한다 — 선언 순서로 매기게 두면
+// 중간 속성을 빼는 순간 그 뒤가 한 칸씩 당겨져 색을 읽으려던 셰이더가 노멀을 읽는다(DX 에서는 멀쩡하고 그 둘에서만 조용히 틀린다).
+// DXC 는 한 진입점의 입력이 모두 명시이거나 모두 암시여야 하므로 정점 입력은 전부 이 매크로를 단다. 리플렉션 계약 검사(ShaderBindingValidator 5번 규칙)가
+// 어긋남을 바이너리에서 잡는다. 형식(Packed 의 snorm8 노멀 · 탄젠트)은 입력 어셈블러가 float 로 풀어 주므로 셰이더는 형식을 모른다.
+#if defined( __spirv__ )
+    #define SW_VK_LOCATION( index ) [[vk::location( index )]]
+#else
+    #define SW_VK_LOCATION( index )
+#endif
+#define SW_VERTEX_LOCATION_POSITION      0
+#define SW_VERTEX_LOCATION_NORMAL        1
+#define SW_VERTEX_LOCATION_TEXCOORD      2
+#define SW_VERTEX_LOCATION_COLOR         3
+#define SW_VERTEX_LOCATION_TANGENT       4
+#define SW_VERTEX_LOCATION_INSTANCE_SLOT 5
+// 위치는 슬롯 0(위치 스트림), 나머지는 슬롯 2(속성 스트림)에서 온다. 위치만 쓰는 셰이더(깊이 · 그림자)는 `VertexPositionInput` 을 받으면 속성 스트림을
+// 읽지 않는다 — DX 는 선언한 입력을 모두 레이아웃에 넣으므로 `VertexInput` 을 받으면 쓰지 않아도 슬롯 2 를 읽는다.
 struct VertexInput
 {
+    SW_VK_LOCATION( SW_VERTEX_LOCATION_POSITION )
     float3 _position : POSITION;
+    SW_VK_LOCATION( SW_VERTEX_LOCATION_NORMAL )
     float3 _normal : NORMAL;
+    SW_VK_LOCATION( SW_VERTEX_LOCATION_TEXCOORD )
     float2 _uv : TEXCOORD0;
+    SW_VK_LOCATION( SW_VERTEX_LOCATION_COLOR )
     float4 _color : COLOR;
     // xyz 탄젠트 · w 바이탄젠트 부호(±1) — 바이탄젠트 = cross( normal, tangent.xyz ) * tangent.w (glTF · MikkTSpace 규약, C++ RHIVertex::_arrTangent).
+    SW_VK_LOCATION( SW_VERTEX_LOCATION_TANGENT )
     float4 _tangent : TANGENT;
 };
+struct VertexPositionInput
+{
+    SW_VK_LOCATION( SW_VERTEX_LOCATION_POSITION )
+    float3 _position : POSITION;
+};
+/** @brief 위치만 받은 정점을 전체 정점 모양으로 — 나머지 칸은 쓰지 않는 셰이더(깊이 전용)만 이렇게 받는다. 노멀은 +Y, 색은 흰색, 탄젠트는 +X 다. */
+VertexInput toVertexInput( VertexPositionInput positionInput )
+{
+    VertexInput input;
+    input._position = positionInput._position;
+    input._normal   = float3( 0.0f, 1.0f, 0.0f );
+    input._uv       = float2( 0.0f, 0.0f );
+    input._color    = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+    input._tangent  = float4( 1.0f, 0.0f, 0.0f, 1.0f );
+    return input;
+}
+VertexInput toVertexInput( VertexInput input )
+{
+    return input;
+}
 // 슬롯 1(인스턴스 스텝)의 uint 하나 — 이 드로우 인스턴스의 **전역 자리**(가시 목록 슬롯)는 구조체에 넣지 않고, 읽는 셰이더만
-// `VSMain( VertexInput input, uint instanceSlot : SW_INSTANCESLOT, … )` 처럼 **VertexInput 바로 뒤 인자**로 받는다(Vulkan·GL location 5 = 선언 순서).
-// 구조체에 두면 읽지 않는 셰이더도 선언하게 되고, DX 는 선언만 한 입력도 시그니처에 남겨 PSO 가 슬롯 1 을 읽는 것으로 판정한다 —
-// 스트림을 걸지 않는 메시 드로우(확장 패스 데모 등)가 버려진다. SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 —
-// 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
-// 풀스크린 셰이더도 이 구조체를 쓴다 — 자기 구조체(`struct VSInput { float3 pos; float4 col; }` 등)를 두면 Vulkan·GL 에서
-// col 이 location 1(노멀) 을 읽는다(RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 리플렉션 계약
-// 검사(ShaderBindingValidator 5번 규칙)가 이 어긋남을 바이너리에서 잡는다.
+// `VSMain( VertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), … )` 처럼 인자로 받는다. 구조체에 두면 읽지 않는 셰이더도 선언하게 되고,
+// DX 는 선언만 한 입력도 시그니처에 남겨 PSO 가 슬롯 1 을 읽는 것으로 판정한다 — 스트림을 걸지 않는 메시 드로우(확장 패스 데모 등)가 버려진다.
+// SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 — 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로 나간다(간접 인자의 startInstance 가
+// 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
+#define SW_INSTANCE_SLOT_INPUT( name ) SW_VK_LOCATION( SW_VERTEX_LOCATION_INSTANCE_SLOT ) uint name : SW_INSTANCESLOT
 
 #endif // SW_ENGINE_COMMON_HLSLI

@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
@@ -108,11 +109,7 @@ namespace sw
         RHIPipelineStateHandle _activeGraphicsPSO;
         RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
 
-        RHIBufferHandle _boundMeshVb;
-        uint32          _boundMeshStride;
-        uint32          _boundMeshOffset;
-        RHIBufferHandle _boundInstanceSlotVb; ///< 슬롯 1: 인스턴스 슬롯 스트림(0이면 바인딩 안 됨)
-        uint32          _boundInstanceSlotOffset;
+        RHIVertexBufferBindings _vertexBuffers; ///< setVertexBuffer 로 건 슬롯들(드로우 때 파이프라인이 선언한 바인딩만 건다)
         /// @brief 이 스트림에 렌더 패스가 열려 있는지 여부입니다.
         uint8 _bRenderPassActive : 1;
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
@@ -129,11 +126,7 @@ namespace sw
         VulkanRecordingState()
             : _activeGraphicsPSO{ 0 }
             , _activeComputePSO{ 0 }
-            , _boundMeshVb{ 0 }
-            , _boundMeshStride{ sizeof( RHIVertex ) }
-            , _boundMeshOffset{ 0 }
-            , _boundInstanceSlotVb{ 0 }
-            , _boundInstanceSlotOffset{ 0 }
+            , _vertexBuffers{}
             , _bRenderPassActive{ SW_FALSE }
             , _bTextureSetBound{ SW_FALSE }
             , _reserved{ 0 }
@@ -519,8 +512,9 @@ namespace sw
         /// @brief VkPipeline 과 레이아웃입니다.
         struct VulkanPipelineStateRecord
         {
-            VkPipeline _pipeline{ nullptr };
-            uint32     _vertexSlotMask{ 0 }; ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask) — 파이프라인이 선언한 바인딩이다
+            VkPipeline          _pipeline{ nullptr };
+            uint32              _vertexSlotMask{ 0 };                             ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask) — 파이프라인이 선언한 바인딩이다
+            RHIMeshVertexFormat _meshVertexFormat{ RHIMeshVertexFormat::Packed }; ///< 바인딩 stride · 속성 형식을 지은 메시 정점 형식
         };
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 을 반환합니다. */

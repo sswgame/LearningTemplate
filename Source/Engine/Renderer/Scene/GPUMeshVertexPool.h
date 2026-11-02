@@ -9,7 +9,9 @@
  * 하나여야 합니다.
  *
  * [어떻게]
- * 메시마다 정점 풀과 인덱스 풀에 구간을 하나씩 내주고(`SpanAllocator` 둘) 그 시작을 기억합니다. 인덱스는 메시 안 번호 그대로 올리고,
+ * 메시마다 정점 풀과 인덱스 풀에 구간을 하나씩 내주고(`SpanAllocator` 둘) 그 시작을 기억합니다. 정점 버퍼는 [위치 구간][속성 구간]이고
+ * (`RHIMeshVertexStreams` — 메시 하나의 정점 버퍼와 같은 모양) 정점 번호가 두 구간에 같은 칸을 가리킵니다. 속성 원소 크기가 형식마다 달라
+ * 풀은 정점 형식마다 하나입니다(`GPUScene` 이 형식마다 둔다 — 멀티 드로우는 정점 버퍼가 다르면 어차피 끊긴다). 인덱스는 메시 안 번호 그대로 올리고,
  * 배치의 간접 인자가 `baseVertex = 정점 시작` · `startIndex = 인덱스 시작 + 구간` 입니다. 정점 셰이더의 SV_VertexID 가 baseVertex 를
  * 포함하는지는 API 마다 다릅니다(Vulkan, GL 은 포함, D3D 는 인덱스 값 그대로. binding.hlsli MorphPool::computeElement).
  * 정점 · 인덱스는 CPU 사본(`Mesh::getVertices` · `getIndices` 와 낮은 단계)에서 옵니다.
@@ -57,7 +59,8 @@ namespace sw
             uint32 _firstIndex{ kInvalidBase }; ///< 인덱스 풀 시작(구간 · LOD 단계의 첫 인덱스를 더해 startIndex)
         };
 
-        GPUMeshVertexPool();
+        /** @brief @p format 형식의 메시만 담는 풀을 만듭니다. */
+        explicit GPUMeshVertexPool( RHIMeshVertexFormat format = RHIMeshVertexFormat::Packed );
         ~GPUMeshVertexPool()                                     = default;
         GPUMeshVertexPool( const GPUMeshVertexPool& )            = delete;
         GPUMeshVertexPool& operator=( const GPUMeshVertexPool& ) = delete;
@@ -80,6 +83,10 @@ namespace sw
 
         /** @brief 풀 정점 버퍼를 반환합니다. 0 이면 풀이 비어 있습니다. */
         RHIBufferHandle getVertexBuffer() const { return _vertexBuffer; }
+        /** @brief 풀 정점 버퍼에서 속성 구간이 시작하는 바이트입니다(용량 × 12 B). 슬롯 2 를 여기서 건다. */
+        uint32 getAttributeOffset() const;
+        /** @brief 이 풀이 담는 정점 형식입니다. */
+        RHIMeshVertexFormat getFormat() const { return _format; }
         /** @brief 풀 인덱스 버퍼(uint32)를 반환합니다. 정점 버퍼와 함께 만들고 함께 놓습니다. */
         RHIBufferHandle getIndexBuffer() const { return _indexBuffer; }
         /** @brief 풀에 든(구간을 받은) 메시의 정점 수 합을 반환합니다. */
@@ -115,7 +122,7 @@ namespace sw
         /** @brief 들어온 메시에 구간을 주고 그 정점만 한 번에 올립니다. 자리가 없는 메시가 있으면 false 이고, 부르는 쪽이 다시 채운다(`repack`). */
         [[nodiscard]] bool placeAddedMeshes( IRHIDevice* pDevice );
 
-        /// @brief 풀 상한(정점 수)입니다. 4M 정점 × 64 바이트 = 256MB 로, 이 저장소의 씬에는 넉넉합니다.
+        /// @brief 풀 상한(정점 수)입니다. 4M 정점 × 44 바이트(Packed — 위치 12 + 속성 32) = 176MB 로, 이 저장소의 씬에는 넉넉합니다.
         static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
         /// @brief 처음 만드는 풀의 최소 용량(정점 수)입니다. 작은 씬에서 메시 하나 들어올 때마다 다시 채우지 않게 합니다.
         static constexpr uint32 kMinPoolVertices = 64u * 1024u;
@@ -123,10 +130,14 @@ namespace sw
         static constexpr uint32 kMaxPoolIndices = 3u * kMaxPoolVertices;
         static constexpr uint32 kMinPoolIndices = 3u * kMinPoolVertices;
 
-        SpanAllocator   _allocator;
-        SpanAllocator   _indexAllocator;
-        RHIBufferHandle _vertexBuffer;
-        RHIBufferHandle _indexBuffer;
+        /** @brief CPU 정점(`_listScratchVertex`)을 [위치 구간 @p vertexCapacity 칸][속성 구간]으로 바꿔 `_listScratchByte` 에 씁니다. */
+        void writeScratchStreams( uint32 vertexCapacity );
+
+        RHIMeshVertexFormat _format;
+        SpanAllocator       _allocator;
+        SpanAllocator       _indexAllocator;
+        RHIBufferHandle     _vertexBuffer;
+        RHIBufferHandle     _indexBuffer;
         /// @brief 메시 → 기록입니다. 지난 프레임에 본 메시들입니다(포인터는 키로만 쓰며 따라가지 않습니다 — 이미 죽었을 수 있습니다).
         unordered_map<const Mesh*, Entry> _mapEntry;
         /// @brief 이번 `update` 에 새로 구간이 필요한 메시입니다(살아 있는 포인터). 프레임마다 할당하지 않습니다.
@@ -136,6 +147,7 @@ namespace sw
         vector<const Mesh*> _listScratchRemoved;
         /// @brief 올릴 정점 · 인덱스와 조각입니다. 프레임마다 할당하지 않습니다.
         vector<RHIVertex>           _listScratchVertex;
+        vector<uint8>               _listScratchByte; ///< `_listScratchVertex` 를 GPU 스트림으로 바꾼 것(올리는 원본)
         vector<uint32>              _listScratchIndex;
         vector<RHIBufferCopyRegion> _listScratchRegion;
         vector<RHIBufferCopyRegion> _listScratchIndexRegion;

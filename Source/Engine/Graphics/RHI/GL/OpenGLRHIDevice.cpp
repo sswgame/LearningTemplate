@@ -482,14 +482,7 @@ namespace sw
         {
             glGenVertexArrays( 1, &_vao ); // 빈 VAO — 정점 입력이 없는 셰이더의 드로우
 
-            glGenVertexArrays( 1, &_meshVao );
-            glBindVertexArray( _meshVao );
-            for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
-            {
-                if ( constant::render::arrVertexAttribute[attributeIndex]._inputSlot == 0 )
-                    glEnableVertexAttribArray( constant::render::arrVertexAttribute[attributeIndex]._location );
-            }
-            glBindVertexArray( 0 );
+            glGenVertexArrays( 1, &_meshVao ); // 속성은 드로우마다 PSO 의 형식 표대로 켠다(bindVertexInputsForDraw)
 
             GLuint defaultTex{ 0 };
             glGenTextures( 1, &defaultTex );
@@ -734,9 +727,7 @@ namespace sw
                 name = 0;
             }
         } );
-        _recordingState._boundMeshVb      = 0;
-        _recordingState._boundMeshStride  = sizeof( RHIVertex );
-        _recordingState._boundMeshOffset  = 0;
+        _recordingState._vertexBuffers.clear();
         _recordingState._boundIndexBuffer = 0;
         _recordingState._boundIndexStride = 4;
         _recordingState._boundIndexOffset = 0;

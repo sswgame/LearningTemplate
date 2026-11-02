@@ -63,6 +63,26 @@ namespace sw
         {
             return ( ( value + alignment - 1 ) / alignment ) * alignment;
         }
+
+        /** @brief 정점 속성 형식을 VkFormat 으로 옮깁니다. `default:` 를 두지 않는다 — 형식을 더하면 `-Werror=switch` 가 여기를 가리킨다. */
+        VkFormat toVkVertexFormat( RHIVertexElementFormat format )
+        {
+            switch ( format )
+            {
+                case RHIVertexElementFormat::Float2:
+                    return VK_FORMAT_R32G32_SFLOAT;
+                case RHIVertexElementFormat::Float3:
+                    return VK_FORMAT_R32G32B32_SFLOAT;
+                case RHIVertexElementFormat::Float4:
+                    return VK_FORMAT_R32G32B32A32_SFLOAT;
+                case RHIVertexElementFormat::Uint1:
+                    return VK_FORMAT_R32_UINT;
+                case RHIVertexElementFormat::Snorm8x4:
+                    return VK_FORMAT_R8G8B8A8_SNORM;
+            }
+            SW_LOG_ASSERT( false, "Unsupported RHIVertexElementFormat: %#", static_cast<uint32>( format ) );
+            return VK_FORMAT_UNDEFINED;
+        }
     } // namespace
 
     RHIBufferHandle VulkanRHIResourceFactory::createConstantBuffer( uint32 size )
@@ -1348,32 +1368,32 @@ namespace sw
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        // 정점 속성은 **공용 표**(constant::render::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
+        // 정점 속성은 **공용 표**(메시 정점 형식의 표 — constant::render::getMeshVertexAttributes)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
         // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다. 바인딩도 읽는 슬롯만 선언한다 — 정점 입력이 없는 셰이더는
-        // 바인딩이 없어 정점 버퍼 없이 그린다(바인딩 0 = 메시 정점(정점 스텝), 바인딩 1 = 인스턴스 슬롯 스트림(인스턴스 스텝, uint 하나)).
-        const uint32                    consumedMask   = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
-        const uint32                    vertexSlotMask = RHIShaderRequest::toVertexSlotMask( consumedMask );
-        VkVertexInputBindingDescription arrBindingDescription[2]{};
+        // 바인딩이 없어 정점 버퍼 없이 그린다. stride 는 슬롯의 원소 크기(위치 · 인스턴스 슬롯 · 형식의 속성), 인스턴스 슬롯 스트림만 인스턴스 스텝이다.
+        const uint32                    consumedMask    = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
+        const uint32                    vertexSlotMask  = RHIShaderRequest::toVertexSlotMask( consumedMask );
+        const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( desc._meshVertexFormat );
+        VkVertexInputBindingDescription arrBindingDescription[constant::render::kVertexBufferSlotCount]{};
         uint32                          bindingCount{ 0 };
-        if ( ( vertexSlotMask & 1u ) != 0 )
-            arrBindingDescription[bindingCount++] = VkVertexInputBindingDescription{ 0, static_cast<uint32>( sizeof( RHIVertex ) ), VK_VERTEX_INPUT_RATE_VERTEX };
-        if ( ( vertexSlotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 )
-            arrBindingDescription[bindingCount++] =
-                VkVertexInputBindingDescription{ constant::render::kInstanceSlotStreamSlot, constant::render::kInstanceSlotStreamStride, VK_VERTEX_INPUT_RATE_INSTANCE };
+        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
+        {
+            if ( ( vertexSlotMask & ( 1u << slot ) ) == 0 )
+                continue;
+            const VkVertexInputRate inputRate     = slot == constant::render::kInstanceSlotStreamSlot ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+            arrBindingDescription[bindingCount++] = VkVertexInputBindingDescription{ slot, constant::render::getVertexSlotStride( desc._meshVertexFormat, slot ), inputRate };
+        }
         VkVertexInputAttributeDescription arrAttributeDescription[constant::render::kVertexAttributeCount]{};
         uint32                            attributeCount{ 0 };
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {
             if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
                 continue;
-            const RHIVertexAttribute&          attribute   = constant::render::arrVertexAttribute[attributeIndex];
+            const RHIVertexAttribute&          attribute   = pAttributeTable[attributeIndex];
             VkVertexInputAttributeDescription& description = arrAttributeDescription[attributeCount++];
             description.binding                            = attribute._inputSlot;
             description.location                           = attribute._location;
-            description.format                             = ( attribute._bUint != SW_FALSE )   ? VK_FORMAT_R32_UINT
-                                                           : ( attribute._componentCount == 4 ) ? VK_FORMAT_R32G32B32A32_SFLOAT
-                                                           : ( attribute._componentCount == 2 ) ? VK_FORMAT_R32G32_SFLOAT
-                                                                                                : VK_FORMAT_R32G32B32_SFLOAT;
+            description.format                             = toVkVertexFormat( attribute._format );
             description.offset                             = attribute._byteOffset;
         }
 
@@ -1488,8 +1508,9 @@ namespace sw
         }
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
-        record._pipeline       = newPipeline;
-        record._vertexSlotMask = vertexSlotMask;
+        record._pipeline         = newPipeline;
+        record._vertexSlotMask   = vertexSlotMask;
+        record._meshVertexFormat = desc._meshVertexFormat;
         return _pDevice->_pipelineStates.insert( record );
     }
 

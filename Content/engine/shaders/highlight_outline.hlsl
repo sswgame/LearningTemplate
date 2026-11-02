@@ -32,7 +32,7 @@ struct PSInput
     SW_APPEARANCE_VARYING
 };
 
-PSInput VSMain( VertexInput input, uint instanceSlot : SW_INSTANCESLOT, uint vertexID : SV_VertexID )
+PSInput VSMain( VertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), uint vertexID : SV_VertexID )
 {
     PSInput      output;
     InstanceData instance = InstanceData::load( instanceSlot );

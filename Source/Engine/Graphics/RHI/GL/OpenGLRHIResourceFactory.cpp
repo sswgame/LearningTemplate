@@ -356,8 +356,7 @@ namespace sw
             return;
 
         ScopedOpenGLContext contextScope( _pDevice );
-        if ( buffer == _pDevice->_recordingState._boundMeshVb )
-            _pDevice->_recordingState._boundMeshVb = 0;
+        _pDevice->_recordingState._vertexBuffers.forget( buffer );
         if ( buffer == _pDevice->_recordingState._boundIndexBuffer )
             _pDevice->_recordingState._boundIndexBuffer = 0;
 
@@ -994,8 +993,9 @@ namespace sw
                 linkLabel.appendFormat( "Graphics (%# / %#)", desc._vertexShaderPath, desc._pixelShaderPath );
                 if ( linkProgram( program, linkLabel.c_str() ) )
                 {
-                    record._program        = program;
-                    record._vertexSlotMask = RHIShaderRequest::toVertexSlotMask( RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_OpenGL ) );
+                    record._program          = program;
+                    record._vertexSlotMask   = RHIShaderRequest::toVertexSlotMask( RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_OpenGL ) );
+                    record._meshVertexFormat = desc._meshVertexFormat;
                 }
             }
             else

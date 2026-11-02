@@ -918,7 +918,9 @@ namespace sw
                                    desc._vertexShaderPath.c_str() );
                 return 0;
             }
-            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 셰이더가 읽는 속성만 골라 만든다. DX12, Vulkan, GL 과 같은 규칙이다.
+            // 입력 레이아웃은 **공용 테이블**(메시 정점 형식의 표 — constant::render::getMeshVertexAttributes)에서 셰이더가 읽는 속성만 골라 만든다. DX12, Vulkan, GL 과 같은 규칙이다.
+            const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( desc._meshVertexFormat );
+            pso._meshVertexFormat                           = desc._meshVertexFormat;
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 레이아웃을 두지 않는다 — 정점 버퍼 없이 그린다.
             const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXBC_D3D11 );
             D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
@@ -927,7 +929,7 @@ namespace sw
             {
                 if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
                     continue;
-                const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
+                const RHIVertexAttribute& attribute = pAttributeTable[attributeIndex];
                 D3D11_INPUT_ELEMENT_DESC& element   = arrInputElement[elementCount++];
                 element.SemanticName                = attribute._pSemanticName;
                 element.Format                      = toDxgiVertexFormat( attribute );

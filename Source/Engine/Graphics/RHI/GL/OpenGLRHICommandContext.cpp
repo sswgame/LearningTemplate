@@ -521,16 +521,7 @@ namespace sw
 
     void OpenGLRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::render::arrVertexAttribute 의 SW_INSTANCESLOT.
-        if ( slot == constant::render::kInstanceSlotStreamSlot )
-        {
-            _pState->_boundInstanceSlotVb     = buffer;
-            _pState->_boundInstanceSlotOffset = offset;
-            return;
-        }
-        _pState->_boundMeshVb     = buffer;
-        _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
-        _pState->_boundMeshOffset = offset;
+        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
     }
 
     void OpenGLRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
@@ -540,55 +531,12 @@ namespace sw
         _pState->_boundIndexOffset = offset;
     }
 
-    void OpenGLRHICommandContext::bindMeshVaoAttribs( uint32 vbo )
-    {
-        const GLsizei stride = static_cast<GLsizei>( _pState->_boundMeshStride );
-        glBindVertexArray( _pDevice->_meshVao );
-        glBindBuffer( GL_ARRAY_BUFFER, vbo );
-        // 정점 속성은 **공용 표**(constant::render::arrVertexAttribute)에서 건다. DX11 · DX12 · Vulkan 과 같은 표다.
-        for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
-        {
-            const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
-            if ( attribute._inputSlot != 0 )
-                continue; // 슬롯 1 은 아래에서 스트림 VBO 로
-            if ( vbo == 0 )
-            {
-                glDisableVertexAttribArray( attribute._location ); // 슬롯 0 을 읽지 않는 PSO(스트림만 읽는다)
-                continue;
-            }
-            glEnableVertexAttribArray( attribute._location );
-            glVertexAttribPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_FLOAT, GL_FALSE, stride,
-                                   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + attribute._byteOffset ) ) );
-        }
-
-        // 슬롯 1: 인스턴스 슬롯 스트림(uint, 인스턴스마다 하나). 안 걸린 드로우는 배열을 꺼 둔다. 켜 둔 채 버퍼가 없으면
-        // 코어 프로파일에서 드로우가 거부된다.
-        const GLuint streamVbo = _pDevice->resolveGlBuffer( _pState->_boundInstanceSlotVb );
-        for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
-        {
-            const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
-            if ( attribute._inputSlot != constant::render::kInstanceSlotStreamSlot )
-                continue;
-            if ( streamVbo == 0 )
-            {
-                glDisableVertexAttribArray( attribute._location );
-                continue;
-            }
-            glBindBuffer( GL_ARRAY_BUFFER, streamVbo );
-            glEnableVertexAttribArray( attribute._location );
-            glVertexAttribIPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_UNSIGNED_INT,
-                                    static_cast<GLsizei>( constant::render::kInstanceSlotStreamStride ),
-                                    reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundInstanceSlotOffset + attribute._byteOffset ) ) );
-            glVertexAttribDivisor( attribute._location, attribute._bPerInstance != SW_FALSE ? 1u : 0u );
-        }
-        glBindBuffer( GL_ARRAY_BUFFER, vbo );
-    }
-
     bool OpenGLRHICommandContext::bindVertexInputsForDraw()
     {
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO     = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
         const uint32                                      slotMask = pPSO != nullptr ? pPSO->_vertexSlotMask : 0u; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
-        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "OpenGL", slotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+        const RHIMeshVertexFormat                         format   = pPSO != nullptr ? pPSO->_meshVertexFormat : RHIMeshVertexFormat::Packed;
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "OpenGL", slotMask, format, _pState->_vertexBuffers ) == false )
             return false;
         if ( slotMask == 0 )
         {
@@ -597,19 +545,57 @@ namespace sw
             glBindVertexArray( _pDevice->_vao );
             return true;
         }
-        GLuint vbo{ 0 };
-        if ( ( slotMask & 1u ) != 0 )
+        if ( _pDevice->_meshVao == 0 )
+            return false;
+        // 정점 속성은 **공용 표**(PSO 의 메시 정점 형식 — constant::render::getMeshVertexAttributes)에서 건다. DX11 · DX12 · Vulkan 과 같은 표다.
+        // VAO 상태는 드로우 사이에 남으므로 PSO 가 읽지 않는 슬롯의 속성은 꺼 둔다 — 켜 둔 채 버퍼가 없으면 코어 프로파일에서 드로우가 거부된다.
+        GLuint arrBuffer[constant::render::kVertexBufferSlotCount]{};
+        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
         {
-            vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
-            if ( vbo == 0 )
+            if ( ( slotMask & ( 1u << slot ) ) == 0 )
+                continue;
+            arrBuffer[slot] = _pDevice->resolveGlBuffer( _pState->_vertexBuffers._arrSlot[slot]._buffer );
+            if ( arrBuffer[slot] == 0 )
             {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_vertexBuffers._arrSlot[slot]._buffer );
                 return false;
             }
         }
-        if ( _pDevice->_meshVao == 0 )
-            return false;
-        bindMeshVaoAttribs( vbo );
+        glBindVertexArray( _pDevice->_meshVao );
+        const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( format );
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
+        {
+            const RHIVertexAttribute& attribute = pAttributeTable[attributeIndex];
+            if ( arrBuffer[attribute._inputSlot] == 0 )
+            {
+                glDisableVertexAttribArray( attribute._location );
+                continue;
+            }
+            const RHIVertexBufferBinding& binding = _pState->_vertexBuffers._arrSlot[attribute._inputSlot];
+            const GLsizei                 stride  = static_cast<GLsizei>( binding._stride );
+            const void* const             pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( binding._offset + attribute._byteOffset ) );
+            glBindBuffer( GL_ARRAY_BUFFER, arrBuffer[attribute._inputSlot] );
+            glEnableVertexAttribArray( attribute._location );
+            switch ( attribute._format )
+            {
+                case RHIVertexElementFormat::Float2:
+                    glVertexAttribPointer( attribute._location, 2, GL_FLOAT, GL_FALSE, stride, pOffset );
+                    break;
+                case RHIVertexElementFormat::Float3:
+                    glVertexAttribPointer( attribute._location, 3, GL_FLOAT, GL_FALSE, stride, pOffset );
+                    break;
+                case RHIVertexElementFormat::Float4:
+                    glVertexAttribPointer( attribute._location, 4, GL_FLOAT, GL_FALSE, stride, pOffset );
+                    break;
+                case RHIVertexElementFormat::Uint1:
+                    glVertexAttribIPointer( attribute._location, 1, GL_UNSIGNED_INT, stride, pOffset );
+                    break;
+                case RHIVertexElementFormat::Snorm8x4:
+                    glVertexAttribPointer( attribute._location, 4, GL_BYTE, GL_TRUE, stride, pOffset );
+                    break;
+            }
+            glVertexAttribDivisor( attribute._location, attribute._bPerInstance != SW_FALSE ? 1u : 0u );
+        }
         return true;
     }
 

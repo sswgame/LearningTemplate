@@ -34,6 +34,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -2051,7 +2052,7 @@ namespace sw
         // 정점 · 인덱스 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다. 둘은 짝이라 정점 버퍼로만 바뀜을 본다.
         if ( head._vertexBuffer != ioBoundVertexBuffer )
         {
-            context._pCmd->setVertexBuffer( 0, head._vertexBuffer, sizeof( RHIVertex ), 0 );
+            RHIMeshVertexStreams::bind( *context._pCmd, head._vertexBuffer, head._attributeOffset, head._mesh->getVertexFormat() );
             context._pCmd->setIndexBuffer( head._indexBuffer, sizeof( uint32 ), 0 );
             ioBoundVertexBuffer = head._vertexBuffer;
         }
@@ -2305,7 +2306,7 @@ namespace sw
             ExtensionConstantScope<FramePassContext> elementScope( context );
             elementScope.apply( element._arrConstant, element._constantCount );
             context._world = element._world;
-            context._pCmd->setVertexBuffer( 0, mesh.getVertexBuffer(), sizeof( RHIVertex ), 0 );
+            RHIMeshVertexStreams::bind( *context._pCmd, mesh.getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
             context._pCmd->setIndexBuffer( mesh.getIndexBuffer(), sizeof( uint32 ), 0 );
             context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
             context._pCmd->setPipelineState( pass._pso );

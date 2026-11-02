@@ -329,27 +329,7 @@ namespace sw
 
     void D3D11RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::render::arrVertexAttribute 의 SW_INSTANCESLOT.
-        if ( slot == constant::render::kInstanceSlotStreamSlot )
-        {
-            _pState->_boundInstanceSlotVb     = buffer;
-            _pState->_boundInstanceSlotOffset = offset;
-            return;
-        }
-        _pState->_boundMeshVb     = buffer;
-        _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
-        _pState->_boundMeshOffset = offset;
-    }
-
-    void D3D11RHICommandContext::bindInstanceSlotStream()
-    {
-        // 슬롯 1: 인스턴스 슬롯 스트림. PSO 가 읽을 때만 부른다(걸렸는지는 checkVertexSlotsBound 가 봤다).
-        ID3D11Buffer* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
-        if ( pStream == nullptr )
-            return;
-        UINT stride = constant::render::kInstanceSlotStreamStride;
-        UINT offset = _pState->_boundInstanceSlotOffset;
-        _pContext->IASetVertexBuffers( constant::render::kInstanceSlotStreamSlot, 1, &pStream, &stride, &offset );
+        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
     }
 
     bool D3D11RHICommandContext::bindGraphicsPipelineForDraw()
@@ -372,22 +352,23 @@ namespace sw
 
         // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 버퍼가 부서졌으면(세대가 달라 풀리지 않는다)
         // 드로우를 버린다 — IASetVertexBuffers 를 건너뛰면 직전 드로우의 버퍼로 그린다.
-        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "DX11", pPSO->_vertexSlotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "DX11", pPSO->_vertexSlotMask, pPSO->_meshVertexFormat, _pState->_vertexBuffers ) == false )
             return false;
-        if ( ( pPSO->_vertexSlotMask & 1u ) != 0 )
+        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
         {
-            ID3D11Buffer* const pVb = _pDevice->resolveBuffer( _pState->_boundMeshVb );
+            if ( ( pPSO->_vertexSlotMask & ( 1u << slot ) ) == 0 )
+                continue;
+            const RHIVertexBufferBinding& binding = _pState->_vertexBuffers._arrSlot[slot];
+            ID3D11Buffer* const           pVb     = _pDevice->resolveBuffer( binding._buffer );
             if ( pVb == nullptr )
             {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX11", _pState->_boundMeshVb );
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX11", binding._buffer );
                 return false;
             }
-            UINT stride = _pState->_boundMeshStride;
-            UINT offset = _pState->_boundMeshOffset;
-            _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
+            UINT stride = binding._stride;
+            UINT offset = binding._offset;
+            _pContext->IASetVertexBuffers( slot, 1, &pVb, &stride, &offset );
         }
-        if ( ( pPSO->_vertexSlotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 )
-            bindInstanceSlotStream();
 
         _pContext->IASetInputLayout( pIl );
         _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );

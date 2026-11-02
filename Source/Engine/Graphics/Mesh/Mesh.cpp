@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 
 namespace sw
 {
@@ -605,11 +606,14 @@ namespace sw
             listDrawIndex.insert( listDrawIndex.end(), _listIndex.begin(), _listIndex.end() );
             listDrawIndex.insert( listDrawIndex.end(), _listLODIndex.begin(), _listLODIndex.end() );
         }
-        const RHIVertex*      pDrawVertex  = listDrawVertex.empty() ? _listVertex.data() : listDrawVertex.data();
-        const uint32*         pDrawIndex   = listDrawIndex.empty() ? _listIndex.data() : listDrawIndex.data();
-        const uint32          vertexBytes  = getDrawVertexCount() * static_cast<uint32>( sizeof( RHIVertex ) );
+        const RHIVertex* pDrawVertex = listDrawVertex.empty() ? _listVertex.data() : listDrawVertex.data();
+        const uint32*    pDrawIndex  = listDrawIndex.empty() ? _listIndex.data() : listDrawIndex.data();
+        // GPU 정점 = [위치 구간][속성 구간](RHIMeshVertexStreams) — 형식은 메시가 정한다.
+        const uint32  drawVertexCount = getDrawVertexCount();
+        vector<uint8> listStreamByte( RHIMeshVertexStreams::computeBufferBytes( _vertexFormat, drawVertexCount ) );
+        RHIMeshVertexStreams::write( _vertexFormat, pDrawVertex, drawVertexCount, listStreamByte.data(), listStreamByte.data() + getAttributeStreamOffset() );
         const uint32          indexBytes   = getDrawIndexCount() * static_cast<uint32>( sizeof( uint32 ) );
-        const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( pDrawVertex, vertexBytes );
+        const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( listStreamByte.data(), static_cast<uint32>( listStreamByte.size() ) );
         const RHIBufferHandle indexBuffer  = indexBytes > 0 ? pResource->createIndexBuffer( pDrawIndex, indexBytes ) : 0;
         if ( vertexBuffer == 0 || indexBuffer == 0 )
         {
@@ -623,6 +627,19 @@ namespace sw
         _vertex.adopt( pDevice, vertexBuffer );
         _index.adopt( pDevice, indexBuffer );
         return true;
+    }
+
+    void Mesh::setVertexFormat( RHIMeshVertexFormat format )
+    {
+        if ( _vertexFormat == format )
+            return;
+        _vertexFormat = format;
+        _contentID    = allocateContentID(); // 정점 풀이 다른 형식의 풀로 옮겨 다시 올린다
+    }
+
+    uint32 Mesh::getAttributeStreamOffset() const
+    {
+        return RHIMeshVertexStreams::computeAttributeOffset( getDrawVertexCount() );
     }
 
     void Mesh::releaseRHI( IRHIDevice* pDevice )

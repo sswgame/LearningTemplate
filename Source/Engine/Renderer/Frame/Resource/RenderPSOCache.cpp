@@ -106,13 +106,15 @@ namespace sw
         return true;
     }
 
-    uint64 RenderPSOCache::materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling )
+    uint64 RenderPSOCache::materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat )
     {
         uint64 key = static_cast<uint64>( passPSO ) * HashUtil::kGoldenRatio64;
         key        = HashUtil::combine( key, permutationHash );
         key ^= ( static_cast<uint64>( viewMode ) + 1 ) * 0xff51afd7ed558ccdull;
         if ( bReverseCulling )
             key ^= 0xc4ceb9fe1a85ec53ull;
+        if ( vertexFormat != RHIMeshVertexFormat::Packed )
+            key = HashUtil::combine( key, static_cast<uint64>( vertexFormat ) * 0x9e3779b97f4a7c15ull );
         return key;
     }
 

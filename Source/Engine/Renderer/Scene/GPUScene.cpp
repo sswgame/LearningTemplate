@@ -187,21 +187,25 @@ namespace sw
                 }
             }
             // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 · 인덱스 버퍼(시작 0)로 돌아간다.
-            if ( _vertexPool.update( pDevice, _listScratchPoolMesh ) )
-                _bBatchTablesDirty = SW_TRUE;
+            for ( GPUMeshVertexPool& pool : _arrVertexPool ) // 각 풀이 자기 형식의 메시만 담는다
+            {
+                if ( pool.update( pDevice, _listScratchPoolMesh ) )
+                    _bBatchTablesDirty = SW_TRUE;
+            }
         }
         SW_PROFILE_SCOPE( "RT.GPUScene.uploadMeshes" );
-        const RHIBufferHandle poolBuffer      = _vertexPool.getVertexBuffer();
-        const RHIBufferHandle poolIndexBuffer = _vertexPool.getIndexBuffer();
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
-            const GPUMeshVertexPool::Placement placement = _vertexPool.placementOf( batch._mesh.get() );
-            if ( placement._baseVertex != GPUMeshVertexPool::kInvalidBase && poolBuffer != 0 )
+            const RHIMeshVertexFormat          format    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            const GPUMeshVertexPool&           pool      = _arrVertexPool[static_cast<size_t>( format )];
+            const GPUMeshVertexPool::Placement placement = pool.placementOf( batch._mesh.get() );
+            if ( placement._baseVertex != GPUMeshVertexPool::kInvalidBase && pool.getVertexBuffer() != 0 )
             {
-                batch._vertexBuffer = poolBuffer;
-                batch._indexBuffer  = poolIndexBuffer;
-                batch._baseVertex   = placement._baseVertex;
-                batch._firstIndex   = placement._firstIndex + batch._sectionFirstIndex;
+                batch._vertexBuffer    = pool.getVertexBuffer();
+                batch._attributeOffset = pool.getAttributeOffset();
+                batch._indexBuffer     = pool.getIndexBuffer();
+                batch._baseVertex      = placement._baseVertex;
+                batch._firstIndex      = placement._firstIndex + batch._sectionFirstIndex;
                 continue;
             }
             // 풀 밖(풀을 껐거나 못 든 메시) — 자기 정점 · 인덱스 버퍼로 그린다. 구간의 첫 인덱스부터.
@@ -217,8 +221,9 @@ namespace sw
             {
                 if ( batch._mesh->isRHIValid() )
                 {
-                    batch._vertexBuffer = batch._mesh->getVertexBuffer();
-                    batch._indexBuffer  = batch._mesh->getIndexBuffer();
+                    batch._vertexBuffer    = batch._mesh->getVertexBuffer();
+                    batch._attributeOffset = batch._mesh->getAttributeStreamOffset();
+                    batch._indexBuffer     = batch._mesh->getIndexBuffer();
                 }
                 else
                     SW_LOG_ERROR_ONCE_ID( "GPUScene.MeshNotCreatedBeforeHandoff", "A mesh in the snapshot has no vertex buffer although the upload queue owns its creation - it is not drawn" );
@@ -226,8 +231,9 @@ namespace sw
             }
             if ( batch._mesh->initRHI( pDevice ) )
             {
-                batch._vertexBuffer = batch._mesh->getVertexBuffer();
-                batch._indexBuffer  = batch._mesh->getIndexBuffer();
+                batch._vertexBuffer    = batch._mesh->getVertexBuffer();
+                batch._attributeOffset = batch._mesh->getAttributeStreamOffset();
+                batch._indexBuffer     = batch._mesh->getIndexBuffer();
             }
         }
     }
@@ -509,7 +515,10 @@ namespace sw
         // 슬롯이 뷰 등록 해제와 버퍼 파괴를 순서까지 맞춰 처리한다. 손으로 풀어 쓰면 뷰 하나를 빠뜨려도 컴파일은 통과한다.
         _instances.release( pDevice );
         _batchInfo.release( pDevice );
-        _vertexPool.release( pDevice );
+        for ( GPUMeshVertexPool& pool : _arrVertexPool )
+        {
+            pool.release( pDevice );
+        }
         const bool bReleasableSlotStream = _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
         if ( bReleasableSlotStream )
             pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );

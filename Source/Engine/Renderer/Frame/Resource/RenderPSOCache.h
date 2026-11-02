@@ -128,8 +128,9 @@ namespace sw
          * @details 뷰 모드가 키의 한 축입니다. 같은 머티리얼이라도 Lit 와 Wireframe 은 다른 PSO 이고,
          *          모드를 되돌리면 이미 만들어 둔 것이 다시 나옵니다(다시 컴파일하지 않습니다).
          *          컬 반전(거울 변환 배치, `GPUMeshBatch::_bReverseCulling`)도 축입니다. 컬 모드만 다른 PSO 입니다.
+         *          메시 정점 형식(`Mesh::getVertexFormat`)도 축입니다 — 입력 레이아웃만 다른 PSO 입니다(언리얼에서 vertex factory 가 PSO 키에 드는 자리). `Packed` 는 키를 바꾸지 않는다.
          */
-        static uint64 materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling );
+        static uint64 materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat );
         /** @brief 그 키의 항목이 어떤 상태로든(`Building` · `Ready` · `Failed`) 이미 있는지 반환합니다. */
         bool hasMaterialPSO( uint64 key ) const;
         /**

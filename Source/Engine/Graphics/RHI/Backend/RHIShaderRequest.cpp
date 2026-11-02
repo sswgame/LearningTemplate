@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 
+#include "Core/Container/StringUtil.h"
+
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -97,7 +99,9 @@ namespace sw
         {
             for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
             {
-                if ( input._location != constant::render::arrVertexAttribute[attributeIndex]._location )
+                // 시맨틱 이름으로 대조한다 — DX 리플렉션의 location(시그니처 레지스터)은 선언 순서라 위치만 받는 셰이더(VertexPositionInput)에서 표의 칸과 다르다.
+                // 두 형식 표의 시맨틱은 같다. 시맨틱 인덱스는 표에 하나뿐이라(TEXCOORD0) 보지 않는다.
+                if ( StringUtil::equals( input._semantic, constant::render::arrPackedMeshVertexAttribute[attributeIndex]._pSemanticName, true ) == false )
                     continue;
                 mask |= ( 1u << attributeIndex );
                 break;
@@ -112,7 +116,7 @@ namespace sw
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {
             if ( ( attributeMask & ( 1u << attributeIndex ) ) != 0 )
-                slotMask |= 1u << constant::render::arrVertexAttribute[attributeIndex]._inputSlot;
+                slotMask |= 1u << constant::render::arrPackedMeshVertexAttribute[attributeIndex]._inputSlot;
         }
         return slotMask;
     }

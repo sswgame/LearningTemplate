@@ -96,6 +96,7 @@ namespace sw
         , _bEnableBlend{ SW_FALSE }
         , _bPremultipliedAlpha{ SW_FALSE }
         , _reservedFlags{ 0 }
+        , _meshVertexFormat{ RHIMeshVertexFormat::Packed }
     {
         for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {

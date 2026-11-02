@@ -111,8 +111,8 @@ namespace sw
         [[nodiscard]] bool writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView, D3D12_GPU_DESCRIPTOR_HANDLE& outTable );
         /** @brief 이 리스트의 온라인 블록에서 count 개를 bump 할당합니다. 블록이 차면 디바이스에서 하나 더 빌립니다. */
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
-        /** @brief 설정해 둔 메시 정점 버퍼를 바인딩합니다. 핸들로 대상을 찾지 못하면(이미 파괴됨) 아무것도 바인딩하지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool bindMeshVertexBuffer();
+        /** @brief 정점 버퍼 슬롯 하나를 바인딩합니다. 핸들로 대상을 찾지 못하면(이미 파괴됨) 아무것도 바인딩하지 않고 false 를 반환합니다. */
+        [[nodiscard]] bool bindVertexBufferSlot( uint32 slot );
         /** @brief 활성 PSO 가 읽는 정점 버퍼 슬롯(메시 · 인스턴스 슬롯 스트림)만 바인딩합니다. 읽는 슬롯에 버퍼가 없거나 설정한 버퍼가 파괴됐으면 알리고 false 를 반환하며, 부르는 쪽은 드로우를 버립니다(네 백엔드가 같습니다). */
         [[nodiscard]] bool bindMeshVertexBufferForDraw();
         /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 바인딩합니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */

@@ -187,18 +187,17 @@ namespace sw
         return true;
     }
 
-    bool D3D12RHICommandContext::bindMeshVertexBuffer()
+    bool D3D12RHICommandContext::bindVertexBufferSlot( uint32 slot )
     {
-        ID3D12Resource* pVb = _pDevice->resolveBuffer( _pState->_boundMeshVb );
+        const RHIVertexBufferBinding& binding = _pState->_vertexBuffers._arrSlot[slot];
+        ID3D12Resource* const         pVb     = _pDevice->resolveBuffer( binding._buffer );
         if ( pVb == nullptr )
             return false;
         D3D12_VERTEX_BUFFER_VIEW vbv{};
-        vbv.BufferLocation = pVb->GetGPUVirtualAddress() + _pState->_boundMeshOffset;
-        vbv.SizeInBytes    = static_cast<UINT>( pVb->GetDesc().Width > _pState->_boundMeshOffset
-                                                    ? pVb->GetDesc().Width - _pState->_boundMeshOffset
-                                                    : 0 );
-        vbv.StrideInBytes  = _pState->_boundMeshStride;
-        commandListForRecord()->IASetVertexBuffers( 0, 1, &vbv );
+        vbv.BufferLocation = pVb->GetGPUVirtualAddress() + binding._offset;
+        vbv.SizeInBytes    = static_cast<UINT>( pVb->GetDesc().Width > binding._offset ? pVb->GetDesc().Width - binding._offset : 0 );
+        vbv.StrideInBytes  = binding._stride;
+        commandListForRecord()->IASetVertexBuffers( slot, 1, &vbv );
         return true;
     }
 
@@ -207,27 +206,15 @@ namespace sw
         // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
         const D3D12RHIDevice::D3D12PipelineStateRecord* pPSORecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         const uint32                                    slotMask   = pPSORecord != nullptr ? pPSORecord->_vertexSlotMask : 0u; // 없는 PSO 는 bindActiveGraphicsPSO 가 멈췄다
-        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "DX12", slotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+        const RHIMeshVertexFormat                       format     = pPSORecord != nullptr ? pPSORecord->_meshVertexFormat : RHIMeshVertexFormat::Packed;
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "DX12", slotMask, format, _pState->_vertexBuffers ) == false )
             return false;
-        if ( ( slotMask & 1u ) != 0 && bindMeshVertexBuffer() == false )
+        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
         {
-            RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX12", _pState->_boundMeshVb );
-            return false;
-        }
-
-        // 슬롯 1: 인스턴스 슬롯 스트림 — PSO 가 읽을 때만 건다.
-        if ( ( slotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 )
-        {
-            ID3D12Resource* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
-            if ( pStream != nullptr )
+            if ( ( slotMask & ( 1u << slot ) ) != 0 && bindVertexBufferSlot( slot ) == false )
             {
-                D3D12_VERTEX_BUFFER_VIEW vbv{};
-                vbv.BufferLocation = pStream->GetGPUVirtualAddress() + _pState->_boundInstanceSlotOffset;
-                vbv.SizeInBytes    = static_cast<UINT>( pStream->GetDesc().Width > _pState->_boundInstanceSlotOffset
-                                                            ? pStream->GetDesc().Width - _pState->_boundInstanceSlotOffset
-                                                            : 0 );
-                vbv.StrideInBytes  = constant::render::kInstanceSlotStreamStride;
-                commandListForRecord()->IASetVertexBuffers( constant::render::kInstanceSlotStreamSlot, 1, &vbv );
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX12", _pState->_vertexBuffers._arrSlot[slot]._buffer );
+                return false;
             }
         }
         return true;
@@ -507,16 +494,7 @@ namespace sw
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝)이다. constant::render::arrVertexAttribute 의 SW_INSTANCESLOT.
-        if ( slot == constant::render::kInstanceSlotStreamSlot )
-        {
-            _pState->_boundInstanceSlotVb     = buffer;
-            _pState->_boundInstanceSlotOffset = offset;
-            return;
-        }
-        _pState->_boundMeshVb     = buffer;
-        _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
-        _pState->_boundMeshOffset = offset;
+        _pState->_vertexBuffers.set( slot, buffer, stride, offset );
     }
 
     bool D3D12RHICommandContext::bindActiveGraphicsPSO()
