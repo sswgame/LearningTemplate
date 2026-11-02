@@ -118,6 +118,17 @@ namespace sw
             return nullptr;
         }
 
+        /** @brief 표면이 어느 출력 위에 올라 있는지입니다(`wl_surface.enter`) — 첫 버퍼를 붙이기 전의 표면은 화면에 없다. */
+        bool isOnAnyOutput() const
+        {
+            for ( const WaylandOutput& output : _listOutput )
+            {
+                if ( output._bEntered )
+                    return true;
+            }
+            return false;
+        }
+
         /** @brief 소개됐지만 선택이 되지 않은 제안(끌어다 놓기 따위)을 버립니다. */
         void dropIntroducedOffer()
         {
@@ -1114,8 +1125,10 @@ namespace sw
 
     void WaylandWindow::applyWindowVisibility( bool bShow )
     {
-        if ( bShow == false )
-            SW_LOG_ERROR_ID( "WaylandWindow.WaylandNoWayClient", "Wayland has no way for a client to hide its window - the window stays mapped" );
+        // 버퍼를 붙이기 전의 표면은 화면에 없다 — 만든 직후 · 내보내지 않는 무인 실행의 숨기기는 이미 지켜진다(첫 그림이 붙어야 매핑된다).
+        // 이미 화면에 오른 창만 숨길 길이 없다: null 버퍼로 내리면 다시 올릴 때 새 configure 전에 렌더 스레드가 붙이는 버퍼가 규약 위반이다.
+        if ( bShow == false && _pState->isOnAnyOutput() )
+            SW_LOG_ERROR_ID( "WaylandWindow.WaylandNoWayClient", "Wayland has no way for a client to hide a mapped window - the window stays mapped" );
     }
 
     bool WaylandWindow::isVisible() const
