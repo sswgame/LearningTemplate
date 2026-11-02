@@ -34,6 +34,8 @@ namespace sw::editor
             struct RowCache
             {
                 unordered_map<const TypeInfo*, NamedRow> _mapRow;
+                NamedRow                                 _objectRow; ///< 빌보드 컴포넌트가 없는 오브젝트 줄 — 계층 패널이 줄마다 묻는다(색 키를 줄마다 이어 붙이지 않게)
+                bool                                     _bObjectRow{ false };
                 uint32                                   _generation{ constant::invalid_index::kUint32 };
             };
 
@@ -63,6 +65,20 @@ namespace sw::editor
                 return makeRow( iconTable._defaultIcon, iconTable._neutralColor, false );
             }
 
+            /** @brief 지금 타입 테이블 세대의 캐시입니다. 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 세대가 바뀌면 비운다. */
+            static RowCache& validCache()
+            {
+                RowCache&    cache      = editor::getSubsystem<EditorStateStore>().get<RowCache>();
+                const uint32 generation = editor::getSubsystem<TypeRegistry>().getGeneration();
+                if ( cache._generation != generation )
+                {
+                    cache._mapRow.clear();
+                    cache._bObjectRow = false;
+                    cache._generation = generation;
+                }
+                return cache;
+            }
+
             static EditorComponentIconRow resolve( const NamedRow& row )
             {
                 return EditorComponentIconRow{ EditorIconUtil::findGlyph( row._iconName ), EditorThemeUtil::findColor( row._colorKey ), row._bBillboard };
@@ -74,15 +90,8 @@ namespace sw::editor
     {
         if ( pType == nullptr )
             return EditorComponentIconInternal::resolve( EditorComponentIconInternal::findRowUncached( pType ) );
-        // 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 타입 테이블 세대가 바뀌면 캐시를 비운다.
-        EditorComponentIconInternal::RowCache& cache      = editor::getSubsystem<EditorStateStore>().get<EditorComponentIconInternal::RowCache>();
-        const uint32                           generation = editor::getSubsystem<TypeRegistry>().getGeneration();
-        if ( cache._generation != generation )
-        {
-            cache._mapRow.clear();
-            cache._generation = generation;
-        }
-        auto iter = cache._mapRow.find( pType );
+        EditorComponentIconInternal::RowCache& cache = EditorComponentIconInternal::validCache();
+        auto                                   iter  = cache._mapRow.find( pType );
         if ( iter == cache._mapRow.end() )
             iter = cache._mapRow.emplace( pType, EditorComponentIconInternal::findRowUncached( pType ) ).first;
         return EditorComponentIconInternal::resolve( iter->second );
@@ -98,8 +107,14 @@ namespace sw::editor
             if ( row._bBillboard )
                 return row;
         }
-        const EditorComponentIconTable& iconTable = EditorComponentIconInternal::table();
-        return EditorComponentIconInternal::resolve( EditorComponentIconInternal::makeRow( iconTable._objectIcon, iconTable._neutralColor, false ) );
+        EditorComponentIconInternal::RowCache& cache = EditorComponentIconInternal::validCache();
+        if ( cache._bObjectRow == false )
+        {
+            const EditorComponentIconTable& iconTable = EditorComponentIconInternal::table();
+            cache._objectRow                          = EditorComponentIconInternal::makeRow( iconTable._objectIcon, iconTable._neutralColor, false );
+            cache._bObjectRow                         = true;
+        }
+        return EditorComponentIconInternal::resolve( cache._objectRow );
     }
 
     uint32 EditorComponentIcon::decodeGlyph( const utf8* pGlyph )

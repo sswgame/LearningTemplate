@@ -323,7 +323,7 @@ namespace sw::editor
             {
                 // 배지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
                 // 타입 이름을 비교하면 게임이 추가한 컴포넌트는 배지가 없다.
-                string badgeStr;
+                fixed_string<constant::buffer::kMax256> badgeStr;
                 for ( const Component* pComp : pObj->getComponents() )
                 {
                     if ( pComp == nullptr )

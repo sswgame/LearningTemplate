@@ -540,6 +540,7 @@ namespace sw::editor
         , _drawSnapshotHandoff{}
         , _lastDrawSnapshotSequence{ 0 }
         , _pUICapture{ nullptr }
+        , _listFrameDrawData{}
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
@@ -983,13 +984,15 @@ namespace sw::editor
             return;
 
         // 이 프레임에 그릴 목록(메인 · 캡처 · 보조 창)을 버퍼 하나에 한 번 올린다.
-        ImDrawData* const   pDrawData        = _arrDrawSnapshot[slot].getMainDrawData();
-        ImDrawData* const   pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
-        const bool          bViewports       = ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) != 0;
-        vector<ImDrawData*> listDrawData{ pDrawData, pCaptureDrawData };
+        ImDrawData* const pDrawData        = _arrDrawSnapshot[slot].getMainDrawData();
+        ImDrawData* const pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
+        const bool        bViewports       = ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) != 0;
+        _listFrameDrawData.clear();
+        _listFrameDrawData.push_back( pDrawData );
+        _listFrameDrawData.push_back( pCaptureDrawData );
         if ( bViewports )
-            _renderer->collectPlatformWindowDrawData( listDrawData );
-        _renderer->prepareFrame( *pRHIDevice, listDrawData );
+            _renderer->collectPlatformWindowDrawData( _listFrameDrawData );
+        _renderer->prepareFrame( *pRHIDevice, _listFrameDrawData );
 
         if ( pDrawData != nullptr )
             renderBackend( pRHIDevice, pDrawData );

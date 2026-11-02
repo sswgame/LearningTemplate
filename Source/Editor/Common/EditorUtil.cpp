@@ -12,16 +12,16 @@
 
 namespace sw::editor
 {
-    void EditorUtil::appendCategoryBadge( string_view category, string& inoutBadge )
+    void EditorUtil::appendCategoryBadge( string_view category, fixed_string<constant::buffer::kMax256>& inoutBadge )
     {
         if ( category.empty() )
             return;
 
         // 같은 Category 의 컴포넌트가 여럿 붙어 있으면 뱃지도 여럿이 된다. 그래서 한 번만 넣는다.
-        string token{ "[" };
-        token.append( string{ category } );
+        fixed_string<constant::buffer::kMax256> token{ "[" };
+        token.append( category );
         token.append( "]" );
-        if ( inoutBadge.find( token ) != string::npos )
+        if ( inoutBadge.view().find( token.view() ) != string_view::npos )
             return;
 
         if ( inoutBadge.empty() == false )

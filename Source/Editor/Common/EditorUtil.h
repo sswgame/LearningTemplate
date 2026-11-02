@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
+#include "Core/String/fixed_string.h"
 
 namespace sw::editor
 {
@@ -30,10 +31,10 @@ namespace sw::editor
         /**
          * @brief 계층 라벨에 붙일 `[Category]` 뱃지를 덧붙입니다.
          * @param category 컴포넌트 타입의 리플렉션 Category (`TypeInfo::getCategory`).
-         * @param inoutBadge 누적 중인 뱃지 문자열. 비어 있지 않으면 앞에 공백이 붙습니다.
+         * @param inoutBadge 누적 중인 뱃지 문자열. 비어 있지 않으면 앞에 공백이 붙습니다. 계층 패널이 줄마다 프레임마다 만들어 힙을 쓰지 않는 고정 버퍼다(넘치면 자른다).
          * @details 타입 이름이 아니라 Category 로 고르므로 게임이 넣은 컴포넌트도 뱃지가 붙고, 엔진이 컴포넌트를 늘려도 패널을
          *          고칠 필요가 없습니다("컴포넌트 추가" 메뉴와 같은 기준). 같은 Category 는 한 번만 넣습니다.
          */
-        static void appendCategoryBadge( string_view category, string& inoutBadge );
+        static void appendCategoryBadge( string_view category, fixed_string<constant::buffer::kMax256>& inoutBadge );
     };
 } // namespace sw::editor

@@ -3,6 +3,7 @@
  * @brief ImGui 에디터 호스트입니다. OS 와 GPU 백엔드, 프레임 루프를 담당합니다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 
 #include "Editor/Common/Backend/DrawSnapshotHandoff.h"
@@ -11,6 +12,8 @@
 #include "Editor/IEditor.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+
+struct ImDrawData;
 
 namespace sw::editor
 {
@@ -141,6 +144,8 @@ namespace sw::editor
         uint64 _lastDrawSnapshotSequence;
         /// @brief 에디터 컨텍스트의 UI 캡처 서브시스템입니다. 컨텍스트와 수명이 같고, 렌더 스레드가 present 훅에서 쓰므로 찾지 않고 들어 둔다.
         EditorUICapture* _pUICapture;
+        /// @brief 이번 프레임에 그릴 그리기 목록(메인 · 캡처 · 보조 창)입니다. 렌더 스레드 전용이며 present 훅이 프레임마다 다시 채운다 — 저장소를 남겨 할당하지 않는다.
+        vector<ImDrawData*> _listFrameDrawData;
 
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;
