@@ -35,7 +35,8 @@
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
 			                              _presetID="TownsfolkMale"
-			                              _seed="0" />
+			                              _seed="0"
+			                              _bMergeParts="true" />
 			<MoveAnimationComponent _componentName="MoveAnimationComponent"
 			                        _bActive="true" />
 			<FarmVillagerComponent _componentName="FarmVillagerComponent"

@@ -15,6 +15,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/SocketSet.h"
@@ -34,6 +35,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -182,6 +184,12 @@ namespace sw
      * @details 카메라는 격자의 앞 위쪽에서 내려다봅니다. 앞줄은 크고 뒷줄은 작아서 애니메이션 LOD 의 단계가 고르게 나옵니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestCharacterColumns, 0, "벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄)" );
+
+    /**
+     * @brief `-gv_stressTestCharacterPrefab=<경로>`: 벤치 캐릭터를 KayKit 기사 대신 이 프리팹으로 스폰합니다(예: 외형 · 병합을 쓰는 `common/prefabs/quaternius/townsfolk_merged.prefab.xml`).
+     * @details 프리팹의 애니메이터 · 외형이 스스로 움직이고 차려입으므로 짝수 · 홀수 클립, 시작 시각 흩기, 부품 · 무기 유닛 스위치는 기사에만 걸린다. 위치 · 방향 · 격자는 같다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( string, gv_stressTestCharacterPrefab, "", "벤치 캐릭터 프리팹 (비우면 KayKit 기사)" );
 
     /**
      * @brief `-gv_stressTestCrowdShare=1`: 벤치 캐릭터의 군중 포즈 공유를 켭니다(`SkeletalMeshComponent::setShareCrowdPose`).
@@ -760,12 +768,37 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
-        const uint32  columns = ( gv_stressTestCharacterColumns > 0 ) ? static_cast<uint32>( gv_stressTestCharacterColumns ) : characterCount;
-        const float32 origin  = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * _settings._characterSpacing;
+        const uint32      columns = ( gv_stressTestCharacterColumns > 0 ) ? static_cast<uint32>( gv_stressTestCharacterColumns ) : characterCount;
+        const float32     origin  = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * _settings._characterSpacing;
+        const string_view prefabPath( gv_stressTestCharacterPrefab.c_str(), gv_stressTestCharacterPrefab.size() );
+        AssetManager*     pAssets = prefabPath.empty() ? nullptr : game::findSubsystem<AssetManager>();
+        if ( prefabPath.empty() == false && pAssets == nullptr )
+        {
+            SW_LOG_ERROR_ID( "StressTestScene.CharacterPrefabNoAssets", "[Bench] Character prefab '%#' cannot be spawned - there is no asset manager", prefabPath );
+            return;
+        }
         for ( uint32 index = 0; index < characterCount; ++index )
         {
             StringBuilder<constant::buffer::kMax64> nameBuilder;
             nameBuilder.append( "StressTestCharacter_" ).append( index );
+            // 기사는 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다. 격자로 배치하면 열과 행으로 펼치고, 행은 +Z 쪽으로 멀어집니다.
+            const uint32 column   = index % columns;
+            const uint32 row      = index / columns;
+            const float3 position = float3{ origin + static_cast<float32>( column ) * _settings._characterSpacing, 0.0f, static_cast<float32>( row ) * _settings._characterSpacing };
+            if ( pAssets != nullptr )
+            {
+                GameObject*            pSpawned = pAssets->getAssetCache<PrefabCache>().spawn( pObjects, prefabPath, nameBuilder.c_str() );
+                SkeletalMeshComponent* pBody    = pSpawned != nullptr ? pSpawned->getComponent<SkeletalMeshComponent>() : nullptr;
+                if ( pBody == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "StressTestScene.CharacterPrefabNoBody", "[Bench] Character prefab '%#' did not spawn an object with a skeletal mesh", prefabPath );
+                    return;
+                }
+                pBody->setLocalPosition( position );
+                pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
+                _listBenchExtra.push_back( pBody->getHandle() );
+                continue;
+            }
             GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
             if ( pObject == nullptr )
                 continue;
@@ -778,10 +811,7 @@ namespace sw
             pMesh->setMaterialPath( _settings._knightMaterial );
             pMesh->setSkeletonPath( _settings._knightSkeleton.c_str() );
             pMesh->resolveRenderAssets();
-            // 기사는 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다. 격자로 배치하면 열과 행으로 펼치고, 행은 +Z 쪽으로 멀어집니다.
-            const uint32 column = index % columns;
-            const uint32 row    = index / columns;
-            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( column ) * _settings._characterSpacing, 0.0f, static_cast<float32>( row ) * _settings._characterSpacing } );
+            pMesh->setLocalPosition( position );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pAnimator->setClipFolder( _settings._knightClips.c_str() );
             pAnimator->setInitialState( ( index % 2u ) == 0 ? _settings._characterEvenClip.c_str() : _settings._characterOddClip.c_str() );
@@ -799,7 +829,8 @@ namespace sw
         spawnLight( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
         applyFraming( pScene, FramingMode::Character );
-        SW_LOG_INFO_ID( "StressTestScene.ScenePlacedSkinnedCharacters", "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
+        SW_LOG_INFO_ID( "StressTestScene.ScenePlacedSkinnedCharacters", "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount,
+                        prefabPath.empty() ? string_view( _settings._knightMesh.c_str() ) : prefabPath );
     }
 
     void StressTestScene::spawnCharacterParts( GameObjectManager& objects, uint32 characterIndex, SkeletalMeshComponent* pBody )
