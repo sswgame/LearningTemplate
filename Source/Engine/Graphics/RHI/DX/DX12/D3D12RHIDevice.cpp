@@ -922,7 +922,8 @@ namespace sw
     void D3D12RHIDevice::resizeSwapChainBuffers( D3D12RHISwapChain& swapChain, uint32 width, uint32 height )
     {
         // resize 는 렌더 스레드를 세운 뒤(`Engine::onMainWindowResize` · `IRHIDevice::resizeSwapChain` 의 `waitIdle`) 부른다 — 그동안 프레임 진행 상태(백 버퍼 · 프레임 펜스)는
-        // 이 스레드가 렌더 스레드 역할을 빌려 만진다.
+        // 이 스레드가 렌더 스레드 역할을 빌려 만진다. 프레임 펜스 대기(`waitForPreviousFrame`)는 메인 창의 백 버퍼를 다시 고르므로 다른 창을 바꿀 때도 메인 창의 역할을 빌린다.
+        ScopedThreadRoleBorrow mainBorrow{ _swapChain.getRenderThreadRole() };
         ScopedThreadRoleBorrow borrow{ swapChain.getRenderThreadRole() };
 
         if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )

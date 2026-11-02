@@ -1062,15 +1062,24 @@ namespace sw
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
 
+        // 이 텍스처에 발급한 bindless 번호는 파괴가 모두 놓는다(DX11 · GL · Vulkan 과 같은 규칙 — IRHIResourceFactory::registerBindlessTexture). 남겨 두면 등록한 쪽이 해제를
+        // 잊거나 늦게 한 번호가 새고, 늦은 해제가 이미 다른 리소스에 다시 발급된 번호를 놓는다.
+        vector<RHIDescriptorIndex> listFreedIndex;
         {
             UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-            for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
+            for ( size_t index = 0; index < _pDevice->_listRegisteredBindless.size(); ++index )
             {
+                D3D12RHIDevice::BindlessResourceRecord& record = _pDevice->_listRegisteredBindless[index];
                 if ( record._texture != texture )
                     continue;
                 record._resource.Reset();
                 record._texture = 0;
+                listFreedIndex.push_back( static_cast<RHIDescriptorIndex>( index ) );
             }
+        }
+        for ( const RHIDescriptorIndex index : listFreedIndex )
+        {
+            deferFreeBindlessIndex( index );
         }
 
         // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 같은 핸들이 다시 쓰이지 않도록 표의 칸도 지운다.

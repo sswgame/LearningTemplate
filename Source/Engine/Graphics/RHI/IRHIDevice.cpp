@@ -465,7 +465,8 @@ namespace sw
     IRHISwapChain* IRHIDevice::createSwapChain( const RHISwapChainDesc& desc )
     {
         waitIdle( RHIWaitIdleReason::WindowSwapChain );
-        IRHISwapChain* const pSwapChain = createSwapChainInternal( desc );
+        ScopedThreadRoleBorrow borrow{ _renderThread }; // 렌더 스레드가 쉬는 동안 프레임 진행 상태(스왑체인 목록 · 프레임 펜스)를 이 스레드가 빌려 만진다(resize 와 같다)
+        IRHISwapChain* const   pSwapChain = createSwapChainInternal( desc );
         if ( pSwapChain == nullptr )
             SW_LOG_ERROR_ID( "RHI.SwapChainCreateFailed", "%# could not create a swap chain for window %# (%#x%#)", getBackendName(), desc._pWindowHandle, desc._width, desc._height );
         return pSwapChain;
@@ -477,6 +478,7 @@ namespace sw
         if ( bUnchanged )
             return;
         waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        ScopedThreadRoleBorrow borrow{ _renderThread };
         resizeSwapChainInternal( swapChain, width, height );
     }
 
@@ -485,6 +487,7 @@ namespace sw
         if ( pSwapChain == nullptr )
             return;
         waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        ScopedThreadRoleBorrow borrow{ _renderThread };
         destroySwapChainInternal( *pSwapChain );
     }
 

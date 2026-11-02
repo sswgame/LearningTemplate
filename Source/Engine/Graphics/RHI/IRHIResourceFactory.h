@@ -260,7 +260,8 @@ namespace sw
          *          **끝나지 않은 전송이 있는 텍스처는 등록하지 않는다.** 백엔드가 레코드의 마지막 전송 시리얼이 완료 워터마크 아래인지 확인하고, 아니면 오류를 남기고
          *          `kInvalidDescriptorIndex` 를 돌려준다(소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에 등록한다).
          *          **등록마다 새 번호다**(네 백엔드가 같다). 같은 텍스처를 여러 쪽(엔진 · 에디터 UI)이 등록해도 각자의 번호를 각자 해제한다 — 번호를 나눠 주면 한쪽의 해제가
-         *          다른 쪽이 쓰는 번호를 놓는다(Vulkan 이 그랬다, 2026-11-02 에디터 RHI 렌더러).
+         *          다른 쪽이 쓰는 번호를 놓는다(Vulkan 이 그랬다, 2026-11-02 에디터 RHI 렌더러). **`destroyTexture` 는 그 텍스처의 번호를 모두 놓는다**(네 백엔드가 같다 —
+         *          DX12 만 번호를 남겨 늦은 해제가 다시 발급된 번호를 놓았다). 텍스처 주인이 아닌 쪽은 번호를 해제하지 않고 파괴에 맡긴다.
          */
         virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
 
