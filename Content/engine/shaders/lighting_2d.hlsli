@@ -158,7 +158,11 @@ static float Lighting2d::computeShadow( float2 pixel, float2 lightPosition, floa
 float3 LightData::sampleLight2dCookie( float2 pixel )
 {
     const int cell = (int)floor( _extra.w + 0.5f );
-    if ( cell < 0 || g_Light2DCookieAtlasIndex == kInvalidIndex )
+    // 두 조건을 `||` 로 묶지 않는다 — DXC 가 단락 평가를 이른 return 의 OpSwitch 안 OpPhi(true) 로 내고, NVIDIA GL 의 SPIR-V 컴파일러가 그 phi 를 틀려
+    // 쿠키 없는 빛(cell = -1)이 아틀라스 구석을 읽어 꺼졌다(같은 SPIR-V 를 NVIDIA Vulkan · AMD GL 은 맞게 돈다 — light2dcookie 골든이 지킨다).
+    if ( cell < 0 )
+        return float3( 1.0f, 1.0f, 1.0f );
+    if ( g_Light2DCookieAtlasIndex == kInvalidIndex )
         return float3( 1.0f, 1.0f, 1.0f );
     const float2 delta   = pixel - _positionRadius.xy;
     const float  outer   = max( _positionRadius.w, 1e-4f );
