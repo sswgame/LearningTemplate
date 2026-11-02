@@ -61,6 +61,7 @@
     #include "Engine/Renderer/SceneRHISubsystem.h"
     #include "Engine/Renderer/ScreenshotRequestQueue.h"
     #include "Engine/Window/MainWindowSubsystem.h"
+    #include "Engine/Window/SplashSubsystem.h"
 #endif
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
@@ -193,6 +194,7 @@ namespace sw::engine
         {
             // 주 창의 소유자 — RHI 가 기본 창을 만들면 여기에 넘기고, App 이 직접 만든 창도 여기로 간다. RHI 보다 먼저 서고 나중에 내려간다(RHI 가 의존한다).
             (void)startup.emplaceSubsystem<MainWindowSubsystem>();
+            (void)startup.emplaceSubsystem<SplashSubsystem>(); // 에셋 직후 스플래시를 띄운다 — 엔진 초기화(RHI 디바이스 생성)를 기다리지 않는다
             RHISubsystem& rhiSubsystem = startup.emplaceSubsystem<RHISubsystem>();
             parts._pRHI                = &rhiSubsystem;
             unique_ptr<FrameRenderer> frameRenderer;

@@ -36,6 +36,7 @@
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/SplashSubsystem.h"
 #include "Engine/Window/SplashWindow.h"
 
 #include "ModuleManager/HostServiceUtil.h"
@@ -169,11 +170,11 @@ namespace sw
 
         // 무인 실행(-unattended)은 보는 사람이 없다 — 스플래시도 메인 창도 띄우지 않고 그리기 · 캡처만 한다(언리얼 -RenderOffScreen). 화면 표시를 보는 시나리오
         // (present="true")는 그 단계에서 자동화 세션이 메인 창을 띄운다(`AutomationSession::applyPresentPolicy`).
-        const bool   bUnattended = _engine.getCommandLineManager()->isArgumentProvided( CommandLineArgument::UNATTENDED );
-        SplashWindow splash;
-        if ( bUnattended == false )
-            (void)splash.initialize( "SW Engine", "Initializing Engine Subsystems..." ); // 스플래시 없이 기동하는 것도 정상 경로다(SplashWindow::initialize 설명)
-        splash.setProgress( 0.05f );
+        // 스플래시는 엔진 기동이 에셋 직후 띄웠다(`SplashSubsystem`) — 여기서는 남은 단계의 진행을 적고 닫는다.
+        const bool             bUnattended = _engine.getCommandLineManager()->isArgumentProvided( CommandLineArgument::UNATTENDED );
+        SplashWindow           noSplash;
+        SplashSubsystem* const pSplashHost = engine::findSubsystem<SplashSubsystem>();
+        SplashWindow&          splash      = pSplashHost != nullptr ? pSplashHost->getSplash() : noSplash; // 렌더러 없는 구성은 스플래시 단계가 없다
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );
 
