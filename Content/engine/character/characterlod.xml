@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   조립한 캐릭터 메시(합친 외형)의 LOD 표 — CharacterMeshLOD 가 합친 메시에서 단계마다 구간별로 단순화한다(언리얼 스켈레탈 메시 LOD 감소와 같은 값).
-  triangle_ratio: LOD 0 삼각형 대비 비율, max_error: 허용 오차(메시 크기 대비), screen_size: 이 단계로 넘어가는 화면 높이 비율. 단계마다 셋 다 작아진다.
+  triangle_ratio: LOD 0 삼각형 대비 비율, max_error: 허용 오차(메시 크기 대비), screen_size: 이 단계로 넘어가는 화면 높이 비율 — 단계마다 셋 다 작아진다.
+  lock_border: 열린 가장자리를 잠근다(가까운 단계 — 옷 · 몸 틈), permissive: 이음매를 넘어 줄인다(먼 단계 — 정점 수), prune: 작은 떨어진 조각을 지운다(가장 먼 단계).
 -->
 <CharacterLODSettings>
-  <Level triangle_ratio="0.5" max_error="0.01" screen_size="0.4"/>
-  <Level triangle_ratio="0.25" max_error="0.03" screen_size="0.2"/>
-  <Level triangle_ratio="0.12" max_error="0.06" screen_size="0.1"/>
-  <Level triangle_ratio="0.05" max_error="0.12" screen_size="0.05"/>
+  <Level triangle_ratio="0.5" max_error="0.01" screen_size="0.4" lock_border="true" permissive="false" prune="false"/>
+  <Level triangle_ratio="0.25" max_error="0.03" screen_size="0.2" lock_border="true" permissive="false" prune="false"/>
+  <Level triangle_ratio="0.1" max_error="0.06" screen_size="0.1" lock_border="false" permissive="true" prune="false"/>
+  <Level triangle_ratio="0.03" max_error="0.12" screen_size="0.05" lock_border="false" permissive="true" prune="true"/>
 </CharacterLODSettings>

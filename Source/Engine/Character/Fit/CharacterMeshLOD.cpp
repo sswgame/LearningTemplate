@@ -67,22 +67,25 @@ namespace sw
         float32 previousScreen = 1.0f;
         for ( XMLNode level = root.findChild( "Level" ); level.isValid(); level = level.findNextSibling( "Level" ) )
         {
-            if ( XMLReadUtil::hasOnlyKnownNames( level, { "triangle_ratio", "max_error", "screen_size" }, {}, sourceLabel ) == false )
+            if ( XMLReadUtil::hasOnlyKnownNames( level, { "triangle_ratio", "max_error", "screen_size", "lock_border", "permissive", "prune" }, {}, sourceLabel ) == false )
                 return false;
-            const std::optional<float32> ratio  = level.readRequiredAttribute<float32>( "triangle_ratio" );
-            const std::optional<float32> error  = level.readRequiredAttribute<float32>( "max_error" );
-            const std::optional<float32> screen = level.readRequiredAttribute<float32>( "screen_size" );
-            // 셋 다 필수다. 단계가 낮아질수록 비율 · 임계값이 작아져야 한다(`Mesh::setLODs` 와 같은 규칙) — 범위 밖 값은 자르지 않고 거절한다.
-            const bool bRead  = ratio.has_value() && error.has_value() && screen.has_value();
+            const std::optional<float32> ratio      = level.readRequiredAttribute<float32>( "triangle_ratio" );
+            const std::optional<float32> error      = level.readRequiredAttribute<float32>( "max_error" );
+            const std::optional<float32> screen     = level.readRequiredAttribute<float32>( "screen_size" );
+            const std::optional<bool>    lockBorder = level.readRequiredAttribute<bool>( "lock_border" );
+            const std::optional<bool>    permissive = level.readRequiredAttribute<bool>( "permissive" );
+            const std::optional<bool>    prune      = level.readRequiredAttribute<bool>( "prune" );
+            // 모두 필수다. 단계가 낮아질수록 비율 · 임계값이 작아져야 한다(`Mesh::setLODs` 와 같은 규칙) — 범위 밖 값은 자르지 않고 거절한다.
+            const bool bRead  = ratio.has_value() && error.has_value() && screen.has_value() && lockBorder.has_value() && permissive.has_value() && prune.has_value();
             const bool bValid = bRead && 0.0f < *ratio && *ratio < previousRatio && *error >= 0.0f && 0.0f < *screen && *screen < previousScreen;
             if ( bValid == false )
             {
                 SW_LOG_ERROR_ID( "CharacterMeshLOD.SettingsLevelInvalid",
-                                 "Character LOD settings '%#': level %# needs triangle_ratio and screen_size in (0, previous level) and max_error >= 0", sourceLabel,
+                                 "Character LOD settings '%#': level %# needs triangle_ratio and screen_size in (0, previous level), max_error >= 0 and lock_border / permissive / prune", sourceLabel,
                                  static_cast<uint32>( _listLevel.size() ) + 1u );
                 return false;
             }
-            _listLevel.push_back( CharacterLODLevelRule{ *ratio, *error, *screen } );
+            _listLevel.push_back( CharacterLODLevelRule{ *ratio, *error, *screen, *lockBorder, *permissive, *prune } );
             previousRatio  = *ratio;
             previousScreen = *screen;
         }
@@ -106,8 +109,12 @@ namespace sw
                 const size_t             targetCount = MathUtil::max( static_cast<size_t>( static_cast<float32>( indexCount / 3u ) * rule._triangleRatio ), size_t( 1 ) ) * 3u;
                 const size_t             start       = outListIndex.size();
                 outListIndex.resize( start + indexCount );
-                const size_t kept = meshopt_simplify( outListIndex.data() + start, pSource, indexCount, &listVertex[0]._arrPosition[0], listVertex.size(), sizeof( RHIVertex ), targetCount,
-                                                      rule._maxError, meshopt_SimplifyLockBorder, nullptr );
+                // 언리얼 스켈레탈 메시 감소처럼 가까운 단계는 경계 · 이음매를 지키고 먼 단계는 풀어 준다(표가 단계마다 정한다). 법선을 오차에 넣어 이음매를 넘어도 음영이 덜 망가진다.
+                const unsigned int options = ( rule._bLockBorder ? meshopt_SimplifyLockBorder : 0u ) | ( rule._bPermissive ? meshopt_SimplifyPermissive : 0u ) |
+                                             ( rule._bPrune ? meshopt_SimplifyPrune : 0u );
+                constexpr float32 arrNormalWeight[3] = { 0.5f, 0.5f, 0.5f };
+                const size_t      kept               = meshopt_simplifyWithAttributes( outListIndex.data() + start, pSource, indexCount, &listVertex[0]._arrPosition[0], listVertex.size(), sizeof( RHIVertex ),
+                                                                                       &listVertex[0]._arrNormal[0], sizeof( RHIVertex ), arrNormalWeight, 3, nullptr, targetCount, rule._maxError, options, nullptr );
                 // 단순화는 삼각형 순서를 정점 캐시에 맞추지 않는다 — 다시 맞춘다(meshoptimizer 권장 순서, 임포터 `ModelImportGeometry` 와 같다).
                 meshopt_optimizeVertexCache( outListIndex.data() + start, outListIndex.data() + start, kept, listVertex.size() );
                 outListIndex.resize( start + kept );
