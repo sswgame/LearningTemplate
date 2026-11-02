@@ -178,13 +178,18 @@ namespace sw::editor
         bool               duplicateAsset( string_view absolutePath );
         /** @brief 이름 바꾸기를 시작합니다. 시작했으면 true 이고 @p outStem 에 확장자를 뺀 이름을 씁니다. 폴더는 받지 않습니다. */
         [[nodiscard]] bool beginRename( string_view absolutePath, string& outStem );
-        /** @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 참조 역색인이 따라오기 전이면 경고하고 false 입니다(입력은 열어 둔다). */
+        /**
+         * @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 참조 역색인이 마지막 파일 변경을 따라오기 전이면 그때까지 미뤘다가 `tick` 이 실행한다(입력은 그동안 열려 있다).
+         * @details 언리얼이 에셋 레지스트리 스캔이 끝날 때까지 이름 바꾸기를 미루는 것과 같다 — 거절하면 늦게 닿은 파일 변경 알림 하나가 사용자의 Enter 를 버린다.
+         */
         bool          commitRename( string_view newName );
         void          cancelRename() { _fileActions.cancelRename(); }
         const string& getRenamingPath() const { return _fileActions.getRenamingPath(); }
         bool          isRenaming( const AssetEntry& entry ) const;
-        /** @brief 에셋을 @p folderAbs 로 옮기고 참조를 고칩니다. */
+        /** @brief 에셋을 @p folderAbs 로 옮기고 참조를 고칩니다. 역색인이 따라오기 전이면 `commitRename` 처럼 미룬다. */
         [[nodiscard]] bool moveAssetToFolder( string_view sourceAbs, string_view folderAbs );
+        /** @brief 역색인을 기다리는 옮기기(이름 바꾸기 · 폴더로 옮기기)가 있으면 true 입니다. */
+        bool hasPendingMove() const { return _pendingMove.has_value(); }
         /** @brief 지울 에셋을 정합니다. 확인은 창이 받는다. */
         void          requestDeleteAsset( string_view absolutePath ) { _fileActions.requestDelete( absolutePath ); }
         const string& getPendingDeletePath() const { return _fileActions.getPendingDeletePath(); }
@@ -223,8 +228,19 @@ namespace sw::editor
         void processPendingImports();
         /** @brief 목록과 폴더 트리를 다시 읽게 하고 @p absolutePath 를 고릅니다. 이 변경 전에 시작한 색인 스캔은 버린다. */
         void selectAfterFileChange( string_view absolutePath );
-        /** @brief 옮기기가 고칠 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 경고하고 nullptr 입니다. */
+        /** @brief 옮기기가 고칠 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 nullptr 입니다. */
         EditorReferenceIndex* findCurrentReferenceIndex();
+        /** @brief 역색인이 따라왔으면 미뤄 둔 옮기기를 실행합니다(`tick`). */
+        void applyPendingMove();
+
+        /** @brief 역색인을 기다리는 옮기기 하나 — 이름 바꾸기면 `_newName`, 폴더로 옮기기면 `_sourceAbs` · `_folderAbs` 다. */
+        struct PendingMove
+        {
+            bool   _bRename{ false };
+            string _newName{};
+            string _sourceAbs{};
+            string _folderAbs{};
+        };
 
     private:
         vector<ContentBrowserRoot>    _listRoot;
@@ -234,6 +250,7 @@ namespace sw::editor
         string                        _selectedAssetAbs;
         ContentBrowserHistory         _history;         /**< 뒤로 가기 · 앞으로 가기 이력 */
         ContentBrowserFileActions     _fileActions;     /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
+        std::optional<PendingMove>    _pendingMove;     /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */
         ContentBrowserReferenceSearch _referenceSearch; /**< 참조 역색인과 마지막 참조 찾기의 결과 */
         ContentBrowserImportQueue     _importQueue;     /**< 파일 대화상자가 고른 임포트 경로. 메인 스레드가 꺼내 임포트한다 */
         ContentBrowserTypeFilter      _typeFilter;      /**< 종류 필터 목록과 고른 필터. 종류 등록이 바뀌면 다시 만든다 */

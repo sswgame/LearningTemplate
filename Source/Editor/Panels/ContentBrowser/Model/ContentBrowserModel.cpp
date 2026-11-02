@@ -168,6 +168,7 @@ namespace sw::editor
         syncWithContentChanges();
         AssetHotReload& hotReload = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>(); // 번호의 출처이기도 하다
         _referenceSearch.update( hotReload.getContentChangeSerial(), &hotReload );
+        applyPendingMove();
         if ( _bFolderDirty )
             refreshCurrentFolder();
         vector<EditorFolderListingEntry> listNewEntry;
@@ -444,18 +445,30 @@ namespace sw::editor
 
     EditorReferenceIndex* ContentBrowserModel::findCurrentReferenceIndex()
     {
-        EditorReferenceIndex* pIndex = _referenceSearch.findCurrentIndex( ContentBrowserModelInternal::getContentChangeSerial() );
-        if ( pIndex == nullptr )
-            SW_LOG_WARNING_ID( "ContentBrowserModel.ReferenceIndexNotCaught", "The reference index has not caught up with the last file change yet - nothing was moved, try again in a moment" );
-        return pIndex;
+        return _referenceSearch.findCurrentIndex( ContentBrowserModelInternal::getContentChangeSerial() );
+    }
+
+    void ContentBrowserModel::applyPendingMove()
+    {
+        if ( _pendingMove.has_value() == false || findCurrentReferenceIndex() == nullptr )
+            return;
+        const PendingMove move = std::move( *_pendingMove );
+        _pendingMove.reset();
+        if ( move._bRename )
+            (void)commitRename( move._newName ); // 실패(이름 규칙 · 이미 있음)는 moveAsset 이 알린다
+        else
+            (void)moveAssetToFolder( move._sourceAbs, move._folderAbs );
     }
 
     bool ContentBrowserModel::commitRename( string_view newName )
     {
-        // 색인이 따라오기 전이면 입력란을 열어 둔 채 돌아온다 — Enter 를 다시 누르면 된다.
         EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
-            return false;
+        {
+            _pendingMove = PendingMove{ true, string( newName ), string{}, string{} };
+            SW_LOG_INFO_ID( "ContentBrowserModel.MoveWaitsForReferenceIndex", "Rename waits for the reference index to catch up with the last file change" );
+            return true;
+        }
         string destinationAbs;
         if ( _fileActions.commitRename( newName, *pIndex, destinationAbs ) == false )
             return false;
@@ -473,7 +486,11 @@ namespace sw::editor
     {
         EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
-            return false;
+        {
+            _pendingMove = PendingMove{ false, string{}, string( sourceAbs ), string( folderAbs ) };
+            SW_LOG_INFO_ID( "ContentBrowserModel.MoveWaitsForReferenceIndex", "Move waits for the reference index to catch up with the last file change" );
+            return true;
+        }
         string destinationAbs;
         if ( ContentBrowserFileActions::moveAssetToFolder( sourceAbs, folderAbs, *pIndex, destinationAbs ) == false )
             return false;

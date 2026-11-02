@@ -171,9 +171,10 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // font.iconGlyphs: 아이콘 폰트가 본문 폰트에 합쳐졌는지 확인한다. 글리프를 찾지 못하면 ImGui 는 빈 상자를 그리고 로그 한 줄만 남긴다
             // ------------------------------------------------------------------------------
-            static bool hasGlyph( ImFontBaked* pBaked, uint32 codepoint )
+            /** @brief 글꼴 자료(합친 소스들)에 글리프가 있는지 — 구운 캐시(`ImFontBaked`)는 처음 그릴 때 채워지므로 그것을 보면 그리는 순서 · 속도에 따라 흔들린다(ImGui 1.92 동적 글꼴). */
+            static bool hasGlyph( ImFont* pFont, uint32 codepoint )
             {
-                return pBaked != nullptr && pBaked->FindGlyphNoFallback( static_cast<ImWchar>( codepoint ) ) != nullptr;
+                return pFont != nullptr && pFont->IsGlyphInFont( static_cast<ImWchar>( codepoint ) );
             }
 
             static uint32 decodeFirstCodepoint( const utf8* pText )
@@ -188,10 +189,9 @@ namespace sw::editor
                 // ImGuiNotify 토스트가 고정해 둔 Font Awesome 코드포인트(성공)다. 아이콘 폰트가 같은 코드포인트에 글리프를 둔다.
                 constexpr uint32 kNotifySuccessCodepoint = 0xF058;
                 ImFont*          pFont                   = ImGui::GetFont();
-                ImFontBaked*     pBaked                  = pFont != nullptr ? pFont->GetFontBaked( ImGui::GetFontSize() ) : nullptr;
-                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( SW_EDITORICON( "Save" ) ) ), "editor icon font glyph kSave is missing" );
-                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( SW_EDITORICON( "Missing" ) ) ), "editor icon font glyph kMissing is missing" );
-                (void)context.expect( hasGlyph( pBaked, kNotifySuccessCodepoint ), "notification glyph U+F058 is missing from the editor icon font" );
+                (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITORICON( "Save" ) ) ), "editor icon font glyph kSave is missing" );
+                (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITORICON( "Missing" ) ) ), "editor icon font glyph kMissing is missing" );
+                (void)context.expect( hasGlyph( pFont, kNotifySuccessCodepoint ), "notification glyph U+F058 is missing from the editor icon font" );
                 return EditorSelfTestStep::Done;
             }
 
