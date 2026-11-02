@@ -295,12 +295,9 @@ namespace sw
             static void collectEngineShaderRequests( const EngineDefaultAssets& engineDefaultAssets, vector<ShaderCookRequest>& outListRequest )
             {
                 const vector<string> listEngineShader = {
-                    engineDefaultAssets._shaderFullscreenTriangle.get(),
                     engineDefaultAssets._shaderSprite2D.get(),
                     engineDefaultAssets._shaderSprite2DLit.get(),
-                    engineDefaultAssets._shaderParticle.get(),
-                    engineDefaultAssets._shaderProbeProvokingVertex.get(),
-                    engineDefaultAssets._shaderProbeInstanceSlot.get() };
+                    engineDefaultAssets._shaderParticle.get() };
                 for ( const string& path : listEngineShader )
                 {
                     appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
@@ -315,7 +312,7 @@ namespace sw
                 {
                     appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
                 }
-                // 기본이 아닌 컴퓨트 진입점(RHIDeviceTest.ComputeEntryPointOtherThanCSMainRuns).
+                // 기본이 아닌 컴퓨트 진입점.
                 appendRequestUnique( outListRequest, engineDefaultAssets._shaderProbeComputeTextureWrite.get(), "csWriteSwapped", ShaderStage::Compute, {} );
             }
 

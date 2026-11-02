@@ -57,8 +57,7 @@ namespace sw
          * @details 커맨드 리스트는 디바이스보다 오래 살 수 있습니다. 그러면 소멸자가 이미 파괴된
          *          디바이스에 반납을 시도합니다(`releaseOnlineBlocksDeferred`,
          *          `recycleCommandListEntryDeferred`). 주의: 이 연결을 끊지 않으면 커맨드 리스트를 보유한 채
-         *          디바이스를 종료할 때 크래시가 납니다(`RHIDeviceTest.CommandListCreationAndExecution` 이 드물게
-         *          SEGFAULT 합니다). 여기서는 디바이스를 다시 부르지 않고 자기 것만 놓습니다.
+         *          디바이스를 종료할 때 크래시가 납니다. 여기서는 디바이스를 다시 부르지 않고 자기 것만 놓습니다.
          */
         void detachFromDevice();
 

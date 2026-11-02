@@ -74,7 +74,6 @@
                      _shaderAutoExposure="engine/shaders/auto_exposure.hlsl"
                      _shaderUpscale="engine/shaders/fsr1.hlsl"
                      _shaderOcclusionTiles="engine/shaders/occlusion_tiles.hlsl"
-                     _shaderFullscreenTriangle="engine/shaders/fullscreen_triangle.hlsl"
                      _shaderSSAO="engine/shaders/ssao.hlsl"
                      _shaderTAA="engine/shaders/taa.hlsl"
                      _shaderSceneDepthCopy="engine/shaders/scene_depth_copy.hlsl"
@@ -93,8 +92,6 @@
                      _shaderSprite2D="engine/shaders/sprite_2d.hlsl"
                      _shaderSprite2DLit="engine/shaders/sprite_2d_lit.hlsl"
                      _shaderParticle="engine/shaders/particle.hlsl"
-                     _shaderProbeProvokingVertex="common/shaders/provoking_vertex.hlsl"
-                     _shaderProbeInstanceSlot="common/shaders/instance_slot_probe.hlsl"
                      _shaderProbeSampleCompute="common/shaders/sample_compute.hlsl"
                      _shaderProbeComputeTextureWrite="common/shaders/compute_texture_write.hlsl"
                      _shaderProbeWaterWave="common/shaders/water_wave_probe.hlsl" />

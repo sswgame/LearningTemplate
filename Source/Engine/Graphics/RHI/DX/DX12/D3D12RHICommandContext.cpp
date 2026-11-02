@@ -702,7 +702,7 @@ namespace sw
         if ( flushSlotTables( false ) == false )
             return;
         // 슬롯 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 주의: 슬롯 0 만 걸면 이 리스트에서
-        // 슬롯 1 이 한 번도 안 걸렸을 때 인스턴스 자리를 0 으로 읽는다(RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 잡는다).
+        // 슬롯 1 이 한 번도 안 걸렸을 때 인스턴스 자리를 0 으로 읽는다.
         if ( bindMeshVertexBufferForDraw() == false )
             return;
         bindBoundIndexBuffer();

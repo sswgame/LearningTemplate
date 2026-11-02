@@ -187,8 +187,6 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderOcclusionTiles; ///< 가림 타일(컴퓨트) — 지난 장면 깊이를 타일마다 최대 깊이로 줄인다. GPU 컬링의 가림 판정이 읽는다
         PROPERTY( Required )
-        DataPath _shaderFullscreenTriangle; ///< 전체 화면 삼각형 정점 셰이더
-        PROPERTY( Required )
         DataPath _shaderSSAO; ///< SSAO
         PROPERTY( Required )
         DataPath _shaderTAA; ///< TAA
@@ -226,10 +224,6 @@ namespace sw
         DataPath _shaderParticle; ///< 파티클 빌보드(VFX) — 방출기 하나 = 그리기 하나, 입자 하나 = 인스턴스 하나. 투명 패스 PSO 를 물려받는다
 
         // RHI · 렌더 테스트의 프로브 셰이더 — 런타임은 쓰지 않지만 Shipping 테스트가 쿠킹된 바이너리를 읽으므로 쿠킹 목록에 든다.
-        PROPERTY( Required )
-        DataPath _shaderProbeProvokingVertex; ///< 프로브: 플랫 보간이 첫 정점 값을 쓰는가(RHIDeviceTest)
-        PROPERTY( Required )
-        DataPath _shaderProbeInstanceSlot; ///< 프로브: 인스턴스 슬롯 스트림이 네 API 에서 같은가(RHIDeviceTest)
         PROPERTY( Required )
         DataPath _shaderProbeSampleCompute; ///< 프로브: 컴퓨트 쿠킹 · 리플렉션(ShaderTest)
         PROPERTY( Required )

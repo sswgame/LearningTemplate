@@ -130,8 +130,7 @@ namespace sw
          * @brief 내용을 담아 인덱스 버퍼(uint16, uint32)를 만듭니다. 인덱스 크기는 바인딩할 때(`setIndexBuffer`) 다시 알려 줍니다.
          * @details 백엔드마다 **인덱스 버퍼 용도**로 만들어야 한다(D3D11_BIND_INDEX_BUFFER, VK_BUFFER_USAGE_INDEX_BUFFER_BIT 등).
          *          주의: 구조화 버퍼로 대신하면 안 된다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은
-         *          검증 레이어가 용도 위반으로 잡는다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 이미지만으로는 드러나지 않는다
-         *          (RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream).
+         *          검증 레이어가 용도 위반으로 잡는다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 이미지만으로는 드러나지 않는다.
          */
         virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
