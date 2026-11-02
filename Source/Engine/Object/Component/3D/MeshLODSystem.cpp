@@ -78,6 +78,10 @@ namespace sw
         float3  center{};
         float32 radius = 0.0f;
         (void)component.getWorldBounds( center, radius ); // 메시 컴포넌트는 늘 경계를 낸다
+        // 크기는 메시 경계로 잰다 — 컴포넌트 경계는 컬링 여유(스킨드 1.5 배 · VAT)를 품어 그대로 쓰면 단계가 늘 한 칸 곱다(언리얼 LOD 화면 크기도 메시 경계다).
+        const Mesh* pMesh = component.getRawMesh();
+        if ( pMesh != nullptr && pMesh->getVertexCount() > 0 )
+            radius = pMesh->getBoundingRadius() * component.getWorldMatrix().getMaximumAxisScale();
         float32 screenSize = 0.0f;
         for ( const LODView& view : _listView )
         {

@@ -4,6 +4,8 @@
   triangle_ratio: LOD 0 삼각형 대비 비율, max_error: 허용 오차(메시 크기 대비), screen_size: 이 단계로 넘어가는 화면 높이 비율. 단계마다 셋 다 작아진다.
 -->
 <CharacterLODSettings>
-  <Level triangle_ratio="0.5" max_error="0.02" screen_size="0.25"/>
-  <Level triangle_ratio="0.2" max_error="0.05" screen_size="0.1"/>
+  <Level triangle_ratio="0.5" max_error="0.01" screen_size="0.4"/>
+  <Level triangle_ratio="0.25" max_error="0.03" screen_size="0.2"/>
+  <Level triangle_ratio="0.12" max_error="0.06" screen_size="0.1"/>
+  <Level triangle_ratio="0.05" max_error="0.12" screen_size="0.05"/>
 </CharacterLODSettings>

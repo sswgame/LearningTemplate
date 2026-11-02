@@ -19,12 +19,12 @@ namespace sw
     class Mesh;
     class XMLNode;
 
-    /** @brief 단계 하나의 단순화 규칙입니다. */
+    /** @brief 단계 하나의 단순화 규칙입니다. 값은 늘 데이터(`engine/character/characterlod.xml`)가 정한다 — 셋 다 필수 속성이라 기본값이 없다. */
     struct CharacterLODLevelRule
     {
-        float32 _triangleRatio{ 0.5f }; ///< LOD 0 삼각형 수 대비 목표 비율(0..1, 단계마다 작아진다)
-        float32 _maxError{ 0.01f };     ///< 허용 오차(메시 크기 대비 비율, `meshopt_simplify` 의 target_error)
-        float32 _screenSize{ 0.3f };    ///< 이 단계로 넘어가는 화면 크기 임계값(0..1, 단계마다 작아진다 — `MeshLODLevel::_screenSize`)
+        float32 _triangleRatio{ 0.0f }; ///< LOD 0 삼각형 수 대비 목표 비율(0..1, 단계마다 작아진다)
+        float32 _maxError{ 0.0f };      ///< 허용 오차(메시 크기 대비 비율, `meshopt_simplify` 의 target_error)
+        float32 _screenSize{ 0.0f };    ///< 이 단계로 넘어가는 화면 크기 임계값(0..1, 단계마다 작아진다 — `MeshLODLevel::_screenSize`)
     };
 
     /**

@@ -2,6 +2,7 @@
 
 #include "Engine/Character/Fit/CharacterMeshLOD.h"
 
+#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -107,6 +108,8 @@ namespace sw
                 outListIndex.resize( start + indexCount );
                 const size_t kept = meshopt_simplify( outListIndex.data() + start, pSource, indexCount, &listVertex[0]._arrPosition[0], listVertex.size(), sizeof( RHIVertex ), targetCount,
                                                       rule._maxError, meshopt_SimplifyLockBorder, nullptr );
+                // 단순화는 삼각형 순서를 정점 캐시에 맞추지 않는다 — 다시 맞춘다(meshoptimizer 권장 순서, 임포터 `ModelImportGeometry` 와 같다).
+                meshopt_optimizeVertexCache( outListIndex.data() + start, outListIndex.data() + start, kept, listVertex.size() );
                 outListIndex.resize( start + kept );
                 return kept;
             }
@@ -161,8 +164,16 @@ namespace sw
             level._listIndex = listLevelIndex;
             listLevel.push_back( std::move( level ) );
         }
+        utf8 arrSummary[constant::buffer::kMax256]{};
+        for ( const MeshLODLevel& level : listLevel )
+        {
+            formatstring( arrSummary + std::strlen( arrSummary ), constant::buffer::kMax256 - std::strlen( arrSummary ), " %#/%#", static_cast<uint32>( level._listIndex.size() / 3u ),
+                          static_cast<uint32>( level._listVertex.size() ) );
+        }
         if ( inoutMesh.setLODs( std::move( listLevel ) ) == false )
             return false; // setLODs 가 까닭을 남겼다
+        // 단계마다 남은 삼각형 / 정점 — 표(characterlod.xml)를 맞출 때 본다. 차림마다 한 번이다.
+        SW_LOG_INFO_ID( "CharacterMeshLOD.LevelsBuilt", "Character LODs built from %# triangles / %# vertices:%#", inoutMesh.getIndexCount() / 3u, inoutMesh.getVertexCount(), arrSummary );
         return true;
     }
 
