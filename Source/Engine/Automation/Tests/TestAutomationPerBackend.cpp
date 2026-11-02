@@ -4,7 +4,7 @@
 
 #include "Engine/Automation/Runner/AutomationPerBackend.h"
 
-// AutomationPerBackendTest — 백엔드 사이의 `<Record>` 대조(`findRecordMismatches`). 부모 App가 자식 보고의 records[] 로 결정성을 판정하는 근거다(nogpu).
+// AutomationPerBackendTest — 백엔드 사이의 `<Record>` 대조(`findRecordMismatches`, 부모 App 가 자식 보고의 records[] 로 결정성을 판정하는 근거)와 백엔드 목록 읽기(`parseBackendList`)(nogpu).
 
 /**
  * @brief [AutomationPerBackendTest] 모두 같으면 빈 목록이고, 다른 순번만 한 줄로 각 백엔드의 값을 적는다
@@ -51,4 +51,24 @@ SW_TEST_CASE( AutomationPerBackendTest, RecordMismatchReportsMissingAndRenamedLi
         SW_EXPECT_EQUAL( sw::string( "record #1 'frame 1 A': dx11=1 gl='frame 1 C = 1'" ), listMismatch[0] );
         SW_EXPECT_EQUAL( sw::string( "record #2 'frame 2 B': dx11=2 gl=(none)" ), listMismatch[1] );
     }
+}
+
+/**
+ * @brief [AutomationPerBackendTest] all 은 이 플랫폼이 만들 수 있는 백엔드만(Windows 넷, 리눅스 vk · gl), 이름을 적은 백엔드는 플랫폼과 무관하게 표 순서로 고른다
+ */
+SW_TEST_CASE( AutomationPerBackendTest, BackendListAllFollowsPlatformAvailability )
+{
+    sw::vector<sw::string> listBackend;
+    sw::string             error;
+    SW_EXPECT_TRUE( sw::AutomationPerBackend::parseBackendList( "all", listBackend, error ) );
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::vector<sw::string> listExpectedAll{ "dx11", "dx12", "vk", "gl" };
+#else
+    const sw::vector<sw::string> listExpectedAll{ "vk", "gl" };
+#endif
+    SW_EXPECT_TRUE( listBackend == listExpectedAll );
+
+    SW_EXPECT_TRUE( sw::AutomationPerBackend::parseBackendList( "gl,dx12", listBackend, error ) );
+    SW_EXPECT_TRUE( listBackend == ( sw::vector<sw::string>{ "dx12", "gl" } ) );
+    SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendList( "all,vk", listBackend, error ) );
 }

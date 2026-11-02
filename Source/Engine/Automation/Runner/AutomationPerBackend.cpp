@@ -16,6 +16,7 @@
 #include "Engine/Automation/Runner/AutomationScenarioChain.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -37,6 +38,12 @@ namespace sw
 #define SW_MATRIX_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
                 SW_RHI_BACKEND_TABLE( SW_MATRIX_BACKEND_NAME_ROW )
 #undef SW_MATRIX_BACKEND_NAME_ROW
+            };
+            /** @brief 같은 표의 백엔드 열거자(`kArrBackendName` 과 같은 순서) — `all` 이 이 플랫폼에서 만들 수 있는 것만 고를 때 읽는다. */
+            static constexpr RHIBackend kArrBackend[] = {
+#define SW_MATRIX_BACKEND_ENUM_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) RHIBackend::Backend,
+                SW_RHI_BACKEND_TABLE( SW_MATRIX_BACKEND_ENUM_ROW )
+#undef SW_MATRIX_BACKEND_ENUM_ROW
             };
 
             /**
@@ -223,10 +230,14 @@ namespace sw
         outListBackend.clear();
         const vector<string_view> listName = StringUtil::split( text, ",", { ._bTrim = true, ._bDropEmpty = true } );
         // 표 순서로 모은다 — 적은 순서와 무관하게 보고 · 종료 코드의 "첫 실패" 가 늘 같다.
-        for ( const utf8* pName : Internal::kArrBackendName )
+        // `all` 은 이 플랫폼이 만들 수 있는 백엔드다(리눅스는 vk · gl — DX 자식을 띄워 건너뜀을 받지 않는다). 이름을 적은 백엔드는 그대로 띄운다 — 못 돌면 자식이 건너뜀(77)으로 끝난다.
+        const bool bAll = listName.size() == 1 && listName[0] == "all";
+        for ( size_t index = 0; index < std::size( Internal::kArrBackendName ); ++index )
         {
-            const bool bAll = listName.size() == 1 && listName[0] == "all";
-            if ( bAll || std::find( listName.begin(), listName.end(), string_view{ pName } ) != listName.end() )
+            const utf8* const pName     = Internal::kArrBackendName[index];
+            const bool        bSelected = bAll ? RHIAvailability::isAvailable( Internal::kArrBackend[index] )
+                                               : std::find( listName.begin(), listName.end(), string_view{ pName } ) != listName.end();
+            if ( bSelected )
                 outListBackend.emplace_back( pName );
         }
         for ( const string_view name : listName )

@@ -3,6 +3,7 @@
   엔진 시나리오 — 표시 경로: 무인 실행도 그린 프레임을 화면에 내보내게 하고(present="true"), 창 크기를 두 번 바꾸고, 최소화했다 되돌린 뒤 다시 크기를 바꾼다.
   무인 체인은 기본으로 내보내지 않아(-unattended — 언리얼 -RenderOffScreen 자리) 스왑체인 획득 · 표시 · 다시 만들기를 이 시나리오만 지난다.
   최소화 중에는 표면 크기가 0 이라 Vulkan 이 프레임을 건너뛰고, 되돌리면 스왑체인을 다시 만든다. 검증 레이어(Debug)가 그 길의 동기화 오류를 로그로 낸다.
+  리눅스는 ICCCM 아이콘화를 따르는 창 관리자가 있어야 최소화가 된다(WSLg 의 Weston XWayland 는 요청을 무시해 Window.Minimized 를 기다리다 진다).
   실행: App -scenario=engine/automation/windowpresent.scenario.xml -unattended
 -->
 <Scenario name="engine.windowpresent" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive" present="true">
