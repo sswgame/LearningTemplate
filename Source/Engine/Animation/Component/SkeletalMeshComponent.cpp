@@ -13,6 +13,7 @@
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Object/Component/3D/MeshLODSettings.h"
 #include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -37,9 +38,6 @@ namespace sw
                 static const shared_ptr<const Skeleton> s_skeleton = createImplicitSkeleton();
                 return s_skeleton;
             }
-
-            /** @brief 스킨드 메시의 경계 반지름 여유입니다 — 포즈가 바인드 포즈 밖으로 정점을 옮겨도 GPU 컬링에 잘리지 않게 합니다. */
-            static constexpr float32 kSkinnedBoundsScale = 1.5f;
 
             /** @brief 핸들에서 주기 위상을 냅니다(정수 해시 — 이웃한 id 가 이웃한 위상이 되지 않게 섞는다). */
             static uint32 makeUpdatePhase( uint64 id )
@@ -373,7 +371,7 @@ namespace sw
         leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
         _skinSourceMesh      = source;
         _skinSourceContentID = source->getContentID();
-        setBoundsRadius( source->getBoundingRadius() * SkeletalMeshComponentInternal::kSkinnedBoundsScale );
+        setBoundsRadius( source->getBoundingRadius() * MeshLODSettings::getDefault()._skinnedBoundsScale ); // 포즈가 바인드 포즈 밖으로 정점을 옮겨도 컬링에 잘리지 않게
         if ( current != source )
             setMesh( std::move( source ) );
         refreshDrawnSkinSlot();

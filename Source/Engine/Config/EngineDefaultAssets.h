@@ -115,6 +115,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _characterLODSettings; ///< 조립한 캐릭터 메시의 LOD 표(`CharacterMeshLOD`, `CharacterLODSettings`)
         PROPERTY( Required )
+        DataPath _meshLODSettings; ///< 메시 LOD · 경계 정책(`MeshLODSystem` · `SkeletalMeshComponent`, `MeshLODSettings`)
+        PROPERTY( Required )
         DataPath _lipSyncSettings; ///< 립싱크 표(`FacialAnimationComponent`, `LipSyncSettings`)
         PROPERTY( Required )
         DataPath _navMeshSettings; ///< 내비메시 설정 표(`SceneNavigation`, `NavMeshSettings`)

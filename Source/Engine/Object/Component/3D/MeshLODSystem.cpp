@@ -8,6 +8,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/MeshLODSettings.h"
 #include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
@@ -59,7 +60,7 @@ namespace sw
         if ( strictLOD >= currentLOD )
             return strictLOD;
         // 고운 쪽으로는 임계값을 여유만큼 넘어야 간다 — 화면 크기를 그만큼 깎아 다시 고른다.
-        const uint32 relaxedLOD = mesh.selectLOD( screenSize / ( 1.0f + kRefineHysteresis ) );
+        const uint32 relaxedLOD = mesh.selectLOD( screenSize / ( 1.0f + MeshLODSettings::getDefault()._refineHysteresis ) );
         return MathUtil::min( relaxedLOD, currentLOD );
     }
 

@@ -40,6 +40,7 @@
                      _animationCrowdSettings="engine/animation/animationcrowd.xml"
                      _animationLODSettings="engine/animation/animationlod.xml"
                      _characterLODSettings="engine/character/characterlod.xml"
+                     _meshLODSettings="engine/render/meshlod.xml"
                      _lipSyncSettings="engine/animation/lipsync.xml"
                      _navMeshSettings="engine/navigation/navmeshsettings.xml"
                      _defaultDestructionProfile="engine/destruction/default.destruction.xml"

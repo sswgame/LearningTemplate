@@ -26,12 +26,6 @@ namespace sw
     class SW_API MeshLODSystem final : public ISceneService
     {
     public:
-        /**
-         * @brief 더 고운 단계로 돌아갈 때 화면 크기가 임계값보다 이만큼(비율) 커야 합니다. 임계값 근처에서 카메라가 흔들려 단계가 프레임마다 오가지 않게 한다.
-         * @details 거친 단계로는 임계값을 넘자마자 간다 — 늦게 내리면 먼 물체가 필요 이상 정점을 그린다.
-         */
-        static constexpr float32 kRefineHysteresis = 0.1f;
-
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
         /** @brief 서브시스템 이름입니다. */
@@ -82,7 +76,7 @@ namespace sw
         int32 getForcedLOD() const { return _forcedLOD; }
 
         /**
-         * @brief 화면 크기 @p screenSize 에서 지금 단계 @p currentLOD 다음에 그릴 단계입니다. 거친 쪽은 바로, 고운 쪽은 `kRefineHysteresis` 만큼 여유를 두고 바꾼다.
+         * @brief 화면 크기 @p screenSize 에서 지금 단계 @p currentLOD 다음에 그릴 단계입니다. 거친 쪽은 바로, 고운 쪽은 여유(`MeshLODSettings::_refineHysteresis` — 문턱에서 카메라가 흔들려 단계가 프레임마다 오가지 않게)를 두고 바꾼다.
          * @details 메시 하나의 판정이라 테스트가 뷰 없이 직접 부른다.
          */
         static uint32 selectNextLOD( const Mesh& mesh, float32 screenSize, uint32 currentLOD );
