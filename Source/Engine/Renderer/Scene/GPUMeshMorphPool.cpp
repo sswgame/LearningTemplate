@@ -506,10 +506,21 @@ namespace sw
         _vertexCount = _skinVertexBase + resultOffset;
     }
 
+    GPUDeformResult GPUDeformResult::fromVertex( const RHIVertex& vertex )
+    {
+        GPUDeformResult result{};
+        result._arrPosition[0] = vertex._arrPosition[0];
+        result._arrPosition[1] = vertex._arrPosition[1];
+        result._arrPosition[2] = vertex._arrPosition[2];
+        result._normal         = OctahedralNormal::fromNormal( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] } );
+        result._tangent        = OctahedralNormal::fromNormal( float3{ vertex._arrTangent[0], vertex._arrTangent[1], vertex._arrTangent[2] } );
+        return result;
+    }
+
     void GPUMeshMorphPool::ensureDeformBuffers( IRHIDevice* pDevice )
     {
         // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다).
-        const bool bMorphBuffer = _morph.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _vertexCount * shaderslot::kMorphFloat4PerVertex,
+        const bool bMorphBuffer = _morph.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), _vertexCount * shaderslot::kMorphResultWordsPerVertex,
                                                          GPUMeshMorphPoolInternal::kWriteUsage, true, true, nullptr );
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );
         // 칸 표 — 원소가 uint2 라 셰이더 선언(StructuredBuffer<uint2>)과 같은 stride 로 만든다. 못 만들면 표가 걸리지 않아 스킨 메시는 그리지 않는다(셰이더가 NaN 위치로 버린다).

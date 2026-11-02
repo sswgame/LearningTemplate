@@ -49,6 +49,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
@@ -59,11 +60,12 @@ namespace sw
     struct GPUSkinPalette;
 
     class IRHIDevice;
+    struct RHIVertex;
     class Mesh;
 
     /**
      * @struct GPUMorphVertex
-     * @brief 모프 풀의 정점 하나입니다. GPU 에서는 **float4 셋**(위치 · 노멀 · 탄젠트)으로 보입니다(`g_SwMorphVertices`, binding.hlsli).
+     * @brief 모프 · 스킨 **레스트** 정점 하나입니다. GPU 에서는 **float4 셋**(위치 · 노멀 · 탄젠트)으로 보입니다(`g_RestVertices`, mesh_morph · mesh_skin.hlsl). 결과는 `GPUDeformResult` 다.
      * @details 셰이더 쪽은 구조체가 아니라 `StructuredBuffer<float4>` 다. 주의: 구조체로 선언하면 레이아웃이 네 백엔드에서
      *          같아도 OpenGL 만 같은 원소의 두 멤버를 **다른 원소**에서 읽는다. 그래서 버퍼의 원소는 float4 이고 정점당
      *          `shaderslot::kMorphFloat4PerVertex` 개다.
@@ -75,11 +77,28 @@ namespace sw
         float4 _normal{};   ///< 변형된 노멀입니다. 컴퓨트가 위치와 **같이** 다시 만듭니다. w 는 쓰지 않습니다.
         float4 _tangent{};  ///< 변형된 탄젠트(xyz)입니다. 노멀과 같이 돌립니다 — 없으면 노멀 맵이 레스트 탄젠트로 칠해진다. w 는 레스트의 바이탄젠트 부호입니다.
     };
+
+    /**
+     * @struct GPUDeformResult
+     * @brief 변형 결과 정점 하나입니다(`g_SwMorphVertices` — uint 다섯, binding_slots.hlsli `SW_MORPH_RESULT_WORDS_PER_VERTEX`). 컴퓨트가 쓰고 정점 셰이더가 읽는다.
+     * @details 노멀 · 탄젠트는 옥타헤드럴 snorm16 둘(셰이더 `Octahedral::pack` 과 같은 바이트), 탄젠트 부호는 레스트(입력 스트림) 값이라 싣지 않는다.
+     *          float4 셋(48 B)에서 20 B 다 — 캐릭터 200 명의 결과 풀이 그만큼 준다. CPU 는 진단(`SkipDispatch`)에서만 채운다.
+     */
+    struct GPUDeformResult
+    {
+        float32          _arrPosition[3]{};
+        OctahedralNormal _normal{};
+        OctahedralNormal _tangent{};
+
+        /** @brief 레스트 정점을 변형 없이 결과 배치로 담습니다. */
+        [[nodiscard]] static GPUDeformResult fromVertex( const RHIVertex& vertex );
+    };
 } // namespace sw
 
 namespace sw
 {
     static_assert( sizeof( GPUMorphVertex ) == shaderslot::kMorphFloat4PerVertex * sizeof( float4 ), "모프 풀 정점은 SW_MORPH_FLOAT4_PER_VERTEX 개의 float4 여야 한다 — 셰이더가 [3i], [3i+1], [3i+2] 로 읽는다" );
+    static_assert( sizeof( GPUDeformResult ) == shaderslot::kMorphResultWordsPerVertex * sizeof( uint32 ), "변형 결과는 SW_MORPH_RESULT_WORDS_PER_VERTEX 개의 uint 여야 한다 — 셰이더가 단어로 읽는다" );
 
 } // namespace sw
 

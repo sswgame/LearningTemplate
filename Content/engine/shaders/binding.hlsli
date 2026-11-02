@@ -78,6 +78,7 @@
 
 #include "common.hlsli"
 #include "instance_data.hlsli"
+#include "octahedral.hlsli"
 #include "light_grid_common.hlsli"
 
 static const uint kInvalidIndex = 0xFFFFFFFFu;
@@ -109,13 +110,6 @@ struct MorphPool
     static uint computeElement( uint batchIndex, uint skinSlot, uint vertexID );
     static void loadVertex( uint batchIndex, uint skinSlot, uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
     static float4 loadTangent( uint batchIndex, uint skinSlot, uint vertexID, float4 restTangent );
-};
-
-/** @brief 단위 벡터 ↔ 옥타헤드럴 좌표 [-1, 1]^2 (6 절 앞). C++ `OctahedralNormal` 과 같은 식이다 — G버퍼 노멀 첨부(R16G16_SNORM)와 VAT 노멀이 쓴다. */
-struct Octahedral
-{
-    static float2 encode( float3 direction );
-    static float3 decode( float2 coordinate );
 };
 
 /** @brief 정점 애니메이션(VAT) 표(6 절). 인스턴스마다의 원소 번호(표 안 단어 번호)는 InstanceData::computeVertexAnimationElements 다. */
@@ -370,12 +364,13 @@ static BatchData BatchData::load( uint batchIndex )
 //    메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
 //    버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
 // ------------------------------------------------------------------------------
-// **구조체가 아니라 평면 float4 배열이다.** 정점 하나가 원소 셋 — [3i] 위치, [3i+1] 노멀(w 는 안 쓴다), [3i+2] 탄젠트(xyz, w 부호).
+// **구조체가 아니라 평면 uint 배열이다.** 정점 하나가 단어 SW_MORPH_RESULT_WORDS_PER_VERTEX 개 — 위치 float 비트 셋, 노멀 · 탄젠트 옥타헤드럴(Octahedral::pack) 하나씩.
+// 탄젠트 부호(w)는 변형으로 바뀌지 않아 싣지 않는다(입력 스트림 값). 예전 float4 셋(48 B)에서 20 B 다 — 언리얼 스킨 캐시도 법선 · 탄젠트를 묶어 쓴다.
 // 주의: `struct { float4 pos; float4 nrm; }` 로 두면 레이아웃이 네 백엔드에서 같아도(ArrayStride 32 · 오프셋 0/16)
 // OpenGL 만 **같은 원소의 두 멤버를 다른 원소에서 읽는다**(셰이더 모양에 따라 달라진다 — 드라이버의 SPIR-V 경로가
 // 구조체 멤버 로드를 다루는 방식). 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
 // 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
-SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
 // 스킨 칸 → (결과 시작, 변형한 LOD 단계의 첫 정점) 표(binding_slots.hlsli SW_SLOT_SKIN_BASE_SRV, C++ GPUSkinBase). 스킨 결과는 메시가 아니라 칸(유닛 · 군중 묶음)마다 하나라
 // 같은 메시의 캐릭터들이 한 배치로 그려지고, 칸마다 그리는 단계 하나만 변형된다.
 SW_DECLARE_STRUCTURED_BUFFER( uint2, g_SwSkinBases, SW_SLOT_SKIN_BASE_SRV );
@@ -435,8 +430,9 @@ static void MorphPool::loadVertex( uint batchIndex, uint skinSlot, uint vertexID
     const uint element = MorphPool::computeElement( batchIndex, skinSlot, vertexID );
     if ( element != kInvalidIndex )
     {
-        outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
-        outNormal   = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
+        const uint word = element * SW_MORPH_RESULT_WORDS_PER_VERTEX;
+        outPosition     = asfloat( uint3( g_SwMorphVertices[word], g_SwMorphVertices[word + 1u], g_SwMorphVertices[word + 2u] ) );
+        outNormal       = Octahedral::unpack( g_SwMorphVertices[word + 3u] );
     }
     // 칸이 있는데 결과가 없다(풀 상한 초과 · 버퍼 실패 — 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않는다. NaN 위치의 삼각형은 래스터에서 버려진다.
     const bool bRefused = ( skinSlot != kInvalidIndex ) && ( element == kInvalidIndex );
@@ -451,7 +447,7 @@ static void MorphPool::loadVertex( uint batchIndex, uint skinSlot, uint vertexID
 static float4 MorphPool::loadTangent( uint batchIndex, uint skinSlot, uint vertexID, float4 restTangent )
 {
     const uint element = MorphPool::computeElement( batchIndex, skinSlot, vertexID );
-    return ( element == kInvalidIndex ) ? restTangent : float4( g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 2u].xyz, restTangent.w );
+    return ( element == kInvalidIndex ) ? restTangent : float4( Octahedral::unpack( g_SwMorphVertices[element * SW_MORPH_RESULT_WORDS_PER_VERTEX + 4u] ), restTangent.w );
 }
 
 // ------------------------------------------------------------------------------
@@ -463,31 +459,6 @@ static float4 MorphPool::loadTangent( uint batchIndex, uint skinSlot, uint verte
 // ------------------------------------------------------------------------------
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
 // 헤더 · 원소 단어 수는 SW_VERTEX_ANIMATION_HEADER_WORDS · SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT(binding_slots.hlsli — C++ MeshVertexAnimationElement 와 같은 배치).
-
-/**
- * @brief 옥타헤드럴 좌표 [-1, 1]^2 를 단위 벡터로 푼다. C++ `OctahedralNormal::decodeOctant` 와 같은 식이다(0 은 양수 부호).
- */
-static float3 Octahedral::decode( float2 coordinate )
-{
-    float3       normal = float3( coordinate, 1.0f - abs( coordinate.x ) - abs( coordinate.y ) );
-    const float2 signs  = float2( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f );
-    const float2 folded = ( 1.0f - abs( normal.yx ) ) * signs;
-    normal.xy           = ( normal.z < 0.0f ) ? folded : normal.xy;
-    return normalize( normal );
-}
-
-/**
- * @brief 방향(길이는 상관없다)을 옥타헤드럴 좌표 [-1, 1]^2 로 접는다. C++ `OctahedralNormal::fromNormal` 과 같은 식이다
- *        (`sum = |x| + |y| + |z|`, z < 0 이면 접기, 0 은 양수 부호). 영벡터는 (0, 0) 이라 +z 로 풀린다.
- */
-static float2 Octahedral::encode( float3 direction )
-{
-    const float  sum    = abs( direction.x ) + abs( direction.y ) + abs( direction.z );
-    const float2 plane  = sum > 0.0f ? direction.xy / sum : float2( 0.0f, 0.0f );
-    const float2 signs  = float2( plane.x >= 0.0f ? 1.0f : -1.0f, plane.y >= 0.0f ? 1.0f : -1.0f );
-    const float2 folded = ( 1.0f - abs( plane.yx ) ) * signs;
-    return ( direction.z < 0.0f ) ? folded : plane;
-}
 
 /** @brief 부호 있는 정수의 최대값(snorm16 = 32767 · snorm8 = 127)으로 나눈 [-1, 1] 실수다(최솟값은 -1 로 자른다, C++ snorm::toFloat 과 같다). */
 static float VertexAnimation::toSnorm( int raw, float maxRaw )

@@ -342,6 +342,9 @@
 // 모프 결과 · 레스트 버퍼 — 정점 하나 = float4 셋([3i] 위치, [3i+1] 노멀, [3i+2] 탄젠트 xyz · w 바이탄젠트 부호). 스킨 원본 레스트 버퍼 안의 차이 구간(인스턴스 줄의 차이 시작부터)은 모프 차이 하나 = float4 셋
 // ([0] 위치 차이 + w 에 타깃 번호, [1] 노멀 차이, [2] 비어 있음 — 탄젠트 차이는 없고 컴퓨트가 변형된 노멀에 다시 직교화한다). 구조체가 아니라 평면 배열인 이유는 binding.hlsli 의 g_SwMorphVertices 주석(GL 이 멤버를 옆 원소에서 읽는다).
 #define SW_MORPH_FLOAT4_PER_VERTEX 3u
+// 변형 결과 버퍼(g_SwMorphVertices · 컴퓨트의 g_MorphVerticesRW, uint 배열) — 정점 하나 = 단어 다섯([0..2] 위치 float 비트, [3] 노멀 · [4] 탄젠트 옥타헤드럴 snorm16 둘 — octahedral.hlsli).
+// 탄젠트 부호는 레스트(입력 스트림) 값이라 싣지 않는다. C++ GPUDeformResult 와 같은 배치다.
+#define SW_MORPH_RESULT_WORDS_PER_VERTEX 5u
 // 스킨 가중치 버퍼 — 원본 정점 하나 = float4 셋([3i] 가중치 넷, [3i+1] 원본 스켈레톤 본 번호 넷, [3i+2] 모프 차이 구간(시작 · 수)).
 #define SW_SKIN_FLOAT4_PER_VERTEX 3u
 // 스킨 팔레트 — 본 하나 = float4 셋(행벡터 규약 4x4 행렬의 0 · 1 · 2 열). 위치 = dot( float4( p, 1 ), 열 ). 본 행 뒤에 모프 가중치가 float4 로 이어진다.

@@ -166,8 +166,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2-2) 버퍼 배치와 식 상수. binding_slots.hlsli 10절이 기준이다(셰이더와 같은 파일).
         // ------------------------------------------------------------------------------
-        /// @brief 모프 풀 정점 하나의 원소(float4) 수입니다.
+        /// @brief 모프 · 스킨 레스트 정점 하나의 원소(float4) 수입니다.
         inline constexpr uint32 kMorphFloat4PerVertex = SW_MORPH_FLOAT4_PER_VERTEX;
+        /// @brief 변형 결과 정점 하나의 단어(uint) 수입니다(위치 셋 + 옥타헤드럴 노멀 · 탄젠트).
+        inline constexpr uint32 kMorphResultWordsPerVertex = SW_MORPH_RESULT_WORDS_PER_VERTEX;
         /// @brief 스킨 원본 정점 하나의 가중치 버퍼 원소(float4) 수입니다.
         inline constexpr uint32 kSkinFloat4PerVertex = SW_SKIN_FLOAT4_PER_VERTEX;
         /// @brief 스킨 팔레트 본 하나의 원소(float4) 수입니다.

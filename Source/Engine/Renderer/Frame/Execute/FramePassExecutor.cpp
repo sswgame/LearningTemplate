@@ -1700,19 +1700,16 @@ namespace sw
         // 모프 결과 풀. **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
-        const RHIStructuredBufferSlot& morphBuffer = ( _state._deform._bMorphBindsRest != SW_FALSE ) ? _state._deform._meshMorphPool.getRestBuffer()
-                                                                                                     : _state._deform._meshMorphPool.getMorphBuffer();
+        const RHIStructuredBufferSlot& morphBuffer = _state._deform._meshMorphPool.getMorphBuffer();
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
-            // 진단(레스트를 그대로 물림)이면 레스트 버퍼는 모프 구간만 담는다 — 스킨 구간 번호는 범위 밖으로 걸러 입력 스트림을 쓴다.
-            const uint32 morphElementCount = ( _state._deform._bMorphBindsRest != SW_FALSE ) ? _state._deform._meshMorphPool.getMorphVertexCount() : _state._deform._meshMorphPool.getVertexCount();
-            context._passValues.setUint( passConstantNames()._swMorphVertexCount, morphElementCount );
+            context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getVertexCount() );
         }
         // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
-        // 진단(레스트를 그대로 물림)이면 스킨 구간이 레스트 버퍼에 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
+        // 진단(SkipDispatch)이면 스킨 결과가 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
         const RHIStructuredBufferSlot& skinBaseBuffer = _state._deform._meshMorphPool.getSkinBaseBuffer();
-        const bool                     bSkinBases     = _state._deform._bMorphBindsRest == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinBaseBuffer._buffer != 0 &&
+        const bool                     bSkinBases     = _state._deform._bDeformDispatchSkipped == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinBaseBuffer._buffer != 0 &&
                                 skinBaseBuffer._srv != kInvalidDescriptorIndex;
         if ( bSkinBases )
         {

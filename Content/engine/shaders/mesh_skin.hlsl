@@ -1,4 +1,5 @@
 #include "common.hlsli"
+#include "octahedral.hlsli"
 
 /**
  * mesh_skin.hlsl — GPU 스키닝 (컴퓨트). 언리얼 GPU Skin Cache 의 자리다.
@@ -36,7 +37,7 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SkinWeights, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SkinPalette, 2 );
 SW_DECLARE_STRUCTURED_BUFFER( uint4, g_SkinInstances, 3 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_MorphVerticesRW, 0 );
 
 /** @brief 본 하나의 행렬로 점을 옮긴다(행벡터 규약). */
 float3 transformPoint( uint bone, float3 position )
@@ -125,13 +126,15 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         skinnedTangent += transformDirection( bone, tangent.xyz ) * weight;
     }
 
-    const uint  element             = ( g_SkinVertexBase + skinIndex ) * SW_MORPH_FLOAT4_PER_VERTEX;
-    const float normalLength        = length( skinnedNormal );
-    g_MorphVerticesRW[element]      = float4( skinnedPosition, 1.0f );
-    const float3 outNormal          = normalLength > 1e-6f ? skinnedNormal / normalLength : normal;
-    g_MorphVerticesRW[element + 1u] = float4( outNormal, 0.0f );
-    // 탄젠트는 노멀과 같은 행렬로 돌린다. 모프 차이가 노멀만 바꾸므로 변형된 노멀에 다시 직교화한다(픽셀도 한 번 더 한다 — toon.hlsl applyNormalMap).
-    const float3 orthogonal         = skinnedTangent - outNormal * dot( outNormal, skinnedTangent );
-    const float  tangentLength      = length( orthogonal );
-    g_MorphVerticesRW[element + 2u] = float4( tangentLength > 1e-6f ? orthogonal / tangentLength : tangent.xyz, tangent.w );
+    const uint   word         = ( g_SkinVertexBase + skinIndex ) * SW_MORPH_RESULT_WORDS_PER_VERTEX; // 결과 배치는 binding_slots.hlsli 10 절
+    const float  normalLength = length( skinnedNormal );
+    const float3 outNormal    = normalLength > 1e-6f ? skinnedNormal / normalLength : normal;
+    // 탄젠트는 노멀과 같은 행렬로 돌린다. 모프 차이가 노멀만 바꾸므로 변형된 노멀에 다시 직교화한다(픽셀도 한 번 더 한다 — toon.hlsl applyNormalMap). 부호는 레스트 그대로라 싣지 않는다.
+    const float3 orthogonal      = skinnedTangent - outNormal * dot( outNormal, skinnedTangent );
+    const float  tangentLength   = length( orthogonal );
+    g_MorphVerticesRW[word]      = asuint( skinnedPosition.x );
+    g_MorphVerticesRW[word + 1u] = asuint( skinnedPosition.y );
+    g_MorphVerticesRW[word + 2u] = asuint( skinnedPosition.z );
+    g_MorphVerticesRW[word + 3u] = Octahedral::pack( outNormal );
+    g_MorphVerticesRW[word + 4u] = Octahedral::pack( tangentLength > 1e-6f ? orthogonal / tangentLength : tangent.xyz );
 }

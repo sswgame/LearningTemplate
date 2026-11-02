@@ -39,17 +39,15 @@ namespace sw
     SW_GLOBAL_VARIABLE( bool, gv_gpuCulling, true, "GPU 컬링 컴퓨트 디스패치 (false=건너뜀, 진단용)" );
 
     /**
-     * @brief `-gv_meshMorphDebugMode=<Normal|ForceOn|SkipDispatch|IndexTag>` 는 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다(`MeshMorphDiagMode`).
+     * @brief `-gv_meshMorphDebugMode=<Normal|ForceOn|SkipDispatch>` 는 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다(`MeshMorphDiagMode`).
      * @details Normal 은 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), ForceOn 은 능력 테이블을 무시하고 켬,
-     *          SkipDispatch 는 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 바인딩**,
-     *          IndexTag 는 SkipDispatch 에 더해 풀 원소의 노멀 위치에 **원소 번호**를 기록한다.
+     *          SkipDispatch 는 켜되 **컴퓨트 디스패치를 건너뛰고 레스트를 결과 배치로 묶어 결과 버퍼에 올린다**.
      *
      *          SkipDispatch 의 정답은 **레스트 포즈와 같은 이미지**다. 컴퓨트가 아예 돌지 않기 때문이다. 그래서
-     *          SkipDispatch 만으로 "컴퓨트가 범인인가" 를 가를 수 있다.
-     *          IndexTag 는 거기서 한 걸음 더 간다. 원소 번호를 읽으면 "제 원소를 가리켰는가" 를 위치 값과 **따로**
-     *          볼 수 있어서, 인덱싱이 틀린 것인지 내용이 틀린 것인지 이미지 한 장으로 가를 수 있다.
+     *          SkipDispatch 만으로 "컴퓨트가 범인인가" 를 가를 수 있다. 예전의 IndexTag(노멀 칸에 원소 번호)는 결과가 옥타헤드럴로 묶인 뒤
+     *          번호를 실을 칸이 없어 지웠다.
      */
-    SW_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_meshMorphDebugMode, MeshMorphDiagMode::Normal, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략 / IndexTag 번호표)" );
+    SW_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_meshMorphDebugMode, MeshMorphDiagMode::Normal, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략)" );
 
     FramePrepass::FramePrepass( IRHIDevice* const& pDevice, FrameRenderState& state, FramePSOManager& psoManager, FrameFog& fog )
         : _pDevice{ pDevice }
@@ -168,12 +166,11 @@ namespace sw
             case MeshMorphDiagMode::Normal:
             case MeshMorphDiagMode::ForceOn:
             case MeshMorphDiagMode::SkipDispatch:
-            case MeshMorphDiagMode::IndexTag:
             {
                 return true;
             }
         }
-        SW_LOG_ERROR_ID( "FramePrepass.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn, SkipDispatch or IndexTag)", static_cast<uint32>( gv_meshMorphDebugMode ) );
+        SW_LOG_ERROR_ID( "FramePrepass.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn or SkipDispatch)", static_cast<uint32>( gv_meshMorphDebugMode ) );
         return false;
     }
 
@@ -182,7 +179,7 @@ namespace sw
         const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
         // 백엔드가 못 하면 풀을 만들지도 않는다. 배치의 base 가 kInvalidBase 로 남아 셰이더가
         // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같다). 자세한 사연은 RHICapabilities.h 를 참고한다.
-        _state._deform._bMorphBindsRest = SW_FALSE;
+        _state._deform._bDeformDispatchSkipped = SW_FALSE;
         if ( _pDevice == nullptr )
             return;
         if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == MeshMorphDiagMode::Normal )
@@ -284,39 +281,25 @@ namespace sw
         if ( _state._deform._meshMorphPool.isDispatchable() == false )
             return;
 
-        // 진단 SkipDispatch: 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 바인딩한다(위 gv 주석 참고).
+        // 진단 SkipDispatch: 컴퓨트를 돌리지 않고 레스트를 결과 배치로 묶어 결과 버퍼에 올린다 — 정점 셰이더의 결과 읽기(원소 번호 · 풀기)를 컴퓨트 없이 본다.
+        // 메시마다 풀 구간(baseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
         if ( morphDiag == MeshMorphDiagMode::SkipDispatch )
         {
-            _state._deform._bMorphBindsRest = SW_TRUE;
-            return;
-        }
-
-        // 진단 IndexTag: 레스트 버퍼에 **위치는 진짜 값, 노멀 위치에는 원소 번호**를 기록해 올리고 컴퓨트를
-        //         건너뛴다. 그러면 이미지 한 장으로 "정점 셰이더가 제 원소를 가리켰는가"(원소 번호)와 "그 원소의
-        //         위치가 정점 스트림과 같은가" 를 **따로** 볼 수 있다. 값만 비교해서는 둘을 가를 수 없다.
-        if ( morphDiag == MeshMorphDiagMode::IndexTag )
-        {
-            // 메시마다 풀 구간(baseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
             for ( const Mesh* pMesh : _state._deform._listScratchMorphMesh )
             {
                 const uint32 base = ( pMesh != nullptr ) ? _state._deform._meshMorphPool.baseOf( pMesh ) : GPUMeshMorphPool::kInvalidBase;
                 if ( base == GPUMeshMorphPool::kInvalidBase )
                     continue;
-                _state._deform._listScratchMorphTag.clear();
-                uint32 element = base;
+                _state._deform._listScratchRestResult.clear();
                 for ( const RHIVertex& vertex : pMesh->getVertices() )
                 {
-                    GPUMorphVertex tagged{};
-                    tagged._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
-                    tagged._normal   = float4{ static_cast<float32>( element ), 0.0f, 0.0f, 0.0f };
-                    _state._deform._listScratchMorphTag.push_back( tagged );
-                    ++element;
+                    _state._deform._listScratchRestResult.push_back( GPUDeformResult::fromVertex( vertex ) );
                 }
-                _state._deform._meshMorphPool.getRestBuffer().upload( _pDevice, _state._deform._listScratchMorphTag.data(),
-                                                                      static_cast<uint32>( _state._deform._listScratchMorphTag.size() * sizeof( GPUMorphVertex ) ),
-                                                                      base * static_cast<uint32>( sizeof( GPUMorphVertex ) ) );
+                _state._deform._meshMorphPool.getMorphBuffer().upload( _pDevice, _state._deform._listScratchRestResult.data(),
+                                                                       static_cast<uint32>( _state._deform._listScratchRestResult.size() * sizeof( GPUDeformResult ) ),
+                                                                       base * static_cast<uint32>( sizeof( GPUDeformResult ) ) );
             }
-            _state._deform._bMorphBindsRest = SW_TRUE;
+            _state._deform._bDeformDispatchSkipped = SW_TRUE;
             return;
         }
 
@@ -356,9 +339,9 @@ namespace sw
         if ( _pDevice == nullptr || _pCmd == nullptr )
             return;
         const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
-        // 진단 SkipDispatch 와 IndexTag 는 레스트 버퍼를 그대로 바인딩해 "컴퓨트 없이" 를 본다. 스키닝도 돌리지 않는다(바인드 포즈).
+        // 진단 SkipDispatch 는 "컴퓨트 없이" 를 본다. 스키닝도 돌리지 않는다(칸 표를 걸지 않아 스킨 메시는 그리지 않는다).
         const bool bSkipMorphSkinning = ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == MeshMorphDiagMode::Normal ) ||
-                                        morphDiag == MeshMorphDiagMode::SkipDispatch || morphDiag == MeshMorphDiagMode::IndexTag;
+                                        morphDiag == MeshMorphDiagMode::SkipDispatch;
         if ( bSkipMorphSkinning )
             return;
         if ( _state._deform._meshMorphPool.isSkinDispatchable() == false )

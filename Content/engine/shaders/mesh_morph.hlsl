@@ -1,5 +1,6 @@
 #include "common.hlsli"
 #include "gpu_assert.hlsli"
+#include "octahedral.hlsli"
 
 /**
  * mesh_morph.hlsl — GPU 메시 모프 (컴퓨트).
@@ -17,7 +18,7 @@
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( restSRV, 0 ) / bindComputeUAV( morphUAV, 0 ).
  */
 
-// 결과 배치는 binding.hlsli 의 g_SwMorphVertices 와 같다 — 정점 하나 = SW_MORPH_FLOAT4_PER_VERTEX 개의 float4(binding_slots.hlsli 10 절).
+// 결과 배치는 binding.hlsli 의 g_SwMorphVertices 와 같다 — 정점 하나 = SW_MORPH_RESULT_WORDS_PER_VERTEX 개의 uint(binding_slots.hlsli 10 절). 레스트는 float4 셋 그대로다.
 // 구조체가 아니라 평면 배열인 이유는 그쪽 주석에 있다(OpenGL 이 구조체 멤버를 옆 원소에서 읽는다).
 
 SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
@@ -32,7 +33,7 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
 // [모프 메시 칸마다 float4 하나(x = 그 메시 변형 프로그램의 시작 원소, 없으면 -1 · y = 그 메시 구간의 풀 안 시작 정점)][프로그램들] — GPUMeshMorphPool::updateDeformPrograms.
 // 레스트 노멀의 w 가 칸 번호 + 1 이다. 프로그램이 있는 메시는 아래 물결 대신 프로그램(mesh_modifier.hlsli)을 건다.
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_DeformPrograms, 1 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_MorphVerticesRW, 0 );
 
 #include "mesh_modifier.hlsli"
 
@@ -91,11 +92,14 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         MeshDeform::applyProgram( (uint)programStart, vertexIndex - (uint)g_DeformPrograms[slot].y, position, normal );
     }
 
-    g_MorphVerticesRW[element]      = float4( position, 1.0f );
-    g_MorphVerticesRW[element + 1u] = float4( normal, 0.0f );
-    // 탄젠트 — 변형은 노멀만 바꾸므로 레스트 탄젠트를 새 노멀에 다시 직교화한다. w(바이탄젠트 부호)는 레스트 그대로다.
-    const float4 restTangent        = g_RestVertices[element + 2u];
-    const float3 orthogonal         = restTangent.xyz - normal * dot( normal, restTangent.xyz );
-    const float  tangentLength      = length( orthogonal );
-    g_MorphVerticesRW[element + 2u] = float4( tangentLength > 1e-6f ? orthogonal / tangentLength : restTangent.xyz, restTangent.w );
+    // 탄젠트 — 변형은 노멀만 바꾸므로 레스트 탄젠트를 새 노멀에 다시 직교화한다. w(바이탄젠트 부호)는 레스트 그대로라 싣지 않는다.
+    const float4 restTangent     = g_RestVertices[element + 2u];
+    const float3 orthogonal      = restTangent.xyz - normal * dot( normal, restTangent.xyz );
+    const float  tangentLength   = length( orthogonal );
+    const uint   word            = vertexIndex * SW_MORPH_RESULT_WORDS_PER_VERTEX;
+    g_MorphVerticesRW[word]      = asuint( position.x );
+    g_MorphVerticesRW[word + 1u] = asuint( position.y );
+    g_MorphVerticesRW[word + 2u] = asuint( position.z );
+    g_MorphVerticesRW[word + 3u] = Octahedral::pack( normal );
+    g_MorphVerticesRW[word + 4u] = Octahedral::pack( tangentLength > 1e-6f ? orthogonal / tangentLength : restTangent.xyz );
 }
