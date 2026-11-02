@@ -43,10 +43,10 @@ namespace sw
         // 조회 칸을 먼저 지운다 — 소멸자가 같은 범위를 조회해도 지워지는 서브시스템을 돌려주지 않는다.
         VectorUtil::removeIf( _listEntry, []( const Entry& entry )
         { return entry._bOwned; } );
-        // 빌린 칸까지 모두 빠졌으면 저장소도 놓는다(`SubsystemCollection::destroyAll` 과 같은 이유 — 기동 뒤에 자란 칸이 종료 누수 보고에 남지 않게).
-        if ( _listEntry.empty() )
-            _listEntry.shrink_to_fit();
         _collection.destroyAll();
+        // 허문 범위에는 빌린 칸도 없다 — 소멸자들이 빌린 칸을 찾을 수 있게 서브시스템을 다 지운 뒤에 저장소까지 놓는다(다시 쓰려면 다시 건다).
+        // 호스트 범위는 엔진 종료 보고보다 먼저 허물어진다 — 기동 뒤에 빌려 건 칸(시나리오 재생기 등)이 저장소를 키웠으면 빌린 칸이 남아 그 저장소가 보고에 찍혔다.
+        _listEntry = vector<Entry>{};
     }
 
     void* SubsystemScope::findInScope( uint64 typeHash ) const

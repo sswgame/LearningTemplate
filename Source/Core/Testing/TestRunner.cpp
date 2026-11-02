@@ -90,6 +90,9 @@ namespace sw::test
                 return s_registry;
             }
 
+            /** @brief `TestRunner::run` 이 도는 동안 true 입니다(케이스 상태를 묻는 로그 경로가 실행 밖에서 상태를 만들지 않게). */
+            static inline atomic<bool> s_bRunInProgress{ false };
+
             static CaseState& getState()
             {
                 static CaseState s_state;
@@ -528,7 +531,8 @@ namespace sw::test
 
     bool TestRunner::isExpectedByActiveCase( const utf8* pLogID )
     {
-        if ( pLogID == nullptr )
+        // 테스트 실행이 아니면(시나리오 · 게임) 케이스 상태를 만들지 않는다 — 로그 경로가 처음 물을 때 함수 안 static 이 기준선 뒤에 생겨 종료 누수 보고에 찍혔다.
+        if ( pLogID == nullptr || TestRunnerInternal::s_bRunInProgress.load( std::memory_order_acquire ) == false )
             return false;
         TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
         ScopedLock<mutex>              lock{ state._mutex };
@@ -633,6 +637,7 @@ namespace sw::test
                       static_cast<uint32>( listCase.size() ), static_cast<uint32>( collectCaseNames().size() ), baseSeed, baseSeed, repeatCount, options._shardIndex,
                       options._shardCount );
         Internal::writeLine( arrBuffer );
+        TestRunnerInternal::s_bRunInProgress.store( true, std::memory_order_release );
         for ( uint32 roundIndex = 0; roundIndex < repeatCount; ++roundIndex )
         {
             vector<const TestCaseRegistration*> listRound = listCase;
@@ -720,6 +725,7 @@ namespace sw::test
         CrashHandler::setContextValue( "TestCase", "" );
         {
             // 케이스 기록 칸은 정적 칸이라 케이스마다 비우기만 하면 저장소가 프로세스 끝까지 남아 종료 누수 보고에 찍힌다 — 실행이 끝나면 놓는다.
+            TestRunnerInternal::s_bRunInProgress.store( false, std::memory_order_release );
             TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
             ScopedLock<mutex>              lock{ state._mutex };
             state._pCase               = nullptr;
