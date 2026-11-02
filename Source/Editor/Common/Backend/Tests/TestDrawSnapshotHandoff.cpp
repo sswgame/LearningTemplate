@@ -18,12 +18,12 @@ SW_TEST_CASE( DrawSnapshotHandoffTest, UIWritesTheNextSlotWhileTheRenderThreadDr
     DrawSnapshotHandoff handoff;
     SW_EXPECT_TRUE( handoff.isIdle() );
 
-    const sw::uint32 first = handoff.waitForWriteSlot();
+    const uint32 first = handoff.waitForWriteSlot();
     handoff.publish( first );
     SW_EXPECT_FALSE( handoff.isIdle() ); // 낸 것을 렌더 스레드가 아직 집지 않았다
 
     SW_EXPECT_EQUAL( first, handoff.beginRender() );
-    const sw::uint32 second = handoff.waitForWriteSlot(); // 그리는 동안 받는다 — 기다리지 않는다
+    const uint32 second = handoff.waitForWriteSlot(); // 그리는 동안 받는다 — 기다리지 않는다
     SW_EXPECT_NOT_EQUAL( first, second );
     handoff.publish( second ); // 앞 것은 이미 집혔다 — 기다리지 않는다
     handoff.endRender();
