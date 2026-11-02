@@ -1422,13 +1422,10 @@ namespace sw
         }
         else
         {
-            // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상의 상태 전이만 위해 패스를 열고 닫는다.
+            // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상은 상태만 렌더 타깃으로 맞춘다.
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.PresentSourceColorNo", "Present source color has no transient (its allocation failed) - the output is not drawn" );
-            RHIRenderPassBeginInfo beginInfo{};
-            beginInfo.setColorTarget( dstTarget, _state._clearColor, RHIRenderPassLoadOp::Load );
-            beginInfo._bBindColor = SW_TRUE;
-            context._pCmd->beginRenderPass( beginInfo );
-            context._pCmd->endRenderPass();
+            if ( dstTarget != 0 ) // 백버퍼(0)는 백엔드가 Present 쪽에서 상태를 맞춘다
+                context._pCmd->prepareTextureForRenderTarget( dstTarget );
         }
         if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( passDesc ) )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );

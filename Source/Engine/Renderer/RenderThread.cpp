@@ -615,9 +615,7 @@ namespace sw
             gameViewPass._arrColorTarget[0] = packet._outputRenderTarget;
             gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
             gameViewPass._arrClearColor[0]  = packet._clearColor;
-            pFrameStream->beginRenderPass( gameViewPass );
-            // 지우기만 하는 패스다 — 열어 둔 채 넘기면 아래 씬 업로드가 패스 안에서 일어난다(Vulkan 은 그 복사를 위해 패스를 닫는다 — RHI.BufferUpdateInsideRenderPass).
-            pFrameStream->endRenderPass();
+            pFrameStream->clearRenderTargets( gameViewPass );
         }
 
         // 그래프가 이 프레임을 실제로 그렸는가. 그리지 않은 프레임(렌더러 준비 전, 주 시점이 없는 패킷)은 백버퍼를 아무도 건드리지 않았다.

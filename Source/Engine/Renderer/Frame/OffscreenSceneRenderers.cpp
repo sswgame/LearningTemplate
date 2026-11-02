@@ -36,7 +36,7 @@ namespace sw
         outputPass._arrColorTarget[0] = outputTarget;
         outputPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         outputPass._arrClearColor[0]  = clearColor;
-        pFrameStream->beginRenderPass( outputPass );
+        pFrameStream->clearRenderTargets( outputPass );
         FrameRenderer* const pRenderer = findOrCreate( mainRenderer, pDevice, packet._sceneKey, pipelinePath );
         const bool           bDrew     = pRenderer != nullptr && pRenderer->executePacket( pDevice, packet ); // 보기 모드는 패킷의 뷰 설정이 정한다
         pFrameStream->prepareTextureForShaderRead( outputTarget );

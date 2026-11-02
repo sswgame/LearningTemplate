@@ -57,6 +57,16 @@ namespace sw
         virtual void setPipelineState( RHIPipelineStateHandle pso )             = 0;
         virtual void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) = 0;
         virtual void endRenderPass()                                            = 0;
+        /**
+         * @brief 타깃을 패스의 load op 로 지우고 곧바로 닫습니다(드로우 없는 패스 — 언리얼 `ClearRenderTarget` 자리).
+         * @details 지우기만 하는 패스를 연 채 두면 뒤의 업로드 · 렌더러 준비가 패스 안에서 일어난다(`RHI.BufferUpdateInsideRenderPass` — 게임 뷰와 미리보기 씬이 그랬다).
+         *          열고 닫기를 한 호출로 묶어 그 모양을 쓸 수 없게 한다.
+         */
+        void clearRenderTargets( const RHIRenderPassBeginInfo& beginInfo )
+        {
+            beginRenderPass( beginInfo );
+            endRenderPass();
+        }
 
         // ------------------------------------------------------------------------------
         // 3) 드로우: 메시 버텍스/인덱스, 머티리얼 CB
