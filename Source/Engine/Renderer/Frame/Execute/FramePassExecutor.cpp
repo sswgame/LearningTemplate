@@ -1412,12 +1412,7 @@ namespace sw
                 context._pCmd->setViewport( viewport );
             }
             if ( bUpscale )
-            {
-                const float4& rect      = activeView._settings._screenRect;
-                const float32 viewportX = bFullRect ? 0.0f : rect._x * static_cast<float32>( outputWidth );
-                const float32 viewportY = bFullRect ? 0.0f : rect._y * static_cast<float32>( outputHeight );
-                _upscale.drawUpscaleRcas( context, *_pActiveView, target._format, viewportX, viewportY );
-            }
+                _upscale.drawUpscaleRcas( context, *_pActiveView, target._format );
             else
             {
                 drawFullscreen( context, psoBlit );

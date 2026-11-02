@@ -73,6 +73,25 @@ SW_TEST_CASE( SPIRVOpenGLPatchTest, NamesOnlyUnnamedMembersBeforeAnnotations )
 }
 
 /**
+ * @brief [SPIRVOpenGLPatchTest] 조각 셰이더의 `OriginUpperLeft` 만 `OriginLowerLeft` 로 바뀌고 다른 실행 모드는 그대로인지 검증
+ */
+SW_TEST_CASE( SPIRVOpenGLPatchTest, FlipsOnlyUpperLeftOrigin )
+{
+    vector<uint32> listWord{ spirv::kMagic, 0x00010000u, 0u, 10u, 0u };
+    SPIRVOpenGLPatchTestInternal::append( listWord, spirv::kOpCapability, { 1u } );
+    SPIRVOpenGLPatchTestInternal::append( listWord, spirv::kOpExecutionMode, { 4u, spirv::kExecutionModeOriginUpperLeft } );
+    SPIRVOpenGLPatchTestInternal::append( listWord, spirv::kOpExecutionMode, { 4u, 9u } ); // EarlyFragmentTests
+    const uint8*  pByte = reinterpret_cast<const uint8*>( listWord.data() );
+    vector<uint8> bytecode( pByte, pByte + listWord.size() * 4u );
+
+    SPIRVOpenGLPatch::useLowerLeftFragmentOrigin( bytecode );
+
+    const uint32* pWord = reinterpret_cast<const uint32*>( bytecode.data() );
+    SW_EXPECT_EQUAL( spirv::kExecutionModeOriginLowerLeft, pWord[9] );
+    SW_EXPECT_EQUAL( 9u, pWord[12] );
+}
+
+/**
  * @brief [SPIRVOpenGLPatchTest] SPIR-V 가 아닌 바이트는 그대로 두는지 검증
  */
 SW_TEST_CASE( SPIRVOpenGLPatchTest, LeavesNonSPIRVUntouched )

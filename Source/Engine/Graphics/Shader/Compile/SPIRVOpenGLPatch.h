@@ -13,7 +13,7 @@ namespace sw
     /** @brief GL 용 SPIR-V 패치입니다(전부 static, 바이트 배열을 제자리에서 고친다). 매직이 아니거나 깨진 모듈은 건드리지 않는다. */
     struct SW_API SPIRVOpenGLPatch
     {
-        /** @brief 아래 둘을 차례로 겁니다. */
+        /** @brief 아래 셋을 차례로 겁니다. */
         static void apply( vector<uint8>& ioBytecode );
 
         /**
@@ -33,5 +33,13 @@ namespace sw
          *          (AMD 는 넘겨 숨어 있었다). 이름은 타입 안의 번호라 단계와 상관없이 같다. 새 명령은 디버그 이름 절 끝(첫 장식 · 타입 명령 앞)에 넣는다 — SPIR-V 의 절 순서다.
          */
         static void nameStructMembers( vector<uint8>& ioBytecode );
+
+        /**
+         * @brief 조각 셰이더의 좌표 원점을 `OriginLowerLeft` 로 바꿉니다(DXC 는 Vulkan 규칙대로 `OriginUpperLeft` 를 낸다).
+         * @details GL 의 오프스크린 대상은 클립 원점을 GL_UPPER_LEFT 로 걸어 메모리 행 순서를 DX 와 맞춘다(OpenGLRHICommandContext). ARB_clip_control 은 `gl_FragCoord` 를 바꾸지 않으므로
+         *          그 대상에서 DX 의 `SV_Position.y`(위에서 센 행 + 0.5)와 같은 값은 왼쪽 아래 원점이다. `OriginUpperLeft` 를 남기면 규격대로인 드라이버(AMD)는 y 를 H - y 로 뒤집어
+         *          픽셀 좌표 무늬(디더)가 어긋났고, 그렇지 않은 드라이버(NVIDIA)만 우연히 맞았다. 기본 프레임버퍼(클립 원점 LOWER_LEFT)에 그리는 셰이더는 `SV_Position` 을 쓰지 않는다(fsr1 은 UV).
+         */
+        static void useLowerLeftFragmentOrigin( vector<uint8>& ioBytecode );
     };
 } // namespace sw

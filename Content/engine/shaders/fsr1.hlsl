@@ -26,10 +26,10 @@ SW_ROOT_CONSTANTS_BEGIN
     uint  g_FSRSource;     // 원본(EASU: 배율 크기 장면, RCAS: 중간 RT)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
     float g_FSRInputWidth; // EASU: 원본 픽셀 크기
     float g_FSRInputHeight;
-    float g_FSROutputWidth; // EASU: 출력(중간 RT) 픽셀 크기
+    float g_FSROutputWidth; // EASU: 출력(중간 RT) 픽셀 크기. RCAS: 중간 RT(= 대상 뷰포트) 픽셀 크기 — UV 를 픽셀로 옮긴다
     float g_FSROutputHeight;
-    float g_FSRViewportX; // RCAS: Present 대상에서 뷰포트 왼쪽 위(px) — 대상 픽셀 위치를 중간 RT 픽셀로 옮긴다
-    float g_FSRViewportY;
+    float g_FSRReserved0; // 루트 상수 칸을 지킨다(C++ RootConstants 와 같은 크기)
+    float g_FSRReserved1;
     float g_FSRSharpness; // RCAS: 선명도를 줄이는 단계(0 = 가장 선명, 1 단계마다 절반 — AMD FsrRcasCon 의 sharpness)
 };
 SW_ROOT_CONSTANTS_END
@@ -40,6 +40,7 @@ static const float kRcasLimit = 0.25f - ( 1.0f / 16.0f );
 struct PSInput
 {
     float4 _position : SV_POSITION;
+    float2 _uv : TEXCOORD0; // 뷰포트 안 UV(DX 규약 — 위가 0). 픽셀 위치는 SV_Position 이 아니라 이것으로 구한다: GL 의 기본 프레임버퍼는 조각 좌표 원점이 다르다
 };
 
 PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
@@ -48,6 +49,7 @@ PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
     input._position           = input._position;
     const float2 clipPosition = float2( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f );
     output._position          = float4( clipPosition, 0.0f, 1.0f );
+    output._uv                = float2( clipPosition.x * 0.5f + 0.5f, 0.5f - clipPosition.y * 0.5f );
     return output;
 }
 
@@ -267,12 +269,12 @@ float3 computeRcas( int2 pixel )
 #if defined( SW_PASS_FSR_RCAS )
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const int2 pixel = int2( floor( input._position.xy - float2( SW_ROOT( g_FSRViewportX ), SW_ROOT( g_FSRViewportY ) ) ) );
+    const int2 pixel = int2( floor( input._uv * float2( SW_ROOT( g_FSROutputWidth ), SW_ROOT( g_FSROutputHeight ) ) ) );
     return float4( computeRcas( pixel ), 1.0f );
 }
 #else
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    return float4( computeEasu( uint2( input._position.xy ) ), 1.0f );
+    return float4( computeEasu( uint2( input._uv * float2( SW_ROOT( g_FSROutputWidth ), SW_ROOT( g_FSROutputHeight ) ) ) ), 1.0f );
 }
 #endif

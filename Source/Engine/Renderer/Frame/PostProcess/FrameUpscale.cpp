@@ -46,8 +46,8 @@ namespace sw
                 float32 _inputHeight{ 0.0f };
                 float32 _outputWidth{ 0.0f };
                 float32 _outputHeight{ 0.0f };
-                float32 _viewportX{ 0.0f };
-                float32 _viewportY{ 0.0f };
+                float32 _reserved0{ 0.0f };
+                float32 _reserved1{ 0.0f };
                 float32 _sharpness{ 0.0f };
             };
             static_assert( sizeof( RootConstants ) == 8 * sizeof( uint32 ), "fsr1.hlsl 의 루트 상수와 크기가 같아야 한다" );
@@ -168,7 +168,7 @@ namespace sw
         return true;
     }
 
-    void FrameUpscale::drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat, float32 viewportX, float32 viewportY ) const
+    void FrameUpscale::drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat ) const
     {
         const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
         IRHICommandList&             cmd = *context._pCmd;
@@ -178,8 +178,8 @@ namespace sw
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
         constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
-        constants._viewportX         = viewportX;
-        constants._viewportY         = viewportY;
+        constants._outputWidth       = static_cast<float32>( view._upscaleWidth ); // 픽셀 = 정점 UV × 중간 RT 크기(SV_Position 은 GL 기본 프레임버퍼에서 원점이 다르다)
+        constants._outputHeight      = static_cast<float32>( view._upscaleHeight );
         constants._sharpness         = MathUtil::max( 0.0f, static_cast<float32>( gv_upscalerSharpness ) );
         constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )

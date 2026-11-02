@@ -51,7 +51,7 @@ namespace sw
          */
         bool recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, string_view sourceName ) const;
         /** @brief 열린 Present 렌더 패스(뷰포트를 건 뒤)에 RCAS(중간 RT → 대상)를 그립니다. @p viewportX · @p viewportY 는 대상 안의 뷰포트 왼쪽 위(px)입니다. */
-        void drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat, float32 viewportX, float32 viewportY ) const;
+        void drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat ) const;
 
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다

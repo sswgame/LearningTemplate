@@ -39,6 +39,7 @@ namespace sw
     {
         patchBuiltins( ioBytecode );
         nameStructMembers( ioBytecode );
+        useLowerLeftFragmentOrigin( ioBytecode );
     }
 
     void SPIRVOpenGLPatch::patchBuiltins( vector<uint8>& ioBytecode )
@@ -66,6 +67,24 @@ namespace sw
                 else if ( *pValue == spirv::kBuiltInVertexIndex )
                     *pValue = spirv::kBuiltInVertexID;
             }
+            offset += length;
+        }
+    }
+
+    void SPIRVOpenGLPatch::useLowerLeftFragmentOrigin( vector<uint8>& ioBytecode )
+    {
+        const size_t wordCount = SPIRVOpenGLPatchInternal::countWords( ioBytecode );
+        uint32*      pWord     = reinterpret_cast<uint32*>( ioBytecode.data() );
+        size_t       offset    = 5;
+        while ( offset < wordCount )
+        {
+            const uint32 opcode = pWord[offset] & 0xFFFFu;
+            const uint32 length = pWord[offset] >> 16;
+            if ( length == 0 || offset + length > wordCount )
+                return;
+            // OpExecutionMode <진입점> <모드>
+            if ( opcode == spirv::kOpExecutionMode && length >= 3 && pWord[offset + 2] == spirv::kExecutionModeOriginUpperLeft )
+                pWord[offset + 2] = spirv::kExecutionModeOriginLowerLeft;
             offset += length;
         }
     }
