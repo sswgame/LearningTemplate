@@ -289,11 +289,7 @@ namespace sw
         gv_rhiBackend = currentBackend;
         SW_LOG_INFO_ID( "RHI.InitializingRHIBackend", "Initializing RHI with backend: %#", getBackendTypeName( currentBackend ) );
 
-        // 기동 초기에 네이티브 디바이스 생성을 미리 시작했으면(`RHIDevicePrewarmSubsystem`) 그 디바이스를 받는다 — 그 생성의 끝은 initialize 가 기다린다.
-        RHIBackendRegistry& registry = engine::getSubsystem<RHIBackendRegistry>();
-        _device                      = registry.takeWarmDevice( currentBackend );
-        if ( _device == nullptr )
-            _device = registry.createDevice( currentBackend );
+        _device = engine::getSubsystem<RHIBackendRegistry>().createDevice( currentBackend );
         if ( _device == nullptr )
         {
             SW_LOG_ERROR_ID( "RHI.FailedCreateRHIDevice", "Failed to create RHI Device!" );

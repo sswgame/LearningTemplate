@@ -113,8 +113,6 @@ namespace sw
 
     D3D12RHIDevice::~D3D12RHIDevice()
     {
-        if ( _deviceCreation.joinable() )
-            _deviceCreation.join(); // 미리 시작한 생성이 아직 디바이스를 쓰고 있다 — 내리기 전에 끝을 기다린다
         shutdown();
     }
 
@@ -519,9 +517,9 @@ namespace sw
         return _frameStreamContext.get();
     }
 
-    bool D3D12RHIDevice::createDeviceObjects( bool bSoftwareAdapter, bool bPreferMinimumPower )
+    // 길이 유지(긴 함수 정리 기준): 디바이스 · 큐 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
+    bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
-        // 미리 시작한 생성(`beginDeviceCreationInternal`)은 작업 스레드에서 이 함수를 돈다 — 디바이스 · 팩토리 · 어댑터 판정만 하고 창에 묶인 일은 하지 않는다.
     #if defined( SW_DEBUG )
         {
             Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
@@ -545,19 +543,20 @@ namespace sw
             }
         }
 
-        if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( _dxgiFactory.GetAddressOf() ) ) ) )
+        Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
+        if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
             return false;
 
         // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
         Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
-        if ( bSoftwareAdapter && FAILED( _dxgiFactory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
+        if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
         {
             SW_LOG_ERROR_ID( "D3D12.WARPAdapterNotAvailable", "WARP adapter is not available (gv_rhiSoftwareAdapter)" );
             return false;
         }
 
         // 하드웨어는 고성능 순서의 첫 어댑터다 — nullptr(기본 어댑터)은 하이브리드 노트북에서 내장 GPU 다(RHIDxgiAdapter.h).
-        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDxgiPreferredAdapter( _dxgiFactory.Get(), bPreferMinimumPower );
+        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDxgiPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
         if ( adapter == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
@@ -577,6 +576,7 @@ namespace sw
 
         if ( FAILED( D3D12CreateDevice( adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
+        createBreadcrumbBuffer();
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
         _memoryAdapter = findDxgiAdapterByLuid( _device->GetAdapterLuid() );
         // 실제로 선 어댑터가 소프트웨어인지 — 요청이 아니라 결과를 적는다.
@@ -584,37 +584,9 @@ namespace sw
         {
             DXGI_ADAPTER_DESC1 softwareDesc{};
             const LUID         deviceLuid = _device->GetAdapterLuid();
-            _bCreatedOnSoftwareAdapter    = SUCCEEDED( softwareAdapter->GetDesc1( &softwareDesc ) ) && softwareDesc.AdapterLuid.LowPart == deviceLuid.LowPart &&
-                                         softwareDesc.AdapterLuid.HighPart == deviceLuid.HighPart;
+            _bSoftwareAdapter             = SUCCEEDED( softwareAdapter->GetDesc1( &softwareDesc ) ) && softwareDesc.AdapterLuid.LowPart == deviceLuid.LowPart &&
+                                softwareDesc.AdapterLuid.HighPart == deviceLuid.HighPart;
         }
-        return true;
-    }
-
-    void D3D12RHIDevice::beginDeviceCreationInternal( bool bSoftwareAdapter, bool bPreferMinimumPower )
-    {
-        if ( _deviceCreation.joinable() || _device != nullptr )
-            return; // 이미 시작했거나 만들었다
-        _deviceCreation = sw::thread( [this, bSoftwareAdapter, bPreferMinimumPower]()
-        { _bDeviceCreationSucceeded = createDeviceObjects( bSoftwareAdapter, bPreferMinimumPower ); } );
-    }
-
-    bool D3D12RHIDevice::finishDeviceCreation( const RHISwapChainDesc& desc )
-    {
-        // 미리 시작했으면 그 끝을 기다린다(드라이버 초기화가 다른 서브시스템과 겹쳐 돌았다). 아니면 지금 만든다.
-        if ( _deviceCreation.joinable() )
-            _deviceCreation.join();
-        else
-            _bDeviceCreationSucceeded = createDeviceObjects( desc._bSoftwareAdapter, desc._bPreferMinimumPower );
-        _bSoftwareAdapter = _bCreatedOnSoftwareAdapter; // IRHIDevice::initialize 가 요청 전에 지운 칸 — 실제로 선 어댑터를 적는다
-        return _bDeviceCreationSucceeded;
-    }
-
-    // 길이 유지(긴 함수 정리 기준): 디바이스 · 큐 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
-    bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
-    {
-        if ( finishDeviceCreation( desc ) == false )
-            return false;
-        createBreadcrumbBuffer();
 
         D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
         if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) )
@@ -661,7 +633,7 @@ namespace sw
             return false;
 
         _swapChain.setBarrierWatcher( this );
-        if ( _swapChain.initialize( _dxgiFactory.Get(), _commandQueue.Get(), desc ) == false )
+        if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
             return false;
 
         _bBindlessRootSignature = SW_FALSE;
@@ -830,8 +802,6 @@ namespace sw
 
     void D3D12RHIDevice::shutdownInternal()
     {
-        if ( _deviceCreation.joinable() )
-            _deviceCreation.join(); // 초기화하지 않고 내리는 디바이스(백엔드를 바꿨다)도 미리 시작한 생성을 기다린다
         if ( _breadcrumbBuffer != nullptr && _pBreadcrumbMapped != nullptr )
             _breadcrumbBuffer->Unmap( 0, nullptr );
         _pBreadcrumbMapped = nullptr;
@@ -896,7 +866,6 @@ namespace sw
         _validationCallbackCookie = 0;
         infoQueue1.Reset();
         _device.Reset();
-        _dxgiFactory.Reset();
 
         _fenceValue        = 0;
         _rtvDescriptorSize = 0;

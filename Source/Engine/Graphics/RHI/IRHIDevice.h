@@ -123,13 +123,6 @@ namespace sw
         /** @brief 표면(`setRenderSurface`)에서 스왑체인 서술(크기, 백버퍼 3개, 포맷, VSync)을 채우고 `initializeInternal` 을 부릅니다. */
         [[nodiscard]] virtual bool initialize();
         /**
-         * @brief 네이티브 디바이스 생성(드라이버 초기화 — 이 노트북에서 0.9 ~ 1.7 s)을 작업 스레드에서 미리 시작합니다. 창 · 표면이 없어도 된다.
-         * @details 엔진 기동이 다른 서브시스템(오디오 · 모듈 · 에셋)을 초기화하는 동안 겹쳐 돈다(`RHIDevicePrewarmSubsystem`). `initialize` 가 그 끝을 기다려 받고,
-         *          스왑체인처럼 창 스레드와 메시지를 주고받는 일은 그 뒤 메인 스레드에서 한다(DXGI 는 창 스레드가 막혀 있으면 스왑체인 생성이 멈출 수 있다).
-         *          창보다 먼저 만들 수 없는 백엔드(Vulkan — 큐 선택이 표면을 본다, GL — 컨텍스트가 창에 묶인다)는 아무것도 하지 않는다.
-         */
-        void beginDeviceCreation();
-        /**
          * @brief 마지막 `initialize` 의 결과입니다. 실패한 경우 원인이 환경(드라이버가 기능을 제공하지 않음)인지, 결함일 수 있는지를 구분합니다.
          * @details 백엔드는 환경 때문에 물러날 때만 `initializeInternal` 안에서 `_initResult` 를 `DriverUnsupported` 로 기록하고 false 를 반환한다.
          */
@@ -149,16 +142,8 @@ namespace sw
          */
         void shutdown();
 
-        /** @brief RHI 디바이스와 스왑체인을 초기화합니다. `beginDeviceCreation` 이 시작한 생성이 있으면 그 끝을 기다려 이어 받는다. */
+        /** @brief RHI 디바이스와 스왑체인을 초기화합니다. */
         [[nodiscard]] virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
-        /** @brief `beginDeviceCreation` 의 백엔드 몫입니다 — 미리 만들 수 있는 백엔드만 덮어쓴다(기본은 아무것도 하지 않는다). */
-        virtual void beginDeviceCreationInternal( bool bSoftwareAdapter, bool bPreferMinimumPower )
-        {
-            (void)bSoftwareAdapter;
-            (void)bPreferMinimumPower;
-        }
-        /** @brief 어댑터 요청(`gv_rhiSoftwareAdapter` · 환경 변수 `SW_RHI_SOFTWARE_ADAPTER` · `gv_rhiPreferMinimumPower`)을 읽습니다. 환경 변수가 켬/끔 토큰이 아니면 알리고 false 입니다. */
-        [[nodiscard]] static bool resolveAdapterRequest( bool& outSoftwareAdapter, bool& outPreferMinimumPower );
 
         /** @brief 종료 4단계입니다. 백엔드 자원, 스왑체인, 네이티브 디바이스를 해제합니다. GPU 대기와 커맨드 리스트 분리는 이미 끝나 있습니다. */
         virtual void shutdownInternal() = 0;

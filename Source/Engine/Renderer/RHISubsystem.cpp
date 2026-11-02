@@ -13,8 +13,6 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
@@ -33,42 +31,6 @@ namespace sw
 
 namespace sw
 {
-    namespace
-    {
-        struct RHISubsystemInternal
-        {
-            /** @brief 기동 백엔드를 고릅니다 — 명령줄(`-dx12` 등)이 없으면 설정의 기본값을 `gv_rhiBackend` 에 둔다. 두 서브시스템이 같은 규칙을 쓴다. */
-            static RHIBackend selectStartupBackend()
-            {
-                RHIBackend commandLineBackend{};
-                if ( RHIBackendUtil::findCommandLineBackend( engine::getSubsystem<CommandLineManager>(), commandLineBackend ) )
-                    return commandLineBackend;
-                gv_rhiBackend = engine::getSubsystem<EngineConfig>()._window._defaultRHI;
-                return gv_rhiBackend;
-            }
-        };
-    } // namespace
-
-    SubsystemInitResult RHIDevicePrewarmSubsystem::initializeSubsystem()
-    {
-        // 이 플랫폼에 없는 백엔드면 시작하지 않는다 — RHI::initialize 가 플랫폼 기본으로 바꾸며 알린다.
-        const RHIBackend backend = RHISubsystemInternal::selectStartupBackend();
-        if ( RHIAvailability::isAvailable( backend ) )
-            engine::getSubsystem<RHIBackendRegistry>().beginDeviceWarmup( backend );
-        return SubsystemInitResult::Succeeded;
-    }
-
-    span<const utf8* const> RHIDevicePrewarmSubsystem::getSubsystemDependencies() const
-    {
-        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName }; // RHIBackendRegistry 는 서비스 범위라 먼저 서 있다
-        return kArrDependency;
-    }
-
-    SubsystemHostMask RHIDevicePrewarmSubsystem::getSubsystemHost() const
-    {
-        return EngineSubsystemHost::kClient;
-    }
-
     RHISubsystem::RHISubsystem()
         : _rhi{ nullptr }
         , _initResult{ RHIInitResult::NotStarted }
@@ -84,8 +46,10 @@ namespace sw
     {
         CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
 
+        RHIBackend          commandLineBackend{};
         const EngineConfig& engineConfig = engine::getSubsystem<EngineConfig>();
-        (void)RHISubsystemInternal::selectStartupBackend(); // 명령줄이 없으면 설정의 기본값을 gv_rhiBackend 에 둔다 — RHI::initialize 가 명령줄 · 가용성을 다시 본다
+        if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) == false )
+            gv_rhiBackend = engineConfig._window._defaultRHI;
 
         const DisplaySettingsRequest& display = engine::getSubsystem<UserSettingsManager>().getDisplayRequest();
         // 주 창의 소유자는 서브시스템 MainWindow 다(의존이라 먼저 서 있다). 창이 이미 있으면(임베드한 호스트가 넘겼다) 만들지 않는다.
@@ -145,7 +109,7 @@ namespace sw
     span<const utf8* const> RHISubsystem::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName, UserSettingsManager::kSubsystemName,
-                                                          MainWindowSubsystem::kSubsystemName, RHIDevicePrewarmSubsystem::kSubsystemName };
+                                                          MainWindowSubsystem::kSubsystemName };
         return kArrDependency;
     }
 

@@ -135,8 +135,6 @@ namespace sw
 
     D3D11RHIDevice::~D3D11RHIDevice()
     {
-        if ( _deviceCreation.joinable() )
-            _deviceCreation.join(); // 미리 시작한 생성이 아직 디바이스를 쓰고 있다 — 내리기 전에 끝을 기다린다
         shutdown();
     }
 
@@ -479,67 +477,6 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 스왑체인 · 상태 객체 생성의 순서가 곧 의미라 나누지 않는다.
-    bool D3D11RHIDevice::createDeviceObjects( bool bSoftwareAdapter, bool bPreferMinimumPower )
-    {
-        // 미리 시작한 생성(`beginDeviceCreationInternal`)은 작업 스레드에서 이 함수를 돈다 — 디바이스 · 즉시 컨텍스트만 만들고 창에 묶인 스왑체인은 만들지 않는다.
-        UINT createDeviceFlags{ 0 };
-    #if defined( SW_DEBUG )
-        createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-    #endif
-
-        D3D_FEATURE_LEVEL           featureLevel;
-        constexpr D3D_FEATURE_LEVEL arrFeatureLevel[2] = {
-            D3D_FEATURE_LEVEL_11_0,
-            D3D_FEATURE_LEVEL_10_0,
-        };
-
-        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
-        Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
-        Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-        if ( bSoftwareAdapter == false )
-        {
-            if ( SUCCEEDED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
-                adapter = findDxgiPreferredAdapter( factory.Get(), bPreferMinimumPower );
-            if ( adapter == nullptr )
-            {
-                SW_LOG_ERROR_ID( "D3D11.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
-                return false;
-            }
-            DXGI_ADAPTER_DESC1 adapterDesc{};
-            if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
-                SW_LOG_INFO_ID( "D3D11.AdapterSelected", "Direct3D 11 adapter: %# (VRAM %# MB)", StringUtil::utf16ToUTF8( adapterDesc.Description ).c_str(),
-                                static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
-        }
-        // 어댑터를 넘기면 드라이버 종류는 UNKNOWN 이어야 한다(D3D11CreateDevice 규칙).
-        const D3D_DRIVER_TYPE driverType = bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
-        const HRESULT         hr         = D3D11CreateDevice( adapter.Get(), driverType, nullptr, createDeviceFlags, arrFeatureLevel, SW_COUNT_OF( arrFeatureLevel ), D3D11_SDK_VERSION,
-                                                              _device.GetAddressOf(), &featureLevel, _createdContext.GetAddressOf() );
-        if ( FAILED( hr ) )
-        {
-            SW_LOG_ERROR_ID( "D3D11.FailedCreateDirect3DDevice", "Failed to create the Direct3D 11 device! HRESULT: %#", hr );
-            return false;
-        }
-        return true;
-    }
-
-    void D3D11RHIDevice::beginDeviceCreationInternal( bool bSoftwareAdapter, bool bPreferMinimumPower )
-    {
-        if ( _deviceCreation.joinable() || _device != nullptr )
-            return; // 이미 시작했거나 만들었다
-        _deviceCreation = sw::thread( [this, bSoftwareAdapter, bPreferMinimumPower]()
-        { _bDeviceCreationSucceeded = createDeviceObjects( bSoftwareAdapter, bPreferMinimumPower ); } );
-    }
-
-    bool D3D11RHIDevice::finishDeviceCreation( const RHISwapChainDesc& desc )
-    {
-        // 미리 시작했으면 그 끝을 기다린다(드라이버 초기화가 다른 서브시스템과 겹쳐 돌았다). 아니면 지금 만든다.
-        if ( _deviceCreation.joinable() )
-            _deviceCreation.join();
-        else
-            _bDeviceCreationSucceeded = createDeviceObjects( desc._bSoftwareAdapter, desc._bPreferMinimumPower );
-        return _bDeviceCreationSucceeded;
-    }
-
     bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
         // 이 백엔드는 Win32 전용이다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
@@ -585,25 +522,56 @@ namespace sw
         const bool bAllowTearing = queryDxgiAllowTearing();
         swapChainDesc.Flags      = bAllowTearing ? static_cast<UINT>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
 
-        if ( finishDeviceCreation( desc ) == false )
-            return false;
-        // 스왑체인은 디바이스를 만든 어댑터의 팩토리로 메인 스레드에서 만든다(D3D11CreateDeviceAndSwapChain 이 안에서 하는 일과 같다). 디바이스는 미리 만들어 둘 수 있지만
-        // 스왑체인은 창 스레드와 메시지를 주고받으므로 창을 가진 스레드에서 만든다.
-        Microsoft::WRL::ComPtr<IDXGISwapChain> createdSwapChain;
+        UINT createDeviceFlags{ 0 };
+    #if defined( SW_DEBUG )
+        createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    #endif
+
+        D3D_FEATURE_LEVEL           featureLevel;
+        constexpr D3D_FEATURE_LEVEL arrFeatureLevel[2] = {
+            D3D_FEATURE_LEVEL_11_0,
+            D3D_FEATURE_LEVEL_10_0,
+        };
+
+        Microsoft::WRL::ComPtr<IDXGISwapChain>      createdSwapChain;
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext> createdContext;
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
+        Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
+        Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
+        if ( desc._bSoftwareAdapter == false )
         {
-            Microsoft::WRL::ComPtr<IDXGIDevice>  dxgiDevice;
-            Microsoft::WRL::ComPtr<IDXGIAdapter> deviceAdapter;
-            Microsoft::WRL::ComPtr<IDXGIFactory> deviceFactory;
-            const bool                           bSwapChainCreated = SUCCEEDED( _device.As( &dxgiDevice ) ) && SUCCEEDED( dxgiDevice->GetAdapter( deviceAdapter.GetAddressOf() ) ) &&
-                                           SUCCEEDED( deviceAdapter->GetParent( IID_PPV_ARGS( deviceFactory.GetAddressOf() ) ) ) &&
-                                           isHrSuccess( deviceFactory->CreateSwapChain( _device.Get(), &swapChainDesc, createdSwapChain.GetAddressOf() ), "CreateSwapChain" );
-            if ( bSwapChainCreated == false )
+            if ( SUCCEEDED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
+                adapter = findDxgiPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
+            if ( adapter == nullptr )
             {
-                SW_LOG_ERROR_ID( "D3D11.FailedCreateSwapChain", "Failed to create the Direct3D 11 swap chain" );
+                SW_LOG_ERROR_ID( "D3D11.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
                 return false;
             }
+            DXGI_ADAPTER_DESC1 adapterDesc{};
+            if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
+                SW_LOG_INFO_ID( "D3D11.AdapterSelected", "Direct3D 11 adapter: %# (VRAM %# MB)", StringUtil::utf16ToUTF8( adapterDesc.Description ).c_str(),
+                                static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
         }
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> createdContext = std::move( _createdContext );
+        // 어댑터를 넘기면 드라이버 종류는 UNKNOWN 이어야 한다(D3D11CreateDevice 규칙).
+        const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
+        HRESULT               hr         = D3D11CreateDeviceAndSwapChain( adapter.Get(),
+                                                                          driverType,
+                                                                          nullptr,
+                                                                          createDeviceFlags,
+                                                                          arrFeatureLevel,
+                                                                          SW_COUNT_OF( arrFeatureLevel ),
+                                                                          D3D11_SDK_VERSION,
+                                                                          &swapChainDesc,
+                                                                          createdSwapChain.GetAddressOf(),
+                                                                          _device.GetAddressOf(),
+                                                                          &featureLevel,
+                                                                          createdContext.GetAddressOf() );
+
+        if ( FAILED( hr ) )
+        {
+            SW_LOG_ERROR_ID( "D3D11.FailedCreateDirect3DDevice", "Failed to create Direct3D 11 Device and SwapChain! HRESULT: %#", hr );
+            return false;
+        }
         // 즉시 컨텍스트는 렌더 스레드와 전송 · 폴링 스레드가 함께 쓴다. 런타임 보호를 켜지 못하면 초기화를 실패시킨다(폴백 없음).
         if ( _immediateContext.initialize( std::move( createdContext ) ) == false )
             return false;
@@ -640,7 +608,7 @@ namespace sw
             }
         }
 
-        // 위에서 디바이스의 팩토리로 만든 스왑체인을 넘겨 소유시킨다.
+        // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.
         _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags );
 
         // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
@@ -714,9 +682,6 @@ namespace sw
 
     void D3D11RHIDevice::shutdownInternal()
     {
-        if ( _deviceCreation.joinable() )
-            _deviceCreation.join(); // 초기화하지 않고 내리는 디바이스(백엔드를 바꿨다)도 미리 시작한 생성을 기다린다
-        _createdContext.Reset();
         _listFrameSwapChain.clear();
         _listWindowSwapChain.clear();
         _swapChain.shutdown();

@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -108,11 +107,6 @@ namespace sw
 
         /** @brief Direct3D 11 디바이스와 스왑체인(백버퍼 RTV 포함)을 만듭니다. */
         [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
-        void               beginDeviceCreationInternal( bool bSoftwareAdapter, bool bPreferMinimumPower ) override;
-        /** @brief 어댑터를 골라 디바이스 · 즉시 컨텍스트를 만듭니다(스왑체인 없이 — 작업 스레드에서도 돈다). */
-        [[nodiscard]] bool createDeviceObjects( bool bSoftwareAdapter, bool bPreferMinimumPower );
-        /** @brief 미리 시작한 디바이스 생성을 기다리거나(합류) 지금 만듭니다. 만들었으면 true 입니다. */
-        [[nodiscard]] bool finishDeviceCreation( const RHISwapChainDesc& desc );
 
         /** @brief D3D11 자원을 해제합니다. */
         void shutdownInternal() override;
@@ -506,11 +500,8 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;
         };
 
-        Microsoft::WRL::ComPtr<ID3D11Device>        _device;
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> _createdContext; ///< `createDeviceObjects` 가 만든 즉시 컨텍스트 — `initializeInternal` 이 `_immediateContext` 로 넘긴다
-        sw::thread                                  _deviceCreation; ///< 미리 시작한 디바이스 생성(`beginDeviceCreationInternal`) — `finishDeviceCreation` 이 합류한다
-        bool                                        _bDeviceCreationSucceeded{ false };
-        Microsoft::WRL::ComPtr<IDXGIAdapter3>       _memoryAdapter; ///< 디바이스가 쓰는 어댑터. GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
+        Microsoft::WRL::ComPtr<ID3D11Device>  _device;
+        Microsoft::WRL::ComPtr<IDXGIAdapter3> _memoryAdapter; ///< 디바이스가 쓰는 어댑터. GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
         /// @brief 즉시 컨텍스트입니다. 여러 호출과 그것에 딸린 상태(전송 큐 · 쿼리 풀 · 프레임 링 · 타임스탬프)는 `lock()` 가드 안에서만 다룹니다.
         /// @details 기록 중의 상수 버퍼 갱신은 `IRHICommandList::updateConstantBuffer` 로 리스트의 Deferred Context 에 간다. 드로우마다 불리는 그 경로가
         ///          즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어써서 패스 CB 가 옆 패스 값으로 바뀐다.

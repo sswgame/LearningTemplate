@@ -193,25 +193,9 @@ namespace sw
 
 #endif // SW_WITH_DYNAMIC_MODULES
 
-    void RHIBackendRegistry::beginDeviceWarmup( RHIBackend backend )
-    {
-        _warmDevice  = createDevice( backend ); // 못 만들면 createDevice 가 알렸다 — RHI::initialize 가 같은 백엔드로 다시 만들며 같은 오류로 멈춘다
-        _warmBackend = backend;
-        if ( _warmDevice != nullptr )
-            _warmDevice->beginDeviceCreation();
-    }
-
-    unique_ptr<IRHIDevice> RHIBackendRegistry::takeWarmDevice( RHIBackend backend )
-    {
-        if ( _warmDevice != nullptr && _warmBackend != backend )
-            _warmDevice.reset(); // 다른 백엔드로 섰다 — 미리 만든 것은 쓰지 않는다
-        return std::move( _warmDevice );
-    }
-
     void RHIBackendRegistry::unloadModules()
     {
-        _warmDevice.reset(); // 이 레지스트리가 쥔 디바이스도 그 모듈의 코드다 — 내리기 전에 파괴한다
-#if SW_WITH_DYNAMIC_MODULES  // 배포 빌드는 백엔드가 정적이라 내릴 DLL 이 없다
+#if SW_WITH_DYNAMIC_MODULES // 배포 빌드는 백엔드가 정적이라 내릴 DLL 이 없다
         if ( _listLoadedModule.empty() )
             return;
 
