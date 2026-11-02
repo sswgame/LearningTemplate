@@ -76,6 +76,7 @@ Fixed rules that go with it:
 
 - Spell `Anim` out as `Animation`, except a name that refers to an outside term (Unreal's `AnimInstance`).
 - A boolean variable or member keeps the `b` prefix (`bVisible`, `_bOpen`), as in Unreal. Only a function that returns a boolean follows `is` / `has` / `can` / `should`.
+- Name a graphics type for what a game programmer would call it in Unreal or Unity. `Slot` is only a shader binding slot or a position in a ring or array; a type that owns a buffer is named after the buffer (`RHIStructuredBuffer`, `RHIConstantBuffer`). Do not use bookkeeping metaphors (`Ledger`): a counter of sizes is a `…Tracker` (`RHIMemoryTracker`), a handle table is a `…Registry`, and a range allocator is an `…Allocator`.
 - `Scene` owns the data of one scene. `GameObjectManager` manages the lifetime of that scene's objects; `GameObjectStore` is the storage it uses.
 
 ### Function names
