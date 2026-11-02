@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -42,6 +43,18 @@ namespace sw
         const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
         if ( count < kMaxReportedDraw )
             SW_LOG_ERROR_ID( "RHI.DrawSkippedNoRenderPass", "%# draw skipped: no render pass is open - something ended the pass (a buffer update inside it?) or the draw was recorded before beginRenderPass", pBackendName );
+    }
+
+    void RHIDrawDiagnostics::reportBufferUpdateInsideRenderPass( const utf8* pBackendName, const utf8* pWhat )
+    {
+        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        if ( count >= kMaxReportedDraw )
+            return;
+        // 부른 자리를 함께 남긴다 — 업로드를 패스 앞으로 옮길 곳이 곧 그 호출자다.
+        CallStack stack{};
+        CallStackCapture::capture( stack, 2 );
+        SW_LOG_ERROR_ID( "RHI.BufferUpdateInsideRenderPass", "%# %#: a buffer update inside an open render pass - the pass is ended and draws after it in that pass are dropped. Upload before beginRenderPass\n%#",
+                         pBackendName, pWhat, CallStackCapture::symbolize( stack ).c_str() );
     }
 
     void RHIDrawDiagnostics::reportIndexBufferUnbound( const utf8* pBackendName )

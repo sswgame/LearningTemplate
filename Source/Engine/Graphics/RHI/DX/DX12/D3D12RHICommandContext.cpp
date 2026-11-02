@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
+#include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -17,6 +18,35 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct D3D12RHICommandContextInternal
+        {
+            /** @brief 네이티브 렌더 패스 API(`ID3D12GraphicsCommandList4`)입니다. Windows 10 1809 런타임부터 늘 있다 — 없으면 기록할 수 없어 멈춘다(대신하는 길을 두지 않는다). */
+            static Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> asRenderPassList( ID3D12GraphicsCommandList* pList )
+            {
+                Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> list4;
+                requireHr( pList->QueryInterface( IID_PPV_ARGS( list4.GetAddressOf() ) ), "QueryInterface(ID3D12GraphicsCommandList4)" );
+                return list4;
+            }
+
+            /** @brief 엔진 load op 을 네이티브 패스의 시작 접근으로 옮깁니다. */
+            static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE toBeginningAccess( RHIRenderPassLoadOp loadOp )
+            {
+                switch ( loadOp )
+                {
+                    case RHIRenderPassLoadOp::Clear:
+                        return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+                    case RHIRenderPassLoadOp::Load:
+                        return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+                    case RHIRenderPassLoadOp::DontCare:
+                        return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+                }
+                return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+            }
+        };
+    } // namespace
+
     namespace
     {
         D3D12_RESOURCE_STATES toD3D12BufferState( RHIBufferState state )
@@ -252,7 +282,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 같은 포맷 복사와 셰이더 블릿의 상태 전이 순서가 곧 의미라 나누지 않는다.
-    void D3D12RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
+    void D3D12RHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pCmdList == nullptr || ( src == 0 && dst == 0 ) )
             return;
@@ -392,7 +422,7 @@ namespace sw
         state._bSRVDirty    = SW_TRUE;
     }
 
-    void D3D12RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
+    void D3D12RHICommandContext::prepareTextureForShaderReadNative( RHITextureHandle texture )
     {
         if ( _pCmdList == nullptr || texture == 0 )
             return;
@@ -407,7 +437,7 @@ namespace sw
         transitionTexture( texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
     }
 
-    void D3D12RHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
+    void D3D12RHICommandContext::prepareTextureForUnorderedAccessNative( RHITextureHandle texture )
     {
         if ( _pCmdList == nullptr || texture == 0 )
             return;
@@ -416,7 +446,7 @@ namespace sw
         transitionTexture( texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
     }
 
-    void D3D12RHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
+    void D3D12RHICommandContext::prepareTextureForRenderTargetNative( RHITextureHandle texture )
     {
         if ( _pCmdList == nullptr )
             return;
@@ -502,7 +532,7 @@ namespace sw
         return true;
     }
 
-    void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    void D3D12RHICommandContext::drawNative( uint32 vertexCount, uint32 startVertex )
     {
         const bool bNothingToDraw = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0;
         if ( bNothingToDraw )
@@ -519,7 +549,7 @@ namespace sw
         commandListForRecord()->DrawInstanced( vertexCount, 1, startVertex, 0 );
     }
 
-    void D3D12RHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    void D3D12RHICommandContext::drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
         const bool bNothingToDrawInstanced = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 || instanceCount == 0;
         if ( bNothingToDrawInstanced )
@@ -563,7 +593,7 @@ namespace sw
         bindShaderResource( index, slot );
     }
 
-    void D3D12RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
+    void D3D12RHICommandContext::dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         if ( _pCmdList == nullptr )
             return;
@@ -604,8 +634,8 @@ namespace sw
         commandListForRecord()->RSSetScissorRects( 1, &scissor );
     }
 
-    void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
-                                               RHIBufferHandle countBuffer, uint32 countBufferOffset )
+    void D3D12RHICommandContext::drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                                     RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
         const bool bNothingToDrawIndirect = _pCmdList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 || drawCount == 0;
         if ( bNothingToDrawIndirect )
@@ -661,7 +691,7 @@ namespace sw
         commandListForRecord()->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }
 
-    void D3D12RHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
+    void D3D12RHICommandContext::drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
         const bool bNothingToDraw = _pCmdList == nullptr || indexCount == 0 || instanceCount == 0;
         if ( bNothingToDraw )
@@ -676,8 +706,8 @@ namespace sw
         commandListForRecord()->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
     }
 
-    void D3D12RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
-                                                      uint32 countBufferOffset )
+    void D3D12RHICommandContext::drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                            uint32 countBufferOffset )
     {
         const bool bCannotDrawIndexedIndirect = _pCmdList == nullptr || _pDevice->_drawIndexedCommandSignature == nullptr || argumentBuffer == 0 || drawCount == 0;
         if ( bCannotDrawIndexedIndirect )
@@ -702,7 +732,7 @@ namespace sw
                                                  ( pCountResource != nullptr ) ? countBufferOffset : 0 );
     }
 
-    void D3D12RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void D3D12RHICommandContext::dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         const bool bCannotDispatchIndirect = _pCmdList == nullptr || _pDevice->_dispatchCommandSignature == nullptr || argumentBuffer == 0;
         if ( bCannotDispatchIndirect )
@@ -771,7 +801,7 @@ namespace sw
         _pState->_boundNativeGraphicsPSO = pso;
     }
 
-    void D3D12RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
+    void D3D12RHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
     {
         if ( _pCmdList == nullptr )
             return;
@@ -796,20 +826,23 @@ namespace sw
             SW_FATAL( "D3D12 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO );
     }
 
-    // 길이 유지(긴 함수 정리 기준): 상태 전이 · 타깃 바인딩 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    void D3D12RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
+    // 길이 유지(긴 함수 정리 기준): 상태 전이 · 시작 접근 채우기 · 패스 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
+    RHIRenderPassOpen D3D12RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
+        // 네이티브 렌더 패스다(`ID3D12GraphicsCommandList4::BeginRenderPass` — Vulkan · 언리얼 D3D12RHI 와 같은 모양). 상태 전이는 패스를 열기 전에 끝내고, 지우기는
+        // 시작 접근(CLEAR)으로 넘긴다 — 패스 안에서는 배리어 · 복사 · Clear 호출을 할 수 없다(디버그 레이어가 잡는다). 예전에는 OMSetRenderTargets + Clear*View 로
+        // 흉내 내 패스 안의 배리어 · 업로드가 DX12 에서만 그냥 지나갔고, load op 의 Load · DontCare 는 뜻이 사라졌다.
         ensureRecording();
         if ( _pCmdList == nullptr )
-            return;
+            return RHIRenderPassOpen::Failed;
 
         const bool bBindColor = beginInfo._bBindColor != SW_FALSE;
         const bool bHasDepth  = beginInfo._depthTarget != 0;
         if ( bBindColor == false && bHasDepth == false )
-            return;
+            return RHIRenderPassOpen::Failed;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[kMaxColorAttachments]{};
-        uint32                      rtCount{ 0 };
+        D3D12_RENDER_PASS_RENDER_TARGET_DESC arrColorDesc[kMaxColorAttachments]{};
+        uint32                               rtCount{ 0 };
         _pState->_bActiveSwapchainRT = SW_FALSE;
 
         const bool         bBackBuffer    = bBindColor && beginInfo._arrColorTarget[0] == 0;
@@ -819,15 +852,16 @@ namespace sw
         {
             const RHITextureHandle      colorHandle = beginInfo._arrColorTarget[attachmentIndex];
             D3D12_CPU_DESCRIPTOR_HANDLE rtv{};
-            bool                        bValid = false;
-
+            DXGI_FORMAT                 format{ DXGI_FORMAT_UNKNOWN };
             if ( colorHandle == 0 )
             {
-                if ( attachmentIndex > 0 || swapChain.isBackBufferReady() == false )
+                if ( attachmentIndex > 0 )
                     break;
+                if ( swapChain.isBackBufferReady() == false )
+                    return RHIRenderPassOpen::BackedOff; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
                 swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
                 rtv                                     = swapChain.getCurrentRTV();
-                bValid                                  = true;
+                format                                  = toDxgiFormat( swapChain.getFormat() );
                 _pState->_bActiveSwapchainRT            = SW_TRUE;
                 _pState->_arrActiveColorTarget[rtCount] = 0;
             }
@@ -835,11 +869,12 @@ namespace sw
             {
                 const uint32                        slice = beginInfo._arrColorTargetSlice[attachmentIndex];
                 D3D12RHIDevice::OffscreenTargetView view{};
-                if ( _pDevice->findOffscreenTargetView( colorHandle, slice, view ) == false || view._bHasRTV == SW_FALSE )
+                const bool                          bViewMissing = _pDevice->findOffscreenTargetView( colorHandle, slice, view ) == false || view._bHasRTV == SW_FALSE;
+                if ( bViewMissing )
                 {
                     if ( attachmentIndex > 0 )
                         break;
-                    return;
+                    return RHIRenderPassOpen::Failed;
                 }
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(color)" );
                 transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -847,26 +882,26 @@ namespace sw
                 {
                     if ( attachmentIndex > 0 )
                         break;
-                    return;
+                    return RHIRenderPassOpen::Failed;
                 }
                 rtv                                     = view._rtvHandle;
-                bValid                                  = true;
+                format                                  = view._format;
                 _pState->_arrActiveColorTarget[rtCount] = colorHandle;
             }
 
-            if ( bValid == false )
-                break;
-
-            const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
-            const float32*            pClear = &beginInfo._arrClearColor[attachmentIndex]._x;
-            if ( loadOp == RHIRenderPassLoadOp::Clear )
-                commandListForRecord()->ClearRenderTargetView( rtv, pClear, 0, nullptr );
-
-            rtvHandles[rtCount++] = rtv;
+            D3D12_RENDER_PASS_RENDER_TARGET_DESC& colorDesc = arrColorDesc[rtCount++];
+            colorDesc.cpuDescriptor                         = rtv;
+            colorDesc.BeginningAccess.Type                  = D3D12RHICommandContextInternal::toBeginningAccess( beginInfo._arrLoadOp[attachmentIndex] );
+            if ( colorDesc.BeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR )
+            {
+                colorDesc.BeginningAccess.Clear.ClearValue.Format = format;
+                Memory::copy( colorDesc.BeginningAccess.Clear.ClearValue.Color, &beginInfo._arrClearColor[attachmentIndex]._x, sizeof( float32 ) * 4u );
+            }
+            colorDesc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
         }
 
-        D3D12_CPU_DESCRIPTOR_HANDLE* pDSV{ nullptr };
-        D3D12_CPU_DESCRIPTOR_HANDLE  dsvHandle{};
+        D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthDesc{};
+        bool                                 bDepthBound{ false };
         _pState->_activeDepthTarget = 0;
         if ( bHasDepth )
         {
@@ -877,19 +912,36 @@ namespace sw
             {
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-                dsvHandle                   = depthView._dsvHandle;
-                pDSV                        = &dsvHandle;
-                _pState->_activeDepthTarget = beginInfo._depthTarget;
-                if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear )
-                    commandListForRecord()->ClearDepthStencilView( dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
-                                                                   beginInfo._clearDepth, 0, 0, nullptr );
+                _pState->_activeDepthTarget         = beginInfo._depthTarget;
+                bDepthBound                         = true;
+                depthDesc.cpuDescriptor             = depthView._dsvHandle;
+                depthDesc.DepthBeginningAccess.Type = D3D12RHICommandContextInternal::toBeginningAccess( beginInfo._depthLoadOp );
+                depthDesc.DepthEndingAccess.Type    = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                if ( depthDesc.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR )
+                {
+                    depthDesc.DepthBeginningAccess.Clear.ClearValue.Format               = depthView._format;
+                    depthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth   = beginInfo._clearDepth;
+                    depthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = 0;
+                }
+                // 스텐실이 있는 포맷이면 깊이와 같이 다룬다(예전 ClearDepthStencilView 가 둘 다 지웠다). 없는 포맷은 접근하지 않는다.
+                const bool bStencil = depthView._format == DXGI_FORMAT_D24_UNORM_S8_UINT || depthView._format == DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+                if ( bStencil )
+                {
+                    depthDesc.StencilBeginningAccess = depthDesc.DepthBeginningAccess;
+                    depthDesc.StencilEndingAccess    = depthDesc.DepthEndingAccess;
+                }
+                else
+                {
+                    depthDesc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+                    depthDesc.StencilEndingAccess.Type    = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+                }
             }
         }
+        if ( rtCount == 0 && bDepthBound == false )
+            return RHIRenderPassOpen::Failed;
 
-        if ( rtCount > 0 )
-            commandListForRecord()->OMSetRenderTargets( rtCount, rtvHandles, FALSE, pDSV );
-        else if ( pDSV != nullptr )
-            commandListForRecord()->OMSetRenderTargets( 0, nullptr, FALSE, pDSV );
+        D3D12RHICommandContextInternal::asRenderPassList( commandListForRecord() )
+            ->BeginRenderPass( rtCount, rtCount > 0 ? arrColorDesc : nullptr, bDepthBound ? &depthDesc : nullptr, D3D12_RENDER_PASS_FLAG_NONE );
 
         const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : swapChain.getWidth();
         const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : swapChain.getHeight();
@@ -902,10 +954,12 @@ namespace sw
 
         D3D12_RECT scissor{ 0, 0, static_cast<LONG>( vpW ), static_cast<LONG>( vpH ) };
         commandListForRecord()->RSSetScissorRects( 1, &scissor );
+        return RHIRenderPassOpen::Opened;
     }
 
-    void D3D12RHICommandContext::endRenderPass()
+    void D3D12RHICommandContext::endRenderPassNative()
     {
+        D3D12RHICommandContextInternal::asRenderPassList( commandListForRecord() )->EndRenderPass();
         _pState->_activeDepthTarget  = 0;
         _pState->_bActiveSwapchainRT = SW_FALSE;
     }
@@ -915,7 +969,7 @@ namespace sw
         _pState->_geometry.setIndexBuffer( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw)
     }
 
-    void D3D12RHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    void D3D12RHICommandContext::uavBarrierNative( RHIBufferHandle buffer )
     {
         if ( _pCmdList == nullptr || buffer == 0 )
             return;
@@ -929,7 +983,7 @@ namespace sw
         commandListForRecord()->ResourceBarrier( 1, &barrier );
     }
 
-    void D3D12RHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
+    void D3D12RHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         if ( _pCmdList == nullptr || buffer == 0 )
             return;
@@ -960,7 +1014,7 @@ namespace sw
         commandListForRecord()->ResourceBarrier( 1, &barrier );
     }
 
-    void D3D12RHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    void D3D12RHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
     {
         const bool bNothingToCopy = _pCmdList == nullptr || source == 0 || readback == 0 || sizeBytes == 0;
         if ( bNothingToCopy )

@@ -221,6 +221,7 @@ namespace sw
     void D3D12RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
+        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
         const bool bInvalidBufferRegionUpload = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
                                                 _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
         if ( bInvalidBufferRegionUpload )
@@ -699,6 +700,7 @@ namespace sw
 
     void D3D12RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
+        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;

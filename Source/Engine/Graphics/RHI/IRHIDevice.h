@@ -267,12 +267,12 @@ namespace sw
             assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
             beginFrameInternal();
         }
-        /** @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 하지 않습니다. 렌더 스레드에서만 부른다(`beginFrame` 과 같다). */
-        void endFrame( bool vsync = true, bool bPresent = true )
-        {
-            assumeRenderThreadRole();
-            endFrameInternal( vsync, bPresent );
-        }
+        /**
+         * @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 하지 않습니다. 렌더 스레드에서만 부른다(`beginFrame` 과 같다).
+         * @details 프레임 스트림에 열린 렌더 패스를 먼저 닫는다 — 패스는 프레임을 넘지 못한다(네 백엔드가 같다, `IRHICommandContext`). 예전에는 DX12 · Vulkan 만 백엔드에서 닫아
+         *          DX11 · GL 은 열린 패스가 다음 프레임으로 넘어갔다.
+         */
+        void endFrame( bool vsync = true, bool bPresent = true );
 
         /**
          * @brief GPU 타임스탬프 계측 능력입니다. 이 능력이 없는 디바이스(테스트 목)는 nullptr 입니다.
@@ -482,6 +482,16 @@ namespace sw
          * @param pWhat 로그에 남길 호출 지점 이름입니다.
          */
         void requireRegistryMutableNow( const utf8* pWhat ) const;
+
+        /**
+         * @brief 렌더 스레드가 프레임 스트림에 렌더 패스를 연 채로 버퍼를 갱신하면 알리고 그 패스를 닫습니다(네 백엔드가 같다). 백엔드의 버퍼 갱신이 들어올 때 부릅니다.
+         * @details 전송 계약 3 — 업로드는 그리기 기록 전에 한다. Vulkan 은 패스 안에 복사를 기록할 수 없어 패스를 닫고, D3D12 는 업로드가 별도 복사 리스트로 가 프레임
+         *          리스트보다 **먼저** 실행된다(이미 기록한 드로우가 새 내용을 읽는다). 어느 백엔드에서든 같은 오류(`RHI.BufferUpdateInsideRenderPass`)로 드러나게 하고,
+         *          패스를 닫아 그 뒤의 드로우도 네 백엔드에서 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
+         *          다른 스레드의 갱신은 렌더 스레드가 기록하는 패스와 순서가 없어 보지 않는다(렌더 스레드가 없으면 보지 않는다).
+         * @param pWhat 로그에 남길 호출 지점 이름입니다.
+         */
+        void requireNoOpenRenderPassForUpload( const utf8* pWhat );
 
         /**
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).

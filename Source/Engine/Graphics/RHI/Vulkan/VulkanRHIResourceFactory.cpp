@@ -241,6 +241,7 @@ namespace sw
     void VulkanRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                   const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
+        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
         // 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다. 목적 버퍼를 직접 vkMapMemory 해서 쓰면
         // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 생긴다. 큐 순서가 곧 해저드 해결이고,
         // "바뀐 게 없으면 업로드 생략" 같은 상위 로직도 단일 목적 버퍼 그대로 유효하다.
@@ -320,13 +321,10 @@ namespace sw
             }
             cmd = oneShot->get();
         }
-        else if ( _pDevice->_recordingState._bRenderPassActive == SW_TRUE )
+        else
         {
-            // 패스 안에는 복사를 기록할 수 없어 닫는다. 부르는 쪽은 그 패스에 이어 그리던 것을 잃는다(패스가 없으면 드로우를 버린다) — 계약 위반이라 알린다(전송 계약 3:
-            // 업로드는 그리기 기록 전에). 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에 UI 가 그려지지 않았다.
-            SW_LOG_ERROR_ONCE_ID( "Vulkan.BufferUpdateInsideRenderPass", "updateStructuredBufferRegions: a buffer update inside an open render pass ended that pass - draws recorded after it in the same pass are dropped. Upload before beginRenderPass" );
-            vkCmdEndRenderPass( cmd );
-            _pDevice->_recordingState._bRenderPassActive = SW_FALSE;
+            // 패스 안에는 복사를 기록할 수 없다. 렌더 스레드의 위반은 위 판정(requireNoOpenRenderPassForUpload)이 알리고 닫았다 — 남은 것은 공용 상태와 함께 닫는다.
+            _pDevice->_frameStreamContext->endRenderPass();
         }
 
         // 앞 프레임의 읽기(셰이더 · 간접 인자 · 컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
@@ -376,6 +374,7 @@ namespace sw
 
     void VulkanRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
+        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_device == VK_NULL_HANDLE;
         if ( bInvalidVertexRegionUpdate )
             return;

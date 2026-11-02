@@ -616,6 +616,8 @@ namespace sw
             gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
             gameViewPass._arrClearColor[0]  = packet._clearColor;
             pFrameStream->beginRenderPass( gameViewPass );
+            // 지우기만 하는 패스다 — 열어 둔 채 넘기면 아래 씬 업로드가 패스 안에서 일어난다(Vulkan 은 그 복사를 위해 패스를 닫는다 — RHI.BufferUpdateInsideRenderPass).
+            pFrameStream->endRenderPass();
         }
 
         // 그래프가 이 프레임을 실제로 그렸는가. 그리지 않은 프레임(렌더러 준비 전, 주 시점이 없는 패킷)은 백버퍼를 아무도 건드리지 않았다.
@@ -663,6 +665,9 @@ namespace sw
             SW_PROFILE_SCOPE( "RT.PresentHook" );
             _presentHook( *_pDevice, packet );
         }
+        // 위에서 연 백버퍼 패스를 연 쪽이 닫는다(남겨 두면 endFrame 이 닫지만 패스의 끝이 어디인지 여기서 보이게 둔다).
+        if ( pFrameStream != nullptr )
+            pFrameStream->endRenderPass();
 
         {
             // 제출과 Present 다. GPU 가 밀리면 여기서 기다린다.

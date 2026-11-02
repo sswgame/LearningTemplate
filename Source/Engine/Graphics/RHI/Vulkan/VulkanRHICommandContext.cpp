@@ -120,7 +120,7 @@ namespace sw
         return _pDevice != nullptr ? _pDevice->currentCommandBuffer() : nullptr;
     }
 
-    void VulkanRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
+    void VulkanRHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || ( src == 0 && dst == 0 ) )
@@ -229,7 +229,7 @@ namespace sw
         setSlot( false, shaderslot::vk::kTShift + slot, index, false, false );
     }
 
-    void VulkanRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
+    void VulkanRHICommandContext::prepareTextureForShaderReadNative( RHITextureHandle texture )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || texture == 0 )
@@ -254,7 +254,7 @@ namespace sw
         _pDevice->transitionTextureLayout( cmd, record, targetLayout, aspect );
     }
 
-    void VulkanRHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
+    void VulkanRHICommandContext::prepareTextureForUnorderedAccessNative( RHITextureHandle texture )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || texture == 0 )
@@ -273,7 +273,7 @@ namespace sw
         _pDevice->transitionTextureLayout( cmd, *pResolved, static_cast<uint32>( VK_IMAGE_LAYOUT_GENERAL ), static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT ) );
     }
 
-    void VulkanRHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
+    void VulkanRHICommandContext::prepareTextureForRenderTargetNative( RHITextureHandle texture )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || texture == 0 )
@@ -314,7 +314,7 @@ namespace sw
             vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pRecord->_pipeline );
     }
 
-    void VulkanRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
+    void VulkanRHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
@@ -343,11 +343,11 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 첨부 전이 · 렌더링 정보 채우기 · 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    void VulkanRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassOpen VulkanRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
-            return;
+            return RHIRenderPassOpen::Failed;
 
         const bool   bBindColor = beginInfo._bBindColor != SW_FALSE;
         const uint32 colorCount = bBindColor ? ( beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u ) : 0u;
@@ -355,7 +355,7 @@ namespace sw
 
         // 깊이 타깃이 있으면 깊이 전용 패스도 합성 경로를 쓴다.
         if ( bBindColor == 0 && bHasDepth == false )
-            return;
+            return RHIRenderPassOpen::Failed;
 
         RHITextureHandle colorHandles[kMaxColorAttachments]{};
         for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -400,7 +400,7 @@ namespace sw
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._arrColor[colorIndex] );
                 if ( pTex == nullptr )
-                    return;
+                    return RHIRenderPassOpen::Failed;
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
             }
@@ -408,14 +408,14 @@ namespace sw
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._depth );
                 if ( pTex == nullptr )
-                    return;
+                    return RHIRenderPassOpen::Failed;
                 const uint32 aspect = _pDevice->depthAspectMask();
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
             }
 
             VulkanRHIRenderPassCache::CompositeRecord composite{};
             if ( _pDevice->ensureCompositeFramebuffer( key, composite ) == false )
-                return;
+                return RHIRenderPassOpen::Failed;
 
             renderPass  = composite._renderPass;
             framebuffer = composite._framebuffer;
@@ -441,7 +441,7 @@ namespace sw
                 VulkanRHIDevice::VulkanTextureRecord* pTex                      = _pDevice->resolveTexture( colorTarget );
                 const bool                            bColorTargetNotRenderable = pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE;
                 if ( bColorTargetNotRenderable )
-                    return;
+                    return RHIRenderPassOpen::Failed;
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
@@ -454,8 +454,7 @@ namespace sw
                 const VulkanRHISwapChain* pSwapChain = _pDevice->useSwapChain( beginInfo._pSwapChain );
                 if ( _pDevice->_renderPass == VK_NULL_HANDLE || pSwapChain == nullptr || pSwapChain->getCurrentFramebuffer() == VK_NULL_HANDLE )
                 {
-                    _pState->_bRenderPassBackedOff = SW_TRUE; // 그릴 백버퍼가 없다 — 이 패스의 드로우는 알리지 않고 버린다
-                    return;
+                    return RHIRenderPassOpen::BackedOff; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
                 }
                 framebuffer = pSwapChain->getCurrentFramebuffer();
                 extent      = { pSwapChain->getExtentWidth(), pSwapChain->getExtentHeight() };
@@ -492,8 +491,7 @@ namespace sw
         renderPassInfo.pClearValues      = clearValues;
 
         vkCmdBeginRenderPass( cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
-        _pState->_bRenderPassActive    = SW_TRUE;
-        _pState->_bRenderPassBackedOff = SW_FALSE;
+        _pState->_bRenderPassActive = SW_TRUE;
 
         // DX12 beginRenderPass 와 맞춘다: 뷰포트 = 패스 크기, DX 의 Y 방향.
         RHIViewport viewport{};
@@ -502,9 +500,10 @@ namespace sw
         viewport._minDepth = 0.0f;
         viewport._maxDepth = 1.0f;
         setViewport( viewport );
+        return RHIRenderPassOpen::Opened;
     }
 
-    void VulkanRHICommandContext::endRenderPass()
+    void VulkanRHICommandContext::endRenderPassNative()
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pState->_bRenderPassActive == SW_FALSE )
@@ -513,7 +512,7 @@ namespace sw
         _pState->_bRenderPassActive = SW_FALSE;
     }
 
-    void VulkanRHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    void VulkanRHICommandContext::uavBarrierNative( RHIBufferHandle buffer )
     {
         VkCommandBuffer                      cmd                  = commandBuffer();
         VulkanRHIDevice::VulkanBufferRecord* pRecord              = _pDevice->resolveAllocatedBuffer( buffer );
@@ -541,7 +540,7 @@ namespace sw
                               &barrier, 0, nullptr );
     }
 
-    void VulkanRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
+    void VulkanRHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         VkCommandBuffer                      cmd     = commandBuffer();
         VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
@@ -578,7 +577,7 @@ namespace sw
         pRecord->_state = newState;
     }
 
-    void VulkanRHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    void VulkanRHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
     {
         VkCommandBuffer                      cmd            = commandBuffer();
         VulkanRHIDevice::VulkanBufferRecord* pSource        = _pDevice->resolveAllocatedBuffer( source );
@@ -765,14 +764,12 @@ namespace sw
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
     {
         VkCommandBuffer cmd = commandBuffer();
-        // 패스가 안 열렸으면 그리지 않는다(Vulkan 은 패스 밖 드로우가 없다). 백버퍼 프레임버퍼가 없을 때(최소화 · 스왑체인 재생성 중) beginRenderPass 가 물러난 뒤의 드로우는
-        // 정상이라 조용히 버리고, 그 밖에는 부르는 쪽의 결함이라 알린다 — 열린 패스를 무언가가 닫았다(패스 안 버퍼 갱신이 그랬다: 에디터 UI 가 화면에서 사라졌다).
+        // 드로우는 열린 패스 안에서만 온다(`IRHICommandContext` 가 거른다). 여기서 패스가 없으면 네이티브 패스를 공용 상태 몰래 닫은 백엔드 결함이라 알린다.
         if ( cmd == VK_NULL_HANDLE )
             return false;
         if ( _pState->_bRenderPassActive == SW_FALSE )
         {
-            if ( _pState->_bRenderPassBackedOff == SW_FALSE )
-                RHIDrawDiagnostics::reportDrawWithoutRenderPass( "Vulkan" );
+            RHIDrawDiagnostics::reportDrawWithoutRenderPass( "Vulkan" );
             return false;
         }
 
@@ -789,7 +786,7 @@ namespace sw
         return true;
     }
 
-    void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    void VulkanRHICommandContext::drawNative( uint32 vertexCount, uint32 startVertex )
     {
         VkCommandBuffer cmd = commandBuffer();
         const bool      bCanDraw =
@@ -807,7 +804,7 @@ namespace sw
         vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
     }
 
-    void VulkanRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    void VulkanRHICommandContext::drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
         VkCommandBuffer cmd = commandBuffer();
         const bool      bCanDraw =
@@ -847,7 +844,7 @@ namespace sw
         bindShaderResource( index, slot );
     }
 
-    void VulkanRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
+    void VulkanRHICommandContext::dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
@@ -946,7 +943,7 @@ namespace sw
         } );
     }
 
-    void VulkanRHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
+    void VulkanRHICommandContext::drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
         const bool bNothingToDraw = _pDevice->_pipelineLayout == VK_NULL_HANDLE || indexCount == 0 || instanceCount == 0;
         if ( bNothingToDraw || bindIndexedMeshForDraw() == false )
@@ -954,8 +951,8 @@ namespace sw
         vkCmdDrawIndexed( commandBuffer(), indexCount, instanceCount, startIndex, baseVertex, startInstance );
     }
 
-    void VulkanRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
-                                                       uint32 countBufferOffset )
+    void VulkanRHICommandContext::drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                             uint32 countBufferOffset )
     {
         const VulkanRHIDevice::VulkanBufferRecord* pArgs          = _pDevice->resolveAllocatedBuffer( argumentBuffer );
         const bool                                 bNothingToDraw = pArgs == nullptr || pArgs->_buffer == VK_NULL_HANDLE || drawCount == 0;
@@ -984,7 +981,7 @@ namespace sw
             vkCmdDrawIndexedIndirect( cmd, pArgs->_buffer, argumentBufferOffset + commandIndex * stride, 1, stride );
         }
     }
-    void VulkanRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void VulkanRHICommandContext::dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         VkCommandBuffer                            cmd     = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( argumentBuffer );
@@ -999,8 +996,8 @@ namespace sw
         }
     }
 
-    void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
-                                                RHIBufferHandle countBuffer, uint32 countBufferOffset )
+    void VulkanRHICommandContext::drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                                      RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
         VkCommandBuffer                            cmd                    = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pArgs                  = _pDevice->resolveAllocatedBuffer( argumentBuffer );

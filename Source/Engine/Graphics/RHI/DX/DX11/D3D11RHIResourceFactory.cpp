@@ -154,6 +154,7 @@ namespace sw
     void D3D11RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
+        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
         const bool bInvalidBufferRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_immediateContext.isValid() == false;
         if ( bInvalidBufferRegionUpdate )
             return;
@@ -201,6 +202,7 @@ namespace sw
 
     void D3D11RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
+        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
         // 정점 버퍼도 DEFAULT 사용 버퍼다(createFilledBuffer) — 즉시 컨텍스트의 UpdateSubresource 상자 갱신이 그대로 맞고, 순서는 드라이버가 맞춘다.
         // 범위는 여기서 본다. 상자가 버퍼를 넘으면 D3D11 은 호출을 조용히 버린다.
         ID3D11Buffer* pResource = ( buffer != 0 && _pDevice->_immediateContext.isValid() ) ? _pDevice->resolveBuffer( buffer ) : nullptr;

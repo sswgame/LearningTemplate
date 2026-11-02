@@ -57,7 +57,7 @@ namespace sw
     {
     }
 
-    void OpenGLRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
+    void OpenGLRHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || ( src == 0 && dst == 0 ) )
             return;
@@ -176,7 +176,7 @@ namespace sw
             glDisable( GL_BLEND );
     }
 
-    void OpenGLRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
+    void OpenGLRHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
     {
         // 등록되지 않은 핸들도 기록한다 — 앞 컴퓨트 PSO 를 남겨 두면 다음 디스패치가 그것으로 대신 돈다. 그 디스패치는 resolveComputeProgram 에서 멈춘다.
         _pDevice->_recordingState._boundComputePSO                = pso;
@@ -189,16 +189,16 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 프레임버퍼 바인딩 · 드로우 버퍼 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    void OpenGLRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassOpen OpenGLRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
-            return;
+            return RHIRenderPassOpen::Failed;
 
         // 백버퍼(컬러 핸들 0)면 그 창에 컨텍스트를 건다 — 기본 프레임버퍼(fbo 0)는 걸린 창의 것이다.
         const bool                bBackBufferTarget = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == 0;
         const OpenGLRHISwapChain* pSwapChain        = bBackBufferTarget ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : &_pDevice->_swapChain;
         if ( pSwapChain == nullptr )
-            return;
+            return RHIRenderPassOpen::Failed;
         uint32 targetWidth  = beginInfo._width > 0 ? beginInfo._width : pSwapChain->getWidth();
         uint32 targetHeight = beginInfo._height > 0 ? beginInfo._height : pSwapChain->getHeight();
 
@@ -331,28 +331,27 @@ namespace sw
             glClearDepth( static_cast<GLclampd>( beginInfo._clearDepth ) );
             glClear( GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
         }
+        return RHIRenderPassOpen::Opened;
     }
 
-    void OpenGLRHICommandContext::endRenderPass()
+    void OpenGLRHICommandContext::endRenderPassNative()
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-        // 패스 밖에서는 **GL 기본 상태**로 되돌린다. 엔진 패스를 거치지 않고 기본 프레임버퍼에 직접 그리는
-        // 코드(에디터 ImGui 백엔드가 그렇다)는 표준 GL 규약(좌하단 원점)을 가정한다. 오프스크린 패스가
-        // 걸어 둔 UPPER_LEFT 가 남아 있으면 그쪽 UI 가 상하로 뒤집힌다.
+        // 패스 밖에서는 **GL 기본 상태**로 되돌린다(기본 프레임버퍼 · 좌하단 원점). 오프스크린 패스가 걸어 둔 UPPER_LEFT 가 다음 패스 밖 일(블릿 · 되읽기)에 새지 않게 한다.
         if ( glad_glClipControl != nullptr )
             glClipControl( GL_LOWER_LEFT, GL_ZERO_TO_ONE );
     }
 
-    void OpenGLRHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    void OpenGLRHICommandContext::uavBarrierNative( RHIBufferHandle buffer )
     {
         // GL 에는 버퍼 단위 배리어가 없다. 비트로 어떤 접근을 기다릴지 고른다.
         (void)buffer;
         glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT );
     }
 
-    void OpenGLRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
+    void OpenGLRHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         (void)buffer;
         if ( _pDevice->_bInitialized == SW_FALSE )
@@ -399,7 +398,7 @@ namespace sw
         }
     }
 
-    void OpenGLRHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    void OpenGLRHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || sizeBytes == 0 )
             return;
@@ -637,12 +636,12 @@ namespace sw
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
     }
 
-    void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    void OpenGLRHICommandContext::drawNative( uint32 vertexCount, uint32 startVertex )
     {
         drawArrays( vertexCount, 1, startVertex );
     }
 
-    void OpenGLRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    void OpenGLRHICommandContext::drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
         // startInstance 는 무시한다(GL 3.1 호환 glDrawArraysInstanced 에는 시작 인스턴스 인자가 없다).
         // 인스턴스 자리가 필요한 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림을 쓴다.
@@ -691,7 +690,7 @@ namespace sw
             glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
     }
 
-    void OpenGLRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
+    void OpenGLRHICommandContext::dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
@@ -773,8 +772,8 @@ namespace sw
         glBindBufferBase( GL_UNIFORM_BUFFER, shaderslot::kRootConstantEmulationSlot, _pDevice->_computeRootConstantUbo );
     }
 
-    void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
-                                                RHIBufferHandle countBuffer, uint32 countBufferOffset )
+    void OpenGLRHICommandContext::drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                                      RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
         const bool bNothingToDrawIndirect = _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || drawCount == 0;
         if ( bNothingToDrawIndirect )
@@ -854,7 +853,7 @@ namespace sw
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
     }
 
-    void OpenGLRHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
+    void OpenGLRHICommandContext::drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
         // startInstance 는 drawInstanced 와 같이 무시한다(인스턴스 자리가 필요한 씬 드로우는 인스턴스 슬롯 스트림을 쓴다).
         (void)startInstance;
@@ -869,8 +868,8 @@ namespace sw
         unbindIndexedMesh();
     }
 
-    void OpenGLRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
-                                                       uint32 countBufferOffset )
+    void OpenGLRHICommandContext::drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                             uint32 countBufferOffset )
     {
         const GLuint buf = _pDevice->_bInitialized != SW_FALSE && argumentBuffer != 0 ? _pDevice->resolveGlBuffer( argumentBuffer ) : 0u;
         GLenum       mode{ GL_TRIANGLES };
@@ -901,7 +900,7 @@ namespace sw
         glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
         unbindIndexedMesh();
     }
-    void OpenGLRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void OpenGLRHICommandContext::dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
             return;
@@ -919,7 +918,7 @@ namespace sw
         glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT );
     }
 
-    void OpenGLRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
+    void OpenGLRHICommandContext::prepareTextureForShaderReadNative( RHITextureHandle texture )
     {
         // FBO 로 그린 결과를 텍스처로 샘플링하기 전에 필요한 배리어.
         // FBO 0 재바인딩은 여기서 하지 않는다. 다음 beginRenderPass 가 타깃을 명시적으로 정한다.
@@ -930,7 +929,7 @@ namespace sw
         glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT );
     }
 
-    void OpenGLRHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
+    void OpenGLRHICommandContext::prepareTextureForUnorderedAccessNative( RHITextureHandle texture )
     {
         // 상태 추적이 없다. 이전 렌더 · 샘플 결과가 이미지 스토어 전에 끝나도록 배리어만 친다.
         (void)texture;

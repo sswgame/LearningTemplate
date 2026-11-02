@@ -27,28 +27,28 @@ namespace sw
         D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext, D3D11RecordingState* pState );
         ~D3D11RHICommandContext() override = default;
 
-        void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
+        void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
-        void prepareTextureForShaderRead( RHITextureHandle texture ) override;
+        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         /**
          * @brief D3D11 에 상태 전이는 없지만 바인딩 해저드는 있습니다. 이 텍스처가 바인딩된 PS SRV 슬롯을 해제합니다.
          * @details 그대로 두면 뒤따르는 `OMSetRenderTargets` 가 그 SRV 를 NULL 로 강제하고 디버그 레이어가 해저드를 냅니다
          *          ("still bound on input"). 그래프가 첨부로 쓰기 전에 이것을 부르므로(레벨 프롤로그, 직렬 패스 앞) 패스의 바인딩을 지우지 않습니다.
          */
-        void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
+        void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
         /** @brief D3D11 은 UAV 해저드를 런타임이 풀어 의도적으로 아무것도 하지 않습니다. */
-        void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { (void)texture; }
+        void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { (void)texture; }
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
-        void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
-        void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
+        void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
+        void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다. Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 다른 스레드의 팩토리 갱신과 같은 버퍼를 다툴 수 있어 `D3D11ImmediateContext::lock()` 으로 묶습니다. */
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
-        void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
+        void dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
         void setScissorRect( const RHIScissorRect& rect ) override;
 
@@ -64,26 +64,27 @@ namespace sw
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
         [[nodiscard]] bool bindIndexBufferForDraw();
         /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
-        void requireComputePipelineForDispatch() const;
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
-                           RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
-                                  uint32 countBufferOffset = 0 ) override;
-        void drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
-        void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
-        void beginEventMarker( const utf8* pName ) override;
-        void writeBreadcrumb( uint32 markerID ) override;
-        void endEventMarker() override;
-        void setPipelineState( RHIPipelineStateHandle pso ) override;
-        void setComputePipelineState( RHIPipelineStateHandle pso ) override;
-        void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
-        void endRenderPass() override;
-        void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
-        void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
-        void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
-        void uavBarrier( RHIBufferHandle buffer ) override;
+        void              requireComputePipelineForDispatch() const;
+        void              drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
+                                              RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
+        void              setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void              setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void              drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                                     uint32 countBufferOffset = 0 ) override;
+        void              drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
+        void              dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
+        void              beginEventMarker( const utf8* pName ) override;
+        void              writeBreadcrumb( uint32 markerID ) override;
+        void              endEventMarker() override;
+        void              setPipelineState( RHIPipelineStateHandle pso ) override;
+        void              setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
+        const utf8*       getContextBackendName() const override { return "DX11"; }
+        RHIRenderPassOpen beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
+        void              endRenderPassNative() override;
+        void              setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
+        void              transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void              copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
+        void              uavBarrierNative( RHIBufferHandle buffer ) override;
 
     private:
         /** @brief beginEventMarker 와 endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */

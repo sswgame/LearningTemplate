@@ -31,7 +31,7 @@ namespace sw
     {
     }
 
-    void D3D11RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
+    void D3D11RHICommandContext::blitTextureNative( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pContext == nullptr || ( src == 0 && dst == 0 ) )
             return;
@@ -111,7 +111,7 @@ namespace sw
             _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
     }
 
-    void D3D11RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
+    void D3D11RHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
     {
         // 컴퓨트 셰이더만 건다. 그래픽스 PSO 기록(_activeGraphicsPSO)은 건드리지 않는다 — 컴퓨트 PSO 가 그래픽스 자리에 남으면 다음 드로우가 멈춘다.
         // 핸들은 레코드가 없어도 기록한다 — 디스패치가 앞 컴퓨트 PSO 로 대신 돌지 않고 requireComputePipelineForDispatch 에서 멈추게 한다.
@@ -132,10 +132,10 @@ namespace sw
             SW_FATAL( "D3D11 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO );
     }
 
-    void D3D11RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassOpen D3D11RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
         if ( _pContext == nullptr )
-            return;
+            return RHIRenderPassOpen::Failed;
 
         ID3D11RenderTargetView* arrRTV[kMaxColorAttachments]{};
         uint32                  rtCount{ 0 };
@@ -207,21 +207,18 @@ namespace sw
         // 래스터라이저 상태가 가위를 늘 켜 두므로(PSO) 가위를 패스 전체로 되돌린다 — 앞 패스의 가위가 새지 않게.
         const D3D11_RECT scissor{ 0, 0, static_cast<LONG>( viewport.Width ), static_cast<LONG>( viewport.Height ) };
         _pContext->RSSetScissorRects( 1, &scissor );
+        return RHIRenderPassOpen::Opened;
     }
 
     /**
      * @brief D3D11 에는 끝낼 렌더 패스가 **없습니다.** 비어 있는 것이 맞습니다.
-     * @details 네 백엔드 중 여기만 본문이 비어 있어서 "빠뜨린 것" 으로 읽히기 쉽습니다. 아닙니다:
-     *          - **Vulkan** 은 `vkCmdEndRenderPass` 가 API 의 요구입니다.
-     *          - **GL** 은 기본 프레임버퍼와 `glClipControl` 을 되돌려야 합니다(엔진 패스를 거치지
-     *            않고 그리는 에디터 ImGui 백엔드가 표준 GL 규약을 가정하기 때문입니다).
-     *          - **DX12** 는 배리어 판단에 쓰는 자기 추적 상태(활성 컬러 · 깊이 타깃)를 지웁니다.
-     *          D3D11 은 즉시 모드라 패스 객체가 없다. 렌더 타깃도 그대로 둔다 — 에디터 ImGui 가 마지막 패스의 백버퍼 바인딩 위에 그린다.
+     * @details 패스 규칙(열림 상태, 패스 밖 일 전에 닫기, 패스 없는 드로우 버리기)은 `IRHICommandContext` 가 네 백엔드에 같이 지킨다 — 여기는 네이티브로 할 일만 한다.
+     *          Vulkan · DX12 는 네이티브 패스를 닫고, GL 은 기본 프레임버퍼와 `glClipControl` 을 되돌린다. D3D11 은 즉시 모드라 패스 객체가 없고 렌더 타깃도 그대로 둔다.
      *          끝난 타깃을 컴퓨트 UAV 로 거는 해저드는 `bindComputeUAV` 가 RT 를 떼서 막는다.
      *          `D3D11RecordingState` 가 들고 있는 것(메시 VB, 루트 상수 그림자)은 **패스 경계를
      *          넘어 유지되어야 하는 것**이라 여기서 지우면 오히려 틀립니다.
      */
-    void D3D11RHICommandContext::endRenderPass()
+    void D3D11RHICommandContext::endRenderPassNative()
     {
     }
 
@@ -230,14 +227,14 @@ namespace sw
         _pState->_geometry.setIndexBuffer( buffer, indexStride, offset ); // 인덱스 드로우가 건다(bindIndexBufferForDraw — 네 백엔드가 같다)
     }
 
-    void D3D11RHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    void D3D11RHICommandContext::uavBarrierNative( RHIBufferHandle buffer )
     {
         // D3D11 은 같은 컨텍스트의 디스패치를 순서대로 실행하고 UAV 위험도 드라이버가 처리한다.
         // 명시적 배리어 개념 자체가 없다. 의도적으로 아무것도 하지 않는다.
         (void)buffer;
     }
 
-    void D3D11RHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
+    void D3D11RHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
         // D3D11 에 배리어는 없다. 하지만 "이제 읽는다" 는 요청이 할 일 없는 것은 아니다. 같은 리소스를
         // 출력(UAV)과 입력(SRV)에 동시에 걸 수 없어서, UAV 를 안 떼면 런타임이 SRV 를 NULL 로 강제하고
@@ -277,7 +274,7 @@ namespace sw
         }
     }
 
-    void D3D11RHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    void D3D11RHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
     {
         ID3D11Buffer* pSource        = _pDevice->resolveBuffer( source );
         ID3D11Buffer* pTarget        = _pDevice->resolveBuffer( readback );
@@ -367,7 +364,7 @@ namespace sw
         return true;
     }
 
-    void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
+    void D3D11RHICommandContext::drawNative( uint32 vertexCount, uint32 startVertex )
     {
         if ( _pContext == nullptr || vertexCount == 0 )
             return;
@@ -378,7 +375,7 @@ namespace sw
         _pContext->Draw( vertexCount, startVertex );
     }
 
-    void D3D11RHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    void D3D11RHICommandContext::drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
         const bool bNothingToDraw = _pContext == nullptr || vertexCount == 0 || instanceCount == 0;
         if ( bNothingToDraw )
@@ -482,7 +479,7 @@ namespace sw
         _pContext->CSSetShaderResources( slot, 1, &pSRV );
     }
 
-    void D3D11RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
+    void D3D11RHICommandContext::dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         if ( _pContext == nullptr )
             return;
@@ -569,8 +566,8 @@ namespace sw
         writeRootConstants( num32BitValues, pData, destOffsetIn32BitValues, true );
     }
 
-    void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
-                                               RHIBufferHandle countBuffer, uint32 countBufferOffset )
+    void D3D11RHICommandContext::drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                                     RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
         // D3D11 에는 멀티 드로우도 countBuffer 도 없다. 커맨드마다 한 번씩 부른다.
         // (countBuffer 는 GPU 가 정한 개수라 CPU 가 읽을 수 없으므로 drawCount 를 상한으로 그대로 쓴다.)
@@ -608,7 +605,7 @@ namespace sw
         } );
     }
 
-    void D3D11RHICommandContext::drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
+    void D3D11RHICommandContext::drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance )
     {
         const bool bNothingToDraw = _pContext == nullptr || indexCount == 0 || instanceCount == 0;
         if ( bNothingToDraw )
@@ -618,8 +615,8 @@ namespace sw
         _pContext->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
     }
 
-    void D3D11RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
-                                                      uint32 countBufferOffset )
+    void D3D11RHICommandContext::drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount, RHIBufferHandle countBuffer,
+                                                            uint32 countBufferOffset )
     {
         // D3D11 에는 멀티 드로우도 개수 버퍼도 없다 — 커맨드마다 한 번씩(`drawIndirect` 와 같다).
         (void)countBuffer;
@@ -641,7 +638,7 @@ namespace sw
         }
     }
 
-    void D3D11RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void D3D11RHICommandContext::dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         if ( _pContext != nullptr && argumentBuffer != 0 )
         {
@@ -652,7 +649,7 @@ namespace sw
         }
     }
 
-    void D3D11RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
+    void D3D11RHICommandContext::prepareTextureForShaderReadNative( RHITextureHandle texture )
     {
         // DX11 은 리소스 상태를 명시적으로 전환하지 않는다. 다만 같은 텍스처가 렌더타깃으로 걸린 채
         // SRV 로도 걸려 있으면 런타임이 조용히 한쪽을 풀어버리므로, 읽기로 넘기기 전에 픽셀 셰이더
@@ -670,7 +667,7 @@ namespace sw
             Memory::set( _pState->_arrPixelSRVTexture, 0, sizeof( _pState->_arrPixelSRVTexture ) );
     }
 
-    void D3D11RHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
+    void D3D11RHICommandContext::prepareTextureForRenderTargetNative( RHITextureHandle texture )
     {
         // D3D11 은 상태를 전이하지 않는다. 대신 같은 리소스가 입력과 출력에 함께 걸리면 OMSetRenderTargets 가 SRV 쪽을 NULL 로
         // 강제한다(해저드 경고). 첨부로 쓰기 전에 이 텍스처가 걸린 PS SRV 슬롯만 뗀다. 백버퍼(0)는 SRV 로 걸리지 않는다.

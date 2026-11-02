@@ -111,11 +111,7 @@ namespace sw
         if ( _entry._buffer == VK_NULL_HANDLE )
             return;
 
-        if ( _state._bRenderPassActive == SW_TRUE )
-        {
-            vkCmdEndRenderPass( _entry._buffer );
-            _state._bRenderPassActive = SW_FALSE;
-        }
+        _context.endRenderPass(); // 패스는 리스트를 넘지 못한다 — 공용 패스 상태와 함께 닫는다
         requireVk( vkEndCommandBuffer( _entry._buffer ), "vkEndCommandBuffer (command list)" );
     }
 } // namespace sw

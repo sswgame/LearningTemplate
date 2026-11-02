@@ -12,7 +12,9 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
@@ -117,6 +119,25 @@ namespace sw
                   "(a resize during recording leaves the descriptor references held by draws dangling and the GPU dies with a PageFault) - "
                   "release it through IRHIDevice::releaseHandle (see setParallelRecording)",
                   pWhat );
+    }
+
+    void IRHIDevice::endFrame( bool vsync, bool bPresent )
+    {
+        assumeRenderThreadRole();
+        if ( IRHICommandContext* const pFrameStream = getFrameStreamContext() )
+            pFrameStream->endRenderPass();
+        endFrameInternal( vsync, bPresent );
+    }
+
+    void IRHIDevice::requireNoOpenRenderPassForUpload( const utf8* pWhat )
+    {
+        if ( std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
+            return;
+        IRHICommandContext* const pFrameStream = getFrameStreamContext();
+        if ( pFrameStream == nullptr || pFrameStream->isRenderPassOpen() == false )
+            return;
+        RHIDrawDiagnostics::reportBufferUpdateInsideRenderPass( getBackendName(), pWhat );
+        pFrameStream->endRenderPass();
     }
 
     void IRHIDevice::waitIdle( RHIWaitIdleReason reason )

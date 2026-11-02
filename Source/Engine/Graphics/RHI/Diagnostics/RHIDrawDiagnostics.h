@@ -30,6 +30,8 @@ namespace sw
         static void reportDestroyedVertexBuffer( const utf8* pBackendName, RHIBufferHandle handle );
         /** @brief 렌더 패스가 열려 있지 않아 그 드로우를 버렸음을 알립니다(패스 밖 드로우가 없는 백엔드 — Vulkan). 열린 패스를 무언가가 닫았거나 패스를 열지 않고 그렸다. */
         static void reportDrawWithoutRenderPass( const utf8* pBackendName );
+        /** @brief 렌더 스레드가 렌더 패스를 연 채로 버퍼를 갱신했음을 알립니다(`IRHIDevice::requireNoOpenRenderPassForUpload` — 업로드는 그리기 기록 전에). */
+        static void reportBufferUpdateInsideRenderPass( const utf8* pBackendName, const utf8* pWhat );
         /** @brief 인덱스 드로우에 인덱스 버퍼를 걸지 않아 그 드로우를 버렸음을 알립니다(네 백엔드가 같다 — 앞 드로우의 인덱스 버퍼로 그리지 않는다). */
         static void reportIndexBufferUnbound( const utf8* pBackendName );
         /** @brief 인덱스 드로우에 건 인덱스 버퍼가 해제돼 핸들로 찾을 수 없어 그 드로우를 버렸음을 알립니다. */

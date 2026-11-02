@@ -2019,11 +2019,7 @@ namespace sw
             return;
         }
 
-        if ( _recordingState._bRenderPassActive == SW_TRUE )
-        {
-            vkCmdEndRenderPass( _activeFrameBuffer );
-            _recordingState._bRenderPassActive = SW_FALSE;
-        }
+        // 열린 렌더 패스는 공용 `IRHIDevice::endFrame` 이 이미 닫았다.
         requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "endFrame: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
 
@@ -2276,11 +2272,7 @@ namespace sw
             return;
 
         // 지금까지의 프레임 세그먼트를 닫아 제출 순서에 넣고, 그 뒤에 이 리스트의 버퍼를 잇는다.
-        if ( _recordingState._bRenderPassActive == SW_TRUE )
-        {
-            vkCmdEndRenderPass( _activeFrameBuffer );
-            _recordingState._bRenderPassActive = SW_FALSE;
-        }
+        _frameStreamContext->endRenderPass(); // 공용 패스 상태와 함께 닫는다(IRHICommandContext)
         requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "executeCommandList: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         _listPendingSubmit.push_back( listBuffer );

@@ -945,6 +945,7 @@ namespace sw
                 ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( true );
             }
+            _frameStreamContext->endRenderPass();
             requireHr( _commandList->Close(), "ID3D12GraphicsCommandList::Close (resize)" );
             ID3D12CommandList* arrCommandList[] = { _commandList.Get() };
             if ( _commandQueue != nullptr )
@@ -1073,7 +1074,8 @@ namespace sw
             return;
         }
 
-        // Close 실패는 기록 중 잘못된 명령이 있었다는 뜻이다 — 제출하면 장치가 제거되므로 이유와 함께 멈춘다(아래 Close 도 같다).
+        // Close 실패는 기록 중 잘못된 명령이 있었다는 뜻이다 — 제출하면 장치가 제거되므로 이유와 함께 멈춘다(아래 Close 도 같다). 네이티브 패스는 리스트를 넘지 못해 먼저 닫는다.
+        _frameStreamContext->endRenderPass();
         requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (frame segment)" );
         releaseOnlineBlocksDeferred( _frameStreamState );
         _listPendingSubmit.push_back( _pActiveFrameList );
@@ -1536,6 +1538,7 @@ namespace sw
     // 업로드 리스트를 프레임 리스트 앞에 끼우는 규칙이 한곳에 있어야 한다.
     void D3D12RHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
+        // 열린 렌더 패스는 공용 `IRHIDevice::endFrame` 이 이미 닫았다(아래 Present 전이 · 타임스탬프 Resolve 는 패스 밖의 일이다).
         if ( bPresent )
         {
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );

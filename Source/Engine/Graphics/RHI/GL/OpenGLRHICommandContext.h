@@ -16,44 +16,45 @@ namespace sw
         explicit OpenGLRHICommandContext( OpenGLRHIDevice* pDevice );
         ~OpenGLRHICommandContext() override = default;
 
-        void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
+        void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
-        void prepareTextureForShaderRead( RHITextureHandle texture ) override;
+        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         /** @brief OpenGL 은 리소스 상태를 추적하지 않습니다. 의도적으로 아무것도 하지 않습니다. */
-        void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
-        void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
+        void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { (void)texture; }
+        void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
-        void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
-        void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
+        void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
+        void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. `IRHIResourceFactory::updateConstantBuffer` 와 같은 일이며, 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
-        void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
-        void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
-        void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
-        void setViewport( const RHIViewport& viewport ) override;
-        void setScissorRect( const RHIScissorRect& rect ) override;
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
-                           RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
-                                  uint32 countBufferOffset = 0 ) override;
-        void drawIndexedInstanced( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
-        void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
-        void beginEventMarker( const utf8* pName ) override;
-        void writeBreadcrumb( uint32 markerID ) override;
-        void endEventMarker() override;
-        void setPipelineState( RHIPipelineStateHandle pso ) override;
-        void setComputePipelineState( RHIPipelineStateHandle pso ) override;
-        void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
-        void endRenderPass() override;
-        void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
-        void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
-        void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
-        void uavBarrier( RHIBufferHandle buffer ) override;
+        void              updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        void              bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
+        void              bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
+        void              bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        void              dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
+        void              setViewport( const RHIViewport& viewport ) override;
+        void              setScissorRect( const RHIScissorRect& rect ) override;
+        void              drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
+                                              RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
+        void              setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void              setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void              drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                                     uint32 countBufferOffset = 0 ) override;
+        void              drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
+        void              dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
+        void              beginEventMarker( const utf8* pName ) override;
+        void              writeBreadcrumb( uint32 markerID ) override;
+        void              endEventMarker() override;
+        void              setPipelineState( RHIPipelineStateHandle pso ) override;
+        void              setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
+        const utf8*       getContextBackendName() const override { return "OpenGL"; }
+        RHIRenderPassOpen beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
+        void              endRenderPassNative() override;
+        void              setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
+        void              transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void              copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
+        void              uavBarrierNative( RHIBufferHandle buffer ) override;
 
     private:
         /**
