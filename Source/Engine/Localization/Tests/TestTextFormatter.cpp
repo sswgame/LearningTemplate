@@ -11,17 +11,18 @@
 
 namespace
 {
-    const sw::CultureTable& getCultures()
+    // 표는 부를 때마다 읽는다 — 함수 안 static 은 기준선 뒤에 만들어져 종료 누수 보고에 늘어난 블록으로 찍혔다.
+    sw::CultureTable loadCultures()
     {
-        static sw::CultureTable s_table;
-        static const bool       s_bLoaded = s_table.loadFromAsset( sw::AssetID{ "engine/localization/engine.cultures.xml" } );
-        SW_EXPECT_TRUE( s_bLoaded );
-        return s_table;
+        sw::CultureTable table;
+        SW_EXPECT_TRUE( table.loadFromAsset( sw::AssetID{ "engine/localization/engine.cultures.xml" } ) );
+        return table;
     }
 
     sw::string format( sw::string_view code, sw::string_view pattern, const sw::TextArgumentList& arguments )
     {
-        const sw::CultureInfo* pCulture = getCultures().findCulture( code );
+        const sw::CultureTable cultures = loadCultures();
+        const sw::CultureInfo* pCulture = cultures.findCulture( code );
         SW_EXPECT_TRUE( pCulture != nullptr );
         sw::string text;
         sw::string error;
@@ -72,7 +73,8 @@ SW_TEST_CASE( TextFormatterTest, OffsetOrdinalSelectAndNumbers )
  */
 SW_TEST_CASE( TextFormatterTest, ReportsBrokenPatterns )
 {
-    const sw::CultureInfo* pEnglish = getCultures().findCulture( "en" );
+    const sw::CultureTable cultures = loadCultures();
+    const sw::CultureInfo* pEnglish = cultures.findCulture( "en" );
     SW_REQUIRE_TRUE( pEnglish != nullptr );
     sw::string text;
     sw::string error;

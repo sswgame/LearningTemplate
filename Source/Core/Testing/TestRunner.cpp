@@ -718,6 +718,17 @@ namespace sw::test
         logListener.reset();
         watchThread = thread{}; // 감시를 세우고 합류한다
         CrashHandler::setContextValue( "TestCase", "" );
+        {
+            // 케이스 기록 칸은 정적 칸이라 케이스마다 비우기만 하면 저장소가 프로세스 끝까지 남아 종료 누수 보고에 찍힌다 — 실행이 끝나면 놓는다.
+            TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
+            ScopedLock<mutex>              lock{ state._mutex };
+            state._pCase               = nullptr;
+            state._listExpectedLog     = vector<TestRunnerInternal::ExpectedLog>{};
+            state._listFailure         = vector<string>{};
+            state._listUpdatedSnapshot = vector<string>{};
+            state._scratchFolder       = string{};
+            state._childArgument       = string{};
+        }
 
         const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::time::kNanosecondsPerMillisecond;
         formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );
