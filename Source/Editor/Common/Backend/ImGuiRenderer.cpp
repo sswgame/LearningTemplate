@@ -18,6 +18,7 @@
 #include "Engine/Window/IWindow.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -45,7 +46,7 @@ namespace sw::editor
             static constexpr float32 kBufferGrowth = 1.5f;
             /**
              * @brief `ImTextureStatus_WantDestroy` 텍스처를 파괴하기 전에 기다릴 ImGui 프레임 수입니다.
-             * @details 렌더 스레드가 그리는 스냅샷(최대 `kMaxFrameCountInFlight` 장)이 옛 아틀라스를 아직 그릴 수 있다. 그 GPU 작업은 `enqueueGPURelease` 가 기다린다.
+             * @details 렌더 스레드가 그리는 스냅샷(최대 `kMaxFrameCountInFlight` 장)이 옛 아틀라스를 아직 그릴 수 있다. GPU 사용은 백엔드의 해제(번호 · 텍스처)가 기다린다.
              */
             static constexpr int32 kTextureDestroyDelayFrames = static_cast<int32>( constant::render::kMaxFrameCountInFlight + 1u );
 
@@ -63,7 +64,10 @@ namespace sw::editor
 
             static ImGuiRenderer* findRenderer() { return ImGui::GetCurrentContext() != nullptr ? static_cast<ImGuiRenderer*>( ImGui::GetIO().BackendRendererUserData ) : nullptr; }
 
-            /** @brief 감시 값 `Editor.PlatformWindows` — 스왑체인을 단 보조 창(메인 밖의 OS 창) 수입니다. 렌더러가 없으면 값이 없습니다. */
+            /**
+             * @brief 감시 값 `Editor.PlatformWindows` — 스왑체인을 단 보조 창(메인 밖의 OS 창) 가운데 패널 창을 띄운 것의 수입니다. 렌더러가 없으면 값이 없습니다.
+             * @details 툴팁 · 팝업도 메인 창 가장자리에서는 제 OS 창이 된다(가상 커서가 가장자리 근처면) — 패널을 띄우고 닫는 시나리오가 그것까지 세지 않게 뺀다.
+             */
             [[nodiscard]] static bool readPlatformWindows( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 if ( findRenderer() == nullptr )
@@ -71,7 +75,10 @@ namespace sw::editor
                 uint32 count{ 0 };
                 for ( int32 index = 1; index < ImGui::GetPlatformIO().Viewports.Size; ++index )
                 {
-                    count += ImGui::GetPlatformIO().Viewports[index]->RendererUserData != nullptr ? 1u : 0u;
+                    const ImGuiViewportP* const pViewport    = static_cast<const ImGuiViewportP*>( ImGui::GetPlatformIO().Viewports[index] );
+                    const bool                  bPanelWindow = pViewport->RendererUserData != nullptr && pViewport->Window != nullptr &&
+                                              ( pViewport->Window->Flags & ( ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup ) ) == 0;
+                    count += bPanelWindow ? 1u : 0u;
                 }
                 outValue = static_cast<float64>( count );
                 return true;
@@ -194,6 +201,7 @@ namespace sw::editor
             _listTextureSlot.clear();
             _listFreeSlot.clear();
         }
+        _mapForeignSRV.clear();
         _wordBuffer.release( _pDevice );
         if ( _pso != 0 && _pDevice->getResourceFactory() != nullptr )
             _pDevice->getResourceFactory()->destroyPipelineState( _pso );
@@ -231,7 +239,18 @@ namespace sw::editor
             {
                 TextureSlot& slot = _listTextureSlot[slotIndex];
                 if ( slot._bInUse && slot._srv == kInvalidDescriptorIndex && slot._texture != 0 )
-                    slot._srv = device.getResourceFactory()->registerBindlessTexture( slot._texture );
+                {
+                    // 패널 텍스처는 텍스처마다 한 번만 등록한다 — 번호는 텍스처의 파괴가 놓으므로, 다시 열 때마다 등록하면 텍스처가 사는 동안 번호가 쌓인다.
+                    const auto it = _mapForeignSRV.find( slot._texture );
+                    if ( it != _mapForeignSRV.end() )
+                        slot._srv = it->second;
+                    else
+                    {
+                        slot._srv = device.getResourceFactory()->registerBindlessTexture( slot._texture );
+                        if ( slot._srv != kInvalidDescriptorIndex )
+                            _mapForeignSRV[slot._texture] = slot._srv;
+                    }
+                }
                 _listFrameSRV[slotIndex] = slot._bInUse ? slot._srv : kInvalidDescriptorIndex;
             }
         }
@@ -403,12 +422,9 @@ namespace sw::editor
         uint32 slotIndex{ 0 };
         if ( ImGuiRendererInternal::tryGetSlotIndex( static_cast<uint64>( reinterpret_cast<uintptr_t>( pTextureID ) ), slotIndex ) == false )
             return;
-        // 이미 낸 draw 스냅샷이 이 칸을 아직 그릴 수 있다 — 그것을 그린 마지막 프레임의 GPU 완료 뒤에 반환한다(렌더 스레드에서 불린다).
-        _drawReleaseQueue.enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, slotIndex]()
-        {
-            if ( _pDevice != nullptr )
-                releaseSlot( *_pDevice, slotIndex );
-        } ) );
+        // 칸은 지금 비운다 — 이 UI 프레임이 낼 스냅샷은 그 ID 를 그리지 않고, 앞 스냅샷은 UI 프레임이 열리기 전에 이미 그려졌다(`waitForDrawSnapshotIdle`).
+        if ( _pDevice != nullptr )
+            releaseSlot( *_pDevice, slotIndex );
     }
 
     uint32 ImGuiRenderer::acquireSlot( RHITextureHandle texture, bool bOwned )
@@ -446,9 +462,13 @@ namespace sw::editor
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
         if ( pFactory == nullptr )
             return;
+        // 패널이 등록한 텍스처 — 번호는 텍스처 주인의 파괴가 놓는다(IRHIResourceFactory::registerBindlessTexture). 여기서 놓으면 파괴와 순서가 엇갈려 다시 발급된 번호를 놓는다.
+        if ( slot._bOwned == false )
+            return;
+        // 이 렌더러가 만든 텍스처(ImGui 동적 텍스처) — 렌더 스레드의 패스 기록 밖에서 부른다. 번호 · 텍스처 해제는 백엔드가 GPU 사용 뒤로 미룬다.
         if ( slot._srv != kInvalidDescriptorIndex )
             pFactory->unregisterBindlessTexture( slot._srv );
-        if ( slot._bOwned && slot._texture != 0 )
+        if ( slot._texture != 0 )
             pFactory->destroyTexture( slot._texture );
     }
 
@@ -466,11 +486,7 @@ namespace sw::editor
             if ( texture.UnusedFrames < Internal::kTextureDestroyDelayFrames )
                 return;
             if ( Internal::tryGetSlotIndex( static_cast<uint64>( texture.TexID ), slotIndex ) )
-            {
-                IRHIDevice* const pDevice = &device;
-                device.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, pDevice, slotIndex]()
-                { releaseSlot( *pDevice, slotIndex ); } ) );
-            }
+                releaseSlot( device, slotIndex ); // 렌더 스레드 · 패스 기록 밖 — 백엔드가 GPU 사용 뒤로 미룬다
             texture.SetTexID( ImTextureID_Invalid );
             texture.SetStatus( ImTextureStatus_Destroyed );
             return;

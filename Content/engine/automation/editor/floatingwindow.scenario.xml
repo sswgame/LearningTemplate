@@ -10,6 +10,7 @@
 	<Wait frames="20"/>
 	<ResizeWindow width="1280" height="720"/>
 	<Wait frames="20"/>
+	<WaitUntil watch="Editor.PlatformWindows" equals="0" timeoutFrames="60"/>
 	<DevCommand line="panel.focus inspector"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.float inspector"/>
