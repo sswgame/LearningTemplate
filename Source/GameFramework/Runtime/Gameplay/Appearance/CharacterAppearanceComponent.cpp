@@ -4,9 +4,9 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Task/TaskManager.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Asset/AssetManager.h"
@@ -152,6 +152,16 @@ namespace sw
 
             /** @brief 병합한 메시를 같은 차림끼리 나누는 캐시 키에 섞는 값입니다(구운 메시와 키가 겹치지 않게). */
             static constexpr uint64 kMergedMeshKeySalt = 0x4D45524745ull; // "MERGE"
+
+            /**
+             * @brief 짓는 중인 조립(짓기 키 → 짓기)입니다. 같은 프레임에 스폰한 같은 차림이 캐시를 다 놓치고(캐시는 짓기가 끝나야 찬다) 따로 짓지 않게 나눈다 —
+             *        Mutable · DDC 가 진행 중인 같은 요청을 합치는 자리. 약한 참조라 걸기를 마친 짓기는 사라진다. 게임 스레드에서만 쓴다.
+             */
+            static unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>>& inFlightBuilds()
+            {
+                static unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>> s_mapBuild;
+                return s_mapBuild;
+            }
 
             /** @brief 보고에 한 줄을 덧붙입니다. */
             template <typename... Args>
@@ -1350,21 +1360,34 @@ namespace sw
         vector<shared_ptr<Mesh>> listCached;
         if ( job._listMergeLoad.empty() == false && AppearanceBakedMeshCache::tryGet( job._mergedKey, listCached ) && listCached.size() == 1 )
             job._merged = listCached[0];
+        // 같은 차림을 짓는 중이면 그것을 나눈다(결과가 같다). 미리보기는 나누지 않는다 — 걸 때 피팅 결과를 옮겨 간다. 읽기 오류도 나누지 않는다(차림마다 알린다).
+        const bool                                                     bShares     = job._bPreview == false && job._report.empty();
+        const uint64                                                   buildKey    = job._listMergeLoad.empty() ? job._bakeKey : job._mergedKey;
+        unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>>& mapInFlight = Internal::inFlightBuilds();
+        const auto                                                     found       = bShares ? mapInFlight.find( buildKey ) : mapInFlight.end();
+        shared_ptr<CharacterAppearanceMeshBuild>                       inFlight    = found != mapInFlight.end() ? found->second.lock() : nullptr;
+        if ( inFlight != nullptr )
+        {
+            _meshBuild = std::move( inFlight );
+            return;
+        }
         job._bodyPart     = _bodyPart;
         job._pLODSettings = &CharacterLODSettings::getDefault(); // 엔진 서브시스템을 읽으므로 게임 스레드에서 한 번
         _meshBuild        = build;
+        if ( bShares )
+        {
+            for ( auto it = mapInFlight.begin(); it != mapInFlight.end(); )
+            {
+                it = it->second.expired() ? mapInFlight.erase( it ) : std::next( it );
+            }
+            mapInFlight[buildKey] = build;
+        }
         // 언리얼 Mutable 처럼 메시 짓기는 워커에서 한다(마을 사람 하나에 수십 ms). 로드 단계에 넣어 결정적 실행의 프레임 경계가 기다린다(`AssetManager::finishPendingAssetWork`).
-        TaskManager* const  pTaskManager  = game::findSubsystem<TaskManager>();
-        AssetManager* const pAssetManager = game::findSubsystem<AssetManager>();
-        SW_ASSERT( pTaskManager != nullptr && pAssetManager != nullptr ); // 씬을 도는 엔진에는 늘 있다
-        TaskHandle handle = pTaskManager->emplaceTask( "AppearanceMeshBuild", SW_DELEGATE_LAMBDA( TaskDelegate, [build]()
+        game::getSubsystem<AssetManager>().launchLoadWork( "AppearanceMeshBuild", SW_DELEGATE_LAMBDA( TaskDelegate, [build]()
         {
             build->run();
             build->_bDone.store( true, std::memory_order_release );
         } ) );
-        handle.setPriority( TaskPriority::Low );
-        pAssetManager->addLoadTask( handle );
-        handle.submit();
     }
 
     void CharacterAppearanceMeshBuild::run()

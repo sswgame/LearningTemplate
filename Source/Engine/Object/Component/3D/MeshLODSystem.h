@@ -60,6 +60,12 @@ namespace sw
          */
         bool needsCPUSelection() const;
         /**
+         * @brief @p mesh 를 스킨 칸 @p skinSlot 으로 그리는 것의 단계를 GPU 컬링이 고를 수 있으면 true 입니다. GPU 그룹(`GPUSceneBuilder::applyGPULODGroup`)과 CPU 선택(`update`)이 같은 규칙을 쓴다.
+         * @details 스킨 칸이 있으면(칸마다 그리는 단계 하나만 스키닝한다 — `GPUMeshMorphPool`) 구간 메시면(구간마다 단계 범위 — `MeshComponent::findDrawSection`) 컴포넌트가 고른 단계를 그려야 하므로
+         *          늘 CPU 가 고른다(언리얼도 스켈레탈 메시 LOD 는 컴포넌트가 CPU 에서 고르고 GPU 인스턴스 LOD 는 정적 메시만이다).
+         */
+        static bool isGPUSelectable( const Mesh& mesh, uint32 skinSlot );
+        /**
          * @brief GPU 컬링이 단계를 고르는 중임을 알립니다(`GPUSceneBuilder` 가 빌드마다 정한다). 켜 있고 `needsCPUSelection` 이 아니면 `update` 는 고르지 않는다 — 단계를 고르는 쪽이 둘이면
          *        컴포넌트마다 프레임마다 `setLODIndex` 가 렌더 상태를 더럽혀 부분 수집이 헛돈다.
          */

@@ -63,6 +63,11 @@ namespace sw
         return MathUtil::min( relaxedLOD, currentLOD );
     }
 
+    bool MeshLODSystem::isGPUSelectable( const Mesh& mesh, uint32 skinSlot )
+    {
+        return skinSlot == constant::invalid_index::kUint32 && mesh.getSections().empty();
+    }
+
     bool MeshLODSystem::needsCPUSelection() const
     {
         return gv_meshLodForce >= 0 || _forcedLOD >= 0 || _bHasPendingView == SW_TRUE || _bViewsSet == SW_FALSE;
@@ -87,9 +92,8 @@ namespace sw
     {
         (void)deltaTime;
         SW_PROFILE_SCOPE( "GT.MeshLOD.select" );
-        // GPU 컬링이 인스턴스마다 단계를 고르는 프레임은 컴포넌트의 단계를 건드리지 않는다(고정 단계 · 대기 뷰가 생기면 빌더가 다음 빌드에 CPU 로 돌려 놓는다).
-        if ( _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false )
-            return;
+        // GPU 컬링이 인스턴스마다 단계를 고르는 프레임은 그것이 고르는 컴포넌트의 단계를 건드리지 않는다(고정 단계 · 대기 뷰가 생기면 빌더가 다음 빌드에 CPU 로 돌려 놓는다).
+        const bool                     bGPUPicks     = _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false;
         const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
         const int32                    forcedLOD     = gv_meshLodForce >= 0 ? gv_meshLodForce : _forcedLOD;
         for ( ScenePrimitive* pPrimitive : listPrimitive )
@@ -99,6 +103,8 @@ namespace sw
             const Mesh*    pMesh     = component.getRawMesh();
             // 구간 컴포넌트는 따르는 주 메시의 단계를 받는다(`MeshComponent::setLODIndex`) — 따로 고르면 경계에서 단계가 갈린다.
             if ( pMesh == nullptr || castTo<MeshSectionComponent>( &component ) != nullptr )
+                continue;
+            if ( bGPUPicks && isGPUSelectable( *pMesh, component.getSkinSlot() ) )
                 continue;
             if ( forcedLOD >= 0 )
             {

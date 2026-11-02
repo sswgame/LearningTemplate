@@ -4,7 +4,6 @@
 
 #include "Core/Concurrency/Futex.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/CookJob.h"
@@ -115,13 +114,10 @@ namespace sw
             pBlock->runLoadIfUnclaimed();
             return;
         }
-        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask( "AssetLoad", SW_DELEGATE_LAMBDA( TaskDelegate, [pBlock]()
+        engine::getSubsystem<AssetManager>().launchLoadWork( "AssetLoad", SW_DELEGATE_LAMBDA( TaskDelegate, [pBlock]()
         {
             pBlock->runLoadIfUnclaimed();
         } ) );
-        handle.setPriority( TaskPriority::Low );                    // 백그라운드 IO 큐에서 돌아 프레임 작업을 막지 않는다(AssetStreamingQueue 와 같다)
-        engine::getSubsystem<AssetManager>().addLoadTask( handle ); // 제출 전에 — 결정적 실행의 프레임 경계 대기가 놓치지 않는다
-        handle.submit();
     }
 
     bool AssetLoadBlock::runCompletion( string& outError )

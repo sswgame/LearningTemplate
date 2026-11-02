@@ -427,9 +427,9 @@ namespace sw
         if ( _bGPULODActive == SW_FALSE || pMesh == nullptr )
             return;
         // 불투명 메시만이다 — 투명은 정렬이 배치 안 인스턴스 번호 순서(`instance_sort.hlsl`)라 단계 배치로 나누면 단계 사이 블렌딩 순서가 깨지고 디더 대상도 아니다.
-        // LOD 를 가진 메시는 구간 · 모프 · VAT 가 없다(`Mesh::setLODs` 가 거절한다)이므로 단계가 있는지와 블렌드만 본다. 스킨드 메시는 단계 배치가 자기 모프 풀 구간(`assignMorphBases`)을 가진다.
+        // 스킨 칸 · 구간 메시는 컴포넌트가 고른 단계를 그린다(`MeshLODSystem::isGPUSelectable` — CPU 선택과 같은 규칙). LOD 를 가진 메시에 VAT 는 없다(`Mesh::setLODs` 가 거절한다).
         const uint32 levelCount     = pMesh->getLODCount();
-        const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULODMaxLevels;
+        const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULODMaxLevels && MeshLODSystem::isGPUSelectable( *pMesh, candidate._skinSlot );
         const bool   bOpaque        = static_cast<RHIBlendMode>( candidate._blendMode ) != RHIBlendMode::Transparent;
         if ( bGroupableMesh == false || bOpaque == false )
             return;

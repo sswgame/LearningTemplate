@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  부하 시나리오 — 외형으로 차려입은 Quaternius 마을 사람 100 명(UBC 몸 + 머리 · 수염 · 눈썹 · 옷 넷, 20 열 격자): 부품을 몸 메시 하나로 합친(_bMergeParts) 캐릭터의
+  부하 시나리오 — 외형으로 차려입은 Quaternius 마을 사람 200 명(UBC 몸 + 머리 · 수염 · 눈썹 · 옷 넷, 20 열 격자): 부품을 몸 메시 하나로 합친(_bMergeParts) 캐릭터의
   캐릭터당 GPU 비용을 잰다(characters 의 KayKit 기사와 견준다). 프리팹은 common/prefabs/quaternius/townsfolk_merged.prefab.xml 이다. 측정 창(<Load>)이 끝내므로 <Pass/> 가 없다.
-  실행: ctest -L load (항목 Scenario.empty.load.townsfolk) · App -scenario=game/empty/automation/load/townsfolk.scenario.xml -unattended -gv_stressTestCharacters=100 -gv_stressTestCharacterColumns=20 -gv_stressTestCharacterPrefab=common/prefabs/quaternius/townsfolk_merged.prefab.xml
+  실행: ctest -L load (항목 Scenario.empty.load.townsfolk) · App -scenario=game/empty/automation/load/townsfolk.scenario.xml -unattended -gv_stressTestCharacters=200 -gv_stressTestCharacterColumns=20 -gv_stressTestCharacterPrefab=common/prefabs/quaternius/townsfolk_merged.prefab.xml
 -->
 <Scenario name="game.empty.load.townsfolk" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
-	<Launch variable="gv_stressTestCharacters" value="100"/>
+	<Launch variable="gv_stressTestCharacters" value="200"/>
 	<Launch variable="gv_stressTestCharacterColumns" value="20"/>
 	<Launch variable="gv_stressTestCharacterPrefab" value="common/prefabs/quaternius/townsfolk_merged.prefab.xml"/>
 	<Load durationSeconds="15"/>
