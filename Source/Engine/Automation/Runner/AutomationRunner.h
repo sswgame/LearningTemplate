@@ -149,6 +149,8 @@ namespace sw
          * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(Engine 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.
          */
         [[nodiscard]] bool takePendingScreenshotPath( string& outPath ) { return _run.takePendingScreenshotPath( outPath ); }
+        /** @brief 요청한 스크린샷이 아직 다 써지지 않았으면 true 입니다(패킷에 싣기 전이거나 렌더 스레드 · 워커가 덜 썼다). */
+        [[nodiscard]] bool hasPendingScreenshot() const { return _run.hasPendingScreenshot(); }
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(Engine 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
         void setCompletedScreenshotCount( uint32 completedCount ) { _run._screenshotCompletedCount = completedCount; }
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */

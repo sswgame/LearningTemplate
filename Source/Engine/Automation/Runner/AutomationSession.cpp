@@ -71,6 +71,7 @@ namespace sw
         _pRunner.reset();
         _pChain.reset();
         _recordPath.clear();
+        _pRenderThread = nullptr;
     }
 
     bool AutomationSession::beginRecording( string_view outputPath, string_view watchList )
@@ -396,6 +397,11 @@ namespace sw
             return kEngineFrameRunning;
         const uint32 completedScreenshotCount = findCompletedScreenshotCount();
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
+        // 사진을 실은 패킷은 방금 제출했고 렌더 스레드가 아직 그리는 중일 수 있다. 이제 돌 단계가 렌더 스레드가 그릴 때 읽는 전역 변수(gv_upscaler …)를 바꾸면
+        // 그 값이 사진에 섞인다 — 백엔드마다 렌더 스레드가 뒤처지는 정도가 달라 Vulkan · GL 만 FSR 이 섞였다(useroptions scale). 단계 앞에서 패킷을 비운다(언리얼 FlushRenderingCommands).
+        // 시계를 붙잡지 않는다 — 붙잡으면 게임이 그동안 더 돌아 뒤 사진의 게임 시간이 렌더 지연에 따라 흔들린다.
+        if ( _pRenderThread != nullptr && _pRunner->hasPendingScreenshot() )
+            _pRenderThread->drainPackets();
         const AutomationOutcome result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationOutcome::Running )
             return kEngineFrameRunning;
@@ -512,6 +518,7 @@ namespace sw
         const bool    bStarted      = bScenario && _owner.begin( scenarioPath, reportPath, bKeepGoing );
         if ( bStarted && pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
+        _owner._pRenderThread = pRenderThread; // 재생(`ScenarioPlayback::play`)도 사진을 찍으므로 시작 여부와 무관하게 건다
 
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
         _frameSubscription = engine.getFrameHooks().add( _owner.makeFrameHooks() );

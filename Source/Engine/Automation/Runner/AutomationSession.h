@@ -23,6 +23,7 @@ namespace sw
 {
     class AutomationRunner;
     class AutomationScenarioChain;
+    class RenderThread;
 
     /**
      * @class AutomationSession
@@ -185,6 +186,7 @@ namespace sw
         vector<pair<string, string>>        _listStartVariable;         ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
         AutomationReproduceInput            _reproduceInput;            ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline;        ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
+        RenderThread*                       _pRenderThread{ nullptr };  ///< 사진을 실은 패킷을 단계 앞에서 비운다(`onFrameEnd`). `Runtime::start` 가 건다, 없으면(헤드리스) 비울 것이 없다
         ScenarioPlayer                      _scenarioPlayer;            ///< 재생기(`Runtime::start` 가 호스트 범위에 건다)
         Runtime                             _runtime;                   ///< 바깥 창구(`getPublishedPart`)
         ScenarioPlayOptions                 _playOptions{};             ///< 재생 선택(재생 중일 때만 뜻이 있다)
