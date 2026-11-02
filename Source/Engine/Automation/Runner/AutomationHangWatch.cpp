@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
@@ -256,7 +257,7 @@ namespace sw
             writeFileWithoutAllocation( payload._reportPath, arrReport, length );
         // 크래시와 같은 할당 없는 기록 — 컨텍스트 파일(`Scenario` 키)과 빵부스러기 파일.
         CrashBreadcrumbStore::get().add( "[Scenario] hang watchdog fired" );
-        writeCrashContextFile( "ScenarioHang", nullptr, 0, 0 );
+        CrashHandler::reportHang( "ScenarioHang" ); // 컨텍스트 + (Windows) 모든 스레드의 미니덤프 — 어디서 멈췄는지는 덤프가 말한다
         // 로거를 거치지 않는다(비동기 로거는 크래시 직전 줄을 잃는다) — stderr 에 직접 적고 비운다.
         std::fputs( "\n[Scenario] ERROR hang watchdog: the runner did not end the scenario in time - report written, exiting. Last position: ", stderr );
         std::fputs( payload._lastStep, stderr );

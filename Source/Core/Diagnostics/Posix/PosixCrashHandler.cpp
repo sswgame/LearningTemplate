@@ -140,6 +140,11 @@ namespace sw
         }
     } // namespace
 
+    void CrashHandler::reportHang( const utf8* pReason )
+    {
+        writeCrashContextFile( pReason, nullptr, static_cast<uint64>( ::getpid() ), 0 );
+    }
+
     void CrashHandler::initialize()
     {
         if ( s_bInstalled.exchange( true ) )

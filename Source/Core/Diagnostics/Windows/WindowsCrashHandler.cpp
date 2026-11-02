@@ -382,6 +382,13 @@ namespace sw
         }
     } // namespace
 
+    void CrashHandler::reportHang( const utf8* pReason )
+    {
+        // 예외도 폴트 스레드도 없다 — 덤프는 스냅샷의 모든 스레드를 담고, 디버거가 멈춘 스레드를 연다.
+        (void)writeMiniDump( nullptr, 0 );
+        writeCrashContextFile( pReason, nullptr, GetCurrentProcessId(), 0 );
+    }
+
     void CrashHandler::initialize()
     {
         if ( s_bInstalled.exchange( true ) )

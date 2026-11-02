@@ -90,5 +90,12 @@ namespace sw
          *          시한에 걸려도 대개 남는다. Windows 는 폴트 스레드가 보고 스레드를 이만큼만 기다리고, POSIX 는 `alarm` 이 끝낸다.
          */
         static void setReportDeadline( uint32 seconds );
+        /**
+         * @brief 멈춘 프로세스를 보고합니다 — 컨텍스트 · 빵부스러기 파일과, Windows 는 프로세스 스냅샷 미니덤프(모든 스레드의 스택)를 씁니다. 프로세스는 끝내지 않습니다.
+         * @details 멈춤을 잡은 감시 스레드(`AutomationHangWatchdog`)가 부른다 — 그 스레드는 멀쩡하므로 크래시 경로와 달리 보고 스레드에 맡기지 않고 그 자리에서 쓴다.
+         *          할당하지 않는다(멈춘 스레드가 힙 락을 쥐었을 수 있다). 예전에는 컨텍스트만 남겨 어느 스레드가 어디서 멈췄는지 볼 수 없었다(언리얼 행 감지기는 스택을 남긴다).
+         *          POSIX 는 살아 있는 프로세스를 할당 없이 덤프할 길이 없어 컨텍스트만 쓴다.
+         */
+        static void reportHang( const utf8* pReason );
     };
 } // namespace sw
