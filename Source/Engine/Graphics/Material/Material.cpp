@@ -532,6 +532,8 @@ namespace sw
     {
         for ( const ShaderVariableInfo& var : schema._listVariable )
         {
+            if ( MaterialPacking::isPaddingMember( var._name ) )
+                continue; // 채움 칸은 머티리얼 속성이 아니다
             MaterialProperty prop{};
             prop._name       = var._name;
             prop._offset     = var._offset;
@@ -614,7 +616,7 @@ namespace sw
         // 셰이더 구조체엔 있는데 머티리얼에 없는 필드는 값을 적은 사람이 없다 — 0 으로 채우지 않고 알린다(텍스처 인덱스의 0 은 Vulkan 의 첫 실제 텍스처다).
         for ( const ShaderVariableInfo& var : schema._listVariable )
         {
-            bool bListed{ false };
+            bool bListed = MaterialPacking::isPaddingMember( var._name ); // 채움 칸은 적지 않는다
             for ( const MaterialProperty& prop : _data._listProperty )
             {
                 if ( prop._name == var._name )

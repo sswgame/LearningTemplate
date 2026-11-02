@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -640,6 +641,43 @@ namespace sw
              * @details DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
              *          빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 픽셀로는 늦게 드러난다.
              */
+            /**
+             * @brief 4) 구조체 버퍼 원소: 엔진이 모든 백엔드에 같은 바이트(DX 의 촘촘한 배치, `-fvk-use-dx-layout`)를 올리므로 그 배치가 GL 의 std430 과도 같아야 한다.
+             * @details GL 은 SPIR-V 를 그대로 받는데(ARB_gl_spirv) 규격이 Offset · ArrayStride 가 std430 을 지키라고 한다 — 어긋나면 드라이버마다 다르게 읽는다(NVIDIA 는
+             *          std430 으로 읽어 52 바이트 머티리얼 원소를 64 간격으로 읽었다, AMD 는 SPIR-V 값을 따라 숨어 있었다). 그래서 백엔드와 상관없이 같은 규칙으로 막는다:
+             *          2 성분 벡터는 8, 3 · 4 성분 벡터와 행렬은 16 바이트 경계에서 시작하고, 원소 크기는 가장 큰 정렬의 배수여야 한다. 언리얼은 셰이더 매개변수 구조체를 같은 규칙(16 바이트 행)으로 맞춘다.
+             */
+            void checkStructuredElementLayouts( const ShaderReflectionData& reflection )
+            {
+                for ( const ShaderBufferInfo& element : reflection._listStructuredElement )
+                {
+                    uint32 structAlign = 4;
+                    for ( const ShaderVariableInfo& variable : element._listVariable )
+                    {
+                        const uint32 align = std430Alignment( variable._type );
+                        structAlign        = MathUtil::max( structAlign, align );
+                        if ( variable._offset % align != 0 )
+                            report( element._name, formatToString( "원소의 '%#'(%#)가 오프셋 %# 에서 시작합니다 — GL std430 은 %# 바이트 경계를 요구한다(멤버 순서를 바꾸거나 채움을 넣을 것)", variable._name,
+                                                                   variable._type, variable._offset, align ) );
+                    }
+                    if ( element._totalSize % structAlign != 0 )
+                        report( element._name, formatToString( "원소 크기 %# 가 %# 의 배수가 아닙니다 — GL std430 의 배열 간격과 DX 의 원소 간격이 달라진다(끝에 채움을 넣을 것)", element._totalSize, structAlign ) );
+                }
+            }
+
+            /** @brief 리플렉션 형식 이름(`Float4`, `Uint2`, `Float4x4`, 스칼라)의 std430 기본 정렬입니다. */
+            static uint32 std430Alignment( const string& typeName )
+            {
+                if ( typeName.find( 'x' ) != string::npos )
+                    return 16; // 행렬 — 열 하나가 4 성분 벡터 정렬
+                const char last = typeName.empty() ? '\0' : typeName.back();
+                if ( last == '2' )
+                    return 8;
+                if ( last == '3' || last == '4' )
+                    return 16;
+                return 4;
+            }
+
             void checkVertexInputs( const ShaderReflectionData& reflection )
             {
                 for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
@@ -690,6 +728,7 @@ namespace sw
         checks.checkReservedBindings( listReflected );
         checks.checkSlotRulesAndCollisions( listReflected );
         checks.checkVertexInputs( reflection );
+        checks.checkStructuredElementLayouts( reflection );
         return checks._issueCount;
     }
 } // namespace sw

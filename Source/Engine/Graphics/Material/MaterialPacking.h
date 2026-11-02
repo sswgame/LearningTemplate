@@ -44,6 +44,11 @@ namespace sw
          *          유니티 셰이더의 `_MainTex`, `_BumpMap` 처럼 이름이 텍스처 슬롯을 말합니다. 규칙은 `binding.hlsli` 의 `SW_MATERIAL_BEGIN` 옆에 적혀 있습니다.
          */
         static bool isTextureIndexMember( string_view memberName, string_view reflectedType, uint32 byteSize );
+        /**
+         * @brief 셰이더 머티리얼 원소의 채움 칸(`_swPad#`)이면 true 입니다. 원소 크기를 16 바이트 배수로 맞추는 자리라 머티리얼 속성이 아니다(값을 적지 않는다).
+         * @details 규칙은 `binding.hlsli` 의 `SW_MATERIAL_BEGIN` 옆 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(`ShaderBindingValidator`).
+         */
+        static bool isPaddingMember( string_view memberName );
 
         /**
          * @brief 머티리얼 없는 배치에 쓰는 폴백 원소 하나의 바이트를 만듭니다. 텍스처 인덱스 필드는 `kInvalidDescriptorIndex`, 나머지는 0 입니다.

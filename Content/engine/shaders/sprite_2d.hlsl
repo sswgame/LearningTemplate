@@ -17,6 +17,8 @@ SW_MATERIAL_BEGIN
     uint   _albedoMap;
     uint   _pointFilter;
     uint   _premultipliedTexture;
+    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
+    uint _swPad0;
 }
 SW_MATERIAL_END
 

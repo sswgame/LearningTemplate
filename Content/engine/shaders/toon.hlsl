@@ -65,6 +65,9 @@ SW_MATERIAL_BEGIN
     float  _uvAnimationScrollSpeedY;  // UV 스크롤 v 속도(uvAnimationScrollYSpeedFactor, glTF UV — v 는 아래가 +)
     float  _uvAnimationRotationSpeed; // UV 회전 속도(uvAnimationRotationSpeedFactor, 라디안 / 초, 중심 (0.5, 0.5))
     uint   _uvAnimationMaskMap;       // UV 애니메이션 마스크(uvAnimationMaskTexture · 0.x _UvAnimMaskTexture) — b 를 쓴다. 없으면 흰색이라 전체가 움직인다
+    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
+    uint _swPad0;
+    uint _swPad1;
 }
 SW_MATERIAL_END
 

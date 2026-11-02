@@ -19,6 +19,8 @@ SW_MATERIAL_BEGIN
     uint   _albedoMap;
     float  _scanlineCount;    ///< 화면 높이(UV 0 ~ 1) 안의 주사선 줄 수
     float  _scanlineStrength; ///< 0 이면 주사선 없음, 1 이면 줄 사이가 검다
+    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
+    uint _swPad0;
 }
 SW_MATERIAL_END
 

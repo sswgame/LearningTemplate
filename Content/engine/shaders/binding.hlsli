@@ -767,6 +767,8 @@ static uint MaterialBuffer::clampIndex( uint index )
     const uint materialCount = MaterialBuffer::getDrawCount();
     return ( materialCount == 0 ) ? 0 : min( index, materialCount - 1 );
 }
+// 원소 크기는 16 바이트의 배수, 3 · 4 성분 벡터는 16 바이트 경계에서 시작해야 한다(DX 의 촘촘한 배치 = GL std430 — ShaderBindingValidator 가 막는다).
+// 모자라면 끝에 `uint _swPad#;` 을 둔다(머티리얼 속성이 아니다 — Material::fillPropertiesFromSchema 가 건너뛴다).
 #define SW_MATERIAL_BEGIN struct MaterialData
 #define SW_MATERIAL_END \
     ;                   \

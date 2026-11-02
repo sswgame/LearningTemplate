@@ -10,20 +10,20 @@
 
 struct BatchData
 {
-    uint _instanceBase;        // 인스턴스 버퍼(또는 가시 목록)에서 이 배치의 시작
-    uint _instanceCount;       // CPU 가 센 개수 (컬링은 간접 인자에 자기 개수를 따로 만든다)
-    uint _sortMode;            // 컬링 전용 (GPUBatchSortMode) — 0 없음(불투명), 1 CPU 순서 유지, 2 압축 뒤 CPU 순서로 되돌림
-    uint _morphVertexBase;     // 모프 정점 풀에서 이 배치 메시의 시작. kInvalidIndex = 모프 안 함
-    uint _baseVertex;          // 정점 풀에서 이 배치 메시의 시작 (간접 인자의 baseVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — MorphPool::computeElement 참고
-    uint _vertexAnimationBase; // 정점 애니메이션(VAT) 표에서 이 메시의 머리 원소. kInvalidIndex = VAT 없음 (InstanceData::loadAnimatedVertex)
-    uint _visibleBase;         // 가시 목록(g_VisibleInstanceIDs) 안에서 이 배치 구간의 시작. 인스턴스 구간(_instanceBase)과 다른 축이다 — LOD 그룹이 없으면 둘이 같다
+    // 3 성분 벡터를 맨 앞 16 바이트 경계에 둔다(GL std430 — ShaderBindingValidator::checkStructuredElementLayouts). 메시 공간 경계(언리얼 FBoxSphereBounds) — 컬링이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 상자로 판정한다(구보다 가늘고 긴 물체에서 훨씬 촘촘하다).
+    float3 _localBoundsCenter;   // 상자 중심(= 구 중심)
+    float  _localBoundsRadius;   // 상자 중심 기준 구 반지름. 0 이면 상자가 없다(구로만 판정)
+    float3 _localBoundsExtent;   // 상자 반 크기
+    uint   _instanceBase;        // 인스턴스 버퍼(또는 가시 목록)에서 이 배치의 시작
+    uint   _instanceCount;       // CPU 가 센 개수 (컬링은 간접 인자에 자기 개수를 따로 만든다)
+    uint   _sortMode;            // 컬링 전용 (GPUBatchSortMode) — 0 없음(불투명), 1 CPU 순서 유지, 2 압축 뒤 CPU 순서로 되돌림
+    uint   _morphVertexBase;     // 모프 정점 풀에서 이 배치 메시의 시작. kInvalidIndex = 모프 안 함
+    uint   _baseVertex;          // 정점 풀에서 이 배치 메시의 시작 (간접 인자의 baseVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — MorphPool::computeElement 참고
+    uint   _vertexAnimationBase; // 정점 애니메이션(VAT) 표에서 이 메시의 머리 원소. kInvalidIndex = VAT 없음 (InstanceData::loadAnimatedVertex)
+    uint   _visibleBase;         // 가시 목록(g_VisibleInstanceIDs) 안에서 이 배치 구간의 시작. 인스턴스 구간(_instanceBase)과 다른 축이다 — LOD 그룹이 없으면 둘이 같다
 
     uint  _lodLevelCount; // LOD 그룹의 머리 배치(단계 0)의 단계 수. 0 = 그룹이 아니다 — 컬링이 인스턴스의 머리 배치 행에서 읽는다
     float _lodScreenSize; // LOD 그룹의 낮은 단계 배치 행: 이 단계로 넘어가는 화면 크기 임계값 — 컬링이 머리 + 단계 번호 행에서 읽는다
-    // 메시 공간 경계(언리얼 FBoxSphereBounds) — 컬링이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 상자로 판정한다(구보다 가늘고 긴 물체에서 훨씬 촘촘하다).
-    float3 _localBoundsCenter; // 상자 중심(= 구 중심)
-    float  _localBoundsRadius; // 상자 중심 기준 구 반지름. 0 이면 상자가 없다(구로만 판정)
-    float3 _localBoundsExtent; // 상자 반 크기
 
     static BatchData load( uint batchIndex ); // 정의는 binding.hlsli(배치 표 g_SwBatches 를 읽는다)
 };

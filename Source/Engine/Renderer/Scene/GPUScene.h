@@ -71,8 +71,16 @@ namespace sw
      */
     struct GPUBatchInfo
     {
-        uint32 _instanceBase{ 0 };
-        uint32 _instanceCount{ 0 };
+        /**
+         * @brief 배치 메시의 메시 공간 경계입니다(언리얼 `FBoxSphereBounds` — 상자 중심 · 그 중심 기준 구 반지름 · 상자 반 크기). 반지름이 0 이면 상자가 없다(구로만 판정).
+         * @details 컬링(`gpu_cull.hlsl`)이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 판정한다. 컴포넌트 여유(스킨드 · VAT 의 큰 구)는 인스턴스 구 반지름 ÷ 메시 구 반지름(1 이상)을 상자에 곱한다.
+         *          3 성분 벡터는 16 바이트 경계에 둔다(GL std430 — `ShaderBindingValidator`).
+         */
+        float3  _localBoundsCenter{};
+        float32 _localBoundsRadius{ 0.0f };
+        float3  _localBoundsExtent{};
+        uint32  _instanceBase{ 0 };
+        uint32  _instanceCount{ 0 };
         /**
          * @brief 이 배치의 가시 목록을 어떻게 다룰지 정합니다(GPUBatchSortMode). gpu_cull.hlsl 과 instance_sort.hlsl 의 값과 같아야 합니다.
          */
@@ -96,13 +104,6 @@ namespace sw
         uint32 _lodLevelCount{ 0 };
         /// @brief LOD 그룹의 낮은 단계 배치 행에서 이 단계로 넘어가는 화면 크기 임계값입니다(`GPUMeshBatch::_lodScreenSize`). 컬링이 머리 + 단계 번호 행에서 읽는다.
         float32 _lodScreenSize{ 0.0f };
-        /**
-         * @brief 배치 메시의 메시 공간 경계입니다(언리얼 `FBoxSphereBounds` — 상자 중심 · 그 중심 기준 구 반지름 · 상자 반 크기). 반지름이 0 이면 상자가 없다(구로만 판정).
-         * @details 컬링(`gpu_cull.hlsl`)이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 판정한다. 컴포넌트 여유(스킨드 · VAT 의 큰 구)는 인스턴스 구 반지름 ÷ 메시 구 반지름(1 이상)을 상자에 곱한다.
-         */
-        float3  _localBoundsCenter{};
-        float32 _localBoundsRadius{ 0.0f };
-        float3  _localBoundsExtent{};
     };
 } // namespace sw
 

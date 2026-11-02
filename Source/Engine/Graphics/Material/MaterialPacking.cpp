@@ -474,6 +474,11 @@ namespace sw
         return MathUtil::align( offset, align );
     }
 
+    bool MaterialPacking::isPaddingMember( string_view memberName )
+    {
+        return StringUtil::startsWith( memberName, "_swPad" );
+    }
+
     bool MaterialPacking::isTextureIndexMember( string_view memberName, string_view reflectedType, uint32 byteSize )
     {
         return shaderTypeFromReflectionName( reflectedType, byteSize ) == MaterialPropertyType::Uint &&
