@@ -1,6 +1,6 @@
 /**
- * @file CanvasGlyphAtlasMirror.h
- * @brief 캔버스 렌더러의 글리프 아틀라스 미러입니다(렌더 스레드). 페이지마다 CPU 미러를 보관하고 페이지 텍스처를 만들어 바뀐 구간만 올립니다.
+ * @file CanvasGlyphAtlasTexture.h
+ * @brief 캔버스 렌더러의 글리프 아틀라스 텍스처입니다(렌더 스레드). 페이지마다 CPU 미러를 보관하고 페이지 텍스처를 만들어 바뀐 구간만 올립니다.
  * @details `CanvasRenderer` 가 값으로 소유합니다. 언리얼 Slate 의 `FSlateFontAtlasRHI`(폰트 아틀라스의 GPU 쪽)에 해당합니다.
  */
 #pragma once
@@ -17,21 +17,21 @@ namespace sw
     class IRHIResourceFactory;
 
     /**
-     * @class CanvasGlyphAtlasMirror
+     * @class CanvasGlyphAtlasTexture
      * @brief 글리프 아틀라스 페이지의 CPU 미러와 그 GPU 텍스처 · SRV 입니다. 기록 전(`CanvasRenderer::prepareFrame`)에 반영 · 업로드하고, 기록 중에는 SRV 만 읽힙니다.
      * @details 디바이스를 다시 만들거나 백엔드를 바꿔도 게임 스레드에 묻지 않고 미러에서 페이지를 다시 업로드합니다(`release` 는 GPU 자원만 놓고 미러는 남깁니다).
      */
-    class SW_API CanvasGlyphAtlasMirror
+    class SW_API CanvasGlyphAtlasTexture
     {
     public:
         /** @brief 페이지 하나에서 이 수를 넘는 구간 업로드는 그 경계 상자 하나로 합칩니다. 업로드 비용은 바이트가 아니라 호출 수가 지배합니다(DX12 호출당 ~3 us). */
         static constexpr uint32 kMaxRegionUploadPerPage = 8;
 
-        CanvasGlyphAtlasMirror();
-        ~CanvasGlyphAtlasMirror();
+        CanvasGlyphAtlasTexture();
+        ~CanvasGlyphAtlasTexture();
 
-        CanvasGlyphAtlasMirror( const CanvasGlyphAtlasMirror& )            = delete;
-        CanvasGlyphAtlasMirror& operator=( const CanvasGlyphAtlasMirror& ) = delete;
+        CanvasGlyphAtlasTexture( const CanvasGlyphAtlasTexture& )            = delete;
+        CanvasGlyphAtlasTexture& operator=( const CanvasGlyphAtlasTexture& ) = delete;
 
         /** @brief 아틀라스 업로드를 미러에 반영하고 업로드할 구간으로 적은 뒤 @p inoutListUpload 를 비웁니다(같은 프레임 묶음을 다시 그려도 두 번 올리지 않게). */
         void applyUploads( vector<GlyphAtlasUpload>& inoutListUpload );

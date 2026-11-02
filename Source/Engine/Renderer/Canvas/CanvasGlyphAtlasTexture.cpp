@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Canvas/CanvasGlyphAtlasMirror.h"
+#include "Engine/Renderer/Canvas/CanvasGlyphAtlasTexture.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -10,16 +10,16 @@
 
 namespace sw
 {
-    CanvasGlyphAtlasMirror::CanvasGlyphAtlasMirror()
+    CanvasGlyphAtlasTexture::CanvasGlyphAtlasTexture()
         : _listPage{}
         , _regionScratchBytes{}
         , _lastUploadCallCount{ 0 }
     {
     }
 
-    CanvasGlyphAtlasMirror::~CanvasGlyphAtlasMirror() = default;
+    CanvasGlyphAtlasTexture::~CanvasGlyphAtlasTexture() = default;
 
-    void CanvasGlyphAtlasMirror::applyUploads( vector<GlyphAtlasUpload>& inoutListUpload )
+    void CanvasGlyphAtlasTexture::applyUploads( vector<GlyphAtlasUpload>& inoutListUpload )
     {
         for ( const GlyphAtlasUpload& upload : inoutListUpload )
         {
@@ -28,7 +28,7 @@ namespace sw
         inoutListUpload.clear();
     }
 
-    void CanvasGlyphAtlasMirror::uploadPages( IRHIDevice& device )
+    void CanvasGlyphAtlasTexture::uploadPages( IRHIDevice& device )
     {
         _lastUploadCallCount = 0;
         // 페이지 텍스처 — 없으면 만들고(새 디바이스 · 백엔드 교체 뒤에도 거울에서 다시 올린다) 바뀐 구간을 올린다. 프레임 경로라 GPU 완료를 기다리지 않는다:
@@ -40,7 +40,7 @@ namespace sw
         }
     }
 
-    RHIDescriptorIndex CanvasGlyphAtlasMirror::findPageSRV( uint32 page ) const
+    RHIDescriptorIndex CanvasGlyphAtlasTexture::findPageSRV( uint32 page ) const
     {
         if ( page >= _listPage.size() )
             return kInvalidDescriptorIndex;
@@ -49,7 +49,7 @@ namespace sw
         return atlasPage._bFailed == SW_TRUE ? kInvalidDescriptorIndex : atlasPage._srv;
     }
 
-    void CanvasGlyphAtlasMirror::release( IRHIDevice* pDevice )
+    void CanvasGlyphAtlasTexture::release( IRHIDevice* pDevice )
     {
         for ( AtlasPage& page : _listPage )
         {
@@ -70,7 +70,7 @@ namespace sw
         }
     }
 
-    void CanvasGlyphAtlasMirror::mergeUploadRegions( vector<GlyphAtlasRect>& inoutListRegion, uint32 maxRegionCount )
+    void CanvasGlyphAtlasTexture::mergeUploadRegions( vector<GlyphAtlasRect>& inoutListRegion, uint32 maxRegionCount )
     {
         if ( inoutListRegion.size() <= maxRegionCount || inoutListRegion.empty() )
             return;
@@ -95,7 +95,7 @@ namespace sw
         inoutListRegion.push_back( bounds );
     }
 
-    void CanvasGlyphAtlasMirror::applyUpload( const GlyphAtlasUpload& upload )
+    void CanvasGlyphAtlasTexture::applyUpload( const GlyphAtlasUpload& upload )
     {
         constexpr uint32 kPageSize  = GlyphAtlas::kPageSize;
         const bool       bInside    = static_cast<uint32>( upload._x ) + upload._width <= kPageSize && static_cast<uint32>( upload._y ) + upload._height <= kPageSize;
@@ -132,7 +132,7 @@ namespace sw
         }
     }
 
-    void CanvasGlyphAtlasMirror::failPage( AtlasPage& page, string_view reason )
+    void CanvasGlyphAtlasTexture::failPage( AtlasPage& page, string_view reason )
     {
         const size_t pageIndex = static_cast<size_t>( &page - _listPage.data() );
         SW_LOG_ERROR_ID( "Canvas.GlyphAtlasPageGlyphs", "Glyph atlas page %# %# - its glyphs are not drawn until the canvas GPU resources are recreated", pageIndex, reason );
@@ -140,7 +140,7 @@ namespace sw
         page._registerTicket = RHITransferTicket{};
     }
 
-    void CanvasGlyphAtlasMirror::uploadPage( IRHIDevice& device, AtlasPage& page )
+    void CanvasGlyphAtlasTexture::uploadPage( IRHIDevice& device, AtlasPage& page )
     {
         if ( page._bytes.empty() || page._bFailed == SW_TRUE )
             return;
@@ -158,7 +158,7 @@ namespace sw
             uploadRegions( factory, page );
     }
 
-    bool CanvasGlyphAtlasMirror::ensurePageTexture( IRHIResourceFactory& factory, AtlasPage& page )
+    bool CanvasGlyphAtlasTexture::ensurePageTexture( IRHIResourceFactory& factory, AtlasPage& page )
     {
         if ( page._texture != 0 )
             return true;
@@ -182,7 +182,7 @@ namespace sw
         return true;
     }
 
-    bool CanvasGlyphAtlasMirror::registerPage( IRHIResourceFactory& factory, AtlasPage& page )
+    bool CanvasGlyphAtlasTexture::registerPage( IRHIResourceFactory& factory, AtlasPage& page )
     {
         // 새 페이지는 첫 전체 업로드의 티켓이 `Complete` 가 된 프레임에 등록한다. 그 전에는 이 페이지의 글리프를 그리지 않고(SRV 가 없다), 그동안 쌓인 구간은
         // 등록한 프레임에 이어서 올린다(등록 전에 구간을 내면 마지막 전송이 늘 새것이라 등록이 계속 밀린다).
@@ -206,7 +206,7 @@ namespace sw
         return true;
     }
 
-    void CanvasGlyphAtlasMirror::uploadWholePage( IRHIResourceFactory& factory, AtlasPage& page )
+    void CanvasGlyphAtlasTexture::uploadWholePage( IRHIResourceFactory& factory, AtlasPage& page )
     {
         RHITextureUploadDesc upload{};
         upload._pData                  = page._bytes.data();
@@ -227,7 +227,7 @@ namespace sw
             page._registerTicket = submit._ticket;
     }
 
-    void CanvasGlyphAtlasMirror::uploadRegions( IRHIResourceFactory& factory, AtlasPage& page )
+    void CanvasGlyphAtlasTexture::uploadRegions( IRHIResourceFactory& factory, AtlasPage& page )
     {
         constexpr uint32 kPageSize = GlyphAtlas::kPageSize;
         // 구간은 기다리지 않고 잇달아 낸다. 같은 텍스처에 낸 전송은 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3).

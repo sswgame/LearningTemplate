@@ -1,5 +1,5 @@
 // CanvasDrawListTest — 캔버스 그리기 목록과 칠하기 도구(CanvasPainter). 순수 CPU(nogpu): 사각형 배치 · 일괄 끊김 · 9-슬라이스 · 가위 · 둥근 자르기 · 글리프(가짜 래스터라이저).
-// 아틀라스 업로드 구간 합치기는 렌더러 층이라 `Renderer/Canvas/Tests/TestCanvasGlyphAtlasMirror.cpp` 에 있다.
+// 아틀라스 업로드 구간 합치기는 렌더러 층이라 `Renderer/Canvas/Tests/TestCanvasGlyphAtlasTexture.cpp` 에 있다.
 #include "pch.h"
 
 #include "Core/Container/vector.h"

@@ -2,7 +2,7 @@
  * @file CanvasRenderer.h
  * @brief 캔버스 그리기 목록을 GPU 로 그립니다(렌더 스레드). 준비 순서를 정하고 일괄마다 인스턴스 드로우와 렌더 텍스처 대상(월드 공간 UI) 그리기를 기록합니다.
  * @details 언리얼 `FSlateRHIRenderer` 에 해당합니다(게임 스레드가 만든 그리기 목록만 읽습니다). `FrameRenderer` 가 소유합니다.
- *          자원은 협력 객체가 나눠 듭니다: 글리프 아틀라스 미러(`CanvasGlyphAtlasMirror`), 캐시에서 빌린 텍스처(`CanvasTextureLeases`),
+ *          자원은 협력 객체가 나눠 듭니다: 글리프 아틀라스 텍스처(`CanvasGlyphAtlasTexture`), 캐시에서 빌린 텍스처(`CanvasTextureLeases`),
  *          사각형 구조 버퍼(`CanvasQuadBuffer`), 화면 마커 투영(`CanvasMarkerProjection`). 이 클래스는 그 순서와 드로우 기록만 갖습니다.
  */
 #pragma once
@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Renderer/Canvas/CanvasGlyphAtlasMirror.h"
+#include "Engine/Renderer/Canvas/CanvasGlyphAtlasTexture.h"
 #include "Engine/Renderer/Canvas/CanvasMarkerProjection.h"
 #include "Engine/Renderer/Canvas/CanvasQuadBuffer.h"
 #include "Engine/Renderer/Canvas/CanvasTextureLeases.h"
@@ -93,17 +93,17 @@ namespace sw
          */
         void release( IRHIDevice* pDevice );
 
-        /** @brief 글리프 아틀라스 미러입니다(페이지 수 · 업로드 호출 수 진단). */
-        const CanvasGlyphAtlasMirror& getAtlas() const { return _atlas; }
+        /** @brief 글리프 아틀라스 텍스처입니다(페이지 수 · 업로드 호출 수 진단). */
+        const CanvasGlyphAtlasTexture& getAtlas() const { return _atlas; }
 
     private:
         /** @brief 일괄 텍스처 하나의 SRV 입니다(직접 텍스처 · 경로 이미지 · 아틀라스 페이지 순). 없으면 kInvalidDescriptorIndex 입니다. */
         RHIDescriptorIndex findTextureSRV( const CanvasTextureRef& texture ) const;
 
-        CanvasGlyphAtlasMirror _atlas;      ///< 글리프 아틀라스 페이지의 CPU 미러와 GPU 텍스처
-        CanvasTextureLeases    _textures;   ///< `TextureCache` 에서 빌린 경로 이미지와 렌더 텍스처 대상
-        CanvasQuadBuffer       _quadBuffer; ///< 앵커 · 주 출력 · 대상 사각형을 이은 구조 버퍼
-        CanvasMarkerProjection _markers;    ///< 화면 마커 투영 컴퓨트의 입력과 디스패치
-        uint32                 _lastDrawnTargetCount;
+        CanvasGlyphAtlasTexture _atlas;      ///< 글리프 아틀라스 페이지의 CPU 미러와 GPU 텍스처
+        CanvasTextureLeases     _textures;   ///< `TextureCache` 에서 빌린 경로 이미지와 렌더 텍스처 대상
+        CanvasQuadBuffer        _quadBuffer; ///< 앵커 · 주 출력 · 대상 사각형을 이은 구조 버퍼
+        CanvasMarkerProjection  _markers;    ///< 화면 마커 투영 컴퓨트의 입력과 디스패치
+        uint32                  _lastDrawnTargetCount;
     };
 } // namespace sw
