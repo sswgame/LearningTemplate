@@ -2,6 +2,15 @@
 
 #include "App/App.h"
 
+#if defined( SW_PLATFORM_WINDOWS )
+// 하이브리드 노트북의 드라이버가 이 실행 파일을 외장 GPU 로 돌린다 — GL 은 어댑터를 고르는 API 가 없고 DXGI 의 기본 순서도 이 값을 따른다(언리얼 · 유니티 실행 파일도 내보낸다).
+extern "C"
+{
+    __declspec( dllexport ) unsigned long NvOptimusEnablement                  = 1;
+    __declspec( dllexport ) int           AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 int32 main( int32 argc, utf8* pArgv[] )
 {
     sw::App app{};

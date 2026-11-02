@@ -24,6 +24,7 @@
     #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
     #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
+    #include "Engine/Graphics/RHI/DX/RHIDxgiAdapter.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -540,25 +541,26 @@ namespace sw
             return false;
         }
 
-        // 크래시 리포트용 어댑터 정보. 실패해도 디바이스 생성에는 영향이 없다.
+        // 하드웨어는 고성능 순서의 첫 어댑터다 — nullptr(기본 어댑터)은 하이브리드 노트북에서 내장 GPU 다(RHIDxgiAdapter.h).
+        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDxgiHighPerformanceAdapter( factory.Get() );
+        if ( adapter == nullptr )
         {
-            Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter;
-            if ( adapter != nullptr || ( SUCCEEDED( factory->EnumAdapters1( 0, adapter.GetAddressOf() ) ) && adapter != nullptr ) )
-            {
-                DXGI_ADAPTER_DESC1 adapterDesc{};
-                if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
-                {
-                    utf8         arrName[constant::buffer::kMax256]{};
-                    const string name = StringUtil::utf16ToUTF8( adapterDesc.Description );
-                    formatstring( arrName, constant::buffer::kMax256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(),
-                                  adapterDesc.VendorId, adapterDesc.DeviceId,
-                                  static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
-                    CrashHandler::setContextValue( "GPU", arrName );
-                }
-            }
+            SW_LOG_ERROR_ID( "D3D12.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
+            return false;
+        }
+        // 크래시 리포트 · 로그에 실제로 쓰는 어댑터를 남긴다.
+        DXGI_ADAPTER_DESC1 adapterDesc{};
+        if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
+        {
+            utf8         arrName[constant::buffer::kMax256]{};
+            const string name = StringUtil::utf16ToUTF8( adapterDesc.Description );
+            formatstring( arrName, constant::buffer::kMax256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(), adapterDesc.VendorId, adapterDesc.DeviceId,
+                          static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
+            CrashHandler::setContextValue( "GPU", arrName );
+            SW_LOG_INFO_ID( "D3D12.AdapterSelected", "Direct3D 12 adapter: %#", arrName );
         }
 
-        if ( FAILED( D3D12CreateDevice( softwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
+        if ( FAILED( D3D12CreateDevice( adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
         createBreadcrumbBuffer();
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.

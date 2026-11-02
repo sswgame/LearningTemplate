@@ -970,6 +970,13 @@ namespace sw
                       { return vkEnumeratePhysicalDevices( _instance, pCount, pData ); } );
         if ( bEnumerated == false || listDevice.empty() )
             return false;
+        // 외장 GPU 를 먼저 본다 — 열거 순서는 드라이버 마음이라 하이브리드 노트북에서 내장 GPU 가 먼저 나온다(DX 의 고성능 순서 · RHIDxgiAdapter.h 와 같은 규칙).
+        std::stable_partition( listDevice.begin(), listDevice.end(), []( VkPhysicalDevice device )
+        {
+            VkPhysicalDeviceProperties properties{};
+            vkGetPhysicalDeviceProperties( device, &properties );
+            return properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+        } );
 
         for ( const VkPhysicalDevice& device : listDevice )
         {

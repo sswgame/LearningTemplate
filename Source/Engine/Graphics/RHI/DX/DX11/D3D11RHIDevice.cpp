@@ -24,6 +24,7 @@
 
     #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
+    #include "Engine/Graphics/RHI/DX/RHIDxgiAdapter.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -535,9 +536,26 @@ namespace sw
 
         Microsoft::WRL::ComPtr<IDXGISwapChain>      createdSwapChain;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> createdContext;
-        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
-        const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_HARDWARE;
-        HRESULT               hr         = D3D11CreateDeviceAndSwapChain( nullptr,
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
+        Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
+        Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
+        if ( desc._bSoftwareAdapter == false )
+        {
+            if ( SUCCEEDED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
+                adapter = findDxgiHighPerformanceAdapter( factory.Get() );
+            if ( adapter == nullptr )
+            {
+                SW_LOG_ERROR_ID( "D3D11.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
+                return false;
+            }
+            DXGI_ADAPTER_DESC1 adapterDesc{};
+            if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
+                SW_LOG_INFO_ID( "D3D11.AdapterSelected", "Direct3D 11 adapter: %# (VRAM %# MB)", StringUtil::utf16ToUTF8( adapterDesc.Description ).c_str(),
+                                static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
+        }
+        // 어댑터를 넘기면 드라이버 종류는 UNKNOWN 이어야 한다(D3D11CreateDevice 규칙).
+        const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
+        HRESULT               hr         = D3D11CreateDeviceAndSwapChain( adapter.Get(),
                                                                           driverType,
                                                                           nullptr,
                                                                           createDeviceFlags,
