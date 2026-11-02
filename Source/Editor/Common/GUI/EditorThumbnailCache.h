@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    class TextureLoadBlock;
+    class TextureLoadOperation;
 } // namespace sw
 
 namespace sw::editor
@@ -60,18 +60,18 @@ namespace sw::editor
         /** @brief 썸네일 하나입니다. */
         struct Entry
         {
-            string                       _assetID;
-            shared_ptr<TextureLoadBlock> _pBlock; ///< 끝난 로드 — 텍스처 참조 하나를 쥔다(놓으면 엔진이 참조를 놓는다)
-            void*                        _pTextureID{ nullptr };
-            uint64                       _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
-            uint64                       _lastUsedFrame{ 0 };
+            string                           _assetID;
+            shared_ptr<TextureLoadOperation> _pOperation; ///< 끝난 로드 — 텍스처 참조 하나를 쥔다(놓으면 엔진이 참조를 놓는다)
+            void*                            _pTextureID{ nullptr };
+            uint64                           _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
+            uint64                           _lastUsedFrame{ 0 };
         };
 
-        /** @brief 워커에서 읽는 중인 썸네일 하나입니다. 핸들이 로드를 살려 둡니다(블록은 에셋이 준비된 뒤 참조 하나를 쥔다). */
+        /** @brief 워커에서 읽는 중인 썸네일 하나입니다. 핸들이 로드를 살려 둡니다(로드 작업은 에셋이 준비된 뒤 참조 하나를 쥔다). */
         struct Loading
         {
-            string                       _assetID;
-            shared_ptr<TextureLoadBlock> _pBlock;
+            string                           _assetID;
+            shared_ptr<TextureLoadOperation> _pOperation;
         };
 
         /** @brief 썸네일 하나의 ImGui 등록과 텍스처 참조를 놓습니다. */
@@ -83,8 +83,8 @@ namespace sw::editor
          * @details 예전에는 UI 스레드가 업로드를 마무리했다(`runCompletionIfPending`) — 에디터가 디바이스를 쓰는 스레드 노릇을 했다(GL 컨텍스트를 다퉜다).
          */
         void finishLoads();
-        /** @brief 끝난 로드 @p pBlock(참조를 쥔다)의 텍스처를 ImGui 에 등록합니다. 못 쓰는 텍스처면 false 이고 아무것도 쥐지 않습니다. 디바이스를 쓰지 않는다. */
-        bool adoptReady( const string& assetID, const shared_ptr<TextureLoadBlock>& pBlock );
+        /** @brief 끝난 로드 @p pOperation(참조를 쥔다)의 텍스처를 ImGui 에 등록합니다. 못 쓰는 텍스처면 false 이고 아무것도 쥐지 않습니다. 디바이스를 쓰지 않는다. */
+        bool adoptReady( const string& assetID, const shared_ptr<TextureLoadOperation>& pOperation );
         /** @brief 이번 프레임에 쓰지 않은 것 가운데 오래된 것부터 용량까지 놓습니다. */
         void evictOverCapacity();
 

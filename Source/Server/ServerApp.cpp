@@ -570,7 +570,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "Server.ServerServicesCouldNot", "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
         const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
-        _engine.update( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
+        _engine.update( deltaSeconds, FrameViewports{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
         _engine.endFrame();
     }
 

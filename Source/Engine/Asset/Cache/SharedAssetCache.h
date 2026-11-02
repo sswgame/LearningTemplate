@@ -42,7 +42,7 @@ namespace sw
     struct SharedAssetCacheTraits;
 
     template <typename AssetType>
-    class SharedAssetLoadBlock;
+    class SharedAssetLoadOperation;
     template <typename AssetType>
     class SharedAssetTable;
 } // namespace sw
@@ -51,7 +51,7 @@ namespace sw
 {
     /** @brief 공유 에셋 로드 핸들입니다(`SharedAssetCache<에셋>::request`). 핸들이 살아 있는 동안 준비된 에셋도 살아 있습니다. */
     template <typename AssetType>
-    using SharedAssetHandle = AssetHandle<SharedAssetLoadBlock<AssetType>>;
+    using SharedAssetHandle = AssetHandle<SharedAssetLoadOperation<AssetType>>;
 } // namespace sw
 
 namespace sw
@@ -79,7 +79,7 @@ namespace sw
          * @details 실패는 기억하지 않으므로 파일이 생기면 다음 요청이 읽습니다(오류는 읽는 함수가 남깁니다).
          */
         static SharedAssetHandle<AssetType> request( string_view path );
-        /** @brief 경로의 에셋을 나눠 받습니다. `request` 와 같은 로드 블록을 기다립니다(새 로드는 이 자리에서 읽는다). 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다. */
+        /** @brief 경로의 에셋을 나눠 받습니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서 읽는다). 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다. */
         static shared_ptr<const AssetType> acquire( string_view path );
         /**
          * @brief 사용 중이면 다시 읽고 다시 읽은 횟수를 올립니다(틱 밖, 게임 스레드). 읽지 못하면 옛 내용 그대로이고 false 입니다.
@@ -100,9 +100,9 @@ namespace sw
         void clear() override;
 
     private:
-        friend class SharedAssetLoadBlock<AssetType>;
+        friend class SharedAssetLoadOperation<AssetType>;
 
-        /** @brief 엔진의 에셋 매니저가 소유한 이 종류 캐시의 표입니다(정적 창구 · 로드 블록이 쓴다). 엔진 서비스가 없으면 멈춘다. */
+        /** @brief 엔진의 에셋 매니저가 소유한 이 종류 캐시의 표입니다(정적 창구 · 로드 작업이 쓴다). 엔진 서비스가 없으면 멈춘다. */
         static SharedAssetTable<AssetType>& getTable();
         /** @brief @p table 의 @p path 를 종류의 `kReloadMode` 대로 다시 읽습니다(`reloadShared` · `reload` 의 본문). */
         [[nodiscard]] static bool reloadIn( SharedAssetTable<AssetType>& table, string_view path );
@@ -118,17 +118,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class SharedAssetLoadBlock
+     * @class SharedAssetLoadOperation
      * @brief 공유 에셋 로드 하나의 공유 상태입니다. 로드 단계에서 파일을 읽어 표에 넣습니다(완료 단계 없음 — 디바이스를 쓰지 않습니다).
      */
     template <typename TAsset>
-    class SharedAssetLoadBlock final : public AssetLoadBlock
+    class SharedAssetLoadOperation final : public AssetLoadOperation
     {
     public:
         using AssetType = const TAsset;
 
-        SharedAssetLoadBlock( const utf8* pKindName, string_view path, MemoryTag memoryTag )
-            : AssetLoadBlock{ pKindName, path, memoryTag }
+        SharedAssetLoadOperation( const utf8* pKindName, string_view path, MemoryTag memoryTag )
+            : AssetLoadOperation{ pKindName, path, memoryTag }
             , _pAsset{}
         {
         }

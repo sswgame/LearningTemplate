@@ -233,15 +233,15 @@ namespace sw
             uint32 _sceneKey{ 0 };
             uint32 _pendingBatchCount{ 0 };
         };
-        mutable mutex                                  _scenePendingMutex;                  ///< 아래 표를 지킨다(렌더 스레드가 프레임마다 쓰고 게임 스레드가 읽는다)
-        array<ScenePendingWork, 1 + kMaxHostSceneView> _arrScenePending;                    ///< 지난 프레임에 그린 씬(주 화면 + 미리보기)마다의 값
-        uint32                                         _scenePendingCount;                  ///< `_arrScenePending` 에 쓴 칸 수
-        string                                         _requestedScreenshotPath;            ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
-        RHITextureHandle                               _requestedScreenshotTexture;         ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
-        RHIFormat                                      _requestedScreenshotFormat;          ///< `_requestedScreenshotTexture` 의 포맷
-        uint32                                         _requestedScreenshotWaitFrames;      ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
-        shared_ptr<atomic<uint32>>                     _pRequestedScreenshotWritesInFlight; ///< 워커가 쓰는 중인 실행 중 요청 수(잡이 같이 들어 이 객체보다 오래 살 수 있다). 0 이 아니면 다음 요청을 꺼내지 않는다
-        shared_ptr<atomic<uint32>>                     _pCommandLineShotsLeft;              ///< `-gv_screenshot` 의 아직 끝나지 않은 장 수(첫 프레임에 장 수로 채운다). 0 으로 만드는 워커가 끝을 알린다
+        mutable mutex                                     _scenePendingMutex;                  ///< 아래 표를 지킨다(렌더 스레드가 프레임마다 쓰고 게임 스레드가 읽는다)
+        array<ScenePendingWork, 1 + kMaxPreviewSceneView> _arrScenePending;                    ///< 지난 프레임에 그린 씬(주 화면 + 미리보기)마다의 값
+        uint32                                            _scenePendingCount;                  ///< `_arrScenePending` 에 쓴 칸 수
+        string                                            _requestedScreenshotPath;            ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
+        RHITextureHandle                                  _requestedScreenshotTexture;         ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
+        RHIFormat                                         _requestedScreenshotFormat;          ///< `_requestedScreenshotTexture` 의 포맷
+        uint32                                            _requestedScreenshotWaitFrames;      ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
+        shared_ptr<atomic<uint32>>                        _pRequestedScreenshotWritesInFlight; ///< 워커가 쓰는 중인 실행 중 요청 수(잡이 같이 들어 이 객체보다 오래 살 수 있다). 0 이 아니면 다음 요청을 꺼내지 않는다
+        shared_ptr<atomic<uint32>>                        _pCommandLineShotsLeft;              ///< `-gv_screenshot` 의 아직 끝나지 않은 장 수(첫 프레임에 장 수로 채운다). 0 으로 만드는 워커가 끝을 알린다
         struct PendingRenderTargetRead;
         unique_ptr<PendingRenderTargetRead> _pPendingTargetRead; ///< 요청을 받았고 읽기가 끝나지 않은 렌더 타깃 읽기(렌더 스레드만 쓴다). 없으면 비어 있다
 

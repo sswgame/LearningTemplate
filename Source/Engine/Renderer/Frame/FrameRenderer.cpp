@@ -1032,8 +1032,8 @@ namespace sw
         view._bRenderThisFrame = request._bRender;
         view._outputWidth      = request._outputWidth;
         view._outputHeight     = request._outputHeight;
-        view._hostTarget       = request._outputKind == RenderViewOutputKind::HostTarget ? request._hostTarget : RHITextureHandle{ 0 };
-        if ( view._outputKind == RenderViewOutputKind::HostTarget && view._hostTarget == 0 )
+        view._viewportTarget   = request._outputKind == RenderViewOutputKind::ViewportTarget ? request._viewportTarget : RHITextureHandle{ 0 };
+        if ( view._outputKind == RenderViewOutputKind::ViewportTarget && view._viewportTarget == 0 )
             view._bRenderThisFrame = SW_FALSE;
 
         // 렌더 텍스처는 캐시에서 빌린다 — 머티리얼이 같은 경로로 읽는다. 크기는 텍스처의 실제 크기다(먼저 만든 쪽이 정했다).

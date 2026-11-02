@@ -112,7 +112,7 @@ namespace sw
          * @param sceneViewCameraProvider 씬 뷰를 그리는 호스트 카메라(에디터 카메라)를 돌려주는 델리게이트. 씬 뷰가 없으면 부르지 않습니다.
          * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
          */
-        void update( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene );
+        void update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene );
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
@@ -200,11 +200,11 @@ namespace sw
          * @brief 활성 씬을 틱합니다. 게임 카메라와 입력이 쓰는 게임 화면 크기를 틱 전에 적고(@p vpWidth · @p vpHeight), 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 돌립니다.
          * @details 미리보기 씬은 @p views 가 이번 프레임에 그려 달라고 한 씬만 틱합니다(`ScenePreviewTick::WhenDrawn`).
          */
-        void updateScenes( float32 deltaTime, const HostViewTargets& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene );
+        void updateScenes( float32 deltaTime, const FrameViewports& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene );
         /** @brief 런타임 UI 를 이번 프레임의 게임 상태로 돌립니다(게임 틱 뒤 · 렌더 패킷 앞). 디버그 HUD 와 음성 자막을 먼저 넘기고, 뷰포트는 게임이 그려지는 화면으로 정합니다. */
-        void updateRuntimeUI( const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
+        void updateRuntimeUI( const ViewportTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
         /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. 렌더러를 짓는 타깃에만 있습니다. */
-        void submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider );
+        void submitRenderPacket( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider );
 
     private:
         /**

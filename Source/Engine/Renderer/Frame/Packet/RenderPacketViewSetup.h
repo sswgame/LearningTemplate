@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    struct HostViewTargets;
+    struct FrameViewports;
     struct RenderFramePacket;
 
     enum class RenderViewMode : uint8;
@@ -65,13 +65,13 @@ namespace sw
          * @param sceneViewCameraProvider 씬 뷰 카메라 조회입니다. 씬 뷰가 있을 때만, 씬 틱과 기본 카메라 보장 **뒤에** 부릅니다.
          * @param rhi 주 출력 크기가 0 일 때(백버퍼 경로) 스왑체인 크기를 읽습니다.
          */
-        RenderPacketMainView setupMainView( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene& activeScene,
+        RenderPacketMainView setupMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene& activeScene,
                                             float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer );
         /**
          * @brief 추가 뷰(캡처 카메라 · 화면 사각형) 중 이번 프레임에 그릴 것을 갱신 주기 · 보이는가 · 예산으로 고르고(쉬는 뷰도 실린다), 씬 뷰를 주 출력 여부에 맞춰 넣거나 뺍니다.
          * @details 주 시점 그림자가 정해진 **뒤에** 부릅니다(추가 뷰의 그림자는 그 뒤 `RenderPacketSceneCollector::populateViewShadows`).
          */
-        void collectExtraViews( RenderFramePacket& packet, const HostViewTargets& views, Scene& activeScene, const RenderPacketMainView& mainView, float32 deltaTime,
+        void collectExtraViews( RenderFramePacket& packet, const FrameViewports& views, Scene& activeScene, const RenderPacketMainView& mainView, float32 deltaTime,
                                 const FrameRenderer* pFrameRenderer );
 
     private:

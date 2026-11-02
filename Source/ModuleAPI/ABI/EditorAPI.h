@@ -12,8 +12,8 @@ namespace sw
 {
     // 핸들은 ABI/ModuleHandles.h 가 모아 들고 있다. EditorHandle 포함.
 
-    struct HostSceneView;
-    struct HostViewTarget;
+    struct PreviewSceneView;
+    struct ViewportTarget;
     struct NativeWindowEvent;
 
     class ISubsystemLocator;
@@ -52,16 +52,16 @@ namespace sw
         void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                     /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
         void ( *abandonPendingDraw )( EditorHandle editor ){ nullptr };                                         /**< @brief 에디터 인스턴스를 없애기 직전에만 부릅니다(렌더 워커는 이미 비운 뒤). 렌더 대기 중인 draw 스냅샷 표시를 버리게 합니다. 모듈 리로드 중간에 부르면 UI 스레드와 렌더 스레드가 겹칩니다. */
         bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* pEvent ){ nullptr };              /**< @brief 네이티브 이벤트를 에디터로 전달합니다. */
-        void ( *getGameViewport )( EditorHandle editor, HostViewTarget* pOutTarget ){ nullptr };                /**< @brief 이번 프레임 게임 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
-        void ( *getSceneViewport )( EditorHandle editor, HostViewTarget* pOutTarget ){ nullptr };               /**< @brief 이번 프레임 씬 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
+        void ( *getGameViewport )( EditorHandle editor, ViewportTarget* pOutTarget ){ nullptr };                /**< @brief 이번 프레임 게임 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
+        void ( *getSceneViewport )( EditorHandle editor, ViewportTarget* pOutTarget ){ nullptr };               /**< @brief 이번 프레임 씬 뷰 RT 핸들 · 크기 · 창 안 자리를 씁니다(패널이 안 보이면 빈 값). */
         void* ( *getSceneViewCamera )(EditorHandle editor){ nullptr };                                          /**< @brief 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */
         void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                                  /**< @brief 호스트 서비스 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */
         bool ( *isPlaying )( EditorHandle editor ){ nullptr };                                                  /**< @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
         bool ( *isPaused )( EditorHandle editor ){ nullptr };                                                   /**< @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
         void ( *stopSimulation )( EditorHandle editor ){ nullptr };                                             /**< @brief 에디터 시뮬레이션(PIE)을 정지합니다(핫 리로드 등). */
         void ( *endFrame )( EditorHandle editor ){ nullptr };                                                   /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
-        /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다(`HostSceneView`, Engine 의 값 타입). */
-        uint32 ( *getSceneViews )( EditorHandle editor, HostSceneView* pOutView, uint32 capacity ){ nullptr };
+        /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다(`PreviewSceneView`, Engine 의 값 타입). */
+        uint32 ( *getPreviewSceneViews )( EditorHandle editor, PreviewSceneView* pOutView, uint32 capacity ){ nullptr };
         /** @brief 이번 프레임의 다시 그릴 까닭(`EditorRedrawReason` 비트 묶음)입니다. `updateUI` 뒤에 부릅니다. 0 이면 에디터가 조용합니다. */
         uint32 ( *getRedrawReasons )( EditorHandle editor ){ nullptr };
         /** @brief 앱이 끝나는 중이니 에디터의 백그라운드 잡(색인 스캔 · 임포트 …)은 일찍 끝내라는 협조 신호를 올립니다. 호스트가 종료 대기(`drainRenderWorkers`) 앞에서 한 번 부릅니다. */

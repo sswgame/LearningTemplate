@@ -209,7 +209,7 @@ namespace sw
         {
             if ( texture._path != path )
                 continue;
-            const Texture2D* pTexture = texture._load.isReady() ? texture._load.getBlock()->getTexture() : nullptr;
+            const Texture2D* pTexture = texture._load.isReady() ? texture._load.getOperation()->getTexture() : nullptr;
             return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;
         }
         return kInvalidDescriptorIndex;

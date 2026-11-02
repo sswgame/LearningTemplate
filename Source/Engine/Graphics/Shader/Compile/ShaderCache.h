@@ -21,16 +21,16 @@ namespace sw
     class ShaderCache;
 
     /**
-     * @class ShaderLoadBlock
+     * @class ShaderLoadOperation
      * @brief 셰이더 바이트코드 하나를 얻는 로드의 공유 상태입니다 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 컴파일 — 셰이더 DDC 를 먼저 본다(`ShaderCache::loadOrCompile`).
-     * @details 결과는 실패해도 남긴다(`getResult` — 컴파일 오류 문구). 블록은 캐시를 원시 포인터로 가리킨다 — 캐시 종료(`shutdown`)가 진행 중인 로드를 모두 기다린다.
+     * @details 결과는 실패해도 남긴다(`getResult` — 컴파일 오류 문구). 로드 작업은 캐시를 원시 포인터로 가리킨다 — 캐시 종료(`shutdown`)가 진행 중인 로드를 모두 기다린다.
      */
-    class SW_API ShaderLoadBlock final : public AssetLoadBlock
+    class SW_API ShaderLoadOperation final : public AssetLoadOperation
     {
     public:
         using AssetType = const ShaderCompileResult;
 
-        ShaderLoadBlock( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey );
+        ShaderLoadOperation( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey );
 
         /** @brief 바이트코드입니다. `Ready` 일 때만 쓸 수 있습니다(`AssetHandle::get` 이 상태를 본다). */
         const shared_ptr<const ShaderCompileResult>& getAsset() const { return _pResult; }
@@ -50,7 +50,7 @@ namespace sw
     };
 
     /** @brief 셰이더 로드 핸들입니다(`ShaderCache::request`). */
-    using ShaderHandle = AssetHandle<ShaderLoadBlock>;
+    using ShaderHandle = AssetHandle<ShaderLoadOperation>;
 } // namespace sw
 
 namespace sw
@@ -103,7 +103,7 @@ namespace sw
          *        컴파일합니다(엔진 태스크가 없으면 이 자리에서). PSO 를 만들기 전에 미리 데워 둘 때 씁니다.
          */
         ShaderHandle request( const ShaderCompileDesc& desc );
-        /** @brief 캐시에 있으면 반환하고, 없거나 소스가 바뀌었으면 컴파일한 뒤 캐시합니다. `request` 와 같은 로드 블록을 기다립니다(새 로드는 이 자리에서). */
+        /** @brief 캐시에 있으면 반환하고, 없거나 소스가 바뀌었으면 컴파일한 뒤 캐시합니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서). */
         ShaderCompileResult getOrCompile( const ShaderCompileDesc& desc );
         /**
          * @brief 요청 @p desc 의 바인딩 리플렉션을 구합니다. 쿠킹본 정책은 쿠킹된 매니페스트, 소스 정책은 이 캐시가 얻은 바이트코드에서 만든다(공급자가 정한다).
@@ -137,7 +137,7 @@ namespace sw
         ShaderReflectionManifestCache& getReflectionManifests() { return _reflectionManifests; }
 
     private:
-        friend class ShaderLoadBlock;
+        friend class ShaderLoadOperation;
 
         /** @brief 인메모리 캐시의 키입니다(경로 · 진입점 · 스테이지 · 대상 · 코드젠 · define). */
         static string makeCacheKey( const ShaderCompileDesc& desc );
@@ -152,10 +152,10 @@ namespace sw
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
         void waitForLoadsInFlight();
 
-        unique_ptr<IShaderBytecodeProvider>                          _pProvider;           ///< 기동 때(`initialize`) 콘텐츠 정책으로 고른 바이트코드 공급자. 로드 워커는 읽기만 한다
-        ShaderReflectionManifestCache                                _reflectionManifests; ///< 읽은 리플렉션 매니페스트(`ShaderReflectionLibrary` 의 조회가 찾는다)
-        unordered_map<string, ShaderCacheEntry> _mapCache            SW_GUARDED_BY( _mutexCache );
-        unordered_map<string, weak_ptr<ShaderLoadBlock>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 블록). `_mutexCache` 로 지킨다
-        mutable mutex                                                _mutexCache;
+        unique_ptr<IShaderBytecodeProvider>                              _pProvider;           ///< 기동 때(`initialize`) 콘텐츠 정책으로 고른 바이트코드 공급자. 로드 워커는 읽기만 한다
+        ShaderReflectionManifestCache                                    _reflectionManifests; ///< 읽은 리플렉션 매니페스트(`ShaderReflectionLibrary` 의 조회가 찾는다)
+        unordered_map<string, ShaderCacheEntry> _mapCache                SW_GUARDED_BY( _mutexCache );
+        unordered_map<string, weak_ptr<ShaderLoadOperation>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 로드 작업). `_mutexCache` 로 지킨다
+        mutable mutex                                                    _mutexCache;
     };
 } // namespace sw

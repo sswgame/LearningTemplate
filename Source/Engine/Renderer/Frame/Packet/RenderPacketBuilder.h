@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    struct HostViewTargets;
+    struct FrameViewports;
     struct RenderFramePacket;
 
     class FontService;
@@ -69,7 +69,7 @@ namespace sw
          * @param sceneViewCameraProvider 씬 뷰 카메라 조회입니다. 씬 뷰가 있을 때만, 씬 틱과 기본 카메라 보장 **뒤에** 부릅니다.
          * @param rhi 주 출력 크기가 0 일 때(백버퍼 경로) 스왑체인 크기를 읽습니다.
          */
-        void populateScene( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene* pActiveScene,
+        void populateScene( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene* pActiveScene,
                             float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer );
         /**
          * @brief 화면 2D(런타임 UI 의 캔버스, 월드 UI 캔버스, 개발 테스트 이미지), 글리프 아틀라스 구간, 색각 보정을 싣습니다(`RenderPacketCanvasCollector::populate`).
@@ -82,12 +82,12 @@ namespace sw
          */
         void resolveMarkerInstanceSlots( RenderFramePacket& packet, const UISystem* pUISystem, const Scene* pActiveScene ) const;
         /**
-         * @brief 호스트가 요청한 미리보기 씬 뷰(`HostViewTargets::_arrSceneView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다(`RenderPacketScenePreviews::populate`).
+         * @brief 호스트가 요청한 미리보기 씬 뷰(`FrameViewports::_arrPreviewView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다(`RenderPacketScenePreviews::populate`).
          * @details 씬마다 스냅샷 빌더를 따로 둔다(빌더의 재구축 판단 캐시가 씬별이기 때문이다). 요청이 끊긴 씬의 빌더는 이 프레임에 해제한다.
          *          미리보기 패킷에는 주 광원, 라이트, 그림자, 카메라, 씬 스냅샷만 싣는다. 추가 뷰, 캔버스, 스크린샷은 주 패킷에만 있다.
          * @param sceneManager 씬 키로 씬을 찾는 곳입니다(`SceneManager::findPreviewScene`). 없는 키는 건너뜁니다.
          */
-        void populateScenePreviews( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager );
+        void populateScenePreviews( RenderFramePacket& packet, const FrameViewports& views, const SceneManager& sceneManager );
 
     private:
         /**

@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    struct HostViewTargets;
+    struct FrameViewports;
     struct RenderFramePacket;
 
     class GPUUploadQueue;
@@ -40,13 +40,13 @@ namespace sw
         void clear();
 
         /**
-         * @brief 호스트가 요청한 미리보기 씬 뷰(`HostViewTargets::_arrSceneView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다.
+         * @brief 호스트가 요청한 미리보기 씬 뷰(`FrameViewports::_arrPreviewView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다.
          * @details 미리보기 패킷에는 씬 하나의 채우기(`RenderPacketSceneCollector::fillSceneView` — 주 광원, 라이트, 그림자, 카메라, 씬 스냅샷)만 싣는다. 추가 뷰, 캔버스, 스크린샷은 주 패킷에만 있다.
          *          사라진 씬(매니저가 더는 찾지 못한다)의 채우기는 내리고 그 키를 `RenderFramePacket::_listRetiredSceneKey` 에 싣는다 — 요청만 끊긴 씬(창을 가렸다)은 남긴다.
          * @param sceneManager 씬 키로 씬을 찾는 곳입니다(`SceneManager::findPreviewScene`). 없는 키는 건너뜁니다.
          * @param pUploadQueue GPU 업로드 요청을 받을 큐입니다(없으면 요청하지 않는다).
          */
-        void populate( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager, GPUUploadQueue* pUploadQueue );
+        void populate( RenderFramePacket& packet, const FrameViewports& views, const SceneManager& sceneManager, GPUUploadQueue* pUploadQueue );
 
     private:
         /** @brief 미리보기 씬 하나의 채우기입니다. 씬 키로 찾습니다. */

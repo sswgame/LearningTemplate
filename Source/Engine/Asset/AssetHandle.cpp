@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    AssetLoadBlock::AssetLoadBlock( const utf8* pKindName, string_view path, MemoryTag memoryTag )
+    AssetLoadOperation::AssetLoadOperation( const utf8* pKindName, string_view path, MemoryTag memoryTag )
         : _path{ path }
         , _error{}
         , _pKindName{ pKindName }
@@ -22,20 +22,20 @@ namespace sw
     {
     }
 
-    AssetLoadBlock::~AssetLoadBlock() = default;
+    AssetLoadOperation::~AssetLoadOperation() = default;
 
-    AssetLoadState AssetLoadBlock::getState() const
+    AssetLoadState AssetLoadOperation::getState() const
     {
         return _state.load( std::memory_order_acquire );
     }
 
-    const string& AssetLoadBlock::getError() const
+    const string& AssetLoadOperation::getError() const
     {
         static const string s_empty{};
         return getState() == AssetLoadState::Failed ? _error : s_empty;
     }
 
-    void AssetLoadBlock::wait()
+    void AssetLoadOperation::wait()
     {
         for ( ;; )
         {
@@ -65,14 +65,14 @@ namespace sw
         }
     }
 
-    void AssetLoadBlock::runLoadIfUnclaimed()
+    void AssetLoadOperation::runLoadIfUnclaimed()
     {
         uint32 expected = kPhaseQueued;
         if ( _phase.compare_exchange_strong( expected, kPhaseLoading, std::memory_order_acq_rel ) )
             executeLoad();
     }
 
-    bool AssetLoadBlock::runCompletionIfPending()
+    bool AssetLoadOperation::runCompletionIfPending()
     {
         uint32 expected = kPhaseAwaitingCompletion;
         if ( _phase.compare_exchange_strong( expected, kPhaseCompleting, std::memory_order_acq_rel ) == false )
@@ -81,7 +81,7 @@ namespace sw
         return true;
     }
 
-    bool AssetLoadBlock::runUploadPollIfPending( const bool bBlocking )
+    bool AssetLoadOperation::runUploadPollIfPending( const bool bBlocking )
     {
         uint32 expected = kPhaseUploading;
         if ( _phase.compare_exchange_strong( expected, kPhaseCompleting, std::memory_order_acq_rel ) == false )
@@ -90,17 +90,17 @@ namespace sw
         return true;
     }
 
-    bool AssetLoadBlock::canLoadOnWorker()
+    bool AssetLoadOperation::canLoadOnWorker()
     {
         // 쿠킹 중에는 요청한 스레드(그 작업 범위 안)에서 읽는다 — 워커에서 읽으면 작업의 입력에서 빠지고 쿠킹 세션이 그 읽기를 실패시킨다.
         return engine::areEngineServicesBound() && CookJob::requiresCallingThreadRead() == false;
     }
 
-    void AssetLoadBlock::startLoad( const shared_ptr<AssetLoadBlock>& pBlock, AssetLoadStart start )
+    void AssetLoadOperation::startLoad( const shared_ptr<AssetLoadOperation>& pOperation, AssetLoadStart start )
     {
-        SW_ASSERT( pBlock != nullptr );
-        if ( pBlock->_phase.load( std::memory_order_acquire ) != kPhaseQueued )
-            return; // 캐시 적중 · 틀린 요청으로 이미 끝난 블록이다
+        SW_ASSERT( pOperation != nullptr );
+        if ( pOperation->_phase.load( std::memory_order_acquire ) != kPhaseQueued )
+            return; // 캐시 적중 · 틀린 요청으로 이미 끝난 로드 작업이다
         if ( start == AssetLoadStart::OnCallingThread || canLoadOnWorker() == false )
         {
             // 동기 로드 공용 진입점이다(프리팹 · 머티리얼 · 텍스처 · 메시 · 셰이더의 `OnCallingThread` 요청이 모두 여기를 지난다).
@@ -108,19 +108,19 @@ namespace sw
             if ( engine::areEngineServicesBound() )
             {
                 SW_PROFILE_SCOPE( "GT.Load.sync" );
-                pBlock->runLoadIfUnclaimed();
+                pOperation->runLoadIfUnclaimed();
                 return;
             }
-            pBlock->runLoadIfUnclaimed();
+            pOperation->runLoadIfUnclaimed();
             return;
         }
-        engine::getSubsystem<AssetManager>().launchLoadWork( "AssetLoad", SW_DELEGATE_LAMBDA( TaskDelegate, [pBlock]()
+        engine::getSubsystem<AssetManager>().launchLoadWork( "AssetLoad", SW_DELEGATE_LAMBDA( TaskDelegate, [pOperation]()
         {
-            pBlock->runLoadIfUnclaimed();
+            pOperation->runLoadIfUnclaimed();
         } ) );
     }
 
-    bool AssetLoadBlock::runCompletion( string& outError )
+    bool AssetLoadOperation::runCompletion( string& outError )
     {
         utf8 arrBuffer[constant::buffer::kMax1024];
         formatstring( arrBuffer, constant::buffer::kMax1024, "%# '%#' has no completion step", _pKindName, _path.c_str() );
@@ -128,29 +128,29 @@ namespace sw
         return false;
     }
 
-    AssetCompletionStep AssetLoadBlock::beginCompletion( bool /*bBlocking*/, string& outError )
+    AssetCompletionStep AssetLoadOperation::beginCompletion( bool /*bBlocking*/, string& outError )
     {
         return runCompletion( outError ) ? AssetCompletionStep::Done : AssetCompletionStep::Failed;
     }
 
-    AssetCompletionStep AssetLoadBlock::pollCompletion( bool /*bBlocking*/, string& /*outError*/ )
+    AssetCompletionStep AssetLoadOperation::pollCompletion( bool /*bBlocking*/, string& /*outError*/ )
     {
         return AssetCompletionStep::Done;
     }
 
-    void AssetLoadBlock::markReadyWithoutLoad()
+    void AssetLoadOperation::markReadyWithoutLoad()
     {
         SW_ASSERT( _phase.load( std::memory_order_acquire ) == kPhaseQueued );
         finish( true, string{} );
     }
 
-    void AssetLoadBlock::markFailedWithoutLoad( string error )
+    void AssetLoadOperation::markFailedWithoutLoad( string error )
     {
         SW_ASSERT( _phase.load( std::memory_order_acquire ) == kPhaseQueued );
         finish( false, std::move( error ) );
     }
 
-    void AssetLoadBlock::executeLoad()
+    void AssetLoadOperation::executeLoad()
     {
         const ScopedMemoryTag memoryScope{ _memoryTag };
         string                error;
@@ -170,7 +170,7 @@ namespace sw
         onAwaitingCompletion();
     }
 
-    void AssetLoadBlock::executeCompletion( bool bBlocking )
+    void AssetLoadOperation::executeCompletion( bool bBlocking )
     {
         const ScopedMemoryTag     memoryScope{ _memoryTag };
         string                    error;
@@ -178,7 +178,7 @@ namespace sw
         settleCompletionStep( step, std::move( error ) );
     }
 
-    void AssetLoadBlock::executeUploadPoll( bool bBlocking )
+    void AssetLoadOperation::executeUploadPoll( bool bBlocking )
     {
         const ScopedMemoryTag     memoryScope{ _memoryTag };
         string                    error;
@@ -186,7 +186,7 @@ namespace sw
         settleCompletionStep( step, std::move( error ) );
     }
 
-    void AssetLoadBlock::settleCompletionStep( AssetCompletionStep step, string error )
+    void AssetLoadOperation::settleCompletionStep( AssetCompletionStep step, string error )
     {
         switch ( step )
         {
@@ -219,7 +219,7 @@ namespace sw
         }
     }
 
-    void AssetLoadBlock::finish( bool bSucceeded, string error )
+    void AssetLoadOperation::finish( bool bSucceeded, string error )
     {
         // 실패는 이유와 함께 드러낸다 — 이유 없는 실패는 본문의 결함이다. 로그는 종류별 본문이 남긴다(메시는 경로마다 한 번만 경고한다).
         if ( bSucceeded == false )
@@ -237,9 +237,9 @@ namespace sw
 {
     bool AssetReadySet::isComplete() const
     {
-        for ( const shared_ptr<AssetLoadBlock>& pBlock : _listBlock )
+        for ( const shared_ptr<AssetLoadOperation>& pOperation : _listOperation )
         {
-            if ( pBlock->getState() == AssetLoadState::Loading )
+            if ( pOperation->getState() == AssetLoadState::Loading )
                 return false;
         }
         return true;
@@ -247,9 +247,9 @@ namespace sw
 
     bool AssetReadySet::isReady() const
     {
-        for ( const shared_ptr<AssetLoadBlock>& pBlock : _listBlock )
+        for ( const shared_ptr<AssetLoadOperation>& pOperation : _listOperation )
         {
-            if ( pBlock->getState() != AssetLoadState::Ready )
+            if ( pOperation->getState() != AssetLoadState::Ready )
                 return false;
         }
         return true;
@@ -257,9 +257,9 @@ namespace sw
 
     bool AssetReadySet::hasFailed() const
     {
-        for ( const shared_ptr<AssetLoadBlock>& pBlock : _listBlock )
+        for ( const shared_ptr<AssetLoadOperation>& pOperation : _listOperation )
         {
-            if ( pBlock->getState() == AssetLoadState::Failed )
+            if ( pOperation->getState() == AssetLoadState::Failed )
                 return true;
         }
         return false;
@@ -268,9 +268,9 @@ namespace sw
     size_t AssetReadySet::countLoading() const
     {
         size_t count = 0;
-        for ( const shared_ptr<AssetLoadBlock>& pBlock : _listBlock )
+        for ( const shared_ptr<AssetLoadOperation>& pOperation : _listOperation )
         {
-            if ( pBlock->getState() == AssetLoadState::Loading )
+            if ( pOperation->getState() == AssetLoadState::Loading )
                 ++count;
         }
         return count;
@@ -279,9 +279,9 @@ namespace sw
     size_t AssetReadySet::countReady() const
     {
         size_t count = 0;
-        for ( const shared_ptr<AssetLoadBlock>& pBlock : _listBlock )
+        for ( const shared_ptr<AssetLoadOperation>& pOperation : _listOperation )
         {
-            if ( pBlock->getState() == AssetLoadState::Ready )
+            if ( pOperation->getState() == AssetLoadState::Ready )
                 ++count;
         }
         return count;
@@ -289,12 +289,12 @@ namespace sw
 
     void AssetReadySet::appendFailures( vector<string>& outListError ) const
     {
-        for ( const shared_ptr<AssetLoadBlock>& pBlock : _listBlock )
+        for ( const shared_ptr<AssetLoadOperation>& pOperation : _listOperation )
         {
-            if ( pBlock->getState() != AssetLoadState::Failed )
+            if ( pOperation->getState() != AssetLoadState::Failed )
                 continue;
             utf8 arrBuffer[constant::buffer::kMax1024];
-            formatstring( arrBuffer, constant::buffer::kMax1024, "%# %#: %#", pBlock->getKindName(), pBlock->getPath().c_str(), pBlock->getError().c_str() );
+            formatstring( arrBuffer, constant::buffer::kMax1024, "%# %#: %#", pOperation->getKindName(), pOperation->getPath().c_str(), pOperation->getError().c_str() );
             outListError.emplace_back( arrBuffer );
         }
     }

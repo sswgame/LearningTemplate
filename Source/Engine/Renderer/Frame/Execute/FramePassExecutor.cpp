@@ -328,7 +328,7 @@ namespace sw
         // 화면 사각형 뷰(분할 화면, PiP)는 주 시점 위에 겹친다.
         renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::ScreenRect );
         // 호스트 타깃 뷰(에디터 씬 뷰)는 자기 RT 에 그린다. 이번 프레임에 그린 렌더 텍스처(CCTV)를 읽을 수 있도록 마지막에 그린다.
-        renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::HostTarget );
+        renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::ViewportTarget );
         _state._frameContext        = _state._mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
         // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
@@ -399,8 +399,8 @@ namespace sw
         // 렌더 텍스처는 이어서 주 시점의 머티리얼이, 호스트 타깃은 에디터 UI 가 읽는다 — 읽기 상태로 돌려 둔다(DX11 은 RTV 슬롯에서 뗀다).
         if ( view._outputKind == RenderViewOutputKind::RenderTexture && view._pOutputTexture != nullptr )
             pCmd->prepareTextureForShaderRead( view._pOutputTexture->getHandle() );
-        else if ( view._outputKind == RenderViewOutputKind::HostTarget && view._hostTarget != 0 )
-            pCmd->prepareTextureForShaderRead( view._hostTarget );
+        else if ( view._outputKind == RenderViewOutputKind::ViewportTarget && view._viewportTarget != 0 )
+            pCmd->prepareTextureForShaderRead( view._viewportTarget );
         pCmd->endCommandList();
         pDevice->executeCommandList( pCmd );
 
@@ -1639,8 +1639,8 @@ namespace sw
         const bool             bExtraViewOwnOutput = isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::RenderTexture && activeView._pOutputTexture != nullptr;
         if ( bExtraViewOwnOutput )
             ownOutput = activeView._pOutputTexture->getHandle();
-        else if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::HostTarget )
-            ownOutput = activeView._hostTarget;
+        else if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::ViewportTarget )
+            ownOutput = activeView._viewportTarget;
         const bool bOwnOutput = ownOutput != 0;
         const bool bCapture   = bOwnOutput == false && ( _state._outputRenderTarget == 0 ) && _capture.isPresentActive();
         // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다. 크기를 덮어쓴 출력(초상화 베이크)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
@@ -1707,13 +1707,13 @@ namespace sw
         }
         // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
         // 진단(SkipDispatch)이면 스킨 결과가 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
-        const RHIStructuredBuffer& skinBaseBuffer = _state._deform._meshMorphPool.getSkinBaseBuffer();
-        const bool                 bSkinBases     = _state._deform._bDeformDispatchSkipped == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinBaseBuffer._buffer != 0 &&
-                                skinBaseBuffer._srv != kInvalidDescriptorIndex;
-        if ( bSkinBases )
+        const RHIStructuredBuffer& skinResultOffsetBuffer = _state._deform._meshMorphPool.getSkinResultOffsetBuffer();
+        const bool                 bSkinResultOffsets     = _state._deform._bDeformDispatchSkipped == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinResultOffsetBuffer._buffer != 0 &&
+                                        skinResultOffsetBuffer._srv != kInvalidDescriptorIndex;
+        if ( bSkinResultOffsets )
         {
-            context._resourceRegistry.registerBuffer( passConstantNames()._swSkinBases, skinBaseBuffer._buffer, skinBaseBuffer._srv );
-            context._passValues.setUint( passConstantNames()._swSkinBaseCount, _state._deform._meshMorphPool.getSkinBaseCount() );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swSkinResultOffsets, skinResultOffsetBuffer._buffer, skinResultOffsetBuffer._srv );
+            context._passValues.setUint( passConstantNames()._swSkinResultOffsetCount, _state._deform._meshMorphPool.getSkinResultOffsetCount() );
         }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.

@@ -181,17 +181,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class PrefabLoadBlock
+     * @class PrefabLoadOperation
      * @brief 프리팹 로드 하나의 공유 상태입니다. 로드 단계에서 파일을 읽고 중첩 원본을 확인해 캐시에 넣습니다(완료 단계 없음).
-     * @details 블록은 캐시를 원시 포인터로 가리킨다 — 캐시 소멸자가 진행 중인 로드를 모두 기다리므로(`~PrefabCache`) 단계를 실행하는 동안 캐시는 살아 있다.
+     * @details 로드 작업은 캐시를 원시 포인터로 가리킨다 — 캐시 소멸자가 진행 중인 로드를 모두 기다리므로(`~PrefabCache`) 단계를 실행하는 동안 캐시는 살아 있다.
      */
-    class SW_API PrefabLoadBlock final : public AssetLoadBlock
+    class SW_API PrefabLoadOperation final : public AssetLoadOperation
     {
     public:
         using AssetType = const PrefabAsset;
 
         /** @brief @p resolvedPath 는 GUID 를 푼 경로, @p cacheKey 는 그 캐시 키입니다(`PrefabCache::request` 가 한 번 구한다). */
-        PrefabLoadBlock( PrefabCache* pCache, string_view resolvedPath, string cacheKey );
+        PrefabLoadOperation( PrefabCache* pCache, string_view resolvedPath, string cacheKey );
 
         /** @brief 읽은 프리팹입니다. `Ready` 일 때만 값이 있습니다(`AssetHandle::get` 이 상태를 본다). */
         const shared_ptr<const PrefabAsset>& getAsset() const { return _pAsset; }
@@ -208,7 +208,7 @@ namespace sw
     };
 
     /** @brief 프리팹 로드 핸들입니다. 핸들이 살아 있는 동안 프리팹도 살아 있습니다(캐시가 버려도 — 다시 읽기 · `clear`). */
-    using PrefabHandle = AssetHandle<PrefabLoadBlock>;
+    using PrefabHandle = AssetHandle<PrefabLoadOperation>;
 } // namespace sw
 
 namespace sw
@@ -236,7 +236,7 @@ namespace sw
          *          중첩 원본은 그 로드 안에서 같은 스레드가 읽는다 — 다른 스레드의 로드를 기다리지 않으므로 순환한 프리팹 둘을 두 워커가 동시에 읽어도 멈추지 않는다.
          */
         PrefabHandle request( string_view assetRelativePath );
-        /** @brief 프리팹을 로드합니다. `request` 와 같은 로드 블록을 기다립니다(새 로드는 이 자리에서 읽는다). 읽지 못하면 nullptr 입니다. */
+        /** @brief 프리팹을 로드합니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서 읽는다). 읽지 못하면 nullptr 입니다. */
         shared_ptr<const PrefabAsset> loadPrefab( string_view assetRelativePath );
         /**
          * @brief 프리팹을 스폰합니다.
@@ -292,7 +292,7 @@ namespace sw
         size_t getCachedCount() const override;
         /** @brief 캐시를 통째로 비웁니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다. */
         void clear() override;
-        /** @brief 프리팹 경로(`kAssetType` 의 접미사)면 `request` 의 로드 블록(곧 프리팹)을 붙드는 토큰입니다. 아니면 nullptr 입니다. */
+        /** @brief 프리팹 경로(`kAssetType` 의 접미사)면 `request` 의 로드 작업(곧 프리팹)을 붙드는 토큰입니다. 아니면 nullptr 입니다. */
         shared_ptr<const void> pinAsset( string_view relativePath ) override;
 
         /**
@@ -311,7 +311,7 @@ namespace sw
         static constexpr uint32 kCookVersion = 1;
 
     private:
-        friend class PrefabLoadBlock;
+        friend class PrefabLoadOperation;
 
         /** @brief 경로의 캐시 키입니다(본문 · 핫 리로드 `PrefabAsset.cpp` 가 같은 키를 쓴다). */
         static string makeCacheKey( string_view assetRelativePath );
@@ -348,9 +348,9 @@ namespace sw
         uint32 spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
                                           vector<string>& inoutListSpawnedPath );
 
-        mutable shared_mutex                                           _mapCacheMutex;
-        unordered_map<string, shared_ptr<const PrefabAsset>> _mapCache SW_GUARDED_BY( _mapCacheMutex );
-        unordered_map<string, weak_ptr<PrefabLoadBlock>> _mapLoading   SW_GUARDED_BY( _mapCacheMutex ); ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 블록). `_mapCacheMutex` 로 지킨다
-        atomic<uint32>                                                 _cacheGeneration;                ///< `reload` · `clear` 가 올린다. 읽는 사이 바뀌면 결과를 캐시에 넣지 않는다
+        mutable shared_mutex                                             _mapCacheMutex;
+        unordered_map<string, shared_ptr<const PrefabAsset>> _mapCache   SW_GUARDED_BY( _mapCacheMutex );
+        unordered_map<string, weak_ptr<PrefabLoadOperation>> _mapLoading SW_GUARDED_BY( _mapCacheMutex ); ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 로드 작업). `_mapCacheMutex` 로 지킨다
+        atomic<uint32>                                                   _cacheGeneration;                ///< `reload` · `clear` 가 올린다. 읽는 사이 바뀌면 결과를 캐시에 넣지 않는다
     };
 } // namespace sw

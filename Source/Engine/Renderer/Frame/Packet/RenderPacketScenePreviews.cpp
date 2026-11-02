@@ -52,18 +52,18 @@ namespace sw
         return _listEntry.back();
     }
 
-    void RenderPacketScenePreviews::populate( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager, GPUUploadQueue* pUploadQueue )
+    void RenderPacketScenePreviews::populate( RenderFramePacket& packet, const FrameViewports& views, const SceneManager& sceneManager, GPUUploadQueue* pUploadQueue )
     {
         packet._scenePreviewCount = 0;
         packet._listRetiredSceneKey.clear();
         if ( _pDevice == nullptr )
             return; // 기동 단계가 디바이스를 주기 전이다(`initialize`)
 
-        const uint32 requestCount = MathUtil::min( views._sceneViewCount, kMaxHostSceneView );
+        const uint32 requestCount = MathUtil::min( views._previewViewCount, kMaxPreviewSceneView );
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
-            const HostSceneView& request = views._arrSceneView[requestIndex];
-            Scene* const         pScene  = sceneManager.findPreviewScene( request._sceneKey );
+            const PreviewSceneView& request = views._arrPreviewView[requestIndex];
+            Scene* const            pScene  = sceneManager.findPreviewScene( request._sceneKey );
             if ( pScene == nullptr || request._target.isValid() == false )
                 continue;
 

@@ -132,7 +132,7 @@ namespace sw
     void EditorModuleManager::sampleViewTargets()
     {
         ModuleFrameState& frameState = getMutableFrameState();
-        frameState._views            = HostViewTargets{};
+        frameState._views            = FrameViewports{};
         if ( hasEditor() == false )
             return;
 
@@ -141,8 +141,8 @@ namespace sw
         if ( _editorAPI.getSceneViewport != nullptr )
             _editorAPI.getSceneViewport( _editor, &frameState._views._scene );
         // 툴 창의 미리보기 씬 — 보이는 창만 온다(`Engine::update` 이 씬마다 따로 그린다).
-        if ( _editorAPI.getSceneViews != nullptr )
-            frameState._views._sceneViewCount = _editorAPI.getSceneViews( _editor, frameState._views._arrSceneView, kMaxHostSceneView );
+        if ( _editorAPI.getPreviewSceneViews != nullptr )
+            frameState._views._previewViewCount = _editorAPI.getPreviewSceneViews( _editor, frameState._views._arrPreviewView, kMaxPreviewSceneView );
     }
 
     void EditorModuleManager::updateEditorUI( float32 /*deltaTime*/ )
@@ -367,7 +367,7 @@ namespace sw
             _editorAPI.abandonPendingDraw( _editor );
         // 이번 프레임에 샘플한 게임 뷰 · 씬 뷰 RT 는 이 인스턴스가 가진 텍스처다. 리로드는 샘플(`updateEditorUI`) 뒤 · 엔진 갱신 앞에 일어나므로,
         // 비우지 않으면 같은 프레임의 `Engine::update` 가 부서진 핸들에 그린다(포맷 Unknown — 출력 PSO 조회가 멈춘다). 새 인스턴스는 다음 샘플에서 채운다.
-        getMutableFrameState()._views = HostViewTargets{};
+        getMutableFrameState()._views = FrameViewports{};
         ModuleInstanceUtil::destroyInstance( _editorAPI, _editor, bReleaseAPITable, sw::config::kTargetEditorModule );
     }
 

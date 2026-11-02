@@ -147,9 +147,9 @@
 // 볼륨은 라이트 목록(g_SwLights)의 SW_LIGHT_TYPE_PROBE_VOLUME 원소이고 그 원소가 이 버퍼의 첫 프로브를 가리킨다. 읽는 함수는 lighting.hlsli LightProbe::load 하나다.
 #define SW_SLOT_LIGHT_PROBE_SRV 13
 
-// 스킨 칸 → 결과 시작 표 (StructuredBuffer<uint> g_SwSkinBases) — 칸(유닛 · 군중 묶음마다 게임 스레드가 준 오래 가는 번호, 인스턴스의 _skinSlot)마다
+// 스킨 칸 → 결과 시작 표 (StructuredBuffer<uint> g_SwSkinResultOffsets) — 칸(유닛 · 군중 묶음마다 게임 스레드가 준 오래 가는 번호, 인스턴스의 _skinSlot)마다
 // 모프 풀(g_SwMorphVertices) 안 그 스킨 결과의 첫 원소. 풀에 못 든 칸은 kInvalidIndex 다. 읽는 함수는 binding.hlsli MorphPool::computeElement 하나다.
-#define SW_SLOT_SKIN_BASE_SRV 14
+#define SW_SLOT_SKIN_RESULT_OFFSET_SRV 14
 
 #define SW_SRV_SLOT_COUNT 15 // t0..t14 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)까지 늘릴 수 있다 — 머티리얼 슬롯은 밴드 뒤라 밀리지 않는다
 

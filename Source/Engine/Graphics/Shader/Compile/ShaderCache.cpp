@@ -41,8 +41,8 @@ namespace sw
         return liveDesc;
     }
 
-    ShaderLoadBlock::ShaderLoadBlock( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey )
-        : AssetLoadBlock{ "Shader", desc._source.str(), MemoryTag::Shader }
+    ShaderLoadOperation::ShaderLoadOperation( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey )
+        : AssetLoadOperation{ "Shader", desc._source.str(), MemoryTag::Shader }
         , _pCache{ pCache }
         , _desc{ desc }
         , _cacheKey{ std::move( cacheKey ) }
@@ -50,7 +50,7 @@ namespace sw
     {
     }
 
-    bool ShaderLoadBlock::runLoad( string& outError )
+    bool ShaderLoadOperation::runLoad( string& outError )
     {
         shared_ptr<ShaderCompileResult> pResult = sw::make_shared<ShaderCompileResult>( _pCache->loadOrCompile( _desc, _cacheKey ) );
         const bool                      bLoaded = pResult->_bSuccess;
@@ -58,7 +58,7 @@ namespace sw
             outError = pResult->_errorMessage.empty() ? string( "the shader could not be compiled or found" ) : pResult->_errorMessage;
         _pResult = std::move( pResult );
         {
-            // 이 블록의 칸일 때만 뺀다(캐시를 비운 뒤 같은 요청이 새 블록을 넣었을 수 있다).
+            // 이 로드 작업의 칸일 때만 뺀다(캐시를 비운 뒤 같은 요청이 새 로드 작업을 넣었을 수 있다).
             ScopedLock<mutex> lock{ _pCache->_mutexCache };
             const auto        it = _pCache->_mapLoading.find( _cacheKey );
             if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
@@ -127,29 +127,29 @@ namespace sw
 
     ShaderHandle ShaderCache::requestWith( const ShaderCompileDesc& desc, AssetLoadStart start )
     {
-        string                      cacheKey = makeCacheKey( desc );
-        shared_ptr<ShaderLoadBlock> pBlock;
+        string                          cacheKey = makeCacheKey( desc );
+        shared_ptr<ShaderLoadOperation> pOperation;
         {
             ScopedLock<mutex> lock{ _mutexCache };
             const auto        it = _mapLoading.find( cacheKey );
             if ( it != _mapLoading.end() )
-                pBlock = it->second.lock();
-            if ( pBlock != nullptr )
-                return ShaderHandle{ std::move( pBlock ) };
+                pOperation = it->second.lock();
+            if ( pOperation != nullptr )
+                return ShaderHandle{ std::move( pOperation ) };
             // 인메모리 적중도 로드 단계가 본다 — 적중인지는 소스 해시를 구해야 알고, 그 계산(파일 읽기)은 잠금 밖에서 한다.
-            pBlock                = sw::make_shared<ShaderLoadBlock>( this, desc, cacheKey );
-            _mapLoading[cacheKey] = pBlock;
+            pOperation            = sw::make_shared<ShaderLoadOperation>( this, desc, cacheKey );
+            _mapLoading[cacheKey] = pOperation;
         }
-        AssetLoadBlock::startLoad( pBlock, start );
-        return ShaderHandle{ std::move( pBlock ) };
+        AssetLoadOperation::startLoad( pOperation, start );
+        return ShaderHandle{ std::move( pOperation ) };
     }
 
     ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
     {
         const ShaderHandle handle = requestWith( desc, AssetLoadStart::OnCallingThread );
-        handle.getBlock()->wait();
+        handle.getOperation()->wait();
         // 실패도 결과를 돌려준다 — 부르는 쪽이 컴파일 오류 문구를 드러낸다.
-        const shared_ptr<const ShaderCompileResult>& pResult = handle.getBlock()->getResult();
+        const shared_ptr<const ShaderCompileResult>& pResult = handle.getOperation()->getResult();
         if ( pResult != nullptr )
             return *pResult;
         ShaderCompileResult failedResult{};
@@ -160,19 +160,19 @@ namespace sw
 
     void ShaderCache::waitForLoadsInFlight()
     {
-        vector<shared_ptr<ShaderLoadBlock>> listLoading;
+        vector<shared_ptr<ShaderLoadOperation>> listLoading;
         {
             ScopedLock<mutex> lock{ _mutexCache };
-            for ( const auto& [key, weakBlock] : _mapLoading )
+            for ( const auto& [key, weakOperation] : _mapLoading )
             {
-                shared_ptr<ShaderLoadBlock> pBlock = weakBlock.lock();
-                if ( pBlock != nullptr )
-                    listLoading.push_back( std::move( pBlock ) );
+                shared_ptr<ShaderLoadOperation> pOperation = weakOperation.lock();
+                if ( pOperation != nullptr )
+                    listLoading.push_back( std::move( pOperation ) );
             }
         }
-        for ( const shared_ptr<ShaderLoadBlock>& pBlock : listLoading )
+        for ( const shared_ptr<ShaderLoadOperation>& pOperation : listLoading )
         {
-            pBlock->wait();
+            pOperation->wait();
         }
     }
 

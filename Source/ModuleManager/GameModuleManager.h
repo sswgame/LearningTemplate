@@ -60,7 +60,7 @@ namespace sw
     struct ModuleFrameState
     {
         /** @brief 에디터가 이번 프레임에 그려 달라고 요청한 게임 뷰와 씬 뷰 RT 입니다. 보이지 않는 패널의 뷰는 비어 있고, 둘 다 비면 백버퍼에 바로 그립니다. */
-        HostViewTargets _views;
+        FrameViewports _views;
         /** @brief 이번 프레임에 게임 모듈의 update/fixedUpdate 를 돌려야 하면 1 입니다. */
         uint8 _bGameplayActive : 1;
         /** @brief 이번 프레임에 씬 GameObject 를 틱해야 하면 1 입니다. */

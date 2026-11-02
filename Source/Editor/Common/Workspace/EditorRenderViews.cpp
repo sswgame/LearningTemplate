@@ -116,7 +116,7 @@ namespace sw::editor
         requestAnimationFrame(); // 보인 미리보기 씬은 이번 프레임에 틱한다(`ScenePreviewTick::WhenDrawn`) — 그 움직임을 그리려면 다음 프레임이 곧 와야 한다
     }
 
-    uint32 EditorRenderViews::collectSceneViews( HostSceneView* pOutView, uint32 capacity ) const
+    uint32 EditorRenderViews::collectSceneViews( PreviewSceneView* pOutView, uint32 capacity ) const
     {
         uint32 count = 0;
         for ( const EditorPreviewViewTarget& preview : _listPreviewTarget )
@@ -124,8 +124,8 @@ namespace sw::editor
             const bool bVisible = preview._target._bDrawn == SW_TRUE && preview._target._renderTarget != 0 && preview._sceneKey != 0;
             if ( bVisible == false || count >= capacity )
                 continue;
-            HostSceneView& view        = pOutView[count];
-            view                       = HostSceneView{};
+            PreviewSceneView& view     = pOutView[count];
+            view                       = PreviewSceneView{};
             view._sceneKey             = preview._sceneKey;
             view._viewProj             = preview._viewProj;
             view._cameraPos            = preview._cameraPos;

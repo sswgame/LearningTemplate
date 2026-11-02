@@ -85,7 +85,7 @@ namespace sw
         return scale;
     }
 
-    RenderPacketMainView RenderPacketViewSetup::setupMainView( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
+    RenderPacketMainView RenderPacketViewSetup::setupMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
                                                                Scene& activeScene, float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer )
     {
         const bool           bSceneMain = views.isSceneViewMain();
@@ -130,7 +130,7 @@ namespace sw
         return mainView;
     }
 
-    void RenderPacketViewSetup::collectExtraViews( RenderFramePacket& packet, const HostViewTargets& views, Scene& activeScene, const RenderPacketMainView& mainView, float32 deltaTime,
+    void RenderPacketViewSetup::collectExtraViews( RenderFramePacket& packet, const FrameViewports& views, Scene& activeScene, const RenderPacketMainView& mainView, float32 deltaTime,
                                                    const FrameRenderer* pFrameRenderer )
     {
         // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
@@ -147,6 +147,6 @@ namespace sw
         if ( views.isSceneViewMain() )
             RenderViewCollector::removeScreenRectViews( packet._listView );
         else if ( mainView._pSceneViewCamera != nullptr && mainView._pSceneViewCamera != mainView._pCamera )
-            RenderViewCollector::appendHostView( *mainView._pSceneViewCamera, views._scene, mainView._sceneViewMode, packet._listView );
+            RenderViewCollector::appendViewportView( *mainView._pSceneViewCamera, views._scene, mainView._sceneViewMode, packet._listView );
     }
 } // namespace sw

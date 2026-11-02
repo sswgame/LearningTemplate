@@ -19,15 +19,15 @@ namespace sw
     class Mesh;
 
     /**
-     * @class MeshLoadBlock
+     * @class MeshLoadOperation
      * @brief `.mesh` 로드 하나의 공유 상태입니다. 로드 단계에서 파일을 읽어 `Mesh` 를 만들고 캐시에 넣습니다(CPU 만 — 정점 업로드는 업로드 큐가 한다).
      */
-    class SW_API MeshLoadBlock final : public AssetLoadBlock
+    class SW_API MeshLoadOperation final : public AssetLoadOperation
     {
     public:
         using AssetType = Mesh;
 
-        explicit MeshLoadBlock( string_view path );
+        explicit MeshLoadOperation( string_view path );
 
         /** @brief 읽은 메시입니다. `Ready` 일 때만 값이 있습니다(`AssetHandle::get` 이 상태를 본다). */
         const shared_ptr<Mesh>& getAsset() const { return _pMesh; }
@@ -44,7 +44,7 @@ namespace sw
 namespace sw
 {
     /** @brief 메시 로드 핸들입니다. */
-    using MeshHandle = AssetHandle<MeshLoadBlock>;
+    using MeshHandle = AssetHandle<MeshLoadOperation>;
 
     /**
      * @class MeshCache
@@ -67,7 +67,7 @@ namespace sw
         MeshCache( const MeshCache& )            = delete;
         MeshCache& operator=( const MeshCache& ) = delete;
 
-        /** @brief 이 캐시의 상태입니다. 정적 창구와 로드 블록(MeshCache.cpp)만 씁니다. */
+        /** @brief 이 캐시의 상태입니다. 정적 창구와 로드 작업(MeshCache.cpp)만 씁니다. */
         State& getState() { return *_pState; }
 
         /**
@@ -78,7 +78,7 @@ namespace sw
         static MeshHandle request( string_view path );
 
         /**
-         * @brief 경로의 메시를 **공유받습니다**. `request` 와 같은 로드 블록을 기다립니다 — 아직 아무도 읽지 않았으면 이 스레드가 읽습니다(`AssetLoadStart::OnCallingThread`).
+         * @brief 경로의 메시를 **공유받습니다**. `request` 와 같은 로드 작업을 기다립니다 — 아직 아무도 읽지 않았으면 이 스레드가 읽습니다(`AssetLoadStart::OnCallingThread`).
          * @return 읽을 수 없으면 nullptr 입니다.
          */
         static shared_ptr<Mesh> acquire( string_view path );
@@ -104,7 +104,7 @@ namespace sw
         size_t getCachedCount() const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
-        /** @brief `.mesh` 경로면 `request` 의 로드 블록(곧 메시)을 붙드는 토큰입니다. 아니면 nullptr 입니다. */
+        /** @brief `.mesh` 경로면 `request` 의 로드 작업(곧 메시)을 붙드는 토큰입니다. 아니면 nullptr 입니다. */
         shared_ptr<const void> pinAsset( string_view relativePath ) override;
 
     private:

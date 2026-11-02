@@ -732,9 +732,9 @@ namespace sw
     void RenderThread::drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream, bool bMainDrew )
     {
         // 씬마다 빠뜨린 배치 수를 이 프레임 것으로 다시 쓴다(캡처 준비 판정 `CaptureReadiness`). 주 화면이 그리지 않은 프레임은 기다릴 그림이 없다.
-        array<ScenePendingWork, 1 + kMaxHostSceneView> arrPending{};
-        uint32                                         pendingCount = 0;
-        arrPending[pendingCount++]                                  = ScenePendingWork{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
+        array<ScenePendingWork, 1 + kMaxPreviewSceneView> arrPending{};
+        uint32                                            pendingCount = 0;
+        arrPending[pendingCount++]                                     = ScenePendingWork{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
 
         // 미리보기 씬(에디터 툴 창)은 씬마다의 렌더러로 자기 타깃에 그린다(`OffscreenSceneRenderers` — 캡처와 같은 길). 사라진 씬의 렌더러는 그 씬과 함께 내린다.
         const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && _pOffscreenRenderers != nullptr && pFrameStream != nullptr;

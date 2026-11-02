@@ -133,7 +133,7 @@ namespace sw
             TextureHandle _load{};       ///< 요청한 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 이유를 한 번 남기고 놓는다.
 
             /** @brief 준비된 텍스처입니다. 읽는 중이거나 요청이 없으면 nullptr 입니다(그동안 부모의 텍스처가 보인다). 다시 올려도 객체는 그대로라 SRV 를 그때마다 읽는다. */
-            Texture2D* findReadyTexture() const { return _load.isReady() ? _load.getBlock()->getTexture() : nullptr; }
+            Texture2D* findReadyTexture() const { return _load.isReady() ? _load.getOperation()->getTexture() : nullptr; }
         };
 
         /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */

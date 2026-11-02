@@ -183,7 +183,7 @@ namespace sw
             // 때까지 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다). 못 읽으면 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
             TextureHandle    load = textures.request( prop._assetPath, AssetLoadStart::Async );
             string           borrowedPath;
-            const Texture2D* pTexture = load.isReady() ? load.getBlock()->getTexture() : nullptr;
+            const Texture2D* pTexture = load.isReady() ? load.getOperation()->getTexture() : nullptr;
             if ( pTexture == nullptr )
             {
                 const bool bLoading = load.isLoading();

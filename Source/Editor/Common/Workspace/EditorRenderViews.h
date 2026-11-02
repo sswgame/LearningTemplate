@@ -2,7 +2,7 @@
  * @file EditorRenderViews.h
  * @brief 에디터가 그리는 뷰(씬 · 게임 · 툴 창의 미리보기 씬)의 렌더 타깃과, 그것을 만들고 ImGui 에 등록하는 RHI 디바이스 · 렌더러 백엔드, 게임 뷰의 입력 상태를 가진 에디터 서브시스템입니다.
  * @details 셸(`ImGuiEditor`)이 컨텍스트를 만든 뒤 디바이스와 백엔드를 알리고(`setRHIDevice` · `setRenderer`), 패널이 뷰 크기에 맞춰 렌더 타깃을 만들고
- *          그린 것을 표시하며, 호스트는 프레임마다 핸들만 읽는다(`ImGuiEditor::getSceneViewport` · `getGameViewport` · `getSceneViews`). 종료(`shutdownSubsystem`)에서 렌더 타깃을 놓는다.
+ *          그린 것을 표시하며, 호스트는 프레임마다 핸들만 읽는다(`ImGuiEditor::getSceneViewport` · `getGameViewport` · `getPreviewSceneViews`). 종료(`shutdownSubsystem`)에서 렌더 타깃을 놓는다.
  *          씬 뷰 · 게임 뷰는 활성 씬의 고정 두 슬롯이고, 툴 창의 미리보기 타깃은 id 로 찾는 가변 목록이다(`allocatePreviewTarget`).
  */
 #pragma once
@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    struct HostSceneView;
+    struct PreviewSceneView;
 
     class IRHIDevice;
 } // namespace sw
@@ -59,7 +59,7 @@ namespace sw::editor
 {
     /**
      * @brief 툴 창(미리보기 씬)이 가지는 뷰 렌더 타깃 하나와 이번 프레임의 눈입니다. id 로 찾습니다(`EditorRenderViews::allocatePreviewTarget`).
-     * @details 호스트에는 `HostViewTargets::_arrSceneView` 로 간다 — 보인 프레임(`submitPreviewView`)에만 간다.
+     * @details 호스트에는 `FrameViewports::_arrPreviewView` 로 간다 — 보인 프레임(`submitPreviewView`)에만 간다.
      */
     struct EditorPreviewViewTarget
     {
@@ -144,8 +144,8 @@ namespace sw::editor
         const EditorPreviewViewTarget* findPreviewTarget( uint32 id ) const;
         /** @brief 툴 창이 이번 프레임에 그 타깃을 보였고, 이 씬 · 이 눈으로 그려 달라고 알립니다. 보인 프레임마다 부릅니다. */
         void submitPreviewView( uint32 id, uint32 sceneKey, const float4x4& viewProj, const float3& cameraPos );
-        /** @brief 이번 프레임에 보인 미리보기 뷰를 호스트 형식으로 씁니다. 쓴 개수를 반환합니다(`ImGuiEditor::getSceneViews`). */
-        uint32 collectSceneViews( HostSceneView* pOutView, uint32 capacity ) const;
+        /** @brief 이번 프레임에 보인 미리보기 뷰를 호스트 형식으로 씁니다. 쓴 개수를 반환합니다(`ImGuiEditor::getPreviewSceneViews`). */
+        uint32 collectSceneViews( PreviewSceneView* pOutView, uint32 capacity ) const;
         /** @brief 지금 가진 미리보기 타깃 수입니다(테스트용). */
         uint32 getPreviewTargetCount() const { return static_cast<uint32>( _listPreviewTarget.size() ); }
 

@@ -161,7 +161,7 @@ namespace sw
          *          (`GameObjectManager::getSceneScope`)가 따로라 서비스(물리 · 오디오 · 내비)도 월드마다 하나씩입니다.
          *          틱은 `tickPreviewScenes` 가 정책대로 하고, 월드 플레이 상태(`setWorldPlaying`)는 따르지 않습니다(`ScenePreviewPolicy::_bPlay` 가 따로 정한다).
          *          디바이스가 걸려 있으면(`setRHIDevice`) 다른 씬과 같이 `adoptScene` 이 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
-         *          그림은 호스트가 이 씬의 키로 뷰를 요청할 때만 나옵니다(`HostSceneView` · `RenderPacketBuilder::populateScenePreviews`).
+         *          그림은 호스트가 이 씬의 키로 뷰를 요청할 때만 나옵니다(`PreviewSceneView` · `RenderPacketBuilder::populateScenePreviews`).
          * @return 만든 씬. 매니저가 소유하며 `destroyPreviewScene` 이나 `shutdownSubsystem` 이 내립니다.
          */
         Scene* createPreviewScene( string_view name, const ScenePreviewPolicy& policy = {} );

@@ -63,7 +63,7 @@ namespace sw::editor
         if ( entry._pTextureID != nullptr && pBackend != nullptr )
             pBackend->unregisterTexture( entry._pTextureID );
         entry._pTextureID    = nullptr;
-        entry._pBlock        = nullptr; // 쥔 참조를 놓는다 — 마지막이면 엔진이 텍스처를 놓는다
+        entry._pOperation    = nullptr; // 쥔 참조를 놓는다 — 마지막이면 엔진이 텍스처를 놓는다
         entry._textureHandle = 0;
     }
 
@@ -75,7 +75,7 @@ namespace sw::editor
         }
         _listEntry.clear();
         _listPendingID.clear();
-        _listLoading.clear(); // 핸들만 놓는다 — 워커가 읽던 로드는 엔진이 끝내고, 참조를 쥐었다면 블록이 사라질 때 스스로 놓는다
+        _listLoading.clear(); // 핸들만 놓는다 — 워커가 읽던 로드는 엔진이 끝내고, 참조를 쥐었다면 로드 작업이 사라질 때 스스로 놓는다
         _listFailedID.clear();
         _uniqueKnownID.clear();
     }
@@ -147,7 +147,7 @@ namespace sw::editor
                 recordFailure( assetID );
                 continue;
             }
-            _listLoading.push_back( Loading{ assetID, handle.getBlock() } );
+            _listLoading.push_back( Loading{ assetID, handle.getOperation() } );
         }
     }
 
@@ -155,29 +155,29 @@ namespace sw::editor
     {
         for ( size_t loadingIndex = 0; loadingIndex < _listLoading.size(); )
         {
-            const TextureLoadBlock& block = *_listLoading[loadingIndex]._pBlock;
+            const TextureLoadOperation& operation = *_listLoading[loadingIndex]._pOperation;
             // 올리기는 렌더 쪽 로드 펌프가 한다 — 여기서는 끝났는지만 본다.
-            const AssetLoadState state = block.getState();
+            const AssetLoadState state = operation.getState();
             if ( state == AssetLoadState::Loading )
             {
                 ++loadingIndex;
                 continue;
             }
             const string assetID = _listLoading[loadingIndex]._assetID;
-            if ( state == AssetLoadState::Failed || adoptReady( assetID, _listLoading[loadingIndex]._pBlock ) == false )
+            if ( state == AssetLoadState::Failed || adoptReady( assetID, _listLoading[loadingIndex]._pOperation ) == false )
                 recordFailure( assetID );
             else
                 _uniqueKnownID.erase( assetID ); // 항목이 생겼다 — 이후엔 항목 목록이 답한다. 쫓겨나면 다시 예약할 수 있게 비운다
-            // 로드 목록에서 지워도 항목이 블록을 쥐었으므로(`adoptReady`) 참조는 남는다.
+            // 로드 목록에서 지워도 항목이 로드 작업을 쥐었으므로(`adoptReady`) 참조는 남는다.
             _listLoading.erase( _listLoading.begin() + static_cast<std::ptrdiff_t>( loadingIndex ) );
         }
     }
 
-    bool EditorThumbnailCache::adoptReady( const string& assetID, const shared_ptr<TextureLoadBlock>& pBlock )
+    bool EditorThumbnailCache::adoptReady( const string& assetID, const shared_ptr<TextureLoadOperation>& pOperation )
     {
         const TextureCache& textures = EditorThumbnailCacheInternal::requireTextureCache();
         ImGuiRenderer*      pBackend = EditorThumbnailCacheInternal::findRenderer();
-        // 끝난 로드가 참조를 쥐고 있다 — 다시 빌리지 않고(`acquire` 는 디바이스 스레드의 일) 그 블록을 항목이 쥔다.
+        // 끝난 로드가 참조를 쥐고 있다 — 다시 빌리지 않고(`acquire` 는 디바이스 스레드의 일) 그 로드 작업을 항목이 쥔다.
         const Texture2D* pTexture           = textures.find( assetID );
         const bool       bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
         if ( bThumbnailUnusable )
@@ -185,7 +185,7 @@ namespace sw::editor
 
         Entry entry{};
         entry._assetID       = assetID;
-        entry._pBlock        = pBlock;
+        entry._pOperation    = pOperation;
         entry._textureHandle = pTexture->getHandle();
         entry._pTextureID    = pBackend->registerTexture( entry._textureHandle );
         entry._lastUsedFrame = _frame;

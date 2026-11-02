@@ -33,9 +33,9 @@ namespace sw
      *        v3: 씬 뷰 / 게임 뷰 분리 — `EditorAPI` 에 `getSceneViewport` 를 더하고 `getViewportCamera` 를 `getSceneViewCamera` 로(EditorAPI 20항목).
      *        v4: 에디터 모듈이 헤드리스 로컬라이제이션 진입점 `runEditorLocalizationTask` 를 내보냄(글 수집 · PO 교환이 엔진에서 에디터로).
      *        v5: 호출처가 없던 `EditorAPI::registerTexture` · `unregisterTexture` 를 지움(EditorAPI 18항목, `TextureHandle` 도 지움).
-     *        v6: 다중 월드 — `EditorAPI::getSceneViews` 로 툴 창의 미리보기 씬 뷰를 넘김(EditorAPI 19항목).
+     *        v6: 다중 월드 — `EditorAPI::getPreviewSceneViews` 로 툴 창의 미리보기 씬 뷰를 넘김(EditorAPI 19항목).
      *        v7: `GameAPI::serializeState` 가 크기 묻기 대신 호스트 할당 싱크(`StateBufferSink`)를 받음(직렬화 한 번).
-     *        v8: `EditorAPI::getGameViewport` · `getSceneViewport` 가 `HostViewTarget` 하나를 채움(창 안 자리가 더해져 게임 뷰의 런타임 UI 가 포인터를 받는다).
+     *        v8: `EditorAPI::getGameViewport` · `getSceneViewport` 가 `ViewportTarget` 하나를 채움(창 안 자리가 더해져 게임 뷰의 런타임 UI 가 포인터를 받는다).
      *        v9: `EditorAPI::getRedrawReasons` 를 더하고(에디터가 조용하면 앱 루프가 잔다) 재정의하는 패널이 없던 `EditorAPI::preRender` 를 지움(EditorAPI 19항목).
      *        v10: `GameAPI::initialize` 가 RHI 디바이스를 받지 않음 — 게임은 디바이스를 쓰지 않는다(렌더 자원은 엔진이 붙은 디바이스로 만든다).
      *        v11: `EditorAPI::prepareRender` 를 더함(EditorAPI 20항목) — UI 업로드를 백버퍼 패스 밖에서 한다. Vulkan 은 패스 안의 복사가 그 패스를 닫아 UI 가 그려지지 않았다.

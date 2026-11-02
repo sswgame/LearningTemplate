@@ -74,9 +74,9 @@ namespace sw
         return kInvalidBase;
     }
 
-    uint32 GPUMeshMorphPool::skinBaseOf( uint32 skinSlot ) const
+    uint32 GPUMeshMorphPool::skinResultStartOf( uint32 skinSlot ) const
     {
-        return ( skinSlot < _listSkinBase.size() && isSkinDispatchable() ) ? _listSkinBase[skinSlot]._resultStart : kInvalidBase;
+        return ( skinSlot < _listSkinResultOffset.size() && isSkinDispatchable() ) ? _listSkinResultOffset[skinSlot]._resultStart : kInvalidBase;
     }
 
     bool GPUMeshMorphPool::isSkinDispatchable() const
@@ -434,7 +434,7 @@ namespace sw
             _morph.release( pDevice );
             _skinInstance.release( pDevice );
             _skinPalette.release( pDevice );
-            _skinBase.release( pDevice );
+            _skinResultOffsets.release( pDevice );
             return;
         }
 
@@ -445,7 +445,7 @@ namespace sw
     {
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 칸마다 하나이고 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );
-        _listSkinBase.clear();
+        _listSkinResultOffset.clear();
         _listSkinMesh.clear();
         _listSkinSlot.clear();
         _listSkinRow.clear();
@@ -458,7 +458,7 @@ namespace sw
             const uint32 skinSlot  = listSkinSlot[skinIndex];
             const auto   morphIt   = ( pMesh != nullptr ) ? _mapMorphEntry.find( pMesh ) : _mapMorphEntry.end();
             const bool   bInMorph  = morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase;
-            const bool   bSeenSlot = skinSlot < _listSkinBase.size() && _listSkinBase[skinSlot]._resultStart != kInvalidBase;
+            const bool   bSeenSlot = skinSlot < _listSkinResultOffset.size() && _listSkinResultOffset[skinSlot]._resultStart != kInvalidBase;
             const bool   bSkipMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || bInMorph || bSeenSlot || skinSlot == kInvalidBase;
             if ( bSkipMesh )
                 continue;
@@ -487,10 +487,10 @@ namespace sw
             row._paletteBase      = _skinBoneCount;
             row._morphTargetCount = pLower != nullptr ? 0u : pMesh->getMorphTargetCount(); // 낮은 단계 정점은 모프 차이가 없다(`Mesh::setLODs`)
             row._morphWeightBase  = _skinMorphWeightCount;                                 // 팔레트 뒤 구간 기준 — 팔레트 본 수가 정해진 뒤 아래에서 절대 위치로 옮긴다
-            if ( skinSlot >= _listSkinBase.size() )
-                _listSkinBase.resize( static_cast<size_t>( skinSlot ) + 1u, GPUSkinBase{} );
+            if ( skinSlot >= _listSkinResultOffset.size() )
+                _listSkinResultOffset.resize( static_cast<size_t>( skinSlot ) + 1u, GPUSkinResultOffset{} );
             // 정점 셰이더는 정점 흐름 번호(낮은 단계면 그 단계 첫 정점부터)에서 첫 정점을 빼고 결과 시작에 더한다.
-            _listSkinBase[skinSlot] = GPUSkinBase{ _skinVertexBase + resultOffset, first };
+            _listSkinResultOffset[skinSlot] = GPUSkinResultOffset{ _skinVertexBase + resultOffset, first };
             _listSkinMesh.push_back( pMesh );
             _listSkinSlot.push_back( skinSlot );
             _listSkinRow.push_back( row );
@@ -524,13 +524,13 @@ namespace sw
                                                          GPUMeshMorphPoolInternal::kWriteUsage, true, true, nullptr );
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );
         // 칸 표 — 원소가 uint2 라 셰이더 선언(StructuredBuffer<uint2>)과 같은 stride 로 만든다. 못 만들면 표가 걸리지 않아 스킨 메시는 그리지 않는다(셰이더가 NaN 위치로 버린다).
-        const uint32 skinBaseCount = static_cast<uint32>( _listSkinBase.size() );
-        if ( skinBaseCount == 0 )
-            _skinBase.release( pDevice );
-        else if ( _skinBase.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUSkinBase ) ), skinBaseCount, GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr ) == false )
-            SW_LOG_ERROR_ID( "GPUMeshMorphPool.FailedCreateSkinBase", "Failed to create the skin slot table (%# slots) - skinned meshes are not drawn", skinBaseCount );
+        const uint32 skinResultOffsetCount = static_cast<uint32>( _listSkinResultOffset.size() );
+        if ( skinResultOffsetCount == 0 )
+            _skinResultOffsets.release( pDevice );
+        else if ( _skinResultOffsets.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUSkinResultOffset ) ), skinResultOffsetCount, GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr ) == false )
+            SW_LOG_ERROR_ID( "GPUMeshMorphPool.FailedCreateSkinResultOffset", "Failed to create the skin slot table (%# slots) - skinned meshes are not drawn", skinResultOffsetCount );
         else
-            _skinBase.upload( pDevice, _listSkinBase.data(), skinBaseCount * static_cast<uint32>( sizeof( GPUSkinBase ) ) );
+            _skinResultOffsets.upload( pDevice, _listSkinResultOffset.data(), skinResultOffsetCount * static_cast<uint32>( sizeof( GPUSkinResultOffset ) ) );
         if ( _skinBoneCount > 0 )
         {
             if ( _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
@@ -802,7 +802,7 @@ namespace sw
             return;
 
         // 칸 → 팔레트 항목 표를 한 번 짓는다 — 인스턴스마다 목록을 훑으면 캐릭터 천 명에서 백만 번 비교다.
-        _listScratchPaletteIndex.assign( _listSkinBase.size(), kInvalidBase );
+        _listScratchPaletteIndex.assign( _listSkinResultOffset.size(), kInvalidBase );
         for ( uint32 paletteIndex = 0; paletteIndex < static_cast<uint32>( listPalette.size() ); ++paletteIndex )
         {
             const uint32 skinSlot = listPalette[paletteIndex]._skinSlot;
@@ -862,13 +862,13 @@ namespace sw
         _skinInstance.release( pDevice );
         _skinPalette.release( pDevice );
         _deformProgram.release( pDevice );
-        _skinBase.release( pDevice );
+        _skinResultOffsets.release( pDevice );
         _listPoolMorph.clear();
         _listDeformProgramGeneration.clear();
         _listFreeMorphSlot.clear();
         _mapMorphEntry.clear();
         _morphAllocator.reset( 0 );
-        _listSkinBase.clear();
+        _listSkinResultOffset.clear();
         _morphLiveVertexCount = 0;
         _listBuiltSkin.clear();
         _listBuiltSkinSlot.clear();

@@ -1072,37 +1072,37 @@ namespace sw
 
     PrefabCache::~PrefabCache()
     {
-        // 워커가 아직 이 캐시로 읽고 있을 수 있다(블록이 원시 포인터를 쥔다). 모두 끝날 때까지 기다린다 — 아무도 집지 않은 로드는 여기서 실행한다.
-        vector<shared_ptr<PrefabLoadBlock>> listLoading;
+        // 워커가 아직 이 캐시로 읽고 있을 수 있다(로드 작업이 원시 포인터를 쥔다). 모두 끝날 때까지 기다린다 — 아무도 집지 않은 로드는 여기서 실행한다.
+        vector<shared_ptr<PrefabLoadOperation>> listLoading;
         {
             UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
-            for ( const auto& [key, weakBlock] : _mapLoading )
+            for ( const auto& [key, weakOperation] : _mapLoading )
             {
-                shared_ptr<PrefabLoadBlock> pBlock = weakBlock.lock();
-                if ( pBlock != nullptr )
-                    listLoading.push_back( std::move( pBlock ) );
+                shared_ptr<PrefabLoadOperation> pOperation = weakOperation.lock();
+                if ( pOperation != nullptr )
+                    listLoading.push_back( std::move( pOperation ) );
             }
         }
-        for ( const shared_ptr<PrefabLoadBlock>& pBlock : listLoading )
+        for ( const shared_ptr<PrefabLoadOperation>& pOperation : listLoading )
         {
-            pBlock->wait();
+            pOperation->wait();
         }
     }
 
-    PrefabLoadBlock::PrefabLoadBlock( PrefabCache* pCache, string_view resolvedPath, string cacheKey )
-        : AssetLoadBlock{ PrefabCache::kAssetKindName, resolvedPath, MemoryTag::Scene }
+    PrefabLoadOperation::PrefabLoadOperation( PrefabCache* pCache, string_view resolvedPath, string cacheKey )
+        : AssetLoadOperation{ PrefabCache::kAssetKindName, resolvedPath, MemoryTag::Scene }
         , _pCache{ pCache }
         , _cacheKey{ std::move( cacheKey ) }
         , _pAsset{}
     {
     }
 
-    bool PrefabLoadBlock::runLoad( string& outError )
+    bool PrefabLoadOperation::runLoad( string& outError )
     {
         _pAsset = _pCache->loadAndCache( getPath() );
         {
-            // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 캐시 둘 중 하나를 반드시 본다.
-            // 이 블록의 칸일 때만 뺀다(다시 읽기가 표를 비운 뒤 새 요청이 새 블록을 넣었을 수 있다).
+            // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
+            // 이 로드 작업의 칸일 때만 뺀다(다시 읽기가 표를 비운 뒤 새 요청이 새 로드 작업을 넣었을 수 있다).
             UniqueLock<shared_mutex> writeLock{ _pCache->_mapCacheMutex };
             const auto               it = _pCache->_mapLoading.find( _cacheKey );
             if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
@@ -1125,7 +1125,7 @@ namespace sw
     {
         if ( AssetTypeRegistry::isPathOfType( relativePath, PrefabAsset::kAssetType ) == false )
             return {};
-        return request( relativePath ).getBlock();
+        return request( relativePath ).getOperation();
     }
 
     PrefabHandle PrefabCache::requestWith( string_view assetRelativePath, AssetLoadStart start )
@@ -1133,33 +1133,33 @@ namespace sw
         const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
         const string cacheKey     = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
 
-        shared_ptr<PrefabLoadBlock> pBlock;
+        shared_ptr<PrefabLoadOperation> pOperation;
         {
             UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
             const auto               loadingIt = _mapLoading.find( cacheKey );
             if ( loadingIt != _mapLoading.end() )
-                pBlock = loadingIt->second.lock();
-            if ( pBlock != nullptr )
+                pOperation = loadingIt->second.lock();
+            if ( pOperation != nullptr )
             {
                 PrefabAssetInternal::getCacheStats().recordHit();
-                return PrefabHandle{ std::move( pBlock ) };
+                return PrefabHandle{ std::move( pOperation ) };
             }
 
             // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
-            pBlock             = sw::make_shared<PrefabLoadBlock>( this, resolvedPath, cacheKey );
+            pOperation         = sw::make_shared<PrefabLoadOperation>( this, resolvedPath, cacheKey );
             const auto cacheIt = _mapCache.find( cacheKey );
             if ( cacheIt != _mapCache.end() )
             {
-                pBlock->_pAsset = cacheIt->second;
-                pBlock->markReadyWithoutLoad();
+                pOperation->_pAsset = cacheIt->second;
+                pOperation->markReadyWithoutLoad();
                 PrefabAssetInternal::getCacheStats().recordHit();
-                return PrefabHandle{ std::move( pBlock ) };
+                return PrefabHandle{ std::move( pOperation ) };
             }
-            _mapLoading[cacheKey] = pBlock;
+            _mapLoading[cacheKey] = pOperation;
             PrefabAssetInternal::getCacheStats().recordMiss();
         }
-        AssetLoadBlock::startLoad( pBlock, start );
-        return PrefabHandle{ std::move( pBlock ) };
+        AssetLoadOperation::startLoad( pOperation, start );
+        return PrefabHandle{ std::move( pOperation ) };
     }
 
     shared_ptr<const PrefabAsset> PrefabCache::loadPrefab( string_view assetRelativePath )
@@ -1253,7 +1253,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "PrefabAsset.CircularNestedPrefabReference", "Circular nested prefab reference: '%#' places '%#', which is already being loaded", asset.getName(), childPath );
                     continue;
                 }
-                // 원본은 이 스레드에서 읽는다(`loadAndCache`) — 다른 스레드의 로드 블록을 기다리면 순환한 두 프리팹을 두 워커가 읽을 때 서로를 기다린다.
+                // 원본은 이 스레드에서 읽는다(`loadAndCache`) — 다른 스레드의 로드 작업을 기다리면 순환한 두 프리팹을 두 워커가 읽을 때 서로를 기다린다.
                 const bool bLoadFailed = loadAndCache( childPath ) == nullptr;
                 if ( bLoadFailed && cycleFloor > depth )
                     SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot2", "Nested prefab '%#' in '%#' could not be loaded - that instance is skipped when spawning", childPath, asset.getName() );

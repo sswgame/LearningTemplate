@@ -69,10 +69,10 @@ namespace sw
         return packet;
     }
 
-    void RenderPacketBuilder::populateScene( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
+    void RenderPacketBuilder::populateScene( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
                                              Scene* pActiveScene, float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer )
     {
-        const HostViewTarget& mainOutput = views.getMainOutput();
+        const ViewportTarget& mainOutput = views.getMainOutput();
         packet._outputRenderTarget       = mainOutput._renderTarget;
         packet._viewportWidth            = mainOutput._width;
         packet._viewportHeight           = mainOutput._height;
@@ -97,7 +97,7 @@ namespace sw
         _scene.populateGPUSceneSnapshot( packet, pActiveScene, _gpuUploadQueue.get() );
     }
 
-    void RenderPacketBuilder::populateScenePreviews( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager )
+    void RenderPacketBuilder::populateScenePreviews( RenderFramePacket& packet, const FrameViewports& views, const SceneManager& sceneManager )
     {
         _previews.populate( packet, views, sceneManager, _gpuUploadQueue.get() );
     }

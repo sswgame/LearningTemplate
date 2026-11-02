@@ -114,11 +114,11 @@ namespace sw
         inline constexpr uint32 kLightProbeBuffer      = SW_SLOT_LIGHT_PROBE_SRV;
         inline constexpr uint32 kLightProbeFloat4Count = SW_LIGHT_PROBE_FLOAT4_COUNT;
         /**
-         * @brief 스킨 칸 → 결과 시작 표(g_SwSkinBases, `uint` 배열)입니다. 칸마다 모프 풀 안 그 스킨 결과의 첫 원소(못 든 칸은 무효)입니다.
-         * @details 인스턴스의 `GPUInstance::_skinSlot` 으로 읽는다(binding.hlsli `MorphPool::loadSkinBase`). RT 의 모프 풀이 스킨 집합이 바뀐 프레임에만 올린다.
+         * @brief 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, `uint` 배열)입니다. 칸마다 모프 풀 안 그 스킨 결과의 첫 원소(못 든 칸은 무효)입니다.
+         * @details 인스턴스의 `GPUInstance::_skinSlot` 으로 읽는다(binding.hlsli `MorphPool::loadSkinResultOffset`). RT 의 모프 풀이 스킨 집합이 바뀐 프레임에만 올린다.
          */
-        inline constexpr uint32 kSkinBaseBuffer = SW_SLOT_SKIN_BASE_SRV;
-        inline constexpr uint32 kSRVSlotCount   = SW_SRV_SLOT_COUNT;
+        inline constexpr uint32 kSkinResultOffsetBuffer = SW_SLOT_SKIN_RESULT_OFFSET_SRV;
+        inline constexpr uint32 kSRVSlotCount           = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 2-1) 라이트 원소의 타입 값. binding_slots.hlsli 가 기준이다(셰이더와 같은 파일).
@@ -347,7 +347,7 @@ namespace sw
             inline constexpr const utf8* kParticles            = "g_SwParticles";          ///< t11(투명 패스의 입자 그리기). 방출기 하나의 입자(particle.hlsl)
             inline constexpr const utf8* kLightGrid            = "g_SwLightGrid";          ///< t12(그래픽스). 뷰마다의 라이트 그리드 단어
             inline constexpr const utf8* kLightProbes          = "g_SwLightProbes";        ///< t13(그래픽스). 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개)
-            inline constexpr const utf8* kSkinBases            = "g_SwSkinBases";          ///< t14(그래픽스). 스킨 칸 → 결과 시작 표
+            inline constexpr const utf8* kSkinResultOffsets    = "g_SwSkinResultOffsets";  ///< t14(그래픽스). 스킨 칸 → 결과 시작 표
             inline constexpr const utf8* kLightGridLights      = "g_LightGridLights";      ///< light_grid 컴퓨트 t0. 씬 라이트 버퍼(g_SwLights 와 같은 버퍼)
             inline constexpr const utf8* kLightGridViews       = "g_LightGridViews";       ///< light_grid 컴퓨트 t1. 뷰마다의 뷰-투영과 깊이 조각 상수
             inline constexpr const utf8* kLightGridRw          = "g_LightGridRW";          ///< light_grid 컴퓨트 u0. 뷰마다의 그리드를 쓴다
@@ -392,7 +392,7 @@ namespace sw
         static_assert( kPassBuffer == kVertexAnimationBuffer + 1, "패스 전용 버퍼는 VAT 표 다음이다" );
         static_assert( kLightGridBuffer == kPassBuffer + 1, "라이트 그리드는 패스 전용 버퍼 다음이다" );
         static_assert( kLightProbeBuffer == kLightGridBuffer + 1, "라이트 프로브는 라이트 그리드 다음이다" );
-        static_assert( kSkinBaseBuffer == kLightProbeBuffer + 1 && kSkinBaseBuffer + 1 == kSRVSlotCount, "스킨 칸 표는 라이트 프로브 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kSkinResultOffsetBuffer == kLightProbeBuffer + 1 && kSkinResultOffsetBuffer + 1 == kSRVSlotCount, "스킨 칸 표는 라이트 프로브 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
                            kLightTypeFreeform2D < kLightTypeCount && kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount &&

@@ -35,7 +35,7 @@ namespace sw
         RenderViewSettings          _settings;
         hashed_string               _outputPath;                ///< 렌더 텍스처 경로
         Texture2D*                  _pOutputTexture{ nullptr }; ///< 빌려 쓰는 렌더 텍스처(`TextureCache`)
-        RHITextureHandle            _hostTarget{ 0 };           ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
+        RHITextureHandle            _viewportTarget{ 0 };       ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
         uint64                      _viewID{ 0 };
         RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
         RHIDescriptorIndex          _taaHistorySRV{ kInvalidDescriptorIndex };

@@ -258,7 +258,7 @@ namespace sw
         }
     }
 
-    void RenderViewCollector::appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView )
+    void RenderViewCollector::appendViewportView( CameraComponent& camera, const ViewportTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView )
     {
         if ( target.isValid() == false )
             return;
@@ -269,8 +269,8 @@ namespace sw
         request._settings._screenRect = float4{ 0.0f, 0.0f, 1.0f, 1.0f };
         request._settings._viewMode   = viewMode;
         request._viewID               = camera.getComponentID();
-        request._outputKind           = RenderViewOutputKind::HostTarget;
-        request._hostTarget           = target._renderTarget;
+        request._outputKind           = RenderViewOutputKind::ViewportTarget;
+        request._viewportTarget       = target._renderTarget;
         request._outputWidth          = target._width;
         request._outputHeight         = target._height;
         request._viewProj             = camera.getViewProjectionMatrix( static_cast<float32>( target._width ) / static_cast<float32>( target._height ) );

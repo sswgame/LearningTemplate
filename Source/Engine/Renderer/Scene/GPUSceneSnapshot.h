@@ -74,7 +74,7 @@ namespace sw
         float32 _appearance{ 1.0f };
         /**
          * @brief 스킨 칸(`MeshComponent::getSkinSlot` — 유닛 · 군중 묶음마다 게임 스레드가 준 오래 가는 번호)입니다. 스킨 결과가 없으면 무효입니다. 셰이더의 `skinSlot` 에 해당한다.
-         * @details 스킨 결과는 메시가 아니라 칸마다 하나라(모프 풀이 칸마다 결과 구간, RT 의 칸 → 시작 표 `g_SwSkinBases`) 같은 메시를 그리는 캐릭터들이 한 배치다.
+         * @details 스킨 결과는 메시가 아니라 칸마다 하나라(모프 풀이 칸마다 결과 구간, RT 의 칸 → 시작 표 `g_SwSkinResultOffsets`) 같은 메시를 그리는 캐릭터들이 한 배치다.
          */
         uint32 _skinSlot{ constant::invalid_index::kUint32 };
     };

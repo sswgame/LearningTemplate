@@ -145,7 +145,7 @@ namespace sw
 
     bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency )
     {
-        // 블로킹 헬퍼: 제출 → 대기 → 끝내기. 비동기 로드는 같은 두 단계를 프레임에 나눠 한다(`TextureLoadBlock`).
+        // 블로킹 헬퍼: 제출 → 대기 → 끝내기. 비동기 로드는 같은 두 단계를 프레임에 나눠 한다(`TextureLoadOperation`).
         if ( beginUploadFromImage( pDevice, relativePath, image, residency, true ) != Texture2DUploadStep::Submitted )
             return false;
         return finishUpload( pDevice, true ) == Texture2DUploadStatus::Ready;

@@ -41,7 +41,7 @@
 - `PackManager` 는 (도메인, 상대 경로) 색인 하나. 팩 머리에 마운트 도메인을 적고(언리얼 pak mount point) 패치 교체 · 제거도 같은 키. **지금 결함**: 도메인 없는 키로 읽으면 패치가 바꾸거나 지운 파일이 보이지 않는다(`visitPacksWithFile` 1 단계 해시가 전체 경로 기준), `dlc/<이름>` 은 팩에서 못 찾는다.
 - 확인과 실행을 맞춘다: `hasAsset` 이 폴더에 true(읽기는 `isRegularFile`), `collectAssets` 가 소스 구성에선 한 도메인 · 팩 구성에선 합집합, `LocalizationManagerReload::isSamePath` 의 꼬리 글자 비교.
 - 리소스 참조 형식: 장면 데이터의 `string _…Path` 속성 약 60 개를 리소스 참조 형식으로(`FileUtil` 이 받을 수 없게). `IntentTrackControllerComponent::_trackFile` 은 지금 `FileUtil` 로 작업 폴더 기준 읽기(런타임 결함).
-- 캐시: `AudioClipCache` 를 `AssetCacheBase` + `AssetLoadBlock` 으로(지금은 `finishPendingAssetWork` 가 오디오 디코드를 기다리지 않는다, 리로드도 DevTools 별도 길). `TextureCache` 의 `rendertarget/` · `cpu/` 는 가상 도메인, 선언하지 않은 렌더 타깃은 256×256 으로 만들지 않고 오류. `AssetDatabase::toRelativePath` 는 `toAssetID` 로 합친다.
+- 캐시: `AudioClipCache` 를 `AssetCacheBase` + `AssetLoadOperation` 으로(지금은 `finishPendingAssetWork` 가 오디오 디코드를 기다리지 않는다, 리로드도 DevTools 별도 길). `TextureCache` 의 `rendertarget/` · `cpu/` 는 가상 도메인, 선언하지 않은 렌더 타깃은 256×256 으로 만들지 않고 오류. `AssetDatabase::toRelativePath` 는 `toAssetID` 로 합친다.
 
 - **결정(2026-10-31)**: `TextureCache` 의 렌더 타깃 기본 크기(256)는 그대로 둔다 — 카메라가 나중에 크기를 알리면 `resizeRenderTarget` 이 다시 만들어 맞추므로 폴백이 아니라 자리 표시 값이다(언리얼 렌더 타깃 에셋의 기본 크기와 같다). 씬 데이터의 `string _…Path` 칸(컴포넌트 44 개)을 참조 형식으로 바꾸는 일은 하지 않는다 — 그 값이 디스크 입구(`FileUtil`)로 가는 곳은 0 이고(조사), 7 단계부터 상대 경로가 OS 경계에 닿으면 오류라 남은 위험도 드러난다. 리플렉션 · 세 직렬화기 · 에디터 위젯을 바꾸는 비용에 견줘 얻는 것이 작다(새 결함이 이 모양으로 나오면 그때 형식으로).
 - `AudioClipCache` 의 디코드는 에셋 로드 단계(`AssetManager::addLoadTask`)에 넣는다(끝, 2026-10-31) — 프레임 경계 대기가 오디오도 기다린다.
@@ -295,7 +295,7 @@
 | 층 | 바꿀 것 |
 |---|---|
 | 정체성 | 스킨 칸(`GPUSkinSlot` — 스킨을 내는 유닛 · 군중 묶음마다 GT 가 빈 칸 목록에서 받는 오래 가는 번호)을 팔레트 항목(`GPUSkinPalette::_pMesh` 대신)과 인스턴스가 싣는다. 구간 컴포넌트(`MeshSectionComponent`)는 따르는 주 메시 컴포넌트의 칸을 싣는다. 프레임마다 바뀌는 번호(팔레트 순서)를 쓰지 않는 까닭 — 인스턴스를 매 프레임 다시 올리게 된다 |
-| 모프 풀 | 결과 구간을 스킨 칸마다 하나(`_mapSkinBase` 의 키), 원본은 지금처럼 스킨 데이터 번호마다 한 번. RT 가 칸 → 결과 시작 표(`g_SwSkinBase`, 칸 수만큼의 uint)를 바뀐 프레임에만 올린다 |
+| 모프 풀 | 결과 구간을 스킨 칸마다 하나(`_listSkinResultOffset` 의 키), 원본은 지금처럼 스킨 데이터 번호마다 한 번. RT 가 칸 → 결과 시작 표(`g_SwSkinResultOffset`, 칸 수만큼의 uint)를 바뀐 프레임에만 올린다 |
 | 인스턴스 | `InstanceData::_reserved1` → `_skinSlot`(변형 없으면 무효). `MorphPool::computeElement` 가 인스턴스의 칸으로 표를 읽는다(부르는 곳 셋 — `InstanceData::loadAnimatedVertex` · `highlight_outline` · `material_shader_main` — 이 모두 인스턴스를 쥐었다) — `BatchData::_morphVertexBase` 는 지운다 |
 | 배치 | 사본이 없으니 같은 메시 · 구간 · 머티리얼의 캐릭터가 한 배치다(드로우 수가 캐릭터 수와 무관). 변형 거절(`_bDeformRefused`)은 인스턴스 단위로 — 컬링(`gpu_cull.hlsl`)이 변형이 필요한데 표의 칸이 무효인 인스턴스를 가시 목록에 넣지 않는다(레스트 포즈로 대신 그리지 않는다) |
 | 애니메이션 | `SkeletalMeshComponent::resolveSkinInstanceMesh` 의 사본 · 군중의 홀로 메시(`acquireSoloMesh`) · 묶음 메시를 지운다 — 묶음은 키 하나를 나눠 쓴다 |
@@ -315,7 +315,7 @@
 |---|---|
 | 메시 | 단계마다 LOD 0 구간 순서의 범위(`MeshLODLevel::_listSectionRange` → `MeshLOD::_listSectionRange`, 그릴 흐름 기준). 모프 메시도 받고 낮은 단계에는 모프가 없다. `findDrawSection` 이 단계의 구간 범위를 쓴다 |
 | 선택 | 구간 컴포넌트는 주 메시의 단계를 따른다(`MeshComponent::setLODIndex`). 스킨 칸 · 구간 메시는 늘 CPU 가 고른다 — GPU 인스턴스 LOD 그룹과 CPU 선택이 한 규칙(`MeshLODSystem::isGPUSelectable`)을 쓴다 |
-| 스킨 캐시 | 팔레트가 단계를 싣고(`GPUSkinPalette::_lodIndex`, 군중 묶음은 멤버마다 거리가 달라 모든 단계) 모프 풀이 그 단계 정점만 스킨 행으로. 칸 표 원소는 (결과 시작, 단계 첫 정점)(`GPUSkinBase`, 셰이더 `uint2`) |
+| 스킨 캐시 | 팔레트가 단계를 싣고(`GPUSkinPalette::_lodIndex`, 군중 묶음은 멤버마다 거리가 달라 모든 단계) 모프 풀이 그 단계 정점만 스킨 행으로. 칸 표 원소는 (결과 시작, 단계 첫 정점)(`GPUSkinResultOffset`, 셰이더 `uint2`) |
 | 단순화 | `CharacterMeshLOD::buildLODs` — 구간마다 `meshopt_simplify`(경계 잠금, 옷과 몸 틈이 벌어지지 않게), 단계가 쓰는 정점만 스킨과 함께 모은다. 표는 데이터(`engine/character/characterlod.xml`) |
 | 짓기 | 외형의 굽기 · 합치기 · LOD 를 `CharacterAppearanceMeshBuild` 로 묶어 워커에서(`AssetManager::launchLoadWork` — 게임 모듈은 태스크 매니저를 보지 않는다, 로드 단계라 결정적 실행이 기다린다). 캐시 읽기 · 쓰기와 걸기는 게임 스레드. 짓는 중인 같은 차림은 키로 나눈다 |
 

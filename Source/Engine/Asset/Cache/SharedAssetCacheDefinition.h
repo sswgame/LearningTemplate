@@ -59,9 +59,9 @@ namespace sw
     template <typename AssetType>
     SharedAssetHandle<AssetType> SharedAssetCache<AssetType>::requestWith( string_view path, AssetLoadStart start )
     {
-        bool                                        bStartLoad = false;
-        shared_ptr<SharedAssetLoadBlock<AssetType>> pBlock     = getTable().request( path, SharedAssetCacheTraits<AssetType>::kKindName, SharedAssetCacheTraits<AssetType>::kMemoryTag, bStartLoad );
-        // 새 로드를 시작해야 하면 실패, 준비된 블록이나 읽는 중인 블록을 받았으면 적중이다. 빈 경로는 조회가 아니다.
+        bool                                            bStartLoad = false;
+        shared_ptr<SharedAssetLoadOperation<AssetType>> pOperation = getTable().request( path, SharedAssetCacheTraits<AssetType>::kKindName, SharedAssetCacheTraits<AssetType>::kMemoryTag, bStartLoad );
+        // 새 로드를 시작해야 하면 실패, 준비된 로드 작업이나 읽는 중인 로드 작업을 받았으면 적중이다. 빈 경로는 조회가 아니다.
         if ( path.empty() == false )
         {
             if ( bStartLoad )
@@ -70,8 +70,8 @@ namespace sw
                 getSharedAssetCacheStats<AssetType>().recordHit();
         }
         if ( bStartLoad )
-            AssetLoadBlock::startLoad( pBlock, start );
-        return SharedAssetHandle<AssetType>{ std::move( pBlock ) };
+            AssetLoadOperation::startLoad( pOperation, start );
+        return SharedAssetHandle<AssetType>{ std::move( pOperation ) };
     }
 
     template <typename AssetType>

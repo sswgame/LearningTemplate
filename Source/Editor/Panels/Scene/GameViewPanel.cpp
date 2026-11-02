@@ -118,7 +118,7 @@ namespace sw::editor
         const ImVec2 imagePos{ origin.x + rect._offset._x, origin.y + rect._offset._y };
         const ImVec2 imageSize{ rect._size._x, rect._size._y };
         // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
-        // 이미지 자리도 함께 알린다 — 런타임 UI 가 창 픽셀 포인터를 게임 뷰 픽셀로 옮긴다(`HostViewTarget::_windowX`).
+        // 이미지 자리도 함께 알린다 — 런타임 UI 가 창 픽셀 포인터를 게임 뷰 픽셀로 옮긴다(`ViewportTarget::_windowX`).
         editorContext.getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
         forwardDetachedInput();
         ImGui::SetCursorScreenPos( imagePos );

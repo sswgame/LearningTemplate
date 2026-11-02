@@ -177,7 +177,7 @@ namespace sw
             if ( onComplete.isBound() )
                 _mapInFlightDataCallback[pathStr].push_back( onComplete );
 
-            if ( AssetLoadBlock::canLoadOnWorker() )
+            if ( AssetLoadOperation::canLoadOnWorker() )
                 bIssueRead = true;
             else
                 startRequestLocked( pathStr, generation, true, priority );
@@ -253,7 +253,7 @@ namespace sw
 
     void AssetStreamingQueue::startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority )
     {
-        if ( AssetLoadBlock::canLoadOnWorker() )
+        if ( AssetLoadOperation::canLoadOnWorker() )
         {
             TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
                 "AssetStreamingTask",

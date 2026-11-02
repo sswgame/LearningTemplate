@@ -553,10 +553,10 @@ namespace sw
         hashed_string _swMorphVertices{ "SwMorphVertices" };
         /// @brief 그 풀의 원소 수입니다. PassCB g_SwMorphVertexCount 에 대응합니다.
         hashed_string _swMorphVertexCount{ "g_SwMorphVertexCount" };
-        /// @brief 스킨 칸 → 결과 시작 표입니다. binding.hlsli 의 g_SwSkinBases(t14)와 PassCB g_SwSkinBasesIndex 에 대응합니다.
-        hashed_string _swSkinBases{ "SwSkinBases" };
-        /// @brief 그 표의 칸 수입니다. PassCB g_SwSkinBaseCount 에 대응합니다.
-        hashed_string _swSkinBaseCount{ "g_SwSkinBaseCount" };
+        /// @brief 스킨 칸 → 결과 시작 표입니다. binding.hlsli 의 g_SwSkinResultOffsets(t14)와 PassCB g_SwSkinResultOffsetsIndex 에 대응합니다.
+        hashed_string _swSkinResultOffsets{ "SwSkinResultOffsets" };
+        /// @brief 그 표의 칸 수입니다. PassCB g_SwSkinResultOffsetCount 에 대응합니다.
+        hashed_string _swSkinResultOffsetCount{ "g_SwSkinResultOffsetCount" };
         /// @brief 컬링이 만든 가시 인스턴스 ID 목록입니다. binding.hlsli g_SwVisibleInstanceIDs 와 "SwVisibleInstanceIDs" 에 대응합니다.
         hashed_string _swVisibleInstanceIDs{ "SwVisibleInstanceIDs" };
         /// @brief 배치의 머티리얼 데이터 구조 버퍼입니다. binding.hlsli g_SwMaterials 와 "SwMaterials" 에 대응하며, 배치마다 등록합니다.

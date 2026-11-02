@@ -526,9 +526,9 @@ namespace sw
         }
     }
 
-    void Engine::updateScenes( float32 deltaTime, const HostViewTargets& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene )
+    void Engine::updateScenes( float32 deltaTime, const FrameViewports& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene )
     {
-        const HostViewTarget& mainOutput = views.getMainOutput();
+        const ViewportTarget& mainOutput = views.getMainOutput();
         _sceneDeltaSeconds               = bTickScene ? deltaTime : 0.0f;
         BLOCK( "Scene update" )
         {
@@ -537,7 +537,7 @@ namespace sw
             Scene* pTickScene = ( _pSceneManager != nullptr ) ? _pSceneManager->getActiveScene() : nullptr;
             if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
                 pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
-            // 입력의 게임 화면도 같은 값이다(포인터 비율 · 가상 커서 영역). 창 안 위치는 주 출력이 그린 이미지의 위치다(HostViewTarget::_windowX · _windowY, 백버퍼면 0).
+            // 입력의 게임 화면도 같은 값이다(포인터 비율 · 가상 커서 영역). 창 안 위치는 주 출력이 그린 이미지의 위치다(ViewportTarget::_windowX · _windowY, 백버퍼면 0).
             if ( _pInputManager != nullptr )
                 _pInputManager->setGameViewRect( InputViewRect{
                     int2{          mainOutput._windowX,            mainOutput._windowY},
@@ -549,12 +549,12 @@ namespace sw
             // 틱 여부는 이번 프레임에 그려지는지다 — 렌더 패킷(`RenderPacketBuilder::populateScenePreviews`)과 같은 요청 · 같은 조건(유효한 타깃)으로 고른다.
             if ( _pSceneManager != nullptr )
             {
-                uint32       arrDrawnSceneKey[kMaxHostSceneView]{};
+                uint32       arrDrawnSceneKey[kMaxPreviewSceneView]{};
                 uint32       drawnSceneCount = 0;
-                const uint32 requestCount    = MathUtil::min( views._sceneViewCount, kMaxHostSceneView );
+                const uint32 requestCount    = MathUtil::min( views._previewViewCount, kMaxPreviewSceneView );
                 for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
                 {
-                    const HostSceneView& request = views._arrSceneView[requestIndex];
+                    const PreviewSceneView& request = views._arrPreviewView[requestIndex];
                     if ( request._target.isValid() )
                         arrDrawnSceneKey[drawnSceneCount++] = request._sceneKey;
                 }
@@ -565,7 +565,7 @@ namespace sw
         }
     }
 
-    void Engine::updateRuntimeUI( const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight )
+    void Engine::updateRuntimeUI( const ViewportTarget& mainOutput, uint32 vpWidth, uint32 vpHeight )
     {
         if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
@@ -585,10 +585,10 @@ namespace sw
         _pUISystem->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
     }
 
-    void Engine::update( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
+    void Engine::update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
     {
         // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
-        const HostViewTarget& mainOutput = views.getMainOutput();
+        const ViewportTarget& mainOutput = views.getMainOutput();
         // 게임이 그려지는 픽셀 크기 — 주 출력이 있으면 그 크기(에디터 게임 뷰의 이미지), 없으면 백버퍼(게임 창)다. 창 크기가 아니다:
         // 에디터의 게임 뷰는 창의 일부라 창 크기로 종횡비를 세면 카메라가 늘어난다. 카메라(종횡비 · 픽셀 퍼펙트)와 런타임 UI 가 이 값 하나를 쓴다.
         const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
@@ -741,7 +741,7 @@ namespace sw
             _pRenderThread->drainPackets();
     }
 
-    void Engine::submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
+    void Engine::submitRenderPacket( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
     {
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {

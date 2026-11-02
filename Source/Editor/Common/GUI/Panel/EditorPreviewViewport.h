@@ -2,7 +2,7 @@
  * @file EditorPreviewViewport.h
  * @brief 툴 창 안의 미리보기 씬 뷰포트 하나입니다. 미리보기 씬, 조명 환경, 오빗 카메라, 렌더 타깃을 함께 가지고 있습니다.
  * @details 창(`EditorPreviewPanel`)이 값으로 보관하고, 창마다 하나씩 있습니다. 렌더는 엔진이 씬마다 따로 하므로 활성 씬과 섞이지 않습니다
- *          (`HostSceneView` → `RenderPacketBuilder::populateScenePreviews` → `OffscreenSceneRenderers::execute`).
+ *          (`PreviewSceneView` → `RenderPacketBuilder::populateScenePreviews` → `OffscreenSceneRenderers::execute`).
  *          언리얼의 `FPreviewScene` 과 `SEditorViewport`, 유니티의 `PreviewRenderUtility` 에 해당합니다.
  */
 #pragma once

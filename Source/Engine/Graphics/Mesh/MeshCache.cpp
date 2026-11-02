@@ -26,16 +26,16 @@ namespace sw
     /**
      * @struct MeshCache::State
      * @brief 메시 캐시의 상태 전부입니다 — 공유 테이블(경로 → 약한 참조), 읽는 중인 로드, 경고한 경로.
-     * @details 캐시(에셋 매니저가 소유한 내장 캐시)가 든다. 정적 창구(`request` · `acquire` · `reloadShared`)와 로드 블록은 엔진의 에셋 매니저에서 찾은 캐시의 것을 쓴다.
+     * @details 캐시(에셋 매니저가 소유한 내장 캐시)가 든다. 정적 창구(`request` · `acquire` · `reloadShared`)와 로드 작업은 엔진의 에셋 매니저에서 찾은 캐시의 것을 쓴다.
      *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다.
      */
     struct MeshCache::State
     {
-        /** @brief 읽는 중인 로드입니다. 같은 경로를 동시에 요청하면 같은 블록을 받습니다(이중 읽기 없음). 로드 단계가 끝나면 지웁니다. */
+        /** @brief 읽는 중인 로드입니다. 같은 경로를 동시에 요청하면 같은 로드 작업을 받습니다(이중 읽기 없음). 로드 단계가 끝나면 지웁니다. */
         struct InFlightTable
         {
-            mutex                                          _mutex;
-            unordered_map<string, weak_ptr<MeshLoadBlock>> _mapKeyToBlock;
+            mutex                                              _mutex;
+            unordered_map<string, weak_ptr<MeshLoadOperation>> _mapKeyToOperation;
         };
 
         WeakInternTable<string, Mesh> _sharedTable{};
@@ -81,13 +81,13 @@ namespace sw
 
 namespace sw
 {
-    MeshLoadBlock::MeshLoadBlock( string_view path )
-        : AssetLoadBlock{ MeshCache::kAssetKindName, path, MemoryTag::Mesh }
+    MeshLoadOperation::MeshLoadOperation( string_view path )
+        : AssetLoadOperation{ MeshCache::kAssetKindName, path, MemoryTag::Mesh }
         , _pMesh{}
     {
     }
 
-    bool MeshLoadBlock::runLoad( string& outError )
+    bool MeshLoadOperation::runLoad( string& outError )
     {
         const string_view path = getPath();
         const string      key  = MeshCacheInternal::makeKey( path );
@@ -115,11 +115,11 @@ namespace sw
             }
         }
 
-        // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 캐시 둘 중 하나를 반드시 본다.
+        // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
         {
             MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
             ScopedLock<mutex>                 lock{ inFlight._mutex };
-            inFlight._mapKeyToBlock.erase( key );
+            inFlight._mapKeyToOperation.erase( key );
         }
         if ( bLoaded == false )
         {
@@ -150,40 +150,40 @@ namespace sw
     {
         if ( path.empty() )
         {
-            shared_ptr<MeshLoadBlock> pFailed = sw::make_shared<MeshLoadBlock>( path );
+            shared_ptr<MeshLoadOperation> pFailed = sw::make_shared<MeshLoadOperation>( path );
             pFailed->markFailedWithoutLoad( "the mesh path is empty" );
             return MeshHandle{ std::move( pFailed ) };
         }
 
         const string                      key      = MeshCacheInternal::makeKey( path );
         MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
-        shared_ptr<MeshLoadBlock>         pBlock;
+        shared_ptr<MeshLoadOperation>     pOperation;
         {
             ScopedLock<mutex> lock{ inFlight._mutex };
-            const auto        it = inFlight._mapKeyToBlock.find( key );
-            if ( it != inFlight._mapKeyToBlock.end() )
-                pBlock = it->second.lock();
-            if ( pBlock != nullptr )
+            const auto        it = inFlight._mapKeyToOperation.find( key );
+            if ( it != inFlight._mapKeyToOperation.end() )
+                pOperation = it->second.lock();
+            if ( pOperation != nullptr )
             {
                 MeshCacheInternal::getStats().recordHit();
-                return MeshHandle{ std::move( pBlock ) };
+                return MeshHandle{ std::move( pOperation ) };
             }
 
             // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
-            pBlock                = sw::make_shared<MeshLoadBlock>( path );
+            pOperation            = sw::make_shared<MeshLoadOperation>( path );
             shared_ptr<Mesh> live = MeshCacheInternal::getState()._sharedTable.findLive( key );
             if ( live != nullptr )
             {
-                pBlock->_pMesh = std::move( live );
-                pBlock->markReadyWithoutLoad();
+                pOperation->_pMesh = std::move( live );
+                pOperation->markReadyWithoutLoad();
                 MeshCacheInternal::getStats().recordHit();
-                return MeshHandle{ std::move( pBlock ) };
+                return MeshHandle{ std::move( pOperation ) };
             }
-            inFlight._mapKeyToBlock[key] = pBlock;
+            inFlight._mapKeyToOperation[key] = pOperation;
             MeshCacheInternal::getStats().recordMiss();
         }
-        AssetLoadBlock::startLoad( pBlock, start );
-        return MeshHandle{ std::move( pBlock ) };
+        AssetLoadOperation::startLoad( pOperation, start );
+        return MeshHandle{ std::move( pOperation ) };
     }
 
     shared_ptr<Mesh> MeshCache::acquire( string_view path )
@@ -211,7 +211,7 @@ namespace sw
     {
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) == false )
             return {};
-        return request( relativePath ).getBlock();
+        return request( relativePath ).getOperation();
     }
 
     void MeshCache::clear()

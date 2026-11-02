@@ -7,8 +7,8 @@
 
 namespace sw
 {
-    struct HostSceneView;
-    struct HostViewTarget;
+    struct PreviewSceneView;
+    struct ViewportTarget;
     struct NativeWindowEvent;
 
     class CameraComponent;
@@ -61,13 +61,13 @@ namespace sw
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어에 전달합니다. */
         virtual bool processEvent( const NativeWindowEvent& event ) = 0;
         /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 @p pOutTarget 에 씁니다. 게임 뷰 패널이 보이지 않으면 빈 값입니다. */
-        virtual void getGameViewport( HostViewTarget* pOutTarget ) const = 0;
+        virtual void getGameViewport( ViewportTarget* pOutTarget ) const = 0;
         /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 씁니다. 씬 뷰가 보이지 않으면 빈 값입니다. 두 뷰가 모두 보이지 않으면 씬 뷰 렌더 타깃을 씁니다. */
-        virtual void getSceneViewport( HostViewTarget* pOutTarget ) const = 0;
+        virtual void getSceneViewport( ViewportTarget* pOutTarget ) const = 0;
         /** @brief 이번 프레임 씬 뷰를 그리는 카메라(에디터 카메라)를 반환합니다. */
         virtual CameraComponent* getSceneViewCamera() const = 0;
         /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다. */
-        virtual uint32 getSceneViews( HostSceneView* pOutView, uint32 capacity ) const = 0;
+        virtual uint32 getPreviewSceneViews( PreviewSceneView* pOutView, uint32 capacity ) const = 0;
         /**
          * @brief 플레이어가 조종하는 세션(PIE Play)이 실행 중이면 true 입니다. Step 대기 중일 때도 true 입니다.
          * @details 호스트는 이 값으로 게임 모듈 업데이트와 게임 입력을 켠다. Simulate(월드만)는 false 이고, 씬 틱은 `isPaused` 가 정한다.

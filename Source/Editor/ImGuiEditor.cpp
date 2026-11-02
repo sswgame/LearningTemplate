@@ -185,11 +185,11 @@ namespace sw::editor
             }
 
             /** @brief 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 호스트 형식으로 씁니다. @p pView 가 없으면 빈 값이며, 이번 프레임에 그 뷰를 그리지 않았다는 뜻입니다. */
-            static void writeViewport( const EditorViewTarget* pView, HostViewTarget* pOutTarget )
+            static void writeViewport( const EditorViewTarget* pView, ViewportTarget* pOutTarget )
             {
                 if ( pOutTarget == nullptr )
                     return;
-                *pOutTarget = HostViewTarget{};
+                *pOutTarget = ViewportTarget{};
                 if ( pView == nullptr )
                     return;
                 pOutTarget->_renderTarget = pView->_renderTarget;
@@ -1081,20 +1081,20 @@ namespace sw::editor
         return false;
     }
 
-    void ImGuiEditor::getGameViewport( HostViewTarget* pOutTarget ) const
+    void ImGuiEditor::getGameViewport( ViewportTarget* pOutTarget ) const
     {
         const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestGameView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
         ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game ) : nullptr, pOutTarget );
     }
 
-    void ImGuiEditor::getSceneViewport( HostViewTarget* pOutTarget ) const
+    void ImGuiEditor::getSceneViewport( ViewportTarget* pOutTarget ) const
     {
         const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestSceneView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ),
                                                                                                          _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
         ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene ) : nullptr, pOutTarget );
     }
 
-    uint32 ImGuiEditor::getSceneViews( HostSceneView* pOutView, uint32 capacity ) const
+    uint32 ImGuiEditor::getPreviewSceneViews( PreviewSceneView* pOutView, uint32 capacity ) const
     {
         if ( _editorContext == nullptr || pOutView == nullptr )
             return 0;

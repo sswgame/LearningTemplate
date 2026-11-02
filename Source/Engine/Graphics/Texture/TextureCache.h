@@ -22,10 +22,10 @@ namespace sw
 
     class IRHIDevice;
     class Texture2D;
-    class TextureLoadBlock;
+    class TextureLoadOperation;
 
     /** @brief 텍스처 로드 핸들입니다. 핸들이 살아 있는 동안 준비된 텍스처의 참조 하나를 쥡니다(놓으면 `release` 와 같다). */
-    using TextureHandle = AssetHandle<TextureLoadBlock>;
+    using TextureHandle = AssetHandle<TextureLoadOperation>;
 
     /**
      * @class TextureCache
@@ -77,7 +77,7 @@ namespace sw
         void bindDevice( IRHIDevice* pDevice );
         /**
          * @brief 경로의 텍스처를 확보하고 GPU 에 업로드합니다(렌더 텍스처 경로면 렌더 타깃을 만듭니다). 실패하면 nullptr 입니다.
-         * @details `request` 와 같은 로드 블록을 기다린다(새 로드는 이 자리에서 읽는다) — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
+         * @details `request` 와 같은 로드 작업을 기다린다(새 로드는 이 자리에서 읽는다) — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
          *          **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
          *          맵이 원소를 옮겨도 주소가 그대로입니다). 같은 경로를 동시에 원한 스레드는 같은 로드를 기다려 받습니다.
          */
@@ -217,9 +217,9 @@ namespace sw
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
         uint32 pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
-        friend class TextureLoadBlock; // 로드 블록이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
+        friend class TextureLoadOperation; // 로드 작업이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
         struct Impl;
-        shared_ptr<Impl> _impl; ///< 로드 블록이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 블록은 놓을 것이 없다
+        shared_ptr<Impl> _impl; ///< 로드 작업이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 로드 작업은 놓을 것이 없다
         /// @brief 엔진 범위에 `IRenderTargetDeclarationSink` 로 거는 객체입니다(`getRenderTargetDeclarationSink`).
         RenderTargetDeclarationSink _renderTargetDeclarationSink;
     };
@@ -228,12 +228,12 @@ namespace sw
 namespace sw
 {
     /**
-     * @class TextureLoadBlock
+     * @class TextureLoadOperation
      * @brief 텍스처 로드 하나의 공유 상태입니다. 로드 단계(워커)는 DDS 를 읽고, 완료 단계(디바이스 스레드)는 GPU 에 올려 항목을 공개합니다.
      * @details 준비되면 참조 하나를 쥐고 소멸할 때 놓는다. 로드 단계의 실패(파일 없음 · 포맷)도 완료 단계에서 드러낸다 — 항목 표의 "올리는 중" 표시를
      *          내리는 곳을 완료 단계 하나로 두어, 실패한 로드가 표시를 남기는 길이 없게 한다.
      */
-    class SW_API TextureLoadBlock final : public AssetLoadBlock, public std::enable_shared_from_this<TextureLoadBlock>
+    class SW_API TextureLoadOperation final : public AssetLoadOperation, public std::enable_shared_from_this<TextureLoadOperation>
     {
     public:
         using AssetType = Texture2D;
@@ -246,11 +246,11 @@ namespace sw
             CPUBytes,     ///< `cpu/` — 캐시가 보관한 CPU 원본
         };
 
-        TextureLoadBlock( string_view key, IRHIDevice* pDevice, Source source, Texture2D* pTexture, weak_ptr<TextureCache::Impl> pCache );
+        TextureLoadOperation( string_view key, IRHIDevice* pDevice, Source source, Texture2D* pTexture, weak_ptr<TextureCache::Impl> pCache );
         /** @brief 쥔 참조를 놓습니다(`TextureCache::release` 와 같은 길). */
-        ~TextureLoadBlock() override;
+        ~TextureLoadOperation() override;
 
-        /** @brief 준비된 텍스처입니다. 블록(곧 참조)을 쥔 채 텍스처를 가리킵니다 — 받은 쪽이 쥐는 동안 참조가 남습니다. */
+        /** @brief 준비된 텍스처입니다. 로드 작업(곧 참조)을 쥔 채 텍스처를 가리킵니다 — 받은 쪽이 쥐는 동안 참조가 남습니다. */
         shared_ptr<Texture2D> getAsset() const;
         /** @brief 텍스처 객체입니다(`Ready` 가 아니면 쓰지 않는다). 핸들이 살아 있는 동안 유효합니다. */
         Texture2D* getTexture() const { return _pTexture; }
@@ -264,7 +264,7 @@ namespace sw
         [[nodiscard]] AssetCompletionStep pollCompletion( bool bBlocking, string& outError ) override;
         void                              onAwaitingCompletion() override;
         void                              onUploadSubmitted() override;
-        /** @brief 두 대기 목록에서 이 블록을 뺍니다(다른 스레드가 먼저 집었거나 끝났을 때). */
+        /** @brief 두 대기 목록에서 이 로드 작업을 뺍니다(다른 스레드가 먼저 집었거나 끝났을 때). */
         void removeFromPumpLists( TextureCache::Impl& cache );
         /** @brief 업로드가 끝난(또는 실패한) 뒤의 마무리입니다 — 항목을 공개하고 결과를 단계 결과로 바꿉니다. */
         [[nodiscard]] AssetCompletionStep concludeCompletion( TextureCache::Impl& cache, bool bReady, string& outError );

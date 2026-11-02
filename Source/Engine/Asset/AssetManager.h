@@ -171,7 +171,7 @@ namespace sw
          *          (언리얼 자동화의 `FlushAsyncLoading` 과 같은 자리).
          */
         [[nodiscard]] static bool isFinishingAssetWorkEachFrame();
-        /** @brief 워커에서 도는 에셋 로드 태스크를 로드 단계에 넣습니다. **제출 전에** 부른다(`AssetLoadBlock::startLoad`) — 프레임 경계의 대기가 놓치지 않는다. */
+        /** @brief 워커에서 도는 에셋 로드 태스크를 로드 단계에 넣습니다. **제출 전에** 부른다(`AssetLoadOperation::startLoad`) — 프레임 경계의 대기가 놓치지 않는다. */
         void addLoadTask( const TaskHandle& task );
         /**
          * @brief @p work 를 워커에서 낮은 우선순위로 돌리는 에셋 일로 냅니다(로드 단계에 넣고 제출한다). 에셋 로드와 실행 중에 짓는 파생 에셋(외형이 합친 메시)이 쓴다.

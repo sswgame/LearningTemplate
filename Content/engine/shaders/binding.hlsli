@@ -106,7 +106,7 @@ struct View
 /** @brief 모프 · 스킨 정점 풀(5 절). */
 struct MorphPool
 {
-    static uint2 loadSkinBase( uint skinSlot );
+    static uint2 loadSkinResultOffset( uint skinSlot );
     static uint computeElement( uint batchIndex, uint skinSlot, uint vertexID );
     static void loadVertex( uint batchIndex, uint skinSlot, uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
     static float4 loadTangent( uint batchIndex, uint skinSlot, uint vertexID, float4 restTangent );
@@ -264,8 +264,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint   g_SwVisibleSlotCount;        // 그 목록의 칸 수(가시 구간의 합 — LOD 그룹이 없으면 인스턴스 수) — 범위 밖 슬롯을 막는다
     uint   g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
     uint   g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
-    uint   g_SwSkinBasesIndex;          // 스킨 칸 → 결과 시작 표(g_SwSkinBases, t14)가 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwSkinBaseCount;           // 그 표의 칸 수 — 범위 밖 칸을 막는다
+    uint   g_SwSkinResultOffsetsIndex;  // 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, t14)가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwSkinResultOffsetCount;   // 그 표의 칸 수 — 범위 밖 칸을 막는다
     uint   g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint   g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
     uint   g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
@@ -371,17 +371,17 @@ static BatchData BatchData::load( uint batchIndex )
 // 구조체 멤버 로드를 다루는 방식). 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
 // 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
-// 스킨 칸 → (결과 시작, 변형한 LOD 단계의 첫 정점) 표(binding_slots.hlsli SW_SLOT_SKIN_BASE_SRV, C++ GPUSkinBase). 스킨 결과는 메시가 아니라 칸(유닛 · 군중 묶음)마다 하나라
+// 스킨 칸 → (결과 시작, 변형한 LOD 단계의 첫 정점) 표(binding_slots.hlsli SW_SLOT_SKIN_RESULT_OFFSET_SRV, C++ GPUSkinResultOffset). 스킨 결과는 메시가 아니라 칸(유닛 · 군중 묶음)마다 하나라
 // 같은 메시의 캐릭터들이 한 배치로 그려지고, 칸마다 그리는 단계 하나만 변형된다.
-SW_DECLARE_STRUCTURED_BUFFER( uint2, g_SwSkinBases, SW_SLOT_SKIN_BASE_SRV );
+SW_DECLARE_STRUCTURED_BUFFER( uint2, g_SwSkinResultOffsets, SW_SLOT_SKIN_RESULT_OFFSET_SRV );
 
 /** @brief 스킨 칸의 (결과 시작, 단계 첫 정점) — 칸이 없거나(@p skinSlot 이 kInvalidIndex) 표가 안 걸렸으면 시작이 kInvalidIndex. 분기는 있지만 early-return 은 없다. */
-static uint2 MorphPool::loadSkinBase( uint skinSlot )
+static uint2 MorphPool::loadSkinResultOffset( uint skinSlot )
 {
     uint2      base   = uint2( kInvalidIndex, 0u );
-    const bool bValid = ( skinSlot != kInvalidIndex ) && ( g_SwSkinBasesIndex != kInvalidIndex ) && ( skinSlot < g_SwSkinBaseCount );
+    const bool bValid = ( skinSlot != kInvalidIndex ) && ( g_SwSkinResultOffsetsIndex != kInvalidIndex ) && ( skinSlot < g_SwSkinResultOffsetCount );
     if ( bValid )
-        base = g_SwSkinBases[skinSlot];
+        base = g_SwSkinResultOffsets[skinSlot];
     return base;
 }
 
@@ -409,10 +409,10 @@ static uint MorphPool::computeElement( uint batchIndex, uint skinSlot, uint vert
     const uint local = vertexID - batch._baseVertex; // 풀 밖 메시는 baseVertex 가 0 이라 그대로다
 #endif
     // 결과 시작은 메시 종류마다 하나다 — 스킨 메시는 인스턴스의 칸(유닛마다 결과, 변형한 단계의 첫 정점부터), 모프 메시는 배치(메시마다 결과). 폴백이 아니다.
-    const uint2 skinBase = MorphPool::loadSkinBase( skinSlot );
-    const bool  bSkin    = skinSlot != kInvalidIndex;
-    const uint  base     = bSkin ? skinBase.x : batch._morphVertexBase;
-    const uint  element  = base + ( local - ( bSkin ? skinBase.y : 0u ) ); // 칸의 인스턴스는 모두 변형한 그 단계를 그린다(구간 컴포넌트는 주 메시의 단계를 따른다 — MeshComponent::setLODIndex)
+    const uint2 skinResultOffset = MorphPool::loadSkinResultOffset( skinSlot );
+    const bool  bSkin            = skinSlot != kInvalidIndex;
+    const uint  base             = bSkin ? skinResultOffset.x : batch._morphVertexBase;
+    const uint  element          = base + ( local - ( bSkin ? skinResultOffset.y : 0u ) ); // 칸의 인스턴스는 모두 변형한 그 단계를 그린다(구간 컴포넌트는 주 메시의 단계를 따른다 — MeshComponent::setLODIndex)
     // 잘못된 번호(밑돎으로 커진 local)는 element 가 풀 크기를 넘어 여기서 걸러진다.
     const bool bValid = ( base != kInvalidIndex ) && ( g_SwMorphVerticesIndex != kInvalidIndex ) && ( element < g_SwMorphVertexCount );
     return bValid ? element : kInvalidIndex;

@@ -225,7 +225,7 @@ namespace sw
             storeResult( path, nullptr );
             return;
         }
-        if ( AssetLoadBlock::canLoadOnWorker() == false )
+        if ( AssetLoadOperation::canLoadOnWorker() == false )
         {
             storeResult( path, decodeClip( path ) );
             return;
