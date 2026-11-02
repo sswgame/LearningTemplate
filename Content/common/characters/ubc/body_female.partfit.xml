@@ -1,0 +1,2 @@
+<!-- UBC 몸의 피팅 데이터 — 가장 안쪽 겹이라 옷이 정한 숨김 영역(<Hide region>)이 이 몸의 삼각형을 뺀다(옷 밑의 몸을 그리지 않는다). -->
+<PartFit layer="Body" profile="Skin"/>

@@ -176,7 +176,10 @@ namespace sw
                 }
             }
 
-            /** @brief 부품 하나의 결과를 만듭니다. 덮였어도 덮이지 않은 삼각형과 정점을 나누면 남깁니다(경계 한 겹). */
+            /**
+             * @brief 부품 하나의 결과를 만듭니다. 숨김 영역(작가의 마스크 — 덮임 거리 밖의 헐렁한 옷 밑도 지운다)이거나 덮인 삼각형을 지우되, 남는 삼각형과 정점을 나누면 남깁니다(경계 한 겹).
+             * @details 언리얼 Mutable 의 마스크 · 메시 클립과 같은 자리다. 경계 한 겹은 옷 끝과 영역 경계가 정확히 맞지 않는 손목 · 목둘레의 틈을 막고, 피팅이 바깥 겹을 그 바깥으로 밀어 뚫고 나오지 않는다.
+             */
             static void extractPartResult( const FitPartState& part, FitPartResult& outResult )
             {
                 const AppearanceGeometry& geometry = *part._pInput->_pGeometry;
@@ -186,27 +189,22 @@ namespace sw
                 {
                     outResult._listVertexDelta[vertex] = part._listPosition[vertex] - part._listBindPosition[vertex];
                 }
-                vector<uint8> listTouchesUncovered( geometry.getVertexCount(), SW_FALSE );
+                vector<uint8> listTouchesKept( geometry.getVertexCount(), SW_FALSE );
                 for ( uint32 triangle = 0; triangle < outResult._triangleCount; ++triangle )
                 {
-                    if ( part._listCovered[triangle] == SW_TRUE )
+                    if ( part._listCovered[triangle] == SW_TRUE || part._listHidden[triangle] == SW_TRUE )
                         continue;
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
-                        listTouchesUncovered[geometry._listIndex[triangle * 3 + corner]] = SW_TRUE;
+                        listTouchesKept[geometry._listIndex[triangle * 3 + corner]] = SW_TRUE;
                     }
                 }
                 for ( uint32 triangle = 0; triangle < outResult._triangleCount; ++triangle )
                 {
-                    bool bCut = part._listHidden[triangle] == SW_TRUE;
-                    if ( bCut == false && part._listCovered[triangle] == SW_TRUE )
+                    bool bCut = part._listHidden[triangle] == SW_TRUE || part._listCovered[triangle] == SW_TRUE;
+                    for ( uint32 corner = 0; corner < 3 && bCut; ++corner )
                     {
-                        bCut = true;
-                        for ( uint32 corner = 0; corner < 3; ++corner )
-                        {
-                            if ( listTouchesUncovered[geometry._listIndex[triangle * 3 + corner]] == SW_TRUE )
-                                bCut = false;
-                        }
+                        bCut = listTouchesKept[geometry._listIndex[triangle * 3 + corner]] == SW_FALSE;
                     }
                     if ( bCut )
                     {

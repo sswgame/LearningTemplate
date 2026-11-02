@@ -94,14 +94,14 @@
        옷(outfit_*)은 Outfits 묶음의 부품이고, 덮는 몸은 피팅 표(ubc.fit.xml)의 숨김 영역 · 피부 × 천 잘라 내기가 뺀다. -->
   <ItemVisual id="body_ubc_male">
     <Part name="Body" kind="Skinned" mesh="common/models/quaternius/characters/superhero_male_fullbody.mesh" skeleton="common/models/quaternius/characters/superhero_male_fullbody/superhero_male_fullbody.skeleton.xml"
-          sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml">
+          sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml" fit="common/characters/ubc/body_male.partfit.xml">
       <Section name="mi_superhero_male" material="common/models/quaternius/characters/superhero_male_fullbody/materials/mi_superhero_male.material"/>
       <Section name="mi_eyes" material="common/models/quaternius/characters/superhero_male_fullbody/materials/mi_eyes.material"/>
     </Part>
   </ItemVisual>
   <ItemVisual id="body_ubc_female">
     <Part name="Body" kind="Skinned" mesh="common/models/quaternius/characters/superhero_female_fullbody.mesh" skeleton="common/models/quaternius/characters/superhero_female_fullbody/superhero_female_fullbody.skeleton.xml"
-          sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml">
+          sockets="common/data/sockets/ubc_humanoid.sockets.xml" fitTables="common/characters/ubc/ubc.fit.xml" fit="common/characters/ubc/body_female.partfit.xml">
       <Section name="mi_superhero_female" material="common/models/quaternius/characters/superhero_female_fullbody/materials/mi_superhero_female.material"/>
       <Section name="mi_eyes" material="common/models/quaternius/characters/superhero_female_fullbody/materials/mi_eyes.material"/>
     </Part>

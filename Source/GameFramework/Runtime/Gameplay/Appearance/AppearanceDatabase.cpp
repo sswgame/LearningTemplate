@@ -352,6 +352,10 @@ namespace sw
                 continue;
             for ( const AppearancePartDef& part : visual._listPart )
             {
+                // 몸은 피팅의 가장 안쪽 겹이어야 옷의 숨김 영역이 그 삼각형을 뺀다 — 표만 있고 피팅 데이터가 없으면 옷 밑의 몸을 통째로 그린다(언리얼 Mutable 의 숨김 마스크와 같은 자리).
+                if ( part._fitTables.empty() == false && part._fit.empty() )
+                    _report.addErrorWithID( "Appearance.BodyFitMissing", "visual '%#' part '%#' has fit tables but no fit data - clothes cannot hide the body under them", visual._id.c_str(),
+                                            part._name.c_str() );
                 for ( const hashed_string& region : part._listHiddenRegion )
                 {
                     if ( VectorUtil::contains( *pListKnownBodyRegion, region ) == false )
