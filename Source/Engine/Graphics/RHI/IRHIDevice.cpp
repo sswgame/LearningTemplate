@@ -368,6 +368,29 @@ namespace sw
     // 고정 비용과 비슷한 자리다. 글리프 아틀라스 구간 갱신(수 KB)과 256² RGBA8 이하 텍스처가 이 아래로 간다. M1(RHIAsyncUploads 측정)이 조정한다.
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiDirectUploadMaxKilobytes, 256, "이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징" );
 
+    bool IRHIDevice::resolveAdapterRequest( bool& outSoftwareAdapter, bool& outPreferMinimumPower )
+    {
+        string softwareEnv;
+        bool   bSoftwareEnv = false;
+        // 환경 변수도 명령줄과 같은 켬/끔 토큰만 받는다. 알 수 없는 값은(빈 값 포함) 끔으로 읽지 않고 멈춘다.
+        if ( ProcessEnvironment::tryRead( "SW_RHI_SOFTWARE_ADAPTER", softwareEnv ) && StringUtil::tryParseBool( softwareEnv.c_str(), bSoftwareEnv ) == false )
+        {
+            SW_LOG_ERROR_ID( "RHI.SWRHISOFTWAREADAPTER", "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
+            return false;
+        }
+        outSoftwareAdapter    = gv_rhiSoftwareAdapter || bSoftwareEnv;
+        outPreferMinimumPower = gv_rhiPreferMinimumPower;
+        return true;
+    }
+
+    void IRHIDevice::beginDeviceCreation()
+    {
+        bool bSoftwareAdapter{ false };
+        bool bPreferMinimumPower{ false };
+        if ( resolveAdapterRequest( bSoftwareAdapter, bPreferMinimumPower ) )
+            beginDeviceCreationInternal( bSoftwareAdapter, bPreferMinimumPower ); // 요청이 틀렸으면 시작하지 않는다 — initialize 가 같은 오류로 멈춘다
+    }
+
     bool IRHIDevice::initialize()
     {
         // 백엔드가 이유를 좁히지 않고 물러나면 결함일 수 있는 실패다. 환경 탓이면 백엔드가 initializeInternal 안에서 고쳐 적는다.
@@ -415,18 +438,8 @@ namespace sw
         swapChainDesc._readbackRingBytes    = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
         swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte : 0u;
         swapChainDesc._stagingSoloMaxBytes  = gv_rhiStagingSingleMaxMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
-        {
-            string softwareEnv;
-            bool   bSoftwareEnv = false;
-            // 환경 변수도 명령줄과 같은 켬/끔 토큰만 받는다. 알 수 없는 값은(빈 값 포함) 끔으로 읽지 않고 멈춘다.
-            if ( ProcessEnvironment::tryRead( "SW_RHI_SOFTWARE_ADAPTER", softwareEnv ) && StringUtil::tryParseBool( softwareEnv.c_str(), bSoftwareEnv ) == false )
-            {
-                SW_LOG_ERROR_ID( "RHI.SWRHISOFTWAREADAPTER", "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
-                return false;
-            }
-            swapChainDesc._bSoftwareAdapter    = gv_rhiSoftwareAdapter || bSoftwareEnv;
-            swapChainDesc._bPreferMinimumPower = gv_rhiPreferMinimumPower;
-        }
+        if ( resolveAdapterRequest( swapChainDesc._bSoftwareAdapter, swapChainDesc._bPreferMinimumPower ) == false )
+            return false;
         _bSoftwareAdapter = false;
         if ( engine::areEngineServicesBound() )
         {

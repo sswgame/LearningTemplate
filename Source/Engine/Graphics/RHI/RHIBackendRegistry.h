@@ -88,6 +88,14 @@ namespace sw
 
         /** @brief 등록된 팩토리로 IRHIDevice 를 만듭니다. */
         unique_ptr<IRHIDevice> createDevice( RHIBackend backend ) const;
+        /**
+         * @brief @p backend 디바이스를 만들고 네이티브 디바이스 생성을 작업 스레드에서 미리 시작합니다(`IRHIDevice::beginDeviceCreation`). 기동 초기에 부른다.
+         * @details 드라이버 초기화(이 노트북에서 0.9 ~ 1.7 s)가 오디오 · 모듈 · 에셋 초기화와 겹쳐 돈다 — 언리얼 · 유니티도 기동 중 GPU 초기화를 다른 일과 겹친다.
+         *          만든 디바이스는 `RHI::initialize` 가 같은 백엔드면 받아 간다(`takeWarmDevice`).
+         */
+        void beginDeviceWarmup( RHIBackend backend );
+        /** @brief `beginDeviceWarmup` 이 만든 디바이스를 넘깁니다. 백엔드가 다르면(명령줄 · 교체) 그 디바이스를 내리고 nullptr 입니다. */
+        unique_ptr<IRHIDevice> takeWarmDevice( RHIBackend backend );
 
         // ------------------------------------------------------------------------------
         // 3) MODULE: createRHIDevice export DLL, 언로드 전 디바이스 파괴 필수
@@ -124,5 +132,7 @@ namespace sw
 
         vector<RHIBackendEntry> _listEntry;
         vector<LoadedModule>    _listLoadedModule;
+        unique_ptr<IRHIDevice>  _warmDevice; ///< `beginDeviceWarmup` 이 만들어 `takeWarmDevice` 를 기다리는 디바이스(모듈을 내리기 전에 내린다)
+        RHIBackend              _warmBackend{};
     };
 } // namespace sw

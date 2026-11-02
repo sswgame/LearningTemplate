@@ -769,8 +769,9 @@ namespace sw
             return;
 
         _pState->_activeGraphicsPSO = pso;
-        // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다. 이전 패스의 t 슬롯이 다음 테이블로 새지 않게 한다(Vulkan setPipelineState 와 같다).
-        _pState->_arrSlotState[0]                               = D3D12SlotTableState{};
+        // PSO 가 바뀌면 그래픽스 슬롯 상태와 정점 버퍼를 비운다. 이전 패스의 t 슬롯 · 스트림이 다음 드로우로 새지 않게 한다(Vulkan setPipelineState 와 같다).
+        _pState->_arrSlotState[0] = D3D12SlotTableState{};
+        _pState->_vertexBuffers.clear();
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;

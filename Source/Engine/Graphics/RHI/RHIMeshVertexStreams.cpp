@@ -26,8 +26,11 @@ namespace sw
         return static_cast<int8>( scaled >= 0.0f ? scaled + 0.5f : scaled - 0.5f );
     }
 
-    void RHIMeshVertexStreams::write( RHIMeshVertexFormat format, const RHIVertex* pSource, uint32 count, uint8* pOutPosition, uint8* pOutAttribute )
+    void RHIMeshVertexStreams::write( RHIMeshVertexFormat format, const RHIVertex* pSource, uint32 count, uint32 firstVertex, uint32 vertexCapacity, uint8* pBuffer )
     {
+        SW_ASSERT( firstVertex + count <= vertexCapacity );
+        uint8* const pOutPosition  = pBuffer + static_cast<size_t>( firstVertex ) * constant::render::kMeshPositionStride;
+        uint8* const pOutAttribute = pBuffer + computeAttributeOffset( vertexCapacity ) + static_cast<size_t>( firstVertex ) * constant::render::getMeshAttributeStride( format );
         for ( uint32 vertexIndex = 0; vertexIndex < count; ++vertexIndex )
         {
             const RHIVertex& vertex = pSource[vertexIndex];

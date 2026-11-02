@@ -1295,8 +1295,6 @@ namespace sw
         // drawFullscreen 과 같은 순서다. 볼륨 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다.
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
-        context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         context._pCmd->setPipelineState( pso );
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         if ( bVolume )
@@ -1922,7 +1920,7 @@ namespace sw
         uint32       orderIndex{ 0 };
         while ( orderIndex < batchCount )
         {
-            if ( bDrawsParticles && drawParticleRun( context, inoutState._listParticleSlot, inoutState._particleSlotCursor, orderIndex, inoutState._slotStream ) )
+            if ( bDrawsParticles && drawParticleRun( context, inoutState._listParticleSlot, inoutState._particleSlotCursor, orderIndex ) )
             {
                 inoutState._boundPSO          = 0;
                 inoutState._boundVertexBuffer = 0;
@@ -1938,8 +1936,7 @@ namespace sw
             const uint32 groupCount = countDrawGroup( inoutState, drawMode, orderIndex, bDrawsParticles );
             // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            if ( drawBatchGroup( context, inoutState._pso, drawMode, head, inoutState._boundPSO, inoutState._boundVertexBuffer, inoutState._argsBuffer, inoutState._batchOffset + batchIndex,
-                                 groupCount ) )
+            if ( drawBatchGroup( context, inoutState, drawMode, head, inoutState._batchOffset + batchIndex, groupCount ) )
                 ++inoutState._drawCallCount;
             orderIndex += groupCount;
         }
@@ -1990,13 +1987,11 @@ namespace sw
         const bool bUsesViewOrder = bTransparentPass && bExtraView && _pActiveView->_listTransparentBatchOrder.size() == state._batches.size();
         if ( bUsesViewOrder )
             state._pOrder = &_pActiveView->_listTransparentBatchOrder;
-        // 인스턴스 슬롯 스트림(슬롯 1). 패스당 한 번 건다. 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다.
+        // 인스턴스 슬롯 스트림(슬롯 1). 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다 — PSO 를 걸 때마다 메시 스트림과 함께 다시 건다(drawBatchGroup).
         // 컬링 없는 백엔드의 추가 뷰는 꼬리를 그 뷰 순서로 다시 놓은 자기 스트림을 쓴다(GPU 정렬 백엔드는 늘 공용 스트림).
         state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _state._gpuScene.getInstanceSlotStream();
-        if ( state._slotStream != 0 )
-            context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, state._slotStream, constant::render::kInstanceSlotStreamStride, 0 );
-        // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 와 정점 슬롯을 바꾸므로
-        // 메시로 돌아올 때 PSO · 정점 버퍼를 다시 건다(`drawParticleRun` 이 슬롯 스트림과 에뮬 텍스처 슬롯을, bindForDraw 가 PSO 가 바뀐 바인딩을 다시 건다).
+        // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 를 바꾸므로
+        // 메시로 돌아올 때 PSO 와 정점 스트림을 다시 건다(drawBatchRound 가 걸린 PSO 를 잊고, `drawParticleRun` 이 에뮬 텍스처 슬롯을 다시 건다).
         if ( pParticleSlot != nullptr )
             state._listParticleSlot = vector_reference<const GPUTransparentParticleSlot>( *pParticleSlot );
 
@@ -2011,7 +2006,7 @@ namespace sw
             drawBatchRound( context, state, arrDrawMode[drawRound], drawRound == 0 );
         }
         // 모든 배치보다 가까운 입자(자리 = 배치 수)를 마저 그린다.
-        (void)drawParticleRun( context, state._listParticleSlot, state._particleSlotCursor, MathUtil::kMaxUInt32, state._slotStream );
+        (void)drawParticleRun( context, state._listParticleSlot, state._particleSlotCursor, MathUtil::kMaxUInt32 );
         SW_PROFILE_COUNT( "RT.Draw.indirectCalls", state._drawCallCount );
         _indirectDrawCallCount.fetch_add( state._drawCallCount, std::memory_order_relaxed );
     }
@@ -2045,23 +2040,14 @@ namespace sw
         return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( _psoManager.psoForBatch( pso, head, drawMode ) ) );
     }
 
-    bool FramePassExecutor::drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, RenderViewMode drawMode, const GPUMeshBatch& head,
-                                            RHIPipelineStateHandle& ioBoundPSO,
-                                            RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount )
+    bool FramePassExecutor::drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head, uint32 argIndex,
+                                            uint32 groupCount )
     {
-        // 정점 · 인덱스 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다. 둘은 짝이라 정점 버퍼로만 바뀜을 본다.
-        if ( head._vertexBuffer != ioBoundVertexBuffer )
-        {
-            RHIMeshVertexStreams::bind( *context._pCmd, head._vertexBuffer, head._attributeOffset, head._mesh->getVertexFormat() );
-            context._pCmd->setIndexBuffer( head._indexBuffer, sizeof( uint32 ), 0 );
-            ioBoundVertexBuffer = head._vertexBuffer;
-        }
-
         // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
         // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
         RenderPSOCache::MaterialPSOState psoState = RenderPSOCache::MaterialPSOState::Ready;
-        const RHIPipelineStateHandle     batchPSO = _psoManager.psoForBatch( pso, head, drawMode, &psoState );
+        const RHIPipelineStateHandle     batchPSO = _psoManager.psoForBatch( inoutState._pso, head, drawMode, &psoState );
         // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
         if ( batchPSO == 0 )
         {
@@ -2072,21 +2058,30 @@ namespace sw
             }
             return false;
         }
-        if ( batchPSO != ioBoundPSO )
+        if ( batchPSO != inoutState._boundPSO )
         {
-            context._pCmd->setPipelineState( batchPSO );
-            ioBoundPSO = batchPSO;
+            context._pCmd->setPipelineState( batchPSO ); // 정점 슬롯을 비운다 — 스트림은 아래에서 다시 건다
+            inoutState._boundPSO          = batchPSO;
+            inoutState._boundVertexBuffer = 0;
+            if ( inoutState._slotStream != 0 )
+                context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, inoutState._slotStream, constant::render::kInstanceSlotStreamStride, 0 );
+        }
+        // 정점 · 인덱스 풀 하나라 PSO 가 그대로면 다시 걸지 않는다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다. 둘은 짝이라 정점 버퍼로만 바뀜을 본다.
+        if ( head._vertexBuffer != inoutState._boundVertexBuffer )
+        {
+            RHIMeshVertexStreams::bind( *context._pCmd, head._vertexBuffer, head._attributeOffset, head._mesh->getVertexFormat() );
+            context._pCmd->setIndexBuffer( head._indexBuffer, sizeof( uint32 ), 0 );
+            inoutState._boundVertexBuffer = head._vertexBuffer;
         }
 
         // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
         registerMaterialBuffer( context, head, batchPSO );
         bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSRV );
-        context._pCmd->drawIndexedIndirect( argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
+        context._pCmd->drawIndexedIndirect( inoutState._argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
         return true;
     }
 
-    bool FramePassExecutor::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
-                                             RHIBufferHandle slotStream )
+    bool FramePassExecutor::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position )
     {
         uint32 slotEnd = inOutCursor;
         while ( slotEnd < listSlot.size() && listSlot[slotEnd]._drawPosition <= position )
@@ -2099,9 +2094,7 @@ namespace sw
         inOutCursor                                                      = slotEnd;
         if ( drawParticleSlots( context, listRun ) == false )
             return false;
-        // 메시 드로우가 읽는 패스 단위 상태를 되돌린다 — 입자 그리기가 인스턴스 슬롯 스트림을 비웠고 PSO 가 바뀌어 에뮬 텍스처 슬롯이 비었다.
-        if ( slotStream != 0 )
-            context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, slotStream, constant::render::kInstanceSlotStreamStride, 0 );
+        // 메시 드로우가 읽는 패스 단위 상태를 되돌린다 — PSO 가 바뀌어 에뮬 텍스처 슬롯이 비었다(정점 스트림은 메시 묶음이 PSO 를 걸며 다시 건다).
         commitBindlessTextureBindings( context );
         return true;
     }
@@ -2113,9 +2106,7 @@ namespace sw
         const bool                      bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || listBatch.empty() || listSlot.empty() || pso == 0;
         if ( bCannotDraw )
             return false;
-        // 정점은 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼 슬롯과 인스턴스 슬롯 스트림은 비운다(캔버스 · 풀스크린 패스와 같다).
-        context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
+        // 정점은 셰이더가 SV_VertexID 로 만든다 — PSO 의 입력 레이아웃이 비어 정점 버퍼를 걸지 않는다.
         context._pCmd->setPipelineState( pso );
         setIdentityWorld( context );
         // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
@@ -2194,8 +2185,6 @@ namespace sw
             return;
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
-        context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         context._pCmd->setPipelineState( pso );
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         context._pCmd->draw( 3, 0 );
@@ -2306,10 +2295,9 @@ namespace sw
             ExtensionConstantScope<FramePassContext> elementScope( context );
             elementScope.apply( element._arrConstant, element._constantCount );
             context._world = element._world;
+            context._pCmd->setPipelineState( pass._pso ); // 정점 슬롯을 비운다 — 메시 스트림은 그 뒤에 건다
             RHIMeshVertexStreams::bind( *context._pCmd, mesh.getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
             context._pCmd->setIndexBuffer( mesh.getIndexBuffer(), sizeof( uint32 ), 0 );
-            context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
-            context._pCmd->setPipelineState( pass._pso );
             commitBindlessTextureBindings( context );
             bindForDraw( context, pass._pso, kInvalidDescriptorIndex );
             context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );

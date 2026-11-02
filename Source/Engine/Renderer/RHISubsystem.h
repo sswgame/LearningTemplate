@@ -52,4 +52,23 @@ namespace sw
         RHIInitResult   _initResult;
         bool            _bReady;
     };
+
+    /**
+     * @class RHIDevicePrewarmSubsystem
+     * @brief 기동 초기(설정을 읽은 직후)에 고를 백엔드의 네이티브 디바이스 생성을 작업 스레드에서 시작합니다(`RHIBackendRegistry::beginDeviceWarmup`).
+     * @details 드라이버 초기화가 이 노트북에서 0.9 ~ 1.7 s 로 기동 시간의 절반이다. 창이 없어도 되는 그 일을 오디오 · 모듈 · 에셋 초기화와 겹쳐 돌리고,
+     *          `RHISubsystem` 이 창 · 스왑체인을 만들 때 그 디바이스를 받는다. 백엔드는 `RHISubsystem` 과 같은 규칙(명령줄, 아니면 설정의 기본값)으로 고른다.
+     *          서브시스템 순서는 의존 · 이름 순이라 설정 뒤 · 오디오 앞에서 돈다.
+     */
+    class SW_API RHIDevicePrewarmSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "RHIDevicePrewarm";
+
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override {}
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override;
+    };
 } // namespace sw

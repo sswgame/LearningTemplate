@@ -49,6 +49,11 @@ namespace sw
          */
         virtual void writeTimestamp( uint32 slotIndex ) { (void)slotIndex; }
 
+        /**
+         * @brief 그래픽스 PSO 를 겁니다. **셰이더 슬롯과 정점 버퍼 슬롯을 비운다**(네 백엔드 같음) — 버퍼 · 정점 스트림은 PSO 뒤에 건다.
+         * @details 앞 드로우의 스트림이 남으면 그 슬롯을 읽는 다음 PSO 가 남은 스트림을 조용히 읽는다. 비워 두면 거는 것을 잊은 드로우는
+         *          버려지고 알려진다(`RHIDrawDiagnostics::checkVertexSlotsBound`). 백엔드는 드로우마다 바인딩 표에서 정점 버퍼를 다시 걸므로 비용이 없다.
+         */
         virtual void setPipelineState( RHIPipelineStateHandle pso )             = 0;
         virtual void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) = 0;
         virtual void endRenderPass()                                            = 0;

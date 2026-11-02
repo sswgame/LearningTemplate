@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -158,6 +159,7 @@ namespace sw
 
         /** @brief Direct3D 12 디바이스, 커맨드 큐, DXGI 스왑체인, 힙 리소스를 초기화합니다. */
         [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        void               beginDeviceCreationInternal( bool bSoftwareAdapter, bool bPreferMinimumPower ) override;
 
         /** @brief D3D12 자원과 펜스 동기화 객체를 해제합니다. */
         void shutdownInternal() override;
@@ -666,7 +668,11 @@ namespace sw
         mutex _uploadSlotMutex;
 
         Microsoft::WRL::ComPtr<ID3D12Device>              _device;
-        Microsoft::WRL::ComPtr<IDXGIAdapter3>             _memoryAdapter; ///< 디바이스가 쓰는 어댑터(LUID 로 찾는다). GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
+        Microsoft::WRL::ComPtr<IDXGIFactory4>             _dxgiFactory;    ///< 디바이스를 만든 팩토리 — 주 스왑체인을 같은 팩토리로 만든다
+        sw::thread                                        _deviceCreation; ///< 미리 시작한 디바이스 생성(`beginDeviceCreationInternal`) — `finishDeviceCreation` 이 합류한다
+        bool                                              _bDeviceCreationSucceeded{ false };
+        bool                                              _bCreatedOnSoftwareAdapter{ false }; ///< 실제로 선 어댑터가 WARP 인지(작업 스레드가 적고 메인 스레드가 옮긴다)
+        Microsoft::WRL::ComPtr<IDXGIAdapter3>             _memoryAdapter;                      ///< 디바이스가 쓰는 어댑터(LUID 로 찾는다). GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
         Microsoft::WRL::ComPtr<ID3D12CommandQueue>        _commandQueue;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _dsvHeap;
@@ -768,7 +774,11 @@ namespace sw
         D3D12_GPU_VIRTUAL_ADDRESS              _breadcrumbAddress;
         const volatile uint32*                 _pBreadcrumbMapped;
         /// @brief 브레드크럼 버퍼를 만들어 매핑합니다. 못 만들면 능력을 켜지 않을 뿐 초기화는 이어진다(진단 기능이다).
-        void createBreadcrumbBuffer();
+        /** @brief 디버그 레이어 · DRED 를 켜고 팩토리 · 어댑터를 골라 네이티브 디바이스를 만듭니다. 창에 묶인 일은 하지 않는다(작업 스레드에서도 돈다). */
+        [[nodiscard]] bool createDeviceObjects( bool bSoftwareAdapter, bool bPreferMinimumPower );
+        /** @brief 미리 시작한 디바이스 생성을 기다리거나(합류) 지금 만듭니다. 만들었으면 true 입니다. */
+        [[nodiscard]] bool finishDeviceCreation( const RHISwapChainDesc& desc );
+        void               createBreadcrumbBuffer();
         /// @brief blitTexture 포맷이나 크기 불일치 경고를 한 번만 남기기 위한 래치입니다. 병렬 기록 워커가 함께 쓰므로 atomic 입니다.
         atomic<uint8>                     _bBlitMismatchLogged;
         uint8 _bOnlineHeapExhaustedLogged SW_GUARDED_BY( _onlineBlockMutex ); ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.

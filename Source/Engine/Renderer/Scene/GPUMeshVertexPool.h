@@ -113,8 +113,8 @@ namespace sw
         void retireEntry( Entry& inoutEntry, uint64 retireStamp );
         /** @brief 더 큰 새 버퍼를 만들고 살아 있는 메시를 모두 앞에서부터 다시 이어 붙입니다. */
         void repack( IRHIDevice* pDevice );
-        /** @brief 메시의 그릴 정점 · 인덱스 흐름(LOD 0 뒤에 낮은 단계, `Mesh::getDrawVertexCount` · `getDrawIndexCount`)을 올릴 목록 끝에 붙입니다. */
-        void appendDrawGeometry( const Mesh& mesh );
+        /** @brief 메시의 그릴 인덱스 흐름(LOD 0 뒤에 낮은 단계, `Mesh::getDrawIndexCount`)을 올릴 목록 끝에 붙입니다. */
+        void appendDrawIndices( const Mesh& mesh );
         /** @brief 이번 목록의 메시를 표시합니다. 처음 보거나 내용이 바뀐 메시는 들어올 목록에, 예산 때문에 못 들어간 메시는 다시 시도할 목록에 넣습니다. 바뀐 것이 있으면 true 입니다. */
         [[nodiscard]] bool markListedMeshes( const vector<Mesh*>& listMesh, uint64 retireStamp );
         /** @brief 이번 목록에 없는 메시의 구간을 늦게 돌려주고 항목을 지웁니다(포인터는 따라가지 않는다). 지운 것이 있으면 true 입니다. */
@@ -130,8 +130,8 @@ namespace sw
         static constexpr uint32 kMaxPoolIndices = 3u * kMaxPoolVertices;
         static constexpr uint32 kMinPoolIndices = 3u * kMinPoolVertices;
 
-        /** @brief CPU 정점(`_listScratchVertex`)을 [위치 구간 @p vertexCapacity 칸][속성 구간]으로 바꿔 `_listScratchByte` 에 씁니다. */
-        void writeScratchStreams( uint32 vertexCapacity );
+        /** @brief 메시의 그릴 정점 흐름(LOD 0 뒤에 낮은 단계)을 `_listScratchByte`([위치 구간 @p vertexCapacity 칸][속성 구간])의 @p firstVertex 칸부터 원본에서 바로 씁니다. */
+        void writeDrawVertices( const Mesh& mesh, uint32 firstVertex, uint32 vertexCapacity );
 
         RHIMeshVertexFormat _format;
         SpanAllocator       _allocator;
@@ -146,8 +146,7 @@ namespace sw
         vector<const Mesh*> _listScratchRetry;
         vector<const Mesh*> _listScratchRemoved;
         /// @brief 올릴 정점 · 인덱스와 조각입니다. 프레임마다 할당하지 않습니다.
-        vector<RHIVertex>           _listScratchVertex;
-        vector<uint8>               _listScratchByte; ///< `_listScratchVertex` 를 GPU 스트림으로 바꾼 것(올리는 원본)
+        vector<uint8>               _listScratchByte; ///< 올릴 정점 — GPU 스트림 모양([위치 구간][속성 구간])
         vector<uint32>              _listScratchIndex;
         vector<RHIBufferCopyRegion> _listScratchRegion;
         vector<RHIBufferCopyRegion> _listScratchIndexRegion;

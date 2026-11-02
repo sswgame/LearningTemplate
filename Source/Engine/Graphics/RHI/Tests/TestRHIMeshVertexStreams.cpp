@@ -44,7 +44,8 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
     const uint32    capacity     = 2;
     vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Packed, capacity ) );
     const uint32    attributeAt = RHIMeshVertexStreams::computeAttributeOffset( capacity );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, arrVertex, 2, listByte.data(), listByte.data() + attributeAt );
+    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, &arrVertex[0], 1, 0, capacity, listByte.data() );
+    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, &arrVertex[1], 1, 1, capacity, listByte.data() ); // 자리를 받아 이어 쓴다(LOD 단계 · 풀의 메시)
 
     SW_EXPECT_EQUAL( 2u * ( 12u + 32u ), static_cast<uint32>( listByte.size() ) );
     SW_EXPECT_EQUAL( 24u, attributeAt );
@@ -63,7 +64,7 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, FullKeepsDataCarriedInTangent )
 {
     const RHIVertex vertex = makeVertex( 1.0f, 1.0f, 1.0f, 4096.0f ); // 지형 형태 변환이 탄젠트에 싣는 경계 좌표
     vector<uint8>   listByte( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Full, 1 ) );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Full, &vertex, 1, listByte.data(), listByte.data() + RHIMeshVertexStreams::computeAttributeOffset( 1 ) );
+    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Full, &vertex, 1, 0, 1, listByte.data() );
 
     SW_EXPECT_EQUAL( 12u + 52u, static_cast<uint32>( listByte.size() ) );
     const RHIFullMeshAttributes* pAttributes = reinterpret_cast<const RHIFullMeshAttributes*>( listByte.data() + 12 );

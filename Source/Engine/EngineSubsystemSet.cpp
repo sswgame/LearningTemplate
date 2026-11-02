@@ -193,6 +193,7 @@ namespace sw::engine
         {
             // 주 창의 소유자 — RHI 가 기본 창을 만들면 여기에 넘기고, App 이 직접 만든 창도 여기로 간다. RHI 보다 먼저 서고 나중에 내려간다(RHI 가 의존한다).
             (void)startup.emplaceSubsystem<MainWindowSubsystem>();
+            (void)startup.emplaceSubsystem<RHIDevicePrewarmSubsystem>(); // 드라이버 초기화를 기동의 다른 일과 겹친다 — RHI 가 그 디바이스를 받는다
             RHISubsystem& rhiSubsystem = startup.emplaceSubsystem<RHISubsystem>();
             parts._pRHI                = &rhiSubsystem;
             unique_ptr<FrameRenderer> frameRenderer;

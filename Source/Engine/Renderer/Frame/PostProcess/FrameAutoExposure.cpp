@@ -166,8 +166,6 @@ namespace sw
         beginInfo._width             = 1;
         beginInfo._height            = 1;
         cmd.beginRenderPass( beginInfo );
-        cmd.setVertexBuffer( 0, 0, 0, 0 );
-        cmd.setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();

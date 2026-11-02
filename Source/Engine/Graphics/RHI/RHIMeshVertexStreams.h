@@ -29,10 +29,11 @@ namespace sw
         static uint32 computeAttributeOffset( uint32 vertexCapacity ) { return vertexCapacity * constant::render::kMeshPositionStride; }
 
         /**
-         * @brief 정점 @p count 개를 위치 원소(@p pOutPosition, 12 B 씩)와 형식의 속성 원소(@p pOutAttribute)로 바꿔 씁니다.
-         * @details `Packed` 는 노멀 · 탄젠트를 snorm8 로 줄인다 — 단위 벡터가 아닌 값(지형이 탄젠트에 싣는 경계)을 넣은 메시는 `Full` 이어야 한다.
+         * @brief 정점 @p count 개를 정점 @p vertexCapacity 칸짜리 스트림 버퍼(@p pBuffer — [위치 구간][속성 구간])의 @p firstVertex 칸부터 바꿔 씁니다.
+         * @details 원본에서 GPU 모양으로 한 번만 옮긴다(LOD 단계 · 풀의 메시마다 자리를 받아 쓴다 — 중간에 CPU 정점을 이어 붙이지 않는다).
+         *          `Packed` 는 노멀 · 탄젠트를 snorm8 로 줄인다 — 단위 벡터가 아닌 값(지형이 탄젠트에 싣는 경계)을 넣은 메시는 `Full` 이어야 한다.
          */
-        static void write( RHIMeshVertexFormat format, const RHIVertex* pSource, uint32 count, uint8* pOutPosition, uint8* pOutAttribute );
+        static void write( RHIMeshVertexFormat format, const RHIVertex* pSource, uint32 count, uint32 firstVertex, uint32 vertexCapacity, uint8* pBuffer );
 
         /** @brief 메시 정점 버퍼의 위치 구간(슬롯 0)과 속성 구간(슬롯 2, @p attributeOffset 부터)을 겁니다. stride 는 형식의 원소 크기다(드로우가 PSO 의 형식과 대조한다). */
         static void bind( IRHICommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, RHIMeshVertexFormat format );

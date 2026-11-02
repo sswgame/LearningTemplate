@@ -304,9 +304,10 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다. 이전 패스가 건 t/u 슬롯이 다음 세트로 새지 않게 한다(언리얼의 파이프라인별 상태).
+        // PSO 가 바뀌면 그래픽스 슬롯 상태와 정점 버퍼를 비운다. 이전 패스가 건 t/u 슬롯 · 스트림이 다음 드로우로 새지 않게 한다(언리얼의 파이프라인별 상태).
         _pState->_arrSlotState[0]   = VulkanSlotState{};
         _pState->_activeGraphicsPSO = pso;
+        _pState->_vertexBuffers.clear();
         // 등록되지 않은 핸들은 걸지 않는다. 그 뒤의 드로우가 bindActiveGraphicsPipeline 에서 멈춘다.
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord != nullptr && pRecord->_pipeline != VK_NULL_HANDLE )

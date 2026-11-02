@@ -591,14 +591,6 @@ namespace sw
         IRHIResourceFactory* pResource = pDevice->getResourceFactory();
         if ( pResource == nullptr )
             return false;
-        // 그릴 정점 흐름 — LOD 가 있으면 LOD 0 뒤에 낮은 단계를 잇는다(배치가 단계의 범위로 그린다).
-        vector<RHIVertex> listDrawVertex;
-        if ( _listLODVertex.empty() == false )
-        {
-            listDrawVertex.reserve( getDrawVertexCount() );
-            listDrawVertex.insert( listDrawVertex.end(), _listVertex.begin(), _listVertex.end() );
-            listDrawVertex.insert( listDrawVertex.end(), _listLODVertex.begin(), _listLODVertex.end() );
-        }
         vector<uint32> listDrawIndex;
         if ( _listLODIndex.empty() == false )
         {
@@ -606,12 +598,13 @@ namespace sw
             listDrawIndex.insert( listDrawIndex.end(), _listIndex.begin(), _listIndex.end() );
             listDrawIndex.insert( listDrawIndex.end(), _listLODIndex.begin(), _listLODIndex.end() );
         }
-        const RHIVertex* pDrawVertex = listDrawVertex.empty() ? _listVertex.data() : listDrawVertex.data();
-        const uint32*    pDrawIndex  = listDrawIndex.empty() ? _listIndex.data() : listDrawIndex.data();
-        // GPU 정점 = [위치 구간][속성 구간](RHIMeshVertexStreams) — 형식은 메시가 정한다.
+        const uint32* pDrawIndex = listDrawIndex.empty() ? _listIndex.data() : listDrawIndex.data();
+        // GPU 정점 = [위치 구간][속성 구간](RHIMeshVertexStreams) — 형식은 메시가 정한다. 그릴 정점 흐름은 LOD 0 뒤에 낮은 단계다(배치가 단계의 범위로 그린다).
         const uint32  drawVertexCount = getDrawVertexCount();
+        const uint32  lod0Count       = static_cast<uint32>( _listVertex.size() );
         vector<uint8> listStreamByte( RHIMeshVertexStreams::computeBufferBytes( _vertexFormat, drawVertexCount ) );
-        RHIMeshVertexStreams::write( _vertexFormat, pDrawVertex, drawVertexCount, listStreamByte.data(), listStreamByte.data() + getAttributeStreamOffset() );
+        RHIMeshVertexStreams::write( _vertexFormat, _listVertex.data(), lod0Count, 0, drawVertexCount, listStreamByte.data() );
+        RHIMeshVertexStreams::write( _vertexFormat, _listLODVertex.data(), drawVertexCount - lod0Count, lod0Count, drawVertexCount, listStreamByte.data() );
         const uint32          indexBytes   = getDrawIndexCount() * static_cast<uint32>( sizeof( uint32 ) );
         const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( listStreamByte.data(), static_cast<uint32>( listStreamByte.size() ) );
         const RHIBufferHandle indexBuffer  = indexBytes > 0 ? pResource->createIndexBuffer( pDrawIndex, indexBytes ) : 0;

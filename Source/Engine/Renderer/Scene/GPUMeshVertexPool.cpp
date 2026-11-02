@@ -22,7 +22,6 @@ namespace sw
         , _listScratchAdded{}
         , _listScratchRetry{}
         , _listScratchRemoved{}
-        , _listScratchVertex{}
         , _listScratchByte{}
         , _listScratchIndex{}
         , _listScratchRegion{}
@@ -37,11 +36,12 @@ namespace sw
         return RHIMeshVertexStreams::computeAttributeOffset( _allocator.getCapacity() );
     }
 
-    void GPUMeshVertexPool::writeScratchStreams( uint32 vertexCapacity )
+    void GPUMeshVertexPool::writeDrawVertices( const Mesh& mesh, uint32 firstVertex, uint32 vertexCapacity )
     {
-        _listScratchByte.assign( RHIMeshVertexStreams::computeBufferBytes( _format, vertexCapacity ), uint8{ 0 } ); // 꼬리(빈 용량)는 0 — 앞 호출의 내용을 남기지 않는다
-        const uint32 writeCount = MathUtil::min( vertexCapacity, static_cast<uint32>( _listScratchVertex.size() ) );
-        RHIMeshVertexStreams::write( _format, _listScratchVertex.data(), writeCount, _listScratchByte.data(), _listScratchByte.data() + RHIMeshVertexStreams::computeAttributeOffset( vertexCapacity ) );
+        const uint32 lod0Count = static_cast<uint32>( mesh.getVertices().size() );
+        RHIMeshVertexStreams::write( _format, mesh.getVertices().data(), lod0Count, firstVertex, vertexCapacity, _listScratchByte.data() );
+        RHIMeshVertexStreams::write( _format, mesh.getLODVertices().data(), static_cast<uint32>( mesh.getLODVertices().size() ), firstVertex + lod0Count, vertexCapacity,
+                                     _listScratchByte.data() );
     }
 
     GPUMeshVertexPool::Placement GPUMeshVertexPool::placementOf( const Mesh* pMesh ) const
@@ -157,10 +157,10 @@ namespace sw
 
     bool GPUMeshVertexPool::placeAddedMeshes( IRHIDevice* pDevice )
     {
-        _listScratchVertex.clear();
         _listScratchIndex.clear();
         _listScratchRegion.clear();
         _listScratchIndexRegion.clear();
+        uint32 addedCount{ 0 };
         for ( const Mesh* pMesh : _listScratchAdded )
         {
             Entry&       entry     = _mapEntry.find( pMesh )->second;
@@ -171,21 +171,25 @@ namespace sw
             entry._base      = base;
             entry._indexBase = indexBase;
             _liveVertexCount += entry._count;
-            // 정점 조각은 아래에서 스트림으로 바꾼 뒤 위치 · 속성 두 조각으로 낸다 — 여기서는 원본 안 정점 위치(_srcOffset)와 풀 안 시작(_dstOffset)을 정점 단위로 적어 둔다.
-            _listScratchRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchVertex.size() ), base, entry._count } );
+            // 정점 조각은 아래에서 위치 · 속성 두 조각으로 낸다 — 여기서는 올릴 원본 안 정점 자리(_srcOffset)와 풀 안 시작(_dstOffset)을 정점 단위로 적어 둔다.
+            _listScratchRegion.push_back( RHIBufferCopyRegion{ addedCount, base, entry._count } );
+            addedCount += entry._count;
             _listScratchIndexRegion.push_back( RHIBufferCopyRegion{ static_cast<uint32>( _listScratchIndex.size() * sizeof( uint32 ) ), indexBase * static_cast<uint32>( sizeof( uint32 ) ),
                                                                     entry._indexCount * static_cast<uint32>( sizeof( uint32 ) ) } );
-            appendDrawGeometry( *pMesh );
+            appendDrawIndices( *pMesh );
         }
         if ( _listScratchRegion.empty() == false )
         {
-            // 올릴 원본 = 이번에 들어온 정점들의 [위치 구간][속성 구간], 목적 = 풀 버퍼의 같은 두 구간.
-            const uint32 addedCount      = static_cast<uint32>( _listScratchVertex.size() );
+            // 올릴 원본 = 이번에 들어온 정점들의 [위치 구간][속성 구간](메시마다 받은 자리에 원본에서 바로 쓴다), 목적 = 풀 버퍼의 같은 두 구간.
             const uint32 attributeStride = constant::render::getMeshAttributeStride( _format );
             const uint32 srcAttribute    = RHIMeshVertexStreams::computeAttributeOffset( addedCount );
             const uint32 dstAttribute    = getAttributeOffset();
-            writeScratchStreams( addedCount );
+            _listScratchByte.resize( RHIMeshVertexStreams::computeBufferBytes( _format, addedCount ) ); // 모든 칸을 아래에서 쓴다
             const size_t meshCount = _listScratchRegion.size();
+            for ( size_t meshIndex = 0; meshIndex < meshCount; ++meshIndex )
+            {
+                writeDrawVertices( *_listScratchAdded[meshIndex], _listScratchRegion[meshIndex]._srcOffset, addedCount );
+            }
             for ( size_t meshIndex = 0; meshIndex < meshCount; ++meshIndex )
             {
                 const RHIBufferCopyRegion vertexSpan = _listScratchRegion[meshIndex];
@@ -225,9 +229,8 @@ namespace sw
         _indexAllocator.reset( indexCapacity );
         _liveVertexCount = 0;
 
-        // 목록 순서 = 맵의 밀집 순서다. 정렬하지 않는다 — 구간 위치는 그림에 드러나지 않는다.
-        _listScratchVertex.clear();
-        _listScratchVertex.reserve( capacity );
+        // 목록 순서 = 맵의 밀집 순서다. 정렬하지 않는다 — 구간 위치는 그림에 드러나지 않는다. 정점은 받은 구간 자리에 원본에서 바로 쓴다.
+        _listScratchByte.assign( RHIMeshVertexStreams::computeBufferBytes( _format, capacity ), uint8{ 0 } ); // 꼬리(빈 용량)는 0 — 앞 호출의 내용을 남기지 않는다
         _listScratchIndex.clear();
         _listScratchIndex.reserve( indexCapacity );
         bool bWarnedFull = false;
@@ -248,15 +251,15 @@ namespace sw
                 bWarnedFull = true;
                 continue;
             }
-            // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다). 구간은 앞에서부터 이어지므로 목록 끝이 곧 구간 시작이다.
-            appendDrawGeometry( *pMesh );
+            // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다). 인덱스 구간은 앞에서부터 이어지므로 목록 끝이 곧 구간 시작이다.
+            writeDrawVertices( *pMesh, entry._base, capacity );
+            appendDrawIndices( *pMesh );
             _liveVertexCount += entry._count;
         }
         if ( _liveVertexCount == 0 )
             return;
         // 꼬리는 비워 둔 용량이다 — 0 으로 채워 버퍼 전체를 한 번에 만든다(createVertexBuffer · createIndexBuffer 는 내용 없이 만들 수 없다).
         _listScratchIndex.resize( indexCapacity );
-        writeScratchStreams( capacity ); // 꼬리(빈 용량)는 0 바이트다
         _vertexBuffer = pFactory->createVertexBuffer( _listScratchByte.data(), static_cast<uint32>( _listScratchByte.size() ) );
         _indexBuffer  = pFactory->createIndexBuffer( _listScratchIndex.data(), indexCapacity * static_cast<uint32>( sizeof( uint32 ) ) );
         if ( _vertexBuffer == 0 || _indexBuffer == 0 )
@@ -280,10 +283,8 @@ namespace sw
         }
     }
 
-    void GPUMeshVertexPool::appendDrawGeometry( const Mesh& mesh )
+    void GPUMeshVertexPool::appendDrawIndices( const Mesh& mesh )
     {
-        _listScratchVertex.insert( _listScratchVertex.end(), mesh.getVertices().begin(), mesh.getVertices().end() );
-        _listScratchVertex.insert( _listScratchVertex.end(), mesh.getLODVertices().begin(), mesh.getLODVertices().end() );
         _listScratchIndex.insert( _listScratchIndex.end(), mesh.getIndices().begin(), mesh.getIndices().end() );
         _listScratchIndex.insert( _listScratchIndex.end(), mesh.getLODIndices().begin(), mesh.getLODIndices().end() );
     }

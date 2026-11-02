@@ -81,9 +81,7 @@ namespace sw
             return 0;
         SW_PROFILE_SCOPE( "RT.Canvas.Draw" );
 
-        // 정점은 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼 슬롯은 비운다(풀스크린 패스와 같다).
-        cmd.setVertexBuffer( 0, 0, 0, 0 );
-        cmd.setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
+        // 정점은 셰이더가 SV_VertexID 로 만든다 — PSO 의 입력 레이아웃이 비어 정점 버퍼를 걸지 않는다.
         cmd.setPipelineState( pso );
         // setPipelineState 가 슬롯 상태를 비운다 — 버퍼는 PSO 뒤에 건다.
         cmd.bindStructuredBuffer( _quadBuffer.getSlot()._srv, shaderslot::kPassBuffer );

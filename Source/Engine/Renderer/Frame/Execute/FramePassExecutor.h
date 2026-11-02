@@ -310,11 +310,11 @@ namespace sw
         /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
         bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatch& other ) const;
         /**
-         * @brief 묶음 하나를 그립니다 — 바뀐 정점 버퍼 · 배치 PSO 만 다시 걸고, 머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다.
+         * @brief 묶음 하나를 그립니다 — 바뀐 배치 PSO 를 걸고(그때 정점 슬롯이 비므로 인스턴스 슬롯 스트림 · 메시 스트림도 다시 건다), 바뀐 정점 버퍼만 다시 걸고,
+         *        머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다.
          * @return 그렸으면 true 입니다. 그 보기 모드의 머티리얼 변형이 없으면(만들 때 오류를 남겼다) 그리지 않고 false 입니다.
          */
-        bool drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, RenderViewMode drawMode, const GPUMeshBatch& head, RHIPipelineStateHandle& ioBoundPSO,
-                             RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount );
+        bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head, uint32 argIndex, uint32 groupCount );
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
         /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */
@@ -329,12 +329,10 @@ namespace sw
          */
         bool drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot );
         /**
-         * @brief @p listSlot 의 @p inOutCursor 부터 자리가 @p position 이하인 입자를 그리고 커서를 그 뒤로 옮깁니다. 메시 드로우로 돌아갈 패스 상태(인스턴스 슬롯
-         *        스트림 @p slotStream, 에뮬 텍스처 슬롯)를 다시 겁니다.
-         * @return 입자 상태를 걸었으면 true 입니다 — 부르는 쪽은 자기가 기억한 PSO · 정점 버퍼를 잊어야 한다
+         * @brief @p listSlot 의 @p inOutCursor 부터 자리가 @p position 이하인 입자를 그리고 커서를 그 뒤로 옮깁니다. 메시 드로우로 돌아갈 에뮬 텍스처 슬롯을 다시 겁니다.
+         * @return 입자 상태를 걸었으면 true 입니다 — 부르는 쪽은 자기가 기억한 PSO · 정점 버퍼를 잊어야 한다(다음 묶음이 PSO 와 정점 스트림을 다시 건다)
          */
-        bool drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
-                              RHIBufferHandle slotStream );
+        bool drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position );
         /** @brief 새로 칸을 받은 쿠키를 아틀라스 칸에 그립니다(프레임 프리패스 리스트, `submitGraph`). 그릴 칸이 없으면 아무것도 하지 않습니다. */
         void drawLight2DCookieAtlas();
         /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 로 받은 값을 쓰고, 없으면 전역 `gv_drawMerge` 를 씁니다. */

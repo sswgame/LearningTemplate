@@ -504,8 +504,6 @@ namespace sw
         beginInfo._width             = depth._width;
         beginInfo._height            = depth._height;
         _pCmd->beginRenderPass( beginInfo );
-        _pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        _pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
         _pCmd->setPipelineState( _psoManager.getEnginePSO( RenderPassType::DepthHistory ) );
         // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depth_history.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();

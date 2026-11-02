@@ -115,7 +115,8 @@ namespace sw
     void OpenGLRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
         // 등록되지 않은 핸들도 기록한다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 resolveDrawProgram 에서 멈춘다.
-        _pDevice->_recordingState._boundGraphicsPSO               = pso;
+        _pDevice->_recordingState._boundGraphicsPSO = pso;
+        _pState->_vertexBuffers.clear(); // 정점 버퍼는 PSO 뒤에 건다(IRHICommandList::setPipelineState 계약)
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_program == 0 )
             return;
