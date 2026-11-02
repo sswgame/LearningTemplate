@@ -566,6 +566,9 @@ namespace sw
         _frameStreamContext = sw::make_unique<OpenGLRHICommandContext>( this );
 
         SW_LOG_INFO_ID( "OpenGL.OpenGLRHIBackendDevice", "OpenGL RHI Backend Device Active (DirectX Coordinate System & Top-Left UV Texture Space Configured)" );
+        // GL 은 어댑터를 고르지 않는다(드라이버 · 실행 파일 내보내기가 정한다) — 어느 GPU 에서 도는지 남긴다(DX 의 AdapterSelected 자리, 제조사마다 그림이 다를 때 가른다).
+        SW_LOG_INFO_ID( "OpenGL.AdapterSelected", "OpenGL renderer: %# (%#)", reinterpret_cast<const char*>( glGetString( GL_RENDERER ) ),
+                        reinterpret_cast<const char*>( glGetString( GL_VENDOR ) ) );
         return true;
     }
 
