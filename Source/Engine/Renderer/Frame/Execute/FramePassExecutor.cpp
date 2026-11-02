@@ -1186,6 +1186,9 @@ namespace sw
     {
         // 원본 색(SourceColor 역할 입력)을 선언한 컬러 출력으로 그대로 복사한다 — 셰이더도 PSO 도 없다. 반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다(물의 굴절).
         // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassTypeInfo`)이 SourceColor 를 필수로 검사했다.
+        // 사본을 읽는 것은 반투명 메시(물의 굴절 — water.hlsl)뿐이다. 이 프레임에 반투명 메시 배치가 없으면 복사하지 않는다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다).
+        if ( _state._gpuScene.getTransparentBatches().empty() )
+            return;
         using Internal                                              = FramePassExecutorInternal;
         const RenderGraphPassDesc::ResolvedAttachment* pSourceInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SourceColor );
         SW_ASSERT( pSourceInput != nullptr );
