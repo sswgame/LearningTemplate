@@ -481,7 +481,7 @@ namespace sw
             uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            atomic<uint64> _lastTransferSerial{ 0 };
+            RHITextureTransferMarks _transferMarks;
             /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
             atomic<uint64> _lastReadbackSerial{ 0 };
             uint8          _bRenderTarget : 1;

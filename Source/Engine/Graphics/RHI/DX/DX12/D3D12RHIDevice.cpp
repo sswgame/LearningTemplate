@@ -99,7 +99,7 @@ namespace sw
         , _transferJobMutex{}
         , _listFreeTransferJob{}
         , _textureTransferMutex{}
-        , _mapTextureTransferSerial{}
+        , _mapTextureTransferMarks{}
         , _readbackTable{}
         , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
         , _transferReleaseQueue{}
@@ -1929,7 +1929,7 @@ namespace sw
         }
         {
             ScopedLock<mutex> lock{ _textureTransferMutex };
-            _mapTextureTransferSerial.clear();
+            _mapTextureTransferMarks.clear();
         }
         // 가져가지 않은 읽기는 읽기 버퍼와 함께 사라진다. 그 뒤의 가져가기 · 버리기는 업로드 티켓처럼 아무 일도 하지 않는다.
         _readbackTable.clear();
@@ -2125,23 +2125,27 @@ namespace sw
     void D3D12RHIDevice::noteTextureTransfer( RHITextureHandle texture, uint64 serial )
     {
         ScopedLock<mutex> lock{ _textureTransferMutex };
-        // 스레드마다 제출하므로 늦게 기록한 작은 시리얼이 큰 시리얼을 덮지 않게 한다(파괴 지연과 bindless 등록 보호는 가장 나중에 제출한 전송을 기다려야 한다).
-        uint64& rSerial = _mapTextureTransferSerial[texture];
-        if ( serial > rSerial )
-            rSerial = serial;
+        _mapTextureTransferMarks[texture].recordWrite( serial );
     }
 
     uint64 D3D12RHIDevice::findTextureTransferSerial( RHITextureHandle texture )
     {
         ScopedLock<mutex> lock{ _textureTransferMutex };
-        const auto        foundIt = _mapTextureTransferSerial.find( texture );
-        return foundIt != _mapTextureTransferSerial.end() ? foundIt->second : 0;
+        const auto        foundIt = _mapTextureTransferMarks.find( texture );
+        return foundIt != _mapTextureTransferMarks.end() ? foundIt->second._lastSerial.load() : 0;
+    }
+
+    bool D3D12RHIDevice::isTextureReadyToRegister( RHITextureHandle texture )
+    {
+        ScopedLock<mutex> lock{ _textureTransferMutex };
+        const auto        foundIt = _mapTextureTransferMarks.find( texture );
+        return foundIt == _mapTextureTransferMarks.end() || _transferSerials.isTextureReadyToRegister( foundIt->second, texture );
     }
 
     void D3D12RHIDevice::eraseTextureTransfer( RHITextureHandle texture )
     {
         ScopedLock<mutex> lock{ _textureTransferMutex };
-        _mapTextureTransferSerial.erase( texture );
+        _mapTextureTransferMarks.erase( texture );
     }
 } // namespace sw
 #endif

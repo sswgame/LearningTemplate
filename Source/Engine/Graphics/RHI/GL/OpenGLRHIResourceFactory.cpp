@@ -536,7 +536,7 @@ namespace sw
         // 펜스가 링 구간의 회수 시점이다 — 워터마크가 이 시리얼을 지나면 구간이 돌아온다.
         const uint64 serial = _pDevice->endTransfer();
         _pDevice->_stagingRing.markSubmitted( staging, serial );
-        pRecord->_lastTransferSerial.store( serial );
+        pRecord->_transferMarks.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -591,7 +591,7 @@ namespace sw
         }
         const uint64 serial = _pDevice->endTransfer();
         _pDevice->_stagingRing.markSubmitted( staging, serial );
-        pRecord->_lastTransferSerial.store( serial );
+        pRecord->_transferMarks.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -873,7 +873,7 @@ namespace sw
             return kInvalidDescriptorIndex;
         }
         // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        if ( pRecord != nullptr && _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_lastTransferSerial.load(), texture ) == false )
+        if ( pRecord != nullptr && _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferMarks, texture ) == false )
             return kInvalidDescriptorIndex;
 
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,

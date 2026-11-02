@@ -76,12 +76,13 @@ namespace sw
         return RHITransferStatus::Pending;
     }
 
-    bool RHITransferSerials::isTextureReadyToRegister( uint64 lastTransferSerial, RHITextureHandle texture ) const
+    bool RHITransferSerials::isTextureReadyToRegister( const RHITextureTransferMarks& marks, RHITextureHandle texture ) const
     {
-        if ( lastTransferSerial == 0 || isComplete( lastTransferSerial ) )
+        const uint64 firstUploadSerial = marks._firstSerial.load(); // 첫 업로드만 막는다(RHITextureTransferMarks)
+        if ( firstUploadSerial == 0 || isComplete( firstUploadSerial ) )
             return true;
-        SW_LOG_ERROR_ID( "RHI.RegisterBeforeTransferDone", "registerBindlessTexture: texture %# has an unfinished transfer (serial %#, watermark %#): register only after pollTransfer returns Complete", texture,
-                         lastTransferSerial, getWatermark() );
+        SW_LOG_ERROR_ID( "RHI.RegisterBeforeTransferDone", "registerBindlessTexture: texture %# has an unfinished first upload (serial %#, watermark %#): register only after pollTransfer returns Complete", texture,
+                         firstUploadSerial, getWatermark() );
         return false;
     }
 } // namespace sw

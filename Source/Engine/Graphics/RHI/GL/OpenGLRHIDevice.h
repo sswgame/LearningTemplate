@@ -393,10 +393,10 @@ namespace sw
             uint32              _arraySize{ 1 };      ///< 면 수(배열 원소, 큐브 면)
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            atomic<uint64> _lastTransferSerial{ 0 };
-            uint8          _bDepthStencil : 1;
-            uint8          _bUAV          : 1;
-            uint8          _reserved      : 6;
+            RHITextureTransferMarks _transferMarks;
+            uint8                   _bDepthStencil : 1;
+            uint8                   _bUAV          : 1;
+            uint8                   _reserved      : 6;
         };
 
         /// @brief MRT FBO 캐시 키입니다.

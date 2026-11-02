@@ -735,7 +735,7 @@ namespace sw
             ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
-        pRecord->_lastTransferSerial.store( serial );
+        pRecord->_transferMarks.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -819,7 +819,7 @@ namespace sw
             ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
-        pRecord->_lastTransferSerial.store( serial );
+        pRecord->_transferMarks.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -1073,7 +1073,7 @@ namespace sw
 
         // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 끝나면 그때의 다음 프레임 펜스까지 한 번 더 미뤄 이 텍스처를 그린 프레임도 지나게 한다.
         // 지금은 전송과 프레임이 같은 큐라 다음 프레임 펜스도 앞서 낸 전송을 덮지만, 해제가 그 큐 공유에 기대지 않게 전송 완료를 직접 본다(DX12 와 같은 규칙).
-        const uint64 lastWriteSerial     = owned._lastTransferSerial.load();
+        const uint64 lastWriteSerial     = owned._transferMarks._lastSerial.load();
         const uint64 lastReadSerial      = owned._lastReadbackSerial.load();
         const uint64 lastSerial          = lastWriteSerial > lastReadSerial ? lastWriteSerial : lastReadSerial;
         const bool   bUnfinishedTransfer = lastSerial != 0 && _pDevice->_transferSerials.isComplete( lastSerial ) == false;
@@ -1120,9 +1120,8 @@ namespace sw
 
         VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
         // 등록마다 새 번호다(DX11 · DX12 · GL 과 같다). 같은 텍스처의 번호를 나눠 주면 한쪽의 해제(에디터의 ImGui 등록)가 다른 쪽(엔진)이 쓰는 번호를 놓는다.
-        // 끝나지 않은 업로드가 남은 텍스처는 처음 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        // 이미 등록된 텍스처는 업로드가 남아도 등록한다 — 등록 뒤 구간 갱신(글리프 아틀라스)은 막지 않는다.
-        if ( record._listBindlessIndex.empty() && _pDevice->_transferSerials.isTextureReadyToRegister( record._lastTransferSerial.load(), texture ) == false )
+        // 첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — RHITextureTransferMarks). 뒤의 구간 갱신은 막지 않는다.
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._transferMarks, texture ) == false )
             return kInvalidDescriptorIndex;
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };

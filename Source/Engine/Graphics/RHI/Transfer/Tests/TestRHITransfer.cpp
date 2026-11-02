@@ -271,10 +271,19 @@ SW_TEST_CASE( RHITransferTest, SerialsClassifyTicketsByWatermarkAndGeneration )
     serials.advanceWatermark( 0 ); // 워터마크는 내려가지 않는다
     SW_EXPECT_EQUAL( first, serials.getWatermark() );
 
-    // bindless 등록 보호: 전송한 적 없거나(0) 끝난 전송이면 통과하고, 끝나지 않은 전송이 남은 텍스처는 오류와 함께 거절한다.
-    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( 0, 11 ) );
-    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( first, 11 ) );
-    SW_EXPECT_FALSE( serials.isTextureReadyToRegister( second, 11 ) );
+    // bindless 등록 보호: 전송한 적 없거나 첫 업로드가 끝났으면 통과하고(뒤의 구간 갱신이 남아도), 첫 업로드가 남은 텍스처는 오류와 함께 거절한다.
+    RHITextureTransferMarks neverUploaded;
+    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( neverUploaded, 11 ) );
+    RHITextureTransferMarks updatedAfterFirst;
+    updatedAfterFirst.recordWrite( first );
+    updatedAfterFirst.recordWrite( second );
+    SW_EXPECT_TRUE( serials.isTextureReadyToRegister( updatedAfterFirst, 11 ) );
+    SW_EXPECT_EQUAL( second, updatedAfterFirst._lastSerial.load() ); // 파괴 미루기는 마지막 전송을 기다린다
+    RHITextureTransferMarks firstPending;
+    firstPending.recordWrite( second );
+    firstPending.recordWrite( first ); // 늦게 적은 작은 시리얼은 마지막을 덮지 않는다
+    SW_EXPECT_EQUAL( second, firstPending._lastSerial.load() );
+    SW_EXPECT_FALSE( serials.isTextureReadyToRegister( firstPending, 11 ) );
 
     serials.markLost();
     SW_EXPECT_TRUE( serials.classify( firstTicket ) == RHITransferStatus::Complete ); // 이미 끝난 일은 그대로다

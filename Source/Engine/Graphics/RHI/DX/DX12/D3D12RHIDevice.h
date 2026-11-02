@@ -664,6 +664,8 @@ namespace sw
         void noteTextureTransfer( RHITextureHandle texture, uint64 serial );
         /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */
         [[nodiscard]] uint64 findTextureTransferSerial( RHITextureHandle texture );
+        /** @brief 텍스처의 첫 업로드가 끝나 bindless 에 등록해도 되는지 봅니다(아니면 오류를 남긴다 — `RHITransferSerials::isTextureReadyToRegister`). */
+        [[nodiscard]] bool isTextureReadyToRegister( RHITextureHandle texture );
         /** @brief 텍스처를 파괴할 때 전송 시리얼 칸을 지웁니다. */
         void eraseTextureTransfer( RHITextureHandle texture );
         /**
@@ -849,7 +851,7 @@ namespace sw
         /// @brief 텍스처 핸들에서 마지막 전송(업로드 또는 읽기 원본)의 시리얼을 찾는 표를 지킵니다(DX12 텍스처는 레코드 없이 리소스 포인터만 들고 있다).
         mutex _textureTransferMutex;
         /// @brief 텍스처 핸들에서 마지막 전송의 시리얼을 찾는 표입니다. `_textureTransferMutex` 가 지킵니다.
-        unordered_map<RHITextureHandle, uint64> _mapTextureTransferSerial SW_GUARDED_BY( _textureTransferMutex );
+        unordered_map<RHITextureHandle, RHITextureTransferMarks> _mapTextureTransferMarks SW_GUARDED_BY( _textureTransferMutex );
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
 

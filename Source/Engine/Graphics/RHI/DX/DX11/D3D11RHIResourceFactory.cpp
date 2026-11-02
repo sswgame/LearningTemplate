@@ -402,7 +402,7 @@ namespace sw
             context->UpdateSubresource( pRecord->_texture.Get(), subresource, nullptr, span._pData, span._rowBytes, span._sizeBytes );
         }
         const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
-        pRecord->_lastTransferSerial.store( serial );
+        pRecord->_transferMarks.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -446,7 +446,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         context->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, uploadBytes );
         const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
-        pRecord->_lastTransferSerial.store( serial );
+        pRecord->_transferMarks.recordWrite( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -771,7 +771,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_srv == nullptr )
             return kInvalidDescriptorIndex;
         // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        if ( _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_lastTransferSerial.load(), texture ) == false )
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferMarks, texture ) == false )
             return kInvalidDescriptorIndex;
         // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다. 배열이나 큐브 뷰를 바인딩하면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         if ( pRecord->_dimension != RHITextureDimension::Texture2D )

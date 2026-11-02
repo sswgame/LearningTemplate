@@ -386,9 +386,9 @@ namespace sw
             uint32                                                 _arraySize; ///< 면 수
             RHITextureDimension                                    _dimension;
             /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            atomic<uint64> _lastTransferSerial;
-            uint8          _bDepth   : 1;
-            uint8          _reserved : 7;
+            RHITextureTransferMarks _transferMarks;
+            uint8                   _bDepth   : 1;
+            uint8                   _reserved : 7;
             /** @brief 빈 텍스처 레코드로 만듭니다. */
             TextureRecord()
                 : _listSliceRTV{}
@@ -397,7 +397,6 @@ namespace sw
                 , _height{ 0 }
                 , _arraySize{ 1 }
                 , _dimension{ RHITextureDimension::Texture2D }
-                , _lastTransferSerial{ 0 }
                 , _bDepth{ SW_FALSE }
                 , _reserved{ 0 } {}
 

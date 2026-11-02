@@ -22,6 +22,31 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct RHITextureTransferMarks
+     * @brief 텍스처 하나에 낸 쓰기 전송(업로드)의 첫 시리얼과 마지막 시리얼입니다. 네 백엔드의 텍스처 기록이 하나씩 든다.
+     * @details 첫 시리얼은 bindless 등록 관문(`RHITransferSerials::isTextureReadyToRegister`)이, 마지막 시리얼은 전송 중 파괴 미루기(전송 계약 6)가 본다.
+     *          등록은 **첫 업로드**가 끝나야 받는다 — 주인이 업로드 결과(성공 · 실패)를 확인하기 전에 텍스처를 내보내지 않게 하는 관문이다. 그 뒤의 구간 갱신
+     *          (글리프 아틀라스, CPU 텍스처의 구간 쓰기)은 뒤에 낸 프레임보다 먼저 실행되므로(전송 계약 3(b)) 이미 내보낸 텍스처를 다른 쪽(에디터 UI)이 등록하는 것을
+     *          막지 않는다. 마지막 전송으로 막으면 구간을 다시 쓰는 텍스처는 등록 시점에 따라 거절됐다(백엔드마다 규칙도 달랐다 — Vulkan 만 "이미 등록됨" 으로 풀었다).
+     */
+    struct RHITextureTransferMarks
+    {
+        atomic<uint64> _firstSerial{ 0 };
+        atomic<uint64> _lastSerial{ 0 };
+
+        /** @brief 쓰기 전송 하나를 적습니다. 첫 시리얼은 처음 한 번만, 마지막 시리얼은 더 큰 값만 받는다(여러 스레드가 제출해 늦게 적은 작은 시리얼이 덮지 않게). */
+        void recordWrite( uint64 serial )
+        {
+            uint64 expectedFirst = 0;
+            (void)_firstSerial.compare_exchange_strong( expectedFirst, serial );
+            uint64 last = _lastSerial.load();
+            while ( serial > last && _lastSerial.compare_exchange_weak( last, serial ) == false )
+            {
+            }
+        }
+    };
+
+    /**
      * @class RHITransferSerials
      * @brief 한 장치의 전송 시리얼을 발급하고 완료 워터마크를 쥡니다.
      * @details **시리얼은 큐 제출 순서대로 매겨야 한다.** 그래서 `issue` 는 백엔드가 자기 큐 제출 락을 쥔 채, 제출을 낸 직후에 부른다(같은 락 안). 락 밖에서 발급하면 두
@@ -86,12 +111,12 @@ namespace sw
         [[nodiscard]] RHITransferStatus classify( RHITransferTicket ticket ) const;
 
         /**
-         * @brief bindless 등록 보호입니다. 텍스처 레코드의 마지막 전송 시리얼이 아직 끝나지 않았으면 오류를 남기고 false 입니다.
-         * @param lastTransferSerial 레코드가 들고 있는 마지막 쓰기 전송(업로드)의 시리얼입니다. 전송한 적이 없으면 0 이고 그때는 늘 true 입니다.
+         * @brief bindless 등록 보호입니다. 텍스처의 첫 쓰기 전송(업로드)이 아직 끝나지 않았으면 오류를 남기고 false 입니다(`RHITextureTransferMarks` 가 까닭을 적는다).
+         * @param marks 텍스처 기록의 전송 표시입니다. 전송한 적이 없으면 늘 true 입니다(렌더 타깃 · 내용을 아직 올리지 않은 텍스처).
          * @details 백엔드의 `registerBindlessTexture` 가 부르고, false 면 `kInvalidDescriptorIndex` 를 돌려준다. "`Complete` 를 본 뒤에 등록한다" 는 소비자 규칙을 주석이 아니라
          *          코드로 막는 자리다. 워터마크는 `pollTransfer` 가 `Complete` 를 돌려줄 때 이미 올라가 있으므로, 규칙을 지킨 소비자는 늘 통과한다.
          */
-        [[nodiscard]] bool isTextureReadyToRegister( uint64 lastTransferSerial, RHITextureHandle texture ) const;
+        [[nodiscard]] bool isTextureReadyToRegister( const RHITextureTransferMarks& marks, RHITextureHandle texture ) const;
 
     private:
         atomic<uint64> _lastIssued;
