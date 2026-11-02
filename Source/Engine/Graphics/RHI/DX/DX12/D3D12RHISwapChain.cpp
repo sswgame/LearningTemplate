@@ -124,6 +124,9 @@ namespace sw
             SW_LOG_ERROR_ID( "D3D12.ResizeBuffersFailedHrX", "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
             return false;
         }
+        // 새 백버퍼는 PRESENT(COMMON) 상태로 생긴다 — 추적 상태도 그 값으로 맞춘다. present 하지 않고 끝난 프레임(무인 시나리오 · bPresent=false)의 RENDER_TARGET 을
+        // 들고 가면 다음 프레임이 배리어 없이 Clear 해 디버그 레이어가 막았다(id 538).
+        markPresented();
         return true;
     }
 
