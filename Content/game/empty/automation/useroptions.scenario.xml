@@ -7,7 +7,7 @@
   실행: ctest -R Scenario.game.empty.useroptions
         (ctest 가 <Launch> 를 명령줄로 옮긴다)
 -->
-<Scenario name="game.empty.useroptions" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.empty.useroptions" fixedDelta="0.0166667" timeoutFrames="450" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
 	<Launch variable="gv_deferredShading" value="1"/>
 	<!-- 설정 파일이 비어 있으면 App 이 이 PC 에 맞춰 그래픽 프리셋을 고른다(약한 GPU 는 low) — 잰 값의 기준 상태(높음)로 못 박는다 -->
@@ -22,6 +22,11 @@
 	<Variable name="gv_renderScale" value="0.5"/>
 	<Wait frames="30"/>
 	<Screenshot file="scale.ppm" waitForSettle="false"/>
+	<!-- 같은 배율을 FSR 1(EASU + RCAS)로 키운다 — RCAS 가 대상 픽셀을 정점 UV 로 구한다(GL 기본 프레임버퍼는 조각 좌표 원점이 달라 SV_Position 을 쓰지 않는다) -->
+	<Variable name="gv_upscaler" value="1"/>
+	<Wait frames="30"/>
+	<Screenshot file="scale_fsr.ppm" waitForSettle="false"/>
+	<Variable name="gv_upscaler" value="0"/>
 	<Wait frames="5"/>
 	<Variable name="gv_renderScale" value="1"/>
 
@@ -51,6 +56,8 @@
 
 	<Wait frames="10"/>
 	<ExpectImage file="scale.ppm" golden="scale" region="0.05,0.15,0.95,0.75"/>
+	<!-- 왼쪽 큐브 모서리를 줄이지 않고(160 px 폭 = 원 픽셀) 본다 — 넓은 영역은 160 px 로 줄어 FSR 과 선형이 같아지고, 이 영역은 한 줄 어긋남도 4 % 넘게 달라진다 -->
+	<ExpectImage file="scale_fsr.ppm" golden="scale_fsr" region="0.11,0.3,0.235,0.5"/>
 	<ExpectImage file="distance.ppm" golden="distance" region="0.05,0.15,0.95,0.75"/>
 	<ExpectImage file="postlow.ppm" golden="postlow" region="0.05,0.15,0.95,0.75"/>
 	<ExpectImage file="colorvision.ppm" golden="colorvision" region="0.05,0.15,0.95,0.75"/>
