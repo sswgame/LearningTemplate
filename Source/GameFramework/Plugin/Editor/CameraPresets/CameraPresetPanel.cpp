@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -102,6 +103,7 @@ namespace sw::editor
                 const string           label     = string( preset._id.c_str() ) + "  [" + CameraPresetModel::getModeName( preset._view._mode ) + "]";
                 if ( ImGui::Selectable( label.c_str(), bSelected ) )
                     _model.selectPreset( index );
+                EditorSelfTestMarks::note( ( string( "camerapreset.row." ) + preset._id.c_str() ).c_str() ); // 시나리오가 행을 고른다(editor/camerapresets)
             }
             ImGui::EndListBox();
         }

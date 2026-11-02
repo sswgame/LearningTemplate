@@ -11,12 +11,14 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -46,6 +48,36 @@ namespace sw::editor
             {
                 return float4x4::makeTrs( position, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, yaw ), float3{ 1.0f, 1.0f, 1.0f } );
             }
+
+            /** @brief 열린 창입니다. 닫혔으면 nullptr 입니다(감시 값이 실패한다). */
+            [[nodiscard]] static const PairedAnimationPanel* findOpenPanel()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return nullptr;
+                const PairedAnimationPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<PairedAnimationPanel>();
+                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+            }
+
+            /** @brief 감시 값 `Editor.PairedAnimationRoleCount` — 연 파일의 역할 수입니다(창이 닫혔거나 파일을 읽지 못했으면 실패). */
+            [[nodiscard]] static bool readRoleCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const PairedAnimationPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr || pPanel->getModel().getContent()._listRole.empty() ) // 읽은 파일은 역할이 하나 이상이다(PairedAnimationDef 검사)
+                    return false;
+                outValue = static_cast<float64>( pPanel->getModel().getContent()._listRole.size() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Editor.PairedAnimationSceneFrames` — 창이 렌더러에 그려 달라고 낸 미리보기 씬 프레임 수입니다. */
+            [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const PairedAnimationPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getPreviewViewport().getSubmittedFrameCount() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -53,6 +85,10 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( PairedAnimationPanel, PairedAnimationPanel::kPanelID, EditorPanelCategory::Custom, 9030 );
+    SW_AUTOMATION_WATCH( editorPairedAnimationRoleCount, "Editor.PairedAnimationRoleCount", "Roles in the paired animation file the Paired Animation panel has open (fails while the panel is closed or has no file)",
+                         &PairedAnimationPanelInternal::readRoleCount );
+    SW_AUTOMATION_WATCH( editorPairedAnimationSceneFrames, "Editor.PairedAnimationSceneFrames", "Frames the Paired Animation panel asked the renderer to draw its preview scene",
+                         &PairedAnimationPanelInternal::readPreviewSceneFrames );
 
     PairedAnimationPanel::PairedAnimationPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }

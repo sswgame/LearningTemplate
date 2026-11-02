@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 버그 리포트 창(Bug It): 창을 열고 메모 칸에 글을 적은 뒤 Collect Now 를 누르면 개발 명령 bugreport 와 같은 수집이 그 메모로 Saved/BugReports/<시각>/ 에
+  리포트를 남긴다(창은 목록을 새로 읽는다). 수집 자체(폴더 내용 · bugreport.goto)는 editor/bugreport 가 본다 — 이 시나리오는 창의 길(메모 → 수집)을 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/bugreportpanel.scenario.xml -unattended
+-->
+<Scenario name="editor.bugreportpanel" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1600" height="900"/>
+	<Wait frames="20"/>
+	<DevCommand line="panel.focus bug_it"/>
+	<Wait frames="20"/>
+	<EditorClick mark="bugReport.note"/>
+	<EditorText value="panel scenario note"/>
+	<Wait frames="5"/>
+	<EditorClick mark="bugReport.capture"/>
+	<Wait frames="10"/>
+	<ExpectLog id="BugReport.Saved" contains="panel scenario note" count="1"/>
+	<DevCommand line="panel.close bug_it"/>
+	<Wait frames="5"/>
+	<Pass/>
+</Scenario>
