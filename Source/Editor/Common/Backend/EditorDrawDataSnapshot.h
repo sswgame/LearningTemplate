@@ -1,6 +1,6 @@
 /**
  * @file EditorDrawDataSnapshot.h
- * @brief ImGui 메인 뷰포트 DrawData를 클론해 렌더 스레드가 안전하게 그리게 합니다.
+ * @brief ImGui 의 그리기 목록(메인 · 보조 창 · UI 캡처 합본)을 클론해 렌더 스레드가 UI 스레드와 겹쳐 그리게 합니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -17,8 +17,9 @@ namespace sw::editor
 {
     /**
      * @class EditorDrawDataSnapshot
-     * @brief EndFrame 이후 메인 DrawData를 복사합니다. 원본은 다음 NewFrame에서 무효가 됩니다.
-     * @details 보조(플로팅) 뷰포트는 UI 스레드가 RenderPlatformWindowsDefault 로 직접 처리합니다.
+     * @brief EndFrame 이후 그리기 목록을 복사합니다. 원본은 다음 NewFrame 에서 무효가 됩니다.
+     * @details 렌더 스레드는 이 스냅샷만 읽고 살아 있는 ImGui 상태(뷰포트 · 입출력 설정)를 읽지 않는다 — UI 스레드가 다음 프레임을 만드는 동안 그린다(`DrawSnapshotHandoff`).
+     *          보조(플로팅) 창은 창마다 그리기 목록과 렌더러 칸(스왑체인)을 함께 담는다. 스왑체인을 부수거나 크기를 바꾸는 훅은 낸 스냅샷이 다 그려지기를 기다린다(`ImGuiRenderer`).
      */
     class EditorDrawDataSnapshot
     {
@@ -48,6 +49,12 @@ namespace sw::editor
         const EditorUICaptureJob& getCaptureJob() const;
         /** @brief `capture` 에 준 번호입니다. 비어 있으면 0 입니다(`EditorDrawReleaseQueue` 가 이 번호로 해제를 넘깁니다). */
         uint64 getSequence() const { return _sequence; }
+        /** @brief 그릴 보조 창 수입니다(최소화했거나 스왑체인이 없는 창은 담지 않았다). */
+        uint32 getPlatformWindowCount() const;
+        /** @brief 보조 창 @p index 의 그리기 목록입니다. */
+        ImDrawData* getPlatformWindowDrawData( uint32 index );
+        /** @brief 보조 창 @p index 의 렌더러 칸(`ImGuiViewport::RendererUserData` — 그 창의 스왑체인)입니다. */
+        void* getPlatformWindowRendererData( uint32 index ) const;
 
     private:
         struct Impl;

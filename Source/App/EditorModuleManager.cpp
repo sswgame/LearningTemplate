@@ -151,9 +151,9 @@ namespace sw
         if ( hasEditor() == false )
             return;
 
-        // 평소의 UI 프레임은 지난 UI 스냅샷이 그려지기를 기다리며(`waitForDrawSnapshotIdle`) 렌더 스레드가 그 프레임의 게임 패킷까지 다 기록한 뒤에 돈다.
-        // 새 인스턴스(리로드 · RHI 교체)는 기다릴 스냅샷이 없어, 리로드 프레임에 낸 게임 패킷을 렌더 스레드가 병렬로 기록하는 동안 뷰 RT 를 만들었다
-        // (`requireRegistryMutableNow` — DX12 체인의 chainreloadeditor). 첫 UI 프레임은 렌더 스레드를 먼저 비운다.
+        // UI 프레임은 렌더 스레드가 앞 UI 스냅샷과 게임 패킷을 그리는 동안 돈다(`DrawSnapshotHandoff`). 그래서 UI 프레임의 RHI 자원 생성 · 등록은 렌더 스레드의
+        // 기록 밖으로 간다(뷰 RT 는 `TextureCache` 완료가, 패널 텍스처 칸은 그리기 해제 큐가). 새 인스턴스(리로드 · RHI 교체)의 첫 UI 프레임은 초기화가 그 규칙 밖에서
+        // 자원을 만들 수 있어(`requireRegistryMutableNow` — DX12 체인의 chainreloadeditor) 렌더 스레드를 먼저 비운다.
         if ( _bFreshEditorInstance == SW_TRUE )
         {
             waitRenderThreadIdle();

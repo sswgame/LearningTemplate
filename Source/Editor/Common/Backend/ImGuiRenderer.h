@@ -7,8 +7,9 @@
  *          - 텍스처: ImGui 텍스처 ID 는 이 렌더러의 칸 번호다. 칸이 RHI 텍스처와 bindless 번호를 든다 — 번호 등록 · 반환은 렌더 스레드가 패스 기록 밖(present 훅)에서 한다
  *            (UI 스레드의 등록이 병렬 패스 기록과 겹치면 bindless 표가 바뀐다 — `requireRegistryMutableNow`). DX11 · GL 은 그 번호를 머티리얼 슬롯 서수로 건다(캔버스와 같다).
  *          - 보조 창: ImGui 플랫폼 창마다 RHI 스왑체인(`IRHIDevice::createSwapChain`)을 하나 두고, 렌더 스레드가 그 백버퍼에 그린다(`renderPlatformWindows`). 표시는 `endFrame` 이 한다.
- *          스레드: 텍스처 갱신과 그리기는 렌더 스레드(present 훅)에서 한다. UI 스레드는 그동안 다음 UI 프레임을 열지 않으므로(`DrawSnapshotHandoff`) ImGui 상태가 멈춰 있다.
- *          보조 창의 생성 · 크기 · 파괴는 ImGui 가 UI 스레드에서 부르고, 디바이스가 렌더 스레드와 GPU 를 비운 뒤에 한다.
+ *          스레드: 렌더 스레드는 살아 있는 ImGui 상태를 읽지 않는다 — UI 스레드가 다음 UI 프레임을 만드는 동안 그린다(`DrawSnapshotHandoff`). 그리기 목록 · 보조 창은 스냅샷
+ *          (`EditorDrawDataSnapshot`)으로, ImGui 동적 텍스처(글꼴 아틀라스)의 생성 · 갱신 · 파괴는 UI 스레드가 픽셀을 복사해 낸 연산(`queueTextureUpdates`)으로 받는다.
+ *          보조 창의 생성 · 크기 · 파괴는 ImGui 가 UI 스레드에서 부르고, 낸 스냅샷이 다 그려진 뒤(`DrawSnapshotHandoff::waitForIdle`) 디바이스가 렌더 스레드와 GPU 를 비우고 한다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -35,6 +36,9 @@ struct ImVec2;
 
 namespace sw::editor
 {
+    class DrawSnapshotHandoff;
+    class EditorDrawDataSnapshot;
+
     using RHITextureHandle = uint64;
 
     /**
@@ -51,27 +55,32 @@ namespace sw::editor
 
         /**
          * @brief 디바이스에 붙고 PSO(백버퍼 포맷)를 만들며 ImGui 렌더러 칸(`BackendRendererUserData` · 텍스처 · 뷰포트 능력과 창 훅)을 겁니다. 렌더 스레드가 프레임을 기록하기 전에 부릅니다.
+         * @param drawHandoff 스냅샷을 렌더 스레드에 넘기는 약속입니다. 보조 창의 스왑체인을 부수거나 바꾸기 전에 낸 스냅샷이 다 그려지기를 기다린다(렌더러보다 오래 산다).
          * @return 셰이더 · PSO 를 만들지 못하면 이유를 남기고 false 입니다(다른 경로로 대신 그리지 않는다).
          */
-        [[nodiscard]] bool initialize( IRHIDevice* pRHIDevice );
+        [[nodiscard]] bool initialize( IRHIDevice* pRHIDevice, const DrawSnapshotHandoff& drawHandoff );
         /** @brief 보조 창을 부수고, 렌더 스레드와 GPU 를 기다려 미뤄 둔 해제를 끝낸 뒤 텍스처 · 버퍼 · PSO 를 놓습니다. */
         void shutdown();
 
         /**
-         * @brief 이번 프레임에 그릴 그리기 목록들을 버퍼 하나에 올리고, 텍스처 칸(bindless 번호)과 ImGui 동적 텍스처(생성 · 갱신 · 파괴)를 처리합니다.
+         * @brief ImGui 동적 텍스처(글꼴 아틀라스)의 생성 · 갱신 · 파괴 요청을 연산으로 옮겨 담고 ImGui 쪽 상태를 끝냅니다(UI 스레드, `ImGui::Render` 뒤 스냅샷을 내기 전).
+         * @details 픽셀은 지금 복사한다 — 다음 UI 프레임이 아틀라스를 키우거나 고치는 동안 렌더 스레드가 같은 버퍼를 읽지 않게. 새 텍스처의 칸 번호(ImGui 텍스처 ID)도 지금 정한다.
+         *          그 ID 를 그리는 스냅샷은 이 뒤에 나가므로 렌더 스레드는 연산을 먼저 적용한 뒤 그린다(`prepareFrame`). 파괴는 그 텍스처를 그렸을 수 있는 스냅샷이 다 지나간 뒤에 낸다.
+         */
+        void queueTextureUpdates();
+        /**
+         * @brief 이번 프레임에 그릴 그리기 목록들을 버퍼 하나에 올리고, UI 스레드가 낸 텍스처 연산과 텍스처 칸(bindless 번호)을 처리합니다.
          * @details 렌더 스레드에서, 이 프레임의 `render` 앞에 한 번 부른다. 버퍼는 프레임에 한 번만 올린다(같은 프레임에 같은 버퍼를 두 번 올리지 않는다 — 캔버스와 같은 규칙).
          *          nullptr 항목은 건너뛴다.
          */
         void prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData );
         /** @brief @p drawData 를 지금 열린 렌더 패스에 그립니다. `prepareFrame` 이 이번 프레임에 올린 목록만 그린다(올리지 않은 목록은 오류를 남기고 건너뛴다). */
         void render( IRHIDevice& device, const ImDrawData& drawData );
-        /** @brief 보조 창들의 그리기 목록을 더합니다(`prepareFrame` 에 메인 목록과 함께 넘긴다). 최소화했거나 스왑체인이 없는 창은 빠진다. */
-        void collectPlatformWindowDrawData( vector<ImDrawData*>& inoutListDrawData ) const;
         /**
-         * @brief 보조 창(메인 밖으로 끌어낸 패널)마다 그 창의 스왑체인 백버퍼에 그립니다. 렌더 스레드에서, 메인 그리기 뒤에 부릅니다.
+         * @brief 스냅샷의 보조 창(메인 밖으로 끌어낸 패널)마다 그 창의 스왑체인 백버퍼에 그립니다. 렌더 스레드에서, 메인 그리기 뒤에 부릅니다.
          * @details 열린 패스를 닫고 창마다 패스를 열어 그린 뒤 닫는다. 이번 프레임에 그릴 수 없는 창(`IRHIDevice::acquireSwapChainImage` 가 false)은 건너뛴다.
          */
-        void renderPlatformWindows( IRHIDevice& device );
+        void renderPlatformWindows( IRHIDevice& device, EditorDrawDataSnapshot& snapshot );
 
         /** @brief 보조 창에 그린 누적 횟수입니다(시나리오 감시 값). */
         uint32 getPlatformWindowFrames() const { return _platformWindowFrames.load( std::memory_order_relaxed ); }
@@ -80,7 +89,8 @@ namespace sw::editor
         void* registerTexture( RHITextureHandle texture );
         /**
          * @brief `registerTexture` 로 발급한 ID 를 해제합니다. UI 스레드에서 부릅니다.
-         * @details 이미 낸 draw 스냅샷이 그 ID 를 그릴 수 있으므로 칸 반환은 `getDrawReleaseQueue()` 에 맡긴다. ID 는 호출한 즉시 무효다(같은 UI 프레임에서 다시 그리지 않는다).
+         * @details 이미 낸 draw 스냅샷이 그 ID 를 그릴 수 있으므로 칸 반환은 `getDrawReleaseQueue()` 에 맡긴다 — 바로 비우면 그 칸을 새 등록이 받아 앞 스냅샷이 다른 텍스처를 그린다.
+         *          ID 는 호출한 즉시 무효다(같은 UI 프레임에서 다시 그리지 않는다).
          */
         void unregisterTexture( void* pTextureID );
 
@@ -111,8 +121,27 @@ namespace sw::editor
         uint32 acquireSlot( RHITextureHandle texture, bool bOwned ) SW_REQUIRES_LOCK( _textureMutex );
         /** @brief 칸을 비웁니다. 이 렌더러가 만든 텍스처면 번호와 텍스처도 놓습니다(렌더 스레드). 패널 텍스처의 번호는 텍스처 주인의 파괴가 놓는다. */
         void releaseSlot( IRHIDevice& device, uint32 slotIndex );
-        /** @brief ImGui 1.92 동적 텍스처 하나를 처리합니다(생성 · 구간 갱신 · 미뤄 파괴). 렌더 스레드에서 부릅니다. */
-        void updateTexture( IRHIDevice& device, ImTextureData& texture );
+        /** @brief UI 스레드가 낸 ImGui 동적 텍스처 연산 하나입니다(`queueTextureUpdates`). 픽셀은 RGBA8 로 넓혀 복사해 두었다. */
+        struct TextureOp
+        {
+            enum class Kind : uint8
+            {
+                Create,  ///< 칸 `_slot` 에 `_width` × `_height` 텍스처를 만들어 `_listByte` 를 올린다
+                Update,  ///< 칸 `_slot` 텍스처의 (`_x`, `_y`) 구간에 `_listByte` 를 올린다
+                Destroy, ///< 칸 `_slot` 을 비운다(텍스처 · 번호는 GPU 사용 뒤 놓인다)
+            };
+            Kind          _kind{ Kind::Create };
+            uint32        _slot{ 0 };
+            uint32        _x{ 0 };
+            uint32        _y{ 0 };
+            uint32        _width{ 0 };
+            uint32        _height{ 0 };
+            vector<uint8> _listByte;
+        };
+        /** @brief 텍스처 연산 하나를 적용합니다(렌더 스레드, 패스 기록 밖). */
+        void applyTextureOp( IRHIDevice& device, TextureOp& op );
+        /** @brief 보조 창의 스왑체인을 만들거나 바꾸거나 부수기 전에 낸 스냅샷이 다 그려지기를 기다립니다(UI 스레드, ImGui 창 훅). */
+        void waitDrawnBeforeWindowChange() const;
         /** @brief 그리기 명령의 텍스처 ID 를 이번 프레임의 bindless 번호로 풉니다. 아직 없으면 무효입니다. */
         RHIDescriptorIndex resolveTexture( uint64 textureID ) const;
 
@@ -122,6 +151,7 @@ namespace sw::editor
         static void resizeWindowSwapChain( ImGuiViewport* pViewport, ImVec2 size );
 
         IRHIDevice*                                _pDevice;
+        const DrawSnapshotHandoff*                 _pDrawHandoff;    ///< 보조 창 스왑체인을 바꾸기 전에 낸 스냅샷이 다 그려지기를 기다린다
         RHIPipelineStateHandle                     _pso;             ///< 백버퍼 포맷의 PSO(캡처 텍스처 · 보조 창도 같은 포맷이다)
         RHIStructuredBufferSlot                    _wordBuffer;      ///< 이번 프레임의 정점 · 인덱스(uint 칸)
         vector<uint32>                             _listWord;        ///< 올릴 칸 모으기(프레임마다 비운다)
@@ -136,6 +166,8 @@ namespace sw::editor
         mutable mutex                        _textureMutex; ///< 칸 표 — UI 스레드(등록 · 해제 예약)와 렌더 스레드(번호 등록 · 반환)가 함께 쓴다
         vector<TextureSlot> _listTextureSlot SW_GUARDED_BY( _textureMutex );
         vector<uint32> _listFreeSlot         SW_GUARDED_BY( _textureMutex );
+        vector<TextureOp> _listTextureOp     SW_GUARDED_BY( _textureMutex ); ///< UI 스레드가 낸 텍스처 연산(낸 순서) — 렌더 스레드의 `prepareFrame` 이 비운다
+        vector<TextureOp>                    _listApplyingOp;                ///< 렌더 스레드가 적용 중인 연산(잠금 밖에서 쓰려고 바꿔 받는다 — 저장소를 다시 쓴다)
         EditorDrawReleaseQueue               _drawReleaseQueue;
     };
 } // namespace sw::editor

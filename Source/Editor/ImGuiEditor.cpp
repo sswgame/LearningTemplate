@@ -703,7 +703,7 @@ namespace sw::editor
         SW_LOG_TRACE_ID( "ImGuiEditor.CreatingRendererBackend", "Creating Renderer Backend" );
         // 네 RHI 백엔드가 같은 렌더러 하나를 쓴다(ImGuiRenderer — RHI 로 그린다).
         _renderer = make_unique<ImGuiRenderer>();
-        if ( _renderer->initialize( _pRHIDevice ) == false )
+        if ( _renderer->initialize( _pRHIDevice, _drawSnapshotHandoff ) == false )
         {
             SW_LOG_ERROR_ID( "ImGuiEditor.RendererBackendInitializationFailed", "Renderer backend initialization failed" );
             shutdownRendererBackend();
@@ -914,6 +914,9 @@ namespace sw::editor
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.render" );
             endFrame();
         }
+        // 이 프레임이 만들거나 고친 ImGui 텍스처(글꼴 아틀라스)를 연산으로 옮긴다 — 렌더 스레드는 살아 있는 텍스처 목록을 읽지 않는다. 그 ID 를 그리는 스냅샷보다 먼저 낸다.
+        if ( _renderer != nullptr )
+            _renderer->queueTextureUpdates();
 
         // EndFrame 이후에 호출해야 창의 DrawList 에 이번 프레임의 최종 내용이 담긴다.
         // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
@@ -928,7 +931,12 @@ namespace sw::editor
             ImGui::UpdatePlatformWindows();
         }
 
-        const uint32 writeSlot = _drawSnapshotHandoff.waitForWriteSlot();
+        // 렌더 스레드가 그리는 중인 칸에는 쓰지 않는다 — 이 UI 프레임은 렌더 스레드가 앞 스냅샷을 그리는 동안 만들어졌다(`DrawSnapshotHandoff`).
+        uint32 writeSlot{ 0 };
+        {
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.waitDrawSnapshot" );
+            writeSlot = _drawSnapshotHandoff.waitForWriteSlot();
+        }
 
         // 스냅샷을 내기 전에 번호를 알린다. 이 뒤에 해제하는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
         ++_lastDrawSnapshotSequence;
@@ -941,8 +949,8 @@ namespace sw::editor
         }
         if ( _renderer != nullptr )
             _renderer->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
-        // 게시하면 이 프레임이 "렌더 대기" 가 된다. 다음 updateUI 는 상단의 waitForDrawSnapshotIdle 에서 postPresent 까지 막힌다.
-        // 그래서 렌더 스레드가 present 훅에서 ImGui 공유 상태(텍스처 리스트, 뷰포트)를 건드리는 GL 경로에서도 UI 스레드와 겹치지 않는다.
+        // 앞에 낸 스냅샷을 렌더 스레드가 아직 집지 않았으면 집을 때까지 기다린다 — 낸 스냅샷을 건너뛰지 않는다(UI 캡처 요청이 실려 있다).
+        SW_EDITOR_PROFILE_SCOPE( "GT.Editor.publishDrawSnapshot" );
         _drawSnapshotHandoff.publish( writeSlot );
     }
 
@@ -952,12 +960,8 @@ namespace sw::editor
             return;
 
         // 하위 구간은 `GT.Editor.updateUI`(App) 의 시간이 어디에 쓰이는지 나눠 보여 준다. 패널별 시간은 `-gv_editorPanelTimes=N` 으로 본다.
-        {
-            // 지난 UI 프레임을 렌더 스레드가 다 그릴 때(postPresent)까지 기다린다. 이 값이 크면 UI 작업이 아니라 RT, GPU, Present 대기가 길다는 뜻이다.
-            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.waitDrawSnapshot" );
-            waitForDrawSnapshotIdle();
-        }
-
+        // 앞 UI 프레임이 다 그려지기를 기다리지 않는다 — 렌더 스레드가 그것을 그리는 동안 이 프레임을 만든다. 기다림은 쓸 칸 받기 · 게시에만 있다(`closeAndPublishFrame`).
+        // 그 구간(`GT.Editor.waitDrawSnapshot` · `GT.Editor.publishDrawSnapshot`)이 크면 UI 작업이 아니라 RT, GPU, Present 가 길다는 뜻이다.
         prepareFrameState();
         openFrame();
 
@@ -977,34 +981,35 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr )
             return;
 
-        // 렌더 스레드의 present 훅이다. UI 스레드는 다음 UI 프레임을 열기 전에 이 그리기가 끝나기를 기다리므로(`waitForDrawSnapshotIdle`) 그동안 ImGui 상태(텍스처 목록 ·
-        // 보조 창의 그리기 목록)가 멈춰 있다 — 네 백엔드 모두 텍스처 갱신과 그리기를 여기서 한다.
+        // 렌더 스레드의 present 훅이다. UI 스레드는 그동안 다음 UI 프레임을 만든다 — 여기서는 살아 있는 ImGui 상태를 읽지 않고 스냅샷(그리기 목록 · 보조 창)과
+        // UI 스레드가 낸 텍스처 연산만 읽는다. 네 백엔드 모두 텍스처 갱신과 그리기를 여기서 한다.
         const uint32 slot = _drawSnapshotHandoff.beginRender();
         if ( slot >= constant::render::kMaxFrameCountInFlight || _renderer == nullptr )
             return;
 
         // 이 프레임에 그릴 목록(메인 · 캡처 · 보조 창)을 버퍼 하나에 한 번 올린다.
-        ImDrawData* const pDrawData        = _arrDrawSnapshot[slot].getMainDrawData();
-        ImDrawData* const pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
-        const bool        bViewports       = ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) != 0;
+        EditorDrawDataSnapshot& snapshot         = _arrDrawSnapshot[slot];
+        ImDrawData* const       pDrawData        = snapshot.getMainDrawData();
+        ImDrawData* const       pCaptureDrawData = snapshot.findCaptureDrawData();
         _listFrameDrawData.clear();
         _listFrameDrawData.push_back( pDrawData );
         _listFrameDrawData.push_back( pCaptureDrawData );
-        if ( bViewports )
-            _renderer->collectPlatformWindowDrawData( _listFrameDrawData );
+        for ( uint32 windowIndex = 0; windowIndex < snapshot.getPlatformWindowCount(); ++windowIndex )
+        {
+            _listFrameDrawData.push_back( snapshot.getPlatformWindowDrawData( windowIndex ) );
+        }
         _renderer->prepareFrame( *pRHIDevice, _listFrameDrawData );
 
         if ( pDrawData != nullptr )
             renderBackend( pRHIDevice, pDrawData );
         // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. `renderJob` 은 자기가 연 패스를 닫고 돌아온다.
         if ( pCaptureDrawData != nullptr && _pUICapture != nullptr )
-            _pUICapture->renderJob( *pRHIDevice, *_renderer, *pCaptureDrawData, _arrDrawSnapshot[slot].getCaptureJob() );
+            _pUICapture->renderJob( *pRHIDevice, *_renderer, *pCaptureDrawData, snapshot.getCaptureJob() );
         // 보조(플로팅) 창 — 창마다 그 창의 스왑체인 백버퍼에 그린다. 표시는 이 프레임의 endFrame 이 한다.
-        if ( bViewports )
-            _renderer->renderPlatformWindows( *pRHIDevice );
+        _renderer->renderPlatformWindows( *pRHIDevice, snapshot );
 
         // 이 프레임의 스냅샷보다 먼저 해제 요청된 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 작업이 끝난 뒤에 해제되도록 디바이스로 넘긴다.
-        _renderer->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
+        _renderer->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, snapshot.getSequence() );
     }
 
     void ImGuiEditor::postPresent( IRHIDevice* pRHIDevice )
@@ -1020,7 +1025,7 @@ namespace sw::editor
     void ImGuiEditor::abandonPendingDraw()
     {
         // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 해제한다" 는 약속이다. 에디터 인스턴스를 없애면(destroyEditorInstance)
-        // 그 약속을 지킬 쪽이 사라지므로 여기서 푼다. 풀지 않으면 shutdown 뒤의 waitForDrawSnapshotIdle 이 영원히 반환하지 않는다.
+        // 그 약속을 지킬 쪽이 사라지므로 여기서 푼다. 풀지 않으면 종료의 보조 창 정리가 낸 스냅샷을 기다리며(`ImGuiRenderer::waitDrawnBeforeWindowChange`) 반환하지 않는다.
         // 인스턴스가 살아 있는 동안(게임 모듈만 리로드할 때)에는 부르지 않는다. 그 표시는 아직 렌더 스레드에 제출되지 않은 프레임의 것이다.
         _drawSnapshotHandoff.abandon();
     }
@@ -1191,11 +1196,6 @@ namespace sw::editor
         ImGui::PopStyleVar( 2 );
 
         ImGui::Render();
-    }
-
-    void ImGuiEditor::waitForDrawSnapshotIdle()
-    {
-        _drawSnapshotHandoff.waitForIdle();
     }
 
     void ImGuiEditor::renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData )

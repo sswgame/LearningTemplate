@@ -117,8 +117,6 @@ namespace sw::editor
         void endFrame();
         /** @brief ImGui 렌더러 백엔드로 주어진 DrawData 를 그립니다. */
         void renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData );
-        /** @brief 렌더 스레드가 이전 스냅샷을 쓰는 동안 NewFrame 을 미룹니다. */
-        void waitForDrawSnapshotIdle();
         /** @brief 프레임을 열기 전의 상태 정리입니다 — 확장 등록 맞추기, 테마 토큰 다시 읽기, 새 환경설정 섹션, 뷰 표시 지우기. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임 앞이어야 한다. */
         void prepareFrameState();
         /** @brief ImGui 프레임을 열고 메뉴 · 툴바를 그린 뒤 도크스페이스를 엽니다(순서는 ImGui 가 정한다). */

@@ -145,6 +145,14 @@ namespace sw::editor
                 }
             }
 
+            /** @brief 보조 창 하나의 클론입니다. 목록 풀은 창 칸마다 두고 프레임을 넘어 다시 쓴다. */
+            struct PlatformWindowClone
+            {
+                ImDrawData          _drawData;
+                vector<ImDrawList*> _listOwned;
+                void*               _pRendererData{ nullptr };
+            };
+
             static void destroyOwnedLists( ImDrawData& drawData, vector<ImDrawList*>& listOwned )
             {
                 drawData.Clear();
@@ -162,14 +170,16 @@ namespace sw::editor
 {
     struct EditorDrawDataSnapshot::Impl
     {
-        ImDrawData             _mainDrawData;
-        vector<ImDrawList*>    _listMainOwned;
-        ImDrawData             _captureDrawData; ///< 에디터 UI 캡처를 요청한 프레임에만 채우는 모든 뷰포트 합본입니다.
-        vector<ImDrawList*>    _listCaptureOwned;
-        EditorUICaptureJob     _captureJob;
-        uint8                  _bValid   : 1;
-        uint8                  _bCapture : 1;
-        [[maybe_unused]] uint8 _reserved : 6;
+        ImDrawData                                                              _mainDrawData;
+        vector<ImDrawList*>                                                     _listMainOwned;
+        ImDrawData                                                              _captureDrawData; ///< 에디터 UI 캡처를 요청한 프레임에만 채우는 모든 뷰포트 합본입니다.
+        vector<ImDrawList*>                                                     _listCaptureOwned;
+        EditorUICaptureJob                                                      _captureJob;
+        vector<unique_ptr<EditorDrawDataSnapshotInternal::PlatformWindowClone>> _listPlatformWindow; ///< 칸 풀 — 앞 `_platformWindowCount` 개가 이번 스냅샷이다
+        uint32                                                                  _platformWindowCount{ 0 };
+        uint8                                                                   _bValid   : 1;
+        uint8                                                                   _bCapture : 1;
+        [[maybe_unused]] uint8                                                  _reserved : 6;
     };
 
     EditorDrawDataSnapshot::EditorDrawDataSnapshot()
@@ -193,9 +203,15 @@ namespace sw::editor
 
         EditorDrawDataSnapshotInternal::destroyOwnedLists( _pImpl->_mainDrawData, _pImpl->_listMainOwned );
         EditorDrawDataSnapshotInternal::destroyOwnedLists( _pImpl->_captureDrawData, _pImpl->_listCaptureOwned );
-        _pImpl->_bValid   = SW_FALSE;
-        _pImpl->_bCapture = SW_FALSE;
-        _sequence         = 0;
+        for ( const unique_ptr<EditorDrawDataSnapshotInternal::PlatformWindowClone>& pWindow : _pImpl->_listPlatformWindow )
+        {
+            EditorDrawDataSnapshotInternal::destroyOwnedLists( pWindow->_drawData, pWindow->_listOwned );
+        }
+        _pImpl->_listPlatformWindow.clear();
+        _pImpl->_platformWindowCount = 0;
+        _pImpl->_bValid              = SW_FALSE;
+        _pImpl->_bCapture            = SW_FALSE;
+        _sequence                    = 0;
     }
 
     void EditorDrawDataSnapshot::capture( uint64 sequence, const EditorUICaptureJob* pCaptureJob )
@@ -203,9 +219,10 @@ namespace sw::editor
         // 목록 풀은 두고 다시 쓴다(`cloneDrawData`). 컨텍스트가 없으면 풀까지 놓는다.
         _pImpl->_mainDrawData.Clear();
         _pImpl->_captureDrawData.Clear();
-        _pImpl->_bValid   = SW_FALSE;
-        _pImpl->_bCapture = SW_FALSE;
-        _sequence         = 0;
+        _pImpl->_bValid              = SW_FALSE;
+        _pImpl->_bCapture            = SW_FALSE;
+        _pImpl->_platformWindowCount = 0;
+        _sequence                    = 0;
         if ( ImGui::GetCurrentContext() == nullptr )
         {
             clear();
@@ -215,6 +232,25 @@ namespace sw::editor
         _sequence = sequence;
         EditorDrawDataSnapshotInternal::cloneDrawData( ImGui::GetDrawData(), _pImpl->_mainDrawData, _pImpl->_listMainOwned );
         _pImpl->_bValid = ( _pImpl->_mainDrawData.Valid ) ? SW_TRUE : SW_FALSE;
+
+        // 보조 창 — 0 은 메인 창이다(위에서 복사했다). 스왑체인이 없거나(만들지 못한 창) 최소화한 창은 그리지 않는다.
+        if ( ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) != 0 )
+        {
+            const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+            for ( int32 index = 1; index < platformIO.Viewports.Size; ++index )
+            {
+                const ImGuiViewport* const pViewport = platformIO.Viewports[index];
+                const bool                 bDrawable = ( pViewport->Flags & ImGuiViewportFlags_IsMinimized ) == 0 && pViewport->RendererUserData != nullptr && pViewport->DrawData != nullptr &&
+                                       pViewport->DrawData->Valid;
+                if ( bDrawable == false )
+                    continue;
+                if ( _pImpl->_platformWindowCount == _pImpl->_listPlatformWindow.size() )
+                    _pImpl->_listPlatformWindow.push_back( make_unique<EditorDrawDataSnapshotInternal::PlatformWindowClone>() );
+                EditorDrawDataSnapshotInternal::PlatformWindowClone& window = *_pImpl->_listPlatformWindow[_pImpl->_platformWindowCount++];
+                EditorDrawDataSnapshotInternal::cloneDrawData( pViewport->DrawData, window._drawData, window._listOwned );
+                window._pRendererData = pViewport->RendererUserData;
+            }
+        }
 
         if ( pCaptureJob != nullptr )
         {
@@ -246,5 +282,22 @@ namespace sw::editor
     const EditorUICaptureJob& EditorDrawDataSnapshot::getCaptureJob() const
     {
         return _pImpl->_captureJob;
+    }
+
+    uint32 EditorDrawDataSnapshot::getPlatformWindowCount() const
+    {
+        return isValid() ? _pImpl->_platformWindowCount : 0u;
+    }
+
+    ImDrawData* EditorDrawDataSnapshot::getPlatformWindowDrawData( uint32 index )
+    {
+        SW_ASSERT( index < getPlatformWindowCount() );
+        return &_pImpl->_listPlatformWindow[index]->_drawData;
+    }
+
+    void* EditorDrawDataSnapshot::getPlatformWindowRendererData( uint32 index ) const
+    {
+        SW_ASSERT( index < getPlatformWindowCount() );
+        return _pImpl->_listPlatformWindow[index]->_pRendererData;
     }
 } // namespace sw::editor

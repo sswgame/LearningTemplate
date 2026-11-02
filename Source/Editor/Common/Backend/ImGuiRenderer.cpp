@@ -6,6 +6,8 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Backend/DrawSnapshotHandoff.h"
+#include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -46,7 +48,7 @@ namespace sw::editor
             static constexpr float32 kBufferGrowth = 1.5f;
             /**
              * @brief `ImTextureStatus_WantDestroy` 텍스처를 파괴하기 전에 기다릴 ImGui 프레임 수입니다.
-             * @details 렌더 스레드가 그리는 스냅샷(최대 `kMaxFrameCountInFlight` 장)이 옛 아틀라스를 아직 그릴 수 있다. GPU 사용은 백엔드의 해제(번호 · 텍스처)가 기다린다.
+             * @details 렌더 스레드가 그리는 스냅샷(최대 `kMaxFrameCountInFlight` 장)이 옛 아틀라스를 아직 그릴 수 있다. 파괴 연산은 그 뒤에 내고, GPU 사용은 백엔드의 해제(번호 · 텍스처)가 기다린다.
              */
             static constexpr int32 kTextureDestroyDelayFrames = static_cast<int32>( constant::render::kMaxFrameCountInFlight + 1u );
 
@@ -94,6 +96,29 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief @p texture 의 (@p x, @p y) 부터 @p width × @p height 구간을 RGBA8 로 복사합니다. Alpha8 이면 흰색 + 알파로 넓힌다 — 셰이더는 RGBA 하나만 읽는다. */
+            static void copyRegion( ImTextureData& texture, uint32 x, uint32 y, uint32 width, uint32 height, vector<uint8>& outBytes )
+            {
+                outBytes.resize( static_cast<size_t>( width ) * height * 4u );
+                for ( uint32 row = 0; row < height; ++row )
+                {
+                    const uint8* pSource = static_cast<const uint8*>( texture.GetPixelsAt( static_cast<int32>( x ), static_cast<int32>( y + row ) ) );
+                    uint8*       pTarget = outBytes.data() + static_cast<size_t>( row ) * width * 4u;
+                    if ( texture.Format == ImTextureFormat_RGBA32 )
+                    {
+                        Memory::copy( pTarget, pSource, static_cast<size_t>( width ) * 4u );
+                        continue;
+                    }
+                    for ( uint32 column = 0; column < width; ++column )
+                    {
+                        pTarget[column * 4u + 0u] = 255u;
+                        pTarget[column * 4u + 1u] = 255u;
+                        pTarget[column * 4u + 2u] = 255u;
+                        pTarget[column * 4u + 3u] = pSource[column];
+                    }
+                }
+            }
+
             /** @brief 보조 창의 스왑체인 크기(픽셀)입니다. 0 이면 1 로 둔다 — 스왑체인은 0 크기로 만들 수 없다. */
             static uint32 toPixels( float32 size, float32 scale ) { return MathUtil::max( 1u, static_cast<uint32>( size * ( scale > 0.0f ? scale : 1.0f ) ) ); }
         };
@@ -109,6 +134,7 @@ namespace sw::editor
 {
     ImGuiRenderer::ImGuiRenderer()
         : _pDevice{ nullptr }
+        , _pDrawHandoff{ nullptr }
         , _pso{ 0 }
         , _wordBuffer{}
         , _listWord{}
@@ -120,12 +146,13 @@ namespace sw::editor
 
     ImGuiRenderer::~ImGuiRenderer() = default;
 
-    bool ImGuiRenderer::initialize( IRHIDevice* pRHIDevice )
+    bool ImGuiRenderer::initialize( IRHIDevice* pRHIDevice, const DrawSnapshotHandoff& drawHandoff )
     {
         using Internal = ImGuiRendererInternal;
         if ( pRHIDevice == nullptr || pRHIDevice->getResourceFactory() == nullptr )
             return false;
         _pDevice         = pRHIDevice;
+        _pDrawHandoff    = &drawHandoff;
         _bNativeBindless = pRHIDevice->supportsNativeBindlessSampling();
 
         // 곧은 알파(ImGui 의 규약 — 글꼴 아틀라스 · 색 모두 곱하지 않은 알파다), 깊이 · 컬링 없음. 캡처 텍스처와 보조 창도 백버퍼 포맷이라 PSO 는 하나다.
@@ -191,8 +218,10 @@ namespace sw::editor
         uint32 slotCount{ 0 };
         {
             ScopedLock<mutex> lock{ _textureMutex };
+            _listTextureOp.clear(); // 적용하지 않은 연산 — 만들 칸은 아래에서 모두 비운다
             slotCount = static_cast<uint32>( _listTextureSlot.size() );
         }
+        _listApplyingOp.clear();
         for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
         {
             releaseSlot( *_pDevice, slotIndex ); // GPU 가 비었다 — 바로 놓는다
@@ -225,12 +254,16 @@ namespace sw::editor
     void ImGuiRenderer::prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData )
     {
         using Internal = ImGuiRendererInternal;
-        // 1) ImGui 동적 텍스처(글꼴 아틀라스) — 그리기 전에 만들고 갱신한다. 그리기 명령은 그리는 순간 텍스처의 ID 를 읽는다.
-        for ( ImTextureData* pTexture : ImGui::GetPlatformIO().Textures )
+        // 1) UI 스레드가 낸 ImGui 동적 텍스처 연산(글꼴 아틀라스) — 낸 순서로, 그리기 전에 적용한다. 그 ID 를 그리는 스냅샷은 연산보다 늦게 나왔다.
         {
-            if ( pTexture != nullptr )
-                updateTexture( device, *pTexture );
+            ScopedLock<mutex> lock{ _textureMutex };
+            _listApplyingOp.swap( _listTextureOp );
         }
+        for ( TextureOp& op : _listApplyingOp )
+        {
+            applyTextureOp( device, op );
+        }
+        _listApplyingOp.clear();
 
         // 2) 칸의 bindless 번호 — 패스 기록 밖(present 훅)이라 등록할 수 있다. 업로드가 끝나지 않은 텍스처는 등록이 거절되어 다음 프레임에 다시 본다.
         {
@@ -369,30 +402,16 @@ namespace sw::editor
         pCmd->setScissorRect( RHIScissorRect{ 0, 0, static_cast<uint32>( framebufferW ), static_cast<uint32>( framebufferH ) } );
     }
 
-    void ImGuiRenderer::collectPlatformWindowDrawData( vector<ImDrawData*>& inoutListDrawData ) const
+    void ImGuiRenderer::renderPlatformWindows( IRHIDevice& device, EditorDrawDataSnapshot& snapshot )
     {
-        const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-        for ( int32 index = 1; index < platformIO.Viewports.Size; ++index ) // 0 은 메인 창이다(스냅샷이 따로 넘긴다)
-        {
-            ImGuiViewport* const pViewport = platformIO.Viewports[index];
-            const bool           bDrawable = ( pViewport->Flags & ImGuiViewportFlags_IsMinimized ) == 0 && pViewport->RendererUserData != nullptr && pViewport->DrawData != nullptr;
-            if ( bDrawable )
-                inoutListDrawData.push_back( pViewport->DrawData );
-        }
-    }
-
-    void ImGuiRenderer::renderPlatformWindows( IRHIDevice& device )
-    {
-        IRHICommandContext* const pCmd       = device.getFrameStreamContext();
-        const ImGuiPlatformIO&    platformIO = ImGui::GetPlatformIO();
+        IRHICommandContext* const pCmd = device.getFrameStreamContext();
         if ( pCmd == nullptr )
             return;
-        for ( int32 index = 1; index < platformIO.Viewports.Size; ++index )
+        for ( uint32 index = 0; index < snapshot.getPlatformWindowCount(); ++index )
         {
-            ImGuiViewport* const pViewport  = platformIO.Viewports[index];
-            IRHISwapChain* const pSwapChain = static_cast<IRHISwapChain*>( pViewport->RendererUserData );
-            const bool           bDrawable  = ( pViewport->Flags & ImGuiViewportFlags_IsMinimized ) == 0 && pSwapChain != nullptr && pViewport->DrawData != nullptr;
-            if ( bDrawable == false || device.acquireSwapChainImage( *pSwapChain ) == false )
+            // 스왑체인은 이 스냅샷이 다 그려지기 전에 부서지거나 바뀌지 않는다(창 훅이 `waitDrawnBeforeWindowChange` 로 기다린다).
+            IRHISwapChain* const pSwapChain = static_cast<IRHISwapChain*>( snapshot.getPlatformWindowRendererData( index ) );
+            if ( device.acquireSwapChainImage( *pSwapChain ) == false )
                 continue;
             // 열린 패스(메인 백버퍼)를 닫고 이 창의 백버퍼로 연다 — 열린 채로 다른 패스를 열면 Vulkan 이 레이아웃 전이를 서브패스 안에 기록한다.
             pCmd->endRenderPass();
@@ -404,7 +423,7 @@ namespace sw::editor
             pass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
             pass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
             pCmd->beginRenderPass( pass );
-            render( device, *pViewport->DrawData );
+            render( device, *snapshot.getPlatformWindowDrawData( index ) );
             pCmd->endRenderPass();
             _platformWindowFrames.fetch_add( 1, std::memory_order_relaxed );
         }
@@ -423,9 +442,12 @@ namespace sw::editor
         uint32 slotIndex{ 0 };
         if ( ImGuiRendererInternal::tryGetSlotIndex( static_cast<uint64>( reinterpret_cast<uintptr_t>( pTextureID ) ), slotIndex ) == false )
             return;
-        // 칸은 지금 비운다 — 이 UI 프레임이 낼 스냅샷은 그 ID 를 그리지 않고, 앞 스냅샷은 UI 프레임이 열리기 전에 이미 그려졌다(`waitForDrawSnapshotIdle`).
-        if ( _pDevice != nullptr )
-            releaseSlot( *_pDevice, slotIndex );
+        // 칸은 이미 낸 스냅샷이 다 그려진 뒤에 비운다 — 렌더 스레드가 그 스냅샷을 이 UI 프레임과 겹쳐 그린다. 패널 텍스처의 칸이라 RHI 자원은 놓지 않는다.
+        _drawReleaseQueue.enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, slotIndex]()
+        {
+            if ( _pDevice != nullptr )
+                releaseSlot( *_pDevice, slotIndex );
+        } ) );
     }
 
     uint32 ImGuiRenderer::acquireSlot( RHITextureHandle texture, bool bOwned )
@@ -473,110 +495,115 @@ namespace sw::editor
             pFactory->destroyTexture( slot._texture );
     }
 
-    void ImGuiRenderer::updateTexture( IRHIDevice& device, ImTextureData& texture )
+    void ImGuiRenderer::queueTextureUpdates()
     {
-        using Internal                      = ImGuiRendererInternal;
-        IRHIResourceFactory* const pFactory = device.getResourceFactory();
-        if ( texture.Status == ImTextureStatus_OK || texture.Status == ImTextureStatus_Destroyed || pFactory == nullptr )
+        using Internal = ImGuiRendererInternal;
+        if ( ImGui::GetCurrentContext() == nullptr )
             return;
-
-        if ( texture.Status == ImTextureStatus_WantDestroy )
+        for ( ImTextureData* pTexture : ImGui::GetPlatformIO().Textures )
         {
-            // 그 텍스처를 그렸을 수 있는 스냅샷이 다 지나간 뒤에(ImGui 가 세는 미사용 프레임), 지금 기록 중인 프레임의 GPU 작업이 끝나면 놓는다.
-            uint32 slotIndex{ 0 };
-            if ( texture.UnusedFrames < Internal::kTextureDestroyDelayFrames )
-                return;
-            if ( Internal::tryGetSlotIndex( static_cast<uint64>( texture.TexID ), slotIndex ) )
-                releaseSlot( device, slotIndex ); // 렌더 스레드 · 패스 기록 밖 — 백엔드가 GPU 사용 뒤로 미룬다
-            texture.SetTexID( ImTextureID_Invalid );
-            texture.SetStatus( ImTextureStatus_Destroyed );
+            if ( pTexture == nullptr || pTexture->Status == ImTextureStatus_OK || pTexture->Status == ImTextureStatus_Destroyed )
+                continue;
+            ImTextureData& texture = *pTexture;
+            TextureOp      op{};
+            uint32         slotIndex{ 0 };
+            if ( texture.Status == ImTextureStatus_WantDestroy )
+            {
+                // 그 텍스처를 그렸을 수 있는 스냅샷이 다 지나간 뒤에(ImGui 가 세는 미사용 프레임) 낸다.
+                if ( texture.UnusedFrames < Internal::kTextureDestroyDelayFrames )
+                    continue;
+                if ( Internal::tryGetSlotIndex( static_cast<uint64>( texture.TexID ), slotIndex ) )
+                {
+                    op._kind = TextureOp::Kind::Destroy;
+                    op._slot = slotIndex;
+                    ScopedLock<mutex> lock{ _textureMutex };
+                    _listTextureOp.push_back( std::move( op ) );
+                }
+                texture.SetTexID( ImTextureID_Invalid );
+                texture.SetStatus( ImTextureStatus_Destroyed );
+                continue;
+            }
+            if ( texture.Status == ImTextureStatus_WantCreate )
+            {
+                op._kind   = TextureOp::Kind::Create;
+                op._width  = static_cast<uint32>( texture.Width );
+                op._height = static_cast<uint32>( texture.Height );
+                Internal::copyRegion( texture, 0, 0, op._width, op._height, op._listByte );
+                ScopedLock<mutex> lock{ _textureMutex };
+                op._slot = acquireSlot( 0, true ); // 텍스처는 렌더 스레드가 만들어 칸에 넣는다 — 그때까지 이 ID 의 그리기는 건너뛴다
+                texture.SetTexID( Internal::makeTextureID( op._slot ) );
+                _listTextureOp.push_back( std::move( op ) );
+            }
+            else if ( Internal::tryGetSlotIndex( static_cast<uint64>( texture.TexID ), slotIndex ) && texture.UpdateRect.w > 0 && texture.UpdateRect.h > 0 )
+            {
+                // ImTextureStatus_WantUpdates — 바뀐 구간을 감싼 사각형(UpdateRect) 하나를 올린다. 구간마다 올리면 구간마다 GPU 를 기다린다(새 글리프가 한 프레임에 여럿 붙는다).
+                const ImTextureRect& rect = texture.UpdateRect;
+                op._kind                  = TextureOp::Kind::Update;
+                op._slot                  = slotIndex;
+                op._x                     = rect.x;
+                op._y                     = rect.y;
+                op._width                 = rect.w;
+                op._height                = rect.h;
+                Internal::copyRegion( texture, op._x, op._y, op._width, op._height, op._listByte );
+                ScopedLock<mutex> lock{ _textureMutex };
+                _listTextureOp.push_back( std::move( op ) );
+            }
+            texture.SetStatus( ImTextureStatus_OK );
+        }
+    }
+
+    void ImGuiRenderer::applyTextureOp( IRHIDevice& device, TextureOp& op )
+    {
+        IRHIResourceFactory* const pFactory = device.getResourceFactory();
+        if ( pFactory == nullptr )
+            return;
+        if ( op._kind == TextureOp::Kind::Destroy )
+        {
+            releaseSlot( device, op._slot ); // 렌더 스레드 · 패스 기록 밖 — 백엔드가 GPU 사용 뒤로 미룬다
             return;
         }
-
-        // 아틀라스는 RGBA32 다(ImGui 1.92 기본). Alpha8 이면 흰색 + 알파로 넓힌다 — 셰이더는 RGBA 하나만 읽는다.
-        const uint32 width      = static_cast<uint32>( texture.Width );
-        const uint32 height     = static_cast<uint32>( texture.Height );
-        auto         copyRegion = [&texture]( uint32 x, uint32 y, uint32 regionWidth, uint32 regionHeight, vector<uint8>& outBytes )
-        {
-            outBytes.resize( static_cast<size_t>( regionWidth ) * regionHeight * 4u );
-            for ( uint32 row = 0; row < regionHeight; ++row )
-            {
-                const uint8* pSource = static_cast<const uint8*>( texture.GetPixelsAt( static_cast<int32>( x ), static_cast<int32>( y + row ) ) );
-                uint8*       pTarget = outBytes.data() + static_cast<size_t>( row ) * regionWidth * 4u;
-                if ( texture.Format == ImTextureFormat_RGBA32 )
-                {
-                    Memory::copy( pTarget, pSource, static_cast<size_t>( regionWidth ) * 4u );
-                    continue;
-                }
-                for ( uint32 column = 0; column < regionWidth; ++column )
-                {
-                    pTarget[column * 4u + 0u] = 255u;
-                    pTarget[column * 4u + 1u] = 255u;
-                    pTarget[column * 4u + 2u] = 255u;
-                    pTarget[column * 4u + 3u] = pSource[column];
-                }
-            }
-        };
-
-        vector<uint8> listByte;
-        if ( texture.Status == ImTextureStatus_WantCreate )
+        if ( op._kind == TextureOp::Kind::Create )
         {
             RHITextureDesc desc{};
-            desc._width                   = width;
-            desc._height                  = height;
+            desc._width                   = op._width;
+            desc._height                  = op._height;
             desc._mipLevels               = 1;
             desc._format                  = RHIFormat::R8G8B8A8_UNORM;
             desc._bIsShaderResource       = 1;
             const RHITextureHandle handle = pFactory->createTexture2D( desc );
-            copyRegion( 0, 0, width, height, listByte );
-            RHITextureUploadDesc upload{};
-            upload._pData      = listByte.data();
-            upload._sizeBytes  = static_cast<uint32>( listByte.size() );
+            RHITextureUploadDesc   upload{};
+            upload._pData      = op._listByte.data();
+            upload._sizeBytes  = static_cast<uint32>( op._listByte.size() );
             upload._mipLevels  = 1;
             upload._arraySlice = 0;
             // 첫 그리기 전에 다 올린다 — 반쯤 올라간 아틀라스로 그린 프레임이 UI 캡처 골든을 흔들지 않게(에디터 전용 · 기동과 아틀라스 확장 때뿐이다).
             if ( handle == 0 || RHITransferUtil::uploadTexture2DAndWait( *pFactory, handle, upload ) == false )
             {
-                SW_LOG_ERROR_ID( "ImGuiRenderer.TextureCreateFailed", "Failed to create an editor UI texture (%#x%#) - its glyphs are not drawn", width, height );
+                SW_LOG_ERROR_ID( "ImGuiRenderer.TextureCreateFailed", "Failed to create an editor UI texture (%#x%#) - its glyphs are not drawn", op._width, op._height );
                 if ( handle != 0 )
                     pFactory->destroyTexture( handle );
-                texture.SetStatus( ImTextureStatus_Destroyed );
-                return;
+                return; // 칸은 텍스처 없이 남는다 — 그 ID 의 그리기는 건너뛰고, ImGui 가 파괴를 내면 비운다
             }
-            uint32 slotIndex{ 0 };
-            {
-                ScopedLock<mutex> lock{ _textureMutex };
-                slotIndex                        = acquireSlot( handle, true );
-                _listTextureSlot[slotIndex]._srv = pFactory->registerBindlessTexture( handle );
-            }
-            texture.SetTexID( Internal::makeTextureID( slotIndex ) );
-            texture.SetStatus( ImTextureStatus_OK );
+            ScopedLock<mutex> lock{ _textureMutex };
+            TextureSlot&      slot = _listTextureSlot[op._slot];
+            slot._texture          = handle;
+            slot._srv              = pFactory->registerBindlessTexture( handle );
             return;
         }
-
-        // ImTextureStatus_WantUpdates — 바뀐 구간을 감싼 사각형(UpdateRect) 하나를 올린다. 구간마다 올리면 구간마다 GPU 를 기다린다(새 글리프가 한 프레임에 여럿 붙는다).
-        uint32           slotIndex{ 0 };
         RHITextureHandle handle{ 0 };
-        if ( Internal::tryGetSlotIndex( static_cast<uint64>( texture.TexID ), slotIndex ) )
         {
             ScopedLock<mutex> lock{ _textureMutex };
-            handle = slotIndex < _listTextureSlot.size() ? _listTextureSlot[slotIndex]._texture : 0;
+            handle = op._slot < _listTextureSlot.size() ? _listTextureSlot[op._slot]._texture : 0;
         }
-        const ImTextureRect& rect = texture.UpdateRect;
-        if ( rect.w > 0 && rect.h > 0 )
-        {
-            copyRegion( rect.x, rect.y, rect.w, rect.h, listByte );
-            RHITextureRegionUploadDesc region{};
-            region._pData     = listByte.data();
-            region._sizeBytes = static_cast<uint32>( listByte.size() );
-            region._x         = rect.x;
-            region._y         = rect.y;
-            region._width     = rect.w;
-            region._height    = rect.h;
-            if ( handle == 0 || RHITransferUtil::uploadTexture2DRegionAndWait( *pFactory, handle, region ) == false )
-                SW_LOG_ERROR_ONCE_ID( "ImGuiRenderer.TextureUpdateFailed", "Failed to update an editor UI texture region - new glyphs may be missing" );
-        }
-        texture.SetStatus( ImTextureStatus_OK );
+        RHITextureRegionUploadDesc region{};
+        region._pData     = op._listByte.data();
+        region._sizeBytes = static_cast<uint32>( op._listByte.size() );
+        region._x         = op._x;
+        region._y         = op._y;
+        region._width     = op._width;
+        region._height    = op._height;
+        if ( handle == 0 || RHITransferUtil::uploadTexture2DRegionAndWait( *pFactory, handle, region ) == false )
+            SW_LOG_ERROR_ONCE_ID( "ImGuiRenderer.TextureUpdateFailed", "Failed to update an editor UI texture region - new glyphs may be missing" );
     }
 
     RHIDescriptorIndex ImGuiRenderer::resolveTexture( uint64 textureID ) const
@@ -614,6 +641,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ImGuiRenderer.WindowHandleMissing", "An editor floating window has no Win32 or X11 handle - it is not drawn" );
             return;
         }
+        pRenderer->waitDrawnBeforeWindowChange();
         pViewport->RendererUserData = pRenderer->_pDevice->createSwapChain( desc ); // 실패는 디바이스가 남긴다 — 그 창은 그리지 않는다
     }
 
@@ -623,7 +651,10 @@ namespace sw::editor
         if ( pViewport == nullptr || pViewport->RendererUserData == nullptr )
             return;
         if ( pRenderer != nullptr && pRenderer->_pDevice != nullptr )
+        {
+            pRenderer->waitDrawnBeforeWindowChange();
             pRenderer->_pDevice->destroySwapChain( static_cast<IRHISwapChain*>( pViewport->RendererUserData ) );
+        }
         pViewport->RendererUserData = nullptr;
     }
 
@@ -633,7 +664,15 @@ namespace sw::editor
         ImGuiRenderer* const pRenderer = Internal::findRenderer();
         if ( pRenderer == nullptr || pRenderer->_pDevice == nullptr || pViewport == nullptr || pViewport->RendererUserData == nullptr )
             return;
+        pRenderer->waitDrawnBeforeWindowChange();
         pRenderer->_pDevice->resizeSwapChain( *static_cast<IRHISwapChain*>( pViewport->RendererUserData ), Internal::toPixels( size.x, pViewport->FramebufferScale.x ),
                                               Internal::toPixels( size.y, pViewport->FramebufferScale.y ) );
+    }
+
+    void ImGuiRenderer::waitDrawnBeforeWindowChange() const
+    {
+        // 렌더 스레드는 낸 스냅샷의 보조 창 스왑체인에 그린다(`renderPlatformWindows`) — 그 스냅샷이 다 그려진 뒤에 바꾼다. 드문 일(창을 띄우고 · 옮기고 · 닫을 때)이다.
+        if ( _pDrawHandoff != nullptr )
+            _pDrawHandoff->waitForIdle();
     }
 } // namespace sw::editor
