@@ -168,14 +168,17 @@ namespace sw
     void SubsystemCollection::shutdownAll()
     {
         // 모두를 멈춘 뒤에 놓는다 — 한 서브시스템이 비우는 남은 일(완료 콜백)이 먼저 놓인 다른 서브시스템을 부르지 않게.
+        // 시계가 없는 범위(코어)는 재지 않고 목록도 잡지 않는다 — 코어 범위의 소멸이 종료 누수 보고를 하므로 그때 산 목록이 보고에 찍힌다.
         _listShutdownTiming.clear();
-        _listShutdownTiming.resize( _listInitialized.size() );
+        if ( _pClockNanos != nullptr )
+            _listShutdownTiming.resize( _listInitialized.size() );
         for ( size_t order = _listInitialized.size(); order > 0; --order )
         {
             ISubsystem* const pSubsystem = _listEntry[_listInitialized[order - 1]]._pSubsystem;
             const int64       startNanos = _pClockNanos != nullptr ? _pClockNanos() : 0;
             pSubsystem->stopSubsystem();
-            _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), _pClockNanos != nullptr ? ( _pClockNanos() - startNanos ) / 1000 : 0 };
+            if ( _pClockNanos != nullptr )
+                _listShutdownTiming[order - 1] = { pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / 1000 };
         }
         while ( _listInitialized.empty() == false )
         {
