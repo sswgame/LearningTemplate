@@ -2,8 +2,11 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -101,13 +104,48 @@ namespace sw
         return sw::make_shared<Mesh>( CreateKey{} );
     }
 
-    shared_ptr<Mesh> Mesh::createRigidSkinSource( const Mesh& source )
+    shared_ptr<Mesh> Mesh::acquireRigidSkinSource( const Mesh& source )
     {
-        shared_ptr<Mesh> rigid = create();
+        static SpinLock                              s_spinLock;
+        static unordered_map<uint64, weak_ptr<Mesh>> s_mapRigid;
+        ScopedLock<SpinLock>                         lock{ s_spinLock };
+        const auto                                   found = s_mapRigid.find( source._contentID );
+        shared_ptr<Mesh>                             rigid = found != s_mapRigid.end() ? found->second.lock() : nullptr;
+        if ( rigid != nullptr )
+            return rigid;
+        rigid = create();
         (void)rigid->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
         // 기본 영향이 본 0 에 가중치 1 이다(`MeshSkinVertex`).
         rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), 1u );
         rigid->setMorphTargets( source._listMorphTarget );
+        (void)rigid->setSections( source._listSection ); // 원본이 이미 검사를 지났다
+        // 단계도 따라온다(그릴 흐름 번호를 단계 안 번호로 되돌려 다시 건다) — 스킨은 본 0 가중치 1.
+        vector<MeshLODLevel> listLevel;
+        for ( const MeshLOD& lod : source._listLOD )
+        {
+            MeshLODLevel level{};
+            level._screenSize = lod._screenSize;
+            const auto vertex = source._listLODVertex.begin() + ( lod._firstVertex - source.getVertexCount() );
+            level._listVertex.assign( vertex, vertex + lod._vertexCount );
+            level._listSkinVertex.resize( lod._vertexCount );
+            const auto index = source._listLODIndex.begin() + ( lod._firstIndex - source.getIndexCount() );
+            for ( auto it = index; it != index + lod._indexCount; ++it )
+            {
+                level._listIndex.push_back( *it - lod._firstVertex );
+            }
+            for ( const MeshLODSectionRange& range : lod._listSectionRange )
+            {
+                level._listSectionRange.push_back( MeshLODSectionRange{ range._firstIndex - lod._firstIndex, range._indexCount } );
+            }
+            listLevel.push_back( std::move( level ) );
+        }
+        if ( listLevel.empty() == false )
+            (void)rigid->setLODs( std::move( listLevel ) ); // 원본이 받은 단계라 거절되지 않는다
+        for ( auto it = s_mapRigid.begin(); it != s_mapRigid.end(); )
+        {
+            it = it->second.expired() ? s_mapRigid.erase( it ) : std::next( it );
+        }
+        s_mapRigid[source._contentID] = rigid;
         return rigid;
     }
 

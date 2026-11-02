@@ -17,7 +17,7 @@ namespace
         static constexpr uint32 kGrid = 8u; ///< 구간 하나가 kGrid x kGrid 사각형 평면 — 안쪽 정점은 오차 없이 줄어든다
 
         /** @brief 평면 격자 둘(구간 둘, x 로 떨어져 있다)인 스킨드 메시입니다. 구간 0 의 정점은 x < kGrid, 구간 1 은 x > kGrid 다. */
-        static shared_ptr<Mesh> makeTwoSectionGrid()
+        static shared_ptr<Mesh> makeTwoSectionGrid( bool bSkin = true )
         {
             vector<RHIVertex>      listVertex;
             vector<uint32>         listIndex;
@@ -59,7 +59,8 @@ namespace
             }
             shared_ptr<Mesh> mesh = Mesh::create();
             SW_EXPECT_TRUE( mesh->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ) );
-            mesh->setSkin( std::move( listSkin ), 2u );
+            if ( bSkin )
+                mesh->setSkin( std::move( listSkin ), 2u );
             SW_EXPECT_TRUE( mesh->setSections( std::move( listSection ) ) );
             return mesh;
         }
@@ -122,4 +123,33 @@ SW_TEST_CASE( CharacterMeshLODTest, SettingsRejectNonDecreasingLevels )
     SW_EXPECT_FALSE( settings.parseXML( R"(<CharacterLODSettings><Level triangle_ratio="0.5" max_error="0.01" screen_size="0.3"/><Level triangle_ratio="0.6" max_error="0.01" screen_size="0.1"/></CharacterLODSettings>)",
                                         "test" ) );
     SW_EXPECT_TRUE( settings._listLevel.empty() );
+}
+
+/**
+ * @brief [CharacterMeshLODTest] 스킨 없는 모프 메시의 고정 스킨 원본은 같은 원본이면 한 벌을 나누고, 구간 · LOD(단계 스킨 포함)가 따라오는지 검증
+ */
+SW_TEST_CASE( CharacterMeshLODTest, RigidSkinSourceIsSharedAndKeepsSectionsAndLevels )
+{
+    using Internal              = CharacterMeshLODTestInternal;
+    const shared_ptr<Mesh> mesh = Internal::makeTwoSectionGrid( false );
+    MeshMorphTarget        target;
+    target._name = hashed_string( "smile" );
+    target._listDelta.push_back( MeshMorphDelta{} );
+    mesh->setMorphTargets( { target } );
+    CharacterLODSettings settings;
+    settings._listLevel.push_back( CharacterLODLevelRule{ 0.5f, 0.01f, 0.3f } );
+    SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *mesh, settings ) );
+
+    const shared_ptr<Mesh> rigid = Mesh::acquireRigidSkinSource( *mesh );
+    SW_EXPECT_TRUE( rigid == Mesh::acquireRigidSkinSource( *mesh ) ); // 유닛마다 사본이 아니다
+    SW_EXPECT_TRUE( rigid->hasSkin() );
+    SW_EXPECT_EQUAL( 1u, rigid->getMorphTargetCount() );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( rigid->getSections().size() ) );
+    SW_REQUIRE_EQUAL( mesh->getLODCount(), rigid->getLODCount() );
+    SW_EXPECT_EQUAL( rigid->getLODVertices().size(), rigid->getLODSkinVertices().size() );
+    const MeshLOD& expected = mesh->getLODs()[0];
+    const MeshLOD& actual   = rigid->getLODs()[0];
+    SW_EXPECT_EQUAL( expected._indexCount, actual._indexCount );
+    SW_EXPECT_EQUAL( expected._listSectionRange[1]._firstIndex, actual._listSectionRange[1]._firstIndex );
+    SW_EXPECT_TRUE( mesh->getLODIndices() == rigid->getLODIndices() );
 }

@@ -183,11 +183,13 @@ namespace sw
          */
         static shared_ptr<Mesh> create();
         /**
-         * @brief 스킨 없는 모프 메시(블렌드 셰이프만 있는 소품 · 얼굴)를 본 하나에 가중치 1 로 묶은 스킨 원본으로 만듭니다(정점 · 모프 타깃 복사).
+         * @brief 스킨 없는 모프 메시(블렌드 셰이프만 있는 소품 · 얼굴)를 본 하나에 가중치 1 로 묶은 스킨 원본을 돌려줍니다(정점 · 구간 · LOD · 모프 타깃 복사).
          * @details 모프 가중치는 GPU 스키닝 컴퓨트가 스키닝 앞에 건다. 스킨이 없으면 그 길에 들지 못하므로 고정 본 하나를 준다(임포트가 몸에 합칠 때와 같은 규칙).
          *          `SkeletalMeshComponent` 가 이런 메시를 받으면 이 함수로 원본을 바꿔 그린다 — 스켈레톤이 없으면 암묵 스켈레톤(본 하나)이다.
+         *          같은 원본(내용 번호)의 유닛은 한 벌을 나눈다 — 스킨 결과는 칸마다라 원본은 하나면 되고, 유닛마다 사본이면 정점 풀 · 배치가 유닛마다 갈린다(StructureRefactor 11).
+         *          약한 참조라 그리는 유닛이 없으면 사라지고, 핫 리로드한 원본은 내용 번호가 바뀌어 새 것을 받는다. 어느 스레드에서 불러도 된다.
          */
-        static shared_ptr<Mesh> createRigidSkinSource( const Mesh& source );
+        static shared_ptr<Mesh> acquireRigidSkinSource( const Mesh& source );
 
         /**
          * @brief 고유 정점과 인덱스를 설정합니다. 탄젠트는 받은 값을 버리고 `computeTangents` 로 다시 구합니다.

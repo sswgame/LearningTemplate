@@ -1816,7 +1816,7 @@ namespace sw
         // 리그는 데이터 스켈레톤을 받은 유닛에만 묶인다(암묵 스켈레톤이면 묶지 않아 쇠뇌가 손을 따르지 못하고 바닥에 남는다) — 루트 본 하나를 데이터로 준다.
         pWeaponUnit->setSkeleton( createSingleBoneSkeleton() );
         // 본 하나(0)에 가중치 1 — 암묵 스켈레톤 유닛(무기)이 루트 본 포즈로 움직인다.
-        pWeaponUnit->setMesh( Mesh::createRigidSkinSource( *weaponSource ) );
+        pWeaponUnit->setMesh( Mesh::acquireRigidSkinSource( *weaponSource ) );
         pWeaponUnit->resolveRenderAssets();
         PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
         if ( pWeaponRig != nullptr )

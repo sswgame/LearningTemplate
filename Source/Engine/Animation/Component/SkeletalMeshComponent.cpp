@@ -360,7 +360,7 @@ namespace sw
         {
             if ( getMesh()->getMorphTargetCount() == 0 )
                 return;
-            setMesh( Mesh::createRigidSkinSource( *getMesh() ) );
+            setMesh( Mesh::acquireRigidSkinSource( *getMesh() ) );
         }
         // 사본을 두지 않는다 — 스킨 결과는 칸마다라(AnimationSkinSlot) 원본 메시를 그대로 그린다(군중 묶음도 원본을 그린다).
         // 지금 메시가 원본이거나 VAT 메시이고 원본이 그대로면 둔다. 원본이 바뀌었으면(핫 리로드 · 다른 id) 군중을 놓고 새 원본을 그린다 — 다음 평가가 다시 묶는다.
