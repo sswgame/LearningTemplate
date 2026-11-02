@@ -37,6 +37,13 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
     }
 
+    void RHIDrawDiagnostics::reportDrawWithoutRenderPass( const utf8* pBackendName )
+    {
+        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        if ( count < kMaxReportedDraw )
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedNoRenderPass", "%# draw skipped: no render pass is open - something ended the pass (a buffer update inside it?) or the draw was recorded before beginRenderPass", pBackendName );
+    }
+
     void RHIDrawDiagnostics::reportIndexBufferUnbound( const utf8* pBackendName )
     {
         const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );

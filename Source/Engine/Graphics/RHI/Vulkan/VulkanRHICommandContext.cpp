@@ -453,7 +453,10 @@ namespace sw
             {
                 const VulkanRHISwapChain* pSwapChain = _pDevice->useSwapChain( beginInfo._pSwapChain );
                 if ( _pDevice->_renderPass == VK_NULL_HANDLE || pSwapChain == nullptr || pSwapChain->getCurrentFramebuffer() == VK_NULL_HANDLE )
+                {
+                    _pState->_bRenderPassBackedOff = SW_TRUE; // 그릴 백버퍼가 없다 — 이 패스의 드로우는 알리지 않고 버린다
                     return;
+                }
                 framebuffer = pSwapChain->getCurrentFramebuffer();
                 extent      = { pSwapChain->getExtentWidth(), pSwapChain->getExtentHeight() };
                 // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다.
@@ -489,7 +492,8 @@ namespace sw
         renderPassInfo.pClearValues      = clearValues;
 
         vkCmdBeginRenderPass( cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
-        _pState->_bRenderPassActive = SW_TRUE;
+        _pState->_bRenderPassActive    = SW_TRUE;
+        _pState->_bRenderPassBackedOff = SW_FALSE;
 
         // DX12 beginRenderPass 와 맞춘다: 뷰포트 = 패스 크기, DX 의 Y 방향.
         RHIViewport viewport{};
@@ -761,9 +765,16 @@ namespace sw
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
     {
         VkCommandBuffer cmd = commandBuffer();
-        // 패스가 안 열렸으면 그리지 않는다. 백버퍼 프레임버퍼가 없을 때(최소화 · 스왑체인 재생성 중) beginRenderPass 가 조용히 물러나므로 그 뒤의 draw 가 여기서 걸린다.
-        if ( cmd == VK_NULL_HANDLE || _pState->_bRenderPassActive == SW_FALSE )
+        // 패스가 안 열렸으면 그리지 않는다(Vulkan 은 패스 밖 드로우가 없다). 백버퍼 프레임버퍼가 없을 때(최소화 · 스왑체인 재생성 중) beginRenderPass 가 물러난 뒤의 드로우는
+        // 정상이라 조용히 버리고, 그 밖에는 부르는 쪽의 결함이라 알린다 — 열린 패스를 무언가가 닫았다(패스 안 버퍼 갱신이 그랬다: 에디터 UI 가 화면에서 사라졌다).
+        if ( cmd == VK_NULL_HANDLE )
             return false;
+        if ( _pState->_bRenderPassActive == SW_FALSE )
+        {
+            if ( _pState->_bRenderPassBackedOff == SW_FALSE )
+                RHIDrawDiagnostics::reportDrawWithoutRenderPass( "Vulkan" );
+            return false;
+        }
 
         // 백엔드 계약(네 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다. 기본 파이프라인으로 대신 그리지 않는다 — PSO 가 0 이면
         // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).

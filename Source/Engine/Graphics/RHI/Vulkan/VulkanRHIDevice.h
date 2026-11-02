@@ -113,8 +113,10 @@ namespace sw
         /// @brief 이 스트림에 렌더 패스가 열려 있는지 여부입니다.
         uint8 _bRenderPassActive : 1;
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
-        uint8                  _bTextureSetBound : 1;
-        [[maybe_unused]] uint8 _reserved         : 6;
+        uint8 _bTextureSetBound : 1;
+        /// @brief 마지막 `beginRenderPass` 가 스왑체인 프레임버퍼가 없어(최소화 · 스왑체인 재생성 중) 물러났는지 여부입니다 — 그 뒤의 드로우는 알리지 않고 버린다.
+        uint8                  _bRenderPassBackedOff : 1;
+        [[maybe_unused]] uint8 _reserved             : 5;
 
         /// @brief 바인드 포인트별 슬롯 세트 상태입니다([0] 그래픽스, [1] 컴퓨트). 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않습니다.
         VulkanSlotState _arrSlotState[2];
@@ -126,6 +128,7 @@ namespace sw
             , _geometry{}
             , _bRenderPassActive{ SW_FALSE }
             , _bTextureSetBound{ SW_FALSE }
+            , _bRenderPassBackedOff{ SW_FALSE }
             , _reserved{ 0 }
             , _arrSlotState{}
         {
