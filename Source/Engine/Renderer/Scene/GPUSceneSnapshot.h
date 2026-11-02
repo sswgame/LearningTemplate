@@ -488,6 +488,12 @@ namespace sw
         /// @brief 마지막 populateFromScene 이 내용을 바꿨는지 나타냅니다. RT 는 0이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCPUDirty{ SW_TRUE };
         /**
+         * @brief 이 스냅샷의 인스턴스에 있는 강조 방식의 비트입니다(`1 << InstanceHighlightStyle`). 빌더가 인스턴스를 다시 채울 때마다 구한다.
+         * @details 강조 패스는 불투명 배치를 모두 다시 그리고 정점 셰이더가 강조 아닌 인스턴스를 버린다 — 강조된 것이 없어도 씬의 모든 정점(스키닝 포함)을 두 번 더 돌았다
+         *          (기사 200 명 부하에서 2.6 ms). 그 방식의 인스턴스가 없으면 패스가 그리지 않는다(`FramePassExecutor::executeHighlightPass`).
+         */
+        uint8 _highlightStyleMask{ 0 };
+        /**
          * @brief 1이면 이 스냅샷의 메시(동적 메시 밖)는 게임 스레드가 넘기기 전에 만들었다(`GPUUploadQueue::createsMeshes`) — 렌더 스레드는 다시 만들지 않는다.
          * @details 메시 하나를 만드는 쪽은 하나다(언리얼 `BeginInitResource` 가 한 번만 들어가는 것과 같은 자리). 0이면(GL · 큐를 끈 구성 · 큐 없는 화면 밖 캡처) 렌더 스레드가 만든다.
          *          예전에는 두 쪽이 모두 `Mesh::initRHI` 를 불렀고, 게임 스레드 생성이 실패한 메시는 두 스레드가 함께 다시 시도할 수 있었다.

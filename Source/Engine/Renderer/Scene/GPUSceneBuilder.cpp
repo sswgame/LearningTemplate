@@ -17,6 +17,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
@@ -1001,7 +1002,15 @@ namespace sw
 
     void GPUSceneBuilder::publishInstances()
     {
-        _snapshot._pListInstance = _instanceRing.publish( _snapshot._bAllInstancesDirty != SW_FALSE, _snapshot._listDirtyInstanceRun );
+        // 강조 방식의 비트 — 강조 패스가 그 방식의 인스턴스가 없으면 그리지 않는다(`GPUSceneSnapshot::_highlightStyleMask`).
+        uint8 highlightStyleMask = 0;
+        for ( const GPUInstance& instance : instanceWork() )
+        {
+            if ( instance._highlight != 0u )
+                highlightStyleMask = static_cast<uint8>( highlightStyleMask | ( 1u << static_cast<uint32>( GPUInstanceHighlight::getStyle( instance._highlight ) ) ) );
+        }
+        _snapshot._highlightStyleMask = highlightStyleMask;
+        _snapshot._pListInstance      = _instanceRing.publish( _snapshot._bAllInstancesDirty != SW_FALSE, _snapshot._listDirtyInstanceRun );
     }
 
     void GPUSceneBuilder::requestGPUUploads( GPUUploadQueue& queue ) const

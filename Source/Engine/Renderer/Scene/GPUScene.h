@@ -12,6 +12,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
@@ -160,6 +161,8 @@ namespace sw
         float32 getLODCrossfadeSeconds() const { return _snapshot._lodCrossfadeSeconds; }
         /** @brief 스냅샷에 LOD 그룹이 하나라도 있으면 true 입니다. */
         bool hasLODGroups() const { return _snapshot.hasLODGroups(); }
+        /** @brief 스냅샷에 강조 방식 @p style 의 인스턴스가 하나라도 있으면 true 입니다(`GPUSceneSnapshot::_highlightStyleMask`). */
+        bool hasHighlightStyle( InstanceHighlightStyle style ) const { return ( _snapshot._highlightStyleMask & ( 1u << static_cast<uint32>( style ) ) ) != 0u; }
         /** @brief 가시 목록의 칸 수입니다(`GPUSceneSnapshot::getVisibleSlotCount`). */
         uint32 getVisibleSlotCount() const { return _snapshot.getVisibleSlotCount(); }
         /**

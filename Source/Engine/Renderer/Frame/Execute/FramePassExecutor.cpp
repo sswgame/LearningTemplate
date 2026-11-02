@@ -1224,6 +1224,10 @@ namespace sw
         const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
         if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer )
             return;
+        // 이 패스의 방식으로 강조된 인스턴스가 없으면 그리지 않는다 — 그려도 정점 셰이더가 모두 버린다(씬의 모든 정점을 헛돈다).
+        const InstanceHighlightStyle style = input._passType == RenderPassType::HighlightSense ? InstanceHighlightStyle::Sense : InstanceHighlightStyle::Outline;
+        if ( _state._gpuScene.hasHighlightStyle( style ) == false )
+            return;
         FramePassContext&            context     = input._context;
         const hashed_string&         passDepth   = input._passDepth;
         const hashed_string&         colorTarget = input._declaredColor[0]._attachment;

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  부하 시나리오 — 스킨드 캐릭터 200 명(벤치 기사, 20 열 격자): 캐릭터당 GPU 비용(GPU 스키닝 컴퓨트 · 그리기)을 잰다. NEXT 4 의 "캐릭터 비용" 을 다시 잴 때의 기준이다
+  (손으로 잰 농장 0.6 ms/명은 다시 잴 수 없었다). 측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인이 줍지 않는다.
+  실행: ctest -L load (항목 Scenario.empty.load.characters) · App -scenario=game/empty/automation/load/characters.scenario.xml -unattended -gv_stressTestCharacters=200 -gv_stressTestCharacterColumns=20
+-->
+<Scenario name="game.empty.load.characters" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Launch variable="gv_stressTestCharacters" value="200"/>
+	<Launch variable="gv_stressTestCharacterColumns" value="20"/>
+	<Load durationSeconds="15"/>
+</Scenario>
