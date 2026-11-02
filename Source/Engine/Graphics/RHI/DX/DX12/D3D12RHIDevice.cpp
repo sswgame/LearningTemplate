@@ -2145,6 +2145,13 @@ namespace sw
         return foundIt == _mapTextureTransferMarks.end() || _transferSerials.isTextureReadyToRegister( foundIt->second, texture );
     }
 
+    bool D3D12RHIDevice::isTextureFirstUploadComplete( RHITextureHandle texture )
+    {
+        ScopedLock<mutex> lock{ _textureTransferMutex };
+        const auto        foundIt = _mapTextureTransferMarks.find( texture );
+        return foundIt == _mapTextureTransferMarks.end() || _transferSerials.isFirstUploadComplete( foundIt->second );
+    }
+
     void D3D12RHIDevice::eraseTextureTransfer( RHITextureHandle texture )
     {
         ScopedLock<mutex> lock{ _textureTransferMutex };

@@ -39,6 +39,7 @@ namespace sw
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
         void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;

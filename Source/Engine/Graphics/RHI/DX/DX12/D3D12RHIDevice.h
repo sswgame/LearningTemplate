@@ -660,6 +660,8 @@ namespace sw
         [[nodiscard]] uint64 findTextureTransferSerial( RHITextureHandle texture );
         /** @brief 텍스처의 첫 업로드가 끝나 bindless 에 등록해도 되는지 봅니다(아니면 오류를 남긴다 — `RHITransferSerials::isTextureReadyToRegister`). */
         [[nodiscard]] bool isTextureReadyToRegister( RHITextureHandle texture );
+        /** @brief 텍스처의 첫 업로드가 끝났는지(또는 올린 적이 없는지)만 봅니다 — 오류를 남기지 않는다(`IRHIResourceFactory::isTextureReadyToSample`). */
+        [[nodiscard]] bool isTextureFirstUploadComplete( RHITextureHandle texture );
         /** @brief 텍스처를 파괴할 때 전송 시리얼 칸을 지웁니다. */
         void eraseTextureTransfer( RHITextureHandle texture );
         /**

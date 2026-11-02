@@ -1124,6 +1124,11 @@ namespace sw
         return _pDevice->_allocatedDescriptorsCount++;
     }
 
+    bool D3D12RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    {
+        return _pDevice->resolveTexture( texture ) != nullptr && _pDevice->isTextureFirstUploadComplete( texture );
+    }
+
     RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );

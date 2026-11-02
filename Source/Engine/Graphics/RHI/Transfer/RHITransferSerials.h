@@ -117,6 +117,8 @@ namespace sw
          *          코드로 막는 자리다. 워터마크는 `pollTransfer` 가 `Complete` 를 돌려줄 때 이미 올라가 있으므로, 규칙을 지킨 소비자는 늘 통과한다.
          */
         [[nodiscard]] bool isTextureReadyToRegister( const RHITextureUploadSerials& marks, RHITextureHandle texture ) const;
+        /** @brief 첫 쓰기 전송이 끝났는지(또는 전송한 적이 없는지)만 봅니다 — 오류를 남기지 않는 질의(`IRHIResourceFactory::isTextureReadyToSample`)입니다. */
+        [[nodiscard]] bool isFirstUploadComplete( const RHITextureUploadSerials& marks ) const;
 
     private:
         atomic<uint64> _lastIssued;

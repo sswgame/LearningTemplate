@@ -1091,6 +1091,12 @@ namespace sw
         _pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, _pDevice->_frameFenceCounter + 1 );
     }
 
+    bool VulkanRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    {
+        const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_uploadSerials );
+    }
+
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );

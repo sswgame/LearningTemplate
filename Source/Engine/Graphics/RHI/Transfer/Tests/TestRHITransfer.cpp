@@ -81,6 +81,7 @@ namespace
         void                   destroyTexture( RHITextureHandle ) override {}
         RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool                   isTextureReadyToSample( RHITextureHandle ) override { return false; }
         void                   unregisterBindlessTexture( RHIDescriptorIndex ) override {}
         RHIDescriptorIndex     registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
         void                   unregisterBindlessResource( RHIDescriptorIndex ) override {}

@@ -855,6 +855,12 @@ namespace sw
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
 
+    bool OpenGLRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    {
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_uploadSerials );
+    }
+
     RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         if ( texture == 0 )

@@ -763,6 +763,12 @@ namespace sw
         _pDevice->_releaseQueue.enqueueTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture );
     }
 
+    bool D3D11RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    {
+        const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_uploadSerials );
+    }
+
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );

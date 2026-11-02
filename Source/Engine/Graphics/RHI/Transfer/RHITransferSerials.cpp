@@ -78,11 +78,17 @@ namespace sw
         return RHITransferStatus::Pending;
     }
 
+    bool RHITransferSerials::isFirstUploadComplete( const RHITextureUploadSerials& marks ) const
+    {
+        const uint64 firstUploadSerial = marks._firstSerial.load(); // 첫 업로드만 본다(RHITextureUploadSerials)
+        return firstUploadSerial == 0 || isComplete( firstUploadSerial );
+    }
+
     bool RHITransferSerials::isTextureReadyToRegister( const RHITextureUploadSerials& marks, RHITextureHandle texture ) const
     {
-        const uint64 firstUploadSerial = marks._firstSerial.load(); // 첫 업로드만 막는다(RHITextureUploadSerials)
-        if ( firstUploadSerial == 0 || isComplete( firstUploadSerial ) )
+        if ( isFirstUploadComplete( marks ) )
             return true;
+        const uint64 firstUploadSerial = marks._firstSerial.load();
         // 부른 자리를 함께 남긴다 — 텍스처를 넘긴 쪽(패널 · 캐시)이 곧 완료를 기다리지 않은 쪽이다.
         CallStack stack{};
         CallStackCapture::capture( stack, 2 );

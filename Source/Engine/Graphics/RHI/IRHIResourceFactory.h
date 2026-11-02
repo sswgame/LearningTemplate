@@ -265,6 +265,12 @@ namespace sw
          *          DX12 만 번호를 남겨 늦은 해제가 다시 발급된 번호를 놓았다). 텍스처 주인이 아닌 쪽은 번호를 해제하지 않고 파괴에 맡긴다.
          */
         virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
+        /**
+         * @brief 살아 있는 텍스처의 첫 업로드가 끝나 등록 · 샘플해도 되는지 묻습니다(전송한 적이 없으면 true, 없는 핸들이면 false). 오류를 남기지 않습니다.
+         * @details 받은 핸들의 내력을 모르는 쪽(에디터 UI 가 패널에서 받는 텍스처)이 등록 전에 묻는다 — 끝날 때까지 그 텍스처를 그리지 않고 다음 프레임에 다시 묻는다.
+         *          예전에는 "넘기는 쪽이 첫 업로드를 끝낸 것만 넘긴다" 는 약속뿐이라 창 실행의 체인에서 가끔 `RHI.RegisterBeforeTransferDone` 가 났다.
+         */
+        [[nodiscard]] virtual bool isTextureReadyToSample( RHITextureHandle texture ) = 0;
 
         /**
          * @brief registerBindlessTexture 가 발급한 텍스처 SRV 인덱스를 해제합니다.
