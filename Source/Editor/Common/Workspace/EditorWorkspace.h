@@ -43,8 +43,9 @@ namespace sw::editor
     /** @brief 패널 열기 요청 하나입니다. 패널 id 와 문서 종류 중 하나만 채웁니다(`EditorWorkspace::requestOpenPanel<T>` · `requestOpenDocumentPanel`). */
     struct EditorPanelOpenRequest
     {
-        string          _panelID;        ///< 등록 id(`T::kPanelID`) 또는 실행 중에 들어온 id
-        EditorAssetType _documentKind{}; ///< 이 종류의 문서를 여는 도구 패널. 비면 id 로 연다
+        string          _panelID;         ///< 등록 id(`T::kPanelID`) 또는 실행 중에 들어온 id
+        EditorAssetType _documentKind{};  ///< 이 종류의 문서를 여는 도구 패널. 비면 id 로 연다
+        bool            _bFloat{ false }; ///< 도킹을 풀고 메인 창 밖으로 옮긴다 — ImGui 가 그 패널을 제 OS 창(보조 뷰포트)으로 띄운다
     };
 } // namespace sw::editor
 
@@ -113,6 +114,8 @@ namespace sw::editor
         }
         /** @brief 실행 중에 들어온 id(콘솔 인자 · 패널 서비스)로 열기를 요청합니다. 코드가 아는 패널은 `requestOpenPanel<T>()` 를 씁니다. */
         void requestOpenPanelByID( string_view panelID );
+        /** @brief 열린 패널의 도킹을 풀어 메인 창 밖의 제 OS 창으로 띄우기를 요청합니다(개발 명령 `panel.float` — 보조 창 그리기 · 스왑체인 경로를 시나리오가 본다). */
+        void requestFloatPanelByID( string_view panelID );
         /** @brief 애셋 종류 @p kind 의 문서를 여는 도구 패널(`IEditorPanel::getDocumentKind`)을 열기를 요청합니다. */
         void requestOpenDocumentPanel( const EditorAssetType& kind );
         /** @brief 쌓인 요청을 꺼냅니다. 없으면 false 입니다. */

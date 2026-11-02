@@ -1,7 +1,7 @@
 /**
  * @file EditorRenderViews.h
  * @brief 에디터가 그리는 뷰(씬 · 게임 · 툴 창의 미리보기 씬)의 렌더 타깃과, 그것을 만들고 ImGui 에 등록하는 RHI 디바이스 · 렌더러 백엔드, 게임 뷰의 입력 상태를 가진 에디터 서브시스템입니다.
- * @details 셸(`ImGuiEditor`)이 컨텍스트를 만든 뒤 디바이스와 백엔드를 알리고(`setRHIDevice` · `setRendererBackend`), 패널이 뷰 크기에 맞춰 렌더 타깃을 만들고
+ * @details 셸(`ImGuiEditor`)이 컨텍스트를 만든 뒤 디바이스와 백엔드를 알리고(`setRHIDevice` · `setRenderer`), 패널이 뷰 크기에 맞춰 렌더 타깃을 만들고
  *          그린 것을 표시하며, 호스트는 프레임마다 핸들만 읽는다(`ImGuiEditor::getSceneViewport` · `getGameViewport` · `getSceneViews`). 종료(`shutdownSubsystem`)에서 렌더 타깃을 놓는다.
  *          씬 뷰 · 게임 뷰는 활성 씬의 고정 두 슬롯이고, 툴 창의 미리보기 타깃은 id 로 찾는 가변 목록이다(`allocatePreviewTarget`).
  */
@@ -27,7 +27,7 @@ namespace sw
 
 namespace sw::editor
 {
-    class IImGuiRendererBackend;
+    class ImGuiRenderer;
 
     /** @brief 에디터가 소유하는 뷰 렌더 타깃 하나입니다. 씬 뷰와 게임 뷰가 각각 하나씩 가집니다. 호스트는 프레임마다 핸들만 조회합니다(`ImGuiEditor::getSceneViewport`, `getGameViewport`). */
     struct EditorViewTarget
@@ -87,9 +87,9 @@ namespace sw::editor
 
         void        setRHIDevice( IRHIDevice* pDevice ) { _pRHIDevice = pDevice; }
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
-        void        setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
+        void        setRenderer( ImGuiRenderer* pBackend ) { _pRenderer = pBackend; }
         /** @brief ImGui 렌더러 백엔드를 반환합니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr 입니다. */
-        IImGuiRendererBackend* getRendererBackend() const { return _pRendererBackend; }
+        ImGuiRenderer* getRenderer() const { return _pRenderer; }
 
         void setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? SW_TRUE : SW_FALSE; }
         void setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? SW_TRUE : SW_FALSE; }
@@ -174,9 +174,9 @@ namespace sw::editor
         EditorPreviewViewTarget* findPreviewTargetMutable( uint32 id );
 
     private:
-        uint32                          _nextTargetSerial{ 1 };       ///< 렌더 텍스처 경로의 번호(타깃 · 크기마다 새 경로)
-        IRHIDevice*                     _pRHIDevice{ nullptr };       ///< 렌더 텍스처를 요청할 디바이스(셸이 알린다)
-        IImGuiRendererBackend*          _pRendererBackend{ nullptr }; ///< 렌더 타깃을 ImGui 텍스처로 등록하는 백엔드(셸이 알린다)
+        uint32                          _nextTargetSerial{ 1 }; ///< 렌더 텍스처 경로의 번호(타깃 · 크기마다 새 경로)
+        IRHIDevice*                     _pRHIDevice{ nullptr }; ///< 렌더 텍스처를 요청할 디바이스(셸이 알린다)
+        ImGuiRenderer*                  _pRenderer{ nullptr };  ///< 렌더 타깃을 ImGui 텍스처로 등록하는 백엔드(셸이 알린다)
         EditorViewTarget                _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )]{};
         vector<EditorPreviewViewTarget> _listPreviewTarget{}; ///< 툴 창의 미리보기 타깃(`allocatePreviewTarget`)
         IDAllocator<uint32>             _previewTargetIDAllocator;

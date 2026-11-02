@@ -13,8 +13,8 @@
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
-#include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
+#include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
@@ -510,7 +510,7 @@ namespace sw::editor
         , _pWindow{ nullptr }
         , _pRHIDevice{ nullptr }
         , _platformBackend{ nullptr }
-        , _rendererBackend{ nullptr }
+        , _renderer{ nullptr }
         , _editorToolDefaults{ nullptr }
         , _pIconGlyphTable{ nullptr }
         , _pComponentIconTable{ nullptr }
@@ -672,8 +672,9 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializeRendererBackend()
     {
         SW_LOG_TRACE_ID( "ImGuiEditor.CreatingRendererBackend", "Creating Renderer Backend" );
-        _rendererBackend = IImGuiRendererBackend::createRendererBackend( _pRHIDevice->getBackendType() );
-        if ( _rendererBackend == nullptr || _rendererBackend->initialize( _pRHIDevice ) == false )
+        // 네 RHI 백엔드가 같은 렌더러 하나를 쓴다(ImGuiRenderer — RHI 로 그린다).
+        _renderer = make_unique<ImGuiRenderer>();
+        if ( _renderer->initialize( _pRHIDevice ) == false )
         {
             SW_LOG_ERROR_ID( "ImGuiEditor.RendererBackendInitializationFailed", "Renderer backend initialization failed" );
             shutdownRendererBackend();
@@ -684,10 +685,10 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownRendererBackend()
     {
-        if ( _rendererBackend == nullptr )
+        if ( _renderer == nullptr )
             return;
-        _rendererBackend->shutdown();
-        _rendererBackend.reset();
+        _renderer->shutdown();
+        _renderer.reset();
     }
 
     SubsystemInitResult ImGuiEditor::loadSplashAssets()
@@ -751,7 +752,7 @@ namespace sw::editor
             return SubsystemInitResult::Failed;
         }
         _editorContext->getSubsystem<EditorRenderViews>().setRHIDevice( _pRHIDevice );
-        _editorContext->getSubsystem<EditorRenderViews>().setRendererBackend( _rendererBackend.get() );
+        _editorContext->getSubsystem<EditorRenderViews>().setRenderer( _renderer.get() );
 
         _editorContext->getSubsystem<EditorPanelManager>().registerDefaultPanels();
         EditorCommandGUI::registerDefaults();
@@ -889,26 +890,13 @@ namespace sw::editor
         // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
         EditorPanelDump::dumpIfRequested();
 
-        // GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신, 보조 뷰포트 렌더)을
-        // present 훅으로 옮긴다. 그 외 백엔드는 여기 UI 스레드에서 처리한다.
-        const bool bRenderThreadContext = _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
-
-        // ImGui 1.92 동적 아틀라스는 폰트와 텍스처의 생성과 갱신을 그리기 전에 마쳐야 한다.
-        // 메인 스냅샷은 Textures==nullptr 로 넘겨, 렌더 스레드가 이 리스트를 건드리지 않게 한다.
-        if ( _rendererBackend != nullptr && bRenderThreadContext == false )
-            _rendererBackend->processTextureUpdates();
-
+        // 텍스처 갱신과 그리기(메인 · 캡처 · 보조 창)는 렌더 스레드가 present 훅에서 한다(`render`). 여기서는 OS 창만 갱신한다 — 보조 창의 스왑체인 생성 · 크기 · 파괴는
+        // ImGui 가 이 안에서 렌더러 훅으로 부르고, 디바이스가 렌더 스레드와 GPU 를 비운 뒤에 한다(`ImGuiRenderer::createWindowSwapChain`).
         ImGuiIO& io = ImGui::GetIO();
         if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
         {
-            // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로, 보조(플로팅)
-            // 뷰포트의 GPU 렌더와 present 는 한 스레드에서만 실행해야 한다. GL 에서는 그 스레드가 렌더 스레드다(아래 render() 에서 처리).
-            // 창 생성, 크기 변경, 파괴와 렌더가 GPU 큐에 제출하고 대기하므로 렌더러 백엔드의 큐 락 안에서 실행한다.
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
-            const ScopedOptionalLock<mutex> queueLock{ _rendererBackend != nullptr ? _rendererBackend->getSubmissionQueueMutex() : nullptr };
             ImGui::UpdatePlatformWindows();
-            if ( _rendererBackend != nullptr && bRenderThreadContext == false )
-                _rendererBackend->renderPlatformWindows();
         }
 
         const uint32 writeSlot = _drawSnapshotHandoff.waitForWriteSlot();
@@ -922,8 +910,8 @@ namespace sw::editor
             const bool         bCapture = _pUICapture != nullptr && _pUICapture->takeJob( captureJob );
             _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence, bCapture ? &captureJob : nullptr );
         }
-        if ( _rendererBackend != nullptr )
-            _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
+        if ( _renderer != nullptr )
+            _renderer->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
         // 게시하면 이 프레임이 "렌더 대기" 가 된다. 다음 updateUI 는 상단의 waitForDrawSnapshotIdle 에서 postPresent 까지 막힌다.
         // 그래서 렌더 스레드가 present 훅에서 ImGui 공유 상태(텍스처 리스트, 뷰포트)를 건드리는 GL 경로에서도 UI 스레드와 겹치지 않는다.
         _drawSnapshotHandoff.publish( writeSlot );
@@ -960,43 +948,32 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr )
             return;
 
-        // GL 에서는 컨텍스트가 이 스레드(렌더 스레드)에 바인딩된 지금이 프레임 GPU 작업을 할 수 있는 유일한 지점이다.
-        const bool bRenderThreadContext =
-            _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
-        if ( bRenderThreadContext )
-        {
-            _rendererBackend->newFrame();
-            _rendererBackend->processTextureUpdates();
-        }
-
+        // 렌더 스레드의 present 훅이다. UI 스레드는 다음 UI 프레임을 열기 전에 이 그리기가 끝나기를 기다리므로(`waitForDrawSnapshotIdle`) 그동안 ImGui 상태(텍스처 목록 ·
+        // 보조 창의 그리기 목록)가 멈춰 있다 — 네 백엔드 모두 텍스처 갱신과 그리기를 여기서 한다.
         const uint32 slot = _drawSnapshotHandoff.beginRender();
-        if ( slot < constant::render::kMaxFrameCountInFlight )
-        {
-            ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
-            if ( pDrawData != nullptr )
-                renderBackend( pRHIDevice, pDrawData );
+        if ( slot >= constant::render::kMaxFrameCountInFlight || _renderer == nullptr )
+            return;
 
-            // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. GL 의 플로팅 창 렌더(아래)보다 먼저다 — 그것은 컨텍스트를 바꾼다.
-            // `renderJob` 은 자기가 연 패스를 닫고 돌아온다(GL 은 기본 프레임버퍼로 되돌아온다). 아래 플로팅 창이 자기 창에 그리려면 그래야 한다.
-            // 합본의 주인은 메인 뷰포트라 백엔드의 메인 버퍼 링을 한 슬롯 더 쓴다. 링 크기가 이 횟수를 센다(`kImGuiDrawsPerViewportPerFrame`) — 그리는 횟수를 늘리면 그 값도 올린다.
-            ImDrawData* const pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
-            const bool        bCapture         = pCaptureDrawData != nullptr && _pUICapture != nullptr && _rendererBackend != nullptr;
-            if ( bCapture )
-                _pUICapture->renderJob( *pRHIDevice, *_rendererBackend, *pCaptureDrawData, _arrDrawSnapshot[slot].getCaptureJob() );
+        // 이 프레임에 그릴 목록(메인 · 캡처 · 보조 창)을 버퍼 하나에 한 번 올린다.
+        ImDrawData* const   pDrawData        = _arrDrawSnapshot[slot].getMainDrawData();
+        ImDrawData* const   pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
+        const bool          bViewports       = ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) != 0;
+        vector<ImDrawData*> listDrawData{ pDrawData, pCaptureDrawData };
+        if ( bViewports )
+            _renderer->collectPlatformWindowDrawData( listDrawData );
+        _renderer->prepareFrame( *pRHIDevice, listDrawData );
 
-            // 이 프레임의 스냅샷보다 먼저 해제 요청된 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 작업이 끝난 뒤에 해제되도록 디바이스로 넘긴다.
-            if ( _rendererBackend != nullptr )
-                _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
-        }
+        if ( pDrawData != nullptr )
+            renderBackend( pRHIDevice, pDrawData );
+        // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. `renderJob` 은 자기가 연 패스를 닫고 돌아온다.
+        if ( pCaptureDrawData != nullptr && _pUICapture != nullptr )
+            _pUICapture->renderJob( *pRHIDevice, *_renderer, *pCaptureDrawData, _arrDrawSnapshot[slot].getCaptureJob() );
+        // 보조(플로팅) 창 — 창마다 그 창의 스왑체인 백버퍼에 그린다. 표시는 이 프레임의 endFrame 이 한다.
+        if ( bViewports )
+            _renderer->renderPlatformWindows( *pRHIDevice );
 
-        // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더하고 present 한다.
-        // UI 스레드는 updateUI 상단의 waitForDrawSnapshotIdle 에서 막혀 있으므로 ImGui 상태가 안정적이다.
-        if ( bRenderThreadContext )
-        {
-            const ImGuiIO& io = ImGui::GetIO();
-            if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
-                _rendererBackend->renderPlatformWindows();
-        }
+        // 이 프레임의 스냅샷보다 먼저 해제 요청된 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 작업이 끝난 뒤에 해제되도록 디바이스로 넘긴다.
+        _renderer->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
     }
 
     void ImGuiEditor::postPresent( IRHIDevice* pRHIDevice )
@@ -1122,10 +1099,6 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // GL 처럼 컨텍스트가 렌더 스레드 전용인 백엔드는 newFrame 을 present 훅에서 호출한다.
-        if ( _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext() == false )
-            _rendererBackend->newFrame();
-
         if ( _platformBackend != nullptr )
         {
             // 무인 자동화 중이면 플랫폼이 조회한 실제 커서를 지운다. Win32 는 GetCursorPos 와 커서 아래 뷰포트, X11 은 XQueryPointer 의 위치와 버튼이 해당한다.
@@ -1199,8 +1172,8 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE )
             return;
 
-        if ( _rendererBackend != nullptr )
-            _rendererBackend->render( pRHIDevice, pDrawData );
+        if ( _renderer != nullptr && pRHIDevice != nullptr && pDrawData != nullptr )
+            _renderer->render( *pRHIDevice, *pDrawData );
     }
 } // namespace sw::editor
 

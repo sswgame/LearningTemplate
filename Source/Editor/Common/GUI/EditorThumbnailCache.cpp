@@ -6,7 +6,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogOnce.h"
 
-#include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -31,10 +31,10 @@ namespace sw::editor
                 return pAssets != nullptr ? &pAssets->getAssetCache<TextureCache>() : nullptr;
             }
 
-            static IImGuiRendererBackend* findRendererBackend()
+            static ImGuiRenderer* findRenderer()
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
+                return pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRenderer() : nullptr;
             }
         };
     } // namespace
@@ -59,7 +59,7 @@ namespace sw::editor
 
     void EditorThumbnailCache::releaseEntry( Entry& entry )
     {
-        IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
+        ImGuiRenderer* pBackend = EditorThumbnailCacheInternal::findRenderer();
         if ( entry._pTextureID != nullptr && pBackend != nullptr )
             pBackend->unregisterTexture( entry._pTextureID );
         entry._pTextureID    = nullptr;
@@ -109,7 +109,7 @@ namespace sw::editor
     void EditorThumbnailCache::update()
     {
         ++_frame;
-        if ( EditorThumbnailCacheInternal::findRendererBackend() == nullptr )
+        if ( EditorThumbnailCacheInternal::findRenderer() == nullptr )
             return;
 
         // 다시 읽기 · 디바이스 교체로 텍스처가 바뀐 썸네일은 놓고 다음 그리기가 다시 예약한다.
@@ -175,8 +175,8 @@ namespace sw::editor
 
     bool EditorThumbnailCache::adoptReady( const string& assetID, const shared_ptr<TextureLoadBlock>& pBlock )
     {
-        const TextureCache&    textures = EditorThumbnailCacheInternal::requireTextureCache();
-        IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
+        const TextureCache& textures = EditorThumbnailCacheInternal::requireTextureCache();
+        ImGuiRenderer*      pBackend = EditorThumbnailCacheInternal::findRenderer();
         // 끝난 로드가 참조를 쥐고 있다 — 다시 빌리지 않고(`acquire` 는 디바이스 스레드의 일) 그 블록을 항목이 쥔다.
         const Texture2D* pTexture           = textures.find( assetID );
         const bool       bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;

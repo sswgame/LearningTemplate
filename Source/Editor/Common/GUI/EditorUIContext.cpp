@@ -96,6 +96,17 @@ namespace sw::editor
                 return true;
             }
 
+            static bool runPanelFloat( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*      pContext = editor::findSubsystem<EditorContext>();
+                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                pContext->getSubsystem<EditorWorkspace>().requestFloatPanelByID( listArgument[0] );
+                outReply = string{ "floating " } + pPanel->getPanelTitle();
+                return true;
+            }
+
             static bool runPanelClose( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext* pContext          = editor::findSubsystem<EditorContext>();
@@ -138,6 +149,9 @@ namespace sw::editor
     SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorUIDevCommandsInternal::runLayoutLoad );
     SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelID>", "Open a panel and bring its window (its tab) to the front on the next frame",
                     &EditorUIDevCommandsInternal::runPanelFocus );
+    SW_DEV_COMMAND( PanelFloat, "panel.float", "panel.float <panelID>",
+                    "Undock an open panel and move it outside the main window on the next frame - it becomes its own OS window (an ImGui platform viewport)",
+                    &EditorUIDevCommandsInternal::runPanelFloat );
     SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelID>", "Close a panel", &EditorUIDevCommandsInternal::runPanelClose );
     SW_DEV_COMMAND( PanelResetOptional, "panel.resetOptional", "panel.resetOptional",
                     "Close every panel that is not a core panel (tools, custom and extension panels) and replace it with a new instance, as in a new editor session",

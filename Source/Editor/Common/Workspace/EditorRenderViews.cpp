@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -16,8 +16,8 @@ namespace sw::editor
     void EditorRenderViews::shutdownSubsystem()
     {
         destroyViewTargets();
-        _pRendererBackend = nullptr;
-        _pRHIDevice       = nullptr;
+        _pRenderer  = nullptr;
+        _pRHIDevice = nullptr;
     }
 
     void EditorRenderViews::clearViewDrawnMarks()
@@ -139,17 +139,17 @@ namespace sw::editor
 
     void EditorRenderViews::releaseCurrent( EditorViewTarget& view )
     {
-        if ( view._pTextureID != nullptr && _pRendererBackend != nullptr )
+        if ( view._pTextureID != nullptr && _pRenderer != nullptr )
         {
-            _pRendererBackend->unregisterTexture( view._pTextureID );
+            _pRenderer->unregisterTexture( view._pTextureID );
             view._pTextureID = nullptr;
         }
         // 줄 서 있는 패킷이 이 렌더 타깃에 그리고, 이미 낸 draw 스냅샷이 그것을 샘플링한다 — 참조(로드 핸들)는 그리기 해제 큐에 맡겨 그 프레임들 뒤에 놓는다.
         // 마지막 참조가 사라지면 엔진이 GPU 자원을 놓는다. 그릴 쪽(렌더러 백엔드)이 없으면 지금 놓는다.
-        if ( view._texture.isValid() && _pRendererBackend != nullptr )
+        if ( view._texture.isValid() && _pRenderer != nullptr )
         {
             auto pHold = sw::make_shared<TextureHandle>( std::move( view._texture ) );
-            _pRendererBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pHold]()
+            _pRenderer->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pHold]()
             { *pHold = TextureHandle{}; } ) );
         }
         view._texture      = TextureHandle{};
@@ -203,7 +203,7 @@ namespace sw::editor
         view._pendingTexture = TextureHandle{};
         view._pendingPath    = string{};
         view._renderTarget   = pTexture->getHandle();
-        if ( _pRendererBackend != nullptr )
-            view._pTextureID = _pRendererBackend->registerTexture( view._renderTarget );
+        if ( _pRenderer != nullptr )
+            view._pTextureID = _pRenderer->registerTexture( view._renderTarget );
     }
 } // namespace sw::editor

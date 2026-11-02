@@ -165,6 +165,11 @@ namespace sw::editor
         _pendingOpenPanel = EditorPanelOpenRequest{ string{ panelID }, EditorAssetType{} };
     }
 
+    void EditorWorkspace::requestFloatPanelByID( string_view panelID )
+    {
+        _pendingOpenPanel = EditorPanelOpenRequest{ string{ panelID }, EditorAssetType{}, true };
+    }
+
     void EditorWorkspace::requestOpenDocumentPanel( const EditorAssetType& kind )
     {
         _pendingOpenPanel = EditorPanelOpenRequest{ string{}, kind };

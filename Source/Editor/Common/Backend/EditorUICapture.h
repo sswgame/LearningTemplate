@@ -14,7 +14,7 @@
  *          쓰기가 끝나기를 거기서만 기다린다(`isWritingFiles`, `SW_AUTOMATION_FINISH_BLOCKER`). 예전에는 풀기 · 비율을 렌더 스레드에서 해 캡처하는 프레임이 그만큼 늦었다.
  *          `-gv_screenshotEditor` 의 끝 알림(`-gv_screenshotQuit` 이 앱을 끝낸다)은 워커가 파일을 쓴 뒤 우편함에 직접 한다(패킷 스크린샷과 같다).
  *          주의: 읽기는 GPU 를 기다린다. 캡처하는 프레임만 그렇고, 요청이 없으면 아무 일도 하지 않는다.
- *          주의: 렌더러가 0 행을 아래쪽에 그리면(`IImGuiRendererBackend::rendersTargetRowsBottomUp`, OpenGL) 읽은 뒤 뒤집는다 — 백엔드 이름으로 가르지 않는다.
+ *          행 순서는 네 백엔드가 같다(0 행이 위) — RHI 렌더러가 그리고 GL 도 FBO 의 클립 원점을 위로 둔다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -39,7 +39,7 @@ namespace sw
 
 namespace sw::editor
 {
-    class IImGuiRendererBackend;
+    class ImGuiRenderer;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -84,7 +84,6 @@ namespace sw::editor
         shared_ptr<AutomationDeferredValue> _pMagentaFraction{};
         ScreenshotRequestQueue*             _pStartupMailbox{ nullptr }; ///< `-gv_screenshotEditor` 건이면 다 쓴 뒤 알릴 우편함(UI 스레드가 넘길 때 찾는다)
         RHIFormat                           _format{ RHIFormat::R8G8B8A8_UNORM };
-        bool                                _bRowsBottomUp{ false }; ///< 렌더러가 0 행을 아래쪽에 그렸다(`rendersTargetRowsBottomUp`) - 풀고 뒤집는다
     };
 } // namespace sw::editor
 
@@ -119,7 +118,7 @@ namespace sw::editor
         // 렌더 스레드
         // ------------------------------------------------------------------------------
         /** @brief present 훅 안에서 합본 @p drawData 를 캡처 텍스처에 그립니다. 읽기는 `finishJob` 이 합니다. */
-        void renderJob( IRHIDevice& device, IImGuiRendererBackend& rendererBackend, ImDrawData& drawData, const EditorUICaptureJob& job );
+        void renderJob( IRHIDevice& device, ImGuiRenderer& renderer, ImDrawData& drawData, const EditorUICaptureJob& job );
         /** @brief endFrame 뒤(postPresent)에 부릅니다. 그린 캡처가 있으면 GPU 에서 읽어 결과를 전달하고, 뒤의 일(풀기 · 마젠타 비율 · 쓰기)을 워커 몫으로 쌓습니다. */
         void finishJob( IRHIDevice& device );
         /** @brief 캡처 텍스처를 놓습니다. 렌더 스레드가 쉬는 동안(에디터 종료) 부릅니다. */
@@ -142,9 +141,8 @@ namespace sw::editor
         uint32                                       _textureWidth{ 0 };
         uint32                                       _textureHeight{ 0 };
         uint32                                       _nextTicket{ 1 };
-        uint32                                       _uiFrameCount{ 0 };                 ///< `-gv_screenshotEditor` 대기 프레임 수
-        uint8                                        _bRendered{ SW_FALSE };             ///< 렌더 스레드 전용
-        uint8                                        _bRenderedRowsBottomUp{ SW_FALSE }; ///< 렌더 스레드 전용 — 그린 렌더러가 0 행을 아래쪽에 두었다(`rendersTargetRowsBottomUp`)
+        uint32                                       _uiFrameCount{ 0 };     ///< `-gv_screenshotEditor` 대기 프레임 수
+        uint8                                        _bRendered{ SW_FALSE }; ///< 렌더 스레드 전용
         uint8                                        _bGlobalRequested{ SW_FALSE };
     };
 } // namespace sw::editor

@@ -21,7 +21,7 @@ namespace sw::editor
     class EditorContext;
     class EditorUICapture;
     class IImGuiPlatformBackend;
-    class IImGuiRendererBackend;
+    class ImGuiRenderer;
 
     /** @brief ImGui 플랫폼과 렌더러의 호스트입니다. 메뉴, 도크, 폰트는 Common 에 맡깁니다. */
     class ImGuiEditor : public IEditor
@@ -128,7 +128,7 @@ namespace sw::editor
         IWindow*                             _pWindow;    ///< `initialize` 가 받은 창(기동 단계가 읽는다)
         IRHIDevice*                          _pRHIDevice; ///< `initialize` 가 받은 디바이스(기동 단계가 읽는다)
         unique_ptr<IImGuiPlatformBackend>    _platformBackend;
-        unique_ptr<IImGuiRendererBackend>    _rendererBackend;
+        unique_ptr<ImGuiRenderer>            _renderer;
         unique_ptr<EditorToolDefaults>       _editorToolDefaults;
         unique_ptr<EditorIconGlyphTable>     _pIconGlyphTable;     ///< 아이콘 이름 → 코드포인트(글꼴과 짝) — 에디터 데이터 단계가 읽어 `EditorIconUtil` 에 게시한다
         unique_ptr<EditorComponentIconTable> _pComponentIconTable; ///< 컴포넌트 아이콘 표(Category → 아이콘 · 색 이름)

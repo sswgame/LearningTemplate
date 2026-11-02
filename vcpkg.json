@@ -37,17 +37,13 @@
       "name": "imgui",
       "features": [
         "docking-experimental",
-        "freetype",
-        "opengl3-binding",
-        "vulkan-binding"
+        "freetype"
       ]
     },
     {
       "name": "imgui",
       "features": [
-        "win32-binding",
-        "dx11-binding",
-        "dx12-binding"
+        "win32-binding"
       ],
       "platform": "windows & !uwp"
     },

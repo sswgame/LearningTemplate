@@ -7,7 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -95,21 +95,6 @@ namespace sw::editor
                 }
             }
 
-            /** @brief RGBA8 행을 위아래로 뒤집습니다(렌더러가 0 행을 아래쪽에 그렸을 때 — `rendersTargetRowsBottomUp`). */
-            static void flipRows( vector<uint8>& inoutRGBABytes, uint32 width, uint32 height )
-            {
-                const size_t  rowBytes = static_cast<size_t>( width ) * 4u;
-                vector<uint8> rowBytesTemp( rowBytes );
-                for ( uint32 row = 0; row < height / 2u; ++row )
-                {
-                    uint8* const pTop    = inoutRGBABytes.data() + static_cast<size_t>( row ) * rowBytes;
-                    uint8* const pBottom = inoutRGBABytes.data() + static_cast<size_t>( height - 1u - row ) * rowBytes;
-                    std::memcpy( rowBytesTemp.data(), pTop, rowBytes );
-                    std::memcpy( pTop, pBottom, rowBytes );
-                    std::memcpy( pBottom, rowBytesTemp.data(), rowBytes );
-                }
-            }
-
             /** @brief 마젠타 픽셀 비율입니다. */
             static float64 computeMagentaFraction( const vector<uint8>& rgbaBytes )
             {
@@ -141,8 +126,6 @@ namespace sw::editor
                 bool                                   bWritten = false;
                 if ( RenderTargetImageFile::unpackRGBA8( write._bytes, write._layout, write._format, rgbaBytes ) )
                 {
-                    if ( write._bRowsBottomUp )
-                        flipRows( rgbaBytes, write._layout._width, write._layout._height );
                     const float64 magentaFraction = computeMagentaFraction( rgbaBytes );
                     (void)FileUtil::ensureParentDirectoryExists( path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
                     bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, write._layout._width, write._layout._height, path );
@@ -246,7 +229,7 @@ namespace sw::editor
         return false;
     }
 
-    void EditorUICapture::renderJob( IRHIDevice& device, IImGuiRendererBackend& rendererBackend, ImDrawData& drawData, const EditorUICaptureJob& job )
+    void EditorUICapture::renderJob( IRHIDevice& device, ImGuiRenderer& renderer, ImDrawData& drawData, const EditorUICaptureJob& job )
     {
         IRHICommandContext* const pStream = device.getFrameStreamContext();
         const uint32              width   = static_cast<uint32>( drawData.DisplaySize.x * drawData.FramebufferScale.x );
@@ -277,15 +260,14 @@ namespace sw::editor
         capturePass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         capturePass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         pStream->beginRenderPass( capturePass );
-        rendererBackend.render( &device, &drawData );
+        renderer.render( device, drawData );
         pStream->prepareTextureForShaderRead( _texture );
         // 연 패스는 이 함수 안에서 닫는다. OpenGL 은 패스를 닫아야 기본 프레임버퍼가 다시 묶이는데, 닫지 않으면 이 뒤에 패스 없이 직접 그리는 코드(렌더 스레드가 그리는 플로팅 뷰포트 창)가
         // 캡처 텍스처에 그려 플로팅 창이 캡처에 두 번 나오고 제 창에는 그려지지 않는다. Vulkan · DX12 · DX11 은 이미 닫혔거나 상태만 비우는 호출이다.
         pStream->endRenderPass();
 
-        _renderedJob           = job;
-        _bRendered             = SW_TRUE;
-        _bRenderedRowsBottomUp = rendererBackend.rendersTargetRowsBottomUp() ? SW_TRUE : SW_FALSE;
+        _renderedJob = job;
+        _bRendered   = SW_TRUE;
     }
 
     void EditorUICapture::finishJob( IRHIDevice& device )
@@ -308,7 +290,6 @@ namespace sw::editor
             write._layout._pData     = nullptr; // `_bytes` 를 옮기면 가리킬 곳이 바뀔 수 있다 - 워커는 `_bytes` 로 읽는다
             write._job               = result._job;
             write._format            = device.getBackBufferFormat();
-            write._bRowsBottomUp     = _bRenderedRowsBottomUp == SW_TRUE;
             write._pMagentaFraction  = AutomationDeferredValue::create();
             result._pMagentaFraction = write._pMagentaFraction;
             result._bCaptured        = SW_TRUE;

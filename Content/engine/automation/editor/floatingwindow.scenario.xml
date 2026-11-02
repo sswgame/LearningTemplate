@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 플로팅 창(ImGui 보조 뷰포트): 인스펙터를 도킹에서 풀어 메인 창 밖으로 옮기면(panel.float) ImGui 가 제 OS 창을 띄우고, 에디터 렌더러(ImGuiRenderer)가
+  그 창에 RHI 스왑체인을 달아(IRHIDevice::createSwapChain) 렌더 스레드에서 그 백버퍼에 그린다. 창을 닫으면 스왑체인을 부순다.
+  present="true" — 무인 실행에서도 화면에 내보내 보조 창의 획득 · 표시(Vulkan 세마포어 · DX12 상태 전이)를 지난다. 검증 레이어(Debug)가 그 길의 오류를 로그로 낸다.
+  감시 값: Editor.PlatformWindows(스왑체인을 단 보조 창 수) · Editor.PlatformWindowFrames(보조 창에 그린 누적 횟수).
+  실행: App -EnableEditor -scenario=engine/automation/editor/floatingwindow.scenario.xml -unattended
+-->
+<Scenario name="editor.floatingwindow" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive" present="true">
+	<Wait frames="20"/>
+	<ResizeWindow width="1280" height="720"/>
+	<Wait frames="20"/>
+	<DevCommand line="panel.focus inspector"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.float inspector"/>
+	<WaitUntil watch="Editor.PlatformWindows" atLeast="1" timeoutFrames="120"/>
+	<WaitUntil watch="Editor.PlatformWindowFrames" atLeast="60" timeoutFrames="300"/>
+	<DevCommand line="panel.close inspector"/>
+	<WaitUntil watch="Editor.PlatformWindows" equals="0" timeoutFrames="120"/>
+	<Wait frames="10"/>
+	<Pass/>
+</Scenario>

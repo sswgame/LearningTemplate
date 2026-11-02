@@ -6,7 +6,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -91,8 +91,8 @@ namespace sw::editor
 
     void RenderTargetPanel::releaseSnapshotTexture()
     {
-        EditorContext*         pContext = editor::findSubsystem<EditorContext>();
-        IImGuiRendererBackend* pBackend = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
+        ImGuiRenderer* pBackend = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRenderer() : nullptr;
         if ( _pSnapshotTextureID != nullptr && pBackend != nullptr )
             pBackend->unregisterTexture( _pSnapshotTextureID );
         _pSnapshotTextureID = nullptr;
@@ -117,9 +117,9 @@ namespace sw::editor
             return;
         EditorRenderViews& renderViews = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
         const Texture2D*   pTexture    = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>().find( _snapshotPath );
-        if ( pTexture == nullptr || pTexture->isRHIValid() == false || renderViews.getRendererBackend() == nullptr )
+        if ( pTexture == nullptr || pTexture->isRHIValid() == false || renderViews.getRenderer() == nullptr )
             return;
-        _pSnapshotTextureID = renderViews.getRendererBackend()->registerTexture( pTexture->getHandle() );
+        _pSnapshotTextureID = renderViews.getRenderer()->registerTexture( pTexture->getHandle() );
     }
 
     void RenderTargetPanel::releasePreviewTexture()
@@ -129,8 +129,8 @@ namespace sw::editor
 
         EditorContext* pContext = editor::findSubsystem<EditorContext>();
         // 컨텍스트가 이미 종료됐으면 놓아 줄 상대가 없다. 백엔드가 자기 힙을 통째로 버린 뒤다.
-        if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRendererBackend() != nullptr )
-            pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->unregisterTexture( _pPreviewTextureID );
+        if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRenderer() != nullptr )
+            pContext->getSubsystem<EditorRenderViews>().getRenderer()->unregisterTexture( _pPreviewTextureID );
         _pPreviewTextureID = nullptr;
         _previewTexture    = 0;
     }
@@ -166,9 +166,9 @@ namespace sw::editor
             return;
 
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        if ( editorContext.getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
+        if ( editorContext.getSubsystem<EditorRenderViews>().getRenderer() == nullptr )
             return;
-        _pPreviewTextureID = editorContext.getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( texture );
+        _pPreviewTextureID = editorContext.getSubsystem<EditorRenderViews>().getRenderer()->registerTexture( texture );
         _previewTexture    = ( _pPreviewTextureID != nullptr ) ? texture : 0;
     }
 

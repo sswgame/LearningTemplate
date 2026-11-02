@@ -72,11 +72,9 @@ namespace sw::editor
                 outDrawData.FramebufferScale = pSrc->FramebufferScale;
                 // Textures 는 살아 있는 컨텍스트의 프레임별 리스트(&GetPlatformIO().Textures)를 가리킨다.
                 // 스냅샷을 렌더 스레드로 넘기면 다음 프레임의 resize 와 레이스가 나므로 공유하지 않는다.
-                // 텍스처 갱신은 UI 스레드의 IImGuiRendererBackend::processTextureUpdates() 가 이미 끝냈다.
+                // 텍스처 갱신은 렌더 스레드가 그리기 직전에 한다(ImGuiRenderer::prepareFrame) — 스냅샷은 텍스처 목록을 들지 않는다.
                 outDrawData.Textures = nullptr;
-                // ImGui 1.92 백엔드(imgui_impl_dx12 등)는 RenderDrawData 안에서
-                // OwnerViewport->RendererUserData(뷰포트별 프레임 버퍼)를 참조한다. 메인 뷰포트는
-                // 컨텍스트 수명 동안 유지되는 영속 객체이므로 포인터를 그대로 넘겨도 안전하다.
+                // 메인 뷰포트는 컨텍스트 수명 동안 유지되는 영속 객체라 포인터를 그대로 넘겨도 안전하다(그리기는 이 칸을 읽지 않는다 — ImGuiRenderer).
                 outDrawData.OwnerViewport = pSrc->OwnerViewport;
 
                 size_t usedCount = 0;

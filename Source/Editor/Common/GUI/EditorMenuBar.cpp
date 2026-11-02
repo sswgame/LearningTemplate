@@ -38,6 +38,7 @@
 #include "ModuleAPI/Service/IModuleCompiler.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -321,6 +322,25 @@ namespace sw::editor
         }
         pPanel->setOpen( true );
         ImGui::SetWindowFocus( pPanel->getPanelTitle() ); // 창 이름은 인스턴스의 제목이다(`IEditorPanel::draw`)
+        if ( request._bFloat == false )
+            return;
+        // 도킹을 풀고 메인 창 오른쪽 밖으로 옮긴다 — 메인 뷰포트 밖의 창은 ImGui 가 제 OS 창으로 띄운다(렌더러가 RHI 스왑체인을 단다). 패널은 앞 프레임에 그려져 있어야 한다.
+        ImGuiWindow* const pWindow = ImGui::FindWindowByName( pPanel->getPanelTitle() );
+        if ( pWindow == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Editor.FloatPanelNotDrawn", "Float panel request: panel '%#' has not been drawn yet - open it a frame earlier", request._panelID.c_str() );
+            return;
+        }
+        // 도킹을 푸는 일은 다음 프레임의 NewFrame 이 한다 — 그때까지 창 위치는 도킹 노드가 정한다. 그래서 풀기를 걸고 요청을 다음 프레임으로 넘긴 뒤 옮긴다.
+        if ( pWindow->DockNode != nullptr )
+        {
+            ImGui::DockContextQueueUndockWindow( ImGui::GetCurrentContext(), pWindow );
+            editorContext.getSubsystem<EditorWorkspace>().requestFloatPanelByID( request._panelID );
+            return;
+        }
+        const ImGuiViewport* const pMain = ImGui::GetMainViewport();
+        ImGui::SetWindowPos( pWindow, ImVec2( pMain->Pos.x + pMain->Size.x + 40.0f, pMain->Pos.y + 40.0f ), ImGuiCond_Always );
+        ImGui::SetWindowSize( pWindow, ImVec2( 480.0f, 360.0f ), ImGuiCond_Always );
     }
 
     void EditorMenuBar::processPendingSceneLoad()

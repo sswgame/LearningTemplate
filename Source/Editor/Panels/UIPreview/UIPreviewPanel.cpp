@@ -8,7 +8,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -339,8 +339,8 @@ namespace sw::editor
         if ( _pTextureID == nullptr )
             return;
         EditorContext* pContext = editor::findSubsystem<EditorContext>();
-        if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRendererBackend() != nullptr )
-            pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->unregisterTexture( _pTextureID );
+        if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRenderer() != nullptr )
+            pContext->getSubsystem<EditorRenderViews>().getRenderer()->unregisterTexture( _pTextureID );
         _pTextureID = nullptr;
         _texture    = 0;
     }
@@ -355,10 +355,10 @@ namespace sw::editor
             return;
         releaseTexture();
         EditorRenderViews& renderViews            = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
-        const bool         bCannotRegisterTexture = texture == 0 || renderViews.getRendererBackend() == nullptr;
+        const bool         bCannotRegisterTexture = texture == 0 || renderViews.getRenderer() == nullptr;
         if ( bCannotRegisterTexture )
             return; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        _pTextureID = renderViews.getRendererBackend()->registerTexture( texture );
+        _pTextureID = renderViews.getRenderer()->registerTexture( texture );
         _texture    = _pTextureID != nullptr ? texture : 0;
     }
 
