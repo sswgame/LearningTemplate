@@ -526,6 +526,9 @@ namespace sw
                 continue;
             const CallbackRegistration registration = _listCallbackRegistration[index];
             _listCallbackRegistration.erase( _listCallbackRegistration.begin() + static_cast<ptrdiff_t>( index ) );
+            // 마지막 구독이 풀리면 저장소도 놓는다 — 구독은 기동 뒤에 걸리므로 남은 저장소가 종료 누수 보고(엔진 종료)에 늘어난 블록으로 찍혔다(호스트가 관리자보다 먼저 내려간다).
+            if ( _listCallbackRegistration.empty() )
+                _listCallbackRegistration.shrink_to_fit(); // `= {}` 는 버퍼를 남긴다(initializer_list 대입)
             clearSlot( registration );
             return;
         }
