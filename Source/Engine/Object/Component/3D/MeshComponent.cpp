@@ -278,6 +278,12 @@ namespace sw
             return;
         _lodIndex = clamped;
         markRenderStateDirty();
+        // 구간 컴포넌트는 주 메시와 같은 단계를 그린다 — 스킨 결과는 칸마다 고른 단계 하나만 변형하므로 단계가 갈리면 구간이 변형되지 않은 정점을 읽는다.
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || castTo<MeshSectionComponent>( this ) != nullptr )
+            return;
+        pOwner->forEachComponentOfType<MeshSectionComponent>( [clamped]( MeshSectionComponent* pSection )
+        { pSection->setLODIndex( clamped ); } );
     }
 
     void MeshComponent::setSectionName( hashed_string sectionName )
@@ -289,17 +295,16 @@ namespace sw
 
     bool MeshComponent::findDrawSection( uint32& outFirstIndex, uint32& outIndexCount ) const
     {
-        outFirstIndex = 0;
-        outIndexCount = 0;
+        outFirstIndex         = 0;
+        outIndexCount         = 0;
+        const size_t lodCount = _mesh != nullptr ? _mesh->getLODs().size() : 0u;
+        const size_t lodSlot  = MathUtil::min( static_cast<size_t>( _lodIndex ), lodCount ); // 메시가 제자리에서 다시 읽혀 단계가 줄었으면 가장 낮은 단계를 그린다
         if ( _sectionName.empty() )
         {
-            // LOD 는 구간 없는 메시에만 있다(`Mesh::setLODs`). 메시가 제자리에서 다시 읽혀 단계가 줄었으면 가장 낮은 단계를 그린다.
             // 스킨드 메시의 GPU 스키닝(모프 풀의 스킨 구간)은 LOD 0 뒤의 낮은 단계 정점까지 변형하므로(`GPUMeshMorphPool::rebuildSkinSources`) 같은 범위로 그린다.
-            const size_t lodCount       = _mesh != nullptr ? _mesh->getLODs().size() : 0u;
-            const bool   bDrawsLowerLOD = _lodIndex > 0 && lodCount > 0;
-            if ( bDrawsLowerLOD )
+            if ( lodSlot > 0 )
             {
-                const MeshLOD& lod = _mesh->getLODs()[MathUtil::min( static_cast<size_t>( _lodIndex ), lodCount ) - 1];
+                const MeshLOD& lod = _mesh->getLODs()[lodSlot - 1];
                 outFirstIndex      = lod._firstIndex;
                 outIndexCount      = lod._indexCount;
             }
@@ -308,10 +313,12 @@ namespace sw
         const int32 sectionIndex = ( _mesh != nullptr ) ? _mesh->findSectionIndex( _sectionName ) : -1;
         if ( sectionIndex < 0 )
             return false;
-        const MeshSection& section = _mesh->getSections()[static_cast<size_t>( sectionIndex )];
-        outFirstIndex              = section._firstIndex;
-        outIndexCount              = section._indexCount;
-        return section._indexCount > 0; // 빈 구간(조립이 덮인 삼각형을 모두 뺐다)은 그리지 않는다 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
+        // 낮은 단계면 그 단계의 구간 범위(`Mesh::setLODs` 가 구간마다 범위를 받았다).
+        const MeshSection&         section = _mesh->getSections()[static_cast<size_t>( sectionIndex )];
+        const MeshLODSectionRange* pLower  = lodSlot > 0 ? &_mesh->getLODs()[lodSlot - 1]._listSectionRange[static_cast<size_t>( sectionIndex )] : nullptr;
+        outFirstIndex                      = pLower != nullptr ? pLower->_firstIndex : section._firstIndex;
+        outIndexCount                      = pLower != nullptr ? pLower->_indexCount : section._indexCount;
+        return outIndexCount > 0; // 빈 구간(조립이 덮인 삼각형을 모두 뺐다)은 그리지 않는다 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
     }
 
     void MeshComponent::validateSectionName() const

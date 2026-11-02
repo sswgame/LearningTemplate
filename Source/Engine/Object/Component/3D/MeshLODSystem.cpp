@@ -8,6 +8,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -96,7 +97,8 @@ namespace sw
             // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). LOD 목록에는 메시가 단계 여럿일 때만 든다(`MeshComponent::onMeshAssigned`).
             MeshComponent& component = static_cast<MeshComponent&>( *pPrimitive );
             const Mesh*    pMesh     = component.getRawMesh();
-            if ( pMesh == nullptr )
+            // 구간 컴포넌트는 따르는 주 메시의 단계를 받는다(`MeshComponent::setLODIndex`) — 따로 고르면 경계에서 단계가 갈린다.
+            if ( pMesh == nullptr || castTo<MeshSectionComponent>( &component ) != nullptr )
                 continue;
             if ( forcedLOD >= 0 )
             {

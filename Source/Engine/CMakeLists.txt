@@ -148,6 +148,8 @@ set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 target_link_libraries(Engine PRIVATE acl)
 # OGG Vorbis 디코드(stb_vorbis, 헤더만). `Audio/AudioVorbisDecoder.cpp` 한 곳에서만 include 한다.
 target_link_libraries(Engine PRIVATE stb)
+# 메시 단순화(meshoptimizer). 실행 중에 조립한 캐릭터 메시의 LOD 를 만든다 — `Character/Fit/CharacterMeshLOD.cpp` 한 곳에서만 include 한다(에디터 임포터도 같은 라이브러리).
+target_link_libraries(Engine PRIVATE meshoptimizer)
 
 if(TARGET sw_third_party_includes)
 	target_link_libraries(Engine PRIVATE sw_third_party_includes)

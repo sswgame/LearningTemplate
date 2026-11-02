@@ -50,6 +50,7 @@ namespace sw
         /// @brief 이번 프레임 스킨 인스턴스(칸)의 메시와 칸입니다(같은 순서). 모프 풀의 스킨 구간 순서이며 프레임마다 재사용합니다.
         vector<Mesh*>  _listScratchSkinMesh{};
         vector<uint32> _listScratchSkinSlot{};
+        vector<uint32> _listScratchSkinLOD{}; ///< 칸마다 변형할 단계(`GPUSkinPalette::_lodIndex`)
         /// @brief 이번 프레임 인스턴스가 그리는 스킨 칸 표시입니다(칸 번호가 자리). 그리지 않는 칸(숨은 유닛)은 스키닝하지 않는다.
         vector<uint8> _listScratchDrawnSkinSlot{};
         /// @brief 이번 프레임 VAT 메시 목록입니다. 프레임마다 재사용합니다.

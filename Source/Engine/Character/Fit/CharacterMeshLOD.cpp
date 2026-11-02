@@ -1,0 +1,171 @@
+#include "pch.h"
+
+#include "Engine/Character/Fit/CharacterMeshLOD.h"
+
+#include "Core/Foundation/Constants.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
+
+#include <meshoptimizer.h>
+
+namespace sw
+{
+    bool CharacterLODSettings::parseXML( string_view xml, string_view sourceLabel )
+    {
+        *this = CharacterLODSettings{};
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "CharacterLODSettings", root ) != XMLRootStatus::Found )
+        {
+            SW_LOG_ERROR_ID( "CharacterMeshLOD.SettingsMalformed", "Character LOD settings '%#': malformed XML (expected a <CharacterLODSettings> root)", sourceLabel );
+            return false;
+        }
+        if ( parseRoot( root, sourceLabel ) )
+            return true;
+        *this = CharacterLODSettings{};
+        return false;
+    }
+
+    bool CharacterLODSettings::loadFromAsset( const AssetID& assetID )
+    {
+        string text;
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
+        {
+            SW_LOG_ERROR_ID( "CharacterMeshLOD.SettingsCouldNotRead", "Character LOD settings '%#' could not be read", assetID.view() );
+            *this = CharacterLODSettings{};
+            return false;
+        }
+        return parseXML( text, assetID.view() );
+    }
+
+    const CharacterLODSettings& CharacterLODSettings::getDefault()
+    {
+        // 한 번 읽는다 — 표는 엔진 기본 데이터이고 합친 메시의 캐시 키에 들지 않는다(표를 고치면 다시 시작한다).
+        static const CharacterLODSettings s_settings = []()
+        {
+            CharacterLODSettings settings;
+            (void)settings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._characterLODSettings.get() } ); // 실패는 읽기가 알렸다 — 빈 표(LOD 0 만)
+            return settings;
+        }();
+        return s_settings;
+    }
+
+    bool CharacterLODSettings::parseRoot( const XMLNode& root, string_view sourceLabel )
+    {
+        if ( XMLReadUtil::hasOnlyKnownNames( root, {}, { "Level" }, sourceLabel ) == false )
+            return false;
+        float32 previousRatio  = 1.0f;
+        float32 previousScreen = 1.0f;
+        for ( XMLNode level = root.findChild( "Level" ); level.isValid(); level = level.findNextSibling( "Level" ) )
+        {
+            if ( XMLReadUtil::hasOnlyKnownNames( level, { "triangle_ratio", "max_error", "screen_size" }, {}, sourceLabel ) == false )
+                return false;
+            const std::optional<float32> ratio  = level.readRequiredAttribute<float32>( "triangle_ratio" );
+            const std::optional<float32> error  = level.readRequiredAttribute<float32>( "max_error" );
+            const std::optional<float32> screen = level.readRequiredAttribute<float32>( "screen_size" );
+            // 셋 다 필수다. 단계가 낮아질수록 비율 · 임계값이 작아져야 한다(`Mesh::setLODs` 와 같은 규칙) — 범위 밖 값은 자르지 않고 거절한다.
+            const bool bRead  = ratio.has_value() && error.has_value() && screen.has_value();
+            const bool bValid = bRead && 0.0f < *ratio && *ratio < previousRatio && *error >= 0.0f && 0.0f < *screen && *screen < previousScreen;
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR_ID( "CharacterMeshLOD.SettingsLevelInvalid",
+                                 "Character LOD settings '%#': level %# needs triangle_ratio and screen_size in (0, previous level) and max_error >= 0", sourceLabel,
+                                 static_cast<uint32>( _listLevel.size() ) + 1u );
+                return false;
+            }
+            _listLevel.push_back( CharacterLODLevelRule{ *ratio, *error, *screen } );
+            previousRatio  = *ratio;
+            previousScreen = *screen;
+        }
+        return true;
+    }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct CharacterMeshLODInternal
+        {
+            /** @brief 인덱스 범위 하나(구간 또는 메시 전체)를 단순화해 @p outListIndex 끝에 붙입니다(번호는 LOD 0 정점). @return 붙인 인덱스 수입니다. */
+            static size_t simplifyRange( const Mesh& mesh, uint32 firstIndex, uint32 indexCount, const CharacterLODLevelRule& rule, vector<uint32>& outListIndex )
+            {
+                if ( indexCount == 0 )
+                    return 0;
+                const vector<RHIVertex>& listVertex  = mesh.getVertices();
+                const uint32*            pSource     = mesh.getIndices().data() + firstIndex;
+                const size_t             targetCount = MathUtil::max( static_cast<size_t>( static_cast<float32>( indexCount / 3u ) * rule._triangleRatio ), size_t( 1 ) ) * 3u;
+                const size_t             start       = outListIndex.size();
+                outListIndex.resize( start + indexCount );
+                const size_t kept = meshopt_simplify( outListIndex.data() + start, pSource, indexCount, &listVertex[0]._arrPosition[0], listVertex.size(), sizeof( RHIVertex ), targetCount,
+                                                      rule._maxError, meshopt_SimplifyLockBorder, nullptr );
+                outListIndex.resize( start + kept );
+                return kept;
+            }
+        };
+    } // namespace
+
+    bool CharacterMeshLOD::buildLODs( Mesh& inoutMesh, const CharacterLODSettings& settings )
+    {
+        using Internal = CharacterMeshLODInternal;
+        if ( settings._listLevel.empty() || inoutMesh.getIndexCount() == 0 )
+            return true;
+        const vector<MeshSection>&    listSection = inoutMesh.getSections();
+        const vector<RHIVertex>&      listVertex  = inoutMesh.getVertices();
+        const vector<MeshSkinVertex>& listSkin    = inoutMesh.getSkinVertices();
+        vector<MeshLODLevel>          listLevel;
+        vector<uint32>                listLevelIndex;
+        vector<uint32>                listNewIndex;
+        for ( size_t levelIndex = 0; levelIndex < settings._listLevel.size(); ++levelIndex )
+        {
+            const CharacterLODLevelRule& rule = settings._listLevel[levelIndex];
+            MeshLODLevel                 level{};
+            level._screenSize = rule._screenSize;
+            listLevelIndex.clear();
+            // 구간마다 따로 줄인다 — 머티리얼 경계가 섞이지 않고 구간 범위가 그대로 이어 붙는다.
+            if ( listSection.empty() )
+                (void)Internal::simplifyRange( inoutMesh, 0, inoutMesh.getIndexCount(), rule, listLevelIndex );
+            for ( const MeshSection& section : listSection )
+            {
+                const uint32 first = static_cast<uint32>( listLevelIndex.size() );
+                const uint32 kept  = static_cast<uint32>( Internal::simplifyRange( inoutMesh, section._firstIndex, section._indexCount, rule, listLevelIndex ) );
+                level._listSectionRange.push_back( MeshLODSectionRange{ first, kept } );
+            }
+            if ( listLevelIndex.empty() || listLevelIndex.size() >= inoutMesh.getIndexCount() )
+            {
+                SW_LOG_ERROR_ID( "CharacterMeshLOD.LevelNotReduced", "Character LOD %# kept %# of %# indices - adjust triangle_ratio / max_error (engine/character/characterlod.xml), the mesh keeps LOD 0 only",
+                                 static_cast<uint32>( levelIndex ) + 1u, static_cast<uint32>( listLevelIndex.size() ), inoutMesh.getIndexCount() );
+                return false;
+            }
+            // 이 단계가 쓰는 정점만 처음 쓰인 순서로 모은다 — 고른 단계 하나만 스키닝하므로 정점이 적을수록 싸다.
+            listNewIndex.assign( listVertex.size(), constant::invalid_index::kUint32 );
+            for ( uint32& index : listLevelIndex )
+            {
+                if ( listNewIndex[index] == constant::invalid_index::kUint32 )
+                {
+                    listNewIndex[index] = static_cast<uint32>( level._listVertex.size() );
+                    level._listVertex.push_back( listVertex[index] );
+                    if ( listSkin.empty() == false )
+                        level._listSkinVertex.push_back( listSkin[index] );
+                }
+                index = listNewIndex[index];
+            }
+            level._listIndex = listLevelIndex;
+            listLevel.push_back( std::move( level ) );
+        }
+        if ( inoutMesh.setLODs( std::move( listLevel ) ) == false )
+            return false; // setLODs 가 까닭을 남겼다
+        return true;
+    }
+
+    /** @brief 캐릭터 LOD 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
+    SW_RESOURCE_DATA_KIND( CharacterLOD, "characterlod", nullptr, nullptr, "/character/characterlod.xml", &AssetDataKindUtil::loadCatalog<CharacterLODSettings> );
+} // namespace sw

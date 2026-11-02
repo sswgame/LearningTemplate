@@ -32,6 +32,7 @@
 
 namespace sw
 {
+    struct CharacterAppearanceMeshBuild;
     struct CharacterAppearanceSpec;
     struct FitResult;
 
@@ -310,13 +311,16 @@ namespace sw
          */
         void requestMeshAssembly( GameObjectManager& manager );
         /**
-         * @brief 베이크한 메시의 재료를 기다리는 동안 씬 프레임의 도착 단계가 부릅니다(`PrimitiveRegistry::addAssetWaiter`). 다 읽혔으면 걸기를 틱 뒤 큐에 넣고 false 입니다.
+         * @brief 베이크한 메시의 재료와 짓기를 기다리는 동안 씬 프레임의 도착 단계가 부릅니다(`PrimitiveRegistry::addAssetWaiter`). 다 읽히면 워커에 짓기를 내고(`startMeshBuild`),
+         *        다 지었으면 걸기를 틱 뒤 큐에 넣고 false 입니다.
          * @details 대기 목록에 있는 동안 자동화의 "에셋 일 0" 이 이 조립을 센다 — 틱이 따로 기다리면 그 프레임이 캡처 판정에 보이지 않았다.
          */
         static bool waitMeshAssembly( Component& component, float32 deltaSeconds );
         /** @brief 요청한 것 가운데 아직 읽는 것이 있으면 true 입니다. */
         bool isMeshAssemblyLoading() const;
-        /** @brief 읽은 것으로 베이크한 메시를 지어 몸과 스킨드 부품 유닛의 스킨 원본으로 겁니다(바꿀 것이 없는 부품은 원본). 틱 밖, 게임 스레드입니다. */
+        /** @brief 읽은 것으로 짓기 입력을 채워(캐시 찾기 포함) 워커 태스크로 냅니다(`CharacterAppearanceMeshBuild`). 게임 스레드입니다. */
+        void startMeshBuild();
+        /** @brief 워커가 지은 메시를 몸과 스킨드 부품 유닛의 스킨 원본으로 겁니다(바꿀 것이 없는 부품은 원본). 지은 것을 캐시에 남깁니다. 틱 밖, 게임 스레드입니다. */
         void applyMeshAssembly();
         /**
          * @brief 합치지 않은 부품의 유닛마다 베이크한 사본(없으면 원본)을 스킨 원본으로 걸고 부품의 베이크 여부를 적습니다. `applyMeshAssembly` 의 일부입니다.
@@ -334,11 +338,10 @@ namespace sw
         /** @brief 합친 부품이 하나라도 있으면 true 입니다. */
         bool hasMergedParts() const;
         /**
-         * @brief 몸과 합친 부품의 메시(@p listSource 원본 · @p listBaked 베이크한 사본, 로드 순서)를 하나로 합쳐 몸 유닛에 걸고 부품마다 구간 컴포넌트를 둡니다.
-         * @details 같은 차림이 합친 메시를 나누도록 @p bakeKey 로 `AppearanceBakedMeshCache` 에 둔다. 합치지 못하면 오류를 남기고 false 입니다(몸 원본만 그려진다).
+         * @brief 워커가 합친 메시(@p build 의 `_merged`, 비어 있지 않아야 한다)를 몸 유닛에 걸고 합친 부품의 조각마다 구간 컴포넌트를 둡니다.
+         * @return 주인 오브젝트가 없으면 false 입니다(몸 원본만 그려진다).
          */
-        [[nodiscard]] bool applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const vector<shared_ptr<Mesh>>& listSource,
-                                              const vector<shared_ptr<Mesh>>& listBaked, uint64 bakeKey );
+        [[nodiscard]] bool applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const CharacterAppearanceMeshBuild& build );
         /** @brief 합친 부품의 구간 컴포넌트를 몸 오브젝트에서 뗍니다. */
         void retireMergedPart( GameObjectManager& manager, const SpawnedPart& spawned ) const;
         /** @brief 부품 하나가 그리는 메시 컴포넌트마다 @p func 를 부릅니다 — 합친 부품은 구간 컴포넌트 하나, 아니면 부품 오브젝트의 메시 전부입니다. */
@@ -392,6 +395,7 @@ namespace sw
         Subscription                                   _reloadSubscription;   ///< 외형 데이터 다시 읽기의 구독(플레이 중에만). 데이터 서비스가 먼저 사라지면 무효가 된다
         vector<MeshAssemblyLoad>                       _listMeshAssemblyLoad; ///< 베이크한 메시의 부품 로드(몸이 먼저)
         SharedAssetHandle<FitTables>                   _fitTablesLoad;        ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다
+        shared_ptr<CharacterAppearanceMeshBuild>       _meshBuild;            ///< 워커에서 짓는(또는 다 지어 걸기를 기다리는) 조립. 새 요청이 버린다
         shared_ptr<FitResult>                          _lastFitResult;        ///< 지난 미리보기 조립이 푼 피팅 결과(`getLastFitResult`)
         uint32                                         _fitResultRevision;
         uint32                                         _assembleCount;

@@ -79,6 +79,13 @@ namespace sw
 
 namespace sw
 {
+    /** @brief LOD 단계 안에서 구간 하나의 인덱스 범위입니다(구간 순서는 LOD 0 의 `Mesh::getSections` 와 같다 — 언리얼 스켈레탈 메시의 LOD 마다 섹션 목록). */
+    struct MeshLODSectionRange
+    {
+        uint32 _firstIndex{ 0 };
+        uint32 _indexCount{ 0 };
+    };
+
     /**
      * @struct MeshLODLevel
      * @brief 메시의 낮은 상세 단계(LOD 1 이상) 하나의 저작 형태입니다 — 그 단계의 고유 정점 · 인덱스(번호는 이 단계 정점 안)와, 이 단계로 넘어가는 화면 크기 임계값입니다.
@@ -92,6 +99,8 @@ namespace sw
         float32           _screenSize{ 0.0f };
         /// @brief 스킨드 메시의 단계면 정점마다의 본 영향(`_listVertex` 와 길이가 같다). 스킨 없는 메시의 단계는 비어 있다. `.mesh` 의 `LSKN` 덩어리에 싣는다.
         vector<MeshSkinVertex> _listSkinVertex{};
+        /// @brief 구간 있는 메시의 단계면 구간마다 이 단계 인덱스(`_listIndex`) 안의 범위(LOD 0 구간 순서). 구간 없는 메시는 비어 있다.
+        vector<MeshLODSectionRange> _listSectionRange{};
     };
 } // namespace sw
 
@@ -104,11 +113,12 @@ namespace sw
      */
     struct MeshLOD
     {
-        uint32  _firstIndex{ 0 };
-        uint32  _indexCount{ 0 };
-        uint32  _firstVertex{ 0 }; ///< 이 단계 정점의 정점 흐름 안 시작(스키닝 · 미리보기가 센다)
-        uint32  _vertexCount{ 0 };
-        float32 _screenSize{ 0.0f }; ///< 이 단계로 넘어가는 화면 크기 임계값(`MeshLODLevel::_screenSize`)
+        uint32                      _firstIndex{ 0 };
+        uint32                      _indexCount{ 0 };
+        uint32                      _firstVertex{ 0 }; ///< 이 단계 정점의 정점 흐름 안 시작(스키닝 · 미리보기가 센다)
+        uint32                      _vertexCount{ 0 };
+        float32                     _screenSize{ 0.0f }; ///< 이 단계로 넘어가는 화면 크기 임계값(`MeshLODLevel::_screenSize`)
+        vector<MeshLODSectionRange> _listSectionRange{}; ///< 구간마다 그릴 인덱스 흐름 안의 범위(LOD 0 구간 순서). 구간 없는 메시는 비어 있다
     };
 } // namespace sw
 
@@ -290,8 +300,9 @@ namespace sw
         const vector<MeshSection>& getSections() const { return _listSection; }
         /**
          * @brief 낮은 상세 단계(LOD 1 이상)를 설정합니다. 정점은 탄젠트가 든 값이어야 합니다(`.mesh` 를 읽은 값 — 쓰기가 단계마다 `computeTangents` 로 구했다).
-         * @details 단계마다 정점이 있고 인덱스 수가 0 이 아닌 3 의 배수이며 번호가 그 단계 정점 안이고, 임계값은 (0, 1) 안에서 단계가 낮아질수록 작아야 한다. 모프 타깃 · 구간 · 정점 애니메이션이 있는 메시는
-         *          LOD 를 받지 않는다. 스킨드 메시는 받는다 — 단계마다 스킨 정점(`MeshLODLevel::_listSkinVertex`)이 정점과 같은 길이로 오고 뼈 번호가 `getSkinBoneCount` 안이어야 하며,
+         * @details 단계마다 정점이 있고 인덱스 수가 0 이 아닌 3 의 배수이며 번호가 그 단계 정점 안이고, 임계값은 (0, 1) 안에서 단계가 낮아질수록 작아야 한다. 정점 애니메이션이 있는 메시는
+         *          LOD 를 받지 않는다. 구간 있는 메시는 단계마다 구간 범위(`MeshLODLevel::_listSectionRange`, 구간 순서 · 수가 LOD 0 과 같다)를 받는다 — **구간을 먼저 설정**한다.
+         *          모프 타깃이 있는 메시도 받지만 낮은 단계 정점은 모프 차이가 없다(먼 캐릭터의 표정은 보이지 않는다 — 언리얼도 낮은 LOD 의 모프 타깃을 덜어 낸다). 스킨드 메시는 받는다 — 단계마다 스킨 정점(`MeshLODLevel::_listSkinVertex`)이 정점과 같은 길이로 오고 뼈 번호가 `getSkinBoneCount` 안이어야 하며,
          *          스킨 없는 메시의 단계는 스킨이 없어야 한다(그래서 **스킨을 먼저 설정**한다 — `setSkin` 은 LOD 를 뗀다). GPU 스키닝은 LOD 0 뒤의 낮은 단계 정점도 변형한다.
          *          어기면 오류를 남기고 LOD 를 비운 채 false 입니다. 빈 목록은 LOD 를 뗀다.
          *          CPU 정점(`getVertices`)은 LOD 0 그대로다 — 물리 · 내비 · 피킹은 LOD 를 보지 않는다. 내용 번호가 바뀐다(정점 풀이 다시 올린다).

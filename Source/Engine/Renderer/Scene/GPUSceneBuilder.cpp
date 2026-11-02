@@ -46,11 +46,12 @@ namespace sw
          * @details 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(mesh_skin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
          */
         void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const shared_ptr<Mesh>& mesh, uint32 skinSlot,
-                            const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
+                            uint32 lodIndex, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
         {
             GPUSkinPalette entry{};
             entry._mesh      = mesh;
             entry._skinSlot  = skinSlot;
+            entry._lodIndex  = lodIndex;
             entry._firstRow  = static_cast<uint32>( inoutListRow.size() );
             entry._boneCount = static_cast<uint32>( listPalette.size() );
             if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
@@ -90,13 +91,13 @@ namespace sw
             const uint32 skinSlot = pUnit->getSkinSlot();
             if ( skinSlot == AnimationSkinSlot::kNone || skinSlot != pUnit->getOwnSkinSlot() )
                 continue;
-            appendPalette( inoutSnapshot, *listRow, *listWeight, pUnit->getMesh(), skinSlot, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
+            appendPalette( inoutSnapshot, *listRow, *listWeight, pUnit->getMesh(), skinSlot, pUnit->getLODIndex(), pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
         }
         // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
-                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), bucket->getSkinPalette(), nullptr );
+                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr ); // 멤버마다 단계가 다르다 — 모든 단계
         }
         _paletteRowCountHint               = listRow->size();
         inoutSnapshot._pListSkinPaletteRow = std::move( listRow );

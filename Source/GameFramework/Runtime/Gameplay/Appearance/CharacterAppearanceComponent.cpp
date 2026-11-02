@@ -6,10 +6,12 @@
 #include "Core/Container/formatString.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/Fit/CharacterMeshLOD.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
@@ -268,6 +270,7 @@ namespace sw
         , _reloadSubscription{}
         , _listMeshAssemblyLoad{}
         , _fitTablesLoad{}
+        , _meshBuild{}
         , _lastFitResult{}
         , _fitResultRevision{ 0 }
         , _assembleCount{ 0 }
@@ -351,6 +354,7 @@ namespace sw
             pManager->getPrimitiveRegistry().removeAssetWaiter( this );
         _listMeshAssemblyLoad.clear();
         _fitTablesLoad.reset();
+        _meshBuild.reset(); // 도는 태스크는 자기 참조로 끝까지 돌고 결과를 버린다
         _bMeshAssemblyPending = SW_FALSE;
         _bStarted             = SW_FALSE;
         Component::onEndPlay();
@@ -1115,10 +1119,50 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 베이크한 메시(체형 · 피팅)
     // ------------------------------------------------------------------------------
+    /**
+     * @struct CharacterAppearanceMeshBuild
+     * @brief 워커에서 짓는 조립 하나입니다 — 게임 스레드가 입력을 채워 내고(`startMeshBuild`), 워커가 굽고 · 합치고 · LOD 를 만들며(`run`), 끝나면 게임 스레드가 건다(`applyMeshAssembly`).
+     * @details 워커는 컴포넌트 · 서브시스템을 보지 않는다 — 캐시 읽기 · 쓰기와 LOD 표 찾기는 게임 스레드가 한다. 메시 · 피팅 데이터는 쥔 참조로 살아 있다.
+     *          새 조립이 이것을 버려도 태스크가 자기 참조를 쥐어 끝까지 돌고 결과는 버려진다.
+     */
+    struct CharacterAppearanceMeshBuild
+    {
+        // 입력(게임 스레드가 채운다)
+        string                               _presetID{};
+        ResolvedAppearance                   _resolved{};          ///< 체형 모프를 더한 해석
+        vector<AppearanceMeshPart>           _listPart{};          ///< 로드 순서(몸이 먼저). 포인터는 아래 쥔 메시 · 피팅 데이터를 가리킨다
+        vector<shared_ptr<Mesh>>             _listSource{};        ///< 로드마다 원본 메시
+        vector<shared_ptr<const FitPartDef>> _listFit{};           ///< 로드마다 피팅 데이터(없으면 nullptr)
+        vector<uint32>                       _listLoadPartIndex{}; ///< 로드마다 해석의 부품 번호
+        vector<uint32>                       _listMergeLoad{};     ///< 합칠 로드 번호(몸이 먼저). 비면 합치지 않는다
+        shared_ptr<const FitTables>          _tables{};
+        CharacterBoneArray                   _bindBones{};
+        const CharacterLODSettings*          _pLODSettings{ nullptr };
+        uint64                               _bakeKey{ 0 };
+        uint64                               _mergedKey{ 0 };
+        int32                                _bodyPart{ -1 };
+        bool                                 _bPreview{ false };
+        bool                                 _bBakeCached{ false }; ///< 구운 메시를 캐시에서 받았다(굽지 않는다)
+        // 입력이자 결과
+        string                   _report{};    ///< 읽기 · 굽기 실패의 까닭
+        vector<shared_ptr<Mesh>> _listBaked{}; ///< 로드마다 베이크한 사본(원본을 그리면 nullptr)
+        shared_ptr<Mesh>         _merged{};    ///< 캐시에서 받았거나 합친 메시. 합치지 않거나 못 했으면 nullptr
+        // 결과(워커가 채운다)
+        FitResult             _fitResult{};          ///< 미리보기가 푼 피팅 결과
+        vector<MeshMergePart> _listMergePart{};      ///< `_listMergeLoad` 마다 병합 조각 — 몸 유닛 · 구간 컴포넌트가 이름을 읽는다
+        bool                  _bBakeBuilt{ false };  ///< 이번에 구웠다(캐시에 남긴다)
+        bool                  _bMergeBuilt{ false }; ///< 이번에 합쳤다(캐시에 남긴다)
+        atomic<bool>          _bDone{ false };
+
+        /** @brief 워커에서 굽고 합치고 LOD 를 만듭니다(끝나면 태스크가 `_bDone` 을 건다). */
+        void run();
+    };
+
     void CharacterAppearanceComponent::requestMeshAssembly( GameObjectManager& manager )
     {
         _listMeshAssemblyLoad.clear();
         _fitTablesLoad.reset();
+        _meshBuild.reset();
         manager.getPrimitiveRegistry().removeAssetWaiter( this );
         _bMeshAssemblyPending                    = SW_FALSE;
         const ResolvedAppearance& resolved       = _state.getResolved();
@@ -1174,6 +1218,14 @@ namespace sw
         if ( self._bMeshAssemblyPending == SW_FALSE || pManager == nullptr )
             return false;
         if ( self.isMeshAssemblyLoading() )
+            return true;
+        // 다 읽었으면 워커에서 짓고, 지은 것을 기다린다 — 그동안도 대기 목록에 남아 "에셋 일 0" 이 이 조립을 센다.
+        if ( self._meshBuild == nullptr )
+        {
+            self.startMeshBuild();
+            return true;
+        }
+        if ( self._meshBuild->_bDone.load( std::memory_order_acquire ) == false )
             return true;
         self._bMeshAssemblyPending = SW_FALSE;
         self._bMeshApplyQueued     = SW_TRUE;
@@ -1236,155 +1288,184 @@ namespace sw
         return bAnyBaked;
     }
 
-    void CharacterAppearanceComponent::applyMeshAssembly()
+    void CharacterAppearanceComponent::startMeshBuild()
     {
-        // 틱이 이 걸기를 예약한 뒤 같은 틱 뒤에 다시 조립했으면(새 요청) 새 것이 아직 읽는 중이다 — 다음 틱이 건다.
-        _bMeshApplyQueued                  = SW_FALSE;
-        GameObjectManager* pManager        = findManager();
-        const bool         bSuperseded     = _bMeshAssemblyPending == SW_TRUE || isMeshAssemblyLoading();
-        const bool         bNothingToApply = _listMeshAssemblyLoad.empty() || bSuperseded;
-        if ( pManager == nullptr || bNothingToApply )
-            return;
+        using Internal                                       = CharacterAppearanceComponentInternal;
+        const shared_ptr<CharacterAppearanceMeshBuild> build = make_shared<CharacterAppearanceMeshBuild>();
+        CharacterAppearanceMeshBuild&                  job   = *build;
+        job._presetID                                        = _presetID;
+        job._resolved                                        = _state.getResolved();
         // 체형 축이 정한 몸 모프(주인이 빈 모프)를 해석의 모프에 더해 굽는다. 같은 이름이 해석에 있으면 해석의 것이 이긴다(데이터가 직접 정한 값).
-        ResolvedAppearance resolved = _state.getResolved();
         for ( const BodyMorphWeight& shapeMorph : _listShapeMorph )
         {
             bool bDeclared = false;
-            for ( const ResolvedMorph& morph : resolved._listMorph )
+            for ( const ResolvedMorph& morph : job._resolved._listMorph )
             {
                 bDeclared = bDeclared || ( morph._owner.empty() && morph._name == shapeMorph._morph );
             }
             if ( bDeclared == false )
-                resolved._listMorph.push_back( ResolvedMorph{ hashed_string{}, shapeMorph._morph, shapeMorph._weight } );
+                job._resolved._listMorph.push_back( ResolvedMorph{ hashed_string{}, shapeMorph._morph, shapeMorph._weight } );
         }
-        vector<AppearanceMeshPart> listPart;
-        vector<shared_ptr<Mesh>>   listSource;
-        string                     report;
         // 읽기 실패는 데이터 오류다 — 어느 것인지 알리고 원본을 그린다(베이크한 것과 원본이 섞인 차림을 만들지 않는다).
         if ( _fitTablesLoad.hasFailed() )
-            CharacterAppearanceComponentInternal::appendReport( report, "fit tables: %#", _fitTablesLoad.getError().c_str() );
+            Internal::appendReport( job._report, "fit tables: %#", _fitTablesLoad.getError().c_str() );
         for ( MeshAssemblyLoad& load : _listMeshAssemblyLoad )
         {
-            const ResolvedPart& part = resolved._listPart[load._partIndex];
-            shared_ptr<Mesh>    mesh = load._mesh.get();
+            const ResolvedPart&                part = job._resolved._listPart[load._partIndex];
+            shared_ptr<Mesh>                   mesh = load._mesh.get();
+            const shared_ptr<const FitPartDef> fit  = load._fit.get();
             if ( load._fit.hasFailed() || mesh == nullptr )
-                CharacterAppearanceComponentInternal::appendReport( report, "part '%#' mesh or fit data could not be read", part._partName.c_str() );
+                Internal::appendReport( job._report, "part '%#' mesh or fit data could not be read", part._partName.c_str() );
             load._sourceContentID = mesh != nullptr ? mesh->getContentID() : 0;
-            listPart.push_back( AppearanceMeshPart{ part._partName, part._owner, mesh.get(), load._fit.get().get() } );
-            listSource.push_back( std::move( mesh ) );
+            job._listPart.push_back( AppearanceMeshPart{ part._partName, part._owner, mesh.get(), fit.get() } );
+            job._listSource.push_back( std::move( mesh ) );
+            job._listFit.push_back( fit );
+            job._listLoadPartIndex.push_back( load._partIndex );
         }
         _seenFitReloadStamp = computeFitReloadStamp();
         // 같은 차림이면 이미 베이크한 것을 나눈다 — 키는 메시에 들어가는 해석(메시 해시) · 부품 · 원본 내용 · 데이터 판이다.
-        uint64 bakeKey = HashUtil::combine( resolved._meshHash, _seenFitReloadStamp );
+        job._bakeKey = HashUtil::combine( job._resolved._meshHash, _seenFitReloadStamp );
         for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
         {
-            bakeKey = HashUtil::combine( HashUtil::combine( bakeKey, load._partIndex ), load._sourceContentID );
+            job._bakeKey = HashUtil::combine( HashUtil::combine( job._bakeKey, load._partIndex ), load._sourceContentID );
         }
-        vector<shared_ptr<Mesh>> listBaked;
-        const bool               bRead   = report.empty();
-        const FitTables*         pTables = _fitTablesLoad.isValid() ? _fitTablesLoad.get().get() : nullptr;
+        job._tables    = _fitTablesLoad.isValid() ? _fitTablesLoad.get() : nullptr;
+        job._bindBones = _bodyBindBones;
         // 미리보기 입히기는 피팅 결과를 창에 보이므로 구운 메시 캐시를 건너뛰고 늘 푼다(같은 차림이 캐시된 메시를 나누면 푼 결과가 없다).
-        const bool bPreview = _pPreviewDatabase != nullptr;
-        if ( bRead && ( bPreview || AppearanceBakedMeshCache::tryGet( bakeKey, listBaked ) == false ) )
-        {
-            FitResult fitResult;
-            if ( AppearanceMeshAssembly::assemble( resolved, listPart, pTables, _bodyBindBones, listBaked, report, bPreview ? &fitResult : nullptr ) )
-            {
-                if ( bPreview )
-                {
-                    _lastFitResult = make_shared<FitResult>( std::move( fitResult ) );
-                    ++_fitResultRevision;
-                }
-                else
-                    AppearanceBakedMeshCache::store( bakeKey, listBaked );
-            }
-        }
-        if ( listBaked.size() != listPart.size() )
-        {
-            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceMeshesDrawnUnbaked", "Appearance '%#' meshes are drawn unbaked: %#", _presetID.c_str(), report.c_str() );
-            listBaked.assign( listPart.size(), nullptr );
-        }
-        // 합치는 부품이 있으면 몸과 합친 부품의 메시를 하나로 합쳐 몸 유닛에 건다. 합치지 못하면 오류를 남기고(몸 원본만 그려진다) 아래 부품별 길로 간다.
-        SkeletalMeshComponent* pBodyUnit = _bodyPart >= 0 ? findSkinnedUnit( *pManager, static_cast<uint32>( _bodyPart ) ) : nullptr;
-        const bool             bMerged   = hasMergedParts() && pBodyUnit != nullptr && applyMergedMeshes( *pManager, *pBodyUnit, listSource, listBaked, bakeKey );
-        const bool             bAnyBaked = applyUnitMeshes( *pManager, pBodyUnit, bMerged, listSource, listBaked ) || bMerged;
-        _bMeshAssembled                  = bAnyBaked ? SW_TRUE : SW_FALSE;
-        applyVisibility( *pManager );
-        // 영역 수는 피팅 표의 영역 수다(표가 없으면 영역이 없다). 합친 구간 컴포넌트가 이제 생겼으니 표면도 다시 올린다.
-        rebuildSurfaceState( pTables != nullptr ? static_cast<uint32>( pTables->getRegions().size() ) : 0 );
-        applySurface( *pManager, true );
-    }
-
-    bool CharacterAppearanceComponent::applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const vector<shared_ptr<Mesh>>& listSource,
-                                                          const vector<shared_ptr<Mesh>>& listBaked, uint64 bakeKey )
-    {
-        using Internal                     = CharacterAppearanceComponentInternal;
-        const ResolvedAppearance& resolved = _state.getResolved();
-        GameObject*               pOwner   = getOwner();
-        // 몸이 먼저, 그 뒤 합치는 부품(로드 순서). 읽지 못한 메시가 있으면 합치지 않는다 — 읽기 오류는 이미 알렸다.
-        vector<MeshMergePart> listMergePart;
-        vector<uint32>        listMergePartIndex; // listMergePart 마다 해석의 부품 번호
-        for ( size_t index = 0; index < _listMeshAssemblyLoad.size() && pOwner != nullptr; ++index )
+        job._bPreview    = _pPreviewDatabase != nullptr;
+        job._bBakeCached = job._report.empty() && job._bPreview == false && AppearanceBakedMeshCache::tryGet( job._bakeKey, job._listBaked );
+        // 합칠 것: 몸이 먼저(로드 0), 그 뒤 합치는 부품(로드 순서). 같은 차림이면 합친 메시도 나눈다(구운 메시와 같은 키에 값을 섞은 키).
+        for ( size_t index = 0; index < _listMeshAssemblyLoad.size() && hasMergedParts(); ++index )
         {
             const uint32 partIndex = _listMeshAssemblyLoad[index]._partIndex;
-            const bool   bBody     = static_cast<int32>( partIndex ) == _bodyPart;
-            bool         bMember   = bBody;
+            bool         bMember   = static_cast<int32>( partIndex ) == _bodyPart;
             for ( const SpawnedPart& spawned : _listSpawnedPart )
             {
                 bMember = bMember || ( spawned._bMerged == SW_TRUE && spawned._partIndex == partIndex );
             }
-            if ( bMember == false )
-                continue;
-            const shared_ptr<Mesh>& mesh = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
+            if ( bMember )
+                job._listMergeLoad.push_back( static_cast<uint32>( index ) );
+        }
+        job._mergedKey = HashUtil::combine( job._bakeKey, Internal::kMergedMeshKeySalt );
+        vector<shared_ptr<Mesh>> listCached;
+        if ( job._listMergeLoad.empty() == false && AppearanceBakedMeshCache::tryGet( job._mergedKey, listCached ) && listCached.size() == 1 )
+            job._merged = listCached[0];
+        job._bodyPart     = _bodyPart;
+        job._pLODSettings = &CharacterLODSettings::getDefault(); // 엔진 서브시스템을 읽으므로 게임 스레드에서 한 번
+        _meshBuild        = build;
+        // 언리얼 Mutable 처럼 메시 짓기는 워커에서 한다(마을 사람 하나에 수십 ms). 로드 단계에 넣어 결정적 실행의 프레임 경계가 기다린다(`AssetManager::finishPendingAssetWork`).
+        TaskManager* const  pTaskManager  = game::findSubsystem<TaskManager>();
+        AssetManager* const pAssetManager = game::findSubsystem<AssetManager>();
+        SW_ASSERT( pTaskManager != nullptr && pAssetManager != nullptr ); // 씬을 도는 엔진에는 늘 있다
+        TaskHandle handle = pTaskManager->emplaceTask( "AppearanceMeshBuild", SW_DELEGATE_LAMBDA( TaskDelegate, [build]()
+        {
+            build->run();
+            build->_bDone.store( true, std::memory_order_release );
+        } ) );
+        handle.setPriority( TaskPriority::Low );
+        pAssetManager->addLoadTask( handle );
+        handle.submit();
+    }
+
+    void CharacterAppearanceMeshBuild::run()
+    {
+        using Internal = CharacterAppearanceComponentInternal;
+        SW_PROFILE_SCOPE( "Appearance.MeshBuild" );
+        if ( _report.empty() && _bBakeCached == false )
+            _bBakeBuilt = AppearanceMeshAssembly::assemble( _resolved, _listPart, _tables.get(), _bindBones, _listBaked, _report, _bPreview ? &_fitResult : nullptr );
+        if ( _listBaked.size() != _listPart.size() )
+        {
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceMeshesDrawnUnbaked", "Appearance '%#' meshes are drawn unbaked: %#", _presetID.c_str(), _report.c_str() );
+            _listBaked.assign( _listPart.size(), nullptr );
+        }
+        // 합칠 부품의 메시는 베이크한 사본(없으면 원본)이다. 읽지 못한 메시가 있으면 합치지 않는다 — 읽기 오류는 이미 알렸다(몸 원본만 그려진다).
+        for ( const uint32 loadIndex : _listMergeLoad )
+        {
+            const shared_ptr<Mesh>& mesh      = _listBaked[loadIndex] != nullptr ? _listBaked[loadIndex] : _listSource[loadIndex];
+            const uint32            partIndex = _listLoadPartIndex[loadIndex];
+            const ResolvedPart&     part      = _resolved._listPart[partIndex];
             if ( mesh == nullptr )
             {
-                SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceCannotMergeParts", "Appearance '%#' cannot merge parts - part '%#' has no mesh", _presetID.c_str(), resolved._listPart[partIndex]._partName.c_str() );
-                return false;
+                SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceCannotMergeParts", "Appearance '%#' cannot merge parts - part '%#' has no mesh", _presetID.c_str(), part._partName.c_str() );
+                _listMergePart.clear();
+                _merged.reset();
+                return;
             }
-            listMergePart.push_back( Internal::makeMergePart( resolved._listPart[partIndex], *mesh, bBody ) );
-            listMergePartIndex.push_back( partIndex );
+            _listMergePart.push_back( Internal::makeMergePart( part, *mesh, static_cast<int32>( partIndex ) == _bodyPart ) );
         }
-        const std::optional<size_t> bodyMergeIndex = VectorUtil::findIndex( listMergePartIndex, static_cast<uint32>( _bodyPart ) );
-        if ( bodyMergeIndex.has_value() == false )
+        if ( _merged != nullptr || _listMergePart.empty() )
+            return;
+        MeshMergeResult result;
+        string          error;
+        if ( CharacterMeshUtil::mergeMeshes( _listMergePart, nullptr, result, &error ) == false )
+        {
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %#", _presetID.c_str(), error.c_str() );
+            _listMergePart.clear();
+            return;
+        }
+        _merged = result._mesh;
+        // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다) — 같은 차림은 캐시로 나눈다. 만들지 못하면 오류를 남기고 LOD 0 만 그린다.
+        (void)CharacterMeshLOD::buildLODs( *_merged, *_pLODSettings );
+        _bMergeBuilt = true;
+    }
+
+    void CharacterAppearanceComponent::applyMeshAssembly()
+    {
+        // 틱이 이 걸기를 예약한 뒤 같은 틱 뒤에 다시 조립했으면(새 요청) 새 것이 아직 읽거나 짓는 중이다 — 다음 틱이 건다.
+        _bMeshApplyQueued              = SW_FALSE;
+        GameObjectManager* pManager    = findManager();
+        const bool         bSuperseded = _bMeshAssemblyPending == SW_TRUE || _meshBuild == nullptr;
+        if ( pManager == nullptr || bSuperseded )
+            return;
+        const shared_ptr<CharacterAppearanceMeshBuild> build = std::move( _meshBuild );
+        CharacterAppearanceMeshBuild&                  job   = *build;
+        // 캐시는 게임 스레드에서 채운다(워커는 서브시스템을 보지 않는다).
+        if ( job._bBakeBuilt && job._bPreview )
+        {
+            _lastFitResult = make_shared<FitResult>( std::move( job._fitResult ) );
+            ++_fitResultRevision;
+        }
+        else if ( job._bBakeBuilt )
+            AppearanceBakedMeshCache::store( job._bakeKey, job._listBaked );
+        if ( job._bMergeBuilt )
+            AppearanceBakedMeshCache::store( job._mergedKey, { job._merged } );
+        // 합친 메시가 있으면 몸 유닛에 건다. 합치지 못했으면(오류는 워커가 남겼다) 몸 원본만 그려지고 아래 부품별 길로 간다.
+        SkeletalMeshComponent* pBodyUnit = _bodyPart >= 0 ? findSkinnedUnit( *pManager, static_cast<uint32>( _bodyPart ) ) : nullptr;
+        const bool             bMerged   = job._merged != nullptr && job._listMergePart.empty() == false && pBodyUnit != nullptr && applyMergedMeshes( *pManager, *pBodyUnit, job );
+        const bool             bAnyBaked = applyUnitMeshes( *pManager, pBodyUnit, bMerged, job._listSource, job._listBaked ) || bMerged;
+        _bMeshAssembled                  = bAnyBaked ? SW_TRUE : SW_FALSE;
+        applyVisibility( *pManager );
+        // 영역 수는 피팅 표의 영역 수다(표가 없으면 영역이 없다). 합친 구간 컴포넌트가 이제 생겼으니 표면도 다시 올린다.
+        rebuildSurfaceState( job._tables != nullptr ? static_cast<uint32>( job._tables->getRegions().size() ) : 0 );
+        applySurface( *pManager, true );
+    }
+
+    bool CharacterAppearanceComponent::applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const CharacterAppearanceMeshBuild& build )
+    {
+        using Internal     = CharacterAppearanceComponentInternal;
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
             return false;
-
-        // 같은 차림이면 합친 메시도 나눈다(구운 메시와 같은 키에 값을 섞은 키).
-        const uint64             mergedKey = HashUtil::combine( bakeKey, Internal::kMergedMeshKeySalt );
-        vector<shared_ptr<Mesh>> listCached;
-        shared_ptr<Mesh>         merged;
-        const bool               bCached = AppearanceBakedMeshCache::tryGet( mergedKey, listCached ) && listCached.size() == 1;
-        if ( bCached && listCached[0] != nullptr )
-        {
-            merged = listCached[0];
-        }
-        else
-        {
-            MeshMergeResult result;
-            string          error;
-            if ( CharacterMeshUtil::mergeMeshes( listMergePart, nullptr, result, &error ) == false )
-            {
-                SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %#", _presetID.c_str(), error.c_str() );
-                return false;
-            }
-            merged = result._mesh;
-            AppearanceBakedMeshCache::store( mergedKey, { merged } );
-        }
-
         // 몸 유닛에 합친 메시를 걸고, 몸은 자기 첫 조각을 그린다(나머지 몸 구간은 `_listBodySection` 이 원본 이름 그대로 그린다).
         // 옛 구간 이름은 새 메시에 없을 수 있어 먼저 푼다(없는 이름 오류를 남기지 않게).
-        const MeshMergePart& bodyMerge = listMergePart[*bodyMergeIndex];
+        const MeshMergePart& bodyMerge = build._listMergePart.front(); // 몸이 로드 0 이라 늘 먼저다
         body.setSectionName( hashed_string{} );
-        body.setSkinSourceMesh( merged );
+        body.setSkinSourceMesh( build._merged );
         body.setSectionName( bodyMerge._listSection.empty() ? bodyMerge._name : bodyMerge._listSection.front()._name );
         _bMeshMerged = SW_TRUE;
 
         // 합친 부품의 조각마다 몸 오브젝트에 구간 컴포넌트를 둔다(있으면 그대로 두고 이름 · 머티리얼만 맞춘다).
         for ( SpawnedPart& spawned : _listSpawnedPart )
         {
-            const std::optional<size_t> mergeIndex = VectorUtil::findIndex( listMergePartIndex, spawned._partIndex );
+            std::optional<size_t> mergeIndex;
+            for ( size_t index = 0; index < build._listMergeLoad.size() && mergeIndex.has_value() == false; ++index )
+            {
+                if ( build._listLoadPartIndex[build._listMergeLoad[index]] == spawned._partIndex )
+                    mergeIndex = index;
+            }
             if ( spawned._bMerged == SW_FALSE || mergeIndex.has_value() == false )
                 continue;
-            Internal::applyMergedSections( manager, *pOwner, listMergePart[*mergeIndex], resolved._listPart[spawned._partIndex], spawned._listSection, _presetID );
+            Internal::applyMergedSections( manager, *pOwner, build._listMergePart[*mergeIndex], build._resolved._listPart[spawned._partIndex], spawned._listSection, _presetID );
         }
         // 구간 컴포넌트가 이제 생겼으니 염색을 부품마다 다시 입힌다.
         applyMaterialValues( manager, body );

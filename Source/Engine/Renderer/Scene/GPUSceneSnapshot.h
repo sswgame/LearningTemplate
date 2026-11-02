@@ -328,10 +328,12 @@ namespace sw
     {
         shared_ptr<Mesh> _mesh{};                                       ///< 스키닝할 메시(원본 — 칸마다 사본을 두지 않는다). RT 의 모프 풀이 원본 데이터 · 정점 수를 읽는다
         uint32           _skinSlot{ constant::invalid_index::kUint32 }; ///< 이 팔레트의 스킨 칸(인스턴스의 `GPUInstance::_skinSlot` 과 같은 번호)
-        uint32           _firstRow{ 0 };
-        uint32           _boneCount{ 0 };
-        uint32           _firstMorphWeight{ 0 }; ///< `GPUSceneSnapshot::_pListMorphWeight` 안에서 이 메시의 모프 가중치가 시작하는 위치
-        uint32           _morphWeightCount{ 0 }; ///< 모프 가중치 수(0이면 모프 없음)
+        /// @brief 변형할 LOD 단계(`MeshComponent::getLODIndex` — 그 칸이 그리는 단계 하나만 스키닝한다, 언리얼 스킨 캐시와 같다). 무효면 모든 단계(멤버마다 단계가 다른 군중 묶음)입니다.
+        uint32 _lodIndex{ constant::invalid_index::kUint32 };
+        uint32 _firstRow{ 0 };
+        uint32 _boneCount{ 0 };
+        uint32 _firstMorphWeight{ 0 }; ///< `GPUSceneSnapshot::_pListMorphWeight` 안에서 이 메시의 모프 가중치가 시작하는 위치
+        uint32 _morphWeightCount{ 0 }; ///< 모프 가중치 수(0이면 모프 없음)
     };
 } // namespace sw
 

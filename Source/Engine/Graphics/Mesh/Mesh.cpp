@@ -233,10 +233,9 @@ namespace sw
         _contentID = allocateContentID();
         if ( listLevel.empty() )
             return true;
-        const bool bPlainMesh = _listMorphTarget.empty() && _listSection.empty() && _vertexAnimation == nullptr;
-        if ( bPlainMesh == false )
+        if ( _vertexAnimation != nullptr )
         {
-            SW_LOG_ERROR_ID( "Mesh.MeshLODsNeedMesh", "Mesh LODs need a mesh without morph targets, sections or vertex animation - the mesh keeps LOD 0 only" );
+            SW_LOG_ERROR_ID( "Mesh.MeshLODsNeedMesh", "Mesh LODs need a mesh without vertex animation - the mesh keeps LOD 0 only" );
             return false;
         }
         const bool bSkinned           = hasSkin();
@@ -263,6 +262,20 @@ namespace sw
                     bSkinMatches = bSkinMatches && joint < _skinBoneCount;
                 }
             }
+            // 구간 있는 메시의 단계는 구간마다 범위가 하나씩(LOD 0 구간 순서) 이 단계 인덱스 안의 온전한 삼각형이다.
+            bool bSectionsMatch = level._listSectionRange.size() == _listSection.size();
+            for ( size_t sectionIndex = 0; bSectionsMatch && sectionIndex < level._listSectionRange.size(); ++sectionIndex )
+            {
+                const MeshLODSectionRange& range = level._listSectionRange[sectionIndex];
+                bSectionsMatch                   = range._firstIndex % 3 == 0 && range._indexCount % 3 == 0 && range._firstIndex <= indexCount && range._indexCount <= indexCount - range._firstIndex;
+            }
+            if ( bSectionsMatch == false )
+            {
+                SW_LOG_ERROR_ID( "Mesh.MeshLODSectionRanges", "Mesh LOD %# has %# section ranges for %# sections, or a range that is not whole in-range triangles - the mesh keeps LOD 0 only",
+                                 levelIndex + 1, static_cast<uint32>( level._listSectionRange.size() ), static_cast<uint32>( _listSection.size() ) );
+                clearLODs();
+                return false;
+            }
             const bool bShapeOk = bTriangles && bThreshold;
             if ( bShapeOk == false || bSkinMatches == false )
             {
@@ -272,7 +285,12 @@ namespace sw
                 clearLODs();
                 return false;
             }
-            _listLOD.push_back( MeshLOD{ firstIndex, indexCount, firstVertex, vertexCount, level._screenSize } );
+            MeshLOD lod{ firstIndex, indexCount, firstVertex, vertexCount, level._screenSize, {} };
+            for ( const MeshLODSectionRange& range : level._listSectionRange )
+            {
+                lod._listSectionRange.push_back( MeshLODSectionRange{ firstIndex + range._firstIndex, range._indexCount } );
+            }
+            _listLOD.push_back( std::move( lod ) );
             _listLODVertex.insert( _listLODVertex.end(), level._listVertex.begin(), level._listVertex.end() );
             // 단계의 번호는 그 단계 정점 안이다 — 정점 흐름 번호로 옮겨 싣는다(드로우의 baseVertex 가 0 이다).
             for ( const uint32 index : level._listIndex )
@@ -404,7 +422,7 @@ namespace sw
         const uint32 indexCount = getIndexCount();
         if ( listSection.empty() == false && _listLOD.empty() == false )
         {
-            SW_LOG_ERROR_ID( "Mesh.MeshLODsSectionsNot", "Mesh has LODs - sections are not supported with LODs (setLODs), the mesh has no sections" );
+            SW_LOG_ERROR_ID( "Mesh.MeshLODsSectionsNot", "Mesh has LODs - set the sections first, then the LODs with their section ranges (setLODs) - the mesh has no sections" );
             _listSection.clear();
             return false;
         }

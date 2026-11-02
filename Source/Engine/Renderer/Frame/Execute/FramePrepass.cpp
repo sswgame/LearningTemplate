@@ -194,6 +194,7 @@ namespace sw
         _state._deform._listScratchMorphMesh.clear();
         _state._deform._listScratchSkinMesh.clear();
         _state._deform._listScratchSkinSlot.clear();
+        _state._deform._listScratchSkinLOD.clear();
         _state._deform._listScratchVertexAnimationMesh.clear();
         _state._deform._setScratchSeenMesh.clear();
         const auto& listBatch = _state._gpuScene.getAllBatches();
@@ -224,7 +225,8 @@ namespace sw
         // 아래 세 구간이 preparePool 안의 무거운 단계다 — 목록이 바뀐 프레임의 풀 재구성(GPU 업로드 포함), 매 프레임의 팔레트 업로드, VAT 테이블 풀.
         {
             SW_PROFILE_SCOPE( "RT.Deform.rebuildMorphPool" );
-            _state._deform._meshMorphPool.update( _pDevice, _state._deform._listScratchMorphMesh, _state._deform._listScratchSkinMesh, _state._deform._listScratchSkinSlot );
+            _state._deform._meshMorphPool.update( _pDevice, _state._deform._listScratchMorphMesh, _state._deform._listScratchSkinMesh, _state._deform._listScratchSkinSlot,
+                                                  _state._deform._listScratchSkinLOD );
             // 변형 프로그램(에디터 모디파이어 미리보기)은 레스트와 따로 바뀐다 - 번호가 바뀐 프레임에만 올린다
             _state._deform._meshMorphPool.updateDeformPrograms( _pDevice );
         }
@@ -267,6 +269,7 @@ namespace sw
                 continue;
             deform._listScratchSkinMesh.push_back( palette._mesh.get() );
             deform._listScratchSkinSlot.push_back( palette._skinSlot );
+            deform._listScratchSkinLOD.push_back( palette._lodIndex );
         }
         SW_PROFILE_COUNT( "RT.Deform.skinSlots", deform._listScratchSkinSlot.size() );
     }
