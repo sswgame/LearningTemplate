@@ -189,16 +189,16 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 프레임버퍼 바인딩 · 드로우 버퍼 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassOpen OpenGLRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassBeginResult OpenGLRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
 
         // 백버퍼(컬러 핸들 0)면 그 창에 컨텍스트를 건다 — 기본 프레임버퍼(fbo 0)는 걸린 창의 것이다.
         const bool                bBackBufferTarget = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == 0;
         const OpenGLRHISwapChain* pSwapChain        = bBackBufferTarget ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : &_pDevice->_swapChain;
         if ( pSwapChain == nullptr )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
         uint32 targetWidth  = beginInfo._width > 0 ? beginInfo._width : pSwapChain->getWidth();
         uint32 targetHeight = beginInfo._height > 0 ? beginInfo._height : pSwapChain->getHeight();
 
@@ -331,7 +331,7 @@ namespace sw
             glClearDepth( static_cast<GLclampd>( beginInfo._clearDepth ) );
             glClear( GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
         }
-        return RHIRenderPassOpen::Opened;
+        return RHIRenderPassBeginResult::Begun;
     }
 
     void OpenGLRHICommandContext::endRenderPassNative()

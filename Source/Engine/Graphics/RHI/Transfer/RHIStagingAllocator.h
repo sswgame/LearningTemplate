@@ -1,8 +1,8 @@
 /**
  * @file RHIStagingAllocator.h
- * @brief 고정 용량 스테이징 버퍼(업로드 링 · 되읽기 링)의 구간 장부입니다(구간 할당과 구간마다의 회수). GPU 메모리는 백엔드가 쥐고, 이 장부는 오프셋만 다룹니다.
+ * @brief 고정 용량 스테이징 버퍼(업로드 링 · 되읽기 링)의 구간 할당기입니다(구간 할당과 구간마다의 회수). GPU 메모리는 백엔드가 쥐고, 이 할당기는 오프셋만 다룹니다.
  * @details 백엔드마다 다른 것은 링 메모리(GL 영속 매핑 PBO, DX12 업로드 힙, Vulkan 호스트 가시 버퍼)뿐이고, 구간을 어디에 잡고 언제 돌려받는지는 여기 한 곳이 정한다.
- *          그래서 GPU 없이 단위 테스트로 장부의 규칙(가득 참, 구간마다의 회수, 빈 자리 재사용)을 확인할 수 있다.
+ *          그래서 GPU 없이 단위 테스트로 할당기의 규칙(가득 참, 구간마다의 회수, 빈 자리 재사용)을 확인할 수 있다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -45,7 +45,7 @@ namespace sw
      *          자기 뮤텍스는 잎(leaf)이라 백엔드의 어느 락 안에서나 부른다. 할당과 복사는 GPU 컨텍스트 밖에서 하고, 시리얼은 제출 뒤에 `markSubmitted` 로 붙인다.
      *
      *          **링보다 큰 요청 한 장(단독 구간).** `initialize` 의 단독 상한이 0 보다 크면, 링 용량보다 크고 상한 이하인 요청은 링에 산 구간이 하나도 없을 때만
-     *          링 밖의 단독 구간(`_bSolo`)으로 받는다. 백엔드는 그 크기의 일회성 버퍼를 만들어 쓰고, 장부가 구간을 돌려받은 뒤 지운다. 단독 구간이 살아 있는 동안
+     *          링 밖의 단독 구간(`_bSolo`)으로 받는다. 백엔드는 그 크기의 일회성 버퍼를 만들어 쓰고, 할당기가 구간을 돌려받은 뒤 지운다. 단독 구간이 살아 있는 동안
      *          다른 요청은 모두 `Full` 이다 — 그래서 스테이징 메모리 최고점은 max(링 용량, 가장 큰 한 장)이다. 상한을 넘으면 `TooLarge` 다.
      *          링이 비지 않아 `Full` 을 받은 단독 요청은 예약을 남겨, 예약 시간(`soloReservationMicroseconds`) 동안 새 링 요청도 `Full` 로 돌려 링이 비게 한다
      *          (작은 업로드가 끊이지 않아 큰 한 장이 굶는 것을 막는다). 단독 요청이 다시 올 때마다 예약이 연장되고, 다시 오지 않으면(호출자가 포기) 예약이 끝나 링 요청을 다시 받는다.
@@ -63,14 +63,14 @@ namespace sw
         RHIStagingAllocator& operator=( const RHIStagingAllocator& ) = delete;
 
         /**
-         * @brief 용량과 정렬 단위, 단독 구간 규칙을 정하고 장부를 비웁니다.
+         * @brief 용량과 정렬 단위, 단독 구간 규칙을 정하고 할당기를 비웁니다.
          * @param capacityBytes 링 전체 크기입니다. 정렬 단위의 배수로 내려 씁니다. 0 이면 모든 할당이 `TooLarge` 입니다.
-         * @param alignmentBytes 구간 시작 오프셋의 정렬 단위이자 장부의 한 칸입니다. 2 의 거듭제곱이어야 하고, 칸 수(`capacityBytes / alignmentBytes`)는 uint32 에 담겨야 합니다.
+         * @param alignmentBytes 구간 시작 오프셋의 정렬 단위이자 할당기의 한 칸입니다. 2 의 거듭제곱이어야 하고, 칸 수(`capacityBytes / alignmentBytes`)는 uint32 에 담겨야 합니다.
          * @param soloMaxBytes 링보다 큰 요청 한 장을 단독 구간으로 받을 상한입니다. 0 이면 단독 구간을 받지 않는다(백엔드가 일회성 버퍼를 만들 수 없을 때).
          * @param soloReservationMicroseconds `Full` 을 받은 단독 요청이 링 요청을 막는 시간입니다. 0 이면 예약하지 않는다.
          */
         void initialize( uint64 capacityBytes, uint64 alignmentBytes, uint64 soloMaxBytes, int64 soloReservationMicroseconds = kSoloReservationMicroseconds );
-        /** @brief 장부를 비우고 용량을 0 으로 되돌립니다. 링 메모리를 놓기 전에 부릅니다. */
+        /** @brief 할당기를 비우고 용량을 0 으로 되돌립니다. 링 메모리를 놓기 전에 부릅니다. */
         void shutdown();
 
         /**
@@ -103,7 +103,7 @@ namespace sw
         [[nodiscard]] bool hasLiveSolo() const;
 
     private:
-        /** @brief 바이트 크기를 장부의 칸 수로 올림합니다. */
+        /** @brief 바이트 크기를 할당기의 칸 수로 올림합니다. */
         [[nodiscard]] uint32 toSlotCount( uint64 sizeBytes ) const SW_REQUIRES_LOCK( _mutex );
         /** @brief `_mutex` 를 쥔 채 부릅니다. */
         void freeCompletedLocked( uint64 completedSerial ) SW_REQUIRES_LOCK( _mutex );

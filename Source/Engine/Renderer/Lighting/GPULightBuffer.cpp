@@ -481,13 +481,13 @@ namespace sw
         SW_LOG_ERROR_ID( "GPULightBuffer.GPUParticleLightsSlots", "GPU particle lights (%# slots) need the GPU light grid producer (gv_lightCulling=GPU) - the lights are not drawn", requestedSlotCount );
     }
 
-    const RHIStructuredBufferSlot* GPULightBuffer::findProbeBuffer() const
+    const RHIStructuredBuffer* GPULightBuffer::findProbeBuffer() const
     {
         const bool bReady = _probeElementCount > 0 && _probeBuffer._buffer != 0 && _probeBuffer._srv != kInvalidDescriptorIndex;
         return bReady ? &_probeBuffer : nullptr;
     }
 
-    const RHIStructuredBufferSlot* GPULightBuffer::findGridBuffer() const
+    const RHIStructuredBuffer* GPULightBuffer::findGridBuffer() const
     {
         switch ( _gridProducer )
         {

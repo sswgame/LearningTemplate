@@ -12,7 +12,7 @@
 
 #include "Engine/Graphics/Debug/GPUAssert.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -129,7 +129,7 @@ namespace sw
         FrameFog&          _fog;
         IRHICommandList*   _pCmd{ nullptr }; ///< `record` 하는 동안만 프리패스 리스트를 가리킨다
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
-        RHIStructuredBufferSlot _transparentRankPlaceholder{};
+        RHIStructuredBuffer _transparentRankPlaceholder{};
         /// @brief GPU 컬링의 가림 판정(가림 타일 짓기 · 되읽기 · 자리표)입니다.
         OcclusionTiles _occlusion;
         /// @brief 셰이더 assert 링(`-gv_gpuAssert`). assert 가 켜진 디스패치가 u4 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.

@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
 {
-    bool RHIConstantBufferSlot::create( IRHIDevice* pDevice, uint32 byteSize )
+    bool RHIConstantBuffer::create( IRHIDevice* pDevice, uint32 byteSize )
     {
         const bool bInvalidSlotCreation = pDevice == nullptr || pDevice->getResourceFactory() == nullptr || byteSize == 0;
         if ( bInvalidSlotCreation )
@@ -22,7 +22,7 @@ namespace sw
         return isValid();
     }
 
-    void RHIConstantBufferSlot::update( IRHICommandList& cmd, const void* pData, uint32 byteSize ) const
+    void RHIConstantBuffer::update( IRHICommandList& cmd, const void* pData, uint32 byteSize ) const
     {
         const bool bNothingToUpdate = _buffer == 0 || pData == nullptr || byteSize == 0;
         if ( bNothingToUpdate )
@@ -30,7 +30,7 @@ namespace sw
         cmd.updateConstantBuffer( _buffer, pData, byteSize );
     }
 
-    void RHIConstantBufferSlot::release( IRHIDevice* pDevice )
+    void RHIConstantBuffer::release( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
         {

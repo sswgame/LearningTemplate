@@ -20,7 +20,7 @@
 
 #include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -153,7 +153,7 @@ namespace sw::editor
         IRHIDevice*                                _pDevice;
         const DrawSnapshotHandoff*                 _pDrawHandoff;    ///< 보조 창 스왑체인을 바꾸기 전에 낸 스냅샷이 다 그려지기를 기다린다
         RHIPipelineStateHandle                     _pso;             ///< 백버퍼 포맷의 PSO(캡처 텍스처 · 보조 창도 같은 포맷이다)
-        RHIStructuredBufferSlot                    _wordBuffer;      ///< 이번 프레임의 정점 · 인덱스(uint 칸)
+        RHIStructuredBuffer                        _wordBuffer;      ///< 이번 프레임의 정점 · 인덱스(uint 칸)
         vector<uint32>                             _listWord;        ///< 올릴 칸 모으기(프레임마다 비운다)
         unordered_map<const ImDrawList*, ListBase> _mapListBase;     ///< 이번 프레임에 올린 목록의 시작 칸
         vector<RHIDescriptorIndex>                 _listFrameSRV;    ///< 이번 프레임의 칸별 bindless 번호(그리기가 잠금 없이 읽는다 — `prepareFrame` 이 채운다)

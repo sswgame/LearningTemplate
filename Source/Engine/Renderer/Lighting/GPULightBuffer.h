@@ -23,7 +23,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -151,7 +151,7 @@ namespace sw
         void update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer, uint32 requestedGPULightSlotCount );
 
         /** @brief 라이트 버퍼입니다. 셰이더가 SRV 로 읽습니다. */
-        const RHIStructuredBufferSlot& getBuffer() const { return _buffer; }
+        const RHIStructuredBuffer& getBuffer() const { return _buffer; }
         /** @brief GPU 에 올라간 라이트 수(CPU 라이트 + GPU 구간)입니다. 셰이더 루프가 이 수만큼 돕니다. */
         uint32 getCount() const { return _count; }
         /** @brief GPU 구간의 첫 라이트 번호입니다(= 올라간 CPU 라이트 수). 방출기의 슬롯 구간은 여기서부터 이어집니다. */
@@ -163,20 +163,20 @@ namespace sw
         /** @brief `update` 에 준 뷰 @p gridIndex 의 그리드 첫 단어입니다(PassCB `g_SwLightGridBase`). 그리드가 없으면 `constant::invalid_index::kUint32` 입니다. */
         uint32 getGridBase( uint32 gridIndex ) const { return gridIndex < _listGridBase.size() ? _listGridBase[gridIndex] : constant::invalid_index::kUint32; }
         /** @brief 이번 프레임의 그리드 버퍼(t12)입니다. 생산자가 CPU 면 동적 버퍼, GPU 면 기본 힙 버퍼입니다. 그리드가 없으면 nullptr 입니다. */
-        const RHIStructuredBufferSlot* findGridBuffer() const;
+        const RHIStructuredBuffer* findGridBuffer() const;
         /** @brief 셰이더에 걸 수 있는 상태인지 확인합니다. */
         bool isBindable() const { return _count > 0 && _buffer._buffer != 0 && _buffer._srv != kInvalidDescriptorIndex; }
         /** @brief 라이트 프로브 SH9 버퍼(t13)입니다. 이번 프레임에 쓸 프로브가 없으면 nullptr 입니다(볼륨 원소도 목록에 없다). */
-        const RHIStructuredBufferSlot* findProbeBuffer() const;
+        const RHIStructuredBuffer* findProbeBuffer() const;
         /** @brief 프로브 갱신 컴퓨트가 프로브 버퍼를 쓰는 UAV 입니다. 이번 프레임에 쓸 수 없으면(실시간 볼륨이 없다 · 버퍼가 없다 · 백엔드가 UAV 를 거절했다) `kInvalidDescriptorIndex` 입니다. */
         RHIDescriptorIndex getProbeUAV() const { return ( _bProbeWritable == SW_TRUE && _probeElementCount > 0 ) ? _probeBuffer._uav : kInvalidDescriptorIndex; }
 
         /** @brief GPU 생산자가 이번 프레임에 채울 뷰 수입니다. 0 이면 디스패치할 것이 없습니다. */
         uint32 getGPUGridViewCount() const { return _gpuGridViewCount; }
         /** @brief GPU 생산자의 뷰 정보 버퍼(컴퓨트 t1)입니다. */
-        const RHIStructuredBufferSlot& getGPUGridViewBuffer() const { return _gpuGridViewBuffer; }
+        const RHIStructuredBuffer& getGPUGridViewBuffer() const { return _gpuGridViewBuffer; }
         /** @brief GPU 생산자가 쓰는 그리드 버퍼(컴퓨트 u0, 그래픽스 t12)입니다. */
-        const RHIStructuredBufferSlot& getGPUGridBuffer() const { return _gpuGridBuffer; }
+        const RHIStructuredBuffer& getGPUGridBuffer() const { return _gpuGridBuffer; }
 
         /** @brief 버퍼를 놓습니다. 디바이스가 바뀌거나 내려갈 때 부릅니다. */
         void release( IRHIDevice* pDevice );
@@ -197,26 +197,26 @@ namespace sw
         /** @brief GPU 구간을 거절한 이유(생산자가 GPU 가 아니다)를 한 번만 남깁니다. */
         void reportGPULightRefused( uint32 requestedSlotCount );
 
-        RHIStructuredBufferSlot _buffer;
-        RHIStructuredBufferSlot _cpuGridBuffer;                           ///< CPU 생산자의 그리드 단어(동적, t12)
-        RHIStructuredBufferSlot _gpuGridBuffer;                           ///< GPU 생산자의 그리드 단어(기본 힙 UAV, t12 · 컴퓨트 u0)
-        RHIStructuredBufferSlot _gpuGridViewBuffer;                       ///< GPU 생산자의 뷰 정보(float4 × SW_LIGHT_GRID_VIEW_FLOAT4_COUNT, 컴퓨트 t1)
-        RHIStructuredBufferSlot _probeBuffer;                             ///< 라이트 프로브 SH9 · 반사 프로브 텍셀(float4, t13)
-        vector<float4>          _listProbeScratch;                        ///< 이번 프레임의 프로브 원소(`populate` 가 담고 `update` 가 올린다)
-        uint32                  _probeElementCount{ 0 };                  ///< 이번 프레임에 올린 프로브 원소 수(0 이면 프로브 버퍼를 걸지 않는다)
-        uint8                   _bProbeWritable{ SW_FALSE };              ///< 이번 프레임에 컴퓨트가 프로브 버퍼를 쓴다(`populate`)
-        vector<GPULight>        _listLightScratch;                        ///< 이번 프레임의 CPU 라이트(`populate` 가 담고 `update` 가 상한을 맞춰 올린다)
-        vector<GPULight>        _listTileScratch;                         ///< 이번 프레임의 그림자 타일 원소(`populate` 가 담는다)
-        vector<GPULight>        _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
-        vector<LightGrid>       _listGrid;                                ///< 뷰마다의 라이트 그리드(CPU 생산자, 저장소를 프레임마다 다시 쓴다)
-        vector<uint32>          _listGridWordScratch;                     ///< 뷰마다의 그리드 단어를 이어 붙인 업로드 임시 버퍼(CPU 생산자)
-        vector<float4>          _listGridViewScratch;                     ///< 뷰마다의 뷰 정보(GPU 생산자)
-        vector<uint32>          _listGridBase;                            ///< 뷰마다 그리드의 첫 단어(없으면 constant::invalid_index::kUint32)
-        uint32                  _count{ 0 };                              ///< 셰이더가 보는 라이트 수 = CPU 라이트 + GPU 구간
-        uint32                  _cpuCount{ 0 };                           ///< 올라간 CPU 라이트 수(= GPU 구간의 첫 번호)
-        uint32                  _gpuLightCount{ 0 };                      ///< 받은 GPU 구간의 슬롯 수
-        uint32                  _gpuGridViewCount{ 0 };                   ///< GPU 생산자가 이번 프레임에 채울 뷰 수
-        LightGridProducer       _gridProducer{ LightGridProducer::None }; ///< 이번 프레임에 그리드 버퍼를 채운 쪽
+        RHIStructuredBuffer _buffer;
+        RHIStructuredBuffer _cpuGridBuffer;                           ///< CPU 생산자의 그리드 단어(동적, t12)
+        RHIStructuredBuffer _gpuGridBuffer;                           ///< GPU 생산자의 그리드 단어(기본 힙 UAV, t12 · 컴퓨트 u0)
+        RHIStructuredBuffer _gpuGridViewBuffer;                       ///< GPU 생산자의 뷰 정보(float4 × SW_LIGHT_GRID_VIEW_FLOAT4_COUNT, 컴퓨트 t1)
+        RHIStructuredBuffer _probeBuffer;                             ///< 라이트 프로브 SH9 · 반사 프로브 텍셀(float4, t13)
+        vector<float4>      _listProbeScratch;                        ///< 이번 프레임의 프로브 원소(`populate` 가 담고 `update` 가 올린다)
+        uint32              _probeElementCount{ 0 };                  ///< 이번 프레임에 올린 프로브 원소 수(0 이면 프로브 버퍼를 걸지 않는다)
+        uint8               _bProbeWritable{ SW_FALSE };              ///< 이번 프레임에 컴퓨트가 프로브 버퍼를 쓴다(`populate`)
+        vector<GPULight>    _listLightScratch;                        ///< 이번 프레임의 CPU 라이트(`populate` 가 담고 `update` 가 상한을 맞춰 올린다)
+        vector<GPULight>    _listTileScratch;                         ///< 이번 프레임의 그림자 타일 원소(`populate` 가 담는다)
+        vector<GPULight>    _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
+        vector<LightGrid>   _listGrid;                                ///< 뷰마다의 라이트 그리드(CPU 생산자, 저장소를 프레임마다 다시 쓴다)
+        vector<uint32>      _listGridWordScratch;                     ///< 뷰마다의 그리드 단어를 이어 붙인 업로드 임시 버퍼(CPU 생산자)
+        vector<float4>      _listGridViewScratch;                     ///< 뷰마다의 뷰 정보(GPU 생산자)
+        vector<uint32>      _listGridBase;                            ///< 뷰마다 그리드의 첫 단어(없으면 constant::invalid_index::kUint32)
+        uint32              _count{ 0 };                              ///< 셰이더가 보는 라이트 수 = CPU 라이트 + GPU 구간
+        uint32              _cpuCount{ 0 };                           ///< 올라간 CPU 라이트 수(= GPU 구간의 첫 번호)
+        uint32              _gpuLightCount{ 0 };                      ///< 받은 GPU 구간의 슬롯 수
+        uint32              _gpuGridViewCount{ 0 };                   ///< GPU 생산자가 이번 프레임에 채울 뷰 수
+        LightGridProducer   _gridProducer{ LightGridProducer::None }; ///< 이번 프레임에 그리드 버퍼를 채운 쪽
         /// @brief 상한 초과 경고를 한 번만 남기기 위한 표시입니다.
         uint8 _bWarnedOverflow{ SW_FALSE };
         /// @brief 그리드를 만들지 못한 뷰의 오류를 한 번만 남기기 위한 표시입니다.

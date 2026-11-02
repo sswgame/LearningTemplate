@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 
@@ -67,7 +67,7 @@ namespace sw
         , _mapCbMapped{}
         , _constantBufferMirror{}
         , _pipelineStates{}
-        , _renderPassLedger{}
+        , _renderPassRegistry{}
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
         , _reservedPassFlags{ 0 }
@@ -304,7 +304,7 @@ namespace sw
         ID3D12Resource* pNamed = buffer.Get();
     #endif
         const RHIBufferHandle handle = _gpuBuffers.insert( std::move( buffer ) );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
     #if defined( SW_DEBUG )
         nameResourceForDiagnostics( pNamed, L"Buffer", handle );
     #endif
@@ -326,9 +326,9 @@ namespace sw
         const uint64 releaseFence = _fenceValue.load();
         // 키 공간은 템플릿 인자로 갈라 람다를 델리게이트의 인라인 칸(24 바이트)에 맞춘다.
         if ( key._space == RHIMemoryKeySpace::Texture )
-            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryLedger(), key._id, releaseFence );
+            _releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryTracker(), key._id, releaseFence );
         else
-            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Buffer>( owned, getMemoryLedger(), key._id, releaseFence );
+            _releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, getMemoryTracker(), key._id, releaseFence );
     }
 
     bool D3D12RHIDevice::createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
@@ -361,7 +361,7 @@ namespace sw
         ID3D12Resource* pNamed = texture.Get();
     #endif
         const RHITextureHandle handle = _gpuTextures.insert( std::move( texture ) );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), kind, bytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), kind, bytes );
     #if defined( SW_DEBUG )
         nameResourceForDiagnostics( pNamed, L"Texture", handle );
     #endif
@@ -666,8 +666,8 @@ namespace sw
 
         _cbvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
         // GPU 메모리를 차지하는 것은 셰이더 가시 힙뿐이다(RTV · DSV · 오프라인 힙은 CPU 메모리). 크기는 칸 수 × 칸 크기다.
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ), RHIMemoryKind::Descriptor,
-                                            static_cast<uint64>( cbvHeapDesc.NumDescriptors ) * _cbvDescriptorSize );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ), RHIMemoryKind::Descriptor,
+                                             static_cast<uint64>( cbvHeapDesc.NumDescriptors ) * _cbvDescriptorSize );
 
         // 오프라인(CPU 전용) 뷰 힙. 슬롯 테이블은 CopyDescriptors 로 굳히는데 셰이더 가시 힙은 복사 원본이 될 수 없다.
         // 등록은 뷰를 두 힙에 같은 인덱스로 만들고, 마지막 두 칸은 안 걸린 슬롯을 채우는 null 뷰다.
@@ -809,7 +809,7 @@ namespace sw
         _breadcrumbBuffer.Reset();
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
-        _renderPassLedger.clear();
+        _renderPassRegistry.clear();
         _listRegisteredBindless.clear();
         _listFreeBindless.clear();
         _listRegisteredUAV.clear();
@@ -832,7 +832,7 @@ namespace sw
         _drawCommandSignature.Reset();
         _drawIndexedCommandSignature.Reset();
         _dispatchCommandSignature.Reset();
-        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ) );
+        getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ) );
         _cbvHeap.Reset();
         _offlineViewHeap.Reset();
         {
@@ -1944,7 +1944,7 @@ namespace sw
         if ( createMappedStagingBuffer( capacityBytes, ring._buffer, ring._pMapped ) == false )
             return false;
         // 구간 시작 정렬은 텍스처 복사의 배치 오프셋 규칙(512)이다 — 구간 안에서 다시 맞추지 않아도 된다.
-        ring._ledger.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes );
+        ring._allocator.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes );
         return true;
     }
 
@@ -1955,7 +1955,7 @@ namespace sw
             destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
         }
         destroyMappedStagingBuffer( ring._buffer, ring._pMapped );
-        ring._ledger.shutdown();
+        ring._allocator.shutdown();
     }
 
     bool D3D12RHIDevice::createMappedStagingBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped )
@@ -1968,37 +1968,37 @@ namespace sw
             return false;
         }
         pOutMapped = static_cast<uint8*>( pMapped );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer.Get() ), RHIMemoryKind::Staging, computeAllocationBytes( outBuffer.Get() ) );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer.Get() ), RHIMemoryKind::Staging, computeAllocationBytes( outBuffer.Get() ) );
         return true;
     }
 
     void D3D12RHIDevice::destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped )
     {
-        // 자원을 놓으면 매핑도 풀린다. 장부에는 매핑까지 끝난 버퍼만 올렸다.
+        // 자원을 놓으면 매핑도 풀린다. 추적기에는 매핑까지 끝난 버퍼만 올렸다.
         if ( rBuffer != nullptr )
-            getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer.Get() ) );
+            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer.Get() ) );
         rBuffer.Reset();
         pMapped = nullptr;
     }
 
     RHISubmitResult D3D12RHIDevice::allocateStagingSpan( D3D12StagingRing& ring, uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan )
     {
-        RHIStagingAllocateResult result = ring._ledger.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        RHIStagingAllocateResult result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         if ( result == RHIStagingAllocateResult::Full )
         {
             retireCompletedTransfers();
-            result = ring._ledger.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+            result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         }
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
-        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( ring._ledger, _transferSerials, result, sizeBytes, "D3D12", pCaller, outSpan );
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( ring._allocator, _transferSerials, result, sizeBytes, "D3D12", pCaller, outSpan );
         if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
             return submitResult;
-        // 장부가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
+        // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
         ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
         if ( createMappedStagingBuffer( outSpan._sizeBytes, ring._soloBuffer, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
-        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._ledger, outSpan, "D3D12", pCaller );
+        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "D3D12", pCaller );
     }
 
     void D3D12RHIDevice::destroyIdleSoloBuffer( D3D12StagingRing& ring )
@@ -2007,8 +2007,8 @@ namespace sw
         if ( ring._soloBuffer == nullptr )
             return;
         // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
-        ring._ledger.freeCompleted( _transferSerials.getWatermark() );
-        if ( ring._ledger.hasLiveSolo() )
+        ring._allocator.freeCompleted( _transferSerials.getWatermark() );
+        if ( ring._allocator.hasLiveSolo() )
             return;
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
     }
@@ -2113,7 +2113,7 @@ namespace sw
         }
         // 워터마크가 지난 전송을 기다리던 해제를 프레임 해제 큐로 넘긴다(그 프레임 펜스 뒤에 놓인다).
         _transferReleaseQueue.tickCompleted( _transferSerials.getWatermark() );
-        // 장부가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(업로드 힙 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
+        // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(업로드 힙 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
     }
 

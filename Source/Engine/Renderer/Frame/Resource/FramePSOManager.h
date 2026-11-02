@@ -15,7 +15,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -86,7 +86,7 @@ namespace sw
         /** @brief PSO 를 만들 때 쓴 디스크립터를 반환합니다. 모르는 PSO 면 false 입니다. */
         [[nodiscard]] bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 이 레이아웃의 머티리얼 폴백 버퍼입니다(`ensureMaterialFallbackBuffers` 가 셋업에서 만든다). 없으면 nullptr 입니다. */
-        const RHIStructuredBufferSlot* findMaterialFallback( const ShaderBindingLayout* pLayout ) const;
+        const RHIStructuredBuffer* findMaterialFallback( const ShaderBindingLayout* pLayout ) const;
 
         /**
          * @brief 패스 종류 테이블(RenderPassTypeInfo)과 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
@@ -159,8 +159,8 @@ namespace sw
          */
         struct MaterialFallback
         {
-            vector<uint8>           _bytes;
-            RHIStructuredBufferSlot _buffer;
+            vector<uint8>       _bytes;
+            RHIStructuredBuffer _buffer;
         };
 
         /** @brief 셋업이 만들 그래픽스 패스 PSO 하나입니다. `_outputFormat` 이 `Unknown` 이면 엔진 패스 PSO, 아니면 그 대상 포맷의 출력 패스 변형입니다. */

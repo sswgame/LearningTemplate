@@ -59,7 +59,7 @@
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -639,11 +639,11 @@ namespace sw
             pProfilerBackend->markFrame( nullptr );
         const bool bReportedBefore = _profileSession.hasReported();
         _profileSession.onFrameEnd();
-        // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 장부를 볼 수 없어 여기서 잇는다.
+        // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 추적기를 볼 수 없어 여기서 잇는다.
         const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
         const bool bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
         if ( bReportedNow && bHasDevice )
-            _pRHI->getDevice().getMemoryLedger().report( _pRHI->getDevice().getBackendName() );
+            _pRHI->getDevice().getMemoryTracker().report( _pRHI->getDevice().getBackendName() );
         // 캐시 적중 · 실패 표도 같은 자리에서 잇는다. 보고 세션은 Profiling 층이라 에셋 매니저(Resource)를 볼 수 없다.
         if ( bReportedNow )
             CacheStatsUtil::logReport( "profile window" );

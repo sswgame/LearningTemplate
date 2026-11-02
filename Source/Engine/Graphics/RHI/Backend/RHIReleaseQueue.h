@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 // 프레임 상수(kGPUReleaseFrameLatency)는 EngineDefines 가 아니라 RHIDescriptors.h 의 constant 블록에 있다.
@@ -44,35 +44,35 @@ namespace sw
         void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue );
 
         /**
-         * @brief 자원을 해제 큐에 쥐여 두었다가 CPU 프레임 지연 뒤 놓고, 그때 장부에서 줄입니다.
-         * @details 키 공간은 템플릿 인자로 받아 람다가 델리게이트의 인라인 칸(24 바이트)에 들게 한다 — 자원 · 장부 · id.
-         *          장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+         * @brief 자원을 해제 큐에 쥐여 두었다가 CPU 프레임 지연 뒤 놓고, 그때 추적기에서 줄입니다.
+         * @details 키 공간은 템플릿 인자로 받아 람다가 델리게이트의 인라인 칸(24 바이트)에 들게 한다 — 자원 · 추적기 · id.
+         *          추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
          */
         template <RHIMemoryKeySpace kSpace, class Owned>
-        void enqueueLedgerRelease( Owned owned, RHIMemoryLedger& ledger, uint64 id )
+        void enqueueTrackedRelease( Owned owned, RHIMemoryTracker& tracker, uint64 id )
         {
-            RHIMemoryLedger* pLedger = &ledger;
-            enqueueRelease( RHIResourceReleaseDelegate::create( [owned, pLedger, id]()
+            RHIMemoryTracker* pTracker = &tracker;
+            enqueueRelease( RHIResourceReleaseDelegate::create( [owned, pTracker, id]()
             {
                 (void)owned;
-                pLedger->recordFree( RHIMemoryKey{ id, kSpace } );
+                pTracker->recordFree( RHIMemoryKey{ id, kSpace } );
             } ) );
         }
 
-        /** @brief `enqueueLedgerRelease` 의 GPU 펜스 판입니다. 펜스가 지난 뒤 자원을 놓고 장부에서 줄입니다. */
+        /** @brief `enqueueTrackedRelease` 의 GPU 펜스 판입니다. 펜스가 지난 뒤 자원을 놓고 추적기에서 줄입니다. */
         template <RHIMemoryKeySpace kSpace, class Owned>
-        void enqueueGPULedgerRelease( Owned owned, RHIMemoryLedger& ledger, uint64 id, uint64 fenceValue )
+        void enqueueGPUTrackedRelease( Owned owned, RHIMemoryTracker& tracker, uint64 id, uint64 fenceValue )
         {
-            RHIMemoryLedger* pLedger = &ledger;
-            enqueueGPURelease( RHIResourceReleaseDelegate::create( [owned, pLedger, id]()
+            RHIMemoryTracker* pTracker = &tracker;
+            enqueueGPURelease( RHIResourceReleaseDelegate::create( [owned, pTracker, id]()
             {
                 (void)owned;
-                pLedger->recordFree( RHIMemoryKey{ id, kSpace } );
+                pTracker->recordFree( RHIMemoryKey{ id, kSpace } );
             } ),
                                fenceValue );
         }
 
-        /** @brief 펜스가 지날 때까지 자원을 쥐고 있다가 놓습니다(장부에 오르지 않는 자원). */
+        /** @brief 펜스가 지날 때까지 자원을 쥐고 있다가 놓습니다(추적기에 오르지 않는 자원). */
         template <class Owned>
         void enqueueGPUKeepAlive( Owned owned, uint64 fenceValue )
         {

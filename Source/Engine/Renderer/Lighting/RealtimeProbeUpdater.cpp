@@ -195,7 +195,7 @@ namespace sw
     {
         if ( _bActive == SW_FALSE || pso == 0 )
             return;
-        const RHIStructuredBufferSlot* pProbeBuffer = lightBuffer.findProbeBuffer();
+        const RHIStructuredBuffer* pProbeBuffer = lightBuffer.findProbeBuffer();
         if ( pProbeBuffer == nullptr || lightBuffer.getProbeUAV() == kInvalidDescriptorIndex )
             return;
         // t0 라이트는 라이트 버퍼가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 - DX12 는 빈 디스크립터를 읽으면 폴트).

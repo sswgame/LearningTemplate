@@ -18,7 +18,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
 #include "gpu_assert_ids.hlsli"
 
@@ -97,12 +97,12 @@ namespace sw
         uint64 getDroppedCount() const { return _droppedCount; }
 
     private:
-        IRHIDevice*             _pDevice;
-        RHIStructuredBufferSlot _buffer;
-        AsyncBufferReadback     _readback;
-        uint64                  _frameSerial;
-        uint64                  _processedCount; ///< 지난번까지 읽은 누적 기록 수(셰이더 카운터와 같은 축)
-        uint64                  _reportedCount;
-        uint64                  _droppedCount;
+        IRHIDevice*         _pDevice;
+        RHIStructuredBuffer _buffer;
+        AsyncBufferReadback _readback;
+        uint64              _frameSerial;
+        uint64              _processedCount; ///< 지난번까지 읽은 누적 기록 수(셰이더 카운터와 같은 축)
+        uint64              _reportedCount;
+        uint64              _droppedCount;
     };
 } // namespace sw

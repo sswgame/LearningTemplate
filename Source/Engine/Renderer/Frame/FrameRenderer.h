@@ -296,9 +296,9 @@ namespace sw
         /** @brief 컴퓨트 디스패치 상수 버퍼 한 항목입니다. 생성(`ensurePassResources`)과 해제(`releasePassResources`)가 같은 테이블을 돕니다. */
         struct ComputeConstantBufferRow
         {
-            RHIConstantBufferSlot* _pSlot{ nullptr };
-            uint32                 _byteSize{ 0 };
-            const utf8*            _pUsage{ nullptr };
+            RHIConstantBuffer* _pSlot{ nullptr };
+            uint32             _byteSize{ 0 };
+            const utf8*        _pUsage{ nullptr };
         };
         /// @brief 컴퓨트 상수 버퍼 수입니다. 고정 뷰마다 컬링과 정렬이 하나씩 있고, 인스턴스 애니메이션, 메시 모프, 메시 스킨이 하나씩 더 있습니다. 추가 뷰의 것은 그 뷰가 가집니다.
         static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) * 2 + 3;

@@ -18,8 +18,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -391,14 +391,14 @@ namespace sw
         D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRTVHandle( uint32 rtvIndex ) const;
         /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
         D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenDSVHandle( uint32 dsvIndex ) const;
-        /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 항목에 할당 크기를 올리는 유일한 지점입니다. */
+        /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
         /**
          * @brief 업로드 힙(GENERIC_READ)에 버퍼를 만들고 CPU 주소로 매핑합니다. 실패하면 false 이고 `outBuffer` 는 비웁니다. 로그는 호출하는 쪽이 남깁니다.
          * @details 상수 버퍼 링, 정점/인덱스 업로드 버퍼, 전체 화면 삼각형, 업로드 스테이징 네 곳이 "만들기, 매핑" 을 이 함수로 처리한다.
          */
         [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
-        /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 `kind` 항목에 할당 크기를 올리는 유일한 지점입니다. */
+        /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 `kind` 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind );
     #if defined( SW_DEBUG )
         /** @brief 리소스에 `SW <종류> <핸들> (<폭>x<높이> fmt <포맷>)` 이름을 붙입니다. DRED 페이지 폴트 출력이 폴트 주소의 할당을 이 이름으로 보여 줍니다(Debug 전용). */
@@ -407,8 +407,8 @@ namespace sw
         /** @brief 자원 하나가 차지하는 실제 할당 크기입니다(`GetResourceAllocationInfo`이며 정렬과 패딩을 포함합니다). */
         uint64 computeAllocationBytes( ID3D12Resource* pResource ) const;
         /**
-         * @brief 핸들 테이블에서 꺼낸 자원을 지금 펜스 뒤에 해제하고, 그때 장부에서 뺍니다. destroyBuffer 와 destroyTexture 가 공통으로 쓰는 해제 함수입니다.
-         * @details 장부는 GPU 가 실제로 해제한 뒤에 줄어야 한다. 해제 요청 시점에 빼면 아직 GPU 메모리를 쥔 자원이 장부에서 먼저 사라진다.
+         * @brief 핸들 테이블에서 꺼낸 자원을 지금 펜스 뒤에 해제하고, 그때 추적기에서 뺍니다. destroyBuffer 와 destroyTexture 가 공통으로 쓰는 해제 함수입니다.
+         * @details 추적기는 GPU 가 실제로 해제한 뒤에 줄어야 한다. 해제 요청 시점에 빼면 아직 GPU 메모리를 쥔 자원이 추적기에서 먼저 사라진다.
          *          끝나지 않은 전송이 있는 텍스처는 이 함수가 아니라 `releaseTextureAfterTransfer` 를 거쳐 온다(전송 완료 뒤에야 여기로 넘어온다).
          */
         void releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key );
@@ -578,14 +578,14 @@ namespace sw
 
         /**
          * @struct D3D12StagingRing
-         * @brief 영속 매핑한 업로드 힙 버퍼 하나와 그 구간 장부입니다. 텍스처 업로드가 소스를 여기에 복사한 뒤 복사 리스트가 이 버퍼에서 읽습니다.
-         * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 장부가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고,
-         *          그 크기의 일회성 업로드 힙 버퍼(`_solo*`)를 만들어 쓴다. 장부가 단독 구간을 한 번에 하나만 내주므로 링마다 하나다. 장부가 돌려받은 뒤(`hasLiveSolo` 거짓)
+         * @brief 영속 매핑한 업로드 힙 버퍼 하나와 그 구간 할당기입니다. 텍스처 업로드가 소스를 여기에 복사한 뒤 복사 리스트가 이 버퍼에서 읽습니다.
+         * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고,
+         *          그 크기의 일회성 업로드 힙 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을 한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓)
          *          `retireCompletedTransfers` 가 지운다. 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다.
          */
         struct D3D12StagingRing
         {
-            RHIStagingAllocator                    _ledger;
+            RHIStagingAllocator                    _allocator;
             Microsoft::WRL::ComPtr<ID3D12Resource> _buffer;
             uint8*                                 _pMapped{ nullptr };
             mutex                                  _soloMutex; ///< 단독 버퍼 칸(아래 둘)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
@@ -605,22 +605,22 @@ namespace sw
         [[nodiscard]] bool initializeTransfers( const RHISwapChainDesc& desc );
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 가져가지 않은 읽기, 링을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
-        /** @brief 업로드 힙에 @p capacityBytes 의 버퍼를 만들어 영속 매핑하고 구간 장부를 초기화합니다. 실패하면 이유를 로그로 남기고 false 입니다. */
+        /** @brief 업로드 힙에 @p capacityBytes 의 버퍼를 만들어 영속 매핑하고 구간 할당기를 초기화합니다. 실패하면 이유를 로그로 남기고 false 입니다. */
         [[nodiscard]] bool createStagingRing( D3D12StagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes );
-        /** @brief 링 버퍼와 단독 버퍼를 놓고 장부를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
+        /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
         void destroyStagingRing( D3D12StagingRing& ring );
-        /** @brief 업로드 힙 버퍼를 만들어 영속 매핑하고 메모리 장부의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다). 실패하면 두 출력은 비어 있다. */
+        /** @brief 업로드 힙 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다). 실패하면 두 출력은 비어 있다. */
         [[nodiscard]] bool createMappedStagingBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped );
-        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 장부에서 내립니다. 비어 있으면 아무것도 하지 않습니다. */
+        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. */
         void destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
          * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::settleAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
-         *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 장부가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
+         *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 할당기가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
          *          Rejected 면 이유를 로그로 남기고 잡은 구간은 놓는다. 어느 스레드에서나, 전송 제출 락 밖에서 부른다.
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( D3D12StagingRing& ring, uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
-        /** @brief 장부가 단독 구간을 돌려받았으면(`hasLiveSolo` 거짓) @p ring 의 단독 버퍼를 지웁니다. `retireCompletedTransfers` 가 부릅니다. */
+        /** @brief 할당기가 단독 구간을 돌려받았으면(`hasLiveSolo` 거짓) @p ring 의 단독 버퍼를 지웁니다. `retireCompletedTransfers` 가 부릅니다. */
         void destroyIdleSoloBuffer( D3D12StagingRing& ring );
         /**
          * @brief 놀고 있는 전송 작업을 꺼내(없으면 만들어) 얼로케이터와 리스트를 열어 줍니다. 어느 스레드에서나, 락 없이 부른다(작업은 호출자 것이다).
@@ -746,7 +746,7 @@ namespace sw
         RHIConstantBufferMirror _constantBufferMirror           SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
-        RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
+        RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 메인 창의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;

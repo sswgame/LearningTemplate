@@ -1,5 +1,5 @@
 /**
- * @file RHIResidentBuffer.h
+ * @file RHIDeviceBuffer.h
  * @brief GPU 버퍼 핸들 하나와 "어느 디바이스의 것인가"를 함께 보관하는 값 타입입니다.
  *
  * @details 핸들만 보관하면 "누구에게 돌려줘야 하나"를 알 수 없습니다. 그래서 만들어 준 디바이스를 함께 보관합니다.
@@ -17,10 +17,10 @@ namespace sw
     class IRHIDevice;
 
     /**
-     * @struct RHIResidentBuffer
+     * @struct RHIDeviceBuffer
      * @brief 만들어 준 디바이스를 함께 보관하는 GPU 버퍼 핸들입니다. 디바이스가 죽기 전에 통보가 와서 비워지므로, 값이 남아 있으면 유효합니다.
      */
-    struct RHIResidentBuffer
+    struct RHIDeviceBuffer
     {
         RHIBufferHandle _buffer{ 0 };        ///< 0 이면 초기화된 적이 없거나 잊은 상태입니다
         IRHIDevice*     _pDevice{ nullptr }; ///< 만들어 준 디바이스. 통보를 받으므로 죽은 뒤에 남아 있지 않습니다
@@ -36,6 +36,6 @@ namespace sw
             _buffer  = buffer;
         }
         /** @brief 핸들을 잊습니다. 죽은 디바이스의 것을 destroy 하면 해제 후 사용이므로, 잊는 것이 옳을 때 씁니다. */
-        void forget() { *this = RHIResidentBuffer{}; }
+        void forget() { *this = RHIDeviceBuffer{}; }
     };
 } // namespace sw

@@ -11,6 +11,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -23,12 +24,8 @@ namespace sw
     class PassConstantValues;
     class ShaderBindingLayout;
 
-    /// @brief 엔진(PassCB 등) 상수 버퍼 슬롯입니다(버퍼 핸들 + bindless 인덱스).
-    struct EngineConstantBufferSlot
-    {
-        RHIBufferHandle    _buffer{ 0 };
-        RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
-    };
+    RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+};
 } // namespace sw
 
 namespace sw
@@ -49,15 +46,15 @@ namespace sw
          * @param pIndexCheck 있으면 넘기는 bindless 인덱스(엔진 CB 의 `g_<Name>Index`, 머티리얼 텍스처, 구조 버퍼와 텍스처 슬롯)가 살아 있는
          *        슬롯인지 검사합니다(`BindlessIndexValidator`, Debug 와 Dev 전용). Shipping 에서는 무시됩니다.
          */
-        static void bindGraphics( IRHICommandList&                cmd,
-                                  const ShaderBindingLayout&      layout,
-                                  const FrameResourceRegistry&    registry,
-                                  const PassConstantValues&       values,
-                                  const EngineConstantBufferSlot& engineCb,
-                                  RHIDescriptorIndex              materialCb,
-                                  bool                            bNativeBindless,
-                                  const RHIDescriptorIndex*       pMaterialTexSRV   = nullptr,
-                                  bool                            bEngineCbUpToDate = false,
-                                  const BindlessIndexCheckSite*   pIndexCheck       = nullptr );
+        static void bindGraphics( IRHICommandList&              cmd,
+                                  const ShaderBindingLayout&    layout,
+                                  const FrameResourceRegistry&  registry,
+                                  const PassConstantValues&     values,
+                                  const RHIConstantBuffer&      engineCb,
+                                  RHIDescriptorIndex            materialCb,
+                                  bool                          bNativeBindless,
+                                  const RHIDescriptorIndex*     pMaterialTexSRV   = nullptr,
+                                  bool                          bEngineCbUpToDate = false,
+                                  const BindlessIndexCheckSite* pIndexCheck       = nullptr );
     };
 } // namespace sw

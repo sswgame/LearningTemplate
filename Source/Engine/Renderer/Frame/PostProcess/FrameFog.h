@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -75,18 +75,18 @@ namespace sw
         /** @brief 이번 프레임에 볼륨 안개 컴퓨트가 돈다(`prepareVolumetricFog` 가 정한다) — 안개 패스가 주 시점에서 볼륨을 읽는다. */
         bool isFogVolumeActive() const { return _bFogVolumeActive == SW_TRUE; }
         /** @brief 볼륨 안개의 froxel 출력(구조 버퍼 float4 — 산란 rgb, 투과율 a)입니다. 안개 패스가 t11 로 읽습니다. */
-        const RHIStructuredBufferSlot& getFogVolumeBuffer() const { return _fogVolumeBuffer; }
+        const RHIStructuredBuffer& getFogVolumeBuffer() const { return _fogVolumeBuffer; }
 
     private:
         IRHIDevice* const&     _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
         const FramePSOManager& _psoManager;
         FrameFogState          _frameFog;
         /// @brief 볼륨 안개의 froxel 출력입니다. 컴퓨트가 쓰고 안개 패스가 t11 로 읽습니다(`volumetric_fog.hlsl`).
-        RHIStructuredBufferSlot _fogVolumeBuffer;
+        RHIStructuredBuffer _fogVolumeBuffer;
         /// @brief 볼륨 안개 컴퓨트의 입력(float4 행, `SW_FOG_VOLUME_PARAM_FLOAT4_COUNT` 개)입니다. 프레임마다 올립니다.
-        RHIStructuredBufferSlot _fogVolumeParamBuffer;
-        vector<float4>          _listScratchFogVolumeParam; ///< 그 행의 업로드 임시 버퍼(프레임마다 다시 쓴다)
-        uint8                   _bHasFrameFog{ SW_FALSE };
-        uint8                   _bFogVolumeActive{ SW_FALSE };
+        RHIStructuredBuffer _fogVolumeParamBuffer;
+        vector<float4>      _listScratchFogVolumeParam; ///< 그 행의 업로드 임시 버퍼(프레임마다 다시 쓴다)
+        uint8               _bHasFrameFog{ SW_FALSE };
+        uint8               _bFogVolumeActive{ SW_FALSE };
     };
 } // namespace sw

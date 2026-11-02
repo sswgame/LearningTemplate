@@ -1699,7 +1699,7 @@ namespace sw
         // 모프 결과 풀. **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
-        const RHIStructuredBufferSlot& morphBuffer = _state._deform._meshMorphPool.getMorphBuffer();
+        const RHIStructuredBuffer& morphBuffer = _state._deform._meshMorphPool.getMorphBuffer();
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
@@ -1707,8 +1707,8 @@ namespace sw
         }
         // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
         // 진단(SkipDispatch)이면 스킨 결과가 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
-        const RHIStructuredBufferSlot& skinBaseBuffer = _state._deform._meshMorphPool.getSkinBaseBuffer();
-        const bool                     bSkinBases     = _state._deform._bDeformDispatchSkipped == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinBaseBuffer._buffer != 0 &&
+        const RHIStructuredBuffer& skinBaseBuffer = _state._deform._meshMorphPool.getSkinBaseBuffer();
+        const bool                 bSkinBases     = _state._deform._bDeformDispatchSkipped == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinBaseBuffer._buffer != 0 &&
                                 skinBaseBuffer._srv != kInvalidDescriptorIndex;
         if ( bSkinBases )
         {
@@ -1717,7 +1717,7 @@ namespace sw
         }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
-        const RHIStructuredBufferSlot& vertexAnimationBuffer = _state._deform._vertexAnimationPool.getBuffer();
+        const RHIStructuredBuffer& vertexAnimationBuffer = _state._deform._vertexAnimationPool.getBuffer();
         if ( vertexAnimationBuffer._buffer != 0 && vertexAnimationBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVertexAnimation, vertexAnimationBuffer._buffer, vertexAnimationBuffer._srv );
@@ -1751,18 +1751,18 @@ namespace sw
         context._passValues.setUint( passConstantNames()._swLightCount, _state._lightBuffer.isBindable() ? _state._lightBuffer.getCount() : 0u );
         // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling=None, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
         // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(LightGrid::hasGrid 가 둘 다 본다).
-        const RHIStructuredBufferSlot* pGridBuffer = _state._lightBuffer.isBindable() ? _state._lightBuffer.findGridBuffer() : nullptr;
-        const bool                     bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
-        const uint32                   gridBase    = bGridReady ? _state._lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : constant::invalid_index::kUint32;
+        const RHIStructuredBuffer* pGridBuffer = _state._lightBuffer.isBindable() ? _state._lightBuffer.findGridBuffer() : nullptr;
+        const bool                 bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
+        const uint32               gridBase    = bGridReady ? _state._lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : constant::invalid_index::kUint32;
         context._passValues.setUint( passConstantNames()._swLightGridBase, gridBase );
         if ( _state._lightBuffer.isBindable() == false )
             return;
-        const RHIStructuredBufferSlot& buffer = _state._lightBuffer.getBuffer();
+        const RHIStructuredBuffer& buffer = _state._lightBuffer.getBuffer();
         context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
         if ( bGridReady )
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, pGridBuffer->_buffer, pGridBuffer->_srv );
         // 라이트 프로브 SH9(t13) — 볼륨 원소가 라이트 목록에 있는 프레임에만 있다. 셰이더는 g_SwLightProbesIndex 로 걸렸는지 본다.
-        const RHIStructuredBufferSlot* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
+        const RHIStructuredBuffer* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
         if ( pProbeBuffer != nullptr )
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
     }
@@ -1780,8 +1780,8 @@ namespace sw
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
                 return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다. 걸 것도 없다.
-            const RHIStructuredBufferSlot* pFallback            = _psoManager.findMaterialFallback( pLayout );
-            const bool                     bUseFallbackMaterial = pFallback != nullptr && pFallback->isValid() && pFallback->_srv != kInvalidDescriptorIndex;
+            const RHIStructuredBuffer* pFallback            = _psoManager.findMaterialFallback( pLayout );
+            const bool                 bUseFallbackMaterial = pFallback != nullptr && pFallback->isValid() && pFallback->_srv != kInvalidDescriptorIndex;
             if ( bUseFallbackMaterial )
             {
                 context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, pFallback->_buffer, pFallback->_srv );
@@ -1826,7 +1826,7 @@ namespace sw
         context._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
                                                  arrDrawRootConstant );
 
-        const EngineConstantBufferSlot engineCb{ context._passCb, context._passCbIndex };
+        const RHIConstantBuffer engineCb{ context._passCb, context._passCbIndex };
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
         // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,

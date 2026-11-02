@@ -827,19 +827,19 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 상태 전이 · 시작 접근 채우기 · 패스 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassOpen D3D12RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassBeginResult D3D12RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
         // 네이티브 렌더 패스다(`ID3D12GraphicsCommandList4::BeginRenderPass` — Vulkan · 언리얼 D3D12RHI 와 같은 모양). 상태 전이는 패스를 열기 전에 끝내고, 지우기는
         // 시작 접근(CLEAR)으로 넘긴다 — 패스 안에서는 배리어 · 복사 · Clear 호출을 할 수 없다(디버그 레이어가 잡는다). 예전에는 OMSetRenderTargets + Clear*View 로
         // 흉내 내 패스 안의 배리어 · 업로드가 DX12 에서만 그냥 지나갔고, load op 의 Load · DontCare 는 뜻이 사라졌다.
         ensureRecording();
         if ( _pCmdList == nullptr )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
 
         const bool bBindColor = beginInfo._bBindColor != SW_FALSE;
         const bool bHasDepth  = beginInfo._depthTarget != 0;
         if ( bBindColor == false && bHasDepth == false )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
 
         D3D12_RENDER_PASS_RENDER_TARGET_DESC arrColorDesc[kMaxColorAttachments]{};
         uint32                               rtCount{ 0 };
@@ -858,7 +858,7 @@ namespace sw
                 if ( attachmentIndex > 0 )
                     break;
                 if ( swapChain.isBackBufferReady() == false )
-                    return RHIRenderPassOpen::BackedOff; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
+                    return RHIRenderPassBeginResult::NoBackBuffer; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
                 swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
                 rtv                                     = swapChain.getCurrentRTV();
                 format                                  = toDxgiFormat( swapChain.getFormat() );
@@ -874,7 +874,7 @@ namespace sw
                 {
                     if ( attachmentIndex > 0 )
                         break;
-                    return RHIRenderPassOpen::Failed;
+                    return RHIRenderPassBeginResult::Failed;
                 }
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(color)" );
                 transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -882,7 +882,7 @@ namespace sw
                 {
                     if ( attachmentIndex > 0 )
                         break;
-                    return RHIRenderPassOpen::Failed;
+                    return RHIRenderPassBeginResult::Failed;
                 }
                 rtv                                     = view._rtvHandle;
                 format                                  = view._format;
@@ -938,7 +938,7 @@ namespace sw
             }
         }
         if ( rtCount == 0 && bDepthBound == false )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
 
         D3D12RHICommandContextInternal::asRenderPassList( commandListForRecord() )
             ->BeginRenderPass( rtCount, rtCount > 0 ? arrColorDesc : nullptr, bDepthBound ? &depthDesc : nullptr, D3D12_RENDER_PASS_FLAG_NONE );
@@ -954,7 +954,7 @@ namespace sw
 
         D3D12_RECT scissor{ 0, 0, static_cast<LONG>( vpW ), static_cast<LONG>( vpH ) };
         commandListForRecord()->RSSetScissorRects( 1, &scissor );
-        return RHIRenderPassOpen::Opened;
+        return RHIRenderPassBeginResult::Begun;
     }
 
     void D3D12RHICommandContext::endRenderPassNative()

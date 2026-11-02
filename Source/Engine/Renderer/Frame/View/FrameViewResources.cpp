@@ -305,7 +305,7 @@ namespace sw
         view._bOcclusionTilesThisFrame = SW_FALSE;
         if ( _pDevice == nullptr )
         {
-            view._occlusionTiles = RHIStructuredBufferSlot{};
+            view._occlusionTiles = RHIStructuredBuffer{};
             view._transientPool.forget();
             view._taaHistory           = 0;
             view._taaHistorySRV        = kInvalidDescriptorIndex;

@@ -790,15 +790,15 @@ namespace sw
 
         /**
          * @struct VulkanStagingRing
-         * @brief 영속 매핑한 호스트 가시 · 일관 버퍼 하나와 그 구간 장부입니다. 업로드 링과 되읽기 링이 하나씩 있다.
+         * @brief 영속 매핑한 호스트 가시 · 일관 버퍼 하나와 그 구간 할당기입니다. 업로드 링과 되읽기 링이 하나씩 있다.
          * @details 업로드 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 되읽기 구간은 결과를 가져갈 때(`free`) 돌아오고, 끝나기 전에 버린 구간은
          *          그때 시리얼을 붙여 복사가 끝난 뒤에 돌아온다 — 구간을 GPU 가 아직 쓰는 동안 다음 되읽기가 같은 자리를 받지 않는다.
-         *          링보다 큰 한 장은 장부가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고, 그 크기의 일회성 버퍼(`_solo*`)를 만들어 쓴다. 장부가 단독 구간을
-         *          한 번에 하나만 내주므로 링마다 하나다. 장부가 돌려받은 뒤(`hasLiveSolo` 거짓) `retireFinishedTransfers` 가 지운다.
+         *          링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고, 그 크기의 일회성 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을
+         *          한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓) `retireFinishedTransfers` 가 지운다.
          */
         struct VulkanStagingRing
         {
-            RHIStagingAllocator _ledger;
+            RHIStagingAllocator _allocator;
             VkBuffer            _buffer{ nullptr };
             VkDeviceMemory      _memory{ nullptr };
             uint8*              _pMapped{ nullptr };
@@ -830,26 +830,26 @@ namespace sw
         [[nodiscard]] bool initializeTransfers( const RHISwapChainDesc& desc );
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 링, 풀을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
-        /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 장부의 Staging 항목에 올립니다. 단독 상한은 @p soloMaxBytes 입니다. */
+        /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다. 단독 상한은 @p soloMaxBytes 입니다. */
         [[nodiscard]] bool createStagingRing( VulkanStagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes, uint32 usageFlags, const utf8* pName );
-        /** @brief 링 버퍼와 단독 버퍼를 놓고 장부를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
+        /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
         void destroyStagingRing( VulkanStagingRing& ring );
         /**
-         * @brief @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 장부의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다).
+         * @brief @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다).
          * @return 만들었으면 true. 실패하면 이유를 로그로 남기고 만든 것을 놓은 뒤 false 이며 세 출력은 비어 있다.
          */
         [[nodiscard]] bool createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VkDeviceMemory& outMemory,
                                                       uint8*& outMapped );
-        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 장부에서 내립니다. 비어 있으면 아무것도 하지 않습니다. 세 칸을 비웁니다. */
+        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. 세 칸을 비웁니다. */
         void destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
          * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::settleAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
-         *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 장부가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
+         *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 할당기가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
          *          Rejected 면 이유를 로그로 남기고 잡은 구간은 놓는다. 어느 스레드에서나, 전송 락 밖에서 부른다.
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan );
-        /** @brief 장부가 단독 구간을 돌려받았으면(`hasLiveSolo` 거짓) @p ring 의 단독 버퍼를 지웁니다. `retireFinishedTransfers` 가 부릅니다. */
+        /** @brief 할당기가 단독 구간을 돌려받았으면(`hasLiveSolo` 거짓) @p ring 의 단독 버퍼를 지웁니다. `retireFinishedTransfers` 가 부릅니다. */
         void destroyIdleSoloBuffer( VulkanStagingRing& ring );
         /** @brief 놀고 있는 전송 작업을 꺼내(없으면 만들어) 기록을 시작합니다. `_transferMutex` 를 쥐고 부릅니다. */
         [[nodiscard]] bool beginTransferJob( VulkanTransferJob& outJob );

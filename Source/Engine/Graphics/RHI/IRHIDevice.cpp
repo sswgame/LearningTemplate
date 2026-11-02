@@ -13,7 +13,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
@@ -218,7 +218,7 @@ namespace sw
         RHIMemoryBudget budget{};
         if ( queryGPUMemoryBudgetInternal( budget ) == false )
             budget = RHIMemoryBudget{};
-        _memoryLedger->setDriverBudget( budget );
+        _memoryTracker->setDriverBudget( budget );
     }
 
     void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID )
@@ -355,7 +355,7 @@ namespace sw
         , _bSoftwareAdapter{ false }
         , _initResult{ RHIInitResult::NotStarted }
         , _bShutDown{ false }
-        , _memoryLedger{ make_unique<RHIMemoryLedger>() }
+        , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
     {
     }

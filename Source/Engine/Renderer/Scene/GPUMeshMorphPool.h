@@ -19,7 +19,7 @@
  * 비싼 방법이다. `createBuffer` 는 `Vertex` 플래그를 보면 `UnorderedAccess` 를 버리고, DX12 의
  * `createVertexBuffer` 는 UPLOAD 힙이라 UAV 가 될 수 없으며, DX11 은 구조화 버퍼와 정점 버퍼를 겸할 수
  * 없다. 그래서 결과를 **구조화 버퍼**에 두고 정점 셰이더가 `SV_VertexID` 로 읽는다(정점 풀링).
- * 이미 네 백엔드에서 도는 `RHIStructuredBufferSlot` 을 그대로 쓰므로 백엔드 분기가 없다.
+ * 이미 네 백엔드에서 도는 `RHIStructuredBuffer` 을 그대로 쓰므로 백엔드 분기가 없다.
  *
  * [스키닝]
  * 결과 버퍼는 두 구간이다. [모프 메시][스킨 인스턴스] 순서이며, 모프 컴퓨트(mesh_morph.hlsl)는 앞 구간을, 스키닝 컴퓨트(mesh_skin.hlsl)는 뒤 구간을
@@ -52,7 +52,7 @@
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -186,18 +186,18 @@ namespace sw
         /** @brief 모프 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. 스킨 결과는 칸마다라 칸 표(`getSkinBaseBuffer`)로 찾는다. */
         uint32 baseOf( const Mesh* pMesh ) const;
         /** @brief 스킨 칸 → 결과 시작 표입니다(칸 하나가 `GPUSkinBase`, 못 든 칸은 시작이 `kInvalidBase`). 정점 셰이더가 t14(g_SwSkinBases)로 읽는다. 스킨 인스턴스가 없으면 비어 있습니다. */
-        const RHIStructuredBufferSlot& getSkinBaseBuffer() const { return _skinBase; }
+        const RHIStructuredBuffer& getSkinBaseBuffer() const { return _skinBase; }
         /** @brief 칸 표의 칸 수(가장 큰 칸 + 1)입니다. */
         uint32 getSkinBaseCount() const { return static_cast<uint32>( _listSkinBase.size() ); }
         /** @brief 칸의 결과 시작입니다(진단 · 테스트). 없는 칸이거나 디스패치할 수 없으면 `kInvalidBase` 입니다. */
         uint32 skinBaseOf( uint32 skinSlot ) const;
 
         /** @brief 결과 버퍼입니다. 정점 셰이더가 SRV 로 읽습니다. */
-        const RHIStructuredBufferSlot& getMorphBuffer() const { return _morph; }
+        const RHIStructuredBuffer& getMorphBuffer() const { return _morph; }
         /** @brief 모프 메시의 레스트 버퍼입니다. 모프 컴퓨트가 SRV 로 읽습니다(진단 2와 3은 정점 셰이더에 그대로 바인딩합니다). */
-        const RHIStructuredBufferSlot& getRestBuffer() const { return _rest; }
+        const RHIStructuredBuffer& getRestBuffer() const { return _rest; }
         /** @brief 변형 프로그램 버퍼입니다(`updateDeformPrograms`). 모프 컴퓨트가 t1 로 읽습니다. 모프 메시가 없으면 비어 있습니다. */
-        const RHIStructuredBufferSlot& getDeformProgramBuffer() const { return _deformProgram; }
+        const RHIStructuredBuffer& getDeformProgramBuffer() const { return _deformProgram; }
         /** @brief 풀에 든 결과 정점 수(모프와 스킨 인스턴스)입니다. 정점 셰이더의 범위 검사 값입니다. */
         uint32 getVertexCount() const { return _vertexCount; }
         /** @brief 모프 구간(앞)의 길이(용량, 빈 자리 포함)입니다. 모프 컴퓨트가 이만큼 돕니다. */
@@ -221,17 +221,17 @@ namespace sw
         /** @brief 업로드한 스킨 원본의 정점 수 합입니다. */
         uint32 getSkinSourceVertexCount() const { return _skinSourceVertexCount; }
         /** @brief 스킨 원본의 레스트 버퍼입니다(원소 하나가 float4 셋 — 원본마다 레스트 정점 구간과 모프 차이 구간이 있습니다). */
-        const RHIStructuredBufferSlot& getSkinRestBuffer() const { return _skinRest; }
+        const RHIStructuredBuffer& getSkinRestBuffer() const { return _skinRest; }
         /** @brief 스킨 원본 구간을 새 버퍼로 다시 채운 횟수입니다. 부분 갱신이 통째로 올리기로 새지 않는지 테스트가 봅니다. */
         uint32 getSkinRepackCount() const { return _skinRepackCount; }
         /** @brief 지난 `update` 가 스킨 원본 버퍼(레스트 · 가중치)에 올린 바이트 수입니다. */
         uint32 getLastSkinUploadBytes() const { return _lastSkinUploadBytes; }
         /** @brief 스킨 원본의 가중치 버퍼입니다(정점 하나가 float4 셋이며 가중치 4개, 원본 본 번호 4개, 모프 차이 구간(시작과 수)을 담습니다). */
-        const RHIStructuredBufferSlot& getSkinWeightBuffer() const { return _skinWeight; }
+        const RHIStructuredBuffer& getSkinWeightBuffer() const { return _skinWeight; }
         /** @brief 스킨 인스턴스 테이블입니다(인스턴스 하나가 uint4 둘이며 `GPUSkinInstanceRow` 입니다). */
-        const RHIStructuredBufferSlot& getSkinInstanceBuffer() const { return _skinInstance; }
+        const RHIStructuredBuffer& getSkinInstanceBuffer() const { return _skinInstance; }
         /** @brief 스킨 팔레트 버퍼입니다(본 하나가 float4 셋입니다). */
-        const RHIStructuredBufferSlot& getSkinPaletteBuffer() const { return _skinPalette; }
+        const RHIStructuredBuffer& getSkinPaletteBuffer() const { return _skinPalette; }
         /** @brief 컴퓨트가 쓸 수 있는 상태인지(레스트 SRV 와 결과 UAV 가 둘 다 있는지) 확인합니다. */
         bool isDispatchable() const;
         /** @brief 스키닝 컴퓨트가 쓸 수 있는 상태인지(결과 UAV, 원본, 가중치, 인스턴스 테이블, 팔레트 SRV 가 있는지) 확인합니다. */
@@ -303,14 +303,14 @@ namespace sw
         /** @brief 메시의 레스트 정점을 칸 번호를 실어 `_listScratchRest` 에 덧붙입니다. */
         void appendRestVertices( const Mesh& mesh, uint32 slot );
 
-        RHIStructuredBufferSlot _rest;
-        RHIStructuredBufferSlot _morph;
-        RHIStructuredBufferSlot _skinRest;
-        RHIStructuredBufferSlot _skinWeight;
-        RHIStructuredBufferSlot _skinInstance;
-        RHIStructuredBufferSlot _skinPalette;
-        RHIStructuredBufferSlot _deformProgram;
-        RHIStructuredBufferSlot _skinBase;
+        RHIStructuredBuffer _rest;
+        RHIStructuredBuffer _morph;
+        RHIStructuredBuffer _skinRest;
+        RHIStructuredBuffer _skinWeight;
+        RHIStructuredBuffer _skinInstance;
+        RHIStructuredBuffer _skinPalette;
+        RHIStructuredBuffer _deformProgram;
+        RHIStructuredBuffer _skinBase;
         /// @brief 풀에 든 모프 메시(칸 순서)입니다. 레스트 노멀의 w 가 이 번호 + 1 입니다. 나간 메시의 칸은 nullptr 이고 `_listFreeMorphSlot` 에 있습니다.
         vector<const Mesh*> _listPoolMorph;
         vector<uint32>      _listFreeMorphSlot;

@@ -150,7 +150,7 @@ namespace sw
         return elementIndex;
     }
 
-    void GPUMaterialRegistry::stampBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceRun>& listBatchElementRange,
+    void GPUMaterialRegistry::stampBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceDirtyRange>& listBatchElementRange,
                                                   const vector<uint32>& listBatchElementIndex )
     {
         ++_buildCounter;
@@ -160,8 +160,8 @@ namespace sw
             const uint32 groupIndex = listBatch[batchIndex]._materialGroup;
             if ( groupIndex >= _listMaterialGroupState.size() )
                 continue;
-            MaterialGroupState&   state = _listMaterialGroupState[groupIndex];
-            const GPUInstanceRun& range = listBatchElementRange[batchIndex];
+            MaterialGroupState&          state = _listMaterialGroupState[groupIndex];
+            const GPUInstanceDirtyRange& range = listBatchElementRange[batchIndex];
             for ( uint32 entry = range._start; entry < range._start + range._count && entry < listBatchElementIndex.size(); ++entry )
             {
                 const uint32 elementIndex = listBatchElementIndex[entry];

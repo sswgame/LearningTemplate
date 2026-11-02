@@ -128,7 +128,7 @@ namespace sw
              *          채운다 — 0 으로 두면 셰이더가 힙 0번을 잘못 읽는다(InstanceData::loadWorld / Bindless::sampleIndex 는 kInvalidIndex 비교로 폴백).
              */
             static void uploadEngineConstantBuffer( IRHICommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry,
-                                                    const PassConstantValues& values, const EngineConstantBufferSlot& engineCb,
+                                                    const PassConstantValues& values, const RHIConstantBuffer& engineCb,
                                                     const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 const uint32 alignedSize = MathUtil::align( layout.getEngineCbSize(), 16u );
@@ -185,7 +185,7 @@ namespace sw
              * @details 리플렉션이 주는 `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가 다른 CB 자리를
              *          덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다. 텍스처 · 구조버퍼는 3) 의 표가 맡는다.
              */
-            static void bindReservedConstantBuffers( IRHICommandList& cmd, const ShaderBindingLayout& layout, const EngineConstantBufferSlot& engineCb,
+            static void bindReservedConstantBuffers( IRHICommandList& cmd, const ShaderBindingLayout& layout, const RHIConstantBuffer& engineCb,
                                                      RHIDescriptorIndex materialCb, const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
                 // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
@@ -259,16 +259,16 @@ namespace sw
         };
     } // namespace
 
-    void ShaderParameterBinder::bindGraphics( IRHICommandList&                cmd,
-                                              const ShaderBindingLayout&      layout,
-                                              const FrameResourceRegistry&    registry,
-                                              const PassConstantValues&       values,
-                                              const EngineConstantBufferSlot& engineCb,
-                                              RHIDescriptorIndex              materialCb,
-                                              bool                            bNativeBindless,
-                                              const RHIDescriptorIndex*       pMaterialTexSRV,
-                                              bool                            bEngineCbUpToDate,
-                                              const BindlessIndexCheckSite*   pIndexCheck )
+    void ShaderParameterBinder::bindGraphics( IRHICommandList&              cmd,
+                                              const ShaderBindingLayout&    layout,
+                                              const FrameResourceRegistry&  registry,
+                                              const PassConstantValues&     values,
+                                              const RHIConstantBuffer&      engineCb,
+                                              RHIDescriptorIndex            materialCb,
+                                              bool                          bNativeBindless,
+                                              const RHIDescriptorIndex*     pMaterialTexSRV,
+                                              bool                          bEngineCbUpToDate,
+                                              const BindlessIndexCheckSite* pIndexCheck )
     {
         using Internal = ShaderParameterBinderInternal;
         if ( layout.isEmpty() )

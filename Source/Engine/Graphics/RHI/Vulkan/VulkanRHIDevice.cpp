@@ -33,7 +33,7 @@
     #include "Core/Foundation/X11MacroUndef.h"
 #endif
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
@@ -495,7 +495,7 @@ namespace sw
                 vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
             if ( _descriptorPool )
             {
-                getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _descriptorPool ) );
+                getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( _descriptorPool ) );
                 vkDestroyDescriptorPool( _device, _descriptorPool, nullptr );
             }
             for ( VkSampler& sampler : _arrStaticSampler )
@@ -597,7 +597,7 @@ namespace sw
         memoryProperties.pNext = &budgetProperties;
         vkGetPhysicalDeviceMemoryProperties2( _physicalDevice, &memoryProperties );
 
-        // 사용량은 모든 힙(로컬 + 호스트 가시)의 합이다 — 장부가 호스트 가시 버퍼도 센다. 예산 · 남은 양은 로컬 힙만 본다.
+        // 사용량은 모든 힙(로컬 + 호스트 가시)의 합이다 — 추적기가 호스트 가시 버퍼도 센다. 예산 · 남은 양은 로컬 힙만 본다.
         uint64 usageBytes{ 0 };
         uint64 localUsageBytes{ 0 };
         uint64 localBudgetBytes{ 0 };
@@ -690,9 +690,9 @@ namespace sw
         record._usage     = usageFlags;
         record._state     = RHIBufferState::Common;
 
-        // GPU 메모리 장부의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
+        // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHIBufferHandle handle = _gpuBuffers.insert( record );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, memRequirements.size );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, memRequirements.size );
         return handle;
     }
 
@@ -2382,7 +2382,7 @@ namespace sw
         constexpr uint64 kSpanAlignmentBytes = 256;
         if ( createMappedStagingBuffer( capacityBytes, usageFlags, pName, ring._buffer, ring._memory, ring._pMapped ) == false )
             return false;
-        ring._ledger.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes );
+        ring._allocator.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes );
         return true;
     }
 
@@ -2393,7 +2393,7 @@ namespace sw
             destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
         }
         destroyMappedStagingBuffer( ring._buffer, ring._memory, ring._pMapped );
-        ring._ledger.shutdown();
+        ring._allocator.shutdown();
     }
 
     bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VkDeviceMemory& outMemory,
@@ -2440,15 +2440,15 @@ namespace sw
         }
 
         outMapped = static_cast<uint8*>( pMapped );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( outMemory ), RHIMemoryKind::Staging, requirements.size );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outMemory ), RHIMemoryKind::Staging, requirements.size );
         return true;
     }
 
     void VulkanRHIDevice::destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped )
     {
-        // 메모리를 놓으면 매핑도 풀린다. 장부에는 매핑까지 끝난 버퍼만 올렸다.
+        // 메모리를 놓으면 매핑도 풀린다. 추적기에는 매핑까지 끝난 버퍼만 올렸다.
         if ( pMapped != nullptr )
-            getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( rMemory ) );
+            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rMemory ) );
         if ( rBuffer != VK_NULL_HANDLE )
             vkDestroyBuffer( _device, rBuffer, nullptr );
         if ( rMemory != VK_NULL_HANDLE )
@@ -2460,22 +2460,22 @@ namespace sw
 
     RHISubmitResult VulkanRHIDevice::allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan )
     {
-        RHIStagingAllocateResult result = ring._ledger.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        RHIStagingAllocateResult result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         if ( result == RHIStagingAllocateResult::Full )
         {
             retireFinishedTransfers();
-            result = ring._ledger.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+            result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         }
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
-        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( ring._ledger, _transferSerials, result, sizeBytes, "Vulkan", pCaller, outSpan );
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( ring._allocator, _transferSerials, result, sizeBytes, "Vulkan", pCaller, outSpan );
         if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
             return submitResult;
-        // 장부가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
+        // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
         ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
         if ( createMappedStagingBuffer( outSpan._sizeBytes, usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
-        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._ledger, outSpan, "Vulkan", pCaller );
+        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "Vulkan", pCaller );
     }
 
     void VulkanRHIDevice::destroyIdleSoloBuffer( VulkanStagingRing& ring )
@@ -2484,8 +2484,8 @@ namespace sw
         if ( ring._soloBuffer == VK_NULL_HANDLE )
             return;
         // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
-        ring._ledger.freeCompleted( _transferSerials.getWatermark() );
-        if ( ring._ledger.hasLiveSolo() )
+        ring._allocator.freeCompleted( _transferSerials.getWatermark() );
+        if ( ring._allocator.hasLiveSolo() )
             return;
         destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
     }
@@ -2592,7 +2592,7 @@ namespace sw
         }
         // 워터마크가 지난 전송을 기다리던 텍스처 해제를 프레임 해제 큐로 넘긴다(그 다음 프레임 펜스 뒤에 놓인다).
         _transferReleaseQueue.tickCompleted( _transferSerials.getWatermark() );
-        // 장부가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(GL 과 같은 규칙, 호스트 가시 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
+        // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(GL 과 같은 규칙, 호스트 가시 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
         destroyIdleSoloBuffer( _readbackRing );
     }
@@ -2781,7 +2781,7 @@ namespace sw
             if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
                 return false;
             // 디스크립터 풀의 크기는 Vulkan 이 알려 주지 않는다. 0 으로 숨기지 않고 "크기 모름" 칸에서 센다.
-            getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _descriptorPool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
+            getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( _descriptorPool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
         }
         for ( VulkanDescriptorPoolSet& poolSet : _arrFrameDescriptorPoolSet )
         {
@@ -2969,7 +2969,7 @@ namespace sw
         if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &pool ) != VK_SUCCESS )
             return VK_NULL_HANDLE;
         // 디스크립터 풀의 크기는 Vulkan 이 알려 주지 않는다. 0 으로 숨기지 않고 "크기 모름" 칸에서 센다. 내리는 자리는 destroyDescriptorPoolSet 하나다.
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( pool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( pool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
         return pool;
     }
 
@@ -3030,7 +3030,7 @@ namespace sw
             {
                 if ( pool == VK_NULL_HANDLE )
                     continue;
-                getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( pool ) );
+                getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( pool ) );
                 vkDestroyDescriptorPool( _device, pool, nullptr );
             }
         }

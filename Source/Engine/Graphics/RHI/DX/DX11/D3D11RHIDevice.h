@@ -17,7 +17,7 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11ImmediateContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -303,7 +303,7 @@ namespace sw
         /**
          * @class UploadStaging
          * @brief 큰 업로드 하나가 쓰는 스테이징 텍스처와, 그것이 업로드 스테이징 예산(`_uploadStagingBudget`)에서 잡은 바이트입니다. 옮길 수만 있습니다.
-         * @details 전송 큐 항목(`TransferProbe`)이 GPU 가 복사를 끝낼 때까지 쥐고, 소멸자가 예산과 GPU 메모리 장부(Staging)를 돌려준다. 제출 도중의 이른 반환도
+         * @details 전송 큐 항목(`TransferProbe`)이 GPU 가 복사를 끝낼 때까지 쥐고, 소멸자가 예산과 GPU 메모리 추적기(Staging)를 돌려준다. 제출 도중의 이른 반환도
          *          같은 소멸자로 돌려주므로 예산이 새는 길이 없다.
          */
         class UploadStaging
@@ -322,14 +322,14 @@ namespace sw
             /** @brief 예산을 잡았으면 true 입니다. */
             bool isReserved() const { return _pDevice != nullptr; }
             /**
-             * @brief 만든 스테이징 텍스처를 맡기고 GPU 메모리 장부의 Staging 에 @p sourceBytes 로 올립니다. `isReserved()` 일 때 한 번만 부릅니다.
-             * @details 예산에서 잡은 바이트와 다를 수 있다 — 예산보다 큰 업로드는 예산 전부를 잡고 장부에는 제 크기로 오른다.
+             * @brief 만든 스테이징 텍스처를 맡기고 GPU 메모리 추적기의 Staging 에 @p sourceBytes 로 올립니다. `isReserved()` 일 때 한 번만 부릅니다.
+             * @details 예산에서 잡은 바이트와 다를 수 있다 — 예산보다 큰 업로드는 예산 전부를 잡고 추적기에는 제 크기로 오른다.
              */
             void             attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture, uint64 sourceBytes );
             ID3D11Texture2D* getTexture() const { return _texture.Get(); }
 
         private:
-            /** @brief 텍스처를 장부에서 내리고 놓은 뒤 예산을 돌려줍니다. 비어 있으면 아무것도 하지 않습니다. */
+            /** @brief 텍스처를 추적기에서 내리고 놓은 뒤 예산을 돌려줍니다. 비어 있으면 아무것도 하지 않습니다. */
             void release();
 
             Microsoft::WRL::ComPtr<ID3D11Texture2D> _texture;
@@ -452,7 +452,7 @@ namespace sw
          */
         ID3D11ShaderResourceView* resolveBufferSRV( RHIBufferHandle handle ) const;
         /**
-         * @brief 버퍼(와 있으면 SRV)를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 항목에 크기(`ByteWidth`)를 올리는 유일한 지점입니다.
+         * @brief 버퍼(와 있으면 SRV)를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 크기(`ByteWidth`)를 올리는 유일한 지점입니다.
          * @details SRV 는 넣기 **전에** 레코드에 싣는다. 넣은 뒤에 붙이면 다른 스레드가 SRV 없는 레코드를 볼 수 있다.
          */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv = nullptr );
@@ -465,8 +465,8 @@ namespace sw
         TextureRecord*       resolveTexture( RHITextureHandle handle );
         const TextureRecord* resolveTexture( RHITextureHandle handle ) const;
         /**
-         * @brief TextureRecord 를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부에 `desc` 의 항목과 논리 크기를 올리는 유일한 지점입니다.
-         * @details D3D11 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 기록한다(장부 기준은 Logical).
+         * @brief TextureRecord 를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기에 `desc` 의 항목과 논리 크기를 올리는 유일한 지점입니다.
+         * @details D3D11 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 기록한다(추적기 기준은 Logical).
          */
         RHITextureHandle storeTexture( TextureRecord record, const RHITextureDesc& desc );
         /**
@@ -587,7 +587,7 @@ namespace sw
         vector<uint32>                                            _listUAVFree;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
-        RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
+        RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 정적 샘플러 세트입니다(binding_slots.hlsli 4, DX12 와 같은 테이블). s9..s15 에 바인딩합니다. 셰이더가 Bindless::sampleIndexWith 의 samplerID 로 고릅니다.
         Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];

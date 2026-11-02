@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 
 #include "Core/Container/VectorUtil.h"
 
@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        struct RHIMemoryLedgerInternal
+        struct RHIMemoryTrackerInternal
         {
             /** @brief `RHIMemoryKind` 값 순서의 표시 이름입니다. */
             static constexpr const utf8* kArrKindName[] = {
@@ -63,15 +63,15 @@ namespace sw
     {
     }
 
-    const utf8* RHIMemoryLedger::getKindName( RHIMemoryKind kind )
+    const utf8* RHIMemoryTracker::getKindName( RHIMemoryKind kind )
     {
         const uint32 kindIndex = static_cast<uint32>( kind );
         if ( kindIndex >= kRHIMemoryKindCount )
             return "Invalid";
-        return RHIMemoryLedgerInternal::kArrKindName[kindIndex];
+        return RHIMemoryTrackerInternal::kArrKindName[kindIndex];
     }
 
-    const utf8* RHIMemoryLedger::getSizeBasisName( RHIMemorySizeBasis basis )
+    const utf8* RHIMemoryTracker::getSizeBasisName( RHIMemorySizeBasis basis )
     {
         switch ( basis )
         {
@@ -83,7 +83,7 @@ namespace sw
         return "Invalid";
     }
 
-    RHIMemoryKind RHIMemoryLedger::classifyTexture( const RHITextureDesc& desc )
+    RHIMemoryKind RHIMemoryTracker::classifyTexture( const RHITextureDesc& desc )
     {
         if ( desc._bIsTransient != SW_FALSE )
             return RHIMemoryKind::TransientPool;
@@ -91,7 +91,7 @@ namespace sw
         return bAttachment ? RHIMemoryKind::RenderTarget : RHIMemoryKind::Texture;
     }
 
-    uint64 RHIMemoryLedger::computeTextureLogicalBytes( const RHITextureDesc& desc )
+    uint64 RHIMemoryTracker::computeTextureLogicalBytes( const RHITextureDesc& desc )
     {
         if ( desc._width == 0 || desc._height == 0 )
             return kRHIMemoryUnknownBytes;
@@ -99,7 +99,7 @@ namespace sw
         // 깊이 첨부는 서술의 포맷과 상관없이 D24S8 로 만든다(블록 표는 깊이를 "업로드 대상 아님" 으로 0 바이트라 한다).
         RHIFormatBlockInfo block = getRHIFormatBlockInfo( desc._format );
         if ( desc._bIsDepthStencil != SW_FALSE )
-            block = RHIFormatBlockInfo{ 1, 1, static_cast<uint32>( RHIMemoryLedgerInternal::kDepthStencilTexelBytes ) };
+            block = RHIFormatBlockInfo{ 1, 1, static_cast<uint32>( RHIMemoryTrackerInternal::kDepthStencilTexelBytes ) };
         if ( block._blockBytes == 0 )
             return kRHIMemoryUnknownBytes;
 
@@ -117,7 +117,7 @@ namespace sw
         return sliceBytes * sliceCount;
     }
 
-    RHIMemoryLedger::RHIMemoryLedger()
+    RHIMemoryTracker::RHIMemoryTracker()
         : _mutex{}
         , _arrMapIDToEntry{}
         , _arrStat{}
@@ -126,12 +126,12 @@ namespace sw
     {
     }
 
-    void RHIMemoryLedger::recordAllocation( const RHIMemoryKey& key, RHIMemoryKind kind, uint64 bytes )
+    void RHIMemoryTracker::recordAllocation( const RHIMemoryKey& key, RHIMemoryKind kind, uint64 bytes )
     {
-        const uint32 spaceIndex        = static_cast<uint32>( key._space );
-        const uint32 kindIndex         = static_cast<uint32>( kind );
-        const bool   bInvalidLedgerKey = spaceIndex >= kRHIMemoryKeySpaceCount || kindIndex >= kRHIMemoryKindCount || key._id == 0;
-        if ( bInvalidLedgerKey )
+        const uint32 spaceIndex  = static_cast<uint32>( key._space );
+        const uint32 kindIndex   = static_cast<uint32>( kind );
+        const bool   bInvalidKey = spaceIndex >= kRHIMemoryKeySpaceCount || kindIndex >= kRHIMemoryKindCount || key._id == 0;
+        if ( bInvalidKey )
             return;
 
         ScopedLock<mutex>                 lock{ _mutex };
@@ -160,7 +160,7 @@ namespace sw
         }
     }
 
-    void RHIMemoryLedger::recordFree( const RHIMemoryKey& key )
+    void RHIMemoryTracker::recordFree( const RHIMemoryKey& key )
     {
         const uint32 spaceIndex = static_cast<uint32>( key._space );
         if ( spaceIndex >= kRHIMemoryKeySpaceCount )
@@ -175,7 +175,7 @@ namespace sw
         mapIDToEntry.erase( entryIt );
     }
 
-    RHIMemoryKindStats RHIMemoryLedger::getStats( RHIMemoryKind kind ) const
+    RHIMemoryKindStats RHIMemoryTracker::getStats( RHIMemoryKind kind ) const
     {
         const uint32 kindIndex = static_cast<uint32>( kind );
         if ( kindIndex >= kRHIMemoryKindCount )
@@ -184,7 +184,7 @@ namespace sw
         return _arrStat[kindIndex];
     }
 
-    uint64 RHIMemoryLedger::getTrackedBytes() const
+    uint64 RHIMemoryTracker::getTrackedBytes() const
     {
         ScopedLock<mutex> lock{ _mutex };
         uint64            total{ 0 };
@@ -195,7 +195,7 @@ namespace sw
         return total;
     }
 
-    array<RHIMemoryKind, kRHIMemoryKindCount> RHIMemoryLedger::makeKindOrderByLiveBytes() const
+    array<RHIMemoryKind, kRHIMemoryKindCount> RHIMemoryTracker::makeKindOrderByLiveBytes() const
     {
         // 정렬하는 동안 다른 스레드가 값을 바꿔도 비교가 흔들리지 않게 한 번 읽어 둔다.
         array<uint64, kRHIMemoryKindCount>        arrLiveBytes{};
@@ -213,19 +213,19 @@ namespace sw
         return arrKind;
     }
 
-    RHIMemoryBudget RHIMemoryLedger::getDriverBudget() const
+    RHIMemoryBudget RHIMemoryTracker::getDriverBudget() const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _driverBudget;
     }
 
-    void RHIMemoryLedger::setDriverBudget( const RHIMemoryBudget& budget )
+    void RHIMemoryTracker::setDriverBudget( const RHIMemoryBudget& budget )
     {
         ScopedLock<mutex> lock{ _mutex };
         _driverBudget = budget;
     }
 
-    RHIMemorySummary RHIMemoryLedger::makeSummary() const
+    RHIMemorySummary RHIMemoryTracker::makeSummary() const
     {
         RHIMemorySummary summary{};
         {
@@ -248,7 +248,7 @@ namespace sw
         return summary;
     }
 
-    void RHIMemoryLedger::report( [[maybe_unused]] const utf8* pBackendName ) const
+    void RHIMemoryTracker::report( [[maybe_unused]] const utf8* pBackendName ) const
     {
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         const RHIMemorySummary summary = makeSummary();
@@ -258,17 +258,17 @@ namespace sw
             liveCount += getStats( static_cast<RHIMemoryKind>( kindIndex ) )._liveCount;
         }
 
-        const uint64 trackedX10 = RHIMemoryLedgerInternal::toMegabytesX10( summary._trackedBytes );
-        SW_LOG_INFO_ID( "RHIMemoryLedger.GPUMemoryKindLive", "[Profile] GPU memory by kind (live, %# · %# size)  %#.%# MB in %# resources  + %# of unknown size", pBackendName,
+        const uint64 trackedX10 = RHIMemoryTrackerInternal::toMegabytesX10( summary._trackedBytes );
+        SW_LOG_INFO_ID( "RHIMemoryTracker.GPUMemoryKindLive", "[Profile] GPU memory by kind (live, %# · %# size)  %#.%# MB in %# resources  + %# of unknown size", pBackendName,
                         getSizeBasisName( summary._sizeBasis ), trackedX10 / 10, trackedX10 % 10, liveCount, summary._unknownSizeCount );
         for ( const RHIMemoryKind kind : makeKindOrderByLiveBytes() )
         {
             const RHIMemoryKindStats stats = getStats( kind );
             if ( stats._liveBytes == 0 && stats._unknownSizeCount == 0 )
                 continue;
-            const uint64 megabytesX10 = RHIMemoryLedgerInternal::toMegabytesX10( stats._liveBytes );
+            const uint64 megabytesX10 = RHIMemoryTrackerInternal::toMegabytesX10( stats._liveBytes );
             const uint64 sharePermill = summary._trackedBytes == 0 ? 0 : ( stats._liveBytes * 1000 ) / summary._trackedBytes;
-            SW_LOG_INFO_ID( "RHIMemoryLedger.MBResourcesUnknownSize", "[Profile]   %#  %#.%# MB  %#.%#%%  %# resources  + %# of unknown size", getKindName( kind ), megabytesX10 / 10, megabytesX10 % 10,
+            SW_LOG_INFO_ID( "RHIMemoryTracker.MBResourcesUnknownSize", "[Profile]   %#  %#.%# MB  %#.%#%%  %# resources  + %# of unknown size", getKindName( kind ), megabytesX10 / 10, megabytesX10 % 10,
                             sharePermill / 10, sharePermill % 10, stats._liveCount, stats._unknownSizeCount );
         }
 
@@ -276,26 +276,26 @@ namespace sw
         utf8                   arrUsage[constant::buffer::kMax32]{};
         utf8                   arrBudget[constant::buffer::kMax32]{};
         utf8                   arrAvailable[constant::buffer::kMax32]{};
-        RHIMemoryLedgerInternal::formatMegabytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsage, constant::buffer::kMax32 );
-        RHIMemoryLedgerInternal::formatMegabytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudget, constant::buffer::kMax32 );
-        RHIMemoryLedgerInternal::formatMegabytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailable, constant::buffer::kMax32 );
+        RHIMemoryTrackerInternal::formatMegabytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsage, constant::buffer::kMax32 );
+        RHIMemoryTrackerInternal::formatMegabytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudget, constant::buffer::kMax32 );
+        RHIMemoryTrackerInternal::formatMegabytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailable, constant::buffer::kMax32 );
         const utf8* pScope = budget._bUsageKnown == SW_FALSE          ? ""
                            : budget._scope == RHIMemoryScope::Process ? " (this process)"
                                                                       : " (whole device, including other processes)";
-        SW_LOG_INFO_ID( "RHIMemoryLedger.DriverUsageBudgetAvailable", "[Profile]   driver: usage %#%#  budget %#  available %#", arrUsage, pScope, arrBudget, arrAvailable );
+        SW_LOG_INFO_ID( "RHIMemoryTracker.DriverUsageBudgetAvailable", "[Profile]   driver: usage %#%#  budget %#  available %#", arrUsage, pScope, arrBudget, arrAvailable );
         if ( summary._bOutsideKnown == SW_FALSE )
         {
-            SW_LOG_INFO_ID( "RHIMemoryLedger.OutsideLedgerSwapChain", "[Profile]   (outside the ledger - swap chain, driver internals, device resources not in the ledger)  unknown - no driver usage for this process" );
+            SW_LOG_INFO_ID( "RHIMemoryTracker.OutsideTrackerSwapChain", "[Profile]   (outside the tracker - swap chain, driver internals, device resources not in the tracker)  unknown - no driver usage for this process" );
             return;
         }
         const bool   bNegative  = summary._outsideBytes < 0;
-        const uint64 outsideX10 = RHIMemoryLedgerInternal::toMegabytesX10( static_cast<uint64>( bNegative ? -summary._outsideBytes : summary._outsideBytes ) );
-        SW_LOG_INFO_ID( "RHIMemoryLedger.OutsideLedgerSwapChain2", "[Profile]   (outside the ledger - swap chain, driver internals, device resources not in the ledger)  %#%#.%# MB", bNegative ? "-" : "", outsideX10 / 10,
+        const uint64 outsideX10 = RHIMemoryTrackerInternal::toMegabytesX10( static_cast<uint64>( bNegative ? -summary._outsideBytes : summary._outsideBytes ) );
+        SW_LOG_INFO_ID( "RHIMemoryTracker.OutsideTrackerSwapChain2", "[Profile]   (outside the tracker - swap chain, driver internals, device resources not in the tracker)  %#%#.%# MB", bNegative ? "-" : "", outsideX10 / 10,
                         outsideX10 % 10 );
 #endif
     }
 
-    void RHIMemoryLedger::subtractLocked( const LiveEntry& entry )
+    void RHIMemoryTracker::subtractLocked( const LiveEntry& entry )
     {
         RHIMemoryKindStats& stat = _arrStat[static_cast<uint32>( entry._kind )];
         if ( entry._bytes == kRHIMemoryUnknownBytes )

@@ -14,7 +14,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -75,9 +75,9 @@ namespace sw
         /** @brief 슬롯을 하나 더 만듭니다. 못 만들면 false 입니다. */
         bool appendSlot( IRHIDevice* pDevice );
 
-        vector<RHIConstantBufferSlot> _listSlot;
-        atomic<uint32>                _cursor;
-        atomic<uint32>                _highWater;
+        vector<RHIConstantBuffer> _listSlot;
+        atomic<uint32>            _cursor;
+        atomic<uint32>            _highWater;
         /// @brief 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치입니다.
         atomic<uint8> _bExhaustedLogged;
     };

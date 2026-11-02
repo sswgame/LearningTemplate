@@ -17,7 +17,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Sky/SkyGradient.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 
@@ -77,9 +77,9 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
     private:
-        RHIStructuredBufferSlot                  _voxelBuffer;    ///< 볼륨들의 점유 복셀 단어(uint, 컴퓨트 t2)
-        RHIStructuredBufferSlot                  _historyBuffer;  ///< 프로브마다 원시 SH9 계수 float4 일곱(컴퓨트 u0, 프레임을 넘어 남는다)
-        RHIStructuredBufferSlot                  _paramBuffer;    ///< 입력 행(컴퓨트 t1)
+        RHIStructuredBuffer                      _voxelBuffer;    ///< 볼륨들의 점유 복셀 단어(uint, 컴퓨트 t2)
+        RHIStructuredBuffer                      _historyBuffer;  ///< 프로브마다 원시 SH9 계수 float4 일곱(컴퓨트 u0, 프레임을 넘어 남는다)
+        RHIStructuredBuffer                      _paramBuffer;    ///< 입력 행(컴퓨트 t1)
         vector<float4>                           _listRowScratch; ///< 입력 행 업로드 임시 버퍼
         vector<shared_ptr<const SceneVoxelGrid>> _listHeldGrid;   ///< 지금 복셀 버퍼에 올라간 격자들(포인터 비교가 믿을 수 있도록 붙들고 있는다)
         vector<uint64>                           _listHistoryKey; ///< 기록이 만들어진 볼륨 구성(볼륨 번호 · 프로브 수가 번갈아) - 달라지면 기록을 0 으로 되돌린다

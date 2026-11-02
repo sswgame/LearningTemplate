@@ -8,7 +8,7 @@
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
@@ -183,11 +183,11 @@ namespace sw
             // 옛 힙은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다. 펜스 뒤에 놓아 준다.
             if ( slot._uploadHeap != nullptr )
             {
-                Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap = slot._uploadHeap;
-                RHIMemoryLedger*                       pLedger = &_pDevice->getMemoryLedger();
-                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pLedger]()
+                Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap  = slot._uploadHeap;
+                RHIMemoryTracker*                      pTracker = &_pDevice->getMemoryTracker();
+                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pTracker]()
                 {
-                    pLedger->recordFree( RHIMemoryKey::makeDeviceObject( oldHeap.Get() ) );
+                    pTracker->recordFree( RHIMemoryKey::makeDeviceObject( oldHeap.Get() ) );
                 } ),
                                                            _pDevice->_fenceValue );
                 slot._uploadHeap   = nullptr;
@@ -204,8 +204,8 @@ namespace sw
                 return false;
             }
 
-            _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( newHeap.Get() ), RHIMemoryKind::Staging,
-                                                          _pDevice->computeAllocationBytes( newHeap.Get() ) );
+            _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( newHeap.Get() ), RHIMemoryKind::Staging,
+                                                           _pDevice->computeAllocationBytes( newHeap.Get() ) );
             slot._uploadHeap = newHeap;
             slot._pMapped    = pMapped;
             slot._capacity   = newCapacity;
@@ -375,7 +375,7 @@ namespace sw
         D3D12RHIDevice::D3D12TransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
         ID3D12GraphicsCommandList* pList = job._list.Get();
@@ -418,10 +418,10 @@ namespace sw
         const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureUpload" );
         if ( serial == 0 )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
-        ring._ledger.markSubmitted( span, serial );
+        ring._allocator.markSubmitted( span, serial );
         _pDevice->noteTextureTransfer( texture, serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -460,7 +460,7 @@ namespace sw
         D3D12RHIDevice::D3D12TransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
         ID3D12GraphicsCommandList* pList = job._list.Get();
@@ -503,10 +503,10 @@ namespace sw
         const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureRegionUpload" );
         if ( serial == 0 )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
-        ring._ledger.markSubmitted( span, serial );
+        ring._allocator.markSubmitted( span, serial );
         _pDevice->noteTextureTransfer( texture, serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -805,7 +805,7 @@ namespace sw
     RHIBufferHandle D3D12RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
     {
         uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
         if ( bInvalidReadbackRequest )
             return 0;
         const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
@@ -914,7 +914,7 @@ namespace sw
                           "CreateCommittedResource" ) == false )
             return 0;
 
-        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, RHIMemoryLedger::classifyTexture( desc ) );
+        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, RHIMemoryTracker::classifyTexture( desc ) );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );
         D3D12RHIDevice::OffscreenTextureRecord record{};
         record._state      = D3D12_RESOURCE_STATE_COMMON;
@@ -1539,12 +1539,12 @@ namespace sw
 
     RHIRenderPassHandle D3D12RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
     {
-        return _pDevice->_renderPassLedger.add( desc );
+        return _pDevice->_renderPassRegistry.add( desc );
     }
 
     void D3D12RHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
     {
-        _pDevice->_renderPassLedger.retire( pass );
+        _pDevice->_renderPassRegistry.retire( pass );
     }
 } // namespace sw
 #endif

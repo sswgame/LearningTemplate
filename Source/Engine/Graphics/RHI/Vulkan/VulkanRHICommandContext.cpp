@@ -343,11 +343,11 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 첨부 전이 · 렌더링 정보 채우기 · 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassOpen VulkanRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassBeginResult VulkanRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
 
         const bool   bBindColor = beginInfo._bBindColor != SW_FALSE;
         const uint32 colorCount = bBindColor ? ( beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u ) : 0u;
@@ -355,7 +355,7 @@ namespace sw
 
         // 깊이 타깃이 있으면 깊이 전용 패스도 합성 경로를 쓴다.
         if ( bBindColor == 0 && bHasDepth == false )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
 
         RHITextureHandle colorHandles[kMaxColorAttachments]{};
         for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -400,7 +400,7 @@ namespace sw
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._arrColor[colorIndex] );
                 if ( pTex == nullptr )
-                    return RHIRenderPassOpen::Failed;
+                    return RHIRenderPassBeginResult::Failed;
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
             }
@@ -408,14 +408,14 @@ namespace sw
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._depth );
                 if ( pTex == nullptr )
-                    return RHIRenderPassOpen::Failed;
+                    return RHIRenderPassBeginResult::Failed;
                 const uint32 aspect = _pDevice->depthAspectMask();
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
             }
 
             VulkanRHIRenderPassCache::CompositeRecord composite{};
             if ( _pDevice->ensureCompositeFramebuffer( key, composite ) == false )
-                return RHIRenderPassOpen::Failed;
+                return RHIRenderPassBeginResult::Failed;
 
             renderPass  = composite._renderPass;
             framebuffer = composite._framebuffer;
@@ -441,7 +441,7 @@ namespace sw
                 VulkanRHIDevice::VulkanTextureRecord* pTex                      = _pDevice->resolveTexture( colorTarget );
                 const bool                            bColorTargetNotRenderable = pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE;
                 if ( bColorTargetNotRenderable )
-                    return RHIRenderPassOpen::Failed;
+                    return RHIRenderPassBeginResult::Failed;
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
@@ -454,7 +454,7 @@ namespace sw
                 const VulkanRHISwapChain* pSwapChain = _pDevice->useSwapChain( beginInfo._pSwapChain );
                 if ( _pDevice->_renderPass == VK_NULL_HANDLE || pSwapChain == nullptr || pSwapChain->getCurrentFramebuffer() == VK_NULL_HANDLE )
                 {
-                    return RHIRenderPassOpen::BackedOff; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
+                    return RHIRenderPassBeginResult::NoBackBuffer; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
                 }
                 framebuffer = pSwapChain->getCurrentFramebuffer();
                 extent      = { pSwapChain->getExtentWidth(), pSwapChain->getExtentHeight() };
@@ -500,7 +500,7 @@ namespace sw
         viewport._minDepth = 0.0f;
         viewport._maxDepth = 1.0f;
         setViewport( viewport );
-        return RHIRenderPassOpen::Opened;
+        return RHIRenderPassBeginResult::Begun;
     }
 
     void VulkanRHICommandContext::endRenderPassNative()

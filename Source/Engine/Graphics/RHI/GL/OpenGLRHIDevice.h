@@ -15,7 +15,7 @@
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
@@ -286,7 +286,7 @@ namespace sw
         /**
          * @brief 업로드 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다(복사는 컨텍스트 밖에서 한다).
          * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
-         *          링보다 큰 한 장은 장부가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
+         *          링보다 큰 한 장은 할당기가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
          * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
          *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::settleAllocation` 한 곳).
          */
@@ -315,22 +315,22 @@ namespace sw
          */
         [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
 
-        /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::_bSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 장부가 단독 구간을 한 번에 하나만 내준다.
+        /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::_bSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 할당기가 단독 구간을 한 번에 하나만 내준다.
         struct OpenGLSoloTransferBuffer
         {
             uint8* _pMapped{ nullptr }; ///< 영속 매핑 주소. 버퍼가 없으면 nullptr
             uint32 _buffer{ 0 };        ///< GL 버퍼 이름. 0 이면 없다
         };
         /**
-         * @brief 장부가 내준 단독 구간 @p span 에 그 크기의 영속 매핑 버퍼를 만들어 붙입니다. 컨텍스트를 빌린다(이미 쥐었으면 그대로).
-         * @details 앞선 단독 구간의 버퍼가 아직 남아 있으면(장부는 이미 돌려받았다) 먼저 지운다. 만든 버퍼는 메모리 장부의 Staging 에 올린다.
-         * @return 붙였으면 `Accepted`. 컨텍스트를 얻지 못하면 `Busy`, 버퍼를 만들지 못하면 `Rejected` 이고 두 경우 모두 구간을 장부에 돌려준다.
+         * @brief 할당기가 내준 단독 구간 @p span 에 그 크기의 영속 매핑 버퍼를 만들어 붙입니다. 컨텍스트를 빌린다(이미 쥐었으면 그대로).
+         * @details 앞선 단독 구간의 버퍼가 아직 남아 있으면(할당기는 이미 돌려받았다) 먼저 지운다. 만든 버퍼는 메모리 추적기의 Staging 에 올린다.
+         * @return 붙였으면 `Accepted`. 컨텍스트를 얻지 못하면 `Busy`, 버퍼를 만들지 못하면 `Rejected` 이고 두 경우 모두 구간을 할당기에 돌려준다.
          */
         [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
                                                         const utf8* pCaller );
-        /** @brief 단독 버퍼를 지우고 메모리 장부에서 내립니다. 컨텍스트를 쥔 채 부릅니다. 버퍼가 없으면 아무것도 하지 않습니다. */
+        /** @brief 단독 버퍼를 지우고 메모리 추적기에서 내립니다. 컨텍스트를 쥔 채 부릅니다. 버퍼가 없으면 아무것도 하지 않습니다. */
         void deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo );
-        /** @brief 장부가 단독 구간을 돌려받았으면 그 버퍼를 지웁니다. 컨텍스트를 쥔 채 `retireFinishedTransfers` 가 부릅니다. */
+        /** @brief 할당기가 단독 구간을 돌려받았으면 그 버퍼를 지웁니다. 컨텍스트를 쥔 채 `retireFinishedTransfers` 가 부릅니다. */
         void deleteIdleSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, uint64 completedSerial );
         /** @brief 업로드 구간 @p span 의 바이트를 쓸 매핑 주소입니다(단독 구간이면 단독 버퍼의 시작). */
         [[nodiscard]] uint8* getStagingBytes( const RHIStagingSpan& span ) const;
@@ -348,7 +348,7 @@ namespace sw
         /** @brief 불투명 핸들로 GLuint 이름을 찾습니다. */
         uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
         /**
-         * @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 항목에 `sizeBytes` 를 올리는 유일한 지점입니다.
+         * @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 `sizeBytes` 를 올리는 유일한 지점입니다.
          * @param sizeBytes `glBufferData` 에 준 크기입니다(논리 크기이며, GL 에는 할당 크기를 물을 API 가 없습니다).
          */
         RHIBufferHandle storeGlBuffer( uint32 glName, uint32 sizeBytes );
@@ -519,7 +519,7 @@ namespace sw
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
         RHIHandleTable<OpenGLPipelineStateRecord> _pipelineStates;
-        RHIRenderPassLedger                       _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
+        RHIRenderPassRegistry                     _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 이고, 비면 nullptr 입니다.
@@ -533,15 +533,15 @@ namespace sw
         RHITransferFenceQueue<void*> _transferQueue;
         /// @brief 아직 가져가지 않은 텍스처 읽기가 결과를 받는 되읽기 링 구간입니다. 바이트는 펜스가 지난 뒤 `takeTextureReadback` 이 컨텍스트 밖에서 복사한다.
         RHIPendingReadbackTable<RHIStagingSpan> _readbackTable;
-        /// @brief 업로드 스테이징 링의 구간 장부입니다. 구간은 전송 시리얼이 워터마크를 지나면 돌아옵니다(`_transferSerials`).
+        /// @brief 업로드 스테이징 링의 구간 할당기입니다. 구간은 전송 시리얼이 워터마크를 지나면 돌아옵니다(`_transferSerials`).
         RHIStagingAllocator _stagingRing;
-        /// @brief 링의 영속 매핑 주소입니다(`GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 어느 스레드에서나 장부가 내준 구간에만 씁니다. 링이 없으면 nullptr 입니다.
+        /// @brief 링의 영속 매핑 주소입니다(`GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 어느 스레드에서나 할당기가 내준 구간에만 씁니다. 링이 없으면 nullptr 입니다.
         uint8* _pStagingRingMapped;
-        /// @brief 텍스처 되읽기 링의 구간 장부입니다. 구간은 시리얼이 아니라 `takeTextureReadback`(`free`) · `discardTextureReadback`(`markSubmitted`)으로 돌아옵니다.
+        /// @brief 텍스처 되읽기 링의 구간 할당기입니다. 구간은 시리얼이 아니라 `takeTextureReadback`(`free`) · `discardTextureReadback`(`markSubmitted`)으로 돌아옵니다.
         RHIStagingAllocator _readbackRing;
         /// @brief 되읽기 링의 영속 매핑 주소입니다(`GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 펜스가 지난 구간만 읽습니다. 링이 없으면 nullptr 입니다.
         const uint8* _pReadbackRingMapped;
-        /// @brief 업로드 링보다 큰 한 장의 일회성 버퍼입니다. 컨텍스트를 쥔 스레드만 만들고 지우며, 장부가 단독 구간을 내준 동안은 바뀌지 않는다.
+        /// @brief 업로드 링보다 큰 한 장의 일회성 버퍼입니다. 컨텍스트를 쥔 스레드만 만들고 지우며, 할당기가 단독 구간을 내준 동안은 바뀌지 않는다.
         OpenGLSoloTransferBuffer _stagingSolo;
         /// @brief 되읽기 링보다 큰 한 장의 일회성 버퍼입니다. 규칙은 `_stagingSolo` 와 같다.
         OpenGLSoloTransferBuffer _readbackSolo;

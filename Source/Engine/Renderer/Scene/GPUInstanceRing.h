@@ -51,7 +51,7 @@ namespace sw
          * @param listDirtyRun 전부가 아니면 직전 발행에 비해 바뀐 구간
          * @return 발행본. 쓰기 슬롯이 없었으면 마지막 발행본 그대로입니다.
          */
-        shared_ptr<const vector<GPUInstance>> publish( bool bAllDirty, const vector<GPUInstanceRun>& listDirtyRun );
+        shared_ptr<const vector<GPUInstance>> publish( bool bAllDirty, const vector<GPUInstanceDirtyRange>& listDirtyRun );
 
         /**
          * @brief 부분 갱신 전에 쓰기 슬롯을 마지막 발행본에 맞춥니다.
@@ -67,9 +67,9 @@ namespace sw
         /** @brief 발행 하나가 직전 발행에 비해 바꾼 구간입니다. 낡은 슬롯을 따라잡게 할 때 읽습니다. */
         struct PublishRecord
         {
-            uint64                 _build{ 0 };
-            uint8                  _bAll{ SW_FALSE };
-            vector<GPUInstanceRun> _listRun;
+            uint64                        _build{ 0 };
+            uint8                         _bAll{ SW_FALSE };
+            vector<GPUInstanceDirtyRange> _listRun;
         };
 
         /// @brief 슬롯들입니다. 각 슬롯의 `use_count()` 가 곧 "누가 읽고 있나" 입니다.

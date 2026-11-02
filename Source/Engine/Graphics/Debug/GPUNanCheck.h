@@ -15,7 +15,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -76,14 +76,14 @@ namespace sw
         /// @brief 슬롯의 이름을 찾거나 새로 잡습니다. 슬롯이 모두 찼으면 kMaxSlot 입니다.
         uint32 getOrCreateSlot( string_view name );
 
-        IRHIDevice*             _pDevice;
-        RHIStructuredBufferSlot _buffer;
-        AsyncBufferReadback     _readback;
-        vector<string>          _listSlotName;
-        vector<uint32>          _listPreviousCount; ///< 슬롯마다 지난번까지 읽은 카운터(NaN · Inf 순서로 둘씩)
-        uint64                  _frameSerial;
-        uint64                  _reportedNanCount;
-        uint64                  _reportedInfCount;
-        uint8                   _bScannedThisFrame;
+        IRHIDevice*         _pDevice;
+        RHIStructuredBuffer _buffer;
+        AsyncBufferReadback _readback;
+        vector<string>      _listSlotName;
+        vector<uint32>      _listPreviousCount; ///< 슬롯마다 지난번까지 읽은 카운터(NaN · Inf 순서로 둘씩)
+        uint64              _frameSerial;
+        uint64              _reportedNanCount;
+        uint64              _reportedInfCount;
+        uint8               _bScannedThisFrame;
     };
 } // namespace sw

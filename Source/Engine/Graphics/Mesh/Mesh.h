@@ -12,8 +12,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/RHI/RHIDeviceBuffer.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/RHIResidentBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -439,8 +439,8 @@ namespace sw
         shared_ptr<const vector<float4>> _deformProgram SW_GUARDED_BY( _deformProgramMutex );
         mutable mutex                                   _deformProgramMutex;
         atomic<uint64>                                  _deformProgramGeneration{ 0 };
-        /** @brief 정점 · 인덱스 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIResidentBuffer). 둘은 함께 만들고 함께 놓는다. */
-        RHIResidentBuffer _vertex;
-        RHIResidentBuffer _index;
+        /** @brief 정점 · 인덱스 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIDeviceBuffer). 둘은 함께 만들고 함께 놓는다. */
+        RHIDeviceBuffer _vertex;
+        RHIDeviceBuffer _index;
     };
 } // namespace sw

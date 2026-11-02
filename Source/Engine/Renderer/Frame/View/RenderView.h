@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/Component/CameraDepthOfFieldValues.h"
 #include "Engine/Object/Component/CameraPostProcessValues.h"
@@ -319,12 +319,12 @@ namespace sw
          * @details **뷰마다 하나여야 한다.** 하나를 나눠 쓰면 두 번째 업로드가 첫 번째 디스패치가 읽을
          *          내용을 덮어쓴다. CPU 는 디스패치 사이에 쓰지만 GPU 는 제출 뒤에 읽기 때문이다.
          */
-        RHIConstantBufferSlot _cullCb;
+        RHIConstantBuffer _cullCb;
         /**
          * @brief 이 뷰 전용 인스턴스 정렬 상수 버퍼입니다(투명 깊이 정렬이며, 정렬 키가 이 뷰의 눈까지의 거리입니다).
          * @details 컬링 상수 버퍼와 같은 이유로 뷰마다 하나다. 하나를 나눠 쓰면 모든 뷰가 마지막 뷰의 눈 위치로 정렬한다.
          */
-        RHIConstantBufferSlot _sortCb;
+        RHIConstantBuffer _sortCb;
 
         /** @brief 컬링을 돌릴 준비가 되었는지(상수 버퍼가 있는지) 반환합니다. */
         bool isReadyForCulling() const { return _cullCb.isValid(); }

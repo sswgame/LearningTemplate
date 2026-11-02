@@ -5,7 +5,7 @@
  *          곧 GPU 타임라인의 순서다. 애니메이션이 바운드를 바꾸고, 컬링이 그 바운드로 거르고, 정렬이 컬링 결과를
  *          되돌린다. 그래서 순서와 배리어가 한 파일 안에 나란히 보여야 한다.
  *
- *          컴퓨트 패스를 감싸는 래퍼 클래스는 두지 않는다. 각자의 상수 버퍼는 `RHIConstantBufferSlot` 이고 프레임 데이터(`FrameRenderState::_deform` · 뷰)에 있다.
+ *          컴퓨트 패스를 감싸는 래퍼 클래스는 두지 않는다. 각자의 상수 버퍼는 `RHIConstantBuffer` 이고 프레임 데이터(`FrameRenderState::_deform` · 뷰)에 있다.
  *          기록은 `FramePassExecutor` 가 한다. 실시간 프로브 갱신 디스패치도 같은 프리패스 리스트라 여기 둔다.
  */
 #include "pch.h"
@@ -445,7 +445,7 @@ namespace sw
         const uint32 viewCount = _state._lightBuffer.getGPUGridViewCount();
         if ( viewCount == 0 || _pCmd == nullptr )
             return;
-        const RHIStructuredBufferSlot& gridBuffer = _state._lightBuffer.getGPUGridBuffer();
+        const RHIStructuredBuffer& gridBuffer = _state._lightBuffer.getGPUGridBuffer();
         _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::LightGrid ) );
         // g_LightGridLights(t0) / g_LightGridViews(t1) / g_LightGridRW(u0). light_grid.hlsl 레지스터와 1:1 로 대응한다. 상수 버퍼는 없다(뷰마다의 값은 t1).

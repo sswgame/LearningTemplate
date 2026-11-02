@@ -11,8 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/RHIDeviceBuffer.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/RHIResidentBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 핸들을 비우고 다음 `sync` 가 다시 올리게 합니다. */
         void forgetHandles();
 
-        RHIResidentBuffer                    _constant;
+        RHIDeviceBuffer                      _constant;
         uint32                               _constantByteSize; ///< `_constant` 를 만든 크기. 바이트가 이보다 커지면 다시 만든다(크기를 넘긴 update 는 버퍼 밖을 쓴다)
         RHIDescriptorIndex                   _descriptorIndex;
         shared_ptr<const MaterialRenderData> _uploaded; ///< 마지막으로 올린 사본. 같은 사본이면 다시 올리지 않는다

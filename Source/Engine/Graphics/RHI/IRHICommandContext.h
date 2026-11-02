@@ -7,12 +7,12 @@
 
 namespace sw
 {
-    /** @brief 렌더 패스를 열려고 한 결과입니다(`IRHICommandContext::beginRenderPassNative`). */
-    enum class RHIRenderPassOpen : uint8
+    /** @brief 렌더 패스를 시작하려고 한 결과입니다(`IRHICommandContext::beginRenderPassNative`). */
+    enum class RHIRenderPassBeginResult : uint8
     {
-        Opened,    ///< 열었다 — 드로우를 받는다
-        BackedOff, ///< 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
-        Failed,    ///< 타깃을 걸지 못했다(없는 핸들 · 면 범위 밖) — 이 패스의 드로우는 알리고 버린다
+        Begun,        ///< 시작했다 — 드로우를 받는다
+        NoBackBuffer, ///< 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
+        Failed,       ///< 타깃을 걸지 못했다(없는 핸들 · 면 범위 밖) — 이 패스의 드로우는 알리고 버린다
     };
 
     /**
@@ -22,7 +22,7 @@ namespace sw
      *          - 패스는 겹치지 않는다. `beginRenderPass` 는 열린 패스를 먼저 닫는다.
      *          - **패스 밖의 일**(텍스처 · 버퍼 상태 전이, 블릿, 되읽기 복사, UAV 배리어, 컴퓨트 PSO · 디스패치)은 열린 패스를 먼저 닫는다 — Vulkan · D3D12 네이티브
      *            패스는 그 안에 배리어 · 복사 · 디스패치를 기록할 수 없다.
-     *          - **드로우는 열린 패스 안에서만** 나간다. 패스가 없으면 알리고 버린다(`RHI.DrawSkippedNoRenderPass`). 백버퍼가 없어 물러난 패스(`RHIRenderPassOpen::BackedOff`)만
+     *          - **드로우는 열린 패스 안에서만** 나간다. 패스가 없으면 알리고 버린다(`RHI.DrawSkippedNoRenderPass`). 백버퍼가 없던 패스(`RHIRenderPassBeginResult::NoBackBuffer`)만
      *            조용히 버린다.
      *          예전에는 백엔드마다 따로 지켜, Vulkan 만 패스 안의 업로드가 패스를 닫고 그 뒤 드로우를 조용히 버렸고(에디터 UI 가 화면에서 사라졌다) DX11 · DX12 · GL 은
      *          같은 위반이 그냥 지나가 시나리오가 놓쳤다. 이제 어느 백엔드로 돌려도 같은 위반이 같은 오류다. `beginCommandList` · `endCommandList` 는 리스트 쪽에만 뜻이 있다.
@@ -74,7 +74,7 @@ namespace sw
         /** @brief 진단 줄에 붙일 백엔드 이름입니다("DX12" 등). */
         virtual const utf8* getContextBackendName() const = 0;
         /** @brief 네이티브 패스를 엽니다. 열린 패스는 기반이 이미 닫았다. 상태 전이는 여기서 패스를 열기 전에 끝낸다. */
-        virtual RHIRenderPassOpen beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) = 0;
+        virtual RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) = 0;
         /** @brief 열린 네이티브 패스를 닫습니다. 기반이 열린 패스가 있을 때만 부른다. */
         virtual void endRenderPassNative()                                                                                                                                      = 0;
         virtual void drawNative( uint32 vertexCount, uint32 startVertex )                                                                                                       = 0;
@@ -95,10 +95,10 @@ namespace sw
         virtual void uavBarrierNative( RHIBufferHandle buffer )                                                                                                                 = 0;
 
     private:
-        /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 물러난 패스면 조용히, 아니면 알리고 false 입니다. */
+        /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 백버퍼가 없던 패스면 조용히, 아니면 알리고 false 입니다. */
         [[nodiscard]] bool isDrawAllowed() const;
 
         bool _bRenderPassOpen{ false };
-        bool _bRenderPassBackedOff{ false };
+        bool _bRenderPassNoBackBuffer{ false };
     };
 } // namespace sw

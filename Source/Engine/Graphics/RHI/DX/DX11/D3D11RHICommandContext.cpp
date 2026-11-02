@@ -132,10 +132,10 @@ namespace sw
             SW_FATAL( "D3D11 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO );
     }
 
-    RHIRenderPassOpen D3D11RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassBeginResult D3D11RHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
     {
         if ( _pContext == nullptr )
-            return RHIRenderPassOpen::Failed;
+            return RHIRenderPassBeginResult::Failed;
 
         ID3D11RenderTargetView* arrRTV[kMaxColorAttachments]{};
         uint32                  rtCount{ 0 };
@@ -207,7 +207,7 @@ namespace sw
         // 래스터라이저 상태가 가위를 늘 켜 두므로(PSO) 가위를 패스 전체로 되돌린다 — 앞 패스의 가위가 새지 않게.
         const D3D11_RECT scissor{ 0, 0, static_cast<LONG>( viewport.Width ), static_cast<LONG>( viewport.Height ) };
         _pContext->RSSetScissorRects( 1, &scissor );
-        return RHIRenderPassOpen::Opened;
+        return RHIRenderPassBeginResult::Begun;
     }
 
     /**

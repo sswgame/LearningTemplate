@@ -8,7 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
 namespace sw
 {
@@ -40,7 +40,7 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
         /** @brief 사각형 구조 버퍼입니다(SRV 는 캔버스 그리기, UAV 는 마커 투영이 씁니다). */
-        const RHIStructuredBufferSlot& getSlot() const { return _quadBuffer; }
+        const RHIStructuredBuffer& getSlot() const { return _quadBuffer; }
         /** @brief 마지막 `upload` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
         uint32 getMainQuadBase() const { return _mainQuadBase; }
         /** @brief 마지막 `upload` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 위치입니다. */
@@ -50,13 +50,13 @@ namespace sw
         /** @brief 화면 앵커를 버퍼 맨 앞에 업로드합니다. @p bForce 가 아니면 지난번과 같을 때 업로드하지 않습니다. */
         void uploadAnchors( IRHIDevice& device, const vector<CanvasAnchor>& listAnchor, bool bForce );
 
-        vector<CanvasQuad>      _listAnchorScratch;  ///< 앵커를 사각형 원소 형태(rect = x, y, 배율, -)로 옮긴 사본
-        vector<CanvasAnchor>    _listUploadedAnchor; ///< 버퍼 앞에 지금 있는 앵커(같으면 다시 업로드하지 않는다)
-        vector<CanvasQuad>      _listQuadScratch;    ///< 대상이 있을 때 주 출력과 대상 사각형을 이어 붙인 사본
-        vector<uint32>          _listTargetQuadBase; ///< 대상마다 버퍼 안 시작 위치
-        RHIStructuredBufferSlot _quadBuffer;
-        uint64                  _uploadedRevision; ///< 사각형 버퍼에 지금 있는 내용의 서명(주 출력과 대상 내용 번호, 0이면 없음)
-        uint32                  _uploadedQuadCount;
-        uint32                  _mainQuadBase; ///< 주 출력 사각형이 버퍼에서 시작하는 위치(앞의 앵커 수)
+        vector<CanvasQuad>   _listAnchorScratch;  ///< 앵커를 사각형 원소 형태(rect = x, y, 배율, -)로 옮긴 사본
+        vector<CanvasAnchor> _listUploadedAnchor; ///< 버퍼 앞에 지금 있는 앵커(같으면 다시 업로드하지 않는다)
+        vector<CanvasQuad>   _listQuadScratch;    ///< 대상이 있을 때 주 출력과 대상 사각형을 이어 붙인 사본
+        vector<uint32>       _listTargetQuadBase; ///< 대상마다 버퍼 안 시작 위치
+        RHIStructuredBuffer  _quadBuffer;
+        uint64               _uploadedRevision; ///< 사각형 버퍼에 지금 있는 내용의 서명(주 출력과 대상 내용 번호, 0이면 없음)
+        uint32               _uploadedQuadCount;
+        uint32               _mainQuadBase; ///< 주 출력 사각형이 버퍼에서 시작하는 위치(앞의 앵커 수)
     };
 } // namespace sw

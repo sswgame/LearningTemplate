@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -113,7 +113,7 @@ namespace sw
         , _listUAVSourceBuffer{}
         , _listUAVFree{}
         , _pipelineStates{}
-        , _renderPassLedger{}
+        , _renderPassRegistry{}
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
@@ -295,7 +295,7 @@ namespace sw
         record._buffer               = std::move( buffer );
         record._srv                  = std::move( srv );
         const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bufferDesc.ByteWidth );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bufferDesc.ByteWidth );
         return handle;
     }
 
@@ -323,8 +323,8 @@ namespace sw
         if ( record._texture == nullptr )
             return 0;
         const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ),
-                                            RHIMemoryLedger::computeTextureLogicalBytes( desc ) );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ),
+                                             RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
         return handle;
     }
 
@@ -371,8 +371,8 @@ namespace sw
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         SW_ASSERT( _texture == nullptr );
         _texture = std::move( texture );
-        // 장부 크기는 소스 바이트(논리 크기)다 — 드라이버가 행 간격을 늘린 실제 할당은 물을 API 가 없다.
-        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _texture.Get() ), RHIMemoryKind::Staging, sourceBytes );
+        // 추적기 크기는 소스 바이트(논리 크기)다 — 드라이버가 행 간격을 늘린 실제 할당은 물을 API 가 없다.
+        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( _texture.Get() ), RHIMemoryKind::Staging, sourceBytes );
     }
 
     void D3D11RHIDevice::UploadStaging::release()
@@ -381,8 +381,8 @@ namespace sw
             return;
         if ( _texture != nullptr )
         {
-            // 주소가 다른 자원에 다시 쓰이기 전에 장부에서 내린다.
-            _pDevice->getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _texture.Get() ) );
+            // 주소가 다른 자원에 다시 쓰이기 전에 추적기에서 내린다.
+            _pDevice->getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( _texture.Get() ) );
             _texture.Reset();
         }
         _pDevice->_uploadStagingBudget.release( _bytes );
@@ -488,8 +488,8 @@ namespace sw
         }
         _pHWnd            = static_cast<HWND>( pWindowHandle );
         _backBufferFormat = desc._format;
-        // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술로 계산한 논리 크기다.
-        getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
+        // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술로 계산한 논리 크기다.
+        getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
         // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
         if ( desc._stagingRingBytes == 0 )
         {

@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/GameTimer.h"
 
-#include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
@@ -35,9 +35,9 @@ namespace sw
     /** @brief 한 프레임의 정점 변형 컴퓨트가 쓰는 상태입니다. 렌더 스레드만 만집니다. */
     struct FrameMeshDeformState
     {
-        RHIConstantBufferSlot _instanceAnimationCb{}; ///< 인스턴스 애니메이션(instance_animation.hlsl) 상수 버퍼다.
-        RHIConstantBufferSlot _meshMorphCb{};         ///< 모프 디스패치 상수 버퍼다.
-        RHIConstantBufferSlot _meshSkinCb{};          ///< 스킨 디스패치 상수 버퍼다.
+        RHIConstantBuffer _instanceAnimationCb{}; ///< 인스턴스 애니메이션(instance_animation.hlsl) 상수 버퍼다.
+        RHIConstantBuffer _meshMorphCb{};         ///< 모프 디스패치 상수 버퍼다.
+        RHIConstantBuffer _meshSkinCb{};          ///< 스킨 디스패치 상수 버퍼다.
         /// @brief GPU 가 변형한 정점 풀입니다. RT 가 소유합니다(GPUMeshMorphPool 참고).
         GPUMeshMorphPool _meshMorphPool{};
         /// @brief 정점 애니메이션(VAT) 테이블 풀입니다. RT 가 소유합니다(GPUVertexAnimationPool 참고).

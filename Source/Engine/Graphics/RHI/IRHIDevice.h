@@ -28,7 +28,7 @@ namespace sw
     class IRHIResourceFactory;
     class IRHISwapChain;
     class IRHITimestampProvider;
-    class RHIMemoryLedger;
+    class RHIMemoryTracker;
 
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
     enum class RHIHandleKind : uint8
@@ -507,20 +507,20 @@ namespace sw
         void reportBarrierDuringRecording( const utf8* pWhat ) const;
 
         // ------------------------------------------------------------------------------
-        // 5) GPU 메모리: 자원 장부
+        // 5) GPU 메모리: 자원 추적기
         // ------------------------------------------------------------------------------
         /**
-         * @brief 이 디바이스가 만든 GPU 자원의 장부입니다. 백엔드가 자원을 만들 때와 실제로 해제할 때 기록하고, 엔진(프로파일 보고, 에디터 패널)이 읽습니다.
-         * @details 장부는 디바이스와 수명이 같다. 백엔드를 바꾸면 새 디바이스가 빈 장부로 시작한다.
+         * @brief 이 디바이스가 만든 GPU 자원의 추적기입니다. 백엔드가 자원을 만들 때와 실제로 해제할 때 기록하고, 엔진(프로파일 보고, 에디터 패널)이 읽습니다.
+         * @details 추적기는 디바이스와 수명이 같다. 백엔드를 바꾸면 새 디바이스가 빈 추적기로 시작한다.
          */
-        RHIMemoryLedger& getMemoryLedger() { return *_memoryLedger; }
-        /** @brief 읽기 전용 장부입니다. */
-        const RHIMemoryLedger& getMemoryLedger() const { return *_memoryLedger; }
+        RHIMemoryTracker& getMemoryTracker() { return *_memoryTracker; }
+        /** @brief 읽기 전용 추적기입니다. */
+        const RHIMemoryTracker& getMemoryTracker() const { return *_memoryTracker; }
         /**
-         * @brief 드라이버에게 GPU 메모리 사용량과 예산을 물어 장부에 기록합니다(`RHIMemoryLedger::getDriverBudget`). 백엔드가 물을 수 없으면 모든 항목이 "모름" 입니다.
+         * @brief 드라이버에게 GPU 메모리 사용량과 예산을 물어 추적기에 기록합니다(`RHIMemoryTracker::getDriverBudget`). 백엔드가 물을 수 없으면 모든 항목이 "모름" 입니다.
          * @details **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** GL 은 컨텍스트를 가진 채 묻는데, 다른 스레드에서 부르면 렌더 스레드가 그 프레임의
          *          컨텍스트를 놓을 때까지 기다린다. 엔진은 Present 뒤 몇 프레임마다 부르고(`RenderThread`), 읽는 쪽(프로파일 보고, 에디터 패널)은
-         *          장부에 기록된 마지막 값을 본다.
+         *          추적기에 기록된 마지막 값을 본다.
          */
         void refreshGPUMemoryBudget();
 
@@ -610,8 +610,8 @@ namespace sw
         RHIInitResult _initResult;
         /// @brief `shutdown` 을 끝냈다. 그 뒤에 쌓인 해제는 다음 `shutdown`(백엔드 소멸자)이 단언한다. `initialize` 가 지운다.
         bool _bShutDown;
-        /// @brief GPU 자원 장부입니다(getMemoryLedger 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
-        unique_ptr<RHIMemoryLedger> _memoryLedger;
+        /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
+        unique_ptr<RHIMemoryTracker> _memoryTracker;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
         unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
 

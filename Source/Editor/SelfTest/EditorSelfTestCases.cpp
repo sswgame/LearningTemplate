@@ -24,7 +24,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -754,7 +754,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // profiler.gpuMemoryTab: 프로파일러의 GPU Memory 탭이 장부 테이블(항목, 바이트, 비율, 개수, 크기 모름)을 그리는지 확인한다
+            // profiler.gpuMemoryTab: 프로파일러의 GPU Memory 탭이 추적기 테이블(항목, 바이트, 비율, 개수, 크기 모름)을 그리는지 확인한다
             // ------------------------------------------------------------------------------
             /** @brief 이 프레임에 그려진 테이블 중 첫 열이 `pFirstColumn` 이고 마지막 열이 `pLastColumn` 인 것을 찾습니다. 없으면 nullptr 입니다. */
             static ImGuiTable* findActiveTable( const utf8* pFirstColumn, const utf8* pLastColumn, int32 columnCount )
@@ -796,7 +796,7 @@ namespace sw::editor
                 return false;
             }
 
-            static EditorSelfTestStep runProfilerGPUMemoryTabDrawsTheLedger( EditorSelfTestContext& context )
+            static EditorSelfTestStep runProfilerGPUMemoryTabDrawsTheTracker( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kProfilerPanelID = ProfilerPanel::kPanelID;
                 constexpr uint32      kMaxStepCount    = 30;
@@ -819,9 +819,9 @@ namespace sw::editor
                     (void)queueTabFocus( "GPU Memory" );
                     return EditorSelfTestStep::Continue;
                 }
-                (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its ledger table" );
-                const RHIMemoryLedger& ledger = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice()->getMemoryLedger();
-                (void)context.expect( ledger.getTrackedBytes() > 0, "the GPU memory ledger is empty in a running editor" );
+                (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its tracker table" );
+                const RHIMemoryTracker& tracker = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice()->getMemoryTracker();
+                (void)context.expect( tracker.getTrackedBytes() > 0, "the GPU memory tracker is empty in a running editor" );
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, false );
                 return EditorSelfTestStep::Done;
             }
@@ -1003,7 +1003,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
     SW_EDITOR_SELF_TEST( HierarchyOffscreenRows, "hierarchy.offscreenRootsKeepTheirPlace", 610, &EditorSelfTestCasesInternal::runHierarchyOffscreenRootsKeepTheirPlace );
     SW_EDITOR_SELF_TEST( SceneViewResize, "sceneView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runSceneViewResizeEveryFrame );
-    SW_EDITOR_SELF_TEST( ProfilerGPUMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGPUMemoryTabDrawsTheLedger );
+    SW_EDITOR_SELF_TEST( ProfilerGPUMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGPUMemoryTabDrawsTheTracker );
     SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
     SW_EDITOR_SELF_TEST( DPIMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::runDPIMonitorScaleFollows );
 } // namespace sw::editor

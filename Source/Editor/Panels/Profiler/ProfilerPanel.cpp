@@ -29,7 +29,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/2D/SpriteComponent.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -910,15 +910,15 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoRHIDevice" ) );
             return;
         }
-        const RHIMemoryLedger& ledger  = pDevice->getMemoryLedger();
-        const RHIMemorySummary summary = ledger.makeSummary();
+        const RHIMemoryTracker& tracker = pDevice->getMemoryTracker();
+        const RHIMemorySummary  summary = tracker.makeSummary();
 
         fixed_string<constant::buffer::kMax32> arrBytesBuf;
         ProfilerPanelInternal::formatBytes( summary._trackedBytes, arrBytesBuf );
-        ImGui::Text( "%s - %s size", pDevice->getBackendName(), RHIMemoryLedger::getSizeBasisName( summary._sizeBasis ) );
+        ImGui::Text( "%s - %s size", pDevice->getBackendName(), RHIMemoryTracker::getSizeBasisName( summary._sizeBasis ) );
         ImGui::Text( "Tracked: %s  (+ %u of unknown size)", arrBytesBuf.c_str(), summary._unknownSizeCount );
 
-        if ( ImGui::CollapsingHeader( "Engine Ledger By Kind", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( "Tracked Memory By Kind", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             if ( ImGui::BeginTable( "GPUMemoryTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
             {
@@ -930,13 +930,13 @@ namespace sw::editor
                 ImGui::TableHeadersRow();
 
                 // 로그 보고와 같은 순서(바이트가 큰 항목부터)와 같은 이름을 쓴다. 크기 모름은 바이트 합에 넣지 않고 따로 센다.
-                for ( const RHIMemoryKind kind : ledger.makeKindOrderByLiveBytes() )
+                for ( const RHIMemoryKind kind : tracker.makeKindOrderByLiveBytes() )
                 {
-                    const RHIMemoryKindStats stats = ledger.getStats( kind );
+                    const RHIMemoryKindStats stats = tracker.getStats( kind );
                     ProfilerPanelInternal::formatBytes( stats._liveBytes, arrBytesBuf );
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::TextUnformatted( RHIMemoryLedger::getKindName( kind ) );
+                    ImGui::TextUnformatted( RHIMemoryTracker::getKindName( kind ) );
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted( arrBytesBuf.c_str() );
                     ImGui::TableNextColumn();
@@ -971,10 +971,10 @@ namespace sw::editor
             {
                 const bool bNegative = summary._outsideBytes < 0;
                 ProfilerPanelInternal::formatBytes( static_cast<uint64>( bNegative ? -summary._outsideBytes : summary._outsideBytes ), arrBytesBuf );
-                ImGui::Text( "Outside ledger (swap chain, driver, untracked): %s%s", bNegative ? "-" : "", arrBytesBuf.c_str() );
+                ImGui::Text( "Outside tracker (swap chain, driver, untracked): %s%s", bNegative ? "-" : "", arrBytesBuf.c_str() );
             }
             else
-                ImGui::TextUnformatted( "Outside ledger: Unknown (no per-process driver usage)" );
+                ImGui::TextUnformatted( "Outside tracker: Unknown (no per-process driver usage)" );
         }
     }
 

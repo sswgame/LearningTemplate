@@ -1,5 +1,5 @@
 /**
- * @file RHIBufferSize.h
+ * @file RHIBufferSizeUtil.h
  * @brief 32비트 API 에 넘길 버퍼 크기를 계산합니다. 넘치면 만들지 않습니다.
  * @details `elementSize * elementCount` 를 uint32 로 곱하면 넘쳐서 **조용히 작은 버퍼**가 만들어지고, 셰이더는 원래 개수만큼
  *          쓰므로 그 밖으로 나갑니다. DX12 는 `Width` 가 UINT64 라 넓히는 것으로 끝났지만 DX11 · GL · Vulkan 은 API 가 32비트
@@ -12,10 +12,10 @@
 namespace sw
 {
     /**
-     * @class RHIBufferSize
+     * @class RHIBufferSizeUtil
      * @brief 원소 크기 × 개수를 64비트로 곱해 32비트에 담기는지 확인합니다.
      */
-    class SW_API RHIBufferSize
+    class SW_API RHIBufferSizeUtil
     {
     public:
         /**

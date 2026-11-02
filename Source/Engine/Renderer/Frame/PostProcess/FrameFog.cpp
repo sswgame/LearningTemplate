@@ -171,10 +171,10 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "RT.Fog.Volume" );
         // t0 라이트 · t2 그리드는 라이트 버퍼가 없거나 뷰의 그리드가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 — DX12 는 빈 디스크립터를 읽으면 폴트).
-        const bool                     bLights = lightBuffer.isBindable();
-        const RHIStructuredBufferSlot* pGrid   = bLights ? lightBuffer.findGridBuffer() : nullptr;
-        const RHIDescriptorIndex       lights  = bLights ? lightBuffer.getBuffer()._srv : placeholderSRV;
-        const RHIDescriptorIndex       grid    = pGrid != nullptr ? pGrid->_srv : placeholderSRV;
+        const bool                 bLights = lightBuffer.isBindable();
+        const RHIStructuredBuffer* pGrid   = bLights ? lightBuffer.findGridBuffer() : nullptr;
+        const RHIDescriptorIndex   lights  = bLights ? lightBuffer.getBuffer()._srv : placeholderSRV;
+        const RHIDescriptorIndex   grid    = pGrid != nullptr ? pGrid->_srv : placeholderSRV;
 
         cmd.transitionBuffer( _fogVolumeBuffer._buffer, RHIBufferState::UnorderedAccess );
         cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) );

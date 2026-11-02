@@ -253,11 +253,11 @@ namespace sw
                                             _snapshot.getInstances().data() ) )
             {
                 const bool bRecreated          = ( _instances._buffer != bufferBefore );
-                const bool bFullInstanceUpload = bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRun.empty();
+                const bool bFullInstanceUpload = bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRange.empty();
                 if ( bFullInstanceUpload )
                     _instances.upload( pDevice, _snapshot.getInstances().data(), instanceCount * static_cast<uint32>( sizeof( GPUInstance ) ) );
                 else
-                    uploadDirtyInstanceRuns( pDevice, instanceCount );
+                    uploadDirtyInstanceRanges( pDevice, instanceCount );
             }
         }
 
@@ -309,14 +309,14 @@ namespace sw
         return true;
     }
 
-    void GPUScene::uploadDirtyInstanceRuns( IRHIDevice* pDevice, uint32 instanceCount )
+    void GPUScene::uploadDirtyInstanceRanges( IRHIDevice* pDevice, uint32 instanceCount )
     {
         // **바뀐 구간만, 그리고 한 번의 호출로 올린다.** 구간마다 따로 부르면 백엔드가
         // 스테이징 확보와 큐 제출을 그만큼 되풀이한다(DX12 에서 호출당 ~3.3 us).
         constexpr uint32 kStride = static_cast<uint32>( sizeof( GPUInstance ) );
         _listScratchCopyRegion.clear();
-        _listScratchCopyRegion.reserve( _snapshot._listDirtyInstanceRun.size() );
-        for ( const GPUInstanceRun& run : _snapshot._listDirtyInstanceRun )
+        _listScratchCopyRegion.reserve( _snapshot._listDirtyInstanceRange.size() );
+        for ( const GPUInstanceDirtyRange& run : _snapshot._listDirtyInstanceRange )
         {
             if ( run._count == 0 || run._start >= instanceCount )
                 continue;

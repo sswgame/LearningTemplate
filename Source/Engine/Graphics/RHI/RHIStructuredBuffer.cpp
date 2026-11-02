@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
 #include "Core/Log/LogOnce.h"
 
@@ -8,8 +8,8 @@
 
 namespace sw
 {
-    bool RHIStructuredBufferSlot::ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,
-                                                  bool bNeedsSRV, bool bNeedsUAV, const void* pInitialData )
+    bool RHIStructuredBuffer::ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,
+                                              bool bNeedsSRV, bool bNeedsUAV, const void* pInitialData )
     {
         if ( pDevice == nullptr || elementSize == 0 )
             return false;
@@ -36,7 +36,7 @@ namespace sw
         if ( _buffer == 0 )
         {
             // 프레임마다 다시 묻는 슬롯(GPUScene)이 있어 한 번만 남긴다 — 어느 슬롯인지는 부르는 쪽이 알린다.
-            SW_LOG_ERROR_ONCE_ID( "RHIStructuredBufferSlot.FailedCreateStructuredBuffer", "Failed to create a structured buffer (%# elements x %# bytes, usage %#) - the slot stays empty", elementCount, elementSize,
+            SW_LOG_ERROR_ONCE_ID( "RHIStructuredBuffer.FailedCreateStructuredBuffer", "Failed to create a structured buffer (%# elements x %# bytes, usage %#) - the slot stays empty", elementCount, elementSize,
                                   static_cast<uint32>( usage ) );
             return false;
         }
@@ -50,7 +50,7 @@ namespace sw
         return true;
     }
 
-    void RHIStructuredBufferSlot::upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset ) const
+    void RHIStructuredBuffer::upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset ) const
     {
         const bool bNothingToUpload = pDevice == nullptr || _buffer == 0 || pData == nullptr || byteSize == 0;
         if ( bNothingToUpload )
@@ -58,11 +58,11 @@ namespace sw
         pDevice->getResourceFactory()->updateStructuredBufferRange( _buffer, pData, byteSize, byteOffset );
     }
 
-    void RHIStructuredBufferSlot::release( IRHIDevice* pDevice )
+    void RHIStructuredBuffer::release( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr || _buffer == 0 )
         {
-            *this = RHIStructuredBufferSlot{};
+            *this = RHIStructuredBuffer{};
             return;
         }
 
@@ -72,6 +72,6 @@ namespace sw
         if ( _uav != kInvalidDescriptorIndex )
             pDevice->getResourceFactory()->unregisterBindlessUAV( _uav );
         pDevice->getResourceFactory()->destroyBuffer( _buffer );
-        *this = RHIStructuredBufferSlot{};
+        *this = RHIStructuredBuffer{};
     }
 } // namespace sw

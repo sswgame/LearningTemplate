@@ -12,7 +12,7 @@
 
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 
@@ -76,10 +76,10 @@ namespace sw
         };
         static constexpr uint32 kReadbackMetaCount = 8;
 
-        RHIStructuredBufferSlot _placeholder{};                         ///< 가림 타일이 없는 컬링의 t2(원소 하나, 깊이 1)
-        AsyncBufferReadback     _readback{};                            ///< 주 시점 가림 타일의 되읽기 고리
-        OcclusionTileMailbox    _mailbox{};                             ///< 게임 스레드가 가져가는 우편함
-        ReadbackMeta            _arrReadbackMeta[kReadbackMetaCount]{}; ///< 요청 때의 메타
-        uint64                  _readbackSerial{ 0 };                   ///< 마지막 요청 번호
+        RHIStructuredBuffer  _placeholder{};                         ///< 가림 타일이 없는 컬링의 t2(원소 하나, 깊이 1)
+        AsyncBufferReadback  _readback{};                            ///< 주 시점 가림 타일의 되읽기 고리
+        OcclusionTileMailbox _mailbox{};                             ///< 게임 스레드가 가져가는 우편함
+        ReadbackMeta         _arrReadbackMeta[kReadbackMetaCount]{}; ///< 요청 때의 메타
+        uint64               _readbackSerial{ 0 };                   ///< 마지막 요청 번호
     };
 } // namespace sw

@@ -8,9 +8,9 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -208,9 +208,9 @@ namespace sw
         if ( bInvalidStructuredBufferRequest )
             return 0;
 
-        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSizeUtil 가 세 백엔드의 규칙 하나).
         uint32 totalBytes{ 0 };
-        if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
+        if ( RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
 
         RHIBufferDesc desc{};
@@ -377,13 +377,13 @@ namespace sw
             record._buffer = 0;
         }
 
-        // 장부는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
-        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
-        auto             releaseCb = [glBuffer = glName, pLedger, buffer]()
+        // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
+        RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
+        auto              releaseCb = [glBuffer = glName, pTracker, buffer]()
         {
             GLuint name = glBuffer;
             glDeleteBuffers( 1, &name );
-            pLedger->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
+            pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
@@ -391,7 +391,7 @@ namespace sw
     RHIBufferHandle OpenGLRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
     {
         uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        const bool bInvalidReadbackRequest = _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
         if ( bInvalidReadbackRequest )
             return 0;
         ScopedOpenGLContext contextScope( _pDevice );
@@ -798,10 +798,10 @@ namespace sw
             record._fbo = fbo;
         }
 
-        // GPU 메모리 장부에 올리는 유일한 자리다. GL 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적는다.
+        // GPU 메모리 추적기에 올리는 유일한 자리다. GL 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적는다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ),
-                                                      RHIMemoryLedger::computeTextureLogicalBytes( desc ) );
+        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ),
+                                                       RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
         return handle;
     }
 
@@ -845,12 +845,12 @@ namespace sw
                                   static_cast<uint32>( textureIndex ), OpenGLRHIDevice::BindlessTextureRecord{} );
         }
 
-        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
-        auto             releaseCb = [fboName, texName, pLedger, texture]()
+        RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
+        auto              releaseCb = [fboName, texName, pTracker, texture]()
         {
             deleteTextureNames( fboName, texName );
-            // 장부는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
-            pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
+            // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
+            pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
         };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
@@ -1119,12 +1119,12 @@ namespace sw
 
     RHIRenderPassHandle OpenGLRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
     {
-        return _pDevice->_renderPassLedger.add( desc );
+        return _pDevice->_renderPassRegistry.add( desc );
     }
 
     void OpenGLRHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
     {
-        _pDevice->_renderPassLedger.retire( pass );
+        _pDevice->_renderPassRegistry.retire( pass );
     }
 
     bool OpenGLRHIResourceFactory::linkProgram( uint32 program, const utf8* pLabel )

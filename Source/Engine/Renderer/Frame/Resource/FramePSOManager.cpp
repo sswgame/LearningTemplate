@@ -445,7 +445,7 @@ namespace sw
         return _pCache->findDesc( pso, outDesc );
     }
 
-    const RHIStructuredBufferSlot* FramePSOManager::findMaterialFallback( const ShaderBindingLayout* pLayout ) const
+    const RHIStructuredBuffer* FramePSOManager::findMaterialFallback( const ShaderBindingLayout* pLayout ) const
     {
         const auto it = _mapLayoutMaterialFallback.find( pLayout );
         return ( it != _mapLayoutMaterialFallback.end() ) ? &_listMaterialFallback[it->second]._buffer : nullptr;
@@ -509,8 +509,8 @@ namespace sw
             }
             if ( fallbackIndex == _listMaterialFallback.size() )
             {
-                const uint32            stride = pSlot->_elementStride;
-                RHIStructuredBufferSlot buffer{};
+                const uint32        stride = pSlot->_elementStride;
+                RHIStructuredBuffer buffer{};
                 if ( buffer.ensureCapacity( _pDevice, stride, 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, bytes.data() ) == false )
                 {
                     SW_LOG_ERROR_ID( "FramePSOManager.FailedCreateMaterialFallback", "Failed to create the material fallback buffer (stride %#).", stride );

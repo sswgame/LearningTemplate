@@ -1,6 +1,6 @@
 /**
- * @file RHIConstantBufferSlot.h
- * @brief 상수 버퍼 하나와 그 bindless 인덱스를 함께 보관하는 슬롯입니다. `RHIStructuredBufferSlot` 의 형제입니다.
+ * @file RHIConstantBuffer.h
+ * @brief 상수 버퍼 하나와 그 bindless 인덱스를 함께 보관합니다. `RHIStructuredBuffer` 의 형제입니다.
  * @details 렌더러가 만드는 상수 버퍼는 언제나 같은 흐름을 거칩니다: **만들고 → bindless 에 등록하고 → 쓸 때 갱신하고 →
  *          등록 해제한 뒤 지웁니다.** 이 네 단계가 타입 없이 흩어져 있으면 두 가지가 생깁니다.
  *          (1) `{RHIBufferHandle, RHIDescriptorIndex}` 멤버 쌍이 클래스마다 따로 자랍니다(컴퓨트 디스패치 네 곳이 그랬습니다),
@@ -8,10 +8,10 @@
  *          함수 안에 두고 다섯 번 불렀습니다.
  *
  *          **인덱스를 먼저 등록 해제하고 버퍼를 지우는 순서**가 중요합니다. 반대로 하면 bindless 레지스트리에
- *          죽은 핸들을 가리키는 항목이 남습니다(`RHIStructuredBufferSlot` 과 같은 이유).
+ *          죽은 핸들을 가리키는 항목이 남습니다(`RHIStructuredBuffer` 과 같은 이유).
  *
  * @note 구조버퍼가 아니라 **상수버퍼**입니다. 용량이 프레임마다 변하지 않으므로 `ensureCapacity` 가 아니라 `create` 입니다.
- *       에셋(Material · MaterialInstance)은 이 타입이 아니라 `RHIResidentBuffer` 를 씁니다: 그쪽은 "어느 디바이스의
+ *       에셋(Material · MaterialInstance)은 이 타입이 아니라 `RHIDeviceBuffer` 를 씁니다: 그쪽은 "어느 디바이스의
  *       것인가" 를 함께 알아야 하고(디바이스 수명 통보를 받습니다) 여기는 소유자가 해제 시점을 이미 압니다.
  */
 #pragma once
@@ -24,10 +24,10 @@ namespace sw
     class IRHIDevice;
 
     /**
-     * @struct RHIConstantBufferSlot
+     * @struct RHIConstantBuffer
      * @brief 상수 버퍼와 bindless 인덱스입니다. 생성, 갱신, 해제를 한 곳에 모읍니다.
      */
-    struct RHIConstantBufferSlot
+    struct RHIConstantBuffer
     {
         RHIBufferHandle    _buffer{ 0 };
         RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
@@ -50,6 +50,6 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
         /** @brief 디바이스가 이미 사라졌을 때 값만 잊습니다(destroy 를 부르면 해제 후 사용입니다). */
-        void forget() { *this = RHIConstantBufferSlot{}; }
+        void forget() { *this = RHIConstantBuffer{}; }
     };
 } // namespace sw

@@ -13,7 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
 namespace sw
 {
@@ -45,7 +45,7 @@ namespace sw
         /** @brief 메시의 헤더 원소 번호입니다. 풀에 없으면 `kInvalidBase` 입니다. */
         uint32 baseOf( const Mesh* pMesh ) const;
         /** @brief 테이블 버퍼입니다. 정점 셰이더가 SRV 로 읽습니다. */
-        const RHIStructuredBufferSlot& getBuffer() const { return _table; }
+        const RHIStructuredBuffer& getBuffer() const { return _table; }
         /** @brief 테이블의 단어(uint32) 수입니다. 셰이더의 범위 검사 값입니다. */
         uint32 getWordCount() const { return _wordCount; }
         /** @brief 업로드한 테이블 수입니다(같은 테이블을 나누는 메시는 하나로 셉니다). */
@@ -93,7 +93,7 @@ namespace sw
         /** @brief 버퍼 · 구간 할당기를 @p capacity 단어로 다시 만들고 모든 기록을 비웁니다. 못 만들면 풀을 비우고 false 입니다. */
         [[nodiscard]] bool resetStorage( IRHIDevice* pDevice, uint32 capacity );
 
-        RHIStructuredBufferSlot                          _table;
+        RHIStructuredBuffer                              _table;
         SpanAllocator                                    _allocator;
         unordered_map<const MeshVertexAnimation*, Entry> _mapEntry;
         unordered_map<const Mesh*, MeshRecord>           _mapRecord;

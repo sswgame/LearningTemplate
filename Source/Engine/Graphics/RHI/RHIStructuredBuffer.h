@@ -1,6 +1,6 @@
 /**
- * @file RHIStructuredBufferSlot.h
- * @brief 구조 버퍼 하나와 그 뷰(SRV/UAV), 용량을 함께 보관하는 슬롯입니다.
+ * @file RHIStructuredBuffer.h
+ * @brief 구조 버퍼 하나와 그 뷰(SRV/UAV), 용량을 함께 보관합니다(언리얼 `FRWBufferStructured` 자리).
  */
 #pragma once
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -11,7 +11,7 @@ namespace sw
     class IRHIDevice;
 
     /**
-     * @struct RHIStructuredBufferSlot
+     * @struct RHIStructuredBuffer
      * @brief 매 프레임 크기가 변할 수 있는 구조 버퍼의 수명과 뷰 등록을 한 곳에 모읍니다.
      * @details GPU 드리븐 경로는 같은 패턴을 계속 반복합니다: "용량이 모자라면 이전 뷰를 등록 해제하고
      *          버퍼를 다시 만들고 새 뷰를 등록한다". GPUScene 만 해도 인스턴스, 가시 목록, 배치 구간,
@@ -23,7 +23,7 @@ namespace sw
      *
      * @note 이 타입은 RHI ABI 가 아니라 그 위의 편의 계층입니다. 백엔드 모듈이 아니라 엔진이 씁니다.
      */
-    struct SW_API RHIStructuredBufferSlot
+    struct SW_API RHIStructuredBuffer
     {
         RHIBufferHandle    _buffer{ 0 };
         RHIDescriptorIndex _srv = kInvalidDescriptorIndex;

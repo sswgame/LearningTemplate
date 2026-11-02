@@ -8,7 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
@@ -49,7 +49,7 @@ namespace sw
         , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
-        , _renderPassLedger{}
+        , _renderPassRegistry{}
         , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
         , _arrFrameDoneSync{}
         , _frameSerial{ 0 }
@@ -102,7 +102,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE || ( _bNvxMemoryInfo == SW_FALSE && _bAtiMemInfo == SW_FALSE ) )
             return false;
 
-        // 확장 값은 KB 단위이고, 다른 프로세스가 쓰는 양까지 포함한 디바이스 전체 값이다. 그래서 장부를 빼 "엔진 밖"을 내지 않는다(Scope Device).
+        // 확장 값은 KB 단위이고, 다른 프로세스가 쓰는 양까지 포함한 디바이스 전체 값이다. 그래서 추적기를 빼 "엔진 밖"을 내지 않는다(Scope Device).
         ScopedOpenGLContext contextScope( this );
         outBudget._scope = RHIMemoryScope::Device;
         if ( _bNvxMemoryInfo == SW_TRUE )
@@ -277,7 +277,7 @@ namespace sw
         if ( glName == 0 )
             return 0;
         const RHIBufferHandle handle = _gpuBuffers.insert( glName );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, sizeBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, sizeBytes );
         return handle;
     }
 
@@ -340,8 +340,8 @@ namespace sw
         _swapChain.setSize( desc._width, desc._height );
         if ( desc._bSoftwareAdapter )
             SW_LOG_WARNING_ID( "OpenGL.GvRhiSoftwareAdapterIgnoredOpenGL", "gv_rhiSoftwareAdapter is ignored on OpenGL (the driver decides)" );
-        // GL 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
-        getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
+        // GL 에는 자원의 할당 크기를 물을 API 가 없다. 추적기는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
+        getMemoryTracker().setSizeBasis( RHIMemorySizeBasis::Logical );
 
         // 플랫폼 컨텍스트 생성(WGL · GLX · EGL)은 GL/Platform 이 맡는다. 디바이스는 플랫폼 분기를 갖지 않는다.
         _platformContext = IOpenGLPlatformContext::create( desc._surfaceKind );
@@ -575,7 +575,7 @@ namespace sw
 
         _pStagingRingMapped = pMapped;
         _stagingRing.initialize( capacityBytes, kTransferRingAlignmentBytes, soloMaxBytes );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_stagingRing ), RHIMemoryKind::Staging, capacityBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( &_stagingRing ), RHIMemoryKind::Staging, capacityBytes );
         return true;
     }
 
@@ -604,7 +604,7 @@ namespace sw
 
         _pReadbackRingMapped = pMapped;
         _readbackRing.initialize( capacityBytes, kTransferRingAlignmentBytes, soloMaxBytes );
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_readbackRing ), RHIMemoryKind::Staging, capacityBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( &_readbackRing ), RHIMemoryKind::Staging, capacityBytes );
         return true;
     }
 
@@ -637,7 +637,7 @@ namespace sw
         deleteSoloBuffer( _stagingSolo );
         GLuint name = _stagingRingBuffer;
         glDeleteBuffers( 1, &name );
-        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_stagingRing ) );
+        getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( &_stagingRing ) );
         _stagingRing.shutdown();
         _stagingRingBuffer  = 0;
         _pStagingRingMapped = nullptr;
@@ -650,7 +650,7 @@ namespace sw
         deleteSoloBuffer( _readbackSolo );
         GLuint name = _readbackRingBuffer;
         glDeleteBuffers( 1, &name );
-        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_readbackRing ) );
+        getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( &_readbackRing ) );
         _readbackRing.shutdown();
         _readbackRingBuffer  = 0;
         _pReadbackRingMapped = nullptr;
@@ -745,7 +745,7 @@ namespace sw
             }
         } );
         _pipelineStates.clear();
-        _renderPassLedger.clear();
+        _renderPassRegistry.clear();
 
         _gpuBuffers.forEach( []( uint32& glBuf )
         {
@@ -1133,7 +1133,7 @@ namespace sw
             glDeleteSync( static_cast<GLsync>( pSync ) ); // 끝났다고 본 펜스만 온다 — 펜스가 없는 항목은 위에서 끝나지 않는다
             pSync = nullptr;
         } );
-        // 장부가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다. 버퍼는 컨텍스트가 있어야 지우므로 컨텍스트를 쥔 이곳(프레임 끝 · 제출 · 폴링)에서만 한다.
+        // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다. 버퍼는 컨텍스트가 있어야 지우므로 컨텍스트를 쥔 이곳(프레임 끝 · 제출 · 폴링)에서만 한다.
         const uint64 watermark = _transferSerials.getWatermark();
         deleteIdleSoloBuffer( _stagingRing, _stagingSolo, watermark );
         deleteIdleSoloBuffer( _readbackRing, _readbackSolo, watermark );
@@ -1155,7 +1155,7 @@ namespace sw
             return;
         GLuint name = rSolo._buffer;
         glDeleteBuffers( 1, &name ); // 매핑된 버퍼를 지우면 매핑도 풀린다
-        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &rSolo ) );
+        getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( &rSolo ) );
         rSolo = OpenGLSoloTransferBuffer{};
     }
 
@@ -1170,7 +1170,7 @@ namespace sw
             SW_LOG_ERROR_ID( "OpenGL.GLContextCouldNot", "%#: the GL context could not be acquired to create a %#-byte single transfer buffer; submit again later", pCaller, span._sizeBytes );
             return RHISubmitResult::Busy;
         }
-        deleteSoloBuffer( rSolo ); // 장부가 이미 돌려받았지만 아직 지우지 못한 앞 단독 버퍼
+        deleteSoloBuffer( rSolo ); // 할당기가 이미 돌려받았지만 아직 지우지 못한 앞 단독 버퍼
         rSolo._pMapped = createPersistentRingBuffer( span._sizeBytes, mapFlags, rSolo._buffer );
         if ( rSolo._pMapped == nullptr )
         {
@@ -1178,7 +1178,7 @@ namespace sw
             SW_LOG_ERROR_ID( "OpenGL.ByteSingleTransferBuffer", "%#: a %#-byte single transfer buffer could not be created or mapped; the transfer is rejected", pCaller, span._sizeBytes );
             return RHISubmitResult::Rejected;
         }
-        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &rSolo ), RHIMemoryKind::Staging, span._sizeBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( &rSolo ), RHIMemoryKind::Staging, span._sizeBytes );
         return RHISubmitResult::Accepted;
     }
 

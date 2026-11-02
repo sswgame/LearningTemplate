@@ -38,7 +38,7 @@ namespace sw
             }
 
             /** @brief 내용을 담아 용량을 맞추고 올립니다. */
-            static void uploadAll( IRHIDevice* pDevice, RHIStructuredBufferSlot& slot, const void* pData, uint32 elementCount )
+            static void uploadAll( IRHIDevice* pDevice, RHIStructuredBuffer& slot, const void* pData, uint32 elementCount )
             {
                 if ( elementCount == 0 )
                 {

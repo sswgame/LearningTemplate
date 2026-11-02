@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -32,13 +32,13 @@ namespace sw
      */
     struct GPUCullViewResources
     {
-        RHIStructuredBufferSlot _indirectArgs;
-        RHIStructuredBufferSlot _visibleInstances;
+        RHIStructuredBuffer _indirectArgs;
+        RHIStructuredBuffer _visibleInstances;
         /**
          * @brief 인스턴스마다의 LOD 전환 상태입니다(`gpu_cull.hlsl` 의 `g_LODState`, 인스턴스 번호로 읽는다). LOD 그룹이 있을 때만 만든다.
          * @details 뷰마다 하나다 — 뷰마다 보는 거리와 갱신 주기가 달라 전환 진행이 다르다.
          */
-        RHIStructuredBufferSlot _lodState;
+        RHIStructuredBuffer _lodState;
         /// @brief `_lodState` 가 맞춰 둔 인스턴스 배치 세대(`GPUSceneSnapshot::_instanceLayoutGeneration`)입니다. 다르면 다음 컬링이 상태를 비운다(`GPUScene::takeLODStateReset`).
         uint32 _lodStateLayoutGeneration{ 0xFFFFFFFFu };
     };
@@ -114,7 +114,7 @@ namespace sw
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer
     {
-        RHIStructuredBufferSlot _slot;
+        RHIStructuredBuffer _slot;
         /** @brief 마지막으로 올린 바이트입니다. 같으면 업로드를 건너뜁니다(언리얼처럼 바뀐 것만 올립니다). */
         vector<uint8> _lastBytes;
     };
@@ -301,7 +301,7 @@ namespace sw
         /** @brief 인스턴스 버퍼를 확보해 통째로 또는 바뀐 구간만 올리고, 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */
         void uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice, uint32 instanceCount );
         /** @brief 스냅샷의 더티 인스턴스 구간을 한 번의 호출로 올립니다. */
-        void uploadDirtyInstanceRuns( IRHIDevice* pDevice, uint32 instanceCount );
+        void uploadDirtyInstanceRanges( IRHIDevice* pDevice, uint32 instanceCount );
         /** @brief 배치 표(인스턴스 시작 · 모프 · 정점 풀 · VAT 오프셋 · 정렬 방식)를 만들어 올립니다. */
         void uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount );
         /** @brief 배치마다의 간접 드로우 인자를 만듭니다(GPU 가 개수를 채우는 배치는 0 에서 시작). */
@@ -333,7 +333,7 @@ namespace sw
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
 
-        RHIStructuredBufferSlot _instances;
+        RHIStructuredBuffer _instances;
         /**
          * @brief 뷰별 컬링 산출물입니다. 언리얼의 FInstanceCullingContext 가 뷰마다 있는 것과 같은 구조입니다.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
@@ -343,7 +343,7 @@ namespace sw
          *          목록은 절두체에 종속이므로 메인 카메라, 그림자 라이트, 추가 뷰가 **각자** 가진다(슬롯 0과 1은 항상 있다).
          */
         vector<GPUCullViewResources> _listCullView = vector<GPUCullViewResources>( static_cast<size_t>( RenderViewType::Count ) );
-        RHIStructuredBufferSlot      _batchInfo;
+        RHIStructuredBuffer          _batchInfo;
         /**
          * @brief 씬 메시 정점을 모은 풀입니다(RT 소유) — 정점 형식마다 하나(속성 원소 크기가 다르다). 배치는 자기 형식의 풀 버퍼와 자기 시작 오프셋으로 그립니다.
          * @details 메시 집합이 바뀔 때만 다시 만든다. 풀에 들어가지 못한 메시는 자기 정점 버퍼로 그린다(멀티 드로우로는 묶이지 않는다).

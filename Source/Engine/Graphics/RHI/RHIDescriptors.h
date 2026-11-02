@@ -617,7 +617,7 @@ namespace sw
         uint8                  _bIsDepthStencil    : 1; ///< 깊이/스텐실 지원 여부
         uint8                  _bIsShaderResource  : 1; ///< 셰이더 리소스 지원 여부
         uint8                  _bIsUnorderedAccess : 1; ///< UAV 지원 여부
-        uint8                  _bIsTransient       : 1; ///< 트랜지언트 첨부 풀이 만든 것이다. 만드는 방법은 같고 GPU 메모리 장부의 항목만 구분한다(`RHIMemoryLedger::classifyTexture`).
+        uint8                  _bIsTransient       : 1; ///< 트랜지언트 첨부 풀이 만든 것이다. 만드는 방법은 같고 GPU 메모리 추적기의 항목만 구분한다(`RHIMemoryTracker::classifyTexture`).
         [[maybe_unused]] uint8 _reservedFlags      : 3;
         RHITextureDimension    _dimension;      ///< 형태 (1 byte)
         uint8                  _arrReserved[1]; ///< 4바이트 정렬 패딩 (1 byte)

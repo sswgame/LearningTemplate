@@ -10,9 +10,9 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
@@ -135,9 +135,9 @@ namespace sw
         if ( elementSize == 0 || elementCount == 0 )
             return 0;
 
-        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSizeUtil 가 세 백엔드의 규칙 하나).
         uint32 totalBytes{ 0 };
-        if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
+        if ( RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
 
         // TRANSFER_SRC: 어느 구조 버퍼든 비동기 되읽기(`copyBufferToReadback`)의 원본이 될 수 있다 — IRHICommandList 계약이 원본을 가리지 않는다(다른 백엔드는 복사 원본 제한이 없다).
@@ -172,12 +172,12 @@ namespace sw
                 VkDeviceMemory mem = slot._memory;
                 if ( slot._pMapped != nullptr )
                     vkUnmapMemory( dev, mem );
-                RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
-                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger]()
+                RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
+                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker]()
                 {
                     vkDestroyBuffer( dev, buf, nullptr );
                     vkFreeMemory( dev, mem, nullptr );
-                    pLedger->recordFree( RHIMemoryKey::makeDeviceObject( mem ) );
+                    pTracker->recordFree( RHIMemoryKey::makeDeviceObject( mem ) );
                 } ),
                                                            _pDevice->_frameFenceCounter + 1 );
                 slot._buffer   = VK_NULL_HANDLE;
@@ -228,7 +228,7 @@ namespace sw
                 return false;
             }
             slot._capacity = newCapacity;
-            _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( slot._memory ), RHIMemoryKind::Staging, memoryRequirements.size );
+            _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( slot._memory ), RHIMemoryKind::Staging, memoryRequirements.size );
         }
 
         slot._uploadOffset = offset + sizeBytes;
@@ -444,18 +444,18 @@ namespace sw
             deferFreeBufferIndex( static_cast<uint32>( bufferIndex ), true );
         }
 
-        VkBuffer         buf     = owned._buffer;
-        VkDeviceMemory   mem     = owned._memory;
-        VkDevice         dev     = _pDevice->_device;
-        RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger, buffer]()
+        VkBuffer          buf      = owned._buffer;
+        VkDeviceMemory    mem      = owned._memory;
+        VkDevice          dev      = _pDevice->_device;
+        RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker, buffer]()
         {
             if ( buf != VK_NULL_HANDLE )
                 vkDestroyBuffer( dev, buf, nullptr );
             if ( mem != VK_NULL_HANDLE )
                 vkFreeMemory( dev, mem, nullptr );
-            // 장부는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-            pLedger->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
+            // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+            pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         } ),
                                                    _pDevice->_frameFenceCounter + 1 );
     }
@@ -620,9 +620,9 @@ namespace sw
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
             SW_LOG_WARNING_ID( "VulkanRHIResourceFactory.CreateTexture2DFramebufferCreationFailed", "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
-        // GPU 메모리 장부에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
+        // GPU 메모리 추적기에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ), allocInfo.allocationSize );
+        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryTracker::classifyTexture( desc ), allocInfo.allocationSize );
         return handle;
     }
 
@@ -698,7 +698,7 @@ namespace sw
         VulkanRHIDevice::VulkanTransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
         uint32 layoutBefore{ 0 };
@@ -729,10 +729,10 @@ namespace sw
         const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureUpload: vkQueueSubmit" );
         if ( serial == 0 )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
-        ring._ledger.markSubmitted( span, serial );
+        ring._allocator.markSubmitted( span, serial );
         // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
         {
             ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
@@ -774,7 +774,7 @@ namespace sw
         VulkanRHIDevice::VulkanTransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
         uint32 layoutBefore{ 0 };
@@ -814,10 +814,10 @@ namespace sw
         const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureRegionUpload: vkQueueSubmit" );
         if ( serial == 0 )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
-        ring._ledger.markSubmitted( span, serial );
+        ring._allocator.markSubmitted( span, serial );
         {
             ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -853,7 +853,7 @@ namespace sw
         VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
         outBytes.resize( pending._sizeBytes );
         Memory::copy( outBytes.data(), ring.getSpanMappedBase( pending._span ) + pending._dataOffsetBytes, pending._sizeBytes );
-        ring._ledger.free( pending._span );
+        ring._allocator.free( pending._span );
         if ( pending._depth24TexelCount != 0 )
             convertRHIDepth24ToFloat( outBytes.data(), pending._depth24TexelCount );
         return true;
@@ -869,9 +869,9 @@ namespace sw
         // 끝나지 않은 복사는 아직 이 구간에 쓴다. 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다).
         VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
         if ( _pDevice->_transferSerials.isComplete( ticket._serial ) )
-            ring._ledger.free( pending._span );
+            ring._allocator.free( pending._span );
         else
-            ring._ledger.markSubmitted( pending._span, ticket._serial );
+            ring._allocator.markSubmitted( pending._span, ticket._serial );
     }
 
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -884,7 +884,7 @@ namespace sw
     RHIBufferHandle VulkanRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
     {
         uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        const bool bInvalidReadbackRequest = elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
         if ( bInvalidReadbackRequest )
             return 0;
         // 모든 Vulkan 버퍼가 HOST_VISIBLE | HOST_COHERENT 메모리다(createVulkanBuffer) — 복사 도착지 용도로 만들면 맵해 읽을 수 있다.
@@ -957,7 +957,7 @@ namespace sw
         VulkanRHIDevice::VulkanTransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
         uint32 layoutBeforeValue{ 0 };
@@ -1012,7 +1012,7 @@ namespace sw
         const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureReadback: vkQueueSubmit" );
         if ( serial == 0 )
         {
-            ring._ledger.free( span );
+            ring._allocator.free( span );
             return RHITransferSubmit::rejected();
         }
         {
@@ -1054,9 +1054,9 @@ namespace sw
         VkImage                          image      = owned._image;
         VkDeviceMemory                   mem        = owned._memory;
         vector<VkImageView>              listSliceView{ owned._listSliceView };
-        RHIMemoryLedger*                 pLedger = &_pDevice->getMemoryLedger();
+        RHIMemoryTracker*                pTracker = &_pDevice->getMemoryTracker();
         const RHIResourceReleaseDelegate releaseDelegate =
-            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
+            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture]()
         {
             for ( VkImageView sliceView : listSliceView )
             {
@@ -1070,8 +1070,8 @@ namespace sw
                 vkDestroyImage( dev, image, nullptr );
             if ( mem != VK_NULL_HANDLE )
                 vkFreeMemory( dev, mem, nullptr );
-            // 장부는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-            pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
+            // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+            pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
         } );
 
         // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 끝나면 그때의 다음 프레임 펜스까지 한 번 더 미뤄 이 텍스처를 그린 프레임도 지나게 한다.

@@ -312,7 +312,7 @@ namespace sw
 namespace sw
 {
     /** @brief 인스턴스 배열에서 바뀐 구간 `[_start, _start + _count)` 입니다. */
-    struct GPUInstanceRun
+    struct GPUInstanceDirtyRange
     {
         uint32 _start{ 0 };
         uint32 _count{ 0 };
@@ -507,7 +507,7 @@ namespace sw
          */
         uint8 _bMeshesCreatedBeforeHandoff{ SW_FALSE };
         /**
-         * @brief 1이면 인스턴스 배열 **전체**가 바뀌었고, 0이면 `_listDirtyInstanceRun` 만 바뀌었습니다.
+         * @brief 1이면 인스턴스 배열 **전체**가 바뀌었고, 0이면 `_listDirtyInstanceRange` 만 바뀌었습니다.
          * @details 전체 재구축은 1이고, 물체만 움직인 프레임은 0이다. 버퍼를 새로 만든 프레임도 받는 쪽이
          *          전체로 취급해야 한다. 새 버퍼에는 아직 아무것도 없기 때문이다.
          */
@@ -518,7 +518,7 @@ namespace sw
          *          같은 100µs 가 든다. 그래서 바뀐 구간만 올린다. 구간이 너무 잘게 흩어지면
          *          작은 업로드가 오히려 비싸므로, 빌더가 개수 상한을 넘기면 전체로 돌린다.
          */
-        vector<GPUInstanceRun> _listDirtyInstanceRun;
+        vector<GPUInstanceDirtyRange> _listDirtyInstanceRange;
         /// @brief 이번 프레임에 그리는 추가 뷰마다의 투명 순서입니다. 뷰가 투명을 보지 않거나 꼬리가 없으면 비어 있으며, 그 뷰는 주 순서로 그립니다.
         vector<GPUViewTransparentOrder> _listViewTransparentOrder;
         /**

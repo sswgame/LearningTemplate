@@ -628,7 +628,7 @@ namespace sw
          *          수에 비례하지 않는다. 그래도 상한을 두는 이유는 두 가지다. 구간 목록 자체가 스냅샷에
          *          실려 복사되고, 변경이 배열 전체에 고르게 흩어졌다면 통째로 올리는 것이 단순하고 싸다.
          */
-        static constexpr size_t kMaxDirtyInstanceRun = 256;
+        static constexpr size_t kMaxDirtyInstanceRange = 256;
 
         /**
          * @struct InstanceRefreshChunk
@@ -638,13 +638,13 @@ namespace sw
          */
         struct InstanceRefreshChunk
         {
-            uint32         _start{ 0 };
-            uint32         _end{ 0 };
-            uint32         _spinCount{ 0 };
-            uint32         _runCount{ 0 };
-            uint8          _bFailed{ SW_FALSE };
-            uint8          _bTooManyRun{ SW_FALSE };
-            GPUInstanceRun _arrRun[kMaxDirtyInstanceRun];
+            uint32                _start{ 0 };
+            uint32                _end{ 0 };
+            uint32                _spinCount{ 0 };
+            uint32                _runCount{ 0 };
+            uint8                 _bFailed{ SW_FALSE };
+            uint8                 _bTooManyRun{ SW_FALSE };
+            GPUInstanceDirtyRange _arrRun[kMaxDirtyInstanceRange];
         };
         vector<InstanceRefreshChunk> _listRefreshChunk;
 
@@ -696,7 +696,7 @@ namespace sw
             /** @brief 원소 인덱스 목록입니다. 배치의 구간(`getBatchRanges`)으로 자릅니다. */
             const vector<uint32>& getElementIndices() const { return _listElementIndex; }
             /** @brief 배치마다 `getElementIndices` 의 구간입니다. 배치 번호와 같은 번호입니다. */
-            const vector<GPUInstanceRun>& getBatchRanges() const { return _listBatchRange; }
+            const vector<GPUInstanceDirtyRange>& getBatchRanges() const { return _listBatchRange; }
 
             /** @brief 모두 지웁니다. */
             void clear()
@@ -705,12 +705,12 @@ namespace sw
                 _listBatchRange.clear();
             }
             /** @brief 다음 배치의 빈 구간을 엽니다. 이후 `appendElement` 는 이 배치에 들어갑니다. */
-            void beginBatch() { _listBatchRange.push_back( GPUInstanceRun{ static_cast<uint32>( _listElementIndex.size() ), 0 } ); }
+            void beginBatch() { _listBatchRange.push_back( GPUInstanceDirtyRange{ static_cast<uint32>( _listElementIndex.size() ), 0 } ); }
             /** @brief 지금 배치에 원소를 붙입니다. 정렬되어 같은 원소가 연속으로 오므로 직전 것과 같으면 넣지 않습니다. */
             void appendElement( uint32 elementIndex )
             {
                 SW_ASSERT( _listBatchRange.empty() == false );
-                GPUInstanceRun& range = _listBatchRange.back();
+                GPUInstanceDirtyRange& range = _listBatchRange.back();
                 if ( range._count != 0 && _listElementIndex.back() == elementIndex )
                     return;
                 _listElementIndex.push_back( elementIndex );
@@ -726,8 +726,8 @@ namespace sw
             }
 
         private:
-            vector<uint32>         _listElementIndex;
-            vector<GPUInstanceRun> _listBatchRange;
+            vector<uint32>                _listElementIndex;
+            vector<GPUInstanceDirtyRange> _listBatchRange;
         };
         BatchElementTable _batchElementTable;
 

@@ -10,7 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/VFX/VFXEmitterClock.h"
 #include "Engine/VFX/VFXParticle.h"
@@ -137,14 +137,14 @@ namespace sw
         {
             EmitterState( shared_ptr<const VFXEmitterDef> pDef, float32 spawnScale );
 
-            VFXEmitterClock         _clock;          ///< 게임 스레드와 같은 일정(여기서 다시 돈다)
-            uint64                  _doneStepCount;  ///< 디스패치에 실은 단계 수
-            RHIStructuredBufferSlot _stateBuffer;    ///< 입자 상태(풀 크기 × 2)
-            RHIStructuredBufferSlot _particleBuffer; ///< 렌더 입력(풀 크기)
-            RHIStructuredBufferSlot _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수(SW_VFX_ARGS_WORD_COUNT 단어)
-            DrawSource              _drawSource;
-            bool                    _bNeedsReset; ///< 아직 한 번도 디스패치하지 않았다
-            bool                    _bSeen;       ///< 이번 프레임 목록에 있었다
+            VFXEmitterClock     _clock;          ///< 게임 스레드와 같은 일정(여기서 다시 돈다)
+            uint64              _doneStepCount;  ///< 디스패치에 실은 단계 수
+            RHIStructuredBuffer _stateBuffer;    ///< 입자 상태(풀 크기 × 2)
+            RHIStructuredBuffer _particleBuffer; ///< 렌더 입력(풀 크기)
+            RHIStructuredBuffer _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수(SW_VFX_ARGS_WORD_COUNT 단어)
+            DrawSource          _drawSource;
+            bool                _bNeedsReset; ///< 아직 한 번도 디스패치하지 않았다
+            bool                _bSeen;       ///< 이번 프레임 목록에 있었다
         };
 
         /** @brief 이번 프레임의 시뮬레이션 디스패치 하나입니다. */
@@ -201,7 +201,7 @@ namespace sw
         vector<uint64>                                  _listScratchStaleRunID;
         vector<VFXGPULightRange>                        _listLightRange; ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
         VFXSimulationFrameInput                         _frameInput;     ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
-        RHIStructuredBufferSlot                         _paramBuffer;
+        RHIStructuredBuffer                             _paramBuffer;
         bool                                            _bPipelineMissingLogged;
         bool                                            _bMeshPipelineMissingLogged;
         bool                                            _bLightOverflowLogged;

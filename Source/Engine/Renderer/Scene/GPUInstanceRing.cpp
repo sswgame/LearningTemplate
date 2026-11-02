@@ -29,7 +29,7 @@ namespace sw
         return *_pWrite;
     }
 
-    shared_ptr<const vector<GPUInstance>> GPUInstanceRing::publish( bool bAllDirty, const vector<GPUInstanceRun>& listDirtyRun )
+    shared_ptr<const vector<GPUInstance>> GPUInstanceRing::publish( bool bAllDirty, const vector<GPUInstanceDirtyRange>& listDirtyRun )
     {
         if ( _pWrite == nullptr )
             return _pPublished;
@@ -91,7 +91,7 @@ namespace sw
         {
             if ( record._build <= slotBuild )
                 continue;
-            for ( const GPUInstanceRun& run : record._listRun )
+            for ( const GPUInstanceDirtyRange& run : record._listRun )
             {
                 const size_t start = MathUtil::min<size_t>( run._start, prev.size() );
                 const size_t end   = MathUtil::min<size_t>( static_cast<size_t>( run._start ) + run._count, prev.size() );

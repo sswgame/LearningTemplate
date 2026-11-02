@@ -7,11 +7,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -75,9 +75,9 @@ namespace sw
         if ( elementSize == 0 || elementCount == 0 )
             return 0;
 
-        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
+        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSizeUtil 가 세 백엔드의 규칙 하나).
         uint32 totalBytes{ 0 };
-        if ( RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
+        if ( RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
             return 0;
 
         D3D11_BUFFER_DESC bufferDesc{};
@@ -280,14 +280,14 @@ namespace sw
                                   static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
 
-        // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
-        _pDevice->_releaseQueue.enqueueLedgerRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryLedger(), buffer );
+        // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
+        _pDevice->_releaseQueue.enqueueTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer );
     }
 
     RHIBufferHandle D3D11RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
     {
         uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
         if ( bInvalidReadbackRequest )
             return 0;
 
@@ -759,8 +759,8 @@ namespace sw
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
 
-        // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-        _pDevice->_releaseQueue.enqueueLedgerRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryLedger(), texture );
+        // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+        _pDevice->_releaseQueue.enqueueTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
@@ -1016,12 +1016,12 @@ namespace sw
 
     RHIRenderPassHandle D3D11RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
     {
-        return _pDevice->_renderPassLedger.add( desc );
+        return _pDevice->_renderPassRegistry.add( desc );
     }
 
     void D3D11RHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
     {
-        _pDevice->_renderPassLedger.retire( pass );
+        _pDevice->_renderPassRegistry.retire( pass );
     }
 } // namespace sw
 #endif

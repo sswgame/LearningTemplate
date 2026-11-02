@@ -1015,7 +1015,7 @@ namespace sw
                 highlightStyleMask = static_cast<uint8>( highlightStyleMask | ( 1u << static_cast<uint32>( GPUInstanceHighlight::getStyle( instance._highlight ) ) ) );
         }
         _snapshot._highlightStyleMask = highlightStyleMask;
-        _snapshot._pListInstance      = _instanceRing.publish( _snapshot._bAllInstancesDirty != SW_FALSE, _snapshot._listDirtyInstanceRun );
+        _snapshot._pListInstance      = _instanceRing.publish( _snapshot._bAllInstancesDirty != SW_FALSE, _snapshot._listDirtyInstanceRange );
     }
 
     void GPUSceneBuilder::requestGPUUploads( GPUUploadQueue& queue ) const
@@ -1290,7 +1290,7 @@ namespace sw
 
         // **바뀐 슬롯만 기록해 둔다.** 받는 쪽이 그 구간만 GPU 에 올린다. 구간이 너무 잘게 흩어지면 작은 업로드가 오히려 비싸므로
         // 상한을 넘기면 전체로 돌린다(그때는 구간 목록이 의미를 잃는다).
-        _snapshot._listDirtyInstanceRun.clear();
+        _snapshot._listDirtyInstanceRange.clear();
         _snapshot._bAllInstancesDirty = SW_FALSE;
         bool bTooManyRuns             = false;
 
@@ -1333,7 +1333,7 @@ namespace sw
 
         if ( bTooManyRuns )
         {
-            _snapshot._listDirtyInstanceRun.clear();
+            _snapshot._listDirtyInstanceRange.clear();
             _snapshot._bAllInstancesDirty = SW_TRUE;
         }
 
@@ -1434,7 +1434,7 @@ namespace sw
                 ioTooManyRuns = true;
             totalRunCount += chunk._runCount;
         }
-        if ( ioTooManyRuns == false && totalRunCount > kMaxDirtyInstanceRun )
+        if ( ioTooManyRuns == false && totalRunCount > kMaxDirtyInstanceRange )
             ioTooManyRuns = true;
         if ( ioTooManyRuns )
             return true;
@@ -1442,12 +1442,12 @@ namespace sw
         {
             for ( uint32 runIndex = 0; runIndex < chunk._runCount; ++runIndex )
             {
-                const GPUInstanceRun& run = chunk._arrRun[runIndex];
-                if ( _snapshot._listDirtyInstanceRun.empty() == false &&
-                     _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == run._start )
-                    _snapshot._listDirtyInstanceRun.back()._count += run._count;
+                const GPUInstanceDirtyRange& run = chunk._arrRun[runIndex];
+                if ( _snapshot._listDirtyInstanceRange.empty() == false &&
+                     _snapshot._listDirtyInstanceRange.back()._start + _snapshot._listDirtyInstanceRange.back()._count == run._start )
+                    _snapshot._listDirtyInstanceRange.back()._count += run._count;
                 else
-                    _snapshot._listDirtyInstanceRun.push_back( run );
+                    _snapshot._listDirtyInstanceRange.push_back( run );
             }
         }
         return true;
@@ -1459,13 +1459,13 @@ namespace sw
         const uint32 tailCount = static_cast<uint32>( instanceWork().size() ) - opaqueInstanceCount;
         if ( ioTooManyRuns || tailCount == 0 )
             return;
-        if ( _snapshot._listDirtyInstanceRun.empty() == false &&
-             _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == opaqueInstanceCount )
-            _snapshot._listDirtyInstanceRun.back()._count += tailCount;
-        else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
+        if ( _snapshot._listDirtyInstanceRange.empty() == false &&
+             _snapshot._listDirtyInstanceRange.back()._start + _snapshot._listDirtyInstanceRange.back()._count == opaqueInstanceCount )
+            _snapshot._listDirtyInstanceRange.back()._count += tailCount;
+        else if ( _snapshot._listDirtyInstanceRange.size() >= kMaxDirtyInstanceRange )
             ioTooManyRuns = true;
         else
-            _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ opaqueInstanceCount, tailCount } );
+            _snapshot._listDirtyInstanceRange.push_back( GPUInstanceDirtyRange{ opaqueInstanceCount, tailCount } );
     }
 
     bool GPUSceneBuilder::refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns )
@@ -1509,12 +1509,12 @@ namespace sw
             if ( bChanged == false || ioTooManyRuns )
                 continue;
 
-            if ( lastDirtySlot + 1 == slot && _snapshot._listDirtyInstanceRun.empty() == false )
-                ++_snapshot._listDirtyInstanceRun.back()._count;
-            else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
+            if ( lastDirtySlot + 1 == slot && _snapshot._listDirtyInstanceRange.empty() == false )
+                ++_snapshot._listDirtyInstanceRange.back()._count;
+            else if ( _snapshot._listDirtyInstanceRange.size() >= kMaxDirtyInstanceRange )
                 ioTooManyRuns = true;
             else
-                _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ static_cast<uint32>( slot ), 1 } );
+                _snapshot._listDirtyInstanceRange.push_back( GPUInstanceDirtyRange{ static_cast<uint32>( slot ), 1 } );
             lastDirtySlot = slot;
         }
         return true;
@@ -1549,10 +1549,10 @@ namespace sw
 
             if ( lastDirtySlot + 1 == slot && chunk._runCount > 0 )
                 ++chunk._arrRun[chunk._runCount - 1]._count;
-            else if ( chunk._runCount >= kMaxDirtyInstanceRun )
+            else if ( chunk._runCount >= kMaxDirtyInstanceRange )
                 chunk._bTooManyRun = SW_TRUE;
             else
-                chunk._arrRun[chunk._runCount++] = GPUInstanceRun{ slot, 1 };
+                chunk._arrRun[chunk._runCount++] = GPUInstanceDirtyRange{ slot, 1 };
             lastDirtySlot = slot;
         }
     }
@@ -1576,7 +1576,7 @@ namespace sw
         // 전체 재구축이다. 구간을 기록해 봐야 전부이므로 받는 쪽이 통째로 올리게 한다.
         _snapshot._bAllInstancesDirty = SW_TRUE;
         ++_snapshot._instanceLayoutGeneration; // 인스턴스 번호가 새로 매겨진다 — 번호에 묶인 GPU 상태(LOD 전환)는 낡았다
-        _snapshot._listDirtyInstanceRun.clear();
+        _snapshot._listDirtyInstanceRange.clear();
         instanceWork().reserve( _listScratchCandidate.size() );
         _listInstanceSrcIndex.clear();
         _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );

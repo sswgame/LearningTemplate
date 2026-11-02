@@ -96,7 +96,7 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "Canvas.CanvasMarkerProjectionCompute", "The canvas marker projection compute PSO is missing (shader not cooked or no compute support) - GPU-projected markers are not drawn" );
             return;
         }
-        const RHIStructuredBufferSlot& quads = quadBuffer.getSlot();
+        const RHIStructuredBuffer& quads = quadBuffer.getSlot();
         if ( quads.isValid() == false || quads._uav == kInvalidDescriptorIndex || _markerRowBuffer.isValid() == false )
         {
             SW_LOG_ERROR_ONCE_ID( "Canvas.CanvasQuadBufferNo", "The canvas quad buffer has no UAV for the marker projection - GPU-projected markers are not drawn" );

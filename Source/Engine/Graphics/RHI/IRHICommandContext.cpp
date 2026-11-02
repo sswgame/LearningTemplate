@@ -9,9 +9,9 @@ namespace sw
     void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
         endRenderPass(); // 패스는 겹치지 않는다
-        const RHIRenderPassOpen result = beginRenderPassNative( beginInfo );
-        _bRenderPassOpen               = result == RHIRenderPassOpen::Opened;
-        _bRenderPassBackedOff          = result == RHIRenderPassOpen::BackedOff;
+        const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo );
+        _bRenderPassOpen                      = result == RHIRenderPassBeginResult::Begun;
+        _bRenderPassNoBackBuffer              = result == RHIRenderPassBeginResult::NoBackBuffer;
     }
 
     void IRHICommandContext::endRenderPass()
@@ -26,7 +26,7 @@ namespace sw
     {
         if ( _bRenderPassOpen )
             return true;
-        if ( _bRenderPassBackedOff == false )
+        if ( _bRenderPassNoBackBuffer == false )
             RHIDrawDiagnostics::reportDrawWithoutRenderPass( getContextBackendName() );
         return false;
     }

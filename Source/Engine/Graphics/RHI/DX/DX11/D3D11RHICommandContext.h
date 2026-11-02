@@ -64,27 +64,27 @@ namespace sw
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
         [[nodiscard]] bool bindIndexBufferForDraw();
         /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
-        void              requireComputePipelineForDispatch() const;
-        void              drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
-                                              RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void              setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void              setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void              drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
-                                                     uint32 countBufferOffset = 0 ) override;
-        void              drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
-        void              dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
-        void              beginEventMarker( const utf8* pName ) override;
-        void              writeBreadcrumb( uint32 markerID ) override;
-        void              endEventMarker() override;
-        void              setPipelineState( RHIPipelineStateHandle pso ) override;
-        void              setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
-        const utf8*       getContextBackendName() const override { return "DX11"; }
-        RHIRenderPassOpen beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
-        void              endRenderPassNative() override;
-        void              setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
-        void              transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
-        void              copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
-        void              uavBarrierNative( RHIBufferHandle buffer ) override;
+        void                     requireComputePipelineForDispatch() const;
+        void                     drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
+                                                     RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
+        void                     setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void                     setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void                     drawIndexedIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
+                                                            uint32 countBufferOffset = 0 ) override;
+        void                     drawIndexedInstancedNative( uint32 indexCount, uint32 instanceCount, uint32 startIndex = 0, int32 baseVertex = 0, uint32 startInstance = 0 ) override;
+        void                     dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
+        void                     beginEventMarker( const utf8* pName ) override;
+        void                     writeBreadcrumb( uint32 markerID ) override;
+        void                     endEventMarker() override;
+        void                     setPipelineState( RHIPipelineStateHandle pso ) override;
+        void                     setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
+        const utf8*              getContextBackendName() const override { return "DX11"; }
+        RHIRenderPassBeginResult beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo ) override;
+        void                     endRenderPassNative() override;
+        void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
+        void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
+        void                     uavBarrierNative( RHIBufferHandle buffer ) override;
 
     private:
         /** @brief beginEventMarker 와 endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */
