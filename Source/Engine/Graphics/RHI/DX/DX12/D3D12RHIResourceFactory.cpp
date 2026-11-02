@@ -1401,6 +1401,7 @@ namespace sw
     RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
+        uint32                                      vertexSlotMask{ 0 };
 
         // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정, RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
         const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXIL_D3D12 );
@@ -1409,22 +1410,28 @@ namespace sw
         ShaderCompileResult            psResult{};
         if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
         {
-            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 만든다.
+            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 셰이더가 읽는 속성만 골라 만든다(DX11 · Vulkan · GL 과 같은 규칙).
+            // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
+            const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXIL_D3D12 );
             D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
+            uint32                   elementCount{ 0 };
             for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
             {
-                const RHIVertexAttribute& attribute                  = constant::render::arrVertexAttribute[attributeIndex];
-                arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
-                arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
-                arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
-                arrInputElement[attributeIndex].InputSlot            = attribute._inputSlot;
-                arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA
-                                                                                                               : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-                arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
+                if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
+                    continue;
+                const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
+                D3D12_INPUT_ELEMENT_DESC& element   = arrInputElement[elementCount++];
+                element.SemanticName                = attribute._pSemanticName;
+                element.Format                      = toDxgiVertexFormat( attribute );
+                element.AlignedByteOffset           = attribute._byteOffset;
+                element.InputSlot                   = attribute._inputSlot;
+                element.InputSlotClass              = ( attribute._bPerInstance != SW_FALSE ) ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+                element.InstanceDataStepRate        = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
             }
+            vertexSlotMask = RHIShaderRequest::toVertexSlotMask( consumedMask );
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
-            psoDesc.InputLayout    = { arrInputElement, constant::render::kVertexAttributeCount };
+            psoDesc.InputLayout    = { elementCount > 0 ? arrInputElement : nullptr, elementCount };
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
             psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
             if ( bHasPixelShader )
@@ -1495,7 +1502,7 @@ namespace sw
         // 있는 줄 알고 그리다가 드로우 계약(PSO 없는 드로우는 멈춤)에 걸린다 — 0 이면 렌더러가 그 패스를 건너뛴다.
         if ( pso == nullptr )
             return 0;
-        return _pDevice->_pipelineStates.insert( { pso } );
+        return _pDevice->_pipelineStates.insert( { pso, vertexSlotMask } );
     }
 
     RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )

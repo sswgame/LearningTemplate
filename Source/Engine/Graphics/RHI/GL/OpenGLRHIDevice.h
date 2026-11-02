@@ -468,6 +468,7 @@ namespace sw
             uint8                _bEnableBlend        : 1;
             uint8                _bPremultipliedAlpha : 1; ///< 블렌드 색 원본 계수가 One 이다(아니면 SrcAlpha 이다).
             uint8                _reserved            : 4;
+            uint32               _vertexSlotMask{ 0 }; ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask)
         };
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)입니다. 생성, 바인딩, 프레젠트, VSync 를 모두 여기가 압니다. */
@@ -486,8 +487,7 @@ namespace sw
         void*  _pHRC;
         uint32 _width;
         uint32 _height;
-        uint32 _vao;
-        uint32 _vbo;             ///< 풀스크린 삼각형(정점 3개)
+        uint32 _vao;             ///< 속성이 없는 빈 VAO — 정점 입력이 없는 셰이더의 드로우가 건다(코어 프로파일은 VAO 없이 그리지 못한다)
         uint32 _meshVao;         ///< 씬 메시 드로우용 VAO
         uint32 _defaultSampler;  ///< 엔진과 머티리얼 유닛 밖의 모든 텍스처 유닛(최근접, 클램프)
         uint32 _materialSampler; ///< 머티리얼 텍스처 유닛 t16..t31 (선형, 랩, shaderslot::kMaterialTextureSampler)

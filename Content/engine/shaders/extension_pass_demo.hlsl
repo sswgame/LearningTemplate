@@ -9,12 +9,11 @@ struct PSInput
     float4 _position : SV_POSITION;
 };
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
+PSInput VSMain( uint vertexID : SV_VertexID )
 {
     PSInput output;
-    input._position     = input._position;
-    float2 clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position    = float4( clipPosition, 0.0f, 1.0f );
+    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
+    output._position     = float4( clipPosition, 0.0f, 1.0f );
     return output;
 }
 

@@ -90,7 +90,6 @@ namespace sw
         , _immediateContext{}
         , _backBufferFormat{ constant::render::kBackBufferFormat }
         , _swapChain{}
-        , _vertexBuffer{ nullptr }
         , _gpuBuffers{}
         , _gpuTextures{}
         , _timestampFrameIndex{ 0 }
@@ -667,21 +666,6 @@ namespace sw
             }
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             bindStaticSamplers( context.get() );
-        }
-
-        // 풀스크린 삼각형 정점 버퍼. 메시 VB 없이 그리는 패스(Present/Bloom/Outline/Tonemap 등)는 draw() 가 이것을 건다.
-        // 주의: 이것이 nullptr 이면 그 패스들이 정점 없이 그려 아무것도 안 나오지만 크래시는 없다
-        // (RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다.
-        // fullscreen_triangle.hlsl 이 변환 없이 그대로 쓴다.
-        {
-            D3D11_BUFFER_DESC vbDesc{};
-            vbDesc.Usage     = D3D11_USAGE_IMMUTABLE;
-            vbDesc.ByteWidth = static_cast<UINT>( sizeof( constant::render::arrFallbackVertex ) );
-            vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-            D3D11_SUBRESOURCE_DATA vbData{};
-            vbData.pSysMem = constant::render::arrFallbackVertex;
-            if ( isHrSuccess( _device->CreateBuffer( &vbDesc, &vbData, _vertexBuffer.GetAddressOf() ), "CreateBuffer" ) == false )
-                SW_LOG_WARNING_ID( "D3D11.FailedCreateFullscreenTriangle", "Failed to create the fullscreen triangle vertex buffer." );
         }
 
         SW_LOG_INFO_ID( "D3D11.Direct3DRHIBackendDevice", "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );

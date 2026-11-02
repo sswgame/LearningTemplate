@@ -343,9 +343,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindInstanceSlotStream()
     {
-        // 슬롯 1: 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린 · 픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
-        if ( _pState->_boundInstanceSlotVb == 0 )
-            return;
+        // 슬롯 1: 인스턴스 슬롯 스트림. PSO 가 읽을 때만 부른다(걸렸는지는 checkVertexSlotsBound 가 봤다).
         ID3D11Buffer* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
         if ( pStream == nullptr )
             return;
@@ -372,25 +370,24 @@ namespace sw
         // PS 는 없어도 된다 — 깊이 전용 PSO(그림자 · 깊이 프리패스)는 픽셀 스테이지를 붙이지 않고, 아래 PSSetShader( nullptr )가 앞 드로우의 PS 를 뗀다.
         // 주의: PS 까지 요구하면 깊이 전용 드로우가 **하나도** 나가지 않는다(그림자 맵이 클리어 값뿐이 된다).
 
-        // 메시가 자기 정점 버퍼를 걸었으면 그것을, 아니면 장치의 공용 버퍼를 쓴다. 건 버퍼가 부서졌으면(세대가 달라 풀리지 않는다) 드로우를 버린다 —
-        // IASetVertexBuffers 를 건너뛰면 직전 드로우의 버퍼로 그린다.
-        ID3D11Buffer* pVb    = _pDevice->_vertexBuffer.Get();
-        UINT          stride = static_cast<UINT>( sizeof( RHIVertex ) );
-        UINT          offset = 0;
-        if ( _pState->_boundMeshVb != 0 )
+        // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 버퍼가 부서졌으면(세대가 달라 풀리지 않는다)
+        // 드로우를 버린다 — IASetVertexBuffers 를 건너뛰면 직전 드로우의 버퍼로 그린다.
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "DX11", pPSO->_vertexSlotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+            return false;
+        if ( ( pPSO->_vertexSlotMask & 1u ) != 0 )
         {
-            pVb = _pDevice->resolveBuffer( _pState->_boundMeshVb );
+            ID3D11Buffer* const pVb = _pDevice->resolveBuffer( _pState->_boundMeshVb );
             if ( pVb == nullptr )
             {
                 RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX11", _pState->_boundMeshVb );
                 return false;
             }
-            stride = _pState->_boundMeshStride;
-            offset = _pState->_boundMeshOffset;
-        }
-        if ( pVb != nullptr )
+            UINT stride = _pState->_boundMeshStride;
+            UINT offset = _pState->_boundMeshOffset;
             _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
-        bindInstanceSlotStream();
+        }
+        if ( ( pPSO->_vertexSlotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 )
+            bindInstanceSlotStream();
 
         _pContext->IASetInputLayout( pIl );
         _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );

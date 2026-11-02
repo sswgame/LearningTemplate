@@ -11,7 +11,7 @@ struct PSInput
     nointerpolation uint _vertexID : TEXCOORD1;
 };
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
+PSInput VSMain( uint vertexID : SV_VertexID )
 {
     PSInput output;
     float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );

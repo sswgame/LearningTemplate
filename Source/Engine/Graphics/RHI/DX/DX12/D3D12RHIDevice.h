@@ -501,6 +501,7 @@ namespace sw
         struct D3D12PipelineStateRecord
         {
             Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
+            uint32                                      _vertexSlotMask{ 0 }; ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask)
         };
 
         // 셰이더 가시 힙 하나는 [레지스트리 구간 | 온라인 블록 구간]으로 나뉜다. 레지스트리는 bindless 인덱스가 곧 힙 슬롯이다(텍스처 배열이 힙 시작을
@@ -678,7 +679,6 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _cbvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _offlineViewHeap; ///< CPU 전용 뷰 힙. 슬롯 테이블 CopyDescriptors 의 원본과 null 뷰를 담는다.
         Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature;   ///< 그래픽스와 컴퓨트가 같이 쓴다(같은 블롭).
-        Microsoft::WRL::ComPtr<ID3D12Resource>            _vertexBuffer;    ///< 풀스크린 포스트용 정점 버퍼(정점 3개)
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;

@@ -111,7 +111,6 @@ namespace sw
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
-        , _vertexBuffer{ nullptr }
         , _listBindlessFree{}
         , _gpuBuffers{}
         , _mapCbSlotSize{}
@@ -294,20 +293,6 @@ namespace sw
                 SW_LOG_ERROR_ID( "Vulkan.FailedCreateBindlessTexture", "Failed to create the bindless texture set." );
                 return false;
             }
-        }
-
-        BLOCK( "Fullscreen Triangle" )
-        {
-            const RHIBufferHandle vbHandle =
-                createVulkanBuffer( static_cast<uint32>( sizeof( constant::render::arrFallbackVertex ) ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, constant::render::arrFallbackVertex );
-            if ( vbHandle != 0 )
-            {
-                const VulkanBufferRecord* pRecord = resolveAllocatedBuffer( vbHandle );
-                if ( pRecord != nullptr )
-                    _vertexBuffer = pRecord->_buffer;
-            }
-            else
-                SW_LOG_WARNING_ID( "Vulkan.FailedCreateFullscreenTriangle", "Failed to create fullscreen triangle vertex buffer." );
         }
 
         (void)initializePipelineCache(); // 캐시가 없으면 파이프라인을 처음부터 만들 뿐이다 — 실패는 initializePipelineCache 가 경고로 남긴다
@@ -511,8 +496,6 @@ namespace sw
             } );
             _pipelineStates.clear();
 
-            // _vertexBuffer 는 _gpuBuffers 가 소유한다(풀스크린 삼각형 리소스). 두 번 부수지 않는다.
-            _vertexBuffer = VK_NULL_HANDLE;
             if ( _pipelineLayout )
                 vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
             if ( _descriptorPool )

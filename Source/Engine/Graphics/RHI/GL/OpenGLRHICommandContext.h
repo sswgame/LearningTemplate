@@ -56,9 +56,13 @@ namespace sw
         void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
-        /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 테이블(constant::render::arrVertexAttribute)대로 vbo 와 인스턴스 슬롯 스트림의 속성을 설정합니다.
-         *         모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다. */
+        /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 테이블(constant::render::arrVertexAttribute)대로 vbo(0 이면 슬롯 0 속성을 끈다)와 인스턴스 슬롯 스트림의 속성을 설정합니다. */
         void bindMeshVaoAttribs( uint32 vbo );
+        /**
+         * @brief 건 PSO 가 읽는 정점 슬롯만 VAO 로 겁니다(정점 입력이 없으면 빈 VAO). 읽는 슬롯에 버퍼가 없거나 건 버퍼가 부서졌으면 알리고 false 이며, 드로우를 버립니다(네 백엔드가 같다).
+         * @details 모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다.
+         */
+        [[nodiscard]] bool bindVertexInputsForDraw();
         /**
          * @brief 드로우가 쓸 프로그램과 토폴로지를 건 PSO 에서 고릅니다. 등록된 PSO 가 없으면 오류로 멈춥니다(기본 프로그램 없음).
          * @details 드로우 진입점 네 개가 모두 이것을 씁니다. 따로 고르는 진입점은 PSO 토폴로지를 놓쳐 GL_TRIANGLES 로 굳기 쉽습니다.

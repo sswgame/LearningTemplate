@@ -27,9 +27,8 @@ namespace sw
             static constexpr uint32 kRootConstantCount = kRootColorVision + 1;
             static_assert( kRootConstantCount <= shaderslot::kRootConstantDwords, "canvas root constants exceed the four-backend budget" );
 
-            /** @brief 사각형 하나의 정점 수입니다 — canvas.hlsl 이 SV_VertexID 로 모서리 여섯을 만든다. 메시 없는 드로우라 장치 공용 대체 정점 버퍼가 이만큼 담아야 한다. */
+            /** @brief 사각형 하나의 정점 수입니다 — canvas.hlsl 이 SV_VertexID 로 모서리 여섯을 만든다(정점 입력이 없는 PSO 라 정점 버퍼를 걸지 않는다). */
             static constexpr uint32 kVerticesPerQuad = 6;
-            static_assert( kVerticesPerQuad <= constant::render::kFallbackVertexCount, "the fallback vertex buffer must cover a canvas quad (slot 0 is read past its end)" );
         };
     } // namespace
 } // namespace sw

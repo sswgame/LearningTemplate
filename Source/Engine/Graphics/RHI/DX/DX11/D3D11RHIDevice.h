@@ -495,7 +495,8 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11VertexShader>      _vs;
             Microsoft::WRL::ComPtr<ID3D11PixelShader>       _ps;
             Microsoft::WRL::ComPtr<ID3D11ComputeShader>     _cs;
-            Microsoft::WRL::ComPtr<ID3D11InputLayout>       _inputLayout;
+            Microsoft::WRL::ComPtr<ID3D11InputLayout>       _inputLayout;         ///< 셰이더가 읽는 속성만 담는다. 정점 입력이 없는 셰이더는 비어 있다(nullptr)
+            uint32                                          _vertexSlotMask{ 0 }; ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask)
             Microsoft::WRL::ComPtr<ID3D11RasterizerState>   _rasterizerState;
             Microsoft::WRL::ComPtr<ID3D11BlendState>        _blendState;
             Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;
@@ -522,8 +523,6 @@ namespace sw
         D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
         /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓고 크기를 바꿉니다. */
         void resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height );
-
-        Microsoft::WRL::ComPtr<ID3D11Buffer> _vertexBuffer; ///< 풀스크린 삼각형(정점 3개). 메시 정점 버퍼가 없는 드로우가 쓴다.
 
         /// @brief 버퍼 핸들에서 버퍼와 SRV 를 찾는 테이블입니다(텍스처 `_gpuTextures` 와 같은 구조). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSRV`).
         RHIHandleTable<BufferRecord>  _gpuBuffers;

@@ -551,6 +551,11 @@ namespace sw
             const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
             if ( attribute._inputSlot != 0 )
                 continue; // 슬롯 1 은 아래에서 스트림 VBO 로
+            if ( vbo == 0 )
+            {
+                glDisableVertexAttribArray( attribute._location ); // 슬롯 0 을 읽지 않는 PSO(스트림만 읽는다)
+                continue;
+            }
             glEnableVertexAttribArray( attribute._location );
             glVertexAttribPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_FLOAT, GL_FALSE, stride,
                                    reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + attribute._byteOffset ) ) );
@@ -577,6 +582,35 @@ namespace sw
             glVertexAttribDivisor( attribute._location, attribute._bPerInstance != SW_FALSE ? 1u : 0u );
         }
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
+    }
+
+    bool OpenGLRHICommandContext::bindVertexInputsForDraw()
+    {
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO     = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
+        const uint32                                      slotMask = pPSO != nullptr ? pPSO->_vertexSlotMask : 0u; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "OpenGL", slotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+            return false;
+        if ( slotMask == 0 )
+        {
+            if ( _pDevice->_vao == 0 )
+                return false;
+            glBindVertexArray( _pDevice->_vao );
+            return true;
+        }
+        GLuint vbo{ 0 };
+        if ( ( slotMask & 1u ) != 0 )
+        {
+            vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
+            if ( vbo == 0 )
+            {
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
+                return false;
+            }
+        }
+        if ( _pDevice->_meshVao == 0 )
+            return false;
+        bindMeshVaoAttribs( vbo );
+        return true;
     }
 
     void OpenGLRHICommandContext::resolveDrawProgram( uint32& outProgram, uint32& outMode ) const
@@ -612,25 +646,8 @@ namespace sw
 
         glUseProgram( program );
 
-        const bool bMeshVertexBuffer = _pState->_boundMeshVb != 0;
-        if ( bMeshVertexBuffer )
-        {
-            const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
-            if ( vbo == 0 )
-            {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
-                return;
-            }
-            if ( _pDevice->_meshVao == 0 )
-                return;
-            bindMeshVaoAttribs( vbo );
-        }
-        else
-        {
-            if ( _pDevice->_vao == 0 )
-                return;
-            glBindVertexArray( _pDevice->_vao );
-        }
+        if ( bindVertexInputsForDraw() == false )
+            return;
 
         if ( instanceCount == 1 )
             glDrawArrays( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ) );
@@ -638,8 +655,7 @@ namespace sw
             glDrawArraysInstanced( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ), static_cast<GLsizei>( instanceCount ) );
 
         glBindVertexArray( 0 );
-        if ( bMeshVertexBuffer )
-            glBindBuffer( GL_ARRAY_BUFFER, 0 );
+        glBindBuffer( GL_ARRAY_BUFFER, 0 );
     }
 
     void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
@@ -791,22 +807,10 @@ namespace sw
 
         glUseProgram( program );
 
-        // 메시를 걸지 않은 간접 드로우(GPU 입자 — SV_VertexID 로 정점을 만든다)는 drawArrays 와 같이 장치 공용 VAO 로 그린다(다른 세 백엔드도 공용 버퍼로 그린다).
-        const bool   bMeshVertexBuffer = _pState->_boundMeshVb != 0;
-        const GLuint vbo               = bMeshVertexBuffer ? _pDevice->resolveGlBuffer( _pState->_boundMeshVb ) : 0u;
-        const GLuint buf               = _pDevice->resolveGlBuffer( argumentBuffer );
-        if ( vbo == 0 && bMeshVertexBuffer )
-            RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
-        const bool bMissingMeshBuffers  = bMeshVertexBuffer && ( vbo == 0 || _pDevice->_meshVao == 0 );
-        const bool bMissingSharedBuffer = bMeshVertexBuffer == false && _pDevice->_vao == 0;
-        const bool bCannotDraw          = bMissingMeshBuffers || bMissingSharedBuffer || buf == 0;
-        if ( bCannotDraw )
+        // 메시를 걸지 않은 간접 드로우(GPU 입자 — SV_VertexID 로 정점을 만든다)는 정점 입력이 없는 PSO 라 빈 VAO 로 그린다(drawArrays 와 같다).
+        const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
+        if ( buf == 0 || bindVertexInputsForDraw() == false )
             return;
-
-        if ( bMeshVertexBuffer )
-            bindMeshVaoAttribs( vbo );
-        else
-            glBindVertexArray( _pDevice->_vao );
         glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
 
         constexpr GLsizei stride  = sizeof( RHIDrawIndirectCommand );
@@ -844,17 +848,10 @@ namespace sw
         outMode = GL_TRIANGLES;
         resolveDrawProgram( program, outMode );
         glUseProgram( program );
-        const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
+        // 정점 슬롯은 PSO 가 읽는 것만 건다(다른 드로우 진입점 · 세 백엔드와 같다). 인덱스 버퍼는 VAO 상태라 VAO 를 건 뒤에 건다.
         const GLuint ibo = _pDevice->resolveGlBuffer( _pState->_boundIndexBuffer );
-        // 건 메시 버퍼가 부서졌으면 드로우를 버린다(다른 드로우 진입점 · 세 백엔드와 같다). 인덱스 드로우는 메시 정점 · 인덱스 버퍼가 둘 다 있어야 한다.
-        if ( vbo == 0 && _pState->_boundMeshVb != 0 )
-        {
-            RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
+        if ( ibo == 0 || bindVertexInputsForDraw() == false )
             return false;
-        }
-        if ( vbo == 0 || ibo == 0 || _pDevice->_meshVao == 0 )
-            return false;
-        bindMeshVaoAttribs( vbo );
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
         outIndexType = ( _pState->_boundIndexStride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
         return true;

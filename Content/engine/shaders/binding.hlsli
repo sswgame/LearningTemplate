@@ -67,7 +67,7 @@
  * - 엔진(C++ ShaderParameterBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
  *   따라서 이 파일의 PassCB 를 고치면 C++ 는 자동으로 따라온다 (미러 없음).
  * - GPUScene(언리얼 방식): 드로우별 데이터는 바인딩이 아니라 버퍼에서 읽는다.
- *     VS: `InstanceData instance = InstanceData::load( input._instanceSlot )` → instance._world / instance._materialIndex
+ *     VS: `InstanceData instance = InstanceData::load( instanceSlot )` → instance._world / instance._materialIndex
  *     PS: `SW_MATERIAL( materialIndex )._color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
  *   머티리얼 구조체는 셰이더가 SW_MATERIAL_BEGIN/END 로 선언하고, 엔진이 그 셰이더 타입의 머티리얼 데이터를
  *   StructuredBuffer(g_SwMaterials, t5)에 원소로 쌓아 인스턴스에 materialIndex 를 매긴다.
@@ -292,7 +292,7 @@ SW_ROOT_CONSTANTS_BEGIN
 {
     // 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
     // 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
-    // 인스턴스 슬롯 스트림(VertexInput._instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
+    // 인스턴스 슬롯 스트림(정점 셰이더 인자 SW_INSTANCESLOT)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
     // 배치들이 루트 상수를 바꾸지 않고 멀티 드로우 하나로 나간다.
     uint g_SwMaterialCount;
 };

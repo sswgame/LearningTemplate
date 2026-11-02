@@ -21,9 +21,16 @@ namespace sw
 
         /**
          * @brief 드로우가 설정한 메시 정점 버퍼가 해제돼 핸들로 찾을 수 없어 그 드로우를 버렸음을 알립니다.
-         * @details 네 백엔드 모두 그 드로우를 버린다. 풀스크린 버퍼나 직전 드로우의 버퍼로 대신 그리지 않는다.
+         * @details 네 백엔드 모두 그 드로우를 버린다. 다른 버퍼나 직전 드로우의 버퍼로 대신 그리지 않는다.
          *          횟수는 백엔드 이름마다 따로 센다. 백엔드를 바꾸면 그 백엔드는 다시 처음부터 센다.
          */
         static void reportDestroyedVertexBuffer( const utf8* pBackendName, RHIBufferHandle handle );
+
+        /**
+         * @brief PSO 가 읽는 정점 버퍼 슬롯(@p vertexSlotMask, `RHIShaderRequest::toVertexSlotMask`)에 버퍼가 모두 걸렸는지 봅니다. 빠졌으면 알리고 false 입니다.
+         * @details 네 백엔드가 그 드로우를 버린다. 장치 공용 버퍼로 대신 그리지 않는다 — 정점 입력이 없는 셰이더는 입력 레이아웃이 비어 슬롯을 읽지 않으므로
+         *          (언리얼의 빈 정점 선언 · Godot 의 빈 정점 포맷) 여기 걸린 것은 메시를 걸지 않고 메시 셰이더로 그린 부르는 쪽의 결함이다.
+         */
+        [[nodiscard]] static bool checkVertexSlotsBound( const utf8* pBackendName, uint32 vertexSlotMask, RHIBufferHandle meshVertexBuffer, RHIBufferHandle instanceSlotStream );
     };
 } // namespace sw

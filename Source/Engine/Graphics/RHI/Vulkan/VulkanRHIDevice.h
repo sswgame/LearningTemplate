@@ -520,6 +520,7 @@ namespace sw
         struct VulkanPipelineStateRecord
         {
             VkPipeline _pipeline{ nullptr };
+            uint32     _vertexSlotMask{ 0 }; ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask) — 파이프라인이 선언한 바인딩이다
         };
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 을 반환합니다. */
@@ -743,7 +744,6 @@ namespace sw
         VkPipelineLayout _pipelineLayout;
         VkDescriptorPool _descriptorPool;
         VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< binding_slots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
-        VkBuffer         _vertexBuffer;                                      ///< 풀스크린 삼각형(정점 3개)
         vector<uint32>   _listBindlessFree;
 
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;

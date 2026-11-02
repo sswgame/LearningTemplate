@@ -753,42 +753,29 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE )
             return false;
 
-        VkBuffer     slot0Buffer = VK_NULL_HANDLE;
-        VkDeviceSize slot0Offset = 0;
-        if ( _pState->_boundMeshVb != 0 )
+        // 파이프라인이 선언한 바인딩(셰이더가 읽는 슬롯)에만 버퍼를 건다 — 정점 입력이 없는 셰이더는 바인딩이 없어 아무것도 걸지 않는다.
+        // 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
+        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
+        const uint32                                      slotMask = pRecord != nullptr ? pRecord->_vertexSlotMask : 0u; // 없는 PSO 는 bindActiveGraphicsPipeline 이 멈췄다
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "Vulkan", slotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+            return false;
+        const auto bindSlot = [this, cmd]( uint32 slot, RHIBufferHandle buffer, uint32 offset )
         {
-            // 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다 — 장치 공용 버퍼로 대신 그리지 않는다.
-            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pState->_boundMeshVb );
-            if ( pVb == nullptr || pVb->_buffer == VK_NULL_HANDLE )
+            const VulkanRHIDevice::VulkanBufferRecord* pBuffer = _pDevice->resolveAllocatedBuffer( buffer );
+            if ( pBuffer == nullptr || pBuffer->_buffer == VK_NULL_HANDLE )
             {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "Vulkan", _pState->_boundMeshVb );
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "Vulkan", buffer );
                 return false;
             }
-            slot0Buffer = pVb->_buffer;
-            slot0Offset = static_cast<VkDeviceSize>( _pState->_boundMeshOffset );
-        }
-        // 메시를 걸지 않은 드로우(풀스크린 · 픽스처)는 장치 공용 버퍼로 그린다.
-        if ( slot0Buffer == VK_NULL_HANDLE )
-            slot0Buffer = _pDevice->_vertexBuffer;
-        if ( slot0Buffer == VK_NULL_HANDLE )
+            const VkDeviceSize vkOffset = static_cast<VkDeviceSize>( offset );
+            vkCmdBindVertexBuffers( cmd, slot, 1, &pBuffer->_buffer, &vkOffset );
             return true;
-
-        // 바인딩 1(인스턴스 슬롯 스트림)은 파이프라인이 선언하므로 **늘 유효한 버퍼**가 있어야 한다. 스트림이 안 걸린
-        // 드로우(풀스크린 · 픽스처)는 그 속성을 읽지 않으므로 슬롯 0 버퍼를 자리만 채우게 건다.
-        VkBuffer     slot1Buffer = slot0Buffer;
-        VkDeviceSize slot1Offset = 0;
-        if ( _pState->_boundInstanceSlotVb != 0 )
-        {
-            const VulkanRHIDevice::VulkanBufferRecord* pStream = _pDevice->resolveAllocatedBuffer( _pState->_boundInstanceSlotVb );
-            if ( pStream != nullptr && pStream->_buffer != VK_NULL_HANDLE )
-            {
-                slot1Buffer = pStream->_buffer;
-                slot1Offset = static_cast<VkDeviceSize>( _pState->_boundInstanceSlotOffset );
-            }
-        }
-        VkBuffer     arrVertexBuffer[] = { slot0Buffer, slot1Buffer };
-        VkDeviceSize arrOffset[]       = { slot0Offset, slot1Offset };
-        vkCmdBindVertexBuffers( cmd, 0, 2, arrVertexBuffer, arrOffset );
+        };
+        if ( ( slotMask & 1u ) != 0 && bindSlot( 0, _pState->_boundMeshVb, _pState->_boundMeshOffset ) == false )
+            return false;
+        const bool bReadsStream = ( slotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0;
+        if ( bReadsStream && bindSlot( constant::render::kInstanceSlotStreamSlot, _pState->_boundInstanceSlotVb, _pState->_boundInstanceSlotOffset ) == false )
+            return false;
         return true;
     }
 

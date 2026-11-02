@@ -71,5 +71,12 @@ namespace sw
          *          빼는 쪽만 이 마스크로 한다. 리플렉션은 SPIR-V, DXIL, DXBC 모두 된다.
          */
         static uint32 computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat );
+
+        /**
+         * @brief 속성 마스크(`computeConsumedVertexAttributeMask`)가 읽는 정점 버퍼 슬롯을 비트(1 << 슬롯)로 반환합니다. 0 이면 정점 입력이 없는 셰이더입니다.
+         * @details PSO 가 이 값을 들고 드로우마다 그 슬롯에 버퍼가 걸렸는지 본다(`RHIDrawDiagnostics::checkVertexSlotsBound`). 입력 레이아웃도 읽는 속성만으로 만든다 —
+         *          그래서 정점을 SV_VertexID 로 만드는 셰이더는 빈 레이아웃이라 정점 버퍼 없이 몇 정점이든 그린다(언리얼 빈 정점 선언 · Godot 빈 정점 포맷).
+         */
+        static uint32 toVertexSlotMask( uint32 attributeMask );
     };
 } // namespace sw

@@ -105,4 +105,15 @@ namespace sw
         }
         return mask;
     }
+
+    uint32 RHIShaderRequest::toVertexSlotMask( uint32 attributeMask )
+    {
+        uint32 slotMask{ 0 };
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
+        {
+            if ( ( attributeMask & ( 1u << attributeIndex ) ) != 0 )
+                slotMask |= 1u << constant::render::arrVertexAttribute[attributeIndex]._inputSlot;
+        }
+        return slotMask;
+    }
 } // namespace sw

@@ -43,10 +43,9 @@ struct PSInput
     float2 _uv : TEXCOORD0; // 뷰포트 안 UV(DX 규약 — 위가 0). 픽셀 위치는 SV_Position 이 아니라 이것으로 구한다: GL 의 기본 프레임버퍼는 조각 좌표 원점이 다르다
 };
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
+PSInput VSMain( uint vertexID : SV_VertexID )
 {
-    PSInput output;
-    input._position           = input._position;
+    PSInput      output;
     const float2 clipPosition = float2( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f );
     output._position          = float4( clipPosition, 0.0f, 1.0f );
     output._uv                = float2( clipPosition.x * 0.5f + 0.5f, 0.5f - clipPosition.y * 0.5f );

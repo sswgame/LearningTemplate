@@ -17,10 +17,9 @@ struct PSInput
     float4 _position : SV_POSITION;
 };
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
+PSInput VSMain( uint vertexID : SV_VertexID )
 {
-    PSInput output;
-    input._position           = input._position;
+    PSInput      output;
     const float2 clipPosition = float2( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f );
     output._position          = float4( clipPosition, 0.0f, 1.0f );
     return output;

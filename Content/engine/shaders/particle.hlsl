@@ -131,9 +131,8 @@ PSInput billboardVertex( uint vertexID, uint instanceId )
     return output;
 }
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID, uint instanceId : SV_InstanceID )
+PSInput VSMain( uint vertexID : SV_VertexID, uint instanceId : SV_InstanceID )
 {
-    input._position = input._position;
     if ( ( SW_ROOT( g_SwParticleFlags ) & kParticleFlagRibbon ) != 0u )
         return ribbonVertex( vertexID, instanceId );
     return billboardVertex( vertexID, instanceId );

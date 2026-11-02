@@ -918,19 +918,27 @@ namespace sw
                                    desc._vertexShaderPath.c_str() );
                 return 0;
             }
-            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 만든다. DX12, Vulkan, GL 과 같은 테이블이다.
+            // 입력 레이아웃은 **공용 테이블**(constant::render::arrVertexAttribute)에서 셰이더가 읽는 속성만 골라 만든다. DX12, Vulkan, GL 과 같은 규칙이다.
+            // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 레이아웃을 두지 않는다 — 정점 버퍼 없이 그린다.
+            const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXBC_D3D11 );
             D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
+            uint32                   elementCount{ 0 };
             for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
             {
-                const RHIVertexAttribute& attribute                  = constant::render::arrVertexAttribute[attributeIndex];
-                arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
-                arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
-                arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
-                arrInputElement[attributeIndex].InputSlot            = attribute._inputSlot;
-                arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
-                arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
+                if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
+                    continue;
+                const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
+                D3D11_INPUT_ELEMENT_DESC& element   = arrInputElement[elementCount++];
+                element.SemanticName                = attribute._pSemanticName;
+                element.Format                      = toDxgiVertexFormat( attribute );
+                element.AlignedByteOffset           = attribute._byteOffset;
+                element.InputSlot                   = attribute._inputSlot;
+                element.InputSlotClass              = ( attribute._bPerInstance != SW_FALSE ) ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
+                element.InstanceDataStepRate        = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
             }
-            if ( isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, constant::render::kVertexAttributeCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
+            pso._vertexSlotMask = RHIShaderRequest::toVertexSlotMask( consumedMask );
+            if ( elementCount > 0 &&
+                 isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, elementCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
             {
                 SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateCreateInputLayoutFailed", "createPipelineState: CreateInputLayout failed '%#'", desc._vertexShaderPath.c_str() );
                 return 0;

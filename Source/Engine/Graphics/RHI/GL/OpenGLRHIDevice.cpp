@@ -27,7 +27,6 @@ namespace sw
         , _width{ 1280 }
         , _height{ 720 }
         , _vao{ 0 }
-        , _vbo{ 0 }
         , _meshVao{ 0 }
         , _defaultSampler{ 0 }
         , _materialSampler{ 0 }
@@ -481,23 +480,7 @@ namespace sw
         _bInitialized = SW_TRUE;
 
         {
-            glGenVertexArrays( 1, &_vao );
-            glGenBuffers( 1, &_vbo );
-            glBindVertexArray( _vao );
-            glBindBuffer( GL_ARRAY_BUFFER, _vbo );
-            glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( constant::render::arrFallbackVertex ) ), constant::render::arrFallbackVertex, GL_STATIC_DRAW );
-            for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
-            {
-                const RHIVertexAttribute& attribute = constant::render::arrVertexAttribute[attributeIndex];
-                if ( attribute._inputSlot != 0 )
-                    continue; // 인스턴스 슬롯 스트림은 씬 드로우 전용이다. 풀스크린 VAO 는 슬롯 0 뿐이다
-                glEnableVertexAttribArray( attribute._location );
-                glVertexAttribPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_FLOAT, GL_FALSE,
-                                       static_cast<GLsizei>( sizeof( RHIVertex ) ),
-                                       reinterpret_cast<void*>( static_cast<uintptr_t>( attribute._byteOffset ) ) );
-            }
-            glBindVertexArray( 0 );
-            glBindBuffer( GL_ARRAY_BUFFER, 0 );
+            glGenVertexArrays( 1, &_vao ); // 빈 VAO — 정점 입력이 없는 셰이더의 드로우
 
             glGenVertexArrays( 1, &_meshVao );
             glBindVertexArray( _meshVao );
@@ -737,11 +720,6 @@ namespace sw
             glDeleteVertexArrays( 1, &_vao );
             _vao = 0;
         }
-        if ( _vbo )
-        {
-            glDeleteBuffers( 1, &_vbo );
-            _vbo = 0;
-        }
         if ( _meshVao )
         {
             glDeleteVertexArrays( 1, &_meshVao );
@@ -820,11 +798,6 @@ namespace sw
         {
             glDeleteVertexArrays( 1, &_vao );
             _vao = 0;
-        }
-        if ( _vbo != 0 )
-        {
-            glDeleteBuffers( 1, &_vbo );
-            _vbo = 0;
         }
         if ( _meshVao != 0 )
         {

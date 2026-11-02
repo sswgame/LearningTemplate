@@ -32,10 +32,10 @@ struct PSInput
     SW_APPEARANCE_VARYING
 };
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
+PSInput VSMain( VertexInput input, uint instanceSlot : SW_INSTANCESLOT, uint vertexID : SV_VertexID )
 {
     PSInput      output;
-    InstanceData instance = InstanceData::load( input._instanceSlot );
+    InstanceData instance = InstanceData::load( instanceSlot );
     output._color         = instance.getHighlightColor();
     SW_APPEARANCE_WRITE( output, instance )
     // 이 패스의 방식이 아닌 인스턴스(강조 없음 포함)는 그리지 않는다 — 드로우는 그대로 나가지만 래스터가 없다.

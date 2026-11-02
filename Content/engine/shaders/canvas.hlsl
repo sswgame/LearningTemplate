@@ -66,10 +66,9 @@ uint selectTexture( uint slot )
     return kInvalidIndex;
 }
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID, uint instanceId : SV_InstanceID )
+PSInput VSMain( uint vertexID : SV_VertexID, uint instanceId : SV_InstanceID )
 {
-    PSInput output;
-    input._position            = input._position;
+    PSInput          output;
     const uint       quadIndex = SW_ROOT( g_SwCanvasQuadBase ) + instanceId;
     const CanvasQuad quad      = g_SwCanvasQuads[quadIndex];
     const float2     corner    = kCornerTable[vertexID % 6u];

@@ -113,13 +113,12 @@ namespace sw
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
         /** @brief 설정해 둔 메시 정점 버퍼를 바인딩합니다. 핸들로 대상을 찾지 못하면(이미 파괴됨) 아무것도 바인딩하지 않고 false 를 반환합니다. */
         [[nodiscard]] bool bindMeshVertexBuffer();
-        /** @brief 메시 정점 버퍼가 설정되어 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다. 설정한 메시 버퍼가 파괴됐으면 알리고 false 를 반환하며, 부르는 쪽은 드로우를 버립니다(네 백엔드가 같습니다). */
+        /** @brief 활성 PSO 가 읽는 정점 버퍼 슬롯(메시 · 인스턴스 슬롯 스트림)만 바인딩합니다. 읽는 슬롯에 버퍼가 없거나 설정한 버퍼가 파괴됐으면 알리고 false 를 반환하며, 부르는 쪽은 드로우를 버립니다(네 백엔드가 같습니다). */
         [[nodiscard]] bool bindMeshVertexBufferForDraw();
         /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 바인딩합니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */
         [[nodiscard]] bool bindActiveGraphicsPSO();
         /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
         void requireComputePipelineForDispatch() const;
-        void bindFullscreenVertexBuffer();
         void bindBoundIndexBuffer();
         void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
 

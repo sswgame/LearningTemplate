@@ -96,7 +96,7 @@ namespace sw::editor
         struct ListBase
         {
             uint32 _vertexWord{ 0 };
-            uint32 _indexWord{ 0 };
+            uint32 _indexHalf{ 0 }; ///< 첫 인덱스의 16비트 칸 번호(uint 칸 번호 × 2)
         };
         /** @brief 텍스처 칸 하나입니다. ImGui 텍스처 ID 는 칸 번호 + 1 이다(0 은 ImGui 의 무효 ID). */
         struct TextureSlot

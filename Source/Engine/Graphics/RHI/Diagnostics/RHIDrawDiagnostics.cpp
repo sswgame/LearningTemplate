@@ -7,6 +7,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
+
 namespace sw
 {
     namespace
@@ -32,5 +34,18 @@ namespace sw
         const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
         if ( count < kMaxReportedDraw )
             SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
+    }
+
+    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, uint32 vertexSlotMask, RHIBufferHandle meshVertexBuffer, RHIBufferHandle instanceSlotStream )
+    {
+        const bool bMissingMesh   = ( vertexSlotMask & 1u ) != 0 && meshVertexBuffer == 0;
+        const bool bMissingStream = ( vertexSlotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 && instanceSlotStream == 0;
+        if ( bMissingMesh == false && bMissingStream == false )
+            return true;
+        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        if ( count < kMaxReportedDraw )
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexSlotUnbound", "%# draw skipped: its vertex shader reads vertex buffer slot %# but no buffer is bound - bind the mesh (slot 0) or instance slot stream (slot 1), or drop VertexInput from a shader that builds its vertices",
+                             pBackendName, bMissingMesh ? 0u : constant::render::kInstanceSlotStreamSlot );
+        return false;
     }
 } // namespace sw

@@ -130,6 +130,10 @@ namespace sw
          * @brief 정점 입력 레이아웃의 **기준**입니다. 네 백엔드가 이 테이블만 읽습니다.
          * @details 순서가 곧 HLSL 의 선언 순서이고 `_location` 이다. 속성을 추가하려면 여기에 한 줄을 더하고
          *          `RHIVertex` 멤버를 하나 추가하면 되며, 백엔드는 수정하지 않는다.
+         *          PSO 의 입력 레이아웃은 이 표에서 **그 정점 셰이더가 읽는 속성만** 골라 만든다(`RHIShaderRequest::computeConsumedVertexAttributeMask`).
+         *          정점을 SV_VertexID 로 만드는 셰이더(`VertexInput` 을 받지 않는다 — 풀스크린 · 캔버스 · 입자 · 에디터 UI)는 레이아웃이 비어 정점 버퍼 없이
+         *          몇 정점이든 그린다(언리얼의 빈 정점 선언 · Godot 의 빈 정점 포맷). 읽는 슬롯에 버퍼가 없는 드로우는 대체 버퍼로 그리지 않고 버린다
+         *          (`RHIDrawDiagnostics::checkVertexSlotsBound`).
          * @note 오프셋은 손으로 적지 않는다. `SW_OFFSET_OF` 를 쓰므로 구조체를 바꾸면 자동으로 따라온다.
          */
         inline constexpr RHIVertexAttribute arrVertexAttribute[] = {
@@ -142,27 +146,6 @@ namespace sw
         };
         /// @brief 정점 속성 수입니다. 백엔드가 배열 크기를 직접 세지 않도록 함께 둡니다.
         inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrVertexAttribute ) / sizeof( arrVertexAttribute[0] ) );
-
-        /**
-         * @brief 메시 정점 버퍼 없이 그리는 드로우(정점을 SV_VertexID 로 만든다)가 인스턴스 하나에 쓰는 정점 수의 상한입니다. 풀스크린 삼각형은 3, 캔버스 사각형은 6 입니다.
-         * @details 입력 레이아웃이 하나뿐이라 이런 드로우도 슬롯 0 을 읽는다. 백엔드는 메시가 안 걸린 드로우에 `arrFallbackVertex` 로 만든 장치 공용 버퍼를 건다.
-         *          버퍼가 드로우의 정점 수보다 작으면 입력 어셈블러가 범위 밖을 읽는다 — D3D 는 0 을 읽고 D3D12 디버그 레이어가
-         *          "Vertex Buffer at the input vertex slot 0 is not big enough" 를 쌓으며, Vulkan · GL 은 견고성 기능이 없으면 미정의다.
-         *          더 많은 정점을 만드는 드로우를 더하면 이 값을 올린다.
-         */
-        inline constexpr uint32 kFallbackVertexCount = 6;
-        /**
-         * @brief 메시가 안 걸린 드로우의 슬롯 0 버퍼 내용입니다. 앞의 셋은 풀스크린 삼각형(NDC 큰 삼각형 — `fullscreen_triangle.hlsl` 이 변환 없이 쓴다)이고 나머지는 자리만 채운다.
-         * @details 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다. 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
-         */
-        inline constexpr RHIVertex arrFallbackVertex[kFallbackVertexCount] = {
-            { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            {},
-            {},
-            {},
-        };
 
         /** @brief submitTextureUpload 가 한 번에 받는 밉 수의 상한입니다. 2^16 텍스처의 전체 체인(17단계)을 덮습니다. */
         inline constexpr uint32 kMaxTextureMipCount = 17;

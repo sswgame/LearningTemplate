@@ -148,14 +148,14 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 }
 #endif // SW_MATERIAL_DEPTH_ONLY
 
-MaterialInterpolants VSMain( VertexInput input, uint vertexID : SV_VertexID )
+MaterialInterpolants VSMain( VertexInput input, uint instanceSlot : SW_INSTANCESLOT, uint vertexID : SV_VertexID )
 {
     MaterialInterpolants output;
     VertexContext        context;
     context._input    = input;
     context._vertexID = vertexID;
     // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
-    context._instance = InstanceData::load( input._instanceSlot );
+    context._instance = InstanceData::load( instanceSlot );
     // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
     context._instance.loadAnimatedVertex( vertexID, input._position, input._normal, context._localPosition, context._localNormal );
     // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
@@ -169,7 +169,7 @@ MaterialInterpolants VSMain( VertexInput input, uint vertexID : SV_VertexID )
     output._position          = clipPosition;
     output.storeVaryings( context, worldPosition, clipPosition );
     SW_APPEARANCE_WRITE( output, context._instance )
-    SW_LODDEBUG_WRITE( output, input._instanceSlot )
+    SW_LODDEBUG_WRITE( output, instanceSlot )
     return output;
 }
 

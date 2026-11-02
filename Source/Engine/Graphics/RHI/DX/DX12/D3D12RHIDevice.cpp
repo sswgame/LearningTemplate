@@ -40,7 +40,6 @@ namespace sw
         , _cbvHeap{ nullptr }
         , _offlineViewHeap{ nullptr }
         , _rootSignature{ nullptr }
-        , _vertexBuffer{ nullptr }
         , _drawCommandSignature{ nullptr }
         , _drawIndexedCommandSignature{ nullptr }
         , _dispatchCommandSignature{ nullptr }
@@ -814,7 +813,6 @@ namespace sw
         }
         _listWindowSwapChain.clear();
         _swapChain.shutdown();
-        _vertexBuffer.Reset();
         _rootSignature.Reset();
         _drawCommandSignature.Reset();
         _drawIndexedCommandSignature.Reset();
@@ -1876,18 +1874,6 @@ namespace sw
         dispatchCmdSigDesc.pArgumentDescs   = &dispatchArg;
         if ( isHrSuccess( _device->CreateCommandSignature( &dispatchCmdSigDesc, nullptr, IID_PPV_ARGS( _dispatchCommandSignature.GetAddressOf() ) ), "CreateCommandSignature (dispatch)" ) == false )
             return false;
-
-        {
-
-            void* pMapped{ nullptr };
-            if ( createMappedUploadBuffer( sizeof( constant::render::arrFallbackVertex ), _vertexBuffer, pMapped ) == false )
-            {
-                SW_LOG_ERROR_ID( "D3D12.FailedCreateMapFullscreen", "Failed to create or map fullscreen vertex buffer." );
-                return false;
-            }
-            Memory::copy( pMapped, constant::render::arrFallbackVertex, sizeof( constant::render::arrFallbackVertex ) );
-            _vertexBuffer->Unmap( 0, nullptr );
-        }
 
         return true;
     }

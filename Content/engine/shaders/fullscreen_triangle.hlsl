@@ -13,11 +13,12 @@ SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB )
     float4 g_MaterialColor;
 };
 
-PSInput VSMain( VertexInput input )
+// 정점 입력 없이 SV_VertexID 로 NDC 큰 삼각형을 만든다 — 정점 버퍼를 걸지 않는 드로우(PSO 의 입력 레이아웃이 비어 있다).
+PSInput VSMain( uint vertexID : SV_VertexID )
 {
     PSInput output;
-    output._position = float4( input._position, 1.0f );
-    output._color    = input._color;
+    output._position = float4( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f, 0.0f, 1.0f );
+    output._color    = float4( 1.0f, 1.0f, 1.0f, 1.0f );
     return output;
 }
 

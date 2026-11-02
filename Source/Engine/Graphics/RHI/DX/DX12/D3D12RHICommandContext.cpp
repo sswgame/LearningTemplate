@@ -204,17 +204,19 @@ namespace sw
 
     bool D3D12RHICommandContext::bindMeshVertexBufferForDraw()
     {
-        // 메시를 걸지 않은 드로우(풀스크린 · 픽스처)는 풀스크린 버퍼로 그린다. 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
-        if ( _pState->_boundMeshVb == 0 )
-            bindFullscreenVertexBuffer();
-        else if ( bindMeshVertexBuffer() == false )
+        // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
+        const D3D12RHIDevice::D3D12PipelineStateRecord* pPSORecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
+        const uint32                                    slotMask   = pPSORecord != nullptr ? pPSORecord->_vertexSlotMask : 0u; // 없는 PSO 는 bindActiveGraphicsPSO 가 멈췄다
+        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "DX12", slotMask, _pState->_boundMeshVb, _pState->_boundInstanceSlotVb ) == false )
+            return false;
+        if ( ( slotMask & 1u ) != 0 && bindMeshVertexBuffer() == false )
         {
             RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX12", _pState->_boundMeshVb );
             return false;
         }
 
-        // 슬롯 1: 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린 · 픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
-        if ( _pState->_boundInstanceSlotVb != 0 )
+        // 슬롯 1: 인스턴스 슬롯 스트림 — PSO 가 읽을 때만 건다.
+        if ( ( slotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 )
         {
             ID3D12Resource* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
             if ( pStream != nullptr )
@@ -229,17 +231,6 @@ namespace sw
             }
         }
         return true;
-    }
-
-    void D3D12RHICommandContext::bindFullscreenVertexBuffer()
-    {
-        if ( _pDevice->_vertexBuffer == nullptr )
-            return;
-        D3D12_VERTEX_BUFFER_VIEW vbv{};
-        vbv.BufferLocation = _pDevice->_vertexBuffer->GetGPUVirtualAddress();
-        vbv.SizeInBytes    = static_cast<UINT>( sizeof( constant::render::arrFallbackVertex ) );
-        vbv.StrideInBytes  = static_cast<UINT>( sizeof( RHIVertex ) );
-        commandListForRecord()->IASetVertexBuffers( 0, 1, &vbv );
     }
 
     void D3D12RHICommandContext::bindBoundIndexBuffer()

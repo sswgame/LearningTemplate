@@ -50,11 +50,8 @@ namespace sw::editor
              */
             static constexpr int32 kTextureDestroyDelayFrames = static_cast<int32>( constant::render::kMaxFrameCountInFlight + 1u );
 
-            /** @brief 인스턴스 하나가 그리는 정점 수 — 삼각형 둘(셰이더 `kImGuiVerticesPerInstance`). */
-            static constexpr uint32 kVerticesPerInstance = 6u;
-
             static_assert( sizeof( ImDrawVert ) == kVertexWords * sizeof( uint32 ), "ImDrawVert must be pos float2 + uv float2 + col uint (imgui.hlsl)" );
-            static_assert( kVerticesPerInstance <= constant::render::kFallbackVertexCount, "the fallback vertex buffer must cover an ImGui instance (slot 0 is read past its end)" );
+            static_assert( sizeof( ImDrawIdx ) == 2u, "imgui.hlsl reads 16-bit indices, two per uint" );
 
             /** @brief ImGui 텍스처 ID ↔ 칸 번호(0 은 ImGui 의 무효 ID 라 하나를 더한다). */
             static ImTextureID makeTextureID( uint32 slotIndex ) { return static_cast<ImTextureID>( slotIndex ) + 1u; }
@@ -259,7 +256,7 @@ namespace sw::editor
             }
         }
 
-        // 3) 그리기 목록 — 정점(uint 다섯) 다음에 인덱스(uint 하나, ImDrawIdx 를 넓힌다)를 목록마다 잇는다.
+        // 3) 그리기 목록 — 정점(uint 다섯) 다음에 16비트 인덱스를 그대로(uint 하나에 둘, 홀수면 반 칸을 비운다) 목록마다 잇는다.
         _listWord.clear();
         _mapListBase.clear();
         for ( const ImDrawData* pDrawData : listDrawData )
@@ -271,15 +268,11 @@ namespace sw::editor
                 ListBase base{};
                 base._vertexWord             = static_cast<uint32>( _listWord.size() );
                 const size_t vertexWordCount = static_cast<size_t>( pList->VtxBuffer.Size ) * Internal::kVertexWords;
-                _listWord.resize( _listWord.size() + vertexWordCount );
+                const size_t indexWordCount  = ( static_cast<size_t>( pList->IdxBuffer.Size ) + 1u ) / 2u;
+                base._indexHalf              = static_cast<uint32>( ( _listWord.size() + vertexWordCount ) * 2u );
+                _listWord.resize( _listWord.size() + vertexWordCount + indexWordCount );
                 Memory::copy( _listWord.data() + base._vertexWord, pList->VtxBuffer.Data, vertexWordCount * sizeof( uint32 ) );
-                base._indexWord = static_cast<uint32>( _listWord.size() );
-                _listWord.resize( _listWord.size() + static_cast<size_t>( pList->IdxBuffer.Size ) );
-                uint32* const pIndexWord = _listWord.data() + base._indexWord;
-                for ( int32 index = 0; index < pList->IdxBuffer.Size; ++index )
-                {
-                    pIndexWord[index] = static_cast<uint32>( pList->IdxBuffer.Data[index] );
-                }
+                Memory::copy( _listWord.data() + base._vertexWord + vertexWordCount, pList->IdxBuffer.Data, static_cast<size_t>( pList->IdxBuffer.Size ) * sizeof( ImDrawIdx ) );
                 _mapListBase[pList] = base;
             }
         }
@@ -310,9 +303,7 @@ namespace sw::editor
         if ( bNothingToDraw )
             return;
 
-        // 정점은 셰이더가 구조 버퍼에서 꺼낸다 — 정점 버퍼 슬롯은 비운다(캔버스와 같다).
-        pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, 0, 0, 0 );
+        // 정점은 셰이더가 구조 버퍼에서 꺼낸다 — 셰이더가 정점 입력을 받지 않아 PSO 의 입력 레이아웃이 비어 있다(정점 버퍼를 걸지 않는다).
         pCmd->setPipelineState( _pso );
         pCmd->bindStructuredBuffer( _wordBuffer._srv, shaderslot::kPassBuffer ); // setPipelineState 가 슬롯 상태를 비운다 — PSO 뒤에 건다
 
@@ -358,7 +349,7 @@ namespace sw::editor
                                               static_cast<uint32>( clipMaxY - clipMinY ) };
                 pCmd->setScissorRect( scissor );
                 arrRoot[Internal::kRootVertexBase] = it->second._vertexWord + cmd.VtxOffset * Internal::kVertexWords;
-                arrRoot[Internal::kRootIndexBase]  = it->second._indexWord + cmd.IdxOffset;
+                arrRoot[Internal::kRootIndexBase]  = it->second._indexHalf + cmd.IdxOffset;
                 if ( _bNativeBindless )
                     arrRoot[Internal::kRootTexture] = srv; // 전역 번호
                 else
@@ -370,17 +361,8 @@ namespace sw::editor
                     arrRoot[Internal::kRootTexture] = 0;
                 }
                 pCmd->setGraphicsRootConstants( 0, Internal::kRootConstantCount, arrRoot );
-                // 삼각형 둘(ImGui 사각형 하나)마다 인스턴스 하나(셰이더 VSMain) — 인스턴스의 정점 수가 메시 없는 드로우의 슬롯 0 버퍼 크기 안이어야 한다.
-                const uint32 triangleCount = cmd.ElemCount / 3u;
-                if ( triangleCount >= 2u )
-                    pCmd->drawInstanced( Internal::kVerticesPerInstance, triangleCount / 2u, 0, 0 );
-                if ( ( triangleCount & 1u ) != 0u )
-                {
-                    // 남은 삼각형 하나 — D3D 의 SV_InstanceID 는 시작 인스턴스를 더하지 않으므로 시작 인덱스를 옮겨 인스턴스 0 으로 그린다.
-                    arrRoot[Internal::kRootIndexBase] += ( triangleCount - 1u ) * 3u;
-                    pCmd->setGraphicsRootConstants( 0, Internal::kRootConstantCount, arrRoot );
-                    pCmd->drawInstanced( 3, 1, 0, 0 );
-                }
+                // 명령 하나 = 드로우 하나(인덱스 하나 = 정점 하나, 셰이더 VSMain) — 시작 위치는 루트 상수로 넘겨 SV_VertexID 는 0 부터다.
+                pCmd->drawInstanced( cmd.ElemCount, 1, 0, 0 );
             }
         }
         // 가위를 대상 전체로 되돌린다(같은 패스에서 뒤에 그리는 것이 있어도 잘리지 않게).

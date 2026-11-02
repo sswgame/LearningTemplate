@@ -9,12 +9,12 @@ struct PSInput
     nointerpolation uint _slot : TEXCOORD1;
 };
 
-PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
+PSInput VSMain( VertexInput input, uint instanceSlot : SW_INSTANCESLOT, uint vertexID : SV_VertexID )
 {
     PSInput output;
     float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
     output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._slot         = input._instanceSlot;
+    output._slot         = instanceSlot;
     return output;
 }
 

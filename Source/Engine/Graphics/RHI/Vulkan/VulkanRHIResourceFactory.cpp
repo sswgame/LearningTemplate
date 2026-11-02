@@ -1348,18 +1348,18 @@ namespace sw
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        // 바인딩 0 = 메시 정점(정점 스텝), 바인딩 1 = 인스턴스 슬롯 스트림(인스턴스 스텝, uint 하나).
-        VkVertexInputBindingDescription arrBindingDescription[2]{};
-        arrBindingDescription[0].binding   = 0;
-        arrBindingDescription[0].stride    = static_cast<uint32>( sizeof( RHIVertex ) );
-        arrBindingDescription[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        arrBindingDescription[1].binding   = constant::render::kInstanceSlotStreamSlot;
-        arrBindingDescription[1].stride    = constant::render::kInstanceSlotStreamStride;
-        arrBindingDescription[1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-
         // 정점 속성은 **공용 표**(constant::render::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
-        // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다.
-        const uint32                      consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
+        // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다. 바인딩도 읽는 슬롯만 선언한다 — 정점 입력이 없는 셰이더는
+        // 바인딩이 없어 정점 버퍼 없이 그린다(바인딩 0 = 메시 정점(정점 스텝), 바인딩 1 = 인스턴스 슬롯 스트림(인스턴스 스텝, uint 하나)).
+        const uint32                    consumedMask   = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
+        const uint32                    vertexSlotMask = RHIShaderRequest::toVertexSlotMask( consumedMask );
+        VkVertexInputBindingDescription arrBindingDescription[2]{};
+        uint32                          bindingCount{ 0 };
+        if ( ( vertexSlotMask & 1u ) != 0 )
+            arrBindingDescription[bindingCount++] = VkVertexInputBindingDescription{ 0, static_cast<uint32>( sizeof( RHIVertex ) ), VK_VERTEX_INPUT_RATE_VERTEX };
+        if ( ( vertexSlotMask & ( 1u << constant::render::kInstanceSlotStreamSlot ) ) != 0 )
+            arrBindingDescription[bindingCount++] =
+                VkVertexInputBindingDescription{ constant::render::kInstanceSlotStreamSlot, constant::render::kInstanceSlotStreamStride, VK_VERTEX_INPUT_RATE_INSTANCE };
         VkVertexInputAttributeDescription arrAttributeDescription[constant::render::kVertexAttributeCount]{};
         uint32                            attributeCount{ 0 };
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
@@ -1377,7 +1377,7 @@ namespace sw
             description.offset                             = attribute._byteOffset;
         }
 
-        vertexInputInfo.vertexBindingDescriptionCount   = 2;
+        vertexInputInfo.vertexBindingDescriptionCount   = bindingCount;
         vertexInputInfo.pVertexBindingDescriptions      = arrBindingDescription;
         vertexInputInfo.vertexAttributeDescriptionCount = attributeCount;
         vertexInputInfo.pVertexAttributeDescriptions    = arrAttributeDescription;
@@ -1488,7 +1488,8 @@ namespace sw
         }
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
-        record._pipeline = newPipeline;
+        record._pipeline       = newPipeline;
+        record._vertexSlotMask = vertexSlotMask;
         return _pDevice->_pipelineStates.insert( record );
     }
 

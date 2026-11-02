@@ -175,11 +175,12 @@ struct VertexInput
     float4 _color : COLOR;
     // xyz 탄젠트 · w 바이탄젠트 부호(±1) — 바이탄젠트 = cross( normal, tangent.xyz ) * tangent.w (glTF · MikkTSpace 규약, C++ RHIVertex::_arrTangent).
     float4 _tangent : TANGENT;
-    // 슬롯 1(인스턴스 스텝)의 uint 하나 — 이 드로우 인스턴스의 **전역 자리**(가시 목록 슬롯). 씬 드로우만 건다.
-    // SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 — 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로
-    // 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
-    uint _instanceSlot : SW_INSTANCESLOT;
 };
+// 슬롯 1(인스턴스 스텝)의 uint 하나 — 이 드로우 인스턴스의 **전역 자리**(가시 목록 슬롯)는 구조체에 넣지 않고, 읽는 셰이더만
+// `VSMain( VertexInput input, uint instanceSlot : SW_INSTANCESLOT, … )` 처럼 **VertexInput 바로 뒤 인자**로 받는다(Vulkan·GL location 5 = 선언 순서).
+// 구조체에 두면 읽지 않는 셰이더도 선언하게 되고, DX 는 선언만 한 입력도 시그니처에 남겨 PSO 가 슬롯 1 을 읽는 것으로 판정한다 —
+// 스트림을 걸지 않는 메시 드로우(확장 패스 데모 등)가 버려진다. SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 —
+// 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
 // 풀스크린 셰이더도 이 구조체를 쓴다 — 자기 구조체(`struct VSInput { float3 pos; float4 col; }` 등)를 두면 Vulkan·GL 에서
 // col 이 location 1(노멀) 을 읽는다(RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 리플렉션 계약
 // 검사(ShaderBindingValidator 5번 규칙)가 이 어긋남을 바이너리에서 잡는다.
