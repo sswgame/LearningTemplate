@@ -1089,7 +1089,7 @@ namespace sw
         }
 
         // 새 리스트라 바인딩 캐시가 무효다. 뷰포트/시저도 다시 깔아준다.
-        _frameStreamState             = D3D12RecordingState{};
+        _frameStreamState.resetForRecording();
         _frameStreamState._bRecording = SW_TRUE;
         _frameStreamContext->rebindCommandList( pNextSegment );
 

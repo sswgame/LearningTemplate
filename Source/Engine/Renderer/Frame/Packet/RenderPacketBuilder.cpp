@@ -78,7 +78,11 @@ namespace sw
         packet._viewportHeight           = mainOutput._height;
 
         if ( pActiveScene == nullptr )
+        {
+            // 스냅샷을 채우지 않는 프레임이다(게임 재시작이 씬을 닫은 사이). 다시 쓰는 패킷에 앞 씬의 인스턴스가 남으면 "주 시점 없이 3D 내용을 실은 패킷" 이 된다.
+            packet._gpuScene = GPUSceneSnapshot{};
             return;
+        }
 
         // 순서가 계약이다: 빛 · 하늘 → 주 시점(카메라 · 안개 · 투명 정렬 축) → 주 시점 그림자 → 추가 뷰 → 추가 뷰 그림자 → LOD 뷰 → 스냅샷.
         const RenderPacketKeyLights lights   = _scene.collectLights( packet, *pActiveScene );

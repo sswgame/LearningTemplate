@@ -115,6 +115,18 @@ namespace sw
             , _reserved{ 0 }
         {
         }
+
+        /**
+         * @brief 새 기록을 위해 처음 상태로 되돌리되 온라인 블록 목록의 저장소는 남깁니다.
+         * @details 앞 기록의 블록은 닫을 때 풀에서 온 빈 벡터와 바꿔 돌려줬다(`D3D12RHIDevice::releaseOnlineBlocksDeferred`). 상태를 통째로 새로 만들면 그 벡터를
+         *          버려 리스트마다 프레임마다 다시 할당했다. 돌려주지 않은 블록이 남아 있으면 버리지 않고 다음 닫기가 펜스 뒤에 돌려준다.
+         */
+        void resetForRecording()
+        {
+            vector<uint32> listOnlineBlock = std::move( _listOnlineBlock );
+            *this                          = D3D12RecordingState{};
+            _listOnlineBlock               = std::move( listOnlineBlock );
+        }
     };
 } // namespace sw
 

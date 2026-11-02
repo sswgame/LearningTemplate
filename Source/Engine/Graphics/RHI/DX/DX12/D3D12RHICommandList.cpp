@@ -52,7 +52,7 @@ namespace sw
 
     void D3D12RHICommandList::beginCommandList()
     {
-        _state = D3D12RecordingState{};
+        _state.resetForRecording();
         if ( _pDevice == nullptr )
             return;
 

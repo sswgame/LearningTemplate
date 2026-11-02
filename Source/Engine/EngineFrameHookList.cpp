@@ -20,8 +20,10 @@ namespace sw
             return {};
         }
         // 묶음 하나를 항목 하나로 올린다 — 시점마다 맞는 칸을 부르고, 빈 칸 · 종료 코드가 없는 시점은 `kEngineFrameRunning` 이다.
-        return _listHook.add( FrameHookDelegate::create( [hooks]( FramePoint point, const EngineFrameContext& context ) -> int32
+        // 묶음(델리게이트 넷)은 공유 포인터로 잡는다. broadcast 는 부를 때마다 델리게이트를 복사하는데, 묶음을 값으로 잡으면 람다가 인라인 칸을 넘어 그 복사가 힙 할당이었다(시점 셋 × 구독마다).
+        return _listHook.add( FrameHookDelegate::create( [pHooks = make_shared<const EngineFrameHooks>( hooks )]( FramePoint point, const EngineFrameContext& context ) -> int32
         {
+            const EngineFrameHooks& hooks = *pHooks;
             switch ( point )
             {
                 case FramePoint::FrameBegin:

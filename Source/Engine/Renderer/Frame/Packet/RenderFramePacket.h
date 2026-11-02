@@ -152,9 +152,8 @@ namespace sw
             _clearColor = float4{ 0.12f, 0.15f, 0.18f, 1.0f };
             _cameraPos  = float3{};
             _viewProj   = float4x4{};
-            // 장면 스냅샷도 비운다 — 활성 씬이 없는 프레임(게임 재시작이 씬을 닫은 사이)은 스냅샷을 채우지 않아, 버퍼를 다시 쓰는 패킷에 앞 씬의 인스턴스가 남아
-            // "주 시점 없이 3D 내용을 실은 패킷" 오류가 났다. 채우는 프레임은 통째로 덮어쓰므로(`GPUSceneBuilder::exportCPUSnapshot`) 비워도 잃는 것이 없다.
-            _gpuScene = GPUSceneSnapshot{};
+            // 장면 스냅샷(`_gpuScene`)은 여기서 비우지 않는다 — 채우는 쪽이 대입으로 통째로 덮어써(`GPUSceneBuilder::exportCPUSnapshot`) 그룹 · 원소의 저장소가 남는다.
+            // 비우면 프레임마다 머티리얼 그룹을 새로 할당한다. 채우지 않는 프레임(활성 씬 없음)은 그쪽이 비운다(`RenderPacketBuilder::populateScene`).
             _shadow.clear();
             _lightDirIntensity = float4{};
             _lightColorAmbient = float4{};
