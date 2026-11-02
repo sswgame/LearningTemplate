@@ -20,6 +20,17 @@ namespace sw
 {
     namespace
     {
+        /** @brief 패스 하나를 열린 리스트 @p pCmdList 에 기록합니다(열고 닫지 않는다). */
+        void recordPassBody( RenderGraphNode& node, IRHICommandList* pCmdList )
+        {
+            RenderGraphPassContext passContext;
+            passContext._passName     = node._name;
+            passContext._pListInputs  = &node._listInput;
+            passContext._pListOutputs = &node._listOutput;
+            passContext._pCmdList     = pCmdList;
+            node._execute( passContext );
+        }
+
         void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList, bool bAlreadyBegun )
         {
             const bool bNodeNotRecordable = pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false;
@@ -29,12 +40,7 @@ namespace sw
             // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
             if ( bAlreadyBegun == false )
                 pCmdList->beginCommandList();
-            RenderGraphPassContext passContext;
-            passContext._passName     = pNode->_name;
-            passContext._pListInputs  = &pNode->_listInput;
-            passContext._pListOutputs = &pNode->_listOutput;
-            passContext._pCmdList     = pCmdList;
-            pNode->_execute( passContext );
+            recordPassBody( *pNode, pCmdList );
             pCmdList->endCommandList();
         }
 
@@ -389,11 +395,45 @@ namespace sw
         // 공유 상태(예: "직전 패스가 이 리소스를 이미 클리어했는가")도 이 순서 보장 덕에 안전하다.
         // 같은 자원을 놓고 경합하는 두 패스는 compile() 의 Write-after-Write/Read-after-Write 엣지로
         // 이미 서로 다른 레벨에 배치되어 있다.
+        //
+        // 패스 하나짜리 레벨이 이어지면 렌더 스레드가 리스트 하나에 레벨마다 배리어 → 패스 순으로 이어 기록하고 한 번 제출한다(언리얼 RDG 가 작은 패스를 한
+        // 리스트에 묶는 자리). 레벨마다 리스트를 열고 · 태스크로 넘겨 기다리고 · 제출하는 고정 비용(레벨당 ~20 µs)이 패스 본문(대개 수 µs)보다 컸다 — 빈 씬
+        // 14 패스에서 그래프 400 µs 중 300 µs. 같은 리스트 안의 기록 순서와 레벨마다의 배리어가 레벨 순서를 지키므로 GPU 순서는 그대로다. 패스가 둘 이상인
+        // 레벨만 병렬로 기록하고, 그 앞에서 이어 기록하던 리스트를 먼저 제출한다.
+        IRHICommandList* pSerialList      = nullptr;
+        auto             submitSerialList = [pDevice, &pSerialList]()
+        {
+            if ( pSerialList == nullptr )
+                return;
+            pSerialList->endCommandList();
+            pDevice->executeCommandList( pSerialList );
+            pSerialList = nullptr;
+        };
         for ( const vector<hashed_string>& level : _listCompiledLevel )
         {
-            if ( recordAndSubmitLevel( context, level, pTaskManager, pDevice ) == false )
+            if ( collectLevelPasses( context, level ) == false )
+            {
+                submitSerialList(); // 연 리스트를 열린 채로 두지 않는다
                 return false;
+            }
+            const vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
+            if ( listPassEntry.empty() )
+                continue;
+            if ( listPassEntry.size() == 1 )
+            {
+                if ( pSerialList == nullptr )
+                {
+                    pSerialList = listPassEntry[0]._pPassCmdList; // 이어 기록하는 동안 다른 패스의 리스트는 이 프레임에 쓰이지 않는다
+                    pSerialList->beginCommandList();
+                }
+                issueBarriers( pSerialList );
+                recordPassBody( *listPassEntry[0]._pNode, pSerialList );
+                continue;
+            }
+            submitSerialList();
+            recordAndSubmitParallelLevel( pTaskManager, pDevice );
         }
+        submitSerialList();
         return true;
     }
 
@@ -447,7 +487,7 @@ namespace sw
         return true;
     }
 
-    bool RenderGraph::recordAndSubmitLevel( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass, TaskManager* pTaskManager, IRHIDevice* pDevice )
+    bool RenderGraph::collectLevelPasses( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass )
     {
         ParallelScratch&           scratch       = *_pParallelScratch;
         vector<ParallelPassEntry>& listPassEntry = scratch._listPassEntry;
@@ -477,9 +517,12 @@ namespace sw
             // 리스트는 `prepareParallelCommandLists` 가 모두 마련했다.
             listPassEntry.push_back( ParallelPassEntry{ &node, scratch._listNodeCmdList[indexIt->second].get() } );
         }
+        return true;
+    }
 
-        if ( listPassEntry.empty() )
-            return true;
+    void RenderGraph::recordAndSubmitParallelLevel( TaskManager* pTaskManager, IRHIDevice* pDevice )
+    {
+        vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
 
         // 이 레벨이 만질 자원의 배리어를 **여기서 미리**, 레벨 **첫 패스 리스트의 앞머리**에 발행한다
         // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 방식이다). 판단과 기록 모두 렌더 스레드가 병렬 기록
@@ -498,8 +541,6 @@ namespace sw
         // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
         pDevice->setParallelRecording( true );
 
-        // 패스마다 리스트 하나다(기록 · 제출 고정 비용이 패스당 ~100 µs — 빈 씬 14 패스). 언리얼 RDG 처럼 작은 패스를 한 리스트로 묶으면 줄지만 레벨 단위 배리어 · 제출 순서 계약을
-        // 함께 바꿔야 하고, 잰 게임 부하(characters)는 GPU 1.0 ms · RT 0.8 ms 로 RT 가 병목이 아니라 묶지 않는다(2026-11-03).
         // `runParallel` 로 바꾸지 않는다 — 그 티켓은 Normal 큐로 가는데 렌더 스레드가 곧바로 기다리는 기록은 High 레인이어야 한다(아래). 스테이지는 이미 TaskManager 의 것이다.
         TaskStageHandle stage = pTaskManager->createStage( "RenderGraphLevel" );
         for ( ParallelPassEntry& entry : listPassEntry )
@@ -531,7 +572,6 @@ namespace sw
             if ( entry._pPassCmdList != nullptr )
                 pDevice->executeCommandList( entry._pPassCmdList );
         }
-        return true;
     }
 
     /**

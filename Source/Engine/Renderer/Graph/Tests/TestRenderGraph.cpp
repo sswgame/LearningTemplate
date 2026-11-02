@@ -259,6 +259,46 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsEachPassOnceInLevelOrder 
 }
 
 /**
+ * @brief [RenderGraphTest] 패스 하나짜리 레벨이 이어지면 리스트 하나에 이어 기록해 한 번 제출하고, 패스가 둘인 레벨을 만나면 그 리스트를 먼저 제출한다
+ * @details 레벨마다 리스트를 열고 태스크로 넘기고 제출하는 고정 비용이 패스 본문보다 컸다(`RenderGraph::executeParallel`). 제출 순서가 곧 GPU 순서다.
+ */
+SW_TEST_CASE( RenderGraphTest, ParallelExecutionChainsSinglePassLevelsIntoOneList )
+{
+    atomic<int32> countA{ 0 };
+    atomic<int32> countB{ 0 };
+    atomic<int32> countC{ 0 };
+    atomic<int32> countD{ 0 };
+    atomic<int32> countE{ 0 };
+    RenderGraph   graph;
+    // 레벨 0 { A } → 레벨 1 { B } → 레벨 2 { C, D } → 레벨 3 { E }
+    graph.addPass( hashed_string( "A" ), {}, { hashed_string( "OutA" ) }, makeCountingPass( countA ) );
+    graph.addPass( hashed_string( "B" ), { hashed_string( "OutA" ) }, { hashed_string( "OutB" ) }, makeCountingPass( countB ) );
+    graph.addPass( hashed_string( "C" ), { hashed_string( "OutB" ) }, { hashed_string( "OutC" ) }, makeCountingPass( countC ) );
+    graph.addPass( hashed_string( "D" ), { hashed_string( "OutB" ) }, { hashed_string( "OutD" ) }, makeCountingPass( countD ) );
+    graph.addPass( hashed_string( "E" ), { hashed_string( "OutC" ), hashed_string( "OutD" ) }, { hashed_string( "OutE" ) }, makeCountingPass( countE ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    test::FakeRHIDevice         device;
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.executeParallel( context, &engine::getSubsystem<TaskManager>(), &device ) );
+
+    for ( const atomic<int32>* pCount : { &countA, &countB, &countC, &countD, &countE } )
+    {
+        SW_EXPECT_EQUAL( 1, pCount->load() );
+    }
+    // A · B 를 이은 리스트 → C · D 의 리스트 둘 → E 의 리스트.
+    SW_REQUIRE_EQUAL( size_t( 4 ), device._listExecuted.size() );
+    SW_EXPECT_TRUE( device._listExecuted[0]->_passName == hashed_string( "B" ) ); // 같은 리스트에 A 다음 B 를 기록했다
+    SW_EXPECT_TRUE( device._listExecuted[3]->_passName == hashed_string( "E" ) );
+    for ( const test::FakeRHICommandList* pList : device._listExecuted )
+    {
+        SW_EXPECT_EQUAL( 1u, pList->_beginCount );
+        SW_EXPECT_EQUAL( 1u, pList->_endCount );
+        SW_EXPECT_FALSE( pList->_bOpen );
+    }
+}
+
+/**
  * @brief [RenderGraphTest] 커맨드 리스트를 만들 수 없으면 병렬 기록은 아무것도 기록 · 제출하지 않고 실패한다 — 앞 레벨을 두 번 돌리지 않는다
  * @details 레벨을 돌며 리스트를 만들다 실패할 때 직렬 `execute` 로 넘어가면, 앞 레벨은 이미 기록 · 제출된 뒤라 그 패스들이 두 번 돌고(같은
  *          프레임에 두 번 그린다), 직렬 경로는 리스트 없이 기록한다(부르는 쪽은 프레임 리스트를 이미 닫았다).

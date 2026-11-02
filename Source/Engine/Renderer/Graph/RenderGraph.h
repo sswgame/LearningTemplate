@@ -341,7 +341,9 @@ namespace sw
         void computeResourceLifetimes();
         /** @brief 병렬 기록 전에 모든 레벨의 패스 커맨드 리스트를 마련합니다(디바이스가 바뀌면 지난 것을 놓는다). 하나라도 못 만들면 false 이고 아무것도 내지 않습니다. */
         [[nodiscard]] bool prepareParallelCommandLists( IRHIDevice* pDevice );
-        /** @brief 레벨 하나의 배리어를 첫 리스트 앞머리에 발행하고, 패스들을 병렬로 기록한 뒤 큐 순서대로 제출합니다. 모르는 패스면 false 입니다. */
-        [[nodiscard]] bool recordAndSubmitLevel( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass, TaskManager* pTaskManager, IRHIDevice* pDevice );
+        /** @brief 레벨 하나의 배리어를 `_listLevelBarrier` 에, 기록할 패스를 병렬 스크래치의 엔트리 목록에 모읍니다. 모르는 패스면 false 입니다. */
+        [[nodiscard]] bool collectLevelPasses( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass );
+        /** @brief 모은 레벨(패스 둘 이상)의 배리어를 첫 리스트 앞머리에 발행하고, 패스들을 병렬로 기록한 뒤 큐 순서대로 제출합니다. */
+        void recordAndSubmitParallelLevel( TaskManager* pTaskManager, IRHIDevice* pDevice );
     };
 } // namespace sw
