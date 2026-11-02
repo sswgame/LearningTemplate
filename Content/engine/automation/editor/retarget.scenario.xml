@@ -36,7 +36,7 @@
 	<EditorClick mark="retarget.open.knight_to_minion.retarget.xml"/>
 	<WaitUntil watch="Editor.RetargetChainCount" atLeast="6" timeoutFrames="195"/>
 	<Expect watch="Editor.RetargetPoseCount" equals="0"/>
-	<Expect watch="Editor.RetargetPreviewSegments" atLeast="20"/>
+	<WaitUntil watch="Editor.RetargetPreviewSegments" atLeast="20" timeoutFrames="120"/> <!-- 미리보기 스켈레톤은 비동기로 읽힌다 — 체인이 찬 프레임에 선이 있다고 가정하지 않는다 -->
 	<CaptureEditorUI file="retarget/opened.png"/>
 	<!-- 리타깃 포즈 줄 더하기: 대상 스켈레톤에 있는 본만 받는다 -->
 	<!-- 미리보기와 사슬 목록이 길어 아래 칸이 창의 보이는 영역 밖으로 밀린다 — 미리보기만 남기고 위 구역을 접어 닿게 한다 -->
