@@ -31,6 +31,11 @@ namespace sw
         void present() override;
         void setSwapInterval( bool bVSync ) override;
 
+        [[nodiscard]] void* createWindowSurface( const RHISwapChainDesc& desc ) override;
+        void                destroyWindowSurface( void* pSurface ) override;
+        [[nodiscard]] bool  makeCurrentOnWindowSurface( void* pSurface ) override;
+        void                presentWindowSurface( void* pSurface ) override;
+
     private:
         void* _pWindowHandle;  ///< HWND
         void* _pDeviceContext; ///< HDC

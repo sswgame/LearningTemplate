@@ -96,6 +96,18 @@ namespace sw
         /** @brief 백버퍼를 화면에 내보냅니다. */
         virtual void present() = 0;
 
+        /**
+         * @brief 다른 창(`IRHIDevice::createSwapChain`)의 그리기 표면을 만듭니다. 이 컨텍스트 하나를 그 창에도 건다(`OpenGLRHISwapChain`).
+         * @return 불투명 표면(WGL 창 DC 묶음 · GLX 창)입니다. 지원하지 않는 플랫폼(EGL)이거나 실패하면 이유를 남기고 nullptr 입니다.
+         */
+        [[nodiscard]] virtual void* createWindowSurface( const RHISwapChainDesc& desc );
+        /** @brief `createWindowSurface` 가 만든 표면을 놓습니다. 렌더 스레드는 프레임 끝마다 메인 창으로 돌아가 있으므로 그 표면에 걸려 있지 않습니다. */
+        virtual void destroyWindowSurface( void* pSurface ) { (void)pSurface; }
+        /** @brief 이 스레드에서 컨텍스트를 @p pSurface 에 겁니다. nullptr 이면 메인 창입니다(`makeCurrent`). */
+        [[nodiscard]] virtual bool makeCurrentOnWindowSurface( void* pSurface );
+        /** @brief @p pSurface 의 백버퍼를 내보냅니다. 컨텍스트가 그 표면에 걸려 있어야 합니다. */
+        virtual void presentWindowSurface( void* pSurface ) { (void)pSurface; }
+
         /** @brief VSync 간격을 바꿉니다. 값이 바뀔 때만 불립니다. */
         virtual void setSwapInterval( bool bVSync ) = 0;
     };

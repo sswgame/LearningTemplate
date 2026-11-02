@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 
@@ -51,14 +52,17 @@ namespace sw
      *          세마포어 두 종류는 **인덱스가 다릅니다.** acquire 세마포어는 인플라이트 프레임 슬롯
      *          (`frameSlot`)으로, renderFinished 세마포어는 스왑체인 이미지 인덱스로 셉니다. 드라이버가
      *          인플라이트 프레임 수보다 적은 이미지를 줄 수 있어서 두 개수가 같다는 보장이 없습니다.
+     *          획득한 이미지를 표시하지 않고 끝난 프레임(무인 실행 · bPresent=false)은 그 이미지를 쥔 채로 다음 프레임에 넘긴다 —
+     *          Vulkan 에는 present 말고 이미지를 돌려주는 길이 없어, 매 프레임 새로 획득하면 이미지가 바닥나 acquire 가 영원히 막힌다.
      * @note 프레임 슬롯(펜스, 커맨드 버퍼, 디스크립터 링)은 스왑체인의 것이 아니라 디바이스의 것입니다.
      *       그래서 `frameSlot` 을 인자로 받습니다. 스왑체인은 그 값을 보관하지 않습니다.
+     *       메인 창과 다른 창(`IRHIDevice::createSwapChain`)이 같은 클래스 · 같은 규칙을 쓴다.
      */
-    class VulkanRHISwapChain
+    class VulkanRHISwapChain final : public IRHISwapChain
     {
     public:
         VulkanRHISwapChain()                                       = default;
-        ~VulkanRHISwapChain()                                      = default;
+        ~VulkanRHISwapChain() override                             = default;
         VulkanRHISwapChain( const VulkanRHISwapChain& )            = delete;
         VulkanRHISwapChain& operator=( const VulkanRHISwapChain& ) = delete;
 
@@ -103,12 +107,23 @@ namespace sw
         void destroy( VkDevice device );
 
         /**
-         * @brief 다음에 그릴 이미지를 받아 옵니다. 성공하면 `getImageIndex()` 가 갱신됩니다.
+         * @brief 이번 프레임에 그릴 이미지를 받아 옵니다. 성공하면 `getImageIndex()` 가 갱신됩니다.
+         * @details 앞 프레임이 표시하지 않고 쥔 이미지가 있으면 다시 획득하지 않고 그것을 돌려준다(기다릴 세마포어도 없다).
+         *          새로 획득했으면 그 신호를 이 프레임의 첫 제출이 기다려야 한다 — `takeAcquireWait` 로 꺼낸다.
          * @param frameSlot 이번 프레임의 인플라이트 슬롯. 이 슬롯의 acquire 세마포어가 신호됩니다.
          */
         VulkanSwapChainStatus acquireNextImage( VkDevice device, uint32 frameSlot );
+        /** @brief 방금 획득한 이미지의 acquire 세마포어를 꺼냅니다. 한 번 꺼내면 비웁니다. 물려받은 이미지면 VK_NULL_HANDLE 입니다. */
+        VkSemaphore takeAcquireWait();
+        /**
+         * @brief 현재 이미지를 마지막으로 쓴 프레임이 GPU 에서 끝날 때까지 기다리고, 그 자리를 @p frameFence 로 적습니다.
+         * @return `vkWaitForFences` 결과(VkResult 값)입니다. 기다릴 것이 없으면 VK_SUCCESS 입니다.
+         */
+        int32 waitForImageReuse( VkDevice device, VkFence frameFence );
+        /** @brief 이미지별 펜스 표를 비웁니다. 디바이스가 프레임 펜스를 다시 만들 때 부릅니다(표는 그 펜스의 사본이다). */
+        void forgetImageFences();
 
-        /** @brief 현재 이미지를 화면에 표시합니다. 이 이미지의 renderFinished 세마포어를 기다립니다. */
+        /** @brief 현재 이미지를 화면에 표시합니다. 이 이미지의 renderFinished 세마포어를 기다립니다. 결과와 상관없이 이미지를 내려놓습니다. */
         VulkanSwapChainStatus present( VkQueue queue );
 
         bool isValid() const { return _swapChain != nullptr; }
@@ -119,6 +134,8 @@ namespace sw
         uint32 getImageCount() const { return static_cast<uint32>( _listImage.size() ); }
         uint32 getExtentWidth() const { return _extentWidth; }
         uint32 getExtentHeight() const { return _extentHeight; }
+        uint32 getWidth() const override { return _extentWidth; }
+        uint32 getHeight() const override { return _extentHeight; }
         /** @brief VkFormat 값입니다. 헤더에서 Vulkan 열거형을 쓰지 않으려고 uint32 로 보관합니다. */
         uint32 getImageFormat() const { return _imageFormat; }
         /** @brief 실제로 채택된 백버퍼 포맷입니다. 요청과 다를 수 있습니다. */
@@ -150,6 +167,10 @@ namespace sw
         vector<VkSemaphore> _listImageAvailableSemaphore;
         /// @brief 스왑체인 이미지 인덱스로 셉니다.
         vector<VkSemaphore> _listRenderFinishedSemaphore;
+        /// @brief 이미지 인덱스별로, 그 이미지를 마지막으로 쓴 디바이스 인플라이트 펜스입니다(소유하지 않는 사본).
+        vector<VkFence> _listImageFence;
+        /// @brief 방금 획득해 이 프레임의 첫 제출이 기다릴 세마포어입니다(`takeAcquireWait`).
+        VkSemaphore _acquireWait{ nullptr };
 
         uint32 _imageFormat{ 0 };
         uint32 _extentWidth{ 0 };
@@ -166,5 +187,7 @@ namespace sw
         bool _bRequestedVSync{ true };
         /// @brief 마지막 `create` 가 서피스 크기 0 이라 물러났는지입니다. `create` 가 매번 다시 정합니다.
         bool _bSurfaceEmpty{ false };
+        /// @brief 획득했지만 아직 표시하지 않은 이미지를 쥐고 있는가입니다. `present` · `destroy` 가 내린다.
+        bool _bImageHeld{ false };
     };
 } // namespace sw

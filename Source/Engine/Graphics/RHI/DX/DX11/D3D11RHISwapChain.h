@@ -6,6 +6,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -15,18 +16,18 @@ namespace sw
     /**
      * @class D3D11RHISwapChain
      * @brief 창 하나의 백버퍼입니다. **스왑체인을 넘겨받아 보관하고, 크기를 바꾸고, RTV 를 다시 잡고, 화면에 표시합니다.**
-     * @details D3D11 은 디바이스와 스왑체인이 `D3D11CreateDeviceAndSwapChain` 한 호출에서 **함께**
-     *          태어납니다. 그래서 이 클래스는 스왑체인을 만들지 않고 `attach` 로 넘겨받아 소유합니다.
-     *          DX12/Vulkan 이 스왑체인을 따로 만드는 것과 다른 점이며, 세대 차이가 드러나는 부분입니다.
+     * @details D3D11 은 메인 창의 스왑체인이 디바이스와 `D3D11CreateDeviceAndSwapChain` 한 호출에서 **함께**
+     *          태어납니다. 그래서 메인 창은 `attach` 로 넘겨받아 소유하고, 다른 창(`IRHIDevice::createSwapChain`)은 `createLike` 가
+     *          메인 창의 서술을 그대로 따라 만듭니다(포맷 · 버퍼 수 · 티어링 플래그가 같아야 같은 Present 경로를 쓴다).
      * @note 백버퍼 RTV 를 **매 프레임 다시 잡습니다.** `DXGI_SWAP_EFFECT_FLIP_DISCARD` 는 백버퍼를
      *       돌려 쓰기 때문에, 지난 프레임의 RTV 를 그대로 쓰면 Present 가 보여 줄 버퍼와 다른 버퍼에
      *       그리게 됩니다.
      */
-    class D3D11RHISwapChain
+    class D3D11RHISwapChain final : public IRHISwapChain
     {
     public:
         D3D11RHISwapChain()                                      = default;
-        ~D3D11RHISwapChain()                                     = default;
+        ~D3D11RHISwapChain() override                            = default;
         D3D11RHISwapChain( const D3D11RHISwapChain& )            = delete;
         D3D11RHISwapChain& operator=( const D3D11RHISwapChain& ) = delete;
 
@@ -35,6 +36,9 @@ namespace sw
          * @param swapChainFlags 생성에 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
          */
         void attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags );
+
+        /** @brief @p source(메인 창)와 같은 서술로 @p hWnd 에 스왑체인을 만듭니다. 실패하면 이유를 남기고 false 입니다. */
+        [[nodiscard]] bool createLike( ID3D11Device* pDevice, const D3D11RHISwapChain& source, HWND hWnd, uint32 width, uint32 height );
 
         /** @brief 백버퍼 RTV 와 스왑체인을 모두 놓습니다. */
         void shutdown();
@@ -61,8 +65,8 @@ namespace sw
 
         bool isValid() const { return _swapChain != nullptr; }
 
-        uint32 getWidth() const { return _width; }
-        uint32 getHeight() const { return _height; }
+        uint32 getWidth() const override { return _width; }
+        uint32 getHeight() const override { return _height; }
 
         /** @brief 현재 백버퍼의 RTV 를 반환합니다. 아직 잡지 않았으면 nullptr 입니다. */
         ID3D11RenderTargetView* getBackBufferRTV() const { return _backBufferRTV.Get(); }

@@ -26,5 +26,6 @@ namespace sw
         Capture,         ///< 초상 · 반사 프로브 베이크 같은 캡처가 한 번 GPU 결과를 기다린다(프레임 경로 밖)
         Tool,            ///< 에디터 · 테스트 · 개발 토글 같은 도구 경로(프레임 경로가 아니다)
         PipelineSwitch,  ///< 렌더 파이프라인을 실행 중에 바꾼다(`gv_renderPipeline` · `gv_deferredShading`) — 옛 파이프라인의 패스 자원을 거두기 전
+        WindowSwapChain, ///< 창 하나의 스왑체인을 만들거나 크기를 바꾸거나 부순다(에디터 플로팅 창 — `IRHIDevice::createSwapChain`)
     };
 } // namespace sw

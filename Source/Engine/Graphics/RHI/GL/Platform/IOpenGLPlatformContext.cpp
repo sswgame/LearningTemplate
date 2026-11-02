@@ -15,6 +15,18 @@
 
 namespace sw
 {
+    void* IOpenGLPlatformContext::createWindowSurface( const RHISwapChainDesc& desc )
+    {
+        (void)desc;
+        SW_LOG_ERROR_ID( "OpenGL.WindowSurfaceUnsupported", "This OpenGL platform context cannot draw a second window" );
+        return nullptr;
+    }
+
+    bool IOpenGLPlatformContext::makeCurrentOnWindowSurface( void* pSurface )
+    {
+        return pSurface == nullptr && makeCurrent();
+    }
+
     unique_ptr<IOpenGLPlatformContext> IOpenGLPlatformContext::create( NativeSurfaceKind surfaceKind )
     {
         // 플랫폼을 하나 더 지원하려면 **여기 한 줄과 파일 한 쌍**이면 된다.

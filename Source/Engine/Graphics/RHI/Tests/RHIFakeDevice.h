@@ -97,6 +97,10 @@ namespace sw::test
         [[nodiscard]] bool   initializeInternal( const RHISwapChainDesc& ) override { return true; }
         void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
         void                 resizeInternal( uint32, uint32 ) override {}
+        IRHISwapChain*       createSwapChainInternal( const RHISwapChainDesc& ) override { return nullptr; } // 창이 없다
+        void                 resizeSwapChainInternal( IRHISwapChain&, uint32, uint32 ) override {}
+        void                 destroySwapChainInternal( IRHISwapChain& ) override {}
+        bool                 acquireSwapChainImageInternal( IRHISwapChain& ) override { return false; }
         void                 beginFrameInternal() override {}
         void                 endFrameInternal( bool, bool ) override {}
         IRHICommandContext*  getFrameStreamContext() override { return nullptr; }

@@ -138,6 +138,8 @@ namespace sw
 
         ID3D11RenderTargetView* arrRTV[kMaxColorAttachments]{};
         uint32                  rtCount{ 0 };
+        const bool              bBackBuffer = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == 0;
+        D3D11RHISwapChain&      swapChain   = bBackBuffer ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : _pDevice->_swapChain;
         if ( beginInfo._bBindColor != SW_FALSE )
         {
             const uint32 colorBindCount = beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u;
@@ -146,7 +148,7 @@ namespace sw
                 const RHITextureHandle  colorHandle = beginInfo._arrColorTarget[attachmentIndex];
                 ID3D11RenderTargetView* pRTV{ nullptr };
                 if ( colorHandle == 0 )
-                    pRTV = ( attachmentIndex == 0 ) ? _pDevice->_swapChain.getBackBufferRTV() : nullptr;
+                    pRTV = ( attachmentIndex == 0 ) ? swapChain.getBackBufferRTV() : nullptr;
                 else
                 {
                     D3D11RHIDevice::TextureRecord* pTexture = _pDevice->resolveTexture( colorHandle );
@@ -195,8 +197,8 @@ namespace sw
         }
 
         D3D11_VIEWPORT viewport{};
-        viewport.Width    = static_cast<float32>( beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth() );
-        viewport.Height   = static_cast<float32>( beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight() );
+        viewport.Width    = static_cast<float32>( beginInfo._width > 0 ? beginInfo._width : swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( beginInfo._height > 0 ? beginInfo._height : swapChain.getHeight() );
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         _pContext->RSSetViewports( 1, &viewport );

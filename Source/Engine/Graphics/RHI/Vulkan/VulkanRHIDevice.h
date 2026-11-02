@@ -203,7 +203,11 @@ namespace sw
         bool isDeviceLost() const { return _transferSerials.isLost(); }
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
-        void resizeInternal( uint32 width, uint32 height ) override;
+        void                         resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
+        void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
+        void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
+        [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ) != nullptr; }
         /** @brief present 모드를 새 VSync 값으로 바꾸도록 스왑체인을 다음 `beginFrame` 에서 다시 만들게 표시합니다. */
         void               applyVSyncInternal() override;
         [[nodiscard]] bool createRenderPass();
@@ -392,6 +396,14 @@ namespace sw
          * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 테이블까지 함께 갱신한다.
          */
         [[nodiscard]] bool recreateSwapChain();
+        /**
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @details 다른 창은 이 프레임에 처음 쓰일 때 이미지를 획득하고(낡았으면 그 자리에서 다시 만든다) 그 신호를 이 프레임의 첫 제출이 기다리게 하며,
+         *          `endFrame` 의 신호 · 표시 목록에 오른다. 이번 프레임에 그릴 수 없으면 nullptr 입니다.
+         */
+        VulkanRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );
+        /** @brief 다른 창의 스왑체인 · 프레임버퍼 · 세마포어를 새 크기로 다시 만듭니다. GPU 는 비어 있어야 합니다. */
+        [[nodiscard]] bool rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height );
         /**
          * @brief 서피스를 잃었을 때(VK_ERROR_SURFACE_LOST_KHR) 같은 창 위에 서피스와 스왑체인을 다시 만듭니다. 스왑체인만이 아니라 서피스부터 만들어야 합니다.
          * @return 다시 만들었으면 true 입니다. 창이 사라졌거나 새 서피스를 그래픽스 큐가 프레젠트할 수 없으면 false 이며, 다음 프레임에 다시 시도합니다.
@@ -682,8 +694,12 @@ namespace sw
 
         vector<VkCommandBuffer>            _listCommandBuffer;
         vector<VkFence> _listInFlightFence SW_GUARDED_BY( _renderThread );
-        /// @brief 스왑체인 이미지 인덱스별로, 그 이미지를 마지막으로 쓴 인플라이트 펜스입니다(소유하지 않는 사본).
-        vector<VkFence> _listImagesInFlight;
+        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
+        vector<unique_ptr<VulkanRHISwapChain>> _listWindowSwapChain;
+        /// @brief 이 프레임에 이미지를 잡은 다른 창입니다(`useSwapChain`). `endFrame` 이 신호 · 표시한 뒤 비운다.
+        vector<VulkanRHISwapChain*> _listFrameSwapChain;
+        /// @brief 이 프레임에 새로 획득한 이미지의 acquire 세마포어입니다. 이 프레임의 첫 제출(즉시 모드 비우기 · `endFrame`)이 모두 기다리고 비운다.
+        vector<VkSemaphore> _listPendingAcquireWait;
         /// @brief 링 슬롯마다 마지막 제출에 매긴 _frameFenceCounter 값입니다. beginFrame 이 그 슬롯의 펜스를
         ///        기다린 뒤 _releaseQueue.tickCompleted(이 값)을 불러 실제 GPU 완료를 확인하고 해제합니다.
         vector<uint64> _listRingFrameNumber;
@@ -694,32 +710,30 @@ namespace sw
         VulkanWsiKind     _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
         /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료를 기준으로
         ///        해제하도록(enqueueGPURelease) 프레임 카운트 대신 이 값을 씁니다.
-        uint64 _frameFenceCounter;
-        uint32 _width;
-        uint32 _height;
-        uint32 _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
-        uint32 _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
-        uint16 _bFrameStarted           : 1;
-        uint16 _bEnableValidationLayers : 1;
-        uint16 _bMultiDrawIndirect      : 1;
-        uint16 _bDrawIndirectCount      : 1;
-        uint16 _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
-        uint16 _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
-        uint16 _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
-        uint16 _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
-        uint16 _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
-        uint16 _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
-        uint16 _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
-        uint16 _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
+        uint64                  _frameFenceCounter;
+        uint32                  _width;
+        uint32                  _height;
+        uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
+        uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
+        uint16                  _bFrameStarted           : 1;
+        uint16                  _bEnableValidationLayers : 1;
+        uint16                  _bMultiDrawIndirect      : 1;
+        uint16                  _bDrawIndirectCount      : 1;
+        uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
+        uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16                  _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
+        uint16                  _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
+        [[maybe_unused]] uint16 _reservedSwapChainBit    : 1;
+        uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
+        uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
+        uint16                  _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief 디바이스에 VK_NV_device_diagnostic_checkpoints 를 켰는가(GPU 브레드크럼 - `vkCmdSetCheckpointNV` 로 패스 id 를 남기고 소실 뒤 `vkGetQueueCheckpointDataNV` 로 읽는다).
         ///        없으면(AMD · 인텔 드라이버) 켜지 않는다 - 대체 확장 VK_AMD_buffer_marker 는 쓰지 않는다(그 표지는 호스트 보임 버퍼를 따로 관리해야 하고 이 엔진에는 그 자리가 없다).
-        uint8 _bCheckpoints;
-        void* _pCmdSetCheckpoint;  ///< `vkCmdSetCheckpointNV` 입니다(이 헤더는 vulkan.h 를 include 하지 않아 void* 로 쥔다). `_bCheckpoints` 일 때만 읽는다
-        void* _pGetCheckpointData; ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
-        /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출에서만 바인딩합니다).
-        uint8         _bFrameAcquireWaitPending;
+        uint8         _bCheckpoints;
+        void*         _pCmdSetCheckpoint;                                                                              ///< `vkCmdSetCheckpointNV` 입니다(이 헤더는 vulkan.h 를 include 하지 않아 void* 로 쥔다). `_bCheckpoints` 일 때만 읽는다
+        void*         _pGetCheckpointData;                                                                             ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
         atomic<uint8> _bTimestampEnabled;                                                                              ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
         uint8         _arrTimestampSubmitted[constant::render::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
 

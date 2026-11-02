@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    class IRHISwapChain;
+
     /**
      * @struct RHIVertex
      * @brief 메시 정점 하나를 나타냅니다. 위치, 노멀, UV, 색, 탄젠트를 가지며 정점 버퍼 슬롯 0 의 원소입니다.
@@ -883,6 +885,7 @@ namespace sw
     struct SW_API RHIRenderPassBeginInfo
     {
         RHIRenderPassHandle    _renderPass;                                ///< 렌더 패스 핸들 (8 bytes)
+        IRHISwapChain*         _pSwapChain;                                ///< 컬러 타깃 핸들 0 이 가리킬 백버퍼의 스왑체인. nullptr 이면 메인 창이다 (8 bytes)
         RHITextureHandle       _arrColorTarget[kMaxColorAttachments];      ///< RT별 핸들 (32 bytes)
         RHITextureHandle       _depthTarget;                               ///< 깊이/스텐실 핸들 (8 bytes)
         float4                 _arrClearColor[kMaxColorAttachments];       ///< RT별 클리어 색상 (64 bytes)

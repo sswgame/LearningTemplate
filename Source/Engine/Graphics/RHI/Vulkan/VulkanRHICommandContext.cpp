@@ -450,10 +450,11 @@ namespace sw
             }
             else
             {
-                if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_swapChain.getCurrentFramebuffer() == VK_NULL_HANDLE )
+                const VulkanRHISwapChain* pSwapChain = _pDevice->useSwapChain( beginInfo._pSwapChain );
+                if ( _pDevice->_renderPass == VK_NULL_HANDLE || pSwapChain == nullptr || pSwapChain->getCurrentFramebuffer() == VK_NULL_HANDLE )
                     return;
-                framebuffer = _pDevice->_swapChain.getCurrentFramebuffer();
-                extent      = { _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
+                framebuffer = pSwapChain->getCurrentFramebuffer();
+                extent      = { pSwapChain->getExtentWidth(), pSwapChain->getExtentHeight() };
                 // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다.
                 // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에
                 // 그린 내용이 지워진다.

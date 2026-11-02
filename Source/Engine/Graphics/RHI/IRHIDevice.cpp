@@ -14,6 +14,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Reflection/EnumName.h"
@@ -459,6 +460,32 @@ namespace sw
             return;
         _bPreferredVSync = bVSync;
         applyVSyncInternal();
+    }
+
+    IRHISwapChain* IRHIDevice::createSwapChain( const RHISwapChainDesc& desc )
+    {
+        waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        IRHISwapChain* const pSwapChain = createSwapChainInternal( desc );
+        if ( pSwapChain == nullptr )
+            SW_LOG_ERROR_ID( "RHI.SwapChainCreateFailed", "%# could not create a swap chain for window %# (%#x%#)", getBackendName(), desc._pWindowHandle, desc._width, desc._height );
+        return pSwapChain;
+    }
+
+    void IRHIDevice::resizeSwapChain( IRHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        const bool bUnchanged = width == 0 || height == 0 || ( width == swapChain.getWidth() && height == swapChain.getHeight() );
+        if ( bUnchanged )
+            return;
+        waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        resizeSwapChainInternal( swapChain, width, height );
+    }
+
+    void IRHIDevice::destroySwapChain( IRHISwapChain* pSwapChain )
+    {
+        if ( pSwapChain == nullptr )
+            return;
+        waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        destroySwapChainInternal( *pSwapChain );
     }
 
     void IRHIDevice::resize( uint32 width, uint32 height )

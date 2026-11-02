@@ -320,7 +320,11 @@ namespace sw
         void collectTimestampsForSlot();
 
     public:
-        void resizeInternal( uint32 width, uint32 height ) override;
+        void                         resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
+        void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
+        void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
+        [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ).isBackBufferReady(); }
 
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
@@ -743,8 +747,20 @@ namespace sw
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
-        /// @brief 창 하나의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
+        /// @brief 메인 창의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;
+        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
+        vector<unique_ptr<D3D12RHISwapChain>> _listWindowSwapChain;
+        /// @brief 이 프레임에 그린 다른 창입니다. `useSwapChain` 이 올리고 `endFrame` 이 PRESENT 로 되돌려 표시한 뒤 비운다. 프레임 스트림(렌더 스레드)만 쓴다.
+        vector<D3D12RHISwapChain*> _listFrameSwapChain;
+
+        /**
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @details 다른 창은 이 프레임에 처음 쓰일 때 DXGI 가 정한 현재 백버퍼를 읽고 `endFrame` 의 표시 목록에 오른다.
+         */
+        D3D12RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
+        /** @brief 열린 프레임 리스트를 내고 GPU 를 기다린 뒤 백버퍼를 새 크기로 다시 만듭니다(메인 · 다른 창 공통). */
+        void resizeSwapChainBuffers( D3D12RHISwapChain& swapChain, uint32 width, uint32 height );
 
         uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
         [[maybe_unused]] uint8 _reservedPassFlags      : 7;

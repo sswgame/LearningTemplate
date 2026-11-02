@@ -120,6 +120,11 @@ namespace sw
         /** @brief 스왑체인 백버퍼를 새 크기로 다시 만듭니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
 
+        [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
+        void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
+        void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
+        [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ).getBackBufferRTV() != nullptr; }
+
         /** @brief 프레임을 엽니다(타임스탬프, 백버퍼 RTV 재취득, 정적 샘플러). 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
         void beginFrameInternal() override;
 
@@ -503,8 +508,20 @@ namespace sw
         ///          즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어써서 패스 CB 가 옆 패스 값으로 바뀐다.
         D3D11ImmediateContext _immediateContext;
         RHIFormat             _backBufferFormat; ///< 스왑체인 백버퍼 포맷(DXGI 는 요청값 그대로)
-        /// @brief 창 하나의 백버퍼입니다. 백버퍼 RTV, 크기, Present 가 모두 여기 모여 있습니다.
+        /// @brief 메인 창의 백버퍼입니다. 백버퍼 RTV, 크기, Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
+        /// @brief 다른 창의 스왑체인입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다.
+        vector<unique_ptr<D3D11RHISwapChain>> _listWindowSwapChain;
+        /// @brief 이 프레임에 그린 다른 창입니다. `useSwapChain` 이 백버퍼를 잡으며 올리고 `endFrame` 이 표시한 뒤 비운다. 프레임 스트림(렌더 스레드)만 쓴다.
+        vector<D3D11RHISwapChain*> _listFrameSwapChain;
+
+        /**
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @details 다른 창은 이 프레임에 처음 쓰일 때 백버퍼를 잡고(FLIP_DISCARD 라 매 프레임 다시 잡는다) `endFrame` 의 표시 목록에 오른다.
+         */
+        D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
+        /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓고 크기를 바꿉니다. */
+        void resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height );
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> _vertexBuffer; ///< 풀스크린 삼각형(정점 3개). 메시 정점 버퍼가 없는 드로우가 쓴다.
 

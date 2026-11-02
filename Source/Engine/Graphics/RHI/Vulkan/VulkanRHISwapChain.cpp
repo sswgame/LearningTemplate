@@ -369,6 +369,7 @@ namespace sw
         _extentWidth            = extent.width;
         _extentHeight           = extent.height;
         _imageIndex             = 0;
+        _listImageFence.assign( _listImage.size(), VK_NULL_HANDLE );
 
         return createImageViews( device );
     }
@@ -503,21 +504,56 @@ namespace sw
             vkDestroySwapchainKHR( device, _swapChain, nullptr );
             _swapChain = nullptr;
         }
-        // 스왑체인이 소유한 이미지이므로 핸들만 버린다.
+        // 스왑체인이 소유한 이미지이므로 핸들만 버린다. 쥐고 있던 이미지도 같이 사라진다 — 남기면 새 스왑체인에서 첫 acquire 를 건너뛰어 이미지 없이 그린다.
         _listImage.clear();
-        _imageIndex = 0;
+        _listImageFence.clear();
+        _imageIndex  = 0;
+        _bImageHeld  = false;
+        _acquireWait = nullptr;
     }
 
     VulkanSwapChainStatus VulkanRHISwapChain::acquireNextImage( VkDevice device, uint32 frameSlot )
     {
         if ( _swapChain == nullptr || frameSlot >= _listImageAvailableSemaphore.size() )
             return VulkanSwapChainStatus::OutOfDate;
+        if ( _bImageHeld )
+            return VulkanSwapChainStatus::Success;
 
-        const VkResult result = vkAcquireNextImageKHR( device, _swapChain, UINT64_MAX,
-                                                       _listImageAvailableSemaphore[frameSlot], VK_NULL_HANDLE, &_imageIndex );
-        if ( toSwapChainStatus( result ) == VulkanSwapChainStatus::Failed )
+        const VkResult              result = vkAcquireNextImageKHR( device, _swapChain, UINT64_MAX,
+                                                                    _listImageAvailableSemaphore[frameSlot], VK_NULL_HANDLE, &_imageIndex );
+        const VulkanSwapChainStatus status = toSwapChainStatus( result );
+        if ( status == VulkanSwapChainStatus::Failed )
             SW_LOG_ERROR_ONCE_ID( "Vulkan.VkAcquireNextImageKHRFailedErrorCode", "vkAcquireNextImageKHR failed! Error code: %#", static_cast<int32>( result ) );
-        return toSwapChainStatus( result );
+        // Suboptimal 도 이미지를 넘겨준 것이다 — 쥐고, 그 신호를 기다린다.
+        if ( status == VulkanSwapChainStatus::Success || status == VulkanSwapChainStatus::Suboptimal )
+        {
+            _bImageHeld  = true;
+            _acquireWait = _listImageAvailableSemaphore[frameSlot];
+        }
+        return status;
+    }
+
+    VkSemaphore VulkanRHISwapChain::takeAcquireWait()
+    {
+        const VkSemaphore wait = _acquireWait;
+        _acquireWait           = nullptr;
+        return wait;
+    }
+
+    int32 VulkanRHISwapChain::waitForImageReuse( VkDevice device, VkFence frameFence )
+    {
+        if ( _imageIndex >= _listImageFence.size() )
+            return static_cast<int32>( VK_SUCCESS );
+        VkResult result = VK_SUCCESS;
+        if ( _listImageFence[_imageIndex] != VK_NULL_HANDLE )
+            result = vkWaitForFences( device, 1, &_listImageFence[_imageIndex], VK_TRUE, UINT64_MAX );
+        _listImageFence[_imageIndex] = frameFence;
+        return static_cast<int32>( result );
+    }
+
+    void VulkanRHISwapChain::forgetImageFences()
+    {
+        std::fill( _listImageFence.begin(), _listImageFence.end(), VK_NULL_HANDLE );
     }
 
     VulkanSwapChainStatus VulkanRHISwapChain::present( VkQueue queue )
@@ -537,6 +573,8 @@ namespace sw
         presentInfo.pImageIndices      = &_imageIndex;
 
         const VkResult result = vkQueuePresentKHR( queue, &presentInfo );
+        // 성공이든 OutOfDate 든 이미지는 프레젠테이션 엔진으로 넘어갔다. 재생성 경로에서도 이미지 자체가 사라진다.
+        _bImageHeld = false;
         if ( toSwapChainStatus( result ) == VulkanSwapChainStatus::Failed )
             SW_LOG_ERROR_ONCE_ID( "Vulkan.VkQueuePresentKHRFailedErrorCode", "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( result ) );
         return toSwapChainStatus( result );

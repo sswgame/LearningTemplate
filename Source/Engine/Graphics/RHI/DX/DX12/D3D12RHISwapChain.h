@@ -9,6 +9,7 @@
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -20,14 +21,15 @@ namespace sw
      * @brief 창 하나의 백버퍼 모음입니다. **스왑체인을 만들고, 크기를 바꾸고, 다음 백버퍼를 고르고, 화면에 표시합니다.**
      * @details 백버퍼 리소스 상태와 그 상태를 바꾸는 배리어를 이 객체가 함께 가집니다. 상태를 바꾸는 곳
      *          (`beginRenderPass` / `blitTexture` / `endFrame`)이 각자 배리어를 기록하면 서로 어긋납니다.
-     * @note RTV 힙은 **디바이스가 소유합니다.** 오프스크린 렌더 타깃과 같은 힙을 쓰기 때문입니다.
+     * @note 메인 창의 RTV 힙은 **디바이스가 소유합니다.** 오프스크린 렌더 타깃과 같은 힙을 쓰기 때문입니다.
      *       백버퍼는 그 힙의 앞쪽 `bufferCount()` 슬롯을 차지하고, 오프스크린은 그 뒤부터 씁니다.
+     *       다른 창(`IRHIDevice::createSwapChain`)은 백버퍼 수만큼의 RTV 힙을 스스로 가진다(`createOwnedRTVHeap`) — 디바이스 힙의 칸 배치를 건드리지 않는다.
      */
-    class D3D12RHISwapChain
+    class D3D12RHISwapChain final : public IRHISwapChain
     {
     public:
         D3D12RHISwapChain()                                      = default;
-        ~D3D12RHISwapChain()                                     = default;
+        ~D3D12RHISwapChain() override                            = default;
         D3D12RHISwapChain( const D3D12RHISwapChain& )            = delete;
         D3D12RHISwapChain& operator=( const D3D12RHISwapChain& ) = delete;
 
@@ -37,6 +39,11 @@ namespace sw
          *          성공합니다. 오프스크린 전용(테스트, 헤드리스) 디바이스가 그 경로입니다.
          */
         [[nodiscard]] bool initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc );
+
+        /** @brief 이 창의 백버퍼 RTV 힙을 만듭니다(다른 창 전용 — 메인 창은 디바이스 힙을 쓴다). */
+        [[nodiscard]] bool createOwnedRTVHeap( ID3D12Device* pDevice );
+        /** @brief `createOwnedRTVHeap` 이 만든 힙입니다. 메인 창은 nullptr 입니다. */
+        ID3D12DescriptorHeap* getOwnedRTVHeap() const { return _ownedRTVHeap.Get(); }
 
         /** @brief 백버퍼와 네이티브 스왑체인을 모두 놓습니다. */
         void shutdown();
@@ -108,8 +115,8 @@ namespace sw
         uint32 getBufferCount() const { return _bufferCount; }
         /** @brief 백버퍼 포맷입니다. DXGI 는 요청 포맷을 그대로 만듭니다(Vulkan 처럼 협상하지 않습니다). */
         RHIFormat getFormat() const { return _format; }
-        uint32    getWidth() const { return _width; }
-        uint32    getHeight() const { return _height; }
+        uint32    getWidth() const override { return _width; }
+        uint32    getHeight() const override { return _height; }
 
         /** @brief 현재 백버퍼 리소스를 반환합니다. 준비 안 됐으면 nullptr 입니다. */
         ID3D12Resource* getCurrentBackBuffer() const;
@@ -124,6 +131,7 @@ namespace sw
         ThreadRole                                                     _renderThread; ///< 렌더 스레드 역할 — 백 버퍼 목록 · 인덱스는 프레임 진행(렌더 스레드와 그 병렬 기록 태스크)만 만지고 인덱스는 기록 밖(acquireNextImage)에서만 바뀐다(잠금이 아니라 분석용 능력)
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listBackBuffer SW_GUARDED_BY( _renderThread );
         vector<D3D12_CPU_DESCRIPTOR_HANDLE>                            _listBackBufferRTV;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>                   _ownedRTVHeap; ///< 다른 창의 백버퍼 RTV 힙입니다(`createOwnedRTVHeap`). 메인 창은 비어 있다
 
         /// @brief 소유하지 않는 감시자입니다(setBarrierWatcher 참고).
         const IRHIDevice* _pBarrierWatcher{ nullptr };

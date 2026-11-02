@@ -143,6 +143,7 @@ namespace sw
 
     RHIRenderPassBeginInfo::RHIRenderPassBeginInfo() noexcept
         : _renderPass{ 0 }
+        , _pSwapChain{ nullptr }
         , _arrColorTarget{}
         , _depthTarget{ 0 }
         , _arrClearColor{}

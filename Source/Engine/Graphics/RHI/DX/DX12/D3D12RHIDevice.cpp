@@ -806,6 +806,13 @@ namespace sw
         _nextOffscreenRTVIndex     = 0;
         _allocatedDescriptorsCount = 0;
 
+        _listFrameSwapChain.clear();
+        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _listWindowSwapChain )
+        {
+            ScopedThreadRoleBorrow borrow{ pWindow->getRenderThreadRole() };
+            pWindow->shutdown();
+        }
+        _listWindowSwapChain.clear();
         _swapChain.shutdown();
         _vertexBuffer.Reset();
         _rootSignature.Reset();
@@ -854,10 +861,69 @@ namespace sw
 
     void D3D12RHIDevice::resizeInternal( uint32 width, uint32 height )
     {
-        // resize 는 렌더 스레드를 세운 뒤(`Engine::onMainWindowResize` 의 `waitIdle`) 부른다 — 그동안 프레임 진행 상태(백 버퍼 · 프레임 펜스)는 이 스레드가 렌더 스레드 역할을 빌려 만진다.
-        ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
         if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;
+        resizeSwapChainBuffers( _swapChain, width, height );
+    }
+
+    IRHISwapChain* D3D12RHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
+    {
+        // 메인 창과 같은 버퍼 수 · 포맷이어야 같은 PSO · 프레임 링 규칙을 쓴다. 팩터리는 메인 창과 같은 호출로 만든다(스왑체인은 큐에 붙어 어댑터가 정해진다).
+        RHISwapChainDesc windowDesc = desc;
+        windowDesc._bufferCount     = _swapChain.getBufferCount();
+        windowDesc._format          = _swapChain.getFormat();
+        Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
+        if ( isHrSuccess( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ), "CreateDXGIFactory1 (window)" ) == false )
+            return nullptr;
+
+        unique_ptr<D3D12RHISwapChain> pSwapChain = make_unique<D3D12RHISwapChain>();
+        pSwapChain->bindRenderThread( _renderThreadID.load( std::memory_order_acquire ) );
+        ScopedThreadRoleBorrow borrow{ pSwapChain->getRenderThreadRole() };
+        pSwapChain->setBarrierWatcher( this );
+        const bool bCreated = pSwapChain->initialize( factory.Get(), _commandQueue.Get(), windowDesc ) && pSwapChain->isValid() && pSwapChain->createOwnedRTVHeap( _device.Get() );
+        if ( bCreated == false )
+            return nullptr;
+        pSwapChain->createBackBuffers( _device.Get(), pSwapChain->getOwnedRTVHeap(), _rtvDescriptorSize );
+        if ( pSwapChain->isBackBufferReady() == false )
+            return nullptr;
+        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
+        return _listWindowSwapChain.back().get();
+    }
+
+    void D3D12RHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        resizeSwapChainBuffers( static_cast<D3D12RHISwapChain&>( swapChain ), width, height ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+    }
+
+    void D3D12RHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
+    {
+        D3D12RHISwapChain& window = static_cast<D3D12RHISwapChain&>( swapChain );
+        {
+            ScopedThreadRoleBorrow borrow{ window.getRenderThreadRole() };
+            window.shutdown();
+        }
+        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<D3D12RHISwapChain>& pEntry )
+        { return pEntry.get() == &window; } );
+    }
+
+    D3D12RHISwapChain& D3D12RHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
+    {
+        if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
+            return _swapChain;
+        D3D12RHISwapChain& swapChain = static_cast<D3D12RHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &swapChain ) == _listFrameSwapChain.end() )
+        {
+            swapChain.acquireNextImage();
+            _listFrameSwapChain.push_back( &swapChain );
+        }
+        return swapChain;
+    }
+
+    void D3D12RHIDevice::resizeSwapChainBuffers( D3D12RHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        // resize 는 렌더 스레드를 세운 뒤(`Engine::onMainWindowResize` · `IRHIDevice::resizeSwapChain` 의 `waitIdle`) 부른다 — 그동안 프레임 진행 상태(백 버퍼 · 프레임 펜스)는
+        // 이 스레드가 렌더 스레드 역할을 빌려 만진다.
+        ScopedThreadRoleBorrow borrow{ swapChain.getRenderThreadRole() };
 
         if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
         {
@@ -874,16 +940,21 @@ namespace sw
         }
 
         waitForPreviousFrame();
-        _swapChain.releaseBackBuffers();
-        if ( _swapChain.resize( width, height ) == false )
+        swapChain.releaseBackBuffers();
+        if ( swapChain.resize( width, height ) == false )
             return;
-        _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
-        _swapChain.acquireNextImage();
+        ID3D12DescriptorHeap* const pRTVHeap = &swapChain == &_swapChain ? _rtvHeap.Get() : swapChain.getOwnedRTVHeap();
+        swapChain.createBackBuffers( _device.Get(), pRTVHeap, _rtvDescriptorSize );
+        swapChain.acquireNextImage();
     }
 
     void D3D12RHIDevice::onRenderThreadRoleChanged( std::thread::id owner )
     {
         _swapChain.bindRenderThread( owner );
+        for ( const unique_ptr<D3D12RHISwapChain>& pWindow : _listWindowSwapChain )
+        {
+            pWindow->bindRenderThread( owner );
+        }
     }
 
     void D3D12RHIDevice::waitIdleInternal()
@@ -1452,7 +1523,13 @@ namespace sw
     void D3D12RHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
         if ( bPresent )
+        {
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
+            for ( D3D12RHISwapChain* pWindow : _listFrameSwapChain )
+            {
+                pWindow->transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
+            }
+        }
 
         // Present 의 300 us 가 어디로 가는지 측정하려고 닫기 · 제출 / DXGI Present / 펜스 신호 · 다음 이미지로 나눠 측정한다.
         {
@@ -1528,6 +1605,14 @@ namespace sw
             {
                 SW_PROFILE_SCOPE( "RT.Present.present" );
                 presentHr = _swapChain.present( vsync );
+                // 이 프레임에 그린 다른 창도 같은 제출 뒤에 표시한다(Godot 의 execute_and_present 가 여러 스왑체인을 함께 내는 자리).
+                for ( D3D12RHISwapChain* pWindow : _listFrameSwapChain )
+                {
+                    const HRESULT windowHr = pWindow->present( vsync );
+                    if ( FAILED( windowHr ) )
+                        SW_LOG_ERROR_ONCE_ID( "D3D12.WindowPresentFailedHr", "Present of a window swap chain failed hr=%#", static_cast<uint32>( windowHr ) );
+                    pWindow->markPresented();
+                }
             }
             if ( FAILED( presentHr ) )
             {
@@ -1554,6 +1639,7 @@ namespace sw
         }
         if ( bPresent )
             _swapChain.markPresented();
+        _listFrameSwapChain.clear();
     }
 
     void D3D12RHIDevice::bindBindlessRootState( ID3D12GraphicsCommandList* pList )

@@ -180,7 +180,7 @@ namespace sw
 
     void WGLPlatformContext::reacquireForFrame()
     {
-        // ImGui 멀티 뷰포트가 DC 를 바꿔 놓을 수 있어 매 프레임 다시 가져온다.
+        // 다른 창(`makeCurrentOnWindowSurface`)이 DC 를 바꿔 놓을 수 있어 매 프레임 다시 가져온다.
         if ( _pDeviceContext != nullptr && _pRenderContext != nullptr )
             wglMakeCurrent( static_cast<HDC>( _pDeviceContext ), static_cast<HGLRC>( _pRenderContext ) );
     }
@@ -190,9 +190,71 @@ namespace sw
         if ( _pDeviceContext == nullptr )
             return;
 
-        // 멀티 뷰포트가 DC 를 바꿨을 수 있으니 스왑 직전에 한 번 더 다시 가져온다.
+        // 다른 창이 DC 를 바꿨을 수 있으니 스왑 직전에 한 번 더 다시 가져온다.
         reacquireForFrame();
         SwapBuffers( static_cast<HDC>( _pDeviceContext ) );
+    }
+
+    namespace
+    {
+        /** @brief 다른 창의 표면입니다. 해제는 만들 때 읽은 창으로 합니다. */
+        struct WGLWindowSurface
+        {
+            HWND _hWnd{ nullptr };
+            HDC  _hDC{ nullptr };
+        };
+    } // namespace
+
+    void* WGLPlatformContext::createWindowSurface( const RHISwapChainDesc& desc )
+    {
+        void* pWindowHandle{ nullptr };
+        if ( _pDeviceContext == nullptr || desc.tryGetWin32Handle( pWindowHandle ) == false || pWindowHandle == nullptr )
+        {
+            SW_LOG_ERROR_ID( "OpenGL.WindowSurfaceNeedsWin32", "A WGL window surface needs a Win32 window" );
+            return nullptr;
+        }
+        // 한 문맥을 여러 DC 에 걸려면 픽셀 포맷이 같아야 한다 — 메인 창의 것을 그대로 건다(SetPixelFormat 은 창마다 한 번뿐이다).
+        const HWND            hWnd       = static_cast<HWND>( pWindowHandle );
+        const HDC             hMainDC    = static_cast<HDC>( _pDeviceContext );
+        const int32           mainFormat = GetPixelFormat( hMainDC );
+        PIXELFORMATDESCRIPTOR pfd{};
+        const HDC             hDC        = GetDC( hWnd );
+        const bool            bFormatSet = hDC != nullptr && mainFormat != 0 && DescribePixelFormat( hMainDC, mainFormat, sizeof( pfd ), &pfd ) != 0 &&
+                                ( GetPixelFormat( hDC ) == mainFormat || SetPixelFormat( hDC, mainFormat, &pfd ) != FALSE );
+        if ( bFormatSet == false )
+        {
+            SW_LOG_ERROR_ID( "OpenGL.WindowPixelFormatFailed", "Could not give a window the main window's pixel format (err=%#)", static_cast<uint32>( GetLastError() ) );
+            if ( hDC != nullptr )
+                ReleaseDC( hWnd, hDC );
+            return nullptr;
+        }
+        WGLWindowSurface* pSurface = sw::make_unique<WGLWindowSurface>().release(); // `destroyWindowSurface` 가 푼다
+        pSurface->_hWnd            = hWnd;
+        pSurface->_hDC             = hDC;
+        return pSurface;
+    }
+
+    void WGLPlatformContext::destroyWindowSurface( void* pSurface )
+    {
+        WGLWindowSurface* pWindow = static_cast<WGLWindowSurface*>( pSurface );
+        if ( pWindow == nullptr )
+            return;
+        ReleaseDC( pWindow->_hWnd, pWindow->_hDC );
+        sw_delete( pWindow );
+    }
+
+    bool WGLPlatformContext::makeCurrentOnWindowSurface( void* pSurface )
+    {
+        if ( pSurface == nullptr )
+            return makeCurrent();
+        const WGLWindowSurface* pWindow = static_cast<const WGLWindowSurface*>( pSurface );
+        return _pRenderContext != nullptr && wglMakeCurrent( pWindow->_hDC, static_cast<HGLRC>( _pRenderContext ) ) != FALSE;
+    }
+
+    void WGLPlatformContext::presentWindowSurface( void* pSurface )
+    {
+        if ( pSurface != nullptr )
+            SwapBuffers( static_cast<const WGLWindowSurface*>( pSurface )->_hDC );
     }
 
     void WGLPlatformContext::setSwapInterval( bool bVSync )

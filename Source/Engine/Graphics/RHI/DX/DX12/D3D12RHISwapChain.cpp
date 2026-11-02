@@ -59,11 +59,20 @@ namespace sw
         return true;
     }
 
+    bool D3D12RHISwapChain::createOwnedRTVHeap( ID3D12Device* pDevice )
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
+        heapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        heapDesc.NumDescriptors = _bufferCount;
+        return pDevice != nullptr && isHrSuccess( pDevice->CreateDescriptorHeap( &heapDesc, IID_PPV_ARGS( _ownedRTVHeap.GetAddressOf() ) ), "CreateDescriptorHeap (window RTV)" );
+    }
+
     void D3D12RHISwapChain::shutdown()
     {
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         releaseBackBuffers();
         _swapChain.Reset();
+        _ownedRTVHeap.Reset();
         _pHWnd           = nullptr;
         _width           = 0;
         _height          = 0;

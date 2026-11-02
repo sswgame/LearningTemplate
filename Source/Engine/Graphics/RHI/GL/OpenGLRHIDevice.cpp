@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -337,6 +338,7 @@ namespace sw
 
         _width  = desc._width;
         _height = desc._height;
+        _swapChain.setSize( desc._width, desc._height );
         if ( desc._bSoftwareAdapter )
             SW_LOG_WARNING_ID( "OpenGL.GvRhiSoftwareAdapterIgnoredOpenGL", "gv_rhiSoftwareAdapter is ignored on OpenGL (the driver decides)" );
         // GL 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
@@ -692,6 +694,14 @@ namespace sw
         // GL 자원을 지우기 전에 컨텍스트를 되찾는다 (플랫폼이 필요 없으면 아무것도 하지 않는다).
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
+        for ( const unique_ptr<OpenGLRHISwapChain>& pWindow : _listWindowSwapChain )
+        {
+            if ( _platformContext != nullptr )
+                _platformContext->destroyWindowSurface( pWindow->getSurface() );
+        }
+        _listWindowSwapChain.clear();
+        _listFrameSwapChain.clear();
+        _pCurrentSwapChain = &_swapChain;
 
         // 프레임 펜스는 `waitIdleInternal`(종료 2단계)이 이미 놓았다. 다시 세우는 디바이스가 이어받지 않도록 번호만 처음으로 돌린다.
         _frameSerial          = 0;
@@ -850,6 +860,7 @@ namespace sw
     {
         _width  = width;
         _height = height;
+        _swapChain.setSize( width, height );
         if ( _platformContext != nullptr )
             _platformContext->resize( width, height );
         glViewport( 0, 0, static_cast<GLsizei>( width ), static_cast<GLsizei>( height ) );
@@ -1002,6 +1013,43 @@ namespace sw
         RHITimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
     }
 
+    IRHISwapChain* OpenGLRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
+    {
+        void* const pSurface = _platformContext != nullptr ? _platformContext->createWindowSurface( desc ) : nullptr;
+        if ( pSurface == nullptr )
+            return nullptr;
+        _listWindowSwapChain.push_back( make_unique<OpenGLRHISwapChain>( pSurface, desc._width, desc._height ) );
+        return _listWindowSwapChain.back().get();
+    }
+
+    void OpenGLRHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        static_cast<OpenGLRHISwapChain&>( swapChain ).setSize( width, height ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+    }
+
+    void OpenGLRHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
+    {
+        OpenGLRHISwapChain& window = static_cast<OpenGLRHISwapChain&>( swapChain );
+        if ( _platformContext != nullptr )
+            _platformContext->destroyWindowSurface( window.getSurface() );
+        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<OpenGLRHISwapChain>& pEntry )
+        { return pEntry.get() == &window; } );
+    }
+
+    OpenGLRHISwapChain* OpenGLRHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
+    {
+        OpenGLRHISwapChain* const pTarget = pSwapChain != nullptr ? static_cast<OpenGLRHISwapChain*>( pSwapChain ) : &_swapChain;
+        if ( pTarget != _pCurrentSwapChain )
+        {
+            if ( _platformContext == nullptr || _platformContext->makeCurrentOnWindowSurface( pTarget->getSurface() ) == false )
+                return nullptr;
+            _pCurrentSwapChain = pTarget;
+        }
+        if ( pTarget != &_swapChain && std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), pTarget ) == _listFrameSwapChain.end() )
+            _listFrameSwapChain.push_back( pTarget );
+        return pTarget;
+    }
+
     void OpenGLRHIDevice::beginFrameInternal()
     {
         if ( _bInitialized == SW_FALSE )
@@ -1009,6 +1057,7 @@ namespace sw
 
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
+        _pCurrentSwapChain = &_swapChain;
 
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
         // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩하고 클리어하는 것은 RenderThread 가 여는 명시적
@@ -1028,6 +1077,17 @@ namespace sw
 
         // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 다음 슬롯으로 넘긴다.
         _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::render::kMaxFrameCountInFlight;
+
+        // 이 프레임에 그린 다른 창을 먼저 내보내고 메인 창으로 돌아간다(아래 present 가 메인 창을 다시 건다).
+        for ( OpenGLRHISwapChain* pWindow : _listFrameSwapChain )
+        {
+            if ( bPresent && _platformContext != nullptr && _platformContext->makeCurrentOnWindowSurface( pWindow->getSurface() ) )
+                _platformContext->presentWindowSurface( pWindow->getSurface() );
+        }
+        _listFrameSwapChain.clear();
+        if ( _pCurrentSwapChain != &_swapChain && _platformContext != nullptr )
+            (void)_platformContext->makeCurrent(); // 실패는 다음 프레임의 reacquireForFrame 이 다시 본다
+        _pCurrentSwapChain = &_swapChain;
 
         if ( bPresent == false )
         {

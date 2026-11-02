@@ -853,7 +853,9 @@ namespace sw
         uint32                      rtCount{ 0 };
         _pState->_bActiveSwapchainRT = SW_FALSE;
 
-        const uint32 colorBindCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
+        const bool         bBackBuffer    = bBindColor && beginInfo._arrColorTarget[0] == 0;
+        D3D12RHISwapChain& swapChain      = bBackBuffer ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : _pDevice->_swapChain;
+        const uint32       colorBindCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
         for ( uint32 attachmentIndex = 0; attachmentIndex < colorBindCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {
             const RHITextureHandle      colorHandle = beginInfo._arrColorTarget[attachmentIndex];
@@ -862,10 +864,10 @@ namespace sw
 
             if ( colorHandle == 0 )
             {
-                if ( attachmentIndex > 0 || _pDevice->_swapChain.isBackBufferReady() == false )
+                if ( attachmentIndex > 0 || swapChain.isBackBufferReady() == false )
                     break;
-                _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
-                rtv                                     = _pDevice->_swapChain.getCurrentRTV();
+                swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
+                rtv                                     = swapChain.getCurrentRTV();
                 bValid                                  = true;
                 _pState->_bActiveSwapchainRT            = SW_TRUE;
                 _pState->_arrActiveColorTarget[rtCount] = 0;
@@ -930,8 +932,8 @@ namespace sw
         else if ( pDSV != nullptr )
             commandListForRecord()->OMSetRenderTargets( 0, nullptr, FALSE, pDSV );
 
-        const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth();
-        const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight();
+        const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : swapChain.getWidth();
+        const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : swapChain.getHeight();
         D3D12_VIEWPORT viewport{};
         viewport.Width    = static_cast<float32>( vpW );
         viewport.Height   = static_cast<float32>( vpH );

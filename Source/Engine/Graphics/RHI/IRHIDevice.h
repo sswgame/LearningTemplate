@@ -26,6 +26,7 @@ namespace sw
     class IRHICommandList;
     class IRHIContextThreadBinding;
     class IRHIResourceFactory;
+    class IRHISwapChain;
     class IRHITimestampProvider;
     class RHIMemoryLedger;
 
@@ -258,8 +259,8 @@ namespace sw
          * @details **수명주기 전용**이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.
          *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 핸들 0)가 명시적으로 한다(`RenderThread::executeFrameBody`).
          *          프레임 수명주기(beginFrame, endFrame, resize)는 디바이스의 일이다. 스왑체인 쪽에 두면 디바이스의 private 상태를 건드려야 한다.
-         * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 백엔드 안의 구체 클래스
-         *       `<백엔드>RHISwapChain` 이 소유합니다. 가상 인터페이스로 되돌리지 않습니다(RHI/README.md). GL 에는 없습니다.
+         * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 `IRHISwapChain` 의 백엔드 구현이 소유합니다. 메인 창도 그 가운데 하나이고,
+         *       `endFrame` 은 그 프레임에 그린 스왑체인을 모두 표시합니다(`createSwapChain`).
          */
         void beginFrame()
         {
@@ -394,6 +395,29 @@ namespace sw
          *          않는다. Vulkan 은 present 모드가 바뀌므로 다음 `beginFrame` 에서 스왑체인을 다시 만든다.
          */
         void setVSync( bool bVSync );
+
+        /**
+         * @brief 창 하나에 스왑체인을 더 만듭니다(에디터 플로팅 창). 메인 창의 스왑체인은 `initialize` 가 만든다. 실패하면 이유를 남기고 nullptr 입니다.
+         * @details 언리얼 `RHICreateViewport` 자리다. 그리기는 `RHIRenderPassBeginInfo::_pSwapChain` 으로 고르고, 그 프레임의 `endFrame` 이 함께 표시한다.
+         *          **생성 · 크기 변경 · 파괴는 렌더 스레드와 GPU 를 비운 뒤에 한다**(`waitIdle`). 창이 생기고 사라지는 일은 드물고, 렌더 스레드는 스왑체인 목록을
+         *          잠금 없이 읽기 때문이다(목록을 바꾸는 쪽은 프레임을 넘기는 게임 스레드라, 비운 뒤에는 렌더 스레드가 다음 프레임 전까지 쉰다).
+         *          @p desc 의 창 핸들 · 디스플레이 · 표면 종류 · 크기를 읽는다. 버퍼 수 · 포맷 · VSync 는 메인 창과 같은 값을 쓴다(같은 렌더 패스 · 파이프라인을 쓴다).
+         */
+        [[nodiscard]] IRHISwapChain* createSwapChain( const RHISwapChainDesc& desc );
+        /** @brief 스왑체인 크기를 바꿉니다. 크기가 같거나 한쪽이 0(최소화)이면 아무것도 하지 않습니다. 렌더 스레드와 GPU 를 비운 뒤에 바꿉니다. */
+        void resizeSwapChain( IRHISwapChain& swapChain, uint32 width, uint32 height );
+        /** @brief `createSwapChain` 이 만든 스왑체인을 부숩니다. nullptr 은 무시합니다. 창을 부수기 전에 부릅니다(표면이 창보다 먼저 사라져야 한다). */
+        void destroySwapChain( IRHISwapChain* pSwapChain );
+        /**
+         * @brief 이 프레임에 @p swapChain 의 백버퍼 이미지를 잡습니다. 렌더 스레드에서 `beginFrame` 과 `endFrame` 사이에 부릅니다.
+         * @details 잡았으면 true 다 — 그 뒤 `_pSwapChain` 으로 연 렌더 패스가 그 이미지에 그리고, `endFrame` 이 표시한다. 창이 최소화됐거나 다시 만들어야 해서
+         *          이번 프레임에 그릴 수 없으면 false 이고, 부르는 쪽은 그 창의 그리기를 건너뛴다(패스 없이 기록하면 Vulkan 이 검증 오류다).
+         */
+        [[nodiscard]] bool acquireSwapChainImage( IRHISwapChain& swapChain )
+        {
+            assumeRenderThreadRole();
+            return acquireSwapChainImageInternal( swapChain );
+        }
         // ------------------------------------------------------------------------------
         // 4) 커맨드 리스트: 생성, 그래픽스 스레드에서만 execute
         // ------------------------------------------------------------------------------
@@ -540,6 +564,15 @@ namespace sw
 
         /** @brief 렌더 스레드 역할의 소유자가 바뀌었습니다(`setRenderThreadDrain`). 자기 역할을 따로 든 백엔드 부품(스왑체인)이 같은 소유자로 맞춥니다. 빈 id 면 풀렸다. */
         virtual void onRenderThreadRoleChanged( std::thread::id owner ) { (void)owner; }
+
+        /** @brief `createSwapChain` 의 백엔드 훅입니다. 렌더 스레드와 GPU 는 이미 비었습니다. 백엔드가 소유하고 `destroySwapChainInternal` 까지 살립니다. */
+        [[nodiscard]] virtual IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) = 0;
+        /** @brief `resizeSwapChain` 의 백엔드 훅입니다. 렌더 스레드와 GPU 는 이미 비었습니다. */
+        virtual void resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) = 0;
+        /** @brief `destroySwapChain` 의 백엔드 훅입니다. 렌더 스레드와 GPU 는 이미 비었습니다. */
+        virtual void destroySwapChainInternal( IRHISwapChain& swapChain ) = 0;
+        /** @brief `acquireSwapChainImage` 의 백엔드 훅입니다(렌더 스레드, 프레임 안). */
+        [[nodiscard]] virtual bool acquireSwapChainImageInternal( IRHISwapChain& swapChain ) = 0;
 
         IRenderSurface* _pSurface;
         /// @brief 렌더 스레드 역할입니다(잠금이 아니라 분석용 능력). 프레임 진행 상태(백엔드의 프레임 링 · 스왑체인 깃발 · 진행 중 커맨드 버퍼)는 이 역할 아래에 있고,

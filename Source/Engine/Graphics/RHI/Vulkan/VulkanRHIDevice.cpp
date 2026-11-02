@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 
@@ -38,7 +39,6 @@
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
-#include "Core/Container/VectorUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
@@ -72,7 +72,9 @@ namespace sw
         , _timestampFrame{}
         , _listCommandBuffer{}
         , _listInFlightFence{}
-        , _listImagesInFlight{}
+        , _listWindowSwapChain{}
+        , _listFrameSwapChain{}
+        , _listPendingAcquireWait{}
         , _listRingFrameNumber{}
         , _pHWnd{ nullptr }
         , _pDisplayHandle{ nullptr }
@@ -95,7 +97,7 @@ namespace sw
         , _bFillModeNonSolid{ SW_FALSE }
         , _bSwapChainDirty{ SW_FALSE }
         , _bDepthHasStencil{ SW_FALSE }
-        , _bSwapChainImageHeld{ SW_FALSE }
+        , _reservedSwapChainBit{ 0 }
         , _bMemoryBudget{ SW_FALSE }
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
@@ -103,7 +105,6 @@ namespace sw
         , _bCheckpoints{ SW_FALSE }
         , _pCmdSetCheckpoint{ nullptr }
         , _pGetCheckpointData{ nullptr }
-        , _bFrameAcquireWaitPending{ SW_FALSE }
         , _bTimestampEnabled{ SW_FALSE }
         , _arrTimestampSubmitted{}
         , _defaultSampler{ nullptr }
@@ -526,6 +527,14 @@ namespace sw
                 sampler = VK_NULL_HANDLE;
             }
 
+            for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _listWindowSwapChain )
+            {
+                pWindow->destroy( _device );
+                pWindow->destroySemaphores( _device );
+                pWindow->destroySurface( _instance );
+            }
+            _listWindowSwapChain.clear();
+            _listFrameSwapChain.clear();
             _swapChain.destroy( _device );
             _swapChain.destroySemaphores( _device );
             destroyFrameFences();
@@ -1303,8 +1312,6 @@ namespace sw
         // 이미지별 세마포어는 스왑체인이 만든다(VulkanRHISwapChain::createSemaphores).
         _listInFlightFence.resize( constant::render::kMaxFrameCountInFlight );
         _listRingFrameNumber.resize( constant::render::kMaxFrameCountInFlight, 0 );
-        // "이 이미지를 마지막으로 쓴 펜스" 표는 이미지 개수만큼 필요하다.
-        _listImagesInFlight.resize( _swapChain.getImageCount(), VK_NULL_HANDLE );
 
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -1332,8 +1339,12 @@ namespace sw
         _listInFlightFence.clear();
         _listRingFrameNumber.clear();
 
-        // 위 펜스를 가리키는 사본이므로 비우기만 한다.
-        _listImagesInFlight.clear();
+        // 스왑체인의 이미지별 펜스 표는 위 펜스의 사본이므로 비우기만 한다.
+        _swapChain.forgetImageFences();
+        for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _listWindowSwapChain )
+        {
+            pWindow->forgetImageFences();
+        }
     }
 
     void VulkanRHIDevice::resizeInternal( uint32 width, uint32 height )
@@ -1347,6 +1358,100 @@ namespace sw
         // 아무 스레드에서나 재생성하지 않고 beginFrame 까지 미룬다.
         if ( width != 0 && height != 0 )
             _bSwapChainDirty = 1;
+    }
+
+    IRHISwapChain* VulkanRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
+    {
+        _renderThread.assumeHeld(); // 렌더 스레드를 세운 뒤에 불린다(`IRHIDevice::createSwapChain` 의 `waitIdle`)
+        // 서피스 확장은 인스턴스를 만들 때 메인 창의 창 시스템으로 골랐다 — 다른 창 시스템의 핸들은 그 확장으로 읽지 못한다.
+        const bool bSameWindowSystem = ( desc._surfaceKind == NativeSurfaceKind::Win32 ) == ( _wsiKind == VulkanWsiKind::Win32 ) &&
+                                       ( desc._surfaceKind == NativeSurfaceKind::Wayland ) == ( _wsiKind == VulkanWsiKind::Wayland );
+        if ( bSameWindowSystem == false || _device == nullptr || isDeviceLost() )
+            return nullptr;
+
+        unique_ptr<VulkanRHISwapChain> pSwapChain = make_unique<VulkanRHISwapChain>();
+        pSwapChain->setRequested( _swapChain.getActualBackBufferFormat(), 0, isVSyncEnabled() );
+        if ( pSwapChain->createSurface( _instance, desc._pWindowHandle, desc._pWindowDisplay, _wsiKind ) == false )
+            return nullptr;
+        VkBool32   bPresentSupported = VK_FALSE;
+        const bool bQueried          = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, pSwapChain->getSurface(), &bPresentSupported ),
+                                                    "vkGetPhysicalDeviceSurfaceSupportKHR (window)" );
+        // 메인 창의 렌더 패스 · 프레임버퍼 규칙을 그대로 쓰므로 이미지 포맷이 같아야 한다 — 다르면 대신할 포맷을 고르지 않고 거절한다.
+        const bool bCreated = bQueried && bPresentSupported != VK_FALSE && rebuildWindowSwapChain( *pSwapChain, desc._width, desc._height ) &&
+                              pSwapChain->getImageFormat() == _swapChain.getImageFormat();
+        if ( bCreated == false )
+        {
+            pSwapChain->destroy( _device );
+            pSwapChain->destroySemaphores( _device );
+            pSwapChain->destroySurface( _instance );
+            return nullptr;
+        }
+        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
+        return _listWindowSwapChain.back().get();
+    }
+
+    void VulkanRHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        _renderThread.assumeHeld();                                                                   // 렌더 스레드를 세운 뒤에 불린다(`IRHIDevice::resizeSwapChain` 의 `waitIdle`)
+        (void)rebuildWindowSwapChain( static_cast<VulkanRHISwapChain&>( swapChain ), width, height ); // 실패 알림은 안에서 남긴다. 다음 프레임의 획득이 다시 시도한다
+    }
+
+    void VulkanRHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
+    {
+        _renderThread.assumeHeld();                                                 // 렌더 스레드를 세운 뒤에 불린다(`IRHIDevice::destroySwapChain` 의 `waitIdle`)
+        VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( swapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+        window.destroy( _device );
+        window.destroySemaphores( _device );
+        window.destroySurface( _instance );
+        (void)VectorUtil::removeIf( _listWindowSwapChain, [&window]( const unique_ptr<VulkanRHISwapChain>& pEntry )
+        { return pEntry.get() == &window; } );
+    }
+
+    bool VulkanRHIDevice::rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        swapChain.destroySemaphores( _device );
+        swapChain.destroy( _device );
+        if ( swapChain.create( _physicalDevice, _device, width, height ) == false )
+            return false; // 서피스 크기 0(최소화)은 오류가 아니다 — 다음 획득이 다시 시도한다
+        const bool bBuilt = swapChain.createFramebuffers( _device, _renderPass ) && swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight );
+        if ( bBuilt == false )
+            SW_LOG_ERROR_ONCE_ID( "Vulkan.WindowSwapChainBuildFailed", "Failed to build the framebuffers or semaphores of a window swap chain (%#x%#)", width, height );
+        return bBuilt;
+    }
+
+    VulkanRHISwapChain* VulkanRHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
+    {
+        if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
+            return &_swapChain;
+        VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &window ) != _listFrameSwapChain.end() )
+            return &window;
+        if ( _bFrameStarted == SW_FALSE || isDeviceLost() )
+            return nullptr;
+
+        VulkanSwapChainStatus status = window.isValid() ? window.acquireNextImage( _device, _currentFrame ) : VulkanSwapChainStatus::OutOfDate;
+        if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::SurfaceLost )
+        {
+            // 창 크기가 바뀌었거나 표면이 낡았다 — 메인 창의 beginFrame 처럼 그 자리에서 다시 만든다(GPU 를 비운다 — 창 크기 변경 중에만 드물게 온다).
+            {
+                ScopedLock<mutex> queueLock{ _queueMutex };
+                reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "useSwapChain: vkDeviceWaitIdle" );
+            }
+            if ( isDeviceLost() || rebuildWindowSwapChain( window, window.getExtentWidth(), window.getExtentHeight() ) == false )
+                return nullptr;
+            status = window.acquireNextImage( _device, _currentFrame );
+        }
+        if ( status == VulkanSwapChainStatus::DeviceLost )
+            reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "useSwapChain: vkAcquireNextImageKHR" );
+        if ( status != VulkanSwapChainStatus::Success && status != VulkanSwapChainStatus::Suboptimal )
+            return nullptr;
+
+        const VkSemaphore acquireWait = window.takeAcquireWait();
+        if ( acquireWait != VK_NULL_HANDLE )
+            _listPendingAcquireWait.push_back( acquireWait );
+        reportQueueResult( window.waitForImageReuse( _device, _listInFlightFence[_currentFrame] ), "useSwapChain: vkWaitForFences (image in flight)" );
+        _listFrameSwapChain.push_back( &window );
+        return &window;
     }
 
     void VulkanRHIDevice::applyVSyncInternal()
@@ -1368,10 +1473,6 @@ namespace sw
         // 대기에서 잃었음을 봤으면 다시 만들지 않는다 — 잃은 장치의 스왑체인 생성은 같은 손실만 다시 듣는다.
         if ( isDeviceLost() )
             return false;
-
-        // 아래에서 스왑체인을 통째로 버린다. 쥐고 있던 이미지도 같이 사라지므로 표식을 내린다.
-        // 남겨 두면 새 스왑체인에서 첫 acquire 를 건너뛰어 이미지 없이 그리게 된다.
-        _bSwapChainImageHeld = SW_FALSE;
 
         // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 다시 만든다.
         destroyFrameFences();
@@ -1426,7 +1527,6 @@ namespace sw
         if ( isDeviceLost() )
             return false;
         // 스왑체인이 서피스 위에 있으므로 스왑체인 → 서피스 순으로 버리고 서피스 → 스왑체인 순으로 만든다.
-        _bSwapChainImageHeld = SW_FALSE;
         destroyFrameFences();
         _swapChain.destroySemaphores( _device );
         _swapChain.destroy( _device );
@@ -1838,11 +1938,8 @@ namespace sw
         // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
         resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[_currentFrame] );
 
-        // 앞 프레임이 present 하지 않았다면 그때 획득한 이미지를 아직 쥐고 있다. Vulkan 에는
-        // present 말고 이미지를 돌려주는 길이 없으니, 다시 획득하지 말고 그 이미지에 덮어 그린다.
-        // 매 프레임 새로 획득하면 이미지가 하나씩 소진되고, 개수를 넘기는 순간 acquire 가
-        // UINT64_MAX 타임아웃으로 영원히 막힌다. endFrame(bPresent=false) 로 도는 경로에서 실제로 걸렸다.
-        if ( _bSwapChainImageHeld == SW_FALSE )
+        // 앞 프레임이 present 하지 않았다면 그때 획득한 이미지를 스왑체인이 아직 쥐고 있고, acquireNextImage 는 그 이미지를 돌려준다(VulkanRHISwapChain 머리말).
+        _listPendingAcquireWait.clear();
         {
             VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
             if ( status == VulkanSwapChainStatus::SurfaceLost )
@@ -1878,20 +1975,14 @@ namespace sw
                 reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "beginFrame: vkAcquireNextImageKHR (retry)" );
             if ( status != VulkanSwapChainStatus::Success && status != VulkanSwapChainStatus::Suboptimal )
                 return;
-
-            _bSwapChainImageHeld = SW_TRUE;
-            // 방금 획득한 이미지의 가용 세마포어는 이 프레임의 첫 제출이 딱 한 번 기다린다.
-            // 이미지를 물려받은 프레임은 기다릴 시그널이 없으므로 이 플래그를 세우지 않는다.
-            _bFrameAcquireWaitPending = SW_TRUE;
         }
+        // 방금 획득한 이미지의 가용 세마포어는 이 프레임의 첫 제출이 딱 한 번 기다린다(물려받은 이미지는 기다릴 신호가 없다).
+        const VkSemaphore mainAcquireWait = _swapChain.takeAcquireWait();
+        if ( mainAcquireWait != VK_NULL_HANDLE )
+            _listPendingAcquireWait.push_back( mainAcquireWait );
 
         // 이 이미지를 마지막으로 쓴 프레임이 아직 GPU 에 있으면 그 펜스를 기다린 뒤에 덮어쓴다.
-        const uint32 imageIndex = _swapChain.getImageIndex();
-        if ( imageIndex >= _listImagesInFlight.size() )
-            return;
-        if ( _listImagesInFlight[imageIndex] != VK_NULL_HANDLE )
-            reportQueueResult( static_cast<int32>( vkWaitForFences( _device, 1, &_listImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX ) ), "beginFrame: vkWaitForFences (image in flight)" );
-        _listImagesInFlight[imageIndex] = _listInFlightFence[_currentFrame];
+        reportQueueResult( _swapChain.waitForImageReuse( _device, _listInFlightFence[_currentFrame] ), "beginFrame: vkWaitForFences (image in flight)" );
 
         // 이 셋은 메모리 부족으로만 실패한다(장치 분실은 돌려주지 않는다). 실패한 버퍼에 기록하면 제출이 검증 오류 · 크래시라 멈춘다.
         requireVk( vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] ), "beginFrame: vkResetFences" );
@@ -1963,16 +2054,11 @@ namespace sw
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        // acquire 대기는 프레임당 한 번뿐이다. 즉시 모드에서 앞선 제출이 이미 소비했으면 생략한다.
-        VkSemaphore          arrWaitSemaphore[] = { _swapChain.getImageAvailableSemaphore( _currentFrame ) };
-        VkPipelineStageFlags arrWaitStage[]     = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        if ( _bFrameAcquireWaitPending != SW_FALSE )
-        {
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.pWaitSemaphores    = arrWaitSemaphore;
-            submitInfo.pWaitDstStageMask  = arrWaitStage;
-            _bFrameAcquireWaitPending     = SW_FALSE;
-        }
+        // acquire 대기는 이미지마다 한 번뿐이다. 즉시 모드에서 앞선 제출이 이미 소비했으면 남은 것만 기다린다.
+        const vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
+        submitInfo.waitSemaphoreCount = static_cast<uint32>( _listPendingAcquireWait.size() );
+        submitInfo.pWaitSemaphores    = _listPendingAcquireWait.data();
+        submitInfo.pWaitDstStageMask  = listWaitStage.data();
 
         // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다. 같은 큐에 대한
         // 제출 순서가 곧 실행 순서라, 세그먼트 사이의 리소스 의존성이 그대로 지켜진다.
@@ -1981,11 +2067,16 @@ namespace sw
 
         // renderFinished 를 기다리는 건 present 뿐이다. present 하지 않는 프레임까지 시그널하면
         // 아무도 소비하지 않은 이진 세마포어를 거듭 시그널하게 되어 규약 위반이다.
-        VkSemaphore arrSignalSemaphore[] = { _swapChain.getRenderFinishedSemaphore() };
+        vector<VkSemaphore> listSignalSemaphore;
         if ( bPresent )
         {
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores    = arrSignalSemaphore;
+            listSignalSemaphore.push_back( _swapChain.getRenderFinishedSemaphore() );
+            for ( const VulkanRHISwapChain* pWindow : _listFrameSwapChain )
+            {
+                listSignalSemaphore.push_back( pWindow->getRenderFinishedSemaphore() );
+            }
+            submitInfo.signalSemaphoreCount = static_cast<uint32>( listSignalSemaphore.size() );
+            submitInfo.pSignalSemaphores    = listSignalSemaphore.data();
         }
 
         // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는
@@ -1998,6 +2089,7 @@ namespace sw
         const bool     bDeviceLost  = isDeviceLost();
         const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
         reportQueueResult( static_cast<int32>( submitResult ), "endFrame: vkQueueSubmit" );
+        _listPendingAcquireWait.clear();
         // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
         if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
@@ -2018,10 +2110,14 @@ namespace sw
                 noteSurfaceLost( "present" );
                 _bSurfaceLost = SW_TRUE;
             }
-            // 성공이든 OutOfDate 든 이미지는 프레젠테이션 엔진으로 넘어갔다. 재생성 경로에서도
-            // 이미지 자체가 사라지므로, 어느 쪽이든 더 이상 쥐고 있지 않다.
-            _bSwapChainImageHeld = SW_FALSE;
+            // 다른 창도 같은 제출 뒤에 표시한다(Godot 의 execute_and_present 자리). 낡았으면 다음에 그 창을 쓸 때(`useSwapChain`) 다시 만든다.
+            for ( VulkanRHISwapChain* pWindow : _listFrameSwapChain )
+            {
+                if ( pWindow->present( _graphicsQueue ) == VulkanSwapChainStatus::DeviceLost )
+                    reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "endFrame: vkQueuePresentKHR (window)" );
+            }
         }
+        _listFrameSwapChain.clear();
         // 해제 콜백(아래 tickFrame)을 큐 락 안에서 부르지 않는다.
         queueLock.unlock();
 
@@ -2219,23 +2315,20 @@ namespace sw
         if ( _bImmediateSubmit )
         {
             VkSubmitInfo         flushInfo{};
-            VkPipelineStageFlags waitStage     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            flushInfo.sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            flushInfo.commandBufferCount       = static_cast<uint32>( _listPendingSubmit.size() );
-            flushInfo.pCommandBuffers          = _listPendingSubmit.data();
-            const VkSemaphore acquireSemaphore = _swapChain.getImageAvailableSemaphore( _currentFrame );
-            if ( _bFrameAcquireWaitPending != SW_FALSE && acquireSemaphore != VK_NULL_HANDLE )
-            {
-                flushInfo.waitSemaphoreCount = 1;
-                flushInfo.pWaitSemaphores    = &acquireSemaphore;
-                flushInfo.pWaitDstStageMask  = &waitStage;
-                _bFrameAcquireWaitPending    = SW_FALSE;
-            }
+            VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            flushInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            flushInfo.commandBufferCount   = static_cast<uint32>( _listPendingSubmit.size() );
+            flushInfo.pCommandBuffers      = _listPendingSubmit.data();
+            const vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), waitStage );
+            flushInfo.waitSemaphoreCount = static_cast<uint32>( _listPendingAcquireWait.size() );
+            flushInfo.pWaitSemaphores    = _listPendingAcquireWait.data();
+            flushInfo.pWaitDstStageMask  = listWaitStage.data();
             {
                 ScopedLock<mutex> queueLock{ _queueMutex };
                 const VkResult    flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
                 reportQueueResult( static_cast<int32>( flushResult ), "executeCommandList: vkQueueSubmit (immediate)" );
             }
+            _listPendingAcquireWait.clear();
             _listPendingSubmit.clear();
         }
 

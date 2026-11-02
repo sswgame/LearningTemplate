@@ -698,6 +698,8 @@ namespace sw
 
     void D3D11RHIDevice::shutdownInternal()
     {
+        _listFrameSwapChain.clear();
+        _listWindowSwapChain.clear();
         _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();
@@ -730,12 +732,56 @@ namespace sw
     {
         if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;
+        resizeSwapChainBuffers( _swapChain, width, height );
+    }
+
+    IRHISwapChain* D3D11RHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
+    {
+        unique_ptr<D3D11RHISwapChain> pSwapChain = make_unique<D3D11RHISwapChain>();
+        if ( pSwapChain->createLike( _device.Get(), _swapChain, static_cast<HWND>( desc._pWindowHandle ), desc._width, desc._height ) == false )
+            return nullptr;
+        _listWindowSwapChain.push_back( std::move( pSwapChain ) );
+        return _listWindowSwapChain.back().get();
+    }
+
+    void D3D11RHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
+    {
+        resizeSwapChainBuffers( static_cast<D3D11RHISwapChain&>( swapChain ), width, height ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+    }
+
+    void D3D11RHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
+    {
+        // 컨텍스트에 걸린 백버퍼 바인딩을 먼저 푼다 — 남아 있으면 스왑체인이 그 참조 때문에 창보다 오래 산다.
+        if ( _immediateContext.isValid() )
+        {
+            const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+            context->ClearState();
+        }
+        (void)VectorUtil::removeIf( _listWindowSwapChain, [&swapChain]( const unique_ptr<D3D11RHISwapChain>& pEntry )
+        { return pEntry.get() == &swapChain; } );
+    }
+
+    D3D11RHISwapChain& D3D11RHIDevice::useSwapChain( IRHISwapChain* pSwapChain )
+    {
+        if ( pSwapChain == nullptr || pSwapChain == &_swapChain )
+            return _swapChain;
+        D3D11RHISwapChain& swapChain = static_cast<D3D11RHISwapChain&>( *pSwapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+        if ( std::find( _listFrameSwapChain.begin(), _listFrameSwapChain.end(), &swapChain ) == _listFrameSwapChain.end() )
+        {
+            swapChain.acquireNextImage( _device.Get() );
+            _listFrameSwapChain.push_back( &swapChain );
+        }
+        return swapChain;
+    }
+
+    void D3D11RHIDevice::resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height )
+    {
 
         // 백버퍼를 가리키는 참조가 하나라도 남아 있으면 ResizeBuffers 가 거부된다
         // (DXGI_ERROR_INVALID_CALL). 참조는 세 군데에 있다: 백버퍼 RTV, Immediate Context 의
         // 바인딩, 그리고 **기록이 끝난 커맨드 리스트**다. 마지막 것을 빠뜨리면 창 크기 변경이
         // 매번 조용히 실패한다.
-        _swapChain.releaseBackBufferRTV();
+        swapChain.releaseBackBufferRTV();
         {
             ScopedLock<mutex> lock{ _liveCmdListMutex };
             for ( D3D11RHICommandList* pLiveList : _listLiveCmd )
@@ -749,9 +795,9 @@ namespace sw
             context->ClearState();
             context->Flush();
         }
-        if ( _swapChain.resize( width, height ) == false )
+        if ( swapChain.resize( width, height ) == false )
             return;
-        _swapChain.acquireNextImage( _device.Get() );
+        swapChain.acquireNextImage( _device.Get() );
     }
 
     bool D3D11RHIDevice::bindGraphicsContext()
@@ -1047,6 +1093,18 @@ namespace sw
             return;
 
         _swapChain.releaseBackBufferRTV();
+        // 이 프레임에 그린 다른 창을 메인 창과 같은 규칙으로 표시한다(무인 실행은 내보내지 않는다).
+        for ( D3D11RHISwapChain* pWindow : _listFrameSwapChain )
+        {
+            pWindow->releaseBackBufferRTV();
+            if ( bPresent )
+            {
+                const HRESULT windowHr = pWindow->present( vsync );
+                if ( FAILED( windowHr ) )
+                    SW_LOG_ERROR_ONCE_ID( "D3D11.WindowPresentFailedHr", "Present of a window swap chain failed hr=%#", static_cast<uint32>( windowHr ) );
+            }
+        }
+        _listFrameSwapChain.clear();
 
         if ( bPresent )
         {

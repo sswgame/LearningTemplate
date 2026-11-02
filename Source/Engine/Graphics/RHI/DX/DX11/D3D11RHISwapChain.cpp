@@ -17,6 +17,30 @@ namespace sw
         _swapChainFlags = swapChainFlags;
     }
 
+    bool D3D11RHISwapChain::createLike( ID3D11Device* pDevice, const D3D11RHISwapChain& source, HWND hWnd, uint32 width, uint32 height )
+    {
+        DXGI_SWAP_CHAIN_DESC desc{};
+        if ( pDevice == nullptr || source._swapChain == nullptr || isHrSuccess( source._swapChain->GetDesc( &desc ), "IDXGISwapChain::GetDesc" ) == false )
+            return false;
+        desc.OutputWindow      = hWnd;
+        desc.BufferDesc.Width  = width;
+        desc.BufferDesc.Height = height;
+
+        // 디바이스를 만든 팩터리에 만든다 — 다른 팩터리의 스왑체인은 이 디바이스와 짝이 아니다.
+        Microsoft::WRL::ComPtr<IDXGIDevice>    dxgiDevice;
+        Microsoft::WRL::ComPtr<IDXGIAdapter>   adapter;
+        Microsoft::WRL::ComPtr<IDXGIFactory>   factory;
+        Microsoft::WRL::ComPtr<IDXGISwapChain> created;
+        const bool                             bCreated = isHrSuccess( pDevice->QueryInterface( IID_PPV_ARGS( dxgiDevice.GetAddressOf() ) ), "QueryInterface(IDXGIDevice)" ) &&
+                              isHrSuccess( dxgiDevice->GetAdapter( adapter.GetAddressOf() ), "IDXGIDevice::GetAdapter" ) &&
+                              isHrSuccess( adapter->GetParent( IID_PPV_ARGS( factory.GetAddressOf() ) ), "IDXGIAdapter::GetParent" ) &&
+                              isHrSuccess( factory->CreateSwapChain( pDevice, &desc, created.GetAddressOf() ), "IDXGIFactory::CreateSwapChain" );
+        if ( bCreated == false )
+            return false;
+        attach( created.Get(), hWnd, width, height, desc.Flags );
+        return true;
+    }
+
     void D3D11RHISwapChain::shutdown()
     {
         releaseBackBufferRTV();

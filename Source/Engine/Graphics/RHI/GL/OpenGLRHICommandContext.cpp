@@ -193,8 +193,13 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
 
-        uint32 targetWidth  = beginInfo._width > 0 ? beginInfo._width : _pDevice->_width;
-        uint32 targetHeight = beginInfo._height > 0 ? beginInfo._height : _pDevice->_height;
+        // 백버퍼(컬러 핸들 0)면 그 창에 컨텍스트를 건다 — 기본 프레임버퍼(fbo 0)는 걸린 창의 것이다.
+        const bool                bBackBufferTarget = beginInfo._bBindColor != SW_FALSE && beginInfo._arrColorTarget[0] == 0;
+        const OpenGLRHISwapChain* pSwapChain        = bBackBufferTarget ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : &_pDevice->_swapChain;
+        if ( pSwapChain == nullptr )
+            return;
+        uint32 targetWidth  = beginInfo._width > 0 ? beginInfo._width : pSwapChain->getWidth();
+        uint32 targetHeight = beginInfo._height > 0 ? beginInfo._height : pSwapChain->getHeight();
 
         const bool       bBindColor = beginInfo._bBindColor != SW_FALSE;
         const bool       bHasDepth  = beginInfo._depthTarget != 0;

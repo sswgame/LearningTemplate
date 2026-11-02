@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassLedger.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -99,7 +100,16 @@ namespace sw
         void detachCommandRecordingInternal() override;
 
         /** @brief 크기를 기록하고 glViewport 를 맞춥니다. */
-        void resizeInternal( uint32 width, uint32 height ) override;
+        void                         resizeInternal( uint32 width, uint32 height ) override;
+        [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
+        void                         resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) override;
+        void                         destroySwapChainInternal( IRHISwapChain& swapChain ) override;
+        [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override { return useSwapChain( &swapChain ) != nullptr; }
+        /**
+         * @brief 렌더 패스가 고른 창(`RHIRenderPassBeginInfo::_pSwapChain`)에 컨텍스트를 겁니다. nullptr 은 메인 창입니다. 걸지 못하면 nullptr 입니다.
+         * @details 다른 창은 `endFrame` 의 표시 목록에 오른다. 프레임 끝에는 메인 창으로 돌아간다(다음 프레임 · 다른 스레드의 바인딩이 메인 창을 본다).
+         */
+        OpenGLRHISwapChain* useSwapChain( IRHISwapChain* pSwapChain );
 
         /** @brief 프레임을 엽니다(컨텍스트 되찾기, 뷰포트, 타임스탬프 수거). 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
         void beginFrameInternal() override;
@@ -462,6 +472,14 @@ namespace sw
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)입니다. 생성, 바인딩, 프레젠트, VSync 를 모두 여기가 압니다. */
         unique_ptr<IOpenGLPlatformContext> _platformContext;
+        /** @brief 메인 창입니다(표면 nullptr — 컨텍스트를 만든 창). 크기는 `_width` · `_height` 와 같다. */
+        OpenGLRHISwapChain _swapChain{ nullptr, 0, 0 };
+        /** @brief 다른 창입니다(`createSwapChain`). 렌더 스레드와 GPU 를 비운 뒤에만 바뀐다. */
+        vector<unique_ptr<OpenGLRHISwapChain>> _listWindowSwapChain;
+        /** @brief 이 프레임에 그린 다른 창입니다. `endFrame` 이 표시한 뒤 비운다. */
+        vector<OpenGLRHISwapChain*> _listFrameSwapChain;
+        /** @brief 지금 컨텍스트가 걸린 창입니다(렌더 스레드). 프레임 시작 · 끝에 메인 창이다. */
+        OpenGLRHISwapChain* _pCurrentSwapChain{ &_swapChain };
 
         /** @brief `queryNativeHandles` 의 디바이스 칸에 싣는 복사본입니다. 실제 소유는 _platformContext 가 합니다. */
         void*  _pHDC;

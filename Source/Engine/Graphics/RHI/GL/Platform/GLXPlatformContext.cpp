@@ -255,6 +255,33 @@ namespace sw
         // WGL 만 ImGui 멀티 뷰포트 때문에 되찾아야 한다.
     }
 
+    void* GLXPlatformContext::createWindowSurface( const RHISwapChainDesc& desc )
+    {
+        // 한 문맥을 다른 창에 걸려면 같은 디스플레이 연결의 X 창이어야 한다. 표면 값은 창 XID 다(XID 0 은 창이 아니다).
+        // shortcut: 창 비주얼이 문맥의 FBConfig 와 다르면 glXMakeCurrent 가 BadMatch 다 — 리눅스 에디터에서 플로팅 창이 그려지지 않으면 창마다 문맥을 나눈다.
+        const bool bSameDisplay = desc._surfaceKind == NativeSurfaceKind::X11 && desc._pWindowDisplay == _pDisplay && desc._pWindowHandle != nullptr;
+        if ( bSameDisplay == false )
+        {
+            SW_LOG_ERROR_ID( "OpenGL.WindowSurfaceNeedsX11", "A GLX window surface needs an X11 window on the main window's display connection" );
+            return nullptr;
+        }
+        return desc._pWindowHandle;
+    }
+
+    bool GLXPlatformContext::makeCurrentOnWindowSurface( void* pSurface )
+    {
+        if ( pSurface == nullptr )
+            return makeCurrent();
+        return _pDisplay != nullptr && _pRenderContext != nullptr &&
+               glXMakeCurrent( static_cast<Display*>( _pDisplay ), static_cast<Window>( reinterpret_cast<uintptr_t>( pSurface ) ), static_cast<GLXContext>( _pRenderContext ) ) != 0;
+    }
+
+    void GLXPlatformContext::presentWindowSurface( void* pSurface )
+    {
+        if ( _pDisplay != nullptr && pSurface != nullptr )
+            glXSwapBuffers( static_cast<Display*>( _pDisplay ), static_cast<Window>( reinterpret_cast<uintptr_t>( pSurface ) ) );
+    }
+
     void GLXPlatformContext::present()
     {
         if ( _pDisplay == nullptr )
