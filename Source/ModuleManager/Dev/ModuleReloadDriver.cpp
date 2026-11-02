@@ -6,6 +6,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleCatalog.h"
@@ -61,6 +62,13 @@ namespace sw
                 return true;
             }
 
+            /** @brief 예약한 리로드가 끝나지 않은 동안 시나리오 시계를 잡는다 — 리로드는 벽시계 디바운스(300 ms)와 빌드 · 복사를 거쳐 끝나 프레임 수로는 기다릴 수 없다(빠른 Release 는 600 프레임이 300 ms 안에 지나갔다). */
+            static bool isReloadPending()
+            {
+                const ModuleReloadDriver* pDriver = engine::findSubsystem<ModuleReloadDriver>();
+                return pDriver != nullptr && pDriver->getLiveReloadManager() != nullptr && pDriver->isReloadPending();
+            }
+
             [[nodiscard]] static bool readGraphBroken( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const LiveReloadManager* pManager = findManager();
@@ -87,6 +95,7 @@ namespace sw
                          &ModuleReloadDriverInternal::readReloadCount );
     SW_AUTOMATION_WATCH( moduleReloadPending, "Module.ReloadPending", "1 while a reload queued by module.reload has not finished (0 once it finished, or the graph broke)",
                          &ModuleReloadDriverInternal::readReloadPending );
+    SW_AUTOMATION_CLOCK_HOLDER( moduleReloadPending, "ModuleReload", &ModuleReloadDriverInternal::isReloadPending );
     SW_AUTOMATION_WATCH( moduleGraphBroken, "Module.GraphBroken", "1 when a failed reload blocked the module graph (restart needed), else 0",
                          &ModuleReloadDriverInternal::readGraphBroken );
     SW_AUTOMATION_WATCH( moduleBindingsOk, "Module.BindingsOk", "1 when every loaded module is bound to the dependency images the manager holds now, else 0",
