@@ -64,6 +64,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -118,13 +119,18 @@ namespace sw::editor
         const bool                                    bLightBaking      = pLightBake != nullptr && pLightBake->isRunning();
         const bool                                    bReflectionBaking = pReflectionBake != nullptr && pReflectionBake->isRunning();
         const bool                                    bWorking          = pContext->getSubsystem<AssetHotReload>().isImportBusy() || bLightBaking || bReflectionBaking;
-        uint32                                        reasons           = 0;
+        // 엔진이 비동기로 나르는 일 — 도착하면 화면이 바뀌지만 창 메시지는 오지 않는다(시나리오가 기다리는 `Assets.Pending` 과 같은 판정).
+        SceneManager&      sceneManager = editor::getSubsystem<SceneManager>();
+        const Scene* const pScene       = sceneManager.getActiveScene();
+        const bool         bLoading     = sceneManager.isTransitioning() || CaptureReadiness::countPendingWork( pScene != nullptr ? pScene->getObjectManager() : nullptr ) > 0;
+        uint32             reasons      = 0;
         reasons |= bInput ? static_cast<uint32>( EditorRedrawReason::Input ) : 0u;
         reasons |= bActive ? static_cast<uint32>( EditorRedrawReason::ActiveItem ) : 0u;
         reasons |= bRunning ? static_cast<uint32>( EditorRedrawReason::Simulation ) : 0u;
         reasons |= bToast ? static_cast<uint32>( EditorRedrawReason::Notification ) : 0u;
         reasons |= bAnimate ? static_cast<uint32>( EditorRedrawReason::Animation ) : 0u;
         reasons |= bWorking ? static_cast<uint32>( EditorRedrawReason::BackgroundWork ) : 0u;
+        reasons |= bLoading ? static_cast<uint32>( EditorRedrawReason::AssetsLoading ) : 0u;
         return reasons;
     }
 } // namespace sw::editor

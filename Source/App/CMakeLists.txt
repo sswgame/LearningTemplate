@@ -33,6 +33,9 @@ if(WIN32)
 	# 실행 파일 아이콘(.rc). RC 컴파일러는 DetectToolchain 이 llvm-rc 로 정해 둔다. 리눅스에는 RC 가 없어 WIN32 안에서만 켠다.
 	enable_language(RC)
 	target_sources(App PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Resources/App.rc")
+	# GUI 서브시스템 — OS 가 콘솔 창을 만들지 않는다(언리얼 UnrealEditor.exe 자리). 진입점은 그대로 main 이다. 출력을 파이프로 받는 실행(ctest · 시나리오 · 스크립트)은
+	# 물려받은 핸들로 그대로 쓴다. 로그는 로그 파일과 에디터 출력 로그 패널에 남는다.
+	target_link_options(App PRIVATE "LINKER:/SUBSYSTEM:WINDOWS" "LINKER:/ENTRY:mainCRTStartup")
 endif()
 set_target_properties(App PROPERTIES FOLDER "Source/App")
 

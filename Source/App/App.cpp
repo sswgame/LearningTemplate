@@ -167,8 +167,12 @@ namespace sw
             return AppHeadlessTasks::runAll( _engine.getCommandLineManager() );
         }
 
+        // 무인 실행(-unattended)은 보는 사람이 없다 — 스플래시도 메인 창도 띄우지 않고 그리기 · 캡처만 한다(언리얼 -RenderOffScreen). 화면 표시를 보는 시나리오
+        // (present="true")는 그 단계에서 자동화 세션이 메인 창을 띄운다(`AutomationSession::applyPresentPolicy`).
+        const bool   bUnattended = _engine.getCommandLineManager()->isArgumentProvided( CommandLineArgument::UNATTENDED );
         SplashWindow splash;
-        (void)splash.initialize( "SW Engine", "Initializing Engine Subsystems..." ); // 스플래시 없이 기동하는 것도 정상 경로다(SplashWindow::initialize 설명)
+        if ( bUnattended == false )
+            (void)splash.initialize( "SW Engine", "Initializing Engine Subsystems..." ); // 스플래시 없이 기동하는 것도 정상 경로다(SplashWindow::initialize 설명)
         splash.setProgress( 0.05f );
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );
@@ -247,7 +251,8 @@ namespace sw
 
         // 준비가 끝났다. 스플래시 창을 닫고 메인 창을 화면에 띄운다.
         splash.dismiss();
-        _pWindow->showWindow( true );
+        if ( bUnattended == false )
+            _pWindow->showWindow( true );
 
         // 시동 요약 한 줄 — 단계별 ms 와 오래 걸린 서브시스템(`Test/Load/Baselines.json` 의 `startup_ms` 와 별개의 진단 값이다).
         {

@@ -139,7 +139,12 @@ namespace sw
         if ( _pRenderThread == nullptr || _pRunner == nullptr )
             return;
         // 보는 사람이 없으면 내보내지 않는다(그림 · 사진은 같다). 표시 경로를 보는 시나리오는 내보낸다. 지켜보는 실행(-unattended 없음)은 늘 보인다.
-        _pRenderThread->setPresentSkipped( _bUnattended && _pRunner->getScenario().getTestOptions()._bPresents == false );
+        const bool bPresentSkipped = _bUnattended && _pRunner->getScenario().getTestOptions()._bPresents == false;
+        _pRenderThread->setPresentSkipped( bPresentSkipped );
+        // 무인 실행은 창도 띄우지 않는다(App 이 띄우지 않았다 — 언리얼 -RenderOffScreen). 내보내는 단계만 메인 창을 보이고, 다음 단계가 다시 정한다.
+        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        if ( _bUnattended && pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
+            pWindowHost->getWindow()->showWindow( bPresentSkipped == false );
     }
 
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
