@@ -23,9 +23,9 @@
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
    `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
-   - **캐릭터 비용(먼저)**: 구간 있는 부품도 합친다(농부 · 마을 사람이 한 번에 스키닝 — `_bMergeParts`). 잰 것(DX12 Release, `ctest -L load`): 기사 200 명 GPU 4.7 ms(`load/characters`),
-     마을 사람 100 명 프레임 약 24.5 ms — 컴퓨트 8.4 · 그림자 6.8 · 불투명 8.3 ms, 배치 3,000(`load/townsfolk`). 남은 것 둘: (1) 스킨 사본을 없애고 인스턴스마다 결과 구간(StructureRefactor 11 — 배치가 캐릭터 수만큼 갈리고
-     정점 풀이 사본마다 차는 까닭), (2) 구간 메시 LOD(레인저 차림 한 명이 정점 28,696 — 장화 10,174 — 라 변형 풀 4M 이 200 명을 못 받는다). 끝나면 마을 사람 200 명으로 올려 다시 잰다.
+   - **캐릭터 비용(먼저)**: 구간 있는 부품 병합 · 스킨 칸(StructureRefactor 11 — 사본 없이 같은 메시의 캐릭터가 한 배치)은 끝났다. 잰 것(DX12 Release, `ctest -L load`): 기사 200 명 GPU 2.9 ms(`load/characters`),
+     마을 사람 100 명 GT 프레임 17.7 ms — 컴퓨트 8.4 · 그림자 3.2 · 불투명 5.1 ms, 배치 30(`load/townsfolk`). 남은 것: 구간 메시 LOD(병합 결과가 LOD 를 갖고 스키닝은 고른 단계만 — 레인저 차림 한 명이 정점 28,696, 장화 10,174 라
+     변형 풀 4M 이 200 명을 못 받는다). 끝나면 마을 사람 200 명으로 올려 다시 잰다.
    - Shooter3D 몸을 KayKit 에서 UBC 로(리그 `player_body.rig.xml` · 1인칭 숨김 칸 · 망토 사슬 · 무기 소켓을 UBC 뼈로, 해골은 Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
