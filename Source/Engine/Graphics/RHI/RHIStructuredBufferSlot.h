@@ -23,7 +23,7 @@ namespace sw
      *
      * @note 이 타입은 RHI ABI 가 아니라 그 위의 편의 계층입니다. 백엔드 모듈이 아니라 엔진이 씁니다.
      */
-    struct RHIStructuredBufferSlot
+    struct SW_API RHIStructuredBufferSlot
     {
         RHIBufferHandle    _buffer{ 0 };
         RHIDescriptorIndex _srv = kInvalidDescriptorIndex;

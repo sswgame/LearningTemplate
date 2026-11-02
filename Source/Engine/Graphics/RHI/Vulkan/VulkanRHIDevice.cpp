@@ -1362,7 +1362,7 @@ namespace sw
 
     IRHISwapChain* VulkanRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )
     {
-        _renderThread.assumeHeld(); // 렌더 스레드를 세운 뒤에 불린다(`IRHIDevice::createSwapChain` 의 `waitIdle`)
+        ScopedThreadRoleBorrow borrow{ _renderThread }; // 렌더 스레드를 세운 뒤 다른 스레드(UI)가 부른다(`IRHIDevice::createSwapChain` 의 `waitIdle`) — 역할을 빌린다
         // 서피스 확장은 인스턴스를 만들 때 메인 창의 창 시스템으로 골랐다 — 다른 창 시스템의 핸들은 그 확장으로 읽지 못한다.
         const bool bSameWindowSystem = ( desc._surfaceKind == NativeSurfaceKind::Win32 ) == ( _wsiKind == VulkanWsiKind::Win32 ) &&
                                        ( desc._surfaceKind == NativeSurfaceKind::Wayland ) == ( _wsiKind == VulkanWsiKind::Wayland );
@@ -1392,14 +1392,14 @@ namespace sw
 
     void VulkanRHIDevice::resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height )
     {
-        _renderThread.assumeHeld();                                                                   // 렌더 스레드를 세운 뒤에 불린다(`IRHIDevice::resizeSwapChain` 의 `waitIdle`)
+        ScopedThreadRoleBorrow borrow{ _renderThread };                                               // 렌더 스레드를 세운 뒤 다른 스레드(UI)가 부른다(`IRHIDevice::resizeSwapChain` 의 `waitIdle`) — 역할을 빌린다
         (void)rebuildWindowSwapChain( static_cast<VulkanRHISwapChain&>( swapChain ), width, height ); // 실패 알림은 안에서 남긴다. 다음 프레임의 획득이 다시 시도한다
     }
 
     void VulkanRHIDevice::destroySwapChainInternal( IRHISwapChain& swapChain )
     {
-        _renderThread.assumeHeld();                                                 // 렌더 스레드를 세운 뒤에 불린다(`IRHIDevice::destroySwapChain` 의 `waitIdle`)
-        VulkanRHISwapChain& window = static_cast<VulkanRHISwapChain&>( swapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
+        ScopedThreadRoleBorrow borrow{ _renderThread };                                // 렌더 스레드를 세운 뒤 다른 스레드(UI)가 부른다(`IRHIDevice::destroySwapChain` 의 `waitIdle`) — 역할을 빌린다
+        VulkanRHISwapChain&    window = static_cast<VulkanRHISwapChain&>( swapChain ); // 이 디바이스가 만든 것만 들어온다(`createSwapChain`)
         window.destroy( _device );
         window.destroySemaphores( _device );
         window.destroySurface( _instance );

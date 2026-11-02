@@ -498,7 +498,7 @@ namespace sw
         record._layout        = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
         record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
         record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
-        record._bindlessIndex = kInvalidDescriptorIndex;
+        record._listBindlessIndex.clear();
 
         if ( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &record._image ) != VK_SUCCESS )
         {
@@ -1099,11 +1099,10 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-        if ( record._bindlessIndex != kInvalidDescriptorIndex )
-            return record._bindlessIndex;
+        // 등록마다 새 번호다(DX11 · DX12 · GL 과 같다). 같은 텍스처의 번호를 나눠 주면 한쪽의 해제(에디터의 ImGui 등록)가 다른 쪽(엔진)이 쓰는 번호를 놓는다.
         // 끝나지 않은 업로드가 남은 텍스처는 처음 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        // 이미 등록된 텍스처의 다시 부르기는 위에서 돌아가므로, 등록 뒤 구간 갱신(글리프 아틀라스)은 막지 않는다.
-        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._lastTransferSerial.load(), texture ) == false )
+        // 이미 등록된 텍스처는 업로드가 남아도 등록한다 — 등록 뒤 구간 갱신(글리프 아틀라스)은 막지 않는다.
+        if ( record._listBindlessIndex.empty() && _pDevice->_transferSerials.isTextureReadyToRegister( record._lastTransferSerial.load(), texture ) == false )
             return kInvalidDescriptorIndex;
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -1118,7 +1117,7 @@ namespace sw
         if ( descriptorIndex >= _pDevice->_listTextureUsed.size() )
             _pDevice->_listTextureUsed.resize( descriptorIndex + 1, 0 );
         _pDevice->_listTextureUsed[descriptorIndex] = 1;
-        record._bindlessIndex                       = descriptorIndex;
+        record._listBindlessIndex.push_back( descriptorIndex );
         return descriptorIndex;
     }
 
@@ -1168,14 +1167,17 @@ namespace sw
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         if ( index == kInvalidDescriptorIndex )
             return;
-        // 텍스처 레코드가 자기 인덱스를 들고 있으므로(destroyTexture 가 그걸로 정리한다) 레코드 쪽도
-        // 같이 지워야 나중의 destroyTexture 가 같은 슬롯을 두 번 반납하지 않는다.
+        // 텍스처 레코드가 자기 번호들을 들고 있으므로(destroyTexture 가 그걸로 정리한다) 레코드 쪽에서도
+        // 같이 지워야 나중의 destroyTexture 가 같은 번호를 두 번 반납하지 않는다.
         bool bFound = false;
         _pDevice->_gpuTextures.forEach( [this, index, &bFound]( VulkanRHIDevice::VulkanTextureRecord& record )
         {
-            if ( record._bindlessIndex != index )
+            const auto it = std::find( record._listBindlessIndex.begin(), record._listBindlessIndex.end(), index );
+            if ( it == record._listBindlessIndex.end() )
                 return;
-            releaseTextureBindlessSlot( record );
+            record._listBindlessIndex.erase( it );
+            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            releaseTextureBindlessIndex( index );
             bFound = true;
         } );
         if ( bFound == false )
@@ -1184,10 +1186,18 @@ namespace sw
 
     void VulkanRHIResourceFactory::releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record )
     {
-        if ( record._bindlessIndex == kInvalidDescriptorIndex )
+        if ( record._listBindlessIndex.empty() )
             return;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex index = record._bindlessIndex;
+        for ( const RHIDescriptorIndex index : record._listBindlessIndex )
+        {
+            releaseTextureBindlessIndex( index );
+        }
+        record._listBindlessIndex.clear();
+    }
+
+    void VulkanRHIResourceFactory::releaseTextureBindlessIndex( RHIDescriptorIndex index )
+    {
         if ( index < _pDevice->_listTextureUsed.size() && _pDevice->_listTextureUsed[index] != 0 )
         {
             // 원소를 더미로 되돌리는 것도, 인덱스 재사용도 GPU 펜스 뒤에 한다. update-after-bind 라도 실행 중인
@@ -1203,7 +1213,6 @@ namespace sw
             } ),
                                                        _pDevice->_frameFenceCounter + 1 );
         }
-        record._bindlessIndex = kInvalidDescriptorIndex;
     }
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )

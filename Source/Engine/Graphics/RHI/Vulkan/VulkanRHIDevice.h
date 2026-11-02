@@ -490,11 +490,12 @@ namespace sw
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
             atomic<uint64> _lastTransferSerial{ 0 };
             /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
-            atomic<uint64>     _lastReadbackSerial{ 0 };
-            uint8              _bRenderTarget : 1;
-            uint8              _bDepthStencil : 1;
-            uint8              _reserved      : 6;
-            RHIDescriptorIndex _bindlessIndex{ kInvalidDescriptorIndex };
+            atomic<uint64> _lastReadbackSerial{ 0 };
+            uint8          _bRenderTarget : 1;
+            uint8          _bDepthStencil : 1;
+            uint8          _reserved      : 6;
+            /// @brief 이 텍스처에 발급한 bindless 번호들입니다. 등록마다 하나씩이다(DX11 · DX12 · GL 과 같은 규칙 — 다른 쪽의 해제가 내 번호를 놓지 않는다). 파괴가 모두 놓는다.
+            vector<RHIDescriptorIndex> _listBindlessIndex;
             /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
             vector<VkImageView>   _listSliceView;
             vector<VkFramebuffer> _listSliceFramebuffer;

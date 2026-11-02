@@ -10,8 +10,7 @@ namespace sw
     /**
      * @note 비트필드 대신 uint8 입니다. DLL 과 컴파일러 사이의 패킹, true 대입 문제를 피합니다. 0/1 만 씁니다.
      * @note **여기에 에디터 능력을 넣지 말 것.** "이 백엔드로 에디터가 도는가" 는
-     *       디바이스가 아니라 **에디터가 아는 사실**입니다(ImGui 렌더러 백엔드가 있느냐). 그 답의 기준은
-     *       `IImGuiRendererBackend::createRendererBackend` 하나이고, 없으면 nullptr 을 반환합니다.
+     *       디바이스가 아니라 **에디터가 아는 사실**입니다. 에디터 UI 는 RHI 로 그리므로(`ImGuiRenderer`) 그 답은 에디터 렌더러의 초기화(PSO 생성)가 정합니다.
      */
     struct SW_API RHICapabilities
     {
