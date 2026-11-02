@@ -24,8 +24,16 @@
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
    `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
    - **캐릭터 비용(먼저)**: 구간 있는 부품 병합 · 스킨 칸(StructureRefactor 11 — 사본 없이 같은 메시의 캐릭터가 한 배치)은 끝났다. 잰 것(DX12 Release, `ctest -L load`): 기사 200 명 GPU 2.9 ms(`load/characters`),
-     마을 사람 100 명 GT 프레임 17.7 ms — 컴퓨트 8.4 · 그림자 3.2 · 불투명 5.1 ms, 배치 30(`load/townsfolk`). 남은 것: 구간 메시 LOD(병합 결과가 LOD 를 갖고 스키닝은 고른 단계만 — 레인저 차림 한 명이 정점 28,696, 장화 10,174 라
-     변형 풀 4M 이 200 명을 못 받는다). 끝나면 마을 사람 200 명으로 올려 다시 잰다.
+     마을 사람 100 명 GT 프레임 17.7 ms — 컴퓨트 8.4 · 그림자 3.2 · 불투명 5.1 ms, 배치 30(`load/townsfolk`). 남은 것: 구간 메시 LOD(레인저 차림 한 명이 정점 28,696, 장화 10,174 라 변형 풀 4M 이 200 명을 못 받는다).
+     **작업 트리에 커밋 안 된 채 있다(2026-11-02, Debug 컴파일 통과)** — 언리얼 방식(LOD 마다 섹션, 컴포넌트가 고른 LOD 하나만 스킨 캐시):
+     (a) `Mesh::setLODs` 가 구간 · 모프 메시를 받는다(`MeshLODLevel::_listSectionRange`, 낮은 단계는 모프 없음), `MeshComponent::findDrawSection` 이 단계의 구간 범위, 주 메시의 `setLODIndex` 가 구간 컴포넌트에 같은 단계를 건다, `MeshLODSystem` 은 구간 컴포넌트를 건너뛴다.
+     (b) `GPUSkinPalette::_lodIndex`(묶음은 무효 = 모든 단계) → 모프 풀이 칸마다 그 단계 정점 범위만 스킨 행으로, 칸 표 원소는 `GPUSkinBase`(결과 시작, 단계 첫 정점 — uint2).
+     (c) `CharacterMeshLOD`(Engine/Character/Fit — 합친 메시를 구간마다 `meshopt_simplify` · 경계 잠금 · 단계 정점만 모음), Engine 이 meshoptimizer 를 링크, `applyMergedMeshes` 가 병합 뒤 한 번 만든다(게임 스레드 — shortcut 주석).
+     **남은 손질**: ① `Content/engine/shaders/binding.hlsli` — `g_SwSkinBases` 를 `uint2` 로, `MorphPool::loadSkinBase` 가 uint2 를 돌려주고 `computeElement` 가 `skinBase.x + ( local - skinBase.y )`(스킨 칸일 때만 y) — **이걸 안 하면 C++ 표(8 바이트)와 셰이더(4 바이트)가 어긋난다**,
+     ② `Content/engine/data/enginedefaultassets.xml` 에 `_characterLODSettings="engine/character/characterlod.xml"`(Required 라 없으면 기본 에셋 읽기가 실패한다), ③ 새 파일 `Content/engine/character/characterlod.xml`
+     (`<CharacterLODSettings><Level triangle_ratio="0.5" max_error="0.02" screen_size="0.25"/><Level triangle_ratio="0.2" max_error="0.05" screen_size="0.1"/></CharacterLODSettings>`),
+     ④ 단위 테스트(구간 메시 LOD 범위 · `CharacterMeshLOD::buildLODs` 가 구간마다 줄이고 정점을 모으는지), ⑤ 빌드 · Empty 체인 골든 · `load/townsfolk` 200 명으로 올려 재기 → 커밋 · 묶음 확인 · 푸시.
+     편집은 `py` 스크립트 파일로 한다 — 이 셸의 heredoc · sed 가 한글을 깨뜨린 적이 있다.
    - Shooter3D 몸을 KayKit 에서 UBC 로(리그 `player_body.rig.xml` · 1인칭 숨김 칸 · 망토 사슬 · 무기 소켓을 UBC 뼈로, 해골은 Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
