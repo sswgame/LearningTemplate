@@ -1489,7 +1489,9 @@ namespace sw
         // 있는 줄 알고 그리다가 드로우 계약(PSO 없는 드로우는 멈춤)에 걸린다 — 0 이면 렌더러가 그 패스를 건너뛴다.
         if ( pso == nullptr )
             return 0;
-        return _pDevice->_pipelineStates.insert( { pso, vertexSlotMask, desc._meshVertexFormat } );
+        return _pDevice->_pipelineStates.insert( {
+            pso, RHIVertexInputState{ vertexSlotMask, desc._meshVertexFormat }
+        } );
     }
 
     RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )

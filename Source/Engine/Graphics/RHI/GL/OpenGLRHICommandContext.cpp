@@ -534,12 +534,18 @@ namespace sw
 
     bool OpenGLRHICommandContext::bindVertexInputsForDraw()
     {
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO     = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
-        const uint32                                      slotMask = pPSO != nullptr ? pPSO->_vertexSlotMask : 0u; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
-        const RHIMeshVertexFormat                         format   = pPSO != nullptr ? pPSO->_meshVertexFormat : RHIMeshVertexFormat::Packed;
-        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "OpenGL", slotMask, format, _pState->_vertexBuffers ) == false )
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO  = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
+        const RHIVertexInputState                         input = pPSO != nullptr ? pPSO->_vertexInput : RHIVertexInputState{}; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
+        // GL 은 슬롯마다 버퍼를 걸지 않고 속성마다 포인터를 건다 — 순회는 슬롯의 GL 버퍼만 풀어 두고, 속성은 아래 공용 표로 건다.
+        GLuint     arrBuffer[constant::render::kVertexBufferSlotCount]{};
+        const bool bResolved = _pState->_vertexBuffers.bindForDraw( "OpenGL", input, [this, &arrBuffer]( uint32 slot, const RHIVertexBufferBinding& binding )
+        {
+            arrBuffer[slot] = _pDevice->resolveGlBuffer( binding._buffer );
+            return arrBuffer[slot] != 0;
+        } );
+        if ( bResolved == false )
             return false;
-        if ( slotMask == 0 )
+        if ( input._slotMask == 0 )
         {
             if ( _pDevice->_vao == 0 )
                 return false;
@@ -550,20 +556,8 @@ namespace sw
             return false;
         // 정점 속성은 **공용 표**(PSO 의 메시 정점 형식 — constant::render::getMeshVertexAttributes)에서 건다. DX11 · DX12 · Vulkan 과 같은 표다.
         // VAO 상태는 드로우 사이에 남으므로 PSO 가 읽지 않는 슬롯의 속성은 꺼 둔다 — 켜 둔 채 버퍼가 없으면 코어 프로파일에서 드로우가 거부된다.
-        GLuint arrBuffer[constant::render::kVertexBufferSlotCount]{};
-        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
-        {
-            if ( ( slotMask & ( 1u << slot ) ) == 0 )
-                continue;
-            arrBuffer[slot] = _pDevice->resolveGlBuffer( _pState->_vertexBuffers._arrSlot[slot]._buffer );
-            if ( arrBuffer[slot] == 0 )
-            {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_vertexBuffers._arrSlot[slot]._buffer );
-                return false;
-            }
-        }
         glBindVertexArray( _pDevice->_meshVao );
-        const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( format );
+        const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( input._format );
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {
             const RHIVertexAttribute& attribute = pAttributeTable[attributeIndex];

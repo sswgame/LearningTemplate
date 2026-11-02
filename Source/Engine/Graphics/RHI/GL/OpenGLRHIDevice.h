@@ -465,8 +465,7 @@ namespace sw
             uint8                _bEnableBlend        : 1;
             uint8                _bPremultipliedAlpha : 1; ///< 블렌드 색 원본 계수가 One 이다(아니면 SrcAlpha 이다).
             uint8                _reserved            : 4;
-            uint32               _vertexSlotMask{ 0 };                             ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask)
-            RHIMeshVertexFormat  _meshVertexFormat{ RHIMeshVertexFormat::Packed }; ///< 속성 표를 고르는 메시 정점 형식
+            RHIVertexInputState  _vertexInput; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIVertexBufferBindings::bindForDraw` 에 넘긴다)
         };
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)입니다. 생성, 바인딩, 프레젠트, VSync 를 모두 여기가 압니다. */

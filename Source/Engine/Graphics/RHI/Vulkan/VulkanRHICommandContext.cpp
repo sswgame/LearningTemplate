@@ -747,26 +747,17 @@ namespace sw
 
         // 파이프라인이 선언한 바인딩(셰이더가 읽는 슬롯)에만 버퍼를 건다 — 정점 입력이 없는 셰이더는 바인딩이 없어 아무것도 걸지 않는다.
         // 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
-        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
-        const uint32                                      slotMask = pRecord != nullptr ? pRecord->_vertexSlotMask : 0u; // 없는 PSO 는 bindActiveGraphicsPipeline 이 멈췄다
-        const RHIMeshVertexFormat                         format   = pRecord != nullptr ? pRecord->_meshVertexFormat : RHIMeshVertexFormat::Packed;
-        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "Vulkan", slotMask, format, _pState->_vertexBuffers ) == false )
-            return false;
-        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
+        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
+        const RHIVertexInputState                         input   = pRecord != nullptr ? pRecord->_vertexInput : RHIVertexInputState{}; // 없는 PSO 는 bindActiveGraphicsPipeline 이 멈췄다
+        return _pState->_vertexBuffers.bindForDraw( "Vulkan", input, [this, cmd]( uint32 slot, const RHIVertexBufferBinding& binding )
         {
-            if ( ( slotMask & ( 1u << slot ) ) == 0 )
-                continue;
-            const RHIVertexBufferBinding&              binding = _pState->_vertexBuffers._arrSlot[slot];
             const VulkanRHIDevice::VulkanBufferRecord* pBuffer = _pDevice->resolveAllocatedBuffer( binding._buffer );
             if ( pBuffer == nullptr || pBuffer->_buffer == VK_NULL_HANDLE )
-            {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "Vulkan", binding._buffer );
                 return false;
-            }
             const VkDeviceSize vkOffset = static_cast<VkDeviceSize>( binding._offset ); // stride 는 파이프라인의 바인딩이 가진다(checkVertexSlotsBound 가 같은지 봤다)
             vkCmdBindVertexBuffers( cmd, slot, 1, &pBuffer->_buffer, &vkOffset );
-        }
-        return true;
+            return true;
+        } );
     }
 
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()

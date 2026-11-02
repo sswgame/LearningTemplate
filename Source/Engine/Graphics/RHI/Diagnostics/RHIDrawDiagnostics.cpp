@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
 
 namespace sw
 {
@@ -36,8 +37,10 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
     }
 
-    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, uint32 vertexSlotMask, RHIMeshVertexFormat meshVertexFormat, const RHIVertexBufferBindings& bindings )
+    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, const RHIVertexInputState& input, const RHIVertexBufferBindings& bindings )
     {
+        const uint32              vertexSlotMask   = input._slotMask;
+        const RHIMeshVertexFormat meshVertexFormat = input._format;
         for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
         {
             if ( ( vertexSlotMask & ( 1u << slot ) ) == 0 )

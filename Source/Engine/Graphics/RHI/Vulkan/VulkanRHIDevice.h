@@ -513,8 +513,7 @@ namespace sw
         struct VulkanPipelineStateRecord
         {
             VkPipeline          _pipeline{ nullptr };
-            uint32              _vertexSlotMask{ 0 };                             ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask) — 파이프라인이 선언한 바인딩이다
-            RHIMeshVertexFormat _meshVertexFormat{ RHIMeshVertexFormat::Packed }; ///< 바인딩 stride · 속성 형식을 지은 메시 정점 형식
+            RHIVertexInputState _vertexInput; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIVertexBufferBindings::bindForDraw` 에 넘긴다)
         };
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 을 반환합니다. */

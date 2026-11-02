@@ -993,9 +993,9 @@ namespace sw
                 linkLabel.appendFormat( "Graphics (%# / %#)", desc._vertexShaderPath, desc._pixelShaderPath );
                 if ( linkProgram( program, linkLabel.c_str() ) )
                 {
-                    record._program          = program;
-                    record._vertexSlotMask   = RHIShaderRequest::toVertexSlotMask( RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_OpenGL ) );
-                    record._meshVertexFormat = desc._meshVertexFormat;
+                    record._program     = program;
+                    record._vertexInput = RHIVertexInputState{
+                        RHIShaderRequest::toVertexSlotMask( RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_OpenGL ) ), desc._meshVertexFormat };
                 }
             }
             else

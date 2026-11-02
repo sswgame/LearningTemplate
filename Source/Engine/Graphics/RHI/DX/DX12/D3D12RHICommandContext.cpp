@@ -187,37 +187,23 @@ namespace sw
         return true;
     }
 
-    bool D3D12RHICommandContext::bindVertexBufferSlot( uint32 slot )
-    {
-        const RHIVertexBufferBinding& binding = _pState->_vertexBuffers._arrSlot[slot];
-        ID3D12Resource* const         pVb     = _pDevice->resolveBuffer( binding._buffer );
-        if ( pVb == nullptr )
-            return false;
-        D3D12_VERTEX_BUFFER_VIEW vbv{};
-        vbv.BufferLocation = pVb->GetGPUVirtualAddress() + binding._offset;
-        vbv.SizeInBytes    = static_cast<UINT>( pVb->GetDesc().Width > binding._offset ? pVb->GetDesc().Width - binding._offset : 0 );
-        vbv.StrideInBytes  = binding._stride;
-        commandListForRecord()->IASetVertexBuffers( slot, 1, &vbv );
-        return true;
-    }
-
     bool D3D12RHICommandContext::bindMeshVertexBufferForDraw()
     {
         // PSO 가 읽는 슬롯에만 버퍼를 건다(정점 입력이 없는 셰이더는 레이아웃이 비어 아무 슬롯도 읽지 않는다). 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
         const D3D12RHIDevice::D3D12PipelineStateRecord* pPSORecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
-        const uint32                                    slotMask   = pPSORecord != nullptr ? pPSORecord->_vertexSlotMask : 0u; // 없는 PSO 는 bindActiveGraphicsPSO 가 멈췄다
-        const RHIMeshVertexFormat                       format     = pPSORecord != nullptr ? pPSORecord->_meshVertexFormat : RHIMeshVertexFormat::Packed;
-        if ( RHIDrawDiagnostics::checkVertexSlotsBound( "DX12", slotMask, format, _pState->_vertexBuffers ) == false )
-            return false;
-        for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
+        const RHIVertexInputState                       input      = pPSORecord != nullptr ? pPSORecord->_vertexInput : RHIVertexInputState{}; // 없는 PSO 는 bindActiveGraphicsPSO 가 멈췄다
+        return _pState->_vertexBuffers.bindForDraw( "DX12", input, [this]( uint32 slot, const RHIVertexBufferBinding& binding )
         {
-            if ( ( slotMask & ( 1u << slot ) ) != 0 && bindVertexBufferSlot( slot ) == false )
-            {
-                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX12", _pState->_vertexBuffers._arrSlot[slot]._buffer );
+            ID3D12Resource* const pVb = _pDevice->resolveBuffer( binding._buffer );
+            if ( pVb == nullptr )
                 return false;
-            }
-        }
-        return true;
+            D3D12_VERTEX_BUFFER_VIEW vbv{};
+            vbv.BufferLocation = pVb->GetGPUVirtualAddress() + binding._offset;
+            vbv.SizeInBytes    = static_cast<UINT>( pVb->GetDesc().Width > binding._offset ? pVb->GetDesc().Width - binding._offset : 0 );
+            vbv.StrideInBytes  = binding._stride;
+            commandListForRecord()->IASetVertexBuffers( slot, 1, &vbv );
+            return true;
+        } );
     }
 
     void D3D12RHICommandContext::bindBoundIndexBuffer()

@@ -919,12 +919,11 @@ namespace sw
                 return 0;
             }
             // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDxgiInputElements` — DX12 와 같은 함수, Vulkan · GL 도 같은 규칙).
-            pso._meshVertexFormat = desc._meshVertexFormat;
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
             const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXBC_D3D11 );
             D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
             const uint32             elementCount = fillDxgiInputElements<D3D11_INPUT_PER_VERTEX_DATA, D3D11_INPUT_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
-            pso._vertexSlotMask                   = RHIShaderRequest::toVertexSlotMask( consumedMask );
+            pso._vertexInput                      = RHIVertexInputState{ RHIShaderRequest::toVertexSlotMask( consumedMask ), desc._meshVertexFormat };
             if ( elementCount > 0 &&
                  isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, elementCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
             {

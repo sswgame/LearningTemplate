@@ -1508,9 +1508,8 @@ namespace sw
         }
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
-        record._pipeline         = newPipeline;
-        record._vertexSlotMask   = vertexSlotMask;
-        record._meshVertexFormat = desc._meshVertexFormat;
+        record._pipeline    = newPipeline;
+        record._vertexInput = RHIVertexInputState{ vertexSlotMask, desc._meshVertexFormat };
         return _pDevice->_pipelineStates.insert( record );
     }
 

@@ -506,8 +506,7 @@ namespace sw
         struct D3D12PipelineStateRecord
         {
             Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
-            uint32                                      _vertexSlotMask{ 0 };                             ///< 셰이더가 읽는 정점 버퍼 슬롯(RHIShaderRequest::toVertexSlotMask)
-            RHIMeshVertexFormat                         _meshVertexFormat{ RHIMeshVertexFormat::Packed }; ///< 입력 레이아웃을 지은 메시 정점 형식
+            RHIVertexInputState                         _vertexInput; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIVertexBufferBindings::bindForDraw` 에 넘긴다)
         };
 
         // 셰이더 가시 힙 하나는 [레지스트리 구간 | 온라인 블록 구간]으로 나뉜다. 레지스트리는 bindless 인덱스가 곧 힙 슬롯이다(텍스처 배열이 힙 시작을

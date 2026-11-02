@@ -7,10 +7,12 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/RHI/RHIVertexBufferBindings.h"
 
 namespace sw
 {
+    struct RHIVertexBufferBindings;
+    struct RHIVertexInputState;
+
     /**
      * @struct RHIDrawDiagnostics
      * @brief 드로우 기록의 진단입니다. 판정은 백엔드가, 알림 문구와 횟수 제한은 여기가 맡습니다.
@@ -28,12 +30,12 @@ namespace sw
         static void reportDestroyedVertexBuffer( const utf8* pBackendName, RHIBufferHandle handle );
 
         /**
-         * @brief PSO 가 읽는 정점 버퍼 슬롯(@p vertexSlotMask, `RHIShaderRequest::toVertexSlotMask`)에 버퍼가 모두 걸렸고 원소 크기가 PSO 의 메시 정점 형식과 같은지 봅니다.
+         * @brief PSO 가 읽는 정점 버퍼 슬롯(@p input 의 슬롯, `RHIShaderRequest::toVertexSlotMask`)에 버퍼가 모두 걸렸고 원소 크기가 PSO 의 메시 정점 형식과 같은지 봅니다.
          *        어긋나면 알리고 false 입니다.
          * @details 네 백엔드가 그 드로우를 버린다. 다른 버퍼로 대신 그리지 않는다 — 정점 입력이 없는 셰이더는 입력 레이아웃이 비어 슬롯을 읽지 않으므로
          *          (언리얼의 빈 정점 선언 · Godot 의 빈 정점 포맷) 빈 슬롯은 메시를 걸지 않고 메시 셰이더로 그린 부르는 쪽의 결함이다. 원소 크기가 다르면
          *          메시의 정점 형식과 PSO 의 형식이 다르다(지형 메시를 일반 형식 PSO 로 그렸다) — 그대로 그리면 속성을 엉뚱한 바이트에서 읽는다.
          */
-        [[nodiscard]] static bool checkVertexSlotsBound( const utf8* pBackendName, uint32 vertexSlotMask, RHIMeshVertexFormat meshVertexFormat, const RHIVertexBufferBindings& bindings );
+        [[nodiscard]] static bool checkVertexSlotsBound( const utf8* pBackendName, const RHIVertexInputState& input, const RHIVertexBufferBindings& bindings );
     };
 } // namespace sw
