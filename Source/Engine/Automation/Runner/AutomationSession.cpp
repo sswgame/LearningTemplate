@@ -517,7 +517,11 @@ namespace sw
         const bool    bScenario     = commandLine.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
         const bool    bStarted      = bScenario && _owner.begin( scenarioPath, reportPath, bKeepGoing );
         if ( bStarted && pRenderThread != nullptr )
+        {
             pRenderThread->setScenarioCaptureEnabled( true );
+            // 무인 실행은 보는 사람이 없다 — 화면에 내보내지 않는다(그림 · 사진은 같다). 지켜보는 실행(-unattended 없음)은 그대로 보인다.
+            pRenderThread->setPresentSkipped( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) );
+        }
         _owner._pRenderThread = pRenderThread; // 재생(`ScenarioPlayback::play`)도 사진을 찍으므로 시작 여부와 무관하게 건다
 
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.

@@ -113,6 +113,11 @@ namespace sw
 
         /** @brief 자동화 시나리오 동안 Present 캡처를 켜 둡니다(`<Screenshot>` 이 화면에 나간 이미지를 캡처합니다). 게임 스레드에서 부릅니다. */
         void setScenarioCaptureEnabled( bool bEnabled ) { _bScenarioCaptureEnabled.store( bEnabled, std::memory_order_release ); }
+        /**
+         * @brief 그린 프레임을 화면에 내보내지 않게 합니다(무인 시나리오 — 언리얼 자동화의 `-RenderOffScreen` 자리). 게임 스레드에서 부릅니다.
+         * @details 그리기 · Present 캡처(사진은 캡처 사본에서 읽는다)는 그대로라 그림이 바뀌지 않고, 내보내기(DWM 합성 대기)만 빠진다 — 편집기 체인 92 → 64 초(Release).
+         */
+        void setPresentSkipped( bool bSkipped ) { _bPresentSkipped.store( bSkipped, std::memory_order_release ); }
 
         /**
          * @brief 다음에 그리는 프레임의 이미지를 @p filePath 에 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM 입니다. 어느 스레드에서 불러도 됩니다.
@@ -215,6 +220,7 @@ namespace sw
         int64        _screenshotWaitStartMicroseconds; ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
         uint32       _budgetFrameCounter;              ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
         atomic<bool> _bScenarioCaptureEnabled;         ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
+        atomic<bool> _bPresentSkipped{ false };        ///< 그린 프레임을 화면에 내보내지 않는다(`setPresentSkipped` — 무인 시나리오)
         /** @brief 지난 프레임에 그린 씬 하나의 빠뜨린 배치 수입니다(`findPendingMaterialPSOBatchCount`). */
         struct ScenePendingWork
         {
