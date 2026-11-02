@@ -498,6 +498,8 @@ namespace sw
         // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
         pDevice->setParallelRecording( true );
 
+        // 패스마다 리스트 하나다(기록 · 제출 고정 비용이 패스당 ~100 µs — 빈 씬 14 패스). 언리얼 RDG 처럼 작은 패스를 한 리스트로 묶으면 줄지만 레벨 단위 배리어 · 제출 순서 계약을
+        // 함께 바꿔야 하고, 잰 게임 부하(characters)는 GPU 1.0 ms · RT 0.8 ms 로 RT 가 병목이 아니라 묶지 않는다(2026-11-03).
         // `runParallel` 로 바꾸지 않는다 — 그 티켓은 Normal 큐로 가는데 렌더 스레드가 곧바로 기다리는 기록은 High 레인이어야 한다(아래). 스테이지는 이미 TaskManager 의 것이다.
         TaskStageHandle stage = pTaskManager->createStage( "RenderGraphLevel" );
         for ( ParallelPassEntry& entry : listPassEntry )
