@@ -141,6 +141,20 @@ namespace sw::editor
     {
         struct ImGuiEditorInternal
         {
+            /** @brief ImGui 백엔드의 보조 창 띄우기(`Platform_ShowWindow`)와 메인 창입니다 — `showPlatformWindow` 가 감싼다. */
+            static inline void ( *s_pfnShowPlatformWindow )( ImGuiViewport* ) = nullptr;
+            static inline const IWindow* s_pMainWindow                        = nullptr;
+
+            /**
+             * @brief 메인 창이 숨어 있으면(무인 실행 — 언리얼 -RenderOffScreen, `AutomationSession::applyPresentPolicy`) 보조 창(메인 밖으로 나간 툴팁 · 팝업 · 떼어 낸 패널)도
+             *        띄우지 않습니다. 그리기는 같다. 두 플랫폼 백엔드(Win32 · X11)가 같은 규칙을 받도록 백엔드가 아니라 여기서 감싼다.
+             */
+            static void showPlatformWindow( ImGuiViewport* pViewport )
+            {
+                if ( s_pMainWindow == nullptr || s_pMainWindow->isVisibleRequested() )
+                    s_pfnShowPlatformWindow( pViewport );
+            }
+
             /**
              * @brief 등록된 프레임 단계를 `_order` 순서로 모두 부릅니다.
              * @details 개수와 항목을 매번 다시 읽는다. 단계가 모듈을 로드하거나 언로드해 목록이 바뀌어도 지난 배열을 읽지 않는다.
@@ -664,6 +678,13 @@ namespace sw::editor
             shutdownPlatformBackend();
             return SubsystemInitResult::Failed;
         }
+        ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+        if ( platformIO.Platform_ShowWindow != nullptr )
+        {
+            ImGuiEditorInternal::s_pfnShowPlatformWindow = platformIO.Platform_ShowWindow;
+            ImGuiEditorInternal::s_pMainWindow           = _pWindow;
+            platformIO.Platform_ShowWindow               = &ImGuiEditorInternal::showPlatformWindow;
+        }
         return SubsystemInitResult::Succeeded;
     }
 
@@ -671,6 +692,7 @@ namespace sw::editor
     {
         if ( _platformBackend == nullptr )
             return;
+        ImGuiEditorInternal::s_pMainWindow = nullptr;
         _platformBackend->shutdown();
         _platformBackend.reset();
     }
