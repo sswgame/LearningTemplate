@@ -354,8 +354,8 @@ namespace sw::editor
         ImGui::Text( "%s: %u", SW_LOCKEY( "EditorAudioEvents", "VirtualVoices" ), profile._virtualVoiceCount );
         ImGui::Text( "%s: %u", SW_LOCKEY( "EditorAudioEvents", "PeakRealVoices" ), profile._peakRealVoiceCount );
         ImGui::Text( "%s: %u", SW_LOCKEY( "EditorAudioEvents", "Instances" ), profile._instanceCount );
-        ImGui::Text( "%s: %llu / %llu", SW_LOCKEY( "EditorAudioEvents", "PlayedDropped" ), static_cast<uint64>( profile._playedEventCount ),
-                     static_cast<uint64>( profile._droppedEventCount ) );
+        ImGui::Text( "%s: %llu / %llu", SW_LOCKEY( "EditorAudioEvents", "PlayedDropped" ), static_cast<unsigned long long>( profile._playedEventCount ),
+                     static_cast<unsigned long long>( profile._droppedEventCount ) ); // %llu 는 unsigned long long 이다 — uint64 는 Linux 에서 unsigned long 이다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "PlayedDroppedTip" ) );
         // 이 창이 읽는 사본(인스턴스 × 보이스)을 오디오 스레드가 블록마다 만드는 비용이다(E6 측정).
         const float64 nanosecondsPerMicrosecond = static_cast<float64>( constant::time::kNanosecondsPerMicrosecond );

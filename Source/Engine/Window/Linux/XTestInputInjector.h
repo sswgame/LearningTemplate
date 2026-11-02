@@ -39,6 +39,6 @@ namespace sw
         [[nodiscard]] bool setKey( const string& keysymName, bool bPressed );
 
     private:
-        void* _pDisplay; ///< `Display*` — 헤더에 X11 을 끌고 오지 않으려고 불투명하게 둔다.
+        [[maybe_unused]] void* _pDisplay; ///< `Display*` — 헤더에 X11 을 끌고 오지 않으려고 불투명하게 둔다. XTest 없는 구성(빈 구현)은 읽지 않는다.
     };
 } // namespace sw

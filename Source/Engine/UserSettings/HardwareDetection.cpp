@@ -22,8 +22,10 @@ namespace sw
     {
         struct HardwareDetectionInternal
         {
-            /** @brief 해상도 목록에 넣는 가장 작은 변(픽셀)입니다. 옛 모드(640x480 등)는 옵션 메뉴에 필요 없다. */
+#if defined( SW_PLATFORM_WINDOWS )
+            /** @brief 해상도 목록에 넣는 가장 작은 변(픽셀)입니다. 옛 모드(640x480 등)는 옵션 메뉴에 필요 없다. 모드를 나열하는 플랫폼만 쓴다. */
             static constexpr int32 kMinResolutionSide = 640;
+#endif
 
             static bool isResolutionBefore( const int2& left, const int2& right )
             {
