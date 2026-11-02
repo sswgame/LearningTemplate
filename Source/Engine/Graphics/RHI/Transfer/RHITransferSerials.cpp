@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 
+#include "Core/Diagnostics/CallStackCapture.h"
+
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 
 namespace sw
@@ -81,8 +83,14 @@ namespace sw
         const uint64 firstUploadSerial = marks._firstSerial.load(); // 첫 업로드만 막는다(RHITextureUploadSerials)
         if ( firstUploadSerial == 0 || isComplete( firstUploadSerial ) )
             return true;
-        SW_LOG_ERROR_ID( "RHI.RegisterBeforeTransferDone", "registerBindlessTexture: texture %# has an unfinished first upload (serial %#, watermark %#): register only after pollTransfer returns Complete", texture,
-                         firstUploadSerial, getWatermark() );
+        // 부른 자리를 함께 남긴다 — 텍스처를 넘긴 쪽(패널 · 캐시)이 곧 완료를 기다리지 않은 쪽이다.
+        CallStack stack{};
+        CallStackCapture::capture( stack, 2 );
+        SW_LOG_ERROR_ID( "RHI.RegisterBeforeTransferDone",
+                         "registerBindlessTexture: texture %# has an unfinished first upload (serial %#, watermark %#): register only after pollTransfer returns Complete
+                             % #", texture,
+                             firstUploadSerial,
+                         getWatermark(), CallStackCapture::symbolize( stack ).c_str() );
         return false;
     }
 } // namespace sw
