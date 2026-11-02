@@ -193,6 +193,7 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.Deform.preparePool" );
         _state._deform._listScratchMorphMesh.clear();
         _state._deform._listScratchSkinMesh.clear();
+        _state._deform._listScratchSkinSlot.clear();
         _state._deform._listScratchVertexAnimationMesh.clear();
         _state._deform._setScratchSeenMesh.clear();
         const auto& listBatch = _state._gpuScene.getAllBatches();
@@ -211,11 +212,11 @@ namespace sw
                 _state._deform._listScratchVertexAnimationMesh.push_back( pMesh );
                 continue;
             }
-            const bool bSkin = pMesh->hasSkin();
-            if ( bSkin == false && pMesh->isGPUMorphEnabled() == false )
-                continue;
-            ( bSkin ? _state._deform._listScratchSkinMesh : _state._deform._listScratchMorphMesh ).push_back( pMesh );
+            // 스킨 메시는 칸마다 결과다 — 아래에서 팔레트(칸)로 모은다. 모프를 켠 메시만 메시마다 결과(모프 구간)다.
+            if ( pMesh->hasSkin() == false && pMesh->isGPUMorphEnabled() )
+                _state._deform._listScratchMorphMesh.push_back( pMesh );
         }
+        collectSkinInstances();
         // 중복 제거의 규모다. 배치 수 대비 고유 메시 수를 보면 이 루프가 무엇에 비례하는지 안다.
         SW_PROFILE_COUNT( "RT.Deform.batches", listBatch.size() );
         SW_PROFILE_COUNT( "RT.Deform.uniqueMeshes", _state._deform._setScratchSeenMesh.size() );
@@ -223,7 +224,7 @@ namespace sw
         // 아래 세 구간이 preparePool 안의 무거운 단계다 — 목록이 바뀐 프레임의 풀 재구성(GPU 업로드 포함), 매 프레임의 팔레트 업로드, VAT 테이블 풀.
         {
             SW_PROFILE_SCOPE( "RT.Deform.rebuildMorphPool" );
-            _state._deform._meshMorphPool.update( _pDevice, _state._deform._listScratchMorphMesh, _state._deform._listScratchSkinMesh );
+            _state._deform._meshMorphPool.update( _pDevice, _state._deform._listScratchMorphMesh, _state._deform._listScratchSkinMesh, _state._deform._listScratchSkinSlot );
             // 변형 프로그램(에디터 모디파이어 미리보기)은 레스트와 따로 바뀐다 - 번호가 바뀐 프레임에만 올린다
             _state._deform._meshMorphPool.updateDeformPrograms( _pDevice );
         }
@@ -243,6 +244,31 @@ namespace sw
         SW_PROFILE_COUNT( "RT.Skin.instances", _state._deform._meshMorphPool.getSkinInstanceCount() );
         SW_PROFILE_COUNT( "RT.Skin.vertices", _state._deform._meshMorphPool.getSkinVertexCount() );
         SW_PROFILE_COUNT( "RT.Skin.sourceVertices", _state._deform._meshMorphPool.getSkinSourceVertexCount() );
+    }
+
+    void FramePrepass::collectSkinInstances()
+    {
+        FrameMeshDeformState& deform = _state._deform;
+        deform._listScratchDrawnSkinSlot.clear();
+        for ( const GPUInstance& instance : _state._gpuScene.getInstances() )
+        {
+            const uint32 skinSlot = instance._skinSlot;
+            if ( skinSlot == constant::invalid_index::kUint32 )
+                continue;
+            if ( skinSlot >= deform._listScratchDrawnSkinSlot.size() )
+                deform._listScratchDrawnSkinSlot.resize( static_cast<size_t>( skinSlot ) + 1u, SW_FALSE );
+            deform._listScratchDrawnSkinSlot[skinSlot] = SW_TRUE;
+        }
+        for ( const GPUSkinPalette& palette : _state._gpuScene.getSkinPalettes() )
+        {
+            const bool bDrawn = palette._skinSlot < deform._listScratchDrawnSkinSlot.size() && deform._listScratchDrawnSkinSlot[palette._skinSlot] == SW_TRUE;
+            const bool bSkin  = palette._mesh != nullptr && palette._mesh->hasSkin() && palette._mesh->findVertexAnimation() == nullptr;
+            if ( bDrawn == false || bSkin == false )
+                continue;
+            deform._listScratchSkinMesh.push_back( palette._mesh.get() );
+            deform._listScratchSkinSlot.push_back( palette._skinSlot );
+        }
+        SW_PROFILE_COUNT( "RT.Deform.skinSlots", deform._listScratchSkinSlot.size() );
     }
 
     void FramePrepass::dispatchMeshMorph()

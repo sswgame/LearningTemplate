@@ -32,5 +32,7 @@ namespace sw
         void followSourceMesh();
         /** @brief 이 구간이 따르는 주 메시 컴포넌트입니다. 없으면 nullptr 입니다. */
         MeshComponent* findSourceMeshComponent() const;
+        /** @brief 따르는 주 메시 컴포넌트의 스킨 칸입니다 — 구간은 주 메시와 같은 스킨 결과를 그린다. 주 메시가 없으면 무효입니다. */
+        uint32 getSkinSlot() const override;
     };
 } // namespace sw

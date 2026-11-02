@@ -102,7 +102,7 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 /** @brief 탄젠트는 표면을 따라가는 방향이라 노멀(여인수 행렬)과 달리 월드 행렬 그대로 곱한다. 스킨 · 모프 메시는 컴퓨트가 돌린 탄젠트다. */
 void MaterialInterpolants::storeTangent( VertexContext context )
 {
-    const float4 localTangent = MorphPool::loadTangent( context._instance._meshBatchIndex, context._vertexID, context._input._tangent );
+    const float4 localTangent = MorphPool::loadTangent( context._instance._meshBatchIndex, context._instance._skinSlot, context._vertexID, context._input._tangent );
     _tangent                  = float4( mul( float4( localTangent.xyz, 0.0f ), context._instance._world ).xyz, localTangent.w );
 }
     #else

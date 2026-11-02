@@ -28,6 +28,12 @@ namespace sw
         return pSource;
     }
 
+    uint32 MeshSectionComponent::getSkinSlot() const
+    {
+        const MeshComponent* pSource = findSourceMeshComponent();
+        return pSource != nullptr ? pSource->getSkinSlot() : constant::invalid_index::kUint32;
+    }
+
     void MeshSectionComponent::followSourceMesh()
     {
         const MeshComponent* pSource = findSourceMeshComponent();

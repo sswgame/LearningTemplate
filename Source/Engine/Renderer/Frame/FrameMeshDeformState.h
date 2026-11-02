@@ -47,8 +47,11 @@ namespace sw
         vector<GPUMorphVertex> _listScratchMorphTag{};
         /// @brief 이번 프레임 모프 대상 메시입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<Mesh*> _listScratchMorphMesh{};
-        /// @brief 이번 프레임 스킨드 메시 목록입니다. 모프 풀의 스킨 구간 순서이며 프레임마다 재사용합니다.
-        vector<Mesh*> _listScratchSkinMesh{};
+        /// @brief 이번 프레임 스킨 인스턴스(칸)의 메시와 칸입니다(같은 순서). 모프 풀의 스킨 구간 순서이며 프레임마다 재사용합니다.
+        vector<Mesh*>  _listScratchSkinMesh{};
+        vector<uint32> _listScratchSkinSlot{};
+        /// @brief 이번 프레임 인스턴스가 그리는 스킨 칸 표시입니다(칸 번호가 자리). 그리지 않는 칸(숨은 유닛)은 스키닝하지 않는다.
+        vector<uint8> _listScratchDrawnSkinSlot{};
         /// @brief 이번 프레임 VAT 메시 목록입니다. 프레임마다 재사용합니다.
         vector<Mesh*> _listScratchVertexAnimationMesh{};
         /// @brief 이번 프레임에 이미 분류한 메시입니다. 배치마다 세 목록을 선형 탐색하지 않으려고 둡니다. clear 는 버킷을 남기므로 프레임마다 할당하지 않습니다.

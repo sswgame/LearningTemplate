@@ -127,6 +127,11 @@ namespace sw
         void setVertexAnimationPhase( float32 phaseSeconds );
         /** @brief setVertexAnimationPhase 로 정한 값입니다. */
         float32 getVertexAnimationPhase() const { return _vertexAnimationPhase; }
+        /**
+         * @brief 이 컴포넌트가 그리는 GPU 스킨 결과의 칸(`AnimationSkinSlot`)입니다. 빌더가 `GPUInstance::_skinSlot` 으로 옮깁니다. 스킨 결과를 그리지 않으면 무효입니다.
+         * @details 스킨 결과는 메시가 아니라 칸마다 하나다 — 유닛(`SkeletalMeshComponent`)과 군중 묶음이 칸을 갖고, 구간 컴포넌트는 따르는 주 메시의 칸을 그린다.
+         */
+        virtual uint32 getSkinSlot() const { return constant::invalid_index::kUint32; }
 
         /**
          * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형)과 색입니다. 빌더가 `GPUInstance::_sprite` 로 옮깁니다.

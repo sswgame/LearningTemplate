@@ -18,6 +18,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Content/AssetID.h"
 
@@ -146,6 +147,8 @@ namespace sw
         const AnimationCrowdBucketKey& getKey() const { return _key; }
         /** @brief 멤버가 그리는 메시(스킨 원본의 사본)입니다. */
         const shared_ptr<Mesh>& getMesh() const { return _mesh; }
+        /** @brief 이 묶음의 스킨 칸입니다 — 멤버가 몇이든 결과 구간 하나 · 팔레트 하나다. */
+        uint32                  getSkinSlot() const { return _skinSlot.get(); }
         const Pose&             getLocalPose() const { return _localPose; }
         const vector<float4x4>& getModelSpaceTransforms() const { return _listModelSpace; }
         const vector<float4x4>& getSkinPalette() const { return _listSkinPalette; }
@@ -175,6 +178,7 @@ namespace sw
         shared_ptr<const AnimationClip> _clip;
         shared_ptr<const AnimationClip> _nextClip; ///< 섞기 묶음의 들어가는 클립(아니면 nullptr)
         shared_ptr<Mesh>                _mesh;
+        AnimationSkinSlot               _skinSlot;
         vector<int32>                   _listTrackToBone;
         vector<int32>                   _listNextTrackToBone;
         Pose                            _localPose;

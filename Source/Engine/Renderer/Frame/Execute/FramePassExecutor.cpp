@@ -1714,6 +1714,16 @@ namespace sw
             const uint32 morphElementCount = ( _state._deform._bMorphBindsRest != SW_FALSE ) ? _state._deform._meshMorphPool.getMorphVertexCount() : _state._deform._meshMorphPool.getVertexCount();
             context._passValues.setUint( passConstantNames()._swMorphVertexCount, morphElementCount );
         }
+        // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
+        // 진단(레스트를 그대로 물림)이면 스킨 구간이 레스트 버퍼에 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
+        const RHIStructuredBufferSlot& skinBaseBuffer = _state._deform._meshMorphPool.getSkinBaseBuffer();
+        const bool                     bSkinBases     = _state._deform._bMorphBindsRest == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinBaseBuffer._buffer != 0 &&
+                                skinBaseBuffer._srv != kInvalidDescriptorIndex;
+        if ( bSkinBases )
+        {
+            context._resourceRegistry.registerBuffer( passConstantNames()._swSkinBases, skinBaseBuffer._buffer, skinBaseBuffer._srv );
+            context._passValues.setUint( passConstantNames()._swSkinBaseCount, _state._deform._meshMorphPool.getSkinBaseCount() );
+        }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
         const RHIStructuredBufferSlot& vertexAnimationBuffer = _state._deform._vertexAnimationPool.getBuffer();

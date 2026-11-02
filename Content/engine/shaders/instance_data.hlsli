@@ -30,7 +30,7 @@ struct InstanceData
     float    _vertexAnimationPhase; // 정점 애니메이션(VAT) 시각 오프셋(초) — VAT 시계에 더해 인스턴스마다 다른 프레임을 고른다(binding.hlsli)
     uint     _highlight;            // 강조 — 하위 3 바이트 RGB8 색, 상위 바이트 방식(0 없음 · 1 외곽선 · 2 감각). C++ `GPUInstanceHighlight` — highlight_outline.hlsl 이 읽는다
     float    _appearance;           // 등장 비율(0 ~ 1) — 1 보다 작으면 디더 변형(SW_APPEARANCE_DITHER)이 그 비율만큼의 픽셀만 남긴다(binding.hlsli Appearance::clipDither)
-    uint     _reserved1;            // 원소를 128 바이트(16 의 배수)로 맞춘다 — 스칼라라 std430 에서도 오프셋이 C++ 과 같다
+    uint     _skinSlot;             // 스킨 칸(유닛 · 군중 묶음마다 게임 스레드가 준 번호) — g_SwSkinBases 로 스킨 결과 시작을 찾는다. kInvalidIndex 면 스킨 결과를 읽지 않는다(C++ GPUInstance::_skinSlot)
 
     // 멤버 함수는 원소 레이아웃을 바꾸지 않는다. 정의는 이 파일 아래(강조 · 스프라이트 칸)와 binding.hlsli(읽기 · 정점 애니메이션)다.
     uint getHighlightStyle();

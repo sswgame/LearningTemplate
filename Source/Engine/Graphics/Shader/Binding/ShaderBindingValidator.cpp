@@ -349,6 +349,9 @@ namespace sw
             // 라이트 프로브 t13 (네 백엔드 공통): 조명 식이 프로브 볼륨 원소를 만나면 읽는다(lighting.hlsli LightProbe::load).
             addReserved( list, shaderslot::resname::kLightProbes, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kLightProbeBuffer ), slotAt( 0, shaderslot::kLightProbeBuffer ),
                          slotAt( vk::kTShift, shaderslot::kLightProbeBuffer ), slotAt( 0, shaderslot::kLightProbeBuffer ) );
+            // 스킨 칸 표 t14 (네 백엔드 공통): 정점 셰이더가 인스턴스의 스킨 칸으로 결과 시작을 읽는다(binding.hlsli MorphPool::loadSkinBase).
+            addReserved( list, shaderslot::resname::kSkinBases, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kSkinBaseBuffer ), slotAt( 0, shaderslot::kSkinBaseBuffer ),
+                         slotAt( vk::kTShift, shaderslot::kSkinBaseBuffer ), slotAt( 0, shaderslot::kSkinBaseBuffer ) );
             // light_grid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
             addReserved( list, shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
             addReserved( list, shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );

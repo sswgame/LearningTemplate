@@ -72,7 +72,11 @@ namespace sw
          *          깊이 프리패스 · 그림자 · 기본 패스가 같은 픽셀을 버린다(binding.hlsli `Appearance::clipDither`). 셰이더의 `appearance` 에 해당한다.
          */
         float32 _appearance{ 1.0f };
-        uint32  _arrReserved[1]{}; ///< 원소를 128바이트(16의 배수)로 맞춘다. 셰이더의 `reserved1` 에 해당한다.
+        /**
+         * @brief 스킨 칸(`MeshComponent::getSkinSlot` — 유닛 · 군중 묶음마다 게임 스레드가 준 오래 가는 번호)입니다. 스킨 결과가 없으면 무효입니다. 셰이더의 `skinSlot` 에 해당한다.
+         * @details 스킨 결과는 메시가 아니라 칸마다 하나라(모프 풀이 칸마다 결과 구간, RT 의 칸 → 시작 표 `g_SwSkinBases`) 같은 메시를 그리는 캐릭터들이 한 배치다.
+         */
+        uint32 _skinSlot{ constant::invalid_index::kUint32 };
     };
 } // namespace sw
 
@@ -320,14 +324,14 @@ namespace sw
      * @struct GPUSkinPalette
      * @brief 스킨드 메시 하나의 팔레트 구간입니다. 행은 `GPUSceneSnapshot::_pListSkinPaletteRow` 의 float4 이고, 본 하나가 세 행입니다(행벡터 4x4 의 0, 1, 2번 열).
      */
-    // SW_OWNERSHIP_RAW_OK( _pMesh ): 정체성 키다. RT 의 모프 풀이 자기 구간과 짝짓는 데만 쓰고 역참조하지 않는다. 메시 소유권은 배치(`GPUMeshBatch::_mesh`)가 싣는다.
     struct GPUSkinPalette
     {
-        const Mesh* _pMesh{ nullptr };
-        uint32      _firstRow{ 0 };
-        uint32      _boneCount{ 0 };
-        uint32      _firstMorphWeight{ 0 }; ///< `GPUSceneSnapshot::_pListMorphWeight` 안에서 이 메시의 모프 가중치가 시작하는 위치
-        uint32      _morphWeightCount{ 0 }; ///< 모프 가중치 수(0이면 모프 없음)
+        shared_ptr<Mesh> _mesh{};                                       ///< 스키닝할 메시(원본 — 칸마다 사본을 두지 않는다). RT 의 모프 풀이 원본 데이터 · 정점 수를 읽는다
+        uint32           _skinSlot{ constant::invalid_index::kUint32 }; ///< 이 팔레트의 스킨 칸(인스턴스의 `GPUInstance::_skinSlot` 과 같은 번호)
+        uint32           _firstRow{ 0 };
+        uint32           _boneCount{ 0 };
+        uint32           _firstMorphWeight{ 0 }; ///< `GPUSceneSnapshot::_pListMorphWeight` 안에서 이 메시의 모프 가중치가 시작하는 위치
+        uint32           _morphWeightCount{ 0 }; ///< 모프 가중치 수(0이면 모프 없음)
     };
 } // namespace sw
 

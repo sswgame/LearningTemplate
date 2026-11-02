@@ -105,9 +105,10 @@ struct View
 /** @brief 모프 · 스킨 정점 풀(5 절). */
 struct MorphPool
 {
-    static uint computeElement( uint batchIndex, uint vertexID );
-    static void loadVertex( uint batchIndex, uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
-    static float4 loadTangent( uint batchIndex, uint vertexID, float4 restTangent );
+    static uint loadSkinBase( uint skinSlot );
+    static uint computeElement( uint batchIndex, uint skinSlot, uint vertexID );
+    static void loadVertex( uint batchIndex, uint skinSlot, uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
+    static float4 loadTangent( uint batchIndex, uint skinSlot, uint vertexID, float4 restTangent );
 };
 
 /** @brief 단위 벡터 ↔ 옥타헤드럴 좌표 [-1, 1]^2 (6 절 앞). C++ `OctahedralNormal` 과 같은 식이다 — G버퍼 노멀 첨부(R16G16_SNORM)와 VAT 노멀이 쓴다. */
@@ -269,6 +270,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint   g_SwVisibleSlotCount;        // 그 목록의 칸 수(가시 구간의 합 — LOD 그룹이 없으면 인스턴스 수) — 범위 밖 슬롯을 막는다
     uint   g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
     uint   g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
+    uint   g_SwSkinBasesIndex;          // 스킨 칸 → 결과 시작 표(g_SwSkinBases, t14)가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwSkinBaseCount;           // 그 표의 칸 수 — 범위 밖 칸을 막는다
     uint   g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint   g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
     uint   g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
@@ -373,6 +376,18 @@ static BatchData BatchData::load( uint batchIndex )
 // 구조체 멤버 로드를 다루는 방식). 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
 // 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
+// 스킨 칸 → 결과 시작 표(binding_slots.hlsli SW_SLOT_SKIN_BASE_SRV). 스킨 결과는 메시가 아니라 칸(유닛 · 군중 묶음)마다 하나라 같은 메시의 캐릭터들이 한 배치로 그려진다.
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwSkinBases, SW_SLOT_SKIN_BASE_SRV );
+
+/** @brief 스킨 칸의 결과 시작 — 칸이 없거나(@p skinSlot 이 kInvalidIndex) 표가 안 걸렸거나 풀에 못 든 칸이면 kInvalidIndex. 분기는 있지만 early-return 은 없다. */
+static uint MorphPool::loadSkinBase( uint skinSlot )
+{
+    uint       base   = kInvalidIndex;
+    const bool bValid = ( skinSlot != kInvalidIndex ) && ( g_SwSkinBasesIndex != kInvalidIndex ) && ( skinSlot < g_SwSkinBaseCount );
+    if ( bValid )
+        base = g_SwSkinBases[skinSlot];
+    return base;
+}
 
 /**
  * @brief 이 정점의 풀 원소 번호 — 모프 대상이 아니면 `kInvalidIndex`.
@@ -384,7 +399,7 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SR
 // SPIR-V 의 `OpSwitch(0){ default: … }` 구조로 내는데, OpenGL 드라이버가 그 모양을 잘못 컴파일해 **같은 인보케이션에서
 // 같은 UBO 멤버를 두 번 읽어 다른 값**(0 과 -1)을 낸다 — 결과는 정점마다 한 칸 앞 원소를 읽는 것(DX12·DX11·Vulkan 은
 // 같은 소스로 멀쩡하다). 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
-static uint MorphPool::computeElement( uint batchIndex, uint vertexID )
+static uint MorphPool::computeElement( uint batchIndex, uint skinSlot, uint vertexID )
 {
     const BatchData batch = BatchData::load( batchIndex );
     // **API 차이 — 이 메시의 로컬 정점 번호.** 씬 드로우는 인덱스 드로우이고 인덱스는 메시 안 번호다. 간접 인자의 baseVertex 를
@@ -397,7 +412,8 @@ static uint MorphPool::computeElement( uint batchIndex, uint vertexID )
 #else
     const uint local = vertexID - batch._baseVertex; // 풀 밖 메시는 baseVertex 가 0 이라 그대로다
 #endif
-    const uint base    = batch._morphVertexBase;
+    // 결과 시작은 메시 종류마다 하나다 — 스킨 메시는 인스턴스의 칸(유닛마다 결과), 모프 메시는 배치(메시마다 결과). 폴백이 아니다.
+    const uint base    = ( skinSlot != kInvalidIndex ) ? MorphPool::loadSkinBase( skinSlot ) : batch._morphVertexBase;
     const uint element = base + local;
     // 잘못된 번호(밑돎으로 커진 local)는 element 가 풀 크기를 넘어 여기서 걸러진다.
     const bool bValid = ( base != kInvalidIndex ) && ( g_SwMorphVerticesIndex != kInvalidIndex ) && ( element < g_SwMorphVertexCount );
@@ -409,15 +425,19 @@ static uint MorphPool::computeElement( uint batchIndex, uint vertexID )
  * @details 위치와 노멀을 **함께** 돌려주는 이유는 둘이 같이 변하기 때문이다. 노멀은 정점 속성이므로 위치만 바꾸면
  *          **레스트 포즈의 노멀**이 남아 변형된 표면이 원래 모양대로 칠해진다.
  */
-static void MorphPool::loadVertex( uint batchIndex, uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
+static void MorphPool::loadVertex( uint batchIndex, uint skinSlot, uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
     outPosition        = restPosition;
     outNormal          = restNormal;
-    const uint element = MorphPool::computeElement( batchIndex, vertexID );
-    if ( element == kInvalidIndex )
-        return;
-    outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
-    outNormal   = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
+    const uint element = MorphPool::computeElement( batchIndex, skinSlot, vertexID );
+    if ( element != kInvalidIndex )
+    {
+        outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
+        outNormal   = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
+    }
+    // 칸이 있는데 결과가 없다(풀 상한 초과 · 버퍼 실패 — 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않는다. NaN 위치의 삼각형은 래스터에서 버려진다.
+    const bool bRefused = ( skinSlot != kInvalidIndex ) && ( element == kInvalidIndex );
+    outPosition         = bRefused ? asfloat( 0x7FC00000u ).xxx : outPosition;
 }
 
 /**
@@ -425,9 +445,9 @@ static void MorphPool::loadVertex( uint batchIndex, uint vertexID, float3 restPo
  * @details 부호는 변형으로 바뀌지 않아 입력 스트림 값을 쓴다. 노멀 맵을 읽는 셰이더만 부른다 — 부르지 않는 패스는 이 로드가 빠진다.
  *          early-return 이 없다 — GL 드라이버 사연은 MorphPool::computeElement 참고.
  */
-static float4 MorphPool::loadTangent( uint batchIndex, uint vertexID, float4 restTangent )
+static float4 MorphPool::loadTangent( uint batchIndex, uint skinSlot, uint vertexID, float4 restTangent )
 {
-    const uint element = MorphPool::computeElement( batchIndex, vertexID );
+    const uint element = MorphPool::computeElement( batchIndex, skinSlot, vertexID );
     return ( element == kInvalidIndex ) ? restTangent : float4( g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 2u].xyz, restTangent.w );
 }
 
@@ -541,7 +561,7 @@ static float3 VertexAnimation::computePosition( uint headerBase, uint firstEleme
  */
 void InstanceData::loadAnimatedVertex( uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
-    MorphPool::loadVertex( _meshBatchIndex, vertexID, restPosition, restNormal, outPosition, outNormal );
+    MorphPool::loadVertex( _meshBatchIndex, _skinSlot, vertexID, restPosition, restNormal, outPosition, outNormal );
     bool  bAnimated;
     uint  firstElement;
     uint  secondElement;
@@ -659,9 +679,9 @@ static InstanceData InstanceData::load( uint instanceSlot )
     instance._tint                 = 0xFFFFFFFFu; // 흰색 불투명
     instance._pixelSnap            = 0.0f;        // 스냅 없음
     instance._vertexAnimationPhase = 0.0f;
-    instance._highlight            = 0u;   // 강조 없음
-    instance._appearance           = 1.0f; // 다 보인다
-    instance._reserved1            = 0u;
+    instance._highlight            = 0u;            // 강조 없음
+    instance._appearance           = 1.0f;          // 다 보인다
+    instance._skinSlot             = kInvalidIndex; // 스킨 결과 없음
     return instance;
 }
 

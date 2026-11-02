@@ -46,7 +46,7 @@ PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
     }
     float3 localPosition;
     float3 localNormal;
-    MorphPool::loadVertex( instance._meshBatchIndex, vertexID, input._position, input._normal, localPosition, localNormal );
+    MorphPool::loadVertex( instance._meshBatchIndex, instance._skinSlot, vertexID, input._position, input._normal, localPosition, localNormal );
     const float4 worldPosition = Transform::computeWorldPosition( localPosition, instance._world );
     const float3 worldNormal   = Transform::computeWorldNormal( localNormal, instance._world );
     float4       clipPosition  = Transform::computeClipPosition( worldPosition, g_ViewProj );

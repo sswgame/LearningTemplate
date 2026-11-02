@@ -342,6 +342,14 @@ namespace sw
         setVisibleHint( state._bVisible == SW_TRUE );
     }
 
+    uint32 SkeletalMeshComponent::getSkinSlot() const
+    {
+        if ( _crowdMode == AnimationCrowdMode::VertexAnimation || getRawMesh() == nullptr || getRawMesh()->hasSkin() == false )
+            return AnimationSkinSlot::kNone;
+        const bool bShared = _crowdMode == AnimationCrowdMode::Shared && _pCrowdBucket != nullptr;
+        return bShared ? _pCrowdBucket->getSkinSlot() : _skinSlot.get();
+    }
+
     void SkeletalMeshComponent::resolveSkinInstanceMesh()
     {
         if ( getMesh() == nullptr )

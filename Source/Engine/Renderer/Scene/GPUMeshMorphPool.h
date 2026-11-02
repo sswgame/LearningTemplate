@@ -134,8 +134,10 @@ namespace sw
          *        (돌려받은 모프 구간의 대기 번호가 이 호출 수입니다).
          * @details 세 가지를 따로 본다. 모프 집합이 바뀌면 들어온 모프 메시의 레스트만, 스킨 원본(스킨 데이터 번호) 집합이 바뀌면 원본 레스트와 가중치를,
          *          스킨 인스턴스 목록이 바뀌면 인스턴스 테이블만 다시 올린다. 결과 버퍼는 컴퓨트가 프레임마다 채우므로 배치가 바뀌어도 올릴 것이 없다.
+         *          스킨 인스턴스는 **칸**(@p listSkinSlot — `AnimationSkinSlot`, @p listSkinMesh 와 같은 순서)마다 하나다. 결과 시작은 칸 → 시작 표(`getSkinBaseBuffer`)로 정점 셰이더에 간다 —
+         *          같은 메시를 그리는 캐릭터들이 메시 사본 없이 저마다의 결과를 읽는다.
          */
-        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh );
+        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot );
         /**
          * @brief 모프 메시의 변형 프로그램(`Mesh::setGPUDeformProgram`)을 프로그램 버퍼에 맞춥니다. 어느 메시의 프로그램 번호도 그대로면 아무것도 하지 않습니다.
          * @details 버퍼 = [모프 메시 칸마다 float4 하나(x = 그 메시 프로그램의 시작 원소, 없으면 -1)][프로그램들]. 레스트 노멀의 w 가 칸 번호 + 1 이라
@@ -149,8 +151,14 @@ namespace sw
         void uploadSkinPalettes( IRHIDevice* pDevice, const vector<GPUSkinPalette>& listPalette, const vector<float4>* pListRow,
                                  const vector<float32>* pListMorphWeight = nullptr );
 
-        /** @brief 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. */
+        /** @brief 모프 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. 스킨 결과는 칸마다라 칸 표(`getSkinBaseBuffer`)로 찾는다. */
         uint32 baseOf( const Mesh* pMesh ) const;
+        /** @brief 스킨 칸 → 결과 시작 표입니다(칸 하나가 `uint32`, 못 든 칸은 `kInvalidBase`). 정점 셰이더가 t14(g_SwSkinBases)로 읽는다. 스킨 인스턴스가 없으면 비어 있습니다. */
+        const RHIStructuredBufferSlot& getSkinBaseBuffer() const { return _skinBase; }
+        /** @brief 칸 표의 칸 수(가장 큰 칸 + 1)입니다. */
+        uint32 getSkinBaseCount() const { return static_cast<uint32>( _listSkinBase.size() ); }
+        /** @brief 칸의 결과 시작입니다(진단 · 테스트). 없는 칸이거나 디스패치할 수 없으면 `kInvalidBase` 입니다. */
+        uint32 skinBaseOf( uint32 skinSlot ) const;
 
         /** @brief 결과 버퍼입니다. 정점 셰이더가 SRV 로 읽습니다. */
         const RHIStructuredBufferSlot& getMorphBuffer() const { return _morph; }
@@ -245,7 +253,7 @@ namespace sw
         /** @brief 스킨 원본 구간을 더 큰 새 버퍼로 다시 채웁니다. 살아 있는 원본을 앞에서부터 다시 잇습니다. */
         void repackSkinSources( IRHIDevice* pDevice );
         /** @brief 스킨 원본을 맞추고 스킨 메시마다 인스턴스 행(결과 구간 · 원본 구간 · 팔레트 시작)과 `_mapSkinBase` 를 다시 만듭니다. `_vertexCount` 를 정합니다. */
-        void buildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
+        void buildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh, const vector<uint32>& listSkinSlot );
         /** @brief 결과 버퍼 · 스킨 인스턴스 표 · 팔레트 버퍼의 용량을 맞추고 못 만든 것을 오류로 남깁니다. */
         void ensureDeformBuffers( IRHIDevice* pDevice );
         /** @brief 모프 메시 집합을 맞춥니다. 들어온 메시의 레스트만 올립니다. @return 어느 모프 메시의 구간이라도 바뀌었으면 true 입니다. */
@@ -270,6 +278,7 @@ namespace sw
         RHIStructuredBufferSlot _skinInstance;
         RHIStructuredBufferSlot _skinPalette;
         RHIStructuredBufferSlot _deformProgram;
+        RHIStructuredBufferSlot _skinBase;
         /// @brief 풀에 든 모프 메시(칸 순서)입니다. 레스트 노멀의 w 가 이 번호 + 1 입니다. 나간 메시의 칸은 nullptr 이고 `_listFreeMorphSlot` 에 있습니다.
         vector<const Mesh*> _listPoolMorph;
         vector<uint32>      _listFreeMorphSlot;
@@ -287,13 +296,15 @@ namespace sw
         vector<uint64> _listDeformProgramGeneration;
         /// @brief 프로그램 버퍼를 모으는 버퍼입니다(바뀐 프레임에만 쓴다).
         vector<float4> _listScratchDeformProgram;
-        /// @brief 스킨드 메시에서 결과 시작 오프셋(정점 단위)을 찾는 맵입니다. 모프 메시는 `_mapMorphEntry` 에 있습니다.
-        unordered_map<const Mesh*, uint32> _mapSkinBase;
-        /// @brief 지난 update 의 스킨 메시 목록과 내용 번호입니다(받은 그대로이며 풀에 들어가지 못한 것도 포함합니다).
+        /// @brief 스킨 칸 → 결과 시작(정점 단위)입니다. 칸 번호가 자리이고 결과가 없는 칸은 `kInvalidBase` 다. `_skinBase` 에 그대로 올린다. 모프 메시는 `_mapMorphEntry` 에 있습니다.
+        vector<uint32> _listSkinBase;
+        /// @brief 지난 update 의 스킨 메시 · 칸 목록과 내용 번호입니다(받은 그대로이며 풀에 들어가지 못한 것도 포함합니다).
         vector<const Mesh*> _listBuiltSkin;
+        vector<uint32>      _listBuiltSkinSlot;
         vector<uint64>      _listBuiltSkinContentID;
-        /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서)와 그 테이블 줄입니다.
+        /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서)의 메시 · 칸과 그 테이블 줄입니다.
         vector<const Mesh*>        _listSkinMesh;
+        vector<uint32>             _listSkinSlot;
         vector<GPUSkinInstanceRow> _listSkinRow;
         /// @brief 풀에 든 스킨 원본(스킨 데이터 번호 → 기록)과 구간 할당기(레스트 버퍼 · 가중치 버퍼, 단위 = 원소 하나)입니다.
         unordered_map<uint64, SkinSource> _mapSkinSource;
@@ -306,8 +317,8 @@ namespace sw
         vector<float4>              _listScratchSkinWeight;
         vector<RHIBufferCopyRegion> _listScratchSkinRestRegion;
         vector<RHIBufferCopyRegion> _listScratchSkinWeightRegion;
-        /// @brief 메시에서 이번 프레임 팔레트 항목 위치를 찾는 맵입니다(`uploadSkinPalettes` 가 프레임마다 다시 만들며, 인스턴스마다 목록을 훑지 않기 위한 것입니다).
-        unordered_map<const Mesh*, uint32> _mapScratchPaletteIndex;
+        /// @brief 칸에서 이번 프레임 팔레트 항목 위치를 찾는 표입니다(`uploadSkinPalettes` 가 프레임마다 다시 채우며, 인스턴스마다 목록을 훑지 않기 위한 것입니다).
+        vector<uint32> _listScratchPaletteIndex;
         /// @brief 팔레트를 풀 순서로 다시 모으는 버퍼입니다(프레임마다 재사용합니다).
         vector<float4> _listScratchPaletteRow;
         uint32         _vertexCount{ 0 };

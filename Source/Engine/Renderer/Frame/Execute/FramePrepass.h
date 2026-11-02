@@ -66,6 +66,11 @@ namespace sw
          * @details 오프셋은 배치 테이블(g_SwBatches)에 실려 upload() 가 올리므로 테이블은 업로드 시점에 완성되어 있어야 한다. 디스패치(dispatchMeshMorph)는 커맨드 리스트가 열린 뒤 따로 돈다.
          */
         void prepareMeshMorphPool();
+        /**
+         * @brief 이번 프레임 스킨 인스턴스(칸 · 메시)를 팔레트에서 모읍니다 — 인스턴스가 그리는 칸만(숨은 유닛은 스키닝하지 않는다). 순서는 팔레트 순서 그대로다.
+         * @details 스킨 결과는 메시가 아니라 칸마다라 배치의 메시로는 모을 수 없다(같은 메시를 캐릭터 여럿이 그린다). 팔레트가 메시 소유권을 싣는다.
+         */
+        void collectSkinInstances();
         /** @brief GPU 입자 시뮬레이션의 이번 프레임 입력(PSO · 주 시점 깊이 히스토리 · 인스턴스 버퍼)입니다. GPUScene 을 올린 뒤 부릅니다. */
         VFXSimulationFrameInput makeVFXSimulationInput() const;
 

@@ -77,10 +77,11 @@ namespace sw
             if ( batch._morphVertexBase != meshBase )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
             batch._morphVertexBase = meshBase;
-            // 모프 · 스킨이 필요한데 풀에 없다(상한 초과 · 버퍼 실패, 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않고 이 배치를 거른다.
+            // 모프가 필요한데 풀에 없다(상한 초과 · 버퍼 실패, 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않고 이 배치를 거른다.
+            // 스킨 메시는 결과가 칸마다라 인스턴스 단위로 거른다(칸 표에 없는 칸의 정점 셰이더가 NaN 위치로 버린다, binding.hlsli MorphPool::loadVertex).
             // VAT 메시는 모프 풀이 아니라 VAT 풀이 판정한다(assignVertexAnimationBases).
             const Mesh* pMesh        = batch._mesh.get();
-            const bool  bNeedsDeform = pMesh != nullptr && pMesh->findVertexAnimation() == nullptr && ( pMesh->hasSkin() || pMesh->isGPUMorphEnabled() );
+            const bool  bNeedsDeform = pMesh != nullptr && pMesh->findVertexAnimation() == nullptr && pMesh->hasSkin() == false && pMesh->isGPUMorphEnabled();
             batch._bDeformRefused    = ( bNeedsDeform && meshBase == GPUMeshMorphPool::kInvalidBase ) ? SW_TRUE : SW_FALSE;
         }
     }

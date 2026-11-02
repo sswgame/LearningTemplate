@@ -12,6 +12,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -202,6 +203,13 @@ namespace sw
         AnimationCrowdMode getCrowdMode() const { return _crowdMode; }
         /** @brief 나누는 묶음을 반환합니다(나누지 않으면 nullptr). */
         const AnimationCrowdBucket* findCrowdBucket() const { return _pCrowdBucket; }
+        /**
+         * @brief 이 유닛이 그리는 스킨 결과의 칸입니다 — 묶음을 나누면 묶음의 칸, VAT 이거나 스킨 메시가 없으면 무효, 아니면 자기 칸입니다.
+         * @details 팔레트를 싣는 쪽(`GPUSkinPaletteCollector`)이 같은 규칙으로 칸을 고른다 — 나누는 유닛과 VAT 유닛은 자기 팔레트가 없다.
+         */
+        uint32 getSkinSlot() const override;
+        /** @brief 이 유닛 자신의 스킨 칸입니다(묶음 · VAT 와 무관하게 만들 때 받은 번호). 팔레트를 싣는 쪽이 씁니다. */
+        uint32 getOwnSkinSlot() const { return _skinSlot.get(); }
         /** @brief 묶음, 사본, VAT 를 정합니다(게임 스레드, `AnimationSystem` 이 시간 단계 뒤에 부릅니다). */
         void updateCrowdMembership( AnimationCrowd& crowd );
         /** @brief 이 유닛의 포즈를 읽는 유닛(리더, 부착 의존)이 있는지 정합니다(`AnimationSystem` 이 성분을 만들 때 부릅니다). */
@@ -298,6 +306,7 @@ namespace sw
         shared_ptr<Mesh>                                _soloMesh;              ///< 혼자 평가할 때 빌린 사본
         const AnimationClip*                            _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
         AnimationCrowdMode                              _crowdMode;
+        AnimationSkinSlot                               _skinSlot; ///< 이 유닛의 스킨 결과 칸(`getSkinSlot`)
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )
         uint8 _bFollowParentPose : 1;
         PROPERTY( Category = "Animation", DisplayName = "Animate When Offscreen", Tooltip = "Keep building the pose while not visible" )

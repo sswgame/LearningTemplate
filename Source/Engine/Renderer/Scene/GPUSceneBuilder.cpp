@@ -45,11 +45,12 @@ namespace sw
          * @brief 팔레트 한 벌(과 모프 가중치)을 행 · 가중치 버퍼 끝에 싣고 스냅샷에 항목을 더합니다.
          * @details 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(mesh_skin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
          */
-        void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const Mesh* pMesh, const vector<float4x4>& listPalette,
-                            const vector<float32>* pListMorphWeight )
+        void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const shared_ptr<Mesh>& mesh, uint32 skinSlot,
+                            const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
         {
             GPUSkinPalette entry{};
-            entry._pMesh     = pMesh;
+            entry._mesh      = mesh;
+            entry._skinSlot  = skinSlot;
             entry._firstRow  = static_cast<uint32>( inoutListRow.size() );
             entry._boneCount = static_cast<uint32>( listPalette.size() );
             if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
@@ -85,20 +86,17 @@ namespace sw
         // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬이며 바인드 포즈) 한 번 그려진다.
         for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
         {
-            // 군중 묶음과 공유하는 유닛과 VAT 유닛은 자기 팔레트가 없다. 묶음이 아래에서 한 번 싣는다.
-            const AnimationCrowdMode mode = pUnit->getCrowdMode();
-            if ( mode == AnimationCrowdMode::Shared || mode == AnimationCrowdMode::VertexAnimation )
+            // 자기 칸을 그리는 유닛만 자기 팔레트를 싣는다 — 군중 묶음과 나누는 유닛은 묶음의 칸을, VAT 유닛 · 스킨 없는 유닛은 칸 없이 그린다(`getSkinSlot` 과 같은 규칙).
+            const uint32 skinSlot = pUnit->getSkinSlot();
+            if ( skinSlot == AnimationSkinSlot::kNone || skinSlot != pUnit->getOwnSkinSlot() )
                 continue;
-            const Mesh* pMesh = pUnit->getRawMesh();
-            if ( pMesh == nullptr || pMesh->hasSkin() == false )
-                continue;
-            appendPalette( inoutSnapshot, *listRow, *listWeight, pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
+            appendPalette( inoutSnapshot, *listRow, *listWeight, pUnit->getMesh(), skinSlot, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
         }
         // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
-                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh().get(), bucket->getSkinPalette(), nullptr );
+                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), bucket->getSkinPalette(), nullptr );
         }
         _paletteRowCountHint               = listRow->size();
         inoutSnapshot._pListSkinPaletteRow = std::move( listRow );
@@ -125,7 +123,7 @@ namespace sw
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
                        instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite ||
-                       instance._highlight != raw._highlight ||
+                       instance._highlight != raw._highlight || instance._skinSlot != raw._skinSlot ||
                        Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0 ||
                        Memory::compare( &instance._appearance, &raw._appearance, sizeof( instance._appearance ) ) != 0;
             }
@@ -140,6 +138,7 @@ namespace sw
                 outInstance._spinSeed             = raw._spinSeed;
                 outInstance._sprite               = raw._sprite;
                 outInstance._highlight            = raw._highlight;
+                outInstance._skinSlot             = raw._skinSlot;
                 outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
                 outInstance._appearance           = raw._appearance;
             }
@@ -357,6 +356,7 @@ namespace sw
         candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
         candidate._sprite               = pMeshComp->getSpriteInstanceData();
         candidate._highlight            = pMeshComp->getHighlight();
+        candidate._skinSlot             = pMeshComp->getSkinSlot();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
         candidate._appearance           = pMeshComp->getAppearance();
         candidate._sortKey              = pMeshComp->getSortKey();
@@ -401,7 +401,8 @@ namespace sw
         candidate._bReverseCulling           = GPUSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
-        candidate._highlight                 = 0; // 인스턴스 배치 항목(데미지 숫자 · HP 바)은 강조하지 않는다
+        candidate._highlight                 = 0;                                // 인스턴스 배치 항목(데미지 숫자 · HP 바)은 강조하지 않는다
+        candidate._skinSlot                  = constant::invalid_index::kUint32; // 인스턴스 배치 항목은 스키닝하지 않는다
         candidate._vertexAnimationPhase      = 0.0f;
         candidate._appearance                = 1.0f; // 인스턴스 배치(식생 · UI)는 등장하지 않는다
         candidate._sortKey                   = pBatch->getSortKey();
@@ -495,6 +496,7 @@ namespace sw
         outInstance._spinSeed             = candidate._spinSeed;
         outInstance._sprite               = candidate._sprite;
         outInstance._highlight            = candidate._highlight;
+        outInstance._skinSlot             = candidate._skinSlot;
         outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;
         outInstance._appearance           = candidate._appearance;
     }
