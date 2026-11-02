@@ -81,6 +81,12 @@ function(sw_vcpkgComputeManifestHash OUT_VAR)
         endif()
     endforeach()
 
+    # 리눅스 포트 컴파일러(DetectToolchain 이 건 CC · CXX)도 설치를 가른다 — 바뀌면 다시 계획해야 옛 컴파일러(시스템 GCC)로 지은 포트가 남지 않는다.
+    # Windows 는 포트 툴체인 파일(VcpkgPortsToolchain)이 컴파일러를 정하고 환경 CC 는 프리셋 · 재구성마다 달라 넣지 않는다.
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+        string(APPEND hash "|cc=$ENV{CC}|cxx=$ENV{CXX}")
+    endif()
+
     set(${OUT_VAR} "${hash}" PARENT_SCOPE)
 endfunction()
 
