@@ -20,6 +20,10 @@ struct BatchData
 
     uint  _lodLevelCount; // LOD 그룹의 머리 배치(단계 0)의 단계 수. 0 = 그룹이 아니다 — 컬링이 인스턴스의 머리 배치 행에서 읽는다
     float _lodScreenSize; // LOD 그룹의 낮은 단계 배치 행: 이 단계로 넘어가는 화면 크기 임계값 — 컬링이 머리 + 단계 번호 행에서 읽는다
+    // 메시 공간 경계(언리얼 FBoxSphereBounds) — 컬링이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 상자로 판정한다(구보다 가늘고 긴 물체에서 훨씬 촘촘하다).
+    float3 _localBoundsCenter; // 상자 중심(= 구 중심)
+    float  _localBoundsRadius; // 상자 중심 기준 구 반지름. 0 이면 상자가 없다(구로만 판정)
+    float3 _localBoundsExtent; // 상자 반 크기
 
     static BatchData load( uint batchIndex ); // 정의는 binding.hlsli(배치 표 g_SwBatches 를 읽는다)
 };

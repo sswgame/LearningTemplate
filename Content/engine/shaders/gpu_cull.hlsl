@@ -82,6 +82,36 @@ bool isVisible( float3 center, float radius )
     return true;
 }
 
+/** @brief 월드 상자(중심 @p center, 반 크기 @p extent)가 절두체 안에 걸치면 true 입니다(평면마다 상자의 가장 앞 꼭짓점 — 법선 절댓값 · 반 크기). */
+bool isBoxVisible( float3 center, float3 extent )
+{
+    SW_UNROLL for ( uint planeIndex = 0; planeIndex < 6; ++planeIndex )
+    {
+        const float4 plane = g_FrustumPlanes[planeIndex];
+        if ( dot( plane.xyz, center ) + plane.w < -dot( abs( plane.xyz ), extent ) )
+            return false;
+    }
+    return true;
+}
+
+/**
+ * @brief 인스턴스의 월드 상자입니다 — 배치 메시의 메시 공간 상자를 월드 행렬로 옮긴다(Arvo — 행 벡터 규약이라 행 i 가 축 i 의 월드 방향).
+ *        컴포넌트 여유(스킨드 · VAT 처럼 메시보다 큰 구)는 인스턴스 구 반지름 ÷ (메시 구 반지름 × 최대 축 스케일)을 1 이상으로 곱한다. 배치에 상자가 없으면 false 다(구로만 판정).
+ */
+bool computeWorldBox( InstanceData instance, BatchData batch, out float3 outCenter, out float3 outExtent )
+{
+    const float3 axisX    = instance._world[0].xyz;
+    const float3 axisY    = instance._world[1].xyz;
+    const float3 axisZ    = instance._world[2].xyz;
+    const float  maxScale = sqrt( max( dot( axisX, axisX ), max( dot( axisY, axisY ), dot( axisZ, axisZ ) ) ) );
+    const float  meshR    = batch._localBoundsRadius * maxScale;
+    const float  margin   = meshR > 0.0f ? max( 1.0f, instance._boundsRadius / meshR ) : 1.0f;
+    const float3 local    = batch._localBoundsExtent;
+    outCenter             = mul( float4( batch._localBoundsCenter, 1.0f ), instance._world ).xyz;
+    outExtent             = ( abs( axisX ) * local.x + abs( axisY ) * local.y + abs( axisZ ) * local.z ) * margin;
+    return batch._localBoundsRadius > 0.0f;
+}
+
 /// @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. CPU `LODViewUtil::computeScreenSize` 와 같은 식이다(절두체 밖 판정만 빼고 — 여기는 이미 통과한 인스턴스다).
 float computeLODScreenSize( float3 center, float radius )
 {
@@ -107,7 +137,8 @@ uint selectLODLevel( uint headBatch, uint levelCount, float screenSize )
     return level;
 }
 
-bool isOccluded( float3 center, float radius )
+/** @brief 월드 상자(중심 @p center, 반 크기 @p extent — 구면 반지름을 세 축에 넣는다)가 지난 장면 깊이 뒤에 숨었으면 true 입니다. */
+bool isOccluded( float3 center, float3 extent )
 {
     if ( g_OcclusionGrid.w == 0u )
         return false;
@@ -116,7 +147,7 @@ bool isOccluded( float3 center, float radius )
     float  minDepth = 1.0f;
     SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
     {
-        const float3 offset = float3( ( corner & 1u ) != 0u ? radius : -radius, ( corner & 2u ) != 0u ? radius : -radius, ( corner & 4u ) != 0u ? radius : -radius );
+        const float3 offset = float3( ( corner & 1u ) != 0u ? extent.x : -extent.x, ( corner & 2u ) != 0u ? extent.y : -extent.y, ( corner & 4u ) != 0u ? extent.z : -extent.z );
         const float4 clip   = mul( float4( center + offset, 1.0f ), g_OcclusionViewProj );
         if ( clip.w <= kMinOcclusionClipW )
             return false;
@@ -261,6 +292,12 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
     if ( isVisible( instance._boundsCenter, instance._boundsRadius ) == false )
         return;
+    // 구 다음 상자(배치 메시의 경계) — 둘 다 보수적이라 둘 중 하나라도 밖이면 밖이다. 가림도 상자로 판정한다(가늘고 긴 캐릭터는 구가 몇 배 넓다).
+    float3     boxCenter = instance._boundsCenter;
+    float3     boxExtent = instance._boundsRadius.xxx;
+    const bool bHasBox   = computeWorldBox( instance, g_BatchInfo[headBatch], boxCenter, boxExtent );
+    if ( bHasBox && isBoxVisible( boxCenter, boxExtent ) == false )
+        return;
 
     // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 (instanceId - 배치 인스턴스 시작)이 곧 배치 안 자리다 —
     // 제자리 매핑을 가시 구간에 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
@@ -273,7 +310,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     }
 
     // 지난 프레임 장면 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다).
-    if ( isOccluded( instance._boundsCenter, instance._boundsRadius ) )
+    if ( bHasBox ? isOccluded( boxCenter, boxExtent ) : isOccluded( instance._boundsCenter, instance._boundsRadius.xxx ) )
         return;
 
     // LOD 그룹이 아니면 머리 배치에 한 번 쓴다.

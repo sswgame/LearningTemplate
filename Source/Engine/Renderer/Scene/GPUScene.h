@@ -67,7 +67,7 @@ namespace sw
      * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t9)가 같은 테이블을 읽습니다.
      * @details 컬링은 배치의 인스턴스 구간으로 "이 배치의 가시 목록은 어디서 시작하나" 를 알고, 정점 셰이더는
      *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 BatchData, gpu_cull.hlsl 의 GPUBatchInfo 와
-     *          레이아웃이 같아야 한다(4바이트 9칸, 36바이트).
+     *          레이아웃이 같아야 한다(4바이트 16칸, 64바이트).
      */
     struct GPUBatchInfo
     {
@@ -96,12 +96,19 @@ namespace sw
         uint32 _lodLevelCount{ 0 };
         /// @brief LOD 그룹의 낮은 단계 배치 행에서 이 단계로 넘어가는 화면 크기 임계값입니다(`GPUMeshBatch::_lodScreenSize`). 컬링이 머리 + 단계 번호 행에서 읽는다.
         float32 _lodScreenSize{ 0.0f };
+        /**
+         * @brief 배치 메시의 메시 공간 경계입니다(언리얼 `FBoxSphereBounds` — 상자 중심 · 그 중심 기준 구 반지름 · 상자 반 크기). 반지름이 0 이면 상자가 없다(구로만 판정).
+         * @details 컬링(`gpu_cull.hlsl`)이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 판정한다. 컴포넌트 여유(스킨드 · VAT 의 큰 구)는 인스턴스 구 반지름 ÷ 메시 구 반지름(1 이상)을 상자에 곱한다.
+         */
+        float3  _localBoundsCenter{};
+        float32 _localBoundsRadius{ 0.0f };
+        float3  _localBoundsExtent{};
     };
 } // namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUBatchInfo ) == 9 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열 칸(36바이트) — batch_data.hlsli BatchData 와 같아야 한다" );
+    static_assert( sizeof( GPUBatchInfo ) == 16 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열여섯 칸(64바이트) — batch_data.hlsli BatchData 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer

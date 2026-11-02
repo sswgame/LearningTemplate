@@ -340,6 +340,11 @@ namespace sw
             _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBatch._morphVertexBase;
             _listScratchBatchInfo[argIndex]._baseVertex          = infoBatch._baseVertex;
             _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBatch._vertexAnimationBase;
+            const Mesh* pBatchMesh                               = infoBatch._mesh.get();
+            const bool  bHasBounds                               = pBatchMesh != nullptr && pBatchMesh->getVertexCount() > 0;
+            _listScratchBatchInfo[argIndex]._localBoundsCenter   = bHasBounds ? pBatchMesh->getLocalBoundsCenter() : float3{};
+            _listScratchBatchInfo[argIndex]._localBoundsRadius   = bHasBounds ? pBatchMesh->getBoundingRadius() : 0.0f;
+            _listScratchBatchInfo[argIndex]._localBoundsExtent   = bHasBounds ? ( pBatchMesh->getLocalBoundsMax() - pBatchMesh->getLocalBoundsMin() ) * 0.5f : float3{};
             // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
             // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
             GPUBatchSortMode sortMode = GPUBatchSortMode::None;
