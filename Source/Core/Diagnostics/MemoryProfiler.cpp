@@ -118,6 +118,10 @@ namespace sw
                 "Core\\Container\\",
                 "sw::Memory::",
                 "MemoryInternal::",
+                // 줄 정보가 없는 기호(Linux `backtrace_symbols` 의 `함수 + 0x…`)는 경로가 없어 이름으로 거른다.
+                "sw::Allocator<",
+                "sw::basic_string<",
+                "std::",
             };
             /** @brief 모든 프레임이 거를 프레임일 때 첫 프레임 항목에 쓰는 글입니다. */
             static constexpr const utf8* kNoCallerFrameText = "[no frame outside Core/Memory and Core/Container]";
