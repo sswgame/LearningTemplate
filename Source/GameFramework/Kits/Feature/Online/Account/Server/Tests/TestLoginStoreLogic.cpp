@@ -1,5 +1,5 @@
 // LoginStoreLogicTest — 로그인 저장 규칙(메모리 저장소, 결정적인 가짜 암호): 가입 · 로그인 · 틀린 비밀번호(없는 계정과 구분하지 않는다) · 잠금(실패 상한) ·
-// 이름 겹침(대소문자 무시) · 이름 형식 · 세션 이어 받기 · 로그아웃 뒤 토큰. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
+// 이름 겹침(대소문자 무시) · 이름 형식 · 세션 이어 받기 · 로그아웃 뒤 토큰 · 게스트에 이름 붙이기 · 마지막 로그인 수단 · 탈퇴 유예와 취소. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
 #include "Core/Hash/HashUtil.h"
@@ -138,4 +138,85 @@ SW_TEST_CASE( LoginStoreLogicTest, TokenResumesUntilLogout )
     LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
     AccountIdentity   identity;
     SW_EXPECT_TRUE( logic.validateSession( grant._token, kNowMs + 3000, identity ) != LoginResult::Ok );
+}
+
+/** @brief [LoginStoreLogicTest] 게스트에 이름을 붙이면 그 이름으로 들어온다. 두 번째 이름 · 남의 이름은 AlreadyLinked 다 */
+SW_TEST_CASE( LoginStoreLogicTest, GuestLinksCredentialOnce )
+{
+    Fixture fixture;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Frank_07", "correct horse" ) == LoginResult::Ok );
+    const uint8 arrDeviceSecret[LoginConstant::kDeviceSecretSize]{ 7, 7, 7 };
+    LoginGrant  guestGrant;
+    {
+        LoginStoreOutcome outcome;
+        LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
+        SW_REQUIRE_TRUE( logic.guestLogin( arrDeviceSecret, kNowMs, guestGrant ) == LoginResult::Ok );
+        AccountLinkSummary summary;
+        SW_REQUIRE_TRUE( logic.listLinks( guestGrant._token, kNowMs + 1, summary ) == LoginResult::Ok );
+        SW_EXPECT_TRUE( summary._bGuest == SW_TRUE && summary._bHasCredential == SW_FALSE );
+
+        AccountIdentity identity;
+        SW_EXPECT_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "frank_07", "other horse" }, kNowMs + 2, identity ) == LoginResult::AlreadyLinked );
+        SW_REQUIRE_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "Grace_08", "correct horse" }, kNowMs + 3, identity ) == LoginResult::Ok );
+        SW_EXPECT_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "Grace_09", "correct horse" }, kNowMs + 4, identity ) == LoginResult::AlreadyLinked );
+        SW_REQUIRE_TRUE( logic.listLinks( guestGrant._token, kNowMs + 5, summary ) == LoginResult::Ok );
+        SW_EXPECT_TRUE( summary._bGuest == SW_FALSE && summary._bHasCredential == SW_TRUE );
+    }
+    LoginGrant grant;
+    SW_EXPECT_TRUE( fixture.login( "Grace_08", "correct horse", grant, kNowMs + 10 ) == LoginResult::Ok );
+}
+
+/** @brief [LoginStoreLogicTest] 외부 계정만 있는 계정은 그것을 떼지 못하고(LastLoginMethod), 이름을 붙인 뒤에는 뗀다. 붙지 않은 제공자는 NotLinked 다 */
+SW_TEST_CASE( LoginStoreLogicTest, LastLoginMethodStays )
+{
+    Fixture           fixture;
+    LoginStoreOutcome outcome;
+    LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
+    LoginGrant        grant;
+    SW_REQUIRE_TRUE( logic.platformLogin( "steam", "76561190000000001", "Heidi", nullptr, kNowMs, grant ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( grant._bCreated == SW_TRUE );
+    SW_EXPECT_TRUE( logic.unlinkPlatform( grant._token, "steam", kNowMs + 1 ) == LoginResult::LastLoginMethod );
+    SW_EXPECT_TRUE( logic.unlinkPlatform( grant._token, "epic", kNowMs + 2 ) == LoginResult::NotLinked );
+
+    AccountIdentity identity;
+    SW_REQUIRE_TRUE( logic.linkCredential( grant._token, LoginCredential{ "Heidi_10", "correct horse" }, kNowMs + 3, identity ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( logic.unlinkPlatform( grant._token, "steam", kNowMs + 4 ) == LoginResult::Ok );
+    AccountLinkSummary summary;
+    SW_REQUIRE_TRUE( logic.listLinks( grant._token, kNowMs + 5, summary ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( summary._listProvider.empty() );
+}
+
+/** @brief [LoginStoreLogicTest] 탈퇴 예약은 세션을 끊고 유예 시각을 정한다. 유예 안에 다시 들어와 취소하면 지우지 않고, 취소하지 않으면 시각이 지난 뒤 지워 그 이름으로 들어오지 못한다 */
+SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
+{
+    Fixture fixture;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Ivan_11", "correct horse" ) == LoginResult::Ok );
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Judy_12", "correct horse" ) == LoginResult::Ok );
+    const int64 dueMs = kNowMs + fixture.settings._deletionGraceMs;
+    for ( const string_view name : { string_view( "Ivan_11" ), string_view( "Judy_12" ) } )
+    {
+        LoginGrant grant;
+        SW_REQUIRE_TRUE( fixture.login( name, "correct horse", grant ) == LoginResult::Ok );
+        LoginStoreOutcome outcome;
+        LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
+        int64             outDueMs = 0;
+        SW_REQUIRE_TRUE( logic.requestDeletion( grant._token, kNowMs, outDueMs ) == LoginResult::Ok );
+        SW_EXPECT_EQUAL( dueMs, outDueMs );
+        AccountIdentity identity;
+        SW_EXPECT_TRUE( logic.validateSession( grant._token, kNowMs + 1, identity ) != LoginResult::Ok ); // 예약이 세션을 끊었다
+    }
+
+    LoginGrant ivanGrant;
+    SW_REQUIRE_TRUE( fixture.login( "Ivan_11", "correct horse", ivanGrant, kNowMs + 1000 ) == LoginResult::Ok ); // 유예 안이면 들어온다
+    SW_EXPECT_EQUAL( dueMs, ivanGrant._deletionDueMs );
+    {
+        LoginStoreOutcome outcome;
+        LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
+        SW_REQUIRE_TRUE( logic.cancelDeletion( ivanGrant._token, kNowMs + 2000 ) == LoginResult::Ok );
+        SW_EXPECT_EQUAL( 1, logic.purgeDueDeletions( dueMs + 1, 8 ) ); // Judy 만
+    }
+    LoginGrant grant;
+    SW_EXPECT_TRUE( fixture.login( "Ivan_11", "correct horse", grant, dueMs + 2 ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( int64{ 0 }, grant._deletionDueMs );
+    SW_EXPECT_TRUE( fixture.login( "Judy_12", "correct horse", grant, dueMs + 3 ) == LoginResult::WrongCredentials );
 }

@@ -35,7 +35,7 @@
      그러면 걷기 · 겨눔 · 1인칭 · 보폭 워핑이 바르고(손 장면의 "머리 위 무기"는 뒤 위 카메라의 원근 — 겨눈 상체가 늘 켜져 있다), Shooter3D 체인 전체가 골든 갱신(`-scenario-update-golden`) 뒤 지나간다.
      같이 고칠 것: 눈 높이가 몸의 `Eyes` 소켓이라 1.6 → 1.687 m — `actions` · `rebind` · `sequence/rebind.1 · 2` 의 서 있음 판정(near 1.6 → 1.69, atMost 1.61 → 1.70, atMost 1.65 → 1.74).
      막힌 것 하나(그래서 되돌림): 기사 세트가 입히던 스프링 망토(`cape_knight` — KayKit 사슬 메시 · `knight_cape.rig.xml`)가 UBC 몸을 통째로 덮는다(KayKit 체형 폭). 리그 뼈를 UBC 로 바꿔도(`spine_03` · `pelvis` · `thigh_*` · `calf_*`) 메시 폭은 그대로 —
-     부품에는 크기 칸이 없고 맞춤은 피팅 데이터(`*.partfit.xml`)로만 한다. 망토 시험(`cape.scenario.xml`)이 망토를 계속 보려면 UBC 용 망토(망토 메시의 partfit, 또는 CC0 망토 에셋)를 먼저 둔다.
+     부품에는 크기 칸이 없고 맞춤은 피팅 데이터(`*.partfit.xml`)로만 한다. 피팅 데이터는 겹 · 숨김만 정하고 크기는 바꾸지 않는다. 망토 시험(`cape.scenario.xml`)이 망토를 계속 보려면 UBC 어깨 폭의 망토 메시가 먼저다 — CC0 망토 에셋, 또는 망토 스켈레톤(`knight_cape.skeleton.xml` 의 `cape0..3`)에 가중치를 준 띠 메시를 만들어 모델 가져오기로 굽는다.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
@@ -51,7 +51,7 @@
 | 일 | 내용 |
 |---|---|
 | 흔들리는 게임 골든 | 2026-11-04 Debug · Release 전체 ctest 각 일곱 번과 Release Shooter3D 체인 세 번에서 한 번도 지지 않았다(killcam · cape · bodyviews · useroptions · GL 컨텍스트 잃음 모두). 다시 지면 그 로그의 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다 — GL 컨텍스트 잃음은 GL 디버그 출력(`KHR_debug`)으로 드라이버 리셋인지 VAT 인덱스 드로우인지 가린다 |
-| 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다 — 매칭 · 채팅 거르기 · 라이브 이벤트 · 친구 관계 · 거래 상태 기계 · 우편 · 경제 구매 · 순위 보드 정의 · GM 권한 · 지급은 채웠다, 계정 로그인 저장도 채웠다(가짜 암호). 나머지는 서버 목록 `ServerListModel`(클라이언트 하네스 `OnlineHostTestUtil` 가 필요하다)과 계정의 연동 · 탈퇴 흐름. 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
+| 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다 — 매칭 · 채팅 거르기 · 라이브 이벤트 · 친구 관계 · 거래 상태 기계 · 우편 · 경제 구매 · 순위 보드 정의 · GM 권한 · 지급은 채웠다, 계정 로그인 저장(가짜 암호 — 연동 · 마지막 로그인 수단 · 탈퇴 유예 포함)과 서버 목록 `ServerListModel` 의 실패 길도 채웠다. 나머지는 `ServerListModel` 의 응답 길(Loaded · 겹친 요청 거절 — 루프백 서버 하네스가 필요하다). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
 
 ### 5. 그 뒤
 
