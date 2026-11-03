@@ -32,7 +32,10 @@
      바뀌는 검증: Shooter3D 골든(killcam · cape · bodyviews · arena …)을 다시 굽고, `game/shooter3d/automation/editor/charactereditorscene` 의 `helmet_knight` 기대값을 새 장비로.
      2026-11-04 시도(되돌림): 그래프는 adventurer 를 복사해 노드 이름만 UAL1 클립으로(Idle→`idle_loop` — `pistol_idle_loop` 는 총을 머리 옆으로 든다, Walking_A→`walk_loop`, Running_A→`jog_fwd_loop`, Jump_Idle→`jump_loop`, Hit_A→`hit_chest`, Death_A→`death01`,
      짝 없는 뒷걸음 · 옆 달리기는 한 표본 `blend_space` 로 같은 클립을 다른 이름으로, 층은 `pistol_aim_neutral` · `pistol_shoot` + 상체 마스크 뿌리 `spine_01`), 리그 뼈는 `pelvis` · `thigh_l` · `calf_l` · `foot_l` · `upperarm_l` · `lowerarm_l` · `hand_l` · `Head`, 손 공간 `hand_r`.
-     그러면 bodyviews 의 걷기 · 겨눔 · 1인칭은 바르게 나오고 보폭 워핑도 돈다. 남은 결함 하나: 3인칭 손 장면(hand_rifle · hand_pistol)에서 무기가 머리 위로 간다 — UBC `Gun` 소켓 회전(`ubc_humanoid.sockets.xml` 의 0 -90 0)과 왼손 IK(무기 SupportHand)를 UBC 손 축에 맞춘 뒤 골든을 굽는다.
+     그러면 걷기 · 겨눔 · 1인칭 · 보폭 워핑이 바르고(손 장면의 "머리 위 무기"는 뒤 위 카메라의 원근 — 겨눈 상체가 늘 켜져 있다), Shooter3D 체인 전체가 골든 갱신(`-scenario-update-golden`) 뒤 지나간다.
+     같이 고칠 것: 눈 높이가 몸의 `Eyes` 소켓이라 1.6 → 1.687 m — `actions` · `rebind` · `sequence/rebind.1 · 2` 의 서 있음 판정(near 1.6 → 1.69, atMost 1.61 → 1.70, atMost 1.65 → 1.74).
+     막힌 것 하나(그래서 되돌림): 기사 세트가 입히던 스프링 망토(`cape_knight` — KayKit 사슬 메시 · `knight_cape.rig.xml`)가 UBC 몸을 통째로 덮는다(KayKit 체형 폭). 리그 뼈를 UBC 로 바꿔도(`spine_03` · `pelvis` · `thigh_*` · `calf_*`) 메시 폭은 그대로 —
+     부품에는 크기 칸이 없고 맞춤은 피팅 데이터(`*.partfit.xml`)로만 한다. 망토 시험(`cape.scenario.xml`)이 망토를 계속 보려면 UBC 용 망토(망토 메시의 partfit, 또는 CC0 망토 에셋)를 먼저 둔다.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
