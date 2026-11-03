@@ -389,6 +389,607 @@ msgctxt "EdMeshModifiers.WorldSpace"
 msgid "World Space"
 msgstr "월드 공간"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
+msgid "A scene's Character Appearance component names this id."
+msgstr "씬의 캐릭터 외형 컴포넌트가 이 id 를 가리킵니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Abort"
+msgid "Abort"
+msgstr "중단"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.AddBoneTurn"
+msgid "Add bone turn"
+msgstr "뼈 회전 추가"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.AddChain"
+msgid "Add chain"
+msgstr "사슬 추가"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.AddNode"
+msgid "Add node"
+msgstr "노드 추가"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.AddNotifyAtT"
+msgid "Add notify at t"
+msgstr "t 에 알림 추가"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.AddPair"
+msgid "Add pair"
+msgstr "짝 추가"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.AddSlot"
+msgid "Add slot"
+msgstr "칸 추가"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Appearance"
+msgid "Appearance"
+msgstr "외형"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ApplySanction"
+msgid "Apply sanction"
+msgstr "제재 적용"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.AutoLayout"
+msgid "Auto layout"
+msgstr "자동 배치"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.BlackboardKey"
+msgid "Blackboard key"
+msgstr "블랙보드 키"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Check"
+msgid "Check"
+msgstr "검사"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.ClearTarget"
+msgid "Clear target"
+msgstr "대상 지우기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.ClickANodeToEditIt"
+msgid "Click a node to edit it"
+msgstr "노드를 누르면 편집합니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ClosedReports"
+msgid "Closed reports"
+msgstr "닫은 신고"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Compare"
+msgid "Compare"
+msgstr "비교"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.Connect"
+msgid "Connect"
+msgstr "연결"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Count0UntilItFails"
+msgid "Count (0 = until it fails)"
+msgstr "횟수(0 = 실패할 때까지)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.CustomizationValues"
+msgid "Customization values"
+msgstr "꾸미기 값"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.CustomizeReleaseASliderToRefit"
+msgid "Customize (release a slider to refit)"
+msgstr "꾸미기(슬라이더를 놓으면 다시 맞춘다)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.DataPresetSceneUse"
+msgid "Data preset (scene use)"
+msgstr "데이터 프리셋(씬에서 씀)"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Delete"
+msgid "Delete"
+msgstr "삭제"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.DeleteNode"
+msgid "Delete node"
+msgstr "노드 삭제"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Disconnect"
+msgid "Disconnect"
+msgstr "연결 끊기"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Dismiss"
+msgid "Dismiss"
+msgstr "닫기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Down"
+msgid "Down"
+msgstr "아래"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Edit"
+msgid "Edit"
+msgstr "편집"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.EndMaintenance"
+msgid "End maintenance"
+msgstr "점검 끝내기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ExportDataPreset"
+msgid "Export data preset"
+msgstr "데이터 프리셋 내보내기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FitCheckViewOnly"
+msgid "Fit check (view only)"
+msgstr "맞춤 검사(보기만)"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Grant"
+msgid "Grant"
+msgstr "지급"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.IKGoal"
+msgid "IK goal"
+msgstr "IK 목표"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.Invert"
+msgid "Invert"
+msgstr "반전"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.LiftSanction"
+msgid "Lift sanction"
+msgstr "제재 풀기"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ListAudit"
+msgid "List audit"
+msgstr "감사 기록 보기"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ListLiveEvents"
+msgid "List live events"
+msgstr "라이브 이벤트 보기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Load"
+msgid "Load"
+msgstr "불러오기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadASkeletonToSeeItsBonesThe"
+msgid "Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
+msgstr "스켈레톤을 불러오면 뼈가 보입니다. 스켈레톤은 읽기 전용이고 편집은 기준 포즈 파일에 들어갑니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadAppearanceDataToSeeWhichRulesHid"
+msgid "Load appearance data to see which rules hid or changed what."
+msgstr "외형 데이터를 불러오면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadData"
+msgid "Load data"
+msgstr "데이터 불러오기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadPose"
+msgid "Load pose"
+msgstr "포즈 불러오기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadPresets"
+msgid "Load presets"
+msgstr "프리셋 불러오기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadSkeleton"
+msgid "Load skeleton"
+msgstr "스켈레톤 불러오기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadTheAppearanceDataAppearanceTabToDress"
+msgid "Load the appearance data (Appearance tab) to dress the preview body."
+msgstr "외형 데이터(외형 탭)를 불러오면 미리보기 몸에 입힙니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
+msgid "Load the items file and the appearance folder to pick items and see rule explanations."
+msgstr "항목 파일과 외형 폴더를 불러오면 항목을 고르고 규칙 설명을 봅니다."
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.LookUpAnAccountToSeeItsBalances"
+msgid "Look up an account to see its balances and sanctions"
+msgstr "계정을 찾으면 잔액과 제재가 보입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Lookup"
+msgid "Lookup"
+msgstr "찾기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.MapSameNames"
+msgid "Map same names"
+msgstr "같은 이름끼리 잇기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Mirror"
+msgid "Mirror"
+msgstr "대칭"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.MirrorBone"
+msgid "Mirror bone"
+msgstr "뼈 대칭"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Name"
+msgid "Name"
+msgstr "이름"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.New"
+msgid "New"
+msgstr "새로"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
+msgid "No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
+msgstr "이 선택에는 꾸미기 스키마가 없습니다(외형 데이터를 불러오고 스키마가 있는 기준 프리셋을 고르세요)."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoFitResultYetThePreviewSceneSolves"
+msgid "No fit result yet. The preview scene solves the fit when a slider is released."
+msgstr "아직 맞춤 결과가 없습니다. 슬라이더를 놓으면 미리보기 씬이 맞춥니다."
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
+msgid "No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
+msgstr "한 프로세스 게임이 등록되지 않았습니다(NetSimGameRegistry) — 키트 세션(INetSimSession)이 있는 게임만 여기서 돕니다."
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
+msgid "No login handler is bound: GM commands are refused as not logged in"
+msgstr "로그인 처리기가 없습니다: GM 명령은 로그인하지 않은 것으로 거절됩니다"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoPenetration"
+msgid "No penetration."
+msgstr "뚫림 없음."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoRuleFired"
+msgid "No rule fired."
+msgstr "발동한 규칙이 없습니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.OpenABehaviorTreeFileBtXmlWith"
+msgid "Open a behavior tree file (*.bt.xml) with Open..."
+msgstr "Open... 으로 행동 트리 파일(*.bt.xml)을 엽니다"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPlugin.OpenACamerasXmlPresetFileToSee"
+msgid "Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
+msgstr ".cameras.xml 프리셋 파일을 열면 여기서 카메라가 보입니다. 프리셋 편집은 카탈로그 편집기에서 합니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.OpenAPairedanimXmlToScrubItsRoles"
+msgid "Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies."
+msgstr ".pairedanim.xml 을 열어 역할을 한 시계로 훑고 맞춤 오프셋을 옮기고 공유 알림을 편집합니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.OpenARetargetXmlOrTypeANew"
+msgid "Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
+msgstr ".retarget.xml 을 열거나 새 경로를 적고 새로를 눌러 두 스켈레톤의 사슬을 짝짓고 묶임을 확인합니다."
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.OpenReports"
+msgid "Open reports"
+msgstr "열린 신고"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
+msgid "Orthographic preset - the preview draws it in perspective."
+msgstr "직교 프리셋 — 미리보기는 원근으로 그립니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickABasePresetToSeeWhichRules"
+msgid "Pick a base preset to see which rules hid or changed what."
+msgstr "기준 프리셋을 고르면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다."
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.PostNotice"
+msgid "Post notice"
+msgstr "공지 올리기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PresetsUserData"
+msgid "Presets (user data)"
+msgstr "프리셋(사용자 데이터)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Preview"
+msgid "Preview"
+msgstr "미리보기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PreviewConstraintRig"
+msgid "Preview constraint rig"
+msgstr "제약 리그 미리보기"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.PutLiveEvent"
+msgid "Put live event"
+msgstr "라이브 이벤트 넣기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.ReactiveReCheckHigherPriorityChildrenEveryTick"
+msgid "Reactive (re-check higher priority children every tick)"
+msgstr "반응형(틱마다 우선순위가 높은 자식을 다시 본다)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Redo"
+msgid "Redo"
+msgstr "다시 실행"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.RedoAppearance"
+msgid "Redo appearance"
+msgstr "외형 다시 실행"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.RedoPose"
+msgid "Redo pose"
+msgstr "포즈 다시 실행"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.RefundRevokeMayLeaveADebt"
+msgid "Refund revoke (may leave a debt)"
+msgstr "환불 회수(빚이 남을 수 있다)"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Reload"
+msgid "Reload"
+msgstr "다시 읽기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ReloadFromDiskDiscardEdits"
+msgid "Reload from disk (discard edits)"
+msgstr "디스크에서 다시 읽기(편집 버림)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.Remove"
+msgid "Remove"
+msgstr "제거"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.RemoveBrokenWires"
+msgid "Remove broken wires"
+msgstr "끊어진 선 지우기"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.RemoveLiveEvent"
+msgid "Remove live event"
+msgstr "라이브 이벤트 지우기"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.RemoveNotice"
+msgid "Remove notice"
+msgstr "공지 지우기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Rename"
+msgid "Rename"
+msgstr "이름 바꾸기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.RepathDistance"
+msgid "Repath distance"
+msgstr "경로 다시 찾기 거리"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ResetBone"
+msgid "Reset bone"
+msgstr "뼈 초기화"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Resolve"
+msgid "Resolve"
+msgstr "처리"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Revoke"
+msgid "Revoke"
+msgstr "회수"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Roles"
+msgid "Roles"
+msgstr "역할"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Save"
+msgid "Save"
+msgstr "저장"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SaveAsPreset"
+msgid "Save as preset"
+msgstr "프리셋으로 저장"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SavePose"
+msgid "Save pose"
+msgstr "포즈 저장"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SaveThumbnail"
+msgid "Save thumbnail"
+msgstr "썸네일 저장"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Seconds"
+msgid "Seconds"
+msgstr "초"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SelectABoneToEditItsReferencePose"
+msgid "Select a bone to edit its reference pose."
+msgstr "뼈를 고르면 기준 포즈를 편집합니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.SelectANodeToEditItRightClick"
+msgid "Select a node to edit it. Right-click the canvas to add one."
+msgstr "노드를 고르면 편집합니다. 캔버스를 오른쪽 클릭해 더합니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
+msgid "Select an object that has a Gimmick Circuit component"
+msgstr "기믹 회로 컴포넌트가 있는 오브젝트를 고릅니다"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SelectionBasePresetBodySlotsCustomizationValues"
+msgid "Selection (base preset, body, slots, customization values)"
+msgstr "선택(기준 프리셋 · 몸 · 칸 · 꾸미기 값)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.SetTheSourceAndTargetSkeletonsToSee"
+msgid "Set the source and target skeletons to see them overlaid here."
+msgstr "원본 · 대상 스켈레톤을 정하면 여기서 겹쳐 보입니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.SharedNotifies"
+msgid "Shared notifies"
+msgstr "공유 알림"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Skeleton"
+msgid "Skeleton"
+msgstr "스켈레톤"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
+msgid "Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
+msgstr "스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Slots"
+msgid "Slots"
+msgstr "칸"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Sockets"
+msgid "Sockets"
+msgstr "소켓"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPlugin.StartInProcess"
+msgid "Start in process"
+msgstr "한 프로세스로 시작"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.StartMaintenance"
+msgid "Start maintenance"
+msgstr "점검 시작"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPlugin.Stop"
+msgid "Stop"
+msgstr "정지"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.TargetObject"
+msgid "Target object"
+msgstr "대상 오브젝트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Task"
+msgid "Task"
+msgstr "작업"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.TheNodeEditorCouldNotBeCreated"
+msgid "The node editor could not be created"
+msgstr "노드 편집기를 만들지 못했습니다"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Undo"
+msgid "Undo"
+msgstr "실행 취소"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.UndoAppearance"
+msgid "Undo appearance"
+msgstr "외형 실행 취소"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.UndoPose"
+msgid "Undo pose"
+msgstr "포즈 실행 취소"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Up"
+msgid "Up"
+msgstr "위"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.UseSelectedObject"
+msgid "Use selected object"
+msgstr "고른 오브젝트 쓰기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Value"
+msgid "Value"
+msgstr "값"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
+msgid "Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
+msgstr "뷰포트 기즈모 편집은 미리보기 씬(EditorMultiWorld)이 필요합니다."
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.WhyDoesItLookLikeThisRules"
+msgid "Why does it look like this? (rules)"
+msgstr "왜 이렇게 보이나(규칙)"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.ZoomFit"
+msgid "Zoom fit"
+msgstr "맞춰 보기"
+
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnActivity"
 msgid "Activity"

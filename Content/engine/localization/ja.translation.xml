@@ -102,6 +102,186 @@
 		<entry key="EdMeshModifiers.UseSelectionForParam" text="選択を使用" sourceHash="18163441a7dc78f2" />
 		<entry key="EdMeshModifiers.WarpExportPath" text="ワープファイル (.mfwarp)" sourceHash="ab63f8ba7f42ead5" />
 		<entry key="EdMeshModifiers.WorldSpace" text="ワールド空間" sourceHash="704e1344b9026739" />
+		<entry key="EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
+		       text="シーンのキャラクター外見コンポーネントがこの id を指します。"
+		       sourceHash="5163a04480efea53" />
+		<entry key="EdPlugin.Abort" text="中断" sourceHash="0491e53d9de2e899" />
+		<entry key="EdPlugin.AddBoneTurn" text="ボーン回転を追加" sourceHash="9f9084fadd906ced" />
+		<entry key="EdPlugin.AddChain" text="チェーンを追加" sourceHash="057853bcd1500705" />
+		<entry key="EdPlugin.AddNode" text="ノードを追加" sourceHash="e63c78875f5b2178" />
+		<entry key="EdPlugin.AddNotifyAtT" text="t に通知を追加" sourceHash="d03b0ab100cbc98e" />
+		<entry key="EdPlugin.AddPair" text="ペアを追加" sourceHash="93345f519ff98430" />
+		<entry key="EdPlugin.AddSlot" text="スロットを追加" sourceHash="02c64e6a6306c0b0" />
+		<entry key="EdPlugin.Appearance" text="外見" sourceHash="f0e261e04eda82ff" />
+		<entry key="EdPlugin.ApplySanction" text="制裁を適用" sourceHash="9f0c979ae0d9d618" />
+		<entry key="EdPlugin.AutoLayout" text="自動レイアウト" sourceHash="4f4251e697a0d1dc" />
+		<entry key="EdPlugin.BlackboardKey" text="ブラックボードキー" sourceHash="dd80bb88ea05aac3" />
+		<entry key="EdPlugin.Check" text="チェック" sourceHash="42cbd8dca939a9c7" />
+		<entry key="EdPlugin.ClearTarget" text="ターゲットを解除" sourceHash="d18a85c948654d57" />
+		<entry key="EdPlugin.ClickANodeToEditIt" text="ノードをクリックして編集" sourceHash="3300dd9449098b38" />
+		<entry key="EdPlugin.ClosedReports" text="閉じた通報" sourceHash="3c5905586fa5e736" />
+		<entry key="EdPlugin.Compare" text="比較" sourceHash="7c54f95c59141594" />
+		<entry key="EdPlugin.Connect" text="接続" sourceHash="7a4f059aaa029719" />
+		<entry key="EdPlugin.Count0UntilItFails" text="回数(0 = 失敗するまで)" sourceHash="2f9c842033f27ce0" />
+		<entry key="EdPlugin.CustomizationValues" text="カスタマイズ値" sourceHash="fb5d3ccc0d692148" />
+		<entry key="EdPlugin.CustomizeReleaseASliderToRefit"
+		       text="カスタマイズ(スライダーを離すと再フィット)"
+		       sourceHash="d4d2e4af15f5a303" />
+		<entry key="EdPlugin.DataPresetSceneUse"
+		       text="データプリセット(シーン用)"
+		       sourceHash="b0eca8332d850996" />
+		<entry key="EdPlugin.Delete" text="削除" sourceHash="dc673e73b5c13aea" />
+		<entry key="EdPlugin.DeleteNode" text="ノードを削除" sourceHash="d9bdfc0f95188eea" />
+		<entry key="EdPlugin.Disconnect" text="切断" sourceHash="d2208cd1a767644b" />
+		<entry key="EdPlugin.Dismiss" text="閉じる" sourceHash="12d6dde9b30c3093" />
+		<entry key="EdPlugin.Down" text="下" sourceHash="032c13736048bf35" />
+		<entry key="EdPlugin.Edit" text="編集" sourceHash="64ef2a6c2dd1d3d1" />
+		<entry key="EdPlugin.EndMaintenance" text="メンテナンス終了" sourceHash="7d5699fb9376bca1" />
+		<entry key="EdPlugin.ExportDataPreset" text="データプリセットを書き出す" sourceHash="64b8de7de2582e1c" />
+		<entry key="EdPlugin.FitCheckViewOnly" text="フィットチェック(表示のみ)" sourceHash="7b272a466c1e8140" />
+		<entry key="EdPlugin.Grant" text="付与" sourceHash="ef16778fe7074a8d" />
+		<entry key="EdPlugin.IKGoal" text="IK ゴール" sourceHash="1d84f0c6c37ff4e8" />
+		<entry key="EdPlugin.Invert" text="反転" sourceHash="93b38b71b79d98c1" />
+		<entry key="EdPlugin.LiftSanction" text="制裁を解除" sourceHash="81fdfffbe8a3f431" />
+		<entry key="EdPlugin.ListAudit" text="監査ログ一覧" sourceHash="961acb5f276c143a" />
+		<entry key="EdPlugin.ListLiveEvents" text="ライブイベント一覧" sourceHash="418530c2b0d3dec6" />
+		<entry key="EdPlugin.Load" text="読み込み" sourceHash="4f20edb48a6287c9" />
+		<entry key="EdPlugin.LoadASkeletonToSeeItsBonesThe"
+		       text="スケルトンを読み込むとボーンが見えます。スケルトンは読み取り専用で、編集は基準ポーズファイルに入ります。"
+		       sourceHash="3dbbd81826b0e7db" />
+		<entry key="EdPlugin.LoadAppearanceDataToSeeWhichRulesHid"
+		       text="外見データを読み込むと、どのルールが何を隠した・変えたかが見えます。"
+		       sourceHash="f83cdb5227cb0389" />
+		<entry key="EdPlugin.LoadData" text="データを読み込む" sourceHash="5832611c2fec6e73" />
+		<entry key="EdPlugin.LoadPose" text="ポーズを読み込む" sourceHash="4ffadf807e14435a" />
+		<entry key="EdPlugin.LoadPresets" text="プリセットを読み込む" sourceHash="53d40ec6baa0fdcd" />
+		<entry key="EdPlugin.LoadSkeleton" text="スケルトンを読み込む" sourceHash="e6eb1c155d2b9c24" />
+		<entry key="EdPlugin.LoadTheAppearanceDataAppearanceTabToDress"
+		       text="外見データ(外見タブ)を読み込むとプレビューの体に着せます。"
+		       sourceHash="8d8f91e2d7e6e6df" />
+		<entry key="EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
+		       text="アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。"
+		       sourceHash="cf5d0a507c2be420" />
+		<entry key="EdPlugin.LookUpAnAccountToSeeItsBalances"
+		       text="アカウントを検索すると残高と制裁が見えます"
+		       sourceHash="5be35335366b396f" />
+		<entry key="EdPlugin.Lookup" text="検索" sourceHash="3b29e8112bce0f0b" />
+		<entry key="EdPlugin.MapSameNames" text="同名同士をつなぐ" sourceHash="18af1bfc89304055" />
+		<entry key="EdPlugin.Mirror" text="ミラー" sourceHash="1e5ff0f50c741122" />
+		<entry key="EdPlugin.MirrorBone" text="ボーンをミラー" sourceHash="76a77b2d4eb713d0" />
+		<entry key="EdPlugin.Name" text="名前" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdPlugin.New" text="新規" sourceHash="3741f519c32ac391" />
+		<entry key="EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
+		       text="この選択にはカスタマイズスキーマがありません(外見データを読み込み、スキーマのある基準プリセットを選んでください)。"
+		       sourceHash="a15d48c44f912810" />
+		<entry key="EdPlugin.NoFitResultYetThePreviewSceneSolves"
+		       text="まだフィット結果がありません。スライダーを離すとプレビューシーンがフィットします。"
+		       sourceHash="792e9f927dc4d186" />
+		<entry key="EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
+		       text="インプロセスゲームが登録されていません(NetSimGameRegistry) — キットセッション(INetSimSession)のあるゲームだけがここで動きます。"
+		       sourceHash="89f0528658a0433b" />
+		<entry key="EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
+		       text="ログインハンドラがありません: GM コマンドは未ログインとして拒否されます"
+		       sourceHash="0a0746e5bde7cb37" />
+		<entry key="EdPlugin.NoPenetration" text="貫通なし。" sourceHash="15c1344dcefbbe6b" />
+		<entry key="EdPlugin.NoRuleFired" text="発動したルールはありません。" sourceHash="74ccb053330e02d2" />
+		<entry key="EdPlugin.OpenABehaviorTreeFileBtXmlWith"
+		       text="Open... でビヘイビアツリーファイル(*.bt.xml)を開きます"
+		       sourceHash="c353725f155e1e20" />
+		<entry key="EdPlugin.OpenACamerasXmlPresetFileToSee"
+		       text=".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。"
+		       sourceHash="ea9be68785b441fa" />
+		<entry key="EdPlugin.OpenAPairedanimXmlToScrubItsRoles"
+		       text=".pairedanim.xml を開いて役割を一つの時計でスクラブし、位置合わせオフセットを動かし、共有通知を編集します。"
+		       sourceHash="0e0fa96ad3b8101a" />
+		<entry key="EdPlugin.OpenARetargetXmlOrTypeANew"
+		       text=".retarget.xml を開くか、新しいパスを入力して新規を押し、二つのスケルトンのチェーンを対にして結び付きを確認します。"
+		       sourceHash="e35d453f7963c6c1" />
+		<entry key="EdPlugin.OpenReports" text="未処理の通報" sourceHash="f38f9ccb5aa4a4d2" />
+		<entry key="EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
+		       text="平行投影プリセット — プレビューは透視で描きます。"
+		       sourceHash="6eb50dde8e0f5da3" />
+		<entry key="EdPlugin.PickABasePresetToSeeWhichRules"
+		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。"
+		       sourceHash="b8d45b1a743fb251" />
+		<entry key="EdPlugin.PostNotice" text="お知らせを掲示" sourceHash="37e6931da5f87431" />
+		<entry key="EdPlugin.PresetsUserData" text="プリセット(ユーザーデータ)" sourceHash="5f4339cfe94334b7" />
+		<entry key="EdPlugin.Preview" text="プレビュー" sourceHash="417b90913e05bc17" />
+		<entry key="EdPlugin.PreviewConstraintRig" text="拘束リグをプレビュー" sourceHash="ca9d7f72602ecd10" />
+		<entry key="EdPlugin.PutLiveEvent" text="ライブイベントを登録" sourceHash="9a54ec5c13858e78" />
+		<entry key="EdPlugin.ReactiveReCheckHigherPriorityChildrenEveryTick"
+		       text="リアクティブ(毎ティック優先度の高い子を再チェック)"
+		       sourceHash="9d5dfeddef6d942d" />
+		<entry key="EdPlugin.Redo" text="やり直し" sourceHash="7417792bbe720149" />
+		<entry key="EdPlugin.RedoAppearance" text="外見をやり直し" sourceHash="90c27634b30aba49" />
+		<entry key="EdPlugin.RedoPose" text="ポーズをやり直し" sourceHash="c78d384206df3fda" />
+		<entry key="EdPlugin.RefundRevokeMayLeaveADebt"
+		       text="返金回収(負債が残る場合がある)"
+		       sourceHash="a7c96eb259368178" />
+		<entry key="EdPlugin.Reload" text="再読み込み" sourceHash="d5b6130b4937488c" />
+		<entry key="EdPlugin.ReloadFromDiskDiscardEdits"
+		       text="ディスクから再読み込み(編集を破棄)"
+		       sourceHash="1a5da284e88aa713" />
+		<entry key="EdPlugin.Remove" text="削除" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdPlugin.RemoveBrokenWires" text="切れた配線を削除" sourceHash="56ba420ceb30c42c" />
+		<entry key="EdPlugin.RemoveLiveEvent" text="ライブイベントを削除" sourceHash="286ec822b6f1b615" />
+		<entry key="EdPlugin.RemoveNotice" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
+		<entry key="EdPlugin.Rename" text="名前を変更" sourceHash="60320a18282b2b33" />
+		<entry key="EdPlugin.RepathDistance" text="再経路探索距離" sourceHash="7ea4982c8d5bb972" />
+		<entry key="EdPlugin.ResetBone" text="ボーンをリセット" sourceHash="559f9c3dcb23c44e" />
+		<entry key="EdPlugin.Resolve" text="処理" sourceHash="4de430b40c94e903" />
+		<entry key="EdPlugin.Revoke" text="回収" sourceHash="0e871352ba4b17d3" />
+		<entry key="EdPlugin.Roles" text="役割" sourceHash="6b2beba7ab637e9e" />
+		<entry key="EdPlugin.Save" text="保存" sourceHash="33f85f24c0f5f008" />
+		<entry key="EdPlugin.SaveAsPreset" text="プリセットとして保存" sourceHash="c62bf7298fcf87d7" />
+		<entry key="EdPlugin.SavePose" text="ポーズを保存" sourceHash="4ff1503133a9ec95" />
+		<entry key="EdPlugin.SaveThumbnail" text="サムネイルを保存" sourceHash="a7a44b23c1b690f4" />
+		<entry key="EdPlugin.Seconds" text="秒" sourceHash="c4842e5b8b90466a" />
+		<entry key="EdPlugin.SelectABoneToEditItsReferencePose"
+		       text="ボーンを選ぶと基準ポーズを編集します。"
+		       sourceHash="21ed70f813fce439" />
+		<entry key="EdPlugin.SelectANodeToEditItRightClick"
+		       text="ノードを選ぶと編集します。キャンバスを右クリックして追加します。"
+		       sourceHash="4609bfba81986750" />
+		<entry key="EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
+		       text="ギミック回路コンポーネントを持つオブジェクトを選びます"
+		       sourceHash="2b3af1b8adec3a10" />
+		<entry key="EdPlugin.SelectionBasePresetBodySlotsCustomizationValues"
+		       text="選択(基準プリセット・体・スロット・カスタマイズ値)"
+		       sourceHash="da54eecc567a86ac" />
+		<entry key="EdPlugin.SetTheSourceAndTargetSkeletonsToSee"
+		       text="ソースとターゲットのスケルトンを設定するとここに重ねて表示されます。"
+		       sourceHash="69fb10c2693ccadf" />
+		<entry key="EdPlugin.SharedNotifies" text="共有通知" sourceHash="d954714e8a7eefe9" />
+		<entry key="EdPlugin.Skeleton" text="スケルトン" sourceHash="73c6ad85b7235b4e" />
+		<entry key="EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
+		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。"
+		       sourceHash="58ea5f3287f882b9" />
+		<entry key="EdPlugin.Slots" text="スロット" sourceHash="f96b15cd3921d4a6" />
+		<entry key="EdPlugin.Sockets" text="ソケット" sourceHash="295e56d2a3af242d" />
+		<entry key="EdPlugin.StartInProcess" text="インプロセスで開始" sourceHash="a2fef448b6708fdf" />
+		<entry key="EdPlugin.StartMaintenance" text="メンテナンス開始" sourceHash="2e417dd12aa53688" />
+		<entry key="EdPlugin.Stop" text="停止" sourceHash="d9ad53251f2330a5" />
+		<entry key="EdPlugin.TargetObject" text="対象オブジェクト" sourceHash="385e62428acaa50f" />
+		<entry key="EdPlugin.Task" text="タスク" sourceHash="03ee3cfb0919c62c" />
+		<entry key="EdPlugin.TheNodeEditorCouldNotBeCreated"
+		       text="ノードエディタを作成できませんでした"
+		       sourceHash="8b63c1afdb07b732" />
+		<entry key="EdPlugin.Undo" text="元に戻す" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdPlugin.UndoAppearance" text="外見を元に戻す" sourceHash="f80092870a6bfd27" />
+		<entry key="EdPlugin.UndoPose" text="ポーズを元に戻す" sourceHash="d192bb423fa30a2c" />
+		<entry key="EdPlugin.Up" text="上" sourceHash="09313a07b5c3ab60" />
+		<entry key="EdPlugin.UseSelectedObject"
+		       text="選択中のオブジェクトを使う"
+		       sourceHash="63735c6b1d1894ec" />
+		<entry key="EdPlugin.Value" text="値" sourceHash="41f7dca46d3f1b4a" />
+		<entry key="EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
+		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。"
+		       sourceHash="4da4e8c3ea94daf6" />
+		<entry key="EdPlugin.WhyDoesItLookLikeThisRules"
+		       text="なぜこう見えるか(ルール)"
+		       sourceHash="aa54935a9461505e" />
+		<entry key="EdPlugin.ZoomFit" text="ズームフィット" sourceHash="7a6733cf04aafd9d" />
 		<entry key="EdSchedule.ColumnActivity" text="行動" sourceHash="6c76b294d740446c" />
 		<entry key="EdSchedule.ColumnPlace" text="場所" sourceHash="13b3f5afa0862d1c" />
 		<entry key="EdSchedule.ColumnSource" text="出典" sourceHash="5f43af3669b1e098" />

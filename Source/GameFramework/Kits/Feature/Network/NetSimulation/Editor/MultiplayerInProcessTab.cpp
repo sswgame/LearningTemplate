@@ -12,6 +12,8 @@
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 
@@ -47,7 +49,7 @@ namespace sw::editor
                 drawStartControls( session, listGame );
                 return;
             }
-            const bool bStopClicked = ImGui::Button( "Stop" );
+            const bool bStopClicked = ImGui::Button( SW_LOCKEY( "EdPlugin", "Stop" ) );
             EditorSelfTestMarks::note( "multiplayer.inprocess.stop" );
             if ( bStopClicked )
             {
@@ -68,7 +70,7 @@ namespace sw::editor
         {
             if ( listGame.empty() )
             {
-                ImGui::TextUnformatted( "No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here." );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "NoInProcessGameIsRegisteredNetSimGameRegistryOnly" ) );
                 return;
             }
             _gameIndex = MathUtil::clamp( _gameIndex, 0, static_cast<int32>( listGame.size() ) - 1 );
@@ -83,7 +85,7 @@ namespace sw::editor
             }
             EditorWidgets::drawPropertyRowLabel( "Clients" );
             ImGui::SliderInt( "##Clients", &_clientCount, 1, EditorNetSimSession::kMaxClients );
-            const bool bStartClicked = ImGui::Button( "Start in process" );
+            const bool bStartClicked = ImGui::Button( SW_LOCKEY( "EdPlugin", "StartInProcess" ) );
             EditorSelfTestMarks::note( "multiplayer.inprocess.start" );
             if ( bStartClicked )
             {

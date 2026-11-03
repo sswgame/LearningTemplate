@@ -270,8 +270,8 @@ namespace sw::editor
         if ( _document.hasExternalChange() )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "A socket file was changed on disk while this window has unsaved edits." );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload from disk (discard edits)" ) );
-            if ( ImGui::SmallButton( "Reload from disk (discard edits)" ) && _document.loadSocketFile() == false )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ReloadFromDiskDiscardEdits" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "ReloadFromDiskDiscardEdits" ) ) && _document.loadSocketFile() == false )
                 SW_LOG_WARNING_ID( "CharacterEditorPanel.CharacterEditorSocketFile", "Character Editor: the socket file '%#' could not be reloaded - the edits stay", _document.getPaths()._socketPath.c_str() ); // 까닭은 상태 줄에 남았다
         }
         ImGui::Separator();
@@ -285,21 +285,21 @@ namespace sw::editor
 
         if ( ImGui::BeginTabBar( "##CharacterEditorTabs" ) )
         {
-            const bool bSocketTab = ImGui::BeginTabItem( "Sockets" );
+            const bool bSocketTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Sockets" ) );
             EditorSelfTestMarks::note( "charactereditor.tab.sockets" );
             if ( bSocketTab )
             {
                 drawSocketTab();
                 ImGui::EndTabItem();
             }
-            const bool bSkeletonTab = ImGui::BeginTabItem( "Skeleton" );
+            const bool bSkeletonTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Skeleton" ) );
             EditorSelfTestMarks::note( "charactereditor.tab.skeleton" );
             if ( bSkeletonTab )
             {
                 drawSkeletonTab();
                 ImGui::EndTabItem();
             }
-            const bool bAppearanceTab = ImGui::BeginTabItem( "Appearance" );
+            const bool bAppearanceTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Appearance" ) );
             EditorSelfTestMarks::note( "charactereditor.tab.appearance" );
             if ( bAppearanceTab )
             {
@@ -307,7 +307,7 @@ namespace sw::editor
                 ImGui::EndTabItem();
             }
             // 미리보기는 탭 하나다 — 다른 탭의 줄을 밀지 않고, 가려진 탭은 그리지 않는다(뷰포트를 부른 프레임만 렌더한다).
-            const bool bPreviewTab = ImGui::BeginTabItem( "Preview" );
+            const bool bPreviewTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Preview" ) );
             EditorSelfTestMarks::note( "charactereditor.tab.preview" );
             if ( bPreviewTab )
             {
@@ -380,7 +380,7 @@ namespace sw::editor
     {
         if ( _document.isDatabaseLoaded() == false )
         {
-            EditorWidgets::drawEmptyHint( "Load the appearance data (Appearance tab) to dress the preview body." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "LoadTheAppearanceDataAppearanceTabToDress" ) );
             return;
         }
         syncPreviewBody();
@@ -393,7 +393,7 @@ namespace sw::editor
             drawAnimationControls( *pAnimator );
         if ( _document.getPaths()._rigPath.empty() == false )
         {
-            ImGui::Checkbox( "Preview constraint rig", &_bRigPreview );
+            ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "PreviewConstraintRig" ), &_bRigPreview );
             EditorSelfTestMarks::note( "charactereditor.rigPreview" );
             if ( pMutableBody != nullptr )
                 syncRigPreview( *pMutableBody );
@@ -423,7 +423,7 @@ namespace sw::editor
             _seenFitRevision = pAppearance->getFitResultRevision();
         }
         // 슬라이더는 뷰포트 아래에 둔다 — 모습이 바뀌는 것을 보며 끈다.
-        _bCustomizationOpen = ImGui::CollapsingHeader( "Customize (release a slider to refit)", ImGuiTreeNodeFlags_DefaultOpen );
+        _bCustomizationOpen = ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "CustomizeReleaseASliderToRefit" ), ImGuiTreeNodeFlags_DefaultOpen );
         if ( _bCustomizationOpen )
             drawCustomizationSliders( selection );
         else
@@ -748,17 +748,17 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
         (void)EditorWidgets::drawAssetPathField( "##SocketPath", paths._socketPath, "sockets file", SocketSet::kExtension, nullptr ); // 콘텐츠 브라우저에서 끌어 놓을 수 있다
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
-        if ( ImGui::Button( "Load" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Load" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Load" ) ) )
             reloadDocument(); // 경로 칸의 소켓 파일을 다시 읽는다 — 읽음 · 못 읽음 표시와 미저장 기준은 문서 계약이 맞춘다
         EditorSelfTestMarks::note( "charactereditor.loadSockets" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Save" ) ) );
         ImGui::BeginDisabled( canSaveDocument() == false );
-        if ( ImGui::Button( "Save" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패 이유는 상태 줄에 남는다
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "New" ) );
-        if ( ImGui::Button( "New" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "New" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "New" ) ) )
             _document.clearSockets();
         if ( canSaveDocument() )
         {
@@ -771,12 +771,12 @@ namespace sw::editor
     {
         SocketEditModel& sockets = _document.getSocketModel();
         ImGui::BeginDisabled( sockets.canUndo() == false );
-        if ( ImGui::Button( "Undo" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Undo" ) ) )
             (void)sockets.undo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Redo" ) ) );
         ImGui::BeginDisabled( sockets.canRedo() == false );
-        if ( ImGui::Button( "Redo" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Redo" ) ) )
             (void)sockets.redo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
     }
@@ -857,14 +857,14 @@ namespace sw::editor
 
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##Rename", _renameBuffer.data(), _renameBuffer.max_size() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rename" ) );
-        if ( ImGui::Button( "Rename" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Rename" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Rename" ) ) )
             _document.renameSocket( name, CharacterEditorPanelInternal::makeName( _renameBuffer.c_str() ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Mirror" ) );
-        if ( ImGui::Button( "Mirror" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Mirror" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Mirror" ) ) )
             _document.mirrorSocket( name );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
-        if ( ImGui::Button( "Remove" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
         {
             _document.removeSocket( name );
             return;
@@ -919,29 +919,29 @@ namespace sw::editor
         CharacterEditorPaths& paths = _document.editPaths();
         BonePoseEditModel&    pose  = _document.getPoseModel();
         (void)EditorWidgets::drawAssetPathField( "##SkeletonPath", paths._skeletonPath, "skeleton", nullptr, nullptr );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load skeleton" ) );
-        if ( ImGui::Button( "Load skeleton" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LoadSkeleton" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadSkeleton" ) ) )
             _document.loadSkeleton();
         EditorSelfTestMarks::note( "charactereditor.loadSkeleton" );
 
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         (void)EditorWidgets::drawAssetPathField( "##RefPosePath", paths._refPosePath, "reference pose", nullptr, nullptr );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load pose" ) );
-        if ( ImGui::Button( "Load pose" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LoadPose" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadPose" ) ) )
             _document.loadReferencePose();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save pose" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "SavePose" ) ) );
         ImGui::BeginDisabled( pose.isDirty() == false );
-        if ( ImGui::Button( "Save pose" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "SavePose" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패 이유는 상태 줄에 남는다
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled( pose.canUndo() == false );
-        if ( ImGui::Button( "Undo pose" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "UndoPose" ) ) )
             (void)pose.undo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo pose" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "RedoPose" ) ) );
         ImGui::BeginDisabled( pose.canRedo() == false );
-        if ( ImGui::Button( "Redo pose" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "RedoPose" ) ) )
             (void)pose.redo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
         ImGui::SameLine();
@@ -951,7 +951,7 @@ namespace sw::editor
         ImGui::Separator();
         if ( pose.getSkeleton().getBoneCount() == 0 )
         {
-            ImGui::TextDisabled( "Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "LoadASkeletonToSeeItsBonesThe" ) );
             return;
         }
         if ( ImGui::BeginChild( "##BoneTree", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kBoneTreeLines ) ), ImGuiChildFlags_Borders ) )
@@ -965,7 +965,7 @@ namespace sw::editor
         }
         ImGui::EndChild();
         drawBoneDetail();
-        ImGui::TextDisabled( "Viewport gizmo editing needs the preview scene (EditorMultiWorld)." );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld" ) );
     }
 
     void CharacterEditorPanel::drawBoneNode( uint32 boneIndex )
@@ -1005,7 +1005,7 @@ namespace sw::editor
         BoneTransform       current;
         if ( bone.empty() || pose.getEffectiveTransform( bone, current ) == false )
         {
-            ImGui::TextDisabled( "Select a bone to edit its reference pose." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "SelectABoneToEditItsReferencePose" ) );
             return;
         }
         ImGui::TextUnformatted( bone.c_str() );
@@ -1034,10 +1034,10 @@ namespace sw::editor
             pose.endContinuousEdit();
 
         ImGui::BeginDisabled( pose.hasOverride( bone ) == false );
-        if ( ImGui::Button( "Reset bone" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ResetBone" ) ) )
             _document.reportEdit( pose.clearBone( bone, error ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Mirror bone" ) );
-        if ( ImGui::Button( "Mirror bone" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "MirrorBone" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "MirrorBone" ) ) )
             _document.mirrorSelectedBone();
         ImGui::EndDisabled();
         if ( error.empty() == false )
@@ -1050,7 +1050,7 @@ namespace sw::editor
         // 데이터 프리셋 내보내기는 데이터 줄 바로 아래 — 씬이 쓰는 결과물이라 창을 열면 보이는 자리에 둔다.
         drawDataPresetRow();
         ImGui::Separator();
-        ImGui::TextDisabled( "Selection (base preset, body, slots, customization values)" );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "SelectionBasePresetBodySlotsCustomizationValues" ) );
         AppearanceEditModel&      appearance = _document.getAppearanceModel();
         const AppearanceSelection selection  = appearance.getSelection();
         drawSelectionHeader( selection );
@@ -1060,12 +1060,12 @@ namespace sw::editor
         drawCustomizationRows( selection );
 
         ImGui::BeginDisabled( appearance.canUndo() == false );
-        if ( ImGui::Button( "Undo appearance" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "UndoAppearance" ) ) )
             (void)appearance.undo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo appearance" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "RedoAppearance" ) ) );
         ImGui::BeginDisabled( appearance.canRedo() == false );
-        if ( ImGui::Button( "Redo appearance" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "RedoAppearance" ) ) )
             (void)appearance.redo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
 
@@ -1083,15 +1083,15 @@ namespace sw::editor
         (void)EditorWidgets::drawAssetPathField( "##ItemsPath", paths._itemsPath, "appearance items", nullptr, nullptr );
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##AppearanceFolder", paths._appearanceFolder.data(), paths._appearanceFolder.max_size() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load data" ) );
-        if ( ImGui::Button( "Load data" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LoadData" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadData" ) ) )
             _document.loadAppearanceData();
         EditorSelfTestMarks::note( "charactereditor.loadData" );
         if ( _document.isDatabaseLoaded() )
             ImGui::TextDisabled( "%u slots, %u sets, %u presets", static_cast<uint32>( database.getSlotTable().getSlots().size() ), static_cast<uint32>( database.getSets().getSets().size() ),
                                  static_cast<uint32>( database.getPresets().getPresets().size() ) );
         else
-            ImGui::TextDisabled( "Load the items file and the appearance folder to pick items and see rule explanations." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "LoadTheItemsFileAndTheAppearanceFolder" ) );
     }
 
     void CharacterEditorPanel::drawSelectionHeader( const AppearanceSelection& selection )
@@ -1137,7 +1137,7 @@ namespace sw::editor
     {
         const AppearanceDatabase& database   = _document.getDatabase();
         AppearanceEditModel&      appearance = _document.getAppearanceModel();
-        ImGui::TextUnformatted( "Slots" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Slots" ) );
         if ( _document.isDatabaseLoaded() == false )
         {
             fixed_string<constant::buffer::kMax128> text;
@@ -1150,8 +1150,8 @@ namespace sw::editor
                 ImGui::PopID();
             }
             ImGui::InputText( "##NewSlot", _newName.data(), _newName.max_size() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add slot" ) );
-            if ( ImGui::Button( "Add slot" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "AddSlot" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddSlot" ) ) )
                 (void)appearance.setSlotItem( CharacterEditorPanelInternal::makeName( _newName.c_str() ), hashed_string{} ); // 이미 있으면 false 이고 그대로 둔다
             return;
         }
@@ -1190,7 +1190,7 @@ namespace sw::editor
     void CharacterEditorPanel::drawCustomizationRows( const AppearanceSelection& selection )
     {
         AppearanceEditModel& appearance = _document.getAppearanceModel();
-        ImGui::TextUnformatted( "Customization values" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "CustomizationValues" ) );
         for ( const CustomizationValue& value : selection._customization.getValues() )
         {
             float32 number = value._number._x;
@@ -1199,7 +1199,7 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 appearance.endContinuousEdit();
         }
-        ImGui::TextDisabled( "Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)." );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "SlidersColoursAndChoicesOfTheSchemaAre" ) );
     }
 
     void CharacterEditorPanel::drawCustomizationSliders( const AppearanceSelection& selection )
@@ -1210,7 +1210,7 @@ namespace sw::editor
         if ( pSchema == nullptr )
         {
             _bCustomizationActive = false;
-            ImGui::TextDisabled( "No customization schema for this selection (load the appearance data and pick a base preset with a schema)." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoCustomizationSchemaForThisSelectionLoadThe" ) );
             return;
         }
         CustomizationValueSet normalized;
@@ -1340,17 +1340,17 @@ namespace sw::editor
     {
         Published& published  = _published;
         published._traceCount = 0;
-        if ( ImGui::CollapsingHeader( "Why does it look like this? (rules)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "WhyDoesItLookLikeThisRules" ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
         if ( _document.isDatabaseLoaded() == false )
         {
-            ImGui::TextDisabled( "Load appearance data to see which rules hid or changed what." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "LoadAppearanceDataToSeeWhichRulesHid" ) );
             return;
         }
         // 기준 프리셋이 칸 · 몸 종류의 시드라서, 없으면 펼칠 것이 없고 해석기가 칸마다 경고를 낸다 — 고르게 하고 넘어간다.
         if ( _document.hasBasePresetInData() == false )
         {
-            ImGui::TextDisabled( "Pick a base preset to see which rules hid or changed what." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "PickABasePresetToSeeWhichRules" ) );
             return;
         }
         _document.refreshResolvedPreview(); // 선택 · 데이터가 바뀔 때만 다시 푼다
@@ -1372,7 +1372,7 @@ namespace sw::editor
         if ( ImGui::BeginChild( "##RuleTrace", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kExplanationListLines ) ), ImGuiChildFlags_Borders ) )
         {
             if ( resolved._listTrace.empty() )
-                ImGui::TextDisabled( "No rule fired." );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoRuleFired" ) );
             for ( const AppearanceTraceEntry& entry : resolved._listTrace )
             {
                 ImGui::TextWrapped( "[%s] %s: %s", getEnumName( entry._step ), entry._source.c_str(), entry._message.c_str() );
@@ -1383,11 +1383,11 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawFitCheck()
     {
-        if ( ImGui::CollapsingHeader( "Fit check (view only)" ) == false )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "FitCheckViewOnly" ) ) == false )
             return;
         if ( _document.hasFit() == false )
         {
-            ImGui::TextDisabled( "No fit result yet. The preview scene solves the fit when a slider is released." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoFitResultYetThePreviewSceneSolves" ) );
             return;
         }
         const FitCheckSummary& fit = _document.getFit();
@@ -1397,7 +1397,7 @@ namespace sw::editor
                          part._movedVertexCount, static_cast<float64>( part._maxDelta ) );
         }
         if ( fit.hasPenetration() == false )
-            ImGui::TextDisabled( "No penetration." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoPenetration" ) );
         for ( const FitPenetrationSummary& penetration : fit._listPenetration )
         {
             ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "Penetration %s / %s: %u points, depth %.3f", penetration._partA.c_str(), penetration._partB.c_str(),
@@ -1411,16 +1411,16 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawPresetRow()
     {
-        if ( ImGui::CollapsingHeader( "Presets (user data)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "PresetsUserData" ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
         CharacterEditorPaths& paths = _document.editPaths();
-        if ( ImGui::Button( "Load presets" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadPresets" ) ) )
             _document.loadPresets();
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##PresetName", paths._presetName.data(), paths._presetName.max_size() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save as preset" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "SaveAsPreset" ) ) );
         ImGui::BeginDisabled( _document.isDatabaseLoaded() == false );
-        if ( ImGui::Button( "Save as preset" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "SaveAsPreset" ) ) )
             _document.savePreset();
         EditorSelfTestMarks::note( "charactereditor.savePreset" );
         ImGui::EndDisabled();
@@ -1430,7 +1430,7 @@ namespace sw::editor
             ImGui::TextDisabled( "(unsaved)" );
         }
         ImGui::BeginDisabled( _document.isDatabaseLoaded() == false );
-        if ( ImGui::Button( "Save thumbnail" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "SaveThumbnail" ) ) )
             saveThumbnail();
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "charactereditor.saveThumbnail" );
@@ -1449,9 +1449,9 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawDataPresetRow()
     {
-        if ( ImGui::CollapsingHeader( "Data preset (scene use)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "DataPresetSceneUse" ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
-        ImGui::TextDisabled( "A scene's Character Appearance component names this id." );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "ASceneSCharacterAppearanceComponentNamesThis" ) );
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
         ImGui::InputText( "##ExportFolder", paths._exportFolder.data(), paths._exportFolder.max_size() );
@@ -1459,9 +1459,9 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##ExportID", paths._exportID.data(), paths._exportID.max_size() );
         EditorSelfTestMarks::note( "charactereditor.exportID" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Export data preset" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ExportDataPreset" ) ) );
         ImGui::BeginDisabled( _document.isDatabaseLoaded() == false );
-        if ( ImGui::Button( "Export data preset" ) && _document.exportDataPreset() )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ExportDataPreset" ) ) && _document.exportDataPreset() )
             ++_published._exportCount;
         EditorSelfTestMarks::note( "charactereditor.exportPreset" );
         ImGui::EndDisabled();

@@ -21,6 +21,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
@@ -181,7 +182,7 @@ namespace sw::editor
         _published._chainCount      = static_cast<uint32>( _profile.getChains().size() );
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "OpenARetargetXmlOrTypeANew" ) );
             return;
         }
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
@@ -320,7 +321,7 @@ namespace sw::editor
         ImGui::SameLine();
         const bool bPathValid = acceptsDocumentPath( string_view( _newDocumentPath.c_str() ) );
         ImGui::BeginDisabled( bPathValid == false );
-        if ( ImGui::Button( "New" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "New" ) ) )
             requestOpenDocument( string_view( _newDocumentPath.c_str() ) ); // 없는 파일이면 `loadDocument` 가 빈 문서로 연다
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "retarget.new" );
@@ -345,7 +346,7 @@ namespace sw::editor
     {
         if ( _bPreviewSourceReady == SW_FALSE && _bPreviewTargetReady == SW_FALSE )
         {
-            EditorWidgets::drawEmptyHint( "Set the source and target skeletons to see them overlaid here." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "SetTheSourceAndTargetSkeletonsToSee" ) );
             return;
         }
         if ( _bFramePending == SW_TRUE )
@@ -437,7 +438,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( "How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)" );
         bool bMapSameNames = _profile.isMappingSameNames();
-        if ( ImGui::Checkbox( "Map same names", &bMapSameNames ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "MapSameNames" ), &bMapSameNames ) )
         {
             _profile.setMapSameNames( bMapSameNames );
             markEdited( "Retarget same names" );
@@ -480,14 +481,14 @@ namespace sw::editor
                 bChanged              = true;
             }
             bool bIKGoal = chain._bIKGoal == SW_TRUE;
-            if ( ImGui::Checkbox( "IK goal", &bIKGoal ) )
+            if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "IKGoal" ), &bIKGoal ) )
             {
                 chain._bIKGoal = bIKGoal ? SW_TRUE : SW_FALSE;
                 bChanged       = true;
             }
             EditorWidgets::drawTooltip( "Solve the end onto the source end position (feet that plant without sliding)" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
-            if ( ImGui::SmallButton( "Remove" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
                 removeIndex = chainIndex;
             ImGui::PopID();
         }
@@ -507,7 +508,7 @@ namespace sw::editor
             bNameTaken = bNameTaken || chain._name == newName;
         }
         ImGui::BeginDisabled( bNameTaken ); // 겹친 사슬 이름은 다시 읽을 때 오류다
-        if ( ImGui::Button( "Add chain" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddChain" ) ) )
         {
             RetargetChain chain{};
             chain._name = newName;
@@ -547,8 +548,8 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 bChanged = true;
             EditorSelfTestMarks::note( "retarget.targetPose.rotation" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
-            if ( ImGui::SmallButton( "Remove" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
                 removeIndex = poseIndex;
             ImGui::PopID();
         }
@@ -568,7 +569,7 @@ namespace sw::editor
             bBoneUsable = bBoneUsable && poseBone._bone != newBone; // 같은 본을 두 번 적으면 다시 읽을 때 오류다
         }
         ImGui::BeginDisabled( bBoneUsable == false );
-        if ( ImGui::Button( "Add bone turn" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddBoneTurn" ) ) )
         {
             listPose.push_back( RetargetPoseBone{ newBone, float3{} } );
             bChanged = true;
@@ -593,8 +594,8 @@ namespace sw::editor
         {
             ImGui::PushID( static_cast<int32>( pairIndex ) );
             ImGui::Text( "%s -> %s", listPair[pairIndex]._source.c_str(), listPair[pairIndex]._target.c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
-            if ( ImGui::SmallButton( "Remove" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
                 removeIndex = pairIndex;
             ImGui::PopID();
         }
@@ -612,7 +613,7 @@ namespace sw::editor
         ImGui::SameLine();
         const bool bPairComplete = _newPairSource.size() > 0 && _newPairTarget.size() > 0;
         ImGui::BeginDisabled( bPairComplete == false );
-        if ( ImGui::Button( "Add pair" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddPair" ) ) )
         {
             listPair.push_back( RetargetBonePair{ hashed_string( _newPairSource.c_str() ), hashed_string( _newPairTarget.c_str() ) } );
             bChanged = true;

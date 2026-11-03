@@ -4,6 +4,9 @@
 		<entry source="(None)" text="(なし)" />
 		<entry source="5.1 Surround" text="5.1 サラウンド" />
 		<entry source="7.1 Surround" text="7.1 サラウンド" />
+		<entry source="A scene's Character Appearance component names this id."
+		       text="シーンのキャラクター外見コンポーネントがこの id を指します。" />
+		<entry source="Abort" text="中断" />
 		<entry source="Accessibility" text="アクセシビリティ" />
 		<entry source="Active" text="有効" />
 		<entry source="Active Effects" text="有効なエフェクト" />
@@ -11,26 +14,42 @@
 		<entry source="Add" text="追加" />
 		<entry source="Add Item" text="項目を追加" />
 		<entry source="Add Modifier" text="モディファイアを追加" />
+		<entry source="Add bone turn" text="ボーン回転を追加" />
+		<entry source="Add chain" text="チェーンを追加" />
+		<entry source="Add node" text="ノードを追加" />
+		<entry source="Add notify at t" text="t に通知を追加" />
+		<entry source="Add pair" text="ペアを追加" />
+		<entry source="Add slot" text="スロットを追加" />
 		<entry source="Aim" text="エイム" />
 		<entry source="Already used by" text="使用中:" />
 		<entry source="Ambient Volume" text="環境音の音量" />
+		<entry source="Appearance" text="外見" />
 		<entry source="Apply" text="適用" />
+		<entry source="Apply sanction" text="制裁を適用" />
 		<entry source="Ask Each Time" text="毎回確認する" />
 		<entry source="Attributes" text="アトリビュート" />
 		<entry source="Audio" text="オーディオ" />
+		<entry source="Auto layout" text="自動レイアウト" />
 		<entry source="Automatic" text="自動" />
 		<entry source="Axis" text="軸" />
 		<entry source="Bake" text="ベイク" />
 		<entry source="Base" text="基本値" />
+		<entry source="Blackboard key" text="ブラックボードキー" />
 		<entry source="Borderless" text="ボーダーレス" />
 		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
 		<entry source="CPU only:" text="CPU のみ:" />
 		<entry source="Camera Shake" text="カメラの揺れ" />
 		<entry source="Cancel" text="キャンセル" />
 		<entry source="Center" text="中心" />
+		<entry source="Check" text="チェック" />
+		<entry source="Clear target" text="ターゲットを解除" />
+		<entry source="Click a node to edit it" text="ノードをクリックして編集" />
 		<entry source="Click to edit the curve" text="クリックしてカーブを編集" />
 		<entry source="Close" text="閉じる" />
+		<entry source="Closed reports" text="閉じた通報" />
 		<entry source="Color Vision Mode" text="色覚モード" />
+		<entry source="Compare" text="比較" />
+		<entry source="Connect" text="接続" />
 		<entry source="Control Points" text="制御点" />
 		<entry source="Controls" text="操作" />
 		<entry source="Cooldown" text="クールダウン" />
@@ -38,26 +57,40 @@
 		<entry source="Could not copy to the clipboard."
 		       text="クリップボードにコピーできませんでした。" />
 		<entry source="Count" text="数" />
+		<entry source="Count (0 = until it fails)" text="回数(0 = 失敗するまで)" />
 		<entry source="Crash Reports" text="クラッシュレポート" />
 		<entry source="Crouch" text="しゃがみ" />
 		<entry source="Current" text="現在値" />
 		<entry source="Custom" text="カスタム" />
+		<entry source="Customization values" text="カスタマイズ値" />
+		<entry source="Customize (release a slider to refit)"
+		       text="カスタマイズ(スライダーを離すと再フィット)" />
+		<entry source="Data preset (scene use)" text="データプリセット(シーン用)" />
 		<entry source="Debug" text="デバッグ" />
 		<entry source="Debug HUD" text="デバッグ HUD" />
 		<entry source="Default" text="標準" />
 		<entry source="Defaults" text="初期設定" />
+		<entry source="Delete" text="削除" />
+		<entry source="Delete node" text="ノードを削除" />
 		<entry source="Depth" text="深さ" />
 		<entry source="Deuteranopia" text="2 型色覚 (緑)" />
 		<entry source="Discard" text="破棄" />
+		<entry source="Disconnect" text="切断" />
+		<entry source="Dismiss" text="閉じる" />
 		<entry source="Display" text="ディスプレイ" />
+		<entry source="Down" text="下" />
 		<entry source="Duplicate row" text="行を複製" />
+		<entry source="Edit" text="編集" />
 		<entry source="Edit this group's nested stack" text="このグループのネストされたスタックを編集" />
 		<entry source="Effects Quality" text="エフェクト品質" />
 		<entry source="Effects Volume" text="効果音の音量" />
 		<entry source="Empty - add modifiers to group them."
 		       text="空です。モディファイアを追加してグループにします。" />
+		<entry source="End maintenance" text="メンテナンス終了" />
 		<entry source="Export as World Warp" text="ワールドワープとして書き出す" />
+		<entry source="Export data preset" text="データプリセットを書き出す" />
 		<entry source="Field of View" text="視野角" />
+		<entry source="Fit check (view only)" text="フィットチェック(表示のみ)" />
 		<entry source="Fit to Bounds" text="境界に合わせる" />
 		<entry source="Foliage Density" text="植生の密度" />
 		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
@@ -65,6 +98,7 @@
 		<entry source="Game time" text="ゲーム時刻" />
 		<entry source="Gamepad Sensitivity" text="ゲームパッド感度" />
 		<entry source="Gameplay" text="ゲームプレイ" />
+		<entry source="Grant" text="付与" />
 		<entry source="Granted Abilities" text="付与されたアビリティ" />
 		<entry source="Graphics" text="グラフィックス" />
 		<entry source="Graphics Quality" text="グラフィック品質" />
@@ -73,8 +107,10 @@
 		<entry source="High" text="高" />
 		<entry source="High Contrast" text="ハイコントラスト" />
 		<entry source="Hold" text="長押し" />
+		<entry source="IK goal" text="IK ゴール" />
 		<entry source="Infinite" text="無限" />
 		<entry source="Interface Volume" text="インターフェースの音量" />
+		<entry source="Invert" text="反転" />
 		<entry source="Invert Vertical Look" text="上下の視点を反転" />
 		<entry source="Keep" text="維持" />
 		<entry source="Keep Local" text="ローカルに保存" />
@@ -82,11 +118,32 @@
 		<entry source="Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
 		       text="この設定を維持しますか? {seconds} 秒後に元に戻ります。" />
 		<entry source="Language" text="言語" />
+		<entry source="Lift sanction" text="制裁を解除" />
+		<entry source="List audit" text="監査ログ一覧" />
+		<entry source="List live events" text="ライブイベント一覧" />
+		<entry source="Load" text="読み込み" />
+		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
+		       text="スケルトンを読み込むとボーンが見えます。スケルトンは読み取り専用で、編集は基準ポーズファイルに入ります。" />
+		<entry source="Load appearance data to see which rules hid or changed what."
+		       text="外見データを読み込むと、どのルールが何を隠した・変えたかが見えます。" />
+		<entry source="Load data" text="データを読み込む" />
+		<entry source="Load pose" text="ポーズを読み込む" />
+		<entry source="Load presets" text="プリセットを読み込む" />
+		<entry source="Load skeleton" text="スケルトンを読み込む" />
+		<entry source="Load the appearance data (Appearance tab) to dress the preview body."
+		       text="外見データ(外見タブ)を読み込むとプレビューの体に着せます。" />
+		<entry source="Load the items file and the appearance folder to pick items and see rule explanations."
+		       text="アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。" />
 		<entry source="Loading" text="読み込み中" />
+		<entry source="Look up an account to see its balances and sanctions"
+		       text="アカウントを検索すると残高と制裁が見えます" />
+		<entry source="Lookup" text="検索" />
 		<entry source="Low" text="低" />
+		<entry source="Map same names" text="同名同士をつなぐ" />
 		<entry source="Master Volume" text="マスター音量" />
 		<entry source="Medium" text="中" />
 		<entry source="Mirror" text="ミラー" />
+		<entry source="Mirror bone" text="ボーンをミラー" />
 		<entry source="Motion Blur" text="モーションブラー" />
 		<entry source="Mouse Sensitivity" text="マウス感度" />
 		<entry source="Move row down" text="行を下へ移動" />
@@ -96,73 +153,140 @@
 		<entry source="NPCs" text="NPC" />
 		<entry source="Name" text="名前" />
 		<entry source="Nested Stack" text="ネストされたスタック" />
+		<entry source="New" text="新規" />
 		<entry source="New socket name" text="新しいソケット名" />
 		<entry source="No AbilityComponent in the active scene"
 		       text="アクティブなシーンに AbilityComponent がありません" />
+		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
+		       text="この選択にはカスタマイズスキーマがありません(外見データを読み込み、スキーマのある基準プリセットを選んでください)。" />
+		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
+		       text="まだフィット結果がありません。スライダーを離すとプレビューシーンがフィットします。" />
+		<entry source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
+		       text="インプロセスゲームが登録されていません(NetSimGameRegistry) — キットセッション(INetSimSession)のあるゲームだけがここで動きます。" />
+		<entry source="No login handler is bound: GM commands are refused as not logged in"
+		       text="ログインハンドラがありません: GM コマンドは未ログインとして拒否されます" />
 		<entry source="No object has component:"
 		       text="次のコンポーネントを持つオブジェクトがありません:" />
+		<entry source="No penetration." text="貫通なし。" />
 		<entry source="No plan for today" text="今日の予定はありません" />
+		<entry source="No rule fired." text="発動したルールはありません。" />
 		<entry source="No schedule system is running. Start play with NPCs that have schedules."
 		       text="スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。" />
 		<entry source="No target" text="対象なし" />
 		<entry source="Off" text="オフ" />
 		<entry source="Opacity" text="不透明度" />
+		<entry source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
+		       text=".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。" />
+		<entry source="Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies."
+		       text=".pairedanim.xml を開いて役割を一つの時計でスクラブし、位置合わせオフセットを動かし、共有通知を編集します。" />
+		<entry source="Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
+		       text=".retarget.xml を開くか、新しいパスを入力して新規を押し、二つのスケルトンのチェーンを対にして結び付きを確認します。" />
+		<entry source="Open a behavior tree file (*.bt.xml) with Open..."
+		       text="Open... でビヘイビアツリーファイル(*.bt.xml)を開きます" />
+		<entry source="Open reports" text="未処理の通報" />
 		<entry source="Options" text="オプション" />
+		<entry source="Orthographic preset - the preview draws it in perspective."
+		       text="平行投影プリセット — プレビューは透視で描きます。" />
 		<entry source="Owned Tags" text="所有タグ" />
 		<entry source="Pause Menu" text="ポーズメニュー" />
 		<entry source="Paused" text="一時停止中" />
+		<entry source="Pick a base preset to see which rules hid or changed what."
+		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。" />
 		<entry source="Pick an ability system..." text="アビリティシステムを選択..." />
 		<entry source="Place" text="場所" />
 		<entry source="Play" text="再生" />
 		<entry source="Point" text="点" />
 		<entry source="Position" text="位置" />
+		<entry source="Post notice" text="お知らせを掲示" />
 		<entry source="Post-Processing Quality" text="ポストプロセス品質" />
+		<entry source="Presets (user data)" text="プリセット(ユーザーデータ)" />
 		<entry source="Press a key. Escape cancels; hold Escape for one second to bind it."
 		       text="キーを押してください。Esc でキャンセル、Esc を 1 秒押し続けると Esc を割り当てます。" />
+		<entry source="Preview" text="プレビュー" />
 		<entry source="Preview Time" text="プレビュー時間" />
+		<entry source="Preview constraint rig" text="拘束リグをプレビュー" />
 		<entry source="Privacy" text="プライバシー" />
 		<entry source="Protanopia" text="1 型色覚 (赤)" />
+		<entry source="Put live event" text="ライブイベントを登録" />
 		<entry source="Quit Game" text="ゲームを終了" />
 		<entry source="Raw timeline" text="生のタイムライン" />
+		<entry source="Reactive (re-check higher priority children every tick)"
+		       text="リアクティブ(毎ティック優先度の高い子を再チェック)" />
 		<entry source="Recompute Normals" text="法線の再計算" />
 		<entry source="Redo" text="やり直し" />
+		<entry source="Redo appearance" text="外見をやり直し" />
+		<entry source="Redo pose" text="ポーズをやり直し" />
 		<entry source="Reduce Flashing" text="点滅を減らす" />
 		<entry source="Reduce Motion" text="動きを減らす" />
 		<entry source="Reference Object" text="参照オブジェクト" />
+		<entry source="Refund revoke (may leave a debt)" text="返金回収(負債が残る場合がある)" />
+		<entry source="Reload" text="再読み込み" />
 		<entry source="Reload Stack" text="スタックを再読み込み" />
+		<entry source="Reload from disk (discard edits)" text="ディスクから再読み込み(編集を破棄)" />
 		<entry source="Remaining" text="残り" />
+		<entry source="Remove" text="削除" />
+		<entry source="Remove broken wires" text="切れた配線を削除" />
+		<entry source="Remove live event" text="ライブイベントを削除" />
+		<entry source="Remove notice" text="お知らせを削除" />
 		<entry source="Remove row" text="行を削除" />
+		<entry source="Rename" text="名前を変更" />
 		<entry source="Render Scale" text="レンダースケール" />
+		<entry source="Repath distance" text="再経路探索距離" />
 		<entry source="Reset Lattice" text="ラティスをリセット" />
 		<entry source="Reset Parameters" text="パラメーターをリセット" />
+		<entry source="Reset bone" text="ボーンをリセット" />
 		<entry source="Resolution" text="解像度" />
+		<entry source="Resolve" text="処理" />
 		<entry source="Resume" text="再開" />
 		<entry source="Return to Title" text="タイトルに戻る" />
 		<entry source="Revert" text="元に戻す" />
 		<entry source="Reverting in" text="元に戻すまで" />
+		<entry source="Revoke" text="回収" />
+		<entry source="Roles" text="役割" />
 		<entry source="Rotation" text="回転" />
 		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
 		       text="実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。" />
+		<entry source="Save" text="保存" />
 		<entry source="Save Stack" text="スタックを保存" />
+		<entry source="Save as preset" text="プリセットとして保存" />
+		<entry source="Save pose" text="ポーズを保存" />
+		<entry source="Save thumbnail" text="サムネイルを保存" />
 		<entry source="Schedule system" text="スケジュールシステム" />
+		<entry source="Seconds" text="秒" />
 		<entry source="Sections" text="セクション" />
+		<entry source="Select a bone to edit its reference pose."
+		       text="ボーンを選ぶと基準ポーズを編集します。" />
 		<entry source="Select a modifier in the stack."
 		       text="スタックからモディファイアを選択してください。" />
+		<entry source="Select a node to edit it. Right-click the canvas to add one."
+		       text="ノードを選ぶと編集します。キャンバスを右クリックして追加します。" />
 		<entry source="Select a socket in the list to edit it."
 		       text="一覧からソケットを選んで編集します。" />
 		<entry source="Select an NPC on the left" text="左で NPC を選択してください" />
+		<entry source="Select an object that has a Gimmick Circuit component"
+		       text="ギミック回路コンポーネントを持つオブジェクトを選びます" />
 		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
 		       text="メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。" />
 		<entry source="Select an object with an AbilityComponent, or pick one above."
 		       text="AbilityComponent を持つオブジェクトを選択するか、上で選んでください。" />
+		<entry source="Selection (base preset, body, slots, customization values)"
+		       text="選択(基準プリセット・体・スロット・カスタマイズ値)" />
 		<entry source="Send Automatically" text="自動で送信" />
+		<entry source="Set the source and target skeletons to see them overlaid here."
+		       text="ソースとターゲットのスケルトンを設定するとここに重ねて表示されます。" />
 		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
 		       text="スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。" />
 		<entry source="Shaded Preview" text="シェーディングプレビュー" />
 		<entry source="Shadow Quality" text="影の品質" />
 		<entry source="Share Usage Data" text="使用状況データを共有" />
+		<entry source="Shared notifies" text="共有通知" />
 		<entry source="Show HUD (Ctrl+F3)" text="HUD を表示 (Ctrl+F3)" />
 		<entry source="Show Tutorials" text="チュートリアルを表示" />
+		<entry source="Skeleton" text="スケルトン" />
+		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
+		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。" />
+		<entry source="Slots" text="スロット" />
+		<entry source="Sockets" text="ソケット" />
 		<entry source="Some changes take effect after a restart."
 		       text="一部の変更は再起動後に反映されます。" />
 		<entry source="Source" text="出典" />
@@ -170,16 +294,22 @@
 		<entry source="Speaker Setup" text="スピーカー構成" />
 		<entry source="Sprint" text="ダッシュ" />
 		<entry source="Stacks" text="スタック" />
+		<entry source="Start in process" text="インプロセスで開始" />
+		<entry source="Start maintenance" text="メンテナンス開始" />
 		<entry source="Stereo" text="ステレオ" />
 		<entry source="Stick Dead Zone" text="スティックのデッドゾーン" />
+		<entry source="Stop" text="停止" />
 		<entry source="Subtitle Background" text="字幕の背景" />
 		<entry source="Subtitle Size" text="字幕のサイズ" />
 		<entry source="Subtitles" text="字幕" />
 		<entry source="Swap" text="入れ替え" />
 		<entry source="Tag" text="タグ" />
+		<entry source="Target object" text="対象オブジェクト" />
+		<entry source="Task" text="タスク" />
 		<entry source="Text Language" text="テキストの言語" />
 		<entry source="Text Size" text="文字サイズ" />
 		<entry source="Texture Quality" text="テクスチャ品質" />
+		<entry source="The node editor could not be created" text="ノードエディタを作成できませんでした" />
 		<entry source="The target object no longer exists."
 		       text="対象のオブジェクトはもう存在しません。" />
 		<entry source="Time" text="時刻" />
@@ -190,18 +320,26 @@
 		<entry source="UI Theme" text="UI テーマ" />
 		<entry source="Ultra" text="最高" />
 		<entry source="Undo" text="元に戻す" />
-		<entry source="Up" text="上へ" />
+		<entry source="Undo appearance" text="外見を元に戻す" />
+		<entry source="Undo pose" text="ポーズを元に戻す" />
+		<entry source="Up" text="上" />
 		<entry source="Upscaler" text="アップスケーラー" />
 		<entry source="Use Selection" text="選択を使用" />
+		<entry source="Use selected object" text="選択中のオブジェクトを使う" />
+		<entry source="Value" text="値" />
 		<entry source="Vertical Sync" text="垂直同期" />
 		<entry source="View Distance" text="描画距離" />
+		<entry source="Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
+		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。" />
 		<entry source="Voice Volume" text="ボイスの音量" />
 		<entry source="Warp File (.mfwarp)" text="ワープファイル (.mfwarp)" />
+		<entry source="Why does it look like this? (rules)" text="なぜこう見えるか(ルール)" />
 		<entry source="Why this activity now" text="今この行動をする理由" />
 		<entry source="Window Mode" text="ウィンドウモード" />
 		<entry source="Windowed" text="ウィンドウ" />
 		<entry source="World Space" text="ワールド空間" />
 		<entry source="You have changes that are not applied." text="適用していない変更があります。" />
+		<entry source="Zoom fit" text="ズームフィット" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 選択" />
 		<entry source="{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
 		       text="{count} 件の設定は再起動後に反映されます。" />

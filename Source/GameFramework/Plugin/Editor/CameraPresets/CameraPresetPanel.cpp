@@ -14,6 +14,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include <imgui.h>
@@ -82,12 +83,12 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "OpenACamerasXmlPresetFileToSee" ) );
             return;
         }
 
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
-        if ( ImGui::Button( "Reload" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Reload" ) ) )
             reloadDocument();
         EditorWidgets::drawTooltip( "Read the preset file again (after saving it in the Catalog Editor)" );
 
@@ -115,7 +116,7 @@ namespace sw::editor
             ImGui::Text( "offset %.2f, %.2f, %.2f  distance %.2f  pitch %.3f  yaw %.3f  fov %.3f", preset._view._offset._x, preset._view._offset._y, preset._view._offset._z,
                          preset._view._distance, preset._view._pitch, preset._view._yaw, preset._lens.computeFieldOfViewY() );
             if ( preset._lens._bOrthographic || preset._view._mode == CameraPresetMode::OrthoTopDown )
-                ImGui::TextDisabled( "Orthographic preset - the preview draws it in perspective." );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "OrthographicPresetThePreviewDrawsItInPerspective" ) );
             EditorWidgets::drawPropertyRowLabel( "Target yaw" );
             if ( ImGui::SliderFloat( "##Targetyaw", &_model.editTargetYawDegrees(), -180.0f, 180.0f, "%.0f deg" ) )
                 _model.markViewportDirty();

@@ -389,6 +389,607 @@ msgctxt "EdMeshModifiers.WorldSpace"
 msgid "World Space"
 msgstr "ワールド空間"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
+msgid "A scene's Character Appearance component names this id."
+msgstr "シーンのキャラクター外見コンポーネントがこの id を指します。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Abort"
+msgid "Abort"
+msgstr "中断"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.AddBoneTurn"
+msgid "Add bone turn"
+msgstr "ボーン回転を追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.AddChain"
+msgid "Add chain"
+msgstr "チェーンを追加"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.AddNode"
+msgid "Add node"
+msgstr "ノードを追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.AddNotifyAtT"
+msgid "Add notify at t"
+msgstr "t に通知を追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.AddPair"
+msgid "Add pair"
+msgstr "ペアを追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.AddSlot"
+msgid "Add slot"
+msgstr "スロットを追加"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Appearance"
+msgid "Appearance"
+msgstr "外見"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ApplySanction"
+msgid "Apply sanction"
+msgstr "制裁を適用"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.AutoLayout"
+msgid "Auto layout"
+msgstr "自動レイアウト"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.BlackboardKey"
+msgid "Blackboard key"
+msgstr "ブラックボードキー"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Check"
+msgid "Check"
+msgstr "チェック"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.ClearTarget"
+msgid "Clear target"
+msgstr "ターゲットを解除"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.ClickANodeToEditIt"
+msgid "Click a node to edit it"
+msgstr "ノードをクリックして編集"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ClosedReports"
+msgid "Closed reports"
+msgstr "閉じた通報"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Compare"
+msgid "Compare"
+msgstr "比較"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.Connect"
+msgid "Connect"
+msgstr "接続"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Count0UntilItFails"
+msgid "Count (0 = until it fails)"
+msgstr "回数(0 = 失敗するまで)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.CustomizationValues"
+msgid "Customization values"
+msgstr "カスタマイズ値"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.CustomizeReleaseASliderToRefit"
+msgid "Customize (release a slider to refit)"
+msgstr "カスタマイズ(スライダーを離すと再フィット)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.DataPresetSceneUse"
+msgid "Data preset (scene use)"
+msgstr "データプリセット(シーン用)"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Delete"
+msgid "Delete"
+msgstr "削除"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.DeleteNode"
+msgid "Delete node"
+msgstr "ノードを削除"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Disconnect"
+msgid "Disconnect"
+msgstr "切断"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Dismiss"
+msgid "Dismiss"
+msgstr "閉じる"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Down"
+msgid "Down"
+msgstr "下"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Edit"
+msgid "Edit"
+msgstr "編集"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.EndMaintenance"
+msgid "End maintenance"
+msgstr "メンテナンス終了"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ExportDataPreset"
+msgid "Export data preset"
+msgstr "データプリセットを書き出す"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.FitCheckViewOnly"
+msgid "Fit check (view only)"
+msgstr "フィットチェック(表示のみ)"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Grant"
+msgid "Grant"
+msgstr "付与"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.IKGoal"
+msgid "IK goal"
+msgstr "IK ゴール"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.Invert"
+msgid "Invert"
+msgstr "反転"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.LiftSanction"
+msgid "Lift sanction"
+msgstr "制裁を解除"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ListAudit"
+msgid "List audit"
+msgstr "監査ログ一覧"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.ListLiveEvents"
+msgid "List live events"
+msgstr "ライブイベント一覧"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Load"
+msgid "Load"
+msgstr "読み込み"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadASkeletonToSeeItsBonesThe"
+msgid "Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
+msgstr "スケルトンを読み込むとボーンが見えます。スケルトンは読み取り専用で、編集は基準ポーズファイルに入ります。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadAppearanceDataToSeeWhichRulesHid"
+msgid "Load appearance data to see which rules hid or changed what."
+msgstr "外見データを読み込むと、どのルールが何を隠した・変えたかが見えます。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadData"
+msgid "Load data"
+msgstr "データを読み込む"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadPose"
+msgid "Load pose"
+msgstr "ポーズを読み込む"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadPresets"
+msgid "Load presets"
+msgstr "プリセットを読み込む"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadSkeleton"
+msgid "Load skeleton"
+msgstr "スケルトンを読み込む"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadTheAppearanceDataAppearanceTabToDress"
+msgid "Load the appearance data (Appearance tab) to dress the preview body."
+msgstr "外見データ(外見タブ)を読み込むとプレビューの体に着せます。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
+msgid "Load the items file and the appearance folder to pick items and see rule explanations."
+msgstr "アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.LookUpAnAccountToSeeItsBalances"
+msgid "Look up an account to see its balances and sanctions"
+msgstr "アカウントを検索すると残高と制裁が見えます"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Lookup"
+msgid "Lookup"
+msgstr "検索"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.MapSameNames"
+msgid "Map same names"
+msgstr "同名同士をつなぐ"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Mirror"
+msgid "Mirror"
+msgstr "ミラー"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.MirrorBone"
+msgid "Mirror bone"
+msgstr "ボーンをミラー"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Name"
+msgid "Name"
+msgstr "名前"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.New"
+msgid "New"
+msgstr "新規"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
+msgid "No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
+msgstr "この選択にはカスタマイズスキーマがありません(外見データを読み込み、スキーマのある基準プリセットを選んでください)。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoFitResultYetThePreviewSceneSolves"
+msgid "No fit result yet. The preview scene solves the fit when a slider is released."
+msgstr "まだフィット結果がありません。スライダーを離すとプレビューシーンがフィットします。"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
+msgid "No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
+msgstr "インプロセスゲームが登録されていません(NetSimGameRegistry) — キットセッション(INetSimSession)のあるゲームだけがここで動きます。"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
+msgid "No login handler is bound: GM commands are refused as not logged in"
+msgstr "ログインハンドラがありません: GM コマンドは未ログインとして拒否されます"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoPenetration"
+msgid "No penetration."
+msgstr "貫通なし。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.NoRuleFired"
+msgid "No rule fired."
+msgstr "発動したルールはありません。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.OpenABehaviorTreeFileBtXmlWith"
+msgid "Open a behavior tree file (*.bt.xml) with Open..."
+msgstr "Open... でビヘイビアツリーファイル(*.bt.xml)を開きます"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPlugin.OpenACamerasXmlPresetFileToSee"
+msgid "Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
+msgstr ".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.OpenAPairedanimXmlToScrubItsRoles"
+msgid "Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies."
+msgstr ".pairedanim.xml を開いて役割を一つの時計でスクラブし、位置合わせオフセットを動かし、共有通知を編集します。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.OpenARetargetXmlOrTypeANew"
+msgid "Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
+msgstr ".retarget.xml を開くか、新しいパスを入力して新規を押し、二つのスケルトンのチェーンを対にして結び付きを確認します。"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.OpenReports"
+msgid "Open reports"
+msgstr "未処理の通報"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
+msgid "Orthographic preset - the preview draws it in perspective."
+msgstr "平行投影プリセット — プレビューは透視で描きます。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PickABasePresetToSeeWhichRules"
+msgid "Pick a base preset to see which rules hid or changed what."
+msgstr "基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.PostNotice"
+msgid "Post notice"
+msgstr "お知らせを掲示"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PresetsUserData"
+msgid "Presets (user data)"
+msgstr "プリセット(ユーザーデータ)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Preview"
+msgid "Preview"
+msgstr "プレビュー"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.PreviewConstraintRig"
+msgid "Preview constraint rig"
+msgstr "拘束リグをプレビュー"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.PutLiveEvent"
+msgid "Put live event"
+msgstr "ライブイベントを登録"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.ReactiveReCheckHigherPriorityChildrenEveryTick"
+msgid "Reactive (re-check higher priority children every tick)"
+msgstr "リアクティブ(毎ティック優先度の高い子を再チェック)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Redo"
+msgid "Redo"
+msgstr "やり直し"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.RedoAppearance"
+msgid "Redo appearance"
+msgstr "外見をやり直し"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.RedoPose"
+msgid "Redo pose"
+msgstr "ポーズをやり直し"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.RefundRevokeMayLeaveADebt"
+msgid "Refund revoke (may leave a debt)"
+msgstr "返金回収(負債が残る場合がある)"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Reload"
+msgid "Reload"
+msgstr "再読み込み"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ReloadFromDiskDiscardEdits"
+msgid "Reload from disk (discard edits)"
+msgstr "ディスクから再読み込み(編集を破棄)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.Remove"
+msgid "Remove"
+msgstr "削除"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.RemoveBrokenWires"
+msgid "Remove broken wires"
+msgstr "切れた配線を削除"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.RemoveLiveEvent"
+msgid "Remove live event"
+msgstr "ライブイベントを削除"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.RemoveNotice"
+msgid "Remove notice"
+msgstr "お知らせを削除"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Rename"
+msgid "Rename"
+msgstr "名前を変更"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.RepathDistance"
+msgid "Repath distance"
+msgstr "再経路探索距離"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ResetBone"
+msgid "Reset bone"
+msgstr "ボーンをリセット"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Resolve"
+msgid "Resolve"
+msgstr "処理"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.Revoke"
+msgid "Revoke"
+msgstr "回収"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Roles"
+msgid "Roles"
+msgstr "役割"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Save"
+msgid "Save"
+msgstr "保存"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SaveAsPreset"
+msgid "Save as preset"
+msgstr "プリセットとして保存"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SavePose"
+msgid "Save pose"
+msgstr "ポーズを保存"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SaveThumbnail"
+msgid "Save thumbnail"
+msgstr "サムネイルを保存"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Seconds"
+msgid "Seconds"
+msgstr "秒"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SelectABoneToEditItsReferencePose"
+msgid "Select a bone to edit its reference pose."
+msgstr "ボーンを選ぶと基準ポーズを編集します。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.SelectANodeToEditItRightClick"
+msgid "Select a node to edit it. Right-click the canvas to add one."
+msgstr "ノードを選ぶと編集します。キャンバスを右クリックして追加します。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
+msgid "Select an object that has a Gimmick Circuit component"
+msgstr "ギミック回路コンポーネントを持つオブジェクトを選びます"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SelectionBasePresetBodySlotsCustomizationValues"
+msgid "Selection (base preset, body, slots, customization values)"
+msgstr "選択(基準プリセット・体・スロット・カスタマイズ値)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPlugin.SetTheSourceAndTargetSkeletonsToSee"
+msgid "Set the source and target skeletons to see them overlaid here."
+msgstr "ソースとターゲットのスケルトンを設定するとここに重ねて表示されます。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.SharedNotifies"
+msgid "Shared notifies"
+msgstr "共有通知"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Skeleton"
+msgid "Skeleton"
+msgstr "スケルトン"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
+msgid "Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
+msgstr "スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Slots"
+msgid "Slots"
+msgstr "スロット"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.Sockets"
+msgid "Sockets"
+msgstr "ソケット"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPlugin.StartInProcess"
+msgid "Start in process"
+msgstr "インプロセスで開始"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPlugin.StartMaintenance"
+msgid "Start maintenance"
+msgstr "メンテナンス開始"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPlugin.Stop"
+msgid "Stop"
+msgstr "停止"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.TargetObject"
+msgid "Target object"
+msgstr "対象オブジェクト"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Task"
+msgid "Task"
+msgstr "タスク"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.TheNodeEditorCouldNotBeCreated"
+msgid "The node editor could not be created"
+msgstr "ノードエディタを作成できませんでした"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPlugin.Undo"
+msgid "Undo"
+msgstr "元に戻す"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.UndoAppearance"
+msgid "Undo appearance"
+msgstr "外見を元に戻す"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.UndoPose"
+msgid "Undo pose"
+msgstr "ポーズを元に戻す"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Up"
+msgid "Up"
+msgstr "上"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.UseSelectedObject"
+msgid "Use selected object"
+msgstr "選択中のオブジェクトを使う"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Value"
+msgid "Value"
+msgstr "値"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
+msgid "Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
+msgstr "ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPlugin.WhyDoesItLookLikeThisRules"
+msgid "Why does it look like this? (rules)"
+msgstr "なぜこう見えるか(ルール)"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPlugin.ZoomFit"
+msgid "Zoom fit"
+msgstr "ズームフィット"
+
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnActivity"
 msgid "Activity"

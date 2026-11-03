@@ -21,6 +21,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -112,15 +113,15 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "OpenAPairedanimXmlToScrubItsRoles" ) );
             return;
         }
         ImGui::TextDisabled( "%s%s", getLoadedAssetPath().c_str(), _model.isDirty() ? "  (modified)" : "" );
         drawHistoryRow();
         drawTimeline();
-        if ( ImGui::CollapsingHeader( "Roles", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "Roles" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             drawRoleRows();
-        if ( ImGui::CollapsingHeader( "Shared notifies", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "SharedNotifies" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             drawNotifyRows();
 
         syncPreviewRoles();
@@ -201,18 +202,18 @@ namespace sw::editor
     void PairedAnimationPanel::drawHistoryRow()
     {
         ImGui::BeginDisabled( _model.canUndo() == false );
-        if ( ImGui::Button( "Undo" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Undo" ) ) )
             reportEdit( _model.undo() );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "pairedanim.undo" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Redo" ) ) );
         ImGui::BeginDisabled( _model.canRedo() == false );
-        if ( ImGui::Button( "Redo" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Redo" ) ) )
             reportEdit( _model.redo() );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "pairedanim.redo" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Check" ) );
-        if ( ImGui::Button( "Check" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Check" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Check" ) ) )
             _status = _model.isValid() ? "The paired animation follows every rule" : "The paired animation breaks a rule - see the log";
         EditorSelfTestMarks::note( "pairedanim.check" );
         EditorWidgets::drawTooltip( "Read the edited content with the runtime loader to check every rule" );
@@ -360,8 +361,8 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
-            if ( ImGui::SmallButton( "Remove" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
                 removeIndex = notifyIndex;
             ImGui::PopID();
         }
@@ -373,7 +374,7 @@ namespace sw::editor
         ImGui::SameLine();
         const bool bCanAdd = content._listRole.empty() == false;
         ImGui::BeginDisabled( bCanAdd == false );
-        if ( ImGui::Button( "Add notify at t" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddNotifyAtT" ) ) )
         {
             // 새 알림은 첫 역할로 받는다 — 역할은 콤보로 바꾼다.
             reportEdit( _model.addNotify( hashed_string( _newNotifyName.c_str() ), content._listRole[0]._name, _model.getScrubTime(), _editError ) );

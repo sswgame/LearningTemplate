@@ -19,6 +19,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
@@ -219,7 +220,7 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            ImGui::TextDisabled( "Open a behavior tree file (*.bt.xml) with Open..." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "OpenABehaviorTreeFileBtXmlWith" ) );
             return;
         }
         if ( isDocumentLoadFailed() )
@@ -240,15 +241,15 @@ namespace sw::editor
         if ( EditorChrome::beginToolbar( "##BehaviorTreeToolbar" ) )
         {
             drawDocumentOpenBar( "behaviorTree" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-            if ( ImGui::Button( "Save" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Save" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Save" ) ) )
                 (void)saveDocument(); // 실패는 상태 줄과 로그가 알린다
             EditorSelfTestMarks::note( "behaviorTree.save" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
-            if ( ImGui::Button( "Reload" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Reload" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Reload" ) ) )
                 reloadDocument();
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Zoom fit" ) );
-            if ( ImGui::Button( "Zoom fit" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) )
                 _nodeGraph.requestContentFit();
             ImGui::SameLine();
             const bool bEditable = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
@@ -267,11 +268,11 @@ namespace sw::editor
                 EditorSelfTestMarks::note( "behaviorTree.add" );
                 ImGui::SameLine();
                 const bool bHasSelection = _model.find( _selectedID ) != nullptr;
-                const bool bMoveUp       = ImGui::Button( "Up" );
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Down" ) );
-                const bool bMoveDown = ImGui::Button( "Down" );
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete" ) );
-                const bool bDelete = ImGui::Button( "Delete" );
+                const bool bMoveUp       = ImGui::Button( SW_LOCKEY( "EdPlugin", "Up" ) );
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Down" ) ) );
+                const bool bMoveDown = ImGui::Button( SW_LOCKEY( "EdPlugin", "Down" ) );
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Delete" ) ) );
+                const bool bDelete = ImGui::Button( SW_LOCKEY( "EdPlugin", "Delete" ) );
                 if ( bHasSelection )
                 {
                     if ( bMoveUp && _model.moveChild( _selectedID, -1 ) )
@@ -315,7 +316,7 @@ namespace sw::editor
         if ( _nodeGraph.beginCanvas( BehaviorTreePanelInternal::kCanvasID, BehaviorTreePanelInternal::kCanvasSettingsFile, "behaviorTree" ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
-                ImGui::TextUnformatted( "The node editor could not be created" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "TheNodeEditorCouldNotBeCreated" ) );
             EditorChrome::endSection();
             return;
         }
@@ -627,7 +628,7 @@ namespace sw::editor
         if ( pNode != nullptr )
             drawInspector( *pNode );
         else
-            ImGui::TextDisabled( "Select a node to edit it. Right-click the canvas to add one." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "SelectANodeToEditItRightClick" ) );
         ImGui::Separator();
         drawIssueList();
         EditorChrome::endSection();
@@ -640,14 +641,14 @@ namespace sw::editor
         bool bEdited = false;
         if ( Internal::hasAttribute( node._type, "name" ) )
         {
-            ImGui::TextUnformatted( "Name" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Name" ) );
             bEdited = EditorWidgets::drawTextField( "##behaviorTree.name", node._name, -1.0f ) || bEdited;
         }
         if ( Internal::hasAttribute( node._type, "reactive" ) )
-            bEdited = ImGui::Checkbox( "Reactive (re-check higher priority children every tick)", &node._bReactive ) || bEdited;
+            bEdited = ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "ReactiveReCheckHigherPriorityChildrenEveryTick" ), &node._bReactive ) || bEdited;
         if ( Internal::hasAttribute( node._type, "task" ) )
         {
-            ImGui::TextUnformatted( "Task" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Task" ) );
             if ( ImGui::BeginCombo( "##behaviorTree.task", node._task.empty() ? "(pick a task)" : node._task.c_str() ) )
             {
                 _listTaskName.clear();
@@ -665,37 +666,37 @@ namespace sw::editor
         }
         if ( Internal::hasAttribute( node._type, "key" ) )
         {
-            ImGui::TextUnformatted( "Blackboard key" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "BlackboardKey" ) );
             bEdited = EditorWidgets::drawTextField( "##behaviorTree.key", node._key, -1.0f ) || bEdited;
         }
         if ( Internal::hasAttribute( node._type, "compare" ) )
         {
-            ImGui::TextUnformatted( "Compare" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Compare" ) );
             bEdited = Internal::drawEnumCombo( "##behaviorTree.compare", node._compare, Internal::kCompareCount ) || bEdited;
         }
         if ( Internal::hasAttribute( node._type, "value" ) )
         {
-            ImGui::TextUnformatted( "Value" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Value" ) );
             bEdited = ImGui::DragFloat( "##behaviorTree.value", &node._value, 0.05f ) || bEdited;
         }
         if ( Internal::hasAttribute( node._type, "abort" ) )
         {
-            ImGui::TextUnformatted( "Abort" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Abort" ) );
             bEdited = Internal::drawEnumCombo( "##behaviorTree.abort", node._abort, Internal::kAbortCount ) || bEdited;
         }
         if ( Internal::hasAttribute( node._type, "seconds" ) )
         {
-            ImGui::TextUnformatted( "Seconds" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Seconds" ) );
             bEdited = ImGui::DragFloat( "##behaviorTree.seconds", &node._seconds, 0.05f, 0.0f, 3600.0f ) || bEdited;
         }
         if ( Internal::hasAttribute( node._type, "count" ) )
         {
-            ImGui::TextUnformatted( "Count (0 = until it fails)" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Count0UntilItFails" ) );
             bEdited = ImGui::DragInt( "##behaviorTree.count", &node._count, 0.2f, 0, 100000 ) || bEdited;
         }
         if ( Internal::hasAttribute( node._type, "repathDistance" ) )
         {
-            ImGui::TextUnformatted( "Repath distance" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "RepathDistance" ) );
             bEdited = ImGui::DragFloat( "##behaviorTree.repath", &node._repathDistance, 0.05f, 0.0f, 1000.0f ) || bEdited;
         }
         if ( bEdited )

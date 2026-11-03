@@ -15,6 +15,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
@@ -174,10 +175,10 @@ namespace sw::editor
         }
         else
         {
-            ImGui::TextDisabled( "No login handler is bound: GM commands are refused as not logged in" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoLoginHandlerIsBoundGMCommandsAre" ) );
         }
         const bool bConnected = session.getConnection().getState() != AdminToolConnectionState::Disconnected;
-        if ( bConnected == false && ImGui::Button( "Connect" ) )
+        if ( bConnected == false && ImGui::Button( SW_LOCKEY( "EdPlugin", "Connect" ) ) )
         {
             string     error;
             const bool bOpened =
@@ -186,7 +187,7 @@ namespace sw::editor
             if ( bOpened == false )
                 SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolGMConnection", "Admin tool: GM connection failed - %#", error.c_str() );
         }
-        if ( bConnected && ImGui::Button( "Disconnect" ) )
+        if ( bConnected && ImGui::Button( SW_LOCKEY( "EdPlugin", "Disconnect" ) ) )
             session.disconnectLive();
         ImGui::TextDisabled( "GM connection: %s", session.getConnection().getStateText() );
     }
@@ -201,8 +202,8 @@ namespace sw::editor
 
         EditorWidgets::drawTextField( "Account id (hex)", _accountText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::note( "admin.account" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Lookup" ) );
-        if ( ImGui::Button( "Lookup" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Lookup" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Lookup" ) ) )
         {
             AccountID accountID = kInvalidAccountID;
             if ( AdminToolPanelInternal::parseAccountID( _accountText, accountID ) )
@@ -214,7 +215,7 @@ namespace sw::editor
 
         if ( session.hasLookup() == false )
         {
-            EditorWidgets::drawEmptyHint( "Look up an account to see its balances and sanctions" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "LookUpAnAccountToSeeItsBalances" ) );
             return;
         }
 
@@ -263,16 +264,16 @@ namespace sw::editor
         EditorSelfTestMarks::note( "admin.amount" );
         EditorWidgets::drawTextField( "Memo (ticket)", _memoText, 240.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::note( "admin.memo" );
-        ImGui::Checkbox( "Refund revoke (may leave a debt)", &_bRefund );
+        ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "RefundRevokeMayLeaveADebt" ), &_bRefund );
 
         AccountID  accountID     = kInvalidAccountID;
         const bool bAccountValid = AdminToolPanelInternal::parseAccountID( _accountText, accountID );
         ImGui::BeginDisabled( bAccountValid == false );
-        if ( ImGui::Button( "Grant" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Grant" ) ) )
             session.requestAdjust( accountID, _assetText, _amount, false, _memoText );
         EditorSelfTestMarks::note( "admin.grant" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revoke" ) );
-        if ( ImGui::Button( "Revoke" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Revoke" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Revoke" ) ) )
             session.requestAdjust( accountID, _assetText, -_amount, _bRefund, _memoText );
         EditorSelfTestMarks::note( "admin.revoke" );
         ImGui::EndDisabled();
@@ -305,11 +306,11 @@ namespace sw::editor
         AccountID  accountID     = kInvalidAccountID;
         const bool bAccountValid = AdminToolPanelInternal::parseAccountID( _accountText, accountID );
         ImGui::BeginDisabled( bAccountValid == false );
-        if ( ImGui::Button( "Apply sanction" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ApplySanction" ) ) )
             session.requestSanction( accountID, _sanctionKind, _sanctionSeconds, _reasonText, _memoText );
         EditorSelfTestMarks::note( "admin.sanction.apply" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Lift sanction" ) );
-        if ( ImGui::Button( "Lift sanction" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LiftSanction" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LiftSanction" ) ) )
             session.requestSanction( accountID, _sanctionKind, 0, _reasonText, _memoText );
         EditorSelfTestMarks::note( "admin.sanction.lift" );
         ImGui::EndDisabled();
@@ -324,8 +325,8 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( "Audit log" );
 
         EditorWidgets::drawTextField( "Subject prefix", _auditSubjectText, 200.0f * EditorThemeUtil::getDPIScale() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "List audit" ) );
-        if ( ImGui::Button( "List audit" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ListAudit" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ListAudit" ) ) )
             session.requestAudit( _auditSubjectText );
         EditorSelfTestMarks::note( "admin.audit.list" );
 
@@ -362,11 +363,11 @@ namespace sw::editor
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Reports" );
-        if ( ImGui::Button( "Open reports" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "OpenReports" ) ) )
             session.requestReports( true );
         EditorSelfTestMarks::note( "admin.report.list" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Closed reports" ) );
-        if ( ImGui::Button( "Closed reports" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ClosedReports" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ClosedReports" ) ) )
             session.requestReports( false );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
@@ -397,13 +398,13 @@ namespace sw::editor
             ImGui::TableSetColumnIndex( 4 );
             const bool bOpen = report._status == ServiceReportStatus::Open;
             ImGui::BeginDisabled( bOpen == false || _memoText.empty() );
-            if ( ImGui::SmallButton( "Resolve" ) )
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Resolve" ) ) )
             {
                 resolveKey    = report._reportKey;
                 resolveStatus = ServiceReportStatus::Resolved;
             }
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Dismiss" ) );
-            if ( ImGui::SmallButton( "Dismiss" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Dismiss" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Dismiss" ) ) )
             {
                 resolveKey    = report._reportKey;
                 resolveStatus = ServiceReportStatus::Dismissed;
@@ -430,11 +431,11 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Maintenanceseconds0untilcleared", ImGuiDataType_S64, &_maintenanceSeconds );
         ImGui::BeginDisabled( _memoText.empty() );
-        if ( ImGui::Button( "Start maintenance" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "StartMaintenance" ) ) )
             session.requestSetMaintenance( _scopeText, _maintenanceKeyText, _maintenanceSeconds, _memoText );
         EditorSelfTestMarks::note( "admin.maintenance.set" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "End maintenance" ) );
-        if ( ImGui::Button( "End maintenance" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "EndMaintenance" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "EndMaintenance" ) ) )
             session.requestClearMaintenance( _scopeText, _memoText );
         ImGui::EndDisabled();
 
@@ -450,11 +451,11 @@ namespace sw::editor
         EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );
         const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
         ImGui::BeginDisabled( bNoticeReady == false );
-        if ( ImGui::Button( "Post notice" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PostNotice" ) ) )
             session.requestPostNotice( static_cast<uint64>( _noticeID ), _noticeText, _noticePriority, _noticeSeconds, _memoText );
         EditorSelfTestMarks::note( "admin.notice.post" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove notice" ) );
-        if ( ImGui::Button( "Remove notice" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "RemoveNotice" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "RemoveNotice" ) ) )
             session.requestRemoveNotice( static_cast<uint64>( _noticeID ), _memoText );
         ImGui::EndDisabled();
     }
@@ -466,13 +467,13 @@ namespace sw::editor
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Live events" );
-        if ( ImGui::Button( "List live events" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ListLiveEvents" ) ) )
             session.requestLiveEvents();
         EditorSelfTestMarks::note( "admin.liveevent.list" );
         for ( const AdminLiveEventView& view : session.getLiveEvents() )
         {
             ImGui::PushID( view._definitionJSON.c_str() );
-            if ( ImGui::SmallButton( "Edit" ) )
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Edit" ) ) )
                 _eventJSONText = view._definitionJSON; // 고쳐서 다시 올린다(같은 id 는 덮어쓴다)
             ImGui::SameLine();
             ImGui::TextUnformatted( view._definitionJSON.c_str() );
@@ -480,14 +481,14 @@ namespace sw::editor
         }
         EditorWidgets::drawTextFieldMultiline( "Event JSON", _eventJSONText, 6 );
         ImGui::BeginDisabled( _memoText.empty() || _eventJSONText.empty() );
-        if ( ImGui::Button( "Put live event" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PutLiveEvent" ) ) )
             session.requestPutLiveEvent( _eventJSONText, _memoText );
         EditorSelfTestMarks::note( "admin.liveevent.put" );
         ImGui::EndDisabled();
         EditorWidgets::drawTextField( "Event id", _eventIDText, 200.0f * EditorThemeUtil::getDPIScale() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove live event" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "RemoveLiveEvent" ) ) );
         ImGui::BeginDisabled( _memoText.empty() || _eventIDText.empty() );
-        if ( ImGui::Button( "Remove live event" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "RemoveLiveEvent" ) ) )
             session.requestRemoveLiveEvent( _eventIDText, _memoText );
         ImGui::EndDisabled();
     }

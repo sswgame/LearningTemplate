@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphBridge.h"
@@ -198,7 +199,7 @@ namespace sw::editor
             _ownerHandle = GameObjectHandle{};
             _model.clear();
             _listIssue.clear();
-            EditorWidgets::drawEmptyHint( "Select an object that has a Gimmick Circuit component" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "SelectAnObjectThatHasAGimmickCircuit" ) );
             return;
         }
 
@@ -223,7 +224,7 @@ namespace sw::editor
 
     void GimmickGraphPanel::drawToolbar( GimmickCircuitComponent& circuit )
     {
-        if ( ImGui::Button( "Add node" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddNode" ) ) )
             EditorInputGUI::openPopup( "##gimmickAddNode" );
         EditorSelfTestMarks::note( "gimmick.addnode" );
         if ( ImGui::BeginPopup( "##gimmickAddNode" ) )
@@ -253,12 +254,12 @@ namespace sw::editor
             ImGui::EndPopup();
         }
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Auto layout" ) );
-        if ( ImGui::Button( "Auto layout" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "AutoLayout" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AutoLayout" ) ) )
             _model.autoLayout();
         EditorSelfTestMarks::note( "gimmick.layout" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Zoom fit" ) );
-        if ( ImGui::Button( "Zoom fit" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) )
             _nodeGraph.requestContentFit();
         ImGui::SameLine();
         ImGui::TextDisabled( "%s - %d nodes, %d wires, %d problems", circuit.getOwner()->getName().c_str(), static_cast<int32>( _model.getNodes().size() ),
@@ -284,7 +285,7 @@ namespace sw::editor
         if ( _nodeGraph.beginCanvas( GimmickGraphPanelInternal::kCanvasID, GimmickGraphPanelInternal::kCanvasSettingsFile, "gimmickGraph" ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
-                ImGui::TextUnformatted( "The node editor could not be created" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "TheNodeEditorCouldNotBeCreated" ) );
             EditorChrome::endSection();
             return;
         }
@@ -537,7 +538,7 @@ namespace sw::editor
         const int32 nodeIndex = _model.findNodeIndex( _selectedNode );
         if ( nodeIndex < 0 )
         {
-            EditorWidgets::drawEmptyHint( "Click a node to edit it" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "ClickANodeToEditIt" ) );
             return;
         }
         const GimmickGraphNode node  = _model.getNodes()[static_cast<size_t>( nodeIndex )]; // 편집이 목록을 바꾸므로 사본으로 그린다
@@ -572,7 +573,7 @@ namespace sw::editor
             }
         }
 
-        ImGui::TextUnformatted( "Target object" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "TargetObject" ) );
         GameObject* pTarget = node._target.isValid() ? findGameObject( node._target ) : nullptr;
         if ( node._target.isValid() == false )
             ImGui::TextDisabled( "(the object that owns this circuit)" );
@@ -584,7 +585,7 @@ namespace sw::editor
             missing.appendFormat( "(missing object #%#)", node._target.objectID() );
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", missing.c_str() );
         }
-        if ( ImGui::Button( "Use selected object" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "UseSelectedObject" ) ) )
         {
             // 회로(`findCircuit`)와 같은 선택에서 고른다 — 대상은 회로와 같은 씬에 있어야 한다.
             const EditorSelection* pSelection = editor::getFocusedSelection();
@@ -599,13 +600,13 @@ namespace sw::editor
             _statusText = "Select an object in the Hierarchy first";
         }
         EditorSelfTestMarks::note( "gimmick.target.use" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear target" ) );
-        if ( ImGui::Button( "Clear target" ) && node._target.isValid() )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ClearTarget" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ClearTarget" ) ) && node._target.isValid() )
         {
             editSetTarget( circuit, node._graphID, GameObjectHandle{} );
             return;
         }
-        if ( ImGui::Button( "Delete node" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "DeleteNode" ) ) )
         {
             editRemove( circuit, vector<int32>{ node._graphID }, vector<int32>{} );
             return;
@@ -657,7 +658,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "gimmick.wire.to" );
         ImGui::BeginDisabled( _formFrom._label.empty() || _formTo._label.empty() );
-        if ( ImGui::Button( "Connect" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Connect" ) ) )
         {
             editConnect( circuit, _formFrom._nodeGraphID, _formFrom._port, _formTo._nodeGraphID, _formTo._port );
             ImGui::EndDisabled();
@@ -677,15 +678,15 @@ namespace sw::editor
             ImGui::Text( "%s.%s -> %s.%s", _model.getNodes()[static_cast<size_t>( fromIndex )]._id.c_str(), wire._fromPort.c_str(),
                          _model.getNodes()[static_cast<size_t>( toIndex )]._id.c_str(), wire._toPort.c_str() );
             bool bInvert = wire._bInvert;
-            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Invert" ) );
-            if ( ImGui::Checkbox( "Invert", &bInvert ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdPlugin", "Invert" ) ) );
+            if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "Invert" ), &bInvert ) )
             {
                 ImGui::PopID();
                 editSetInvert( circuit, wire._graphID, bInvert );
                 return;
             }
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
-            if ( ImGui::SmallButton( "Remove" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
                 removeWireID = wire._graphID;
             ImGui::PopID();
         }
@@ -706,7 +707,7 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", issue._message.c_str() );
         }
         // 가리키는 노드가 없는 배선은 저장 내용에 남아 있다 - 지우면 저장 내용이 바뀌므로 편집(Undo 가능)으로 다룬다
-        if ( _model.getOrphanWires().empty() == false && ImGui::SmallButton( "Remove broken wires" ) )
+        if ( _model.getOrphanWires().empty() == false && ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "RemoveBrokenWires" ) ) )
             editRemoveOrphanWires( circuit );
         EditorSelfTestMarks::note( "gimmick.wire.removeBroken" );
     }

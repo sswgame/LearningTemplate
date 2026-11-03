@@ -376,6 +376,628 @@
 				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
+		       source="A scene's Character Appearance component names this id.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Abort" source="Abort">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddBoneTurn" source="Add bone turn">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddChain" source="Add chain">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddNode" source="Add node">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddNotifyAtT" source="Add notify at t">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddPair" source="Add pair">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddSlot" source="Add slot">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Appearance" source="Appearance">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ApplySanction" source="Apply sanction">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AutoLayout" source="Auto layout">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BlackboardKey" source="Blackboard key">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Check" source="Check">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ClearTarget" source="Clear target">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ClickANodeToEditIt" source="Click a node to edit it">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ClosedReports" source="Closed reports">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Compare" source="Compare">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Connect" source="Connect">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Count0UntilItFails" source="Count (0 = until it fails)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.CustomizationValues" source="Customization values">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.CustomizeReleaseASliderToRefit" source="Customize (release a slider to refit)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.DataPresetSceneUse" source="Data preset (scene use)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Delete" source="Delete">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.DeleteNode" source="Delete node">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Disconnect" source="Disconnect">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Dismiss" source="Dismiss">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Down" source="Down">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Edit" source="Edit">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.EndMaintenance" source="End maintenance">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ExportDataPreset" source="Export data preset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FitCheckViewOnly" source="Fit check (view only)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Grant" source="Grant">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.IKGoal" source="IK goal">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Invert" source="Invert">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LiftSanction" source="Lift sanction">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ListAudit" source="List audit">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ListLiveEvents" source="List live events">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Load" source="Load">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadASkeletonToSeeItsBonesThe"
+		       source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadAppearanceDataToSeeWhichRulesHid"
+		       source="Load appearance data to see which rules hid or changed what.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadData" source="Load data">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadPose" source="Load pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadPresets" source="Load presets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadSkeleton" source="Load skeleton">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadTheAppearanceDataAppearanceTabToDress"
+		       source="Load the appearance data (Appearance tab) to dress the preview body.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
+		       source="Load the items file and the appearance folder to pick items and see rule explanations.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LookUpAnAccountToSeeItsBalances" source="Look up an account to see its balances and sanctions">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Lookup" source="Lookup">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.MapSameNames" source="Map same names">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Mirror" source="Mirror">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.MirrorBone" source="Mirror bone">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Name" source="Name">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.New" source="New">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
+		       source="No customization schema for this selection (load the appearance data and pick a base preset with a schema).">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoFitResultYetThePreviewSceneSolves"
+		       source="No fit result yet. The preview scene solves the fit when a slider is released.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
+		       source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here.">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
+		       source="No login handler is bound: GM commands are refused as not logged in">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoPenetration" source="No penetration.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoRuleFired" source="No rule fired.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenABehaviorTreeFileBtXmlWith" source="Open a behavior tree file (*.bt.xml) with Open...">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenACamerasXmlPresetFileToSee"
+		       source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenAPairedanimXmlToScrubItsRoles"
+		       source="Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenARetargetXmlOrTypeANew"
+		       source="Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenReports" source="Open reports">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
+		       source="Orthographic preset - the preview draws it in perspective.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickABasePresetToSeeWhichRules"
+		       source="Pick a base preset to see which rules hid or changed what.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PostNotice" source="Post notice">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PresetsUserData" source="Presets (user data)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Preview" source="Preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PreviewConstraintRig" source="Preview constraint rig">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PutLiveEvent" source="Put live event">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ReactiveReCheckHigherPriorityChildrenEveryTick"
+		       source="Reactive (re-check higher priority children every tick)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Redo" source="Redo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RedoAppearance" source="Redo appearance">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RedoPose" source="Redo pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RefundRevokeMayLeaveADebt" source="Refund revoke (may leave a debt)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Reload" source="Reload">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ReloadFromDiskDiscardEdits" source="Reload from disk (discard edits)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Remove" source="Remove">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RemoveBrokenWires" source="Remove broken wires">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RemoveLiveEvent" source="Remove live event">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RemoveNotice" source="Remove notice">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Rename" source="Rename">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RepathDistance" source="Repath distance">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ResetBone" source="Reset bone">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Resolve" source="Resolve">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Revoke" source="Revoke">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Roles" source="Roles">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Save" source="Save">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SaveAsPreset" source="Save as preset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SavePose" source="Save pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SaveThumbnail" source="Save thumbnail">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Seconds" source="Seconds">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SelectABoneToEditItsReferencePose" source="Select a bone to edit its reference pose.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SelectANodeToEditItRightClick"
+		       source="Select a node to edit it. Right-click the canvas to add one.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
+		       source="Select an object that has a Gimmick Circuit component">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SelectionBasePresetBodySlotsCustomizationValues"
+		       source="Selection (base preset, body, slots, customization values)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SetTheSourceAndTargetSkeletonsToSee"
+		       source="Set the source and target skeletons to see them overlaid here.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SharedNotifies" source="Shared notifies">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Skeleton" source="Skeleton">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
+		       source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider).">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Slots" source="Slots">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Sockets" source="Sockets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.StartInProcess" source="Start in process">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.StartMaintenance" source="Start maintenance">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Stop" source="Stop">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.TargetObject" source="Target object">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Task" source="Task">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.TheNodeEditorCouldNotBeCreated" source="The node editor could not be created">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Undo" source="Undo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.UndoAppearance" source="Undo appearance">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.UndoPose" source="Undo pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Up" source="Up">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.UseSelectedObject" source="Use selected object">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Value" source="Value">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
+		       source="Viewport gizmo editing needs the preview scene (EditorMultiWorld).">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.WhyDoesItLookLikeThisRules" source="Why does it look like this? (rules)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ZoomFit" source="Zoom fit">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdSchedule.ColumnActivity" source="Activity">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp</item>
