@@ -7,6 +7,8 @@ namespace sw
     void ScreenshotRequestQueue::put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         const ScopedLock<mutex> lock{ _mutex };
+        if ( _pendingPath.empty() )
+            (void)_requestedSerial.fetch_add( 1, std::memory_order_acq_rel ); // 꺼내지 않은 앞 요청을 덮어쓰면 처리도 한 번이다
         _pendingPath    = string{ filePath };
         _pendingTexture = sourceTexture;
         _pendingFormat  = sourceFormat;

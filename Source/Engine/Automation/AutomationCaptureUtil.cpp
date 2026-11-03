@@ -7,6 +7,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
+#include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -38,4 +39,16 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_CAPTURE_BLOCKER( foliageFollowingTerrain, "FoliageFollowingTerrain", &isFoliageBehindTerrain );
+
+    namespace
+    {
+        /** @brief 받았지만 아직 쓰지 않은 스크린샷(에디터 툴바 · 개발 명령 `screenshot` · 패킷 사진)이 있으면 true 입니다 — 시나리오가 그 파일 · 로그를 보기 전에 끝나게 한다. */
+        bool isScreenshotPending()
+        {
+            const ScreenshotRequestQueue* pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+            return pMailbox != nullptr && pMailbox->hasUnfinishedRequest();
+        }
+    } // namespace
+
+    SW_AUTOMATION_FINISH_BLOCKER( screenshotRequests, "ScreenshotRequests", &isScreenshotPending );
 } // namespace sw

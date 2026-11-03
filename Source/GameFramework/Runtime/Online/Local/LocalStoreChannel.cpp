@@ -6,17 +6,34 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+
 #include "GameFramework/Runtime/Online/Local/LocalDeviceKeyProvider.h"
 #include "GameFramework/Runtime/Online/Local/LocalStoreFactory.h"
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 살아 있는 채널 목록의 머리입니다(게임 스레드 — 채널은 게임 스레드에서 만들고 부수고 묻는다). */
+        LocalStoreChannel* s_pFirstLiveChannel = nullptr;
+
+        /** @brief 저장 · 썸네일 쓰기가 끝나기 전에 시나리오가 그 결과를 보거나 끝나지 않게 한다(에디터 자리 잡기 · `<Pass/>`). */
+        bool isLocalStoreBusy()
+        {
+            return LocalStoreChannel::isAnyChannelBusy();
+        }
+    } // namespace
+
+    SW_AUTOMATION_FINISH_BLOCKER( localStoreRequests, "LocalStoreRequests", &isLocalStoreBusy );
+
     LocalStoreChannel::LocalStoreChannel()
         : _keyProvider{}
         , _sealContext{}
         , _store{}
         , _listPendingRequest{}
     {
+        linkLive();
     }
 
     LocalStoreChannel::LocalStoreChannel( unique_ptr<ILocalStore> store )
@@ -26,10 +43,44 @@ namespace sw
         , _listPendingRequest{}
     {
         SW_ASSERT( _store != nullptr );
+        linkLive();
     }
 
     // 구독 목록 칸이 맨 나중에 선언돼 먼저 지며 남은 구독을 끊고, 프런트가 봉인 문맥 · 키보다 먼저 진다(남은 쓰기를 마친다).
-    LocalStoreChannel::~LocalStoreChannel() = default;
+    LocalStoreChannel::~LocalStoreChannel()
+    {
+        unlinkLive();
+    }
+
+    void LocalStoreChannel::linkLive()
+    {
+        _pNextLive = s_pFirstLiveChannel;
+        if ( s_pFirstLiveChannel != nullptr )
+            s_pFirstLiveChannel->_pPrevLive = this;
+        s_pFirstLiveChannel = this;
+    }
+
+    void LocalStoreChannel::unlinkLive()
+    {
+        if ( _pPrevLive != nullptr )
+            _pPrevLive->_pNextLive = _pNextLive;
+        else
+            s_pFirstLiveChannel = _pNextLive;
+        if ( _pNextLive != nullptr )
+            _pNextLive->_pPrevLive = _pPrevLive;
+        _pPrevLive = nullptr;
+        _pNextLive = nullptr;
+    }
+
+    bool LocalStoreChannel::isAnyChannelBusy()
+    {
+        for ( const LocalStoreChannel* pChannel = s_pFirstLiveChannel; pChannel != nullptr; pChannel = pChannel->_pNextLive )
+        {
+            if ( pChannel->isBusy() )
+                return true;
+        }
+        return false;
+    }
 
     bool LocalStoreChannel::open( string_view gameName, const LocalStoreLocation& location, INetSecurityProvider* pSecurityProvider, string& outError )
     {

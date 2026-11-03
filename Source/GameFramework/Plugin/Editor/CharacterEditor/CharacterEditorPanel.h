@@ -76,6 +76,8 @@ namespace sw::editor
             uint32 _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
         };
         const Published& getPublished() const { return _published; }
+        /** @brief 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다 — 자동화의 끝 차단(`CharacterEditorThumbnail`)이 캡처 · 저장 사이 틈을 진행 중인 일로 본다. */
+        [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailCapturePath.empty() == false; }
 
     private:
         /**

@@ -64,6 +64,14 @@ namespace sw
         void update();
         /** @brief 맡겼지만 아직 콜백을 부르지 않은 요청이 있으면 true 입니다. */
         bool hasPendingRequest() const { return _listPendingRequest.empty() == false; }
+        /** @brief 저장소가 아직 끝내지 않은 일이 있거나 넘기지 않은 완료가 있으면 true 입니다(구독을 놓은 쓰기도 끝까지 하므로 저장소의 수를 함께 본다). */
+        bool isBusy() const { return hasPendingRequest() || ( _store != nullptr && _store->getPendingCount() > 0 ); }
+        /**
+         * @brief 살아 있는 채널 중 하나라도 일이 남았으면 true 입니다(게임 스레드).
+         * @details 자동화의 끝 차단(`LocalStoreRequests`)이 쓴다 — 저장 · 썸네일 쓰기가 끝나기 전에 시나리오가 그 결과를 보거나 끝나지 않게. 채널은 만들어질 때 목록에 걸리고
+         *          소멸할 때 빠진다(침입형 — 목록이 할당하지 않는다).
+         */
+        static bool isAnyChannelBusy();
 
     private:
         struct PendingRequest
@@ -81,5 +89,10 @@ namespace sw
         unique_ptr<ILocalStore>            _store;
         vector<PendingRequest>             _listPendingRequest;
         SubscriptionList                   _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalStoreChannel::releaseRequest>( this ) };
+        LocalStoreChannel*                 _pPrevLive{ nullptr }; ///< 살아 있는 채널 목록의 앞(`isAnyChannelBusy`)
+        LocalStoreChannel*                 _pNextLive{ nullptr }; ///< 살아 있는 채널 목록의 뒤
+
+        void linkLive();
+        void unlinkLive();
     };
 } // namespace sw

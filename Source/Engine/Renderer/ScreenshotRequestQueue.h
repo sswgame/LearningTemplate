@@ -60,6 +60,11 @@ namespace sw
         void reportCompleted( bool bWritten, const string& writtenPath );
         /** @brief 처리한 요청 수입니다(성공과 실패 모두 셉니다). */
         uint32 getCompletedSerial() const { return _completedSerial.load( std::memory_order_acquire ); }
+        /** @brief 받았지만 아직 처리하지 않은 요청(`put` 으로 넣고 `reportCompleted` 전)이나 패킷에 싣지 않은 패킷 사진이 있으면 true 입니다. 덮어쓴 요청은 하나로 센다. */
+        [[nodiscard]] bool hasUnfinishedRequest() const
+        {
+            return _requestedSerial.load( std::memory_order_acquire ) != _completedSerial.load( std::memory_order_acquire ) || isPacketSlotFree() == false;
+        }
         /** @brief 마지막으로 처리한 요청이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
         string getLastPath() const;
 
@@ -96,6 +101,7 @@ namespace sw
         string _pendingPacketPath        SW_GUARDED_BY( _mutex );
         RHITextureHandle _pendingTexture SW_GUARDED_BY( _mutex ){ 0 };
         RHIFormat _pendingFormat         SW_GUARDED_BY( _mutex ){ RHIFormat::R8G8B8A8_UNORM };
+        atomic<uint32>                   _requestedSerial{ 0 }; ///< 받은 요청 수(꺼내기 전에 덮어쓴 요청은 세지 않는다 — 처리 수와 견준다)
         atomic<uint32>                   _completedSerial{ 0 };
         atomic<uint32>                   _completedPacketSerial{ 0 };
         atomic<uint32>                   _expectedCaptureMask{ 0 };

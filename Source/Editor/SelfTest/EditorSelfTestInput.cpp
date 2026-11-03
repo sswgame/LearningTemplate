@@ -2,6 +2,7 @@
 
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Hash/HashUtil.h"
 
@@ -42,6 +43,13 @@ namespace sw::editor
                 EditorSelfTestMark _mark;
             };
 
+            /** @brief 보이는 창 하나의 자리 해시입니다(위치 · 크기 · 도크 노드 · 뷰포트 · 접힘). */
+            struct WindowPlace
+            {
+                uint32 _windowID{ 0 };
+                uint64 _hash{ 0 };
+            };
+
             /** @brief 키 · 글 입력을 받을 곳입니다(`EditorSelfTestInput::isKeyboardTargetSettled`). */
             struct KeyboardTarget
             {
@@ -73,6 +81,8 @@ namespace sw::editor
                 uint32               _stablePairTag{ 0 };             ///< 지금 서명이 바로 앞 표본과 같으면 그 앞 표본의 번호, 다르면 0(`isLayoutSettledSince`)
                 uint32               _settleWaitSerial{ 0 };          ///< 마지막 `beginSettleWait` 의 번호
                 uint32               _openFrameTag{ 0 };              ///< 지금 열린 프레임에 찍은 기다림 번호
+                vector<WindowPlace>  _listWindowPlace;                ///< 바로 앞 표본의 창마다 자리 해시(`_layoutSignature` 의 재료) — 바뀐 창을 이름으로 알린다
+                string               _lastLayoutChange;               ///< 서명이 마지막으로 바뀐 까닭(창 이름 · 메인 뷰포트 · 팝업, `describeLastLayoutChange`)
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
                 bool                 _bHoldMouse{ false }; ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게)
@@ -160,20 +170,47 @@ namespace sw::editor
                 return target;
             }
 
-            /** @brief 보이는 창의 배치 서명입니다. 둘이 같으면 그 사이 어느 창도 움직이거나 크기가 바뀌거나 도킹이 바뀌지 않았다. */
-            static uint64 sampleLayoutSignature()
+            /**
+             * @brief 보이는 창의 배치 서명입니다. 둘이 같으면 그 사이 어느 창도 움직이거나 크기가 바뀌거나 도킹이 바뀌지 않았다.
+             * @details 창마다의 자리 해시를 @p outListPlace 에 남긴다 — 서명이 바뀌면 앞 표본과 견주어 어느 창이 움직였는지 알린다(자리 잡기 시한 초과의 까닭).
+             */
+            static uint64 sampleLayoutSignature( vector<WindowPlace>& outListPlace )
             {
                 const ImGuiContext& context   = *ImGui::GetCurrentContext();
                 const ImVec2        mainSize  = ImGui::GetMainViewport()->Size;
                 uint64              signature = HashUtil::makeHash( mainSize.x, mainSize.y, context.OpenPopupStack.Size );
+                outListPlace.clear();
                 for ( const ImGuiWindow* pWindow : context.Windows )
                 {
                     if ( pWindow->WasActive == false || pWindow->Hidden )
                         continue;
-                    signature = HashUtil::combine( signature, HashUtil::makeHash( pWindow->ID, pWindow->Pos.x, pWindow->Pos.y, pWindow->Size.x, pWindow->Size.y, pWindow->DockId,
-                                                                                  pWindow->ViewportId, pWindow->Collapsed ) );
+                    const uint64 place = HashUtil::makeHash( pWindow->ID, pWindow->Pos.x, pWindow->Pos.y, pWindow->Size.x, pWindow->Size.y, pWindow->DockId, pWindow->ViewportId,
+                                                             pWindow->Collapsed );
+                    outListPlace.push_back( WindowPlace{ pWindow->ID, place } );
+                    signature = HashUtil::combine( signature, place );
                 }
                 return signature;
+            }
+
+            /** @brief 앞 표본(@p listBefore)에서 지금(@p listAfter)으로 바뀐 첫 창의 이름입니다. 창이 그대로면 메인 뷰포트 크기 · 팝업 수가 바뀐 것이다. */
+            static string describeLayoutChange( const vector<WindowPlace>& listBefore, const vector<WindowPlace>& listAfter )
+            {
+                for ( const WindowPlace& after : listAfter )
+                {
+                    const WindowPlace* pBefore = VectorUtil::findBy<&WindowPlace::_windowID>( listBefore, after._windowID );
+                    if ( pBefore != nullptr && pBefore->_hash == after._hash )
+                        continue;
+                    const ImGuiWindow* pWindow = ImGui::FindWindowByID( after._windowID );
+                    return string{ pWindow != nullptr ? pWindow->Name : "?" } + ( pBefore == nullptr ? " appeared" : " moved or resized" );
+                }
+                for ( const WindowPlace& before : listBefore )
+                {
+                    if ( VectorUtil::findBy<&WindowPlace::_windowID>( listAfter, before._windowID ) != nullptr )
+                        continue;
+                    const ImGuiWindow* pWindow = ImGui::FindWindowByID( before._windowID );
+                    return string{ pWindow != nullptr ? pWindow->Name : "?" } + " disappeared";
+                }
+                return "the main viewport size or the open popup count changed";
             }
         };
     } // namespace
@@ -397,11 +434,23 @@ namespace sw::editor
         return ++pState->_settleWaitSerial;
     }
 
+    uint32 EditorSelfTestInput::getSettleWaitSerial()
+    {
+        const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        return pState != nullptr ? pState->_settleWaitSerial : 0;
+    }
+
     bool EditorSelfTestInput::isLayoutSettledSince( uint32 waitSerial )
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         // 같은 두 표본 중 앞 것의 번호가 기다림 번호 이상이면 뒤 것도 그렇다(번호는 줄지 않는다).
         return pState != nullptr && waitSerial != 0 && pState->_stablePairTag >= waitSerial;
+    }
+
+    string EditorSelfTestInput::describeLastLayoutChange()
+    {
+        const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        return pState != nullptr ? pState->_lastLayoutChange : string{};
     }
 
     void EditorSelfTestInput::releaseMouseHold()
@@ -430,13 +479,17 @@ namespace sw::editor
             state._keyboardTargetFrame = frame;
 
             // 바로 앞 프레임의 배치다 — 그 프레임이 열릴 때 찍은 번호를 붙인다. 그다음 이번에 여는 프레임에 지금 번호를 찍는다.
-            const uint64 signature     = EditorSelfTestInputInternal::sampleLayoutSignature();
-            const bool   bLayoutStayed = state._layoutFrame + 1 >= frame && state._layoutSignature == signature;
-            state._stablePairTag       = bLayoutStayed ? state._layoutTag : 0;
-            state._layoutSignature     = signature;
-            state._layoutFrame         = frame;
-            state._layoutTag           = state._openFrameTag;
-            state._openFrameTag        = state._settleWaitSerial;
+            vector<EditorSelfTestInputInternal::WindowPlace> listPlace;
+            const uint64                                     signature     = EditorSelfTestInputInternal::sampleLayoutSignature( listPlace );
+            const bool                                       bLayoutStayed = state._layoutFrame + 1 >= frame && state._layoutSignature == signature;
+            if ( state._layoutSignature != signature )
+                state._lastLayoutChange = EditorSelfTestInputInternal::describeLayoutChange( state._listWindowPlace, listPlace );
+            state._listWindowPlace = std::move( listPlace );
+            state._stablePairTag   = bLayoutStayed ? state._layoutTag : 0;
+            state._layoutSignature = signature;
+            state._layoutFrame     = frame;
+            state._layoutTag       = state._openFrameTag;
+            state._openFrameTag    = state._settleWaitSerial;
         }
         if ( state._bHoldMouse )
         {

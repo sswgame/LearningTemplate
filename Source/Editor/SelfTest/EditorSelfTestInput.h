@@ -111,6 +111,8 @@ namespace sw::editor
          *          받아들여지므로, 이 번호 이상이 찍힌 프레임은 앞 단계를 모두 반영해 그린 화면이다 — 효과가 몇 프레임 뒤에 나오는지 세지 않는다.
          */
         [[nodiscard]] static uint32 beginSettleWait();
+        /** @brief 마지막 `beginSettleWait` 의 번호입니다. 상태가 새로 만들어졌으면(에디터 컨텍스트를 다시 세움) 0 부터 다시 센다. */
+        [[nodiscard]] static uint32 getSettleWaitSerial();
         /**
          * @brief `beginSettleWait` 가 준 @p waitSerial 이상이 찍힌 프레임 둘이 연속으로 같은 배치면 true 입니다 — 보이는 창 모두의 자리(위치 · 크기 · 도크 노드 · 뷰포트 · 접힘),
          *        메인 뷰포트 크기, 열린 팝업 수.
@@ -118,6 +120,8 @@ namespace sw::editor
          *          위젯 하나의 자리(`EditorSelfTestMark::isSettled`)를 창 전체로 넓힌 것이다. 기록이 꺼져 있으면(표본이 없다) false 다.
          */
         [[nodiscard]] static bool isLayoutSettledSince( uint32 waitSerial );
+        /** @brief 창 배치 서명이 마지막으로 바뀐 까닭입니다(움직인 창 이름 등) — 자리 잡기 시한 초과를 알릴 때 붙인다. 표본이 없으면 빈 글입니다. */
+        [[nodiscard]] static string describeLastLayoutChange();
         /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 호출합니다. 넣기 전에 키보드 대상을 표본으로 남긴다. */
         static void flushIntoImGui();
     };

@@ -19,6 +19,7 @@
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -119,6 +120,14 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 열린 Character Editor 가 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다(캡처 뒤 저장소 쓰기는 `LocalStoreRequests` 가 본다). */
+            [[nodiscard]] static bool isThumbnailCapturePending()
+            {
+                const EditorPanelManager*   pManager = editor::findSubsystem<EditorPanelManager>();
+                const CharacterEditorPanel* pPanel   = pManager != nullptr ? pManager->findPanel<CharacterEditorPanel>() : nullptr;
+                return pPanel != nullptr && pPanel->isThumbnailCapturePending();
+            }
+
             [[nodiscard]] static bool readBoneGizmoPlaced( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 return readPublished( &CharacterEditorPanel::Published::_boneGizmoPlaced, outValue );
@@ -177,6 +186,8 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_PANEL( CharacterEditorPanel, CharacterEditorPanel::kPanelID, EditorPanelCategory::Custom, 9020 );
+
+    SW_AUTOMATION_FINISH_BLOCKER( characterEditorThumbnail, "CharacterEditorThumbnail", &CharacterEditorPanelInternal::isThumbnailCapturePending );
 
     SW_AUTOMATION_WATCH( editorCharacterEditorBoneCount, "Editor.CharacterEditorBoneCount", "Bones of the skeleton the Character Editor has loaded", &CharacterEditorPanelInternal::readBoneCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorStatusSet, "Editor.CharacterEditorStatusSet", "1 while the Character Editor status line holds a message (an edit error or progress)", &CharacterEditorPanelInternal::readStatusSet );

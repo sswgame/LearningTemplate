@@ -44,6 +44,20 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 감시 값 `Editor.NetPlayObjectHashReports` — 세션의 프로세스들에게서 받은 `state.objectline` 답의 합입니다.
+             * @details 답은 다른 프로세스에서 비동기로 온다 — 시나리오는 보내기 전 값을 `Remember` 하고 바뀔 때까지 기다린다(예전에는 답이 올 틈을 프레임 수로 두었다).
+             */
+            [[nodiscard]] static bool readObjectHashReports( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorNetPlaySession* pSession = findSession();
+                uint32                      reports  = 0;
+                for ( int32 processIndex = 0; pSession != nullptr && processIndex < pSession->getProcessCount(); ++processIndex )
+                    reports += pSession->getProcessStatus( processIndex )._objectHashReportCount;
+                outValue = static_cast<float64>( reports );
+                return true;
+            }
+
             /** @brief 감시 값 `Editor.NetPlayConnectedClients` — 서버에 붙었다고 알린 클라이언트 수입니다. */
             [[nodiscard]] static bool readConnectedClients( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -152,6 +166,9 @@ namespace sw::editor
                          &MultiplayerPanelInternal::readProcessCount );
     SW_AUTOMATION_WATCH( editorNetPlayStopping, "Editor.NetPlayStopping", "1 while a stopped multiplayer session is still reaping its processes and merging traces",
                          &MultiplayerPanelInternal::readStopping );
+    SW_AUTOMATION_WATCH( editorNetPlayObjectHashReports, "Editor.NetPlayObjectHashReports",
+                         "state.objectline replies received from the session's processes so far (remember it, send the command, wait until it differs)",
+                         &MultiplayerPanelInternal::readObjectHashReports );
     SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server",
                          &MultiplayerPanelInternal::readConnectedClients );
     SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>]", "Start the editor's multi-process play session",
