@@ -148,8 +148,12 @@ namespace sw::editor
                 uint32 _waitSerial;
             };
 
-            /** @brief `EditorWaitSettled` 의 기본 시한(프레임)입니다. 도킹 · 팝업은 몇 프레임이면 자리 잡는다 — 넘기면 화면이 계속 움직인다는 뜻이라 실패로 적는다. */
-            static constexpr uint32 kDefaultSettleTimeoutFrames = 120;
+            /**
+             * @brief `EditorWaitSettled` 의 시한(벽시계 초)입니다. 넘기면 화면이 계속 움직이거나 뒤의 일이 끝나지 않는다는 뜻이라 실패로 적는다.
+             * @details 벽시계다 — 정지는 바깥 일(캡처 · 저장 파일 쓰기)도 기다리는데, 붙잡은 동안 프레임은 빨리 돌아 프레임 수 시한은 그 일의 시간과 무관하다(Debug 의 UI 캡처 PNG 쓰기가
+             *          120 프레임을 넘었다). 시나리오 전체의 벽시계 상한(`wallTimeoutSeconds`)이 바깥 그물이다.
+             */
+            static constexpr float32 kSettleTimeoutWallSeconds = 20.0f;
 
             /**
              * @brief 에디터가 멈출 때까지(정지 상태) 시나리오 시계를 붙잡습니다 — 앞 단계가 낳은 일이 다 끝나 새 입력 없이는 더 바뀔 것이 없는 상태.
@@ -175,12 +179,10 @@ namespace sw::editor
                 const bool        bAssetsSettled = CaptureReadiness::countPendingWork( runner.findActiveObjectManager() ) == 0;
                 const utf8* const pPendingWork   = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
                 const bool        bReady         = bScreenSettled && bSceneSettled && bAssetsSettled && pPendingWork == nullptr;
-                uint32            timeoutFrames  = kDefaultSettleTimeoutFrames;
-                (void)EditorScenarioStepValidation::readCount( step, "timeoutFrames", timeoutFrames ); // 검사가 형식을 보았다
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pWait 을 읽지 않는다.
-                const AutomationStepHold hold = runner.holdUntilReady( step, input, bReady, timeoutFrames );
+                const AutomationStepHold hold = runner.holdUntilReadyWithin( step, input, bReady, kSettleTimeoutWallSeconds );
                 if ( hold == AutomationStepHold::Run && bReady == false )
-                    runner.recordFailure( step, formatToString( "the editor did not settle within %# frame(s) (screen %#, scene %#, assets %#, work %#)", timeoutFrames,
+                    runner.recordFailure( step, formatToString( "the editor did not settle within %# s (screen %#, scene %#, assets %#, work %#)", kSettleTimeoutWallSeconds,
                                                                 bScreenSettled ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
                                                                 bSceneSettled ? "settled" : "transitioning", bAssetsSettled ? "settled" : "pending",
                                                                 pPendingWork != nullptr ? pPendingWork : "none" ) );

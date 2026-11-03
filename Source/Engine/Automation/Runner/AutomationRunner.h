@@ -172,7 +172,7 @@ namespace sw
          * @details 바깥 일(자식 프로세스 종료 · 파일 · GPU)은 게임 시간과 무관하다. 게임 초(`timeoutSeconds`)로 기다리면 고정 델타로 프레임 수가 되어, 무인 실행처럼 프레임이
          *          빨리 돌면 20 초가 0.8 초가 되어 넷플레이 종료 대기가 졌다(editor.netsyncobjects).
          */
-        AutomationStepHold holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds );
+        AutomationStepHold holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds ) override;
         /** @brief 붙잡은 단계 @p step 이 맡긴 상태입니다(다른 단계의 것이면 nullptr). */
         IAutomationStepState* findHeldStepState( const AutomationStep& step ) const override;
         /** @brief 붙잡은 단계 @p step 의 상태를 맡깁니다 — `holdUntilReady` 가 Run 을 돌려줄 때 · `endRun` 이 지운다. */

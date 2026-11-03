@@ -114,7 +114,7 @@ namespace sw::editor
         static bool validateSelfTest( const AutomationStep& step, string& outError );
         static bool validateDockLayout( const AutomationStep& step, string& outError );
         static bool validateCapture( const AutomationStep& step, string& outError );
-        /** @brief `timeoutFrames`(선택, 프레임 수) 하나만 받습니다. */
+        /** @brief 속성을 받지 않습니다(시한은 벽시계 `kSettleTimeoutWallSeconds`). */
         static bool validateWaitSettled( const AutomationStep& step, string& outError );
     };
 } // namespace sw::editor
