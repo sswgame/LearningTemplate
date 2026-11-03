@@ -546,7 +546,8 @@ namespace sw::editor
             // 2) 액센트 컬러 피커
             const Color& accent          = SW_THEMECOLOR( "Base", "Accent" );
             float32      arrAccentRaw[4] = { accent._r, accent._g, accent._b, accent._a };
-            if ( ImGui::ColorEdit4( "Accent Color", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
+            EditorWidgets::drawPropertyRowLabel( "Accent Color" );
+            if ( ImGui::ColorEdit4( "##AccentColor", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
                 setAccentColor( Color{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] } );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentColor" ) );
 
@@ -585,11 +586,14 @@ namespace sw::editor
             float32 frameRadius     = SW_THEMEMETRIC( "Radius", "Frame" );
             float32 tabRadius       = SW_THEMEMETRIC( "Radius", "Tab" );
             bool    bMetricsChanged = false;
-            bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &windowRadius, 0.0f, 12.0f, "%.0f px" );
+            EditorWidgets::drawPropertyRowLabel( "Window Rounding" );
+            bMetricsChanged |= ImGui::SliderFloat( "##WindowRounding", &windowRadius, 0.0f, 12.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeWindowRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &frameRadius, 0.0f, 8.0f, "%.0f px" );
+            EditorWidgets::drawPropertyRowLabel( "Frame Rounding" );
+            bMetricsChanged |= ImGui::SliderFloat( "##FrameRounding", &frameRadius, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeFrameRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &tabRadius, 0.0f, 8.0f, "%.0f px" );
+            EditorWidgets::drawPropertyRowLabel( "Tab Rounding" );
+            bMetricsChanged |= ImGui::SliderFloat( "##TabRounding", &tabRadius, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeTabRounding" ) );
 
             if ( bMetricsChanged )

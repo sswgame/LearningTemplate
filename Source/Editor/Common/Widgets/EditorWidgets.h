@@ -140,6 +140,11 @@ namespace sw::editor
          * @details 라벨이 붙는 위젯(`drawAssetSlot`, `drawColorEdit`)이 이 함수로 라벨 열을 맞춘다. 행을 열고 닫는 상태가 없어 짝 함수(end)를 두지 않는다. 다음 항목이 행의 끝이다.
          */
         static void drawPropertyRowLabel( const utf8* pLabel );
+        /**
+         * @brief 도구줄 칸의 이름표를 칸 앞(왼쪽)에 붙입니다. 다음 항목의 폭은 건드리지 않습니다(도구줄은 칸마다 폭을 정한다).
+         * @details ImGui 입력 위젯에 보이는 이름표를 주면 칸 오른쪽에 붙어 도구줄이 읽기 어렵다 — 이름표는 앞, 위젯 이름은 `##id` 로.
+         */
+        static void drawInlineLabel( const utf8* pLabel );
 
         /**
          * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력을 그립니다. 값이 바뀌면 true 입니다.

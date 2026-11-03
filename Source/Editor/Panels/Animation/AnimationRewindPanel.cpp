@@ -139,8 +139,9 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "RecordTip" ) );
         ImGui::SameLine();
         float32 seconds = AnimationRewindRecorder::getRequestedWindowSeconds();
+        EditorWidgets::drawInlineLabel( "Window (s)" );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        if ( ImGui::SliderFloat( "Window (s)", &seconds, 1.0f, 60.0f, "%.0f" ) )
+        if ( ImGui::SliderFloat( "##Windows", &seconds, 1.0f, 60.0f, "%.0f" ) )
             AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "WindowTip" ) );
         bool bDraw = _bDrawSkeleton == SW_TRUE;

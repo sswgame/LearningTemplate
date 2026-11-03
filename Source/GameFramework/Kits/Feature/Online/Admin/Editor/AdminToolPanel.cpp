@@ -168,8 +168,9 @@ namespace sw::editor
         if ( bNeedsLogin )
         {
             EditorWidgets::drawTextField( "GM account", _loginNameText, 160.0f * EditorThemeUtil::getDPIScale() );
+            EditorWidgets::drawInlineLabel( "GM password" );
             EditorChrome::setNextItemWidthColumns( 19.0f );
-            ImGui::InputText( "GM password", _arrPassword, kPasswordCapacity, ImGuiInputTextFlags_Password );
+            ImGui::InputText( "##GMpassword", _arrPassword, kPasswordCapacity, ImGuiInputTextFlags_Password );
         }
         else
         {
@@ -256,8 +257,9 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( "Grant / Revoke" );
 
         EditorWidgets::drawTextField( "Asset id", _assetText, 160.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawInlineLabel( "Amount" );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        ImGui::InputScalar( "Amount", ImGuiDataType_S64, &_amount );
+        ImGui::InputScalar( "##Amount", ImGuiDataType_S64, &_amount );
         EditorSelfTestMarks::note( "admin.amount" );
         EditorWidgets::drawTextField( "Memo (ticket)", _memoText, 240.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::note( "admin.memo" );
@@ -295,8 +297,9 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
+        EditorWidgets::drawInlineLabel( "Seconds" );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        ImGui::InputScalar( "Seconds", ImGuiDataType_S64, &_sanctionSeconds );
+        ImGui::InputScalar( "##Seconds", ImGuiDataType_S64, &_sanctionSeconds );
         EditorWidgets::drawTextField( "Reason code", _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
 
         AccountID  accountID     = kInvalidAccountID;
@@ -423,8 +426,9 @@ namespace sw::editor
 
         EditorWidgets::drawTextField( "Scope (all or server kind)", _scopeText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawTextField( "Message key", _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawInlineLabel( "Maintenance seconds (0 = until cleared)" );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        ImGui::InputScalar( "Maintenance seconds (0 = until cleared)", ImGuiDataType_S64, &_maintenanceSeconds );
+        ImGui::InputScalar( "##Maintenanceseconds0untilcleared", ImGuiDataType_S64, &_maintenanceSeconds );
         ImGui::BeginDisabled( _memoText.empty() );
         if ( ImGui::Button( "Start maintenance" ) )
             session.requestSetMaintenance( _scopeText, _maintenanceKeyText, _maintenanceSeconds, _memoText );
@@ -434,12 +438,15 @@ namespace sw::editor
             session.requestClearMaintenance( _scopeText, _memoText );
         ImGui::EndDisabled();
 
+        EditorWidgets::drawInlineLabel( "Notice id" );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        ImGui::InputScalar( "Notice id", ImGuiDataType_S64, &_noticeID );
+        ImGui::InputScalar( "##Noticeid", ImGuiDataType_S64, &_noticeID );
+        EditorWidgets::drawInlineLabel( "Priority" );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        ImGui::InputInt( "Priority", &_noticePriority );
+        ImGui::InputInt( "##Priority", &_noticePriority );
+        EditorWidgets::drawInlineLabel( "Notice seconds (0 = until removed)" );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        ImGui::InputScalar( "Notice seconds (0 = until removed)", ImGuiDataType_S64, &_noticeSeconds );
+        ImGui::InputScalar( "##Noticeseconds0untilremoved", ImGuiDataType_S64, &_noticeSeconds );
         EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );
         const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
         ImGui::BeginDisabled( bNoticeReady == false );

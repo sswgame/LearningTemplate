@@ -373,7 +373,7 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
-            if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
+            if ( ImGui::DragFloat( "##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f s" ) && inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
                 markDocumentDirty();
         }
         // MultiTap 만 누름 횟수를 고른다(2 이상).
@@ -384,7 +384,7 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldTinyEm" ) );
-            if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
+            if ( ImGui::DragInt( "##taps", &editTaps, 0.1f, 2, 9, "%d taps" ) && inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
                 markDocumentDirty();
         }
         bool bNegate = binding._bNegate;
@@ -517,8 +517,9 @@ namespace sw::editor
 
             ImGui::SameLine();
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
+            EditorWidgets::drawInlineLabel( "Type" );
             EditorChrome::setNextItemWidthColumns( 16.0f );
-            ImGui::Combo( "Type", &_newActionValueType, arrTypes, 3 );
+            ImGui::Combo( "##Type", &_newActionValueType, arrTypes, 3 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Create Action" ) );
@@ -713,12 +714,14 @@ namespace sw::editor
 
                 ImGui::Separator();
                 ImGui::Text( "Haptic Vibration Test:" );
+                EditorWidgets::drawInlineLabel( "Left Motor" );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                ImGui::SliderFloat( "Left Motor", &_testVibLeft, 0.0f, 1.0f );
+                ImGui::SliderFloat( "##LeftMotor", &_testVibLeft, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LeftMotorTip" ) );
                 ImGui::SameLine();
+                EditorWidgets::drawInlineLabel( "Right Motor" );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                ImGui::SliderFloat( "Right Motor", &_testVibRight, 0.0f, 1.0f );
+                ImGui::SliderFloat( "##RightMotor", &_testVibRight, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Test Pulse (0.3s)" ) );
                 if ( ImGui::Button( "Test Pulse (0.3s)" ) )
@@ -798,8 +801,9 @@ namespace sw::editor
         const utf8* arrCommonKeys[] = { "Space", "Enter", "Escape", "W", "A", "S", "D", "E", "F", "Shift", "Control" };
         const Key   arrKeyValues[]  = { Key::Space, Key::Enter, Key::Escape, Key::W, Key::A, Key::S, Key::D, Key::E, Key::F, Key::LeftShift, Key::LeftControl };
 
+        EditorWidgets::drawInlineLabel( "Key" );
         EditorChrome::setNextItemWidthColumns( 20.0f );
-        ImGui::Combo( "Key", &_simKeyToInject, arrCommonKeys, 11 );
+        ImGui::Combo( "##Key", &_simKeyToInject, arrCommonKeys, 11 );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Inject KeyDown" ) );
         if ( ImGui::Button( "Inject KeyDown" ) )
             input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
@@ -818,9 +822,11 @@ namespace sw::editor
 
         ImGui::Separator();
         ImGui::Text( "2) Virtual Stick 2D Slider:" );
-        ImGui::SliderFloat( "Sim Stick X", &_simStick._x, -1.0f, 1.0f );
+        EditorWidgets::drawPropertyRowLabel( "Sim Stick X" );
+        ImGui::SliderFloat( "##SimStickX", &_simStick._x, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickXTip" ) );
-        ImGui::SliderFloat( "Sim Stick Y", &_simStick._y, -1.0f, 1.0f );
+        EditorWidgets::drawPropertyRowLabel( "Sim Stick Y" );
+        ImGui::SliderFloat( "##SimStickY", &_simStick._y, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickYTip" ) );
         if ( ImGui::Button( "Inject Stick Tilt" ) )
         {
@@ -941,7 +947,8 @@ namespace sw::editor
 
             int32       frameIdx  = static_cast<int32>( currentFrame );
             const int32 maxFrames = static_cast<int32>( _document.getReplay().getFrameCount() );
-            if ( ImGui::SliderInt( "Timeline Frame", &frameIdx, 0, maxFrames ) )
+            EditorWidgets::drawPropertyRowLabel( "Timeline Frame" );
+            if ( ImGui::SliderInt( "##TimelineFrame", &frameIdx, 0, maxFrames ) )
                 _document.seekReplay( input, static_cast<uint32>( frameIdx ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TimelineFrameTip" ) );
         }
@@ -963,13 +970,16 @@ namespace sw::editor
 
         const utf8* arrPos[] = { "Bottom-Right", "Bottom-Left", "Top-Right", "Top-Left" };
         int32       posIndex = static_cast<int32>( config._position );
-        if ( ImGui::Combo( "Screen Anchor Position", &posIndex, arrPos, 4 ) )
+        EditorWidgets::drawPropertyRowLabel( "Screen Anchor Position" );
+        if ( ImGui::Combo( "##ScreenAnchorPosition", &posIndex, arrPos, 4 ) )
             config._position = static_cast<ViewportOverlayPosition>( posIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayAnchorTip" ) );
 
-        ImGui::SliderFloat( "HUD Opacity", &config._opacity, 0.1f, 1.0f );
+        EditorWidgets::drawPropertyRowLabel( "HUD Opacity" );
+        ImGui::SliderFloat( "##HUDOpacity", &config._opacity, 0.1f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayOpacityTip" ) );
-        ImGui::SliderFloat( "HUD Scale", &config._scale, 0.5f, 2.0f );
+        EditorWidgets::drawPropertyRowLabel( "HUD Scale" );
+        ImGui::SliderFloat( "##HUDScale", &config._scale, 0.5f, 2.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayScaleTip" ) );
 
         ImGui::Separator();

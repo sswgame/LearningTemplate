@@ -462,16 +462,19 @@ namespace sw::editor
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureColumns( UIPreviewPanelInternal::kLanguageComboColumns ) );
         drawLanguageCombo();
+        EditorWidgets::drawInlineLabel( "UI scale" );
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        ImGui::SliderFloat( "UI scale", &_model.editUIScale(), 0.5f, 2.0f, "%.2f" );
+        ImGui::SliderFloat( "##UIscale", &_model.editUIScale(), 0.5f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "UIScaleTip" ) );
         ImGui::SameLine();
+        EditorWidgets::drawInlineLabel( "Text scale" );
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        ImGui::SliderFloat( "Text scale", &_model.editTextScale(), 0.75f, 2.0f, "%.2f" );
+        ImGui::SliderFloat( "##Textscale", &_model.editTextScale(), 0.75f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "TextScaleTip" ) );
         ImGui::SameLine();
+        EditorWidgets::drawInlineLabel( "Safe zone" );
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        ImGui::SliderFloat( "Safe zone", &_model.editSafeZone(), 0.0f, 0.1f, "%.3f" );
+        ImGui::SliderFloat( "##Safezone", &_model.editSafeZone(), 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Layout rects" ) );
         ImGui::Checkbox( "Layout rects", &_bShowLayout );

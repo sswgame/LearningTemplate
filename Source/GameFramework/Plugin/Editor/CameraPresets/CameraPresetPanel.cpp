@@ -116,7 +116,8 @@ namespace sw::editor
                          preset._view._distance, preset._view._pitch, preset._view._yaw, preset._lens.computeFieldOfViewY() );
             if ( preset._lens._bOrthographic || preset._view._mode == CameraPresetMode::OrthoTopDown )
                 ImGui::TextDisabled( "Orthographic preset - the preview draws it in perspective." );
-            if ( ImGui::SliderFloat( "Target yaw", &_model.editTargetYawDegrees(), -180.0f, 180.0f, "%.0f deg" ) )
+            EditorWidgets::drawPropertyRowLabel( "Target yaw" );
+            if ( ImGui::SliderFloat( "##Targetyaw", &_model.editTargetYawDegrees(), -180.0f, 180.0f, "%.0f deg" ) )
                 _model.markViewportDirty();
             EditorWidgets::drawTooltip( "Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it" );
         }

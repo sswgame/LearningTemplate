@@ -300,7 +300,8 @@ namespace sw::editor
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
 
-        ImGui::InputTextMultiline( "Cinematic Note", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 40.0f * EditorThemeUtil::getDPIScale() ) );
+        ImGui::TextDisabled( "Cinematic note" ); // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
+        ImGui::InputTextMultiline( "##CinematicNote", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 40.0f * EditorThemeUtil::getDPIScale() ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );

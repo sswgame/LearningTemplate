@@ -5,6 +5,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -80,7 +81,8 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            ImGui::SliderInt( "Clients", &_clientCount, 1, EditorNetSimSession::kMaxClients );
+            EditorWidgets::drawPropertyRowLabel( "Clients" );
+            ImGui::SliderInt( "##Clients", &_clientCount, 1, EditorNetSimSession::kMaxClients );
             const bool bStartClicked = ImGui::Button( "Start in process" );
             EditorSelfTestMarks::note( "multiplayer.inprocess.start" );
             if ( bStartClicked )

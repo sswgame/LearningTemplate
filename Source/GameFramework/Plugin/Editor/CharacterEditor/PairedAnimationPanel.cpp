@@ -221,8 +221,9 @@ namespace sw::editor
     void PairedAnimationPanel::drawTimeline()
     {
         float32 duration = _model.getContent()._duration;
+        EditorWidgets::drawInlineLabel( "Duration (s)" );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        if ( ImGui::DragFloat( "Duration (s)", &duration, 0.01f, 0.01f, 60.0f, "%.3f" ) )
+        if ( ImGui::DragFloat( "##Durations", &duration, 0.01f, 0.01f, 60.0f, "%.3f" ) )
             reportEdit( _model.setDuration( duration, true, _editError ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             _model.endContinuousEdit();
@@ -280,16 +281,18 @@ namespace sw::editor
             if ( role._bAnchor == false )
             {
                 float32 start = role._startSeconds;
+                EditorWidgets::drawInlineLabel( "Start (s)" );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( ImGui::DragFloat( "Start (s)", &start, 0.01f, 0.0f, _model.getContent()._duration, "%.3f" ) )
+                if ( ImGui::DragFloat( "##Starts", &start, 0.01f, 0.0f, _model.getContent()._duration, "%.3f" ) )
                     reportEdit( _model.setRoleStart( roleIndex, start, true, _editError ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     _model.endContinuousEdit();
                 ImGui::SameLine();
             }
             float32 arrBlend[2] = { role._enterBlendSeconds, role._exitBlendSeconds };
+            EditorWidgets::drawInlineLabel( "Enter / exit blend (s)" );
             EditorChrome::setNextItemWidthColumns( 27.0f );
-            if ( ImGui::DragFloat2( "Enter / exit blend (s)", arrBlend, 0.01f, 0.0f, 5.0f, "%.3f" ) )
+            if ( ImGui::DragFloat2( "##Enterexitblends", arrBlend, 0.01f, 0.0f, 5.0f, "%.3f" ) )
                 reportEdit( _model.setRoleBlend( roleIndex, arrBlend[0], arrBlend[1], true, _editError ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
@@ -299,12 +302,14 @@ namespace sw::editor
             {
                 float3  offset     = role._offset;
                 float32 yawDegrees = role._yawRadians * MathUtil::kRadianToDegree;
+                EditorWidgets::drawInlineLabel( "Offset (m)" );
                 EditorChrome::setNextItemWidthColumns( 32.0f );
-                const bool bOffsetChanged = ImGui::DragFloat3( "Offset (m)", offset.data(), 0.01f, -10.0f, 10.0f, "%.3f" );
+                const bool bOffsetChanged = ImGui::DragFloat3( "##Offsetm", offset.data(), 0.01f, -10.0f, 10.0f, "%.3f" );
                 const bool bOffsetDone    = ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
+                EditorWidgets::drawInlineLabel( "Yaw (deg)" );
                 EditorChrome::setNextItemWidthColumns( 13.0f );
-                const bool bYawChanged = ImGui::DragFloat( "Yaw (deg)", &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f" );
+                const bool bYawChanged = ImGui::DragFloat( "##Yawdeg", &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f" );
                 const bool bYawDone    = ImGui::IsItemDeactivatedAfterEdit();
                 if ( bOffsetChanged || bYawChanged )
                     reportEdit( _model.setRoleOffset( roleIndex, offset, yawDegrees, true, _editError ) );
@@ -316,8 +321,9 @@ namespace sw::editor
             if ( role._bAnchor == false && role._align == PairedAnimationAlign::Warp )
             {
                 float32 warpEnd = role._warpEndSeconds;
+                EditorWidgets::drawInlineLabel( "Warp end (s)" );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( ImGui::DragFloat( "Warp end (s)", &warpEnd, 0.01f, 0.0f, 10.0f, "%.3f" ) )
+                if ( ImGui::DragFloat( "##Warpends", &warpEnd, 0.01f, 0.0f, 10.0f, "%.3f" ) )
                     reportEdit( _model.setRoleWarpEnd( roleIndex, warpEnd, true, _editError ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     _model.endContinuousEdit();

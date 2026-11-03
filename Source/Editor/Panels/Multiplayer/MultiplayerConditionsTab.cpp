@@ -300,13 +300,17 @@ namespace sw::editor
     {
         bool bChanged = false;
         ImGui::PushID( pID );
-        ImGui::SliderFloat( "Latency (ms)", &inoutSettings._latencyMilliseconds, 0.0f, EditorNetConditionsUtil::kMaxLatencyMilliseconds, "%.0f" );
+        EditorWidgets::drawPropertyRowLabel( "Latency (ms)" );
+        ImGui::SliderFloat( "##Latencyms", &inoutSettings._latencyMilliseconds, 0.0f, EditorNetConditionsUtil::kMaxLatencyMilliseconds, "%.0f" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
-        ImGui::SliderFloat( "Jitter (ms)", &inoutSettings._jitterMilliseconds, 0.0f, EditorNetConditionsUtil::kMaxJitterMilliseconds, "%.0f" );
+        EditorWidgets::drawPropertyRowLabel( "Jitter (ms)" );
+        ImGui::SliderFloat( "##Jitterms", &inoutSettings._jitterMilliseconds, 0.0f, EditorNetConditionsUtil::kMaxJitterMilliseconds, "%.0f" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
-        ImGui::SliderFloat( "Loss (%)", &inoutSettings._lossPercent, 0.0f, 100.0f, "%.1f" );
+        EditorWidgets::drawPropertyRowLabel( "Loss (%)" );
+        ImGui::SliderFloat( "##Loss", &inoutSettings._lossPercent, 0.0f, 100.0f, "%.1f" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
-        ImGui::SliderInt( "Bandwidth (KB/s)", &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetConditionsUtil::kMaxBandwidthKilobytesPerSecond, "%d" );
+        EditorWidgets::drawPropertyRowLabel( "Bandwidth (KB/s)" );
+        ImGui::SliderInt( "##BandwidthKBs", &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetConditionsUtil::kMaxBandwidthKilobytesPerSecond, "%d" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsBandwidth" ) );
         ImGui::PopID();

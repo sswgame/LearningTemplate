@@ -567,13 +567,14 @@ namespace sw::editor
 
         // 편집 중이 아니면 오브젝트 이름으로 채운다. 편집 중인 텍스트를 멤버로 보관해야 입력란을 떠난 프레임(ImGui 가 버퍼에 쓰지 않는다)에도 적용할 수 있다.
         // Enter 를 누르거나 다른 곳을 눌러 떠나도 적용한다(유니티와 언리얼). Esc 는 ImGui 가 텍스트를 되돌려 편집 없음으로 끝난다.
-        const bool bEditingName = ImGui::GetActiveID() == ImGui::GetID( "Name" ) && _nameEditObjectID == pObj->getObjectID();
+        const bool bEditingName = ImGui::GetActiveID() == ImGui::GetID( "##Name" ) && _nameEditObjectID == pObj->getObjectID();
         if ( bEditingName == false )
         {
             _nameEditBuffer   = pObj->getName().c_str();
             _nameEditObjectID = pObj->getObjectID();
         }
-        const bool bEnter         = ImGui::InputText( "Name", _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        EditorWidgets::drawPropertyRowLabel( "Name" );
+        const bool bEnter         = ImGui::InputText( "##Name", _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         const bool bLeftAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
         const bool bNameChanged   = _nameEditBuffer.empty() == false && pObj->getName().isEqual( hashed_string( _nameEditBuffer.c_str() ), NameCase::CaseSensitive ) == false;
         if ( ( bEnter || bLeftAfterEdit ) && bNameChanged )

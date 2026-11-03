@@ -110,7 +110,8 @@ namespace sw::editor
         drawEditedDragFloat( "v", &pFrame->_uvRect._y, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
         drawEditedDragFloat( "w", &pFrame->_uvRect._z, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
         drawEditedDragFloat( "h", &pFrame->_uvRect._w, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
-        ImGui::InputInt( "durationMs", &pFrame->_durationMs );
+        EditorWidgets::drawPropertyRowLabel( "durationMs" );
+        ImGui::InputInt( "##durationMs", &pFrame->_durationMs );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
@@ -148,7 +149,8 @@ namespace sw::editor
         drawEditedDragFloat( "y", &pKey->_position._y, 0.1f, nullptr, "Edit Sprite Key", "sprite-clip-key" );
         // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
         float32 angleDeg = MathUtil::toDegree( pKey->_angle );
-        if ( ImGui::DragFloat( "angleDeg", &angleDeg, 0.5f ) )
+        EditorWidgets::drawPropertyRowLabel( "angleDeg" );
+        if ( ImGui::DragFloat( "##angleDeg", &angleDeg, 0.5f ) )
             pKey->_angle = MathUtil::toRadian( angleDeg );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
@@ -253,15 +255,18 @@ namespace sw::editor
         if ( pAnimation == nullptr )
             return;
         fixed_string<constant::buffer::kMax64>& animationName = _model.editAnimationName();
-        ImGui::InputText( "name", animationName.data(), animationName.capacity() );
+        EditorWidgets::drawPropertyRowLabel( "name" );
+        ImGui::InputText( "##name", animationName.data(), animationName.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationName() )
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationNameTip" ) );
-        ImGui::InputInt( "first frame", &pAnimation->_firstFrame );
+        EditorWidgets::drawPropertyRowLabel( "first frame" );
+        ImGui::InputInt( "##firstframe", &pAnimation->_firstFrame );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFirstFrameTip" ) );
-        ImGui::InputInt( "frame count", &pAnimation->_frameCount );
+        EditorWidgets::drawPropertyRowLabel( "frame count" );
+        ImGui::InputInt( "##framecount", &pAnimation->_frameCount );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFrameCountTip" ) );

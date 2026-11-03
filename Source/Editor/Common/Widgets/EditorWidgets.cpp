@@ -582,6 +582,13 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -1.0f );
     }
 
+    void EditorWidgets::drawInlineLabel( const utf8* pLabel )
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextDisabled( "%s", pLabel );
+        ImGui::SameLine();
+    }
+
     bool EditorWidgets::drawTextField( const utf8* pLabel, string& text, float32 width )
     {
         if ( width < 0.0f )

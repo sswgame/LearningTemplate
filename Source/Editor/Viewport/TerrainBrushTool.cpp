@@ -10,6 +10,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -557,15 +558,20 @@ namespace sw::editor
                     static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" };
                     static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
                     int32 mode = static_cast<int32>( state._settings._mode );
-                    if ( ImGui::Combo( "Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
+                    EditorWidgets::drawPropertyRowLabel( "Mode" );
+                    if ( ImGui::Combo( "##Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
                         state._settings._mode = static_cast<TerrainBrushMode>( mode );
-                    ImGui::SliderFloat( "Radius", &state._settings._radius, 0.5f, 64.0f, "%.1f m" );
-                    ImGui::SliderFloat( "Strength", &state._settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
-                    ImGui::SliderFloat( "Falloff", &state._settings._falloff, 0.0f, 1.0f, "%.2f" );
+                    EditorWidgets::drawPropertyRowLabel( "Radius" );
+                    ImGui::SliderFloat( "##Radius", &state._settings._radius, 0.5f, 64.0f, "%.1f m" );
+                    EditorWidgets::drawPropertyRowLabel( "Strength" );
+                    ImGui::SliderFloat( "##Strength", &state._settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
+                    EditorWidgets::drawPropertyRowLabel( "Falloff" );
+                    ImGui::SliderFloat( "##Falloff", &state._settings._falloff, 0.0f, 1.0f, "%.2f" );
                     if ( state._settings._mode == TerrainBrushMode::PaintLayer )
                     {
                         int32 layer = static_cast<int32>( state._settings._layerIndex );
-                        if ( ImGui::SliderInt( "Layer", &layer, 0, static_cast<int32>( kLayerCount ) - 1 ) )
+                        EditorWidgets::drawPropertyRowLabel( "Layer" );
+                        if ( ImGui::SliderInt( "##Layer", &layer, 0, static_cast<int32>( kLayerCount ) - 1 ) )
                             state._settings._layerIndex = static_cast<uint32>( layer );
                     }
                     drawResizeControls( state );

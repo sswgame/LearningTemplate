@@ -3,7 +3,7 @@
 """
 Scripts/lint/PreCommit.py
 
-Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · Core 티어 역류 검사(`CoreTiers.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를 돌립니다.
+Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다.
@@ -25,6 +25,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
+from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -60,6 +61,15 @@ def main(argv: list[str] | None = None) -> int:
             hasErrors = True
             print(f"[CoreTiers] FAIL — Core 티어 역류 {len(listTierViolation)}건(Scripts/generate/rules/CoreLayers.toml)")
             for line in listTierViolation:
+                print(f"  - {line}")
+
+    # --- 에디터 ImGui 입력 위젯의 보이는 이름표(문자열 내용이라 형식이 가르지 못하는 자리 — EditorWidgetLabels.py 머리말) ---------------
+    if stagedCppFiles:
+        listLabelViolation = checkEditorWidgetLabels(projectRoot, [str(path) for path in stagedCppFiles])
+        if listLabelViolation:
+            hasErrors = True
+            print(f"[EditorWidgetLabels] FAIL — 칸 오른쪽에 붙는 ImGui 이름표 {len(listLabelViolation)}건")
+            for line in listLabelViolation:
                 print(f"  - {line}")
 
     # --- CMake 경로의 대소문자(컴파일러가 보지 않는 자리 — CMakePathCase.py 머리말) ---------------

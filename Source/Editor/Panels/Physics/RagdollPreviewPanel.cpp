@@ -200,8 +200,9 @@ namespace sw::editor
                 _model.requestRespawn(); // 다음 그리기가 몸을 처음 자세로 다시 놓는다
             EditorSelfTestMarks::note( "ragdoll.reset" );
             EditorWidgets::drawTooltip( "Place the body again in its start pose" );
+            EditorWidgets::drawInlineLabel( "Impulse (N*s)" );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
-            (void)ImGui::SliderFloat( "Impulse (N*s)", &_model.editImpulse(), 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );
+            (void)ImGui::SliderFloat( "##ImpulseNs", &_model.editImpulse(), 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );
             ImGui::Text( "State %s  Built bodies %u  Settled %s", getEnumName( pRagdoll->getState() ), static_cast<uint32>( pRagdoll->getRagdoll()._listBody.size() ),
                          pRagdoll->isSettled() ? "yes" : "no" );
         }

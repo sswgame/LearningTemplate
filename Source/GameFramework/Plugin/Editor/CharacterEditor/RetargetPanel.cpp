@@ -427,8 +427,9 @@ namespace sw::editor
     void RetargetPanel::drawOptionRows()
     {
         int32 mode = static_cast<int32>( _profile.getTranslationMode() );
+        EditorWidgets::drawInlineLabel( "Translation" );
         EditorChrome::setNextItemWidthColumns( 27.0f );
-        if ( ImGui::Combo( "Translation", &mode, RetargetPanelInternal::kArrTranslationMode, static_cast<int32>( SW_COUNT_OF( RetargetPanelInternal::kArrTranslationMode ) ) ) )
+        if ( ImGui::Combo( "##Translation", &mode, RetargetPanelInternal::kArrTranslationMode, static_cast<int32>( SW_COUNT_OF( RetargetPanelInternal::kArrTranslationMode ) ) ) )
         {
             _profile.setRootAndPelvis( _profile.getSourceRoot(), _profile.getTargetRoot(), _profile.getSourcePelvis(), _profile.getTargetPelvis(),
                                        static_cast<RetargetTranslationMode>( mode ) );
@@ -443,8 +444,9 @@ namespace sw::editor
         }
         ImGui::SameLine();
         float32 heightRatio = _profile.getHeightRatioOverride();
+        EditorWidgets::drawInlineLabel( "Height ratio (0 = pelvis)" );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        ImGui::DragFloat( "Height ratio (0 = pelvis)", &heightRatio, 0.01f, 0.0f, 10.0f, "%.3f" );
+        ImGui::DragFloat( "##Heightratio0pelvis", &heightRatio, 0.01f, 0.0f, 10.0f, "%.3f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _profile.setHeightRatioOverride( heightRatio );
@@ -463,16 +465,15 @@ namespace sw::editor
             ChainText&     text  = _listChainText[chainIndex];
             ImGui::PushID( static_cast<int32>( chainIndex ) );
             ImGui::SeparatorText( chain._name.c_str() );
-            const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDPIScale();
-            ImGui::SetNextItemWidth( fieldWidth );
-            ImGui::InputTextWithHint( "Source bones", "root to end: a, b, c", text._source.data(), text._source.max_size() );
+            EditorWidgets::drawPropertyRowLabel( "Source bones" );
+            ImGui::InputTextWithHint( "##SourceBones", "root to end: a, b, c", text._source.data(), text._source.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
                 chain._listSourceBone = RetargetPanelInternal::parseNames( text._source.c_str() );
                 bChanged              = true;
             }
-            ImGui::SetNextItemWidth( fieldWidth );
-            ImGui::InputTextWithHint( "Target bones", "root to end: a, b, c", text._target.data(), text._target.max_size() );
+            EditorWidgets::drawPropertyRowLabel( "Target bones" );
+            ImGui::InputTextWithHint( "##TargetBones", "root to end: a, b, c", text._target.data(), text._target.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
                 chain._listTargetBone = RetargetPanelInternal::parseNames( text._target.c_str() );

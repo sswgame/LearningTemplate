@@ -872,7 +872,8 @@ namespace sw::editor
 
         fixed_string<constant::buffer::kMax128> parent;
         parent = socket._parent.c_str();
-        if ( ImGui::InputText( "Parent", parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        EditorWidgets::drawPropertyRowLabel( "Parent" );
+        if ( ImGui::InputText( "##Parent", parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ), status ) );
 
         hashed_string pickedKind;
@@ -880,30 +881,35 @@ namespace sw::editor
             _document.reportEdit( sockets.setKind( name, pickedKind, status ) );
 
         float3 translation = socket._translation;
-        if ( ImGui::DragFloat3( "Translation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        EditorWidgets::drawPropertyRowLabel( "Translation" );
+        if ( ImGui::DragFloat3( "##Translation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( sockets.setTranslation( name, translation, true, status ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 degrees = socket._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
-        if ( ImGui::DragFloat3( "Rotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
+        EditorWidgets::drawPropertyRowLabel( "Rotation" );
+        if ( ImGui::DragFloat3( "##Rotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
             _document.reportEdit( sockets.setRotationDegrees( name, degrees, true, status ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 scale = socket._scale;
-        if ( ImGui::DragFloat3( "Scale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        EditorWidgets::drawPropertyRowLabel( "Scale" );
+        if ( ImGui::DragFloat3( "##Scale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( sockets.setScale( name, scale, true, status ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         int32 anchorIndex = socket._anchor == SocketAnchor::Surface ? 1 : 0;
-        if ( ImGui::Combo( "Anchor", &anchorIndex, "Bone\0Surface\0" ) )
+        EditorWidgets::drawPropertyRowLabel( "Anchor" );
+        if ( ImGui::Combo( "##Anchor", &anchorIndex, "Bone\0Surface\0" ) )
             _document.reportEdit( sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone, status ) );
 
         fixed_string<constant::file::kMaxPathSize> previewMesh;
         previewMesh = string_view( socket._previewMesh );
-        if ( ImGui::InputText( "Preview mesh", previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        EditorWidgets::drawPropertyRowLabel( "Preview mesh" );
+        if ( ImGui::InputText( "##Previewmesh", previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             _document.reportEdit( sockets.setPreviewMesh( name, previewMesh.c_str(), status ) );
     }
 
@@ -1006,20 +1012,23 @@ namespace sw::editor
         string error;
 
         float3 translation = current._translation;
-        if ( ImGui::DragFloat3( "Bone translation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        EditorWidgets::drawPropertyRowLabel( "Bone translation" );
+        if ( ImGui::DragFloat3( "##Bonetranslation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( pose.setTranslation( bone, translation, true, error ) || error.empty() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
         EditorSelfTestMarks::note( "charactereditor.bone.translation" );
 
         float3 degrees = current._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
-        if ( ImGui::DragFloat3( "Bone rotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
+        EditorWidgets::drawPropertyRowLabel( "Bone rotation" );
+        if ( ImGui::DragFloat3( "##Bonerotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
             _document.reportEdit( pose.setRotationDegrees( bone, degrees, true, error ) || error.empty() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
 
         float3 scale = current._scale;
-        if ( ImGui::DragFloat3( "Bone scale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        EditorWidgets::drawPropertyRowLabel( "Bone scale" );
+        if ( ImGui::DragFloat3( "##Bonescale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( pose.setScale( bone, scale, true, error ) || error.empty() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
@@ -1106,17 +1115,21 @@ namespace sw::editor
         else
         {
             text = selection._basePresetID.c_str();
-            if ( ImGui::InputText( "Base preset", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+            EditorWidgets::drawPropertyRowLabel( "Base preset" );
+            if ( ImGui::InputText( "##Basepreset", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
                 (void)appearance.setBasePreset( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
         }
         text = selection._bodyType.c_str();
-        if ( ImGui::InputText( "Body type", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        EditorWidgets::drawPropertyRowLabel( "Body type" );
+        if ( ImGui::InputText( "##Bodytype", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)appearance.setBodyType( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
         text = selection._bodyShape.c_str();
-        if ( ImGui::InputText( "Body shape", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        EditorWidgets::drawPropertyRowLabel( "Body shape" );
+        if ( ImGui::InputText( "##Bodyshape", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)appearance.setBodyShape( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
         text = selection._face.c_str();
-        if ( ImGui::InputText( "Face", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        EditorWidgets::drawPropertyRowLabel( "Face" );
+        if ( ImGui::InputText( "##Face", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)appearance.setFace( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
     }
 
