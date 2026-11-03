@@ -139,7 +139,9 @@ namespace sw::editor
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        EditorWidgets::drawSectionHeader( "Selection" );
+        // 머리 글과 자물쇠를 한 줄에 두고 그 아래에 구분선 — drawSectionHeader 는 구분선까지 그려 자물쇠가 다음 줄로 밀렸다(uiaudit 00).
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted( "Selection" );
         // 잠그면 선택이 바뀌어도 현재 오브젝트를 계속 보여 준다. 유니티 Inspector 의 자물쇠에 해당하며, 언리얼에서는 Details 창을 여러 개 여는 것과 같은 용도다.
         ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() );
         const bool bLocked = _lockedObjectID != 0;
@@ -147,6 +149,7 @@ namespace sw::editor
                                                   SW_LOCKEY( "EditorInspector", "FollowingSelection" ) ) )
             _lockedObjectID = bLocked ? 0 : editorContext.getSubsystem<EditorWorkspace>().getSelectedObjectID();
         EditorSelfTestMarks::note( "inspector.lock" );
+        ImGui::Separator();
 
         // 미리보기 창의 선택을 겨누면 그 창 씬의 오브젝트를 보인다. 잠금은 메인 선택의 오브젝트에만 쓴다.
         const EditorSelection* pFocusedSelection = editor::getFocusedSelection();

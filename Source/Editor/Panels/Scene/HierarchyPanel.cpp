@@ -319,11 +319,17 @@ namespace sw::editor
             }
 
             /** @brief 행 라벨(아이콘, 이름, 카테고리 배지, 오브젝트 id 꼬리)을 만듭니다. */
-            static void buildObjectLabel( const GameObject* pObj, uint64 objectID, fixed_string<constant::buffer::kMax256>& outLabel )
+            /**
+             * @brief 행 글(아이콘 · 이름 · ID)과 범주 배지를 따로 만듭니다. 배지는 행 글에 넣지 않고 그린 뒤 회색으로 얹는다(`drawRowBadge`) — 이름과 같은 색 · 같은 글에 붙여
+             *        좁은 하이어라키에서 이름 뒤가 "[Rendering 3" 처럼 잘리고 이름과 구분되지 않았다(uiaudit 00, 언리얼 Outliner 는 종류를 회색 열로 둔다).
+             */
+            static void buildObjectLabel( const GameObject* pObj, uint64 objectID, fixed_string<constant::buffer::kMax256>& outLabel,
+                                          fixed_string<constant::buffer::kMax256>& outBadge )
             {
                 // 배지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
                 // 타입 이름을 비교하면 게임이 추가한 컴포넌트는 배지가 없다.
-                fixed_string<constant::buffer::kMax256> badgeStr;
+                fixed_string<constant::buffer::kMax256>& badgeStr = outBadge;
+                badgeStr.clear();
                 for ( const Component* pComp : pObj->getComponents() )
                 {
                     if ( pComp == nullptr )
@@ -336,10 +342,22 @@ namespace sw::editor
 
                 // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
                 const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? SW_EDITORICON( "Folder" ) : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
-                if ( badgeStr.empty() == false )
-                    formatstring( outLabel.data(), outLabel.capacity(), "%# %# %###go%#", pIcon, pObj->getName().c_str(), badgeStr.c_str(), objectID );
-                else
-                    formatstring( outLabel.data(), outLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
+                formatstring( outLabel.data(), outLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
+            }
+
+            /** @brief 방금 그린 행(트리 노드) 이름 뒤에 배지를 회색으로 얹습니다. 배치는 바꾸지 않는다 — 창이 좁으면 배지만 잘린다. */
+            static void drawRowBadge( const fixed_string<constant::buffer::kMax256>& label, const fixed_string<constant::buffer::kMax256>& badge )
+            {
+                if ( badge.empty() )
+                    return;
+                const utf8* const pText    = label.c_str();
+                const utf8*       pTextEnd = strstr( pText, "##" );
+                const ImVec2      itemMin  = ImGui::GetItemRectMin();
+                const float32     textY    = itemMin.y + ( ImGui::GetItemRectSize().y - ImGui::GetFontSize() ) * 0.5f;
+                const float32     textX    = itemMin.x + ImGui::GetTreeNodeToLabelSpacing() + ImGui::CalcTextSize( pText, pTextEnd ).x + ImGui::GetStyle().ItemSpacing.x;
+                ImGui::GetWindowDrawList()->PushClipRect( itemMin, ImGui::GetItemRectMax(), true );
+                ImGui::GetWindowDrawList()->AddText( ImVec2{ textX, textY }, ImGui::GetColorU32( ImGuiCol_TextDisabled ), badge.c_str() );
+                ImGui::GetWindowDrawList()->PopClipRect();
             }
 
             /** @brief 방금 그린 행의 클릭을 읽어 선택으로 옮깁니다(Shift 범위 · Ctrl 토글은 `HierarchyRowModel::clickRow`). */
@@ -456,7 +474,8 @@ namespace sw::editor
                 drawRowToggles( &editorContext, pObj, objectID );
 
                 fixed_string<constant::buffer::kMax256> arrLabel;
-                buildObjectLabel( pObj, objectID, arrLabel );
+                fixed_string<constant::buffer::kMax256> arrBadge;
+                buildObjectLabel( pObj, objectID, arrLabel, arrBadge );
 
                 const bool bHasChildGos   = pObj->hasChildren();
                 const bool bHasComponents = pObj->getComponentCount() > 0;
@@ -478,6 +497,7 @@ namespace sw::editor
                         ( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
                 if ( bPrefabInstance )
                     ImGui::PopStyleColor();
+                drawRowBadge( arrLabel, arrBadge );
                 rowModel.noteDrawnRow( objectID );
                 if ( pRevealTarget == pObj )
                 {
