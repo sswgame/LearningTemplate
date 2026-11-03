@@ -559,19 +559,19 @@ namespace sw::editor
                     static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" };
                     static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
                     int32 mode = static_cast<int32>( state._settings._mode );
-                    EditorWidgets::drawPropertyRowLabel( "Mode" );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Mode" ) );
                     if ( ImGui::Combo( "##Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
                         state._settings._mode = static_cast<TerrainBrushMode>( mode );
-                    EditorWidgets::drawPropertyRowLabel( "Radius" );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Radius" ) );
                     ImGui::SliderFloat( "##Radius", &state._settings._radius, 0.5f, 64.0f, "%.1f m" );
-                    EditorWidgets::drawPropertyRowLabel( "Strength" );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Strength" ) );
                     ImGui::SliderFloat( "##Strength", &state._settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
-                    EditorWidgets::drawPropertyRowLabel( "Falloff" );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Falloff" ) );
                     ImGui::SliderFloat( "##Falloff", &state._settings._falloff, 0.0f, 1.0f, "%.2f" );
                     if ( state._settings._mode == TerrainBrushMode::PaintLayer )
                     {
                         int32 layer = static_cast<int32>( state._settings._layerIndex );
-                        EditorWidgets::drawPropertyRowLabel( "Layer" );
+                        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Layer" ) );
                         if ( ImGui::SliderInt( "##Layer", &layer, 0, static_cast<int32>( kLayerCount ) - 1 ) )
                             state._settings._layerIndex = static_cast<uint32>( layer );
                     }

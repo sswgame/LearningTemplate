@@ -282,6 +282,41 @@
 		       text="なぜこう見えるか(ルール)"
 		       sourceHash="aa54935a9461505e" />
 		<entry key="EdPlugin.ZoomFit" text="ズームフィット" sourceHash="7a6733cf04aafd9d" />
+		<entry key="EdPluginField.Amount" text="量" sourceHash="ba98a7152d80b949" />
+		<entry key="EdPluginField.Anchor" text="アンカー" sourceHash="beff9ac02dc2c474" />
+		<entry key="EdPluginField.BasePreset" text="基準プリセット" sourceHash="fb4ae1042ef82b97" />
+		<entry key="EdPluginField.BodyShape" text="体型" sourceHash="c02e72b17896e8d8" />
+		<entry key="EdPluginField.BodyType" text="体の種類" sourceHash="abd94a00726e12d7" />
+		<entry key="EdPluginField.BoneRotation" text="ボーン回転" sourceHash="ea1eb9c73bf6b097" />
+		<entry key="EdPluginField.BoneScale" text="ボーンスケール" sourceHash="e007d2837c41ae09" />
+		<entry key="EdPluginField.BoneTranslation" text="ボーン移動" sourceHash="21b2e5272efd0fe4" />
+		<entry key="EdPluginField.Clients" text="クライアント" sourceHash="8faea6e4533e9757" />
+		<entry key="EdPluginField.DurationS" text="長さ(秒)" sourceHash="094748f07458f069" />
+		<entry key="EdPluginField.EnterExitBlendS" text="入り・出のブレンド(秒)" sourceHash="ef5314c2253430db" />
+		<entry key="EdPluginField.Face" text="顔" sourceHash="19b15a8518073d5c" />
+		<entry key="EdPluginField.GMPassword" text="GM パスワード" sourceHash="73021dd72e500432" />
+		<entry key="EdPluginField.HeightRatio0Pelvis" text="高さ比(0 = 骨盤)" sourceHash="f9434060c23b8cc4" />
+		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
+		       text="メンテナンス秒(0 = 解除まで)"
+		       sourceHash="14988336ae4ff447" />
+		<entry key="EdPluginField.NoticeId" text="お知らせ id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.NoticeSeconds0UntilRemoved"
+		       text="お知らせ秒(0 = 削除まで)"
+		       sourceHash="5ca50ca62e3f11de" />
+		<entry key="EdPluginField.OffsetM" text="オフセット(m)" sourceHash="5ec26a29745a2dfc" />
+		<entry key="EdPluginField.Parent" text="親" sourceHash="4eb514ebcb80553d" />
+		<entry key="EdPluginField.PreviewMesh" text="プレビューメッシュ" sourceHash="bf80308374d5e32c" />
+		<entry key="EdPluginField.Priority" text="優先度" sourceHash="a4e407b3a0fe4669" />
+		<entry key="EdPluginField.Rotation" text="回転" sourceHash="cde2e53f46beac7f" />
+		<entry key="EdPluginField.Scale" text="スケール" sourceHash="2706a162264c46f1" />
+		<entry key="EdPluginField.Seconds" text="秒" sourceHash="c4842e5b8b90466a" />
+		<entry key="EdPluginField.SourceBones" text="ソースボーン" sourceHash="c823f98fd9ceabff" />
+		<entry key="EdPluginField.StartS" text="開始(秒)" sourceHash="27b317f471f59517" />
+		<entry key="EdPluginField.TargetBones" text="ターゲットボーン" sourceHash="51e1bd58d0eb254f" />
+		<entry key="EdPluginField.TargetYaw" text="ターゲットのヨー" sourceHash="69738f942ae83a53" />
+		<entry key="EdPluginField.Translation" text="移動" sourceHash="bef9e1084e69480c" />
+		<entry key="EdPluginField.WarpEndS" text="ワープ終了(秒)" sourceHash="930b0d61f8e2d3b6" />
+		<entry key="EdPluginField.YawDeg" text="ヨー(度)" sourceHash="00cfa817171bc367" />
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします"
 		       sourceHash="0d52b634e78c2b8a" />

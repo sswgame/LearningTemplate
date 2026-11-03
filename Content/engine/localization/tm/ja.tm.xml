@@ -23,6 +23,8 @@
 		<entry source="Aim" text="エイム" />
 		<entry source="Already used by" text="使用中:" />
 		<entry source="Ambient Volume" text="環境音の音量" />
+		<entry source="Amount" text="量" />
+		<entry source="Anchor" text="アンカー" />
 		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
 		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします" />
 		<entry source="Appearance" text="外見" />
@@ -36,7 +38,13 @@
 		<entry source="Axis" text="軸" />
 		<entry source="Bake" text="ベイク" />
 		<entry source="Base" text="基本値" />
+		<entry source="Base preset" text="基準プリセット" />
 		<entry source="Blackboard key" text="ブラックボードキー" />
+		<entry source="Body shape" text="体型" />
+		<entry source="Body type" text="体の種類" />
+		<entry source="Bone rotation" text="ボーン回転" />
+		<entry source="Bone scale" text="ボーンスケール" />
+		<entry source="Bone translation" text="ボーン移動" />
 		<entry source="Borderless" text="ボーダーレス" />
 		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
 		<entry source="CPU only:" text="CPU のみ:" />
@@ -47,6 +55,7 @@
 		<entry source="Clear target" text="ターゲットを解除" />
 		<entry source="Click a node to edit it" text="ノードをクリックして編集" />
 		<entry source="Click to edit the curve" text="クリックしてカーブを編集" />
+		<entry source="Clients" text="クライアント" />
 		<entry source="Close" text="閉じる" />
 		<entry source="Closed reports" text="閉じた通報" />
 		<entry source="Color Vision Mode" text="色覚モード" />
@@ -84,6 +93,7 @@
 		<entry source="Display" text="ディスプレイ" />
 		<entry source="Down" text="下" />
 		<entry source="Duplicate row" text="行を複製" />
+		<entry source="Duration (s)" text="長さ(秒)" />
 		<entry source="Edit" text="編集" />
 		<entry source="Edit this group's nested stack" text="このグループのネストされたスタックを編集" />
 		<entry source="Effects Quality" text="エフェクト品質" />
@@ -91,13 +101,16 @@
 		<entry source="Empty - add modifiers to group them."
 		       text="空です。モディファイアを追加してグループにします。" />
 		<entry source="End maintenance" text="メンテナンス終了" />
+		<entry source="Enter / exit blend (s)" text="入り・出のブレンド(秒)" />
 		<entry source="Export as World Warp" text="ワールドワープとして書き出す" />
 		<entry source="Export data preset" text="データプリセットを書き出す" />
+		<entry source="Face" text="顔" />
 		<entry source="Field of View" text="視野角" />
 		<entry source="Fit check (view only)" text="フィットチェック(表示のみ)" />
 		<entry source="Fit to Bounds" text="境界に合わせる" />
 		<entry source="Foliage Density" text="植生の密度" />
 		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
+		<entry source="GM password" text="GM パスワード" />
 		<entry source="Game saved" text="ゲームを保存しました" />
 		<entry source="Game time" text="ゲーム時刻" />
 		<entry source="Gamepad Sensitivity" text="ゲームパッド感度" />
@@ -108,6 +121,7 @@
 		<entry source="Graphics Quality" text="グラフィック品質" />
 		<entry source="Head Bob" text="頭の揺れ" />
 		<entry source="Headphones (3D)" text="ヘッドホン (3D)" />
+		<entry source="Height ratio (0 = pelvis)" text="高さ比(0 = 骨盤)" />
 		<entry source="High" text="高" />
 		<entry source="High Contrast" text="ハイコントラスト" />
 		<entry source="Hold" text="長押し" />
@@ -145,6 +159,7 @@
 		       text="アカウントを検索すると残高と制裁が見えます" />
 		<entry source="Lookup" text="検索" />
 		<entry source="Low" text="低" />
+		<entry source="Maintenance seconds (0 = until cleared)" text="メンテナンス秒(0 = 解除まで)" />
 		<entry source="Map same names" text="同名同士をつなぐ" />
 		<entry source="Master Volume" text="マスター音量" />
 		<entry source="Medium" text="中" />
@@ -179,7 +194,10 @@
 		<entry source="No schedule system is running. Start play with NPCs that have schedules."
 		       text="スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。" />
 		<entry source="No target" text="対象なし" />
+		<entry source="Notice id" text="お知らせ id" />
+		<entry source="Notice seconds (0 = until removed)" text="お知らせ秒(0 = 削除まで)" />
 		<entry source="Off" text="オフ" />
+		<entry source="Offset (m)" text="オフセット(m)" />
 		<entry source="Opacity" text="不透明度" />
 		<entry source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
 		       text=".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。" />
@@ -194,6 +212,7 @@
 		<entry source="Orthographic preset - the preview draws it in perspective."
 		       text="平行投影プリセット — プレビューは透視で描きます。" />
 		<entry source="Owned Tags" text="所有タグ" />
+		<entry source="Parent" text="親" />
 		<entry source="Pause Menu" text="ポーズメニュー" />
 		<entry source="Paused" text="一時停止中" />
 		<entry source="Pick a base preset to see which rules hid or changed what."
@@ -211,6 +230,8 @@
 		<entry source="Preview" text="プレビュー" />
 		<entry source="Preview Time" text="プレビュー時間" />
 		<entry source="Preview constraint rig" text="拘束リグをプレビュー" />
+		<entry source="Preview mesh" text="プレビューメッシュ" />
+		<entry source="Priority" text="優先度" />
 		<entry source="Privacy" text="プライバシー" />
 		<entry source="Protanopia" text="1 型色覚 (赤)" />
 		<entry source="Put live event" text="ライブイベントを登録" />
@@ -261,6 +282,7 @@
 		<entry source="Save as preset" text="プリセットとして保存" />
 		<entry source="Save pose" text="ポーズを保存" />
 		<entry source="Save thumbnail" text="サムネイルを保存" />
+		<entry source="Scale" text="スケール" />
 		<entry source="Schedule system" text="スケジュールシステム" />
 		<entry source="Seconds" text="秒" />
 		<entry source="Sections" text="セクション" />
@@ -304,10 +326,12 @@
 		<entry source="Some changes take effect after a restart."
 		       text="一部の変更は再起動後に反映されます。" />
 		<entry source="Source" text="出典" />
+		<entry source="Source bones" text="ソースボーン" />
 		<entry source="Spatial" text="空間" />
 		<entry source="Speaker Setup" text="スピーカー構成" />
 		<entry source="Sprint" text="ダッシュ" />
 		<entry source="Stacks" text="スタック" />
+		<entry source="Start (s)" text="開始(秒)" />
 		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
 		       text="このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)" />
 		<entry source="Start in process" text="インプロセスで開始" />
@@ -322,7 +346,9 @@
 		<entry source="Subtitles" text="字幕" />
 		<entry source="Swap" text="入れ替え" />
 		<entry source="Tag" text="タグ" />
+		<entry source="Target bones" text="ターゲットボーン" />
 		<entry source="Target object" text="対象オブジェクト" />
+		<entry source="Target yaw" text="ターゲットのヨー" />
 		<entry source="Task" text="タスク" />
 		<entry source="Text Language" text="テキストの言語" />
 		<entry source="Text Size" text="文字サイズ" />
@@ -332,6 +358,7 @@
 		       text="対象のオブジェクトはもう存在しません。" />
 		<entry source="Time" text="時刻" />
 		<entry source="Toggle" text="切り替え" />
+		<entry source="Translation" text="移動" />
 		<entry source="Travel" text="移動" />
 		<entry source="Tritanopia" text="3 型色覚 (青)" />
 		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
@@ -353,11 +380,13 @@
 		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。" />
 		<entry source="Voice Volume" text="ボイスの音量" />
 		<entry source="Warp File (.mfwarp)" text="ワープファイル (.mfwarp)" />
+		<entry source="Warp end (s)" text="ワープ終了(秒)" />
 		<entry source="Why does it look like this? (rules)" text="なぜこう見えるか(ルール)" />
 		<entry source="Why this activity now" text="今この行動をする理由" />
 		<entry source="Window Mode" text="ウィンドウモード" />
 		<entry source="Windowed" text="ウィンドウ" />
 		<entry source="World Space" text="ワールド空間" />
+		<entry source="Yaw (deg)" text="ヨー(度)" />
 		<entry source="You have changes that are not applied." text="適用していない変更があります。" />
 		<entry source="Zoom fit" text="ズームフィット" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 選択" />

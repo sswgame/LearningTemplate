@@ -213,7 +213,7 @@ namespace sw::editor
             {
                 const float32 labelWidth = SW_THEMEMETRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale(); // 라벨 열은 테마 토큰이다
                 beginProbeWindow();
-                EditorWidgets::drawPropertyRowLabel( "Label" );
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Label" ) );
                 (void)context.expect( isNear( ImGui::GetCursorPosX(), labelWidth, 0.5f ), "the value column does not start at the label width" );
                 const float32 expectedWidth = ImGui::GetContentRegionAvail().x - 1.0f;
                 (void)context.expect( isNear( ImGui::CalcItemWidth(), expectedWidth, 1.0f ), "the value does not fill the rest of the row" );

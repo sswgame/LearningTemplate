@@ -25,6 +25,8 @@
 		<entry source="Aim" text="조준" />
 		<entry source="Already used by" text="이미 사용 중:" />
 		<entry source="Ambient Volume" text="환경음 음량" />
+		<entry source="Amount" text="양" />
+		<entry source="Anchor" text="기준" />
 		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
 		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다" />
 		<entry source="Appearance" text="외형" />
@@ -40,7 +42,13 @@
 		       text="디버그 HUD 패널의 배경 불투명도입니다." />
 		<entry source="Bake" text="굽기" />
 		<entry source="Base" text="기본값" />
+		<entry source="Base preset" text="기준 프리셋" />
 		<entry source="Blackboard key" text="블랙보드 키" />
+		<entry source="Body shape" text="체형" />
+		<entry source="Body type" text="몸 종류" />
+		<entry source="Bone rotation" text="뼈 회전" />
+		<entry source="Bone scale" text="뼈 크기" />
+		<entry source="Bone translation" text="뼈 이동" />
 		<entry source="Borderless" text="테두리 없음" />
 		<entry source="CPU only (Recompute Normals)" text="CPU 전용(법선 다시 계산)" />
 		<entry source="CPU only:" text="CPU 전용:" />
@@ -51,6 +59,7 @@
 		<entry source="Clear target" text="대상 지우기" />
 		<entry source="Click a node to edit it" text="노드를 누르면 편집합니다" />
 		<entry source="Click to edit the curve" text="눌러서 곡선 편집" />
+		<entry source="Clients" text="클라이언트" />
 		<entry source="Close" text="닫기" />
 		<entry source="Closed reports" text="닫은 신고" />
 		<entry source="Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting."
@@ -88,14 +97,17 @@
 		<entry source="Display" text="화면" />
 		<entry source="Down" text="아래" />
 		<entry source="Duplicate row" text="행 복제" />
+		<entry source="Duration (s)" text="길이(초)" />
 		<entry source="Edit" text="편집" />
 		<entry source="Edit this group's nested stack" text="이 묶음의 하위 스택 편집" />
 		<entry source="Effects Quality" text="효과 품질" />
 		<entry source="Effects Volume" text="효과음 음량" />
 		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
 		<entry source="End maintenance" text="점검 끝내기" />
+		<entry source="Enter / exit blend (s)" text="들어감 · 나감 섞기(초)" />
 		<entry source="Export as World Warp" text="월드 워프로 내보내기" />
 		<entry source="Export data preset" text="데이터 프리셋 내보내기" />
+		<entry source="Face" text="얼굴" />
 		<entry source="Farthest distance the camera draws. Geometry beyond this is clipped."
 		       text="카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다." />
 		<entry source="Field of View" text="시야각" />
@@ -104,6 +116,7 @@
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
 		<entry source="Foliage Density" text="초목 밀도" />
 		<entry source="Follow game clock" text="게임 시계 따라가기" />
+		<entry source="GM password" text="GM 비밀번호" />
 		<entry source="Game saved" text="게임을 저장했습니다" />
 		<entry source="Game time" text="게임 시각" />
 		<entry source="Gamepad Sensitivity" text="게임패드 감도" />
@@ -115,6 +128,7 @@
 		<entry source="Graphics Quality" text="그래픽 품질" />
 		<entry source="Head Bob" text="걸음 흔들림" />
 		<entry source="Headphones (3D)" text="헤드폰 (3D)" />
+		<entry source="Height ratio (0 = pelvis)" text="높이 비(0 = 골반)" />
 		<entry source="High" text="높음" />
 		<entry source="High Contrast" text="고대비" />
 		<entry source="Hold" text="누르고 있기" />
@@ -154,6 +168,7 @@
 		       text="계정을 찾으면 잔액과 제재가 보입니다" />
 		<entry source="Lookup" text="찾기" />
 		<entry source="Low" text="낮음" />
+		<entry source="Maintenance seconds (0 = until cleared)" text="점검 초(0 = 풀 때까지)" />
 		<entry source="Map same names" text="같은 이름끼리 잇기" />
 		<entry source="Master Volume" text="전체 음량" />
 		<entry source="Medium" text="중간" />
@@ -186,7 +201,10 @@
 		<entry source="No schedule system is running. Start play with NPCs that have schedules."
 		       text="실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요." />
 		<entry source="No target" text="대상 없음" />
+		<entry source="Notice id" text="공지 id" />
+		<entry source="Notice seconds (0 = until removed)" text="공지 초(0 = 지울 때까지)" />
 		<entry source="Off" text="끔" />
+		<entry source="Offset (m)" text="오프셋(m)" />
 		<entry source="Opacity" text="불투명도" />
 		<entry source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
 		       text=".cameras.xml 프리셋 파일을 열면 여기서 카메라가 보입니다. 프리셋 편집은 카탈로그 편집기에서 합니다." />
@@ -201,6 +219,7 @@
 		<entry source="Orthographic preset - the preview draws it in perspective."
 		       text="직교 프리셋 — 미리보기는 원근으로 그립니다." />
 		<entry source="Owned Tags" text="소유 태그" />
+		<entry source="Parent" text="부모" />
 		<entry source="Pause Menu" text="일시정지 메뉴" />
 		<entry source="Paused" text="일시 정지" />
 		<entry source="Pick a base preset to see which rules hid or changed what."
@@ -218,6 +237,8 @@
 		<entry source="Preview" text="미리보기" />
 		<entry source="Preview Time" text="미리보기 시간" />
 		<entry source="Preview constraint rig" text="제약 리그 미리보기" />
+		<entry source="Preview mesh" text="미리보기 메시" />
+		<entry source="Priority" text="우선순위" />
 		<entry source="Privacy" text="개인 정보" />
 		<entry source="Protanopia" text="적색약" />
 		<entry source="Put live event" text="라이브 이벤트 넣기" />
@@ -269,6 +290,7 @@
 		<entry source="Save as preset" text="프리셋으로 저장" />
 		<entry source="Save pose" text="포즈 저장" />
 		<entry source="Save thumbnail" text="썸네일 저장" />
+		<entry source="Scale" text="크기" />
 		<entry source="Schedule system" text="일정 시스템" />
 		<entry source="Seconds" text="초" />
 		<entry source="Sections" text="섹션" />
@@ -311,10 +333,12 @@
 		<entry source="Some changes take effect after a restart."
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다." />
 		<entry source="Source" text="출처" />
+		<entry source="Source bones" text="원본 뼈" />
 		<entry source="Spatial" text="공간" />
 		<entry source="Speaker Setup" text="스피커 구성" />
 		<entry source="Sprint" text="달리기" />
 		<entry source="Stacks" text="스택" />
+		<entry source="Start (s)" text="시작(초)" />
 		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
 		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)" />
 		<entry source="Start in process" text="한 프로세스로 시작" />
@@ -329,7 +353,9 @@
 		<entry source="Subtitles" text="자막" />
 		<entry source="Swap" text="맞바꾸기" />
 		<entry source="Tag" text="태그" />
+		<entry source="Target bones" text="대상 뼈" />
 		<entry source="Target object" text="대상 오브젝트" />
+		<entry source="Target yaw" text="대상 방향" />
 		<entry source="Task" text="작업" />
 		<entry source="Text Language" text="표시 언어" />
 		<entry source="Text Size" text="글자 크기" />
@@ -341,6 +367,7 @@
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
 		<entry source="Time" text="시각" />
 		<entry source="Toggle" text="전환" />
+		<entry source="Translation" text="이동" />
 		<entry source="Travel" text="이동" />
 		<entry source="Tritanopia" text="청색약" />
 		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
@@ -366,6 +393,7 @@
 		       text="뷰포트 기즈모 편집은 미리보기 씬(EditorMultiWorld)이 필요합니다." />
 		<entry source="Voice Volume" text="음성 음량" />
 		<entry source="Warp File (.mfwarp)" text="워프 파일(.mfwarp)" />
+		<entry source="Warp end (s)" text="워프 끝(초)" />
 		<entry source="What will {name} do?" text="{name}은(는) 무엇을 할까?" />
 		<entry source="When the key sits on the curve's time axis. It stays between its neighbouring keys."
 		       text="이 키가 곡선의 시간 축에서 놓인 위치입니다. 이웃한 키 사이에만 둘 수 있습니다." />
@@ -378,6 +406,7 @@
 		<entry source="World Space" text="월드 공간" />
 		<entry source="World-space height of the visible area; the width follows the aspect ratio."
 		       text="보이는 영역의 월드 높이입니다. 너비는 화면 비율을 따라갑니다." />
+		<entry source="Yaw (deg)" text="방향(도)" />
 		<entry source="You have changes that are not applied." text="적용하지 않은 변경이 있습니다." />
 		<entry source="Zoom fit" text="맞춰 보기" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 선택" />

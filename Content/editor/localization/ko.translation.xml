@@ -326,6 +326,61 @@
 		<entry key="EdCommon.ViewportOrientationCube"
 		       text="카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 		       sourceHash="c994648fc818bbf2" />
+		<entry key="EdField.AccentColor" text="강조색" sourceHash="c38d6006730a5fc8" />
+		<entry key="EdField.Atlas" text="아틀라스" sourceHash="4e206b9101d459ac" />
+		<entry key="EdField.AtlasID" text="아틀라스 ID" sourceHash="31f8c7afe6657729" />
+		<entry key="EdField.BandwidthKBS" text="대역폭(KB/s)" sourceHash="b8d60f2d553e2924" />
+		<entry key="EdField.Columns" text="열" sourceHash="b0f3327210fe18fc" />
+		<entry key="EdField.Default" text="기본값" sourceHash="11326fd2590f4e5e" />
+		<entry key="EdField.FOVDeg" text="시야각(도)" sourceHash="843c4a6ad1f65423" />
+		<entry key="EdField.Falloff" text="감쇠" sourceHash="cb90668223a1ad85" />
+		<entry key="EdField.FarPlane" text="먼 평면" sourceHash="32b2cfb94b6a25dc" />
+		<entry key="EdField.FirstFrame" text="첫 프레임" sourceHash="548bbd6d1029e318" />
+		<entry key="EdField.FrameCount" text="프레임 수" sourceHash="63fef9115f7dacf9" />
+		<entry key="EdField.FrameRounding" text="칸 둥글기" sourceHash="ae92ce359b95a0ee" />
+		<entry key="EdField.HUDOpacity" text="HUD 불투명도" sourceHash="5e6bfaa28872f983" />
+		<entry key="EdField.HUDScale" text="HUD 크기" sourceHash="fb118ec94b1f25e8" />
+		<entry key="EdField.Height" text="높이" sourceHash="ffdadf0a576fd802" />
+		<entry key="EdField.ImpulseNS" text="충격(N*s)" sourceHash="9b935150a68e3184" />
+		<entry key="EdField.JitterMs" text="흔들림(ms)" sourceHash="3fd890b98599fce6" />
+		<entry key="EdField.Key" text="키" sourceHash="506b6a19d12f414c" />
+		<entry key="EdField.Label" text="이름표" sourceHash="5590dbf7e425789d" />
+		<entry key="EdField.LatencyMs" text="지연(ms)" sourceHash="51a14ad5083db72c" />
+		<entry key="EdField.Layer" text="레이어" sourceHash="9d167ef77aed79b6" />
+		<entry key="EdField.LeftMotor" text="왼쪽 모터" sourceHash="0b5d912cd5657c99" />
+		<entry key="EdField.Loss" text="손실(%)" sourceHash="b47aff289b1915d4" />
+		<entry key="EdField.Mode" text="모드" sourceHash="37cbecaec58e2192" />
+		<entry key="EdField.Name" text="이름" sourceHash="c4bcadba8e631b86" />
+		<entry key="EdField.NameAlt" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdField.NearFar" text="가까운/먼" sourceHash="033e39eea47a7181" />
+		<entry key="EdField.NearPlane" text="가까운 평면" sourceHash="81e99cb10c86253d" />
+		<entry key="EdField.Opacity" text="불투명도" sourceHash="ba64d8954d027206" />
+		<entry key="EdField.OrthoHeight" text="직교 높이" sourceHash="a337307055350c80" />
+		<entry key="EdField.Path" text="경로" sourceHash="2e532e19ed477a56" />
+		<entry key="EdField.Radius" text="반지름" sourceHash="8afc8c5aafb392d3" />
+		<entry key="EdField.RightMotor" text="오른쪽 모터" sourceHash="4de5c78b61be18ac" />
+		<entry key="EdField.Rows" text="행" sourceHash="cace072bef961918" />
+		<entry key="EdField.SafeZone" text="안전 영역" sourceHash="63e0a460d35a799e" />
+		<entry key="EdField.ScreenAnchorPosition" text="화면 기준 위치" sourceHash="40d42d477f94f0c9" />
+		<entry key="EdField.SimStickX" text="시험 스틱 X" sourceHash="b2f10415a2ed0264" />
+		<entry key="EdField.SimStickY" text="시험 스틱 Y" sourceHash="b2f10515a2ed0417" />
+		<entry key="EdField.Speed" text="속도" sourceHash="e24130f1123560a0" />
+		<entry key="EdField.Strength" text="세기" sourceHash="82c21acdbcd6e830" />
+		<entry key="EdField.TabRounding" text="탭 둥글기" sourceHash="f6a9ffc07e1582a4" />
+		<entry key="EdField.TargetX" text="대상 X" sourceHash="991d55143e202720" />
+		<entry key="EdField.TargetY" text="대상 Y" sourceHash="991d56143e2028d3" />
+		<entry key="EdField.TextScale" text="글자 크기" sourceHash="b94c1dc83027dbf0" />
+		<entry key="EdField.TileSet" text="타일 세트" sourceHash="970aca1a3d553359" />
+		<entry key="EdField.TimelineFrame" text="타임라인 프레임" sourceHash="0923a37d15c7bdd3" />
+		<entry key="EdField.Tint" text="색조" sourceHash="48d785fb3005fe2c" />
+		<entry key="EdField.Type" text="종류" sourceHash="d2223afb7d6b100d" />
+		<entry key="EdField.UIScale" text="UI 크기" sourceHash="c87576d3b9b6efd5" />
+		<entry key="EdField.Value" text="값" sourceHash="41f7dca46d3f1b4a" />
+		<entry key="EdField.WarpTarget" text="이동 대상" sourceHash="6192a31ce8861b80" />
+		<entry key="EdField.Width" text="너비" sourceHash="f21fb4f4b9e8911f" />
+		<entry key="EdField.WindowRounding" text="창 둥글기" sourceHash="01fa3805f2a18b4b" />
+		<entry key="EdField.WindowS" text="창(초)" sourceHash="518056b575884ab9" />
+		<entry key="EdField.Zoom" text="확대" sourceHash="166bd56d19670a72" />
 		<entry key="EdLabel.Active" text="활성" sourceHash="a45a194b58837e4f" />
 		<entry key="EdLabel.AddKey" text="키 추가" sourceHash="7a0e4cc6bfd9c40b" />
 		<entry key="EdLabel.All" text="전부" sourceHash="f993bb199fefbe04" />

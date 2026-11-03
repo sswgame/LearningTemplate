@@ -517,7 +517,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
-            EditorWidgets::drawInlineLabel( "Type" );
+            EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Type" ) );
             EditorChrome::setNextItemWidthColumns( 16.0f );
             ImGui::Combo( "##Type", &_newActionValueType, arrTypes, 3 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
@@ -714,12 +714,12 @@ namespace sw::editor
 
                 ImGui::Separator();
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "HapticVibrationTest" ) );
-                EditorWidgets::drawInlineLabel( "Left Motor" );
+                EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "LeftMotor" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 ImGui::SliderFloat( "##LeftMotor", &_testVibLeft, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LeftMotorTip" ) );
                 ImGui::SameLine();
-                EditorWidgets::drawInlineLabel( "Right Motor" );
+                EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "RightMotor" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 ImGui::SliderFloat( "##RightMotor", &_testVibRight, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
@@ -801,7 +801,7 @@ namespace sw::editor
         const utf8* arrCommonKeys[] = { "Space", "Enter", "Escape", "W", "A", "S", "D", "E", "F", "Shift", "Control" };
         const Key   arrKeyValues[]  = { Key::Space, Key::Enter, Key::Escape, Key::W, Key::A, Key::S, Key::D, Key::E, Key::F, Key::LeftShift, Key::LeftControl };
 
-        EditorWidgets::drawInlineLabel( "Key" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Key" ) );
         EditorChrome::setNextItemWidthColumns( 20.0f );
         ImGui::Combo( "##Key", &_simKeyToInject, arrCommonKeys, 11 );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "InjectKeyDown" ) ) );
@@ -822,10 +822,10 @@ namespace sw::editor
 
         ImGui::Separator();
         ImGui::Text( "2) Virtual Stick 2D Slider:" );
-        EditorWidgets::drawPropertyRowLabel( "Sim Stick X" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SimStickX" ) );
         ImGui::SliderFloat( "##SimStickX", &_simStick._x, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickXTip" ) );
-        EditorWidgets::drawPropertyRowLabel( "Sim Stick Y" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SimStickY" ) );
         ImGui::SliderFloat( "##SimStickY", &_simStick._y, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickYTip" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectStickTilt" ) ) )
@@ -947,7 +947,7 @@ namespace sw::editor
 
             int32       frameIdx  = static_cast<int32>( currentFrame );
             const int32 maxFrames = static_cast<int32>( _document.getReplay().getFrameCount() );
-            EditorWidgets::drawPropertyRowLabel( "Timeline Frame" );
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "TimelineFrame" ) );
             if ( ImGui::SliderInt( "##TimelineFrame", &frameIdx, 0, maxFrames ) )
                 _document.seekReplay( input, static_cast<uint32>( frameIdx ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TimelineFrameTip" ) );
@@ -970,15 +970,15 @@ namespace sw::editor
 
         const utf8* arrPos[] = { "Bottom-Right", "Bottom-Left", "Top-Right", "Top-Left" };
         int32       posIndex = static_cast<int32>( config._position );
-        EditorWidgets::drawPropertyRowLabel( "Screen Anchor Position" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "ScreenAnchorPosition" ) );
         if ( ImGui::Combo( "##ScreenAnchorPosition", &posIndex, arrPos, 4 ) )
             config._position = static_cast<ViewportOverlayPosition>( posIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayAnchorTip" ) );
 
-        EditorWidgets::drawPropertyRowLabel( "HUD Opacity" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "HUDOpacity" ) );
         ImGui::SliderFloat( "##HUDOpacity", &config._opacity, 0.1f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayOpacityTip" ) );
-        EditorWidgets::drawPropertyRowLabel( "HUD Scale" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "HUDScale" ) );
         ImGui::SliderFloat( "##HUDScale", &config._scale, 0.5f, 2.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayScaleTip" ) );
 

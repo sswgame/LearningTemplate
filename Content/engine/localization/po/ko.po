@@ -990,6 +990,162 @@ msgctxt "EdPlugin.ZoomFit"
 msgid "Zoom fit"
 msgstr "맞춰 보기"
 
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.Amount"
+msgid "Amount"
+msgstr "양"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.Anchor"
+msgid "Anchor"
+msgstr "기준"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.BasePreset"
+msgid "Base preset"
+msgstr "기준 프리셋"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.BodyShape"
+msgid "Body shape"
+msgstr "체형"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.BodyType"
+msgid "Body type"
+msgstr "몸 종류"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.BoneRotation"
+msgid "Bone rotation"
+msgstr "뼈 회전"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.BoneScale"
+msgid "Bone scale"
+msgstr "뼈 크기"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.BoneTranslation"
+msgid "Bone translation"
+msgstr "뼈 이동"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPluginField.Clients"
+msgid "Clients"
+msgstr "클라이언트"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginField.DurationS"
+msgid "Duration (s)"
+msgstr "길이(초)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginField.EnterExitBlendS"
+msgid "Enter / exit blend (s)"
+msgstr "들어감 · 나감 섞기(초)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.Face"
+msgid "Face"
+msgstr "얼굴"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.GMPassword"
+msgid "GM password"
+msgstr "GM 비밀번호"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginField.HeightRatio0Pelvis"
+msgid "Height ratio (0 = pelvis)"
+msgstr "높이 비(0 = 골반)"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.MaintenanceSeconds0UntilCleared"
+msgid "Maintenance seconds (0 = until cleared)"
+msgstr "점검 초(0 = 풀 때까지)"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.NoticeId"
+msgid "Notice id"
+msgstr "공지 id"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.NoticeSeconds0UntilRemoved"
+msgid "Notice seconds (0 = until removed)"
+msgstr "공지 초(0 = 지울 때까지)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginField.OffsetM"
+msgid "Offset (m)"
+msgstr "오프셋(m)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.Parent"
+msgid "Parent"
+msgstr "부모"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.PreviewMesh"
+msgid "Preview mesh"
+msgstr "미리보기 메시"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.Priority"
+msgid "Priority"
+msgstr "우선순위"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.Rotation"
+msgid "Rotation"
+msgstr "회전"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginField.Scale"
+msgid "Scale"
+msgstr "크기"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginField.Seconds"
+msgid "Seconds"
+msgstr "초"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginField.SourceBones"
+msgid "Source bones"
+msgstr "원본 뼈"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginField.StartS"
+msgid "Start (s)"
+msgstr "시작(초)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginField.TargetBones"
+msgid "Target bones"
+msgstr "대상 뼈"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPluginField.TargetYaw"
+msgid "Target yaw"
+msgstr "대상 방향"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginField.Translation"
+msgid "Translation"
+msgstr "이동"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginField.WarpEndS"
+msgid "Warp end (s)"
+msgstr "워프 끝(초)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginField.YawDeg"
+msgid "Yaw (deg)"
+msgstr "방향(도)"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 msgid "Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"

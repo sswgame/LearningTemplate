@@ -576,7 +576,7 @@ namespace sw::editor
             _nameEditBuffer   = pObj->getName().c_str();
             _nameEditObjectID = pObj->getObjectID();
         }
-        EditorWidgets::drawPropertyRowLabel( "Name" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
         const bool bEnter         = ImGui::InputText( "##Name", _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         const bool bLeftAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
         const bool bNameChanged   = _nameEditBuffer.empty() == false && pObj->getName().isEqual( hashed_string( _nameEditBuffer.c_str() ), NameCase::CaseSensitive ) == false;

@@ -312,7 +312,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "material.previewScene" );
 
         fixed_string<constant::buffer::kMax128>& name = _model.editName();
-        EditorWidgets::drawPropertyRowLabel( "Name" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
         ImGui::InputText( "##name", name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {

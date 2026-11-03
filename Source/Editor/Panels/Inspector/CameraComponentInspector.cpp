@@ -35,19 +35,19 @@ namespace sw::editor
                 auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Camera" ) );
                 float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
-                EditorWidgets::drawPropertyRowLabel( "FOV (Deg)" );
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FOVDeg" ) );
                 if ( ImGui::SliderFloat( "##FOVDeg", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
                     pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFOV" ) );
 
                 float32 nearZ = pCameraComp->getNearPlane();
-                EditorWidgets::drawPropertyRowLabel( "Near Plane" );
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NearPlane" ) );
                 if ( ImGui::DragFloat( "##NearPlane", &nearZ, 0.01f, 0.001f, 10.0f ) )
                     pCameraComp->setNearPlane( nearZ );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraNear" ) );
 
                 float32 farZ = pCameraComp->getFarPlane();
-                EditorWidgets::drawPropertyRowLabel( "Far Plane" );
+                EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FarPlane" ) );
                 if ( ImGui::DragFloat( "##FarPlane", &farZ, 1.0f, 1.0f, 10000.0f ) )
                     pCameraComp->setFarPlane( farZ );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFar" ) );
@@ -60,7 +60,7 @@ namespace sw::editor
                 if ( bOrtho )
                 {
                     float32 orthoH = pCameraComp->getOrthoHeight();
-                    EditorWidgets::drawPropertyRowLabel( "Ortho Height" );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "OrthoHeight" ) );
                     if ( ImGui::DragFloat( "##OrthoHeight", &orthoH, 0.1f, 0.1f, 100.0f ) )
                         pCameraComp->setOrthoHeight( orthoH );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraOrthoHeight" ) );

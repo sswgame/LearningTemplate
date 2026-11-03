@@ -251,7 +251,7 @@ namespace sw::editor
         ImGui::TextDisabled( "%d targets", static_cast<int32>( _listTarget.size() ) );
 
         ImGui::SameLine();
-        EditorWidgets::drawInlineLabel( "Zoom" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Zoom" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         // 0 = 창에 맞춤. 원본 해상도로 보고 싶을 때만 배율을 준다(1:1 픽셀 검사).
         ImGui::SliderFloat( "##Zoom", &_previewZoom, 0.0f, 2.0f, _previewZoom <= 0.0f ? "fit" : "%.2fx" );
@@ -336,7 +336,7 @@ namespace sw::editor
             if ( bLinearize )
             {
                 ImGui::SameLine();
-                EditorWidgets::drawInlineLabel( "Near/Far" );
+                EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "NearFar" ) );
                 EditorChrome::setNextItemWidthColumns( 24.0f );
                 float32 arrPlane[2]{ _viewSettings._nearPlane, _viewSettings._farPlane };
                 if ( ImGui::DragFloat2( "##NearFar", arrPlane, 0.1f, 0.001f, 100000.0f, "%.3f" ) )

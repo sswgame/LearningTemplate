@@ -272,6 +272,41 @@
 		       text="왜 이렇게 보이나(규칙)"
 		       sourceHash="aa54935a9461505e" />
 		<entry key="EdPlugin.ZoomFit" text="맞춰 보기" sourceHash="7a6733cf04aafd9d" />
+		<entry key="EdPluginField.Amount" text="양" sourceHash="ba98a7152d80b949" />
+		<entry key="EdPluginField.Anchor" text="기준" sourceHash="beff9ac02dc2c474" />
+		<entry key="EdPluginField.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
+		<entry key="EdPluginField.BodyShape" text="체형" sourceHash="c02e72b17896e8d8" />
+		<entry key="EdPluginField.BodyType" text="몸 종류" sourceHash="abd94a00726e12d7" />
+		<entry key="EdPluginField.BoneRotation" text="뼈 회전" sourceHash="ea1eb9c73bf6b097" />
+		<entry key="EdPluginField.BoneScale" text="뼈 크기" sourceHash="e007d2837c41ae09" />
+		<entry key="EdPluginField.BoneTranslation" text="뼈 이동" sourceHash="21b2e5272efd0fe4" />
+		<entry key="EdPluginField.Clients" text="클라이언트" sourceHash="8faea6e4533e9757" />
+		<entry key="EdPluginField.DurationS" text="길이(초)" sourceHash="094748f07458f069" />
+		<entry key="EdPluginField.EnterExitBlendS" text="들어감 · 나감 섞기(초)" sourceHash="ef5314c2253430db" />
+		<entry key="EdPluginField.Face" text="얼굴" sourceHash="19b15a8518073d5c" />
+		<entry key="EdPluginField.GMPassword" text="GM 비밀번호" sourceHash="73021dd72e500432" />
+		<entry key="EdPluginField.HeightRatio0Pelvis" text="높이 비(0 = 골반)" sourceHash="f9434060c23b8cc4" />
+		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
+		       text="점검 초(0 = 풀 때까지)"
+		       sourceHash="14988336ae4ff447" />
+		<entry key="EdPluginField.NoticeId" text="공지 id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.NoticeSeconds0UntilRemoved"
+		       text="공지 초(0 = 지울 때까지)"
+		       sourceHash="5ca50ca62e3f11de" />
+		<entry key="EdPluginField.OffsetM" text="오프셋(m)" sourceHash="5ec26a29745a2dfc" />
+		<entry key="EdPluginField.Parent" text="부모" sourceHash="4eb514ebcb80553d" />
+		<entry key="EdPluginField.PreviewMesh" text="미리보기 메시" sourceHash="bf80308374d5e32c" />
+		<entry key="EdPluginField.Priority" text="우선순위" sourceHash="a4e407b3a0fe4669" />
+		<entry key="EdPluginField.Rotation" text="회전" sourceHash="cde2e53f46beac7f" />
+		<entry key="EdPluginField.Scale" text="크기" sourceHash="2706a162264c46f1" />
+		<entry key="EdPluginField.Seconds" text="초" sourceHash="c4842e5b8b90466a" />
+		<entry key="EdPluginField.SourceBones" text="원본 뼈" sourceHash="c823f98fd9ceabff" />
+		<entry key="EdPluginField.StartS" text="시작(초)" sourceHash="27b317f471f59517" />
+		<entry key="EdPluginField.TargetBones" text="대상 뼈" sourceHash="51e1bd58d0eb254f" />
+		<entry key="EdPluginField.TargetYaw" text="대상 방향" sourceHash="69738f942ae83a53" />
+		<entry key="EdPluginField.Translation" text="이동" sourceHash="bef9e1084e69480c" />
+		<entry key="EdPluginField.WarpEndS" text="워프 끝(초)" sourceHash="930b0d61f8e2d3b6" />
+		<entry key="EdPluginField.YawDeg" text="방향(도)" sourceHash="00cfa817171bc367" />
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다"
 		       sourceHash="0d52b634e78c2b8a" />

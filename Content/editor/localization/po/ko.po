@@ -712,6 +712,284 @@ msgctxt "EdCommon.ViewportOrientationCube"
 msgid "Show or hide the orientation cube that shows which way the camera faces."
 msgstr "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdField.AccentColor"
+msgid "Accent Color"
+msgstr "강조색"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdField.Atlas"
+msgid "Atlas"
+msgstr "아틀라스"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.AtlasID"
+msgid "Atlas ID"
+msgstr "아틀라스 ID"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdField.BandwidthKBS"
+msgid "Bandwidth (KB/s)"
+msgstr "대역폭(KB/s)"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdField.Columns"
+msgid "Columns"
+msgstr "열"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.Default"
+msgid "Default"
+msgstr "기본값"
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EdField.FOVDeg"
+msgid "FOV (Deg)"
+msgstr "시야각(도)"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdField.Falloff"
+msgid "Falloff"
+msgstr "감쇠"
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EdField.FarPlane"
+msgid "Far Plane"
+msgstr "먼 평면"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdField.FirstFrame"
+msgid "first frame"
+msgstr "첫 프레임"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdField.FrameCount"
+msgid "frame count"
+msgstr "프레임 수"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdField.FrameRounding"
+msgid "Frame Rounding"
+msgstr "칸 둥글기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.HUDOpacity"
+msgid "HUD Opacity"
+msgstr "HUD 불투명도"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.HUDScale"
+msgid "HUD Scale"
+msgstr "HUD 크기"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.Height"
+msgid "Height"
+msgstr "높이"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdField.ImpulseNS"
+msgid "Impulse (N*s)"
+msgstr "충격(N*s)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdField.JitterMs"
+msgid "Jitter (ms)"
+msgstr "흔들림(ms)"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.Key"
+msgid "Key"
+msgstr "키"
+
+#: Source/Editor/SelfTest/EditorSelfTestCases.cpp
+msgctxt "EdField.Label"
+msgid "Label"
+msgstr "이름표"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdField.LatencyMs"
+msgid "Latency (ms)"
+msgstr "지연(ms)"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdField.Layer"
+msgid "Layer"
+msgstr "레이어"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.LeftMotor"
+msgid "Left Motor"
+msgstr "왼쪽 모터"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdField.Loss"
+msgid "Loss (%)"
+msgstr "손실(%)"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdField.Mode"
+msgid "Mode"
+msgstr "모드"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdField.Name"
+msgid "name"
+msgstr "이름"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.NameAlt"
+msgid "Name"
+msgstr "이름"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdField.NearFar"
+msgid "Near/Far"
+msgstr "가까운/먼"
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EdField.NearPlane"
+msgid "Near Plane"
+msgstr "가까운 평면"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdField.Opacity"
+msgid "Opacity"
+msgstr "불투명도"
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EdField.OrthoHeight"
+msgid "Ortho Height"
+msgstr "직교 높이"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.Path"
+msgid "Path"
+msgstr "경로"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdField.Radius"
+msgid "Radius"
+msgstr "반지름"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.RightMotor"
+msgid "Right Motor"
+msgstr "오른쪽 모터"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdField.Rows"
+msgid "Rows"
+msgstr "행"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdField.SafeZone"
+msgid "Safe zone"
+msgstr "안전 영역"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.ScreenAnchorPosition"
+msgid "Screen Anchor Position"
+msgstr "화면 기준 위치"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.SimStickX"
+msgid "Sim Stick X"
+msgstr "시험 스틱 X"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.SimStickY"
+msgid "Sim Stick Y"
+msgstr "시험 스틱 Y"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+msgctxt "EdField.Speed"
+msgid "Speed"
+msgstr "속도"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdField.Strength"
+msgid "Strength"
+msgstr "세기"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdField.TabRounding"
+msgid "Tab Rounding"
+msgstr "탭 둥글기"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.TargetX"
+msgid "Target X"
+msgstr "대상 X"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.TargetY"
+msgid "Target Y"
+msgstr "대상 Y"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdField.TextScale"
+msgid "Text scale"
+msgstr "글자 크기"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.TileSet"
+msgid "Tile set"
+msgstr "타일 세트"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.TimelineFrame"
+msgid "Timeline Frame"
+msgstr "타임라인 프레임"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.Tint"
+msgid "Tint"
+msgstr "색조"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.Type"
+msgid "Type"
+msgstr "종류"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdField.UIScale"
+msgid "UI scale"
+msgstr "UI 크기"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.Value"
+msgid "Value"
+msgstr "값"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.WarpTarget"
+msgid "Warp target"
+msgstr "이동 대상"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.Width"
+msgid "Width"
+msgstr "너비"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdField.WindowRounding"
+msgid "Window Rounding"
+msgstr "창 둥글기"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdField.WindowS"
+msgid "Window (s)"
+msgstr "창(초)"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdField.Zoom"
+msgid "Zoom"
+msgstr "확대"
+
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdLabel.Active"
 msgid "Active"

@@ -84,7 +84,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDCorner" ) );
         float32 opacity = DebugHUD::getOpacity();
-        EditorWidgets::drawPropertyRowLabel( "Opacity" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Opacity" ) );
         if ( ImGui::SliderFloat( "##Opacity", &opacity, DebugHUD::kMinOpacity, DebugHUD::kMaxOpacity, "%.2f" ) )
             pHUD->setOpacity( opacity );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpacity" ) );

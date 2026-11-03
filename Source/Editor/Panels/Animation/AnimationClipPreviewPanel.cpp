@@ -119,7 +119,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Loop" ) ) );
             if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Loop" ), &_model.editLoop() ) )
                 _model.requestReplay();
-            EditorWidgets::drawInlineLabel( "Speed" );
+            EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Speed" ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
             (void)ImGui::SliderFloat( "##Speed", &_model.editPlayRate(), 0.0f, AnimationClipPreviewPanelInternal::kMaxPlayRate );
             _model.applyPlayRate( *pAnimator );

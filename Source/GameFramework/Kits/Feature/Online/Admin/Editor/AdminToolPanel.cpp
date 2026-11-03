@@ -169,7 +169,7 @@ namespace sw::editor
         if ( bNeedsLogin )
         {
             EditorWidgets::drawTextField( "GM account", _loginNameText, 160.0f * EditorThemeUtil::getDPIScale() );
-            EditorWidgets::drawInlineLabel( "GM password" );
+            EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "GMPassword" ) );
             EditorChrome::setNextItemWidthColumns( 19.0f );
             ImGui::InputText( "##GMpassword", _arrPassword, kPasswordCapacity, ImGuiInputTextFlags_Password );
         }
@@ -258,7 +258,7 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( "Grant / Revoke" );
 
         EditorWidgets::drawTextField( "Asset id", _assetText, 160.0f * EditorThemeUtil::getDPIScale() );
-        EditorWidgets::drawInlineLabel( "Amount" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Amount" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Amount", ImGuiDataType_S64, &_amount );
         EditorSelfTestMarks::note( "admin.amount" );
@@ -298,7 +298,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorWidgets::drawInlineLabel( "Seconds" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Seconds" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Seconds", ImGuiDataType_S64, &_sanctionSeconds );
         EditorWidgets::drawTextField( "Reason code", _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
@@ -427,7 +427,7 @@ namespace sw::editor
 
         EditorWidgets::drawTextField( "Scope (all or server kind)", _scopeText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawTextField( "Message key", _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
-        EditorWidgets::drawInlineLabel( "Maintenance seconds (0 = until cleared)" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "MaintenanceSeconds0UntilCleared" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Maintenanceseconds0untilcleared", ImGuiDataType_S64, &_maintenanceSeconds );
         ImGui::BeginDisabled( _memoText.empty() );
@@ -439,13 +439,13 @@ namespace sw::editor
             session.requestClearMaintenance( _scopeText, _memoText );
         ImGui::EndDisabled();
 
-        EditorWidgets::drawInlineLabel( "Notice id" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeId" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
         ImGui::InputScalar( "##Noticeid", ImGuiDataType_S64, &_noticeID );
-        EditorWidgets::drawInlineLabel( "Priority" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Priority" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
         ImGui::InputInt( "##Priority", &_noticePriority );
-        EditorWidgets::drawInlineLabel( "Notice seconds (0 = until removed)" );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeSeconds0UntilRemoved" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Noticeseconds0untilremoved", ImGuiDataType_S64, &_noticeSeconds );
         EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );

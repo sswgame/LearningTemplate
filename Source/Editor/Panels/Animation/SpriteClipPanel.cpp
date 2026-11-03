@@ -55,7 +55,7 @@ namespace sw::editor
     void SpriteClipPanel::drawFileBar()
     {
         fixed_string<constant::buffer::kMax256>& atlasPath = _model.editAtlasPath();
-        EditorWidgets::drawPropertyRowLabel( "Atlas" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Atlas" ) );
         if ( EditorWidgets::drawAssetPathField( "##Atlas", atlasPath, "atlas", nullptr, nullptr )._bDeactivatedAfterEdit ) // 콘텐츠 브라우저에서 끌어 놓을 수 있다
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
@@ -166,11 +166,11 @@ namespace sw::editor
     {
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AtlasCellsClickSelectedFrameShiftClickNew" ) );
-        EditorWidgets::drawPropertyRowLabel( "Columns" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Columns" ) );
         ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
         ImGui::InputInt( "##Columns", &_model.editSliceColumns() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceColumnsTip" ) );
-        EditorWidgets::drawPropertyRowLabel( "Rows" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Rows" ) );
         ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
         ImGui::InputInt( "##Rows", &_model.editSliceRows() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceRowsTip" ) );
@@ -255,17 +255,17 @@ namespace sw::editor
         if ( pAnimation == nullptr )
             return;
         fixed_string<constant::buffer::kMax64>& animationName = _model.editAnimationName();
-        EditorWidgets::drawPropertyRowLabel( "name" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Name" ) );
         ImGui::InputText( "##name", animationName.data(), animationName.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationName() )
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationNameTip" ) );
-        EditorWidgets::drawPropertyRowLabel( "first frame" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FirstFrame" ) );
         ImGui::InputInt( "##firstframe", &pAnimation->_firstFrame );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFirstFrameTip" ) );
-        EditorWidgets::drawPropertyRowLabel( "frame count" );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FrameCount" ) );
         ImGui::InputInt( "##framecount", &pAnimation->_frameCount );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );

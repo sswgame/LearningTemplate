@@ -734,6 +734,284 @@
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdField.AccentColor" source="Accent Color">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Atlas" source="Atlas">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.AtlasID" source="Atlas ID">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.BandwidthKBS" source="Bandwidth (KB/s)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Columns" source="Columns">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Default" source="Default">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.FOVDeg" source="FOV (Deg)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Falloff" source="Falloff">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.FarPlane" source="Far Plane">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.FirstFrame" source="first frame">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.FrameCount" source="frame count">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.FrameRounding" source="Frame Rounding">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.HUDOpacity" source="HUD Opacity">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.HUDScale" source="HUD Scale">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Height" source="Height">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.ImpulseNS" source="Impulse (N*s)">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.JitterMs" source="Jitter (ms)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Key" source="Key">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Label" source="Label">
+			<origins>
+				<item>Source/Editor/SelfTest/EditorSelfTestCases.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.LatencyMs" source="Latency (ms)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Layer" source="Layer">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.LeftMotor" source="Left Motor">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Loss" source="Loss (%)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Mode" source="Mode">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Name" source="name">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.NameAlt" source="Name">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.NearFar" source="Near/Far">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.NearPlane" source="Near Plane">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Opacity" source="Opacity">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.OrthoHeight" source="Ortho Height">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Path" source="Path">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Radius" source="Radius">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.RightMotor" source="Right Motor">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Rows" source="Rows">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.SafeZone" source="Safe zone">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.ScreenAnchorPosition" source="Screen Anchor Position">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.SimStickX" source="Sim Stick X">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.SimStickY" source="Sim Stick Y">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Speed" source="Speed">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Strength" source="Strength">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.TabRounding" source="Tab Rounding">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.TargetX" source="Target X">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.TargetY" source="Target Y">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.TextScale" source="Text scale">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.TileSet" source="Tile set">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.TimelineFrame" source="Timeline Frame">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Tint" source="Tint">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Type" source="Type">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.UIScale" source="UI scale">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Value" source="Value">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.WarpTarget" source="Warp target">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Width" source="Width">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.WindowRounding" source="Window Rounding">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.WindowS" source="Window (s)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.Zoom" source="Zoom">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdLabel.Active" source="Active">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>

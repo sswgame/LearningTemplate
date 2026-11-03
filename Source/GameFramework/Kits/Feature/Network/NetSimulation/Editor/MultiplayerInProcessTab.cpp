@@ -83,7 +83,7 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            EditorWidgets::drawPropertyRowLabel( "Clients" );
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Clients" ) );
             ImGui::SliderInt( "##Clients", &_clientCount, 1, EditorNetSimSession::kMaxClients );
             const bool bStartClicked = ImGui::Button( SW_LOCKEY( "EdPlugin", "StartInProcess" ) );
             EditorSelfTestMarks::note( "multiplayer.inprocess.start" );
