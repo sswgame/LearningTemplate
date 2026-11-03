@@ -447,13 +447,16 @@ namespace sw::editor
         if ( GlobalVariablesPanelInternal::drawVariableWidget( info ) )
             markSessionDirty();
 
-        // Reset 컬럼
+        // Reset 컬럼 — 기본값과 다른 줄에만 단추를 둔다(언리얼 디테일의 "기본값으로" 화살표). 모든 줄의 단추는 바뀐 줄을 찾기 어렵게 했다(uiaudit 10).
         ImGui::TableNextColumn();
-        if ( ImGui::SmallButton( "Reset" ) )
+        if ( info.isAtDefault() == false )
         {
-            info.resetToDefault();
-            markSessionDirty();
+            if ( ImGui::SmallButton( "Reset" ) )
+            {
+                info.resetToDefault();
+                markSessionDirty();
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetVariable" ) );
         }
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetVariable" ) );
     }
 } // namespace sw::editor

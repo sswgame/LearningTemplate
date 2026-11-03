@@ -28,8 +28,6 @@
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
-   - 창마다 UX 2차: `editor/uiaudit.scenario.xml` 캡처 중 아직 안 본 것 — 콘솔 · 씬 뷰(1600 폭에서 아래 도구줄 끝이 잘린다) · 게임 뷰 · 단축키 · 전역 변수 · 기록 · 모듈 · 기믹 그래프 · 애니메이션 되감기 · 리그 디버그 · NPC 일정.
-     -/+ 단추가 붙은 숫자 칸은 `EditorChrome::measureStepperInput` 폭, 고정 줄 수 목록은 남은 높이로.
    - 에디터 코드의 영어 화면 글 약 500 줄(`ImGui::Text( "…" )` 등)을 `SW_LOCKEY` + `editor.strings.xml` 로 — 창 UX 를 고칠 때 그 창 것을 함께 옮긴다.
      명령의 라벨 · 툴팁 · 설명은 이제 데이터(`Content/editor/commands/*.commands.xml`)에 글 그대로 있다 — 현지화 키로 바꿀 때 그 파일의 칸을 키로 바꾼다.
 6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·

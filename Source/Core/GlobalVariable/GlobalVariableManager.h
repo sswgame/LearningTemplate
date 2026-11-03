@@ -156,6 +156,8 @@ namespace sw
         string getValueAsString() const;
         /** @brief 기본값(`_defaultValue`)을 `getValueAsString` 과 같은 형식의 글로 바꿉니다. 지금 값은 건드리지 않고 변경 콜백도 부르지 않습니다. */
         string getDefaultValueAsString() const;
+        /** @brief 지금 값이 기본값과 같으면 true 입니다(같은 글 형식으로 비교 — 편집기가 "기본으로" 단추를 바뀐 칸에만 보인다). */
+        bool isAtDefault() const { return getValueAsString() == getDefaultValueAsString(); }
         /**
          * @brief 타입을 표시 · 프리셋용 이름으로 반환합니다(`Bool` · `Int32` · `Float` · `String`). enum 변수는 enum 타입 이름입니다.
          * @details 에디터 패널과 프리셋 저장이 같은 이름을 쓰도록 여기 한 곳에서 정합니다.
