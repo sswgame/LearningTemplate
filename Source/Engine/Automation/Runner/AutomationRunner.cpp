@@ -570,6 +570,9 @@ namespace sw
             reason += formatToString( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
         if ( _run._holdFrameCount > 0 )
             reason += formatToString( ", the current step has held the scenario clock for %# frame(s)", _run._holdFrameCount );
+        const string waitingFor = _run._pHeldStepState != nullptr ? _run._pHeldStepState->describeWait() : string{};
+        if ( waitingFor.empty() == false )
+            reason += ", waiting for " + waitingFor;
         if ( _run._clockHoldFrameCount > 0 )
             reason += formatToString( ", %# has held the scenario clock for %# frame(s)", _run._clockHolderName, _run._clockHoldFrameCount );
         finish( AutomationOutcome::TimedOut, reason );

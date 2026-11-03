@@ -41,6 +41,11 @@ namespace sw
     {
     public:
         virtual ~IAutomationStepState() = default;
+        /**
+         * @brief 이 단계가 지금 무엇을 기다리는지 한 줄입니다(없으면 빈 글). 시한이 없는 대기가 바깥 그물(벽시계 상한)에 걸렸을 때 실행기가 까닭에 붙인다.
+         * @details 단계 이름만으로는 무엇이 끝나지 않았는지 모른다 — 기다리는 쪽이 아는 것을 그대로 남긴다.
+         */
+        virtual string describeWait() const { return string{}; }
     };
 
     /**
