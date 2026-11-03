@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) 기대는 키트 — 클라이언트 키트 일곱과 같은 기능의 서버 키트(한 프로세스 서버 조립 `LoadBotLocalServer`). 하나라도 꺼져 있으면 짓지 않는다.
+# 1) 기대는 키트 — 온라인 클라이언트 키트 모두와 같은 기능의 서버 키트(한 프로세스 서버 조립 `LoadBotLocalServer`). 하나라도 꺼져 있으면 짓지 않는다.
 # ------------------------------------------------------------------------------
 set(swLoadBotKit
 	GF_Account GF_Server_Account
@@ -14,6 +14,11 @@ set(swLoadBotKit
 	GF_Matchmaking GF_Server_Matchmaking
 	GF_ServerDirectory GF_Server_ServerDirectory
 	GF_Social GF_Server_Social
+	# 봇 시나리오가 쓰지 않는 키트도 싣는다 — 봇이 온라인 키트 단위 테스트의 호스트다(`UnitTests.OnlineKits`). 싣기만 하고 켜는 것은 설정 파일의 `_listKit` 이다.
+	GF_Economy GF_Server_Economy
+	GF_Mailbox GF_Server_Mailbox
+	GF_Trade GF_Server_Trade
+	GF_Admin GF_Server_Admin
 )
 foreach(swKit IN LISTS swLoadBotKit)
 	if(NOT TARGET ${swKit})
