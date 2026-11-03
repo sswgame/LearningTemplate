@@ -254,8 +254,10 @@ namespace sw
         bool isOwnedEntry( uint64 typeHash ) const;
 
     private:
-        SubsystemCollection      _collection;  ///< 소유한 서브시스템
-        vector<Entry>            _listEntry;   ///< 조회 칸(소유 · 빌림)
+        SubsystemCollection _collection; ///< 소유한 서브시스템
+        /// @brief 조회 칸(소유 · 빌림)입니다. 범위 대부분(호스트 · 모듈 · 키트)은 칸이 열 몇 개라 인라인에 든다(언리얼 `TInlineAllocator` 자리) — 기동 뒤에 칸을 빌려 걸고
+        ///        풀어도(시나리오 재생기) 힙 저장소가 새로 자라지 않는다. 힙이면 그 저장소가 허물어도 남는 빌린 칸과 함께 종료 누수 보고에 찍혔다.
+        small_vector<Entry, 16>  _listEntry;
         vector<MountedScope>     _listMounted; ///< 매단 자식 범위(매단 순서)
         const ISubsystemLocator* _pParent;     ///< 상위 범위(없으면 nullptr)
     };
