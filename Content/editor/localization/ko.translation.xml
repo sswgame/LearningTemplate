@@ -552,6 +552,14 @@
 		<entry key="EditorBugReport.ShowInExplorer"
 		       text="이 폴더를 파일 탐색기에서 엽니다"
 		       sourceHash="e0320233b736df32" />
+		<entry key="EditorCatalog.FilterHint" text="파일 거르기" sourceHash="f88c42a9bdac2c80" />
+		<entry key="EditorCatalog.NoKinds"
+		       text="등록된 카탈로그 종류가 없습니다"
+		       sourceHash="e8f03e81c7886d00" />
+		<entry key="EditorCatalog.SaveOrRevertFirst"
+		       text="열린 파일을 먼저 저장하거나 되돌리세요"
+		       sourceHash="5b15694f18c528ae" />
+		<entry key="EditorCatalog.Scanning" text="리소스를 훑는 중..." sourceHash="4841a1ca2af64c10" />
 		<entry key="EditorConsole.AllLevelsHidden"
 		       text="모든 로그 수준이 숨겨져 있습니다. 툴바에서 하나를 다시 켜세요."
 		       sourceHash="370f9580d5db61a5" />

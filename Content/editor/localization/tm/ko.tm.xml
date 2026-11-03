@@ -299,6 +299,7 @@
 		       text="로그 메시지, 모듈 태그, 파일명으로 필터링하여 검색합니다" />
 		<entry source="Filter by property and component name"
 		       text="프로퍼티 및 컴포넌트 이름을 검색하여 필터링합니다" />
+		<entry source="Filter files" text="파일 거르기" />
 		<entry source="Filter modules by whether they are on" text="켜짐 여부로 모듈을 거릅니다" />
 		<entry source="Filter scopes..." text="스코프 필터..." />
 		<entry source="Filter variables..." text="변수 필터..." />
@@ -503,6 +504,7 @@
 		       text="본 마스크가 없습니다. 마스크는 레이어가 움직일 본과 그 세기를 고릅니다." />
 		<entry source="No bug reports yet. Collect Now saves one under Saved/BugReports."
 		       text="아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugReports 아래에 하나 모읍니다." />
+		<entry source="No catalog kinds are registered" text="등록된 카탈로그 종류가 없습니다" />
 		<entry source="No components in the active scene." text="활성 씬에 컴포넌트가 없습니다." />
 		<entry source="No content roots found." text="리소스 루트를 찾지 못했습니다." />
 		<entry source="No event library loaded" text="로드된 이벤트 라이브러리가 없습니다" />
@@ -827,6 +829,7 @@
 		<entry source="Save failed" text="저장하지 못했습니다" />
 		<entry source="Save or load named sets of global variable values"
 		       text="이름 붙인 전역 변수 값 묶음을 저장하거나 불러옵니다" />
+		<entry source="Save or revert the open file first" text="열린 파일을 먼저 저장하거나 되돌리세요" />
 		<entry source="Save the captured window to Saved/Profiler/ProfilerCapture.txt (long captures: Tracy)"
 		       text="캡처한 구간을 Saved/Profiler/ProfilerCapture.txt 로 저장합니다(긴 캡처는 Tracy)" />
 		<entry source="Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
@@ -860,6 +863,7 @@
 		       text="에디터 밖에서 추가하거나 지운 XML 테이블을 찾으려고 게임 데이터 폴더를 다시 훑습니다." />
 		<entry source="Scan the instance for overrides again"
 		       text="인스턴스의 오버라이드를 다시 검사합니다" />
+		<entry source="Scanning Resource..." text="리소스를 훑는 중..." />
 		<entry source="Scanning presets..." text="프리셋을 찾는 중..." />
 		<entry source="Scene" text="씬" />
 		<entry source="Scene edits locked until Stop." text="Stop 할 때까지 씬 편집이 잠깁니다." />

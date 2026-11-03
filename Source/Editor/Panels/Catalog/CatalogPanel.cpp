@@ -22,6 +22,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
@@ -222,15 +223,15 @@ namespace sw::editor
 
     void CatalogPanel::drawFileList()
     {
-        EditorWidgets::drawSearchField( "##catalogFilter", _filter, "Filter files", -1.0f, false );
+        EditorWidgets::drawSearchField( "##catalogFilter", _filter, SW_LOCKEY( "EditorCatalog", "FilterHint" ), -1.0f, false );
         if ( _bIndexLoaded == false )
         {
-            EditorWidgets::drawEmptyHint( "Scanning Resource..." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorCatalog", "Scanning" ) );
             return;
         }
         if ( _listFile.empty() )
         {
-            EditorWidgets::drawEmptyHint( "No catalog kinds are registered" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorCatalog", "NoKinds" ) );
             return;
         }
 
@@ -246,25 +247,38 @@ namespace sw::editor
             }
             StringBuilder<constant::buffer::kMax128> header;
             header.appendFormat( "%# (%#)###kind_%#", _listFile[index]._kindLabel, end - index, _listFile[index]._kindLabel );
-            if ( ImGui::CollapsingHeader( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) )
+            // 종류는 트리 노드(띠 없는 머리)로, 줄은 파일 이름 + 회색 폴더 — 좁은 왼쪽 칸에서 전체 경로가 잘려 같은 종류의 파일이 구분되지 않았다(uiaudit 24).
+            if ( ImGui::TreeNodeEx( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_NoTreePushOnOpen ) )
             {
                 for ( size_t fileIndex = index; fileIndex < end; ++fileIndex )
                 {
                     const FileRow& file = _listFile[fileIndex];
                     if ( filter.empty() == false && StringUtil::contains( file._assetID, filter, true ) == false )
                         continue;
-                    const bool bSelected = file._assetID == _selectedID;
-                    if ( ImGui::Selectable( file._assetID.c_str(), bSelected ) && bSelected == false )
+                    const bool   bSelected = file._assetID == _selectedID;
+                    const string fileName  = FileUtil::getFileNamePart( file._assetID );
+                    const string label     = fileName + "##" + file._assetID;
+                    if ( ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false )
                     {
                         if ( _document.isDirty() )
-                            _statusText = "Save or revert the open file first";
+                            _statusText = SW_LOCKEY( "EditorCatalog", "SaveOrRevertFirst" );
                         else
                             openFile( file._assetID );
                     }
                     if ( bFirstFile )
                     {
-                        EditorSelfTestMarks::note( "catalog.file.first" );
+                        EditorSelfTestMarks::note( "catalog.file.first" ); // 표식은 마지막 항목을 가리킨다 — 회색 폴더 글보다 먼저
                         bFirstFile = false;
+                    }
+                    EditorWidgets::drawTooltip( file._assetID.c_str() );
+                    const string_view folder = string_view( file._assetID ).substr( 0, file._assetID.size() - fileName.size() );
+                    if ( folder.empty() == false )
+                    {
+                        // 선택 줄은 폭 전체를 쓰므로 같은 줄에 잇지 않고 그 줄 위, 파일 이름 뒤에 회색으로 얹는다(배치는 바꾸지 않는다).
+                        const ImVec2  itemMin = ImGui::GetItemRectMin();
+                        const float32 textY   = itemMin.y + ( ImGui::GetItemRectSize().y - ImGui::GetFontSize() ) * 0.5f; // 선택 줄이 이름을 세로 가운데에 그리는 자리
+                        const ImVec2  at{ itemMin.x + ImGui::CalcTextSize( fileName.c_str() ).x + ImGui::GetStyle().ItemSpacing.x, textY };
+                        ImGui::GetWindowDrawList()->AddText( at, ImGui::GetColorU32( ImGuiCol_TextDisabled ), folder.data(), folder.data() + folder.size() );
                     }
                 }
             }

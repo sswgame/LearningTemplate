@@ -1262,6 +1262,26 @@ msgctxt "EditorBugReport.ShowInExplorer"
 msgid "Open this folder in the file explorer"
 msgstr "이 폴더를 파일 탐색기에서 엽니다"
 
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EditorCatalog.FilterHint"
+msgid "Filter files"
+msgstr "파일 거르기"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EditorCatalog.NoKinds"
+msgid "No catalog kinds are registered"
+msgstr "등록된 카탈로그 종류가 없습니다"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EditorCatalog.SaveOrRevertFirst"
+msgid "Save or revert the open file first"
+msgstr "열린 파일을 먼저 저장하거나 되돌리세요"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EditorCatalog.Scanning"
+msgid "Scanning Resource..."
+msgstr "리소스를 훑는 중..."
+
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
 msgctxt "EditorConsole.AllLevelsHidden"
 msgid "All log levels are hidden. Re-enable one in the toolbar."

@@ -1321,6 +1321,26 @@
 				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorCatalog.FilterHint" source="Filter files">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.NoKinds" source="No catalog kinds are registered">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.SaveOrRevertFirst" source="Save or revert the open file first">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.Scanning" source="Scanning Resource...">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorConsole.AllLevelsHidden" source="All log levels are hidden. Re-enable one in the toolbar.">
 			<origins>
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
