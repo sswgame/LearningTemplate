@@ -173,6 +173,12 @@ namespace sw::editor
         return columns * ImGui::CalcTextSize( "0" ).x;
     }
 
+    float32 EditorChrome::measureStepperInput( float32 digitColumns )
+    {
+        const ImGuiStyle& style = ImGui::GetStyle();
+        return measureColumns( digitColumns ) + style.FramePadding.x * 2.0f + 2.0f * ( ImGui::GetFrameHeight() + style.ItemInnerSpacing.x );
+    }
+
     float32 EditorChrome::measureSmallButton( const utf8* pLabel )
     {
         return ImGui::CalcTextSize( pLabel, nullptr, true ).x + ImGui::GetStyle().FramePadding.x * 2.0f; // "##" 뒤 글자는 그려지지 않는다

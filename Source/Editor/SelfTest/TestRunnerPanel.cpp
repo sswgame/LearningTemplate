@@ -192,14 +192,19 @@ namespace sw::editor
                 if ( bGroupOpen == false )
                     continue;
 
-                bool bSelected = _uniqueSelectedSelfTest.count( pID ) != 0;
-                if ( ImGui::Checkbox( pID, &bSelected ) )
+                // 묶음 아래 줄은 뒷이름만 — 묶음 이름을 되풀이하면("theme" 아래 "theme.palette") 줄이 길고 훑기 어렵다(uiaudit 30). 전체 이름은 툴팁과 ID 에 남는다.
+                const string_view id        = pID;
+                const string_view leafName  = id.size() > group.size() + 1 && id.substr( 0, group.size() ) == group ? id.substr( group.size() + 1 ) : id;
+                const string      label     = string( leafName ) + "##" + pID;
+                bool              bSelected = _uniqueSelectedSelfTest.count( pID ) != 0;
+                if ( ImGui::Checkbox( label.c_str(), &bSelected ) )
                 {
                     if ( bSelected )
                         _uniqueSelectedSelfTest.insert( pID );
                     else
                         _uniqueSelectedSelfTest.erase( pID );
                 }
+                EditorWidgets::drawTooltip( pID );
                 const string markKey = string( "testRunner.select." ) + pID;
                 EditorSelfTestMarks::note( markKey.c_str() );
                 for ( const EditorSelfTestResult& result : listResult )

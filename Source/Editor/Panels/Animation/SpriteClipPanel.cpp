@@ -164,12 +164,13 @@ namespace sw::editor
     {
         ImGui::Separator();
         ImGui::TextUnformatted( "Atlas cells (click: selected frame, Shift+click: new frame)" );
-        EditorChrome::setNextItemWidthColumns( 12.0f );
-        ImGui::InputInt( "Columns", &_model.editSliceColumns() );
+        EditorWidgets::drawPropertyRowLabel( "Columns" );
+        ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
+        ImGui::InputInt( "##Columns", &_model.editSliceColumns() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceColumnsTip" ) );
-        ImGui::SameLine();
-        EditorChrome::setNextItemWidthColumns( 12.0f );
-        ImGui::InputInt( "Rows", &_model.editSliceRows() );
+        EditorWidgets::drawPropertyRowLabel( "Rows" );
+        ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
+        ImGui::InputInt( "##Rows", &_model.editSliceRows() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceRowsTip" ) );
         _model.clampSliceGrid();
 

@@ -144,10 +144,10 @@ namespace sw::editor
         ImGui::SetNextItemWidth( fieldWidth );
         ImGui::InputInt( "##WindowHeight", &settings._windowHeight, 0, 0 );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "WindowSize" ) );
-        // 단추가 붙은 칸은 폭에 -/+ 단추(정사각 둘)가 들어간다 — 숫자 칸 폭만 주면 숫자가 몇 픽셀로 눌려 ':' 만 보였다(uiaudit 31). 이름표로 무엇을 세는지 밝힌다.
+        // 단추가 붙은 칸은 `measureStepperInput` 폭 — 숫자 칸 폭만 주면 숫자가 몇 픽셀로 눌려 ':' 만 보였다(uiaudit 31). 이름표로 무엇을 세는지 밝힌다.
         const utf8* const pColumns     = SW_LOCKEY( "EditorMultiplayer", "WindowColumnsLabel" );
         const ImGuiStyle& style        = ImGui::GetStyle();
-        const float32     stepperWidth = fieldWidth + 2.0f * ( ImGui::GetFrameHeight() + style.ItemInnerSpacing.x );
+        const float32     stepperWidth = EditorChrome::measureStepperInput( 3.0f );
         EditorChrome::sameLineIfFits( ImGui::CalcTextSize( pColumns ).x + style.ItemSpacing.x + stepperWidth );
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( pColumns );

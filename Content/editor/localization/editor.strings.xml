@@ -3037,6 +3037,22 @@
 				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorScene.PrefabAssetLabel" source="Prefab">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.PrefabInstanceLabel" source="Instance">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.PrefabNoInstance"
+		       source="Select a prefab instance in the Hierarchy to see and apply its overrides.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorScene.RefreshOverrides" source="Scan the instance for overrides again">
 			<origins>
 				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>

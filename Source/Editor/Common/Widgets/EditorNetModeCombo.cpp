@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
@@ -39,7 +40,7 @@ namespace sw::editor
         if ( settings._mode != EditorNetMode::Standalone )
         {
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
+            ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 2.0f ) ); // -/+ 단추 몫까지(숫자 칸 폭만 주면 숫자가 눌린다)
             if ( ImGui::InputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
                 bChanged = true;
             settings._clientCount = MathUtil::clamp( settings._clientCount, 1, kMaxPlayerCount );

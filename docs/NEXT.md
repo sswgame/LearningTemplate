@@ -28,7 +28,8 @@
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
-   - 창마다 UX 2차: `editor/uiaudit.scenario.xml` 캡처 38 장 중 이번에 본 것은 인스펙터 · 콘텐츠 브라우저 · 프로파일러 · 환경설정 · 입력 맵 · 머티리얼 · 프로젝트 · 사용자 설정뿐이다. 나머지 30 장(그래프 · 시퀀서 · 데이터 표 · 멀티플레이 · 캐릭터 에디터 …)을 같은 눈으로 본다.
+   - 창마다 UX 2차: `editor/uiaudit.scenario.xml` 캡처 중 아직 안 본 것 — 기본 배치 · 하이어라키 · 콘솔 · 씬 뷰 · 게임 뷰 · 단축키 · 전역 변수 · 기록 · 모듈 · 기믹 그래프 · 스프라이트 클립 · 렌더 타깃 · 오디오 이벤트 · 애니메이션 되감기 · 리그 디버그 · NPC 일정. UI 미리보기는 도구줄 슬라이더 이름표가 오른쪽(ImGui 기본)이다.
+     같은 결함이 여러 창에 있다 — ImGui 기본 위젯(오른쪽 이름표)을 그대로 쓴 창은 `drawPropertyRowLabel` 이름표 열로, 고정 줄 수 목록은 남은 높이로, 강조색 이름표(`EditorThemeUtil::textInfo`)는 회색으로.
    - 에디터 코드의 영어 화면 글 약 500 줄(`ImGui::Text( "…" )` 등)을 `SW_LOCKEY` + `editor.strings.xml` 로 — 창 UX 를 고칠 때 그 창 것을 함께 옮긴다.
      명령의 라벨 · 툴팁 · 설명은 이제 데이터(`Content/editor/commands/*.commands.xml`)에 글 그대로 있다 — 현지화 키로 바꿀 때 그 파일의 칸을 키로 바꾼다.
 6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·

@@ -46,15 +46,19 @@ namespace sw::editor
         const string& prefabPath   = _model.getPrefabPath();
         const string& instanceName = _model.getInstanceName();
 
-        EditorThemeUtil::textInfo( "Prefab Asset:" );
-        ImGui::SameLine();
-        ImGui::Text( "%s", prefabPath.empty() ? "(none)" : prefabPath.c_str() );
-
-        EditorThemeUtil::textInfo( "Active Instance:" );
-        ImGui::SameLine();
-        ImGui::Text( "%s", instanceName.empty() ? "(none)" : instanceName.c_str() );
-
         PrefabEditorPanel* pWindow = PrefabEditorPanel::findIsolatingWindow(); // 프리팹 창이 열려 문서를 격리 중이면 그 창
+        // 대상이 없으면 빈 덮어쓰기 표와 "모두 적용 · 되돌리기" 대신 무엇을 하면 되는지 한 줄 — 앱 화면 규칙의 빈 상태(uiaudit 15).
+        if ( prefabPath.empty() && instanceName.empty() && pWindow == nullptr )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "PrefabNoInstance" ) );
+            return;
+        }
+        // 이름표는 회색 이름표 열(인스펙터와 같다) — 강조색은 데이터 · 선택에만 쓴다.
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorScene", "PrefabAssetLabel" ) );
+        ImGui::TextUnformatted( prefabPath.empty() ? "-" : prefabPath.c_str() );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorScene", "PrefabInstanceLabel" ) );
+        ImGui::TextUnformatted( instanceName.empty() ? "-" : instanceName.c_str() );
+
         if ( pWindow != nullptr )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Prefab Window: %s", string{ pWindow->getIsolation().getPrefabPath() }.c_str() );

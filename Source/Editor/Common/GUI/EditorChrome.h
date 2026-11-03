@@ -185,6 +185,11 @@ namespace sw::editor
         static void setNextItemWidthColumns( float32 columns );
         /** @brief 숫자 "0" 폭의 @p columns 배인 폭입니다(`setNextItemWidthColumns` 와 같은 값 — 줄바꿈 판단에 쓴다). */
         [[nodiscard]] static float32 measureColumns( float32 columns );
+        /**
+         * @brief -/+ 단추가 붙은 숫자 칸(`ImGui::InputInt( …, step )`)이 숫자 @p digitColumns 자리를 보이는 폭입니다(숫자 칸 + 단추 둘).
+         * @details `SetNextItemWidth` 는 단추까지 포함한 폭이라 숫자 칸 폭만 주면 숫자가 몇 픽셀로 눌렸다(uiaudit 20 · 31).
+         */
+        [[nodiscard]] static float32 measureStepperInput( float32 digitColumns );
         /** @brief 단추(`ImGui::SmallButton` · `ImGui::Button` 은 좌우 안쪽 여백이 같다)의 폭입니다(글자 + 좌우 안쪽 여백) — `sameLineIfFits` 의 인자로 쓴다. 수를 미리 모르는 단추 줄(선택지마다 하나)이 창 밖으로 나가지 않게 한다. */
         [[nodiscard]] static float32 measureSmallButton( const utf8* pLabel );
         /** @brief `ImGui::ArrowButton` 의 폭입니다(정사각 — 프레임 높이). 토글 단추(`EditorWidgets::drawToggleButton`)는 `ImGui::Button` 이므로 `measureSmallButton` 으로 잰다. */

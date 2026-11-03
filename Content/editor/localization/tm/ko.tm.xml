@@ -386,6 +386,7 @@
 		<entry source="Inject virtual key, mouse, or stick events directly into the engine without physical hardware."
 		       text="실제 장치 없이 가상 키, 마우스, 스틱 이벤트를 엔진에 바로 넣습니다." />
 		<entry source="InputManager service is not available." text="InputManager 서비스를 쓸 수 없습니다." />
+		<entry source="Instance" text="인스턴스" />
 		<entry source="Instances" text="인스턴스" />
 		<entry source="Integer to paint on the selected data layer."
 		       text="고른 데이터 레이어에 칠할 정수입니다." />
@@ -894,6 +895,8 @@
 		<entry source="Select a component first" text="먼저 컴포넌트를 고르십시오" />
 		<entry source="Select a folder" text="폴더를 선택하세요" />
 		<entry source="Select a node to edit its settings" text="설정을 편집할 노드를 고르세요" />
+		<entry source="Select a prefab instance in the Hierarchy to see and apply its overrides."
+		       text="하이어라키에서 프리팹 인스턴스를 고르면 덮어쓴 값을 보고 적용할 수 있습니다." />
 		<entry source="Select a target folder to import assets into first"
 		       text="에셋을 가져올 대상 폴더를 먼저 선택하세요" />
 		<entry source="Select an XML data table from the list on the left."
