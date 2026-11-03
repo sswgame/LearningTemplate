@@ -7,48 +7,45 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/sequencerkeys.scenario.xml -unattended
 -->
 <Scenario name="editor.sequencerkeys" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="15"/>
 	<Variable name="gv_editorWatchObject" value="GameCamera"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorText value="sequencerkeys.seq.xml"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="0"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="sequencer.addKey"/>
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="sequencer.channel.0" mods="ctrl"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="2"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.ObjectPositionX" equals="2" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="sequencer.scrub" mods="ctrl"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="100"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="sequencer.channel.0" mods="ctrl"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="12"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.ObjectPositionX" equals="12"/>

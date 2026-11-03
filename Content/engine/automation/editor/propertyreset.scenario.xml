@@ -5,24 +5,22 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/propertyreset.scenario.xml -unattended
 -->
 <Scenario name="editor.propertyreset" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="25"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
 	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="4"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.SelectedProperty" equals="4" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="inspector.reset.CameraComponent._priority"/>
 	<WaitUntil watch="Editor.SelectedProperty" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>

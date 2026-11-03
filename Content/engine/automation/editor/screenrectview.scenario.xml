@@ -6,11 +6,10 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/screenrectview.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.screenrectview" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="5"/>
-	<DevCommand line="layout.reset"/>
-	<Wait frames="5"/>
+	<!-- 창 크기를 먼저 정하고 그 크기에서 기본 배치를 만든다 — 거꾸로면 배치가 앞 시나리오가 남긴 크기에서 만들어져 비율 조정을 거친다(게임 뷰 크기가 체인 순서를 탄다) -->
 	<ResizeWindow width="1600" height="900"/>
-	<Wait frames="10"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
 	<DevCommand line="scene.open engine/automation/editor/screenrectview/screenrectview.scene.xml"/>
 	<Wait frames="40"/>
 	<DevCommand line="panel.close prefab_editor"/>

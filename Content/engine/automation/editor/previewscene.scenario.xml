@@ -8,16 +8,14 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/previewscene.scenario.xml -unattended (백엔드 vk 도 같다)
 -->
 <Scenario name="editor.previewscene" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="10"/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorText value="previewred.material"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>

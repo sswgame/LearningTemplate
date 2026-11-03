@@ -9,16 +9,13 @@
 -->
 <Scenario name="editor.sceneviewgameview" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 위치로 누르는 시나리오 — 앞 시나리오 · 사용자 배치가 패널을 좁혀 두었을 수 있다 -->
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
 	<!-- 두 뷰 RT 를 같은 배치에서 새로 짓게 창 크기를 크게 두 번 바꾼다 — RT 는 1 픽셀 떨림을 무시하므로(EditorViewTargetUtil::needsResize) 앞 배치의 RT 가
 	     1 픽셀 다른 채 남으면 두 스크린샷 크기가 달라 화소 비교(differingFraction)를 하지 못한다 -->
-	<Wait frames="5"/>
 	<ResizeWindow width="1440" height="810"/>
-	<Wait frames="10"/>
 	<ResizeWindow width="1600" height="900"/>
 	<!-- ① 기본은 씬 뷰만 보인다 -->
-	<Wait frames="40"/>
+	<EditorWaitSettled/>
 	<!-- 무인 실행: 사람의 마우스 · 키보드는 창 메시지 단계에서 버린다 — 커서가 창 위 · 밖 어디 있든 비행 결과가 같다 -->
 	<Expect watch="Input.OSDeviceInputBlocked" equals="1"/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
@@ -42,7 +39,7 @@
 	<Wait frames="5"/>
 	<ExpectImage file="gameview.ppm" golden="gameview"/>
 	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="toolbar.play"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="120"/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>

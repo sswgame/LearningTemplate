@@ -6,23 +6,22 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/packaging.scenario.xml -unattended
 -->
 <Scenario name="editor.packaging" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus packaging"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.PackagingState" equals="0"/>
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="packaging.skipBuild" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="packaging.skipBuild" state="up"/>
-	<Wait frames="7"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="packaging.skipCook" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="packaging.skipCook" state="up"/>
-	<Wait frames="7"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="packaging.package" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="packaging.package" state="up"/>

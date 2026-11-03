@@ -5,19 +5,18 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/modules.scenario.xml -unattended
 -->
 <Scenario name="editor.modules" requiresModule="GF_ThemePark,GF_EditorPlugin_ThemePark" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus modules"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="modules.search"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="ThemePark"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="modules.toggle.GF_ThemePark"/>
 	<WaitUntil watch="Editor.ModulePreviewNewlyInactive" equals="2" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="modules.cancel"/>
 	<WaitUntil watch="Editor.ModulePreviewNewlyInactive" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>

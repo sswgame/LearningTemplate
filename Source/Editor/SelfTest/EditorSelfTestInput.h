@@ -105,6 +105,19 @@ namespace sw::editor
          * @details 키 · 글 단계에는 누를 레이블이 없다 — 그 대상은 키보드 초점이다. 클릭이 연 팝업 · 입력 칸이 초점을 잡는 데 한두 프레임이 걸린다.
          */
         [[nodiscard]] static bool isKeyboardTargetSettled();
+        /**
+         * @brief 화면이 자리 잡기를 기다리기 시작합니다. 돌려준 번호를 `isLayoutSettledSince` 에 넘깁니다.
+         * @details 번호는 에디터가 다음에 여는 프레임에 찍힌다(`flushIntoImGui`). 앞 단계(개발 명령 · 입력 · 변수)는 이 호출 전에 다 돌았고, 그 요청은 다음 프레임이 열릴 때
+         *          받아들여지므로, 이 번호 이상이 찍힌 프레임은 앞 단계를 모두 반영해 그린 화면이다 — 효과가 몇 프레임 뒤에 나오는지 세지 않는다.
+         */
+        [[nodiscard]] static uint32 beginSettleWait();
+        /**
+         * @brief `beginSettleWait` 가 준 @p waitSerial 이상이 찍힌 프레임 둘이 연속으로 같은 배치면 true 입니다 — 보이는 창 모두의 자리(위치 · 크기 · 도크 노드 · 뷰포트 · 접힘),
+         *        메인 뷰포트 크기, 열린 팝업 수.
+         * @details 창 크기 바꾸기 · 레이아웃 재설정 · 패널 열기 뒤 도킹이 자리를 잡는 데 몇 프레임이 걸린다 — 시나리오가 그것을 고정 대기로 때우지 않게 한다(`EditorWaitSettled`).
+         *          위젯 하나의 자리(`EditorSelfTestMark::isSettled`)를 창 전체로 넓힌 것이다. 기록이 꺼져 있으면(표본이 없다) false 다.
+         */
+        [[nodiscard]] static bool isLayoutSettledSince( uint32 waitSerial );
         /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 호출합니다. 넣기 전에 키보드 대상을 표본으로 남긴다. */
         static void flushIntoImGui();
     };

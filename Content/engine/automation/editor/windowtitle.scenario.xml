@@ -4,19 +4,18 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/windowtitle.scenario.xml -unattended
 -->
 <Scenario name="editor.windowtitle" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="30"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="10"/>
 	<DevCommand line="scene.saveAs {out}/windowtitle.scene.xml"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.WindowTitleDirty" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.WindowTitleDirty" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+S"/>
 	<WaitUntil watch="Editor.WindowTitleDirty" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>

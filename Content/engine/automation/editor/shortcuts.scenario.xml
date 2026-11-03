@@ -5,36 +5,35 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/shortcuts.scenario.xml -unattended
 -->
 <Scenario name="editor.shortcuts" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus shortcuts"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="shortcuts.set.edit.undo"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+U"/>
 	<WaitUntil watch="Editor.ShortcutOverrideCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus hierarchy"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+U"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus shortcuts"/>
-	<Wait frames="25"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="shortcuts.set.edit.redo"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+U"/>
 	<WaitUntil watch="Editor.ShortcutConflictCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="shortcuts.cancel"/>
 	<WaitUntil watch="Editor.ShortcutConflictCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.ShortcutOverrideCount" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="shortcuts.resetAll"/>
 	<WaitUntil watch="Editor.ShortcutOverrideCount" equals="0" timeoutFrames="60"/>
 	<Wait frames="10"/>

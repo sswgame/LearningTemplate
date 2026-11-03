@@ -6,9 +6,8 @@
 -->
 <Scenario name="editor.viewportgrid" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 위치로 누르는 시나리오 — 앞 시나리오 · 사용자 배치가 패널을 좁혀 두었을 수 있다 -->
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="55"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
 	<Expect watch="Editor.GridMajorLines" atLeast="4"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>

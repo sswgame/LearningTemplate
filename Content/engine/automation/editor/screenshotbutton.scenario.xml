@@ -5,17 +5,16 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/screenshotbutton.scenario.xml -unattended
 -->
 <Scenario name="editor.screenshotbutton" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="30"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gameView.screenshot"/>
 	<Wait frames="40"/>
 	<ExpectLog id="Screenshot.Saved" count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus scene_view"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="sceneView.screenshot"/>
 	<Wait frames="40"/>
 	<ExpectLog id="Screenshot.Saved" count="2"/>

@@ -5,11 +5,9 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/bugreport.scenario.xml -unattended
 -->
 <Scenario name="editor.bugreport" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="5"/>
 	<ResizeWindow width="1600" height="900"/>
-	<Wait frames="50"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<!-- 에디터 카메라를 오른쪽으로 3 m 남짓(오른쪽 단추 + D) -->
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
@@ -23,7 +21,7 @@
 	<Wait frames="5"/>
 	<ExpectLog id="BugReport.Saved" atLeast="1"/>
 	<!-- 다시 왼쪽으로 옮긴다(A) — 기록과 다른 자리 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="A" state="down"/>
 	<Wait frames="70"/>

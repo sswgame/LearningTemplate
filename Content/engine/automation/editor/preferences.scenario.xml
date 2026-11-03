@@ -5,32 +5,31 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/preferences.scenario.xml -unattended
 -->
 <Scenario name="editor.preferences" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PreferencesSavedKeyCount" equals="0"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorText value="Open editor preferences"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus preferences"/>
 	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="7" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="preferences.search"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorText value="snap"/>
 	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="inspector.property.EditorViewportPreferences._gridSnapValue" mods="ctrl"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="2"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.PreferencesSavedKeyCount" equals="1"/>

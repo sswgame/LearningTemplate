@@ -6,26 +6,24 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/colliderhandle.scenario.xml -unattended
 -->
 <Scenario name="editor.colliderhandle" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="25"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<Wait frames="15"/>
 	<DevCommand line="component.add RigidBodyComponent"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.ColliderHandleCount" equals="0"/>
 	<Expect watch="Editor.ColliderHalfExtentX" near="0.5" tolerance="0.001"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="viewport.visualizer.physics_shapes"/>
 	<WaitUntil watch="Editor.ColliderHandleCount" equals="6" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorDrag mark="collider.handle.0.x+" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.ColliderHandleCommitCount" equals="1" timeoutFrames="150"/>
 	<Expect watch="Editor.UndoCount" atLeast="1"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.ColliderHalfExtentX" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<Wait frames="10"/>

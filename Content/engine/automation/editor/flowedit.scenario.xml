@@ -7,12 +7,10 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/flowedit.scenario.xml -unattended
 -->
 <Scenario name="editor.flowedit" fixedDelta="0.0166667" timeoutFrames="2000" startAfter="Immediately" input="exclusive">
-	<Wait frames="10"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.resetOptional"/>
 	<Wait frames="10"/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
@@ -25,11 +23,11 @@
 	<DevCommand line="panel.focus content_browser"/>
 	<Wait frames="10"/>
 	<DevCommand line="content.open game/empty/models"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="contentBrowser.search"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="crate_medium.mesh"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorDrag mark="contentBrowser.asset.crate_medium.mesh" toMark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
@@ -37,19 +35,19 @@
 	<!-- ② 메시 모디파이어 — 고른 것을 대상으로 휘기 -->
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="meshmodifiers.useSelection"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="meshmodifiers.add"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="meshmodifiers.category.Deform"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="meshmodifiers.item.bend"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorText value="80"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<Wait frames="20"/>
 	<Expect watch="MeshModifiers.ModifierCount" equals="1"/>
@@ -59,13 +57,13 @@
 	<!-- ③ 인스펙터로 이름 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus inspector"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorText value="PlacedCrate"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="PlacedCrate" component="MeshComponent" selected="1"/>

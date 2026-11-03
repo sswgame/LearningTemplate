@@ -10,12 +10,10 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/animgraphsave.scenario.xml -unattended
 -->
 <Scenario name="editor.animgraphsave" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="asset.open {out}/temp.animgraph.xml"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus animation_graph"/>
@@ -23,17 +21,17 @@
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
 	<Expect watch="Editor.GraphNodeCount" equals="2"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.add.Attack"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="asset.removeTemp {out}/temp.animgraph.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.add.Idle"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>

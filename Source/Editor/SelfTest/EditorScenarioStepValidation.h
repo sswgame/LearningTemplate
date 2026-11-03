@@ -84,6 +84,7 @@ namespace sw::editor
         static constexpr const utf8* kDockLayoutKind   = "EditorExpectDockLayout";
         static constexpr const utf8* kCaptureKind      = "CaptureEditorUI";
         static constexpr const utf8* kSelfTestKind     = "EditorSelfTest";
+        static constexpr const utf8* kWaitSettledKind  = "EditorWaitSettled";
 
         /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p inoutValue 를 둡니다. 형식이 틀리면 false 이고 값은 그대로입니다. */
         [[nodiscard]] static bool readCount( const AutomationStep& step, string_view name, uint32& inoutValue );
@@ -113,5 +114,7 @@ namespace sw::editor
         static bool validateSelfTest( const AutomationStep& step, string& outError );
         static bool validateDockLayout( const AutomationStep& step, string& outError );
         static bool validateCapture( const AutomationStep& step, string& outError );
+        /** @brief `timeoutFrames`(선택, 프레임 수) 하나만 받습니다. */
+        static bool validateWaitSettled( const AutomationStep& step, string& outError );
     };
 } // namespace sw::editor

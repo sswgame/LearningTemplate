@@ -22,8 +22,17 @@ namespace sw
 {
     namespace
     {
+        /** @brief 마지막 `ResizeWindow` 가 요청했고 아직 창에 반영되지 않은 클라이언트 크기입니다(0 이면 요청 없음 — `isWindowResizeApplied`). */
+        struct PendingResize
+        {
+            uint32 _width{ 0 };
+            uint32 _height{ 0 };
+        };
+
         struct AutomationEnvironmentStepsInternal
         {
+            static inline PendingResize s_pendingResize{};
+
             static bool validateDevCommand( const AutomationStep& step, string& outError )
             {
                 if ( step.hasRequiredAttributes( { "line" }, { "line" }, outError ) == false )
@@ -131,11 +140,31 @@ namespace sw
                 MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
                 IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, width, height ) == false )
+                {
                     runner.recordFailure( step, "this platform could not resize the window" );
+                    return true;
+                }
+                // 창의 최소 크기보다 작게 요청했으면 창은 최소 크기에서 멈춘다 — 그 크기를 기다린다.
+                s_pendingResize = PendingResize{ std::max( width, pWindow->getMinimumClientWidth() ), std::max( height, pWindow->getMinimumClientHeight() ) };
                 return true;
             }
         };
     } // namespace
+
+    bool AutomationEnvironmentSteps::isWindowResizeApplied()
+    {
+        using Internal = AutomationEnvironmentStepsInternal;
+        if ( Internal::s_pendingResize._width == 0 )
+            return true;
+        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const IWindow*       pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        if ( pWindow == nullptr )
+            return false;
+        if ( pWindow->getWidth() != Internal::s_pendingResize._width || pWindow->getHeight() != Internal::s_pendingResize._height )
+            return false;
+        Internal::s_pendingResize = {};
+        return true;
+    }
 
     SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand,
                         false );

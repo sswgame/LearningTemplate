@@ -4,25 +4,24 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/undosurvivesplay.scenario.xml -unattended
 -->
 <Scenario name="editor.undosurvivesplay" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="30"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="toolbar.play"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="toolbar.playAnyway"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Expect watch="Editor.UndoIndex" equals="1"/>
 	<EditorExpectObject name="GameObject"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
 	<EditorExpectObject name="GameObject" count="0"/>

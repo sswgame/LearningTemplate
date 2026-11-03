@@ -6,9 +6,8 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/uicapture.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.uicapture" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
-	<Wait frames="90"/>
 	<ResizeWindow width="1600" height="900"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="ui_dark.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="editor.theme light"/>

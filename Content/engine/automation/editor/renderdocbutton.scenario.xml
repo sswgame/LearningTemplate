@@ -11,12 +11,11 @@
 	<!-- 넘침을 툴바 길이에 맡기지 않는다 — 툴바 단추가 줄면(예: Cam 체크 상자 → 아이콘) 1280 폭에 다 들어가 넘침이 사라졌다. 좁은 창이면 늘 넘친다. -->
 	<ResizeWindow width="900" height="720"/>
 	<Variable name="gv_editorUiScale" value="1.5"/>
-	<Wait frames="10"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
 	<EditorClick mark="toolbar.overflow"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="toolbar.renderDoc"/>
 	<Wait frames="40"/>
 	<ExpectLog id="RenderDoc.CaptureRequested" count="0"/>

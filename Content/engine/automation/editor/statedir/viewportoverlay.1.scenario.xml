@@ -5,28 +5,25 @@
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/viewportoverlay.1.scenario.xml -dx12
 -->
 <Scenario name="editor.viewportoverlay.1" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="25"/>
 	<Variable name="gv_editorWatchOverlay" value="view"/>
 	<Expect watch="Editor.OverlayDock" equals="1"/>
 	<Expect watch="Editor.OverlayX" atMost="10"/>
 	<Expect watch="Editor.OverlayY" atMost="10"/>
 	<Expect watch="Editor.OverlayVertical" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorDrag mark="overlay.grip.view" dx="300" dy="200"/>
 	<WaitUntil watch="Editor.OverlayDock" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.OverlayX" atLeast="250"/>
 	<Expect watch="Editor.OverlayY" atLeast="150"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorDrag mark="overlay.grip.view" dx="-600" dy="0"/>
 	<WaitUntil watch="Editor.OverlayDock" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.OverlayVertical" equals="1"/>
 	<Variable name="gv_editorWatchOverlay" value="transform"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="overlay.collapse.transform"/>
 	<WaitUntil watch="Editor.OverlayFlags" equals="11" timeoutFrames="60"/>
 	<DevCommand line="overlay.show tools 0"/>

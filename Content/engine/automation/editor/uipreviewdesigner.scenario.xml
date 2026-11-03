@@ -12,26 +12,25 @@
 	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<!-- 1) 슬롯 손잡이 -->
-	<Wait frames="34"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorText value="pause.ui.xml"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="900"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="900"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.widget.Window"/>
 	<WaitUntil watch="Editor.UIPreviewSlotEditable" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewPaletteCount" atLeast="10"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorDrag mark="uipreview.handle.move" dx="40" dy="0"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="90"/>
 	<!-- 끄는 동안 자리가 먼저 바뀌고, 고침 · 되돌리기 기록은 끌기를 놓을 때 선다 -->
@@ -54,17 +53,17 @@
 	<!-- 1) 에서 고치고 되돌린 문서는 되돌려도 고친 표시(dirty)가 남는다 — 다른 문서를 열면 버린다고 알리는 경고가 의도한 출력이다 -->
 	<Wait frames="1"/>
 	<ExpectLog id="UIPreview.UnsavedEditsDiscarded" atLeast="1"/>
-	<Wait frames="9"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.palette.filter"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorText value="TextWidget"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorDrag mark="uipreview.palette.TextWidget" toMark="uipreview.row.0"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="180"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.delete"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
@@ -81,13 +80,13 @@
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<!-- 정리: 거름 칸을 비우고 문서 값을 되찾는다 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.palette.filter"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Backspace"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.reload"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="75"/>
 	<Wait frames="5"/>

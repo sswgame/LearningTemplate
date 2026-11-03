@@ -7,14 +7,11 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/viewmodes.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.viewmodes" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
-	<Wait frames="5"/>
-	<DevCommand line="layout.reset"/>
-	<Wait frames="5"/>
-	<ResizeWindow width="1440" height="810"/>
-	<Wait frames="10"/>
+	<!-- 창 크기를 먼저 정하고 그 크기에서 기본 배치를 만든다 — 거꾸로면 배치가 앞 시나리오가 남긴 크기에서 만들어져 비율 조정을 거친다(게임 뷰 크기가 체인 순서를 탄다) -->
 	<ResizeWindow width="1600" height="900"/>
+	<DevCommand line="layout.reset"/>
 	<!-- ① 게임 뷰 Lit 기준 -->
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus game_view"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
@@ -28,27 +25,27 @@
 	<Expect watch="Editor.SceneViewMode" equals="0"/>
 	<Screenshot file="viewmodes_scene_lit.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="viewport.viewMode.unlit"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="1" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_unlit.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="viewport.viewMode.wireframe"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="2" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_wireframe.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="viewport.viewMode.depth"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="4" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_depth.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="viewport.viewMode.overdraw"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="5" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_overdraw.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="viewport.viewMode.normals"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="3" timeoutFrames="90"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>

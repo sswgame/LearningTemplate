@@ -8,14 +8,12 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/netsim.scenario.xml -unattended
 -->
 <Scenario name="editor.netsim" requiresModule="GF_EditorPlugin_NetSimulation" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus multiplayer"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="up"/>

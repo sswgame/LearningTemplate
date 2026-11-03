@@ -5,9 +5,8 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/assertdialog.scenario.xml -unattended
 -->
 <Scenario name="editor.assertdialog" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<Wait frames="30"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="App.AssertDialogInstalled" equals="0"/>
 	<Pass/>
 </Scenario>

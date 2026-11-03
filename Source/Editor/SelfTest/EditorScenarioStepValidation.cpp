@@ -284,6 +284,17 @@ namespace sw::editor
         return false;
     }
 
+    bool EditorScenarioStepValidation::validateWaitSettled( const AutomationStep& step, string& outError )
+    {
+        if ( validateAttributes( step, { "timeoutFrames" }, nullptr, outError ) == false )
+            return false;
+        uint32 value = 0;
+        if ( readCount( step, "timeoutFrames", value ) )
+            return true;
+        outError = step.describe() + ": timeoutFrames must be a frame count";
+        return false;
+    }
+
     // 에디터 모듈이 올라오지 않은 프로세스도 이 단계들의 속성을 검사할 수 있게, 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.
     SW_AUTOMATION_STEP_VALIDATOR( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepValidation::validateClick );
     SW_AUTOMATION_STEP_VALIDATOR( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepValidation::validateDrag );
@@ -294,4 +305,5 @@ namespace sw::editor
     SW_AUTOMATION_STEP_VALIDATOR( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepValidation::validateDockLayout );
     SW_AUTOMATION_STEP_VALIDATOR( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorScenarioStepValidation::validateCapture );
     SW_AUTOMATION_STEP_VALIDATOR( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepValidation::validateSelfTest );
+    SW_AUTOMATION_STEP_VALIDATOR( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, &EditorScenarioStepValidation::validateWaitSettled );
 } // namespace sw::editor

@@ -6,12 +6,10 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/gimmickgraph.scenario.xml -unattended
 -->
 <Scenario name="editor.gimmickgraph" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="scene.open game/empty/maps/gimmickshowcase.scene.xml"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.ObjectCount" atLeast="5" timeoutFrames="600"/>
@@ -21,28 +19,28 @@
 	<DevCommand line="panel.focus gimmick_graph"/>
 	<WaitUntil watch="Editor.GraphNodeCount" atLeast="1" timeoutFrames="120"/>
 	<!-- 노드 둘 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.addnode"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.kind.Signal"/>
 	<Wait frames="20"/>
 	<ExpectLog id="GimmickGraph.Edited" contains="Add Gimmick Node" count="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.addnode"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.kind.Not"/>
 	<Wait frames="20"/>
 	<ExpectLog id="GimmickGraph.Edited" contains="Add Gimmick Node" count="2"/>
 	<!-- 배선: 폼의 From · To 를 고르고 Connect -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.wire.from"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.wire.from.signal_1.Active"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.wire.to"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.wire.to.not_1.In"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="gimmick.wire.connect"/>
 	<Wait frames="20"/>
 	<ExpectLog id="GimmickGraph.Edited" contains="Add Gimmick Wire" count="1"/>

@@ -10,12 +10,14 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -133,6 +135,46 @@ namespace sw::editor
                                                                 kSettleWaitFrames ) );
                 return hold;
             }
+
+            /** @brief `EditorWaitSettled` 가 붙잡기를 시작할 때 받은 기다림 번호입니다(`EditorSelfTestInput::beginSettleWait`). */
+            struct SettleWait final : IAutomationStepState
+            {
+                explicit SettleWait( uint32 waitSerial )
+                    : _waitSerial{ waitSerial }
+                {
+                }
+                uint32 _waitSerial;
+            };
+
+            /** @brief `EditorWaitSettled` 의 기본 시한(프레임)입니다. 도킹 · 팝업은 몇 프레임이면 자리 잡는다 — 넘기면 화면이 계속 움직인다는 뜻이라 실패로 적는다. */
+            static constexpr uint32 kDefaultSettleTimeoutFrames = 120;
+
+            /**
+             * @brief 에디터 화면이 자리 잡을 때까지 시나리오 시계를 붙잡습니다 — 창 크기 요청 반영 · 도크 배치 적용 끝 · 밀린 흉내 입력 없음 · 앞 단계 뒤에 그린 화면이 두 번 연속 같은 배치.
+             * @details 창 크기 · 레이아웃 재설정 · 패널 열기 · 팝업 뒤의 고정 대기(`<Wait frames>`)를 대신한다. 앞 단계(개발 명령 · 입력)의 효과는 다음에 열리는 프레임에 그려지므로,
+             *          그 프레임에 찍힌 기다림 번호로 "앞 단계 뒤의 화면" 을 가린다(`beginSettleWait`) — 프레임 수를 세지 않는다. 감시 값으로 두면 붙잡기 전 화면이 "이미 같다" 로
+             *          거짓 참이 됐다. 언리얼 Automation Driver 의 "안정될 때까지", Playwright 의 actionability("stable")와 같다.
+             */
+            static AutomationStepHold holdUntilScreenSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            {
+                if ( EditorSelfTestMarks::setEnabled( true ) == false )
+                    return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 준비가 이미 막았다
+                const SettleWait* pWait = static_cast<const SettleWait*>( runner.findHeldStepState( step ) );
+                if ( pWait == nullptr )
+                    pWait = static_cast<const SettleWait*>( &runner.setHeldStepState( step, make_unique<SettleWait>( EditorSelfTestInput::beginSettleWait() ) ) );
+                const EditorDockLayout* pDockLayout = editor::findSubsystem<EditorDockLayout>();
+                const bool              bReady      = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&
+                                    EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutSettledSince( pWait->_waitSerial );
+                uint32 timeoutFrames = kDefaultSettleTimeoutFrames;
+                (void)EditorScenarioStepValidation::readCount( step, "timeoutFrames", timeoutFrames ); // 검사가 형식을 보았다
+                // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pWait 을 읽지 않는다.
+                const AutomationStepHold hold = runner.holdUntilReady( step, input, bReady, timeoutFrames );
+                if ( hold == AutomationStepHold::Run && bReady == false )
+                    runner.recordFailure( step, formatToString( "the editor screen did not settle within %# frame(s)", timeoutFrames ) );
+                return hold;
+            }
+
+            [[nodiscard]] static bool runWaitSettled( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ ) { return true; } // 붙잡기가 일을 다 했다
 
             /**
              * @brief 키 · 글 단계는 받을 곳(키보드 초점)이 두 프레임 연속 같고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kSettleWaitFrames`).
@@ -584,6 +626,8 @@ namespace sw::editor
                                    &EditorScenarioStepValidation::validateExpectObject, &EditorScenarioStepsInternal::prepareExpectObject, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout,
                                    &EditorScenarioStepValidation::validateDockLayout, &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, &EditorScenarioStepsInternal::runWaitSettled,
+                                   &EditorScenarioStepValidation::validateWaitSettled, &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilScreenSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepsInternal::runSelfTest,
                                    &EditorScenarioStepValidation::validateSelfTest, &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilSelfTestsEnd, false );
 

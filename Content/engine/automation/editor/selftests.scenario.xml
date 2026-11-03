@@ -6,9 +6,8 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/selftests.scenario.xml -unattended
 -->
 <Scenario name="editor.selftests" fixedDelta="0.0166667" timeoutFrames="30000" startAfter="Immediately" input="exclusive">
-	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorSelfTest pattern="*"/>
 	<Pass/>
 </Scenario>

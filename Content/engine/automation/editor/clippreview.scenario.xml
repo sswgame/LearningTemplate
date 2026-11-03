@@ -6,21 +6,20 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/clippreview.scenario.xml -unattended
 -->
 <Scenario name="editor.clippreview" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus animation_clip_preview"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorText value="cheer.animclip"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="clip.bodyField"/>
 	<EditorText value="common/prefabs/kaykit/knight_merged.prefab.xml"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="clip.spawn"/>
 	<WaitUntil watch="Editor.ClipPreviewDuration" near="1.6667" tolerance="0.05" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.ClipPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>

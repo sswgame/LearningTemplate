@@ -7,10 +7,9 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/lightprobebakecancel.scenario.xml -unattended
 -->
 <Scenario name="editor.lightprobebakecancel" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="scene.open engine/automation/editor/lightprobebake/bake_cancel.scene.xml"/>
 	<Wait frames="90"/>
 	<EditorExpectObject name="ProbeVolume"/>
@@ -29,7 +28,7 @@
 	<Wait frames="10"/>
 	<CaptureEditorUI file="lightprobebakecancel/baking.png"/>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="statusBar.lightProbeBakeCancel" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="statusBar.lightProbeBakeCancel" state="up"/>

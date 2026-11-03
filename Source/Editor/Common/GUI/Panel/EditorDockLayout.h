@@ -28,6 +28,8 @@ namespace sw::editor
         void beginDockspace();
         /** @brief 다음 프레임에 기본 도크 레이아웃을 다시 적용합니다. */
         void requestResetDefault();
+        /** @brief 적용할 배치(첫 적용 · 기본 배치 다시 만들기 · 이름 붙인 레이아웃 · 앞 탭 고르기)가 아직 남았으면 true 입니다(`EditorWaitSettled`). */
+        [[nodiscard]] bool isApplyPending() const { return _bApplied == SW_FALSE || _bLayoutPending == SW_TRUE || _bFrontTabPending == SW_TRUE; }
         /**
          * @brief 기본 배치를 막 만들었으면 가운데 영역의 Scene 탭을 앞으로 가져옵니다. 패널을 모두 그린 뒤 프레임마다 호출합니다.
          * @details ImGui 는 새로 붙은 탭 중 마지막 것을 고르고, 처음 나타난 창에 포커스를 준다. 그래서 열린 채 시작하는 도구 패널(Prefab Overrides)이
