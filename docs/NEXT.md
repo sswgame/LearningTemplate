@@ -25,6 +25,14 @@
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
    `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
    - Shooter3D 몸을 KayKit 에서 UBC 로(리그 `player_body.rig.xml` · 1인칭 숨김 칸 · 망토 사슬 · 무기 소켓을 UBC 뼈로, 해골은 Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총.
+     고리(2026-11-04 읽음): 몸은 외형 프리셋 `ShooterPlayer`(parent `Adventurer` → `body_knight`, `Equip set="Knight"`, `common/data/appearance/presets.xml`)가 정하고, 프리팹 `game/shooter3d/prefabs/player_body.prefab.xml` 은
+     애니메이터(`adventurer.animgraph.xml` · 클립 폴더 `common/models/kaykit/knight/clips`), 리그(`common/rigs/player_body.rig.xml` — 뼈 이름 `hips` · `upperleg.l` · `hand.l` · `head` · `handslot.r`), 1인칭 숨김 칸(Head · MainHand)을 든다.
+     UBC 쪽 본보기는 `TownsfolkMale`(body `body_ubc_male`, 소켓 `ubc_humanoid.sockets.xml`, 피팅 `common/characters/ubc/`)와 `ubc_townsfolk.animgraph.xml`(UAL 클립 `idle_loop` · `walk_loop` · `jog_fwd_loop`).
+     할 일: `ShooterPlayer` 를 UBC 몸 + 옷으로, 사격 · 맞음 · 죽음 상태를 UAL1 · UAL2 클립으로 잇는 `ubc_shooter.animgraph.xml`, 리그 뼈 이름을 UBC 스켈레톤 이름으로, 무기 칸을 소켓 표로.
+     바뀌는 검증: Shooter3D 골든(killcam · cape · bodyviews · arena …)을 다시 굽고, `game/shooter3d/automation/editor/charactereditorscene` 의 `helmet_knight` 기대값을 새 장비로.
+     2026-11-04 시도(되돌림): 그래프는 adventurer 를 복사해 노드 이름만 UAL1 클립으로(Idle→`idle_loop` — `pistol_idle_loop` 는 총을 머리 옆으로 든다, Walking_A→`walk_loop`, Running_A→`jog_fwd_loop`, Jump_Idle→`jump_loop`, Hit_A→`hit_chest`, Death_A→`death01`,
+     짝 없는 뒷걸음 · 옆 달리기는 한 표본 `blend_space` 로 같은 클립을 다른 이름으로, 층은 `pistol_aim_neutral` · `pistol_shoot` + 상체 마스크 뿌리 `spine_01`), 리그 뼈는 `pelvis` · `thigh_l` · `calf_l` · `foot_l` · `upperarm_l` · `lowerarm_l` · `hand_l` · `Head`, 손 공간 `hand_r`.
+     그러면 bodyviews 의 걷기 · 겨눔 · 1인칭은 바르게 나오고 보폭 워핑도 돈다. 남은 결함 하나: 3인칭 손 장면(hand_rifle · hand_pistol)에서 무기가 머리 위로 간다 — UBC `Gun` 소켓 회전(`ubc_humanoid.sockets.xml` 의 0 -90 0)과 왼손 IK(무기 SupportHand)를 UBC 손 축에 맞춘 뒤 골든을 굽는다.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
