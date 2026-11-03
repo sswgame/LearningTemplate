@@ -90,13 +90,28 @@ namespace sw::test
                 return s_registry;
             }
 
-            /** @brief `TestRunner::run` 이 도는 동안 true 입니다(케이스 상태를 묻는 로그 경로가 실행 밖에서 상태를 만들지 않게). */
-            static inline atomic<bool> s_bRunInProgress{ false };
+            /// @brief 지금 도는 실행의 케이스 상태입니다(`ActiveRunState` 가 건다). 실행 밖에서는 nullptr 이다.
+            static inline atomic<CaseState*> s_pActiveState{ nullptr };
 
+            /**
+             * @brief 실행 하나가 소유하는 케이스 상태입니다 — 실행이 끝나면 함께 사라진다.
+             * @details 예전에는 함수 안 static 이라 실행 밖(시나리오의 로그 경로)에서도 만들어지고, 실행 뒤에도 남아 종료 누수 보고에 찍혔다(MSVC Debug 컨테이너 프록시까지).
+             */
+            struct ActiveRunState
+            {
+                CaseState _state;
+                ActiveRunState() { s_pActiveState.store( &_state, std::memory_order_release ); }
+                ~ActiveRunState() { s_pActiveState.store( nullptr, std::memory_order_release ); }
+                ActiveRunState( const ActiveRunState& )            = delete;
+                ActiveRunState& operator=( const ActiveRunState& ) = delete;
+            };
+
+            /** @brief 지금 실행의 케이스 상태입니다. 테스트 API(`SW_EXPECT` · `expectLog` …)는 실행 안에서만 부른다. */
             static CaseState& getState()
             {
-                static CaseState s_state;
-                return s_state;
+                CaseState* const pState = s_pActiveState.load( std::memory_order_acquire );
+                SW_ASSERT( pState != nullptr && "test API used outside TestRunner::run" );
+                return *pState;
             }
 
             static void writeLine( string_view text )
@@ -531,10 +546,10 @@ namespace sw::test
 
     bool TestRunner::isExpectedByActiveCase( const utf8* pLogID )
     {
-        // 테스트 실행이 아니면(시나리오 · 게임) 케이스 상태를 만들지 않는다 — 로그 경로가 처음 물을 때 함수 안 static 이 기준선 뒤에 생겨 종료 누수 보고에 찍혔다.
-        if ( pLogID == nullptr || TestRunnerInternal::s_bRunInProgress.load( std::memory_order_acquire ) == false )
+        TestRunnerInternal::CaseState* const pState = TestRunnerInternal::s_pActiveState.load( std::memory_order_acquire );
+        if ( pLogID == nullptr || pState == nullptr ) // 테스트 실행이 아니다(시나리오 · 게임)
             return false;
-        TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
+        TestRunnerInternal::CaseState& state = *pState;
         ScopedLock<mutex>              lock{ state._mutex };
         return state._bActive && VectorUtil::containsIf( state._listExpectedLog, [&]( const TestRunnerInternal::ExpectedLog& expected )
         { return expected._id == pLogID; } );
@@ -620,9 +635,10 @@ namespace sw::test
             Internal::writeLine( "[  ERROR   ] the scratch folder cannot be made absolute - no case runs" );
             return false;
         }
-        const string scratchRoot = FileUtil::joinPath( baseRoot, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
-        Subscription logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
-        thread       watchThread;
+        const string                       scratchRoot = FileUtil::joinPath( baseRoot, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
+        TestRunnerInternal::ActiveRunState runState; // 리스너보다 먼저 서고 늦게 사라진다
+        Subscription                       logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
+        thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )
             watchThread = thread( &Internal::watchCaseDeadline );
         const uint32   repeatCount = bChildRun ? 1u : MathUtil::max( options._repeatCount, 1u );
@@ -637,7 +653,6 @@ namespace sw::test
                       static_cast<uint32>( listCase.size() ), static_cast<uint32>( collectCaseNames().size() ), baseSeed, baseSeed, repeatCount, options._shardIndex,
                       options._shardCount );
         Internal::writeLine( arrBuffer );
-        TestRunnerInternal::s_bRunInProgress.store( true, std::memory_order_release );
         for ( uint32 roundIndex = 0; roundIndex < repeatCount; ++roundIndex )
         {
             vector<const TestCaseRegistration*> listRound = listCase;
@@ -723,20 +738,6 @@ namespace sw::test
         logListener.reset();
         watchThread = thread{}; // 감시를 세우고 합류한다
         CrashHandler::setContextValue( "TestCase", "" );
-        {
-            // 케이스 기록 칸은 정적 칸이라 케이스마다 비우기만 하면 저장소가 프로세스 끝까지 남아 종료 누수 보고에 찍힌다 — 실행이 끝나면 놓는다.
-            TestRunnerInternal::s_bRunInProgress.store( false, std::memory_order_release );
-            TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
-            ScopedLock<mutex>              lock{ state._mutex };
-            state._pCase               = nullptr;
-            state._listExpectedLog     = vector<TestRunnerInternal::ExpectedLog>{};
-            state._listFailure         = vector<string>{};
-            state._listUpdatedSnapshot = vector<string>{};
-            state._scratchFolder.clear();
-            state._scratchFolder.shrink_to_fit(); // `= string{}` 는 libstdc++ 에서 버퍼를 남긴다(짧은 글의 이동 대입)
-            state._childArgument.clear();
-            state._childArgument.shrink_to_fit();
-        }
 
         const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::time::kNanosecondsPerMillisecond;
         formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );
