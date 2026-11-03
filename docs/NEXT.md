@@ -43,7 +43,6 @@
 |---|---|
 | 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 셋 다 Shooter3D 체인이고 그 체인은 이제 백엔드를 차례로 돈다(프레임 100 ms 부하가 사라졌다, Test/README "어디서 시간이 드는가"), 남는지 본다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지. 머티리얼 PSO 를 만드는 중인 프레임은 이제 자리 잡음에서 뺀다(`Assets.Pending`) — 남는 흔들림만 본다. Debug `Scenario.empty` dx12 의 `game.empty.useroptions` 가 한 번 `colorvision.ppm` 캡처를 남기지 않고 졌다(2026-11-01, 다음 실행은 통과) — 캡처 단계가 파일을 쓰기 전에 판정이 읽는지. Release `Scenario.shooter3d` gl 이 한 번 GL 컨텍스트를 잃었다(2026-11-02, `-j 4` · `game.shooter3d.enemydeath` 에서 해골 VAT 군중이 처음 준비된 직후 `GL_CONTEXT_LOST`, 혼자 다시 돌리면 통과) — 드라이버 리셋인지 VAT 인덱스 드로우의 GPU 멈춤인지 가린다(GL 디버그 출력 · 같은 단계를 GL 로 반복) |
 | 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release)가 돌린다 — 매칭 규칙은 채웠다, 나머지(계정 · 채팅 · 경제 · 순위 · 라이브옵스 · 우편 · 서버 목록)는 `MemoryServiceDatabase` 로 저장 규칙부터. 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
-| 멈춤 뒤의 치명 오류 | Release Vulkan 창 체인의 멈춤(창별 스왑체인 펜스, 고쳤다) 때마다 멈춤 감시가 덤프를 쓴 직후 `Editor state is read off the editor thread`(`EditorService::assertEditorThread`, `SW_FATAL`)로 프로세스가 끝났다(0xE0535701). 덤프에는 그 스레드가 없다 — 멈춤 감시 뒤 종료 길에서 어느 스레드가 에디터 범위를 읽는지 `automation.hang` 으로 멈춤을 일으켜 재현하고(덤프 · 크래시 스택), 그 스레드가 제출 시점에 값을 받게 고친다 |
 | 벽시계 한도와 부하 | 그물은 이제 조건 대기의 제 시한을 덮는다(`computeWallLimitSeconds`). 남은 것: 백엔드 교체가 많은 시나리오(flowterrain 의 교체 7 번이 혼자서도 19 초)의 교체 시간 자체를 줄인다 |
 
 ### 5. 그 뒤

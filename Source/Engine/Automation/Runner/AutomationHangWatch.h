@@ -100,12 +100,12 @@ namespace sw
      * @class AutomationHangWatchdog
      * @brief 시나리오가 시작되면 하나 띄우고 끝나면 내리는 감시 스레드입니다. 시한이 지나도 `stop` 이 불리지 않으면 행으로 보고 보고를 쓰고 프로세스를 끝냅니다.
      * @details 행 처리는 할당 · 잠금 없이 한다 — 스냅샷을 읽어 보고를 OS 원시 호출로 쓰고, 크래시 컨텍스트 · 빵부스러기 파일(`writeCrashContextFile`)을 남기고, stderr 에 한 줄 적은 뒤
-     *          종료 함수(기본은 `std::_Exit`)를 부른다. 로거를 거치지 않는다 — 비동기 로거는 크래시 직전 줄을 잃고 락을 쥔 게임 스레드와 얽힐 수 있다.
+     *          종료 함수(기본은 `Process::exitImmediately`)를 부른다. 로거를 거치지 않는다 — 비동기 로거는 크래시 직전 줄을 잃고 락을 쥔 게임 스레드와 얽힐 수 있다.
      */
     class SW_API AutomationHangWatchdog
     {
     public:
-        /** @brief 프로세스를 끝내는 함수 모양입니다. 기본은 `std::_Exit`(테스트가 기록만 하는 함수로 바꾼다). */
+        /** @brief 프로세스를 끝내는 함수 모양입니다. 기본은 `Process::exitImmediately`(테스트가 기록만 하는 함수로 바꾼다). */
         using TerminateFunction = void ( * )( int32 exitCode );
 
         /** @struct Settings @brief 감시 한 번의 조건입니다. */
@@ -115,7 +115,7 @@ namespace sw
             float32           _limitSeconds{ 0.0f };  ///< 시나리오의 벽시계 상한
             float32           _graceSeconds{ 0.0f };  ///< 상한 뒤 더 기다리는 유예
             int32             _exitCode{ 0 };         ///< 행으로 끝낼 때의 종료 코드
-            TerminateFunction _pTerminate{ nullptr }; ///< nullptr 이면 `std::_Exit`
+            TerminateFunction _pTerminate{ nullptr }; ///< nullptr 이면 `Process::exitImmediately`
         };
 
         AutomationHangWatchdog();

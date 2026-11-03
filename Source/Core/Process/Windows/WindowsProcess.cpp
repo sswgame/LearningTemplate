@@ -512,6 +512,13 @@ namespace sw
         return static_cast<int32>( GetCurrentProcessId() );
     }
 
+    void Process::exitImmediately( int32 exitCode )
+    {
+        TerminateProcess( GetCurrentProcess(), static_cast<UINT>( exitCode ) );
+        // TerminateProcess 는 자기 프로세스면 돌아오지 않는다 — 돌아왔으면(거절) 표준 즉시 종료로 끝낸다.
+        std::_Exit( exitCode );
+    }
+
     string Process::getHostName()
     {
         utf16 arrBuffer[MAX_COMPUTERNAME_LENGTH + 1]{};

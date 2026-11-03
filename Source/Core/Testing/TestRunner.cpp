@@ -189,7 +189,7 @@ namespace sw::test
                                   pName != nullptr ? pName : "(unknown)", static_cast<long long>( watchdog._timeoutMilliseconds.load() ) );
                     std::fflush( stdout );
                     Logger::flushGlobalForCrash();
-                    std::_Exit( kTestTimeoutExitCode );
+                    Process::exitImmediately( kTestTimeoutExitCode );
                 }
             }
 

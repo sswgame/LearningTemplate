@@ -8,6 +8,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
@@ -267,7 +268,7 @@ namespace sw
         if ( _settings._pTerminate != nullptr )
             _settings._pTerminate( exitCode );
         else
-            std::_Exit( exitCode );
+            Process::exitImmediately( exitCode ); // 정리 없이 — `std::_Exit` 는 Windows 에서 DLL 분리 처리(모듈 정적 소멸자)를 이 스레드에서 돌린다
     }
 
     SW_DEV_COMMAND( AutomationHang, "automation.hang", "automation.hang <seconds>", "Block the calling game thread for that many seconds (hang watchdog checks)",

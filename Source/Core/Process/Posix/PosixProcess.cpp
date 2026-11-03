@@ -560,6 +560,11 @@ namespace sw
         return static_cast<int32>( ::getpid() );
     }
 
+    void Process::exitImmediately( int32 exitCode )
+    {
+        ::_exit( exitCode );
+    }
+
     string Process::getHostName()
     {
         utf8 arrBuffer[256]{};
