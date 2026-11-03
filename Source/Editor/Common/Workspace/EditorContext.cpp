@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
@@ -19,6 +20,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Profiling/SubsystemTimingReport.h"
 
 namespace sw::editor
 {
@@ -59,6 +61,8 @@ namespace sw::editor
         else if ( pLocalization->mountProject( AssetID{ EditorPaths::kLocalizationProject }, LocalizationScope::Editor ) == false )
             SW_LOG_WARNING_ID( "EditorContext.EditorLocalizationProjectNot", "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
 
+        // 종료 시간을 서브시스템마다 잰다 — 백엔드 교체 · 리로드가 에디터를 내리고 다시 세우므로 그 몫이 어디서 드는지 줄 하나로 보인다.
+        SubsystemTimingReport::enableTiming( _scope.getCollection() );
         if ( _scope.getCollection().initializeAll( EngineSubsystemHost::kClient ) == false )
             SW_LOG_ERROR_ID( "EditorContext.EditorSubsystemsDidNot", "Editor subsystems did not all initialize: %#", _scope.getCollection().getError().c_str() );
     }
@@ -68,10 +72,12 @@ namespace sw::editor
         // 범위를 허물기 전에 진행 중인 워커 일(임포트 · 색인 스캔 · 백그라운드 잡)이 끝나기를 기다린다. 워커가 이 범위의 서비스를 쥔 채 범위가 사라지면 해제된 메모리를 쓴다.
         // 워커 본문은 범위를 직접 찾지 않지만(`findEditorScope`), 제출 시점에 값으로 받은 서비스 포인터는 이 범위가 소유한다.
         // 엔진 전체(`TaskManager::waitAll`)가 아니라 에디터가 낸 잡만 기다린다 — 엔진의 영구 태스크는 끝나지 않는다.
+        const Stopwatch         waitWatch;
         EditorStateStore* const pStore       = findSubsystem<EditorStateStore>();
         TaskManager* const      pTaskManager = findSubsystem<TaskManager>();
         if ( pStore != nullptr && pTaskManager != nullptr )
             pTaskManager->waitStage( pStore->get<EditorBackgroundWork>()._stage, "EditorContext::shutdown" ); // 중단은 앞서 올렸다(`requestBackgroundStop`) — 오래 걸리면 남은 태스크가 주기적으로 오류로 남는다
+        const uint64 waitMicroseconds = waitWatch.getElapsedMicroseconds();
 
         if ( findEditorScope() == &_scope )
             setActive( nullptr );
@@ -84,6 +90,9 @@ namespace sw::editor
         // 확장이 기여한 서브시스템은 내장 서브시스템을 쓸 수 있다 — 그들보다 먼저 종료한다.
         if ( EditorExtensionSubsystems* pExtensions = findSubsystem<EditorExtensionSubsystems>() )
             pExtensions->releaseAll();
+        _scope.shutdownAll();
+        SW_LOG_INFO_ID( "EditorContext.ShutdownMs", "Editor context shutdown (ms): background work %#, subsystems: %#", waitMicroseconds / 1000,
+                        SubsystemTimingReport::describe( _scope.getCollection().getShutdownTimings() ).c_str() );
         _scope.destroyAll();                 // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
         _scope.unbind<EditorToolDefaults>(); // 셸이 소유한 값 — 다음 `initialize` 가 다시 건다
         _scope.unbind<CommandStack>();       // `EditorUndoHistory` 가 소유한 스택 — 방금 사라졌다

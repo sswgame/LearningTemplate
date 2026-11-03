@@ -7,7 +7,6 @@
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
@@ -17,7 +16,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -83,6 +81,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -228,7 +227,7 @@ namespace sw
             // 모듈 서브시스템의 자식 범위를 매다는 자리 — 기동 단계(모듈을 올리고 내리는 단계)보다 오래 살아야 해 서비스 범위에 둔다. 프로세스 범위는 범위 사슬의
             // 뿌리다: 호스트가 범위를 넘겼으면 그것, 넘기지 않은 실행(테스트 하네스)은 코어 범위가 뿌리다.
             _services.emplaceSubsystem<ModuleRegistrationHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask );
-            _services.getCollection().setTimingClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
+            SubsystemTimingReport::enableTiming( _services.getCollection() ); // 시동 요약 로그의 서브시스템별 시간
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {
                 SW_LOG_ERROR_ID( "Engine.EngineServicesFailed", "Engine services failed: %#", _services.getCollection().getError().c_str() );
@@ -271,7 +270,7 @@ namespace sw
         TelemetryService& telemetryService = *startupParts._pTelemetry;
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
-        _startup.getCollection().setTimingClock( &MonotonicClock::nowNanoseconds );
+        SubsystemTimingReport::enableTiming( _startup.getCollection() );
         const bool bStarted = _startup.getCollection().initializeAll( hostMask );
         // 서지 않은 것(전용 서버 · 헤드리스 · 실패)은 nullptr 다. 실패의 이유는 App 이 종료 코드를 고를 때 읽는다.
         if constexpr ( build::kWithClientCode )
@@ -323,36 +322,12 @@ namespace sw
         return true;
     }
 
-    namespace
-    {
-        struct EngineInternal
-        {
-            /** @brief 시간 목록을 오래 걸린 순으로 `이름=ms` 로 잇습니다(1 ms 미만은 뺀다 — 시동 · 종료 요약 줄). */
-            static string describeTimings( vector<SubsystemCollection::SubsystemTiming> listTiming )
-            {
-                VectorUtil::sort( listTiming, []( const SubsystemCollection::SubsystemTiming& lhs, const SubsystemCollection::SubsystemTiming& rhs )
-                { return lhs._micros > rhs._micros; } );
-                StringBuilder text;
-                for ( const SubsystemCollection::SubsystemTiming& timing : listTiming )
-                {
-                    const int64 millis = timing._micros / constant::time::kMicrosecondsPerMillisecond;
-                    if ( millis < 1 )
-                        break; // 오래 걸린 순이라 뒤는 모두 1 ms 미만이다
-                    if ( text.size() > 0 )
-                        text.append( ", " );
-                    text.append( timing._pName ).append( '=' ).append( millis );
-                }
-                return string{ text.view() };
-            }
-        };
-    } // namespace
-
     string Engine::describeSubsystemInitTimings() const
     {
         vector<SubsystemCollection::SubsystemTiming>        listTiming  = _services.getCollection().getInitTimings();
         const vector<SubsystemCollection::SubsystemTiming>& listStartup = _startup.getCollection().getInitTimings();
         listTiming.insert( listTiming.end(), listStartup.begin(), listStartup.end() );
-        return EngineInternal::describeTimings( std::move( listTiming ) );
+        return SubsystemTimingReport::describe( std::move( listTiming ) );
     }
 
     void Engine::shutdown( SubsystemScope& hostScope )
@@ -372,7 +347,7 @@ namespace sw
         // 범위째 내린다 — 모듈 서브시스템의 자식 범위(배포는 정적 링크한 모듈이 여기 남아 있다)가 기동 단계보다 먼저 내려간다.
         _startup.shutdownAll();
         // 서브시스템마다의 종료 시간 — 로그 없이 오래 걸린 종료가 어느 것인지 보인다(시동 줄 `App.StartupPhasesHostScopeMs` 의 짝). 서비스 범위는 아래 소멸이 내린다.
-        SW_LOG_INFO_ID( "Engine.ShutdownSubsystemsMs", "Shutdown subsystems (ms): %#", EngineInternal::describeTimings( _startup.getCollection().getShutdownTimings() ).c_str() );
+        SW_LOG_INFO_ID( "Engine.ShutdownSubsystemsMs", "Shutdown subsystems (ms): %#", SubsystemTimingReport::describe( _startup.getCollection().getShutdownTimings() ).c_str() );
         // 디버그 키 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(호스트 루프가 처음 돌릴 때 만든다).
         // 기동이 서비스 범위 전에 멈췄으면(크래시 보고 프로세스 · 코어 실패) 맵이 없다.
         if ( _pDebugKeyActions != nullptr )

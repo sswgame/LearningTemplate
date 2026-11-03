@@ -64,6 +64,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
@@ -574,6 +575,7 @@ namespace sw::editor
         _startup.add( make_unique<SplashSubsystem>( *this ) );
         _startup.add( make_unique<EditorContextSubsystem>( *this ) );
         _startup.add( make_unique<WindowCloseQuerySubsystem>( *this ) );
+        SubsystemTimingReport::enableTiming( _startup ); // 종료 요약 줄(`ImGuiEditor.ShutdownMs`) — 백엔드 교체 · 리로드의 에디터 몫
         if ( _startup.initializeAll( EngineSubsystemHost::kClient ) == false )
         {
             SW_LOG_ERROR_ID( "ImGuiEditor.EditorStartupFailed", "Editor startup failed: %#", _startup.getError().c_str() );
@@ -872,6 +874,8 @@ namespace sw::editor
         _dockLayout.save();
 
         // 기동 단계를 초기화의 역순으로 종료하고 목록을 비운다(다시 initialize 할 수 있다).
+        _startup.shutdownAll();
+        SW_LOG_INFO_ID( "ImGuiEditor.ShutdownMs", "Editor shutdown stages (ms): %#", SubsystemTimingReport::describe( _startup.getShutdownTimings() ).c_str() );
         _startup.destroyAll();
         _pWindow      = nullptr;
         _pRHIDevice   = nullptr;
