@@ -48,6 +48,6 @@
 
 ### 6. 다음 설계 (긴 것)
 
-- 빌드 속도: `MaterialPanel` · `PrefabPanel`(각 50 초대, Release)을 `-ftime-trace` 로 나눈다.
+- 빌드 속도(2026-11-04 `-ftime-trace`, Release 단독): `MaterialPanel` · `PrefabPanel` 은 이제 각 1.1 초다. 가장 느린 단위는 `Engine.cpp` · `EngineSubsystemSet.cpp`(각 8.5 초 — 백엔드 6 초 · 최적화 2.9 초, 프런트 2.2 초). 서브시스템을 한 파일이 모두 include 해 만들어 그 헤더들의 인라인 함수를 이 TU 가 코드로 낸다 — 서브시스템마다 제 TU 에서 등록하는 공장(언리얼 `USubsystem` 의 자동 등록)이면 이 둘이 가벼워진다. 재는 법: `compile_commands.json` 명령에 `/clang:-ftime-trace` 를 붙여 scratch 로 낸다.
 - 시나리오 범용화: 재생기 · 판정 층을 나눌 때 `AutomationSession`(이미 `ISubsystem` + `IScenarioPlayer`)에 인터페이스를 더 붙이지 않고 재생기를 별도 객체로. 시퀀서 이벤트 트랙이 시나리오를 부르는 쪽, 액션 단위 녹화 · 리플레이(고스트 · 킬캠). 단계 등록은 키트 · 게임이 아직 0.
 - 창 바둑판 간격의 창 틀 두께가 Win32 대략 값이다(`AutomationPerBackend`) — 플랫폼 창 틀 API 가 생기면.
