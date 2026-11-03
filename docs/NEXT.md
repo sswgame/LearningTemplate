@@ -34,18 +34,14 @@
 6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
    끝낸 경계는 StructureRefactor 9 절(GPU 자원은 프록시 / 한 번 만들기 / 게시, 스레드 경계 표). 끝낸 경계: 머티리얼 · 메시 · 텍스처 · 에디터 텍스처 · 오디오 ·
    애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:
-   1. **시나리오 고정 대기를 정지 상태 대기로 — 남은 것**: 엔진 에디터 시나리오는 끝났다(`<EditorWaitSettled/>`, 규칙은 Test/README). 남은 것:
-      - 게임 팩 에디터 체인(`Content/game/<팩>/automation/editor`, `Scenario.<팩>.editor`)의 고정 대기를 같은 방식으로 — 누른 채인 구간 · 프레임 단언은 둔다.
-      - 에디터 자체 테스트 안의 프레임 대기(`editor.selftests` 약 5 초, `SW_EDITOR_SELF_TEST` 케이스들)를 같은 정지 판정으로.
-      - 시한 없는 대기가 벽시계 상한에 걸릴 때 까닭을 남기는 `IAutomationStepState::describeWait` 를 다른 붙잡는 단계(`WaitUntil` · `LoadScene` · 입력 대상 자리 잡기)에도.
-      - 위를 마치면 전체 묶음 검증(Debug · Release 빌드 · 단위 · ctest · 창 띄운 에디터 시나리오)을 한 번 — 마지막 두 커밋(판정 분리 · describeWait) 뒤에는 에디터 체인만 다시 돌렸다.
+   1. 남은 경계를 같은 기준(9 절 표)으로 Source 전체에서 찾는다.
 
 ### 2. 테스트 · 시나리오 공백
 
 | 일 | 내용 |
 |---|---|
 | 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 셋 다 Shooter3D 체인이고 그 체인은 이제 백엔드를 차례로 돈다(프레임 100 ms 부하가 사라졌다, Test/README "어디서 시간이 드는가"), 남는지 본다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지. 머티리얼 PSO 를 만드는 중인 프레임은 이제 자리 잡음에서 뺀다(`Assets.Pending`) — 남는 흔들림만 본다. Debug `Scenario.empty` dx12 의 `game.empty.useroptions` 가 한 번 `colorvision.ppm` 캡처를 남기지 않고 졌다(2026-11-01, 다음 실행은 통과) — 캡처 단계가 파일을 쓰기 전에 판정이 읽는지. Release `Scenario.shooter3d` gl 이 한 번 GL 컨텍스트를 잃었다(2026-11-02, `-j 4` · `game.shooter3d.enemydeath` 에서 해골 VAT 군중이 처음 준비된 직후 `GL_CONTEXT_LOST`, 혼자 다시 돌리면 통과) — 드라이버 리셋인지 VAT 인덱스 드로우의 GPU 멈춤인지 가린다(GL 디버그 출력 · 같은 단계를 GL 로 반복) |
-| 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release)가 돌린다 — 매칭 규칙은 채웠다, 나머지(계정 · 채팅 · 경제 · 순위 · 라이브옵스 · 우편 · 서버 목록)는 `MemoryServiceDatabase` 로 저장 규칙부터. 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
+| 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다 — 매칭 · 채팅 거르기 · 라이브 이벤트 · 친구 관계 · 거래 상태 기계 · 우편 저장은 채웠다, 나머지(계정 로그인 저장 · 경제 구매 · 순위 · 서버 목록 · GM 도구)는 `MemoryServiceDatabase` 로 저장 규칙부터. 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
 
 ### 5. 그 뒤
 
