@@ -1527,7 +1527,7 @@ namespace sw
         }
         if ( pso == nullptr ) // 셰이더 경로가 비었다 — 빈 레코드를 등록하지 않는다
             return 0;
-        return _pDevice->_pipelineStates.insert( { pso } );
+        return _pDevice->_pipelineStates.insert( { pso, RHIVertexLayout{} } ); // 컴퓨트는 정점 입력이 없다
     }
 
     void D3D12RHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
