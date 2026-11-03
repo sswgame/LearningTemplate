@@ -130,7 +130,7 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( 240.0f ); // 검색 칸 폭(아래 인자와 같다)
             EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCKEY( "EditorDataTable", "SearchHint" ), 240.0f, false );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Localization" ) );
 
@@ -143,7 +143,7 @@ namespace sw::editor
                 _model.reloadLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ReloadTip" ) );
 
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 21.0f ) ); // 좁은 창에서 새 키 칸이 오른쪽 끝에서 잘렸다(uiaudit 23)
             EditorChrome::setNextItemWidthColumns( 21.0f );
             ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add Key" ) );

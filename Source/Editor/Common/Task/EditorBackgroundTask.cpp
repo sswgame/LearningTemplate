@@ -7,6 +7,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+
 namespace sw::editor
 {
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
@@ -38,3 +40,23 @@ namespace sw::editor
         return pStore != nullptr ? pStore->get<EditorBackgroundWork>()._stop.getToken() : StopToken{};
     }
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief 에디터가 낸 백그라운드 잡(파일 스캔 · 현지화 로드 · 참조 색인)이 아직 돌면 true 입니다.
+     * @details 시나리오의 정지 판정(`EditorSettleWait`)과 `<Pass/>` 가 이 잡을 기다린다 — 패널이 "Loading..." 을 그리는 동안 찍은 캡처 · 본 값이 정지 상태가 아니었다(데이터 표 창).
+     *          언리얼 Automation 이 캡처 앞에서 비동기 일(`FlushAsyncLoading` · 셰이더 컴파일)을 비우는 것과 같은 자리다. 잡은 한 곳(`submitEditorBackgroundJob`)에서 내므로 하나도 빠지지 않는다.
+     */
+    static bool isRunningEditorBackgroundJobs()
+    {
+        EditorStateStore* pStore       = editor::findSubsystem<EditorStateStore>(); // 선택: 편집기를 켜지 않은 실행에는 없다
+        TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
+        return pStore != nullptr && pTaskManager != nullptr && pTaskManager->isStageComplete( pStore->get<EditorBackgroundWork>()._stage ) == false;
+    }
+} // namespace sw::editor
+
+namespace sw
+{
+    SW_AUTOMATION_FINISH_BLOCKER( editorBackgroundJobs, "EditorBackgroundJobs", &editor::isRunningEditorBackgroundJobs );
+} // namespace sw

@@ -2,7 +2,8 @@
  * @file EditorCaptureSteps.cpp
  * @brief 자동화 시나리오 단계 `CaptureEditorUI` 를 구현합니다. 에디터 UI 전체(패널 + 플로팅 창)를 PNG 로 찍고 튼튼한 지표를 단언합니다.
  * @details `<CaptureEditorUI file="ui/hierarchy.png" maxMagentaFraction="0" maxClippedWindows="0"/>`. 경로는 시나리오 출력 폴더 기준이다(`<Screenshot>` 과 같다).
- *          단계는 차례가 오면 **레이아웃이 자리 잡을 때까지**(보이는 창의 위치 · 크기 · 내용 크기 · 스크롤이 연속 `kLayoutStableFrames` 프레임 같을 때까지) 기다린 뒤
+ *          단계는 차례가 오면 **에디터가 멈출 때까지**(`EditorSettleWait` — `<EditorWaitSettled/>` 와 같은 판정: 창 배치 · 씬 · 에셋 · 에디터 백그라운드 잡 · 뒤에 끝날 일),
+ *          이어서 **창 내용이 자리 잡을 때까지**(보이는 창의 위치 · 크기 · 내용 크기 · 스크롤이 연속 `kLayoutStableFrames` 프레임 같을 때까지) 기다린 뒤
  *          캡처를 요청하고, 파일이 써질 때까지 시나리오 시계를 붙잡는다(`holdUntilReady`). 그래서 시나리오가 패널을 연 뒤 고정 프레임을 기다리지 않는다 —
  *          예전에는 패널마다 `<Wait frames="20"/>` 를 두어 uiaudit 하나가 Debug 에서 2 분을 넘겼다(언리얼 Automation Driver · Playwright 의 자동 대기와 같은 자리).
  *          지표는 둘이다.
@@ -21,6 +22,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
+#include "Editor/SelfTest/EditorSettleWait.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -43,6 +45,9 @@ namespace sw::editor
             struct PendingCapture
             {
                 const AutomationStep* _pStep{ nullptr };
+                EditorSettleWait      _settle{}; ///< 먼저 에디터가 멈추기를 기다린다(패널이 "Loading..." 을 그리는 동안 찍지 않는다)
+                bool                  _bSettled{ false };
+                uint32                _phaseFrameCount{ 0 };  ///< 정지 뒤 지금 단계(내용 자리 잡기 · 결과 기다리기)에서 붙잡은 프레임 — 정지 대기는 시한이 없어 실행기의 붙잡기 수와 따로 센다
                 uint64                _layoutHash{ 0 };       ///< 지난 프레임의 레이아웃 지문
                 uint32                _stableFrameCount{ 0 }; ///< 지문이 그대로인 연속 프레임 수
                 bool                  _bRequested{ false };   ///< 캡처를 요청했다(그 뒤로는 결과만 기다린다)
@@ -122,19 +127,34 @@ namespace sw::editor
                     pSession->_listPending.push_back( PendingCapture{ ._pStep = &step } );
                     pPending = &pSession->_listPending.back();
                 }
+                if ( pPending->_bSettled == false )
+                {
+                    const EditorSettleVerdict verdict = pPending->_settle.advance( runner.findActiveObjectManager() );
+                    if ( verdict == EditorSettleVerdict::Oscillating )
+                        runner.recordFailure( step, pPending->_settle.describeOscillation() ); // 그래도 찍는다 — 움직이는 화면이 결과 파일에 남는다
+                    if ( verdict == EditorSettleVerdict::Waiting )
+                        return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), pPending->_settle.describeWait() + " before the UI capture" );
+                    pPending->_bSettled = true;
+                }
                 if ( pPending->_bRequested == false )
                 {
                     const uint64 layoutHash     = computeLayoutHash();
                     pPending->_stableFrameCount = layoutHash == pPending->_layoutHash ? pPending->_stableFrameCount + 1 : 0;
                     pPending->_layoutHash       = layoutHash;
-                    // 자리 잡지 못한 채 기다림이 다하면 단계가 돌며 "never completed" 실패를 적는다(아래 `holdUntilReady` 가 같은 상한을 센다).
+                    // 자리 잡지 못한 채 `kCaptureWaitFrames` 가 지나면 놓는다 — 요청하지 않았으므로 단계가 돌며 "never completed" 실패를 적는다.
                     if ( pPending->_stableFrameCount < kLayoutStableFrames )
-                        return runner.holdUntilReady( step, input, false, kCaptureWaitFrames, "the editor layout to hold still before the UI capture" );
-                    pPending->_ticket     = pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) );
-                    pPending->_bRequested = true;
+                    {
+                        const bool bGaveUp = ++pPending->_phaseFrameCount >= kCaptureWaitFrames;
+                        return runner.holdUntilReady( step, input, bGaveUp, std::numeric_limits<uint32>::max(), "the editor window contents to hold still before the UI capture" );
+                    }
+                    pPending->_ticket          = pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) );
+                    pPending->_bRequested      = true;
+                    pPending->_phaseFrameCount = 0;
                 }
                 EditorUICaptureResult result{};
-                return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames, "the editor UI capture to be read back" );
+                const bool            bGaveUp = ++pPending->_phaseFrameCount >= kCaptureWaitFrames; // 결과가 없으면 단계가 돌며 실패를 적는다
+                return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ) || bGaveUp, std::numeric_limits<uint32>::max(),
+                                              "the editor UI capture to be read back" );
             }
 
             /**
