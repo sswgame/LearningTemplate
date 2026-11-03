@@ -143,15 +143,15 @@ namespace sw::editor
 
                 if ( ImGui::BeginCombo( pLabel, previewStr.c_str() ) == false )
                     return;
-                if ( ImGui::SmallButton( "Select All" ) )
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "SelectAll" ) ) )
                 {
                     for ( const auto& [val, _] : enumInfo._mapValueToName )
                     {
                         inoutEditedValue |= val;
                     }
                 }
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear All" ) );
-                if ( ImGui::SmallButton( "Clear All" ) )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ClearAll" ) ) );
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "ClearAll" ) ) )
                     inoutEditedValue = 0;
                 ImGui::Separator();
 
@@ -1010,13 +1010,13 @@ namespace sw::editor
         if ( bArgsOk == false )
         {
             ImGui::BeginDisabled();
-            ImGui::Button( "Invoke" );
+            ImGui::Button( SW_LOCKEY( "EdText", "Invoke" ) );
             ImGui::EndDisabled();
-            ImGui::TextDisabled( "Unsupported FUNCTION args - invoke skipped." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "UnsupportedFUNCTIONArgsInvokeSkipped" ) );
         }
         else
         {
-            const bool bInvoke = ImGui::Button( "Invoke" );
+            const bool bInvoke = ImGui::Button( SW_LOCKEY( "EdText", "Invoke" ) );
             if ( EditorSelfTestMarks::isEnabled() )
             {
                 const string invokeMark = string( "inspector.method.invoke." ) + method._name.c_str();
@@ -1073,8 +1073,8 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", ReflectionInvoke::isEventBound( event, pInstance ) ? "(bound)" : "(unbound)" );
             if ( event.getParameterCount() == 0 )
             {
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Broadcast" ) );
-                if ( ImGui::SmallButton( "Broadcast" ) )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Broadcast" ) ) );
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Broadcast" ) ) )
                     (void)ReflectionInvoke::broadcastEvent( event, pInstance, {} );
             }
             ImGui::PopID();

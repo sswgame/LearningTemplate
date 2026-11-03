@@ -457,7 +457,7 @@ namespace sw::editor
             ImGui::Text( "%s - %u tick(s), %s .. %s", source._label.c_str(), static_cast<uint32>( source._listSample.size() ),
                          to_string( source._listSample.front()._tick ).c_str(), to_string( source._listSample.back()._tick ).c_str() );
 
-        if ( ImGui::Button( "Session server" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "SessionServer" ) ) )
         {
             string reason;
             if ( MultiplayerSyncTabInternal::loadSessionServer( sourceIndex, reason ) == false )
@@ -472,8 +472,8 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
         ImGui::InputTextWithHint( "##SyncToken", "token", _arrToken[sourceIndex].data(), _arrToken[sourceIndex].capacity(), ImGuiInputTextFlags_Password );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Read server" ) );
-        if ( ImGui::Button( "Read server" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReadServer" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ReadServer" ) ) )
         {
             NetAddress remote;
             const bool bLoopback = NetAddress::parse( _arrAddress[sourceIndex].c_str(), 0, remote ) && remote.isValid() && remote.isLoopback();
@@ -489,8 +489,8 @@ namespace sw::editor
         // 사람이 친 상대 경로는 이 실행의 산출물 폴더(`ProcessRoots::_saved`) 아래다 - 작업 폴더가 아니다. 경로가 아니면(드라이브 상대) 빈 값이라 읽기 · 쓰기가 실패로 알린다.
         const std::optional<AbsolutePath> typedPath = AbsolutePath::tryResolve( _arrPath[sourceIndex].c_str(), ProcessRoots::get()._saved );
         const string                      filePath  = typedPath.has_value() ? typedPath->str() : string{};
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load file" ) );
-        if ( ImGui::Button( "Load file" ) && compare.loadFromFile( sourceIndex, filePath ) == false )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "LoadFile" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "LoadFile" ) ) && compare.loadFromFile( sourceIndex, filePath ) == false )
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotLoad", "Sync could not load %#: %#", _arrPath[sourceIndex].c_str(), compare.getLastError() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         ImGui::BeginDisabled( source._listSample.empty() );
@@ -509,9 +509,9 @@ namespace sw::editor
         EditorNetPlaySession& session = MultiplayerSyncTabInternal::getSession();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldPathEm" ) );
         ImGui::InputTextWithHint( "##SyncReplayPath", "<name>.swintent", _arrReplayPath.data(), _arrReplayPath.capacity() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Replay server" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReplayServer" ) ) );
         ImGui::BeginDisabled( session.isRunning() || _arrReplayPath.empty() );
-        if ( ImGui::Button( "Replay server" ) && session.startReplayServer( _arrReplayPath.c_str() ) == false )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ReplayServer" ) ) && session.startReplayServer( _arrReplayPath.c_str() ) == false )
             _errorText = "The replay server could not start - see the Output Log";
         ImGui::EndDisabled();
         // 한 틱씩 진행은 떠 있는 서버가 있을 때만 — 전용 서버는 멈춘 채 떠서 `step` 만큼만 돈다.
@@ -519,8 +519,8 @@ namespace sw::editor
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldStepEm" ) );
         ImGui::InputInt( "##SyncReplayStep", &_replayStepCount, 1, 10 );
         _replayStepCount = _replayStepCount < 1 ? 1 : _replayStepCount;
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Step" ) );
-        if ( ImGui::Button( "Step" ) && session.sendServerCommand( formatToString( "step %#", _replayStepCount ) ) == false )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Step" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Step" ) ) && session.sendServerCommand( formatToString( "step %#", _replayStepCount ) ) == false )
             _errorText = "The server did not take the step command";
         ImGui::EndDisabled();
     }
@@ -550,7 +550,7 @@ namespace sw::editor
         if ( _errorText.empty() == false )
             EditorThemeUtil::textError( _errorText.c_str() );
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
-        if ( ImGui::Button( "Compare" ) && compare.compare() == false )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Compare" ) ) && compare.compare() == false )
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare2", "Sync could not compare: %#", compare.getLastError() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncCompare" ) );
         if ( compare.isComparisonCurrent() )
@@ -559,7 +559,7 @@ namespace sw::editor
             ImGui::TextUnformatted( MultiplayerSyncTabInternal::describeComparison( compare.getComparison() ).c_str() );
         }
         // 어긋난 틱 근처에서 두 서버를 pause 한 채 누른다 — 두 서버의 현재 오브젝트 해시를 다시 받아 다른 오브젝트를 짚는다.
-        if ( ImGui::Button( "Which objects differ" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "WhichObjectsDiffer" ) ) )
             startObjectCompare();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
         if ( compare.hasObjectComparison() )

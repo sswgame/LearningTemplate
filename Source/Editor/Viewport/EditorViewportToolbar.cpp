@@ -193,7 +193,7 @@ namespace sw::editor
 
         if ( ImGui::BeginPopup( "##ViewportBookmarksPopup" ) )
         {
-            ImGui::Text( "Camera Bookmarks (Ctrl+1~9)" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "CameraBookmarksCtrl19" ) );
             ImGui::Separator();
             {
                 EditorWorkspace& ws = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
@@ -231,7 +231,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "AlignSelected" ) );
         if ( ImGui::BeginPopup( "##ViewportAlignPopup" ) )
         {
-            ImGui::Text( "Multi-Object Alignment" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "MultiObjectAlignment" ) );
             ImGui::Separator();
             // 항목 · 구분선은 커맨드 테이블의 메뉴 경로 필드(`commandmenu::kViewportAlign`)에서 나온다.
             EditorCommandGUI::drawMenuItems( commandmenu::kViewportAlign );

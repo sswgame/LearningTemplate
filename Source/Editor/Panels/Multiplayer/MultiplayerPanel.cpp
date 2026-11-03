@@ -219,7 +219,7 @@ namespace sw::editor
         }
         _targetProcessIndex = MathUtil::clamp( _targetProcessIndex, 0, processCount - 1 );
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted( "Target" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Target" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
         const EditorNetPlayProcessStatus target = session.getProcessStatus( _targetProcessIndex );

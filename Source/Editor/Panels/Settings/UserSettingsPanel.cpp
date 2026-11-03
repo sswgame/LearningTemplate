@@ -98,7 +98,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             const vector<UserSettingCategoryDef>& listCategory = settings.getCategories();
-            if ( ImGui::Button( "Reset Tab" ) && _selectedCategory < static_cast<uint32>( listCategory.size() ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetTab" ) ) && _selectedCategory < static_cast<uint32>( listCategory.size() ) )
                 settings.resetCategoryToDefaults( listCategory[_selectedCategory]._id );
 
             if ( settings.isRestartRequired() )
@@ -120,11 +120,11 @@ namespace sw::editor
         if ( settings.isAwaitingConfirm() )
         {
             ImGui::Text( "Keep these display settings? Reverting in %.0f s", static_cast<float64>( settings.getConfirmSecondsLeft() ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Keep" ) );
-            if ( ImGui::Button( "Keep" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Keep" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Keep" ) ) )
                 settings.confirmChanges();
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert Now" ) );
-            if ( ImGui::Button( "Revert Now" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RevertNow" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "RevertNow" ) ) )
                 settings.update( settings.getConfirmSecondsLeft() );
         }
     }

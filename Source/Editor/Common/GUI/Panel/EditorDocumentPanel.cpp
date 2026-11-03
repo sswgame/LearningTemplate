@@ -51,7 +51,7 @@ namespace sw::editor
     void EditorDocumentPanel::drawDocumentOpenBar( const utf8* pMarkPrefix )
     {
         const string markOpen = string{ pMarkPrefix } + ".open";
-        if ( ImGui::Button( "Open..." ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Open" ) ) )
         {
             // 열 때 한 번 모은다 — 리소스 트리를 훑으므로 그리기마다 하지 않는다.
             vector<EditorAssetIndexEntry> listEntry;

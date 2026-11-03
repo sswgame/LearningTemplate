@@ -797,7 +797,7 @@ namespace sw::editor
             choice = EditorUnsavedChoice::Save;
         EditorSelfTestMarks::note( "unsaved.save" );
         ImGui::SameLine();
-        if ( ImGui::Button( "Don't Save" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "DonTSave" ) ) )
             choice = EditorUnsavedChoice::Discard;
         EditorSelfTestMarks::note( "unsaved.discard" );
         ImGui::SameLine();

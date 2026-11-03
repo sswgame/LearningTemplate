@@ -1405,6 +1405,1021 @@ msgctxt "EdSection.ViewportHUD"
 msgid "Viewport HUD"
 msgstr "뷰포트 HUD"
 
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdText.AccentSwatches"
+msgid "Accent Swatches:"
+msgstr "강조색 견본:"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdText.Accept"
+msgid "Accept"
+msgstr "확인"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.ActiveDevice"
+msgid "Active Device:"
+msgstr "활성 장치:"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdText.Add"
+msgid "Add"
+msgstr "추가"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.AddAnimation"
+msgid "Add Animation"
+msgstr "애니메이션 추가"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.AddAttack"
+msgid "Add Attack"
+msgstr "공격 추가"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdText.AddBone"
+msgid "Add Bone"
+msgstr "뼈 추가"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdText.AddDataLayer"
+msgid "Add Data Layer"
+msgstr "데이터 레이어 추가"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.AddFrame"
+msgid "Add Frame"
+msgstr "프레임 추가"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.AddIdle"
+msgid "Add Idle"
+msgstr "대기 추가"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.AddKey"
+msgid "Add key"
+msgstr "키 추가"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdText.AddLayer"
+msgid "Add Layer"
+msgstr "레이어 추가"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdText.AddMask"
+msgid "Add Mask"
+msgstr "마스크 추가"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.AddRow"
+msgid "Add row"
+msgstr "줄 추가"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.AddWalk"
+msgid "Add Walk"
+msgstr "걷기 추가"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.Advance"
+msgid "Advance"
+msgstr "진행"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.AdvancePreview"
+msgid "Advance Preview"
+msgstr "미리보기 진행"
+
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EdText.AlwaysLoaded"
+msgid "Always loaded"
+msgstr "늘 로드됨"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.AnalogTriggersLTRT"
+msgid "Analog Triggers (LT/RT):"
+msgstr "아날로그 트리거(LT/RT):"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.AnimationsNameFirstFrameFrameCountLoopNone"
+msgid "Animations (name, first frame, frame count, loop) - none means the whole clip is one loop"
+msgstr "애니메이션(이름 · 첫 프레임 · 프레임 수 · 반복) — 없으면 클립 전체가 한 반복이다"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdText.ApplyAllOverridesToTemplate"
+msgid "Apply All Overrides to Template"
+msgstr "덮어쓴 값을 모두 원본에 적용"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdText.ApplySize"
+msgid "Apply Size"
+msgstr "크기 적용"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.ApplyToOuterPrefab"
+msgid "Apply to Outer Prefab"
+msgstr "바깥 프리팹에 적용"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.ApplyToPrefab"
+msgid "Apply to Prefab"
+msgstr "프리팹에 적용"
+
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
+msgctxt "EdText.ApplyToSelection"
+msgid "Apply to Selection"
+msgstr "선택에 적용"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.AtlasCellsClickSelectedFrameShiftClickNew"
+msgid "Atlas cells (click: selected frame, Shift+click: new frame)"
+msgstr "아틀라스 칸(누르면 고른 프레임, Shift+누르면 새 프레임)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdText.Attach"
+msgid "Attach"
+msgstr "붙기"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.Blend"
+msgid "Blend"
+msgstr "섞기"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+msgctxt "EdText.BodyPrefabSkeletalAnimatorOnItsRoot"
+msgid "Body prefab (skeletal animator on its root)"
+msgstr "몸 프리팹(뿌리에 스켈레탈 애니메이터)"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdText.BodyPrefabSkeletalMeshOnItsRoot"
+msgid "Body prefab (skeletal mesh on its root)"
+msgstr "몸 프리팹(뿌리에 스켈레탈 메시)"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdText.Broadcast"
+msgid "Broadcast"
+msgstr "방송"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EdText.Build"
+msgid "Build"
+msgstr "빌드"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.Buttons"
+msgid "Buttons:"
+msgstr "단추:"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdText.CameraBookmarksCtrl19"
+msgid "Camera Bookmarks (Ctrl+1~9)"
+msgstr "카메라 책갈피(Ctrl+1~9)"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdText.CinematicNote"
+msgid "Cinematic note"
+msgstr "시네마틱 메모"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdText.ClearAll"
+msgid "Clear All"
+msgstr "모두 지우기"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp
+msgctxt "EdText.Clip"
+msgid "Clip"
+msgstr "클립"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.Close"
+msgid "Close"
+msgstr "닫기"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdText.ColorPaletteCustomization"
+msgid "Color Palette Customization"
+msgstr "색 팔레트 맞춤"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdText.Compare"
+msgid "Compare"
+msgstr "비교"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdText.Connect"
+msgid "Connect"
+msgstr "연결"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.CreateAction"
+msgid "Create Action"
+msgstr "액션 만들기"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.Curves"
+msgid "Curves"
+msgstr "커브"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdText.DataLayers"
+msgid "Data Layers"
+msgstr "데이터 레이어"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdText.Del"
+msgid "Del"
+msgstr "삭제"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdText.DeletePreset"
+msgid "Delete preset"
+msgstr "프리셋 삭제"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdText.DeleteTrack"
+msgid "Delete Track"
+msgstr "트랙 삭제"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.DetailedCallStackTrackingIsDisabled"
+msgid "Detailed CallStack tracking is disabled."
+msgstr "자세한 호출 스택 추적이 꺼져 있습니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.Disabled"
+msgid "Disabled"
+msgstr "꺼짐"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdText.Disconnect"
+msgid "Disconnect"
+msgstr "연결 끊기"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdText.DonTSave"
+msgid "Don't Save"
+msgstr "저장 안 함"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdText.DownReceive"
+msgid "Down (receive)"
+msgstr "내려받기(받음)"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdText.EdgeWarpPresets"
+msgid "Edge Warp Presets"
+msgstr "가장자리 이동 프리셋"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdText.Edit"
+msgid "Edit"
+msgstr "편집"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.EditAKeySTimeValueAndInterpolation"
+msgid "Edit a key's time, value and interpolation in place. Values above 1 are clamped in the color preview."
+msgstr "키의 시간 · 값 · 보간을 그 자리에서 고칩니다. 색 미리보기에서 1 보다 큰 값은 1 로 자릅니다."
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.EditNestedElementsInTheRawTextView"
+msgid "Edit nested elements in the raw text view"
+msgstr "중첩 원소는 원본 글 보기에서 고칩니다"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.EditsRevertOnStopPlayKeepSimulationChanges"
+msgid "Edits revert on Stop (Play > Keep Simulation Changes keeps the selection)."
+msgstr "정지하면 고친 것이 되돌아갑니다(Play > Keep Simulation Changes 는 선택을 남깁니다)."
+
+#: Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp
+msgctxt "EdText.Event"
+msgid "Event"
+msgstr "이벤트"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdText.ExitIsolation"
+msgid "Exit Isolation"
+msgstr "격리 나가기"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.False"
+msgid "False"
+msgstr "거짓"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.Fit"
+msgid "Fit"
+msgstr "맞춤"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.Frames"
+msgid "Frames:"
+msgstr "프레임:"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.FramesUVWHDurationMs"
+msgid "Frames (u,v,w,h,durationMs)"
+msgstr "프레임(u,v,w,h,durationMs)"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.GameViewportOnScreenControllerOverlayHUDSettings"
+msgid "Game Viewport On-Screen Controller Overlay HUD Settings"
+msgstr "게임 뷰포트 화면 컨트롤러 HUD 설정"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.GamepadLeftStickXY"
+msgid "Gamepad Left Stick (X/Y):"
+msgstr "게임패드 왼쪽 스틱(X/Y):"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdText.GeometryRounding"
+msgid "Geometry & Rounding"
+msgstr "모양 · 둥글기"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+msgctxt "EdText.GlobalVariablePresets"
+msgid "Global Variable Presets"
+msgstr "전역 변수 프리셋"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.HapticVibrationTest"
+msgid "Haptic Vibration Test:"
+msgstr "진동 시험:"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.HeldKeys"
+msgid "Held Keys:"
+msgstr "누른 키:"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdText.Import"
+msgid "Import..."
+msgstr "가져오기..."
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdText.Impulse"
+msgid "Impulse"
+msgstr "충격"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.InjectKeyDown"
+msgid "Inject KeyDown"
+msgstr "키 누름 넣기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.InjectKeyUp"
+msgid "Inject KeyUp"
+msgstr "키 뗌 넣기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.InjectStickTilt"
+msgid "Inject Stick Tilt"
+msgstr "스틱 기울임 넣기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.InputMap"
+msgid "Input Map"
+msgstr "입력 맵"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.InputReplayRecorderDeterministicQAPlayback"
+msgid "Input Replay Recorder & Deterministic QA Playback"
+msgstr "입력 재생 기록 · 결정적 QA 재생"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdText.Interpolation"
+msgid "Interpolation"
+msgstr "보간"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdText.Invoke"
+msgid "Invoke"
+msgstr "부르기"
+
+#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+msgctxt "EdText.Keep"
+msgid "Keep"
+msgstr "남기기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdText.LastMergedTrace"
+msgid "Last merged trace:"
+msgstr "마지막으로 합친 추적:"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.Latest"
+msgid "Latest"
+msgstr "최신"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.LinkSelected"
+msgid "Link Selected"
+msgstr "고른 것 잇기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdText.LoadFile"
+msgid "Load file"
+msgstr "파일 불러오기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.LoadReplay"
+msgid "Load Replay"
+msgstr "재생 불러오기"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.LoadTrace"
+msgid "Load Trace"
+msgstr "추적 불러오기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.MouseDeltaSpeedDXDY"
+msgid "Mouse Delta Speed (dX/dY):"
+msgstr "마우스 이동 속도(dX/dY):"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdText.MultiObjectAlignment"
+msgid "Multi-Object Alignment"
+msgstr "여러 오브젝트 정렬"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdText.NetworkPresetsCouldNotBeReadSeeThe"
+msgid "Network presets could not be read - see the log"
+msgstr "네트워크 프리셋을 읽지 못했습니다 — 로그를 보세요"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdText.NoBodyYetEnterAPrefabPathAnd"
+msgid "No body yet - enter a prefab path and press Spawn"
+msgstr "아직 몸이 없습니다 — 프리팹 경로를 적고 Spawn 을 누르세요"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.NoCurvesUnderThisRow"
+msgid "No curves under this row"
+msgstr "이 줄 아래에 커브가 없습니다"
+
+#: Source/Editor/Panels/Scene/SceneViewPanel.cpp
+msgctxt "EdText.NoDebugDrawYet"
+msgid "No debug draw yet."
+msgstr "아직 디버그 그리기가 없습니다."
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.NoDetailedCallStackDataAvailableOrAll"
+msgid "No detailed call stack data available or all freed."
+msgstr "자세한 호출 스택 자료가 없거나 모두 풀렸습니다."
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdText.NoKeysYet"
+msgid "No keys yet"
+msgstr "아직 키가 없습니다"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.NoLeakReportYet"
+msgid "No leak report yet."
+msgstr "아직 누수 보고가 없습니다."
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.NoSavedPresets"
+msgid "No saved presets."
+msgstr "저장한 프리셋이 없습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdText.NoSeqFileFocused"
+msgid "No .seq file focused"
+msgstr "선택한 .seq 파일이 없습니다"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdText.NoTestExeNextToThisBuildBuild"
+msgid "No *Test.exe next to this build (build the AllTests target)"
+msgstr "이 빌드 옆에 *Test.exe 가 없습니다(AllTests 대상을 지으세요)"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdText.NoTextAssetNamesIt"
+msgid "No text asset names it."
+msgstr "이 이름을 쓰는 글 에셋이 없습니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.None"
+msgid "None"
+msgstr "없음"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdText.Notifies"
+msgid "Notifies:"
+msgstr "알림:"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EdText.On"
+msgid "On"
+msgstr "켜짐"
+
+#: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
+msgctxt "EdText.Open"
+msgid "Open..."
+msgstr "열기..."
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdText.OpenInGameSettingsWindow"
+msgid "Open in-game settings window"
+msgstr "게임 안 설정 창 열기"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdText.OpenPrefabWindow"
+msgid "Open Prefab Window"
+msgstr "프리팹 창 열기"
+
+#: Source/Editor/Panels/Inspector/SpriteComponentInspector.cpp
+msgctxt "EdText.OpenSpriteClipTool"
+msgid "Open Sprite Clip Tool"
+msgstr "스프라이트 클립 도구 열기"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.OpenTracy"
+msgid "Open Tracy"
+msgstr "Tracy 열기"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.OpenUI"
+msgid "Open UI"
+msgstr "UI 열기"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.OutsideTrackerUnknownNoPerProcessDriverUsage"
+msgid "Outside tracker: Unknown (no per-process driver usage)"
+msgstr "추적 밖: 알 수 없음(프로세스별 드라이버 사용량 없음)"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.Param"
+msgid "Param"
+msgstr "인자"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.ParentRoot"
+msgid "Parent: (root)"
+msgstr "부모: (뿌리)"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdText.Partial"
+msgid "Partial"
+msgstr "일부"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.Pause"
+msgid "Pause"
+msgstr "일시 정지"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdText.PickAnObjectOnTheLeft"
+msgid "Pick an object on the left"
+msgstr "왼쪽에서 오브젝트를 고릅니다"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.PlayPreview"
+msgid "Play Preview"
+msgstr "미리보기 재생"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdText.Preset"
+msgid "Preset"
+msgstr "프리셋"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+msgctxt "EdText.Presets"
+msgid "Presets..."
+msgstr "프리셋..."
+
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
+msgctxt "EdText.Properties"
+msgid "Properties"
+msgstr "프로퍼티"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdText.Ragdoll"
+msgid "Ragdoll"
+msgstr "래그돌"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdText.ReadServer"
+msgid "Read server"
+msgstr "읽기 서버"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.RealTimeInputGraphsLast120Frames"
+msgid "Real-Time Input Graphs (Last 120 Frames)"
+msgstr "실시간 입력 그래프(최근 120 프레임)"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.Rebind"
+msgid "Rebind"
+msgstr "다시 묶기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.RebindThis"
+msgid "Rebind this"
+msgstr "이것 다시 묶기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdText.Reconnect"
+msgid "Reconnect"
+msgstr "다시 연결"
+
+#: Source/Editor/Panels/Scene/HistoryPanel.cpp
+msgctxt "EdText.RedoCtrlY"
+msgid "Redo (Ctrl+Y)"
+msgstr "다시 실행(Ctrl+Y)"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdText.RefreshFiles"
+msgid "Refresh files"
+msgstr "파일 새로 고침"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdText.RefreshFilesAlt"
+msgid "Refresh Files"
+msgstr "파일 새로 고침"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdText.RefreshOverrides"
+msgid "Refresh Overrides"
+msgstr "덮어쓴 값 새로 고침"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdText.RefreshStats"
+msgid "Refresh stats"
+msgstr "통계 새로 고침"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdText.Release"
+msgid "Release"
+msgstr "놓기"
+
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
+msgctxt "EdText.ReloadList"
+msgid "Reload list"
+msgstr "목록 다시 읽기"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.RemoveAnimation"
+msgid "Remove Animation"
+msgstr "애니메이션 제거"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.RemoveFrame"
+msgid "Remove Frame"
+msgstr "프레임 제거"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.RemoveKey"
+msgid "Remove Key"
+msgstr "키 제거"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.RenderDocCapture"
+msgid "RenderDoc Capture"
+msgstr "RenderDoc 캡처"
+
+#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+msgctxt "EdText.Replace"
+msgid "Replace"
+msgstr "바꾸기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdText.ReplayServer"
+msgid "Replay server"
+msgstr "재생 서버"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+msgctxt "EdText.ResetAll"
+msgid "Reset All"
+msgstr "모두 초기화"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.ResetDefault"
+msgid "Reset Default"
+msgstr "기본으로"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.ResetStickToCenter"
+msgid "Reset Stick to Center"
+msgstr "스틱을 가운데로"
+
+#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+msgctxt "EdText.ResetTab"
+msgid "Reset Tab"
+msgstr "탭 초기화"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdText.ResetView"
+msgid "Reset View"
+msgstr "보기 초기화"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdText.Resize"
+msgid "Resize"
+msgstr "크기 바꾸기"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdText.Restart"
+msgid "Restart"
+msgstr "다시 시작"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdText.RestorePreviousFile"
+msgid "Restore previous file"
+msgstr "이전 파일 되살리기"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.Resume"
+msgid "Resume"
+msgstr "이어 하기"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdText.RevertAllOverrides"
+msgid "Revert All Overrides"
+msgstr "덮어쓴 값 모두 되돌리기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.RevertAllToDefault"
+msgid "Revert All to Default"
+msgstr "모두 기본으로 되돌리기"
+
+#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+msgctxt "EdText.RevertNow"
+msgid "Revert Now"
+msgstr "지금 되돌리기"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.RevertToPrefab"
+msgid "Revert to Prefab"
+msgstr "프리팹으로 되돌리기"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdText.RunAll"
+msgid "Run All"
+msgstr "모두 실행"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdText.RunScenario"
+msgid "Run Scenario"
+msgstr "시나리오 실행"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdText.RunSelected"
+msgid "Run Selected"
+msgstr "고른 것 실행"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdText.RunSelectedCases"
+msgid "Run Selected Cases"
+msgstr "고른 케이스 실행"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdText.Running"
+msgid "Running..."
+msgstr "실행 중..."
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdText.SaveFile"
+msgid "Save File"
+msgstr "파일 저장"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdText.SaveLocalization"
+msgid "Save Localization"
+msgstr "현지화 저장"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdText.SavePrefabExitIsolation"
+msgid "Save Prefab & Exit Isolation"
+msgstr "프리팹 저장하고 격리 나가기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdText.SavePreset"
+msgid "Save preset"
+msgstr "프리셋 저장"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.SaveReplay"
+msgid "Save Replay"
+msgstr "재생 저장"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+msgctxt "EdText.SaveSession"
+msgid "Save Session"
+msgstr "세션 저장"
+
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EdText.SaveToRig"
+msgid "Save to rig"
+msgstr "리그에 저장"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.SaveTrace"
+msgid "Save Trace"
+msgstr "추적 저장"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+msgctxt "EdText.SavedPresets"
+msgid "Saved Presets:"
+msgstr "저장한 프리셋:"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.ScanResources"
+msgid "Scan Resources"
+msgstr "리소스 훑기"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdText.SceneHasUnsavedChangesPlayAnyway"
+msgid "Scene has unsaved changes. Play anyway?"
+msgstr "씬에 저장하지 않은 변경이 있습니다. 그래도 플레이할까요?"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdText.SelectAll"
+msgid "Select All"
+msgstr "모두 고르기"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.Selection"
+msgid "Selection"
+msgstr "선택"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdText.SessionServer"
+msgid "Session server"
+msgstr "세션 서버"
+
+#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+msgctxt "EdText.Set"
+msgid "Set"
+msgstr "정하기"
+
+#: Source/Editor/Common/GUI/Status/EditorNotificationView.cpp
+msgctxt "EdText.ShowInExplorer"
+msgid "Show in Explorer"
+msgstr "탐색기에서 보기"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdText.Spawn"
+msgid "Spawn"
+msgstr "만들기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdText.Spike"
+msgid "Spike"
+msgstr "튐"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdText.Step"
+msgid "Step"
+msgstr "한 걸음"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.StopPreview"
+msgid "Stop Preview"
+msgstr "미리보기 정지"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.Tags"
+msgid "Tags:"
+msgstr "태그:"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.TapKeyDownUp"
+msgid "Tap Key (Down + Up)"
+msgstr "키 톡(누름 + 뗌)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp
+msgctxt "EdText.Target"
+msgid "Target"
+msgstr "대상"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.TestPulse03s"
+msgid "Test Pulse (0.3s)"
+msgstr "시험 진동(0.3 초)"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.Text"
+msgid "Text"
+msgstr "글"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdText.TheReferenceIndexIsStillBuilding"
+msgid "The reference index is still building."
+msgstr "참조 색인을 아직 짓는 중입니다."
+
+#: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+msgctxt "EdText.ThisMeshHasOneLevelSetLODRatios"
+msgid "This mesh has one level - set LOD ratios in the import rule and import again."
+msgstr "이 메시는 단계가 하나입니다 — 가져오기 규칙에 LOD 비율을 정하고 다시 가져오세요."
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdText.Time"
+msgid "Time"
+msgstr "시간"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.TracyNotInThisBuild"
+msgid "Tracy: not in this build"
+msgstr "Tracy: 이 빌드에 없음"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.TracyOff"
+msgid "Tracy: off"
+msgstr "Tracy: 꺼짐"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdText.TransformAnimationKeysOptional"
+msgid "TransformAnimation Keys (optional)"
+msgstr "TransformAnimation 키(선택)"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.True"
+msgid "True"
+msgstr "참"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.UnbindOther"
+msgid "Unbind other"
+msgstr "다른 것 풀기"
+
+#: Source/Editor/Panels/Scene/HistoryPanel.cpp
+msgctxt "EdText.UndoCtrlZ"
+msgid "Undo (Ctrl+Z)"
+msgstr "실행 취소(Ctrl+Z)"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.Unlink"
+msgid "Unlink"
+msgstr "연결 풀기"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdText.Unload"
+msgid "Unload"
+msgstr "내리기"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.Unparent"
+msgid "Unparent"
+msgstr "부모 풀기"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdText.UnsupportedFUNCTIONArgsInvokeSkipped"
+msgid "Unsupported FUNCTION args - invoke skipped."
+msgstr "지원하지 않는 FUNCTION 인자 — 부르기를 건너뜁니다."
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EdText.UpSend"
+msgid "Up (send)"
+msgstr "올리기(보냄)"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdText.Use"
+msgid "Use"
+msgstr "쓰기"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdText.Validate"
+msgid "Validate"
+msgstr "검사"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdText.Value"
+msgid "Value"
+msgstr "값"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.VirtualInputInjectorGameplayMacroSimulator"
+msgid "Virtual Input Injector & Gameplay Macro Simulator"
+msgstr "가상 입력 주입 · 게임플레이 매크로 시험기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.VisibleHUDElements"
+msgid "Visible HUD Elements:"
+msgstr "보이는 HUD 요소:"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdText.WhichObjectsDiffer"
+msgid "Which objects differ"
+msgstr "어떤 오브젝트가 다른가"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdText.XMLDataFiles"
+msgid "XML Data Files"
+msgstr "XML 데이터 파일"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdText.ZoomFit"
+msgid "Zoom Fit"
+msgstr "맞춰 보기"
+
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 #: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp

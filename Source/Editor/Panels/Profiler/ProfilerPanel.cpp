@@ -177,7 +177,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( "FullStacks records the call stack of every allocation born after this point (slows allocation). The report lists blocks born in the window that are still alive." );
                 if ( inoutReport._bValid == false )
                 {
-                    ImGui::TextDisabled( "No leak report yet." );
+                    ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoLeakReportYet" ) );
                     return;
                 }
 
@@ -219,7 +219,7 @@ namespace sw::editor
 
                 if ( listTopStack.empty() )
                 {
-                    ImGui::Text( "No detailed call stack data available or all freed." );
+                    ImGui::TextUnformatted( SW_LOCKEY( "EdText", "NoDetailedCallStackDataAvailableOrAll" ) );
                     return;
                 }
                 if ( ImGui::BeginTable( "CallStackTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) == false )
@@ -371,11 +371,11 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( _capture.isPaused() ? "Resume" : "Pause" ) );
         if ( _capture.isPaused() )
         {
-            if ( ImGui::SmallButton( "Resume" ) )
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Resume" ) ) )
                 _capture.resume();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "ResumeCapture" ) );
         }
-        else if ( ImGui::SmallButton( "Pause" ) )
+        else if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Pause" ) ) )
             _capture.pause();
         EditorSelfTestMarks::note( "profiler.capture.pause" );
         EditorChrome::sameLineIfFits( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Pause on spike" ).x );
@@ -409,15 +409,15 @@ namespace sw::editor
         ImGui::SameLine();
         const IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
         if ( ProfilerBackend::isTracyCompiled() == false )
-            ImGui::TextDisabled( "Tracy: not in this build" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TracyNotInThisBuild" ) );
         else if ( pBackend == nullptr )
-            ImGui::TextDisabled( "Tracy: off" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TracyOff" ) );
         else
             ImGui::Text( "Tracy: on (port %u, viewer %s)", static_cast<uint32>( ProfilerBackend::getTracyPort() ),
                          pBackend->isViewerConnected() ? "connected" : "waiting" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Open Tracy" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "OpenTracy" ) ) );
         ImGui::BeginDisabled( ProfilerBackend::isTracyCompiled() == false );
-        if ( ImGui::SmallButton( "Open Tracy" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenTracy" ) ) )
         {
             _lastTracyResult = EditorTracyLauncher::openViewer();
             _bTracyTried     = SW_TRUE;
@@ -432,11 +432,11 @@ namespace sw::editor
         ImGui::SameLine();
         const bool bRenderDoc = RenderDocCapture::isAvailable();
         ImGui::BeginDisabled( bRenderDoc == false );
-        if ( ImGui::SmallButton( "RenderDoc Capture" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RenderDocCapture" ) ) )
             RenderDocCapture::triggerCapture();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocCapture" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Open UI" ) );
-        if ( ImGui::SmallButton( "Open UI" ) && RenderDocCapture::launchReplayUI() == false )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "OpenUI" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenUI" ) ) && RenderDocCapture::launchReplayUI() == false )
             SW_LOG_WARNING_ID( "ProfilerPanel.RenderDocReplayUICould", "RenderDoc replay UI could not be started" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocOpenUI" ) );
         ImGui::EndDisabled();
@@ -461,7 +461,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "TimelineRecord" ) );
 
         ImGui::SameLine();
-        ImGui::TextUnformatted( "Frames:" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Frames" ) );
         for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
         {
             fixed_string<constant::buffer::kMax16> label;
@@ -475,13 +475,13 @@ namespace sw::editor
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Freeze" ), &bFrozen ) )
             _timeline.setTimelineFrozen( bFrozen );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Freeze" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Fit" ) );
-        if ( ImGui::SmallButton( "Fit" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Fit" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Fit" ) ) )
             _timeline.fit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Fit" ) );
 #if SW_PROFILER_TRACE_ENABLED
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Trace" ) );
-        if ( ImGui::SmallButton( "Save Trace" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveTrace" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "SaveTrace" ) ) )
             _timeline.saveTrace( profiler );
         EditorSelfTestMarks::note( "profiler.timeline.saveTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveTrace" ) );
@@ -526,14 +526,14 @@ namespace sw::editor
 
     void ProfilerPanel::drawTraceControls()
     {
-        if ( ImGui::SmallButton( "Load Trace" ) && _timeline.loadLatestTrace() == false )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "LoadTrace" ) ) && _timeline.loadLatestTrace() == false )
             SW_LOG_WARNING_ID( "ProfilerPanel.TraceStatus", "%#", _timeline.getTraceStatus() );
         EditorSelfTestMarks::note( "profiler.timeline.loadTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadTrace" ) );
         if ( _timeline.hasLoadedTrace() )
         {
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unload" ) );
-            if ( ImGui::SmallButton( "Unload" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Unload" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Unload" ) ) )
                 _timeline.unloadTrace();
             EditorSelfTestMarks::note( "profiler.timeline.unloadTrace" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "UnloadTrace" ) );
@@ -753,8 +753,8 @@ namespace sw::editor
         if ( _capture.getSelectedFrameOffset() > 0 )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kFrameOffsetText ), "Last column shows the frame %u frames ago", _capture.getSelectedFrameOffset() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Latest" ) );
-            if ( ImGui::SmallButton( "Latest" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Latest" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Latest" ) ) )
                 _capture.selectFrameOffset( 0 );
         }
     }
@@ -839,7 +839,7 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "ResourceCatalogSummary" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             _performance.pollCatalog();
-            if ( ImGui::Button( "Scan Resources" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ScanResources" ) ) )
                 _performance.requestCatalogScan();
 
             for ( const EditorResourceCatalogCount& row : _performance.getCatalogCounts()._listKindCount )
@@ -974,7 +974,7 @@ namespace sw::editor
                 ImGui::Text( "Outside tracker (swap chain, driver, untracked): %s%s", bNegative ? "-" : "", arrBytesBuf.c_str() );
             }
             else
-                ImGui::TextUnformatted( "Outside tracker: Unknown (no per-process driver usage)" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdText", "OutsideTrackerUnknownNoPerProcessDriverUsage" ) );
         }
     }
 
@@ -1007,7 +1007,7 @@ namespace sw::editor
         if ( bDetailed && ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TopMemoryAllocationsByCallStack" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             ProfilerPanelInternal::drawTopCallStacks( profiler );
         else if ( bDetailed == false )
-            ImGui::Text( "Detailed CallStack tracking is disabled." );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "DetailedCallStackTrackingIsDisabled" ) );
 
         ImGui::Separator();
 
@@ -1031,7 +1031,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "profiler.callTree.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "CallTreeRecord" ) );
         ImGui::SameLine();
-        ImGui::TextUnformatted( "Frames:" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Frames" ) );
         for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
         {
             ImGui::SameLine();

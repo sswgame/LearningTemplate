@@ -29,6 +29,7 @@
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -541,7 +542,7 @@ namespace sw::editor
                 }
                 ImGui::SameLine();
                 ImGui::BeginDisabled( state._resizeResolution == current );
-                if ( ImGui::Button( "Resize" ) && pTerrain != nullptr )
+                if ( ImGui::Button( SW_LOCKEY( "EdText", "Resize" ) ) && pTerrain != nullptr )
                     (void)resizeTerrain( state, *pTerrain, state._resizeResolution ); // 실패는 지형이 알린다
                 ImGui::EndDisabled();
                 ImGui::EndDisabled();

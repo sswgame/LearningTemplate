@@ -178,7 +178,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( rewind.isScrubbing() )
         {
-            if ( ImGui::Button( "Resume" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Resume" ) ) )
             {
                 rewind.clearScrub();
                 _scrubSecondsAgo = 0.0f;
@@ -205,7 +205,7 @@ namespace sw::editor
         ImGui::Text( "Bones: %u  ·  pose %u B", frame._boneCount, static_cast<uint32>( frame._poseByte.size() ) );
         if ( state._listNotify.empty() == false )
         {
-            ImGui::TextUnformatted( "Notifies:" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Notifies" ) );
             for ( const hashed_string& notify : state._listNotify )
             {
                 ImGui::SameLine();

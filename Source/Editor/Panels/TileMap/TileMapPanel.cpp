@@ -180,8 +180,8 @@ namespace sw::editor
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Erase" ), &_document.editErase() );
         EditorSelfTestMarks::note( "tileMap.erase" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EraseTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset View" ) );
-        if ( ImGui::SmallButton( "Reset View" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetView" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "ResetView" ) ) )
         {
             _canvasPan  = float2{ TileMapPanelInternal::kCanvasMargin, TileMapPanelInternal::kCanvasMargin };
             _canvasZoom = 1.0f;
@@ -372,7 +372,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataValueTip" ) );
         }
         ImGui::Separator();
-        ImGui::TextUnformatted( "Data Layers" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "DataLayers" ) );
         EditorWidgets::drawPropertyRowLabel( "Name" );
         ImGui::InputText( "##dataLayerName", _newDataLayerName.data(), _newDataLayerName.capacity() );
         EditorSelfTestMarks::note( "tileMap.dataLayer.name" );
@@ -380,7 +380,7 @@ namespace sw::editor
         EditorWidgets::drawPropertyRowLabel( "Default" );
         ImGui::InputInt( "##dataLayerDefault", &_newDataLayerDefault );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerDefaultTip" ) );
-        const bool bAddDataLayer = ImGui::Button( "Add Data Layer" );
+        const bool bAddDataLayer = ImGui::Button( SW_LOCKEY( "EdText", "AddDataLayer" ) );
         EditorSelfTestMarks::note( "tileMap.dataLayer.add" );
         if ( bAddDataLayer && _document.addDataLayer( _newDataLayerName.c_str(), _newDataLayerDefault ) )
         {
@@ -420,7 +420,7 @@ namespace sw::editor
         EditorWidgets::drawPropertyRowLabel( "Height" );
         ImGui::InputInt( "##Height", &_document.editInputHeight() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "HeightTip" ) );
-        if ( ImGui::Button( "Apply Size" ) && _document.applyInputSize() )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplySize" ) ) && _document.applyInputSize() )
             notifyDocumentEdited( "Resize Tile Map" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplySizeTip" ) );
 
@@ -490,11 +490,11 @@ namespace sw::editor
         {
             fixed_string<constant::buffer::kMax256>& tileSetInput = _document.editTileSetInput();
             EditorWidgets::drawPropertyRowLabel( "Tile set" );
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( "Use" ) - ImGui::GetStyle().ItemSpacing.x );
+            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Use" ) ) - ImGui::GetStyle().ItemSpacing.x );
             ImGui::InputText( "##TileSet", tileSetInput.data(), tileSetInput.capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TileSetTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Use" ) );
-            if ( ImGui::Button( "Use" ) && _document.useTileSetInput() )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Use" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Use" ) ) && _document.useTileSetInput() )
                 notifyDocumentEdited( "Set Tile Set", "tilemap-tileset" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "UseTileSetTip" ) );
             drawTilePalette();
@@ -502,7 +502,7 @@ namespace sw::editor
         drawDataLayerControls();
 
         ImGui::Separator();
-        ImGui::TextUnformatted( "Edge Warp Presets" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "EdgeWarpPresets" ) );
         const utf8* edges[] = { "N", "E", "S", "W" };
         for ( int32 edgeIndex = 0; edgeIndex < TileMapDocument::kEdgeCount; ++edgeIndex )
         {

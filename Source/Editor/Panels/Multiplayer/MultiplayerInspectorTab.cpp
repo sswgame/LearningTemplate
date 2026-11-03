@@ -199,8 +199,8 @@ namespace sw::editor
         if ( inspector.isConnected() )
         {
             ImGui::Text( "Connected to %s", inspector.getRemoteAddress().toString().c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Disconnect" ) );
-            if ( ImGui::Button( "Disconnect" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Disconnect" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Disconnect" ) ) )
                 inspector.disconnect();
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Refresh" ) ) && inspector.refreshTree() == false )
@@ -212,7 +212,7 @@ namespace sw::editor
             ImGui::Text( "Session server debug channel 127.0.0.1:%u", static_cast<uint32>( session.getDebugChannelPort() ) );
             ImGui::SameLine();
             string     reply;
-            const bool bAttached = ImGui::Button( "Connect" ) && MultiplayerInspectorTabInternal::attachToSession( session, reply );
+            const bool bAttached = ImGui::Button( SW_LOCKEY( "EdText", "Connect" ) ) && MultiplayerInspectorTabInternal::attachToSession( session, reply );
             if ( bAttached && inspector.refreshTree() == false )
                 SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotRead", "Inspector could not read the hierarchy: %#", inspector.getLastError() );
             if ( reply.empty() == false )
@@ -231,8 +231,8 @@ namespace sw::editor
             ImGui::InputTextWithHint( "##InspectorAddress", "127.0.0.1:<port>", _address.data(), _address.capacity() );
             ImGui::SameLine();
             ImGui::InputTextWithHint( "##InspectorToken", "token", _token.data(), _token.capacity(), ImGuiInputTextFlags_Password );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Attach" ) );
-            if ( ImGui::Button( "Attach" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Attach" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Attach" ) ) )
             {
                 NetAddress remote;
                 // 채널은 루프백에만 묶이므로 다른 주소는 붙기 전에 거절한다.
@@ -290,7 +290,7 @@ namespace sw::editor
         if ( ImGui::BeginChild( "##InspectorValues", ImVec2( 0.0f, height ), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar ) )
         {
             if ( inspector.getSelectedName().empty() )
-                ImGui::TextDisabled( "Pick an object on the left" );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "PickAnObjectOnTheLeft" ) );
             else
                 ImGui::TextUnformatted( inspector.getDumpText().c_str() );
         }

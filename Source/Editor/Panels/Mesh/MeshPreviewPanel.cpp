@@ -158,7 +158,7 @@ namespace sw::editor
             ++lod;
         }
         if ( lodCount == 1 )
-            ImGui::TextDisabled( "This mesh has one level - set LOD ratios in the import rule and import again." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "ThisMeshHasOneLevelSetLODRatios" ) );
     }
 
     bool MeshPreviewPanel::findPreviewVertexCount( uint32& outCount ) const

@@ -42,7 +42,7 @@ namespace sw::editor
                 {
                     if ( bCanUndo == false )
                         ImGui::BeginDisabled();
-                    if ( ImGui::Button( "Undo (Ctrl+Z)" ) )
+                    if ( ImGui::Button( SW_LOCKEY( "EdText", "UndoCtrlZ" ) ) )
                         cmdStack.undo();
                     if ( bCanUndo == false )
                         ImGui::EndDisabled();
@@ -51,7 +51,7 @@ namespace sw::editor
                     ImGui::SameLine();
                     if ( bCanRedo == false )
                         ImGui::BeginDisabled();
-                    if ( ImGui::Button( "Redo (Ctrl+Y)" ) )
+                    if ( ImGui::Button( SW_LOCKEY( "EdText", "RedoCtrlY" ) ) )
                         cmdStack.redo();
                     if ( bCanRedo == false )
                         ImGui::EndDisabled();

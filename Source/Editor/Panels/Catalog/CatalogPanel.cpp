@@ -177,7 +177,7 @@ namespace sw::editor
 
     void CatalogPanel::drawToolbar()
     {
-        if ( ImGui::Button( "Refresh files" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RefreshFiles" ) ) )
             _bIndexLoaded = false;
         EditorSelfTestMarks::note( "catalog.refresh" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
@@ -209,8 +209,8 @@ namespace sw::editor
             syncDirty();
         }
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Validate" ) );
-        if ( ImGui::Button( "Validate" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Validate" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Validate" ) ) )
         {
             validateCurrentFile();
             syncDirty(); // 검증 결과 감시 값(`Editor.CatalogValidation`)도 여기서 갱신된다 — 저장 · 복원 길과 같다
@@ -332,8 +332,8 @@ namespace sw::editor
         else if ( _validationState == ValidationState::Failed )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "Validation failed (%d warnings)", static_cast<int32>( _listWarning.size() ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Restore previous file" ) );
-            if ( ImGui::SmallButton( "Restore previous file" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) )
                 restorePreviousFile();
             EditorSelfTestMarks::note( "catalog.restore" );
             for ( const string& warning : _listWarning )

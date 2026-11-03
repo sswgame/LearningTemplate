@@ -96,10 +96,10 @@ namespace sw::editor
         }
 
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
-        ImGui::TextUnformatted( "Body prefab (skeletal animator on its root)" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "BodyPrefabSkeletalAnimatorOnItsRoot" ) );
         (void)EditorWidgets::drawTextField( "##clipPreview.body", _model.editBodyPrefabPath(), -1.0f );
         EditorSelfTestMarks::note( "clip.bodyField" );
-        if ( ImGui::Button( "Spawn" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Spawn" ) ) )
             _model.spawnFromField();
         EditorSelfTestMarks::note( "clip.spawn" );
         EditorWidgets::drawTooltip( "Place the body in the preview scene and play the clip on it" );
@@ -112,8 +112,8 @@ namespace sw::editor
             if ( ImGui::Button( bPaused ? "Play" : "Pause" ) )
                 _model.togglePause();
             EditorSelfTestMarks::note( "clip.pause" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Restart" ) );
-            if ( ImGui::Button( "Restart" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) )
                 _model.requestReplay(); // 다음 그리기가 처음부터 다시 재생한다
             EditorSelfTestMarks::note( "clip.restart" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Loop" ) ) );
@@ -140,7 +140,7 @@ namespace sw::editor
         const SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
         if ( pAnimator == nullptr )
         {
-            ImGui::TextDisabled( "No body yet - enter a prefab path and press Spawn" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoBodyYetEnterAPrefabPathAnd" ) );
             return;
         }
         const AnimationClip* pClip = AnimationClipPreviewModel::findOpenClip( *pAnimator, getLoadedAssetPath() );

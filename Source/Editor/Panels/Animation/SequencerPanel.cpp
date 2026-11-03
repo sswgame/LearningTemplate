@@ -250,8 +250,8 @@ namespace sw::editor
                 _previewPlayer->playFromFrame( _currentFrame );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PlayTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Pause" ) );
-            if ( ImGui::Button( "Pause" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Pause" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Pause" ) ) )
                 _previewPlayer->pause();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PauseTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
@@ -265,7 +265,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "StopTip" ) );
             ImGui::SameLine();
             if ( getLoadedAssetPath().empty() )
-                ImGui::TextDisabled( "No .seq file focused" );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoSeqFileFocused" ) );
             else
                 ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         }
@@ -300,7 +300,7 @@ namespace sw::editor
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
 
-        ImGui::TextDisabled( "Cinematic note" ); // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "CinematicNote" ) ); // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
         ImGui::InputTextMultiline( "##CinematicNote", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 40.0f * EditorThemeUtil::getDPIScale() ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
@@ -350,9 +350,9 @@ namespace sw::editor
         if ( ImGui::Button( "+ Rig Slot Track" ) )
             addKeyTrack( SequenceTrackKind::RigSlot );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddRigSlotTrackTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete Track" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "DeleteTrack" ) ) );
         ImGui::BeginDisabled( _selectedTrack < 0 );
-        const bool bDeleteTrackRequested = ImGui::Button( "Delete Track" ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() );
+        const bool bDeleteTrackRequested = ImGui::Button( SW_LOCKEY( "EdText", "DeleteTrack" ) ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() );
         if ( bDeleteTrackRequested )
         {
             _listTrack.erase( _listTrack.begin() + _selectedTrack );
@@ -576,8 +576,8 @@ namespace sw::editor
 
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Curve" ) );
         ImGui::Text( "%s / %s (frames)", track._name.c_str(), track.getChannelName( static_cast<uint32>( _curveChannel ) ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Close" ) );
-        if ( ImGui::SmallButton( "Close" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Close" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Close" ) ) )
         {
             _curveTrack = -1;
             return;

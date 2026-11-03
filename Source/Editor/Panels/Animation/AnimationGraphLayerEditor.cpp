@@ -178,7 +178,7 @@ namespace sw::editor
             ImGui::PopID();
         }
 
-        if ( ImGui::Button( "Add Layer" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "AddLayer" ) ) )
         {
             AnimationGraphLayerDef layer{};
             layer._name     = AnimationGraphLayerEditorInternal::makeUniqueName( inoutGraph, true );
@@ -359,7 +359,7 @@ namespace sw::editor
             ImGui::PopID();
         }
 
-        if ( ImGui::Button( "Add Mask" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "AddMask" ) ) )
         {
             AnimationBoneMaskDef   mask{};
             AnimationBoneMaskEntry entry{};
@@ -501,7 +501,7 @@ namespace sw::editor
             inoutMask._listEntry.erase( inoutMask._listEntry.begin() + static_cast<ptrdiff_t>( removeIndex ) );
             pInoutEdit = "Edit Bone Mask";
         }
-        if ( ImGui::Button( "Add Bone" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "AddBone" ) ) )
         {
             AnimationBoneMaskEntry entry = inoutMask._listEntry.back();
             inoutMask._listEntry.push_back( entry );

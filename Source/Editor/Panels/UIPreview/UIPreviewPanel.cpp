@@ -513,7 +513,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( "Move the preview focus in this direction (like the keyboard or pad). The first press focuses the first focusable widget." );
             ImGui::SameLine();
         }
-        if ( ImGui::Button( "Accept" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Accept" ) ) )
             _model.acceptFocus( screen );
         UIPreviewPanelInternal::noteMark( "uipreview.nav", "accept" );
         EditorWidgets::drawTooltip( "Press the focused widget (UI.Accept). Its command is only logged - the preview has no screen code." );
@@ -590,7 +590,7 @@ namespace sw::editor
         Widget*    pSelected = screen.getTree().findWidgetByID( _model.getSelected() );
         const bool bCanAdd   = _model.getPaletteType().empty() == false;
         ImGui::BeginDisabled( bCanAdd == false );
-        if ( ImGui::Button( "Add" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Add" ) ) )
             (void)_model.addWidget( screen, _model.getPaletteType(), pSelected );
         ImGui::EndDisabled();
         Internal::noteMark( "uipreview.palette", "add" );

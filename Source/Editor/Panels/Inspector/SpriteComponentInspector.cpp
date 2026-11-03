@@ -12,6 +12,7 @@
 
 #include "Engine/2D/SpriteComponent.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
@@ -25,7 +26,7 @@ namespace sw::editor
         public:
             void drawFooter( Component* /*pComponent*/ ) override
             {
-                if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenSpriteClipTool" ) ) )
                     editor::getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( EditorAssetType{ SpriteClipAsset::kAssetType } );
             }
         };

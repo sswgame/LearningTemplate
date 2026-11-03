@@ -88,7 +88,7 @@ namespace sw::editor
         if ( ImGui::SliderFloat( "##Opacity", &opacity, DebugHUD::kMinOpacity, DebugHUD::kMaxOpacity, "%.2f" ) )
             pHUD->setOpacity( opacity );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpacity" ) );
-        if ( ImGui::Button( "Open in-game settings window" ) && pHUD->openWindow() == false )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "OpenInGameSettingsWindow" ) ) && pHUD->openWindow() == false )
             SW_LOG_WARNING_ID( "EditorDebugHUD.DebugHUDSettingsWindow", "The Debug HUD settings window could not be opened - the reason is logged above" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpenWindow" ) );
     }

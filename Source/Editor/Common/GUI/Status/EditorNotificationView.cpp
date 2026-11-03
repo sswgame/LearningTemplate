@@ -11,6 +11,8 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -108,7 +110,7 @@ namespace sw::editor
                 if ( item._revealPath.empty() == false )
                 {
                     // 콘텐츠 브라우저 메뉴와 같은 글이다(그쪽도 지역화 전 글).
-                    if ( ImGui::SmallButton( "Show in Explorer" ) )
+                    if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "ShowInExplorer" ) ) )
                         (void)EditorAssetFileCommands::showInFileExplorer( item._revealPath );
                     EditorSelfTestMarks::note( "notification.showInExplorer" );
                 }

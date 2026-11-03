@@ -145,8 +145,8 @@ namespace sw::editor
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
                 reloadDocument();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ReloadTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset Default" ) );
-            if ( ImGui::Button( "Reset Default" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetDefault" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetDefault" ) ) )
             {
                 _graph._listNode.clear();
                 _graph._listLink.clear();
@@ -155,8 +155,8 @@ namespace sw::editor
                 notifyDocumentEdited( "Reset Dialogue Graph" );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ResetDefaultTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Zoom Fit" ) );
-            if ( ImGui::Button( "Zoom Fit" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ZoomFit" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ZoomFit" ) ) )
                 _nodeGraph.requestContentFit();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ZoomFitTip" ) );
             drawPreviewToolbar();
@@ -384,16 +384,16 @@ namespace sw::editor
     {
         ImGui::SameLine();
         EditorWidgets::drawToolbarSeparator();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play Preview" ) );
-        if ( ImGui::Button( "Play Preview" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "PlayPreview" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "PlayPreview" ) ) )
             _preview.play( _graph );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PlayPreviewTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Advance Preview" ) );
-        if ( ImGui::Button( "Advance Preview" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "AdvancePreview" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "AdvancePreview" ) ) )
             _preview.step( _graph, DialogueStepInput{} );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AdvancePreviewTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop Preview" ) );
-        if ( ImGui::Button( "Stop Preview" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "StopPreview" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "StopPreview" ) ) )
             _preview.stop();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "StopPreviewTip" ) );
         const int32 previewNodeID = _preview.getNodeID();
@@ -426,16 +426,16 @@ namespace sw::editor
         }
         if ( pInfo->_flow == DialogueNodeFlow::Condition )
         {
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "True" ) );
-            if ( ImGui::SmallButton( "True" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "True" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "True" ) ) )
             {
                 DialogueStepInput input{};
                 input._bConditionMet = true;
                 _preview.step( _graph, input );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewTrueTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "False" ) );
-            if ( ImGui::SmallButton( "False" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "False" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "False" ) ) )
                 _preview.step( _graph, DialogueStepInput{} );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewFalseTip" ) );
         }
@@ -604,7 +604,7 @@ namespace sw::editor
             case DialogueNodeBody::Text:
             {
                 fixed_string<constant::buffer::kMax512> textBuf{ node._text.c_str() };
-                ImGui::TextDisabled( "Text" ); // 폭 전체 칸이라 이름표는 위에
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Text" ) ); // 폭 전체 칸이라 이름표는 위에
                 if ( ImGui::InputTextMultiline( "##Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
                     node._text = textBuf.c_str();
                 if ( ImGui::IsItemDeactivatedAfterEdit() )

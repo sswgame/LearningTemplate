@@ -141,7 +141,7 @@ namespace sw::editor
             ImGui::EndTable();
         }
 
-        if ( ImGui::SmallButton( "Add row" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddRow" ) ) )
         {
             _pendingKind    = PendingKind::AddRow;
             _pendingElement = -1;
@@ -178,8 +178,8 @@ namespace sw::editor
             CatalogCurveModel::collectCurves( document.getParsed(), elementIndex, _listProbeCurve );
             if ( _listProbeCurve.empty() == false )
             {
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Curves" ) );
-                if ( ImGui::SmallButton( "Curves" ) )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Curves" ) ) );
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Curves" ) ) )
                 {
                     _curveOwner      = elementIndex;
                     _bOpenCurvePopup = true;
@@ -196,7 +196,7 @@ namespace sw::editor
             {
                 ImGui::TextUnformatted( document.getParsed().getElement( childIndex )._name.c_str() );
             }
-            ImGui::TextDisabled( "Edit nested elements in the raw text view" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditNestedElementsInTheRawTextView" ) );
             ImGui::EndTooltip();
         }
 
@@ -371,7 +371,7 @@ namespace sw::editor
         if ( CatalogCurveModel::sample( curve, CatalogCurveModel::computeEndTime( curve ), 48, _listSample ) )
             ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ).y } );
         else
-            ImGui::TextDisabled( "No keys yet" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoKeysYet" ) );
         for ( const CatalogCurveKey& key : curve._listKey )
         {
             ImGui::PushID( key._elementIndex );
@@ -397,7 +397,7 @@ namespace sw::editor
             }
             ImGui::PopID();
         }
-        if ( ImGui::SmallButton( "Add key" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddKey" ) ) )
         {
             _pendingKind    = PendingKind::AddCurveKey;
             _pendingElement = curve._elementIndex;
@@ -425,11 +425,11 @@ namespace sw::editor
         CatalogCurveModel::collectGradients( _listCurve, _listGradient );
         if ( _listCurve.empty() )
         {
-            ImGui::TextDisabled( "No curves under this row" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoCurvesUnderThisRow" ) );
         }
         else
         {
-            ImGui::TextDisabled( "Edit a key's time, value and interpolation in place. Values above 1 are clamped in the color preview." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditAKeySTimeValueAndInterpolation" ) );
             for ( const CatalogGradient& gradient : _listGradient )
             {
                 ImGui::TextUnformatted( gradient._label.c_str() );
@@ -443,7 +443,7 @@ namespace sw::editor
             }
             ImGui::EndChild();
         }
-        if ( ImGui::Button( "Close" ) || bOpen == false )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Close" ) ) || bOpen == false )
         {
             _curveOwner = -1;
             ImGui::CloseCurrentPopup();

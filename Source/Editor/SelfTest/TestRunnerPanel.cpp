@@ -157,18 +157,18 @@ namespace sw::editor
 
         ImGui::SameLine();
         ImGui::BeginDisabled( selectedPattern.empty() );
-        if ( ImGui::Button( "Run Selected" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelected" ) ) )
             (void)EditorSelfTestRunner::requestRun( selectedPattern, false ); // 버튼은 실행 중에 회색이다 — 거절될 일이 없다
         EditorSelfTestMarks::note( "testRunner.runSelected" );
         ImGui::EndDisabled();
         ImGui::SameLine();
         ImGui::BeginDisabled( allPattern.empty() );
-        if ( ImGui::Button( "Run All" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RunAll" ) ) )
             (void)EditorSelfTestRunner::requestRun( allPattern, false ); // 위와 같다
         ImGui::EndDisabled();
         ImGui::SameLine();
         if ( EditorSelfTestRunner::isRunning() )
-            ImGui::TextDisabled( "Running..." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Running" ) );
         else
             ImGui::TextDisabled( "%u tests", Registry::getCount() );
 
@@ -255,7 +255,7 @@ namespace sw::editor
         const bool bBusy           = _pJob->isPending();
         const bool bScenarioChosen = _selectedScenarioIndex < _listScenarioPath.size();
         ImGui::BeginDisabled( bBusy || bScenarioChosen == false );
-        if ( ImGui::Button( "Run Scenario" ) && bScenarioChosen )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RunScenario" ) ) && bScenarioChosen )
         {
             const string& scenarioPath = _listScenarioPath[_selectedScenarioIndex];
             const bool    bEditor      = ( "/" + scenarioPath ).find( TestRunnerPanelInternal::kEditorScenarioFolder ) != string::npos;
@@ -342,7 +342,7 @@ namespace sw::editor
     void TestRunnerPanel::drawRunSelectedCasesButton( const string& binDirectory, bool bBusy, bool bExecutableChosen )
     {
         ImGui::BeginDisabled( bBusy || _uniqueSelectedUnitTest.empty() || bExecutableChosen == false );
-        if ( ImGui::Button( "Run Selected Cases" ) && bExecutableChosen )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelectedCases" ) ) && bExecutableChosen )
         {
             vector<string> listCase;
             for ( const string& name : _listUnitTestName )
@@ -423,7 +423,7 @@ namespace sw::editor
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
             _bExecutableListDirty = SW_TRUE;
         if ( _listTestExecutablePath.empty() )
-            ImGui::TextDisabled( "No *Test.exe next to this build (build the AllTests target)" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoTestExeNextToThisBuildBuild" ) );
 
         drawUnitTestList();
         if ( _externalRunKind == ExternalRunKind::UnitTestRun || _externalRunKind == ExternalRunKind::UnitTestList )

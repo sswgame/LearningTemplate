@@ -1433,6 +1433,1032 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdText.AccentSwatches" source="Accent Swatches:">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Accept" source="Accept">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ActiveDevice" source="Active Device:">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Add" source="Add">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddAnimation" source="Add Animation">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddAttack" source="Add Attack">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddBone" source="Add Bone">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddDataLayer" source="Add Data Layer">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddFrame" source="Add Frame">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddIdle" source="Add Idle">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddKey" source="Add key">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddLayer" source="Add Layer">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddMask" source="Add Mask">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddRow" source="Add row">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AddWalk" source="Add Walk">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Advance" source="Advance">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AdvancePreview" source="Advance Preview">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AlwaysLoaded" source="Always loaded">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AnalogTriggersLTRT" source="Analog Triggers (LT/RT):">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AnimationsNameFirstFrameFrameCountLoopNone"
+		       source="Animations (name, first frame, frame count, loop) - none means the whole clip is one loop">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ApplyAllOverridesToTemplate" source="Apply All Overrides to Template">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ApplySize" source="Apply Size">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ApplyToOuterPrefab" source="Apply to Outer Prefab">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ApplyToPrefab" source="Apply to Prefab">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ApplyToSelection" source="Apply to Selection">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.AtlasCellsClickSelectedFrameShiftClickNew"
+		       source="Atlas cells (click: selected frame, Shift+click: new frame)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Attach" source="Attach">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Blend" source="Blend">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.BodyPrefabSkeletalAnimatorOnItsRoot" source="Body prefab (skeletal animator on its root)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.BodyPrefabSkeletalMeshOnItsRoot" source="Body prefab (skeletal mesh on its root)">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Broadcast" source="Broadcast">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Build" source="Build">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Buttons" source="Buttons:">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.CameraBookmarksCtrl19" source="Camera Bookmarks (Ctrl+1~9)">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.CinematicNote" source="Cinematic note">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ClearAll" source="Clear All">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Clip" source="Clip">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Close" source="Close">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ColorPaletteCustomization" source="Color Palette Customization">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Compare" source="Compare">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Connect" source="Connect">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.CreateAction" source="Create Action">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Curves" source="Curves">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.DataLayers" source="Data Layers">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Del" source="Del">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.DeletePreset" source="Delete preset">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.DeleteTrack" source="Delete Track">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.DetailedCallStackTrackingIsDisabled" source="Detailed CallStack tracking is disabled.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Disabled" source="Disabled">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Disconnect" source="Disconnect">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.DonTSave" source="Don't Save">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.DownReceive" source="Down (receive)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.EdgeWarpPresets" source="Edge Warp Presets">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Edit" source="Edit">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.EditAKeySTimeValueAndInterpolation"
+		       source="Edit a key's time, value and interpolation in place. Values above 1 are clamped in the color preview.">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.EditNestedElementsInTheRawTextView" source="Edit nested elements in the raw text view">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.EditsRevertOnStopPlayKeepSimulationChanges"
+		       source="Edits revert on Stop (Play > Keep Simulation Changes keeps the selection).">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Event" source="Event">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ExitIsolation" source="Exit Isolation">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.False" source="False">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Fit" source="Fit">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Frames" source="Frames:">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.FramesUVWHDurationMs" source="Frames (u,v,w,h,durationMs)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.GameViewportOnScreenControllerOverlayHUDSettings"
+		       source="Game Viewport On-Screen Controller Overlay HUD Settings">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.GamepadLeftStickXY" source="Gamepad Left Stick (X/Y):">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.GeometryRounding" source="Geometry &amp; Rounding">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.GlobalVariablePresets" source="Global Variable Presets">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.HapticVibrationTest" source="Haptic Vibration Test:">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.HeldKeys" source="Held Keys:">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Import" source="Import...">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Impulse" source="Impulse">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.InjectKeyDown" source="Inject KeyDown">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.InjectKeyUp" source="Inject KeyUp">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.InjectStickTilt" source="Inject Stick Tilt">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.InputMap" source="Input Map">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.InputReplayRecorderDeterministicQAPlayback"
+		       source="Input Replay Recorder &amp; Deterministic QA Playback">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Interpolation" source="Interpolation">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Invoke" source="Invoke">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Keep" source="Keep">
+			<origins>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.LastMergedTrace" source="Last merged trace:">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Latest" source="Latest">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.LinkSelected" source="Link Selected">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.LoadFile" source="Load file">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.LoadReplay" source="Load Replay">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.LoadTrace" source="Load Trace">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.MouseDeltaSpeedDXDY" source="Mouse Delta Speed (dX/dY):">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.MultiObjectAlignment" source="Multi-Object Alignment">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NetworkPresetsCouldNotBeReadSeeThe" source="Network presets could not be read - see the log">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoBodyYetEnterAPrefabPathAnd" source="No body yet - enter a prefab path and press Spawn">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoCurvesUnderThisRow" source="No curves under this row">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoDebugDrawYet" source="No debug draw yet.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/SceneViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoDetailedCallStackDataAvailableOrAll"
+		       source="No detailed call stack data available or all freed.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoKeysYet" source="No keys yet">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoLeakReportYet" source="No leak report yet.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoSavedPresets" source="No saved presets.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoSeqFileFocused" source="No .seq file focused">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoTestExeNextToThisBuildBuild"
+		       source="No *Test.exe next to this build (build the AllTests target)">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.NoTextAssetNamesIt" source="No text asset names it.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.None" source="None">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Notifies" source="Notifies:">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.On" source="On">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Open" source="Open...">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.OpenInGameSettingsWindow" source="Open in-game settings window">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.OpenPrefabWindow" source="Open Prefab Window">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.OpenSpriteClipTool" source="Open Sprite Clip Tool">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/SpriteComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.OpenTracy" source="Open Tracy">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.OpenUI" source="Open UI">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.OutsideTrackerUnknownNoPerProcessDriverUsage"
+		       source="Outside tracker: Unknown (no per-process driver usage)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Param" source="Param">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ParentRoot" source="Parent: (root)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Partial" source="Partial">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Pause" source="Pause">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.PickAnObjectOnTheLeft" source="Pick an object on the left">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.PlayPreview" source="Play Preview">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Preset" source="Preset">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Presets" source="Presets...">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Properties" source="Properties">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Ragdoll" source="Ragdoll">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ReadServer" source="Read server">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RealTimeInputGraphsLast120Frames" source="Real-Time Input Graphs (Last 120 Frames)">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Rebind" source="Rebind">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RebindThis" source="Rebind this">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Reconnect" source="Reconnect">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RedoCtrlY" source="Redo (Ctrl+Y)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RefreshFiles" source="Refresh files">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RefreshFilesAlt" source="Refresh Files">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RefreshOverrides" source="Refresh Overrides">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RefreshStats" source="Refresh stats">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Release" source="Release">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ReloadList" source="Reload list">
+			<origins>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RemoveAnimation" source="Remove Animation">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RemoveFrame" source="Remove Frame">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RemoveKey" source="Remove Key">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RenderDocCapture" source="RenderDoc Capture">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Replace" source="Replace">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ReplayServer" source="Replay server">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ResetAll" source="Reset All">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ResetDefault" source="Reset Default">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ResetStickToCenter" source="Reset Stick to Center">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ResetTab" source="Reset Tab">
+			<origins>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ResetView" source="Reset View">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Resize" source="Resize">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Restart" source="Restart">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RestorePreviousFile" source="Restore previous file">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Resume" source="Resume">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RevertAllOverrides" source="Revert All Overrides">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RevertAllToDefault" source="Revert All to Default">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RevertNow" source="Revert Now">
+			<origins>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RevertToPrefab" source="Revert to Prefab">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RunAll" source="Run All">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RunScenario" source="Run Scenario">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RunSelected" source="Run Selected">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.RunSelectedCases" source="Run Selected Cases">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Running" source="Running...">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SaveFile" source="Save File">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SaveLocalization" source="Save Localization">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SavePrefabExitIsolation" source="Save Prefab &amp; Exit Isolation">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SavePreset" source="Save preset">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SaveReplay" source="Save Replay">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SaveSession" source="Save Session">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SaveToRig" source="Save to rig">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SaveTrace" source="Save Trace">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SavedPresets" source="Saved Presets:">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ScanResources" source="Scan Resources">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SceneHasUnsavedChangesPlayAnyway" source="Scene has unsaved changes. Play anyway?">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SelectAll" source="Select All">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Selection" source="Selection">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.SessionServer" source="Session server">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Set" source="Set">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ShowInExplorer" source="Show in Explorer">
+			<origins>
+				<item>Source/Editor/Common/GUI/Status/EditorNotificationView.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Spawn" source="Spawn">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Spike" source="Spike">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Step" source="Step">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.StopPreview" source="Stop Preview">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Tags" source="Tags:">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.TapKeyDownUp" source="Tap Key (Down + Up)">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Target" source="Target">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.TestPulse03s" source="Test Pulse (0.3s)">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Text" source="Text">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.TheReferenceIndexIsStillBuilding" source="The reference index is still building.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ThisMeshHasOneLevelSetLODRatios"
+		       source="This mesh has one level - set LOD ratios in the import rule and import again.">
+			<origins>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Time" source="Time">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.TracyNotInThisBuild" source="Tracy: not in this build">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.TracyOff" source="Tracy: off">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.TransformAnimationKeysOptional" source="TransformAnimation Keys (optional)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.True" source="True">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.UnbindOther" source="Unbind other">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.UndoCtrlZ" source="Undo (Ctrl+Z)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Unlink" source="Unlink">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Unload" source="Unload">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Unparent" source="Unparent">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.UnsupportedFUNCTIONArgsInvokeSkipped" source="Unsupported FUNCTION args - invoke skipped.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.UpSend" source="Up (send)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Use" source="Use">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Validate" source="Validate">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.Value" source="Value">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.VirtualInputInjectorGameplayMacroSimulator"
+		       source="Virtual Input Injector &amp; Gameplay Macro Simulator">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.VisibleHUDElements" source="Visible HUD Elements:">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.WhichObjectsDiffer" source="Which objects differ">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.XMLDataFiles" source="XML Data Files">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.ZoomFit" source="Zoom Fit">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdVerb.Apply" source="Apply">
 			<origins>
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>

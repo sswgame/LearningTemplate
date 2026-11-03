@@ -39,8 +39,8 @@ namespace sw::editor
         if ( _model.hasChangedSinceStart() )
         {
             EditorThemeUtil::textWarning( SW_LOCKEY( "EditorSettings", "ModuleSetChanged" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Build" ) );
-            if ( ImGui::SmallButton( "Build" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Build" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Build" ) ) )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 (void)editorContext.getSubsystem<EditorCommandRegistry>().execute( "build.compileAll", EditorCommandTarget::none() ); // 막혀 있으면 빌드 상태 표시가 알린다
@@ -103,7 +103,7 @@ namespace sw::editor
                 ImGui::TextDisabled( "%s", manifest._version.toString().c_str() );
                 ImGui::TableSetColumnIndex( 3 );
                 if ( bActive )
-                    ImGui::TextUnformatted( "On" );
+                    ImGui::TextUnformatted( SW_LOCKEY( "EdText", "On" ) );
                 else
                     ImGui::TextDisabled( "Off - %s", _model.findInactiveReason( manifest._name ).c_str() );
                 ImGui::PopID();

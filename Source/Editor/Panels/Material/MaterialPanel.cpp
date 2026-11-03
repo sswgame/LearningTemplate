@@ -299,8 +299,8 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "SaveTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Apply to Selection" ) );
-        if ( ImGui::Button( "Apply to Selection" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ApplyToSelection" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplyToSelection" ) ) )
             applyLivePreview();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ApplyToSelectionTip" ) );
         drawPreview();
@@ -332,7 +332,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ShaderTip" ) );
 
         ImGui::Separator();
-        ImGui::TextUnformatted( "Properties" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Properties" ) );
         Material&                       material = _model.editMaterial();
         const vector<MaterialProperty>& listProp = material.getProperties();
         for ( uint32 propIndex = 0; propIndex < static_cast<uint32>( listProp.size() ); ++propIndex )

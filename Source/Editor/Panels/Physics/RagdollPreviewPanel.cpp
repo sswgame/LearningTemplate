@@ -163,10 +163,10 @@ namespace sw::editor
         EditorSelfTestMarks::note( "ragdoll.reload" );
         EditorWidgets::drawTooltip( "Read the physics asset file again (after saving it elsewhere) and place the body anew" );
 
-        ImGui::TextUnformatted( "Body prefab (skeletal mesh on its root)" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "BodyPrefabSkeletalMeshOnItsRoot" ) );
         (void)EditorWidgets::drawTextField( "##ragdollPreview.body", _model.editBodyPrefabPath(), -1.0f );
         EditorSelfTestMarks::note( "ragdoll.bodyField" );
-        if ( ImGui::Button( "Spawn" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Spawn" ) ) )
             _model.spawnFromField();
         EditorSelfTestMarks::note( "ragdoll.spawn" );
         EditorWidgets::drawTooltip( "Place the body in the preview scene and hang the physics asset on it as a hitbox ragdoll" );
@@ -176,23 +176,23 @@ namespace sw::editor
         RagdollComponent* pRagdoll = _model.findRagdoll( getPreviewScene() );
         if ( pRagdoll != nullptr )
         {
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Ragdoll" ) );
-            if ( ImGui::Button( "Ragdoll" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Ragdoll" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Ragdoll" ) ) )
                 pRagdoll->startRagdoll( float3{}, -1 );
             EditorSelfTestMarks::note( "ragdoll.drop" );
             EditorWidgets::drawTooltip( "Turn every body dynamic - the body falls and settles by gravity" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Impulse" ) );
-            if ( ImGui::Button( "Impulse" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Impulse" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Impulse" ) ) )
                 _model.applyImpulse( *pRagdoll );
             EditorSelfTestMarks::note( "ragdoll.impulse" );
             EditorWidgets::drawTooltip( "Go ragdoll and push the picked body (the table row; the first body when none) with the impulse below" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Partial" ) );
-            if ( ImGui::Button( "Partial" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Partial" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Partial" ) ) )
                 pRagdoll->startPartialRagdoll( 1.0f );
             EditorSelfTestMarks::note( "ragdoll.partial" );
             EditorWidgets::drawTooltip( "Only the bodies under the ragdoll's Partial Root Bone go limp (the prefab's RagdollComponent names that bone)" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Release" ) );
-            if ( ImGui::Button( "Release" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Release" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Release" ) ) )
                 pRagdoll->stopPartialRagdoll();
             EditorSelfTestMarks::note( "ragdoll.release" );
             EditorWidgets::drawTooltip( "End the partial ragdoll and blend back to the animation pose" );
@@ -209,7 +209,7 @@ namespace sw::editor
         }
         else
         {
-            ImGui::TextDisabled( "No body yet - enter a prefab path and press Spawn" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoBodyYetEnterAPrefabPathAnd" ) );
         }
 
         (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Skeleton" ), &_model.editDrawSkeleton() );

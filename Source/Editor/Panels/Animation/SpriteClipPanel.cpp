@@ -82,14 +82,14 @@ namespace sw::editor
     void SpriteClipPanel::drawFrameSection()
     {
         ImGui::Separator();
-        ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );
-        if ( ImGui::Button( "Add Frame" ) )
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "FramesUVWHDurationMs" ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "AddFrame" ) ) )
         {
             _model.addFrame();
             notifyDocumentEdited( "Add Sprite Frame" );
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove Frame" ) );
-        if ( ImGui::Button( "Remove Frame" ) && _model.removeSelectedFrame() )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RemoveFrame" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveFrame" ) ) && _model.removeSelectedFrame() )
             notifyDocumentEdited( "Remove Sprite Frame" );
 
         const int32 frameCount = static_cast<int32>( _model.getFrames().size() );
@@ -120,14 +120,14 @@ namespace sw::editor
     void SpriteClipPanel::drawKeySection()
     {
         ImGui::Separator();
-        ImGui::TextUnformatted( "TransformAnimation Keys (optional)" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "TransformAnimationKeysOptional" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) )
         {
             _model.addKey();
             notifyDocumentEdited( "Add Sprite Key" );
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove Key" ) );
-        if ( ImGui::Button( "Remove Key" ) && _model.removeSelectedKey() )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RemoveKey" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveKey" ) ) && _model.removeSelectedKey() )
             notifyDocumentEdited( "Remove Sprite Key" );
 
         const int32 keyCount = static_cast<int32>( _model.getKeys().size() );
@@ -165,7 +165,7 @@ namespace sw::editor
     void SpriteClipPanel::drawAtlasPicker()
     {
         ImGui::Separator();
-        ImGui::TextUnformatted( "Atlas cells (click: selected frame, Shift+click: new frame)" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AtlasCellsClickSelectedFrameShiftClickNew" ) );
         EditorWidgets::drawPropertyRowLabel( "Columns" );
         ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
         ImGui::InputInt( "##Columns", &_model.editSliceColumns() );
@@ -231,14 +231,14 @@ namespace sw::editor
     void SpriteClipPanel::drawAnimationSection()
     {
         ImGui::Separator();
-        ImGui::TextUnformatted( "Animations (name, first frame, frame count, loop) - none means the whole clip is one loop" );
-        if ( ImGui::Button( "Add Animation" ) )
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AnimationsNameFirstFrameFrameCountLoopNone" ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "AddAnimation" ) ) )
         {
             _model.addAnimation();
             notifyDocumentEdited( "Add Sprite Animation" );
         }
         ImGui::SameLine();
-        if ( ImGui::Button( "Remove Animation" ) && _model.removeSelectedAnimation() )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveAnimation" ) ) && _model.removeSelectedAnimation() )
             notifyDocumentEdited( "Remove Sprite Animation" );
 
         const vector<SpriteClipAnimation>& listAnimation  = _model.getAnimations();

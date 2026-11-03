@@ -112,8 +112,8 @@ namespace sw::editor
         EditorSelfTestMarks::note( "vfx.reload" );
         EditorWidgets::drawTooltip( "Read the effect file again (after saving it in the Catalog Editor)" );
         VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Restart" ) );
-        if ( ImGui::Button( "Restart" ) && pSubject != nullptr )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) && pSubject != nullptr )
             pSubject->play();
         EditorSelfTestMarks::note( "vfx.restart" );
         EditorWidgets::drawTooltip( "Play the effect again from the start" );

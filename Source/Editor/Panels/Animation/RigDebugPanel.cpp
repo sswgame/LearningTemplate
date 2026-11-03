@@ -433,9 +433,9 @@ namespace sw::editor
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "BoneMarkers" ), &bDrawMarkers ) )
             _bDrawMarkers = bDrawMarkers ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRigDebug", "BoneMarkersTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save to rig" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveToRig" ) ) );
         ImGui::BeginDisabled( pModifier->getRigPath().empty() );
-        if ( ImGui::Button( "Save to rig" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveToRig" ) ) )
             _status = RigDebugPanelInternal::saveNodeSettings( *pModifier );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "rigdebug.save" );

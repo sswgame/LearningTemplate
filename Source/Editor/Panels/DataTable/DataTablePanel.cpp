@@ -132,9 +132,9 @@ namespace sw::editor
             }
             EditorChrome::sameLineIfFits( 240.0f ); // 검색 칸 폭(아래 인자와 같다)
             EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCKEY( "EditorDataTable", "SearchHint" ), 240.0f, false );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Localization" ) );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveLocalization" ) ) );
 
-            if ( ImGui::Button( "Save Localization" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveLocalization" ) ) )
                 _model.saveLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveLocalizationTip" ) );
 
@@ -292,7 +292,7 @@ namespace sw::editor
         }
 
         ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureCount ) );
-        if ( ImGui::SmallButton( "Del" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Del" ) ) )
             bDeleteRequested = true;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "DeleteKeyTip" ) );
 
@@ -303,9 +303,9 @@ namespace sw::editor
     void DataTablePanel::drawGameDataTab()
     {
         ImGui::BeginGroup();
-        ImGui::Text( "XML Data Files" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "XMLDataFiles" ) );
         ImGui::Separator();
-        if ( ImGui::Button( "Refresh Files" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RefreshFilesAlt" ) ) )
             _model.reloadGameDataFiles();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RefreshFilesTip" ) );
 
@@ -341,8 +341,8 @@ namespace sw::editor
         if ( pEntry != nullptr )
         {
             ImGui::Text( "File: %s", pEntry->_fileName.c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save File" ) );
-            if ( ImGui::Button( "Save File" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveFile" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveFile" ) ) )
                 _model.saveSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveFileTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );

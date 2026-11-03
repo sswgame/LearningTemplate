@@ -339,7 +339,7 @@ namespace sw::editor
         if ( _listPage.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "NoSettingsFileWasLoadedFromConfigOr" ) );
-            if ( ImGui::Button( "Reload list" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ReloadList" ) ) )
                 _bCatalogLoaded = false;
             return;
         }

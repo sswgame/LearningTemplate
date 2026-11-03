@@ -509,11 +509,11 @@ namespace sw::editor
             if ( referrerCount > 0 )
                 ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", SW_EDITORICON( "Warning" ), referrerCount );
             else
-                ImGui::TextDisabled( "No text asset names it." );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoTextAssetNamesIt" ) );
         }
         else
         {
-            ImGui::TextDisabled( "The reference index is still building." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TheReferenceIndexIsStillBuilding" ) );
         }
         ImGui::Separator();
         const bool bConfirmed = ImGui::Button( SW_LOCKEY( "EdVerb", "Delete" ) );
@@ -810,7 +810,7 @@ namespace sw::editor
         const bool canImport = _model.canImport();
         if ( canImport == false )
             ImGui::BeginDisabled();
-        const bool importClicked = ImGui::Button( "Import..." );
+        const bool importClicked = ImGui::Button( SW_LOCKEY( "EdText", "Import" ) );
         if ( canImport == false )
         {
             ImGui::EndDisabled();

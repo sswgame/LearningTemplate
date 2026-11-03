@@ -112,7 +112,7 @@ namespace sw::editor
         _model.refreshEventNames( engine );
         const vector<hashed_string>& listEventName = _model.getEventNames();
 
-        ImGui::TextUnformatted( "Event" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Event" ) );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 27.0f );
         const utf8* pPreview = listEventName.empty() ? "(no event library loaded)" : listEventName[_model.getSelectedEvent()].c_str();
@@ -133,7 +133,7 @@ namespace sw::editor
         ImGui::EndDisabled();
 
         ImGui::SameLine();
-        ImGui::TextUnformatted( "Clip" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Clip" ) );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 32.0f );
         (void)EditorWidgets::drawAssetPathField( "##AudioMixerClip", _clipPath, "audio/sample.wav", ".wav,.ogg", "audiomixer.clipPath" );

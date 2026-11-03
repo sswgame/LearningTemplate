@@ -128,7 +128,7 @@ namespace sw::editor
                 const float32  width     = 110.0f * EditorThemeUtil::getDPIScale();
                 // 이름을 필드 앞에 둔다(ImGui 기본은 필드 뒤라 "0.000 Time 0.240 Value" 처럼 이름과 값이 어긋나 읽힌다).
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted( "Time" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Time" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
                 ImGui::InputFloat( "##time", &key._time, 0.0f, 0.0f, "%.3f" );
@@ -139,14 +139,14 @@ namespace sw::editor
                     bFinished = true;
                 }
                 ImGui::SameLine();
-                ImGui::TextUnformatted( "Value" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Value" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
                 ImGui::InputFloat( "##value", &key._value, 0.0f, 0.0f, "%.3f" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyValue" ) );
                 bFinished = bFinished || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
-                ImGui::TextUnformatted( "Interpolation" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Interpolation" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
                 const utf8* const arrName[] = { "Constant", "Linear", "Cubic" };

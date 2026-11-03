@@ -177,7 +177,7 @@ namespace sw::editor
 
     void InputMapPanel::drawMappingsTab()
     {
-        ImGui::TextUnformatted( "Input Map" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "InputMap" ) );
         ImGui::SameLine();
         (void)_document.editInputMapPath().drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "MapPathTip" ) );
@@ -190,8 +190,8 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All to Default" ) );
-        if ( ImGui::Button( "Revert All to Default" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RevertAllToDefault" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RevertAllToDefault" ) ) )
         {
             _document.editInputMap().resetAllBindingsToDefault();
             markDocumentDirty();
@@ -313,9 +313,9 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", inputMap.findBindingLayer( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) );
         drawTriggerCombo( action, bindIndex );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Rebind" ) ) );
         ImGui::BeginDisabled( bRebindable == false );
-        if ( ImGui::SmallButton( "Rebind" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Rebind" ) ) )
             _document.beginKeyCapture( bindIndex );
         ImGui::EndDisabled();
         if ( bRebindable == false )
@@ -414,12 +414,12 @@ namespace sw::editor
             formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputGlyphResolver::makeSlotGlyph( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
                           other.c_str(), conflict._layer.c_str() );
             EditorThemeUtil::textError( conflictText.c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind this" ) );
-            if ( ImGui::SmallButton( "Rebind this" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RebindThis" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RebindThis" ) ) )
                 _document.beginKeyCapture( bIsA ? conflict._bindIndexA : conflict._bindIndexB );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindThisTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unbind other" ) );
-            if ( ImGui::SmallButton( "Unbind other" ) && _document.editInputMap().rebindKey( other, Key::Unknown, otherIndex ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "UnbindOther" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "UnbindOther" ) ) && _document.editInputMap().rebindKey( other, Key::Unknown, otherIndex ) )
                 markDocumentDirty();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "UnbindOtherTip" ) );
             ImGui::PopID();
@@ -501,7 +501,7 @@ namespace sw::editor
                     else if ( bEnabled )
                         ImGui::Text( "Active" );
                     else
-                        ImGui::TextDisabled( "Disabled" );
+                        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Disabled" ) );
                 }
                 ImGui::EndTable();
             }
@@ -522,8 +522,8 @@ namespace sw::editor
             ImGui::Combo( "##Type", &_newActionValueType, arrTypes, 3 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Create Action" ) );
-            if ( ImGui::Button( "Create Action" ) && _document.createAction( _newActionName, _newActionValueType ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "CreateAction" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "CreateAction" ) ) && _document.createAction( _newActionName, _newActionValueType ) )
             {
                 _newActionName = "";
                 markDocumentDirty();
@@ -597,7 +597,7 @@ namespace sw::editor
         const InputGlyphStyle devType   = input.getActiveGlyphStyle();
         const utf8*           pTypeName = InputMapPanelInternal::glyphStyleName( devType );
 
-        ImGui::Text( "Active Device:" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "ActiveDevice" ) );
 
         ImGui::SameLine();
         EditorThemeUtil::textSuccess( pTypeName );
@@ -617,7 +617,7 @@ namespace sw::editor
         // 2) 키보드 실시간 모니터
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "KeyboardStatus" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            ImGui::Text( "Held Keys:" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "HeldKeys" ) );
             ImGui::SameLine();
             bool bAnyKey = false;
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
@@ -637,7 +637,7 @@ namespace sw::editor
                 }
             }
             if ( bAnyKey == false )
-                ImGui::TextDisabled( "None" );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "None" ) );
         }
     }
 
@@ -669,7 +669,7 @@ namespace sw::editor
 
             ImGui::Text( "Wheel: %.2f", static_cast<float64>( input.getMouseWheel() ) );
             ImGui::SameLine( 200.0f );
-            ImGui::Text( "Buttons:" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Buttons" ) );
             ImGui::SameLine();
             ImGui::TextColored( EditorColorUtil::toImVec4( input.isMouseButtonDown( MouseButton::Left ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[L]" );
             ImGui::SameLine();
@@ -713,7 +713,7 @@ namespace sw::editor
                 ImGui::EndGroup();
 
                 ImGui::Separator();
-                ImGui::Text( "Haptic Vibration Test:" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdText", "HapticVibrationTest" ) );
                 EditorWidgets::drawInlineLabel( "Left Motor" );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 ImGui::SliderFloat( "##LeftMotor", &_testVibLeft, 0.0f, 1.0f );
@@ -723,8 +723,8 @@ namespace sw::editor
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 ImGui::SliderFloat( "##RightMotor", &_testVibRight, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Test Pulse (0.3s)" ) );
-                if ( ImGui::Button( "Test Pulse (0.3s)" ) )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "TestPulse03s" ) ) );
+                if ( ImGui::Button( SW_LOCKEY( "EdText", "TestPulse03s" ) ) )
                     pGamepad->playVibration( _testVibLeft, _testVibRight, 0.3f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TestPulseTip" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
@@ -762,7 +762,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputGraphTab()
     {
-        ImGui::Text( "Real-Time Input Graphs (Last 120 Frames)" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "RealTimeInputGraphsLast120Frames" ) );
         ImGui::SameLine( 450.0f );
         bool bPaused = _document.isPlotPaused();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "PauseGraph" ), &bPaused ) )
@@ -774,17 +774,17 @@ namespace sw::editor
         const InputMapPlotSamples& plot        = _document.getPlotSamples();
         const int32                sampleCount = static_cast<int32>( InputMapPlotSamples::kSampleCount );
         const int32                plotOffset  = static_cast<int32>( plot._offset );
-        ImGui::Text( "Gamepad Left Stick (X/Y):" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GamepadLeftStickXY" ) );
         ImGui::PlotLines( "Stick X", plot._arrLeftStickX, sampleCount, plotOffset, "X [-1.0 ~ +1.0]", -1.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.5f ) ) );
         ImGui::PlotLines( "Stick Y", plot._arrLeftStickY, sampleCount, plotOffset, "Y [-1.0 ~ +1.0]", -1.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.5f ) ) );
 
         ImGui::Separator();
-        ImGui::Text( "Analog Triggers (LT/RT):" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AnalogTriggersLTRT" ) );
         ImGui::PlotLines( "LT", plot._arrTriggerL, sampleCount, plotOffset, "Left [0.0 ~ 1.0]", 0.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
         ImGui::PlotLines( "RT", plot._arrTriggerR, sampleCount, plotOffset, "Right [0.0 ~ 1.0]", 0.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
 
         ImGui::Separator();
-        ImGui::Text( "Mouse Delta Speed (dX/dY):" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "MouseDeltaSpeedDXDY" ) );
         ImGui::PlotLines( "dX", plot._arrMouseDeltaX, sampleCount, plotOffset, "Delta X", -100.0f, 100.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
         ImGui::PlotLines( "dY", plot._arrMouseDeltaY, sampleCount, plotOffset, "Delta Y", -100.0f, 100.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
     }
@@ -793,7 +793,7 @@ namespace sw::editor
     {
         InputManager& input = editor::getSubsystem<InputManager>();
 
-        ImGui::Text( "Virtual Input Injector & Gameplay Macro Simulator" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "VirtualInputInjectorGameplayMacroSimulator" ) );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "InjectorHint" ) );
         ImGui::Separator();
 
@@ -804,16 +804,16 @@ namespace sw::editor
         EditorWidgets::drawInlineLabel( "Key" );
         EditorChrome::setNextItemWidthColumns( 20.0f );
         ImGui::Combo( "##Key", &_simKeyToInject, arrCommonKeys, 11 );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Inject KeyDown" ) );
-        if ( ImGui::Button( "Inject KeyDown" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "InjectKeyDown" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectKeyDown" ) ) )
             input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyDownTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Inject KeyUp" ) );
-        if ( ImGui::Button( "Inject KeyUp" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "InjectKeyUp" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectKeyUp" ) ) )
             input.postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyUpTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Tap Key (Down + Up)" ) );
-        if ( ImGui::Button( "Tap Key (Down + Up)" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "TapKeyDownUp" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "TapKeyDownUp" ) ) )
         {
             input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
             input.postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
@@ -828,7 +828,7 @@ namespace sw::editor
         EditorWidgets::drawPropertyRowLabel( "Sim Stick Y" );
         ImGui::SliderFloat( "##SimStickY", &_simStick._y, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickYTip" ) );
-        if ( ImGui::Button( "Inject Stick Tilt" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectStickTilt" ) ) )
         {
             GamepadDevice* pGamepad = input.getGamepad( 0 );
             if ( pGamepad != nullptr )
@@ -838,8 +838,8 @@ namespace sw::editor
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectStickTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset Stick to Center" ) );
-        if ( ImGui::Button( "Reset Stick to Center" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetStickToCenter" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetStickToCenter" ) ) )
         {
             _simStick._x            = 0.0f;
             _simStick._y            = 0.0f;
@@ -857,20 +857,20 @@ namespace sw::editor
     {
         InputManager& input = editor::getSubsystem<InputManager>();
 
-        ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "InputReplayRecorderDeterministicQAPlayback" ) );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "ReplayHint" ) );
         ImGui::Separator();
 
         (void)_document.editReplayFilePath().drawField( "##ReplayFile", 260.0f ); // 확정한 경로만 Save · Load 가 쓴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReplayFileTip" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Replay" ) );
-        if ( ImGui::Button( "Save Replay" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveReplay" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveReplay" ) ) )
             _document.saveReplay();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveReplayTip" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load Replay" ) );
-        if ( ImGui::Button( "Load Replay" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "LoadReplay" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "LoadReplay" ) ) )
             _document.loadReplay( input );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LoadReplayTip" ) );
 
@@ -956,7 +956,7 @@ namespace sw::editor
 
     void InputMapPanel::drawViewportOverlayTab()
     {
-        ImGui::Text( "Game Viewport On-Screen Controller Overlay HUD Settings" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GameViewportOnScreenControllerOverlayHUDSettings" ) );
         ImGui::Separator();
 
         ViewportInputOverlayConfig& config = editor::getSubsystem<ViewportInputOverlaySettings>()._config;
@@ -983,7 +983,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayScaleTip" ) );
 
         ImGui::Separator();
-        ImGui::Text( "Visible HUD Elements:" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "VisibleHUDElements" ) );
 
         bool bStick = ( config._bShowStick == SW_TRUE );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Show2DStickTriggerGauges" ), &bStick ) )

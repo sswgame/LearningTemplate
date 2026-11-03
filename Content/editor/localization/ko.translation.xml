@@ -507,6 +507,261 @@
 		<entry key="EdSection.Transitions" text="전이" sourceHash="5798e7f4322a6963" />
 		<entry key="EdSection.UnitTests" text="단위 테스트" sourceHash="02fb39ac5c0f71e2" />
 		<entry key="EdSection.ViewportHUD" text="뷰포트 HUD" sourceHash="f3d8a3defa991eb2" />
+		<entry key="EdText.AccentSwatches" text="강조색 견본:" sourceHash="9428798bb0025f2d" />
+		<entry key="EdText.Accept" text="확인" sourceHash="13be1af9766661e9" />
+		<entry key="EdText.ActiveDevice" text="활성 장치:" sourceHash="53bafb9a72e7bfd3" />
+		<entry key="EdText.Add" text="추가" sourceHash="f9aee319a006c9b4" />
+		<entry key="EdText.AddAnimation" text="애니메이션 추가" sourceHash="58eea816fbc7cb3a" />
+		<entry key="EdText.AddAttack" text="공격 추가" sourceHash="6f6757e3a0180e58" />
+		<entry key="EdText.AddBone" text="뼈 추가" sourceHash="cb0b8df395245442" />
+		<entry key="EdText.AddDataLayer" text="데이터 레이어 추가" sourceHash="ad1e64e3733b0109" />
+		<entry key="EdText.AddFrame" text="프레임 추가" sourceHash="29aae50507096619" />
+		<entry key="EdText.AddIdle" text="대기 추가" sourceHash="874810ab0501e426" />
+		<entry key="EdText.AddKey" text="키 추가" sourceHash="676b2cc62503e0ab" />
+		<entry key="EdText.AddLayer" text="레이어 추가" sourceHash="7506cbf167fb15b9" />
+		<entry key="EdText.AddMask" text="마스크 추가" sourceHash="cca6bd8746eca46c" />
+		<entry key="EdText.AddRow" text="줄 추가" sourceHash="17c2c9c5f76a3cf8" />
+		<entry key="EdText.AddWalk" text="걷기 추가" sourceHash="61795957b59fc42d" />
+		<entry key="EdText.Advance" text="진행" sourceHash="4e03fb68e290ec5d" />
+		<entry key="EdText.AdvancePreview" text="미리보기 진행" sourceHash="bd8a8c367d663f91" />
+		<entry key="EdText.AlwaysLoaded" text="늘 로드됨" sourceHash="bb378df24d84c1d1" />
+		<entry key="EdText.AnalogTriggersLTRT" text="아날로그 트리거(LT/RT):" sourceHash="3483fa21df81d9be" />
+		<entry key="EdText.AnimationsNameFirstFrameFrameCountLoopNone"
+		       text="애니메이션(이름 · 첫 프레임 · 프레임 수 · 반복) — 없으면 클립 전체가 한 반복이다"
+		       sourceHash="da6d72b48a871f74" />
+		<entry key="EdText.ApplyAllOverridesToTemplate"
+		       text="덮어쓴 값을 모두 원본에 적용"
+		       sourceHash="0ac9a68b36d0ec2c" />
+		<entry key="EdText.ApplySize" text="크기 적용" sourceHash="dff204c036ea5130" />
+		<entry key="EdText.ApplyToOuterPrefab" text="바깥 프리팹에 적용" sourceHash="b8461f190701f9e7" />
+		<entry key="EdText.ApplyToPrefab" text="프리팹에 적용" sourceHash="fce34cf9d99f3b12" />
+		<entry key="EdText.ApplyToSelection" text="선택에 적용" sourceHash="7402aca38b40826e" />
+		<entry key="EdText.AtlasCellsClickSelectedFrameShiftClickNew"
+		       text="아틀라스 칸(누르면 고른 프레임, Shift+누르면 새 프레임)"
+		       sourceHash="e78160df3922bd38" />
+		<entry key="EdText.Attach" text="붙기" sourceHash="41431c2bbdc5f824" />
+		<entry key="EdText.Blend" text="섞기" sourceHash="81ab5d0d57edf2d8" />
+		<entry key="EdText.BodyPrefabSkeletalAnimatorOnItsRoot"
+		       text="몸 프리팹(뿌리에 스켈레탈 애니메이터)"
+		       sourceHash="55ba2fb2f3477df1" />
+		<entry key="EdText.BodyPrefabSkeletalMeshOnItsRoot"
+		       text="몸 프리팹(뿌리에 스켈레탈 메시)"
+		       sourceHash="30a1324cdf2e17f9" />
+		<entry key="EdText.Broadcast" text="방송" sourceHash="7e0a0ba5f894e9b4" />
+		<entry key="EdText.Build" text="빌드" sourceHash="3fe3ff490adaaa63" />
+		<entry key="EdText.Buttons" text="단추:" sourceHash="340c12fdc345c834" />
+		<entry key="EdText.CameraBookmarksCtrl19" text="카메라 책갈피(Ctrl+1~9)" sourceHash="8ead3b82c32f4a7e" />
+		<entry key="EdText.CinematicNote" text="시네마틱 메모" sourceHash="e8a6302e6e1b8956" />
+		<entry key="EdText.ClearAll" text="모두 지우기" sourceHash="76d1628d0e8b9245" />
+		<entry key="EdText.Clip" text="클립" sourceHash="3e092e9d1ee2c5bb" />
+		<entry key="EdText.Close" text="닫기" sourceHash="5e8250fb85d64c23" />
+		<entry key="EdText.ColorPaletteCustomization" text="색 팔레트 맞춤" sourceHash="4f611d3f03ba24d6" />
+		<entry key="EdText.Compare" text="비교" sourceHash="7c54f95c59141594" />
+		<entry key="EdText.Connect" text="연결" sourceHash="7a4f059aaa029719" />
+		<entry key="EdText.CreateAction" text="액션 만들기" sourceHash="3000fa4bc98cb4dd" />
+		<entry key="EdText.Curves" text="커브" sourceHash="1ed69c4ea2882825" />
+		<entry key="EdText.DataLayers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
+		<entry key="EdText.Del" text="삭제" sourceHash="e0a34419921b022a" />
+		<entry key="EdText.DeletePreset" text="프리셋 삭제" sourceHash="63a54251e7d0bd8d" />
+		<entry key="EdText.DeleteTrack" text="트랙 삭제" sourceHash="127011f9f0a25ded" />
+		<entry key="EdText.DetailedCallStackTrackingIsDisabled"
+		       text="자세한 호출 스택 추적이 꺼져 있습니다."
+		       sourceHash="30e17507a0e19ab4" />
+		<entry key="EdText.Disabled" text="꺼짐" sourceHash="66722bc2ea775e05" />
+		<entry key="EdText.Disconnect" text="연결 끊기" sourceHash="d2208cd1a767644b" />
+		<entry key="EdText.DonTSave" text="저장 안 함" sourceHash="068eeb44128dc402" />
+		<entry key="EdText.DownReceive" text="내려받기(받음)" sourceHash="b960fb9c111de291" />
+		<entry key="EdText.EdgeWarpPresets" text="가장자리 이동 프리셋" sourceHash="1b16a4abd389f34a" />
+		<entry key="EdText.Edit" text="편집" sourceHash="64ef2a6c2dd1d3d1" />
+		<entry key="EdText.EditAKeySTimeValueAndInterpolation"
+		       text="키의 시간 · 값 · 보간을 그 자리에서 고칩니다. 색 미리보기에서 1 보다 큰 값은 1 로 자릅니다."
+		       sourceHash="ab605e0ee74c4173" />
+		<entry key="EdText.EditNestedElementsInTheRawTextView"
+		       text="중첩 원소는 원본 글 보기에서 고칩니다"
+		       sourceHash="28c35db58e69ee39" />
+		<entry key="EdText.EditsRevertOnStopPlayKeepSimulationChanges"
+		       text="정지하면 고친 것이 되돌아갑니다(Play > Keep Simulation Changes 는 선택을 남깁니다)."
+		       sourceHash="2f4f4f40f3b73646" />
+		<entry key="EdText.Event" text="이벤트" sourceHash="d0ea7366ebc403ff" />
+		<entry key="EdText.ExitIsolation" text="격리 나가기" sourceHash="e8739d86a278f825" />
+		<entry key="EdText.False" text="거짓" sourceHash="7254ca27b16ae2d8" />
+		<entry key="EdText.Fit" text="맞춤" sourceHash="f2a69a199c808e4c" />
+		<entry key="EdText.Frames" text="프레임:" sourceHash="2a9c5488aee787cf" />
+		<entry key="EdText.FramesUVWHDurationMs" text="프레임(u,v,w,h,durationMs)" sourceHash="b3252c487abe7652" />
+		<entry key="EdText.GameViewportOnScreenControllerOverlayHUDSettings"
+		       text="게임 뷰포트 화면 컨트롤러 HUD 설정"
+		       sourceHash="e14bcb1653ff9245" />
+		<entry key="EdText.GamepadLeftStickXY" text="게임패드 왼쪽 스틱(X/Y):" sourceHash="7eb98cbb5322f20c" />
+		<entry key="EdText.GeometryRounding" text="모양 · 둥글기" sourceHash="b2f6517621baf845" />
+		<entry key="EdText.GlobalVariablePresets" text="전역 변수 프리셋" sourceHash="9c5b0359b644c0b6" />
+		<entry key="EdText.HapticVibrationTest" text="진동 시험:" sourceHash="d356eac510268982" />
+		<entry key="EdText.HeldKeys" text="누른 키:" sourceHash="18a2f1991c417254" />
+		<entry key="EdText.Import" text="가져오기..." sourceHash="b6edf2b86255f94a" />
+		<entry key="EdText.Impulse" text="충격" sourceHash="7c74babe20065df4" />
+		<entry key="EdText.InjectKeyDown" text="키 누름 넣기" sourceHash="20f9bb68fd6f00c7" />
+		<entry key="EdText.InjectKeyUp" text="키 뗌 넣기" sourceHash="fac30e7628de309e" />
+		<entry key="EdText.InjectStickTilt" text="스틱 기울임 넣기" sourceHash="f05eb4987959a983" />
+		<entry key="EdText.InputMap" text="입력 맵" sourceHash="8d5e465851cbeddd" />
+		<entry key="EdText.InputReplayRecorderDeterministicQAPlayback"
+		       text="입력 재생 기록 · 결정적 QA 재생"
+		       sourceHash="6129bf7505e2c067" />
+		<entry key="EdText.Interpolation" text="보간" sourceHash="5786fb3ff1a9a67d" />
+		<entry key="EdText.Invoke" text="부르기" sourceHash="5df6a47198ad908d" />
+		<entry key="EdText.Keep" text="남기기" sourceHash="d60a7dde73859828" />
+		<entry key="EdText.LastMergedTrace" text="마지막으로 합친 추적:" sourceHash="8c71da9ea449ca8c" />
+		<entry key="EdText.Latest" text="최신" sourceHash="c966d49eebca4286" />
+		<entry key="EdText.LinkSelected" text="고른 것 잇기" sourceHash="ec63dd45521f132a" />
+		<entry key="EdText.LoadFile" text="파일 불러오기" sourceHash="dcdbc50f58ee9105" />
+		<entry key="EdText.LoadReplay" text="재생 불러오기" sourceHash="8339af744595c904" />
+		<entry key="EdText.LoadTrace" text="추적 불러오기" sourceHash="5573a0b9e47359e0" />
+		<entry key="EdText.MouseDeltaSpeedDXDY" text="마우스 이동 속도(dX/dY):" sourceHash="d853ce8c1dfc585a" />
+		<entry key="EdText.MultiObjectAlignment" text="여러 오브젝트 정렬" sourceHash="7b3766806c923a2b" />
+		<entry key="EdText.NetworkPresetsCouldNotBeReadSeeThe"
+		       text="네트워크 프리셋을 읽지 못했습니다 — 로그를 보세요"
+		       sourceHash="09bfa12b768ffddf" />
+		<entry key="EdText.NoBodyYetEnterAPrefabPathAnd"
+		       text="아직 몸이 없습니다 — 프리팹 경로를 적고 Spawn 을 누르세요"
+		       sourceHash="86d0a7df25ffd09e" />
+		<entry key="EdText.NoCurvesUnderThisRow"
+		       text="이 줄 아래에 커브가 없습니다"
+		       sourceHash="cea0011e1ee8058c" />
+		<entry key="EdText.NoDebugDrawYet" text="아직 디버그 그리기가 없습니다." sourceHash="c066f7c3d24b87cb" />
+		<entry key="EdText.NoDetailedCallStackDataAvailableOrAll"
+		       text="자세한 호출 스택 자료가 없거나 모두 풀렸습니다."
+		       sourceHash="c14f6356943855b7" />
+		<entry key="EdText.NoKeysYet" text="아직 키가 없습니다" sourceHash="38d17a5eb9997cd4" />
+		<entry key="EdText.NoLeakReportYet" text="아직 누수 보고가 없습니다." sourceHash="1f3bfd7b6d93ff27" />
+		<entry key="EdText.NoSavedPresets" text="저장한 프리셋이 없습니다." sourceHash="8c96c9a9fa0c00b5" />
+		<entry key="EdText.NoSeqFileFocused" text="선택한 .seq 파일이 없습니다" sourceHash="cc20f0013472a6be" />
+		<entry key="EdText.NoTestExeNextToThisBuildBuild"
+		       text="이 빌드 옆에 *Test.exe 가 없습니다(AllTests 대상을 지으세요)"
+		       sourceHash="58cc5cc7bbb26ac1" />
+		<entry key="EdText.NoTextAssetNamesIt"
+		       text="이 이름을 쓰는 글 에셋이 없습니다."
+		       sourceHash="d4bdce75259d6350" />
+		<entry key="EdText.None" text="없음" sourceHash="669b18c6d2d9c95b" />
+		<entry key="EdText.Notifies" text="알림:" sourceHash="439fccdacfa4da16" />
+		<entry key="EdText.On" text="켜짐" sourceHash="091d5807b5b33550" />
+		<entry key="EdText.Open" text="열기..." sourceHash="da2d76b976502a8d" />
+		<entry key="EdText.OpenInGameSettingsWindow" text="게임 안 설정 창 열기" sourceHash="4a6f4e1868309b2a" />
+		<entry key="EdText.OpenPrefabWindow" text="프리팹 창 열기" sourceHash="2135eac57763043f" />
+		<entry key="EdText.OpenSpriteClipTool" text="스프라이트 클립 도구 열기" sourceHash="8c784bce625ab07a" />
+		<entry key="EdText.OpenTracy" text="Tracy 열기" sourceHash="ec665846277d4274" />
+		<entry key="EdText.OpenUI" text="UI 열기" sourceHash="ea65e5b97f2fbac9" />
+		<entry key="EdText.OutsideTrackerUnknownNoPerProcessDriverUsage"
+		       text="추적 밖: 알 수 없음(프로세스별 드라이버 사용량 없음)"
+		       sourceHash="898b04b7338562cc" />
+		<entry key="EdText.Param" text="인자" sourceHash="cbd07b0e13d70332" />
+		<entry key="EdText.ParentRoot" text="부모: (뿌리)" sourceHash="dc83d34152907614" />
+		<entry key="EdText.Partial" text="일부" sourceHash="db590927fb6744da" />
+		<entry key="EdText.Pause" text="일시 정지" sourceHash="061cc20e3432dead" />
+		<entry key="EdText.PickAnObjectOnTheLeft"
+		       text="왼쪽에서 오브젝트를 고릅니다"
+		       sourceHash="b4f68bb907cd8f3d" />
+		<entry key="EdText.PlayPreview" text="미리보기 재생" sourceHash="f186cf4df2639173" />
+		<entry key="EdText.Preset" text="프리셋" sourceHash="57ce5bc9b2b4287e" />
+		<entry key="EdText.Presets" text="프리셋..." sourceHash="012b61a3d5403ed3" />
+		<entry key="EdText.Properties" text="프로퍼티" sourceHash="6b7d7afabc24ff1c" />
+		<entry key="EdText.Ragdoll" text="래그돌" sourceHash="fcbe98df5b4a65e8" />
+		<entry key="EdText.ReadServer" text="읽기 서버" sourceHash="7e8550216a90f914" />
+		<entry key="EdText.RealTimeInputGraphsLast120Frames"
+		       text="실시간 입력 그래프(최근 120 프레임)"
+		       sourceHash="174ef0663c6ba322" />
+		<entry key="EdText.Rebind" text="다시 묶기" sourceHash="a56c3ab7f3617dc7" />
+		<entry key="EdText.RebindThis" text="이것 다시 묶기" sourceHash="83afdae57ec180a1" />
+		<entry key="EdText.Reconnect" text="다시 연결" sourceHash="31853dc46cf19846" />
+		<entry key="EdText.RedoCtrlY" text="다시 실행(Ctrl+Y)" sourceHash="f48bf4bd1d09ac2b" />
+		<entry key="EdText.RefreshFiles" text="파일 새로 고침" sourceHash="4765ac524b5f107b" />
+		<entry key="EdText.RefreshFilesAlt" text="파일 새로 고침" sourceHash="03bf93b8ba9139db" />
+		<entry key="EdText.RefreshOverrides" text="덮어쓴 값 새로 고침" sourceHash="3f9bd9982018f835" />
+		<entry key="EdText.RefreshStats" text="통계 새로 고침" sourceHash="4721f7e619213777" />
+		<entry key="EdText.Release" text="놓기" sourceHash="1cdeecda0baf365e" />
+		<entry key="EdText.ReloadList" text="목록 다시 읽기" sourceHash="ed3cc4863564b78c" />
+		<entry key="EdText.RemoveAnimation" text="애니메이션 제거" sourceHash="1e4e908735b7b22f" />
+		<entry key="EdText.RemoveFrame" text="프레임 제거" sourceHash="46ee0cde145a9e4c" />
+		<entry key="EdText.RemoveKey" text="키 제거" sourceHash="3dbb3894501d679e" />
+		<entry key="EdText.RenderDocCapture" text="RenderDoc 캡처" sourceHash="1b19e0f7e711a50f" />
+		<entry key="EdText.Replace" text="바꾸기" sourceHash="2a8434b16dc214a3" />
+		<entry key="EdText.ReplayServer" text="재생 서버" sourceHash="519056b0f09b6ff1" />
+		<entry key="EdText.ResetAll" text="모두 초기화" sourceHash="76ddbbfef7ddb5d3" />
+		<entry key="EdText.ResetDefault" text="기본으로" sourceHash="803949d65e19191d" />
+		<entry key="EdText.ResetStickToCenter" text="스틱을 가운데로" sourceHash="2045b4ac5b76a4fe" />
+		<entry key="EdText.ResetTab" text="탭 초기화" sourceHash="1cfec4ff566638ff" />
+		<entry key="EdText.ResetView" text="보기 초기화" sourceHash="314d39f0a4252e91" />
+		<entry key="EdText.Resize" text="크기 바꾸기" sourceHash="a9df513a8df776c1" />
+		<entry key="EdText.Restart" text="다시 시작" sourceHash="14bec4678c4e60cc" />
+		<entry key="EdText.RestorePreviousFile" text="이전 파일 되살리기" sourceHash="a710bba6ed95be94" />
+		<entry key="EdText.Resume" text="이어 하기" sourceHash="89118d3a7be870ca" />
+		<entry key="EdText.RevertAllOverrides" text="덮어쓴 값 모두 되돌리기" sourceHash="26b52ac43afb0a39" />
+		<entry key="EdText.RevertAllToDefault" text="모두 기본으로 되돌리기" sourceHash="cea981d1f5796ffc" />
+		<entry key="EdText.RevertNow" text="지금 되돌리기" sourceHash="0433009d952e3cfb" />
+		<entry key="EdText.RevertToPrefab" text="프리팹으로 되돌리기" sourceHash="3f14dd213967a68a" />
+		<entry key="EdText.RunAll" text="모두 실행" sourceHash="22339f8a5b52278d" />
+		<entry key="EdText.RunScenario" text="시나리오 실행" sourceHash="71d1dcf94f3150d4" />
+		<entry key="EdText.RunSelected" text="고른 것 실행" sourceHash="a159d4bec8cb6527" />
+		<entry key="EdText.RunSelectedCases" text="고른 케이스 실행" sourceHash="035c2ad9ec909566" />
+		<entry key="EdText.Running" text="실행 중..." sourceHash="731c97d3d66eee42" />
+		<entry key="EdText.SaveFile" text="파일 저장" sourceHash="86410ff0d1b0f0ee" />
+		<entry key="EdText.SaveLocalization" text="현지화 저장" sourceHash="7afc8f9f0cc30729" />
+		<entry key="EdText.SavePrefabExitIsolation"
+		       text="프리팹 저장하고 격리 나가기"
+		       sourceHash="ed39492ef4ba3208" />
+		<entry key="EdText.SavePreset" text="프리셋 저장" sourceHash="a320cd59f04807e7" />
+		<entry key="EdText.SaveReplay" text="재생 저장" sourceHash="8490942302fbab97" />
+		<entry key="EdText.SaveSession" text="세션 저장" sourceHash="232cd56813b6ac84" />
+		<entry key="EdText.SaveToRig" text="리그에 저장" sourceHash="e49812ae1db8dbfb" />
+		<entry key="EdText.SaveTrace" text="추적 저장" sourceHash="8c000006c87b91f1" />
+		<entry key="EdText.SavedPresets" text="저장한 프리셋:" sourceHash="2e723ef595657cce" />
+		<entry key="EdText.ScanResources" text="리소스 훑기" sourceHash="d7b92af2a2447d3d" />
+		<entry key="EdText.SceneHasUnsavedChangesPlayAnyway"
+		       text="씬에 저장하지 않은 변경이 있습니다. 그래도 플레이할까요?"
+		       sourceHash="acb7f6b840766aee" />
+		<entry key="EdText.SelectAll" text="모두 고르기" sourceHash="baace8219b5f4612" />
+		<entry key="EdText.Selection" text="선택" sourceHash="0380652457f8ba15" />
+		<entry key="EdText.SessionServer" text="세션 서버" sourceHash="00771a77e9d2a4c2" />
+		<entry key="EdText.Set" text="정하기" sourceHash="9844a719fa9b1a83" />
+		<entry key="EdText.ShowInExplorer" text="탐색기에서 보기" sourceHash="7582a6273577e9c6" />
+		<entry key="EdText.Spawn" text="만들기" sourceHash="02e8def1242371f8" />
+		<entry key="EdText.Spike" text="튐" sourceHash="478441f14acdb4d5" />
+		<entry key="EdText.Step" text="한 걸음" sourceHash="d9994f251f1280cf" />
+		<entry key="EdText.StopPreview" text="미리보기 정지" sourceHash="1dc0b873e8b90ae9" />
+		<entry key="EdText.Tags" text="태그:" sourceHash="1a3ef8901494b3ee" />
+		<entry key="EdText.TapKeyDownUp" text="키 톡(누름 + 뗌)" sourceHash="1e4a71b46d2d4658" />
+		<entry key="EdText.Target" text="대상" sourceHash="ff5bb7742c2896c8" />
+		<entry key="EdText.TestPulse03s" text="시험 진동(0.3 초)" sourceHash="240ce3d281f45b63" />
+		<entry key="EdText.Text" text="글" sourceHash="2492f5fb1b05b45e" />
+		<entry key="EdText.TheReferenceIndexIsStillBuilding"
+		       text="참조 색인을 아직 짓는 중입니다."
+		       sourceHash="1328d9fee830527b" />
+		<entry key="EdText.ThisMeshHasOneLevelSetLODRatios"
+		       text="이 메시는 단계가 하나입니다 — 가져오기 규칙에 LOD 비율을 정하고 다시 가져오세요."
+		       sourceHash="703ef0b40c3ba1b5" />
+		<entry key="EdText.Time" text="시간" sourceHash="48e186fb300e5464" />
+		<entry key="EdText.TracyNotInThisBuild" text="Tracy: 이 빌드에 없음" sourceHash="25b689bf9fec4a44" />
+		<entry key="EdText.TracyOff" text="Tracy: 꺼짐" sourceHash="f2504577bd9d8ead" />
+		<entry key="EdText.TransformAnimationKeysOptional"
+		       text="TransformAnimation 키(선택)"
+		       sourceHash="7b403440dbf44374" />
+		<entry key="EdText.True" text="참" sourceHash="85ea99fb52be3385" />
+		<entry key="EdText.UnbindOther" text="다른 것 풀기" sourceHash="8aa5c1bd0cc47127" />
+		<entry key="EdText.UndoCtrlZ" text="실행 취소(Ctrl+Z)" sourceHash="d59b6c520b1c89d2" />
+		<entry key="EdText.Unlink" text="연결 풀기" sourceHash="4ea3cdbc80b3fc92" />
+		<entry key="EdText.Unload" text="내리기" sourceHash="5d3714bc882df1b2" />
+		<entry key="EdText.Unparent" text="부모 풀기" sourceHash="f2e7c9227ea7c462" />
+		<entry key="EdText.UnsupportedFUNCTIONArgsInvokeSkipped"
+		       text="지원하지 않는 FUNCTION 인자 — 부르기를 건너뜁니다."
+		       sourceHash="3ce6bd7d42158e88" />
+		<entry key="EdText.UpSend" text="올리기(보냄)" sourceHash="524c69bb88be662d" />
+		<entry key="EdText.Use" text="쓰기" sourceHash="625ad019db843f94" />
+		<entry key="EdText.Validate" text="검사" sourceHash="bad7d2734149470b" />
+		<entry key="EdText.Value" text="값" sourceHash="41f7dca46d3f1b4a" />
+		<entry key="EdText.VirtualInputInjectorGameplayMacroSimulator"
+		       text="가상 입력 주입 · 게임플레이 매크로 시험기"
+		       sourceHash="8ffb77728884875c" />
+		<entry key="EdText.VisibleHUDElements" text="보이는 HUD 요소:" sourceHash="7b9433454d3816e9" />
+		<entry key="EdText.WhichObjectsDiffer" text="어떤 오브젝트가 다른가" sourceHash="497c8a664fadff16" />
+		<entry key="EdText.XMLDataFiles" text="XML 데이터 파일" sourceHash="149c5ee534cb9379" />
+		<entry key="EdText.ZoomFit" text="맞춰 보기" sourceHash="645e13ce66f1f13d" />
 		<entry key="EdVerb.Apply" text="적용" sourceHash="b8f855b49234b81b" />
 		<entry key="EdVerb.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="EdVerb.Clear" text="지우기" sourceHash="b4f1dffbb6be6302" />

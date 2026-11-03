@@ -346,7 +346,7 @@ namespace sw::editor
                 }
                 if ( EditorWidgets::beginCenteredModal( kUnsavedPopupID ) == false )
                     return;
-                ImGui::TextUnformatted( "Scene has unsaved changes. Play anyway?" );
+                ImGui::TextUnformatted( SW_LOCKEY( "EdText", "SceneHasUnsavedChangesPlayAnyway" ) );
                 if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
                 {
                     startSession( getState()._pendingSession );

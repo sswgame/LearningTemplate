@@ -541,7 +541,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemePreset" ) );
 
             ImGui::Separator();
-            ImGui::TextDisabled( "Color Palette Customization" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "ColorPaletteCustomization" ) );
 
             // 2) 액센트 컬러 피커
             const Color& accent          = SW_THEMECOLOR( "Base", "Accent" );
@@ -552,7 +552,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentColor" ) );
 
             // 3) 빠른 액센트 팔레트 스와치(테마와 무관한 추천 색이다)
-            ImGui::Text( "Accent Swatches:" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AccentSwatches" ) );
             ImGui::SameLine();
             static constexpr Color kArrSwatch[] = {
                 {0.27f, 0.57f,  1.0f, 1.0f}, // Electric Blue
@@ -579,7 +579,7 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            ImGui::TextDisabled( "Geometry & Rounding" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "GeometryRounding" ) );
 
             // 4) 라운딩 슬라이더
             float32 windowRadius    = SW_THEMEMETRIC( "Radius", "Window" );

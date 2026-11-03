@@ -141,7 +141,7 @@ namespace sw::editor
 
         // 머리 글과 자물쇠를 한 줄에 두고 그 아래에 구분선 — drawSectionHeader 는 구분선까지 그려 자물쇠가 다음 줄로 밀렸다(uiaudit 00).
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted( "Selection" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Selection" ) );
         // 잠그면 선택이 바뀌어도 현재 오브젝트를 계속 보여 준다. 유니티 Inspector 의 자물쇠에 해당하며, 언리얼에서는 Details 창을 여러 개 여는 것과 같은 용도다.
         ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() );
         const bool bLocked = _lockedObjectID != 0;
@@ -200,7 +200,7 @@ namespace sw::editor
         {
             EditorWidgets::drawChip( "Play Mode", SW_THEMECOLOR( "Signal", "Warning" ) );
             ImGui::SameLine();
-            ImGui::TextDisabled( "Edits revert on Stop (Play > Keep Simulation Changes keeps the selection)." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditsRevertOnStopPlayKeepSimulationChanges" ) );
         }
 
         drawGameObjectHeader( pObj );
@@ -405,17 +405,17 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextDisabled( "%.*s", static_cast<int32>( prefabPath.size() ), prefabPath.data() );
 
-        if ( ImGui::Button( "Apply to Prefab" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplyToPrefab" ) ) )
             (void)EditorInspectorCommands::applyToPrefab( pObj, assetID ); // 실패는 프리팹 저장이 알린다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ApplyToPrefab" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert to Prefab" ) );
-        if ( ImGui::Button( "Revert to Prefab" ) && EditorInspectorCommands::revertToPrefab( pObj, prefabPath ) == false )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RevertToPrefab" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RevertToPrefab" ) ) && EditorInspectorCommands::revertToPrefab( pObj, prefabPath ) == false )
             SW_LOG_WARNING_ID( "InspectorPanel.RevertPrefabFailed", "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "RevertToPrefab" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unlink" ) );
-        if ( ImGui::Button( "Unlink" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Unlink" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Unlink" ) ) )
             (void)EditorInspectorCommands::unlinkPrefab( pObj ); // 거절 이유는 명령이 경고 로그로 남긴다. 부품이면 맨 바깥 인스턴스를 한 겹 푼다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "UnlinkPrefab" ) );
 
@@ -424,7 +424,7 @@ namespace sw::editor
         if ( pOuter != nullptr )
         {
             const string_view outerPath = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().findPrefabPath( pOuter );
-            if ( ImGui::Button( "Apply to Outer Prefab" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplyToOuterPrefab" ) ) )
                 (void)EditorInspectorCommands::applyToOuterPrefab( pObj ); // 실패는 프리팹 저장이 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ApplyToPrefab" ) );
             ImGui::SameLine();
@@ -561,7 +561,7 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "InspectorPanel.CouldNotApplyComponent", "Could not apply component preset '%#'", presetFile.c_str() );
         }
         if ( bFoundPresets == false )
-            ImGui::TextDisabled( "No saved presets." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoSavedPresets" ) );
     }
 
     void InspectorPanel::drawGameObjectHeader( GameObject* pObj )
@@ -595,19 +595,19 @@ namespace sw::editor
         if ( pParent != nullptr )
         {
             ImGui::Text( "Parent: %s", pParent->getName().c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unparent" ) );
-            if ( ImGui::SmallButton( "Unparent" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Unparent" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Unparent" ) ) )
                 InspectorObjectEdit::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()
                 { pObj->detachFromParent(); } );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "Unparent" ) );
         }
         else
-            ImGui::TextDisabled( "Parent: (root)" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "ParentRoot" ) );
 
         const vector<TagID>& listTag = pObj->getTags().getTags();
         if ( listTag.empty() == false )
         {
-            ImGui::TextUnformatted( "Tags:" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Tags" ) );
             for ( const TagID& tag : listTag )
             {
                 if ( StringUtil::isNullOrEmpty( tag._pString ) == false )

@@ -360,7 +360,7 @@ namespace sw::editor
             _bPresetTableFailed    = _presetTable.loadFromAsset( AssetID{ editor::getSubsystem<const EngineDefaultAssets>()._netEmulationPresets.get() } ) == false;
         }
         if ( _bPresetTableFailed )
-            ImGui::TextDisabled( "Network presets could not be read - see the log" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NetworkPresetsCouldNotBeReadSeeThe" ) );
         for ( const NetEmulationPresetDef& preset : _presetTable._listPreset )
         {
             if ( &preset != &_presetTable._listPreset.front() )
@@ -384,12 +384,12 @@ namespace sw::editor
         if ( ImGui::BeginTable( "##ConditionsLinks", 2, ImGuiTableFlags_SizingStretchSame ) )
         {
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted( "Up (send)" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "UpSend" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsUp" ) );
             if ( drawLinkSliders( "##Up", link._up ) )
                 sendToTargets( session, targetIndex, EditorNetConditionsUtil::makeLinkCommand( EditorNetLinkDirection::Up, link._up ) );
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted( "Down (receive)" );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdText", "DownReceive" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsDown" ) );
             if ( drawLinkSliders( "##Down", link._down ) )
                 sendToTargets( session, targetIndex, EditorNetConditionsUtil::makeLinkCommand( EditorNetLinkDirection::Down, link._down ) );
@@ -397,24 +397,24 @@ namespace sw::editor
         }
 
         ImGui::Separator();
-        if ( ImGui::Button( "Disconnect" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Disconnect" ) ) )
             sendToTargets( session, targetIndex, "net.disconnect" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsDisconnect" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reconnect" ) );
-        if ( ImGui::Button( "Reconnect" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Reconnect" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Reconnect" ) ) )
             sendToTargets( session, targetIndex, "net.reconnect" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsReconnect" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
         ImGui::InputFloat( "##SpikeSeconds", &_spikeSeconds, 0.0f, 0.0f, "%.1f s" );
         _spikeSeconds = MathUtil::max( 0.0f, _spikeSeconds );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Spike" ) );
-        if ( ImGui::Button( "Spike" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Spike" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Spike" ) ) )
             sendToTargets( session, targetIndex, EditorNetConditionsUtil::makeSpikeCommand( _spikeSeconds ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsSpike" ) );
 
         ImGui::Separator();
-        if ( ImGui::Button( "Refresh stats" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RefreshStats" ) ) )
             sendToTargets( session, targetIndex, MultiplayerConditionsTabInternal::kStatsCommand );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsRefreshStats" ) );
         ImGui::SameLine();

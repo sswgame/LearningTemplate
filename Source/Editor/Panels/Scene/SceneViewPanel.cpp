@@ -96,7 +96,7 @@ namespace sw::editor
         _listDebugCategory.clear();
         queue.collectCategories( _listDebugCategory );
         if ( _listDebugCategory.empty() )
-            ImGui::TextDisabled( "No debug draw yet." );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoDebugDrawYet" ) );
         for ( const hashed_string& category : _listDebugCategory )
         {
             bool bEnabled = queue.isCategoryEnabled( category );

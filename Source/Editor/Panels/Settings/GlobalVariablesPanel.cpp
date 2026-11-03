@@ -249,21 +249,21 @@ namespace sw::editor
             (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "GroupByModule" ), &_bGroupByModule );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "GroupByModule" ) );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset All" ) );
-            if ( ImGui::Button( "Reset All" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetAll" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetAll" ) ) )
             {
                 gvm.resetAllToDefault();
                 markSessionDirty();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllVariables" ) );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Session" ) );
-            if ( ImGui::Button( "Save Session" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveSession" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveSession" ) ) )
                 (void)trySaveDirtyDocument(); // 실패는 저장이 알리고 dirty 가 남는다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SaveSession" ) );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Presets..." ) );
-            if ( ImGui::Button( "Presets..." ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Presets" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "Presets" ) ) )
                 EditorInputGUI::openPopup( "##GvPresetsPopup" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "Presets" ) );
 
@@ -279,7 +279,7 @@ namespace sw::editor
         if ( ImGui::BeginPopup( "##GvPresetsPopup" ) == false )
             return;
 
-        ImGui::Text( "Global Variable Presets" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GlobalVariablePresets" ) );
         ImGui::Separator();
 
         ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
@@ -289,7 +289,7 @@ namespace sw::editor
             _presetNameBuf.clear();
 
         ImGui::Separator();
-        ImGui::TextDisabled( "Saved Presets:" );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "SavedPresets" ) );
 
         if ( _model.pollPresetFiles() )
         {

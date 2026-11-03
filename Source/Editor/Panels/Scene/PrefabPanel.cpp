@@ -62,17 +62,17 @@ namespace sw::editor
         if ( pWindow != nullptr )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Prefab Window: %s", string{ pWindow->getIsolation().getPrefabPath() }.c_str() );
-            if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "SavePrefabExitIsolation" ) ) )
                 (void)pWindow->exitIsolation( true ); // 실패는 창이 로그와 상태 줄로 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Exit Isolation" ) );
-            if ( ImGui::Button( "Exit Isolation" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ExitIsolation" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ExitIsolation" ) ) )
                 (void)pWindow->exitIsolation( false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ExitIsolation" ) );
         }
         else if ( prefabPath.empty() == false )
         {
-            if ( ImGui::Button( "Open Prefab Window" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "OpenPrefabWindow" ) ) )
                 (void)PrefabEditorPanel::openWindow( prefabPath ); // 창이 없거나 플레이 중이면 열리지 않는다 — 버튼이 아무 일도 하지 않을 뿐이다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "OpenPrefabIsolation" ) );
         }
@@ -92,12 +92,12 @@ namespace sw::editor
             ImGui::BeginDisabled();
         }
 
-        if ( ImGui::Button( "Apply All Overrides to Template" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplyAllOverridesToTemplate" ) ) )
             _model.applyAllToTemplate();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ApplyAllOverrides" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All Overrides" ) );
-        if ( ImGui::Button( "Revert All Overrides" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RevertAllOverrides" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RevertAllOverrides" ) ) )
             _model.revertAll();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RevertAllOverrides" ) );
 
@@ -114,8 +114,8 @@ namespace sw::editor
             {
                 ImGui::PushID( static_cast<int32>( prefabIndex ) );
                 ImGui::BulletText( "[Nested] %s", listNestedPrefab[prefabIndex].c_str() );
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Edit" ) );
-                if ( ImGui::SmallButton( "Edit" ) )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Edit" ) ) );
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Edit" ) ) )
                 {
                     // 창이 이 프리팹을 열고 있으면 그 안에서 중첩 부분만 보이게 하고, 아니면 중첩 프리팹을 창의 문서로 연다.
                     PrefabEditorPanel* pNestedWindow          = PrefabEditorPanel::findIsolatingWindow();
@@ -134,8 +134,8 @@ namespace sw::editor
 
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "ShowModifiedPropertiesOnly" ), &_model.editShowOnlyModified() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ShowModifiedOnly" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh Overrides" ) );
-        if ( ImGui::SmallButton( "Refresh Overrides" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RefreshOverrides" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RefreshOverrides" ) ) )
             _model.rescan();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RefreshOverrides" ) );
     }

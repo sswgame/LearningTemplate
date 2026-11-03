@@ -118,7 +118,7 @@ namespace sw::editor
             return; // 미리보기가 섰다면 격자는 쓸 수 있다 — 그 사이 설정을 고쳤다(오류는 로그에)
         const CameraComponent* pCamera = scene.getActiveGameCamera();
 
-        if ( ImGui::SmallButton( "Always loaded" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AlwaysLoaded" ) ) )
             StreamingCellsModel::selectObjects( preview._listAlwaysLoadedID );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorStreamingCells", "AlwaysLoadedTip" ) );
         ImGui::SameLine();

@@ -91,7 +91,7 @@ namespace sw::editor
         const string              selectedName = store.getSelectedPresetName(); // 사본 — 아래 호출이 고른 이름을 바꾼다
         ImGui::BeginDisabled( session.isRunning() );
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted( "Preset" );
+        ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Preset" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
         if ( ImGui::BeginCombo( "##NetPlayPreset", selectedName.empty() ? "(none)" : selectedName.c_str() ) )
@@ -115,13 +115,13 @@ namespace sw::editor
         ImGui::SameLine();
         const string saveName = _presetName.empty() ? selectedName : string( _presetName.c_str() );
         ImGui::BeginDisabled( saveName.empty() );
-        if ( ImGui::Button( "Save preset" ) && store.savePreset( saveName, session.getSettings() ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "SavePreset" ) ) && store.savePreset( saveName, session.getSettings() ) )
             _presetName.clear(); // 실패 이유는 저장소가 오류로 남겼다 — 이름은 다시 누를 수 있게 둔다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SavePreset" ) );
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete preset" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "DeletePreset" ) ) );
         ImGui::BeginDisabled( selectedName.empty() );
-        if ( ImGui::Button( "Delete preset" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "DeletePreset" ) ) )
             (void)store.removePreset( selectedName ); // 실패 이유는 저장소가 오류로 남긴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "DeletePreset" ) );
         ImGui::EndDisabled();
@@ -215,7 +215,7 @@ namespace sw::editor
         }
         if ( session.getMergedTracePath().empty() == false )
         {
-            ImGui::TextDisabled( "Last merged trace:" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "LastMergedTrace" ) );
             ImGui::SameLine();
             ImGui::TextUnformatted( session.getMergedTracePath().c_str() );
         }

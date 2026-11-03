@@ -60,7 +60,7 @@ namespace sw::editor
         pollShortcutCapture( inputActions );
 
         // 단추를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
-        if ( ImGui::Button( "Reset All" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetAll" ) ) )
             inputActions.resetAllShortcuts();
         EditorSelfTestMarks::note( "shortcuts.resetAll" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllShortcuts" ) );
@@ -106,7 +106,7 @@ namespace sw::editor
         if ( _conflictAction.empty() )
             return;
         EditorThemeUtil::textError( SW_LOCKEY( "EditorSettings", "ShortcutInUse" ) );
-        if ( ImGui::Button( "Replace" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "Replace" ) ) )
         {
             // 바꾸기: 받은 조합은 이 액션이, 이 액션의 옛 조합은 겹친 액션이 갖는다(언리얼 · 유니티의 바꾸기와 같다).
             if ( inputActions.swapShortcut( _captureAction, _conflictAction, _pendingKey, _pendingModifier ) == false )
@@ -163,7 +163,7 @@ namespace sw::editor
         else
             ImGui::TextUnformatted( shortcutLabel.c_str() );
         ImGui::TableSetColumnIndex( 3 );
-        if ( ImGui::SmallButton( "Set" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Set" ) ) )
         {
             _captureAction  = desc._inputAction;
             _conflictAction = {};
