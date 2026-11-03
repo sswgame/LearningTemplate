@@ -270,7 +270,7 @@ namespace sw::editor
             ImGui::TableSetColumnIndex( 0 );
             const bool  bError = issue._severity == ValidationSeverity::Error;
             const Color color  = bError ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Signal", "Warning" );
-            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? SW_EDITORICON_NAME( "Error" ) : SW_EDITORICON_NAME( "Warning" ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? SW_EDITORICON( "Error" ) : SW_EDITORICON( "Warning" ) );
 
             ImGui::TableSetColumnIndex( 1 );
             const bool bSelected = pObject != nullptr && pObject == pPrimary;
