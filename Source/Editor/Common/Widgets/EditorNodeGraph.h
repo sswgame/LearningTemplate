@@ -116,6 +116,9 @@ namespace sw::editor
         }
 
     private:
+        /** @brief 노드 편집기의 색을 지금 테마 토큰으로 칠합니다(`beginCanvas` 가 프레임마다). */
+        void applyThemeStyle();
+
         void ensureContext( const utf8* pSettingsFileName );
         void destroyContext();
 

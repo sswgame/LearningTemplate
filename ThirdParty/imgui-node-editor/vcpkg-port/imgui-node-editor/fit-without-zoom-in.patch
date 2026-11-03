@@ -1,0 +1,39 @@
+diff --git a/imgui_node_editor.h b/imgui_node_editor.h
+index e932744..a1dc7d4 100644
+--- a/imgui_node_editor.h
++++ b/imgui_node_editor.h
+@@ -378,6 +378,7 @@ IMGUI_NODE_EDITOR_API int BreakLinks(NodeId nodeId); // Break all links connecte
+ IMGUI_NODE_EDITOR_API int BreakLinks(PinId pinId); // Break all links connected to this pin
+ 
+ IMGUI_NODE_EDITOR_API void NavigateToContent(float duration = -1);
++IMGUI_NODE_EDITOR_API void NavigateToContent(float duration, float maxZoom); // fit, but never zoom in past maxZoom (1 = one canvas unit per pixel)
+ IMGUI_NODE_EDITOR_API void NavigateToSelection(bool zoomIn = false, float duration = -1);
+ 
+ IMGUI_NODE_EDITOR_API bool ShowNodeContextMenu(NodeId* nodeId);
+diff --git a/imgui_node_editor_api.cpp b/imgui_node_editor_api.cpp
+index c8c7c3f..7efc97f 100644
+--- a/imgui_node_editor_api.cpp
++++ b/imgui_node_editor_api.cpp
+@@ -571,6 +571,22 @@ void ax::NodeEditor::NavigateToContent(float duration)
+     s_Editor->NavigateTo(s_Editor->GetContentBounds(), true, duration);
+ }
+ 
++void ax::NodeEditor::NavigateToContent(float duration, float maxZoom)
++{
++    auto bounds = s_Editor->GetContentBounds();
++    if (bounds.GetWidth() <= 0.0f || bounds.GetHeight() <= 0.0f || maxZoom <= 0.0f)
++    {
++        NavigateToContent(duration);
++        return;
++    }
++    // Grow small content to the area the canvas shows at maxZoom so the fit never zooms in past it.
++    const auto screenSize = s_Editor->GetRect().GetSize();
++    const auto center     = bounds.GetCenter();
++    const auto halfWidth  = ImMax(bounds.GetWidth(), screenSize.x / maxZoom) * 0.5f;
++    const auto halfHeight = ImMax(bounds.GetHeight(), screenSize.y / maxZoom) * 0.5f;
++    s_Editor->NavigateTo(ImRect(center.x - halfWidth, center.y - halfHeight, center.x + halfWidth, center.y + halfHeight), true, duration);
++}
++
+ void ax::NodeEditor::NavigateToSelection(bool zoomIn, float duration)
+ {
+     s_Editor->NavigateTo(s_Editor->GetSelectionBounds(), zoomIn, duration);

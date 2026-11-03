@@ -97,6 +97,7 @@ namespace sw::editor
             return false;
 
         ed::SetCurrentEditor( _pEditor );
+        applyThemeStyle();
 
         // 캔버스가 창의 첫 그리기면 노드 편집기가 자기 클립 사각형을 창의 빈 첫 그리기 명령에 덮어쓰고, 그 명령은 화면 좌표로 되돌리지 않는다
         // (imgui_canvas 의 EnterLocalSpace 는 마지막 명령이 비어 있지 않을 때만 따로 명령을 연다). 확대 · 축소가 1 이 아니면 배경과 노드가
@@ -107,6 +108,37 @@ namespace sw::editor
 
         ed::Begin( pCanvasID );
         return true;
+    }
+
+    void EditorNodeGraph::applyThemeStyle()
+    {
+        // 라이브러리 기본 색(남색 기운의 반투명 바탕 · 흰 테두리 · 주황 선택)은 테마를 따르지 않았다. 바꾼 테마가 다음 프레임에 따르도록 그릴 때마다 칠한다(값 복사뿐이다).
+        // 언리얼 그래프 편집기처럼 캔버스는 창 바탕 한 단계, 노드는 패널 면, 격자는 테두리 색, 강조색은 선택 · 호버에만 쓴다.
+        ed::Style&   style                               = ed::GetStyle();
+        const ImVec4 windowBg                            = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "WindowBg" ) );
+        const ImVec4 panelBg                             = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) );
+        const ImVec4 border                              = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) );
+        const ImVec4 mutedText                           = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "TextMuted" ) );
+        const ImVec4 accent                              = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Accent" ) );
+        const ImVec4 accentWash                          = ImVec4{ accent.x, accent.y, accent.z, 0.16f };
+        const ImVec4 accentEdge                          = ImVec4{ accent.x, accent.y, accent.z, 0.5f };
+        style.Colors[ed::StyleColor_Bg]                  = windowBg;
+        style.Colors[ed::StyleColor_Grid]                = border;
+        style.Colors[ed::StyleColor_NodeBg]              = panelBg;
+        style.Colors[ed::StyleColor_NodeBorder]          = mutedText;
+        style.Colors[ed::StyleColor_HovNodeBorder]       = accentEdge;
+        style.Colors[ed::StyleColor_SelNodeBorder]       = accent;
+        style.Colors[ed::StyleColor_NodeSelRect]         = accentWash;
+        style.Colors[ed::StyleColor_NodeSelRectBorder]   = accentEdge;
+        style.Colors[ed::StyleColor_HovLinkBorder]       = accentEdge;
+        style.Colors[ed::StyleColor_SelLinkBorder]       = accent;
+        style.Colors[ed::StyleColor_HighlightLinkBorder] = accent;
+        style.Colors[ed::StyleColor_LinkSelRect]         = accentWash;
+        style.Colors[ed::StyleColor_LinkSelRectBorder]   = accentEdge;
+        style.Colors[ed::StyleColor_PinRect]             = accentWash;
+        style.Colors[ed::StyleColor_PinRectBorder]       = accentEdge;
+        style.Colors[ed::StyleColor_GroupBg]             = panelBg;
+        style.Colors[ed::StyleColor_GroupBorder]         = border;
     }
 
     void EditorNodeGraph::endCanvas()
@@ -279,7 +311,7 @@ namespace sw::editor
         if ( isCanvasSizeSettled( _previousCanvasSize, _canvasSize ) == false )
             return; // 크기가 정해진 다음 프레임에 맞춘다(노드 위치 시드도 그때까지 매 프레임 같은 값으로 걸린다)
 
-        ed::NavigateToContent( 0.1f );
+        ed::NavigateToContent( 0.1f, 1.0f ); // 작은 그래프는 1:1 에서 가운데로 — 맞추기가 노드를 화면 가득 키우지 않는다(오버레이 포트 패치)
         _bNeedsContentFit = false;
     }
 
