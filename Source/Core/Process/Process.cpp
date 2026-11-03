@@ -84,6 +84,7 @@ namespace sw
         : _pNativeHandle{ nullptr }
         , _pStdOutRead{ nullptr }
         , _pNativeThread{ nullptr }
+        , _pNativeJob{ nullptr }
         , _pStdInWrite{ nullptr }
         , _bufferedOutput{}
         , _processID{ 0 }
@@ -100,6 +101,7 @@ namespace sw
         : _pNativeHandle{ other._pNativeHandle }
         , _pStdOutRead{ other._pStdOutRead }
         , _pNativeThread{ other._pNativeThread }
+        , _pNativeJob{ other._pNativeJob }
         , _pStdInWrite{ other._pStdInWrite }
         , _bufferedOutput{ std::move( other._bufferedOutput ) }
         , _processID{ other._processID.load() }
@@ -108,6 +110,7 @@ namespace sw
         other._pNativeHandle = nullptr;
         other._pStdOutRead   = nullptr;
         other._pNativeThread = nullptr;
+        other._pNativeJob    = nullptr;
         other._pStdInWrite   = nullptr;
         other._processID.store( 0 );
     }
@@ -121,6 +124,7 @@ namespace sw
             _pNativeHandle    = other._pNativeHandle;
             _pStdOutRead      = other._pStdOutRead;
             _pNativeThread    = other._pNativeThread;
+            _pNativeJob       = other._pNativeJob;
             _pStdInWrite      = other._pStdInWrite;
             _bufferedOutput   = std::move( other._bufferedOutput );
             _bNewProcessGroup = other._bNewProcessGroup;
@@ -129,6 +133,7 @@ namespace sw
             other._pNativeHandle = nullptr;
             other._pStdOutRead   = nullptr;
             other._pNativeThread = nullptr;
+            other._pNativeJob    = nullptr;
             other._pStdInWrite   = nullptr;
             other._processID.store( 0 );
         }

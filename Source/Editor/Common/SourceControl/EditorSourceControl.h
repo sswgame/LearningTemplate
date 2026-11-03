@@ -48,6 +48,8 @@ namespace sw::editor
             initialize();
             return SubsystemInitResult::Succeeded;
         }
+        /** @brief 도는 도구(`git` 과 그 손자)를 끝내고 기다립니다 — 종료 시간(`EditorContext.ShutdownMs`)에 잡히도록 소멸자가 아니라 여기서 한다. */
+        void shutdownSubsystem() override;
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorSourceControl";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }

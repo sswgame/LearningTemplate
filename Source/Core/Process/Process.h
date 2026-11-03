@@ -151,7 +151,8 @@ namespace sw
          * @details 반환됐다고 해서 자식이 이미 죽은 것은 아닙니다. 죽었는지 확인해야 한다면 `waitForExit` 으로 기다리십시오.
          *          그 전까지는 `isRunning` 도 true 일 수 있습니다. 다른 스레드가 `readOutputLine` 을 돌고 있어도 안전합니다. 자식이
          *          죽으면 파이프의 쓰기 쪽이 닫혀 그 스레드의 읽기가 false 를 반환합니다. POSIX 는 **프로세스 그룹째** 죽입니다.
-         *          자식이 띄운 손자 프로세스(빌드라면 cmake 가 띄운 컴파일러)까지 멈춰야 취소가 끝나기 때문입니다.
+         *          자식이 띄운 손자 프로세스(빌드라면 cmake 가 띄운 컴파일러)까지 멈춰야 취소가 끝나기 때문입니다. Windows 는 같은 뜻으로 Job 객체째 죽입니다 —
+         *          루트만 죽이면 손자(`git` 이 띄운 `git-lfs`)가 출력 파이프를 쥐고 있어 읽는 스레드가 손자가 끝날 때까지 막힌다.
          */
         bool terminate( int32 exitCode = 1 );
 
@@ -255,6 +256,7 @@ namespace sw
         void*  _pNativeHandle;
         void*  _pStdOutRead;
         void*  _pNativeThread;
+        void*  _pNativeJob;  ///< 자식 트리를 묶는 Job 객체(Windows) — `terminate` 가 손자까지 죽인다(POSIX 의 프로세스 그룹). POSIX 는 nullptr
         void*  _pStdInWrite; ///< 표준 입력 파이프의 쓰는 끝(Windows HANDLE, POSIX 는 서술자 + 1 — 0 은 없음)
         string _bufferedOutput;
         /**

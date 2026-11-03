@@ -248,6 +248,13 @@ namespace sw
             _pNativeHandle = nullptr;
         }
 
+        // 핸들만 닫는다(KILL_ON_JOB_CLOSE 를 걸지 않았다) — 객체를 놓아도 자식은 산다, `terminate` 를 부르지 않은 자식을 죽이지 않는 것이 계약이다.
+        if ( _pNativeJob != nullptr )
+        {
+            CloseHandle( static_cast<HANDLE>( _pNativeJob ) );
+            _pNativeJob = nullptr;
+        }
+
         _bufferedOutput.clear();
         _processID.store( 0 );
     }
@@ -297,9 +304,10 @@ namespace sw
 
         // 정상 종료 요청(`requestStop` — 콘솔 그룹에 Ctrl+Break)을 받을 자식은 이 프로세스의 콘솔을 나눠 써야 한다. CREATE_NO_WINDOW 는 숨은 새 콘솔을
         // 만들어 이벤트가 닿지 않는다. 이 프로세스에 콘솔이 없으면(서비스 · 창 앱) 나눠 쓸 것이 없으니 그대로 숨긴다 — 새 콘솔 창이 뜨지 않게.
-        DWORD       consoleProcessID = 0;
-        const bool  bShareConsole    = options._bNewProcessGroup && GetConsoleProcessList( &consoleProcessID, 1 ) != 0;
-        const DWORD creationFlags    = ( options._bCreateWindow || bShareConsole ? 0 : CREATE_NO_WINDOW ) | EXTENDED_STARTUPINFO_PRESENT |
+        DWORD      consoleProcessID = 0;
+        const bool bShareConsole    = options._bNewProcessGroup && GetConsoleProcessList( &consoleProcessID, 1 ) != 0;
+        // 멈춘 채 띄워 Job 에 넣은 뒤 돌린다 — 넣기 전에 돌면 그 사이 띄운 손자가 Job 밖에 남는다.
+        const DWORD creationFlags = CREATE_SUSPENDED | ( options._bCreateWindow || bShareConsole ? 0 : CREATE_NO_WINDOW ) | EXTENDED_STARTUPINFO_PRESENT |
                                     ( options._bNewProcessGroup ? CREATE_NEW_PROCESS_GROUP : 0 ) | ( listEnvironmentBlock.empty() ? 0 : CREATE_UNICODE_ENVIRONMENT );
 
         PROCESS_INFORMATION pi{};
@@ -326,6 +334,23 @@ namespace sw
             return false;
         }
 
+        // 자식 트리를 Job 하나로 묶는다(`terminate` — POSIX 의 프로세스 그룹과 같은 뜻). 묶지 못하면 손자를 멈출 수 없으니 띄우지 않은 것으로 돌린다.
+        HANDLE hJob = CreateJobObjectW( nullptr, nullptr );
+        if ( hJob == nullptr || AssignProcessToJobObject( hJob, pi.hProcess ) == FALSE )
+        {
+            const DWORD error = GetLastError();
+            TerminateProcess( pi.hProcess, 1 );
+            CloseHandle( pi.hThread );
+            CloseHandle( pi.hProcess );
+            if ( hJob != nullptr )
+                CloseHandle( hJob );
+            pipes.closeAll();
+            SW_LOG_ERROR_ID( "WindowsProcess.JobAssignFailed", "Failed to put the child in a job object (error %#): %#", static_cast<uint32>( error ), cmdStr.c_str() );
+            return false;
+        }
+        ResumeThread( pi.hThread );
+
+        _pNativeJob       = hJob;
         _pNativeHandle    = pi.hProcess;
         _pNativeThread    = pi.hThread;
         _pStdOutRead      = pipes._hOutRead;
@@ -460,10 +485,10 @@ namespace sw
 
     bool Process::terminate( int32 exitCode )
     {
-        if ( _pNativeHandle == nullptr )
+        if ( _pNativeJob == nullptr )
             return false;
 
-        return TerminateProcess( static_cast<HANDLE>( _pNativeHandle ), static_cast<UINT>( exitCode ) ) != FALSE;
+        return TerminateJobObject( static_cast<HANDLE>( _pNativeJob ), static_cast<UINT>( exitCode ) ) != FALSE;
     }
 
     bool Process::writeInput( string_view text )

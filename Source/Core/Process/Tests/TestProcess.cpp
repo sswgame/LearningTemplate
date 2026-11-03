@@ -124,6 +124,30 @@ SW_TEST_CASE( ProcessTest, TerminateProcess )
 }
 
 /**
+ * @brief 강제 종료는 자식이 띄운 손자까지 끝내 출력 파이프가 닫힌다
+ * @details 루트만 죽이면 손자(`git` 이 띄운 `git-lfs`, 여기서는 셸이 띄운 대기)가 파이프의 쓰는 끝을 쥐고 있어 읽는 스레드가 손자가 끝날 때까지 막힌다
+ *          (에디터 소스 컨트롤 잡의 종료가 1 초 넘게 걸렸다). Windows 는 Job 객체째, POSIX 는 프로세스 그룹째 죽인다.
+ */
+SW_TEST_CASE( ProcessTest, TerminateEndsGrandchildren )
+{
+    sw::Process proc;
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "ping", "127.0.0.1", "-n", "20" } );
+#else
+    const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "sh", { "-c", "sleep 20; :" } ); // `; :` — 셸이 sleep 으로 바뀌지(exec) 않고 손자로 띄운다
+#endif
+    SW_REQUIRE_TRUE( proc.launch( cmd ) );
+    const sw::Stopwatch watch;
+    SW_EXPECT_TRUE( proc.terminate( 99 ) );
+    sw::string line;
+    while ( proc.readOutputLine( line ) )
+    {
+    }
+    (void)proc.waitForExit();
+    SW_EXPECT_TRUE( watch.getElapsedMicroseconds() < 5'000'000 ); // 손자가 남으면 20 초 가까이 막힌다
+}
+
+/**
  * @brief 자식이 스스로 끝나면 묻는 쪽이 **바로** 안다
  * @details `isRunning` 이 자기 깃발만 보면 자식이 끝나도 `waitForExit` 을 부르기 전까지 true 라, 취소 UI 가
  *          끝난 빌드를 "돌고 있다" 고 보여 준다. OS 에 물어 곧 false 가 되어야 하고, 그러면서도

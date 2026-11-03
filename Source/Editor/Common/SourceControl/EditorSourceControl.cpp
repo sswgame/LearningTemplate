@@ -29,6 +29,13 @@ namespace sw::editor
             enqueue( SourceControlOperation::Probe, {} );
     }
 
+    void EditorSourceControl::shutdownSubsystem()
+    {
+        _pJob->cancelAndWait();
+        _running = PendingOperation{};
+        _listPending.clear();
+    }
+
     void EditorSourceControl::setProvider( unique_ptr<ISourceControlProvider> pProvider )
     {
         _pProvider = pProvider != nullptr ? std::move( pProvider ) : make_unique<NullSourceControlProvider>();
