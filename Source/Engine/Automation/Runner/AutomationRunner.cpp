@@ -54,7 +54,6 @@ namespace sw
         , _wallEndSeconds{ 0.0 }
         , _lastFrameEndSeconds{ 0.0 }
         , _clockHoldStartSeconds{ 0.0 }
-        , _holdStartSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
         , _currentStepNumber{ 0 }
@@ -65,6 +64,7 @@ namespace sw
         , _pHeldStepState{}
         , _pHeldStateStep{ nullptr }
         , _holdFrameCount{ 0 }
+        , _holdStartSeconds{ 0.0 }
         , _clockHoldFrameCount{ 0 }
         , _seenFrameCount{ 0 }
         , _bClockHeld{ SW_FALSE }
