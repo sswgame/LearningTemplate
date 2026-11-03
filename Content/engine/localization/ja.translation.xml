@@ -118,6 +118,11 @@
 		<entry key="EdSchedule.SelectNPCHint" text="左で NPC を選択してください" sourceHash="2d4aa57458132d18" />
 		<entry key="EdSchedule.SystemIndex" text="スケジュールシステム" sourceHash="22b2a2f792a7281d" />
 		<entry key="EdSchedule.WhyNow" text="今この行動をする理由" sourceHash="998a39497efff850" />
+		<entry key="EditorCharacterEditor.AddSocketButton" text="追加" sourceHash="f9aee319a006c9b4" />
+		<entry key="EditorCharacterEditor.NewSocketHint" text="新しいソケット名" sourceHash="d60dbc5a471e4bc5" />
+		<entry key="EditorCharacterEditor.SocketNoSelection"
+		       text="一覧からソケットを選んで編集します。"
+		       sourceHash="b4fb8b5bd632d035" />
 		<entry key="Keep" text="維持" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="この表示設定を維持しますか?"

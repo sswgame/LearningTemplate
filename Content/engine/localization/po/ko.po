@@ -459,6 +459,21 @@ msgctxt "EdSchedule.WhyNow"
 msgid "Why this activity now"
 msgstr "지금 왜 이 행동인가"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EditorCharacterEditor.AddSocketButton"
+msgid "Add"
+msgstr "추가"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EditorCharacterEditor.NewSocketHint"
+msgid "New socket name"
+msgstr "새 소켓 이름"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EditorCharacterEditor.SocketNoSelection"
+msgid "Select a socket in the list to edit it."
+msgstr "목록에서 소켓을 골라 편집합니다."
+
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep"

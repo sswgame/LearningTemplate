@@ -72,6 +72,7 @@
 		<entry source="Animator parameter that drives the weight every frame (clamped to 0..1). Leave empty to use Weight."
 		       text="매 프레임 가중치를 정하는 애니메이터 파라미터입니다(0..1 로 자릅니다). 비우면 Weight 를 씁니다." />
 		<entry source="Apply the next recorded frame." text="다음 기록 프레임을 적용합니다." />
+		<entry source="Arrange windows" text="창 배치" />
 		<entry source="Ask both slots (a server read over a debug channel, or a session client) for their current per-object hashes and list the objects that differ (pause the server near the divergent tick first; the two answers must carry the same tick)"
 		       text="두 칸(디버그 채널로 읽은 서버, 또는 세션 클라이언트)에 지금의 오브젝트별 해시를 물어 다른 오브젝트를 나열합니다(어긋난 틱 가까이에서 서버를 먼저 멈춥니다. 두 답은 같은 틱이어야 합니다)" />
 		<entry source="Ask the selected process for its line and connection numbers"
@@ -149,6 +150,7 @@
 		<entry source="Color to paint into the cells' tint." text="칸의 틴트로 칠할 색입니다." />
 		<entry source="Column" text="열" />
 		<entry source="Column Span" text="열 넓이" />
+		<entry source="Columns" text="열" />
 		<entry source="Command the game runs when the conversation passes this node, written as name:argument:argument."
 		       text="대화가 이 노드를 지날 때 게임이 실행하는 명령으로, 이름:인자:인자 형식입니다." />
 		<entry source="CommandStack service is not available." text="CommandStack 서비스를 쓸 수 없습니다." />
@@ -188,6 +190,7 @@
 		       text="크로스페이드 시간(초)입니다. 0보다 작으면 플레이어 기본값을 씁니다." />
 		<entry source="Current graphics RHI backend: {backend} ({fps} FPS)"
 		       text="현재 그래픽스 RHI 백엔드: {backend} ({fps} FPS)" />
+		<entry source="Curve" text="커브" />
 		<entry source="Data layer not added: the name is empty or already used"
 		       text="데이터 레이어를 더하지 못했습니다: 이름이 비었거나 이미 있습니다" />
 		<entry source="Debug HUD is not running" text="디버그 HUD 가 실행 중이 아닙니다" />
@@ -195,6 +198,7 @@
 		       text="디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 테스트 호스트입니다)." />
 		<entry source="Default" text="기본값" />
 		<entry source="Delete Event" text="이벤트 지우기" />
+		<entry source="Delete key" text="키 지우기" />
 		<entry source="Delete the selected preset from your preset file"
 		       text="고른 프리셋을 프리셋 파일에서 지웁니다" />
 		<entry source="Delete this saved layout." text="저장된 레이아웃을 지웁니다." />
@@ -391,6 +395,7 @@
 		<entry source="Keep recording but stop updating the view"
 		       text="기록은 계속하고 화면 갱신만 멈춥니다" />
 		<entry source="Keep scrolling to the newest log line" text="가장 최근 로그 줄을 따라 스크롤합니다" />
+		<entry source="Key" text="키" />
 		<entry source="Key the target's current values on every channel at this frame."
 		       text="대상의 지금 값을 이 프레임의 키로 모든 채널에 찍습니다" />
 		<entry source="Launch a separate server and clients and connect them. Logs gather in the Output Log as [Server] and [Client1], and Stop shuts them all down."
@@ -466,6 +471,7 @@
 		<entry source="Move the selected layer up or down. Order changes the result: later layers are applied on top."
 		       text="고른 레이어를 위나 아래로 옮깁니다. 순서가 결과를 바꿉니다. 뒤의 레이어가 위에 얹힙니다." />
 		<entry source="Multiple values" text="값이 여러 개입니다" />
+		<entry source="Name" text="이름" />
 		<entry source="Name game code uses to play this animation."
 		       text="게임 코드가 이 애니메이션을 재생할 때 쓰는 이름입니다." />
 		<entry source="Name game code uses to query the new action, for example Jump or Move."
@@ -672,6 +678,7 @@
 		<entry source="Processing order" text="처리 순서" />
 		<entry source="Project override" text="프로젝트 오버라이드" />
 		<entry source="Properties" text="속성" />
+		<entry source="Property" text="프로퍼티" />
 		<entry source="Publish cost (avg / peak)" text="게시 비용 (평균 / 최대)" />
 		<entry source="Put every action back to the bindings it was loaded with."
 		       text="모든 액션을 읽어 들였을 때의 바인딩으로 되돌립니다." />
@@ -798,6 +805,7 @@
 		       text="프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다" />
 		<entry source="Revert this property to the prefab value"
 		       text="이 프로퍼티를 프리팹 값으로 되돌립니다" />
+		<entry source="Rig slot" text="리그 칸" />
 		<entry source="Rig slot name (weight_slot in the rig asset); value is clamped to 0..1"
 		       text="리그 슬롯 이름(리그 에셋의 weight_slot), 값은 0..1 로 자릅니다" />
 		<entry source="Rotate: turn the selection around an axis (E)"
@@ -1005,6 +1013,7 @@
 		       text="실행 인수로 RHI 전환: -dx11 / -dx12 / -vk / -gl" />
 		<entry source="Take the pressed cell's value as the value to paint (I)"
 		       text="누른 칸의 값을 칠할 값으로 가져옵니다 (I)" />
+		<entry source="Target" text="대상" />
 		<entry source="Target has no Pose Modifier" text="대상에 Pose Modifier 가 없습니다" />
 		<entry source="Target object not found" text="대상 오브젝트를 찾을 수 없습니다" />
 		<entry source="Target or numeric property not found"

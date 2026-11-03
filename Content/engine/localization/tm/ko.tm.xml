@@ -9,6 +9,7 @@
 		<entry source="Active" text="실행 중" />
 		<entry source="Active Effects" text="걸린 이펙트" />
 		<entry source="Activity" text="행동" />
+		<entry source="Add" text="추가" />
 		<entry source="Add Item" text="항목 추가" />
 		<entry source="Add Key" text="키 추가" />
 		<entry source="Add Modifier" text="모디파이어 추가" />
@@ -105,6 +106,7 @@
 		<entry source="NPCs" text="NPC 목록" />
 		<entry source="Name" text="이름" />
 		<entry source="Nested Stack" text="하위 스택" />
+		<entry source="New socket name" text="새 소켓 이름" />
 		<entry source="No AbilityComponent in the active scene" text="활성 씬에 AbilityComponent 가 없습니다" />
 		<entry source="No object has component:" text="이 컴포넌트를 가진 오브젝트가 없습니다:" />
 		<entry source="No plan for today" text="오늘 계획이 없습니다" />
@@ -154,6 +156,7 @@
 		<entry source="Schedule system" text="일정 시스템" />
 		<entry source="Sections" text="섹션" />
 		<entry source="Select a modifier in the stack." text="스택에서 모디파이어를 고르세요." />
+		<entry source="Select a socket in the list to edit it." text="목록에서 소켓을 골라 편집합니다." />
 		<entry source="Select an NPC on the left" text="왼쪽에서 NPC 를 고르세요" />
 		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
 		       text=".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요." />

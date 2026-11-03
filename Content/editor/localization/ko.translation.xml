@@ -1035,6 +1035,7 @@
 		<entry key="EditorMultiplayer.ArrangeWindows"
 		       text="클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)"
 		       sourceHash="a5d0ffde56d21ff0" />
+		<entry key="EditorMultiplayer.ArrangeWindowsLabel" text="창 배치" sourceHash="23295640fc413e6a" />
 		<entry key="EditorMultiplayer.ClientArgumentsHint"
 		       text="클라이언트 인자 (예: -vk)"
 		       sourceHash="c24fefb663087b87" />
@@ -1198,7 +1199,7 @@
 		<entry key="EditorMultiplayer.WindowColumns"
 		       text="다음 줄로 넘어가기 전에 한 줄에 놓는 창 수"
 		       sourceHash="725c31198012ea35" />
-		<entry key="EditorMultiplayer.WindowColumnsLabel" text="열" sourceHash="b0f3327210fe18fc" review="true" />
+		<entry key="EditorMultiplayer.WindowColumnsLabel" text="열" sourceHash="b0f3327210fe18fc" />
 		<entry key="EditorMultiplayer.WindowSize"
 		       text="App 창마다의 클라이언트 영역 크기(픽셀)"
 		       sourceHash="9328b054689ddf9d" />
@@ -1425,6 +1426,8 @@
 		<entry key="EditorSequencer.CinematicNoteTip"
 		       text="시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다."
 		       sourceHash="10888390b009288d" />
+		<entry key="EditorSequencer.CurveButton" text="커브" sourceHash="c341553c3556d2b4" />
+		<entry key="EditorSequencer.DeleteKeyButton" text="키 지우기" sourceHash="9c0aca1551241c65" />
 		<entry key="EditorSequencer.DeleteKeyTip"
 		       text="현재 프레임에 있는 이 트랙의 키를 모든 채널에서 지웁니다."
 		       sourceHash="49c0091d760285d9" />
@@ -1434,6 +1437,7 @@
 		<entry key="EditorSequencer.ItemTargetTip"
 		       text="이 클립 · 이벤트 · 카메라 컷이 작용하는 씬 오브젝트의 이름입니다."
 		       sourceHash="6d0e0586825466c1" />
+		<entry key="EditorSequencer.KeyButton" text="키" sourceHash="506b6a19d12f414c" />
 		<entry key="EditorSequencer.LoadTip"
 		       text="저장하지 않은 편집을 버리고 포커스된 .seq 파일을 디스크에서 다시 읽습니다."
 		       sourceHash="a7fd6955fa49a19b" />
@@ -1451,12 +1455,14 @@
 		       text="현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다."
 		       sourceHash="9cc849680d919b0b" />
 		<entry key="EditorSequencer.PreviousKeyTip" text="앞 키로" sourceHash="99a63e0a91e9cd8b" />
+		<entry key="EditorSequencer.PropertyLabel" text="프로퍼티" sourceHash="0d5b7fee0311db68" />
 		<entry key="EditorSequencer.PropertyPathTip"
 		       text="&lt;컴포넌트 타입>.&lt;프로퍼티> — float32 · int32 프로퍼티(예: CameraComponent._fov)"
 		       sourceHash="a55f3b5c880aad98" />
 		<entry key="EditorSequencer.PropertyTargetNotFound"
 		       text="대상이나 숫자 프로퍼티를 찾을 수 없습니다"
 		       sourceHash="851e7b1e73d27166" />
+		<entry key="EditorSequencer.RigSlotLabel" text="리그 칸" sourceHash="b383a8abee4b6ed7" />
 		<entry key="EditorSequencer.RigSlotTargetNotFound"
 		       text="대상에 Pose Modifier 가 없습니다"
 		       sourceHash="68a7295429437195" />
@@ -1478,6 +1484,8 @@
 		<entry key="EditorSequencer.TargetNotFound"
 		       text="대상 오브젝트를 찾을 수 없습니다"
 		       sourceHash="f17bc32821b93da2" />
+		<entry key="EditorSequencer.TrackNameLabel" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EditorSequencer.TrackTargetLabel" text="대상" sourceHash="ff5bb7742c2896c8" />
 		<entry key="EditorSettings.BuildModules"
 		       text="바뀐 모듈 구성으로 모든 모듈을 컴파일합니다"
 		       sourceHash="8b6c73917e57c622" />

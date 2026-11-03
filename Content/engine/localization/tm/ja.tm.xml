@@ -8,6 +8,7 @@
 		<entry source="Active" text="有効" />
 		<entry source="Active Effects" text="有効なエフェクト" />
 		<entry source="Activity" text="行動" />
+		<entry source="Add" text="追加" />
 		<entry source="Add Item" text="項目を追加" />
 		<entry source="Add Modifier" text="モディファイアを追加" />
 		<entry source="Aim" text="エイム" />
@@ -95,6 +96,7 @@
 		<entry source="NPCs" text="NPC" />
 		<entry source="Name" text="名前" />
 		<entry source="Nested Stack" text="ネストされたスタック" />
+		<entry source="New socket name" text="新しいソケット名" />
 		<entry source="No AbilityComponent in the active scene"
 		       text="アクティブなシーンに AbilityComponent がありません" />
 		<entry source="No object has component:"
@@ -146,6 +148,8 @@
 		<entry source="Sections" text="セクション" />
 		<entry source="Select a modifier in the stack."
 		       text="スタックからモディファイアを選択してください。" />
+		<entry source="Select a socket in the list to edit it."
+		       text="一覧からソケットを選んで編集します。" />
 		<entry source="Select an NPC on the left" text="左で NPC を選択してください" />
 		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
 		       text="メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。" />

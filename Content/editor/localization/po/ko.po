@@ -2199,6 +2199,11 @@ msgid "Place the client windows side by side (window size and position per App p
 msgstr "클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EditorMultiplayer.ArrangeWindowsLabel"
+msgid "Arrange windows"
+msgstr "창 배치"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.ClientArgumentsHint"
 msgid "client arguments (e.g. -vk)"
 msgstr "클라이언트 인자 (예: -vk)"
@@ -2492,6 +2497,11 @@ msgstr "탭이 다루는 프로세스입니다(서버 또는 클라이언트 하
 msgctxt "EditorMultiplayer.WindowColumns"
 msgid "Windows per row before the next row starts"
 msgstr "다음 줄로 넘어가기 전에 한 줄에 놓는 창 수"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EditorMultiplayer.WindowColumnsLabel"
+msgid "Columns"
+msgstr "열"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.WindowSize"
@@ -2904,6 +2914,16 @@ msgid "Free-form notes saved with the sequence. It does not affect playback."
 msgstr "시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CurveButton"
+msgid "Curve"
+msgstr "커브"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DeleteKeyButton"
+msgid "Delete key"
+msgstr "키 지우기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.DeleteKeyTip"
 msgid "Remove this track's keys at the current frame on every channel."
 msgstr "현재 프레임에 있는 이 트랙의 키를 모든 채널에서 지웁니다."
@@ -2917,6 +2937,11 @@ msgstr "선택한 키 트랙과 그 키를 모두 지웁니다."
 msgctxt "EditorSequencer.ItemTargetTip"
 msgid "Name of the scene object this clip, event or camera cut acts on."
 msgstr "이 클립 · 이벤트 · 카메라 컷이 작용하는 씬 오브젝트의 이름입니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.KeyButton"
+msgid "Key"
+msgstr "키"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.LoadTip"
@@ -2954,6 +2979,11 @@ msgid "Go to the previous key"
 msgstr "앞 키로"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PropertyLabel"
+msgid "Property"
+msgstr "프로퍼티"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.PropertyPathTip"
 msgid "<ComponentType>.<Property> - a float32 or int32 property (for example CameraComponent._fov)"
 msgstr "<컴포넌트 타입>.<프로퍼티> — float32 · int32 프로퍼티(예: CameraComponent._fov)"
@@ -2962,6 +2992,11 @@ msgstr "<컴포넌트 타입>.<프로퍼티> — float32 · int32 프로퍼티(�
 msgctxt "EditorSequencer.PropertyTargetNotFound"
 msgid "Target or numeric property not found"
 msgstr "대상이나 숫자 프로퍼티를 찾을 수 없습니다"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.RigSlotLabel"
+msgid "Rig slot"
+msgstr "리그 칸"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.RigSlotTargetNotFound"
@@ -2997,6 +3032,16 @@ msgstr "재생을 멈추고 첫 프레임으로 돌아가며, 카메라 컷이 �
 msgctxt "EditorSequencer.TargetNotFound"
 msgid "Target object not found"
 msgstr "대상 오브젝트를 찾을 수 없습니다"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TrackNameLabel"
+msgid "Name"
+msgstr "이름"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TrackTargetLabel"
+msgid "Target"
+msgstr "대상"
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EditorSettings.BuildModules"
