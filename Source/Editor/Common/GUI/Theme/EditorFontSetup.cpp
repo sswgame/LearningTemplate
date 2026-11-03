@@ -148,6 +148,7 @@ namespace sw::editor
         const string basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
         const string monoPath   = EditorFontSetupInternal::resolveFontFile( data._listMonoFont );
         const string koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
+        const string kanaPath   = EditorFontSetupInternal::resolveFontFile( data._listJapaneseFont );
         const string iconPath   = EditorFontSetupInternal::resolveFontFile( EditorPaths::kIconFontFileName );
         if ( basePath.empty() )
             SW_LOG_ERROR_ID( "EditorFontSetup.NoBaseFontEditortooldefaults", "No base font from editortooldefaults.json _listBaseFont exists under editor/fonts or the OS font folders" );
@@ -155,9 +156,11 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorFontSetup.NoMonospaceFontEditortooldefaults", "No monospace font from editortooldefaults.json _listMonoFont exists under editor/fonts or the OS font folders" );
         if ( koreanPath.empty() )
             SW_LOG_ERROR_ID( "EditorFontSetup.NoKoreanFontEditortooldefaults", "No Korean font from editortooldefaults.json _listKoreanFont exists under editor/fonts or the OS font folders" );
+        if ( kanaPath.empty() )
+            SW_LOG_ERROR_ID( "EditorFontSetup.NoJapaneseFontEditortooldefaults", "No Japanese font from editortooldefaults.json _listJapaneseFont exists under editor/fonts or the OS font folders" );
         if ( iconPath.empty() )
             SW_LOG_ERROR_ID( "EditorFontSetup.EditorIconFontNot", "Editor icon font '%#' not found under editor/fonts", EditorPaths::kIconFontFileName );
-        const bool bFontMissing = basePath.empty() || monoPath.empty() || koreanPath.empty() || iconPath.empty();
+        const bool bFontMissing = basePath.empty() || monoPath.empty() || koreanPath.empty() || kanaPath.empty() || iconPath.empty();
         if ( bFontMissing )
             return false;
         EditorFontSetupInternal::FontState& fontState = EditorFontSetupInternal::state();
@@ -192,7 +195,8 @@ namespace sw::editor
             mergeConfig.OversampleV = 1;
             mergeConfig.PixelSnapH  = true;
             io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), baseSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
-            SW_LOG_TRACE_ID( "EditorFontSetup.MergedKoreanGlyphs", "Merged Korean glyphs from: %#", koreanPath.c_str() );
+            io.Fonts->AddFontFromFileTTF( kanaPath.c_str(), baseSize, &mergeConfig, io.Fonts->GetGlyphRangesJapanese() ); // 한글 글꼴에 없는 글자만 이쪽에서 온다(먼저 병합한 쪽이 이긴다)
+            SW_LOG_TRACE_ID( "EditorFontSetup.MergedKoreanGlyphs", "Merged Korean glyphs from: %# (Japanese fallback %#)", koreanPath.c_str(), kanaPath.c_str() );
         }
 
         auto mergeIcons = [&]( float32 size )
@@ -223,6 +227,7 @@ namespace sw::editor
             mergeConfig.MergeMode  = true;
             mergeConfig.PixelSnapH = true;
             io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), monoSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
+            io.Fonts->AddFontFromFileTTF( kanaPath.c_str(), monoSize, &mergeConfig, io.Fonts->GetGlyphRangesJapanese() );
             mergeIcons( monoSize );
             fontState._pMonoFont = pMonoFont;
         }

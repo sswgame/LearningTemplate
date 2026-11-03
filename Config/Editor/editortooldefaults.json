@@ -29,5 +29,14 @@
         "NotoSansCJKkr-Regular.otf",
         "NotoSansKR-Regular.otf",
         "DroidSansFallbackFull.ttf"
+    ],
+    "_listJapaneseFont": [
+        "YuGothR.ttc",
+        "meiryo.ttc",
+        "msgothic.ttc",
+        "NotoSansCJK-Regular.ttc",
+        "NotoSansCJKjp-Regular.otf",
+        "NotoSansJP-Regular.otf",
+        "DroidSansFallbackFull.ttf"
     ]
 }

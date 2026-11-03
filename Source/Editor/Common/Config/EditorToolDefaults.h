@@ -52,6 +52,8 @@ namespace sw::editor
         vector<string> _listMonoFont{}; ///< 고정폭 글꼴 후보 — 로그 · 콘솔 줄에만 쓴다(열이 맞아야 읽히는 글). 찾는 순서 · 없을 때는 위와 같다
         PROPERTY( Required )
         vector<string> _listKoreanFont{}; ///< 한글 글꼴 후보(병합) — 찾는 순서는 위와 같다. 하나도 없으면 에디터가 서지 않는다
+        PROPERTY( Required )
+        vector<string> _listJapaneseFont{}; ///< 한글 글꼴에 없는 가나 · 한자 후보(한글 다음에 병합 — 일본어 번역 표의 効 · ー 가 빈 상자였다). 하나도 없으면 에디터가 서지 않는다
 
         /**
          * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.
