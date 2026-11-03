@@ -47,7 +47,7 @@ namespace sw::editor
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }
-        if ( ImGui::SmallButton( "Refresh" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
             _model.reload();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "RefreshModules" ) );
         ImGui::SameLine();
@@ -150,14 +150,14 @@ namespace sw::editor
             }
         }
         ImGui::Spacing();
-        if ( ImGui::Button( "Apply" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Apply" ) ) )
         {
             _model.applyPending();
             ImGui::CloseCurrentPopup();
         }
         EditorSelfTestMarks::note( "modules.apply" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Cancel" ) );
-        if ( ImGui::Button( "Cancel" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) )
         {
             _model.cancelPending();
             ImGui::CloseCurrentPopup();

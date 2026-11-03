@@ -189,7 +189,7 @@ namespace sw::editor
     void PrefabEditorPanel::drawIsolationBar()
     {
         const bool bNested = _model.getIsolation().getDepth() > 1;
-        if ( ImGui::Button( "Save" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다 — 실패는 상태 줄에 남는다
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( bNested ? "Save & Back" : "Save & Close" ) );
         if ( ImGui::Button( bNested ? "Save & Back" : "Save & Close" ) )
@@ -197,8 +197,8 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( bNested ? "Back" : "Close" ) );
         if ( ImGui::Button( bNested ? "Back" : "Close" ) )
             (void)exitIsolation( false );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
-        if ( ImGui::Button( "Reload" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
             reloadDocument();
     }
 

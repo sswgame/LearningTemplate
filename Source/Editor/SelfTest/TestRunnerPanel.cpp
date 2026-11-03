@@ -21,6 +21,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Renderer/Capture/BugReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
@@ -276,7 +277,7 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
-        if ( ImGui::SmallButton( "Refresh" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
             _bScenarioListDirty = SW_TRUE;
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", bBusy ? "Running in a new process..." : "Runs App with -scenario in a new process (-unattended)" );
@@ -419,7 +420,7 @@ namespace sw::editor
         ImGui::SameLine();
         drawRunSelectedCasesButton( binDirectory, bBusy, bExecutableChosen );
         ImGui::SameLine();
-        if ( ImGui::SmallButton( "Refresh" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
             _bExecutableListDirty = SW_TRUE;
         if ( _listTestExecutablePath.empty() )
             ImGui::TextDisabled( "No *Test.exe next to this build (build the AllTests target)" );

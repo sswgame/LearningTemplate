@@ -362,8 +362,8 @@ namespace sw::editor
         const ProfilerScopeHistory& history        = _capture.getHistory();
         const uint64                capturedFrames = MathUtil::min( history.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
         ImGui::TextDisabled( "%u frames window, %u captured", history.getWindowFrame(), static_cast<uint32>( capturedFrames ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
-        if ( ImGui::SmallButton( "Clear" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) )
             _capture.clear();
         EditorSelfTestMarks::note( "profiler.capture.clear" );
 
@@ -389,13 +389,13 @@ namespace sw::editor
         ImGui::DragFloat( "##spikeMs", &_capture.editSpikeThresholdMs(), 0.1f, 0.1f, 1000.0f, "%.1f ms" );
         EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-        if ( ImGui::SmallButton( "Save" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)_capture.saveCapture(); // 결과는 모델이 로그에 남긴다
         EditorSelfTestMarks::note( "profiler.capture.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveCapture" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
-        if ( ImGui::SmallButton( "Load" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) )
             (void)_capture.loadCapture(); // 결과는 모델이 로그에 남긴다
         EditorSelfTestMarks::note( "profiler.capture.load" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadCapture" ) );

@@ -16,6 +16,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
@@ -103,7 +104,7 @@ namespace sw::editor
         }
 
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
-        if ( ImGui::Button( "Reload" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
         {
             reloadDocument();
             _model.requestResync(); // 다시 읽은 효과를 미리보기에 다시 건다
@@ -116,8 +117,8 @@ namespace sw::editor
             pSubject->play();
         EditorSelfTestMarks::note( "vfx.restart" );
         EditorWidgets::drawTooltip( "Play the effect again from the start" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
-        if ( ImGui::Button( "Stop" ) && pSubject != nullptr )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) && pSubject != nullptr )
             pSubject->stop();
         EditorSelfTestMarks::note( "vfx.stop" );
         EditorWidgets::drawTooltip( "Stop and clear the particles" );

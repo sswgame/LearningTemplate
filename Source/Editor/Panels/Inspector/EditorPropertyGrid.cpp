@@ -709,8 +709,8 @@ namespace sw::editor
                     { pSeq->addElementDefault( pContainer ); } );
                     notifyPropertyEdited( prop );
                 }
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
-                if ( ImGui::SmallButton( "Clear" ) )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) )
                 {
                     EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Clear Elements", [pSeq, pContainer]()
                     { pSeq->clear( pContainer ); } );

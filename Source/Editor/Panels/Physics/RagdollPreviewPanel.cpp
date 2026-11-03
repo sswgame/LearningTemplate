@@ -19,6 +19,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
@@ -154,7 +155,7 @@ namespace sw::editor
 
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         ImGui::SameLine();
-        if ( ImGui::SmallButton( "Reload" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) )
         {
             reloadDocument();
             _model.requestRespawn(); // 다시 읽은 에셋으로 몸을 다시 놓는다
@@ -195,8 +196,8 @@ namespace sw::editor
                 pRagdoll->stopPartialRagdoll();
             EditorSelfTestMarks::note( "ragdoll.release" );
             EditorWidgets::drawTooltip( "End the partial ragdoll and blend back to the animation pose" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset" ) );
-            if ( ImGui::Button( "Reset" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reset" ) ) )
                 _model.requestRespawn(); // 다음 그리기가 몸을 처음 자세로 다시 놓는다
             EditorSelfTestMarks::note( "ragdoll.reset" );
             EditorWidgets::drawTooltip( "Place the body again in its start pose" );

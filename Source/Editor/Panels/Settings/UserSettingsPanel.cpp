@@ -88,10 +88,10 @@ namespace sw::editor
             const bool bPending = settings.hasPendingChanges();
             if ( bPending == false )
                 ImGui::BeginDisabled();
-            if ( ImGui::Button( "Apply" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Apply" ) ) )
                 _lastRejectedCount = settings.applyPending()._failedCount; // 저장 실패 · 거절된 설정 이름은 매니저가 경고로 남긴다
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert" ) );
-            if ( ImGui::Button( "Revert" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
                 settings.revertPending();
             if ( bPending == false )
                 ImGui::EndDisabled();

@@ -712,6 +712,138 @@ msgctxt "EdCommon.ViewportOrientationCube"
 msgid "Show or hide the orientation cube that shows which way the camera faces."
 msgstr "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdVerb.Apply"
+msgid "Apply"
+msgstr "적용"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+msgctxt "EdVerb.Cancel"
+msgid "Cancel"
+msgstr "취소"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+#: Source/Editor/Panels/Scene/HistoryPanel.cpp
+msgctxt "EdVerb.Clear"
+msgid "Clear"
+msgstr "지우기"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdVerb.Delete"
+msgid "Delete"
+msgstr "삭제"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdVerb.Load"
+msgid "Load"
+msgstr "불러오기"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdVerb.Play"
+msgid "Play"
+msgstr "재생"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdVerb.Redo"
+msgid "Redo"
+msgstr "다시 실행"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdVerb.Refresh"
+msgid "Refresh"
+msgstr "새로 고침"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
+#: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+#: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVerb.Reload"
+msgid "Reload"
+msgstr "다시 읽기"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdVerb.Remove"
+msgid "Remove"
+msgstr "제거"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+msgctxt "EdVerb.Reset"
+msgid "Reset"
+msgstr "초기화"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+msgctxt "EdVerb.Revert"
+msgid "Revert"
+msgstr "되돌리기"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+#: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdVerb.Save"
+msgid "Save"
+msgstr "저장"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdVerb.Stop"
+msgid "Stop"
+msgstr "정지"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdVerb.Undo"
+msgid "Undo"
+msgstr "실행 취소"
+
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EditorAnimationGraph.AddAttackTip"
 msgid "Add an Attack state node. Its name is the clip it plays; rename it in the inspector."

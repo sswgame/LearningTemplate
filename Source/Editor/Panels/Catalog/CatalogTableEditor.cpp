@@ -14,6 +14,8 @@
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -199,7 +201,7 @@ namespace sw::editor
         }
 
         ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) + 1 );
-        if ( ImGui::SmallButton( "Remove" ) )
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
         {
             _pendingKind    = PendingKind::RemoveRow;
             _pendingElement = elementIndex;
@@ -380,8 +382,8 @@ namespace sw::editor
             ImGui::SameLine();
             drawCell( document, key._elementIndex, "_interpolation", false );
             ImGui::PopItemWidth();
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
-            if ( ImGui::SmallButton( "Remove" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
             {
                 _pendingKind    = PendingKind::RemoveRow;
                 _pendingElement = key._elementIndex;

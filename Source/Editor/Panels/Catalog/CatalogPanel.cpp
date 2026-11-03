@@ -180,18 +180,18 @@ namespace sw::editor
         if ( ImGui::Button( "Refresh files" ) )
             _bIndexLoaded = false;
         EditorSelfTestMarks::note( "catalog.refresh" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         ImGui::BeginDisabled( _selectedID.empty() );
-        if ( ImGui::Button( "Save" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 상태 줄에 이유가 있다
         EditorSelfTestMarks::note( "catalog.save" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert" ) );
-        if ( ImGui::Button( "Revert" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
             revertDocument();
         EditorSelfTestMarks::note( "catalog.revert" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Undo" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Undo" ) ) );
         ImGui::BeginDisabled( _document.canUndo() == false );
-        if ( ImGui::Button( "Undo" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Undo" ) ) )
         {
             SW_LOG_INFO_ID( "Catalog.Undo", "Catalog undo" );
             _document.undo();
@@ -200,9 +200,9 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "catalog.undo" );
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Redo" ) ) );
         ImGui::BeginDisabled( _document.canRedo() == false );
-        if ( ImGui::Button( "Redo" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Redo" ) ) )
         {
             _document.redo();
             _tableEditor.reset();

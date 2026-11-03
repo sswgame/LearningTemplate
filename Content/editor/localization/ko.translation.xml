@@ -326,6 +326,21 @@
 		<entry key="EdCommon.ViewportOrientationCube"
 		       text="카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 		       sourceHash="c994648fc818bbf2" />
+		<entry key="EdVerb.Apply" text="적용" sourceHash="b8f855b49234b81b" />
+		<entry key="EdVerb.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="EdVerb.Clear" text="지우기" sourceHash="b4f1dffbb6be6302" />
+		<entry key="EdVerb.Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
+		<entry key="EdVerb.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
+		<entry key="EdVerb.Play" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="EdVerb.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
+		<entry key="EdVerb.Refresh" text="새로 고침" sourceHash="7b7163270e57e8b4" />
+		<entry key="EdVerb.Reload" text="다시 읽기" sourceHash="d5b6130b4937488c" />
+		<entry key="EdVerb.Remove" text="제거" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdVerb.Reset" text="초기화" sourceHash="255857544a9d5ec0" />
+		<entry key="EdVerb.Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdVerb.Save" text="저장" sourceHash="33f85f24c0f5f008" />
+		<entry key="EdVerb.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
+		<entry key="EdVerb.Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
 		<entry key="EditorAnimationGraph.AddAttackTip"
 		       text="Attack 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다."
 		       sourceHash="d05267712c1567b5" />

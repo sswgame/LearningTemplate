@@ -181,13 +181,13 @@ namespace sw::editor
         ImGui::SameLine();
         (void)_document.editInputMapPath().drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "MapPathTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) ); // 경로 칸이 고정 폭이라 좁은 패널에서는 단추가 창 밖에 놓이므로 줄을 바꾼다
-        if ( ImGui::Button( "Reload" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) ); // 경로 칸이 고정 폭이라 좁은 패널에서는 단추가 창 밖에 놓이므로 줄을 바꾼다
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
             reloadFromFile();
         EditorSelfTestMarks::note( "inputMap.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReloadTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-        if ( ImGui::Button( "Save" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All to Default" ) );
@@ -574,7 +574,7 @@ namespace sw::editor
             }
             ImGui::EndChild();
 
-            if ( ImGui::Button( "Cancel", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 16.0f, 0.0f ) ) ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ), EditorChrome::measureTextExtent( EditorTextExtent::ofText( 16.0f, 0.0f ) ) ) )
             {
                 _document.cancelKeyCapture();
                 ImGui::CloseCurrentPopup();
@@ -727,8 +727,8 @@ namespace sw::editor
                 if ( ImGui::Button( "Test Pulse (0.3s)" ) )
                     pGamepad->playVibration( _testVibLeft, _testVibRight, 0.3f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TestPulseTip" ) );
-                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
-                if ( ImGui::Button( "Stop" ) )
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
+                if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
                     pGamepad->stopVibration();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopVibrationTip" ) );
             }

@@ -492,12 +492,12 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load file" ) );
         if ( ImGui::Button( "Load file" ) && compare.loadFromFile( sourceIndex, filePath ) == false )
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotLoad", "Sync could not load %#: %#", _arrPath[sourceIndex].c_str(), compare.getLastError() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         ImGui::BeginDisabled( source._listSample.empty() );
-        if ( ImGui::Button( "Save" ) && compare.saveToFile( sourceIndex, filePath ) == false )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) && compare.saveToFile( sourceIndex, filePath ) == false )
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotWrite", "Sync could not write %#", _arrPath[sourceIndex].c_str() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
-        if ( ImGui::Button( "Clear" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Clear" ) ) )
             compare.clearSource( sourceIndex );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncFile" ) );

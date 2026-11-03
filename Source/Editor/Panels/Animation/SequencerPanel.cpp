@@ -236,15 +236,15 @@ namespace sw::editor
 
         if ( EditorChrome::beginToolbar( "##SequencerToolbar" ) )
         {
-            if ( ImGui::Button( "Load" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) ) )
                 reloadDocument();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "LoadTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-            if ( ImGui::Button( "Save" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
                 saveToLoadedPath();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "SaveTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
-            if ( ImGui::Button( "Play" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
             {
                 syncPreviewPlayer();
                 _previewPlayer->playFromFrame( _currentFrame );
@@ -254,8 +254,8 @@ namespace sw::editor
             if ( ImGui::Button( "Pause" ) )
                 _previewPlayer->pause();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PauseTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
-            if ( ImGui::Button( "Stop" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
             {
                 _previewPlayer->stop();
                 _currentFrame = _sequence != nullptr ? _sequence->_frameMin : 0;

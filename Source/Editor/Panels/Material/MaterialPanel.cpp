@@ -292,11 +292,11 @@ namespace sw::editor
         }
 
         // 문서 경로는 위의 문서 고르기 칸이 보인다 — 같은 경로를 한 줄 더 쓰지 않는다.
-        if ( ImGui::Button( "Reload" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
             reloadDocument();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ReloadTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-        if ( ImGui::Button( "Save" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "SaveTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Apply to Selection" ) );

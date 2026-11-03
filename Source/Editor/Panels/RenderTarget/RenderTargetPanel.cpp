@@ -258,8 +258,8 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ZoomTip" ) );
 
         // 채널 · 깊이 · 픽셀 값은 CPU 로 읽은 스냅샷이다. 다시 읽기는 GPU 를 기다리므로 누를 때(또는 Auto 간격)만 한다.
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh" ) );
-        if ( ImGui::Button( "Refresh" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
             _bRefreshRequested = SW_TRUE;
         EditorSelfTestMarks::note( "renderTargets.refresh" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "RefreshTip" ) );

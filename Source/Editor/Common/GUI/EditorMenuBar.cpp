@@ -134,7 +134,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldWideEm" ) );
         const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), layoutName.data(), layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         ImGui::SameLine();
-        if ( ( ImGui::Button( "Save" ) || bEnter ) && dockLayout.saveNamedLayout( layoutName.c_str() ) )
+        if ( ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) || bEnter ) && dockLayout.saveNamedLayout( layoutName.c_str() ) )
             layoutName.clear();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SaveLayout" ) );
 

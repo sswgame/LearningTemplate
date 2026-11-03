@@ -424,8 +424,8 @@ namespace sw::editor
             notifyDocumentEdited( "Resize Tile Map" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplySizeTip" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
-        const bool bLoad = ImGui::Button( "Load" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) );
+        const bool bLoad = ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) );
         EditorSelfTestMarks::note( "tileMap.load" );
         if ( bLoad )
         {
@@ -437,8 +437,8 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "TileMapPanel.NoTileMap", "No tile map at '%#'", path.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LoadTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-        const bool bSave = ImGui::Button( "Save" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+        const bool bSave = ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) );
         EditorSelfTestMarks::note( "tileMap.save" );
         if ( bSave )
         {
@@ -514,7 +514,7 @@ namespace sw::editor
             ImGui::AlignTextToFramePadding();
             ImGui::TextDisabled( "%s", edges[edgeIndex] );
             ImGui::SameLine( EditorChrome::measureColumns( 2.0f ) + ImGui::GetStyle().ItemSpacing.x ); // 글자 폭(N · W)과 무관하게 칸 시작을 맞춘다
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 2.0f * ( numberWidth + style.ItemSpacing.x ) - EditorChrome::measureSmallButton( "Apply" ) - style.ItemSpacing.x );
+            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 2.0f * ( numberWidth + style.ItemSpacing.x ) - EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Apply" ) ) - style.ItemSpacing.x );
             ImGui::InputText( "##target", preset._target.data(), preset._target.capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetTip" ) );
             ImGui::SameLine();
@@ -526,7 +526,7 @@ namespace sw::editor
             ImGui::InputInt( "##ty", &preset._tileY, 0, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetYTip" ) );
             ImGui::SameLine();
-            if ( ImGui::Button( "Apply" ) && _document.paintEdgeWarp( edgeIndex ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Apply" ) ) && _document.paintEdgeWarp( edgeIndex ) )
                 notifyDocumentEdited( "Paint Tile Map Edge", "tilemap-edge" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplyEdgeTip" ) );
             ImGui::PopID();

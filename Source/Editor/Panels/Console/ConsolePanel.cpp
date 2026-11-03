@@ -369,7 +369,7 @@ namespace sw::editor
 
     void ConsolePanel::drawToolbarToggles( bool& bNewLogs )
     {
-        if ( ImGui::Button( "Clear" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Clear" ) ) )
         {
             clearEntries();
             bNewLogs = false;

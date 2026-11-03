@@ -138,8 +138,8 @@ namespace sw::editor
                 _model.saveLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveLocalizationTip" ) );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
-            if ( ImGui::Button( "Reload" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
                 _model.reloadLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ReloadTip" ) );
 
@@ -345,8 +345,8 @@ namespace sw::editor
             if ( ImGui::Button( "Save File" ) )
                 _model.saveSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveFileTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert" ) );
-            if ( ImGui::Button( "Revert" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
                 _model.loadSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RevertTip" ) );
 

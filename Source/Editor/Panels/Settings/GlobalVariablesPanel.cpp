@@ -284,8 +284,8 @@ namespace sw::editor
 
         ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
                                   _presetNameBuf.capacity() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-        if ( ImGui::Button( "Save" ) && _model.savePreset( _presetNameBuf.c_str() ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) && _model.savePreset( _presetNameBuf.c_str() ) )
             _presetNameBuf.clear();
 
         ImGui::Separator();
@@ -451,7 +451,7 @@ namespace sw::editor
         ImGui::TableNextColumn();
         if ( info.isAtDefault() == false )
         {
-            if ( ImGui::SmallButton( "Reset" ) )
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) )
             {
                 info.resetToDefault();
                 markSessionDirty();

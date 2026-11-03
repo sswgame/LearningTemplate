@@ -793,7 +793,7 @@ namespace sw::editor
 
         ImGui::TextUnformatted( pMessage != nullptr ? pMessage : "You have unsaved changes." );
         EditorUnsavedChoice choice = EditorUnsavedChoice::None;
-        if ( ImGui::Button( "Save" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             choice = EditorUnsavedChoice::Save;
         EditorSelfTestMarks::note( "unsaved.save" );
         ImGui::SameLine();
@@ -801,7 +801,7 @@ namespace sw::editor
             choice = EditorUnsavedChoice::Discard;
         EditorSelfTestMarks::note( "unsaved.discard" );
         ImGui::SameLine();
-        if ( ImGui::Button( "Cancel" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) )
             choice = EditorUnsavedChoice::Cancel;
         EditorSelfTestMarks::note( "unsaved.cancel" );
         if ( choice != EditorUnsavedChoice::None )

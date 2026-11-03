@@ -523,8 +523,8 @@ namespace sw::editor
     void InspectorPanel::drawComponentPresetItems( Component* pComp )
     {
         ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(), _presetNameBuffer.capacity() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-        if ( ImGui::Button( "Save" ) && _presetNameBuffer.empty() == false )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) && _presetNameBuffer.empty() == false )
         {
             if ( EditorTransformCommands::saveComponentPreset( pComp, _presetNameBuffer.c_str() ) )
             {

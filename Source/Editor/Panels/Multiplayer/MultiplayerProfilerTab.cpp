@@ -309,8 +309,8 @@ namespace sw::editor
         ImGui::Text( "%s  connections %d  samples %d", session.getProcessStatus( context._targetProcessIndex )._label.c_str(), track._lastReport._connectionCount,
                      track._series.getCount() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerSource" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
-        if ( ImGui::Button( "Clear" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Clear" ) ) )
         {
             history.clear();
             return;

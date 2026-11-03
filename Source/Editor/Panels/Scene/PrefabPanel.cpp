@@ -188,7 +188,7 @@ namespace sw::editor
                 if ( item._bModified )
                 {
                     ImGui::PushID( static_cast<int32>( overrideIndex ) );
-                    const bool bRevert = ImGui::SmallButton( "Revert" );
+                    const bool bRevert = ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Revert" ) );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RevertOverride" ) );
                     ImGui::PopID();
                     if ( bRevert )

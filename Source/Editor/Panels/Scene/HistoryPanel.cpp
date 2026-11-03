@@ -57,8 +57,8 @@ namespace sw::editor
                         ImGui::EndDisabled();
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HistoryRedo" ) );
 
-                    EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
-                    if ( ImGui::Button( "Clear" ) )
+                    EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
+                    if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Clear" ) ) )
                         cmdStack.clear();
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HistoryClear" ) );
 

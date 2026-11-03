@@ -734,6 +734,138 @@
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdVerb.Apply" source="Apply">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Cancel" source="Cancel">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Clear" source="Clear">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Delete" source="Delete">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Load" source="Load">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Play" source="Play">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Redo" source="Redo">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Refresh" source="Refresh">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Reload" source="Reload">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Remove" source="Remove">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Reset" source="Reset">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Revert" source="Revert">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Save" source="Save">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Stop" source="Stop">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Undo" source="Undo">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorAnimationGraph.AddAttackTip"
 		       source="Add an Attack state node. Its name is the clip it plays; rename it in the inspector.">
 			<origins>

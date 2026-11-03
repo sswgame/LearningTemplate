@@ -59,12 +59,12 @@ namespace sw::editor
         if ( EditorWidgets::drawAssetPathField( "##Atlas", atlasPath, "atlas", nullptr, nullptr )._bDeactivatedAfterEdit ) // 콘텐츠 브라우저에서 끌어 놓을 수 있다
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
-        if ( ImGui::Button( "Load" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) ) )
             reloadDocument();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "LoadTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         // 저장 단추도 저장 경로 하나(`saveDocumentAndClearDirty`)를 지난다 — 예전 단추는 못 읽은 문서(Malformed)도 덮어쓰고, 경로가 비거나 쓰기에 실패해도 "저장했다" 를 띄웠다.
-        if ( ImGui::Button( "Save" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 dirty 가 남고 상태 줄은 그대로다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SaveTip" ) );
         ImGui::TextDisabled( "%s/%s (separate from AnimationGraph)", config::kDirSavedEditor, EditorPaths::kSpriteClipDocumentFileName );

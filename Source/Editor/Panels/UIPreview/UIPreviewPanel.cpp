@@ -414,15 +414,15 @@ namespace sw::editor
             _model.onDocumentPathCommitted( previous, isDocumentDirty() );
         UIPreviewPanelInternal::noteMark( "uipreview", "path" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "DocumentPathTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
-        if ( ImGui::Button( "Reload" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
             revertDocument();
         UIPreviewPanelInternal::noteMark( "uipreview", "reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ReloadTip" ) );
         ImGui::SameLine();
         const bool bCanSave = canSaveDocument() && isDocumentDirty();
         ImGui::BeginDisabled( bCanSave == false );
-        if ( ImGui::Button( "Save" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패는 saveDocument 가 로그로 알린다
         ImGui::EndDisabled();
         UIPreviewPanelInternal::noteMark( "uipreview", "save" );
@@ -545,8 +545,8 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
-        if ( ImGui::Button( "Play" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
             _model.playAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "play" );
         EditorWidgets::drawTooltip( "Play the chosen animation from the start. The widget values stay where it leaves them; Reload restores the document." );
@@ -555,8 +555,8 @@ namespace sw::editor
         if ( ImGui::Button( pPauseLabel ) )
             _model.togglePauseAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "pause" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
-        if ( ImGui::Button( "Stop" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
             _model.stopAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "stop" );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Loop" ) );
@@ -598,7 +598,7 @@ namespace sw::editor
         ImGui::SameLine();
         const bool bCanDelete = _model.canDeleteSelected( screen.getTree() );
         ImGui::BeginDisabled( bCanDelete == false );
-        if ( ImGui::Button( "Delete" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Delete" ) ) )
             (void)_model.deleteSelected( screen ); // 루트나 없는 선택은 못 지우고, 그때는 단추가 꺼져 있다
         ImGui::EndDisabled();
         Internal::noteMark( "uipreview", "delete" );

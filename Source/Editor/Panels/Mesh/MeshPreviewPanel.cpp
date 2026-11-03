@@ -19,6 +19,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -108,7 +109,7 @@ namespace sw::editor
         }
 
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
-        if ( ImGui::Button( "Reload" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
         {
             reloadDocument();
             _model.requestResync(); // 다시 임포트한 메시를 미리보기에 다시 건다

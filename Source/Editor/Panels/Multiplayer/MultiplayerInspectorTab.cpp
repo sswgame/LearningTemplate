@@ -202,8 +202,8 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Disconnect" ) );
             if ( ImGui::Button( "Disconnect" ) )
                 inspector.disconnect();
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh" ) );
-            if ( ImGui::Button( "Refresh" ) && inspector.refreshTree() == false )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Refresh" ) ) && inspector.refreshTree() == false )
                 SW_LOG_WARNING_ID( "MultiplayerInspector.InspectorCouldNotRead", "Inspector could not read the hierarchy: %#", inspector.getLastError() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "InspectorRefresh" ) );
         }

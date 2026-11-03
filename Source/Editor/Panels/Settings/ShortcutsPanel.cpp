@@ -115,8 +115,8 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "shortcuts.replace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ReplaceShortcut" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Cancel" ) );
-        if ( ImGui::Button( "Cancel" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) )
             finishCapture();
         EditorSelfTestMarks::note( "shortcuts.cancel" );
     }
@@ -173,8 +173,8 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SetShortcut" ) );
         if ( inputActions.isShortcutModified( desc._inputAction ) )
         {
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset" ) );
-            if ( ImGui::SmallButton( "Reset" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) )
                 inputActions.resetShortcut( desc._inputAction );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetShortcut" ) );
         }

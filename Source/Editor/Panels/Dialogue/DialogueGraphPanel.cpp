@@ -137,12 +137,12 @@ namespace sw::editor
                 ImGui::SameLine();
             }
             EditorWidgets::drawToolbarSeparator();
-            if ( ImGui::Button( "Save" ) )
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::note( "dialogueGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SaveTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
-            if ( ImGui::Button( "Reload" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
                 reloadDocument();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ReloadTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset Default" ) );

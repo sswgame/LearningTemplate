@@ -186,26 +186,26 @@ namespace sw::editor
                 linkSelectedNodes();
             EditorSelfTestMarks::note( "animationGraph.linkSelected" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LinkSelectedTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
-            if ( ImGui::Button( "Load" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) ) )
                 reloadDocument();
             EditorSelfTestMarks::note( "animationGraph.load" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LoadTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-            if ( ImGui::Button( "Save" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::note( "animationGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "SaveTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
-            if ( ImGui::Button( "Play" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
                 _preview.play( _graph, getLoadedAssetPath() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "PlayTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Advance" ) );
             if ( ImGui::Button( "Advance" ) )
                 _preview.advance( _graph, getLoadedAssetPath() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AdvanceTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
-            if ( ImGui::Button( "Stop" ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
                 _preview.stop();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StopTip" ) );
 
@@ -315,7 +315,7 @@ namespace sw::editor
         {
             if ( ImGui::MenuItem( "Duplicate" ) )
                 duplicateNode( _selectedNodeID );
-            if ( ImGui::MenuItem( "Delete" ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdVerb", "Delete" ) ) )
                 ed::DeleteNode( toNodeID( _selectedNodeID ) );
             ImGui::EndPopup();
         }

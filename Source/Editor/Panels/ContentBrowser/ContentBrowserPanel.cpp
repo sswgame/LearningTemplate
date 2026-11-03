@@ -516,15 +516,15 @@ namespace sw::editor
             ImGui::TextDisabled( "The reference index is still building." );
         }
         ImGui::Separator();
-        const bool bConfirmed = ImGui::Button( "Delete" );
+        const bool bConfirmed = ImGui::Button( SW_LOCKEY( "EdVerb", "Delete" ) );
         EditorSelfTestMarks::note( "contentBrowser.delete.confirm" );
         if ( bConfirmed )
         {
             (void)confirmDeleteAsset(); // 실패는 moveToTrash 가 알린다(파일과 .meta 를 그대로 둔다)
             ImGui::CloseCurrentPopup();
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Cancel" ) );
-        if ( ImGui::Button( "Cancel" ) || EditorInputGUI::wasCancelPressed() )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) || EditorInputGUI::wasCancelPressed() )
         {
             _model.cancelDeleteAsset();
             ImGui::CloseCurrentPopup();
@@ -823,8 +823,8 @@ namespace sw::editor
         if ( importClicked )
             _model.importFilesFromDialog();
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh" ) );
-        if ( ImGui::Button( "Refresh" ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
             _model.refreshAll();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Refresh" ) );
 
