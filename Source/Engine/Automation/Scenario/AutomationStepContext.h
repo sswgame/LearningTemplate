@@ -60,11 +60,6 @@ namespace sw
          */
         virtual AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames ) = 0;
         /**
-         * @brief `holdUntilReady` 의 벽시계판입니다 — 붙잡기를 시작한 뒤 @p wallSeconds 가 지나면 놓습니다.
-         * @details 바깥 일(파일 쓰기 · 자식 프로세스 · GPU)을 기다리는 단계가 쓴다 — 붙잡은 동안 프레임은 빨리 돌아 프레임 수 시한은 그 일의 시간과 무관하다(Debug 의 PNG 쓰기가 120 프레임을 넘었다).
-         */
-        virtual AutomationStepHold holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds ) = 0;
-        /**
          * @brief 붙잡고 있는 단계 @p step 의 상태입니다(`setHeldStepState` 로 맡긴 것). 맡긴 적이 없거나 다른 단계의 것이면 nullptr 입니다.
          * @details 맡긴 단계만 같은 타입으로 되돌려 읽는다(`static_cast`) — 상태 칸은 붙잡은 단계 하나의 것이다.
          */

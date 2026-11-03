@@ -138,22 +138,25 @@ namespace sw::editor
                 return hold;
             }
 
-            /** @brief `EditorWaitSettled` 가 붙잡기를 시작할 때 받은 기다림 번호입니다(`EditorSelfTestInput::beginSettleWait`). */
+            /** @brief `EditorWaitSettled` 가 붙잡은 동안의 상태입니다 — 기다림 번호(`EditorSelfTestInput::beginSettleWait`)와 할 일 없이 화면만 움직인 연속 프레임 수. */
             struct SettleWait final : IAutomationStepState
             {
                 explicit SettleWait( uint32 waitSerial )
                     : _waitSerial{ waitSerial }
+                    , _idleMovingFrames{ 0 }
                 {
                 }
                 uint32 _waitSerial;
+                uint32 _idleMovingFrames;
             };
 
             /**
-             * @brief `EditorWaitSettled` 의 시한(벽시계 초)입니다. 넘기면 화면이 계속 움직이거나 뒤의 일이 끝나지 않는다는 뜻이라 실패로 적는다.
-             * @details 벽시계다 — 정지는 바깥 일(캡처 · 저장 파일 쓰기)도 기다리는데, 붙잡은 동안 프레임은 빨리 돌아 프레임 수 시한은 그 일의 시간과 무관하다(Debug 의 UI 캡처 PNG 쓰기가
-             *          120 프레임을 넘었다). 시나리오 전체의 벽시계 상한(`wallTimeoutSeconds`)이 바깥 그물이다.
+             * @brief 할 일(씬 · 에셋 · 뒤에 끝날 일)이 없는데 화면이 이만큼 이어서 움직이면 진동하는 UI 결함으로 보고 실패로 적습니다.
+             * @details 시간 시한이 아니다 — 바른 화면은 할 일이 끝나면 몇 프레임 안에 멈추고(도킹 · 팝업 · 자동 크기), 진동(크기와 위치가 서로를 바꾸는 배치)은 끝나지 않는다.
+             *          그래서 기계 · 구성의 빠르기와 무관하게 프레임으로 센다. 진행 중인 일 자체에는 시한을 두지 않는다 — 그 일의 시간은 Debug · 부하 · 크기에 달려 어떤 숫자도
+             *          임의다(Debug 의 UI 캡처 PNG 쓰기가 120 프레임 · 20 초 같은 숫자를 넘었다). 끝나지 않는 일은 바깥 그물(시나리오 벽시계 상한 · 멈춤 감시)이 잡는다.
              */
-            static constexpr float32 kSettleTimeoutWallSeconds = 20.0f;
+            static constexpr uint32 kMaxIdleMovingFrames = 120;
 
             /**
              * @brief 에디터가 멈출 때까지(정지 상태) 시나리오 시계를 붙잡습니다 — 앞 단계가 낳은 일이 다 끝나 새 입력 없이는 더 바뀔 것이 없는 상태.
@@ -169,24 +172,26 @@ namespace sw::editor
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 준비가 이미 막았다
                 // 번호가 없거나(상태 저장소가 아직 없다) 지금 번호보다 크면 상태 저장소가 새로 섰다(백엔드 교체 · 모듈 리로드가 에디터 컨텍스트를 다시 세운다 — 번호가 0 부터 다시 센다) — 거기서 다시 기다린다.
-                const SettleWait* pWait = static_cast<const SettleWait*>( runner.findHeldStepState( step ) );
+                SettleWait* pWait = static_cast<SettleWait*>( runner.findHeldStepState( step ) );
                 if ( pWait == nullptr || pWait->_waitSerial == 0 || pWait->_waitSerial > EditorSelfTestInput::getSettleWaitSerial() )
-                    pWait = static_cast<const SettleWait*>( &runner.setHeldStepState( step, make_unique<SettleWait>( EditorSelfTestInput::beginSettleWait() ) ) );
+                    pWait = static_cast<SettleWait*>( &runner.setHeldStepState( step, make_unique<SettleWait>( EditorSelfTestInput::beginSettleWait() ) ) );
                 const EditorDockLayout* pDockLayout    = editor::findSubsystem<EditorDockLayout>();
                 const bool              bScreenSettled = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&
                                             EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutSettledSince( pWait->_waitSerial );
                 const bool        bSceneSettled  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
                 const bool        bAssetsSettled = CaptureReadiness::countPendingWork( runner.findActiveObjectManager() ) == 0;
                 const utf8* const pPendingWork   = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
-                const bool        bReady         = bScreenSettled && bSceneSettled && bAssetsSettled && pPendingWork == nullptr;
+                const bool        bWorkDone      = bSceneSettled && bAssetsSettled && pPendingWork == nullptr;
+                const bool        bReady         = bScreenSettled && bWorkDone;
+                // 할 일이 남았으면 화면이 움직이는 것은 그 일 때문일 수 있다 — 끝난 뒤의 움직임만 센다.
+                pWait->_idleMovingFrames = ( bWorkDone && bScreenSettled == false ) ? pWait->_idleMovingFrames + 1 : 0;
+                const bool bOscillating  = pWait->_idleMovingFrames > kMaxIdleMovingFrames;
+                if ( bOscillating )
+                    runner.recordFailure( step, formatToString( "the editor screen kept moving for %# frame(s) with no pending work (%#) - a layout that never settles",
+                                                                pWait->_idleMovingFrames, EditorSelfTestInput::describeLastLayoutChange().c_str() ) );
+                // 진행 중인 일에는 시한이 없다(시간 시한은 그 일의 빠르기에 매인 임의 숫자다) — 끝나지 않으면 시나리오 벽시계 상한 · 멈춤 감시가 잡는다.
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pWait 을 읽지 않는다.
-                const AutomationStepHold hold = runner.holdUntilReadyWithin( step, input, bReady, kSettleTimeoutWallSeconds );
-                if ( hold == AutomationStepHold::Run && bReady == false )
-                    runner.recordFailure( step, formatToString( "the editor did not settle within %# s (screen %#, scene %#, assets %#, work %#)", kSettleTimeoutWallSeconds,
-                                                                bScreenSettled ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
-                                                                bSceneSettled ? "settled" : "transitioning", bAssetsSettled ? "settled" : "pending",
-                                                                pPendingWork != nullptr ? pPendingWork : "none" ) );
-                return hold;
+                return runner.holdUntilReady( step, input, bReady, bOscillating ? 0u : std::numeric_limits<uint32>::max() );
             }
 
             /**
