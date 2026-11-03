@@ -210,6 +210,7 @@ namespace sw
         IRHIDevice*              _pDevice;
         FrameRenderer*           _pFrameRenderer;
         OffscreenSceneRenderers* _pOffscreenRenderers;
+        vector<uint32>           _listPendingRetiredSceneKey; ///< 받은 패킷이 알린 사라진 미리보기 씬 키 — 내릴 수 있는 프레임까지 모은다(알림은 한 번뿐이라 그리지 않은 패킷에서 잃으면 렌더러가 남는다)
         PresentHookDelegate      _prepareHook;
         PresentHookDelegate      _presentHook;
         PresentHookDelegate      _postPresentHook;

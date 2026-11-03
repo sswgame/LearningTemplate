@@ -200,6 +200,7 @@ namespace sw
         : _pDevice{ nullptr }
         , _pFrameRenderer{ nullptr }
         , _pOffscreenRenderers{ nullptr }
+        , _listPendingRetiredSceneKey{}
         , _prepareHook{}
         , _presentHook{}
         , _postPresentHook{}
@@ -491,6 +492,9 @@ namespace sw
         // 그러지 않으면 그 묶음의 글자가 영영 빈칸으로 남는다(첫 프레임에 만든 글리프가 HUD 에서 빠졌다).
         if ( _pFrameRenderer != nullptr )
             _pFrameRenderer->acceptCanvasAtlasUploads( packet._canvas );
+        // 사라진 미리보기 씬의 알림도 한 번뿐이다 — 받은 즉시 모으고, 렌더러를 내릴 수 있는 프레임(`drawScenePreviews`)에 내린다. 씬 키는 다시 쓰지 않는다.
+        _listPendingRetiredSceneKey.insert( _listPendingRetiredSceneKey.end(), packet._listRetiredSceneKey.begin(), packet._listRetiredSceneKey.end() );
+        packet._listRetiredSceneKey.clear();
         // 훅에 넘길 디바이스가 아예 없으면 할 수 있는 일이 없다.
         if ( _pDevice == nullptr )
             return;
@@ -750,10 +754,11 @@ namespace sw
                 // 실패는 렌더러가 로그로 남기고 타깃은 클리어 색으로 남는다 — 기다려도 나아지지 않으니 남은 일로 세지 않는다
                 arrPending[pendingCount++] = ScenePendingWork{ preview._sceneKey, pRenderer != nullptr ? pRenderer->getLastPendingPSOBatchCount() : 0u };
             }
-            for ( const uint32 sceneKey : packet._listRetiredSceneKey )
+            for ( const uint32 sceneKey : _listPendingRetiredSceneKey )
             {
                 _pOffscreenRenderers->retire( sceneKey );
             }
+            _listPendingRetiredSceneKey.clear();
         }
         ScopedLock<mutex> lock{ _scenePendingMutex };
         _arrScenePending   = arrPending;

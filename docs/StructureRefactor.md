@@ -264,6 +264,10 @@
   게임 스레드가 GPU 자원이 생긴 뒤에도 값을 바꾼다 → **렌더 프록시**(렌더 쪽 사본, `Material` / `MaterialRenderProxy` = 언리얼 `FMaterialRenderProxy`).
   바꾸지 않는다(바뀌면 새 객체) → **한 번 만들기**(만드는 쪽 하나, `Mesh` = 언리얼 `FStaticMeshRenderData` + `BeginInitResource`).
   렌더 쪽이 핸들을 바꿔 끼운다(스트리밍) → **게시**(원자값 핸들 · SRV, 게임 스레드는 읽기만, `Texture2D` = 언리얼 `FTextureReference`). 잠금으로 두 생성자를 덮지 않는다.
+- **패킷에 실린 차분 · 알림 판단 기준**(2026-11-04, 언리얼 폰트 캐시 갱신은 그리기와 따로 렌더 명령으로 간다): 프레임 패킷은 그리지 않고 버려질 수 있다(시점 없음 · 컨텍스트 실패 · 그래프 준비 전).
+  패킷에는 그 프레임의 **전체 상태**(스냅샷 · 그리기 목록)만 싣고, 한 번뿐인 **차분 · 알림**은 렌더 스레드가 받는 즉시(`RenderThread::executePacket` 머리) 옮긴다 —
+  글리프 아틀라스 업로드(묶음 번호 `GlyphAtlasUpload::_sequence` + 건너뛰면 `GlyphAtlas::requestFullUpload`, 첫 프레임 글자가 HUD 에서 빠졌던 결함), 사라진 미리보기 씬 키(`_listPendingRetiredSceneKey`).
+  게임 스레드 쪽 큐(`TextureCache::flushRegionUpdates`)는 패킷에 실리지 않아 늦어질 뿐 잃지 않는다. 새 차분을 패킷에 더할 때 같은 자리에서 받는다.
 - **같은 일 지도(끝낸 것)**: 캡처 준비 판정(`CaptureReadiness`), 씬 하나 채우기(`fillSceneView`), 읽은 픽셀 풀기(`RenderTargetImageFile::unpackRGBA8` — 초상화의 `makeRGBA8` 삭제),
   로그 줄 모양 쓰기 · 읽기(`LogLineFormat`), 로그 사건 세기(모든 줄에 id — id 없는 매크로 삭제).
 - **점검에 더할 축**: 소유 지도(객체 → 스레드, 렌더러 인스턴스 → 소유자, 디바이스 호출자), 일 지도(하는 일로 묶은 함수들), 명령줄 도구마다 ctest. 진행은 NEXT 0-6.
