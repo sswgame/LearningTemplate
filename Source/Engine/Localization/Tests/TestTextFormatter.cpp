@@ -81,6 +81,17 @@ SW_TEST_CASE( TextFormatterTest, DecimalKeepsFixedFractionDigits )
 }
 
 /**
+ * @brief [TextFormatterTest] select 분기 안에 다른 인자를 둘 수 있다 — 코드는 고르개 값만 넘기고 낱말과 덧붙임은 패턴(번역)이 정한다(에디터 판독 줄의 PASS · FAIL)
+ */
+SW_TEST_CASE( TextFormatterTest, SelectBranchCarriesArgument )
+{
+    const utf8* pPattern = "{result, select, pass {PASS} other {FAIL}}{hasReason, select, yes { - {reason}} other {}}";
+    SW_EXPECT_EQUAL( sw::string( "FAIL - timeout" ),
+                     format( "en", pPattern, sw::TextArgumentList().addText( "result", "fail" ).addText( "hasReason", "yes" ).addText( "reason", "timeout" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "PASS" ), format( "en", pPattern, sw::TextArgumentList().addText( "result", "pass" ).addText( "hasReason", "no" ).addText( "reason", "" ) ) );
+}
+
+/**
  * @brief [TextFormatterTest] 없는 인자 · other 가 빠진 복수형 · 닫히지 않은 괄호는 오류이고, 글은 비지 않게 채운다
  */
 SW_TEST_CASE( TextFormatterTest, ReportsBrokenPatterns )

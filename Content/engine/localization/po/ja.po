@@ -1153,7 +1153,7 @@ msgstr "バインド: ターゲットボーン {targetBoneCount} 個中 {mappedT
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.BonesOverridden"
-msgid "{boneCount} bones, {overridesCount} overridden{dirty}"
+msgid "{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
 msgstr "ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}"
 
 #: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
@@ -1163,8 +1163,8 @@ msgstr "{focused}クライアント {worldIndex}"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginFormat.ClipS"
-msgid "{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
-msgstr "{anchor}  クリップ {clip}  {stage} {clipSeconds} 秒{f}"
+msgid "{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
+msgstr "{role, select, anchor {アンカー} required {必須} other {任意}}  クリップ {clip}  {stage} {clipSeconds} 秒{clipLength, select, unknown {  (クリップの長さ不明 - プレハブを選んでください)} other {}}"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.CutVertsMovedMax"
@@ -1183,8 +1183,8 @@ msgstr "GM 接続: {stateText}"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginFormat.Id"
-msgid "{displayName}  (id {accountID})  {sW_TRUE}"
-msgstr "{displayName}  (id {accountID})  {sW_TRUE}"
+msgid "{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}"
+msgstr "{displayName}  (id {accountID})  {presence, select, online {オンライン} other {オフライン}}"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPluginFormat.Live"
@@ -1198,12 +1198,12 @@ msgstr "''{clipFolder}'' にアニメーションクリップがありません"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPluginFormat.NodesProblems"
-msgid "{nodeCount} nodes | {issueCount} problems"
+msgid "{nodeCount, plural, one {# node} other {# nodes}} | {issueCount, plural, one {# problem} other {# problems}}"
 msgstr "ノード {nodeCount} 個 | 問題 {issueCount} 個"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPluginFormat.NodesWiresProblems"
-msgid "{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems"
+msgid "{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}"
 msgstr "{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個"
 
 #: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
@@ -1218,7 +1218,7 @@ msgstr "貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPluginFormat.Problems"
-msgid "{issueCount} problems"
+msgid "{issueCount, plural, one {# problem} other {# problems}}"
 msgstr "問題 {issueCount} 個"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
@@ -1238,7 +1238,7 @@ msgstr "スロット {slot}: {requestedItem} -> {fallbackItem}({reason})"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.SlotsSetsPresets"
-msgid "{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
+msgid "{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}"
 msgstr "スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
@@ -1258,8 +1258,8 @@ msgstr "ティック {tick}  入力フォーカス: ワールド {inputFocus}"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.WearingOnBasePreset"
-msgid "Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)"
-msgstr "基準プリセット ''{basePresetID}'' に {slot} を装着(組み立て {appearance} 回)"
+msgid "Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+msgstr "基準プリセット ''{basePresetID}'' に {wearing, select, none {スロットアイテムなし} other {選択中のもの}} を装着(組み立て {appearance} 回)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginTip.AnchorRelativeRootPositionAndYawAt"

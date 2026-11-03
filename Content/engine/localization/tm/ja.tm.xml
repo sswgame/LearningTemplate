@@ -397,6 +397,8 @@
 		<entry source="Warp end (s)" text="ワープ終了(秒)" />
 		<entry source="Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)"
 		       text="基準プリセット ''{basePresetID}'' に {slot} を装着(組み立て {appearance} 回)" />
+		<entry source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+		       text="基準プリセット ''{basePresetID}'' に {wearing, select, none {スロットアイテムなし} other {選択中のもの}} を装着(組み立て {appearance} 回)" />
 		<entry source="Why does it look like this? (rules)" text="なぜこう見えるか(ルール)" />
 		<entry source="Why this activity now" text="今この行動をする理由" />
 		<entry source="Window Mode" text="ウィンドウモード" />
@@ -412,22 +414,35 @@
 		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}" />
 		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
 		       text="{anchor}  クリップ {clip}  {stage} {clipSeconds} 秒{f}" />
+		<entry source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
+		       text="ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}" />
 		<entry source="{boneCount} bones, {overridesCount} overridden{dirty}"
 		       text="ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}" />
 		<entry source="{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
 		       text="{count} 件の設定は再起動後に反映されます。" />
+		<entry source="{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}"
+		       text="{displayName}  (id {accountID})  {presence, select, online {オンライン} other {オフライン}}" />
 		<entry source="{displayName}  (id {accountID})  {sW_TRUE}" text="{displayName}  (id {accountID})  {sW_TRUE}" />
 		<entry source="{focused}Client {worldIndex}" text="{focused}クライアント {worldIndex}" />
 		<entry source="{focused}Server" text="{focused}サーバー" />
+		<entry source="{issueCount, plural, one {# problem} other {# problems}}" text="問題 {issueCount} 個" />
 		<entry source="{issueCount} problems" text="問題 {issueCount} 個" />
+		<entry source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}"
+		       text="{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個" />
 		<entry source="{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems"
 		       text="{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個" />
 		<entry source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}"
 		       text="{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂点 {movedVertexCount} 個移動、最大押し出し {maxDelta}" />
 		<entry source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
 		       text="{name}: ソース {sourceLength} m、ターゲット {targetLength} m(x{ratio})" />
+		<entry source="{nodeCount, plural, one {# node} other {# nodes}} | {issueCount, plural, one {# problem} other {# problems}}"
+		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個" />
 		<entry source="{nodeCount} nodes | {issueCount} problems"
 		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個" />
+		<entry source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
+		       text="{role, select, anchor {アンカー} required {必須} other {任意}}  クリップ {clip}  {stage} {clipSeconds} 秒{clipLength, select, unknown {  (クリップの長さ不明 - プレハブを選んでください)} other {}}" />
+		<entry source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}"
+		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
 		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
 		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
 	</entries>

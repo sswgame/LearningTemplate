@@ -1064,7 +1064,8 @@
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.ComponentSAreNot" source="{componentCount} component(s) are not on every selected object">
+		<entry key="EdFormat.ComponentSAreNot"
+		       source="{componentCount, plural, one {# component is} other {# components are}} not on every selected object">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
@@ -1105,18 +1106,19 @@
 			</origins>
 		</entry>
 		<entry key="EdFormat.DurationSTracksCurves"
-		       source="Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault}  Root motion {rootMotionTrack}  Notifies {findNotifyTrack}">
+		       source="Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault, select, yes {yes} other {no}}  Root motion {rootMotionTrack, select, yes {yes} other {no}}  Notifies {findNotifyTrack, select, yes {yes} other {no}}">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.EntitiesCells" source="{alwaysLoadedIDCount} entities, {cellCount} cells">
+		<entry key="EdFormat.EntitiesCells"
+		       source="{alwaysLoadedIDCount, plural, one {# entity} other {# entities}}, {cellCount, plural, one {# cell} other {# cells}}">
 			<origins>
 				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.ExitCodeErrorLines"
-		       source="{externalTitle} — exit code {externalExitCode}, {externalErrorCount} [Error] lines">
+		       source="{externalTitle} — exit code {externalExitCode}, {externalErrorCount, plural, one {# error line} other {# error lines}}">
 			<origins>
 				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
 			</origins>
@@ -1141,7 +1143,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.Frames2" source="{passed} ({frameCount} frames){reason}{reason2}">
+		<entry key="EdFormat.Frames2"
+		       source="{result, select, pass {PASS} other {FAIL}} ({frameCount} frames){hasReason, select, yes { - {reason}} other {}}">
 			<origins>
 				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
 			</origins>
@@ -1202,7 +1205,8 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.Max" source="{name}  {additive}{looping}  max {maxParticles}  {texturePath}">
+		<entry key="EdFormat.Max"
+		       source="{name}  {blend, select, additive {Additive} other {Alpha}}{looping, select, yes {  looping} other {}}  max {maxParticles}  {texturePath}">
 			<origins>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
@@ -1252,7 +1256,7 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.ObjectsSelected" source="{objectCount} objects selected">
+		<entry key="EdFormat.ObjectsSelected" source="{objectCount, plural, one {# object} other {# objects}} selected">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
@@ -1388,12 +1392,14 @@
 				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.StateBuiltBodiesSettled" source="State {state}  Built bodies {bodyCount}  Settled {settled}">
+		<entry key="EdFormat.StateBuiltBodiesSettled"
+		       source="State {state}  Built bodies {bodyCount}  Settled {settled, select, yes {yes} other {no}}">
 			<origins>
 				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.StateHoldS" source="State: {action}  hold {action2} s">
+		<entry key="EdFormat.StateHoldS"
+		       source="State: {phase, select, triggered {TRIGGERED} down {DOWN} ongoing {ONGOING} other {Idle}}  hold {holdSeconds} s">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -1413,12 +1419,12 @@
 				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.Targets" source="{targetCount} targets">
+		<entry key="EdFormat.Targets" source="{targetCount, plural, one {# target} other {# targets}}">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.Tests" source="{registryCount} tests">
+		<entry key="EdFormat.Tests" source="{registryCount, plural, one {# test} other {# tests}}">
 			<origins>
 				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
 			</origins>
@@ -1428,7 +1434,7 @@
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.TickS" source="{label} - {sampleCount} tick(s), {tick} .. {tick2}">
+		<entry key="EdFormat.TickS" source="{label} - {sampleCount, plural, one {# tick} other {# ticks}}, {tick} .. {tick2}">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 			</origins>
@@ -1458,7 +1464,8 @@
 				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.TracyOnPortViewer" source="Tracy: on (port {tracyPort}, viewer {viewerConnected})">
+		<entry key="EdFormat.TracyOnPortViewer"
+		       source="Tracy: on (port {tracyPort}, viewer {viewerConnected, select, connected {connected} other {waiting}})">
 			<origins>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 			</origins>
@@ -1484,12 +1491,13 @@
 			</origins>
 		</entry>
 		<entry key="EdFormat.UsedByFileS"
-		       source="{sW_EDITORICON} Used by {referrerCount} file(s). They will name a missing asset.">
+		       source="{sW_EDITORICON} Used by {referrerCount, plural, one {# file} other {# files}}. They will name a missing asset.">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.ValidationFailedWarnings" source="Validation failed ({warningCount} warnings)">
+		<entry key="EdFormat.ValidationFailedWarnings"
+		       source="Validation failed ({warningCount, plural, one {# warning} other {# warnings}})">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
 			</origins>

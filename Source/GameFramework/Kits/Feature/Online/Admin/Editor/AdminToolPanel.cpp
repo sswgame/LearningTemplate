@@ -221,7 +221,7 @@ namespace sw::editor
         }
 
         const AdminReply& lookup = session.getLookup();
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Id", TextArgumentList().addText( "displayName", lookup._identity._displayName.c_str() ).addText( "accountID", AdminToolPanelInternal::formatAccountID( lookup._identity._accountID ).c_str() ).addText( "sW_TRUE", lookup._bOnline == SW_TRUE ? "online" : "offline" ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Id", TextArgumentList().addText( "displayName", lookup._identity._displayName.c_str() ).addText( "accountID", AdminToolPanelInternal::formatAccountID( lookup._identity._accountID ).c_str() ).addText( "presence", lookup._bOnline == SW_TRUE ? "online" : "offline" ) ).c_str() );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp;
         if ( ImGui::BeginTable( "##AdminBalance", 2, kTableFlags ) )

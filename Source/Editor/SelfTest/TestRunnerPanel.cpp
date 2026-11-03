@@ -214,7 +214,7 @@ namespace sw::editor
                     if ( result._id != pID )
                         continue;
                     ImGui::SameLine();
-                    ImGui::TextColored( result._bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "Frames2", TextArgumentList().addText( "passed", result._bPassed ? "PASS" : "FAIL" ).addInteger( "frameCount", static_cast<int64>( result._frameCount ) ).addText( "reason", result._reason.empty() ? "" : " - " ).addText( "reason2", result._reason.c_str() ) ).c_str() );
+                    ImGui::TextColored( result._bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "Frames2", TextArgumentList().addText( "result", result._bPassed ? "pass" : "fail" ).addInteger( "frameCount", static_cast<int64>( result._frameCount ) ).addText( "hasReason", result._reason.empty() ? "no" : "yes" ).addText( "reason", result._reason ) ).c_str() );
                 }
             }
             if ( bGroupOpen )

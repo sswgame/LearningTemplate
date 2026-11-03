@@ -272,7 +272,7 @@ namespace sw::editor
                                                                                                               : "exited";
             ImGui::PushID( static_cast<int32>( roleIndex ) );
             ImGui::SeparatorText( role._name.c_str() );
-            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "ClipS", TextArgumentList().addText( "anchor", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ) ).addText( "clip", role._clip.c_str() ).addText( "stage", pStage ).addDecimal( "clipSeconds", static_cast<float64>( preview._clipSeconds ), 3 ).addText( "f", _listSlot[roleIndex]._clipSeconds > 0.0f ? "" : "  (clip length unknown - pick a prefab)" ) ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "ClipS", TextArgumentList().addText( "role", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ) ).addText( "clip", role._clip.c_str() ).addText( "stage", pStage ).addDecimal( "clipSeconds", static_cast<float64>( preview._clipSeconds ), 3 ).addText( "clipLength", _listSlot[roleIndex]._clipSeconds > 0.0f ? "known" : "unknown" ) ).c_str() );
 
             RoleSlot& slot = _listSlot[roleIndex];
             ImGui::SetNextItemWidth( -1.0f );

@@ -130,7 +130,7 @@ namespace sw::editor
 
         for ( const VFXPreviewEmitterRow& row : _model.getEmitterRows() )
         {
-            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "additive", row._bAdditive ? "Additive" : "Alpha" ).addText( "looping", row._bLooping ? "  looping" : "" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) ).c_str() );
+            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "blend", row._bAdditive ? "additive" : "alpha" ).addText( "looping", row._bLooping ? "yes" : "no" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) ).c_str() );
         }
 
         if ( isDocumentLoadFailed() == false ) // 읽지 못한 효과는 걸지 않는다

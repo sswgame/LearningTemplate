@@ -1160,7 +1160,8 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.BonesOverridden" source="{boneCount} bones, {overridesCount} overridden{dirty}">
+		<entry key="EdPluginFormat.BonesOverridden"
+		       source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -1170,7 +1171,8 @@
 				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.ClipS" source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}">
+		<entry key="EdPluginFormat.ClipS"
+		       source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
 			</origins>
@@ -1191,7 +1193,8 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.Id" source="{displayName}  (id {accountID})  {sW_TRUE}">
+		<entry key="EdPluginFormat.Id"
+		       source="{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
@@ -1206,13 +1209,14 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.NodesProblems" source="{nodeCount} nodes | {issueCount} problems">
+		<entry key="EdPluginFormat.NodesProblems"
+		       source="{nodeCount, plural, one {# node} other {# nodes}} | {issueCount, plural, one {# problem} other {# problems}}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginFormat.NodesWiresProblems"
-		       source="{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems">
+		       source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
@@ -1229,7 +1233,7 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.Problems" source="{issueCount} problems">
+		<entry key="EdPluginFormat.Problems" source="{issueCount, plural, one {# problem} other {# problems}}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
@@ -1249,7 +1253,8 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.SlotsSetsPresets" source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets">
+		<entry key="EdPluginFormat.SlotsSetsPresets"
+		       source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -1271,7 +1276,7 @@
 			</origins>
 		</entry>
 		<entry key="EdPluginFormat.WearingOnBasePreset"
-		       source="Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)">
+		       source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>

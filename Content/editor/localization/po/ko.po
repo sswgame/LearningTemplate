@@ -1042,7 +1042,7 @@ msgstr "명령: {actionCommand}"
 
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdFormat.ComponentSAreNot"
-msgid "{componentCount} component(s) are not on every selected object"
+msgid "{componentCount, plural, one {# component is} other {# components are}} not on every selected object"
 msgstr "컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
@@ -1082,18 +1082,18 @@ msgstr "LOD {count} 개 중 {lod} 번을 그립니다"
 
 #: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
 msgctxt "EdFormat.DurationSTracksCurves"
-msgid "Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault}  Root motion {rootMotionTrack}  Notifies {findNotifyTrack}"
-msgstr "길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault}  루트 모션 {rootMotionTrack}  알림 {findNotifyTrack}"
+msgid "Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault, select, yes {yes} other {no}}  Root motion {rootMotionTrack, select, yes {yes} other {no}}  Notifies {findNotifyTrack, select, yes {yes} other {no}}"
+msgstr "길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault, select, yes {예} other {아니오}}  루트 모션 {rootMotionTrack, select, yes {예} other {아니오}}  알림 {findNotifyTrack, select, yes {예} other {아니오}}"
 
 #: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
 msgctxt "EdFormat.EntitiesCells"
-msgid "{alwaysLoadedIDCount} entities, {cellCount} cells"
+msgid "{alwaysLoadedIDCount, plural, one {# entity} other {# entities}}, {cellCount, plural, one {# cell} other {# cells}}"
 msgstr "엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개"
 
 #: Source/Editor/SelfTest/TestRunnerPanel.cpp
 msgctxt "EdFormat.ExitCodeErrorLines"
-msgid "{externalTitle} — exit code {externalExitCode}, {externalErrorCount} [Error] lines"
-msgstr "{externalTitle} — 종료 코드 {externalExitCode}, [Error] 줄 {externalErrorCount}개"
+msgid "{externalTitle} — exit code {externalExitCode}, {externalErrorCount, plural, one {# error line} other {# error lines}}"
+msgstr "{externalTitle} — 종료 코드 {externalExitCode}, 오류 줄 {externalErrorCount}개"
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EdFormat.File"
@@ -1117,8 +1117,8 @@ msgstr "{name} / {curveChannel}(프레임)"
 
 #: Source/Editor/SelfTest/TestRunnerPanel.cpp
 msgctxt "EdFormat.Frames2"
-msgid "{passed} ({frameCount} frames){reason}{reason2}"
-msgstr "{passed}({frameCount}프레임){reason}{reason2}"
+msgid "{result, select, pass {PASS} other {FAIL}} ({frameCount} frames){hasReason, select, yes { - {reason}} other {}}"
+msgstr "{result, select, pass {통과} other {실패}}({frameCount}프레임){hasReason, select, yes { - {reason}} other {}}"
 
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
 msgctxt "EdFormat.FramesWindowCaptured"
@@ -1177,8 +1177,8 @@ msgstr "왼쪽 트리거:  {leftTrigger}"
 
 #: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdFormat.Max"
-msgid "{name}  {additive}{looping}  max {maxParticles}  {texturePath}"
-msgstr "{name}  {additive}{looping}  최대 {maxParticles}  {texturePath}"
+msgid "{name}  {blend, select, additive {Additive} other {Alpha}}{looping, select, yes {  looping} other {}}  max {maxParticles}  {texturePath}"
+msgstr "{name}  {blend, select, additive {가산} other {알파}}{looping, select, yes {  반복} other {}}  최대 {maxParticles}  {texturePath}"
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EdFormat.ModuleOff"
@@ -1227,7 +1227,7 @@ msgstr "이 씬에 {type} 이 없습니다"
 
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdFormat.ObjectsSelected"
-msgid "{objectCount} objects selected"
+msgid "{objectCount, plural, one {# object} other {# objects}} selected"
 msgstr "오브젝트 {objectCount}개 선택됨"
 
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
@@ -1357,13 +1357,13 @@ msgstr "스프라이트 프레임: {spriteFrame}"
 
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
 msgctxt "EdFormat.StateBuiltBodiesSettled"
-msgid "State {state}  Built bodies {bodyCount}  Settled {settled}"
-msgstr "상태 {state}  만든 바디 {bodyCount}  안정 {settled}"
+msgid "State {state}  Built bodies {bodyCount}  Settled {settled, select, yes {yes} other {no}}"
+msgstr "상태 {state}  만든 바디 {bodyCount}  안정 {settled, select, yes {예} other {아니오}}"
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdFormat.StateHoldS"
-msgid "State: {action}  hold {action2} s"
-msgstr "상태: {action}  누름 {action2}초"
+msgid "State: {phase, select, triggered {TRIGGERED} down {DOWN} ongoing {ONGOING} other {Idle}}  hold {holdSeconds} s"
+msgstr "상태: {phase, select, triggered {발동} down {누름} ongoing {진행 중} other {대기}}  누름 {holdSeconds}초"
 
 #: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
 msgctxt "EdFormat.StateS"
@@ -1382,12 +1382,12 @@ msgstr "대상: {target}"
 
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 msgctxt "EdFormat.Targets"
-msgid "{targetCount} targets"
+msgid "{targetCount, plural, one {# target} other {# targets}}"
 msgstr "대상 {targetCount}개"
 
 #: Source/Editor/SelfTest/TestRunnerPanel.cpp
 msgctxt "EdFormat.Tests"
-msgid "{registryCount} tests"
+msgid "{registryCount, plural, one {# test} other {# tests}}"
 msgstr "테스트 {registryCount}개"
 
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
@@ -1397,7 +1397,7 @@ msgstr "올바른 XML 파일이 아닙니다: {error}"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 msgctxt "EdFormat.TickS"
-msgid "{label} - {sampleCount} tick(s), {tick} .. {tick2}"
+msgid "{label} - {sampleCount, plural, one {# tick} other {# ticks}}, {tick} .. {tick2}"
 msgstr "{label} - 틱 {sampleCount}개, {tick} .. {tick2}"
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
@@ -1427,8 +1427,8 @@ msgstr "트랙 {tracksCount}개 · {byteCount} KB · 기록 {latestTime}초"
 
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
 msgctxt "EdFormat.TracyOnPortViewer"
-msgid "Tracy: on (port {tracyPort}, viewer {viewerConnected})"
-msgstr "Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected})"
+msgid "Tracy: on (port {tracyPort}, viewer {viewerConnected, select, connected {connected} other {waiting}})"
+msgstr "Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected, select, connected {연결됨} other {기다리는 중}})"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EdFormat.UDP"
@@ -1452,12 +1452,12 @@ msgstr "사용: {usageBuf}{scope}"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EdFormat.UsedByFileS"
-msgid "{sW_EDITORICON} Used by {referrerCount} file(s). They will name a missing asset."
+msgid "{sW_EDITORICON} Used by {referrerCount, plural, one {# file} other {# files}}. They will name a missing asset."
 msgstr "{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다."
 
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EdFormat.ValidationFailedWarnings"
-msgid "Validation failed ({warningCount} warnings)"
+msgid "Validation failed ({warningCount, plural, one {# warning} other {# warnings}})"
 msgstr "검증 실패(경고 {warningCount}개)"
 
 #: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp

@@ -399,7 +399,7 @@
 		<entry key="EdFormat.Cmd" text="명령: {actionCommand}" sourceHash="45863577c777d0c8" />
 		<entry key="EdFormat.ComponentSAreNot"
 		       text="컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다"
-		       sourceHash="fbe013f290723dbb" />
+		       sourceHash="6f52e74415d01355" />
 		<entry key="EdFormat.ConnectedTo" text="{address} 에 연결됨" sourceHash="47a9b329b7af47a7" />
 		<entry key="EdFormat.ConnectionsSamples"
 		       text="{label}  연결 {connectionCount}  표본 {seriesCount}"
@@ -412,21 +412,23 @@
 		<entry key="EdFormat.Depth" text="{endNanos} us, 깊이 {depth}" sourceHash="55ba0f144e2ce76d" />
 		<entry key="EdFormat.DrawingLOD" text="LOD {count} 개 중 {lod} 번을 그립니다" sourceHash="d4b4df4bd12b1df9" />
 		<entry key="EdFormat.DurationSTracksCurves"
-		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault}  루트 모션 {rootMotionTrack}  알림 {findNotifyTrack}"
-		       sourceHash="320a2d3f6f645cc9" />
+		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault, select, yes {예} other {아니오}}  루트 모션 {rootMotionTrack, select, yes {예} other {아니오}}  알림 {findNotifyTrack, select, yes {예} other {아니오}}"
+		       sourceHash="5406a9c2736a3bfa" />
 		<entry key="EdFormat.EntitiesCells"
 		       text="엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개"
-		       sourceHash="97544208746d191a" />
+		       sourceHash="7e26778262111e21" />
 		<entry key="EdFormat.ExitCodeErrorLines"
-		       text="{externalTitle} — 종료 코드 {externalExitCode}, [Error] 줄 {externalErrorCount}개"
-		       sourceHash="3e0a32b7ceb9a84e" />
+		       text="{externalTitle} — 종료 코드 {externalExitCode}, 오류 줄 {externalErrorCount}개"
+		       sourceHash="59aa084ebf8062fc" />
 		<entry key="EdFormat.File" text="파일: {file}" sourceHash="f061b96d155cea0f" />
 		<entry key="EdFormat.Focused" text="선택한 것: {path}" sourceHash="5c186f97213c045d" />
 		<entry key="EdFormat.FrameTS"
 		       text="{label}  ·  프레임 {frameIndex}  ·  t {time}초"
 		       sourceHash="fe9f7f2760c4b1d7" />
 		<entry key="EdFormat.Frames" text="{name} / {curveChannel}(프레임)" sourceHash="a0063c9adf1209ea" />
-		<entry key="EdFormat.Frames2" text="{passed}({frameCount}프레임){reason}{reason2}" sourceHash="5ea106bcfffc997c" />
+		<entry key="EdFormat.Frames2"
+		       text="{result, select, pass {통과} other {실패}}({frameCount}프레임){hasReason, select, yes { - {reason}} other {}}"
+		       sourceHash="9b1dcd6e76575f75" />
 		<entry key="EdFormat.FramesWindowCaptured"
 		       text="창 {windowFrame}프레임, 캡처 {capturedFrames}"
 		       sourceHash="0f11bb3da51bfd2e" />
@@ -449,8 +451,8 @@
 		<entry key="EdFormat.LastResult" text="마지막 결과: {lastInvokeResult}" sourceHash="64defb75f9d6dbcb" />
 		<entry key="EdFormat.LeftTrigger" text="왼쪽 트리거:  {leftTrigger}" sourceHash="137aed7ac4d6901d" />
 		<entry key="EdFormat.Max"
-		       text="{name}  {additive}{looping}  최대 {maxParticles}  {texturePath}"
-		       sourceHash="a90e84e1de36dc25" />
+		       text="{name}  {blend, select, additive {가산} other {알파}}{looping, select, yes {  반복} other {}}  최대 {maxParticles}  {texturePath}"
+		       sourceHash="c4dbe4d688875299" />
 		<entry key="EdFormat.ModuleOff" text="꺼짐 — {reason}" sourceHash="2a4840d525147443" />
 		<entry key="EdFormat.MoveToRecycleBin"
 		       text="'{file}' 을 휴지통으로 옮길까요?"
@@ -466,7 +468,7 @@
 		       sourceHash="b86400b9a078e2d8" />
 		<entry key="EdFormat.NodesLinks2" text="(노드: {nodeCount}, 링크: {linkCount})" sourceHash="d7e5dabea7b6606a" />
 		<entry key="EdFormat.NoneInScene" text="이 씬에 {type} 이 없습니다" sourceHash="a1a3244ababe383b" />
-		<entry key="EdFormat.ObjectsSelected" text="오브젝트 {objectCount}개 선택됨" sourceHash="b7ec3e112e33fac8" />
+		<entry key="EdFormat.ObjectsSelected" text="오브젝트 {objectCount}개 선택됨" sourceHash="776b9e797ada8d35" />
 		<entry key="EdFormat.OutsideTrackerSwapChain"
 		       text="추적 밖(스왑 체인, 드라이버, 추적 안 함): {negative}{bytesBuf}"
 		       sourceHash="4d73c4528b889c35" />
@@ -519,20 +521,22 @@
 		       sourceHash="ea235214a1f7fe99" />
 		<entry key="EdFormat.SpriteFrame" text="스프라이트 프레임: {spriteFrame}" sourceHash="74c4687529532bbd" />
 		<entry key="EdFormat.StateBuiltBodiesSettled"
-		       text="상태 {state}  만든 바디 {bodyCount}  안정 {settled}"
-		       sourceHash="a2b50fd495625748" />
-		<entry key="EdFormat.StateHoldS" text="상태: {action}  누름 {action2}초" sourceHash="a32b5e96cbfc4188" />
+		       text="상태 {state}  만든 바디 {bodyCount}  안정 {settled, select, yes {예} other {아니오}}"
+		       sourceHash="07e2ba02c38ad6a9" />
+		<entry key="EdFormat.StateHoldS"
+		       text="상태: {phase, select, triggered {발동} down {누름} ongoing {진행 중} other {대기}}  누름 {holdSeconds}초"
+		       sourceHash="14ee3f612e74eb03" />
 		<entry key="EdFormat.StateS" text="상태: {stateName}  ({stateTime}초)" sourceHash="84d30c2c41c2e17a" />
 		<entry key="EdFormat.StreamingOfCellsLoaded"
 		       text="스트리밍: 셀 {cellCount}개 중 {loadedCellCount}개 로드됨"
 		       sourceHash="51c821f9ef5475cd" />
 		<entry key="EdFormat.Target" text="대상: {target}" sourceHash="6f9f507fbc585cb9" />
-		<entry key="EdFormat.Targets" text="대상 {targetCount}개" sourceHash="af4cc3d0c892d133" />
-		<entry key="EdFormat.Tests" text="테스트 {registryCount}개" sourceHash="6be490d4f40b536a" />
+		<entry key="EdFormat.Targets" text="대상 {targetCount}개" sourceHash="6d7abe1c3681e83a" />
+		<entry key="EdFormat.Tests" text="테스트 {registryCount}개" sourceHash="15e9ee588c95b3da" />
 		<entry key="EdFormat.TheFileIsNot"
 		       text="올바른 XML 파일이 아닙니다: {error}"
 		       sourceHash="4597171a7781bef6" />
-		<entry key="EdFormat.TickS" text="{label} - 틱 {sampleCount}개, {tick} .. {tick2}" sourceHash="3ac7e1781ae98e7e" />
+		<entry key="EdFormat.TickS" text="{label} - 틱 {sampleCount}개, {tick} .. {tick2}" sourceHash="8063a851cc7ef79a" />
 		<entry key="EdFormat.TooManyArgumentsMax"
 		       text="인자가 너무 많습니다(UI 는 최대 {maxMethodArgCount}개)."
 		       sourceHash="411c08143700d744" />
@@ -549,18 +553,18 @@
 		       text="트랙 {tracksCount}개 · {byteCount} KB · 기록 {latestTime}초"
 		       sourceHash="5abda75617859ec2" />
 		<entry key="EdFormat.TracyOnPortViewer"
-		       text="Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected})"
-		       sourceHash="941fcaca70f85d7c" />
+		       text="Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected, select, connected {연결됨} other {기다리는 중}})"
+		       sourceHash="0f22bd46ce697751" />
 		<entry key="EdFormat.UDP" text="UDP {port}" sourceHash="d9889a5c21735fb1" />
 		<entry key="EdFormat.Unknown" text="[알 수 없음 {type}]" sourceHash="459b9a493c2cd82b" />
 		<entry key="EdFormat.UnsupportedInUI" text="{label}(UI 에서 지원하지 않음)" sourceHash="331a347268daba94" />
 		<entry key="EdFormat.Usage" text="사용: {usageBuf}{scope}" sourceHash="a50719da5c2002dc" />
 		<entry key="EdFormat.UsedByFileS"
 		       text="{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다."
-		       sourceHash="26f1a30e0c8de7a2" />
+		       sourceHash="f86c6da9ec5beecf" />
 		<entry key="EdFormat.ValidationFailedWarnings"
 		       text="검증 실패(경고 {warningCount}개)"
-		       sourceHash="f32795db9fadc7fa" />
+		       sourceHash="5c86969a4ef38c7c" />
 		<entry key="EdFormat.Virtual" text="{voiceCount}(가상 {virtualVoiceCount})" sourceHash="c0efab7ad9f81df0" />
 		<entry key="EdFormat.Wheel" text="휠: {mouseWheel}" sourceHash="90a895c29b3dcdfc" />
 		<entry key="EdFormat.WorkerThreads" text="작업 스레드: {workerCount}" sourceHash="cd9dfcb1bce965d9" />

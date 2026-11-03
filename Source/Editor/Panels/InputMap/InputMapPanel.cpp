@@ -275,7 +275,7 @@ namespace sw::editor
         const hashed_string action( selectedAction.c_str() );
         ImGui::SeparatorText( selectedAction.c_str() );
         const ActionPhase phase = inputMap.getActionPhase( action );
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateHoldS", TextArgumentList().addText( "action", inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ) ).addDecimal( "action2", static_cast<float64>( inputMap.getActionHoldDuration( action ) ), 2 ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateHoldS", TextArgumentList().addText( "phase", inputMap.wasActionTriggered( action ) ? "triggered" : ( inputMap.isActionDown( action ) ? "down" : ( phase != ActionPhase::None ? "ongoing" : "idle" ) ) ).addDecimal( "holdSeconds", static_cast<float64>( inputMap.getActionHoldDuration( action ) ), 2 ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) && inputMap.resetActionToDefault( action ) )
             markDocumentDirty();

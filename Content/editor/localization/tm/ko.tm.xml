@@ -368,6 +368,8 @@
 		       text="강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다" />
 		<entry source="Duplicate" text="복제" />
 		<entry source="Duplicate Event" text="이벤트 복제" />
+		<entry source="Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault, select, yes {yes} other {no}}  Root motion {rootMotionTrack, select, yes {yes} other {no}}  Notifies {findNotifyTrack, select, yes {yes} other {no}}"
+		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault, select, yes {예} other {아니오}}  루트 모션 {rootMotionTrack, select, yes {예} other {아니오}}  알림 {findNotifyTrack, select, yes {예} other {아니오}}" />
 		<entry source="Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault}  Root motion {rootMotionTrack}  Notifies {findNotifyTrack}"
 		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault}  루트 모션 {rootMotionTrack}  알림 {findNotifyTrack}" />
 		<entry source="Edge Warp Presets" text="가장자리 이동 프리셋" />
@@ -1442,9 +1444,13 @@
 		<entry source="Start the server and clients for the selected Net Mode"
 		       text="고른 Net Mode 로 서버와 클라이언트를 시작합니다" />
 		<entry source="State" text="상태" />
+		<entry source="State {state}  Built bodies {bodyCount}  Settled {settled, select, yes {yes} other {no}}"
+		       text="상태 {state}  만든 바디 {bodyCount}  안정 {settled, select, yes {예} other {아니오}}" />
 		<entry source="State {state}  Built bodies {bodyCount}  Settled {settled}"
 		       text="상태 {state}  만든 바디 {bodyCount}  안정 {settled}" />
 		<entry source="State: {action}  hold {action2} s" text="상태: {action}  누름 {action2}초" />
+		<entry source="State: {phase, select, triggered {TRIGGERED} down {DOWN} ongoing {ONGOING} other {Idle}}  hold {holdSeconds} s"
+		       text="상태: {phase, select, triggered {발동} down {누름} ongoing {진행 중} other {대기}}  누름 {holdSeconds}초" />
 		<entry source="State: {stateName}  ({stateTime} s)" text="상태: {stateName}  ({stateTime}초)" />
 		<entry source="Steal policy" text="뺏기 규칙" />
 		<entry source="Step" text="한 걸음" />
@@ -1602,6 +1608,8 @@
 		       text="추적: {bytesBuf}  (+ 크기 모름 {unknownSizeCount})" />
 		<entry source="Tracy: not in this build" text="Tracy: 이 빌드에 없음" />
 		<entry source="Tracy: off" text="Tracy: 꺼짐" />
+		<entry source="Tracy: on (port {tracyPort}, viewer {viewerConnected, select, connected {connected} other {waiting}})"
+		       text="Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected, select, connected {연결됨} other {기다리는 중}})" />
 		<entry source="Tracy: on (port {tracyPort}, viewer {viewerConnected})"
 		       text="Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected})" />
 		<entry source="Transform" text="트랜스폼" />
@@ -1663,6 +1671,8 @@
 		<entry source="Validate" text="검사" />
 		<entry source="Validate every object of the active scene again"
 		       text="활성 씬의 모든 오브젝트를 다시 검증합니다" />
+		<entry source="Validation failed ({warningCount, plural, one {# warning} other {# warnings}})"
+		       text="검증 실패(경고 {warningCount}개)" />
 		<entry source="Validation failed ({warningCount} warnings)" text="검증 실패(경고 {warningCount}개)" />
 		<entry source="Value" text="값" />
 		<entry source="Value of every cell of the new layer, and the value Erase paints."
@@ -1790,9 +1800,13 @@
 		<entry source="streaming: {loadedCellCount} of {cellCount} cells loaded"
 		       text="스트리밍: 셀 {cellCount}개 중 {loadedCellCount}개 로드됨" />
 		<entry source="translated" text="번역됨" />
+		<entry source="{alwaysLoadedIDCount, plural, one {# entity} other {# entities}}, {cellCount, plural, one {# cell} other {# cells}}"
+		       text="엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개" />
 		<entry source="{alwaysLoadedIDCount} entities, {cellCount} cells"
 		       text="엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개" />
 		<entry source="{backendName} - {sizeBasis} size" text="{backendName} - {sizeBasis} 크기" />
+		<entry source="{componentCount, plural, one {# component is} other {# components are}} not on every selected object"
+		       text="컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다" />
 		<entry source="{componentCount} component(s) are not on every selected object"
 		       text="컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다" />
 		<entry source="{context}&#10;State: {state}&#10;Length: {length}{overflow}"
@@ -1804,6 +1818,10 @@
 		<entry source="{errorCount} error(s), {warningCount} warning(s). Open Map Check from the status bar."
 		       text="오류 {errorCount}개, 경고 {warningCount}개가 있습니다. 상태줄에서 Map Check 를 여세요." />
 		<entry source="{externalTitle} — could not be launched" text="{externalTitle} — 실행하지 못했습니다" />
+		<entry source="{externalTitle} — exit code {externalExitCode}, {externalErrorCount, plural, one {# [Error] line} other {# [Error] lines}}"
+		       text="{externalTitle} — 종료 코드 {externalExitCode}, [Error] 줄 {externalErrorCount}개" />
+		<entry source="{externalTitle} — exit code {externalExitCode}, {externalErrorCount, plural, one {# error line} other {# error lines}}"
+		       text="{externalTitle} — 종료 코드 {externalExitCode}, 오류 줄 {externalErrorCount}개" />
 		<entry source="{externalTitle} — exit code {externalExitCode}, {externalErrorCount} [Error] lines"
 		       text="{externalTitle} — 종료 코드 {externalExitCode}, [Error] 줄 {externalErrorCount}개" />
 		<entry source="{externalTitle} — running..." text="{externalTitle} — 실행 중..." />
@@ -1816,20 +1834,32 @@
 		<entry source="{label}  ·  frame {frameIndex}  ·  t {time} s"
 		       text="{label}  ·  프레임 {frameIndex}  ·  t {time}초" />
 		<entry source="{label} (unsupported in UI)" text="{label}(UI 에서 지원하지 않음)" />
+		<entry source="{label} - {sampleCount, plural, one {# tick} other {# ticks}}, {tick} .. {tick2}"
+		       text="{label} - 틱 {sampleCount}개, {tick} .. {tick2}" />
 		<entry source="{label} - {sampleCount} tick(s), {tick} .. {tick2}"
 		       text="{label} - 틱 {sampleCount}개, {tick} .. {tick2}" />
 		<entry source="{name}  {additive}{looping}  max {maxParticles}  {texturePath}"
 		       text="{name}  {additive}{looping}  최대 {maxParticles}  {texturePath}" />
+		<entry source="{name}  {blend, select, additive {Additive} other {Alpha}}{looping, select, yes {  looping} other {}}  max {maxParticles}  {texturePath}"
+		       text="{name}  {blend, select, additive {가산} other {알파}}{looping, select, yes {  반복} other {}}  최대 {maxParticles}  {texturePath}" />
 		<entry source="{name} / {curveChannel} (frames)" text="{name} / {curveChannel}(프레임)" />
+		<entry source="{objectCount, plural, one {# object} other {# objects}} selected"
+		       text="오브젝트 {objectCount}개 선택됨" />
 		<entry source="{objectCount} objects selected" text="오브젝트 {objectCount}개 선택됨" />
 		<entry source="{passed} ({frameCount} frames){reason}{reason2}"
 		       text="{passed}({frameCount}프레임){reason}{reason2}" />
+		<entry source="{registryCount, plural, one {# test} other {# tests}}" text="테스트 {registryCount}개" />
 		<entry source="{registryCount} tests" text="테스트 {registryCount}개" />
+		<entry source="{result, select, pass {PASS} other {FAIL}} ({frameCount} frames){hasReason, select, yes { - {reason}} other {}}"
+		       text="{result, select, pass {통과} other {실패}}({frameCount}프레임){hasReason, select, yes { - {reason}} other {}}" />
 		<entry source="{sW_EDITORICON}  Built ({lastDurationSec}s)" text="{sW_EDITORICON}  빌드됨({lastDurationSec}초)" />
 		<entry source="{sW_EDITORICON}  Ready" text="{sW_EDITORICON}  준비됨" />
+		<entry source="{sW_EDITORICON} Used by {referrerCount, plural, one {# file} other {# files}}. They will name a missing asset."
+		       text="{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다." />
 		<entry source="{sW_EDITORICON} Used by {referrerCount} file(s). They will name a missing asset."
 		       text="{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다." />
 		<entry source="{seriesName}: no samples" text="{seriesName}: 표본 없음" />
+		<entry source="{targetCount, plural, one {# target} other {# targets}}" text="대상 {targetCount}개" />
 		<entry source="{targetCount} targets" text="대상 {targetCount}개" />
 		<entry source="{target} build failed (exit code {code}). See the Output Log."
 		       text="{target} 빌드에 실패했습니다(종료 코드 {code}). Output Log 를 확인하십시오." />

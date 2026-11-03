@@ -400,7 +400,7 @@ namespace sw::editor
                 syncRigPreview( *pMutableBody );
         }
         const AppearanceSelection& selection = _document.getAppearanceModel().getSelection();
-        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "WearingOnBasePreset", TextArgumentList().addText( "slot", selection._listSlot.empty() ? "no slot items" : "the selection" ).addText( "basePresetID", selection._basePresetID.empty() ? _document.getPreviewPresetID().c_str() : selection._basePresetID.c_str() ).addInteger( "appearance", static_cast<int64>( pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u ) ) ).c_str() );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "WearingOnBasePreset", TextArgumentList().addText( "wearing", selection._listSlot.empty() ? "none" : "selection" ).addText( "basePresetID", selection._basePresetID.empty() ? _document.getPreviewPresetID().c_str() : selection._basePresetID.c_str() ).addInteger( "appearance", static_cast<int64>( pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u ) ) ).c_str() );
         _published._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
         const float2  available          = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
         const float32 minHeight          = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDPIScale();

@@ -409,6 +409,8 @@
 		<entry source="Warp end (s)" text="워프 끝(초)" />
 		<entry source="Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)"
 		       text="기준 프리셋 ''{basePresetID}'' 위에 {slot} 착용(조립 {appearance}번)" />
+		<entry source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+		       text="기준 프리셋 ''{basePresetID}'' 위에 {wearing, select, none {칸 아이템 없음} other {선택한 것}} 착용(조립 {appearance}번)" />
 		<entry source="What will {name} do?" text="{name}은(는) 무엇을 할까?" />
 		<entry source="When the key sits on the curve's time axis. It stays between its neighbouring keys."
 		       text="이 키가 곡선의 시간 축에서 놓인 위치입니다. 이웃한 키 사이에만 둘 수 있습니다." />
@@ -430,14 +432,21 @@
 		<entry source="tick {tick}  input focus: world {inputFocus}" text="틱 {tick}  입력 초점: 월드 {inputFocus}" />
 		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
 		       text="{anchor}  클립 {clip}  {stage} {clipSeconds}초{f}" />
+		<entry source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
+		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}" />
 		<entry source="{boneCount} bones, {overridesCount} overridden{dirty}"
 		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}" />
 		<entry source="{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
 		       text="설정 {count}개는 다시 시작한 뒤에 적용됩니다." />
+		<entry source="{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}"
+		       text="{displayName}  (id {accountID})  {presence, select, online {접속 중} other {접속 안 함}}" />
 		<entry source="{displayName}  (id {accountID})  {sW_TRUE}" text="{displayName}  (id {accountID})  {sW_TRUE}" />
 		<entry source="{focused}Client {worldIndex}" text="{focused}클라이언트 {worldIndex}" />
 		<entry source="{focused}Server" text="{focused}서버" />
+		<entry source="{issueCount, plural, one {# problem} other {# problems}}" text="문제 {issueCount}개" />
 		<entry source="{issueCount} problems" text="문제 {issueCount}개" />
+		<entry source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}"
+		       text="{name} - 노드 {nodesCount}개, 선 {wiresCount}개, 문제 {issueCount}개" />
 		<entry source="{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems"
 		       text="{name} - 노드 {nodesCount}개, 선 {wiresCount}개, 문제 {issueCount}개" />
 		<entry source="{name} fainted! You won!" text="{name}(이)가 쓰러졌다! 승리!" />
@@ -450,7 +459,13 @@
 		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}" />
 		<entry source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
 		       text="{name}: 원본 {sourceLength} m, 대상 {targetLength} m(x{ratio})" />
+		<entry source="{nodeCount, plural, one {# node} other {# nodes}} | {issueCount, plural, one {# problem} other {# problems}}"
+		       text="노드 {nodeCount}개 | 문제 {issueCount}개" />
 		<entry source="{nodeCount} nodes | {issueCount} problems" text="노드 {nodeCount}개 | 문제 {issueCount}개" />
+		<entry source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
+		       text="{role, select, anchor {기준} required {필수} other {선택}}  클립 {clip}  {stage} {clipSeconds}초{clipLength, select, unknown {  (클립 길이 모름 - 프리팹을 고르세요)} other {}}" />
+		<entry source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}"
+		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
 		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
 		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
 	</entries>
