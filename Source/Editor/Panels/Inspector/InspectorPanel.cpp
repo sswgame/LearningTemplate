@@ -232,8 +232,8 @@ namespace sw::editor
     void InspectorPanel::drawMultiSelection( const vector<GameObject*>& listObject )
     {
         GameObject* pPrimary = listObject[0];
-        ImGui::TextColored( EditorColorUtil::toImVec4( InspectorPanelInternal::kMultiSelectionText ), "%u objects selected", static_cast<uint32>( listObject.size() ) );
-        ImGui::TextDisabled( "Primary: %s", pPrimary->getName().c_str() );
+        ImGui::TextColored( EditorColorUtil::toImVec4( InspectorPanelInternal::kMultiSelectionText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ObjectsSelected", TextArgumentList().addInteger( "objectCount", static_cast<int64>( listObject.size() ) ) ).c_str() );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Primary", TextArgumentList().addText( "name", pPrimary->getName().c_str() ) ).c_str() );
 
         const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
         if ( bEditsAllowed == false )
@@ -293,7 +293,7 @@ namespace sw::editor
             componentCount += pComponent != nullptr ? 1u : 0u;
         }
         if ( componentCount > _listMultiEditComponent.size() )
-            ImGui::TextDisabled( "%u component(s) are not on every selected object", static_cast<uint32>( componentCount - _listMultiEditComponent.size() ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "ComponentSAreNot", TextArgumentList().addInteger( "componentCount", static_cast<int64>( componentCount - _listMultiEditComponent.size() ) ) ).c_str() );
 
         if ( bEditsAllowed == false )
             ImGui::EndDisabled();
@@ -567,7 +567,7 @@ namespace sw::editor
 
     void InspectorPanel::drawGameObjectHeader( GameObject* pObj )
     {
-        ImGui::Text( "GameObject  ID: %u", static_cast<uint32>( pObj->getObjectID() ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "GameObjectID", TextArgumentList().addInteger( "objectID", static_cast<int64>( pObj->getObjectID() ) ) ).c_str() );
 
         // 편집 중이 아니면 오브젝트 이름으로 채운다. 편집 중인 텍스트를 멤버로 보관해야 입력란을 떠난 프레임(ImGui 가 버퍼에 쓰지 않는다)에도 적용할 수 있다.
         // Enter 를 누르거나 다른 곳을 눌러 떠나도 적용한다(유니티와 언리얼). Esc 는 ImGui 가 텍스트를 되돌려 편집 없음으로 끝난다.
@@ -624,7 +624,7 @@ namespace sw::editor
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        ImGui::TextDisabled( "ID: %u", static_cast<uint32>( pComp->getComponentID() ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "ID", TextArgumentList().addInteger( "componentID", static_cast<int64>( pComp->getComponentID() ) ) ).c_str() );
 
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo == nullptr )

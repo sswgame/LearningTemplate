@@ -17,6 +17,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
@@ -125,12 +126,11 @@ namespace sw::editor
         ImGui::SameLine();
         // GPU 방출기의 살아 있는 입자는 GPU 버퍼에만 있다 — 이번 재생에서 만든 수(일정)와 CPU 방출기의 살아 있는 수를 따로 보인다.
         const uint32 spawnedCount = pSubject != nullptr ? static_cast<uint32>( pSubject->getSpawnedParticleCount() ) : 0u; // 표시용 — 한 재생에 40 억을 넘지 않는다
-        ImGui::Text( "Spawned: %u  CPU alive: %u", spawnedCount, pSubject != nullptr ? pSubject->getCPUAliveParticleCount() : 0u );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpawnedCPUAlive", TextArgumentList().addInteger( "spawnedCount", static_cast<int64>( spawnedCount ) ).addInteger( "subject", static_cast<int64>( pSubject != nullptr ? pSubject->getCPUAliveParticleCount() : 0u ) ) ).c_str() );
 
         for ( const VFXPreviewEmitterRow& row : _model.getEmitterRows() )
         {
-            ImGui::BulletText( "%s  %s%s  max %u  %s", row._name.c_str(), row._bAdditive ? "Additive" : "Alpha", row._bLooping ? "  looping" : "", row._maxParticles,
-                               row._texturePath.c_str() );
+            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "additive", row._bAdditive ? "Additive" : "Alpha" ).addText( "looping", row._bLooping ? "  looping" : "" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) ).c_str() );
         }
 
         if ( isDocumentLoadFailed() == false ) // 읽지 못한 효과는 걸지 않는다

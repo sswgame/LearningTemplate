@@ -990,20 +990,110 @@ msgctxt "EdField.Zoom"
 msgid "Zoom"
 msgstr "확대"
 
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.Available"
+msgid "Available: {availableBuf}"
+msgstr "남음: {availableBuf}"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.AverageAvgMinMax"
+msgid "Average FPS: {averageFPS} (Avg: {averageMs} ms, Min: {minMs} ms, Max: {maxMs} ms)"
+msgstr "평균 FPS: {averageFPS}(평균: {averageMs} ms, 최소: {minMs} ms, 최대: {maxMs} ms)"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.Battery"
+msgid "Battery: {level}"
+msgstr "배터리: {level}"
+
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdFormat.BindingForAction"
 msgid "Binding for action: {action}"
 msgstr "액션 바인딩: {action}"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdFormat.BonesPoseB"
+msgid "Bones: {boneCount}  ·  pose {poseByteCount} B"
+msgstr "본: {boneCount}  ·  포즈 {poseByteCount} B"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.Budget"
+msgid "Budget: {budgetBuf}"
+msgstr "예산: {budgetBuf}"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdFormat.BuiltS"
+msgid "{sW_EDITORICON}  Built ({lastDurationSec}s)"
+msgstr "{sW_EDITORICON}  빌드됨({lastDurationSec}초)"
+
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EdFormat.CellMRadiusM"
+msgid "cell {cellSize} m, radius {loadingRadius} m, margin {unloadMargin} m, {maxCellLoadsPerFrame} per frame"
+msgstr "셀 {cellSize} m, 반경 {loadingRadius} m, 여유 {unloadMargin} m, 프레임당 {maxCellLoadsPerFrame}"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdFormat.Choices"
+msgid "Choices ({choiceCount}):"
+msgstr "선택지({choiceCount}):"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdFormat.Cmd"
+msgid "cmd: {actionCommand}"
+msgstr "명령: {actionCommand}"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdFormat.ComponentSAreNot"
+msgid "{componentCount} component(s) are not on every selected object"
+msgstr "컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
 msgctxt "EdFormat.ConnectedTo"
 msgid "Connected to {address}"
 msgstr "{address} 에 연결됨"
 
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EdFormat.ConnectionsSamples"
+msgid "{label}  connections {connectionCount}  samples {seriesCount}"
+msgstr "{label}  연결 {connectionCount}  표본 {seriesCount}"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdFormat.CouldNotBeLaunched"
+msgid "{externalTitle} — could not be launched"
+msgstr "{externalTitle} — 실행하지 못했습니다"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.Current"
+msgid "Current FPS: {currentFPS} ({currentMs} ms)"
+msgstr "현재 FPS: {currentFPS}({currentMs} ms)"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.Delta"
+msgid "Delta: ({dx}, {dy})"
+msgstr "변화량: ({dx}, {dy})"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.Depth"
+msgid "{endNanos} us, depth {depth}"
+msgstr "{endNanos} us, 깊이 {depth}"
+
 #: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
 msgctxt "EdFormat.DrawingLOD"
 msgid "Drawing LOD {lod} of {count}"
 msgstr "LOD {count} 개 중 {lod} 번을 그립니다"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+msgctxt "EdFormat.DurationSTracksCurves"
+msgid "Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault}  Root motion {rootMotionTrack}  Notifies {findNotifyTrack}"
+msgstr "길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault}  루트 모션 {rootMotionTrack}  알림 {findNotifyTrack}"
+
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EdFormat.EntitiesCells"
+msgid "{alwaysLoadedIDCount} entities, {cellCount} cells"
+msgstr "엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdFormat.ExitCodeErrorLines"
+msgid "{externalTitle} — exit code {externalExitCode}, {externalErrorCount} [Error] lines"
+msgstr "{externalTitle} — 종료 코드 {externalExitCode}, [Error] 줄 {externalErrorCount}개"
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EdFormat.File"
@@ -1015,15 +1105,80 @@ msgctxt "EdFormat.Focused"
 msgid "Focused: {path}"
 msgstr "선택한 것: {path}"
 
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdFormat.FrameTS"
+msgid "{label}  ·  frame {frameIndex}  ·  t {time} s"
+msgstr "{label}  ·  프레임 {frameIndex}  ·  t {time}초"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdFormat.Frames"
+msgid "{name} / {curveChannel} (frames)"
+msgstr "{name} / {curveChannel}(프레임)"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdFormat.Frames2"
+msgid "{passed} ({frameCount} frames){reason}{reason2}"
+msgstr "{passed}({frameCount}프레임){reason}{reason2}"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.FramesWindowCaptured"
+msgid "{windowFrame} frames window, {capturedFrames} captured"
+msgstr "창 {windowFrame}프레임, 캡처 {capturedFrames}"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdFormat.GameObjectID"
+msgid "GameObject  ID: {objectID}"
+msgstr "GameObject  ID: {objectID}"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdFormat.ID"
+msgid "ID: {componentID}"
+msgstr "ID: {componentID}"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdFormat.If"
+msgid "if ({condition})"
+msgstr "조건({condition})"
+
 #: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
 msgctxt "EdFormat.KeepDisplaySettings"
 msgid "Keep these display settings? Reverting in {seconds} s"
 msgstr "이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다"
 
+#: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+msgctxt "EdFormat.LODVerticesTriangles"
+msgid "LOD 0  {vertexCount} vertices  {indexCount} triangles"
+msgstr "LOD 0  정점 {vertexCount}개  삼각형 {indexCount}개"
+
+#: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+msgctxt "EdFormat.LODVerticesTrianglesFrom"
+msgid "LOD {lod}  {vertexCount} vertices  {indexCount} triangles  from screen size {screenSize}"
+msgstr "LOD {lod}  정점 {vertexCount}개  삼각형 {indexCount}개  화면 크기 {screenSize}부터"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.LastColumnShowsThe"
+msgid "Last column shows the frame {selectedFrameOffset} frames ago"
+msgstr "마지막 열은 {selectedFrameOffset}프레임 전의 프레임입니다"
+
 #: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
 msgctxt "EdFormat.LastError"
 msgid "Last error: {error}"
 msgstr "마지막 오류: {error}"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdFormat.LastResult"
+msgid "Last result: {lastInvokeResult}"
+msgstr "마지막 결과: {lastInvokeResult}"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.LeftTrigger"
+msgid "Left Trigger:  {leftTrigger}"
+msgstr "왼쪽 트리거:  {leftTrigger}"
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdFormat.Max"
+msgid "{name}  {additive}{looping}  max {maxParticles}  {texturePath}"
+msgstr "{name}  {additive}{looping}  최대 {maxParticles}  {texturePath}"
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EdFormat.ModuleOff"
@@ -1035,10 +1190,35 @@ msgctxt "EdFormat.MoveToRecycleBin"
 msgid "Move '{file}' to the Recycle Bin?"
 msgstr "'{file}' 을 휴지통으로 옮길까요?"
 
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdFormat.Nested"
+msgid "Nested: {prefabIndex}"
+msgstr "중첩: {prefabIndex}"
+
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EdFormat.NoInspectorFor"
 msgid "No inspector for {type}"
 msgstr "{type} 에는 인스펙터가 없습니다"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.NoSamples"
+msgid "{seriesName}: no samples"
+msgstr "{seriesName}: 표본 없음"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdFormat.Node"
+msgid "Node #{id} ({type})"
+msgstr "노드 #{id}({type})"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdFormat.NodesLinks"
+msgid "Nodes: {nodeCount}  Links: {linkCount}  ({animationGraphDocumentFileName})"
+msgstr "노드: {nodeCount}  링크: {linkCount}  ({animationGraphDocumentFileName})"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdFormat.NodesLinks2"
+msgid "(Nodes: {nodeCount}, Links: {linkCount})"
+msgstr "(노드: {nodeCount}, 링크: {linkCount})"
 
 #: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
 msgctxt "EdFormat.NoneInScene"
@@ -1046,14 +1226,259 @@ msgid "No {type} in this scene"
 msgstr "이 씬에 {type} 이 없습니다"
 
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdFormat.ObjectsSelected"
+msgid "{objectCount} objects selected"
+msgstr "오브젝트 {objectCount}개 선택됨"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.OutsideTrackerSwapChain"
+msgid "Outside tracker (swap chain, driver, untracked): {negative}{bytesBuf}"
+msgstr "추적 밖(스왑 체인, 드라이버, 추적 안 함): {negative}{bytesBuf}"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdFormat.Parent"
 msgid "Parent: {parent}"
 msgstr "부모: {parent}"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdFormat.Pixel"
+msgid "Pixel ({probedTexelX}, {probedTexelY}): {probedPixelX} {probedPixelY} {probedPixelZ} {probedPixelW}"
+msgstr "픽셀 ({probedTexelX}, {probedTexelY}): {probedPixelX} {probedPixelY} {probedPixelZ} {probedPixelW}"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdFormat.PixelDepth"
+msgid "Pixel ({probedTexelX}, {probedTexelY}): depth {probedPixelX}"
+msgstr "픽셀 ({probedTexelX}, {probedTexelY}): 깊이 {probedPixelX}"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.PlaybackControlsTotalFrames"
+msgid "Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):"
+msgstr "재생 제어(전체 프레임: {frameCount}, 길이: {totalDuration}초):"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.Position"
+msgid "Position: ({mx}, {my})"
+msgstr "위치: ({mx}, {my})"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdFormat.PrefabWindow"
+msgid "Prefab Window: {prefabPath}"
+msgstr "프리팹 창: {prefabPath}"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdFormat.PreviewNode"
+msgid "Preview node #{previewNodeID}"
+msgstr "미리보기 노드 #{previewNodeID}"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdFormat.PreviewNodesLinks"
+msgid "Preview: {currentStateName}  Nodes: {nodeCount}  Links: {linkCount}"
+msgstr "미리보기: {currentStateName}  노드: {nodeCount}  링크: {linkCount}"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdFormat.Primary"
+msgid "Primary: {name}"
+msgstr "주 선택: {name}"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.RECORDINGLIVEINPUTSFrames"
+msgid "● RECORDING LIVE INPUTS... (Frames: {frameCount})"
+msgstr "● 실시간 입력 녹화 중...(프레임: {frameCount})"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdFormat.RHI"
+msgid "RHI {backend} | {framerate} FPS"
+msgstr "RHI {backend} | {framerate} FPS"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdFormat.Range"
+msgid "range {snapshotDepthRangeX} .. {snapshotDepthRangeY}"
+msgstr "범위 {snapshotDepthRangeX} .. {snapshotDepthRangeY}"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdFormat.Ready"
+msgid "{sW_EDITORICON}  Ready"
+msgstr "{sW_EDITORICON}  준비됨"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.RightTrigger"
+msgid "Right Trigger: {rightTrigger}"
+msgstr "오른쪽 트리거: {rightTrigger}"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdFormat.RootMotion"
+msgid "Root motion: ({rootMotionTranslationX}, {rootMotionTranslationY}, {rootMotionTranslationZ})"
+msgstr "루트 모션: ({rootMotionTranslationX}, {rootMotionTranslationY}, {rootMotionTranslationZ})"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdFormat.Running"
+msgid "{externalTitle} — running..."
+msgstr "{externalTitle} — 실행 중..."
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.SameScopeHereX"
+msgid "same scope here: {sameCount} x, total {sameTotalUs} us, max {sameMaxUs} us"
+msgstr "여기 같은 구간: {sameCount}번, 합계 {sameTotalUs} us, 최대 {sameMaxUs} us"
+
+#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+msgctxt "EdFormat.SelectedObject"
+msgid "Selected Object: {name}"
+msgstr "선택한 오브젝트: {name}"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdFormat.SeparateFromAnimationGraph"
+msgid "{dirSavedEditor}/{spriteClipDocumentFileName} (separate from AnimationGraph)"
+msgstr "{dirSavedEditor}/{spriteClipDocumentFileName}(AnimationGraph 와 따로)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdFormat.SessionServerDebugChannel"
+msgid "Session server debug channel 127.0.0.1:{debugChannelPort}"
+msgstr "세션 서버 디버그 채널 127.0.0.1:{debugChannelPort}"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.Size"
+msgid "{backendName} - {sizeBasis} size"
+msgstr "{backendName} - {sizeBasis} 크기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.SmoothDelta"
+msgid "Smooth Delta: ({smoothDx}, {smoothDy})"
+msgstr "부드러운 변화량: ({smoothDx}, {smoothDy})"
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdFormat.SpawnedCPUAlive"
+msgid "Spawned: {spawnedCount}  CPU alive: {subject}"
+msgstr "생성: {spawnedCount}  CPU 살아 있음: {subject}"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdFormat.SpriteFrame"
+msgid "Sprite frame: {spriteFrame}"
+msgstr "스프라이트 프레임: {spriteFrame}"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdFormat.StateBuiltBodiesSettled"
+msgid "State {state}  Built bodies {bodyCount}  Settled {settled}"
+msgstr "상태 {state}  만든 바디 {bodyCount}  안정 {settled}"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.StateHoldS"
+msgid "State: {action}  hold {action2} s"
+msgstr "상태: {action}  누름 {action2}초"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdFormat.StateS"
+msgid "State: {stateName}  ({stateTime} s)"
+msgstr "상태: {stateName}  ({stateTime}초)"
+
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EdFormat.StreamingOfCellsLoaded"
+msgid "streaming: {loadedCellCount} of {cellCount} cells loaded"
+msgstr "스트리밍: 셀 {cellCount}개 중 {loadedCellCount}개 로드됨"
 
 #: Source/Editor/Panels/Animation/RigDebugPanel.cpp
 msgctxt "EdFormat.Target"
 msgid "Target: {target}"
 msgstr "대상: {target}"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdFormat.Targets"
+msgid "{targetCount} targets"
+msgstr "대상 {targetCount}개"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdFormat.Tests"
+msgid "{registryCount} tests"
+msgstr "테스트 {registryCount}개"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdFormat.TheFileIsNot"
+msgid "The file is not valid XML: {error}"
+msgstr "올바른 XML 파일이 아닙니다: {error}"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EdFormat.TickS"
+msgid "{label} - {sampleCount} tick(s), {tick} .. {tick2}"
+msgstr "{label} - 틱 {sampleCount}개, {tick} .. {tick2}"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdFormat.TooManyArgumentsMax"
+msgid "Too many arguments (max {maxMethodArgCount} in UI)."
+msgstr "인자가 너무 많습니다(UI 는 최대 {maxMethodArgCount}개)."
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.TotalAttachedComponents"
+msgid "Total Attached Components: {componentCount}"
+msgstr "붙은 컴포넌트 전체: {componentCount}"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.TotalGameObjectsRoots"
+msgid "Total GameObjects: {objectCount} (Roots: {rootCount})"
+msgstr "전체 GameObject: {objectCount}(루트: {rootCount})"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.TrackedOfUnknownSize"
+msgid "Tracked: {bytesBuf}  (+ {unknownSizeCount} of unknown size)"
+msgstr "추적: {bytesBuf}  (+ 크기 모름 {unknownSizeCount})"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdFormat.TracksSOfHistory"
+msgid "{tracksCount} tracks · {byteCount} KB · {latestTime} s of history"
+msgstr "트랙 {tracksCount}개 · {byteCount} KB · 기록 {latestTime}초"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.TracyOnPortViewer"
+msgid "Tracy: on (port {tracyPort}, viewer {viewerConnected})"
+msgstr "Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected})"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdFormat.UDP"
+msgid "UDP {port}"
+msgstr "UDP {port}"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdFormat.Unknown"
+msgid "[Unknown {type}]"
+msgstr "[알 수 없음 {type}]"
+
+#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+msgctxt "EdFormat.UnsupportedInUI"
+msgid "{label} (unsupported in UI)"
+msgstr "{label}(UI 에서 지원하지 않음)"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.Usage"
+msgid "Usage: {usageBuf}{scope}"
+msgstr "사용: {usageBuf}{scope}"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdFormat.UsedByFileS"
+msgid "{sW_EDITORICON} Used by {referrerCount} file(s). They will name a missing asset."
+msgstr "{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다."
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdFormat.ValidationFailedWarnings"
+msgid "Validation failed ({warningCount} warnings)"
+msgstr "검증 실패(경고 {warningCount}개)"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EdFormat.Virtual"
+msgid "{voiceCount} ({virtualVoiceCount} virtual)"
+msgstr "{voiceCount}(가상 {virtualVoiceCount})"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.Wheel"
+msgid "Wheel: {mouseWheel}"
+msgstr "휠: {mouseWheel}"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdFormat.WorkerThreads"
+msgid "Worker Threads: {workerCount}"
+msgstr "작업 스레드: {workerCount}"
+
+#: Source/Editor/Panels/Inspector/SceneComponentInspector.cpp
+msgctxt "EdFormat.World"
+msgid "World: {worldX}, {worldY}, {worldZ}"
+msgstr "월드: {worldX}, {worldY}, {worldZ}"
 
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdLabel.Active"

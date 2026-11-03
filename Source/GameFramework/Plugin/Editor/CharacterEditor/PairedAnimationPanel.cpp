@@ -22,6 +22,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -271,8 +272,7 @@ namespace sw::editor
                                                                                                               : "exited";
             ImGui::PushID( static_cast<int32>( roleIndex ) );
             ImGui::SeparatorText( role._name.c_str() );
-            ImGui::Text( "%s  clip %s  %s %.3f s%s", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ), role._clip.c_str(), pStage, static_cast<float64>( preview._clipSeconds ),
-                         _listSlot[roleIndex]._clipSeconds > 0.0f ? "" : "  (clip length unknown - pick a prefab)" );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "ClipS", TextArgumentList().addText( "anchor", role._bAnchor ? "anchor" : ( role._bRequired ? "required" : "optional" ) ).addText( "clip", role._clip.c_str() ).addText( "stage", pStage ).addDecimal( "clipSeconds", static_cast<float64>( preview._clipSeconds ), 3 ).addText( "f", _listSlot[roleIndex]._clipSeconds > 0.0f ? "" : "  (clip length unknown - pick a prefab)" ) ).c_str() );
 
             RoleSlot& slot = _listSlot[roleIndex];
             ImGui::SetNextItemWidth( -1.0f );

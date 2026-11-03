@@ -30,6 +30,7 @@
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -399,8 +400,7 @@ namespace sw::editor
                 syncRigPreview( *pMutableBody );
         }
         const AppearanceSelection& selection = _document.getAppearanceModel().getSelection();
-        ImGui::TextDisabled( "Wearing %s on base preset '%s' (assembled %u times)", selection._listSlot.empty() ? "no slot items" : "the selection",
-                             selection._basePresetID.empty() ? _document.getPreviewPresetID().c_str() : selection._basePresetID.c_str(), pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "WearingOnBasePreset", TextArgumentList().addText( "slot", selection._listSlot.empty() ? "no slot items" : "the selection" ).addText( "basePresetID", selection._basePresetID.empty() ? _document.getPreviewPresetID().c_str() : selection._basePresetID.c_str() ).addInteger( "appearance", static_cast<int64>( pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u ) ) ).c_str() );
         _published._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
         const float2  available          = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
         const float32 minHeight          = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDPIScale();
@@ -692,7 +692,7 @@ namespace sw::editor
         const vector<hashed_string>& listClipName = _document.getClipNames();
         if ( listClipName.empty() )
         {
-            ImGui::TextDisabled( "No animation clips in '%s'", _document.getPaths()._clipFolder.c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "NoAnimationClipsIn", TextArgumentList().addText( "clipFolder", _document.getPaths()._clipFolder.c_str() ) ).c_str() );
             return;
         }
         const hashed_string selectedClip = _document.getSelectedClip();
@@ -945,8 +945,7 @@ namespace sw::editor
             (void)pose.redo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::TextDisabled( "%u bones, %u overridden%s", pose.getSkeleton().getBoneCount(), static_cast<uint32>( pose.getOverride().getOverrides().size() ),
-                             pose.isDirty() ? " (modified)" : "" );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "BonesOverridden", TextArgumentList().addInteger( "boneCount", static_cast<int64>( pose.getSkeleton().getBoneCount() ) ).addInteger( "overridesCount", static_cast<int64>( pose.getOverride().getOverrides().size() ) ).addText( "dirty", pose.isDirty() ? " (modified)" : "" ) ).c_str() );
 
         ImGui::Separator();
         if ( pose.getSkeleton().getBoneCount() == 0 )
@@ -1088,8 +1087,7 @@ namespace sw::editor
             _document.loadAppearanceData();
         EditorSelfTestMarks::note( "charactereditor.loadData" );
         if ( _document.isDatabaseLoaded() )
-            ImGui::TextDisabled( "%u slots, %u sets, %u presets", static_cast<uint32>( database.getSlotTable().getSlots().size() ), static_cast<uint32>( database.getSets().getSets().size() ),
-                                 static_cast<uint32>( database.getPresets().getPresets().size() ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "SlotsSetsPresets", TextArgumentList().addInteger( "slotsCount", static_cast<int64>( database.getSlotTable().getSlots().size() ) ).addInteger( "setsCount", static_cast<int64>( database.getSets().getSets().size() ) ).addInteger( "presetsCount", static_cast<int64>( database.getPresets().getPresets().size() ) ) ).c_str() );
         else
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "LoadTheItemsFileAndTheAppearanceFolder" ) );
     }
@@ -1362,12 +1360,11 @@ namespace sw::editor
             ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Base preset is not in the data" );
         for ( const hashed_string& dropped : report._listDroppedParameter )
         {
-            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Dropped: %s", dropped.c_str() );
+            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Dropped", TextArgumentList().addText( "dropped", dropped.c_str() ) ).c_str() );
         }
         for ( const AppearanceSelectionReport::SlotFallback& fallback : report._listSlotFallback )
         {
-            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Slot %s: %s -> %s (%s)", fallback._slot.c_str(), fallback._requestedItem.c_str(), fallback._fallbackItem.c_str(),
-                                getEnumName( fallback._reason ) );
+            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Slot", TextArgumentList().addText( "slot", fallback._slot.c_str() ).addText( "requestedItem", fallback._requestedItem.c_str() ).addText( "fallbackItem", fallback._fallbackItem.c_str() ).addText( "reason", getEnumName( fallback._reason ) ) ).c_str() );
         }
         if ( ImGui::BeginChild( "##RuleTrace", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kExplanationListLines ) ), ImGuiChildFlags_Borders ) )
         {
@@ -1393,15 +1390,13 @@ namespace sw::editor
         const FitCheckSummary& fit = _document.getFit();
         for ( const FitPartSummary& part : fit._listPart )
         {
-            ImGui::Text( "%s: cut %u/%u (%.0f%%), %u verts moved, max push %.3f", part._name.c_str(), part._cutTriangleCount, part._triangleCount, static_cast<float64>( part._cutRatio * 100.0f ),
-                         part._movedVertexCount, static_cast<float64>( part._maxDelta ) );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "CutVertsMovedMax", TextArgumentList().addText( "name", part._name.c_str() ).addInteger( "cutTriangleCount", static_cast<int64>( part._cutTriangleCount ) ).addInteger( "triangleCount", static_cast<int64>( part._triangleCount ) ).addDecimal( "cutRatio", static_cast<float64>( part._cutRatio * 100.0f ), 0 ).addInteger( "movedVertexCount", static_cast<int64>( part._movedVertexCount ) ).addDecimal( "maxDelta", static_cast<float64>( part._maxDelta ), 3 ) ).c_str() );
         }
         if ( fit.hasPenetration() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoPenetration" ) );
         for ( const FitPenetrationSummary& penetration : fit._listPenetration )
         {
-            ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "Penetration %s / %s: %u points, depth %.3f", penetration._partA.c_str(), penetration._partB.c_str(),
-                                penetration._vertexCount, static_cast<float64>( penetration._maxDepth ) );
+            ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "PenetrationPointsDepth", TextArgumentList().addText( "partA", penetration._partA.c_str() ).addText( "partB", penetration._partB.c_str() ).addInteger( "vertexCount", static_cast<int64>( penetration._vertexCount ) ).addDecimal( "maxDepth", static_cast<float64>( penetration._maxDepth ), 3 ) ).c_str() );
         }
         for ( const string& message : fit._listMessage )
         {

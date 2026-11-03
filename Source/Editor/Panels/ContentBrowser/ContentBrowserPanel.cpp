@@ -508,7 +508,7 @@ namespace sw::editor
         {
             const uint32 referrerCount = referenceIndex.countReferrerFiles( editor::getSubsystem<AssetPaths>().toAssetID( pendingDeleteAbs ) );
             if ( referrerCount > 0 )
-                ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", SW_EDITORICON( "Warning" ), referrerCount );
+                ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "UsedByFileS", TextArgumentList().addText( "sW_EDITORICON", SW_EDITORICON( "Warning" ) ).addInteger( "referrerCount", static_cast<int64>( referrerCount ) ) ).c_str() );
             else
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoTextAssetNamesIt" ) );
         }

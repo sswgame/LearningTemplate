@@ -317,6 +317,59 @@
 		<entry key="EdPluginField.Translation" text="移動" sourceHash="bef9e1084e69480c" />
 		<entry key="EdPluginField.WarpEndS" text="ワープ終了(秒)" sourceHash="930b0d61f8e2d3b6" />
 		<entry key="EdPluginField.YawDeg" text="ヨー(度)" sourceHash="00cfa817171bc367" />
+		<entry key="EdPluginFormat.BindsOfTargetBones"
+		       text="バインド: ターゲットボーン {targetBoneCount} 個中 {mappedTargetBoneCount} 個がソースに追従、身長比 {heightRatio}"
+		       sourceHash="5a16acb977de891e" />
+		<entry key="EdPluginFormat.BonesOverridden"
+		       text="ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}"
+		       sourceHash="f226a1e0f8abddb3" />
+		<entry key="EdPluginFormat.Client" text="{focused}クライアント {worldIndex}" sourceHash="9c2c41007f64608b" />
+		<entry key="EdPluginFormat.ClipS"
+		       text="{anchor}  クリップ {clip}  {stage} {clipSeconds} 秒{f}"
+		       sourceHash="b5f58e28fac14274" />
+		<entry key="EdPluginFormat.CutVertsMovedMax"
+		       text="{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂点 {movedVertexCount} 個移動、最大押し出し {maxDelta}"
+		       sourceHash="123a644d3007c563" />
+		<entry key="EdPluginFormat.Dropped" text="除外: {dropped}" sourceHash="ce2449119803e99d" />
+		<entry key="EdPluginFormat.GMConnection" text="GM 接続: {stateText}" sourceHash="ba6187deff08f6db" />
+		<entry key="EdPluginFormat.Id" text="{displayName}  (id {accountID})  {sW_TRUE}" sourceHash="95ec41a00d02a9d1" />
+		<entry key="EdPluginFormat.Live" text="実行中: {liveRunnerName}" sourceHash="a97f0a67617d3e8c" />
+		<entry key="EdPluginFormat.NoAnimationClipsIn"
+		       text="''{clipFolder}'' にアニメーションクリップがありません"
+		       sourceHash="6df3686b5c16e734" />
+		<entry key="EdPluginFormat.NodesProblems"
+		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個"
+		       sourceHash="4243b0d97dc9a48f" />
+		<entry key="EdPluginFormat.NodesWiresProblems"
+		       text="{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個"
+		       sourceHash="09d98034cf1c7c09" />
+		<entry key="EdPluginFormat.OffsetDistancePitchYaw"
+		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}"
+		       sourceHash="d7b0b245eda7fa25" />
+		<entry key="EdPluginFormat.PenetrationPointsDepth"
+		       text="貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}"
+		       sourceHash="696849e3606b5dd4" />
+		<entry key="EdPluginFormat.Problems" text="問題 {issueCount} 個" sourceHash="73d244ad7773d9ed" />
+		<entry key="EdPluginFormat.Provider" text="プロバイダー: {providerName}" sourceHash="eff920aeeb94ed28" />
+		<entry key="EdPluginFormat.Server" text="{focused}サーバー" sourceHash="2ab8e57482d849f1" />
+		<entry key="EdPluginFormat.Slot"
+		       text="スロット {slot}: {requestedItem} -> {fallbackItem}({reason})"
+		       sourceHash="67f88b40b318c4e9" />
+		<entry key="EdPluginFormat.SlotsSetsPresets"
+		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個"
+		       sourceHash="1e7f9071d4a0c202" />
+		<entry key="EdPluginFormat.SourceMTargetM"
+		       text="{name}: ソース {sourceLength} m、ターゲット {targetLength} m(x{ratio})"
+		       sourceHash="6f441d4b39cd8ee2" />
+		<entry key="EdPluginFormat.ThisFileCouldNot"
+		       text="このファイルを開けません: {statusText}"
+		       sourceHash="253bbce2905b4f9e" />
+		<entry key="EdPluginFormat.TickInputFocusWorld"
+		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}"
+		       sourceHash="73e089f72ca0df8f" />
+		<entry key="EdPluginFormat.WearingOnBasePreset"
+		       text="基準プリセット ''{basePresetID}'' に {slot} を装着(組み立て {appearance} 回)"
+		       sourceHash="f7c8585e2760023b" />
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします"
 		       sourceHash="0d52b634e78c2b8a" />

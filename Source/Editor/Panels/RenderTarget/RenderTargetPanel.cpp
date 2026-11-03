@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 
@@ -248,7 +249,7 @@ namespace sw::editor
     {
         EditorWidgets::drawSearchField( "##rtsearch", _searchFilter, SW_LOCKEY( "EditorRenderTarget", "SearchHint" ), 260.0f );
         ImGui::SameLine();
-        ImGui::TextDisabled( "%d targets", static_cast<int32>( _listTarget.size() ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Targets", TextArgumentList().addInteger( "targetCount", static_cast<int64>( _listTarget.size() ) ) ).c_str() );
 
         ImGui::SameLine();
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Zoom" ) );
@@ -350,7 +351,7 @@ namespace sw::editor
             if ( hasSnapshot() )
             {
                 ImGui::SameLine();
-                ImGui::TextDisabled( "range %.3f .. %.3f", static_cast<float64>( _snapshotDepthRange._x ), static_cast<float64>( _snapshotDepthRange._y ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Range", TextArgumentList().addDecimal( "snapshotDepthRangeX", static_cast<float64>( _snapshotDepthRange._x ), 3 ).addDecimal( "snapshotDepthRangeY", static_cast<float64>( _snapshotDepthRange._y ), 3 ) ).c_str() );
             }
             if ( bChanged )
                 _bSnapshotImageDirty = SW_TRUE;
@@ -439,12 +440,11 @@ namespace sw::editor
         {
             if ( bDepth )
             {
-                ImGui::TextDisabled( "Pixel (%d, %d): depth %.6f", _probedTexel._x, _probedTexel._y, static_cast<float64>( _probedPixel._x ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "PixelDepth", TextArgumentList().addInteger( "probedTexelX", static_cast<int64>( _probedTexel._x ) ).addInteger( "probedTexelY", static_cast<int64>( _probedTexel._y ) ).addDecimal( "probedPixelX", static_cast<float64>( _probedPixel._x ), 6 ) ).c_str() );
             }
             else
             {
-                ImGui::TextDisabled( "Pixel (%d, %d): %.4f %.4f %.4f %.4f", _probedTexel._x, _probedTexel._y, static_cast<float64>( _probedPixel._x ),
-                                     static_cast<float64>( _probedPixel._y ), static_cast<float64>( _probedPixel._z ), static_cast<float64>( _probedPixel._w ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Pixel", TextArgumentList().addInteger( "probedTexelX", static_cast<int64>( _probedTexel._x ) ).addInteger( "probedTexelY", static_cast<int64>( _probedTexel._y ) ).addDecimal( "probedPixelX", static_cast<float64>( _probedPixel._x ), 4 ).addDecimal( "probedPixelY", static_cast<float64>( _probedPixel._y ), 4 ).addDecimal( "probedPixelZ", static_cast<float64>( _probedPixel._z ), 4 ).addDecimal( "probedPixelW", static_cast<float64>( _probedPixel._w ), 4 ) ).c_str() );
             }
         }
 

@@ -19,6 +19,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphBridge.h"
@@ -262,8 +263,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) )
             _nodeGraph.requestContentFit();
         ImGui::SameLine();
-        ImGui::TextDisabled( "%s - %d nodes, %d wires, %d problems", circuit.getOwner()->getName().c_str(), static_cast<int32>( _model.getNodes().size() ),
-                             static_cast<int32>( _model.getWires().size() + _model.getOrphanWires().size() ), static_cast<int32>( _listIssue.size() ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "NodesWiresProblems", TextArgumentList().addText( "name", circuit.getOwner()->getName().c_str() ).addInteger( "nodesCount", static_cast<int64>( _model.getNodes().size() ) ).addInteger( "wiresCount", static_cast<int64>( _model.getWires().size() + _model.getOrphanWires().size() ) ).addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
         if ( _statusText.empty() == false )
         {
             ImGui::SameLine();

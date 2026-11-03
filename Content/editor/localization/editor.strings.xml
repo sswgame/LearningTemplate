@@ -1012,9 +1012,61 @@
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.Available" source="Available: {availableBuf}">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.AverageAvgMinMax"
+		       source="Average FPS: {averageFPS} (Avg: {averageMs} ms, Min: {minMs} ms, Max: {maxMs} ms)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Battery" source="Battery: {level}">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.BindingForAction" source="Binding for action: {action}">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.BonesPoseB" source="Bones: {boneCount}  ·  pose {poseByteCount} B">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Budget" source="Budget: {budgetBuf}">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.BuiltS" source="{sW_EDITORICON}  Built ({lastDurationSec}s)">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.CellMRadiusM"
+		       source="cell {cellSize} m, radius {loadingRadius} m, margin {unloadMargin} m, {maxCellLoadsPerFrame} per frame">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Choices" source="Choices ({choiceCount}):">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Cmd" source="cmd: {actionCommand}">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.ComponentSAreNot" source="{componentCount} component(s) are not on every selected object">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.ConnectedTo" source="Connected to {address}">
@@ -1022,9 +1074,51 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.ConnectionsSamples" source="{label}  connections {connectionCount}  samples {seriesCount}">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.CouldNotBeLaunched" source="{externalTitle} — could not be launched">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Current" source="Current FPS: {currentFPS} ({currentMs} ms)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Delta" source="Delta: ({dx}, {dy})">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Depth" source="{endNanos} us, depth {depth}">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.DrawingLOD" source="Drawing LOD {lod} of {count}">
 			<origins>
 				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.DurationSTracksCurves"
+		       source="Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault}  Root motion {rootMotionTrack}  Notifies {findNotifyTrack}">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.EntitiesCells" source="{alwaysLoadedIDCount} entities, {cellCount} cells">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.ExitCodeErrorLines"
+		       source="{externalTitle} — exit code {externalExitCode}, {externalErrorCount} [Error] lines">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.File" source="File: {file}">
@@ -1037,14 +1131,80 @@
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.FrameTS" source="{label}  ·  frame {frameIndex}  ·  t {time} s">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Frames" source="{name} / {curveChannel} (frames)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Frames2" source="{passed} ({frameCount} frames){reason}{reason2}">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.FramesWindowCaptured" source="{windowFrame} frames window, {capturedFrames} captured">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.GameObjectID" source="GameObject  ID: {objectID}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.ID" source="ID: {componentID}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.If" source="if ({condition})">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.KeepDisplaySettings" source="Keep these display settings? Reverting in {seconds} s">
 			<origins>
 				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.LODVerticesTriangles" source="LOD 0  {vertexCount} vertices  {indexCount} triangles">
+			<origins>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.LODVerticesTrianglesFrom"
+		       source="LOD {lod}  {vertexCount} vertices  {indexCount} triangles  from screen size {screenSize}">
+			<origins>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.LastColumnShowsThe" source="Last column shows the frame {selectedFrameOffset} frames ago">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.LastError" source="Last error: {error}">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.LastResult" source="Last result: {lastInvokeResult}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.LeftTrigger" source="Left Trigger:  {leftTrigger}">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Max" source="{name}  {additive}{looping}  max {maxParticles}  {texturePath}">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.ModuleOff" source="Off - {reason}">
@@ -1057,9 +1217,34 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.Nested" source="Nested: {prefabIndex}">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.NoInspectorFor" source="No inspector for {type}">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.NoSamples" source="{seriesName}: no samples">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Node" source="Node #{id} ({type})">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.NodesLinks" source="Nodes: {nodeCount}  Links: {linkCount}  ({animationGraphDocumentFileName})">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.NodesLinks2" source="(Nodes: {nodeCount}, Links: {linkCount})">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.NoneInScene" source="No {type} in this scene">
@@ -1067,14 +1252,266 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.ObjectsSelected" source="{objectCount} objects selected">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.OutsideTrackerSwapChain"
+		       source="Outside tracker (swap chain, driver, untracked): {negative}{bytesBuf}">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.Parent" source="Parent: {parent}">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.Pixel"
+		       source="Pixel ({probedTexelX}, {probedTexelY}): {probedPixelX} {probedPixelY} {probedPixelZ} {probedPixelW}">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.PixelDepth" source="Pixel ({probedTexelX}, {probedTexelY}): depth {probedPixelX}">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.PlaybackControlsTotalFrames"
+		       source="Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Position" source="Position: ({mx}, {my})">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.PrefabWindow" source="Prefab Window: {prefabPath}">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.PreviewNode" source="Preview node #{previewNodeID}">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.PreviewNodesLinks" source="Preview: {currentStateName}  Nodes: {nodeCount}  Links: {linkCount}">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Primary" source="Primary: {name}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.RECORDINGLIVEINPUTSFrames" source="● RECORDING LIVE INPUTS... (Frames: {frameCount})">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.RHI" source="RHI {backend} | {framerate} FPS">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Range" source="range {snapshotDepthRangeX} .. {snapshotDepthRangeY}">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Ready" source="{sW_EDITORICON}  Ready">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.RightTrigger" source="Right Trigger: {rightTrigger}">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.RootMotion"
+		       source="Root motion: ({rootMotionTranslationX}, {rootMotionTranslationY}, {rootMotionTranslationZ})">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Running" source="{externalTitle} — running...">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.SameScopeHereX"
+		       source="same scope here: {sameCount} x, total {sameTotalUs} us, max {sameMaxUs} us">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.SelectedObject" source="Selected Object: {name}">
+			<origins>
+				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.SeparateFromAnimationGraph"
+		       source="{dirSavedEditor}/{spriteClipDocumentFileName} (separate from AnimationGraph)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.SessionServerDebugChannel" source="Session server debug channel 127.0.0.1:{debugChannelPort}">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Size" source="{backendName} - {sizeBasis} size">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.SmoothDelta" source="Smooth Delta: ({smoothDx}, {smoothDy})">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.SpawnedCPUAlive" source="Spawned: {spawnedCount}  CPU alive: {subject}">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.SpriteFrame" source="Sprite frame: {spriteFrame}">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.StateBuiltBodiesSettled" source="State {state}  Built bodies {bodyCount}  Settled {settled}">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.StateHoldS" source="State: {action}  hold {action2} s">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.StateS" source="State: {stateName}  ({stateTime} s)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.StreamingOfCellsLoaded" source="streaming: {loadedCellCount} of {cellCount} cells loaded">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.Target" source="Target: {target}">
 			<origins>
 				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Targets" source="{targetCount} targets">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Tests" source="{registryCount} tests">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TheFileIsNot" source="The file is not valid XML: {error}">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TickS" source="{label} - {sampleCount} tick(s), {tick} .. {tick2}">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TooManyArgumentsMax" source="Too many arguments (max {maxMethodArgCount} in UI).">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TotalAttachedComponents" source="Total Attached Components: {componentCount}">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TotalGameObjectsRoots" source="Total GameObjects: {objectCount} (Roots: {rootCount})">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TrackedOfUnknownSize" source="Tracked: {bytesBuf}  (+ {unknownSizeCount} of unknown size)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TracksSOfHistory" source="{tracksCount} tracks · {byteCount} KB · {latestTime} s of history">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.TracyOnPortViewer" source="Tracy: on (port {tracyPort}, viewer {viewerConnected})">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.UDP" source="UDP {port}">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Unknown" source="[Unknown {type}]">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.UnsupportedInUI" source="{label} (unsupported in UI)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Usage" source="Usage: {usageBuf}{scope}">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.UsedByFileS"
+		       source="{sW_EDITORICON} Used by {referrerCount} file(s). They will name a missing asset.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.ValidationFailedWarnings" source="Validation failed ({warningCount} warnings)">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Virtual" source="{voiceCount} ({virtualVoiceCount} virtual)">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Wheel" source="Wheel: {mouseWheel}">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.WorkerThreads" source="Worker Threads: {workerCount}">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.World" source="World: {worldX}, {worldY}, {worldZ}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/SceneComponentInspector.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Active" source="Active">

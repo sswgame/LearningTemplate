@@ -43,6 +43,8 @@
 		<entry source="Bake" text="굽기" />
 		<entry source="Base" text="기본값" />
 		<entry source="Base preset" text="기준 프리셋" />
+		<entry source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
+		       text="묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개가 원본을 따름, 키 비율 {heightRatio}" />
 		<entry source="Blackboard key" text="블랙보드 키" />
 		<entry source="Body shape" text="체형" />
 		<entry source="Body type" text="몸 종류" />
@@ -96,6 +98,7 @@
 		<entry source="Dismiss" text="닫기" />
 		<entry source="Display" text="화면" />
 		<entry source="Down" text="아래" />
+		<entry source="Dropped: {dropped}" text="빠짐: {dropped}" />
 		<entry source="Duplicate row" text="행 복제" />
 		<entry source="Duration (s)" text="길이(초)" />
 		<entry source="Edit" text="편집" />
@@ -116,6 +119,7 @@
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
 		<entry source="Foliage Density" text="초목 밀도" />
 		<entry source="Follow game clock" text="게임 시계 따라가기" />
+		<entry source="GM connection: {stateText}" text="GM 연결: {stateText}" />
 		<entry source="GM password" text="GM 비밀번호" />
 		<entry source="Game saved" text="게임을 저장했습니다" />
 		<entry source="Game time" text="게임 시각" />
@@ -150,6 +154,7 @@
 		<entry source="Lift sanction" text="제재 풀기" />
 		<entry source="List audit" text="감사 기록 보기" />
 		<entry source="List live events" text="라이브 이벤트 보기" />
+		<entry source="Live: {liveRunnerName}" text="실행 중: {liveRunnerName}" />
 		<entry source="Load" text="불러오기" />
 		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
 		       text="스켈레톤을 불러오면 뼈가 보입니다. 스켈레톤은 읽기 전용이고 편집은 기준 포즈 파일에 들어갑니다." />
@@ -186,6 +191,8 @@
 		<entry source="New" text="새로" />
 		<entry source="New socket name" text="새 소켓 이름" />
 		<entry source="No AbilityComponent in the active scene" text="활성 씬에 AbilityComponent 가 없습니다" />
+		<entry source="No animation clips in ''{clipFolder}''"
+		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다" />
 		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
 		       text="이 선택에는 꾸미기 스키마가 없습니다(외형 데이터를 불러오고 스키마가 있는 기준 프리셋을 고르세요)." />
 		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
@@ -222,6 +229,8 @@
 		<entry source="Parent" text="부모" />
 		<entry source="Pause Menu" text="일시정지 메뉴" />
 		<entry source="Paused" text="일시 정지" />
+		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
+		       text="뚫음 {partA} / {partB}: 점 {vertexCount}개, 깊이 {maxDepth}" />
 		<entry source="Pick a base preset to see which rules hid or changed what."
 		       text="기준 프리셋을 고르면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다." />
 		<entry source="Pick an ability system..." text="어빌리티 시스템 고르기..." />
@@ -241,6 +250,7 @@
 		<entry source="Priority" text="우선순위" />
 		<entry source="Privacy" text="개인 정보" />
 		<entry source="Protanopia" text="적색약" />
+		<entry source="Provider: {providerName}" text="제공자: {providerName}" />
 		<entry source="Put live event" text="라이브 이벤트 넣기" />
 		<entry source="Quit Game" text="게임 종료" />
 		<entry source="Raw timeline" text="타임라인 원문" />
@@ -326,6 +336,8 @@
 		<entry source="Skeleton" text="스켈레톤" />
 		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
 		       text="스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)." />
+		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
+		       text="칸 {slot}: {requestedItem} -> {fallbackItem}({reason})" />
 		<entry source="Slots" text="칸" />
 		<entry source="Sockets" text="소켓" />
 		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
@@ -365,6 +377,7 @@
 		<entry source="The same checklist as a runtime UI window (shows in the game view while playing)"
 		       text="같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)." />
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
+		<entry source="This file could not be opened: {statusText}" text="이 파일을 열 수 없습니다: {statusText}" />
 		<entry source="Time" text="시각" />
 		<entry source="Toggle" text="전환" />
 		<entry source="Translation" text="이동" />
@@ -394,6 +407,8 @@
 		<entry source="Voice Volume" text="음성 음량" />
 		<entry source="Warp File (.mfwarp)" text="워프 파일(.mfwarp)" />
 		<entry source="Warp end (s)" text="워프 끝(초)" />
+		<entry source="Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+		       text="기준 프리셋 ''{basePresetID}'' 위에 {slot} 착용(조립 {appearance}번)" />
 		<entry source="What will {name} do?" text="{name}은(는) 무엇을 할까?" />
 		<entry source="When the key sits on the curve's time axis. It stays between its neighbouring keys."
 		       text="이 키가 곡선의 시간 축에서 놓인 위치입니다. 이웃한 키 사이에만 둘 수 있습니다." />
@@ -410,13 +425,33 @@
 		<entry source="You have changes that are not applied." text="적용하지 않은 변경이 있습니다." />
 		<entry source="Zoom fit" text="맞춰 보기" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 선택" />
+		<entry source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
+		       text="오프셋 {offsetX}, {offsetY}, {offsetZ}  거리 {distance}  피치 {pitch}  요 {yaw}  시야각 {computeFieldOfViewY}" />
+		<entry source="tick {tick}  input focus: world {inputFocus}" text="틱 {tick}  입력 초점: 월드 {inputFocus}" />
+		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
+		       text="{anchor}  클립 {clip}  {stage} {clipSeconds}초{f}" />
+		<entry source="{boneCount} bones, {overridesCount} overridden{dirty}"
+		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}" />
 		<entry source="{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
 		       text="설정 {count}개는 다시 시작한 뒤에 적용됩니다." />
+		<entry source="{displayName}  (id {accountID})  {sW_TRUE}" text="{displayName}  (id {accountID})  {sW_TRUE}" />
+		<entry source="{focused}Client {worldIndex}" text="{focused}클라이언트 {worldIndex}" />
+		<entry source="{focused}Server" text="{focused}서버" />
+		<entry source="{issueCount} problems" text="문제 {issueCount}개" />
+		<entry source="{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems"
+		       text="{name} - 노드 {nodesCount}개, 선 {wiresCount}개, 문제 {issueCount}개" />
 		<entry source="{name} fainted! You won!" text="{name}(이)가 쓰러졌다! 승리!" />
 		<entry source="{name} fainted..." text="{name}(이)가 쓰러졌다..." />
 		<entry source="{name} has no PP!" text="{name}의 PP가 없다!" />
 		<entry source="{name} has no usable move!" text="{name}에게는 쓸 수 있는 기술이 없다!" />
 		<entry source="{name} used {move}!" text="{name}의 {move}!" />
 		<entry source="{name} used {move}! ({damage} dmg)" text="{name}의 {move}! ({damage} 피해)" />
+		<entry source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}"
+		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}" />
+		<entry source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
+		       text="{name}: 원본 {sourceLength} m, 대상 {targetLength} m(x{ratio})" />
+		<entry source="{nodeCount} nodes | {issueCount} problems" text="노드 {nodeCount}개 | 문제 {issueCount}개" />
+		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
+		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
 	</entries>
 </TranslationMemory>

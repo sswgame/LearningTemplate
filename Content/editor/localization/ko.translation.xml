@@ -381,25 +381,190 @@
 		<entry key="EdField.WindowRounding" text="창 둥글기" sourceHash="01fa3805f2a18b4b" />
 		<entry key="EdField.WindowS" text="창(초)" sourceHash="518056b575884ab9" />
 		<entry key="EdField.Zoom" text="확대" sourceHash="166bd56d19670a72" />
+		<entry key="EdFormat.Available" text="남음: {availableBuf}" sourceHash="c1b63f0d4fbd49c2" />
+		<entry key="EdFormat.AverageAvgMinMax"
+		       text="평균 FPS: {averageFPS}(평균: {averageMs} ms, 최소: {minMs} ms, 최대: {maxMs} ms)"
+		       sourceHash="8e1669d53c98070d" />
+		<entry key="EdFormat.Battery" text="배터리: {level}" sourceHash="f31be81e7a3489a8" />
 		<entry key="EdFormat.BindingForAction" text="액션 바인딩: {action}" sourceHash="8de988fed1489bd9" />
+		<entry key="EdFormat.BonesPoseB"
+		       text="본: {boneCount}  ·  포즈 {poseByteCount} B"
+		       sourceHash="438e02af5e338cbb" />
+		<entry key="EdFormat.Budget" text="예산: {budgetBuf}" sourceHash="f10128f4ae13948e" />
+		<entry key="EdFormat.BuiltS" text="{sW_EDITORICON}  빌드됨({lastDurationSec}초)" sourceHash="9bc796538c48e0c1" />
+		<entry key="EdFormat.CellMRadiusM"
+		       text="셀 {cellSize} m, 반경 {loadingRadius} m, 여유 {unloadMargin} m, 프레임당 {maxCellLoadsPerFrame}"
+		       sourceHash="2d17573e065de4bb" />
+		<entry key="EdFormat.Choices" text="선택지({choiceCount}):" sourceHash="f4a11b6677b8a27e" />
+		<entry key="EdFormat.Cmd" text="명령: {actionCommand}" sourceHash="45863577c777d0c8" />
+		<entry key="EdFormat.ComponentSAreNot"
+		       text="컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다"
+		       sourceHash="fbe013f290723dbb" />
 		<entry key="EdFormat.ConnectedTo" text="{address} 에 연결됨" sourceHash="47a9b329b7af47a7" />
+		<entry key="EdFormat.ConnectionsSamples"
+		       text="{label}  연결 {connectionCount}  표본 {seriesCount}"
+		       sourceHash="6ce37026f8464540" />
+		<entry key="EdFormat.CouldNotBeLaunched"
+		       text="{externalTitle} — 실행하지 못했습니다"
+		       sourceHash="7d3481d2f99402a3" />
+		<entry key="EdFormat.Current" text="현재 FPS: {currentFPS}({currentMs} ms)" sourceHash="29b27211d81c0717" />
+		<entry key="EdFormat.Delta" text="변화량: ({dx}, {dy})" sourceHash="36f3013e7eb6789b" />
+		<entry key="EdFormat.Depth" text="{endNanos} us, 깊이 {depth}" sourceHash="55ba0f144e2ce76d" />
 		<entry key="EdFormat.DrawingLOD" text="LOD {count} 개 중 {lod} 번을 그립니다" sourceHash="d4b4df4bd12b1df9" />
+		<entry key="EdFormat.DurationSTracksCurves"
+		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault}  루트 모션 {rootMotionTrack}  알림 {findNotifyTrack}"
+		       sourceHash="320a2d3f6f645cc9" />
+		<entry key="EdFormat.EntitiesCells"
+		       text="엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개"
+		       sourceHash="97544208746d191a" />
+		<entry key="EdFormat.ExitCodeErrorLines"
+		       text="{externalTitle} — 종료 코드 {externalExitCode}, [Error] 줄 {externalErrorCount}개"
+		       sourceHash="3e0a32b7ceb9a84e" />
 		<entry key="EdFormat.File" text="파일: {file}" sourceHash="f061b96d155cea0f" />
 		<entry key="EdFormat.Focused" text="선택한 것: {path}" sourceHash="5c186f97213c045d" />
+		<entry key="EdFormat.FrameTS"
+		       text="{label}  ·  프레임 {frameIndex}  ·  t {time}초"
+		       sourceHash="fe9f7f2760c4b1d7" />
+		<entry key="EdFormat.Frames" text="{name} / {curveChannel}(프레임)" sourceHash="a0063c9adf1209ea" />
+		<entry key="EdFormat.Frames2" text="{passed}({frameCount}프레임){reason}{reason2}" sourceHash="5ea106bcfffc997c" />
+		<entry key="EdFormat.FramesWindowCaptured"
+		       text="창 {windowFrame}프레임, 캡처 {capturedFrames}"
+		       sourceHash="0f11bb3da51bfd2e" />
+		<entry key="EdFormat.GameObjectID" text="GameObject  ID: {objectID}" sourceHash="f68ebd5b37309415" />
+		<entry key="EdFormat.ID" text="ID: {componentID}" sourceHash="73e4e2bde40d573a" />
+		<entry key="EdFormat.If" text="조건({condition})" sourceHash="54375bb3db4dff02" />
 		<entry key="EdFormat.KeepDisplaySettings"
 		       text="이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다"
 		       sourceHash="0022217cb6ebd09c" />
+		<entry key="EdFormat.LODVerticesTriangles"
+		       text="LOD 0  정점 {vertexCount}개  삼각형 {indexCount}개"
+		       sourceHash="73a712e8e6fd37a4" />
+		<entry key="EdFormat.LODVerticesTrianglesFrom"
+		       text="LOD {lod}  정점 {vertexCount}개  삼각형 {indexCount}개  화면 크기 {screenSize}부터"
+		       sourceHash="5800966457165d4d" />
+		<entry key="EdFormat.LastColumnShowsThe"
+		       text="마지막 열은 {selectedFrameOffset}프레임 전의 프레임입니다"
+		       sourceHash="f7e2c705c947d9a3" />
 		<entry key="EdFormat.LastError" text="마지막 오류: {error}" sourceHash="efc82ee1082a3a9f" />
+		<entry key="EdFormat.LastResult" text="마지막 결과: {lastInvokeResult}" sourceHash="64defb75f9d6dbcb" />
+		<entry key="EdFormat.LeftTrigger" text="왼쪽 트리거:  {leftTrigger}" sourceHash="137aed7ac4d6901d" />
+		<entry key="EdFormat.Max"
+		       text="{name}  {additive}{looping}  최대 {maxParticles}  {texturePath}"
+		       sourceHash="a90e84e1de36dc25" />
 		<entry key="EdFormat.ModuleOff" text="꺼짐 — {reason}" sourceHash="2a4840d525147443" />
 		<entry key="EdFormat.MoveToRecycleBin"
 		       text="'{file}' 을 휴지통으로 옮길까요?"
 		       sourceHash="3138ed4fd3a78c0b" />
+		<entry key="EdFormat.Nested" text="중첩: {prefabIndex}" sourceHash="b634380a790e4778" />
 		<entry key="EdFormat.NoInspectorFor"
 		       text="{type} 에는 인스펙터가 없습니다"
 		       sourceHash="61de9f35cd64eea4" />
+		<entry key="EdFormat.NoSamples" text="{seriesName}: 표본 없음" sourceHash="0425b5d1403a89d5" />
+		<entry key="EdFormat.Node" text="노드 #{id}({type})" sourceHash="e1ba321f3e2c399e" />
+		<entry key="EdFormat.NodesLinks"
+		       text="노드: {nodeCount}  링크: {linkCount}  ({animationGraphDocumentFileName})"
+		       sourceHash="b86400b9a078e2d8" />
+		<entry key="EdFormat.NodesLinks2" text="(노드: {nodeCount}, 링크: {linkCount})" sourceHash="d7e5dabea7b6606a" />
 		<entry key="EdFormat.NoneInScene" text="이 씬에 {type} 이 없습니다" sourceHash="a1a3244ababe383b" />
+		<entry key="EdFormat.ObjectsSelected" text="오브젝트 {objectCount}개 선택됨" sourceHash="b7ec3e112e33fac8" />
+		<entry key="EdFormat.OutsideTrackerSwapChain"
+		       text="추적 밖(스왑 체인, 드라이버, 추적 안 함): {negative}{bytesBuf}"
+		       sourceHash="4d73c4528b889c35" />
 		<entry key="EdFormat.Parent" text="부모: {parent}" sourceHash="d0bf42b4289b28fb" />
+		<entry key="EdFormat.Pixel"
+		       text="픽셀 ({probedTexelX}, {probedTexelY}): {probedPixelX} {probedPixelY} {probedPixelZ} {probedPixelW}"
+		       sourceHash="a06f06fcefa79ddd" />
+		<entry key="EdFormat.PixelDepth"
+		       text="픽셀 ({probedTexelX}, {probedTexelY}): 깊이 {probedPixelX}"
+		       sourceHash="946b432bf1b2d07e" />
+		<entry key="EdFormat.PlaybackControlsTotalFrames"
+		       text="재생 제어(전체 프레임: {frameCount}, 길이: {totalDuration}초):"
+		       sourceHash="6ea074b30205343c" />
+		<entry key="EdFormat.Position" text="위치: ({mx}, {my})" sourceHash="39046b8b1fc49a88" />
+		<entry key="EdFormat.PrefabWindow" text="프리팹 창: {prefabPath}" sourceHash="e60107180f31ac54" />
+		<entry key="EdFormat.PreviewNode" text="미리보기 노드 #{previewNodeID}" sourceHash="c25d96924b798195" />
+		<entry key="EdFormat.PreviewNodesLinks"
+		       text="미리보기: {currentStateName}  노드: {nodeCount}  링크: {linkCount}"
+		       sourceHash="78e9be56fca0730a" />
+		<entry key="EdFormat.Primary" text="주 선택: {name}" sourceHash="761823eed04a879a" />
+		<entry key="EdFormat.RECORDINGLIVEINPUTSFrames"
+		       text="● 실시간 입력 녹화 중...(프레임: {frameCount})"
+		       sourceHash="49309f7ef2437392" />
+		<entry key="EdFormat.RHI" text="RHI {backend} | {framerate} FPS" sourceHash="a30ac75b378ed9d4" />
+		<entry key="EdFormat.Range"
+		       text="범위 {snapshotDepthRangeX} .. {snapshotDepthRangeY}"
+		       sourceHash="b17ecd9eafda185f" />
+		<entry key="EdFormat.Ready" text="{sW_EDITORICON}  준비됨" sourceHash="5823a33dbacdfe5f" />
+		<entry key="EdFormat.RightTrigger" text="오른쪽 트리거: {rightTrigger}" sourceHash="6efeae86586e0ab5" />
+		<entry key="EdFormat.RootMotion"
+		       text="루트 모션: ({rootMotionTranslationX}, {rootMotionTranslationY}, {rootMotionTranslationZ})"
+		       sourceHash="4cc357f704b545ee" />
+		<entry key="EdFormat.Running" text="{externalTitle} — 실행 중..." sourceHash="c625947de4704af9" />
+		<entry key="EdFormat.SameScopeHereX"
+		       text="여기 같은 구간: {sameCount}번, 합계 {sameTotalUs} us, 최대 {sameMaxUs} us"
+		       sourceHash="e5af4defc1063976" />
+		<entry key="EdFormat.SelectedObject" text="선택한 오브젝트: {name}" sourceHash="bad78023c3a91cc8" />
+		<entry key="EdFormat.SeparateFromAnimationGraph"
+		       text="{dirSavedEditor}/{spriteClipDocumentFileName}(AnimationGraph 와 따로)"
+		       sourceHash="c7f8ee78b2acfdae" />
+		<entry key="EdFormat.SessionServerDebugChannel"
+		       text="세션 서버 디버그 채널 127.0.0.1:{debugChannelPort}"
+		       sourceHash="bf9747278a303b84" />
+		<entry key="EdFormat.Size" text="{backendName} - {sizeBasis} 크기" sourceHash="cfa2212b131c3b0f" />
+		<entry key="EdFormat.SmoothDelta"
+		       text="부드러운 변화량: ({smoothDx}, {smoothDy})"
+		       sourceHash="901adee96ac006e7" />
+		<entry key="EdFormat.SpawnedCPUAlive"
+		       text="생성: {spawnedCount}  CPU 살아 있음: {subject}"
+		       sourceHash="ea235214a1f7fe99" />
+		<entry key="EdFormat.SpriteFrame" text="스프라이트 프레임: {spriteFrame}" sourceHash="74c4687529532bbd" />
+		<entry key="EdFormat.StateBuiltBodiesSettled"
+		       text="상태 {state}  만든 바디 {bodyCount}  안정 {settled}"
+		       sourceHash="a2b50fd495625748" />
+		<entry key="EdFormat.StateHoldS" text="상태: {action}  누름 {action2}초" sourceHash="a32b5e96cbfc4188" />
+		<entry key="EdFormat.StateS" text="상태: {stateName}  ({stateTime}초)" sourceHash="84d30c2c41c2e17a" />
+		<entry key="EdFormat.StreamingOfCellsLoaded"
+		       text="스트리밍: 셀 {cellCount}개 중 {loadedCellCount}개 로드됨"
+		       sourceHash="51c821f9ef5475cd" />
 		<entry key="EdFormat.Target" text="대상: {target}" sourceHash="6f9f507fbc585cb9" />
+		<entry key="EdFormat.Targets" text="대상 {targetCount}개" sourceHash="af4cc3d0c892d133" />
+		<entry key="EdFormat.Tests" text="테스트 {registryCount}개" sourceHash="6be490d4f40b536a" />
+		<entry key="EdFormat.TheFileIsNot"
+		       text="올바른 XML 파일이 아닙니다: {error}"
+		       sourceHash="4597171a7781bef6" />
+		<entry key="EdFormat.TickS" text="{label} - 틱 {sampleCount}개, {tick} .. {tick2}" sourceHash="3ac7e1781ae98e7e" />
+		<entry key="EdFormat.TooManyArgumentsMax"
+		       text="인자가 너무 많습니다(UI 는 최대 {maxMethodArgCount}개)."
+		       sourceHash="411c08143700d744" />
+		<entry key="EdFormat.TotalAttachedComponents"
+		       text="붙은 컴포넌트 전체: {componentCount}"
+		       sourceHash="61eac202e160edfd" />
+		<entry key="EdFormat.TotalGameObjectsRoots"
+		       text="전체 GameObject: {objectCount}(루트: {rootCount})"
+		       sourceHash="3d0c2946336b8dfc" />
+		<entry key="EdFormat.TrackedOfUnknownSize"
+		       text="추적: {bytesBuf}  (+ 크기 모름 {unknownSizeCount})"
+		       sourceHash="f0e78682f79285e3" />
+		<entry key="EdFormat.TracksSOfHistory"
+		       text="트랙 {tracksCount}개 · {byteCount} KB · 기록 {latestTime}초"
+		       sourceHash="5abda75617859ec2" />
+		<entry key="EdFormat.TracyOnPortViewer"
+		       text="Tracy: 켜짐(포트 {tracyPort}, 뷰어 {viewerConnected})"
+		       sourceHash="941fcaca70f85d7c" />
+		<entry key="EdFormat.UDP" text="UDP {port}" sourceHash="d9889a5c21735fb1" />
+		<entry key="EdFormat.Unknown" text="[알 수 없음 {type}]" sourceHash="459b9a493c2cd82b" />
+		<entry key="EdFormat.UnsupportedInUI" text="{label}(UI 에서 지원하지 않음)" sourceHash="331a347268daba94" />
+		<entry key="EdFormat.Usage" text="사용: {usageBuf}{scope}" sourceHash="a50719da5c2002dc" />
+		<entry key="EdFormat.UsedByFileS"
+		       text="{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다."
+		       sourceHash="26f1a30e0c8de7a2" />
+		<entry key="EdFormat.ValidationFailedWarnings"
+		       text="검증 실패(경고 {warningCount}개)"
+		       sourceHash="f32795db9fadc7fa" />
+		<entry key="EdFormat.Virtual" text="{voiceCount}(가상 {virtualVoiceCount})" sourceHash="c0efab7ad9f81df0" />
+		<entry key="EdFormat.Wheel" text="휠: {mouseWheel}" sourceHash="90a895c29b3dcdfc" />
+		<entry key="EdFormat.WorkerThreads" text="작업 스레드: {workerCount}" sourceHash="cd9dfcb1bce965d9" />
+		<entry key="EdFormat.World" text="월드: {worldX}, {worldY}, {worldZ}" sourceHash="afd2bd56913e1a2a" />
 		<entry key="EdLabel.Active" text="활성" sourceHash="a45a194b58837e4f" />
 		<entry key="EdLabel.AddKey" text="키 추가" sourceHash="7a0e4cc6bfd9c40b" />
 		<entry key="EdLabel.All" text="전부" sourceHash="f993bb199fefbe04" />

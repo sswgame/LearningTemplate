@@ -151,11 +151,11 @@ namespace sw::editor
         }
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "DrawingLOD", TextArgumentList().addInteger( "lod", subject.getLODIndex() ).addInteger( "count", lodCount ) ).c_str() );
 
-        ImGui::BulletText( "LOD 0  %u vertices  %u triangles", pMesh->getVertexCount(), pMesh->getIndexCount() / 3u );
+        ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "LODVerticesTriangles", TextArgumentList().addInteger( "vertexCount", static_cast<int64>( pMesh->getVertexCount() ) ).addInteger( "indexCount", static_cast<int64>( pMesh->getIndexCount() / 3u ) ) ).c_str() );
         uint32 lod = 1;
         for ( const MeshLOD& level : pMesh->getLODs() )
         {
-            ImGui::BulletText( "LOD %u  %u vertices  %u triangles  from screen size %.3f", lod, level._vertexCount, level._indexCount / 3u, level._screenSize );
+            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "LODVerticesTrianglesFrom", TextArgumentList().addInteger( "lod", static_cast<int64>( lod ) ).addInteger( "vertexCount", static_cast<int64>( level._vertexCount ) ).addInteger( "indexCount", static_cast<int64>( level._indexCount / 3u ) ).addDecimal( "screenSize", static_cast<float64>( level._screenSize ), 3 ) ).c_str() );
             ++lod;
         }
         if ( lodCount == 1 )

@@ -17,6 +17,7 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include <imgui.h>
@@ -146,9 +147,7 @@ namespace sw::editor
         const AnimationClip* pClip = AnimationClipPreviewModel::findOpenClip( *pAnimator, getLoadedAssetPath() );
         if ( pClip == nullptr )
             return; // 읽지 못했다 — 상태 줄이 알렸다
-        ImGui::Text( "Duration %.2f s  Tracks %u  Curves %u  Default loop %s  Root motion %s  Notifies %s", pClip->getDuration(), pClip->getTrackCount(),
-                     static_cast<uint32>( pClip->getCurves().size() ), pClip->isLoopingByDefault() ? "yes" : "no", pClip->getRootMotionTrack() >= 0 ? "yes" : "no",
-                     pClip->findNotifyTrack() != nullptr ? "yes" : "no" );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "DurationSTracksCurves", TextArgumentList().addDecimal( "duration", static_cast<float64>( pClip->getDuration() ), 2 ).addInteger( "trackCount", static_cast<int64>( pClip->getTrackCount() ) ).addInteger( "curvesCount", static_cast<int64>( pClip->getCurves().size() ) ).addText( "loopingByDefault", pClip->isLoopingByDefault() ? "yes" : "no" ).addText( "rootMotionTrack", pClip->getRootMotionTrack() >= 0 ? "yes" : "no" ).addText( "findNotifyTrack", pClip->findNotifyTrack() != nullptr ? "yes" : "no" ) ).c_str() );
     }
 
     bool AnimationClipPreviewPanel::findPreviewClipDuration( float32& outSeconds ) const

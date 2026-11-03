@@ -32,6 +32,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -361,7 +362,7 @@ namespace sw::editor
         ImGui::SameLine();
         const ProfilerScopeHistory& history        = _capture.getHistory();
         const uint64                capturedFrames = MathUtil::min( history.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
-        ImGui::TextDisabled( "%u frames window, %u captured", history.getWindowFrame(), static_cast<uint32>( capturedFrames ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "FramesWindowCaptured", TextArgumentList().addInteger( "windowFrame", static_cast<int64>( history.getWindowFrame() ) ).addInteger( "capturedFrames", static_cast<int64>( capturedFrames ) ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) )
             _capture.clear();
@@ -413,8 +414,7 @@ namespace sw::editor
         else if ( pBackend == nullptr )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TracyOff" ) );
         else
-            ImGui::Text( "Tracy: on (port %u, viewer %s)", static_cast<uint32>( ProfilerBackend::getTracyPort() ),
-                         pBackend->isViewerConnected() ? "connected" : "waiting" );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "TracyOnPortViewer", TextArgumentList().addInteger( "tracyPort", static_cast<int64>( ProfilerBackend::getTracyPort() ) ).addText( "viewerConnected", pBackend->isViewerConnected() ? "connected" : "waiting" ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "OpenTracy" ) ) );
         ImGui::BeginDisabled( ProfilerBackend::isTracyCompiled() == false );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenTracy" ) ) )
@@ -671,7 +671,7 @@ namespace sw::editor
         const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
         ImGui::BeginTooltip();
         ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
-        ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / constant::time::kNanosecondsPerMicrosecond, static_cast<uint32>( event._depth ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Depth", TextArgumentList().addDecimal( "endNanos", static_cast<float64>( static_cast<float64>( event._endNanos - event._beginNanos ) / constant::time::kNanosecondsPerMicrosecond ), 1 ).addInteger( "depth", static_cast<int64>( event._depth ) ) ).c_str() );
         ImGui::TextDisabled( "%s", listThread[hoveredRect._threadIndex]._name.c_str() );
         // 같은 구간(같은 스레드, 같은 슬롯)의 횟수, 합계, 최대를 구한다. 어느 구간이 늘었는지 한눈에 볼 수 있다.
         uint32  sameCount{ 0 };
@@ -686,7 +686,7 @@ namespace sw::editor
             sameTotalUs += micros;
             sameMaxUs = MathUtil::max( sameMaxUs, micros );
         }
-        ImGui::TextDisabled( "same scope here: %u x, total %.1f us, max %.1f us", sameCount, sameTotalUs, sameMaxUs );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "SameScopeHereX", TextArgumentList().addInteger( "sameCount", static_cast<int64>( sameCount ) ).addDecimal( "sameTotalUs", static_cast<float64>( sameTotalUs ), 1 ).addDecimal( "sameMaxUs", static_cast<float64>( sameMaxUs ), 1 ) ).c_str() );
         ImGui::EndTooltip();
     }
 
@@ -719,7 +719,7 @@ namespace sw::editor
         {
             if ( _capture.getHistory().copySeries( pSeriesName, _listScratchSeries ) == false || _listScratchSeries.empty() )
             {
-                ImGui::TextDisabled( "%s: no samples", pSeriesName );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoSamples", TextArgumentList().addText( "seriesName", pSeriesName ) ).c_str() );
                 continue;
             }
             for ( float32& value : _listScratchSeries )
@@ -752,7 +752,7 @@ namespace sw::editor
         }
         if ( _capture.getSelectedFrameOffset() > 0 )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kFrameOffsetText ), "Last column shows the frame %u frames ago", _capture.getSelectedFrameOffset() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kFrameOffsetText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "LastColumnShowsThe", TextArgumentList().addInteger( "selectedFrameOffset", static_cast<int64>( _capture.getSelectedFrameOffset() ) ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Latest" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Latest" ) ) )
                 _capture.selectFrameOffset( 0 );
@@ -825,9 +825,8 @@ namespace sw::editor
     void ProfilerPanel::drawPerformanceTab()
     {
         const ProfilerFrameTimeStats stats = _performance.sampleFrame();
-        ImGui::Text( "Current FPS: %.1f (%.2f ms)", static_cast<float64>( stats._currentFPS ), static_cast<float64>( stats._currentMs ) );
-        ImGui::Text( "Average FPS: %.1f (Avg: %.2f ms, Min: %.2f ms, Max: %.2f ms)", static_cast<float64>( stats._averageFPS ), static_cast<float64>( stats._averageMs ),
-                     static_cast<float64>( stats._minMs ), static_cast<float64>( stats._maxMs ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Current", TextArgumentList().addDecimal( "currentFPS", static_cast<float64>( stats._currentFPS ), 1 ).addDecimal( "currentMs", static_cast<float64>( stats._currentMs ), 2 ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "AverageAvgMinMax", TextArgumentList().addDecimal( "averageFPS", static_cast<float64>( stats._averageFPS ), 1 ).addDecimal( "averageMs", static_cast<float64>( stats._averageMs ), 2 ).addDecimal( "minMs", static_cast<float64>( stats._minMs ), 2 ).addDecimal( "maxMs", static_cast<float64>( stats._maxMs ), 2 ) ).c_str() );
 
         ImGui::PlotLines( "Frame Time (ms)", _performance.getHistory(), static_cast<int32>( ProfilerPerformanceModel::kHistoryCount ), static_cast<int32>( _performance.getHistoryOffset() ),
                           nullptr, 0.0f, 33.3f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) ) );
@@ -852,7 +851,7 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TaskManagerConcurrency" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            ImGui::BulletText( "Worker Threads: %u", editor::getSubsystem<TaskManager>().getWorkerCount() );
+            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "WorkerThreads", TextArgumentList().addInteger( "workerCount", static_cast<int64>( editor::getSubsystem<TaskManager>().getWorkerCount() ) ) ).c_str() );
             ImGui::BulletText( "Task System: Active" );
         }
     }
@@ -869,8 +868,8 @@ namespace sw::editor
                 const EditorSceneCommands::SceneStatistics stats =
                     EditorSceneCommands::collectSceneStatistics( pScene->getObjectManager() );
 
-                ImGui::BulletText( "Total GameObjects: %u (Roots: %u)", stats._objectCount, stats._rootCount );
-                ImGui::BulletText( "Total Attached Components: %u", stats._componentCount );
+                ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "TotalGameObjectsRoots", TextArgumentList().addInteger( "objectCount", static_cast<int64>( stats._objectCount ) ).addInteger( "rootCount", static_cast<int64>( stats._rootCount ) ) ).c_str() );
+                ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "TotalAttachedComponents", TextArgumentList().addInteger( "componentCount", static_cast<int64>( stats._componentCount ) ) ).c_str() );
 
                 if ( stats._listDistribution.empty() )
                     EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoComponents" ) );
@@ -915,8 +914,8 @@ namespace sw::editor
 
         fixed_string<constant::buffer::kMax32> arrBytesBuf;
         ProfilerPanelInternal::formatBytes( summary._trackedBytes, arrBytesBuf );
-        ImGui::Text( "%s - %s size", pDevice->getBackendName(), RHIMemoryTracker::getSizeBasisName( summary._sizeBasis ) );
-        ImGui::Text( "Tracked: %s  (+ %u of unknown size)", arrBytesBuf.c_str(), summary._unknownSizeCount );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Size", TextArgumentList().addText( "backendName", pDevice->getBackendName() ).addText( "sizeBasis", RHIMemoryTracker::getSizeBasisName( summary._sizeBasis ) ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "TrackedOfUnknownSize", TextArgumentList().addText( "bytesBuf", arrBytesBuf.c_str() ).addInteger( "unknownSizeCount", static_cast<int64>( summary._unknownSizeCount ) ) ).c_str() );
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TrackedMemoryByKind" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
@@ -964,14 +963,14 @@ namespace sw::editor
             const utf8* pScope = budget._bUsageKnown == SW_FALSE          ? ""
                                : budget._scope == RHIMemoryScope::Process ? " (this process)"
                                                                           : " (whole device, other processes included)";
-            ImGui::Text( "Usage: %s%s", arrUsageBuf.c_str(), pScope );
-            ImGui::Text( "Budget: %s", arrBudgetBuf.c_str() );
-            ImGui::Text( "Available: %s", arrAvailableBuf.c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Usage", TextArgumentList().addText( "usageBuf", arrUsageBuf.c_str() ).addText( "scope", pScope ) ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Budget", TextArgumentList().addText( "budgetBuf", arrBudgetBuf.c_str() ) ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Available", TextArgumentList().addText( "availableBuf", arrAvailableBuf.c_str() ) ).c_str() );
             if ( summary._bOutsideKnown != SW_FALSE )
             {
                 const bool bNegative = summary._outsideBytes < 0;
                 ProfilerPanelInternal::formatBytes( static_cast<uint64>( bNegative ? -summary._outsideBytes : summary._outsideBytes ), arrBytesBuf );
-                ImGui::Text( "Outside tracker (swap chain, driver, untracked): %s%s", bNegative ? "-" : "", arrBytesBuf.c_str() );
+                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "OutsideTrackerSwapChain", TextArgumentList().addText( "negative", bNegative ? "-" : "" ).addText( "bytesBuf", arrBytesBuf.c_str() ) ).c_str() );
             }
             else
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "OutsideTrackerUnknownNoPerProcessDriverUsage" ) );

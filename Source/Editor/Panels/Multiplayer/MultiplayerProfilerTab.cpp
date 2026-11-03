@@ -17,6 +17,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -306,8 +307,7 @@ namespace sw::editor
             return;
         }
         const EditorNetProfilerTrack& track = *pTrack;
-        ImGui::Text( "%s  connections %d  samples %d", session.getProcessStatus( context._targetProcessIndex )._label.c_str(), track._lastReport._connectionCount,
-                     track._series.getCount() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "ConnectionsSamples", TextArgumentList().addText( "label", session.getProcessStatus( context._targetProcessIndex )._label.c_str() ).addInteger( "connectionCount", static_cast<int64>( track._lastReport._connectionCount ) ).addInteger( "seriesCount", static_cast<int64>( track._series.getCount() ) ) ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerSource" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Clear" ) ) )

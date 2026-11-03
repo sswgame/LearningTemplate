@@ -1146,6 +1146,121 @@ msgctxt "EdPluginField.YawDeg"
 msgid "Yaw (deg)"
 msgstr "방향(도)"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginFormat.BindsOfTargetBones"
+msgid "Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
+msgstr "묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개가 원본을 따름, 키 비율 {heightRatio}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.BonesOverridden"
+msgid "{boneCount} bones, {overridesCount} overridden{dirty}"
+msgstr "본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPluginFormat.Client"
+msgid "{focused}Client {worldIndex}"
+msgstr "{focused}클라이언트 {worldIndex}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginFormat.ClipS"
+msgid "{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
+msgstr "{anchor}  클립 {clip}  {stage} {clipSeconds}초{f}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.CutVertsMovedMax"
+msgid "{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}"
+msgstr "{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.Dropped"
+msgid "Dropped: {dropped}"
+msgstr "빠짐: {dropped}"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginFormat.GMConnection"
+msgid "GM connection: {stateText}"
+msgstr "GM 연결: {stateText}"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginFormat.Id"
+msgid "{displayName}  (id {accountID})  {sW_TRUE}"
+msgstr "{displayName}  (id {accountID})  {sW_TRUE}"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPluginFormat.Live"
+msgid "Live: {liveRunnerName}"
+msgstr "실행 중: {liveRunnerName}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.NoAnimationClipsIn"
+msgid "No animation clips in ''{clipFolder}''"
+msgstr "''{clipFolder}'' 에 애니메이션 클립이 없습니다"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPluginFormat.NodesProblems"
+msgid "{nodeCount} nodes | {issueCount} problems"
+msgstr "노드 {nodeCount}개 | 문제 {issueCount}개"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPluginFormat.NodesWiresProblems"
+msgid "{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems"
+msgstr "{name} - 노드 {nodesCount}개, 선 {wiresCount}개, 문제 {issueCount}개"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPluginFormat.OffsetDistancePitchYaw"
+msgid "offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
+msgstr "오프셋 {offsetX}, {offsetY}, {offsetZ}  거리 {distance}  피치 {pitch}  요 {yaw}  시야각 {computeFieldOfViewY}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.PenetrationPointsDepth"
+msgid "Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
+msgstr "뚫음 {partA} / {partB}: 점 {vertexCount}개, 깊이 {maxDepth}"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPluginFormat.Problems"
+msgid "{issueCount} problems"
+msgstr "문제 {issueCount}개"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginFormat.Provider"
+msgid "Provider: {providerName}"
+msgstr "제공자: {providerName}"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPluginFormat.Server"
+msgid "{focused}Server"
+msgstr "{focused}서버"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.Slot"
+msgid "Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
+msgstr "칸 {slot}: {requestedItem} -> {fallbackItem}({reason})"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.SlotsSetsPresets"
+msgid "{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
+msgstr "칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginFormat.SourceMTargetM"
+msgid "{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
+msgstr "{name}: 원본 {sourceLength} m, 대상 {targetLength} m(x{ratio})"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPluginFormat.ThisFileCouldNot"
+msgid "This file could not be opened: {statusText}"
+msgstr "이 파일을 열 수 없습니다: {statusText}"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPluginFormat.TickInputFocusWorld"
+msgid "tick {tick}  input focus: world {inputFocus}"
+msgstr "틱 {tick}  입력 초점: 월드 {inputFocus}"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginFormat.WearingOnBasePreset"
+msgid "Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+msgstr "기준 프리셋 ''{basePresetID}'' 위에 {slot} 착용(조립 {appearance}번)"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 msgid "Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"

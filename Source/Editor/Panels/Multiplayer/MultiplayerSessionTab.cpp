@@ -14,6 +14,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -194,7 +195,7 @@ namespace sw::editor
             EditorSelfTestMarks::note( "multiplayer.stop" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Stop" ) );
             ImGui::SameLine();
-            ImGui::TextDisabled( "UDP %u", static_cast<uint32>( session.getPort() ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "UDP", TextArgumentList().addInteger( "port", static_cast<int64>( session.getPort() ) ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Pause" ), "Pause server" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Pause" ), "Pause server" ) ) )
                 (void)session.sendServerCommand( "pause" ); // 답은 서버 로그 줄로 온다

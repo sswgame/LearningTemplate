@@ -15,6 +15,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include <imgui.h>
@@ -113,8 +114,7 @@ namespace sw::editor
         if ( pPreset != nullptr )
         {
             const CameraPresetDef& preset = *pPreset;
-            ImGui::Text( "offset %.2f, %.2f, %.2f  distance %.2f  pitch %.3f  yaw %.3f  fov %.3f", preset._view._offset._x, preset._view._offset._y, preset._view._offset._z,
-                         preset._view._distance, preset._view._pitch, preset._view._yaw, preset._lens.computeFieldOfViewY() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "OffsetDistancePitchYaw", TextArgumentList().addDecimal( "offsetX", static_cast<float64>( preset._view._offset._x ), 2 ).addDecimal( "offsetY", static_cast<float64>( preset._view._offset._y ), 2 ).addDecimal( "offsetZ", static_cast<float64>( preset._view._offset._z ), 2 ).addDecimal( "distance", static_cast<float64>( preset._view._distance ), 2 ).addDecimal( "pitch", static_cast<float64>( preset._view._pitch ), 3 ).addDecimal( "yaw", static_cast<float64>( preset._view._yaw ), 3 ).addDecimal( "computeFieldOfViewY", static_cast<float64>( preset._lens.computeFieldOfViewY() ), 3 ) ).c_str() );
             if ( preset._lens._bOrthographic || preset._view._mode == CameraPresetMode::OrthoTopDown )
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "OrthographicPresetThePreviewDrawsItInPerspective" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "TargetYaw" ) );

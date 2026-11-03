@@ -20,6 +20,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
@@ -204,8 +205,7 @@ namespace sw::editor
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "ImpulseNS" ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
             (void)ImGui::SliderFloat( "##ImpulseNs", &_model.editImpulse(), 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );
-            ImGui::Text( "State %s  Built bodies %u  Settled %s", getEnumName( pRagdoll->getState() ), static_cast<uint32>( pRagdoll->getRagdoll()._listBody.size() ),
-                         pRagdoll->isSettled() ? "yes" : "no" );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateBuiltBodiesSettled", TextArgumentList().addText( "state", getEnumName( pRagdoll->getState() ) ).addInteger( "bodyCount", static_cast<int64>( pRagdoll->getRagdoll()._listBody.size() ) ).addText( "settled", pRagdoll->isSettled() ? "yes" : "no" ) ).c_str() );
         }
         else
         {

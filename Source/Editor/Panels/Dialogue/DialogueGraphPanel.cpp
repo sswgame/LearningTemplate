@@ -23,6 +23,7 @@
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -162,7 +163,7 @@ namespace sw::editor
             drawPreviewToolbar();
 
             ImGui::SameLine();
-            ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _graph._listNode.size(), _graph._listLink.size() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NodesLinks2", TextArgumentList().addInteger( "nodeCount", static_cast<int64>( _graph._listNode.size() ) ).addInteger( "linkCount", static_cast<int64>( _graph._listLink.size() ) ) ).c_str() );
         }
         EditorChrome::endToolbar();
     }
@@ -290,7 +291,7 @@ namespace sw::editor
 
         if ( pSelectedNode != nullptr )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kSelectedNodeText ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kSelectedNodeText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "Node", TextArgumentList().addInteger( "id", static_cast<int64>( pSelectedNode->_id ) ).addText( "type", DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) ) ).c_str() );
             ImGui::Separator();
 
             const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( pSelectedNode->_type );
@@ -401,7 +402,7 @@ namespace sw::editor
             return;
 
         ImGui::SameLine();
-        ImGui::TextDisabled( "Preview node #%d", previewNodeID );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "PreviewNode", TextArgumentList().addInteger( "previewNodeID", static_cast<int64>( previewNodeID ) ) ).c_str() );
         const DialogueAssetNode* pNode = _graph.findNode( previewNodeID );
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
@@ -501,7 +502,7 @@ namespace sw::editor
         const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
         if ( pInfo == nullptr )
         {
-            ImGui::TextDisabled( "[Unknown %u]", static_cast<uint32>( node._type ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Unknown", TextArgumentList().addInteger( "type", static_cast<int64>( node._type ) ) ).c_str() );
             return;
         }
 
@@ -525,7 +526,7 @@ namespace sw::editor
             }
             case DialogueNodeOutput::Branch:
             {
-                ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "If", TextArgumentList().addText( "condition", node._condition.c_str() ) ).c_str() );
                 ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
                 ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kTrueBranchText ), "True ->" );
                 ed::EndPin();
@@ -578,7 +579,7 @@ namespace sw::editor
             }
             case DialogueNodeBody::Action:
             {
-                ImGui::TextDisabled( "cmd: %s", node._actionCommand.c_str() );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Cmd", TextArgumentList().addText( "actionCommand", node._actionCommand.c_str() ) ).c_str() );
                 break;
             }
             case DialogueNodeBody::Condition:
@@ -639,7 +640,7 @@ namespace sw::editor
         if ( info._output != DialogueNodeOutput::Choice )
             return;
 
-        ImGui::Text( "Choices (%zu):", node._listChoice.size() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Choices", TextArgumentList().addInteger( "choiceCount", static_cast<int64>( node._listChoice.size() ) ) ).c_str() );
         for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
         {
             ImGui::PushID( static_cast<int32>( choiceIndex ) );

@@ -210,7 +210,7 @@ namespace sw::editor
         }
         else if ( bSessionChannel )
         {
-            ImGui::Text( "Session server debug channel 127.0.0.1:%u", static_cast<uint32>( session.getDebugChannelPort() ) );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SessionServerDebugChannel", TextArgumentList().addInteger( "debugChannelPort", static_cast<int64>( session.getDebugChannelPort() ) ) ).c_str() );
             ImGui::SameLine();
             string     reply;
             const bool bAttached = ImGui::Button( SW_LOCKEY( "EdText", "Connect" ) ) && MultiplayerInspectorTabInternal::attachToSession( session, reply );

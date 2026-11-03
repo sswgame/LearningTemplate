@@ -19,6 +19,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Scene/SceneStateHash.h"
 
 #include <imgui.h>
@@ -454,8 +455,7 @@ namespace sw::editor
         if ( source._listSample.empty() )
             ImGui::TextDisabled( "empty" );
         else
-            ImGui::Text( "%s - %u tick(s), %s .. %s", source._label.c_str(), static_cast<uint32>( source._listSample.size() ),
-                         to_string( source._listSample.front()._tick ).c_str(), to_string( source._listSample.back()._tick ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "TickS", TextArgumentList().addText( "label", source._label.c_str() ).addInteger( "sampleCount", static_cast<int64>( source._listSample.size() ) ).addText( "tick", to_string( source._listSample.front()._tick ).c_str() ).addText( "tick2", to_string( source._listSample.back()._tick ).c_str() ) ).c_str() );
 
         if ( ImGui::Button( SW_LOCKEY( "EdText", "SessionServer" ) ) )
         {

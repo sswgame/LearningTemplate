@@ -434,7 +434,7 @@ namespace sw
                 const float64        shown    = value - offset;
                 const PluralOperands operands = argument._kind == TextArgumentKind::Integer
                                                   ? PluralOperands::makeInteger( static_cast<int64>( shown ) )
-                                                  : PluralOperands::makeDecimal( shown, CultureInfo::countVisibleFraction( shown, 0, 3 ) );
+                                                  : PluralOperands::makeDecimal( shown, CultureInfo::countVisibleFraction( shown, argument._minFraction, argument._maxFraction ) );
                 const PluralCategory category = bOrdinal ? _pCulture->selectOrdinal( operands ) : _pCulture->selectPlural( operands );
                 return CultureInfo::getPluralKeyword( category );
             }
@@ -445,7 +445,7 @@ namespace sw
                     return {};
                 if ( argument._kind == TextArgumentKind::Integer )
                     return _pCulture->formatInteger( static_cast<int64>( shownValue ) );
-                return _pCulture->formatDecimal( shownValue, 0, 3 );
+                return _pCulture->formatDecimal( shownValue, argument._minFraction, argument._maxFraction );
             }
 
             void appendSimpleArgument( string_view name, string& outText )
@@ -471,7 +471,7 @@ namespace sw
                     }
                     case TextArgumentKind::Decimal:
                     {
-                        outText.append( _pCulture->formatDecimal( pArgument->_decimal, 0, 3 ) );
+                        outText.append( _pCulture->formatDecimal( pArgument->_decimal, pArgument->_minFraction, pArgument->_maxFraction ) );
                         break;
                     }
                     case TextArgumentKind::DateTime:
@@ -510,7 +510,7 @@ namespace sw
                     else if ( StringUtil::startsWith( style, kCurrencySkeleton ) )
                         outText.append( _pCulture->formatCurrency( value, style.substr( kCurrencySkeleton.size() ) ) );
                     else if ( style.empty() )
-                        outText.append( pArgument->_kind == TextArgumentKind::Integer ? _pCulture->formatInteger( pArgument->_integer ) : _pCulture->formatDecimal( value, 0, 3 ) );
+                        outText.append( pArgument->_kind == TextArgumentKind::Integer ? _pCulture->formatInteger( pArgument->_integer ) : _pCulture->formatDecimal( value, pArgument->_minFraction, pArgument->_maxFraction ) );
                     else
                         noteArgumentError( "unknown number style '" + string( style ) + "'" );
                     return;
@@ -583,6 +583,17 @@ namespace sw
         TextArgument& argument = getOrAddArgument( name );
         argument._kind         = TextArgumentKind::Decimal;
         argument._decimal      = value;
+        argument._minFraction  = 0;
+        argument._maxFraction  = 3;
+        return *this;
+    }
+
+    TextArgumentList& TextArgumentList::addDecimal( string_view name, float64 value, uint32 fractionDigits )
+    {
+        (void)addDecimal( name, value );
+        TextArgument& argument = getOrAddArgument( name );
+        argument._minFraction  = static_cast<uint8>( fractionDigits );
+        argument._maxFraction  = static_cast<uint8>( fractionDigits );
         return *this;
     }
 

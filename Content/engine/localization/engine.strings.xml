@@ -1154,6 +1154,128 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginFormat.BindsOfTargetBones"
+		       source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.BonesOverridden" source="{boneCount} bones, {overridesCount} overridden{dirty}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Client" source="{focused}Client {worldIndex}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.ClipS" source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.CutVertsMovedMax"
+		       source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Dropped" source="Dropped: {dropped}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.GMConnection" source="GM connection: {stateText}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Id" source="{displayName}  (id {accountID})  {sW_TRUE}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Live" source="Live: {liveRunnerName}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.NoAnimationClipsIn" source="No animation clips in ''{clipFolder}''">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.NodesProblems" source="{nodeCount} nodes | {issueCount} problems">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.NodesWiresProblems"
+		       source="{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.OffsetDistancePitchYaw"
+		       source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.PenetrationPointsDepth"
+		       source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Problems" source="{issueCount} problems">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Provider" source="Provider: {providerName}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Server" source="{focused}Server">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Slot" source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.SlotsSetsPresets" source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.SourceMTargetM"
+		       source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.ThisFileCouldNot" source="This file could not be opened: {statusText}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.TickInputFocusWorld" source="tick {tick}  input focus: world {inputFocus}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.WearingOnBasePreset"
+		       source="Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo">
 			<origins>

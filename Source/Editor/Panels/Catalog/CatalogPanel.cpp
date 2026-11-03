@@ -23,6 +23,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -303,7 +304,7 @@ namespace sw::editor
         if ( _bRawMode || _document.isParsed() == false )
         {
             if ( _document.isParsed() == false )
-                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "The file is not valid XML: %s", _document.getError().c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "TheFileIsNot", TextArgumentList().addText( "error", _document.getError().c_str() ) ).c_str() );
             string       raw       = _document.getText();
             const uint32 lineCount = static_cast<uint32>( ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing() ) - 1;
             if ( EditorWidgets::drawTextFieldMultiline( "##catalogRaw", raw, lineCount > 4 ? lineCount : 4 ) )
@@ -331,7 +332,7 @@ namespace sw::editor
         }
         else if ( _validationState == ValidationState::Failed )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "Validation failed (%d warnings)", static_cast<int32>( _listWarning.size() ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ValidationFailedWarnings", TextArgumentList().addInteger( "warningCount", static_cast<int64>( _listWarning.size() ) ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) )
                 restorePreviousFile();

@@ -23,6 +23,7 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <algorithm>
 #include <imgui.h>
@@ -211,11 +212,9 @@ namespace sw::editor
 
             ImGui::SameLine();
             if ( _preview.getCurrentStateName().empty() == false )
-                ImGui::TextDisabled( "Preview: %s  Nodes: %zu  Links: %zu", _preview.getCurrentStateName().c_str(),
-                                     _graph._listNode.size(), _graph._listLink.size() );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "PreviewNodesLinks", TextArgumentList().addText( "currentStateName", _preview.getCurrentStateName().c_str() ).addInteger( "nodeCount", static_cast<int64>( _graph._listNode.size() ) ).addInteger( "linkCount", static_cast<int64>( _graph._listLink.size() ) ) ).c_str() );
             else
-                ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _graph._listNode.size(), _graph._listLink.size(),
-                                     EditorPaths::kAnimationGraphDocumentFileName );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NodesLinks", TextArgumentList().addInteger( "nodeCount", static_cast<int64>( _graph._listNode.size() ) ).addInteger( "linkCount", static_cast<int64>( _graph._listLink.size() ) ).addText( "animationGraphDocumentFileName", EditorPaths::kAnimationGraphDocumentFileName ) ).c_str() );
         }
         EditorChrome::endToolbar();
     }

@@ -22,6 +22,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -636,13 +637,11 @@ namespace sw::editor
             EditorThemeUtil::popTextColor();
             return;
         }
-        ImGui::Text( "Binds: %u of %u target bones follow the source, height ratio %.3f", _inspection._mappedTargetBoneCount, _inspection._targetBoneCount,
-                     static_cast<float64>( _inspection._heightRatio ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "BindsOfTargetBones", TextArgumentList().addInteger( "mappedTargetBoneCount", static_cast<int64>( _inspection._mappedTargetBoneCount ) ).addInteger( "targetBoneCount", static_cast<int64>( _inspection._targetBoneCount ) ).addDecimal( "heightRatio", static_cast<float64>( _inspection._heightRatio ), 3 ) ).c_str() );
         for ( const RetargetChainInspection& chain : _inspection._listChain )
         {
             const float32 ratio = chain._sourceLength > 0.0f ? chain._targetLength / chain._sourceLength : 0.0f;
-            ImGui::BulletText( "%s: source %.3f m, target %.3f m (x%.2f)", chain._name.c_str(), static_cast<float64>( chain._sourceLength ),
-                               static_cast<float64>( chain._targetLength ), static_cast<float64>( ratio ) );
+            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "SourceMTargetM", TextArgumentList().addText( "name", chain._name.c_str() ).addDecimal( "sourceLength", static_cast<float64>( chain._sourceLength ), 3 ).addDecimal( "targetLength", static_cast<float64>( chain._targetLength ), 3 ).addDecimal( "ratio", static_cast<float64>( ratio ), 2 ) ).c_str() );
         }
         EditorSelfTestMarks::note( "retarget.check" );
     }

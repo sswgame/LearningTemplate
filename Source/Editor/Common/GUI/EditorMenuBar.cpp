@@ -245,7 +245,7 @@ namespace sw::editor
             else if ( state == BuildState::Success )
             {
                 EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Success" ) );
-                ImGui::Text( "%s  Built (%.1fs)", SW_EDITORICON( "Success" ), static_cast<float64>( pCompiler->getLastDurationSec() ) );
+                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "BuiltS", TextArgumentList().addText( "sW_EDITORICON", SW_EDITORICON( "Success" ) ).addDecimal( "lastDurationSec", static_cast<float64>( pCompiler->getLastDurationSec() ), 1 ) ).c_str() );
                 EditorThemeUtil::popTextColor();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildSucceeded" ) );
             }
@@ -256,7 +256,7 @@ namespace sw::editor
             }
             else
             {
-                ImGui::TextDisabled( "%s  Ready", SW_EDITORICON( "Check" ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Ready", TextArgumentList().addText( "sW_EDITORICON", SW_EDITORICON( "Check" ) ) ).c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildReady" ) );
             }
 
@@ -277,7 +277,7 @@ namespace sw::editor
 
         IRHIDevice* pRHIDevice = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice();
         const utf8* pBackend   = ( pRHIDevice != nullptr ) ? pRHIDevice->getBackendName() : "n/a";
-        ImGui::TextDisabled( "RHI %s | %.0f FPS", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "RHI", TextArgumentList().addText( "backend", pBackend ).addDecimal( "framerate", static_cast<float64>( ImGui::GetIO().Framerate ), 0 ) ).c_str() );
         if ( ImGui::IsItemHovered() )
         {
             const int64  fps     = static_cast<int64>( ImGui::GetIO().Framerate + 0.5f );

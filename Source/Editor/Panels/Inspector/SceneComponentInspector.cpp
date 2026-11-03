@@ -12,6 +12,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 
 #include <imgui.h>
@@ -47,10 +48,7 @@ namespace sw::editor
                     pSceneComp->setLocalScale( scl );
 
                 const float3 world = pSceneComp->getWorldPosition();
-                ImGui::TextDisabled( "World: %.2f, %.2f, %.2f",
-                                     static_cast<float64>( world._x ),
-                                     static_cast<float64>( world._y ),
-                                     static_cast<float64>( world._z ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "World", TextArgumentList().addDecimal( "worldX", static_cast<float64>( world._x ), 2 ).addDecimal( "worldY", static_cast<float64>( world._y ), 2 ).addDecimal( "worldZ", static_cast<float64>( world._z ), 2 ) ).c_str() );
             }
 
             void collectDrawnProperties( vector<hashed_string>& outListName ) const override

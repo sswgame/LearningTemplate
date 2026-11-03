@@ -275,8 +275,7 @@ namespace sw::editor
         const hashed_string action( selectedAction.c_str() );
         ImGui::SeparatorText( selectedAction.c_str() );
         const ActionPhase phase = inputMap.getActionPhase( action );
-        ImGui::Text( "State: %s  hold %.2f s", inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ),
-                     static_cast<float64>( inputMap.getActionHoldDuration( action ) ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateHoldS", TextArgumentList().addText( "action", inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ) ).addDecimal( "action2", static_cast<float64>( inputMap.getActionHoldDuration( action ) ), 2 ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) && inputMap.resetActionToDefault( action ) )
             markDocumentDirty();
@@ -661,13 +660,13 @@ namespace sw::editor
             smoothDx                     = vecSmoothDelta2._x;
             smoothDy                     = vecSmoothDelta2._y;
 
-            ImGui::Text( "Position: (%d, %d)", mx, my );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Position", TextArgumentList().addInteger( "mx", static_cast<int64>( mx ) ).addInteger( "my", static_cast<int64>( my ) ) ).c_str() );
             ImGui::SameLine( 200.0f );
-            ImGui::Text( "Delta: (%d, %d)", dx, dy );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Delta", TextArgumentList().addInteger( "dx", static_cast<int64>( dx ) ).addInteger( "dy", static_cast<int64>( dy ) ) ).c_str() );
             ImGui::SameLine( 350.0f );
-            ImGui::Text( "Smooth Delta: (%.2f, %.2f)", static_cast<float64>( smoothDx ), static_cast<float64>( smoothDy ) );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SmoothDelta", TextArgumentList().addDecimal( "smoothDx", static_cast<float64>( smoothDx ), 2 ).addDecimal( "smoothDy", static_cast<float64>( smoothDy ), 2 ) ).c_str() );
 
-            ImGui::Text( "Wheel: %.2f", static_cast<float64>( input.getMouseWheel() ) );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Wheel", TextArgumentList().addDecimal( "mouseWheel", static_cast<float64>( input.getMouseWheel() ), 2 ) ).c_str() );
             ImGui::SameLine( 200.0f );
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Buttons" ) );
             ImGui::SameLine();
@@ -690,7 +689,7 @@ namespace sw::editor
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
                 const GamepadBatteryInfo batteryInfo = pGamepad->getBatteryInfo();
-                ImGui::Text( "Battery: %s", InputMapPanelInternal::batteryLevelName( batteryInfo._level ) );
+                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Battery", TextArgumentList().addText( "level", InputMapPanelInternal::batteryLevelName( batteryInfo._level ) ) ).c_str() );
 
                 float32      lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f;
                 const float2 vecLeftStick3  = pGamepad->getLeftStick();
@@ -706,9 +705,9 @@ namespace sw::editor
 
                 ImGui::SameLine( 360.0f );
                 ImGui::BeginGroup();
-                ImGui::Text( "Left Trigger:  %.2f", static_cast<float64>( pGamepad->getLeftTrigger() ) );
+                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "LeftTrigger", TextArgumentList().addDecimal( "leftTrigger", static_cast<float64>( pGamepad->getLeftTrigger() ), 2 ) ).c_str() );
                 ImGui::ProgressBar( pGamepad->getLeftTrigger(), EditorChrome::measureTextExtent( EditorTextExtent::ofText( 20.0f, 0.75f ) ) );
-                ImGui::Text( "Right Trigger: %.2f", static_cast<float64>( pGamepad->getRightTrigger() ) );
+                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "RightTrigger", TextArgumentList().addDecimal( "rightTrigger", static_cast<float64>( pGamepad->getRightTrigger() ), 2 ) ).c_str() );
                 ImGui::ProgressBar( pGamepad->getRightTrigger(), EditorChrome::measureTextExtent( EditorTextExtent::ofText( 20.0f, 0.75f ) ) );
                 ImGui::EndGroup();
 
@@ -883,7 +882,7 @@ namespace sw::editor
         ImGui::Separator();
 
         // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 분리한다). 탐색도 seekTo 다.
-        ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", replay.getFrameCount(), static_cast<float64>( replay.getTotalDuration() ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "PlaybackControlsTotalFrames", TextArgumentList().addInteger( "frameCount", static_cast<int64>( replay.getFrameCount() ) ).addDecimal( "totalDuration", static_cast<float64>( replay.getTotalDuration() ), 2 ) ).c_str() );
         const uint32 currentFrame = _document.getReplayCurrentFrame( input );
         drawPlaybackControls( input, bPlaying, currentFrame );
 
@@ -904,7 +903,7 @@ namespace sw::editor
         if ( replay.isRecording() )
         {
             EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Error" ) );
-            ImGui::Text( "● RECORDING LIVE INPUTS... (Frames: %u)", replay.getFrameCount() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "RECORDINGLIVEINPUTSFrames", TextArgumentList().addInteger( "frameCount", static_cast<int64>( replay.getFrameCount() ) ) ).c_str() );
             EditorThemeUtil::popTextColor();
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "■ Stop Recording" ) );
             if ( ImGui::Button( "■ Stop Recording" ) )

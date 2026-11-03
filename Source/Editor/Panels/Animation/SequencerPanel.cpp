@@ -23,6 +23,7 @@
 
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectValue.h"
@@ -575,7 +576,7 @@ namespace sw::editor
         FloatCurve& channel = track._listChannel[static_cast<size_t>( _curveChannel )];
 
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Curve" ) );
-        ImGui::Text( "%s / %s (frames)", track._name.c_str(), track.getChannelName( static_cast<uint32>( _curveChannel ) ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Frames", TextArgumentList().addText( "name", track._name.c_str() ).addText( "curveChannel", track.getChannelName( static_cast<uint32>( _curveChannel ) ) ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Close" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Close" ) ) )
         {

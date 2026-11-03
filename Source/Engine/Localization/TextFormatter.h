@@ -43,6 +43,8 @@ namespace sw
         TextDateTime     _dateTime{};
         float64          _decimal{ 0.0 };
         int64            _integer{ 0 };
+        uint8            _minFraction{ 0 }; ///< 소수 인자가 보일 소수 자리 수의 아래 · 위(언리얼 `FNumberFormattingOptions` 의 Minimum/MaximumFractionalDigits). 기본은 0 ~ 3
+        uint8            _maxFraction{ 3 };
         TextArgumentKind _kind{ TextArgumentKind::Text };
     };
 } // namespace sw
@@ -60,6 +62,8 @@ namespace sw
         TextArgumentList& addText( string_view name, string_view value );
         TextArgumentList& addInteger( string_view name, int64 value );
         TextArgumentList& addDecimal( string_view name, float64 value );
+        /** @brief 소수 자리를 @p fractionDigits 로 고정한 소수 인자를 넣습니다(`%.2f` 판독 — 값 · 단위 표시가 자리 수를 정한다). 반올림 · 구분자는 문화권을 따른다. */
+        TextArgumentList& addDecimal( string_view name, float64 value, uint32 fractionDigits );
         TextArgumentList& addDateTime( string_view name, const TextDateTime& value );
         /**
          * @brief UTC 유닉스 시각(밀리초)을 @p zone 시간대의 날짜 · 시각 인자로 넣습니다(`WallClock::nowUnixMilliseconds()` 를 그대로 받는다).

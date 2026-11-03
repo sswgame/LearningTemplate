@@ -973,7 +973,7 @@ namespace sw::editor
     {
         if ( slot._value.hasValue() == false || slot._builtinIndex >= std::size( kArrDrawMethodArg ) )
         {
-            ImGui::TextDisabled( "%s (unsupported in UI)", pLabel );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "UnsupportedInUI", TextArgumentList().addText( "label", pLabel ) ).c_str() );
             return false;
         }
         if ( parameter._handleTargetTypeName.empty() )

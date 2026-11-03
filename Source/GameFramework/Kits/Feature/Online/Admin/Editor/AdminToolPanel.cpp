@@ -16,6 +16,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
@@ -141,7 +142,7 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        ImGui::Text( "Provider: %s", session.getProvider().getProviderName() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Provider", TextArgumentList().addText( "providerName", session.getProvider().getProviderName() ) ).c_str() );
         if ( session.getProvider().isLive() == false )
         {
             ImGui::SameLine();
@@ -189,7 +190,7 @@ namespace sw::editor
         }
         if ( bConnected && ImGui::Button( SW_LOCKEY( "EdPlugin", "Disconnect" ) ) )
             session.disconnectLive();
-        ImGui::TextDisabled( "GM connection: %s", session.getConnection().getStateText() );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "GMConnection", TextArgumentList().addText( "stateText", session.getConnection().getStateText() ) ).c_str() );
     }
 
     void AdminToolPanel::drawAccountSection()
@@ -220,8 +221,7 @@ namespace sw::editor
         }
 
         const AdminReply& lookup = session.getLookup();
-        ImGui::Text( "%s  (id %s)  %s", lookup._identity._displayName.c_str(), AdminToolPanelInternal::formatAccountID( lookup._identity._accountID ).c_str(),
-                     lookup._bOnline == SW_TRUE ? "online" : "offline" );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Id", TextArgumentList().addText( "displayName", lookup._identity._displayName.c_str() ).addText( "accountID", AdminToolPanelInternal::formatAccountID( lookup._identity._accountID ).c_str() ).addText( "sW_TRUE", lookup._bOnline == SW_TRUE ? "online" : "offline" ) ).c_str() );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp;
         if ( ImGui::BeginTable( "##AdminBalance", 2, kTableFlags ) )

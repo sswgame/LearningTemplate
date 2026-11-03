@@ -24,6 +24,7 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -339,7 +340,7 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( 3 );
                 ImGui::TextUnformatted( AudioEventBrowserUtil::formatRemainingSeconds( row._remainingSeconds ).c_str() );
                 ImGui::TableSetColumnIndex( 4 );
-                ImGui::Text( "%u (%u virtual)", row._voiceCount, row._virtualVoiceCount );
+                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Virtual", TextArgumentList().addInteger( "voiceCount", static_cast<int64>( row._voiceCount ) ).addInteger( "virtualVoiceCount", static_cast<int64>( row._virtualVoiceCount ) ) ).c_str() );
             }
             ImGui::EndTable();
         }

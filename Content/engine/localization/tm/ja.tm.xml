@@ -39,6 +39,8 @@
 		<entry source="Bake" text="ベイク" />
 		<entry source="Base" text="基本値" />
 		<entry source="Base preset" text="基準プリセット" />
+		<entry source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
+		       text="バインド: ターゲットボーン {targetBoneCount} 個中 {mappedTargetBoneCount} 個がソースに追従、身長比 {heightRatio}" />
 		<entry source="Blackboard key" text="ブラックボードキー" />
 		<entry source="Body shape" text="体型" />
 		<entry source="Body type" text="体の種類" />
@@ -92,6 +94,7 @@
 		<entry source="Dismiss" text="閉じる" />
 		<entry source="Display" text="ディスプレイ" />
 		<entry source="Down" text="下" />
+		<entry source="Dropped: {dropped}" text="除外: {dropped}" />
 		<entry source="Duplicate row" text="行を複製" />
 		<entry source="Duration (s)" text="長さ(秒)" />
 		<entry source="Edit" text="編集" />
@@ -110,6 +113,7 @@
 		<entry source="Fit to Bounds" text="境界に合わせる" />
 		<entry source="Foliage Density" text="植生の密度" />
 		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
+		<entry source="GM connection: {stateText}" text="GM 接続: {stateText}" />
 		<entry source="GM password" text="GM パスワード" />
 		<entry source="Game saved" text="ゲームを保存しました" />
 		<entry source="Game time" text="ゲーム時刻" />
@@ -141,6 +145,7 @@
 		<entry source="Lift sanction" text="制裁を解除" />
 		<entry source="List audit" text="監査ログ一覧" />
 		<entry source="List live events" text="ライブイベント一覧" />
+		<entry source="Live: {liveRunnerName}" text="実行中: {liveRunnerName}" />
 		<entry source="Load" text="読み込み" />
 		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
 		       text="スケルトンを読み込むとボーンが見えます。スケルトンは読み取り専用で、編集は基準ポーズファイルに入ります。" />
@@ -178,6 +183,8 @@
 		<entry source="New socket name" text="新しいソケット名" />
 		<entry source="No AbilityComponent in the active scene"
 		       text="アクティブなシーンに AbilityComponent がありません" />
+		<entry source="No animation clips in ''{clipFolder}''"
+		       text="''{clipFolder}'' にアニメーションクリップがありません" />
 		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
 		       text="この選択にはカスタマイズスキーマがありません(外見データを読み込み、スキーマのある基準プリセットを選んでください)。" />
 		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
@@ -215,6 +222,8 @@
 		<entry source="Parent" text="親" />
 		<entry source="Pause Menu" text="ポーズメニュー" />
 		<entry source="Paused" text="一時停止中" />
+		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
+		       text="貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}" />
 		<entry source="Pick a base preset to see which rules hid or changed what."
 		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。" />
 		<entry source="Pick an ability system..." text="アビリティシステムを選択..." />
@@ -234,6 +243,7 @@
 		<entry source="Priority" text="優先度" />
 		<entry source="Privacy" text="プライバシー" />
 		<entry source="Protanopia" text="1 型色覚 (赤)" />
+		<entry source="Provider: {providerName}" text="プロバイダー: {providerName}" />
 		<entry source="Put live event" text="ライブイベントを登録" />
 		<entry source="Quit Game" text="ゲームを終了" />
 		<entry source="Raw timeline" text="生のタイムライン" />
@@ -319,6 +329,8 @@
 		<entry source="Skeleton" text="スケルトン" />
 		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
 		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。" />
+		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
+		       text="スロット {slot}: {requestedItem} -> {fallbackItem}({reason})" />
 		<entry source="Slots" text="スロット" />
 		<entry source="Sockets" text="ソケット" />
 		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
@@ -356,6 +368,8 @@
 		<entry source="The node editor could not be created" text="ノードエディタを作成できませんでした" />
 		<entry source="The target object no longer exists."
 		       text="対象のオブジェクトはもう存在しません。" />
+		<entry source="This file could not be opened: {statusText}"
+		       text="このファイルを開けません: {statusText}" />
 		<entry source="Time" text="時刻" />
 		<entry source="Toggle" text="切り替え" />
 		<entry source="Translation" text="移動" />
@@ -381,6 +395,8 @@
 		<entry source="Voice Volume" text="ボイスの音量" />
 		<entry source="Warp File (.mfwarp)" text="ワープファイル (.mfwarp)" />
 		<entry source="Warp end (s)" text="ワープ終了(秒)" />
+		<entry source="Wearing {slot} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+		       text="基準プリセット ''{basePresetID}'' に {slot} を装着(組み立て {appearance} 回)" />
 		<entry source="Why does it look like this? (rules)" text="なぜこう見えるか(ルール)" />
 		<entry source="Why this activity now" text="今この行動をする理由" />
 		<entry source="Window Mode" text="ウィンドウモード" />
@@ -390,7 +406,29 @@
 		<entry source="You have changes that are not applied." text="適用していない変更があります。" />
 		<entry source="Zoom fit" text="ズームフィット" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 選択" />
+		<entry source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
+		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}" />
+		<entry source="tick {tick}  input focus: world {inputFocus}"
+		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}" />
+		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"
+		       text="{anchor}  クリップ {clip}  {stage} {clipSeconds} 秒{f}" />
+		<entry source="{boneCount} bones, {overridesCount} overridden{dirty}"
+		       text="ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}" />
 		<entry source="{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
 		       text="{count} 件の設定は再起動後に反映されます。" />
+		<entry source="{displayName}  (id {accountID})  {sW_TRUE}" text="{displayName}  (id {accountID})  {sW_TRUE}" />
+		<entry source="{focused}Client {worldIndex}" text="{focused}クライアント {worldIndex}" />
+		<entry source="{focused}Server" text="{focused}サーバー" />
+		<entry source="{issueCount} problems" text="問題 {issueCount} 個" />
+		<entry source="{name} - {nodesCount} nodes, {wiresCount} wires, {issueCount} problems"
+		       text="{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個" />
+		<entry source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}"
+		       text="{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂点 {movedVertexCount} 個移動、最大押し出し {maxDelta}" />
+		<entry source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
+		       text="{name}: ソース {sourceLength} m、ターゲット {targetLength} m(x{ratio})" />
+		<entry source="{nodeCount} nodes | {issueCount} problems"
+		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個" />
+		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
+		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
 	</entries>
 </TranslationMemory>

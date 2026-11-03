@@ -13,6 +13,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -52,7 +53,7 @@ namespace sw::editor
         const SceneStreamingSubsystem& streaming = pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
         if ( streaming.isStreaming() )
         {
-            ImGui::Text( "streaming: %u of %u cells loaded", streaming.getLoadedCellCount(), streaming.getCellCount() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StreamingOfCellsLoaded", TextArgumentList().addInteger( "loadedCellCount", static_cast<int64>( streaming.getLoadedCellCount() ) ).addInteger( "cellCount", static_cast<int64>( streaming.getCellCount() ) ) ).c_str() );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorStreamingCells", "CookedScene" ) );
             return;
         }
@@ -64,8 +65,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "streamingCells.preview" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorStreamingCells", "PreviewTip" ) );
         ImGui::SameLine();
-        ImGui::TextDisabled( "cell %.1f m, radius %.1f m, margin %.1f m, %u per frame", static_cast<float64>( settings._cellGrid._cellSize ), static_cast<float64>( settings._cellGrid._loadingRadius ), static_cast<float64>( settings._unloadMargin ),
-                             settings._maxCellLoadsPerFrame );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "CellMRadiusM", TextArgumentList().addDecimal( "cellSize", static_cast<float64>( settings._cellGrid._cellSize ), 1 ).addDecimal( "loadingRadius", static_cast<float64>( settings._cellGrid._loadingRadius ), 1 ).addDecimal( "unloadMargin", static_cast<float64>( settings._unloadMargin ), 1 ).addInteger( "maxCellLoadsPerFrame", static_cast<int64>( settings._maxCellLoadsPerFrame ) ) ).c_str() );
 
         if ( _model.didLastSplitFail() )
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorStreamingCells", "SplitFailed" ) );
@@ -122,7 +122,7 @@ namespace sw::editor
             StreamingCellsModel::selectObjects( preview._listAlwaysLoadedID );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorStreamingCells", "AlwaysLoadedTip" ) );
         ImGui::SameLine();
-        ImGui::Text( "%u entities, %u cells", static_cast<uint32>( preview._listAlwaysLoadedID.size() ), static_cast<uint32>( preview._listCell.size() ) );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "EntitiesCells", TextArgumentList().addInteger( "alwaysLoadedIDCount", static_cast<int64>( preview._listAlwaysLoadedID.size() ) ).addInteger( "cellCount", static_cast<int64>( preview._listCell.size() ) ) ).c_str() );
         if ( pCamera == nullptr )
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorStreamingCells", "NoGameCamera" ) );
 

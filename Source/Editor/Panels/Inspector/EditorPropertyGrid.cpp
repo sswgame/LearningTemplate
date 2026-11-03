@@ -951,7 +951,7 @@ namespace sw::editor
         }
 
         if ( _lastInvokeResult.empty() == false )
-            ImGui::TextDisabled( "Last result: %s", _lastInvokeResult.c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastResult", TextArgumentList().addText( "lastInvokeResult", _lastInvokeResult.c_str() ) ).c_str() );
 
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
@@ -1006,7 +1006,7 @@ namespace sw::editor
         drawMethodArgInputs( method, listSlot );
 
         if ( paramCount > InspectorBuiltinValueUtil::kMaxMethodArgCount )
-            ImGui::TextDisabled( "Too many arguments (max %u in UI).", InspectorBuiltinValueUtil::kMaxMethodArgCount );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "TooManyArgumentsMax", TextArgumentList().addInteger( "maxMethodArgCount", static_cast<int64>( InspectorBuiltinValueUtil::kMaxMethodArgCount ) ) ).c_str() );
 
         if ( bArgsOk == false )
         {

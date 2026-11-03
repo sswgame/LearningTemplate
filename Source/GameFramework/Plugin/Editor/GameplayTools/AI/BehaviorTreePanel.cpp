@@ -20,6 +20,7 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
@@ -225,7 +226,7 @@ namespace sw::editor
         }
         if ( isDocumentLoadFailed() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "This file could not be opened: %s", _statusText.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "ThisFileCouldNot", TextArgumentList().addText( "statusText", _statusText.c_str() ) ).c_str() );
             return;
         }
 
@@ -286,7 +287,7 @@ namespace sw::editor
                     }
                 }
                 ImGui::SameLine();
-                ImGui::TextDisabled( "%u nodes | %u problems", _model.getNodeCount(), static_cast<uint32>( _listIssue.size() ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "NodesProblems", TextArgumentList().addInteger( "nodeCount", static_cast<int64>( _model.getNodeCount() ) ).addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
             }
             if ( _statusText.empty() == false )
             {
@@ -310,7 +311,7 @@ namespace sw::editor
         string                    liveRunnerName;
         const BehaviorTreeRunner* pRunner = findLiveRunner( liveRunnerName );
         if ( liveRunnerName.empty() == false )
-            ImGui::TextDisabled( "Live: %s", liveRunnerName.c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Live", TextArgumentList().addText( "liveRunnerName", liveRunnerName.c_str() ) ).c_str() );
 
         // 확장 모듈은 imgui-node-editor 를 자기 사본으로 링크하므로, 캔버스를 연 뒤 이 사본에도 지금 편집기를 건다(`EditorGraphDocumentPanel::beginGraphCanvas` 와 같다).
         if ( _nodeGraph.beginCanvas( BehaviorTreePanelInternal::kCanvasID, BehaviorTreePanelInternal::kCanvasSettingsFile, "behaviorTree" ) == false )
@@ -713,7 +714,7 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "No problems" );
             return;
         }
-        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%u problems", static_cast<uint32>( _listIssue.size() ) );
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Problems", TextArgumentList().addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
         for ( const BehaviorTreeEditIssue& issue : _listIssue )
         {
             const string where = issue._nodeID >= 0 ? _model.makeDisplayName( issue._nodeID ) : string{ "Tree" };

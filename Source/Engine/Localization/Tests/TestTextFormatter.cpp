@@ -69,6 +69,18 @@ SW_TEST_CASE( TextFormatterTest, OffsetOrdinalSelectAndNumbers )
 }
 
 /**
+ * @brief [TextFormatterTest] 소수 자리를 고정한 소수 인자는 그 자리까지 채워 반올림하고(`%.2f` 판독), 기본 소수 인자는 0 ~ 3 자리다. 구분자는 문화권을 따른다
+ */
+SW_TEST_CASE( TextFormatterTest, DecimalKeepsFixedFractionDigits )
+{
+    SW_EXPECT_EQUAL( sw::string( "1.50 s" ), format( "en", "{t} s", sw::TextArgumentList().addDecimal( "t", 1.5, 2 ) ) );
+    SW_EXPECT_EQUAL( sw::string( "1,50 s" ), format( "de", "{t} s", sw::TextArgumentList().addDecimal( "t", 1.5, 2 ) ) );
+    SW_EXPECT_EQUAL( sw::string( "3" ), format( "en", "{t}", sw::TextArgumentList().addDecimal( "t", 2.6, 0 ) ) );
+    SW_EXPECT_EQUAL( sw::string( "1.5" ), format( "en", "{t}", sw::TextArgumentList().addDecimal( "t", 1.5 ) ) );
+    SW_EXPECT_EQUAL( sw::string( "0.125" ), format( "en", "{t, number}", sw::TextArgumentList().addDecimal( "t", 0.1249, 3 ) ) );
+}
+
+/**
  * @brief [TextFormatterTest] 없는 인자 · other 가 빠진 복수형 · 닫히지 않은 괄호는 오류이고, 글은 비지 않게 채운다
  */
 SW_TEST_CASE( TextFormatterTest, ReportsBrokenPatterns )

@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -149,7 +150,7 @@ namespace sw::editor
             return;
         }
 
-        ImGui::Text( "Selected Object: %s", name.c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SelectedObject", TextArgumentList().addText( "name", name.c_str() ) ).c_str() );
         ImGui::Separator();
 
         Scene* pScene = editor::getActiveScene();

@@ -22,6 +22,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Renderer/Capture/BugReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
@@ -170,7 +171,7 @@ namespace sw::editor
         if ( EditorSelfTestRunner::isRunning() )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Running" ) );
         else
-            ImGui::TextDisabled( "%u tests", Registry::getCount() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Tests", TextArgumentList().addInteger( "registryCount", static_cast<int64>( Registry::getCount() ) ) ).c_str() );
 
         const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
         if ( ImGui::BeginChild( "##SelfTestList", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders ) )
@@ -213,8 +214,7 @@ namespace sw::editor
                     if ( result._id != pID )
                         continue;
                     ImGui::SameLine();
-                    ImGui::TextColored( result._bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s (%u frames)%s%s",
-                                        result._bPassed ? "PASS" : "FAIL", result._frameCount, result._reason.empty() ? "" : " - ", result._reason.c_str() );
+                    ImGui::TextColored( result._bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "Frames2", TextArgumentList().addText( "passed", result._bPassed ? "PASS" : "FAIL" ).addInteger( "frameCount", static_cast<int64>( result._frameCount ) ).addText( "reason", result._reason.empty() ? "" : " - " ).addText( "reason2", result._reason.c_str() ) ).c_str() );
                 }
             }
             if ( bGroupOpen )
@@ -450,19 +450,18 @@ namespace sw::editor
         ImGui::Separator();
         if ( _pJob->isPending() )
         {
-            ImGui::TextDisabled( "%s — running...", _externalTitle.c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Running", TextArgumentList().addText( "externalTitle", _externalTitle.c_str() ) ).c_str() );
             return;
         }
         if ( _externalTitle.empty() )
             return;
         if ( _bExternalLaunched == SW_FALSE )
         {
-            ImGui::TextColored( TestRunnerPanelInternal::kFailColor, "%s — could not be launched", _externalTitle.c_str() );
+            ImGui::TextColored( TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "CouldNotBeLaunched", TextArgumentList().addText( "externalTitle", _externalTitle.c_str() ) ).c_str() );
             return;
         }
         const bool bPassed = _externalExitCode == 0;
-        ImGui::TextColored( bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s — exit code %d, %u [Error] lines",
-                            _externalTitle.c_str(), _externalExitCode, _externalErrorCount );
+        ImGui::TextColored( bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "ExitCodeErrorLines", TextArgumentList().addText( "externalTitle", _externalTitle.c_str() ).addInteger( "externalExitCode", static_cast<int64>( _externalExitCode ) ).addInteger( "externalErrorCount", static_cast<int64>( _externalErrorCount ) ) ).c_str() );
         if ( ImGui::BeginChild( "##ExternalOutput", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar ) )
         {
             const size_t first = _listExternalLine.size() > TestRunnerPanelInternal::kVisibleTailLineCount

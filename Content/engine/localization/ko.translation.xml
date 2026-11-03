@@ -307,6 +307,59 @@
 		<entry key="EdPluginField.Translation" text="이동" sourceHash="bef9e1084e69480c" />
 		<entry key="EdPluginField.WarpEndS" text="워프 끝(초)" sourceHash="930b0d61f8e2d3b6" />
 		<entry key="EdPluginField.YawDeg" text="방향(도)" sourceHash="00cfa817171bc367" />
+		<entry key="EdPluginFormat.BindsOfTargetBones"
+		       text="묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개가 원본을 따름, 키 비율 {heightRatio}"
+		       sourceHash="5a16acb977de891e" />
+		<entry key="EdPluginFormat.BonesOverridden"
+		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}"
+		       sourceHash="f226a1e0f8abddb3" />
+		<entry key="EdPluginFormat.Client" text="{focused}클라이언트 {worldIndex}" sourceHash="9c2c41007f64608b" />
+		<entry key="EdPluginFormat.ClipS"
+		       text="{anchor}  클립 {clip}  {stage} {clipSeconds}초{f}"
+		       sourceHash="b5f58e28fac14274" />
+		<entry key="EdPluginFormat.CutVertsMovedMax"
+		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}"
+		       sourceHash="123a644d3007c563" />
+		<entry key="EdPluginFormat.Dropped" text="빠짐: {dropped}" sourceHash="ce2449119803e99d" />
+		<entry key="EdPluginFormat.GMConnection" text="GM 연결: {stateText}" sourceHash="ba6187deff08f6db" />
+		<entry key="EdPluginFormat.Id" text="{displayName}  (id {accountID})  {sW_TRUE}" sourceHash="95ec41a00d02a9d1" />
+		<entry key="EdPluginFormat.Live" text="실행 중: {liveRunnerName}" sourceHash="a97f0a67617d3e8c" />
+		<entry key="EdPluginFormat.NoAnimationClipsIn"
+		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다"
+		       sourceHash="6df3686b5c16e734" />
+		<entry key="EdPluginFormat.NodesProblems"
+		       text="노드 {nodeCount}개 | 문제 {issueCount}개"
+		       sourceHash="4243b0d97dc9a48f" />
+		<entry key="EdPluginFormat.NodesWiresProblems"
+		       text="{name} - 노드 {nodesCount}개, 선 {wiresCount}개, 문제 {issueCount}개"
+		       sourceHash="09d98034cf1c7c09" />
+		<entry key="EdPluginFormat.OffsetDistancePitchYaw"
+		       text="오프셋 {offsetX}, {offsetY}, {offsetZ}  거리 {distance}  피치 {pitch}  요 {yaw}  시야각 {computeFieldOfViewY}"
+		       sourceHash="d7b0b245eda7fa25" />
+		<entry key="EdPluginFormat.PenetrationPointsDepth"
+		       text="뚫음 {partA} / {partB}: 점 {vertexCount}개, 깊이 {maxDepth}"
+		       sourceHash="696849e3606b5dd4" />
+		<entry key="EdPluginFormat.Problems" text="문제 {issueCount}개" sourceHash="73d244ad7773d9ed" />
+		<entry key="EdPluginFormat.Provider" text="제공자: {providerName}" sourceHash="eff920aeeb94ed28" />
+		<entry key="EdPluginFormat.Server" text="{focused}서버" sourceHash="2ab8e57482d849f1" />
+		<entry key="EdPluginFormat.Slot"
+		       text="칸 {slot}: {requestedItem} -> {fallbackItem}({reason})"
+		       sourceHash="67f88b40b318c4e9" />
+		<entry key="EdPluginFormat.SlotsSetsPresets"
+		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개"
+		       sourceHash="1e7f9071d4a0c202" />
+		<entry key="EdPluginFormat.SourceMTargetM"
+		       text="{name}: 원본 {sourceLength} m, 대상 {targetLength} m(x{ratio})"
+		       sourceHash="6f441d4b39cd8ee2" />
+		<entry key="EdPluginFormat.ThisFileCouldNot"
+		       text="이 파일을 열 수 없습니다: {statusText}"
+		       sourceHash="253bbce2905b4f9e" />
+		<entry key="EdPluginFormat.TickInputFocusWorld"
+		       text="틱 {tick}  입력 초점: 월드 {inputFocus}"
+		       sourceHash="73e089f72ca0df8f" />
+		<entry key="EdPluginFormat.WearingOnBasePreset"
+		       text="기준 프리셋 ''{basePresetID}'' 위에 {slot} 착용(조립 {appearance}번)"
+		       sourceHash="f7c8585e2760023b" />
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다"
 		       sourceHash="0d52b634e78c2b8a" />

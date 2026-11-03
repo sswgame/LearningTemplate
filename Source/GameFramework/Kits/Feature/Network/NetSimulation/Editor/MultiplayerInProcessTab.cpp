@@ -13,6 +13,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
@@ -57,7 +58,7 @@ namespace sw::editor
                 return;
             }
             ImGui::SameLine();
-            ImGui::Text( "tick %u  input focus: world %d", session.getHarness()->getTick(), session.getInputFocus() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "TickInputFocusWorld", TextArgumentList().addInteger( "tick", static_cast<int64>( session.getHarness()->getTick() ) ).addInteger( "inputFocus", static_cast<int64>( session.getInputFocus() ) ) ).c_str() );
             (void)session.update( static_cast<float64>( ImGui::GetIO().DeltaTime ) );
             // 재생 중인 이 창이 포커스면 키보드는 초점 월드(게임)가 받는다 — 게임 뷰 패널과 같다. 알리지 않으면 에디터가 키를 가져가 월드가 움직이지 않는다.
             if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
@@ -115,9 +116,9 @@ namespace sw::editor
                 ImGui::BeginGroup();
                 const bool bFocused = session.getInputFocus() == worldIndex;
                 if ( worldIndex == 0 )
-                    ImGui::Text( "%sServer", bFocused ? "* " : "" );
+                    ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Server", TextArgumentList().addText( "focused", bFocused ? "* " : "" ) ).c_str() );
                 else
-                    ImGui::Text( "%sClient %d", bFocused ? "* " : "", worldIndex );
+                    ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Client", TextArgumentList().addText( "focused", bFocused ? "* " : "" ).addInteger( "worldIndex", static_cast<int64>( worldIndex ) ) ).c_str() );
                 EditorPreviewViewport* pViewport = session.findViewport( worldIndex );
                 if ( pViewport != nullptr )
                 {

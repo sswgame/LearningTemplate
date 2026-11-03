@@ -16,6 +16,7 @@
 #include "Editor/Panels/Prefab/PrefabEditorPanel.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -61,7 +62,7 @@ namespace sw::editor
 
         if ( pWindow != nullptr )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Prefab Window: %s", string{ pWindow->getIsolation().getPrefabPath() }.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "PrefabWindow", TextArgumentList().addText( "prefabPath", string{ pWindow->getIsolation().getPrefabPath() }.c_str() ) ).c_str() );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SavePrefabExitIsolation" ) ) )
                 (void)pWindow->exitIsolation( true ); // 실패는 창이 로그와 상태 줄로 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );
@@ -113,7 +114,7 @@ namespace sw::editor
             for ( size_t prefabIndex = 0; prefabIndex < listNestedPrefab.size(); ++prefabIndex )
             {
                 ImGui::PushID( static_cast<int32>( prefabIndex ) );
-                ImGui::BulletText( "[Nested] %s", listNestedPrefab[prefabIndex].c_str() );
+                ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "Nested", TextArgumentList().addText( "prefabIndex", listNestedPrefab[prefabIndex].c_str() ) ).c_str() );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Edit" ) ) );
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Edit" ) ) )
                 {
