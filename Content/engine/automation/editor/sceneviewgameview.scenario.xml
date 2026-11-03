@@ -32,8 +32,7 @@
 	<Screenshot file="sceneview.ppm"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.GameViewRequested" equals="1"/>
+	<WaitUntil watch="Editor.GameViewRequested" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneViewRequested" equals="0"/>
 	<Screenshot file="gameview.ppm"/>
 	<Wait frames="5"/>

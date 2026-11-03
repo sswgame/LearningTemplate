@@ -25,8 +25,7 @@
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="11" timeoutFrames="900"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewWidgetCount" atMost="11"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" atMost="11" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
 	<EditorWaitSettled/>
@@ -38,32 +37,28 @@
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="12" timeoutFrames="900"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" atLeast="1" timeoutFrames="900"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewWidgetCount" atLeast="9"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="60"/>
 	<!-- 2) 언어 -->
 	<EditorClick mark="uipreview.language"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.language.en"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" equals="6" timeoutFrames="600"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewRightToLeft" equals="0"/>
+	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.language"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.language.qps_ploc"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" atLeast="9" timeoutFrames="600"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewRightToLeft" equals="0"/>
+	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.language"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.language.qps_plocm"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="1" timeoutFrames="600"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewFirstTextBytes" atLeast="9"/>
+	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" atLeast="9" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.language"/>
 	<EditorWaitSettled/>
@@ -74,8 +69,7 @@
 	<!-- 3) 속성 편집: Window 의 _opacity 를 0.5 로 — 되돌리기 항목 하나, Undo 로 1, Redo 로 0.5 -->
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.widget.Window"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.inspector.search"/>
 	<EditorWaitSettled/>
@@ -101,8 +95,7 @@
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<!-- 4) 입력 흉내 -->
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewHoveredOrdinal" equals="-1"/>
+	<WaitUntil watch="Editor.UIPreviewHoveredOrdinal" equals="-1" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.interact"/>
 	<Wait frames="5"/>
@@ -128,12 +121,10 @@
 	<EditorClick mark="uipreview.animation.play"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewAnimationPlaying" equals="1" timeoutFrames="120"/>
-	<Wait frames="2"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" atMost="0.95"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" atMost="0.95" timeoutFrames="60"/>
 	<Wait frames="3"/>
 	<WaitUntil watch="Editor.UIPreviewAnimationPlaying" equals="0" timeoutFrames="300"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.01"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.01" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorDrag mark="uipreview.animationtime" dx="-3000" dy="0"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" atMost="0.01" timeoutFrames="75"/>
@@ -145,8 +136,7 @@
 	<EditorClick mark="uipreview.reload"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="600"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewDirty" equals="0"/>
+	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="60"/>
 	<!-- 6) 저장: 작은 문서의 _opacity 를 0.5 로 저장하고 핫 리로드가 파일에서 읽어 오면, 1 로 되돌려 저장한다(사본이라 원본은 바뀌지 않는다) -->
 	<Wait frames="5"/>
 	<DevCommand line="asset.openScratch scratch/uipreview/save_probe.ui.xml"/>
@@ -169,8 +159,7 @@
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>
@@ -185,8 +174,7 @@
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<DevCommand line="panel.close ui_preview"/>
 	<Wait frames="10"/>

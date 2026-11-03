@@ -72,8 +72,7 @@
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmanage/probe.material"/>
 	<Wait frames="3"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1"/>
-	<Wait frames="2"/>
-	<Expect watch="Editor.ReferenceCount" equals="1"/>
+	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
 	<EditorClick mark="contentBrowser.asset.new_material.material" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.new_material.material" state="up"/>

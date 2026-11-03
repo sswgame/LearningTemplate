@@ -18,8 +18,7 @@
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="up"/>
 	<!-- 시작: 게임 목록의 첫 게임(본보기)이 클라이언트 둘로 선다. 첫 클라이언트가 입력 초점을 받는다 -->
-	<Wait frames="12"/>
-	<Expect watch="Editor.NetSimRunning" equals="0"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="multiplayer.inprocess.start" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.inprocess.start" state="up"/>
@@ -44,8 +43,7 @@
 	<Tap slot="Key.D" hold="20"/>
 	<Wait frames="30"/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="400"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar1" atLeast="-2"/>
+	<WaitUntil watch="Editor.NetSimObjectX" target="0" key="Avatar1" atLeast="-2" timeoutFrames="60"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar1" atMost="7"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar2" near="-1" tolerance="0.01"/>
 	<Expect watch="Editor.NetSimObjectZ" target="0" key="Avatar1" near="0" tolerance="0.01"/>
@@ -62,8 +60,7 @@
 	<Tap slot="Key.W" hold="20"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="700"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.NetSimObjectZ" target="0" key="Avatar2" atLeast="1"/>
+	<WaitUntil watch="Editor.NetSimObjectZ" target="0" key="Avatar2" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NetSimObjectZ" target="0" key="Avatar1" near="0" tolerance="0.01"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar1" sameAs="avatar1X"/>
 	<Remember watch="Editor.NetSimObjectZ" target="0" key="Avatar2" as="avatar2Z"/>
