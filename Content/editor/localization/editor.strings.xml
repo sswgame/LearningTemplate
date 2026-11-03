@@ -1496,6 +1496,11 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.UsedByLayer" source="Used by layer ''{layer}''">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.ValidationFailedWarnings"
 		       source="Validation failed ({warningCount, plural, one {# warning} other {# warnings}})">
 			<origins>
@@ -3333,6 +3338,24 @@
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdTip.PreviewLanguage"
+		       source="Language the preview text is resolved in. The game UI keeps its own language; qps-ploc and qps-plocm are pseudo-languages (expanded text, right-to-left layout).">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PreviewSimulatePointer"
+		       source="Simulate the pointer over the preview (hover, press, wheel). Clicks no longer select widgets. Pressing changes widget values in the preview only - Reload restores the document.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PreviewWriteBack"
+		       source="Write the edited widget properties back to the document (UIDocumentWriter). Disabled after input simulation or animation playback changed the preview tree - Reload first.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdTip.ReadTheEffectFileAgainAfterSaving"
 		       source="Read the effect file again (after saving it in the Catalog Editor)">
 			<origins>
@@ -3384,6 +3407,18 @@
 		       source="Targets on other units or objects are placed by the host - move that object instead">
 			<origins>
 				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.TerrainResample"
+		       source="Resample the heights and holes of the last edited terrain to a new resolution (undoable)">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.TerrainWriteAssets"
+		       source="Write the heightfield and splat of the last edited terrain to their asset files">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdTip.ThisValueDoesNotMatchItsType"

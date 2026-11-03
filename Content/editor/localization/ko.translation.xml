@@ -562,6 +562,7 @@
 		<entry key="EdFormat.UsedByFileS"
 		       text="{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다."
 		       sourceHash="f86c6da9ec5beecf" />
+		<entry key="EdFormat.UsedByLayer" text="레이어 ''{layer}'' 가 씁니다" sourceHash="e6e63e7ea82732d5" />
 		<entry key="EdFormat.ValidationFailedWarnings"
 		       text="검증 실패(경고 {warningCount}개)"
 		       sourceHash="5c86969a4ef38c7c" />
@@ -1048,6 +1049,15 @@
 		<entry key="EdTip.PressTheFocusedWidgetUIAcceptIts"
 		       text="초점 위젯을 누릅니다(UI.Accept). 그 명령은 로그에만 남습니다 — 미리보기에는 화면 코드가 없습니다."
 		       sourceHash="2a4299b22b2c6536" />
+		<entry key="EdTip.PreviewLanguage"
+		       text="미리보기 글을 풀이하는 언어입니다. 게임 UI 는 자기 언어를 그대로 씁니다. qps-ploc 와 qps-plocm 은 가짜 언어입니다(늘린 글, 오른쪽에서 왼쪽 배치)."
+		       sourceHash="c1071067f19f0e9d" />
+		<entry key="EdTip.PreviewSimulatePointer"
+		       text="미리보기 위의 포인터를 흉내 냅니다(올리기, 누르기, 휠). 클릭이 더는 위젯을 고르지 않습니다. 누르면 미리보기에서만 위젯 값이 바뀝니다 — 다시 불러오면 문서대로 돌아옵니다."
+		       sourceHash="dee0d5735385ab88" />
+		<entry key="EdTip.PreviewWriteBack"
+		       text="고친 위젯 속성을 문서에 다시 씁니다(UIDocumentWriter). 입력 흉내나 애니메이션 재생이 미리보기 트리를 바꾼 뒤에는 꺼집니다 — 먼저 다시 불러오세요."
+		       sourceHash="60bbb35b41f1988a" />
 		<entry key="EdTip.ReadTheEffectFileAgainAfterSaving"
 		       text="효과 파일을 다시 읽습니다(카탈로그 편집기에서 저장한 뒤)"
 		       sourceHash="28d97c89a2a93383" />
@@ -1073,6 +1083,12 @@
 		<entry key="EdTip.TargetsOnOtherUnitsOrObjectsAre"
 		       text="다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요"
 		       sourceHash="7cbe5f899889f043" />
+		<entry key="EdTip.TerrainResample"
+		       text="마지막으로 고친 지형의 높이와 구멍을 새 해상도로 다시 표본합니다(되돌릴 수 있음)"
+		       sourceHash="0b1baced59071c3a" />
+		<entry key="EdTip.TerrainWriteAssets"
+		       text="마지막으로 고친 지형의 높이장과 스플랫을 에셋 파일에 씁니다"
+		       sourceHash="959052c0362ac397" />
 		<entry key="EdTip.ThisValueDoesNotMatchItsType"
 		       text="이 값이 형식과 맞지 않습니다(숫자 개수가 틀리거나 숫자가 아님) — 글을 고치세요"
 		       sourceHash="1d1ce6b9203d2632" />

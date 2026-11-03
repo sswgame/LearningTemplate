@@ -86,6 +86,8 @@
 		<entry source="Debug" text="디버그" />
 		<entry source="Debug HUD" text="디버그 HUD" />
 		<entry source="Default" text="기본" />
+		<entry source="Default: {hasDefault, select, yes {{value}} other {(none)}}"
+		       text="기본값: {hasDefault, select, yes {{value}} other {(없음)}}" />
 		<entry source="Defaults" text="기본값" />
 		<entry source="Delete" text="삭제" />
 		<entry source="Delete node" text="노드 삭제" />
@@ -298,6 +300,8 @@
 		<entry source="Save" text="저장" />
 		<entry source="Save Stack" text="스택 저장" />
 		<entry source="Save as preset" text="프리셋으로 저장" />
+		<entry source="Save or reload the modifier stack before picking another mesh"
+		       text="다른 메시를 고르기 전에 모디파이어 스택을 저장하거나 다시 불러오세요" />
 		<entry source="Save pose" text="포즈 저장" />
 		<entry source="Save thumbnail" text="썸네일 저장" />
 		<entry source="Scale" text="크기" />

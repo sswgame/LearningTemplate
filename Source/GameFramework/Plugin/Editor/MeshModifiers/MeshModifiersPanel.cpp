@@ -313,7 +313,7 @@ namespace sw::editor
         const bool bUseSelection = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "UseSelection" ) );
         ImGui::EndDisabled();
         if ( bUnsaved && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
-            ImGui::SetTooltip( "Save or reload the modifier stack before picking another mesh" );
+            ImGui::SetTooltip( "%s", SW_LOCKEY( "EdPluginTip", "SaveStackBeforePickingMesh" ) );
         EditorSelfTestMarks::note( "meshmodifiers.useSelection" );
         if ( bUseSelection )
         {

@@ -547,7 +547,7 @@ namespace sw::editor
                 ImGui::EndDisabled();
                 ImGui::EndDisabled();
                 if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
-                    ImGui::SetTooltip( "Resample the heights and holes of the last edited terrain to a new resolution (undoable)" );
+                    ImGui::SetTooltip( "%s", SW_LOCKEY( "EdTip", "TerrainResample" ) );
             }
 
             /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 해상도 · 저장). */
@@ -581,7 +581,7 @@ namespace sw::editor
                         saveLastEdited( state );
                     ImGui::EndDisabled();
                     if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
-                        ImGui::SetTooltip( "Write the heightfield and splat of the last edited terrain to their asset files" );
+                        ImGui::SetTooltip( "%s", SW_LOCKEY( "EdTip", "TerrainWriteAssets" ) );
                 }
                 ImGui::End();
             }

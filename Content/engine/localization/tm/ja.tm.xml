@@ -82,6 +82,8 @@
 		<entry source="Debug" text="デバッグ" />
 		<entry source="Debug HUD" text="デバッグ HUD" />
 		<entry source="Default" text="標準" />
+		<entry source="Default: {hasDefault, select, yes {{value}} other {(none)}}"
+		       text="デフォルト: {hasDefault, select, yes {{value}} other {(なし)}}" />
 		<entry source="Defaults" text="初期設定" />
 		<entry source="Delete" text="削除" />
 		<entry source="Delete node" text="ノードを削除" />
@@ -290,6 +292,8 @@
 		<entry source="Save" text="保存" />
 		<entry source="Save Stack" text="スタックを保存" />
 		<entry source="Save as preset" text="プリセットとして保存" />
+		<entry source="Save or reload the modifier stack before picking another mesh"
+		       text="ほかのメッシュを選ぶ前にモディファイアスタックを保存するか再読み込みしてください" />
 		<entry source="Save pose" text="ポーズを保存" />
 		<entry source="Save thumbnail" text="サムネイルを保存" />
 		<entry source="Scale" text="スケール" />

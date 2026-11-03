@@ -560,7 +560,7 @@ namespace sw::editor
             {
                 ImGui::TextUnformatted( spec._name.c_str() );
                 if ( ImGui::IsItemHovered() )
-                    ImGui::SetTooltip( "Default: %s", spec._defaultText.empty() ? "(none)" : spec._defaultText.c_str() );
+                    ImGui::SetTooltip( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "ParamDefault", TextArgumentList().addText( "hasDefault", spec._defaultText.empty() ? "no" : "yes" ).addText( "value", spec._defaultText ) ).c_str() );
                 string       newValue;
                 const string current = GimmickGraphModel::readParam( node._params, spec._name.c_str() );
                 if ( drawCommittedText( ( string( "gimmick.param." ) + spec._name.c_str() ).c_str(), current, newValue ) )

@@ -13,6 +13,7 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -388,7 +389,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "animationGraph.mask.remove" );
         if ( pUser != nullptr )
-            ImGui::SetItemTooltip( "Used by layer '%s'", pUser->_name.c_str() );
+            ImGui::SetItemTooltip( "%s", SW_LOCKEYFORMAT( "EdFormat", "UsedByLayer", TextArgumentList().addText( "layer", pUser->_name.c_str() ) ).c_str() );
         return pEdit;
     }
 

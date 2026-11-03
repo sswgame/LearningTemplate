@@ -1455,6 +1455,11 @@ msgctxt "EdFormat.UsedByFileS"
 msgid "{sW_EDITORICON} Used by {referrerCount, plural, one {# file} other {# files}}. They will name a missing asset."
 msgstr "{sW_EDITORICON} 파일 {referrerCount}개가 씁니다. 그 파일들은 없는 에셋을 가리키게 됩니다."
 
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdFormat.UsedByLayer"
+msgid "Used by layer ''{layer}''"
+msgstr "레이어 ''{layer}'' 가 씁니다"
+
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EdFormat.ValidationFailedWarnings"
 msgid "Validation failed ({warningCount, plural, one {# warning} other {# warnings}})"
@@ -3263,6 +3268,21 @@ msgctxt "EdTip.PressTheFocusedWidgetUIAcceptIts"
 msgid "Press the focused widget (UI.Accept). Its command is only logged - the preview has no screen code."
 msgstr "초점 위젯을 누릅니다(UI.Accept). 그 명령은 로그에만 남습니다 — 미리보기에는 화면 코드가 없습니다."
 
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdTip.PreviewLanguage"
+msgid "Language the preview text is resolved in. The game UI keeps its own language; qps-ploc and qps-plocm are pseudo-languages (expanded text, right-to-left layout)."
+msgstr "미리보기 글을 풀이하는 언어입니다. 게임 UI 는 자기 언어를 그대로 씁니다. qps-ploc 와 qps-plocm 은 가짜 언어입니다(늘린 글, 오른쪽에서 왼쪽 배치)."
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdTip.PreviewSimulatePointer"
+msgid "Simulate the pointer over the preview (hover, press, wheel). Clicks no longer select widgets. Pressing changes widget values in the preview only - Reload restores the document."
+msgstr "미리보기 위의 포인터를 흉내 냅니다(올리기, 누르기, 휠). 클릭이 더는 위젯을 고르지 않습니다. 누르면 미리보기에서만 위젯 값이 바뀝니다 — 다시 불러오면 문서대로 돌아옵니다."
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdTip.PreviewWriteBack"
+msgid "Write the edited widget properties back to the document (UIDocumentWriter). Disabled after input simulation or animation playback changed the preview tree - Reload first."
+msgstr "고친 위젯 속성을 문서에 다시 씁니다(UIDocumentWriter). 입력 흉내나 애니메이션 재생이 미리보기 트리를 바꾼 뒤에는 꺼집니다 — 먼저 다시 불러오세요."
+
 #: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdTip.ReadTheEffectFileAgainAfterSaving"
 msgid "Read the effect file again (after saving it in the Catalog Editor)"
@@ -3307,6 +3327,16 @@ msgstr "표 편집은 주석과 들여쓰기를 지킵니다. 중첩 원소는 �
 msgctxt "EdTip.TargetsOnOtherUnitsOrObjectsAre"
 msgid "Targets on other units or objects are placed by the host - move that object instead"
 msgstr "다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdTip.TerrainResample"
+msgid "Resample the heights and holes of the last edited terrain to a new resolution (undoable)"
+msgstr "마지막으로 고친 지형의 높이와 구멍을 새 해상도로 다시 표본합니다(되돌릴 수 있음)"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdTip.TerrainWriteAssets"
+msgid "Write the heightfield and splat of the last edited terrain to their asset files"
+msgstr "마지막으로 고친 지형의 높이장과 스플랫을 에셋 파일에 씁니다"
 
 #: Source/Editor/Panels/Material/MaterialPanel.cpp
 msgctxt "EdTip.ThisValueDoesNotMatchItsType"

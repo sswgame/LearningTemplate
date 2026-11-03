@@ -348,6 +348,9 @@
 		<entry key="EdPluginFormat.OffsetDistancePitchYaw"
 		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}"
 		       sourceHash="d7b0b245eda7fa25" />
+		<entry key="EdPluginFormat.ParamDefault"
+		       text="デフォルト: {hasDefault, select, yes {{value}} other {(なし)}}"
+		       sourceHash="ab8219dc63aada6a" />
 		<entry key="EdPluginFormat.PenetrationPointsDepth"
 		       text="貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}"
 		       sourceHash="696849e3606b5dd4" />
@@ -387,6 +390,9 @@
 		<entry key="EdPluginTip.ReadThePresetFileAgainAfterSaving"
 		       text="プリセットファイルを再読み込みします(カタログエディタで保存した後)"
 		       sourceHash="ba264efc63dd60bd" />
+		<entry key="EdPluginTip.SaveStackBeforePickingMesh"
+		       text="ほかのメッシュを選ぶ前にモディファイアスタックを保存するか再読み込みしてください"
+		       sourceHash="39a5368a2d1e5dd2" />
 		<entry key="EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
 		       text="共有タイムラインの時間 — すべての役割がアンカーの時計に従います"
 		       sourceHash="85b9ed42dff1375c" />

@@ -389,8 +389,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( UIPreviewPanelInternal::kLanguageComboColumns );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewlang", preview.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "language" );
-        EditorWidgets::drawTooltip( "Language the preview text is resolved in. The game UI keeps its own language; qps-ploc and qps-plocm are pseudo-languages "
-                                    "(expanded text, right-to-left layout)." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PreviewLanguage" ) );
         if ( bOpen == false )
             return;
         const vector<string>& listLanguage = _model.getLanguageChoices();
@@ -426,8 +425,7 @@ namespace sw::editor
             (void)saveDocumentAndClearDirty(); // 실패는 saveDocument 가 로그로 알린다
         ImGui::EndDisabled();
         UIPreviewPanelInternal::noteMark( "uipreview", "save" );
-        EditorWidgets::drawTooltip( "Write the edited widget properties back to the document (UIDocumentWriter). Disabled after input simulation or animation playback "
-                                    "changed the preview tree - Reload first." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PreviewWriteBack" ) );
         // 도구 줄이 패널보다 길면 오른쪽 콤보(언어)가 패널 밖에 놓여 누를 수 없다 — 들어가지 않으면 줄을 바꾼다.
         EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 25.0f ) );
         EditorChrome::setNextItemWidthColumns( 25.0f );
@@ -487,8 +485,7 @@ namespace sw::editor
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Interact" ), &bInteract ) )
             _model.setInteracting( bInteract );
         UIPreviewPanelInternal::noteMark( "uipreview", "interact" );
-        EditorWidgets::drawTooltip( "Simulate the pointer over the preview (hover, press, wheel). Clicks no longer select widgets. Pressing changes widget values "
-                                    "in the preview only - Reload restores the document." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PreviewSimulatePointer" ) );
         ImGui::SameLine();
         // 탐색 방향(키보드, 패드의 방향 입력) 흉내 — 포커스를 옮기고 포커스 테두리(`:focus-visible`)를 보인다.
         struct NavigationButton

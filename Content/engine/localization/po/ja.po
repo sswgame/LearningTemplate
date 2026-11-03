@@ -1211,6 +1211,11 @@ msgctxt "EdPluginFormat.OffsetDistancePitchYaw"
 msgid "offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
 msgstr "オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPluginFormat.ParamDefault"
+msgid "Default: {hasDefault, select, yes {{value}} other {(none)}}"
+msgstr "デフォルト: {hasDefault, select, yes {{value}} other {(なし)}}"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.PenetrationPointsDepth"
 msgid "Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
@@ -1285,6 +1290,11 @@ msgstr "編集内容をランタイムローダーで読み、すべてのルー
 msgctxt "EdPluginTip.ReadThePresetFileAgainAfterSaving"
 msgid "Read the preset file again (after saving it in the Catalog Editor)"
 msgstr "プリセットファイルを再読み込みします(カタログエディタで保存した後)"
+
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdPluginTip.SaveStackBeforePickingMesh"
+msgid "Save or reload the modifier stack before picking another mesh"
+msgstr "ほかのメッシュを選ぶ前にモディファイアスタックを保存するか再読み込みしてください"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
