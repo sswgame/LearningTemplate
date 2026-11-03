@@ -59,7 +59,7 @@ namespace sw::editor
         // 다른 씬의 결과는 그 씬의 오브젝트 id 라 버린다.
         _model.discardIfSceneChanged( pSceneManager->getSceneGeneration() );
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Refresh" ), "Preview Split" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Preview Split" ) ) )
             (void)_model.refreshPreview(); // 나누지 못한 이유는 쿠커가 로그에 남긴다
         EditorSelfTestMarks::note( "streamingCells.preview" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorStreamingCells", "PreviewTip" ) );

@@ -166,14 +166,14 @@ namespace sw::editor
             ImGui::PushID( visualizer._pID );
             fixed_string<constant::buffer::kMax256> tooltip;
             formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", visualizer._pToggleLabel, visualizer._pTooltip );
-            const bool bPressed = visualizer._pIconName != nullptr ? EditorWidgets::drawIconToggle( "##visualizer", EditorIconUtil::findGlyphByName( visualizer._pIconName ), bOn, tooltip.c_str() )
-                                                                   : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
+            const bool bPressed = visualizer._pIconName.isEmpty() == false ? EditorWidgets::drawIconToggle( "##visualizer", EditorIconUtil::findGlyphByName( visualizer._pIconName ), bOn, tooltip.c_str() )
+                                                                           : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
             if ( bPressed )
                 settings._visualizerToggles.setOn( visualizer, bOn == false );
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
             EditorSelfTestMarks::note( mark.c_str() );
-            if ( visualizer._pIconName == nullptr )
+            if ( visualizer._pIconName.isEmpty() )
                 EditorWidgets::drawTooltip( tooltip.c_str() );
             ImGui::PopID();
         }

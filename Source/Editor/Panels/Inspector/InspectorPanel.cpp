@@ -143,7 +143,7 @@ namespace sw::editor
         // 잠그면 선택이 바뀌어도 현재 오브젝트를 계속 보여 준다. 유니티 Inspector 의 자물쇠에 해당하며, 언리얼에서는 Details 창을 여러 개 여는 것과 같은 용도다.
         ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() );
         const bool bLocked = _lockedObjectID != 0;
-        if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, SW_EDITORICON_NAME( "Lock" ), SW_EDITORICON_NAME( "Unlock" ), SW_LOCKEY( "EditorInspector", "LockedToObject" ),
+        if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, SW_EDITORICON( "Lock" ), SW_EDITORICON( "Unlock" ), SW_LOCKEY( "EditorInspector", "LockedToObject" ),
                                                   SW_LOCKEY( "EditorInspector", "FollowingSelection" ) ) )
             _lockedObjectID = bLocked ? 0 : editorContext.getSubsystem<EditorWorkspace>().getSelectedObjectID();
         EditorSelfTestMarks::note( "inspector.lock" );
@@ -378,7 +378,7 @@ namespace sw::editor
         }
 
         ImGui::Spacing();
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Plus" ), "Add Component" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add Component" ) ) )
         {
             _addComponentSearch.clear();
             EditorInputGUI::openPopup( "PreviewAddComponent" );
@@ -490,7 +490,7 @@ namespace sw::editor
         ImGui::Spacing();
         const float32 buttonWidth = MathUtil::min( ImGui::GetContentRegionAvail().x, 220.0f * EditorThemeUtil::getDPIScale() );
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( ImGui::GetContentRegionAvail().x - buttonWidth ) * 0.5f );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Plus" ), "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
         {
             _addComponentSearch.clear();
             EditorInputGUI::openPopup( "InspectorAddComponent" );

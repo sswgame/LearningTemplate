@@ -345,9 +345,9 @@ namespace sw::editor
         // 세 엔진 모두 이동 · 회전 · 크기를 아이콘 단추로 둔다 — 글자 라디오는 좁은 뷰포트에서 잘린다.
         struct GizmoButton
         {
-            const utf8* _pID;
-            const utf8* _pIconName;
-            const utf8* _pMarkSuffix;
+            const utf8*    _pID;
+            EditorIconName _pIconName;
+            const utf8*    _pMarkSuffix;
         };
         static constexpr GizmoButton kArrGizmoButton[] = {
             {"##gizmoTranslate", SW_EDITORICON_NAME( "Translate" ), ".translate"},

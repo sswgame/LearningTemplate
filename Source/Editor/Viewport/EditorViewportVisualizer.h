@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Config/EditorIconName.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 #include "Editor/Viewport/EditorVisualizerStats.h"
 #include "Editor/Viewport/Model/EditorVisualizerToggles.h"
@@ -66,11 +67,11 @@ namespace sw::editor
 
         static constexpr const utf8* kKindName = "visualizer";
 
-        const utf8* _pIconName;    ///< 툴바 토글 버튼의 아이콘 이름(`SW_EDITORICON_NAME`). nullptr 이면 라벨 문자로 된 버튼이다
-        const utf8* _pToggleLabel; ///< 짧은 이름. 툴팁의 제목이며, 아이콘이 없으면 버튼 문자로 쓴다
-        const utf8* _pTooltip;
-        bool        _bDefaultOn;
-        DrawFunc    _pDraw;
+        EditorIconName _pIconName;    ///< 툴바 토글 버튼의 아이콘 이름(`SW_EDITORICON_NAME`). 비었으면 라벨 문자로 된 버튼이다
+        const utf8*    _pToggleLabel; ///< 짧은 이름. 툴팁의 제목이며, 아이콘이 없으면 버튼 문자로 쓴다
+        const utf8*    _pTooltip;
+        bool           _bDefaultOn;
+        DrawFunc       _pDraw;
     };
 } // namespace sw::editor
 

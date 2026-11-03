@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Config/EditorIconName.h"
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
@@ -200,7 +201,7 @@ namespace sw::editor
         const utf8*                    _pDisplayName;      ///< 단수 이름. 퀵 런처 분류와 배지에 쓴다
         const utf8*                    _pBrowserLabel;     ///< 콘텐츠 브라우저 필터와 리소스 카탈로그의 라벨
         const utf8*                    _pPanelTitle;       ///< 전용 도구 패널 제목. nullptr 이면 패널이 없다
-        const utf8*                    _pIconName;         ///< 에디터 아이콘 이름(`SW_EDITORICON_NAME`) — 그릴 때 아이콘 표에서 찾는다
+        EditorIconName                 _pIconName;         ///< 에디터 아이콘 이름(`SW_EDITORICON_NAME`) — 그릴 때 아이콘 표에서 찾는다
         const utf8*                    _pColorKey;         ///< 목록과 배지의 테마 색 키(`SW_THEMECOLOR_KEY( "Asset", … )`, 액센트 종류는 `Base.Accent`)
         bool                           _bOtherExcluded;    ///< 브라우저 "Other" 필터에서 뺄지 정한다
         bool                           _bImportable;       ///< 임포트 대화상자의 확장자 목록에 넣을지 정한다

@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Config/EditorIconName.h"
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/Content/AssetID.h"
@@ -85,11 +86,11 @@ namespace sw::editor
         static const utf8* findGlyph( const hashed_string& name );
         /** @brief 데이터 · 등록 줄이 든 이름으로 찾습니다(`findGlyph` 와 같은 규칙). @p pName 이 nullptr 이거나 비면 nullptr(아이콘 없음)입니다. */
         static const utf8* findGlyphByName( const utf8* pName );
+        /** @brief 이름 형으로 찾습니다(`SW_EDITORICON_NAME`). 비었으면 nullptr 입니다. */
+        static const utf8* findGlyphByName( EditorIconName name ) { return findGlyphByName( name._pName ); }
     };
 } // namespace sw::editor
 
-/** @brief 아이콘 이름 리터럴입니다. 등록 줄 · 상수 표 · 데이터처럼 나중에 찾는 자리가 쓴다. 단위 테스트가 `SW_EDITORICON` 처럼 훑는다. */
-#define SW_EDITORICON_NAME( NameLiteral ) NameLiteral
 /** @brief 아이콘 이름 @p NameLiteral(문자열 리터럴)의 글리프입니다. 호출 자리마다 이름 키를 한 번만 intern 한다. */
 #define SW_EDITORICON( NameLiteral ) \
     ::sw::editor::EditorIconUtil::findGlyph( []() -> const ::sw::hashed_string& {                                                                         \

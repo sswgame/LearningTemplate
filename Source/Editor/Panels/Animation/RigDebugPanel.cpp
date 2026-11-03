@@ -276,7 +276,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( RigTargetGizmo, "rig_target_gizmo", 900, nullptr, "Rig Target",
+    SW_EDITOR_VISUALIZER( RigTargetGizmo, "rig_target_gizmo", 900, ::sw::editor::EditorIconName{}, "Rig Target",
                           "Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset", true,
                           &RigDebugPanelInternal::drawTargetGizmo );
 
