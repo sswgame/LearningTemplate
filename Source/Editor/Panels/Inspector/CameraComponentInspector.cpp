@@ -53,7 +53,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFar" ) );
 
                 bool bOrtho = pCameraComp->isOrthographic();
-                if ( ImGui::Checkbox( "Orthographic", &bOrtho ) )
+                if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Orthographic" ), &bOrtho ) )
                     pCameraComp->setOrthographic( bOrtho );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraOrthographic" ) );
 

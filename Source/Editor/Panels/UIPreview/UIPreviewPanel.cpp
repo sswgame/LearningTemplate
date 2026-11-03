@@ -476,15 +476,15 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "##Safezone", &_model.editSafeZone(), 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Layout rects" ) );
-        ImGui::Checkbox( "Layout rects", &_bShowLayout );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "LayoutRects" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "LayoutRects" ), &_bShowLayout );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "LayoutRectsTip" ) );
     }
 
     void UIPreviewPanel::drawInteractionBar( UIScreen& screen )
     {
         bool bInteract = _model.isInteracting();
-        if ( ImGui::Checkbox( "Interact", &bInteract ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Interact" ), &bInteract ) )
             _model.setInteracting( bInteract );
         UIPreviewPanelInternal::noteMark( "uipreview", "interact" );
         EditorWidgets::drawTooltip( "Simulate the pointer over the preview (hover, press, wheel). Clicks no longer select widgets. Pressing changes widget values "
@@ -559,8 +559,8 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
             _model.stopAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "stop" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Loop" ) );
-        ImGui::Checkbox( "Loop", &_model.editAnimationLoop() );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Loop" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Loop" ), &_model.editAnimationLoop() );
         ImGui::SameLine();
 
         // 시간 막대 — 끌면 그 시각에서 멈춘 채 값을 보인다(이벤트는 보내지 않는다). 재생 중에는 지금 시각을 따라간다.
@@ -995,7 +995,7 @@ namespace sw::editor
         Widget* pWidget = screen.getTree().findWidgetByID( _model.getSelected() );
         if ( pWidget == nullptr || pWidget->getTypeInfo() == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "Select a widget to edit its properties." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "SelectAWidgetToEditItsProperties" ) );
             return;
         }
         _model.syncBaseline( *pWidget );

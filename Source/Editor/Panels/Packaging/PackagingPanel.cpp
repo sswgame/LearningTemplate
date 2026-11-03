@@ -113,11 +113,11 @@ namespace sw::editor
         (void)EditorWidgets::drawTextField( "Output Folder", _model.editOutputFolder() ); // 바뀐 값은 다음 Package 가 쓴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OutputFolder" ) );
 
-        (void)ImGui::Checkbox( "Skip build", &_model.editSkipBuild() ); // 바뀐 값은 다음 Package 가 쓴다
+        (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "SkipBuild" ), &_model.editSkipBuild() ); // 바뀐 값은 다음 Package 가 쓴다
         EditorSelfTestMarks::note( "packaging.skipBuild" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipBuild" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Skip cook" ) );
-        (void)ImGui::Checkbox( "Skip cook", &_model.editSkipCook() );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "SkipCook" ) ) );
+        (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "SkipCook" ), &_model.editSkipCook() );
         EditorSelfTestMarks::note( "packaging.skipCook" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipCook" ) );
         ImGui::EndDisabled();

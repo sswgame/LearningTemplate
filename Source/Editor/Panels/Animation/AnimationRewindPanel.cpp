@@ -134,7 +134,7 @@ namespace sw::editor
     void AnimationRewindPanel::drawRecordingControls( const AnimationRewindRecorder& rewind )
     {
         bool bRecord = AnimationRewindRecorder::isRecordingRequested();
-        if ( ImGui::Checkbox( "Record", &bRecord ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Record" ), &bRecord ) )
             AnimationRewindRecorder::setRecordingRequested( bRecord );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "RecordTip" ) );
         ImGui::SameLine();
@@ -145,13 +145,13 @@ namespace sw::editor
             AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "WindowTip" ) );
         bool bDraw = _bDrawSkeleton == SW_TRUE;
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Skeleton" ) );
-        if ( ImGui::Checkbox( "Skeleton", &bDraw ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Skeleton" ) ) );
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Skeleton" ), &bDraw ) )
             _bDrawSkeleton = bDraw ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "SkeletonTip" ) );
         bool bAll = _bAllTracks == SW_TRUE;
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "All" ) );
-        if ( ImGui::Checkbox( "All", &bAll ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "All" ) ) );
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "All" ), &bAll ) )
             _bAllTracks = bAll ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "AllTracksTip" ) );
         ImGui::TextDisabled( "%u tracks · %.1f KB · %.1f s of history", static_cast<uint32>( rewind.getTracks().size() ),

@@ -146,8 +146,8 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 21.0f ) ); // 좁은 창에서 새 키 칸이 오른쪽 끝에서 잘렸다(uiaudit 23)
             EditorChrome::setNextItemWidthColumns( 21.0f );
             ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add Key" ) );
-            if ( ImGui::Button( "Add Key" ) && _model.addKey( _newKeyBuffer.c_str() ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "AddKey" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) && _model.addKey( _newKeyBuffer.c_str() ) )
                 _newKeyBuffer.clear();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "AddKeyTip" ) );
         }
@@ -350,8 +350,8 @@ namespace sw::editor
                 _model.loadSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RevertTip" ) );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Raw XML" ) );
-            (void)ImGui::Checkbox( "Raw XML", &_bGameDataRaw );
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "RawXML" ) ) );
+            (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "RawXML" ), &_bGameDataRaw );
             EditorWidgets::drawTooltip( "Table edits keep comments and indentation. Nested elements are edited in the raw text view." );
 
             ImGui::Separator();

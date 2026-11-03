@@ -103,7 +103,7 @@ namespace sw::editor
         }
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdCommon", "DebugHUDSavedIn" ) );
         bool bShown = pHUD->isShown();
-        if ( ImGui::Checkbox( "Show Debug HUD (Ctrl+F3)", &bShown ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "ShowDebugHUDCtrlF3" ), &bShown ) )
             pHUD->setShown( bShown );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DebugHUDShow" ) );
         EditorSelfTestMarks::note( "preferences.debugHUD.shown" );

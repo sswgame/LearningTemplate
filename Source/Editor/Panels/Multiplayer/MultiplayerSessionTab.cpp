@@ -164,9 +164,9 @@ namespace sw::editor
     {
         EditorNetPlaySettings& settings = session.getSettings();
         (void)EditorNetModeCombo::draw( session, "multiplayer.netMode" ); // 바뀐 구성은 다음 Play 에 쓰인다
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Record traces" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "RecordTraces" ) ) );
         ImGui::BeginDisabled( session.isRunning() );
-        ImGui::Checkbox( "Record traces", &settings._bRecordTraces );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "RecordTraces" ), &settings._bRecordTraces );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "RecordTraces" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EditorMultiplayer", "ArrangeWindowsLabel" ) ) );
         drawWindowLayout( settings );
@@ -283,8 +283,8 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "LogSource" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Follow" ) );
-        ImGui::Checkbox( "Follow", &_bFollowLog );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Follow" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Follow" ), &_bFollowLog );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "FollowLog" ) );
         if ( ImGui::BeginChild( "##NetPlayLog", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_Borders ) )
         {

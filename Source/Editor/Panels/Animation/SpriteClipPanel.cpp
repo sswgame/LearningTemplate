@@ -121,7 +121,7 @@ namespace sw::editor
     {
         ImGui::Separator();
         ImGui::TextUnformatted( "TransformAnimation Keys (optional)" );
-        if ( ImGui::Button( "Add Key" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) )
         {
             _model.addKey();
             notifyDocumentEdited( "Add Sprite Key" );
@@ -271,7 +271,7 @@ namespace sw::editor
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFrameCountTip" ) );
         bool bLoop = pAnimation->_bLoop == SW_TRUE;
-        if ( ImGui::Checkbox( "loop", &bLoop ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "LoopAlt" ), &bLoop ) )
         {
             pAnimation->_bLoop = bLoop ? SW_TRUE : SW_FALSE;
             notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );

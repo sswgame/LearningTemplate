@@ -313,7 +313,7 @@ namespace sw::editor
 
         if ( ImGui::BeginPopup( "ComponentSettings" ) )
         {
-            if ( ImGui::MenuItem( "Remove component" ) && pBRemoveRequested != nullptr )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "RemoveComponent" ) ) && pBRemoveRequested != nullptr )
                 *pBRemoveRequested = true;
             ImGui::EndPopup();
         }

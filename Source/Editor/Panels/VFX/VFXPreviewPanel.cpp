@@ -99,7 +99,7 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .vfx.xml effect to play it here. Edit effects in the Catalog Editor." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "OpenAVfxXmlEffectToPlayIt" ) );
             return;
         }
 

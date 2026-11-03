@@ -430,7 +430,7 @@ namespace sw::editor
         }
 
         bool bDrawMarkers = _bDrawMarkers == SW_TRUE;
-        if ( ImGui::Checkbox( "Bone Markers", &bDrawMarkers ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "BoneMarkers" ), &bDrawMarkers ) )
             _bDrawMarkers = bDrawMarkers ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRigDebug", "BoneMarkersTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save to rig" ) );

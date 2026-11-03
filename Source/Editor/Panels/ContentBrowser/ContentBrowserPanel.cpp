@@ -829,8 +829,8 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Refresh" ) );
 
         bool bShowAllPacks = _model.isShowingAllPacks();
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "All packs" ) );
-        if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "AllPacks" ) ) );
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "AllPacks" ), &bShowAllPacks ) )
             _model.setShowAllPacks( bShowAllPacks );
         EditorSelfTestMarks::note( "contentBrowser.allPacks" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AllPacks" ) );

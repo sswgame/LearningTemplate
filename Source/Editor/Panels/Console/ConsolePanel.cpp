@@ -436,16 +436,16 @@ namespace sw::editor
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( ImGui::BeginPopup( "##ConsoleOptions" ) == false )
             return;
-        ImGui::MenuItem( "Auto-scroll", nullptr, &_bAutoScroll );
+        ImGui::MenuItem( SW_LOCKEY( "EdLabel", "AutoScroll" ), nullptr, &_bAutoScroll );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
-        if ( ImGui::MenuItem( "Clear on Play", nullptr, _bClearOnPlay == SW_TRUE ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ClearOnPlay" ), nullptr, _bClearOnPlay == SW_TRUE ) )
             _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
-        if ( ImGui::MenuItem( "Pause on Error", nullptr, _bErrorPause == SW_TRUE ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "PauseOnError" ), nullptr, _bErrorPause == SW_TRUE ) )
             _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
         ImGui::Separator();
-        if ( ImGui::MenuItem( "Copy Visible Lines", nullptr, false, _listVisible.empty() == false ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyVisibleLines" ), nullptr, false, _listVisible.empty() == false ) )
         {
             string allLogs;
             for ( const LogEntry* pEntry : _listVisible )
@@ -456,7 +456,7 @@ namespace sw::editor
             ImGui::SetClipboardText( allLogs.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "CopyAll" ) );
-        if ( ImGui::MenuItem( "Open Log File" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "OpenLogFile" ) ) )
             showLogFileInExplorer();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "OpenLogFile" ) );
         ImGui::EndPopup();
@@ -591,11 +591,11 @@ namespace sw::editor
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( EditorInputGUI::beginItemContextMenu( "LogEntryCtx" ) == false )
             return;
-        if ( ImGui::MenuItem( "Open in IDE" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "OpenInIDE" ) ) )
             openEntryInIde( entry );
-        if ( ImGui::MenuItem( "Copy Message" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyMessage" ) ) )
             ImGui::SetClipboardText( entry._message.c_str() );
-        if ( ImGui::MenuItem( "Copy Full Log Line" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyFullLogLine" ) ) )
         {
             string full = formatEntryLine( entry );
             if ( entry._file.empty() == false )
@@ -719,7 +719,7 @@ namespace sw::editor
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( ImGui::BeginPopup( "##LogTagFilter" ) == false )
             return;
-        if ( ImGui::MenuItem( "Show All" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ShowAll" ) ) )
             _tagFilter.showAll();
         ImGui::Separator();
         for ( const string& tag : getSnapshotTags() )

@@ -251,7 +251,7 @@ namespace sw::editor
 
         if ( pValue != nullptr && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
         {
-            if ( ImGui::MenuItem( "Unset attribute" ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "UnsetAttribute" ) ) )
             {
                 _pendingKind    = PendingKind::UnsetCell;
                 _pendingElement = elementIndex;

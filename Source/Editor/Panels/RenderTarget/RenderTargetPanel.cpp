@@ -264,8 +264,8 @@ namespace sw::editor
         EditorSelfTestMarks::note( "renderTargets.refresh" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "RefreshTip" ) );
         bool bAuto = _bAutoRefresh != SW_FALSE;
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Auto" ) );
-        if ( ImGui::Checkbox( "Auto", &bAuto ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Auto" ) ) );
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Auto" ), &bAuto ) )
             _bAutoRefresh = bAuto ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "renderTargets.auto" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "AutoRefreshTip" ) );
@@ -318,15 +318,15 @@ namespace sw::editor
             bool bChanged   = false;
             bool bLinearize = _viewSettings._bLinearizeDepth != SW_FALSE;
             bool bAutoRange = _viewSettings._bAutoDepthRange != SW_FALSE;
-            if ( ImGui::Checkbox( "Linearize", &bLinearize ) )
+            if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Linearize" ), &bLinearize ) )
             {
                 _viewSettings._bLinearizeDepth = bLinearize ? SW_TRUE : SW_FALSE;
                 bChanged                       = true;
             }
             EditorSelfTestMarks::note( "renderTargets.linearize" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "LinearizeTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Auto range" ) );
-            if ( ImGui::Checkbox( "Auto range", &bAutoRange ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "AutoRange" ) ) );
+            if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "AutoRange" ), &bAutoRange ) )
             {
                 _viewSettings._bAutoDepthRange = bAutoRange ? SW_TRUE : SW_FALSE;
                 bChanged                       = true;

@@ -176,8 +176,8 @@ namespace sw::editor
             EditorSelfTestMarks::note( button._pMark );
             EditorWidgets::drawTooltip( button._pTooltip );
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Erase" ) );
-        ImGui::Checkbox( "Erase", &_document.editErase() );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Erase" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Erase" ), &_document.editErase() );
         EditorSelfTestMarks::note( "tileMap.erase" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EraseTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset View" ) );

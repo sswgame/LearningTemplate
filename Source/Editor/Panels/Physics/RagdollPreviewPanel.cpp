@@ -149,7 +149,7 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .physics.xml physics asset, pick a body prefab and knock it down here." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "OpenAPhysicsXmlPhysicsAssetPickA" ) );
             return;
         }
 
@@ -212,11 +212,11 @@ namespace sw::editor
             ImGui::TextDisabled( "No body yet - enter a prefab path and press Spawn" );
         }
 
-        (void)ImGui::Checkbox( "Skeleton", &_model.editDrawSkeleton() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Bodies" ) );
-        (void)ImGui::Checkbox( "Bodies", &_model.editDrawBodies() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Joints" ) );
-        (void)ImGui::Checkbox( "Joints", &_model.editDrawJoints() );
+        (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Skeleton" ), &_model.editDrawSkeleton() );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Bodies" ) ) );
+        (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Bodies" ), &_model.editDrawBodies() );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Joints" ) ) );
+        (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Joints" ), &_model.editDrawJoints() );
         drawBodyTable( pRagdoll );
 
         const float2 viewSize = computeViewportFillSize( RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );

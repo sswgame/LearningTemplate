@@ -249,9 +249,9 @@ namespace sw::editor
         {
             ImGui::TextDisabled( "\xe2\x80\x94" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Active" ) );
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Active" ) ) );
         }
-        if ( ImGui::Checkbox( "Active", &bActive ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Active" ), &bActive ) )
         {
             EditorTransaction::beginTransaction( "Set Active (multiple)" );
             for ( GameObject* pObject : listObject )
@@ -587,7 +587,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ObjectName" ) );
 
         bool bActive = pObj->isActive();
-        if ( ImGui::Checkbox( "Active", &bActive ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Active" ), &bActive ) )
             EditorSceneCommands::setActive( pObj, bActive );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ObjectActive" ) );
 

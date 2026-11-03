@@ -28,6 +28,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -337,7 +338,7 @@ namespace sw::editor
 
         if ( _listPage.empty() )
         {
-            EditorWidgets::drawEmptyHint( "No settings file was loaded from Config/ or Content/" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "NoSettingsFileWasLoadedFromConfigOr" ) );
             if ( ImGui::Button( "Reload list" ) )
                 _bCatalogLoaded = false;
             return;
@@ -361,7 +362,7 @@ namespace sw::editor
         if ( _pSelected != nullptr )
             drawPageDetail( *_pSelected );
         else
-            EditorWidgets::drawEmptyHint( "Pick a settings file on the left" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "PickASettingsFileOnTheLeft" ) );
         ImGui::EndChild();
     }
 

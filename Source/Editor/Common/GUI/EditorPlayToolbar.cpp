@@ -232,7 +232,7 @@ namespace sw::editor
                 // 되돌리기는 보이는 메뉴 항목이다(예전에는 오른쪽 클릭이 말없이 x1 로 되돌렸다 — 숨은 동작).
                 if ( EditorInputGUI::beginItemContextMenu( "##TimeScaleMenu" ) )
                 {
-                    if ( ImGui::MenuItem( "Reset to x1.00", nullptr, false, timeScale != 1.0f ) )
+                    if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ResetToX100" ), nullptr, false, timeScale != 1.0f ) )
                         editor::getSubsystem<GameTimeScale>().set( 1.0f );
                     EditorSelfTestMarks::note( "toolbar.timeScale.reset" );
                     ImGui::EndPopup();

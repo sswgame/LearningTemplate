@@ -104,7 +104,7 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .mesh asset to look at it and compare its LOD levels here." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "OpenAMeshAssetToLookAtIt" ) );
             return;
         }
 

@@ -16,6 +16,7 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include <imgui.h>
@@ -90,7 +91,7 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .animclip clip, pick a body prefab and play it here." );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "OpenAAnimclipClipPickABodyPrefab" ) );
             return;
         }
 
@@ -115,8 +116,8 @@ namespace sw::editor
             if ( ImGui::Button( "Restart" ) )
                 _model.requestReplay(); // 다음 그리기가 처음부터 다시 재생한다
             EditorSelfTestMarks::note( "clip.restart" );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Loop" ) );
-            if ( ImGui::Checkbox( "Loop", &_model.editLoop() ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Loop" ) ) );
+            if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Loop" ), &_model.editLoop() ) )
                 _model.requestReplay();
             EditorWidgets::drawInlineLabel( "Speed" );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );

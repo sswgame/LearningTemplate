@@ -140,7 +140,7 @@ namespace sw::editor
                 (void)setBarVisible( desc._pID, pState->_bVisible == false ); // 바는 위에서 찾았다
         }
         ImGui::Separator();
-        if ( ImGui::MenuItem( "Reset Overlays" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ResetOverlays" ) ) )
             resetToDefault();
     }
 

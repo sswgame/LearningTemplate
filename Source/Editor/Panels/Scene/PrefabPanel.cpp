@@ -132,7 +132,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        ImGui::Checkbox( "Show Modified Properties Only", &_model.editShowOnlyModified() );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "ShowModifiedPropertiesOnly" ), &_model.editShowOnlyModified() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ShowModifiedOnly" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh Overrides" ) );
         if ( ImGui::SmallButton( "Refresh Overrides" ) )

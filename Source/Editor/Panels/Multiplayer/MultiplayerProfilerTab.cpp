@@ -293,7 +293,7 @@ namespace sw::editor
         EditorNetPlaySession&     session = *context._pSession;
         EditorNetProfilerHistory& history = MultiplayerProfilerTabInternal::getHistory();
         history.update( session, MultiplayerProfilerTabInternal::nowSeconds() );
-        ImGui::Checkbox( "Record while hidden", &_bRecordHidden );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "RecordWhileHidden" ), &_bRecordHidden );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerRecordHidden" ) );
         const EditorNetProfilerTrack* pTrack          = history.findTrack( context._targetProcessIndex );
         const bool                    bNoProfilerData = context._targetProcessIndex < 0 || pTrack == nullptr || pTrack->_series.getCount() == 0;
@@ -322,11 +322,11 @@ namespace sw::editor
 
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EditorMultiplayer", "ProfilerKinds" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "All processes" ) );
-        ImGui::Checkbox( "All processes", &_bAllProcessKinds );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "AllProcesses" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "AllProcesses" ), &_bAllProcessKinds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerKindsAllProcesses" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Sent" ) );
-        ImGui::Checkbox( "Sent", &_bSentKinds );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Sent" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Sent" ), &_bSentKinds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerKindsSent" ) );
         drawKindShares( track );
 

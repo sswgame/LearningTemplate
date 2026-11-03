@@ -356,7 +356,7 @@ namespace sw::editor
     void ProfilerPanel::drawCaptureHistoryControls()
     {
         bool bCollect = _capture.isCollecting();
-        if ( ImGui::Checkbox( "Collect", &bCollect ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Collect" ), &bCollect ) )
             _capture.setCollect( editor::getSubsystem<FrameProfiler>(), bCollect );
         ImGui::SameLine();
         const ProfilerScopeHistory& history        = _capture.getHistory();
@@ -380,7 +380,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "profiler.capture.pause" );
         EditorChrome::sameLineIfFits( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Pause on spike" ).x );
         bool bPauseOnSpike = _capture.isPauseOnSpike();
-        if ( ImGui::Checkbox( "Pause on spike", &bPauseOnSpike ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "PauseOnSpike" ), &bPauseOnSpike ) )
             _capture.setPauseOnSpike( bPauseOnSpike );
         EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
@@ -471,8 +471,8 @@ namespace sw::editor
                 _timeline.setFrameCount( frameChoice );
         }
         bool bFrozen = _timeline.isTimelineFrozen();
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Freeze" ) );
-        if ( ImGui::Checkbox( "Freeze", &bFrozen ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Freeze" ) ) );
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Freeze" ), &bFrozen ) )
             _timeline.setTimelineFrozen( bFrozen );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Freeze" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Fit" ) );
@@ -990,11 +990,11 @@ namespace sw::editor
         MemoryProfiler& profiler = *pProfiler;
 
         bool bTracking = profiler.isTrackingEnabled();
-        if ( ImGui::Checkbox( "Enable Memory Tracking", &bTracking ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "EnableMemoryTracking" ), &bTracking ) )
             profiler.setTrackingEnabled( bTracking );
 
         bool bDetailed = profiler.isDetailedTrackingEnabled();
-        if ( ImGui::Checkbox( "Enable Detailed CallStack Tracking (High Overhead)", &bDetailed ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "EnableDetailedCallStackTrackingHighOverhead" ), &bDetailed ) )
             profiler.setDetailedTrackingEnabled( bDetailed );
 
         ImGui::Separator();

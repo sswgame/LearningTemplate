@@ -712,6 +712,402 @@ msgctxt "EdCommon.ViewportOrientationCube"
 msgid "Show or hide the orientation cube that shows which way the camera faces."
 msgstr "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdLabel.Active"
+msgid "Active"
+msgstr "활성"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdLabel.AddKey"
+msgid "Add Key"
+msgstr "키 추가"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdLabel.All"
+msgid "All"
+msgstr "전부"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdLabel.AllPacks"
+msgid "All packs"
+msgstr "모든 팩"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EdLabel.AllProcesses"
+msgid "All processes"
+msgstr "모든 프로세스"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdLabel.Auto"
+msgid "Auto"
+msgstr "자동"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdLabel.AutoRange"
+msgid "Auto range"
+msgstr "자동 범위"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.AutoScroll"
+msgid "Auto-scroll"
+msgstr "자동 스크롤"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdLabel.AutoTangent"
+msgid "Auto Tangent"
+msgstr "자동 탄젠트"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdLabel.Bodies"
+msgid "Bodies"
+msgstr "바디"
+
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EdLabel.BoneMarkers"
+msgid "Bone Markers"
+msgstr "뼈 표시"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.ClearOnPlay"
+msgid "Clear on Play"
+msgstr "플레이 때 지우기"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.CollapseAll"
+msgid "Collapse All"
+msgstr "모두 접기"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdLabel.Collect"
+msgid "Collect"
+msgstr "모으기"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.CopyFullLogLine"
+msgid "Copy Full Log Line"
+msgstr "로그 줄 전체 복사"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.CopyMessage"
+msgid "Copy Message"
+msgstr "메시지 복사"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.CopyPropertyName"
+msgid "Copy Property Name"
+msgstr "프로퍼티 이름 복사"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.CopyValue"
+msgid "Copy Value"
+msgstr "값 복사"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.CopyVisibleLines"
+msgid "Copy Visible Lines"
+msgstr "보이는 줄 복사"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdLabel.DeleteKey"
+msgid "Delete Key"
+msgstr "키 지우기"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdLabel.Duplicate"
+msgid "Duplicate"
+msgstr "복제"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdLabel.EnableDetailedCallStackTrackingHighOverhead"
+msgid "Enable Detailed CallStack Tracking (High Overhead)"
+msgstr "자세한 호출 스택 추적(부하 큼)"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdLabel.EnableMemoryTracking"
+msgid "Enable Memory Tracking"
+msgstr "메모리 추적"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdLabel.EnableViewportOnScreenHUDOverlay"
+msgid "Enable Viewport On-Screen HUD Overlay"
+msgstr "뷰포트 화면 HUD 겹치기"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdLabel.Erase"
+msgid "Erase"
+msgstr "지우개"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.ExpandAll"
+msgid "Expand All"
+msgstr "모두 펼치기"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdLabel.FitView"
+msgid "Fit View"
+msgstr "화면에 맞추기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdLabel.Follow"
+msgid "Follow"
+msgstr "따라가기"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdLabel.Freeze"
+msgid "Freeze"
+msgstr "멈춤"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+msgctxt "EdLabel.GroupByModule"
+msgid "Group by Module"
+msgstr "모듈별로 묶기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdLabel.Interact"
+msgid "Interact"
+msgstr "조작"
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdLabel.Joints"
+msgid "Joints"
+msgstr "관절"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdLabel.LayoutRects"
+msgid "Layout rects"
+msgstr "배치 사각형"
+
+#: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
+msgctxt "EdLabel.Linearize"
+msgid "Linearize"
+msgstr "선형화"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdLabel.Loop"
+msgid "Loop"
+msgstr "반복"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EdLabel.LoopAlt"
+msgid "loop"
+msgstr "반복"
+
+#: Source/Editor/Panels/Scene/GameViewPanel.cpp
+msgctxt "EdLabel.Max"
+msgid "Max"
+msgstr "최대"
+
+#: Source/Editor/Panels/Settings/PreferencesPanel.cpp
+msgctxt "EdLabel.ModifiedOnly"
+msgid "Modified only"
+msgstr "바뀐 것만"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdLabel.Negate"
+msgid "Negate"
+msgstr "반전"
+
+#: Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp
+msgctxt "EdLabel.NoMixerGraphHasBeenPublishedYet"
+msgid "No mixer graph has been published yet"
+msgstr "아직 게시된 믹서 그래프가 없습니다"
+
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
+msgctxt "EdLabel.NoSettingsFileWasLoadedFromConfigOr"
+msgid "No settings file was loaded from Config/ or Content/"
+msgstr "Config/ 나 Content/ 에서 읽은 설정 파일이 없습니다"
+
+#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
+msgctxt "EdLabel.OpenAAnimclipClipPickABodyPrefab"
+msgid "Open a .animclip clip, pick a body prefab and play it here."
+msgstr ".animclip 클립을 열고 몸 프리팹을 골라 여기서 재생합니다."
+
+#: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+msgctxt "EdLabel.OpenAMeshAssetToLookAtIt"
+msgid "Open a .mesh asset to look at it and compare its LOD levels here."
+msgstr ".mesh 에셋을 열어 여기서 보고 LOD 단계를 비교합니다."
+
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdLabel.OpenAPhysicsXmlPhysicsAssetPickA"
+msgid "Open a .physics.xml physics asset, pick a body prefab and knock it down here."
+msgstr ".physics.xml 물리 에셋을 열고 몸 프리팹을 골라 여기서 쓰러뜨려 봅니다."
+
+#: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
+msgctxt "EdLabel.OpenAPrefabWithOpenAbove"
+msgid "Open a prefab with Open... above"
+msgstr "위의 Open... 으로 프리팹을 엽니다"
+
+#: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
+msgctxt "EdLabel.OpenAVfxXmlEffectToPlayIt"
+msgid "Open a .vfx.xml effect to play it here. Edit effects in the Catalog Editor."
+msgstr ".vfx.xml 효과를 열어 여기서 재생합니다. 효과 편집은 카탈로그 편집기에서 합니다."
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.OpenInIDE"
+msgid "Open in IDE"
+msgstr "IDE 에서 열기"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.OpenLogFile"
+msgid "Open Log File"
+msgstr "로그 파일 열기"
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EdLabel.Orthographic"
+msgid "Orthographic"
+msgstr "직교"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.PasteValue"
+msgid "Paste Value"
+msgstr "값 붙여넣기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdLabel.PauseGraph"
+msgid "Pause Graph"
+msgstr "그래프 멈춤"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.PauseOnError"
+msgid "Pause on Error"
+msgstr "오류에서 멈춤"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdLabel.PauseOnSpike"
+msgid "Pause on spike"
+msgstr "튀면 멈춤"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdLabel.PickACatalogFileOnTheLeft"
+msgid "Pick a catalog file on the left"
+msgstr "왼쪽에서 카탈로그 파일을 고릅니다"
+
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
+msgctxt "EdLabel.PickASettingsFileOnTheLeft"
+msgid "Pick a settings file on the left"
+msgstr "왼쪽에서 설정 파일을 고릅니다"
+
+#: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+msgctxt "EdLabel.RawText"
+msgid "Raw text"
+msgstr "원본 글"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdLabel.RawXML"
+msgid "Raw XML"
+msgstr "원본 XML"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+msgctxt "EdLabel.Record"
+msgid "Record"
+msgstr "기록"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdLabel.RecordTraces"
+msgid "Record traces"
+msgstr "추적 기록"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EdLabel.RecordWhileHidden"
+msgid "Record while hidden"
+msgstr "숨겨져도 기록"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdLabel.RemoveComponent"
+msgid "Remove component"
+msgstr "컴포넌트 제거"
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdLabel.ResetOverlays"
+msgid "Reset Overlays"
+msgstr "겹치기 초기화"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.ResetToDefault"
+msgid "Reset to Default"
+msgstr "기본값으로"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdLabel.ResetToX100"
+msgid "Reset to x1.00"
+msgstr "x1.00 으로"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdLabel.SelectAWidgetToEditItsProperties"
+msgid "Select a widget to edit its properties."
+msgstr "위젯을 고르면 프로퍼티를 편집합니다."
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EdLabel.Sent"
+msgid "Sent"
+msgstr "보냄"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdLabel.Show2DStickTriggerGauges"
+msgid "Show 2D Stick & Trigger Gauges"
+msgstr "2D 스틱 · 트리거 게이지 보이기"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdLabel.ShowAll"
+msgid "Show All"
+msgstr "모두 보이기"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdLabel.ShowDebugHUDCtrlF3"
+msgid "Show Debug HUD (Ctrl+F3)"
+msgstr "디버그 HUD 보이기(Ctrl+F3)"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdLabel.ShowFaceButtonsABXY"
+msgid "Show Face Buttons (A/B/X/Y)"
+msgstr "앞면 단추 보이기(A/B/X/Y)"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdLabel.ShowLiveActionTriggerStream"
+msgid "Show Live Action Trigger Stream"
+msgstr "실시간 액션 발동 흐름 보이기"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdLabel.ShowModifiedPropertiesOnly"
+msgid "Show Modified Properties Only"
+msgstr "바뀐 프로퍼티만 보이기"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.ShowOnlyModifiedProperties"
+msgid "Show Only Modified Properties"
+msgstr "바뀐 프로퍼티만 보이기"
+
+#: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
+#: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
+msgctxt "EdLabel.Skeleton"
+msgid "Skeleton"
+msgstr "스켈레톤"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdLabel.SkipBuild"
+msgid "Skip build"
+msgstr "빌드 건너뛰기"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdLabel.SkipCook"
+msgid "Skip cook"
+msgstr "쿠킹 건너뛰기"
+
+#: Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp
+msgctxt "EdLabel.TheAudioServiceIsNotRunning"
+msgid "The audio service is not running"
+msgstr "오디오 서비스가 돌지 않습니다"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdLabel.UnsetAttribute"
+msgid "Unset attribute"
+msgstr "속성 지우기"
+
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdSection.Actions"
 msgid "Actions"

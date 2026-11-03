@@ -248,13 +248,13 @@ namespace sw::editor
         EditorSelfTestMarks::note( "inspector.viewOptions" );
         if ( ImGui::BeginPopup( "InspectorViewOptions" ) )
         {
-            ImGui::MenuItem( "Show Only Modified Properties", nullptr, &_bShowModifiedOnly );
+            ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ShowOnlyModifiedProperties" ), nullptr, &_bShowModifiedOnly );
             EditorSelfTestMarks::note( "inspector.viewOptions.modifiedOnly" );
             ImGui::Separator();
-            if ( ImGui::MenuItem( "Expand All" ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ExpandAll" ) ) )
                 _openAllRequest = 1;
             EditorSelfTestMarks::note( "inspector.viewOptions.expandAll" );
-            if ( ImGui::MenuItem( "Collapse All" ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CollapseAll" ) ) )
                 _openAllRequest = -1;
             EditorSelfTestMarks::note( "inspector.viewOptions.collapseAll" );
             ImGui::EndPopup();
@@ -541,17 +541,17 @@ namespace sw::editor
         }
         if ( defaultInstance.get() != nullptr || prop._metadata->_defaultValue.empty() == false )
         {
-            if ( ImGui::MenuItem( "Reset to Default" ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) )
                 resetPropertyToDefault( instance, prop, defaultInstance );
         }
-        if ( ImGui::MenuItem( "Copy Value" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyValue" ) ) )
             ImGui::SetClipboardText( SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
         // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
         const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop._handleTargetTypeName.empty();
-        if ( ImGui::MenuItem( "Paste Value", nullptr, false, bPasteAllowed ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "PasteValue" ), nullptr, false, bPasteAllowed ) )
             applyPropertyTextAsEdit( instance, prop, ImGui::GetClipboardText(), "Paste Value" );
         EditorSelfTestMarks::note( "inspector.menu.pasteValue" );
-        if ( ImGui::MenuItem( "Copy Property Name" ) )
+        if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyPropertyName" ) ) )
             ImGui::SetClipboardText( prop._name.c_str() );
         ImGui::EndPopup();
     }

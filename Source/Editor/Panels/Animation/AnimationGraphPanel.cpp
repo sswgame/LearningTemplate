@@ -313,7 +313,7 @@ namespace sw::editor
         }
         if ( ImGui::BeginPopup( "AnimationNodeContext" ) )
         {
-            if ( ImGui::MenuItem( "Duplicate" ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
                 duplicateNode( _selectedNodeID );
             if ( ImGui::MenuItem( SW_LOCKEY( "EdVerb", "Delete" ) ) )
                 ed::DeleteNode( toNodeID( _selectedNodeID ) );

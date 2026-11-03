@@ -277,8 +277,8 @@ namespace sw::editor
         const ActionPhase phase = inputMap.getActionPhase( action );
         ImGui::Text( "State: %s  hold %.2f s", inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ),
                      static_cast<float64>( inputMap.getActionHoldDuration( action ) ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset to Default" ) );
-        if ( ImGui::SmallButton( "Reset to Default" ) && inputMap.resetActionToDefault( action ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) && inputMap.resetActionToDefault( action ) )
             markDocumentDirty();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetActionTip" ) );
 
@@ -389,8 +389,8 @@ namespace sw::editor
         }
         bool bNegate = binding._bNegate;
         if ( bLineStart == false )
-            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Negate" ) );
-        if ( ImGui::Checkbox( "Negate", &bNegate ) && inputMap.setBindingNegate( action, bindIndex, bNegate ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Negate" ) ) );
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Negate" ), &bNegate ) && inputMap.setBindingNegate( action, bindIndex, bNegate ) )
             markDocumentDirty();
     }
 
@@ -765,7 +765,7 @@ namespace sw::editor
         ImGui::Text( "Real-Time Input Graphs (Last 120 Frames)" );
         ImGui::SameLine( 450.0f );
         bool bPaused = _document.isPlotPaused();
-        if ( ImGui::Checkbox( "Pause Graph", &bPaused ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "PauseGraph" ), &bPaused ) )
             _document.setPlotPaused( bPaused );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PauseGraphTip" ) );
 
@@ -962,7 +962,7 @@ namespace sw::editor
         ViewportInputOverlayConfig& config = editor::getSubsystem<ViewportInputOverlaySettings>()._config;
 
         bool bEnabled = ( config._bEnabled == SW_TRUE );
-        if ( ImGui::Checkbox( "Enable Viewport On-Screen HUD Overlay", &bEnabled ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "EnableViewportOnScreenHUDOverlay" ), &bEnabled ) )
             config._bEnabled = bEnabled ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayEnableTip" ) );
 
@@ -986,15 +986,15 @@ namespace sw::editor
         ImGui::Text( "Visible HUD Elements:" );
 
         bool bStick = ( config._bShowStick == SW_TRUE );
-        if ( ImGui::Checkbox( "Show 2D Stick & Trigger Gauges", &bStick ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Show2DStickTriggerGauges" ), &bStick ) )
             config._bShowStick = bStick ? SW_TRUE : SW_FALSE;
 
         bool bButtons = ( config._bShowButtons == SW_TRUE );
-        if ( ImGui::Checkbox( "Show Face Buttons (A/B/X/Y)", &bButtons ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "ShowFaceButtonsABXY" ), &bButtons ) )
             config._bShowButtons = bButtons ? SW_TRUE : SW_FALSE;
 
         bool bShowHistory = ( config._bShowCommandHistory == SW_TRUE );
-        if ( ImGui::Checkbox( "Show Live Action Trigger Stream", &bShowHistory ) )
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "ShowLiveActionTriggerStream" ), &bShowHistory ) )
             config._bShowCommandHistory = bShowHistory ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayHistoryTip" ) );
     }

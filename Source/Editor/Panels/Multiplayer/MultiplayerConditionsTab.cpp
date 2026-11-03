@@ -347,7 +347,7 @@ namespace sw::editor
         ProcessLink&                     link        = _listLink[static_cast<size_t>( targetIndex )];
         const EditorNetPlayProcessStatus status      = session.getProcessStatus( targetIndex );
 
-        ImGui::Checkbox( "All processes", &_bApplyToAll );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "AllProcesses" ), &_bApplyToAll );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsApplyToAll" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", _bApplyToAll ? "every process" : status._label.c_str() );

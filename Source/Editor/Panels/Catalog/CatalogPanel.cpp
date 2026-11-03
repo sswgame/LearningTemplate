@@ -216,8 +216,8 @@ namespace sw::editor
             syncDirty(); // 검증 결과 감시 값(`Editor.CatalogValidation`)도 여기서 갱신된다 — 저장 · 복원 길과 같다
         }
         EditorSelfTestMarks::note( "catalog.validate" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Raw text" ) );
-        ImGui::Checkbox( "Raw text", &_bRawMode );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "RawText" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "RawText" ), &_bRawMode );
         ImGui::EndDisabled();
     }
 
@@ -290,7 +290,7 @@ namespace sw::editor
     {
         if ( _selectedID.empty() )
         {
-            EditorWidgets::drawEmptyHint( "Pick a catalog file on the left" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "PickACatalogFileOnTheLeft" ) );
             return;
         }
 

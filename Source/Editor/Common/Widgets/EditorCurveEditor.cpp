@@ -172,7 +172,7 @@ namespace sw::editor
                 if ( state._menuKey < curve._listKey.size() )
                 {
                     FloatCurveKey& key = curve._listKey[state._menuKey];
-                    if ( ImGui::MenuItem( "Delete Key" ) )
+                    if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "DeleteKey" ) ) )
                     {
                         curve._listKey.erase( curve._listKey.begin() + static_cast<ptrdiff_t>( state._menuKey ) );
                         state._selectedKey = constant::invalid_index::kUint32;
@@ -188,7 +188,7 @@ namespace sw::editor
                             bEdited            = true;
                         }
                     }
-                    if ( bEdited == false && ImGui::MenuItem( "Auto Tangent", nullptr, key._bAutoTangent ) )
+                    if ( bEdited == false && ImGui::MenuItem( SW_LOCKEY( "EdLabel", "AutoTangent" ), nullptr, key._bAutoTangent ) )
                     {
                         key._bAutoTangent = key._bAutoTangent == false;
                         bEdited           = true;
@@ -196,13 +196,13 @@ namespace sw::editor
                 }
                 else
                 {
-                    if ( ImGui::MenuItem( "Add Key" ) )
+                    if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "AddKey" ) ) )
                     {
                         state._selectedKey = curve.addKey( state._menuTime, state._menuValue );
                         bEdited            = true;
                     }
                     EditorSelfTestMarks::note( ( string( pMarkScope ) + ".menu.addKey" ).c_str() );
-                    if ( ImGui::MenuItem( "Fit View", "F" ) )
+                    if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "FitView" ), "F" ) )
                         state._bFitPending = true;
                 }
                 if ( bEdited )

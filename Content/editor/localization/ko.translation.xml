@@ -326,6 +326,118 @@
 		<entry key="EdCommon.ViewportOrientationCube"
 		       text="카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 		       sourceHash="c994648fc818bbf2" />
+		<entry key="EdLabel.Active" text="활성" sourceHash="a45a194b58837e4f" />
+		<entry key="EdLabel.AddKey" text="키 추가" sourceHash="7a0e4cc6bfd9c40b" />
+		<entry key="EdLabel.All" text="전부" sourceHash="f993bb199fefbe04" />
+		<entry key="EdLabel.AllPacks" text="모든 팩" sourceHash="1569962035344aea" />
+		<entry key="EdLabel.AllProcesses" text="모든 프로세스" sourceHash="9a23fee499e1a22d" />
+		<entry key="EdLabel.Auto" text="자동" sourceHash="db73788b3c975f16" />
+		<entry key="EdLabel.AutoRange" text="자동 범위" sourceHash="06b4253d144bf62f" />
+		<entry key="EdLabel.AutoScroll" text="자동 스크롤" sourceHash="7667a9f017dc4bf0" />
+		<entry key="EdLabel.AutoTangent" text="자동 탄젠트" sourceHash="930262454f309a23" />
+		<entry key="EdLabel.Bodies" text="바디" sourceHash="e3707cdd2dd42549" />
+		<entry key="EdLabel.BoneMarkers" text="뼈 표시" sourceHash="93f13345e2ad4494" />
+		<entry key="EdLabel.ClearOnPlay" text="플레이 때 지우기" sourceHash="beece2dfe156c8cb" />
+		<entry key="EdLabel.CollapseAll" text="모두 접기" sourceHash="62006d0c66337241" />
+		<entry key="EdLabel.Collect" text="모으기" sourceHash="828e9e42981c5891" />
+		<entry key="EdLabel.CopyFullLogLine" text="로그 줄 전체 복사" sourceHash="e782d27f233f5e83" />
+		<entry key="EdLabel.CopyMessage" text="메시지 복사" sourceHash="8d3da4282063cc8b" />
+		<entry key="EdLabel.CopyPropertyName" text="프로퍼티 이름 복사" sourceHash="afbec81438558fc4" />
+		<entry key="EdLabel.CopyValue" text="값 복사" sourceHash="5899dbc9c6094f85" />
+		<entry key="EdLabel.CopyVisibleLines" text="보이는 줄 복사" sourceHash="52077621fa7648c1" />
+		<entry key="EdLabel.DeleteKey" text="키 지우기" sourceHash="b213ea15eedd28c5" />
+		<entry key="EdLabel.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
+		<entry key="EdLabel.EnableDetailedCallStackTrackingHighOverhead"
+		       text="자세한 호출 스택 추적(부하 큼)"
+		       sourceHash="51b65a7190e387a4" />
+		<entry key="EdLabel.EnableMemoryTracking" text="메모리 추적" sourceHash="166a353672d887f2" />
+		<entry key="EdLabel.EnableViewportOnScreenHUDOverlay"
+		       text="뷰포트 화면 HUD 겹치기"
+		       sourceHash="50b6618b12b2ad6d" />
+		<entry key="EdLabel.Erase" text="지우개" sourceHash="02014a4443a02bd5" />
+		<entry key="EdLabel.ExpandAll" text="모두 펼치기" sourceHash="f1f5ac34e94bd146" />
+		<entry key="EdLabel.FitView" text="화면에 맞추기" sourceHash="62b31c2d4492453d" />
+		<entry key="EdLabel.Follow" text="따라가기" sourceHash="4fd78d90908a11f0" />
+		<entry key="EdLabel.Freeze" text="멈춤" sourceHash="af63b1436123eb22" />
+		<entry key="EdLabel.GroupByModule" text="모듈별로 묶기" sourceHash="83c16ec15138122f" />
+		<entry key="EdLabel.Interact" text="조작" sourceHash="ee1a91137da362cf" />
+		<entry key="EdLabel.Joints" text="관절" sourceHash="db858522545d708c" />
+		<entry key="EdLabel.LayoutRects" text="배치 사각형" sourceHash="ccdec3ece7aa1674" />
+		<entry key="EdLabel.Linearize" text="선형화" sourceHash="172c4708c19ef9f2" />
+		<entry key="EdLabel.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
+		<entry key="EdLabel.LoopAlt" text="반복" sourceHash="cdece4ad70d57deb" />
+		<entry key="EdLabel.Max" text="최대" sourceHash="1e187119b5262c59" />
+		<entry key="EdLabel.ModifiedOnly" text="바뀐 것만" sourceHash="1c80f52c10548280" />
+		<entry key="EdLabel.Negate" text="반전" sourceHash="fb08f40348095c7b" />
+		<entry key="EdLabel.NoMixerGraphHasBeenPublishedYet"
+		       text="아직 게시된 믹서 그래프가 없습니다"
+		       sourceHash="967256efc62a0267" />
+		<entry key="EdLabel.NoSettingsFileWasLoadedFromConfigOr"
+		       text="Config/ 나 Content/ 에서 읽은 설정 파일이 없습니다"
+		       sourceHash="d6cba0c7000db56f" />
+		<entry key="EdLabel.OpenAAnimclipClipPickABodyPrefab"
+		       text=".animclip 클립을 열고 몸 프리팹을 골라 여기서 재생합니다."
+		       sourceHash="397d6affe14139cd" />
+		<entry key="EdLabel.OpenAMeshAssetToLookAtIt"
+		       text=".mesh 에셋을 열어 여기서 보고 LOD 단계를 비교합니다."
+		       sourceHash="7ee3b9cb25995e13" />
+		<entry key="EdLabel.OpenAPhysicsXmlPhysicsAssetPickA"
+		       text=".physics.xml 물리 에셋을 열고 몸 프리팹을 골라 여기서 쓰러뜨려 봅니다."
+		       sourceHash="8db59584f9e518a9" />
+		<entry key="EdLabel.OpenAPrefabWithOpenAbove"
+		       text="위의 Open... 으로 프리팹을 엽니다"
+		       sourceHash="bceed2a41c03152b" />
+		<entry key="EdLabel.OpenAVfxXmlEffectToPlayIt"
+		       text=".vfx.xml 효과를 열어 여기서 재생합니다. 효과 편집은 카탈로그 편집기에서 합니다."
+		       sourceHash="ca5231337fb4ef7e" />
+		<entry key="EdLabel.OpenInIDE" text="IDE 에서 열기" sourceHash="d823e9ac1fb6d070" />
+		<entry key="EdLabel.OpenLogFile" text="로그 파일 열기" sourceHash="8f68d1fad5a66727" />
+		<entry key="EdLabel.Orthographic" text="직교" sourceHash="9593786d265f6d4b" />
+		<entry key="EdLabel.PasteValue" text="값 붙여넣기" sourceHash="d0a655933dc9f449" />
+		<entry key="EdLabel.PauseGraph" text="그래프 멈춤" sourceHash="f0f334de0bcaefa5" />
+		<entry key="EdLabel.PauseOnError" text="오류에서 멈춤" sourceHash="bf313ea7a7db9340" />
+		<entry key="EdLabel.PauseOnSpike" text="튀면 멈춤" sourceHash="7cd8268881fad570" />
+		<entry key="EdLabel.PickACatalogFileOnTheLeft"
+		       text="왼쪽에서 카탈로그 파일을 고릅니다"
+		       sourceHash="e245d1ae7779611d" />
+		<entry key="EdLabel.PickASettingsFileOnTheLeft"
+		       text="왼쪽에서 설정 파일을 고릅니다"
+		       sourceHash="d27d6de25cd83efd" />
+		<entry key="EdLabel.RawText" text="원본 글" sourceHash="10a37734a70488a4" />
+		<entry key="EdLabel.RawXML" text="원본 XML" sourceHash="1c580b01fe302ab8" />
+		<entry key="EdLabel.Record" text="기록" sourceHash="8a4ff2bd9c13498c" />
+		<entry key="EdLabel.RecordTraces" text="추적 기록" sourceHash="0e2cd3f58e34f532" />
+		<entry key="EdLabel.RecordWhileHidden" text="숨겨져도 기록" sourceHash="1ff0f7d07239b8cb" />
+		<entry key="EdLabel.RemoveComponent" text="컴포넌트 제거" sourceHash="7ecca87ab9db1f02" />
+		<entry key="EdLabel.ResetOverlays" text="겹치기 초기화" sourceHash="e3fd9d48c6d453b9" />
+		<entry key="EdLabel.ResetToDefault" text="기본값으로" sourceHash="f786171004dde79c" />
+		<entry key="EdLabel.ResetToX100" text="x1.00 으로" sourceHash="fd16cba56760caa2" />
+		<entry key="EdLabel.SelectAWidgetToEditItsProperties"
+		       text="위젯을 고르면 프로퍼티를 편집합니다."
+		       sourceHash="03a32e1f7acb8032" />
+		<entry key="EdLabel.Sent" text="보냄" sourceHash="57ade424d57c6edf" />
+		<entry key="EdLabel.Show2DStickTriggerGauges"
+		       text="2D 스틱 · 트리거 게이지 보이기"
+		       sourceHash="4ff57c5ad554a390" />
+		<entry key="EdLabel.ShowAll" text="모두 보이기" sourceHash="9c55b48de3e2306f" />
+		<entry key="EdLabel.ShowDebugHUDCtrlF3" text="디버그 HUD 보이기(Ctrl+F3)" sourceHash="f6ae7a11a7075416" />
+		<entry key="EdLabel.ShowFaceButtonsABXY" text="앞면 단추 보이기(A/B/X/Y)" sourceHash="69f6fbfd42a05310" />
+		<entry key="EdLabel.ShowLiveActionTriggerStream"
+		       text="실시간 액션 발동 흐름 보이기"
+		       sourceHash="ae6af190bcd93ca4" />
+		<entry key="EdLabel.ShowModifiedPropertiesOnly"
+		       text="바뀐 프로퍼티만 보이기"
+		       sourceHash="fcf58b160b418672" />
+		<entry key="EdLabel.ShowOnlyModifiedProperties"
+		       text="바뀐 프로퍼티만 보이기"
+		       sourceHash="516415541d833c1a" />
+		<entry key="EdLabel.Skeleton" text="스켈레톤" sourceHash="73c6ad85b7235b4e" />
+		<entry key="EdLabel.SkipBuild" text="빌드 건너뛰기" sourceHash="20b8adcbba894c7e" />
+		<entry key="EdLabel.SkipCook" text="쿠킹 건너뛰기" sourceHash="7f680b86bd822872" />
+		<entry key="EdLabel.TheAudioServiceIsNotRunning"
+		       text="오디오 서비스가 돌지 않습니다"
+		       sourceHash="f0ad4f0ff56a00ed" />
+		<entry key="EdLabel.UnsetAttribute" text="속성 지우기" sourceHash="8c086c87fcbad6fa" />
 		<entry key="EdSection.Actions" text="액션" sourceHash="8af61807443f32a4" />
 		<entry key="EdSection.ActiveSceneComponentDistribution"
 		       text="활성 씬과 컴포넌트 분포"

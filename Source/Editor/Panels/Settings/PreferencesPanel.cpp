@@ -46,7 +46,7 @@ namespace sw::editor
     void PreferencesPanel::drawContent()
     {
         // 체크를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
-        (void)ImGui::Checkbox( "Modified only", &_model.editModifiedOnly() ); // 다음 그리드가 읽는다
+        (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "ModifiedOnly" ), &_model.editModifiedOnly() ); // 다음 그리드가 읽는다
         EditorSelfTestMarks::note( "preferences.modifiedOnly" );
         ImGui::SameLine();
         _grid.drawSearchBar( "preferences.search" );

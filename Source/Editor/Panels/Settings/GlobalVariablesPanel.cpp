@@ -245,8 +245,8 @@ namespace sw::editor
             EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
                                             SW_LOCKEY( "EditorSettings", "FilterVariablesHint" ), 200.0f, true );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Group by Module" ) );
-            (void)ImGui::Checkbox( "Group by Module", &_bGroupByModule );
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "GroupByModule" ) ) );
+            (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "GroupByModule" ), &_bGroupByModule );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "GroupByModule" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset All" ) );

@@ -214,7 +214,7 @@ namespace sw::editor
         const EditorPrefabIsolation& isolation = _model.getIsolation();
         if ( getLoadedAssetPath().empty() || isolation.isActive() == false )
         {
-            EditorWidgets::drawEmptyHint( "Open a prefab with Open... above" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "OpenAPrefabWithOpenAbove" ) );
             EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
             return;
         }

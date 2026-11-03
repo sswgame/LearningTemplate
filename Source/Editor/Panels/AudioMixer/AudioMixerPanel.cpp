@@ -20,6 +20,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
@@ -205,12 +206,12 @@ namespace sw::editor
         IAudioService& audio = editor::getSubsystem<IAudioService>(); // 전용 서버도 널 서비스가 있어 늘 있다
         if ( audio.isInitialized() == false )
         {
-            EditorWidgets::drawEmptyHint( "The audio service is not running" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "TheAudioServiceIsNotRunning" ) );
             return;
         }
         if ( _model.refreshBuses( audio.getEngine() ) == false )
         {
-            EditorWidgets::drawEmptyHint( "No mixer graph has been published yet" );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "NoMixerGraphHasBeenPublishedYet" ) );
             return;
         }
 

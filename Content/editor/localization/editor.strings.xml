@@ -734,6 +734,408 @@
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdLabel.Active" source="Active">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.AddKey" source="Add Key">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.All" source="All">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.AllPacks" source="All packs">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.AllProcesses" source="All processes">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Auto" source="Auto">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.AutoRange" source="Auto range">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.AutoScroll" source="Auto-scroll">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.AutoTangent" source="Auto Tangent">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Bodies" source="Bodies">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.BoneMarkers" source="Bone Markers">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ClearOnPlay" source="Clear on Play">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.CollapseAll" source="Collapse All">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Collect" source="Collect">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.CopyFullLogLine" source="Copy Full Log Line">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.CopyMessage" source="Copy Message">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.CopyPropertyName" source="Copy Property Name">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.CopyValue" source="Copy Value">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.CopyVisibleLines" source="Copy Visible Lines">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.DeleteKey" source="Delete Key">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Duplicate" source="Duplicate">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.EnableDetailedCallStackTrackingHighOverhead"
+		       source="Enable Detailed CallStack Tracking (High Overhead)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.EnableMemoryTracking" source="Enable Memory Tracking">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.EnableViewportOnScreenHUDOverlay" source="Enable Viewport On-Screen HUD Overlay">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Erase" source="Erase">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ExpandAll" source="Expand All">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.FitView" source="Fit View">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Follow" source="Follow">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Freeze" source="Freeze">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.GroupByModule" source="Group by Module">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Interact" source="Interact">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Joints" source="Joints">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.LayoutRects" source="Layout rects">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Linearize" source="Linearize">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Loop" source="Loop">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.LoopAlt" source="loop">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Max" source="Max">
+			<origins>
+				<item>Source/Editor/Panels/Scene/GameViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ModifiedOnly" source="Modified only">
+			<origins>
+				<item>Source/Editor/Panels/Settings/PreferencesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Negate" source="Negate">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.NoMixerGraphHasBeenPublishedYet" source="No mixer graph has been published yet">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.NoSettingsFileWasLoadedFromConfigOr"
+		       source="No settings file was loaded from Config/ or Content/">
+			<origins>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.OpenAAnimclipClipPickABodyPrefab"
+		       source="Open a .animclip clip, pick a body prefab and play it here.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.OpenAMeshAssetToLookAtIt"
+		       source="Open a .mesh asset to look at it and compare its LOD levels here.">
+			<origins>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.OpenAPhysicsXmlPhysicsAssetPickA"
+		       source="Open a .physics.xml physics asset, pick a body prefab and knock it down here.">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.OpenAPrefabWithOpenAbove" source="Open a prefab with Open... above">
+			<origins>
+				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.OpenAVfxXmlEffectToPlayIt"
+		       source="Open a .vfx.xml effect to play it here. Edit effects in the Catalog Editor.">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.OpenInIDE" source="Open in IDE">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.OpenLogFile" source="Open Log File">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Orthographic" source="Orthographic">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.PasteValue" source="Paste Value">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.PauseGraph" source="Pause Graph">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.PauseOnError" source="Pause on Error">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.PauseOnSpike" source="Pause on spike">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.PickACatalogFileOnTheLeft" source="Pick a catalog file on the left">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.PickASettingsFileOnTheLeft" source="Pick a settings file on the left">
+			<origins>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.RawText" source="Raw text">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.RawXML" source="Raw XML">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Record" source="Record">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.RecordTraces" source="Record traces">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.RecordWhileHidden" source="Record while hidden">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.RemoveComponent" source="Remove component">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ResetOverlays" source="Reset Overlays">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportOverlays.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ResetToDefault" source="Reset to Default">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ResetToX100" source="Reset to x1.00">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.SelectAWidgetToEditItsProperties" source="Select a widget to edit its properties.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Sent" source="Sent">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Show2DStickTriggerGauges" source="Show 2D Stick &amp; Trigger Gauges">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ShowAll" source="Show All">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ShowDebugHUDCtrlF3" source="Show Debug HUD (Ctrl+F3)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ShowFaceButtonsABXY" source="Show Face Buttons (A/B/X/Y)">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ShowLiveActionTriggerStream" source="Show Live Action Trigger Stream">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ShowModifiedPropertiesOnly" source="Show Modified Properties Only">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ShowOnlyModifiedProperties" source="Show Only Modified Properties">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.Skeleton" source="Skeleton">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.SkipBuild" source="Skip build">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.SkipCook" source="Skip cook">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.TheAudioServiceIsNotRunning" source="The audio service is not running">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.UnsetAttribute" source="Unset attribute">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdSection.Actions" source="Actions">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
