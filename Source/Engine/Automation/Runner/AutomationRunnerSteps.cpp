@@ -261,12 +261,14 @@ namespace sw
             static bool validateWaitUntil( const AutomationStep& step, string& outError )
             {
                 if ( step.hasOnlyAttributes( { "watch", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
-                                               "timeoutSeconds" },
+                                               "timeoutSeconds", "timeoutWallSeconds" },
                                              outError ) == false )
                     return false;
-                if ( step.findAttribute( "timeoutFrames" ) != nullptr && step.findAttribute( "timeoutSeconds" ) != nullptr )
+                const uint32 timeoutCount = ( step.findAttribute( "timeoutFrames" ) != nullptr ? 1u : 0u ) + ( step.findAttribute( "timeoutSeconds" ) != nullptr ? 1u : 0u ) +
+                                            ( step.findAttribute( "timeoutWallSeconds" ) != nullptr ? 1u : 0u );
+                if ( timeoutCount > 1 )
                 {
-                    outError = step.describe() + ": give timeoutFrames or timeoutSeconds, not both";
+                    outError = step.describe() + ": give one of timeoutFrames, timeoutSeconds or timeoutWallSeconds";
                     return false;
                 }
                 AutomationStepArgsUtil::WaitTimeoutArgs timeout;

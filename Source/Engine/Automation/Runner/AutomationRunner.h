@@ -69,6 +69,7 @@ namespace sw
         unique_ptr<IAutomationStepState> _pHeldStepState;          ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
         const AutomationStep*            _pHeldStateStep;          ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
         uint32                           _holdFrameCount;          ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
+        float64                          _holdStartSeconds;        ///< 지금 단계가 붙잡기 시작한 단조 시계 초(`<WaitUntil timeoutWallSeconds>` 의 시한 기준)
         uint32                           _clockHoldFrameCount;     ///< 시계 잡기 조건이 이어서 붙잡은 프레임
         uint32                           _seenFrameCount;          ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
         uint8                            _bClockHeld : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
@@ -166,6 +167,12 @@ namespace sw
          * @return 붙잡았으면 Hold, 준비됐거나 @p timeoutFrames 를 다 기다렸으면 Run 입니다(그 단계가 돌며 실패를 적는다).
          */
         AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames ) override;
+        /**
+         * @brief `holdUntilReady` 의 벽시계판입니다 — 붙잡기를 시작한 뒤 @p wallSeconds 가 지나면 놓습니다(`<WaitUntil timeoutWallSeconds>`).
+         * @details 바깥 일(자식 프로세스 종료 · 파일 · GPU)은 게임 시간과 무관하다. 게임 초(`timeoutSeconds`)로 기다리면 고정 델타로 프레임 수가 되어, 무인 실행처럼 프레임이
+         *          빨리 돌면 20 초가 0.8 초가 되어 넷플레이 종료 대기가 졌다(editor.netsyncobjects).
+         */
+        AutomationStepHold holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds );
         /** @brief 붙잡은 단계 @p step 이 맡긴 상태입니다(다른 단계의 것이면 nullptr). */
         IAutomationStepState* findHeldStepState( const AutomationStep& step ) const override;
         /** @brief 붙잡은 단계 @p step 의 상태를 맡깁니다 — `holdUntilReady` 가 Run 을 돌려줄 때 · `endRun` 이 지운다. */

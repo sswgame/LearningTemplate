@@ -41,12 +41,17 @@ namespace sw
             NumberRule _rule{ NumberRule::Equals };
         };
 
-        /** @brief `WaitUntil` 의 시한입니다. `timeoutSeconds` 를 적었으면 초, 아니면 프레임입니다. */
+        /**
+         * @brief `WaitUntil` 의 시한입니다. 셋 중 하나다: `timeoutFrames`(시나리오 프레임), `timeoutSeconds`(게임 초 — 고정 델타로 프레임이 된다),
+         *        `timeoutWallSeconds`(벽시계 초 — 게임 시간과 무관한 바깥 일: 자식 프로세스 종료 · 파일 · GPU).
+         */
         struct WaitTimeoutArgs
         {
             uint32  _timeoutFrames{ AutomationTimeLimits::kDefaultWaitTimeoutFrames };
             float32 _timeoutSeconds{ 0.0f };
             bool    _bSeconds{ false };
+            float32 _timeoutWallSeconds{ 0.0f };
+            bool    _bWallSeconds{ false };
         };
 
         /** @brief `ExpectLog` 의 인자입니다. */

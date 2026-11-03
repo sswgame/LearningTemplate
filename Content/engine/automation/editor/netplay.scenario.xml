@@ -18,7 +18,7 @@
 	<Expect watch="Editor.NetPlayConnectedClients" equals="1"/>
 	<Wait frames="8"/>
 	<DevCommand line="netplay.stop"/>
-	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutSeconds="20"/>
+	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
 	<ExpectLog id="NetPlay.SessionStopped" contains="merged trace" count="1"/>
 	<ExpectLog id="NetPlay.ChildExited" contains="exited with code 0" count="2"/>

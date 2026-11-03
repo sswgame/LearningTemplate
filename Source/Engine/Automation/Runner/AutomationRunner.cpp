@@ -54,6 +54,7 @@ namespace sw
         , _wallEndSeconds{ 0.0 }
         , _lastFrameEndSeconds{ 0.0 }
         , _clockHoldStartSeconds{ 0.0 }
+        , _holdStartSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
         , _currentStepNumber{ 0 }
@@ -542,11 +543,14 @@ namespace sw
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration != nullptr )
                 limitSeconds += pRegistration->_wallSeconds;
-            const bool                              bDeclaresWait = step.findAttribute( "timeoutFrames" ) != nullptr || step.findAttribute( "timeoutSeconds" ) != nullptr;
+            const bool bDeclaresWait = step.findAttribute( "timeoutFrames" ) != nullptr || step.findAttribute( "timeoutSeconds" ) != nullptr ||
+                                       step.findAttribute( "timeoutWallSeconds" ) != nullptr;
             AutomationStepArgsUtil::WaitTimeoutArgs timeout;
             string                                  error;
             if ( bDeclaresWait && AutomationStepArgsUtil::parseWaitTimeout( step, timeout, error ) )
-                limitSeconds += timeout._bSeconds ? timeout._timeoutSeconds : static_cast<float32>( timeout._timeoutFrames ) * _scenario.getFixedDelta();
+                limitSeconds += timeout._bWallSeconds ? timeout._timeoutWallSeconds
+                              : timeout._bSeconds     ? timeout._timeoutSeconds
+                                                      : static_cast<float32>( timeout._timeoutFrames ) * _scenario.getFixedDelta();
         }
         return limitSeconds;
     }
@@ -779,6 +783,16 @@ namespace sw
         return AutomationStepHold::Hold;
     }
 
+    AutomationStepHold AutomationRunner::holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds )
+    {
+        const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
+        if ( _run._holdFrameCount == 0 )
+            _run._holdStartSeconds = nowSeconds;
+        const bool bExpired = _run._holdFrameCount > 0 && nowSeconds - _run._holdStartSeconds >= static_cast<float64>( wallSeconds );
+        // 프레임 판(`holdUntilReady`)이 붙잡기 · 놓기 · 입력 밀기를 한 곳에서 한다 — 시한만 벽시계로 정해 넘긴다.
+        return holdUntilReady( step, input, bReady, bExpired ? _run._holdFrameCount : UINT32_MAX );
+    }
+
     IAutomationStepState* AutomationRunner::findHeldStepState( const AutomationStep& step ) const
     {
         return _run._pHeldStateStep == &step ? _run._pHeldStepState.get() : nullptr;
@@ -834,9 +848,11 @@ namespace sw
             recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드) — 기다리지 않고 실패로 적는다
             return false;
         }
-        const uint32 timeoutFrames  = timeout._bSeconds ? convertSecondsToFrames( timeout._timeoutSeconds ) : timeout._timeoutFrames;
-        const uint32 heldFrameCount = _run._holdFrameCount;
-        if ( holdUntilReady( step, input, bReady, timeoutFrames ) == AutomationStepHold::Hold )
+        const uint32             heldFrameCount = _run._holdFrameCount;
+        const uint32             timeoutFrames  = timeout._bSeconds ? convertSecondsToFrames( timeout._timeoutSeconds ) : timeout._timeoutFrames;
+        const AutomationStepHold hold           = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds )
+                                                                        : holdUntilReady( step, input, bReady, timeoutFrames );
+        if ( hold == AutomationStepHold::Hold )
             return true;
         // 처음부터 참이던 조건도 남긴다 - 고정 대기를 조건 대기로 바꿀 때 "기다리지 않고 지나간" 단언(일어나지 않음을 보는 부정형일 수 있다)을 가려낸다.
         if ( bReady && heldFrameCount == 0 )

@@ -98,6 +98,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 ```
 
 - 단계는 **적은 순서대로** 돈다. 시간은 `<Wait frames="N"/>`(또는 `seconds`)가 흘리고, `<WaitUntil>` 은 조건이 설 때까지 기다린다(제 프레임을 혼자 갖도록 읽기가 앞뒤를 한 프레임씩 띄운다). `<At frame>` 은 없다.
+- `<WaitUntil>` 의 시한은 셋 중 하나다: `timeoutFrames`(시나리오 프레임), `timeoutSeconds`(게임 초 — 고정 델타로 프레임이 된다), `timeoutWallSeconds`(벽시계 초 — 게임 시간과 무관한 바깥 일: 자식 프로세스 종료 · 파일 · GPU). 무인 실행은 프레임이 실시간보다 빨리 돌아 게임 초로 바깥 일을 기다리면 금방 끝난다(넷플레이 종료 대기 20 초가 0.8 초였다).
 - `timeoutFrames` 는 시나리오에 적은 프레임(고정 대기 · 단계)만 센다. 시계를 붙잡는 대기(`<WaitUntil>` · `<LoadScene>` · 입력 대상 자리 잡기 · 스크린샷의 에셋 대기 …)는 저마다 제 시한이 있어 늦게 선 조건은 그 단계 이름으로 진다(언리얼 latent 명령 · 유니티 `WaitUntil` 과 같고, 전체는 벽시계 `wallTimeoutSeconds` 가 묶는다). 마지막 단계가 시한 밖이면 읽기 오류다. `<Pass/>` 가 뒤의 일(아래 끝 차단)을 기다리는 프레임은 `kMaxFinishWaitFrames` 가 따로 묶는다.
 - 이미지는 골든 비교다: 영역을 가로 160 화소 이하로 줄여 `golden/<시나리오>.<이름>.<백엔드>.ppm` 과 견주고, 색 거리 12 이상인 화소가 `tolerance`(기본 1 %)를 넘으면 실패다. 골든은 `-scenario-update-golden` 으로 뜨거나 갱신하고(보고의 `updatedGoldens`), 그림을 보고 커밋한다.
 - 로그 게이트: 시나리오 구간의 Warning · Error 는 `<ExpectLog>`(기대) 나 `<AllowLog>`(허용, 사유 필수)가 없으면 실패다. id 없는 줄은 허용할 수 없다 — 소스에 id 를 붙인다.

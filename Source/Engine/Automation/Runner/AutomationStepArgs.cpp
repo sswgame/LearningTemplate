@@ -92,8 +92,10 @@ namespace sw
 
     bool AutomationStepArgsUtil::parseWaitTimeout( const AutomationStep& step, WaitTimeoutArgs& outArgs, string& outError )
     {
-        outArgs._bSeconds = step.findAttribute( "timeoutSeconds" ) != nullptr;
-        return readUint( step, "timeoutFrames", outArgs._timeoutFrames, outError ) && readFloat( step, "timeoutSeconds", outArgs._timeoutSeconds, outError );
+        outArgs._bSeconds     = step.findAttribute( "timeoutSeconds" ) != nullptr;
+        outArgs._bWallSeconds = step.findAttribute( "timeoutWallSeconds" ) != nullptr;
+        return readUint( step, "timeoutFrames", outArgs._timeoutFrames, outError ) && readFloat( step, "timeoutSeconds", outArgs._timeoutSeconds, outError ) &&
+               readFloat( step, "timeoutWallSeconds", outArgs._timeoutWallSeconds, outError );
     }
 
     bool AutomationStepArgsUtil::parseExpectLog( const AutomationStep& step, ExpectLogArgs& outArgs, string& outError )
