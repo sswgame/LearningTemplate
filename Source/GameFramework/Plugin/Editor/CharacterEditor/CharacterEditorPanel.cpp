@@ -29,6 +29,7 @@
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -53,7 +54,6 @@ namespace sw::editor
             static constexpr float32 kDragSpeed                = 0.005f;
             static constexpr float32 kRotationDragSpeed        = 0.5f;
             static constexpr float32 kPathButtonsColumns       = 32.0f;
-            static constexpr float32 kSocketListLines          = 7.0f;
             static constexpr float32 kBoneTreeLines            = 10.0f;
             static constexpr float32 kPresetListLines          = 5.0f;
             static constexpr float32 kExplanationListLines     = 7.0f;
@@ -783,16 +783,32 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawSocketTab()
     {
+        // 목록(왼쪽) · 고른 소켓의 상세(오른쪽) 두 칸이 남은 높이를 모두 쓴다 — 언리얼 스켈레톤 에디터의 소켓 트리 · 디테일 배치. 예전에는 7 줄 고정 목록 아래에 상세를 쌓아
+        // 소켓이 많으면 목록이 잘리고 창 아래 반이 비었다(uiaudit 36).
+        constexpr ImGuiTableFlags kSplitFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV;
+        if ( ImGui::BeginTable( "##SocketSplit", 2, kSplitFlags, ImVec2{ 0.0f, ImGui::GetContentRegionAvail().y } ) == false )
+            return;
+        ImGui::TableSetupColumn( "##List", ImGuiTableColumnFlags_WidthStretch, 0.35f );
+        ImGui::TableSetupColumn( "##Detail", ImGuiTableColumnFlags_WidthStretch, 0.65f );
+        ImGui::TableNextColumn();
         drawSocketList();
+        ImGui::TableNextColumn();
         const SocketDef* pSelected = _document.getSocketModel().findSocket( _document.getSelectedSocket() );
         if ( pSelected != nullptr )
         {
-            ImGui::Separator();
             const SocketDef selected = *pSelected; // 편집이 표를 바꾸므로 복사본으로 그린다
             drawSocketDetail( selected );
         }
+        else
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorCharacterEditor", "SocketNoSelection" ) );
+        }
+        drawSocketIssues();
+        ImGui::EndTable();
+    }
 
-        ImGui::Separator();
+    void CharacterEditorPanel::drawSocketIssues()
+    {
         vector<string> listIssue;
         if ( _document.getSocketModel().validate( listIssue ) == false )
         {
@@ -805,12 +821,14 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawSocketList()
     {
-        ImGui::InputText( "##NewSocketName", _newName.data(), _newName.max_size() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add" ) );
-        if ( ImGui::Button( "Add" ) )
+        const utf8* const pAdd = SW_LOCKEY( "EditorCharacterEditor", "AddSocketButton" );
+        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( pAdd ) - ImGui::GetStyle().ItemSpacing.x );
+        ImGui::InputTextWithHint( "##NewSocketName", SW_LOCKEY( "EditorCharacterEditor", "NewSocketHint" ), _newName.data(), _newName.max_size() );
+        ImGui::SameLine();
+        if ( ImGui::Button( pAdd ) )
             _document.addSocket( CharacterEditorPanelInternal::makeName( _newName.c_str() ) );
 
-        if ( ImGui::BeginChild( "##SocketList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kSocketListLines ) ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##SocketList", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders ) )
         {
             bool bFirst = true;
             for ( const SocketDef& socket : _document.getSocketModel().getSockets().getSockets() )

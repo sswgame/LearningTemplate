@@ -1198,6 +1198,7 @@
 		<entry key="EditorMultiplayer.WindowColumns"
 		       text="다음 줄로 넘어가기 전에 한 줄에 놓는 창 수"
 		       sourceHash="725c31198012ea35" />
+		<entry key="EditorMultiplayer.WindowColumnsLabel" text="열" sourceHash="b0f3327210fe18fc" review="true" />
 		<entry key="EditorMultiplayer.WindowSize"
 		       text="App 창마다의 클라이언트 영역 크기(픽셀)"
 		       sourceHash="9328b054689ddf9d" />

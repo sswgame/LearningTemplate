@@ -130,12 +130,12 @@ namespace sw::editor
 
     void MultiplayerSessionTab::drawWindowLayout( EditorNetPlaySettings& settings )
     {
-        ImGui::Checkbox( "Arrange windows", &settings._bArrangeWindows );
+        ImGui::Checkbox( SW_LOCKEY( "EditorMultiplayer", "ArrangeWindowsLabel" ), &settings._bArrangeWindows );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ArrangeWindows" ) );
         if ( settings._bArrangeWindows == false )
             return;
         const float32 fieldWidth = ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( fieldWidth * 2.0f + ImGui::CalcTextSize( "x" ).x + ImGui::GetStyle().ItemSpacing.x * 2.0f );
         ImGui::SetNextItemWidth( fieldWidth );
         ImGui::InputInt( "##WindowWidth", &settings._windowWidth, 0, 0 );
         ImGui::SameLine();
@@ -144,8 +144,15 @@ namespace sw::editor
         ImGui::SetNextItemWidth( fieldWidth );
         ImGui::InputInt( "##WindowHeight", &settings._windowHeight, 0, 0 );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "WindowSize" ) );
+        // 단추가 붙은 칸은 폭에 -/+ 단추(정사각 둘)가 들어간다 — 숫자 칸 폭만 주면 숫자가 몇 픽셀로 눌려 ':' 만 보였다(uiaudit 31). 이름표로 무엇을 세는지 밝힌다.
+        const utf8* const pColumns     = SW_LOCKEY( "EditorMultiplayer", "WindowColumnsLabel" );
+        const ImGuiStyle& style        = ImGui::GetStyle();
+        const float32     stepperWidth = fieldWidth + 2.0f * ( ImGui::GetFrameHeight() + style.ItemInnerSpacing.x );
+        EditorChrome::sameLineIfFits( ImGui::CalcTextSize( pColumns ).x + style.ItemSpacing.x + stepperWidth );
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted( pColumns );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( fieldWidth );
+        ImGui::SetNextItemWidth( stepperWidth );
         ImGui::InputInt( "##WindowColumns", &settings._windowColumnCount, 1, 1 );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "WindowColumns" ) );
         settings._windowWidth       = MathUtil::clamp( settings._windowWidth, MultiplayerSessionTabInternal::kMinWindowSide, MultiplayerSessionTabInternal::kMaxWindowSide );
@@ -161,7 +168,7 @@ namespace sw::editor
         ImGui::BeginDisabled( session.isRunning() );
         ImGui::Checkbox( "Record traces", &settings._bRecordTraces );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "RecordTraces" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EditorMultiplayer", "ArrangeWindowsLabel" ) ) );
         drawWindowLayout( settings );
         // 프리셋을 고르면 구성이 통째로 바뀐다 — 편집 칸은 늘 구성을 따른다(입력은 아래에서 곧바로 구성에 쓰므로 같은 글이다).
         if ( ( _clientArguments == settings._clientArguments.c_str() ) == false )

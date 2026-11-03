@@ -446,6 +446,21 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorCharacterEditor.AddSocketButton" source="Add">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCharacterEditor.NewSocketHint" source="New socket name">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCharacterEditor.SocketNoSelection" source="Select a socket in the list to edit it.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Keep" source="Keep" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/confirm_countdown.ui.xml</item>

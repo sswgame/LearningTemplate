@@ -124,6 +124,7 @@ namespace sw::editor
         void               drawFileRow();
         void               drawSocketTab();
         void               drawSocketList();
+        void               drawSocketIssues(); ///< 소켓 표의 검사 결과(이름 겹침 · 없는 부모 …)
         void               drawSocketDetail( const SocketDef& socket );
         void               drawSkeletonTab();
         void               drawBoneNode( uint32 boneIndex );

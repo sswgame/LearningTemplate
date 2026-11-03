@@ -2316,6 +2316,11 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMultiplayer.ArrangeWindowsLabel" source="Arrange windows">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMultiplayer.ClientArgumentsHint" source="client arguments (e.g. -vk)">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
@@ -2635,6 +2640,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorMultiplayer.WindowColumns" source="Windows per row before the next row starts">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.WindowColumnsLabel" source="Columns">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 			</origins>
@@ -3078,6 +3088,16 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.CurveButton" source="Curve">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteKeyButton" source="Delete key">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.DeleteKeyTip" source="Remove this track's keys at the current frame on every channel.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -3089,6 +3109,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.ItemTargetTip" source="Name of the scene object this clip, event or camera cut acts on.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.KeyButton" source="Key">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -3131,6 +3156,11 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.PropertyLabel" source="Property">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.PropertyPathTip"
 		       source="&lt;ComponentType>.&lt;Property> - a float32 or int32 property (for example CameraComponent._fov)">
 			<origins>
@@ -3138,6 +3168,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.PropertyTargetNotFound" source="Target or numeric property not found">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.RigSlotLabel" source="Rig slot">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -3176,6 +3211,16 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.TargetNotFound" source="Target object not found">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TrackNameLabel" source="Name">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TrackTargetLabel" source="Target">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>

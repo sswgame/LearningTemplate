@@ -155,6 +155,8 @@ namespace sw::editor
         const float32 heldDb = _model.getHeldPeakDecibel( busIndex );
 
         ImGui::BeginGroup();
+        // 띠는 앞 띠 옆(SameLine)에 놓여 그 줄의 글자 기준선(단추 높이)을 물려받는다 — 첫 띠만 기준선이 없어 6px 위에 그려졌다(uiaudit 26). 모든 띠를 단추 기준선에 맞춘다.
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( name.c_str() );
         if ( heldDb < AudioMixerModel::kMeterFloorDb )
             ImGui::TextDisabled( "-inf dB" );

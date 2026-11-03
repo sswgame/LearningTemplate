@@ -422,7 +422,11 @@ namespace sw::editor
 
     void SequencerPanel::drawTrackTextField( const utf8* pLabel, string& inoutText, const utf8* pTooltip, bool bPreviewOnEdit )
     {
-        EditorWidgets::drawTextField( pLabel, inoutText );
+        // 이름표는 왼쪽 열(인스펙터와 같은 `drawPropertyRowLabel`), 칸은 남은 폭 — ImGui 기본(오른쪽 이름표)은 칸이 창 폭을 따라 늘고 이름표가 줄 끝으로 밀렸다.
+        ImGui::PushID( pLabel );
+        EditorWidgets::drawPropertyRowLabel( pLabel );
+        EditorWidgets::drawTextField( "##value", inoutText, -1.0f );
+        ImGui::PopID();
         if ( pTooltip != nullptr )
             EditorWidgets::drawTooltip( pTooltip );
         if ( ImGui::IsItemDeactivatedAfterEdit() == false )
@@ -435,12 +439,12 @@ namespace sw::editor
     void SequencerPanel::drawSelectedTrack( SequenceKeyTrack& track )
     {
         ImGui::Separator();
-        drawTrackTextField( "Track Name", track._name, nullptr, false );
-        drawTrackTextField( "Track Target", track._targetObject, nullptr, true );
+        drawTrackTextField( SW_LOCKEY( "EditorSequencer", "TrackNameLabel" ), track._name, nullptr, false );
+        drawTrackTextField( SW_LOCKEY( "EditorSequencer", "TrackTargetLabel" ), track._targetObject, nullptr, true );
         if ( track._kind == SequenceTrackKind::Property )
-            drawTrackTextField( "Property", track._propertyPath, SW_LOCKEY( "EditorSequencer", "PropertyPathTip" ), true );
+            drawTrackTextField( SW_LOCKEY( "EditorSequencer", "PropertyLabel" ), track._propertyPath, SW_LOCKEY( "EditorSequencer", "PropertyPathTip" ), true );
         else if ( track._kind == SequenceTrackKind::RigSlot )
-            drawTrackTextField( "Rig Slot", track._propertyPath, SW_LOCKEY( "EditorSequencer", "RigSlotTip" ), true );
+            drawTrackTextField( SW_LOCKEY( "EditorSequencer", "RigSlotLabel" ), track._propertyPath, SW_LOCKEY( "EditorSequencer", "RigSlotTip" ), true );
 
         GameObjectManager* pManager = editor::getActiveObjectManager();
         const float32      frame    = static_cast<float32>( _currentFrame );
@@ -454,7 +458,7 @@ namespace sw::editor
     void SequencerPanel::drawKeyButtons( SequenceKeyTrack& track, float32 frame, const float32* pArrCurrent, bool bTargetFound )
     {
         ImGui::BeginDisabled( bTargetFound == false );
-        if ( ImGui::Button( "Key" ) )
+        if ( ImGui::Button( SW_LOCKEY( "EditorSequencer", "KeyButton" ) ) )
         {
             track.setKey( frame, pArrCurrent, kSequenceTransformChannelCount );
             notifyDocumentEdited( "Add Sequence Key" );
@@ -462,9 +466,10 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "sequencer.addKey" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddKeyTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete Key" ) );
+        const utf8* const pDeleteKey = SW_LOCKEY( "EditorSequencer", "DeleteKeyButton" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDeleteKey ) );
         ImGui::BeginDisabled( track.hasKeyAt( frame ) == false );
-        if ( ImGui::Button( "Delete Key" ) && track.removeKeysAt( frame ) )
+        if ( ImGui::Button( pDeleteKey ) && track.removeKeysAt( frame ) )
         {
             notifyDocumentEdited( "Delete Sequence Key" );
             previewCurrentFrame();
@@ -528,9 +533,12 @@ namespace sw::editor
             // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모에 해당한다.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.6f );
+            // 이름표 열 · 값 · 커브 단추 순서(인스펙터 줄과 같다) — 값 칸은 단추 몫을 뺀 남은 폭이다.
+            const utf8* const pCurve = SW_LOCKEY( "EditorSequencer", "CurveButton" );
+            EditorWidgets::drawPropertyRowLabel( track.getChannelName( channelIndex ) );
+            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( pCurve ) - ImGui::GetStyle().ItemSpacing.x );
             const float32 speed = bRotation ? InspectorPropertyLayout::kAngleDragSpeed : 0.05f;
-            if ( ImGui::DragFloat( track.getChannelName( channelIndex ), &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
+            if ( ImGui::DragFloat( "##value", &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
             {
                 (void)track.setChannelKey( channelIndex, frame, value / displayMul );
                 previewCurrentFrame();
@@ -540,8 +548,8 @@ namespace sw::editor
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
             EditorSelfTestMarks::note( mark.c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Curve" ) );
-            if ( ImGui::SmallButton( "Curve" ) )
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( pCurve ) )
             {
                 _curveTrack              = _selectedTrack;
                 _curveChannel            = static_cast<int32>( channelIndex );
