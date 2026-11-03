@@ -544,9 +544,13 @@ namespace sw
     {
         if ( _imageIndex >= _listImageFence.size() )
             return static_cast<int32>( VK_SUCCESS );
-        VkResult result = VK_SUCCESS;
-        if ( _listImageFence[_imageIndex] != VK_NULL_HANDLE )
-            result = vkWaitForFences( device, 1, &_listImageFence[_imageIndex], VK_TRUE, UINT64_MAX );
+        // 이 이미지를 지난번에도 같은 프레임 슬롯이 썼으면 기다릴 것이 없다 — 그 펜스는 `beginFrame` 첫머리가 이미 기다렸고, 창별 스왑체인(`useSwapChain`)은 프레임 도중에
+        // 획득하므로 그 펜스가 이미 리셋돼 이번 프레임을 제출하기 전에는 신호가 오지 않는다(기다리면 영원히 멈춘다 — Release 창 체인의 editor.screen ResizeWindow).
+        VkResult      result      = VK_SUCCESS;
+        const VkFence imageFence  = _listImageFence[_imageIndex];
+        const bool    bOtherFrame = imageFence != VK_NULL_HANDLE && imageFence != frameFence;
+        if ( bOtherFrame )
+            result = vkWaitForFences( device, 1, &imageFence, VK_TRUE, UINT64_MAX );
         _listImageFence[_imageIndex] = frameFence;
         return static_cast<int32>( result );
     }

@@ -117,6 +117,7 @@ namespace sw
         VkSemaphore takeAcquireWait();
         /**
          * @brief 현재 이미지를 마지막으로 쓴 프레임이 GPU 에서 끝날 때까지 기다리고, 그 자리를 @p frameFence 로 적습니다.
+         * @details 마지막으로 쓴 프레임이 지금 프레임 슬롯(@p frameFence)이면 기다리지 않는다 — 부르는 쪽은 그 펜스를 `beginFrame` 에서 이미 기다렸다(리셋 뒤일 수 있다).
          * @return `vkWaitForFences` 결과(VkResult 값)입니다. 기다릴 것이 없으면 VK_SUCCESS 입니다.
          */
         int32 waitForImageReuse( VkDevice device, VkFence frameFence );
