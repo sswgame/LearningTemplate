@@ -712,6 +712,303 @@ msgctxt "EdCommon.ViewportOrientationCube"
 msgid "Show or hide the orientation cube that shows which way the camera faces."
 msgstr "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Actions"
+msgid "Actions"
+msgstr "액션"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.ActiveSceneComponentDistribution"
+msgid "Active Scene & Component Distribution"
+msgstr "활성 씬과 컴포넌트 분포"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.AddNewActionLayer"
+msgid "Add New Action / Layer"
+msgstr "새 액션 · 레이어 추가"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdSection.AttachByAddress"
+msgid "Attach by address"
+msgstr "주소로 붙기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Bindings"
+msgid "Bindings"
+msgstr "바인딩"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdSection.BoneMasks"
+msgid "Bone Masks"
+msgstr "뼈 마스크"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.CPUScopes"
+msgid "CPU Scopes"
+msgstr "CPU 구간"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.CallTree"
+msgid "Call Tree"
+msgstr "호출 트리"
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EdSection.Camera"
+msgid "Camera"
+msgstr "카메라"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdSection.ClipsEventsAndCameraCuts"
+msgid "Clips, Events and Camera Cuts"
+msgstr "클립 · 이벤트 · 카메라 컷"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.CommandPatternTester"
+msgid "Command Pattern Tester"
+msgstr "명령 패턴 시험기"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdSection.Components"
+msgid "Components"
+msgstr "컴포넌트"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdSection.Condition"
+msgid "Condition"
+msgstr "조건"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Conflicts"
+msgid "Conflicts"
+msgstr "충돌"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.Counters"
+msgid "Counters"
+msgstr "카운터"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdSection.Curve"
+msgid "Curve"
+msgstr "커브"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Debug"
+msgid "Debug"
+msgstr "디버그"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdSection.DebugHUDSections"
+msgid "Debug HUD sections"
+msgstr "디버그 HUD 구역"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Devices"
+msgid "Devices"
+msgstr "장치"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.Driver"
+msgid "Driver"
+msgstr "드라이버"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdSection.EditorSelfTests"
+msgid "Editor Self Tests"
+msgstr "에디터 자체 테스트"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdSection.Events"
+msgid "Events"
+msgstr "이벤트"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+#: Source/Editor/SelfTest/EditorSelfTestCases.cpp
+msgctxt "EdSection.GPUMemory"
+msgid "GPU Memory"
+msgstr "GPU 메모리"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.GPUPasses"
+msgid "GPU Passes"
+msgstr "GPU 패스"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdSection.GameDataXMLTables"
+msgid "Game Data XML Tables"
+msgstr "게임 데이터 XML 표"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Gamepad0Status"
+msgid "Gamepad 0 Status"
+msgstr "게임패드 0 상태"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.GlobalStatisticsByTag"
+msgid "Global Statistics By Tag"
+msgstr "태그별 전체 통계"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdSection.Graph"
+msgid "Graph"
+msgstr "그래프"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Graphs"
+msgid "Graphs"
+msgstr "그래프"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.InputLayers"
+msgid "Input Layers"
+msgstr "입력 레이어"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdSection.KeyTracks"
+msgid "Key Tracks"
+msgstr "키 트랙"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.KeyboardStatus"
+msgid "Keyboard Status"
+msgstr "키보드 상태"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdSection.Layers"
+msgid "Layers"
+msgstr "레이어"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdSection.Layout"
+msgid "Layout"
+msgstr "배치"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.LeakWindowBlocksBornInTheWindow"
+msgid "Leak Window (Blocks Born In The Window)"
+msgstr "누수 창(창 안에서 생긴 블록)"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdSection.LocalizationStrings"
+msgid "Localization Strings"
+msgstr "현지화 문자열"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.Mappings"
+msgid "Mappings"
+msgstr "매핑"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.Memory"
+msgid "Memory"
+msgstr "메모리"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdSection.Methods"
+msgid "Methods"
+msgstr "메서드"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.MouseStatus"
+msgid "Mouse Status"
+msgstr "마우스 상태"
+
+#: Source/Editor/Panels/Scene/PrefabPanel.cpp
+msgctxt "EdSection.NestedPrefabsSubAssets"
+msgid "Nested Prefabs & Sub-Assets"
+msgstr "중첩 프리팹 · 하위 에셋"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdSection.Panels"
+msgid "Panels"
+msgstr "패널"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.PerformanceScene"
+msgid "Performance & Scene"
+msgstr "성능과 씬"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+msgctxt "EdSection.PinnedFavorites"
+msgid "Pinned / Favorites"
+msgstr "고정 · 즐겨찾기"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.PromptGlyphs"
+msgid "Prompt Glyphs"
+msgstr "입력 안내 글리프"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.ReplayInject"
+msgid "Replay & Inject"
+msgstr "재생 · 주입"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.ResourceCatalogSummary"
+msgid "Resource Catalog Summary"
+msgstr "리소스 카탈로그 요약"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdSection.Scenarios"
+msgid "Scenarios"
+msgstr "시나리오"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdSection.Sections"
+msgid "Sections"
+msgstr "구역"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdSection.State"
+msgid "State"
+msgstr "상태"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.TaskManagerConcurrency"
+msgid "Task Manager & Concurrency"
+msgstr "작업 관리자 · 동시성"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.Timeline"
+msgid "Timeline"
+msgstr "타임라인"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdSection.Tools"
+msgid "Tools"
+msgstr "도구"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.TopMemoryAllocationsByCallStack"
+msgid "Top Memory Allocations By Call Stack"
+msgstr "호출 스택별 상위 메모리 할당"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdSection.TrackedMemoryByKind"
+msgid "Tracked Memory By Kind"
+msgstr "종류별 추적 메모리"
+
+#: Source/Editor/Panels/Inspector/SceneComponentInspector.cpp
+msgctxt "EdSection.Transform"
+msgid "Transform"
+msgstr "트랜스폼"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdSection.Transitions"
+msgid "Transitions"
+msgstr "전이"
+
+#: Source/Editor/SelfTest/TestRunnerPanel.cpp
+msgctxt "EdSection.UnitTests"
+msgid "Unit Tests"
+msgstr "단위 테스트"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdSection.ViewportHUD"
+msgid "Viewport HUD"
+msgstr "뷰포트 HUD"
+
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 #: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp

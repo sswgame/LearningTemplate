@@ -107,9 +107,9 @@ namespace sw::editor
             pHUD->setShown( bShown );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DebugHUDShow" ) );
         EditorSelfTestMarks::note( "preferences.debugHUD.shown" );
-        ImGui::SeparatorText( "Sections" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Sections" ) );
         drawSectionChecklist();
-        ImGui::SeparatorText( "Layout" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Layout" ) );
         drawLayoutSettings();
     }
 
@@ -117,7 +117,7 @@ namespace sw::editor
     {
         if ( EditorInputGUI::beginItemContextMenu( pPopupID ) )
         {
-            ImGui::SeparatorText( "Debug HUD sections" );
+            ImGui::SeparatorText( SW_LOCKEY( "EdSection", "DebugHUDSections" ) );
             drawSectionChecklist();
             ImGui::Separator();
             drawLayoutSettings();

@@ -326,6 +326,75 @@
 		<entry key="EdCommon.ViewportOrientationCube"
 		       text="카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 		       sourceHash="c994648fc818bbf2" />
+		<entry key="EdSection.Actions" text="액션" sourceHash="8af61807443f32a4" />
+		<entry key="EdSection.ActiveSceneComponentDistribution"
+		       text="활성 씬과 컴포넌트 분포"
+		       sourceHash="9e636986667fd1b4" />
+		<entry key="EdSection.AddNewActionLayer" text="새 액션 · 레이어 추가" sourceHash="df49a867f23e5194" />
+		<entry key="EdSection.AttachByAddress" text="주소로 붙기" sourceHash="4595bdd6e003ff29" />
+		<entry key="EdSection.Bindings" text="바인딩" sourceHash="3d5586781c492703" />
+		<entry key="EdSection.BoneMasks" text="뼈 마스크" sourceHash="f025c39882264496" />
+		<entry key="EdSection.CPUScopes" text="CPU 구간" sourceHash="366920f3450138b6" />
+		<entry key="EdSection.CallTree" text="호출 트리" sourceHash="0078f10bc6e37407" />
+		<entry key="EdSection.Camera" text="카메라" sourceHash="54d1b2a64667e32e" />
+		<entry key="EdSection.ClipsEventsAndCameraCuts"
+		       text="클립 · 이벤트 · 카메라 컷"
+		       sourceHash="1d05976abaf607a8" />
+		<entry key="EdSection.CommandPatternTester" text="명령 패턴 시험기" sourceHash="2709367edc7f443f" />
+		<entry key="EdSection.Components" text="컴포넌트" sourceHash="bcc8e9d485792ce9" />
+		<entry key="EdSection.Condition" text="조건" sourceHash="d0182c6d73eaa2be" />
+		<entry key="EdSection.Conflicts" text="충돌" sourceHash="9c657c5b21e85cb4" />
+		<entry key="EdSection.Counters" text="카운터" sourceHash="36f6766957c7f710" />
+		<entry key="EdSection.Curve" text="커브" sourceHash="c341553c3556d2b4" />
+		<entry key="EdSection.Debug" text="디버그" sourceHash="96d2f1dc180a46d8" />
+		<entry key="EdSection.DebugHUDSections" text="디버그 HUD 구역" sourceHash="cbfba40cd61f689f" />
+		<entry key="EdSection.Devices" text="장치" sourceHash="cfe39d24bc958960" />
+		<entry key="EdSection.Driver" text="드라이버" sourceHash="b0c44bf7b8de9adf" />
+		<entry key="EdSection.EditorSelfTests" text="에디터 자체 테스트" sourceHash="dc8dc34beebf9e37" />
+		<entry key="EdSection.Events" text="이벤트" sourceHash="c265a3e29e1206e4" />
+		<entry key="EdSection.GPUMemory" text="GPU 메모리" sourceHash="2f07c90db9461ce8" />
+		<entry key="EdSection.GPUPasses" text="GPU 패스" sourceHash="6515bc98f5df0312" />
+		<entry key="EdSection.GameDataXMLTables" text="게임 데이터 XML 표" sourceHash="359b637dcd372a81" />
+		<entry key="EdSection.Gamepad0Status" text="게임패드 0 상태" sourceHash="29951998888ef5ca" />
+		<entry key="EdSection.GlobalStatisticsByTag" text="태그별 전체 통계" sourceHash="1adf1617873938d6" />
+		<entry key="EdSection.Graph" text="그래프" sourceHash="ef467f8fe7307be7" />
+		<entry key="EdSection.Graphs" text="그래프" sourceHash="c5465585d761fc7c" />
+		<entry key="EdSection.InputLayers" text="입력 레이어" sourceHash="cf24b65f27d84cab" />
+		<entry key="EdSection.KeyTracks" text="키 트랙" sourceHash="84feb54fcb2ae7d8" />
+		<entry key="EdSection.KeyboardStatus" text="키보드 상태" sourceHash="d9ebbd5366e488a6" />
+		<entry key="EdSection.Layers" text="레이어" sourceHash="dab38385e185e9bf" />
+		<entry key="EdSection.Layout" text="배치" sourceHash="2e4818861000b13f" />
+		<entry key="EdSection.LeakWindowBlocksBornInTheWindow"
+		       text="누수 창(창 안에서 생긴 블록)"
+		       sourceHash="d9264487aec8253e" />
+		<entry key="EdSection.LocalizationStrings" text="현지화 문자열" sourceHash="91fe4f71332a596e" />
+		<entry key="EdSection.Mappings" text="매핑" sourceHash="18aab33fa5111902" />
+		<entry key="EdSection.Memory" text="메모리" sourceHash="16e1bead7b9c95ce" />
+		<entry key="EdSection.Methods" text="메서드" sourceHash="bc7a8b2f2555ebb9" />
+		<entry key="EdSection.MouseStatus" text="마우스 상태" sourceHash="67d4b652a760a9b6" />
+		<entry key="EdSection.NestedPrefabsSubAssets"
+		       text="중첩 프리팹 · 하위 에셋"
+		       sourceHash="373710a7a5eede55" />
+		<entry key="EdSection.Panels" text="패널" sourceHash="880c0544e68a14e2" />
+		<entry key="EdSection.PerformanceScene" text="성능과 씬" sourceHash="ca40662acda06bef" />
+		<entry key="EdSection.PinnedFavorites" text="고정 · 즐겨찾기" sourceHash="af15e3b9fa2ab8f7" />
+		<entry key="EdSection.PromptGlyphs" text="입력 안내 글리프" sourceHash="81084883101c2a1e" />
+		<entry key="EdSection.ReplayInject" text="재생 · 주입" sourceHash="03c812948bade9d9" />
+		<entry key="EdSection.ResourceCatalogSummary" text="리소스 카탈로그 요약" sourceHash="4ff989f238561472" />
+		<entry key="EdSection.Scenarios" text="시나리오" sourceHash="ee0ed65dc7b709d4" />
+		<entry key="EdSection.Sections" text="구역" sourceHash="0337d90cf703df0d" />
+		<entry key="EdSection.State" text="상태" sourceHash="ae239213b7c70376" />
+		<entry key="EdSection.TaskManagerConcurrency" text="작업 관리자 · 동시성" sourceHash="63eb50539c2674ce" />
+		<entry key="EdSection.Timeline" text="타임라인" sourceHash="680fc90489553ed6" />
+		<entry key="EdSection.Tools" text="도구" sourceHash="c26501e3ade7da3c" />
+		<entry key="EdSection.TopMemoryAllocationsByCallStack"
+		       text="호출 스택별 상위 메모리 할당"
+		       sourceHash="f53c9ebb898b2e63" />
+		<entry key="EdSection.TrackedMemoryByKind" text="종류별 추적 메모리" sourceHash="4c81ae042ec79a6d" />
+		<entry key="EdSection.Transform" text="트랜스폼" sourceHash="c1fff4f356dfb2fb" />
+		<entry key="EdSection.Transitions" text="전이" sourceHash="5798e7f4322a6963" />
+		<entry key="EdSection.UnitTests" text="단위 테스트" sourceHash="02fb39ac5c0f71e2" />
+		<entry key="EdSection.ViewportHUD" text="뷰포트 HUD" sourceHash="f3d8a3defa991eb2" />
 		<entry key="EdVerb.Apply" text="적용" sourceHash="b8f855b49234b81b" />
 		<entry key="EdVerb.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="EdVerb.Clear" text="지우기" sourceHash="b4f1dffbb6be6302" />

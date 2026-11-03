@@ -151,19 +151,19 @@ namespace sw::editor
         {
             const ImGuiTabItemFlags mappingsFlags = _bSelectFirstTab ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
             _bSelectFirstTab                      = SW_FALSE;
-            if ( ImGui::BeginTabItem( "Mappings", nullptr, mappingsFlags ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Mappings" ), nullptr, mappingsFlags ) )
             {
                 drawMappingsTab();
                 ImGui::EndTabItem();
             }
-            const bool bDebugTab = ImGui::BeginTabItem( "Debug" );
+            const bool bDebugTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Debug" ) );
             EditorSelfTestMarks::note( "inputMap.tab.debug" );
             if ( bDebugTab )
             {
                 drawDebugTab();
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "Replay & Inject" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "ReplayInject" ) ) )
             {
                 drawInputReplayTab();
                 ImGui::Separator();
@@ -230,7 +230,7 @@ namespace sw::editor
 
     void InputMapPanel::drawActionList()
     {
-        ImGui::SeparatorText( "Actions" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Actions" ) );
         EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::buffer::kMax64, SW_LOCKEY( "EditorInputMap", "FilterActionsHint" ) );
         EditorSelfTestMarks::note( "inputMap.filter" );
         const EditorListFilter filter{ string_view( _arrActionFilter ) };
@@ -283,7 +283,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetActionTip" ) );
 
         // 바인딩마다 키(글리프), 레이어, 발화 규칙(트리거), 다시 잡기 버튼을 둔다.
-        ImGui::SeparatorText( "Bindings" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Bindings" ) );
         const uint32 bindingCount = inputMap.getBindingCount( action );
         for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
         {
@@ -400,7 +400,7 @@ namespace sw::editor
         const vector<InputMapConflict>& listConflict = _document.getConflicts();
         if ( InputMapConflicts::involves( listConflict, action ) == false )
             return;
-        ImGui::SeparatorText( "Conflicts" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Conflicts" ) );
         for ( size_t index = 0; index < listConflict.size(); ++index )
         {
             const InputMapConflict& conflict = listConflict[index];
@@ -429,7 +429,7 @@ namespace sw::editor
     void InputMapPanel::drawPromptGlyphs( const hashed_string& action )
     {
         // 플랫폼 글리프는 화면에 표시할 버튼 아이콘이다. 언리얼 CommonUI 의 입력 표시에 해당한다.
-        ImGui::SeparatorText( "Prompt Glyphs" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "PromptGlyphs" ) );
         static constexpr InputGlyphStyle kArrStyle[]     = { InputGlyphStyle::KeyboardMouse, InputGlyphStyle::GamepadXbox, InputGlyphStyle::GamepadPlayStation, InputGlyphStyle::GamepadSwitch };
         static constexpr const utf8*     kArrStyleName[] = { "Keyboard / Mouse", "Xbox", "PlayStation", "Switch" };
         for ( size_t index = 0; index < 4; ++index )
@@ -442,13 +442,13 @@ namespace sw::editor
 
     void InputMapPanel::drawDebugTab()
     {
-        if ( ImGui::CollapsingHeader( "Devices", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "Devices" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             drawDeviceMonitorTab();
-        if ( ImGui::CollapsingHeader( "Graphs" ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "Graphs" ) ) )
             drawInputGraphTab();
-        if ( ImGui::CollapsingHeader( "Viewport HUD" ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "ViewportHUD" ) ) )
             drawViewportOverlayTab();
-        if ( ImGui::CollapsingHeader( "Command Pattern Tester" ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "CommandPatternTester" ) ) )
             drawCommandPatternTester();
     }
 
@@ -469,7 +469,7 @@ namespace sw::editor
         InputMap&                    inputMap  = _document.editInputMap();
         const vector<hashed_string>& listLayer = inputMap.getLayerNames();
 
-        if ( ImGui::CollapsingHeader( "Input Layers" ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "InputLayers" ) ) )
         {
             static constexpr InputMapPanelInternal::TableColumn kArrLayerColumn[] = {
                 {  "Layer Name",   0.0f},
@@ -510,7 +510,7 @@ namespace sw::editor
 
     void InputMapPanel::drawAddActionSection()
     {
-        if ( ImGui::CollapsingHeader( "Add New Action / Layer" ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "AddNewActionLayer" ) ) )
         {
             EditorWidgets::drawTextField( "New Action Name", _newActionName, 200.0f );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionNameTip" ) );
@@ -615,7 +615,7 @@ namespace sw::editor
         InputManager& input = editor::getSubsystem<InputManager>();
 
         // 2) 키보드 실시간 모니터
-        if ( ImGui::CollapsingHeader( "Keyboard Status", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "KeyboardStatus" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             ImGui::Text( "Held Keys:" );
             ImGui::SameLine();
@@ -646,7 +646,7 @@ namespace sw::editor
         InputManager& input = editor::getSubsystem<InputManager>();
 
         // 3) 마우스 실시간 모니터
-        if ( ImGui::CollapsingHeader( "Mouse Status", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "MouseStatus" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             int32      mx = 0, my = 0;
             const int2 vecMousePos2 = input.getMousePosition();
@@ -684,7 +684,7 @@ namespace sw::editor
         InputManager& input = editor::getSubsystem<InputManager>();
 
         // 4) 게임패드 실시간 모니터
-        if ( ImGui::CollapsingHeader( "Gamepad 0 Status", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "Gamepad0Status" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             GamepadDevice* pGamepad = input.getGamepad( 0 );
             if ( pGamepad != nullptr && pGamepad->isConnected() )

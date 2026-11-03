@@ -286,17 +286,17 @@ namespace sw::editor
 
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
         {
-            if ( ImGui::BeginTabItem( "CPU Scopes" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "CPUScopes" ) ) )
             {
                 drawScopeTab( ProfilerScopeKind::CPU );
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "GPU Passes" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "GPUPasses" ) ) )
             {
                 drawScopeTab( ProfilerScopeKind::GPU );
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "Counters" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Counters" ) ) )
             {
                 drawScopeTab( ProfilerScopeKind::Counter );
                 ImGui::EndTabItem();
@@ -306,31 +306,31 @@ namespace sw::editor
 #else
             constexpr ImGuiTabItemFlags timelineFlags = ImGuiTabItemFlags_None;
 #endif
-            const bool bTimelineTab = ImGui::BeginTabItem( "Timeline", nullptr, timelineFlags );
+            const bool bTimelineTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Timeline" ), nullptr, timelineFlags );
             EditorSelfTestMarks::note( "profiler.timeline.tab" );
             if ( bTimelineTab )
             {
                 drawTimelineTab();
                 ImGui::EndTabItem();
             }
-            const bool bCallTreeTab = ImGui::BeginTabItem( "Call Tree" );
+            const bool bCallTreeTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "CallTree" ) );
             EditorSelfTestMarks::note( "profiler.callTree.tab" );
             if ( bCallTreeTab )
             {
                 drawCallTreeTab();
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "Performance & Scene" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "PerformanceScene" ) ) )
             {
                 drawPerformanceTab();
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "Memory" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Memory" ) ) )
             {
                 drawMemoryTab();
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "GPU Memory" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "GPUMemory" ) ) )
             {
                 drawGPUMemoryTab();
                 ImGui::EndTabItem();
@@ -836,7 +836,7 @@ namespace sw::editor
 
         drawSceneDistributionSection();
 
-        if ( ImGui::CollapsingHeader( "Resource Catalog Summary", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "ResourceCatalogSummary" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             _performance.pollCatalog();
             if ( ImGui::Button( "Scan Resources" ) )
@@ -850,7 +850,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        if ( ImGui::CollapsingHeader( "Task Manager & Concurrency", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TaskManagerConcurrency" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             ImGui::BulletText( "Worker Threads: %u", editor::getSubsystem<TaskManager>().getWorkerCount() );
             ImGui::BulletText( "Task System: Active" );
@@ -859,7 +859,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawSceneDistributionSection()
     {
-        if ( ImGui::CollapsingHeader( "Active Scene & Component Distribution", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "ActiveSceneComponentDistribution" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             Scene* pScene = editor::getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
@@ -918,7 +918,7 @@ namespace sw::editor
         ImGui::Text( "%s - %s size", pDevice->getBackendName(), RHIMemoryTracker::getSizeBasisName( summary._sizeBasis ) );
         ImGui::Text( "Tracked: %s  (+ %u of unknown size)", arrBytesBuf.c_str(), summary._unknownSizeCount );
 
-        if ( ImGui::CollapsingHeader( "Tracked Memory By Kind", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TrackedMemoryByKind" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             if ( ImGui::BeginTable( "GPUMemoryTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
             {
@@ -951,7 +951,7 @@ namespace sw::editor
             }
         }
 
-        if ( ImGui::CollapsingHeader( "Driver", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "Driver" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             // 드라이버가 응답하지 않은 항목은 "Unknown" 으로 표시하고, 0 으로 대체하지 않는다.
             const RHIMemoryBudget&                 budget = summary._budget;
@@ -999,19 +999,19 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        if ( ImGui::CollapsingHeader( "Global Statistics By Tag", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "GlobalStatisticsByTag" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             ProfilerPanelInternal::drawMemoryTagTable( profiler );
 
         ImGui::Separator();
 
-        if ( bDetailed && ImGui::CollapsingHeader( "Top Memory Allocations By Call Stack", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( bDetailed && ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TopMemoryAllocationsByCallStack" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             ProfilerPanelInternal::drawTopCallStacks( profiler );
         else if ( bDetailed == false )
             ImGui::Text( "Detailed CallStack tracking is disabled." );
 
         ImGui::Separator();
 
-        if ( ImGui::CollapsingHeader( "Leak Window (Blocks Born In The Window)" ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "LeakWindowBlocksBornInTheWindow" ) ) )
             ProfilerPanelInternal::drawLeakWindow( profiler, _leakReport );
     }
     void ProfilerPanel::drawCallTreeTab()

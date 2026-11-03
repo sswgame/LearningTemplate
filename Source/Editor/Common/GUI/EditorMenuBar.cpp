@@ -95,7 +95,7 @@ namespace sw::editor
 
         if ( ImGui::BeginMenu( "Panel" ) )
         {
-            ImGui::SeparatorText( "Panels" );
+            ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Panels" ) );
             for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category != EditorPanelCategory::Core )
@@ -105,7 +105,7 @@ namespace sw::editor
                     entry._pInstance->setOpen( bOpen == false );
             }
 
-            ImGui::SeparatorText( "Tools" );
+            ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Tools" ) );
             for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category == EditorPanelCategory::Core )

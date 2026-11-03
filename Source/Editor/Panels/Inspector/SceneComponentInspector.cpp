@@ -11,6 +11,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 
 #include <imgui.h>
@@ -29,7 +30,7 @@ namespace sw::editor
                 if ( pSceneComp == nullptr )
                     return;
 
-                ImGui::SeparatorText( "Transform" );
+                ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Transform" ) );
 
                 EditorWidgets::drawGizmoOperationControls( "inspector.gizmo" );
 

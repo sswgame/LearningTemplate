@@ -26,6 +26,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -812,7 +813,7 @@ namespace sw::editor
                 const ImGuiTable* pTable = findActiveTable( "Kind", "Unknown Size", 5 );
                 if ( pTable == nullptr && stepIndex < kMaxStepCount )
                 {
-                    (void)queueTabFocus( "GPU Memory" );
+                    (void)queueTabFocus( SW_LOCKEY( "EdSection", "GPUMemory" ) ); // 탭 글과 같은 키(문화권이 바뀌어도 같은 탭)
                     return EditorSelfTestStep::Continue;
                 }
                 (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its tracker table" );

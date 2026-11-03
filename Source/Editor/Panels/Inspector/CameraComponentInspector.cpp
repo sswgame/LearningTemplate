@@ -33,7 +33,7 @@ namespace sw::editor
             void drawSection( Component* pComponent ) override
             {
                 auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
-                ImGui::SeparatorText( "Camera" );
+                ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Camera" ) );
                 float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
                 EditorWidgets::drawPropertyRowLabel( "FOV (Deg)" );
                 if ( ImGui::SliderFloat( "##FOVDeg", &fovDeg, 10.0f, 140.0f, "%.1f" ) )

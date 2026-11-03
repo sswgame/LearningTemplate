@@ -134,14 +134,14 @@ namespace sw::editor
         // 유니티 Animator 의 Layers 탭처럼 상태 기계(캔버스)와 그 위에 적용하는 레이어를 탭으로 나눈다.
         if ( ImGui::BeginTabBar( "##AnimationGraphInspectorTabs" ) == false )
             return;
-        const bool bGraphTab = ImGui::BeginTabItem( "Graph" );
+        const bool bGraphTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Graph" ) );
         EditorSelfTestMarks::note( "animationGraph.tab.graph" );
         if ( bGraphTab )
         {
             drawGraphInspector();
             ImGui::EndTabItem();
         }
-        const bool bLayersTab = ImGui::BeginTabItem( "Layers" );
+        const bool bLayersTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Layers" ) );
         EditorSelfTestMarks::note( "animationGraph.tab.layers" );
         if ( bLayersTab )
         {
@@ -559,7 +559,7 @@ namespace sw::editor
         if ( pNode == nullptr )
             return;
 
-        ImGui::SeparatorText( "State" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "State" ) );
         if ( ImGui::IsAnyItemActive() == false )
             _nameEditBuffer = pNode->_name;
         ImGui::TextUnformatted( "Clip" );
@@ -590,7 +590,7 @@ namespace sw::editor
     void AnimationGraphPanel::drawTransitionList()
     {
         // 전이 목록 — 누르면 그 전이를 고른다(캔버스에서 링크를 눌러도 된다).
-        ImGui::SeparatorText( "Transitions" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Transitions" ) );
         for ( size_t index = 0; index < _graph._listLink.size(); ++index )
         {
             const GraphLink&                        link   = _graph._listLink[index];
@@ -623,7 +623,7 @@ namespace sw::editor
         }
         if ( pLink == nullptr )
             return;
-        ImGui::SeparatorText( "Condition" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Condition" ) );
         bool bEdited = false;
         if ( ImGui::IsAnyItemActive() == false )
             _parameterEditBuffer = pLink->_parameter.empty() ? "" : pLink->_parameter.c_str(); // 빈 hashed_string 의 c_str 는 "None" 이다

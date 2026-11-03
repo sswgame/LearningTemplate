@@ -115,17 +115,17 @@ namespace sw::editor
         ImGui::BeginDisabled( bSelfTestRunning );
         if ( ImGui::BeginTabBar( "TestRunnerTabs" ) )
         {
-            if ( ImGui::BeginTabItem( "Editor Self Tests" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "EditorSelfTests" ) ) )
             {
                 drawSelfTestTab();
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "Scenarios" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Scenarios" ) ) )
             {
                 drawScenarioTab();
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "Unit Tests" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "UnitTests" ) ) )
             {
                 drawUnitTestTab();
                 ImGui::EndTabItem();

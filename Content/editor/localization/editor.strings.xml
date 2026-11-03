@@ -734,6 +734,303 @@
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdSection.Actions" source="Actions">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.ActiveSceneComponentDistribution" source="Active Scene &amp; Component Distribution">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.AddNewActionLayer" source="Add New Action / Layer">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.AttachByAddress" source="Attach by address">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Bindings" source="Bindings">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.BoneMasks" source="Bone Masks">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.CPUScopes" source="CPU Scopes">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.CallTree" source="Call Tree">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Camera" source="Camera">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.ClipsEventsAndCameraCuts" source="Clips, Events and Camera Cuts">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.CommandPatternTester" source="Command Pattern Tester">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Components" source="Components">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Condition" source="Condition">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Conflicts" source="Conflicts">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Counters" source="Counters">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Curve" source="Curve">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Debug" source="Debug">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.DebugHUDSections" source="Debug HUD sections">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Devices" source="Devices">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Driver" source="Driver">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.EditorSelfTests" source="Editor Self Tests">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Events" source="Events">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.GPUMemory" source="GPU Memory">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+				<item>Source/Editor/SelfTest/EditorSelfTestCases.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.GPUPasses" source="GPU Passes">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.GameDataXMLTables" source="Game Data XML Tables">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Gamepad0Status" source="Gamepad 0 Status">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.GlobalStatisticsByTag" source="Global Statistics By Tag">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Graph" source="Graph">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Graphs" source="Graphs">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.InputLayers" source="Input Layers">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.KeyTracks" source="Key Tracks">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.KeyboardStatus" source="Keyboard Status">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Layers" source="Layers">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Layout" source="Layout">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.LeakWindowBlocksBornInTheWindow" source="Leak Window (Blocks Born In The Window)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.LocalizationStrings" source="Localization Strings">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Mappings" source="Mappings">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Memory" source="Memory">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Methods" source="Methods">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.MouseStatus" source="Mouse Status">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.NestedPrefabsSubAssets" source="Nested Prefabs &amp; Sub-Assets">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Panels" source="Panels">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.PerformanceScene" source="Performance &amp; Scene">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.PinnedFavorites" source="Pinned / Favorites">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.PromptGlyphs" source="Prompt Glyphs">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.ReplayInject" source="Replay &amp; Inject">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.ResourceCatalogSummary" source="Resource Catalog Summary">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Scenarios" source="Scenarios">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Sections" source="Sections">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.State" source="State">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.TaskManagerConcurrency" source="Task Manager &amp; Concurrency">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Timeline" source="Timeline">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Tools" source="Tools">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.TopMemoryAllocationsByCallStack" source="Top Memory Allocations By Call Stack">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.TrackedMemoryByKind" source="Tracked Memory By Kind">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Transform" source="Transform">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/SceneComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.Transitions" source="Transitions">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.UnitTests" source="Unit Tests">
+			<origins>
+				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.ViewportHUD" source="Viewport HUD">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdVerb.Apply" source="Apply">
 			<origins>
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>

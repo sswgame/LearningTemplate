@@ -1062,7 +1062,7 @@ namespace sw::editor
         if ( bHasEvent == false )
             return;
 
-        ImGui::SeparatorText( "Events" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Events" ) );
         pTypeInfo->forEachEventWithBase( [pInstance]( const EventInfo& event )
         {
             ImGui::PushID( event._name.c_str() );

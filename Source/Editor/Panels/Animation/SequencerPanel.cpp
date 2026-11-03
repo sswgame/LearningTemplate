@@ -287,7 +287,7 @@ namespace sw::editor
         // 키 트랙이 위, 구간 항목이 아래다 — 자주 고치는 쪽(키 · 커브)이 패널이 낮아도 보인다.
         drawKeyTracks();
 
-        ImGui::SeparatorText( "Clips, Events and Camera Cuts" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "ClipsEventsAndCameraCuts" ) );
         drawItemFields();
 
         // ImSequencer 는 여러 항목을 그리는 위젯이라 IsItemEdited("마지막 항목")가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다 — 부르기 전후의 배치를 비교한다.
@@ -336,7 +336,7 @@ namespace sw::editor
 
     void SequencerPanel::drawKeyTracks()
     {
-        ImGui::SeparatorText( "Key Tracks" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "KeyTracks" ) );
         if ( ImGui::Button( "+ Transform Track" ) )
             addKeyTrack( SequenceTrackKind::Transform );
         EditorSelfTestMarks::note( "sequencer.addTransformTrack" );
@@ -574,7 +574,7 @@ namespace sw::editor
             return;
         FloatCurve& channel = track._listChannel[static_cast<size_t>( _curveChannel )];
 
-        ImGui::SeparatorText( "Curve" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Curve" ) );
         ImGui::Text( "%s / %s (frames)", track._name.c_str(), track.getChannelName( static_cast<uint32>( _curveChannel ) ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Close" ) );
         if ( ImGui::SmallButton( "Close" ) )

@@ -77,13 +77,13 @@ namespace sw::editor
 
         if ( ImGui::BeginTabBar( "##DataTableTabs" ) )
         {
-            if ( ImGui::BeginTabItem( "Localization Strings" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "LocalizationStrings" ) ) )
             {
                 drawLocalizationTab();
                 ImGui::EndTabItem();
             }
 
-            if ( ImGui::BeginTabItem( "Game Data XML Tables" ) )
+            if ( ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "GameDataXMLTables" ) ) )
             {
                 drawGameDataTab();
                 ImGui::EndTabItem();

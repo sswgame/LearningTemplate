@@ -108,7 +108,7 @@ namespace sw::editor
     void PrefabPanel::drawNestedPrefabSection()
     {
         const vector<string>& listNestedPrefab = _model.getNestedPrefabs();
-        if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "NestedPrefabsSubAssets" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             for ( size_t prefabIndex = 0; prefabIndex < listNestedPrefab.size(); ++prefabIndex )
             {

@@ -225,7 +225,7 @@ namespace sw::editor
         if ( inspector.isConnected() == false && inspector.getLastError().empty() == false )
             ImGui::TextDisabled( "Last error: %s", inspector.getLastError().c_str() );
 
-        if ( ImGui::CollapsingHeader( "Attach by address" ) )
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "AttachByAddress" ) ) )
         {
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "InspectorAttach" ) );
             ImGui::InputTextWithHint( "##InspectorAddress", "127.0.0.1:<port>", _address.data(), _address.capacity() );

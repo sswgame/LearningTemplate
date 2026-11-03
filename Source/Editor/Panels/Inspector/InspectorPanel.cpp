@@ -221,7 +221,7 @@ namespace sw::editor
         {
             const EditorPropertyGridTarget objectTarget{ pObj, pTypeInfo, nullptr, pObj, {}, {} };
             _propertyGrid.drawProperties( objectTarget, "Reflected Properties", {} );
-            ImGui::SeparatorText( "Methods" );
+            ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
             _propertyGrid.drawMethodsAndEvents( objectTarget, false );
         }
 
@@ -263,7 +263,7 @@ namespace sw::editor
 
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         drawFavoritesSection( pPrimary ); // 다중 선택의 즐겨찾기는 주 선택 오브젝트 기준이다
-        ImGui::SeparatorText( "Components" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Components" ) );
         EditorMultiEditUtil::collectCommonComponents( listObject, _listMultiEditComponent );
         for ( EditorMultiEditComponent& common : _listMultiEditComponent )
         {
@@ -436,7 +436,7 @@ namespace sw::editor
 
     void InspectorPanel::drawComponentList( GameObject* pObj, EditorWorkspace& workspace )
     {
-        ImGui::SeparatorText( "Components" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Components" ) );
         // 복사한다. 아래 루프가 컴포넌트를 제거할 수 있어 원본을 순회할 수 없다.
         const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )
@@ -653,7 +653,7 @@ namespace sw::editor
 
         const EditorPropertyGridTarget componentTarget{ pComp, pTypeInfo, pComp, pComp->getOwner(), {}, {} };
         _propertyGrid.drawProperties( componentTarget, "Properties", listDrawnName );
-        ImGui::SeparatorText( "Methods" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Methods" ) );
         _propertyGrid.drawMethodsAndEvents( componentTarget, true );
 
         for ( IInspectorComponent* pInspector : listInspector )

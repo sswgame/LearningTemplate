@@ -162,7 +162,7 @@ namespace sw::editor
     {
         const utf8*                     pEdit     = nullptr;
         vector<AnimationGraphLayerDef>& listLayer = inoutGraph._listLayer;
-        ImGui::SeparatorText( "Layers" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Layers" ) );
         if ( listLayer.empty() )
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationGraph", "NoLayersHint" ) );
         for ( size_t index = 0; index < listLayer.size(); ++index )
@@ -343,7 +343,7 @@ namespace sw::editor
     {
         const utf8*                   pEdit    = nullptr;
         vector<AnimationBoneMaskDef>& listMask = inoutGraph._listBoneMask;
-        ImGui::SeparatorText( "Bone Masks" );
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "BoneMasks" ) );
         if ( listMask.empty() )
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationGraph", "NoBoneMasksHint" ) );
         for ( size_t index = 0; index < listMask.size(); ++index )

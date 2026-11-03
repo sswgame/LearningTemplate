@@ -317,7 +317,7 @@ namespace sw::editor
         // 3) 핀으로 고정한 즐겨찾기 변수 섹션
         if ( _model.getPinnedVariables().empty() == false )
         {
-            if ( ImGui::CollapsingHeader( "Pinned / Favorites", ImGuiTreeNodeFlags_DefaultOpen ) )
+            if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "PinnedFavorites" ), ImGuiTreeNodeFlags_DefaultOpen ) )
             {
                 // 고정 섹션은 스크롤하지 않는다. 본문 테이블 위에 통째로 보인다.
                 if ( GlobalVariablesPanelInternal::beginVariableTable(
