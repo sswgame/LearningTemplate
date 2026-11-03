@@ -34,6 +34,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -501,7 +502,7 @@ namespace sw::editor
 
         const string&               pendingDeleteAbs = _model.getPendingDeletePath();
         const EditorReferenceIndex& referenceIndex   = _model.getReferenceSearch().getIndex();
-        ImGui::Text( "Move '%s' to the Recycle Bin?", FileUtil::getFileNamePart( pendingDeleteAbs ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveToRecycleBin", TextArgumentList().addText( "file", FileUtil::getFileNamePart( pendingDeleteAbs ) ) ).c_str() );
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
         {

@@ -42,6 +42,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -627,7 +628,7 @@ namespace sw::editor
             return;
         }
 
-        ImGui::TextDisabled( "No inspector for %s", prop._typeName.c_str() );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoInspectorFor", TextArgumentList().addText( "type", prop._typeName.c_str() ) ).c_str() );
     }
 
     void EditorPropertyGrid::drawEnumProperty( const MutableObjectAddress instance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly )
@@ -678,7 +679,7 @@ namespace sw::editor
             IMapContainerWrapper* pMap = prop._containerWrapper->asMap();
             if ( pMap == nullptr )
             {
-                ImGui::TextDisabled( "No inspector for %s", prop._typeName.c_str() );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoInspectorFor", TextArgumentList().addText( "type", prop._typeName.c_str() ) ).c_str() );
                 return;
             }
 

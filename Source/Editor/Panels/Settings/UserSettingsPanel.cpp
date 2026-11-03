@@ -14,6 +14,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include <imgui.h>
@@ -119,7 +120,7 @@ namespace sw::editor
         // 화면 방식 · 해상도 확인 — 게임 메뉴의 "이 화면을 유지할까요? N 초" 대화상자에 해당한다.
         if ( settings.isAwaitingConfirm() )
         {
-            ImGui::Text( "Keep these display settings? Reverting in %.0f s", static_cast<float64>( settings.getConfirmSecondsLeft() ) );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "KeepDisplaySettings", TextArgumentList().addInteger( "seconds", static_cast<int64>( settings.getConfirmSecondsLeft() + 0.5f ) ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Keep" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Keep" ) ) )
                 settings.confirmChanges();

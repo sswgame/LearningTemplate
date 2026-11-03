@@ -36,6 +36,7 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/Reflection.h"
@@ -635,7 +636,7 @@ namespace sw::editor
                     bPicked = true;
                 EditorSelfTestMarks::note( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
                 if ( inoutListChoice.empty() )
-                    ImGui::TextDisabled( "No %s in this scene", targetType._name.c_str() );
+                    ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoneInScene", TextArgumentList().addText( "type", targetType._name.c_str() ) ).c_str() );
                 for ( const InspectorComponentChoice& choice : inoutListChoice )
                 {
                     if ( ImGui::Selectable( choice._label.c_str(), choice._handle == current ) )

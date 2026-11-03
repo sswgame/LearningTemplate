@@ -401,7 +401,7 @@ namespace sw::editor
 
         const string& focused = editorContext.getSubsystem<EditorWorkspace>().getFocusedAssetPath();
         if ( focused.empty() == false )
-            ImGui::TextDisabled( "Focused: %s", focused.c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Focused", TextArgumentList().addText( "path", focused ) ).c_str() );
 
         fixed_string<constant::buffer::kMax256>& path = _document.editPath();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Path" ) );

@@ -43,6 +43,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -594,7 +595,7 @@ namespace sw::editor
         GameObject* pParent = pObj->getParent();
         if ( pParent != nullptr )
         {
-            ImGui::Text( "Parent: %s", pParent->getName().c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Parent", TextArgumentList().addText( "parent", pParent->getName().c_str() ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Unparent" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Unparent" ) ) )
                 InspectorObjectEdit::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()

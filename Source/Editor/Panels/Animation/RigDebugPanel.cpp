@@ -35,6 +35,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -403,7 +404,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "rigdebug.targets" );
         if ( targetEdit._status.empty() == false )
-            ImGui::TextDisabled( "Target: %s", targetEdit._status.c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Target", TextArgumentList().addText( "target", targetEdit._status ) ).c_str() );
     }
 
     void RigDebugPanel::drawContent()

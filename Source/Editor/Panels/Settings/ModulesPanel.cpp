@@ -15,6 +15,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -105,7 +106,7 @@ namespace sw::editor
                 if ( bActive )
                     ImGui::TextUnformatted( SW_LOCKEY( "EdText", "On" ) );
                 else
-                    ImGui::TextDisabled( "Off - %s", _model.findInactiveReason( manifest._name ).c_str() );
+                    ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "ModuleOff", TextArgumentList().addText( "reason", _model.findInactiveReason( manifest._name ) ) ).c_str() );
                 ImGui::PopID();
             }
             ImGui::EndTable();

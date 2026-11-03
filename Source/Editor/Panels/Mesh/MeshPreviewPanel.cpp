@@ -20,6 +20,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -148,7 +149,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
             ImGui::RadioButton( label.c_str(), &_model.editLODChoice(), static_cast<int32>( lod ) );
         }
-        ImGui::Text( "Drawing LOD %u of %u", subject.getLODIndex(), lodCount );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "DrawingLOD", TextArgumentList().addInteger( "lod", subject.getLODIndex() ).addInteger( "count", lodCount ) ).c_str() );
 
         ImGui::BulletText( "LOD 0  %u vertices  %u triangles", pMesh->getVertexCount(), pMesh->getIndexCount() / 3u );
         uint32 lod = 1;

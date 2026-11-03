@@ -137,6 +137,7 @@
 		<entry source="Background opacity of the Debug HUD panels."
 		       text="디버그 HUD 패널의 배경 불투명도입니다." />
 		<entry source="Bandwidth (KB/s)" text="대역폭(KB/s)" />
+		<entry source="Binding for action: {action}" text="액션 바인딩: {action}" />
 		<entry source="Bindings" text="바인딩" />
 		<entry source="Blend" text="섞기" />
 		<entry source="Bodies" text="바디" />
@@ -243,6 +244,7 @@
 		       text="끊긴 클라이언트를 서버에 다시 붙입니다" />
 		<entry source="Connected clients / launched clients. The process list and server pause are in Window > Multiplayer."
 		       text="붙은 클라이언트 / 띄운 클라이언트 — 프로세스 목록 · 서버 일시정지는 Window > Multiplayer" />
+		<entry source="Connected to {address}" text="{address} 에 연결됨" />
 		<entry source="Container" text="컨테이너" />
 		<entry source="Context: {context}&#10;Comment: {comment}&#10;Max length: {maxLength}"
 		       text="컨텍스트: {context}&#10;주석: {comment}&#10;최대 길이: {maxLength}" />
@@ -343,6 +345,7 @@
 		       text="고른 노드가 쓰는 본을 뷰포트에 표시합니다" />
 		<entry source="Draw the recorded skeleton in the viewport at the time being viewed."
 		       text="보고 있는 시각의 기록된 스켈레톤을 뷰포트에 그립니다." />
+		<entry source="Drawing LOD {lod} of {count}" text="LOD {count} 개 중 {lod} 번을 그립니다" />
 		<entry source="Driver" text="드라이버" />
 		<entry source="Drop a .bonemask.xml preset to use it; its bones are then read-only here. Clear it to keep the bones in this graph."
 		       text=".bonemask.xml 프리셋을 놓으면 그것을 쓰고, 그 본은 여기서 읽기만 합니다. 비우면 본을 이 그래프에 바로 적습니다." />
@@ -418,6 +421,7 @@
 		<entry source="Field" text="항목" />
 		<entry source="Fighting-game command to test, in numpad directions (2 down, 6 right, 3 down-right ...) followed by a button letter. Perform it on the gamepad or keyboard to see it match."
 		       text="테스트할 격투 게임 커맨드로, 숫자 패드 방향(2 아래, 6 오른쪽, 3 오른쪽 아래 ...) 뒤에 버튼 글자를 붙입니다. 게임패드나 키보드로 입력해 일치하는지 봅니다." />
+		<entry source="File: {file}" text="파일: {file}" />
 		<entry source="Fill Weight" text="채우기 비율" />
 		<entry source="Filter (tag / message / file)" text="필터 (태그 / 메시지 / 파일)" />
 		<entry source="Filter actions..." text="액션 필터..." />
@@ -440,6 +444,7 @@
 		       text="두 기록이 모두 가진 틱 가운데 상태 해시가 다른 가장 이른 틱을 찾습니다(씬 트랜스폼: 이름, 활성, 월드 위치)" />
 		<entry source="Fit" text="맞춤" />
 		<entry source="Fit View" text="화면에 맞추기" />
+		<entry source="Focused: {path}" text="선택한 것: {path}" />
 		<entry source="Fold identical log lines into one and show the count in front"
 		       text="같은 로그 줄을 한 줄로 접고 앞에 횟수를 적습니다" />
 		<entry source="Folder the packaged build is staged into" text="패키지 빌드를 스테이징할 폴더입니다" />
@@ -572,12 +577,15 @@
 		<entry source="Keep recording but stop updating the view"
 		       text="기록은 계속하고 화면 갱신만 멈춥니다" />
 		<entry source="Keep scrolling to the newest log line" text="가장 최근 로그 줄을 따라 스크롤합니다" />
+		<entry source="Keep these display settings? Reverting in {seconds} s"
+		       text="이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다" />
 		<entry source="Key" text="키" />
 		<entry source="Key Tracks" text="키 트랙" />
 		<entry source="Key the target's current values on every channel at this frame."
 		       text="대상의 지금 값을 이 프레임의 키로 모든 채널에 찍습니다" />
 		<entry source="Keyboard Status" text="키보드 상태" />
 		<entry source="Label" text="이름표" />
+		<entry source="Last error: {error}" text="마지막 오류: {error}" />
 		<entry source="Last merged trace:" text="마지막으로 합친 추적:" />
 		<entry source="Latency (ms)" text="지연(ms)" />
 		<entry source="Latest" text="최신" />
@@ -671,6 +679,7 @@
 		       text="창 폭에 들지 않는 나머지 툴바 단추" />
 		<entry source="Mouse Delta Speed (dX/dY):" text="마우스 이동 속도(dX/dY):" />
 		<entry source="Mouse Status" text="마우스 상태" />
+		<entry source="Move '{file}' to the Recycle Bin?" text="'{file}' 을 휴지통으로 옮길까요?" />
 		<entry source="Move the preview focus in this direction (like the keyboard or pad). The first press focuses the first focusable widget."
 		       text="미리보기 초점을 이 방향으로 옮깁니다(키보드 · 패드처럼). 처음 누르면 초점을 받는 첫 위젯에 갑니다." />
 		<entry source="Move the preview to the next node without waiting."
@@ -734,6 +743,7 @@
 		<entry source="No game camera - the load and unload column needs one."
 		       text="게임 카메라가 없습니다 - 올림 · 내림 열은 게임 카메라가 있어야 합니다." />
 		<entry source="No global variables registered." text="등록된 전역 변수가 없습니다." />
+		<entry source="No inspector for {type}" text="{type} 에는 인스펙터가 없습니다" />
 		<entry source="No key tracks. Select an object and add a transform or property track."
 		       text="키 트랙이 없습니다. 오브젝트를 선택하고 트랜스폼 트랙이나 프로퍼티 트랙을 추가합니다." />
 		<entry source="No keys yet" text="아직 키가 없습니다" />
@@ -776,6 +786,7 @@
 		<entry source="No tile set loaded" text="읽어 들인 타일셋 없음" />
 		<entry source="No validation issues. Check Map validates every object of the active scene."
 		       text="검증 문제가 없습니다. Check Map 은 활성 씬의 모든 오브젝트를 검증합니다." />
+		<entry source="No {type} in this scene" text="이 씬에 {type} 이 없습니다" />
 		<entry source="None" text="없음" />
 		<entry source="None (uses default)" text="없음(기본값 사용)" />
 		<entry source="Note to attach (what you did and what went wrong)"
@@ -799,6 +810,7 @@
 		       text="프로세스가 이미 세는 값(연결 통계, 메시지 종류)을 이 탭이 보이는 동안 0.5 초마다 net.stats 로 묻습니다" />
 		<entry source="Object not found in the active scene."
 		       text="활성 씬에서 오브젝트를 찾지 못했습니다." />
+		<entry source="Off - {reason}" text="꺼짐 — {reason}" />
 		<entry source="Off only" text="꺼진 것만" />
 		<entry source="Off shows only the active game pack; on shows every pack under game/ (default: Preferences > Content Browser)"
 		       text="끄면 활성 게임 팩만, 켜면 game/ 의 모든 팩을 보입니다(기본값은 환경설정 Content Browser)" />
@@ -880,6 +892,7 @@
 		<entry source="Param" text="인자" />
 		<entry source="Parameter curves" text="파라미터 곡선 수" />
 		<entry source="Parent: (root)" text="부모: (뿌리)" />
+		<entry source="Parent: {parent}" text="부모: {parent}" />
 		<entry source="Partial" text="일부" />
 		<entry source="Paste" text="붙여넣기" />
 		<entry source="Paste Value" text="값 붙여넣기" />
@@ -1430,6 +1443,7 @@
 		<entry source="Target object not found" text="대상 오브젝트를 찾을 수 없습니다" />
 		<entry source="Target or numeric property not found"
 		       text="대상이나 숫자 프로퍼티를 찾을 수 없습니다" />
+		<entry source="Target: {target}" text="대상: {target}" />
 		<entry source="Targets on other units or objects are placed by the host - move that object instead"
 		       text="다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요" />
 		<entry source="Task Manager &amp; Concurrency" text="작업 관리자 · 동시성" />

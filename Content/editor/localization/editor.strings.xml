@@ -1012,6 +1012,71 @@
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.BindingForAction" source="Binding for action: {action}">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.ConnectedTo" source="Connected to {address}">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.DrawingLOD" source="Drawing LOD {lod} of {count}">
+			<origins>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.File" source="File: {file}">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Focused" source="Focused: {path}">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.KeepDisplaySettings" source="Keep these display settings? Reverting in {seconds} s">
+			<origins>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.LastError" source="Last error: {error}">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.ModuleOff" source="Off - {reason}">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.MoveToRecycleBin" source="Move '{file}' to the Recycle Bin?">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.NoInspectorFor" source="No inspector for {type}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.NoneInScene" source="No {type} in this scene">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Parent" source="Parent: {parent}">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.Target" source="Target: {target}">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdLabel.Active" source="Active">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>

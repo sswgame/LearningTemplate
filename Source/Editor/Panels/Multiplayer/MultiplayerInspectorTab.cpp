@@ -16,6 +16,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -198,7 +199,7 @@ namespace sw::editor
         const bool             bSessionChannel = session.isRunning() && session.getDebugChannelPort() != 0;
         if ( inspector.isConnected() )
         {
-            ImGui::Text( "Connected to %s", inspector.getRemoteAddress().toString().c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "ConnectedTo", TextArgumentList().addText( "address", inspector.getRemoteAddress().toString() ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Disconnect" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Disconnect" ) ) )
                 inspector.disconnect();
@@ -223,7 +224,7 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "InspectorNoChannel" ) );
         }
         if ( inspector.isConnected() == false && inspector.getLastError().empty() == false )
-            ImGui::TextDisabled( "Last error: %s", inspector.getLastError().c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "LastError", TextArgumentList().addText( "error", inspector.getLastError() ) ).c_str() );
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "AttachByAddress" ) ) )
         {

@@ -540,7 +540,7 @@ namespace sw::editor
         EditorInputGUI::openPopup( "Press Key / Button To Bind" );
         if ( EditorWidgets::beginCenteredModal( "Press Key / Button To Bind" ) )
         {
-            ImGui::Text( "Binding for Action: %s", _document.getSelectedAction().c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "BindingForAction", TextArgumentList().addText( "action", _document.getSelectedAction().c_str() ) ).c_str() );
             ImGui::TextUnformatted( SW_LOCKEY( "EditorInputMap", "CaptureInstruction" ) );
             ImGui::Separator();
 

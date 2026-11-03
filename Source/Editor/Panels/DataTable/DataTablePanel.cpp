@@ -340,7 +340,7 @@ namespace sw::editor
         const GameDataFileEntry* pEntry = _model.findSelectedGameDataFile();
         if ( pEntry != nullptr )
         {
-            ImGui::Text( "File: %s", pEntry->_fileName.c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "File", TextArgumentList().addText( "file", pEntry->_fileName ) ).c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveFile" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveFile" ) ) )
                 _model.saveSelectedGameDataFile();

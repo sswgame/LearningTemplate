@@ -990,6 +990,71 @@ msgctxt "EdField.Zoom"
 msgid "Zoom"
 msgstr "확대"
 
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdFormat.BindingForAction"
+msgid "Binding for action: {action}"
+msgstr "액션 바인딩: {action}"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdFormat.ConnectedTo"
+msgid "Connected to {address}"
+msgstr "{address} 에 연결됨"
+
+#: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+msgctxt "EdFormat.DrawingLOD"
+msgid "Drawing LOD {lod} of {count}"
+msgstr "LOD {count} 개 중 {lod} 번을 그립니다"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EdFormat.File"
+msgid "File: {file}"
+msgstr "파일: {file}"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdFormat.Focused"
+msgid "Focused: {path}"
+msgstr "선택한 것: {path}"
+
+#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+msgctxt "EdFormat.KeepDisplaySettings"
+msgid "Keep these display settings? Reverting in {seconds} s"
+msgstr "이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
+msgctxt "EdFormat.LastError"
+msgid "Last error: {error}"
+msgstr "마지막 오류: {error}"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EdFormat.ModuleOff"
+msgid "Off - {reason}"
+msgstr "꺼짐 — {reason}"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdFormat.MoveToRecycleBin"
+msgid "Move '{file}' to the Recycle Bin?"
+msgstr "'{file}' 을 휴지통으로 옮길까요?"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdFormat.NoInspectorFor"
+msgid "No inspector for {type}"
+msgstr "{type} 에는 인스펙터가 없습니다"
+
+#: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
+msgctxt "EdFormat.NoneInScene"
+msgid "No {type} in this scene"
+msgstr "이 씬에 {type} 이 없습니다"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdFormat.Parent"
+msgid "Parent: {parent}"
+msgstr "부모: {parent}"
+
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EdFormat.Target"
+msgid "Target: {target}"
+msgstr "대상: {target}"
+
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdLabel.Active"
 msgid "Active"
