@@ -11,6 +11,8 @@ namespace sw
         : _listPage{}
         , _kind{ kind }
         , _generation{ 0 }
+        , _uploadSequence{ 0 }
+        , _bFullUploadRequested{ false }
     {
     }
 
@@ -190,6 +192,15 @@ namespace sw
 
     void GlyphAtlas::takeUploads( vector<GlyphAtlasUpload>& outListUpload )
     {
+        const bool bFullUpload = _bFullUploadRequested.exchange( false, std::memory_order_acq_rel );
+        if ( bFullUpload )
+        {
+            for ( Page& page : _listPage )
+            {
+                page._bWholePageDirty = SW_TRUE;
+            }
+        }
+        const size_t firstIndex = outListUpload.size();
         for ( size_t pageIndex = 0; pageIndex < _listPage.size(); ++pageIndex )
         {
             Page& page = _listPage[pageIndex];
@@ -224,6 +235,14 @@ namespace sw
                 }
             }
             page._listDirty.clear();
+        }
+        if ( outListUpload.size() == firstIndex )
+            return;
+        ++_uploadSequence;
+        for ( size_t index = firstIndex; index < outListUpload.size(); ++index )
+        {
+            outListUpload[index]._sequence    = _uploadSequence;
+            outListUpload[index]._bFullUpload = bFullUpload ? SW_TRUE : SW_FALSE;
         }
     }
 } // namespace sw

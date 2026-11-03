@@ -85,7 +85,10 @@ namespace sw
                                       glyphFrameIndex );
         }
         if ( pFontService != nullptr && pFontService->isInitialized() )
-            pFontService->getGlyphCache().getAtlas().takeUploads( packet._canvas._listAtlasUpload );
+        {
+            packet._canvas._pAtlasSource = &pFontService->getGlyphCache().getAtlas();
+            packet._canvas._pAtlasSource->takeUploads( packet._canvas._listAtlasUpload );
+        }
         // 색각 보정 — UI 는 톤맵 뒤라 캔버스 셰이더가 직접 건다(사용자 설정 accessibility.colorVision, 범위 밖은 끔).
         packet._canvas._colorVisionMode = ( 0 <= gv_colorVisionMode && gv_colorVisionMode <= 3 ) ? static_cast<uint32>( gv_colorVisionMode ) : 0u;
     }

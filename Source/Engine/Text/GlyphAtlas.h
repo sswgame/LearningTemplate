@@ -7,6 +7,7 @@
  *          (Jukka Jylänki, "A Thousand Ways to Pack the Bin").
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -31,14 +32,16 @@ namespace sw
     /** @brief 렌더러에 넘기는 업로드 한 건입니다. 페이지의 한 구간과 그 바이트 사본(빈틈없는 행)을 가집니다. */
     struct GlyphAtlasUpload
     {
-        vector<uint8> _bytes{};                ///< 구간 바이트 사본입니다(행 우선이며 `_width` × `_bytesPerTexel` 바이트 행).
-        uint8         _bytesPerTexel{ 1 };     ///< 텍셀당 바이트입니다(SDF 1, MSDF 4). 렌더러가 페이지 텍스처 형식을 이것으로 고른다.
-        uint16        _page{ 0 };              ///< 페이지 번호입니다.
-        uint16        _x{ 0 };                 ///< 구간 왼쪽(텍셀)
-        uint16        _y{ 0 };                 ///< 구간 위(텍셀)
-        uint16        _width{ 0 };             ///< 구간 너비입니다.
-        uint16        _height{ 0 };            ///< 구간 높이입니다.
-        uint8         _bWholePage{ SW_FALSE }; ///< 페이지를 새로 만들었거나 비웠는지 나타냅니다. 그러면 렌더러는 페이지 텍스처를 (다시) 만들고 전체를 올립니다.
+        vector<uint8> _bytes{};                 ///< 구간 바이트 사본입니다(행 우선이며 `_width` × `_bytesPerTexel` 바이트 행).
+        uint8         _bytesPerTexel{ 1 };      ///< 텍셀당 바이트입니다(SDF 1, MSDF 4). 렌더러가 페이지 텍스처 형식을 이것으로 고른다.
+        uint16        _page{ 0 };               ///< 페이지 번호입니다.
+        uint16        _x{ 0 };                  ///< 구간 왼쪽(텍셀)
+        uint16        _y{ 0 };                  ///< 구간 위(텍셀)
+        uint16        _width{ 0 };              ///< 구간 너비입니다.
+        uint16        _height{ 0 };             ///< 구간 높이입니다.
+        uint8         _bWholePage{ SW_FALSE };  ///< 페이지를 새로 만들었거나 비웠는지 나타냅니다. 그러면 렌더러는 페이지 텍스처를 (다시) 만들고 전체를 올립니다.
+        uint8         _bFullUpload{ SW_FALSE }; ///< 모든 페이지를 통째로 담은 묶음(`requestFullUpload` 의 답)입니다. 렌더러 거울은 앞 묶음을 놓쳤어도 이 묶음부터 다시 맞는다.
+        uint64        _sequence{ 0 };           ///< 이 업로드가 속한 묶음 번호(`takeUploads` 한 번 = 한 묶음, 1 부터)입니다. 렌더러 거울은 번호가 건너뛰면 묶음을 놓친 것으로 안다.
     };
 } // namespace sw
 
@@ -73,8 +76,14 @@ namespace sw
          */
         [[nodiscard]] bool evictLeastRecentlyUsedPage( uint64 currentFrame, uint32& outPage );
 
-        /** @brief 지난 호출 뒤 바뀐 구간들을 바이트 사본과 함께 @p outListUpload 뒤에 붙이고 비웁니다(게임 스레드가 패킷을 채울 때). */
+        /**
+         * @brief 지난 호출 뒤 바뀐 구간들을 바이트 사본과 함께 @p outListUpload 뒤에 붙이고 비웁니다(게임 스레드가 패킷을 채울 때). 붙인 것이 있으면 한 묶음 번호를 매깁니다.
+         * @details 업로드는 차분이라 한 묶음이라도 렌더러에 닿지 않으면 거울이 영영 어긋난다(그 구간의 글자가 빈칸으로 남는다). 그래서 묶음마다 번호를 붙이고,
+         *          렌더러가 건너뛴 번호를 보면 `requestFullUpload` 로 전체를 다시 청한다 — 패킷이 어느 길에서 버려지든 다음 묶음에서 스스로 맞는다.
+         */
         void takeUploads( vector<GlyphAtlasUpload>& outListUpload );
+        /** @brief 다음 `takeUploads` 가 모든 페이지를 통째로 내게 합니다. 렌더 스레드가 부르는 유일한 함수입니다(원자 표시만 한다). */
+        void requestFullUpload() { _bFullUploadRequested.store( true, std::memory_order_release ); }
 
         /** @brief 이 아틀라스가 담는 거리장 종류입니다. */
         GlyphFieldKind getFieldKind() const { return _kind; }
@@ -114,5 +123,7 @@ namespace sw
         vector<Page>   _listPage;
         GlyphFieldKind _kind;
         uint32         _generation;
+        uint64         _uploadSequence;       ///< 마지막으로 낸 묶음 번호입니다(0 = 아직 없음).
+        atomic<bool>   _bFullUploadRequested; ///< 렌더러 거울이 묶음을 놓쳤다(`requestFullUpload`)
     };
 } // namespace sw

@@ -146,6 +146,7 @@ namespace sw
         _mainOutput.clear();
         _listTarget.clear();
         _listAtlasUpload.clear();
+        _pAtlasSource = nullptr;
         _listAnchor.clear();
         _listMarker.clear();
         _markerView      = CanvasMarkerView{};

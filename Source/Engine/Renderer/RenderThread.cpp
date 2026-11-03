@@ -487,6 +487,10 @@ namespace sw
 
     void RenderThread::executePacket( RenderFramePacket& packet )
     {
+        // 글리프 아틀라스 업로드는 차분이다 — 이 패킷을 그리지 않고 끝내는 길(시점 없음 · 컨텍스트 실패 · 그래프 준비 전)보다 먼저 거울에 옮긴다.
+        // 그러지 않으면 그 묶음의 글자가 영영 빈칸으로 남는다(첫 프레임에 만든 글리프가 HUD 에서 빠졌다).
+        if ( _pFrameRenderer != nullptr )
+            _pFrameRenderer->acceptCanvasAtlasUploads( packet._canvas );
         // 훅에 넘길 디바이스가 아예 없으면 할 수 있는 일이 없다.
         if ( _pDevice == nullptr )
             return;

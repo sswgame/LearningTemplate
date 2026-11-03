@@ -207,6 +207,8 @@ namespace sw
          *          그 목록을 그린다. 아틀라스 업로드는 한 번만 반영하고 반영한 뒤에는 비운다.
          */
         void setCanvasFrame( CanvasFrameData& inoutFrame );
+        /** @brief 패킷의 글리프 아틀라스 업로드를 캔버스 거울에 옮깁니다. 그리지 않을 패킷도 받은 즉시 부릅니다(`CanvasRenderer::acceptAtlasUploads`). */
+        void acceptCanvasAtlasUploads( CanvasFrameData& inoutFrame ) { _state._canvasRenderer.acceptAtlasUploads( inoutFrame ); }
         /** @brief 캔버스(화면 2D · 렌더 텍스처 대상) 렌더러입니다. 다시 그린 대상 수 같은 진단 값을 읽을 때 씁니다. */
         const CanvasRenderer& getCanvasRenderer() const { return _state._canvasRenderer; }
 

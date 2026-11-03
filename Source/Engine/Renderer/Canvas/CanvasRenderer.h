@@ -53,6 +53,11 @@ namespace sw
          */
         void prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame, const RenderPSOCache& psoCache );
         /**
+         * @brief @p inoutFrame 의 글리프 아틀라스 업로드를 거울에 옮기고 비웁니다. 디바이스가 없어도 된다(거울은 CPU 바이트다).
+         * @details 업로드는 차분이라 그리지 않고 버리는 패킷의 것도 받아야 한다 — 렌더 스레드가 패킷을 받자마자, 그리기 여부를 가리기 전에 부른다(`RenderThread::executePacket`).
+         */
+        void acceptAtlasUploads( CanvasFrameData& inoutFrame );
+        /**
          * @brief 목록 하나를 지금 열린 렌더 패스에 그립니다. 일괄마다 가위, 루트 상수(시작, 텍스처 넷, 대상 크기, 색각 보정), `drawInstanced( 6, n )` 을 기록합니다.
          * @param quadBase       사각형 버퍼에서 이 목록이 시작하는 위치(주 출력 0, 대상은 `getTargetQuadBase`)
          * @param pso            대상 포맷의 캔버스 PSO

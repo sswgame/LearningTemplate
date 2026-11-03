@@ -14,16 +14,39 @@ namespace sw
         : _listPage{}
         , _regionScratchBytes{}
         , _lastUploadCallCount{ 0 }
+        , _appliedSequence{ 0 }
+        , _bAwaitingFullUpload{ SW_FALSE }
     {
     }
 
     CanvasGlyphAtlasTexture::~CanvasGlyphAtlasTexture() = default;
 
-    void CanvasGlyphAtlasTexture::applyUploads( vector<GlyphAtlasUpload>& inoutListUpload )
+    void CanvasGlyphAtlasTexture::applyUploads( vector<GlyphAtlasUpload>& inoutListUpload, GlyphAtlas* pSource )
     {
-        for ( const GlyphAtlasUpload& upload : inoutListUpload )
+        // 한 목록에 묶음 하나다(`GlyphAtlas::takeUploads` 한 번). 번호가 이어지거나 전체 묶음이면 받는다.
+        if ( inoutListUpload.empty() == false )
         {
-            applyUpload( upload );
+            const GlyphAtlasUpload& first       = inoutListUpload.front();
+            const bool              bFullUpload = first._bFullUpload == SW_TRUE;
+            const bool              bInOrder    = _bAwaitingFullUpload == SW_FALSE && first._sequence == _appliedSequence + 1;
+            if ( bFullUpload || bInOrder )
+            {
+                for ( const GlyphAtlasUpload& upload : inoutListUpload )
+                {
+                    applyUpload( upload );
+                }
+                _appliedSequence     = first._sequence;
+                _bAwaitingFullUpload = SW_FALSE;
+            }
+            else
+            {
+                if ( pSource == nullptr )
+                    SW_LOG_ERROR_ID( "Canvas.GlyphAtlasMissedBatchNoSource", "Glyph atlas upload batch %# arrived after %# with no source to ask for a full upload - glyphs drawn since stay blank",
+                                     first._sequence, _appliedSequence );
+                else
+                    pSource->requestFullUpload(); // 청한 전체 묶음이 실린 패킷도 버려질 수 있으므로 버린 묶음마다 다시 청한다
+                _bAwaitingFullUpload = SW_TRUE;
+            }
         }
         inoutListUpload.clear();
     }

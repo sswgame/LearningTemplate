@@ -33,8 +33,12 @@ namespace sw
         CanvasGlyphAtlasTexture( const CanvasGlyphAtlasTexture& )            = delete;
         CanvasGlyphAtlasTexture& operator=( const CanvasGlyphAtlasTexture& ) = delete;
 
-        /** @brief 아틀라스 업로드를 미러에 반영하고 업로드할 구간으로 적은 뒤 @p inoutListUpload 를 비웁니다(같은 프레임 묶음을 다시 그려도 두 번 올리지 않게). */
-        void applyUploads( vector<GlyphAtlasUpload>& inoutListUpload );
+        /**
+         * @brief 아틀라스 업로드를 미러에 반영하고 업로드할 구간으로 적은 뒤 @p inoutListUpload 를 비웁니다(같은 프레임 묶음을 다시 그려도 두 번 올리지 않게).
+         * @details 업로드는 차분이다. 묶음 번호(`GlyphAtlasUpload::_sequence`)가 지난 번호 + 1 이 아니면 앞 묶음을 놓친 것이라(그리지 않고 버린 패킷 등)
+         *          그 묶음을 버리고 @p pSource 에 전체 업로드를 청한다. 전체 묶음(`_bFullUpload`)이 오면 번호와 관계없이 받아 다시 맞는다. 청할 곳이 없으면 오류다.
+         */
+        void applyUploads( vector<GlyphAtlasUpload>& inoutListUpload, GlyphAtlas* pSource );
         /**
          * @brief 페이지 텍스처를 갖추고(없으면 만듭니다) 바뀐 구간의 업로드를 냅니다. GPU 완료를 기다리지 않습니다(새 페이지는 첫 업로드가 끝난 이후 프레임부터 그려진다).
          * @details 업로드 호출 수(`getLastUploadCallCount`)를 이번 호출 것으로 새로 셉니다.
@@ -94,5 +98,7 @@ namespace sw
         vector<AtlasPage> _listPage;
         vector<uint8>     _regionScratchBytes; ///< 구간 업로드용으로 행 사이의 빈틈을 없앤 사본
         uint32            _lastUploadCallCount;
+        uint64            _appliedSequence;     ///< 마지막으로 받은 묶음 번호입니다(0 = 아직 없음).
+        uint8             _bAwaitingFullUpload; ///< 묶음을 놓쳐 전체 묶음을 기다린다 — 그때까지 차분 묶음은 버리고 다시 청한다
     };
 } // namespace sw
