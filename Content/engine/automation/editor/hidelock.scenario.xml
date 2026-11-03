@@ -24,14 +24,14 @@
 	<EditorClick mark="hierarchy.lock.GameCamera"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectionCount" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.lock.GameCamera"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

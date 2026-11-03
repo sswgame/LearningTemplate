@@ -5,11 +5,11 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/hierarchyfilter.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.hierarchyfilter" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<Wait frames="60"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="tag.add GameObject Scenario.Probe.Child"/>
 	<!-- 부모 태그로 자식 태그를 찾는다 -->
 	<EditorWaitSettled/>

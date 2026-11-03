@@ -17,7 +17,7 @@
 	<Wait frames="42"/>
 	<EditorKey key="D" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
-	<Wait frames="8"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
@@ -27,10 +27,10 @@
 	<Wait frames="460"/>
 	<EditorKey key="Shift+E" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraY" atLeast="100"/>
 	<Expect watch="Editor.GridStep" near="10" tolerance="0.001"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

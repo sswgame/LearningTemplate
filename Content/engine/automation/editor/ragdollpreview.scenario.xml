@@ -30,7 +30,7 @@
 	<EditorClick mark="ragdoll.reset"/>
 	<WaitUntil watch="Editor.RagdollPreviewState" equals="0" timeoutFrames="300"/>
 	<WaitUntil watch="Editor.RagdollPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

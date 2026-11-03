@@ -14,7 +14,7 @@
 	<EditorText value="Audio Mixer"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus audiomixer"/>
 	<WaitUntil watch="Editor.AudioMixerBusCount" atLeast="7" timeoutFrames="135"/>
 	<Expect watch="Editor.AudioMixerMutedCount" equals="0"/>
@@ -31,12 +31,12 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="audiomixer.solo.sfx"/>
 	<WaitUntil watch="Editor.AudioMixerSoloCount" equals="0" timeoutFrames="90"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchBus" value="sfx"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="audiomixer.volume.sfx"/>
 	<WaitUntil watch="Editor.AudioMixerBusVolume" near="0.5" tolerance="0.15" timeoutFrames="105"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -5,10 +5,10 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/loadingscreen.scenario.xml -unattended
 -->
 <Scenario name="editor.loadingscreen" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<Wait frames="90"/>
+	<EditorWaitSettled/>
 	<Screenshot file="stopped.ppm"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<ExpectImage file="stopped.ppm" golden="stopped" region="0.3,0.3,0.9,0.9"/>
-	<Wait frames="4"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

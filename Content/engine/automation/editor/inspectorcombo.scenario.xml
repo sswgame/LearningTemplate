@@ -12,7 +12,7 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
 	<Variable name="gv_editorWatchProperty" value="CameraComponent._role"/>
-	<Wait frames="25"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectedEnumValue" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<EditorWaitSettled/>
@@ -21,10 +21,10 @@
 	<EditorClick mark="inspector.enum._role.Custom"/>
 	<WaitUntil watch="Editor.SelectedEnumValue" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.SelectedEnumValue" equals="0" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

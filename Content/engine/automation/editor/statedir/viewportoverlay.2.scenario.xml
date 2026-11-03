@@ -5,23 +5,23 @@
   실행: 1/2 와 같은 -gv_editorStateDir 로 이어서.
 -->
 <Scenario name="editor.viewportoverlay.2" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<Wait frames="40"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchOverlay" value="view"/>
 	<Expect watch="Editor.OverlayDock" equals="3"/>
 	<Expect watch="Editor.OverlayVertical" equals="1"/>
 	<Variable name="gv_editorWatchOverlay" value="transform"/>
-	<Wait frames="2"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.OverlayFlags" equals="11"/>
 	<Variable name="gv_editorWatchOverlay" value="tools"/>
-	<Wait frames="2"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.OverlayFlags" equals="0"/>
-	<Wait frames="6"/>
+	<EditorWaitSettled/>
 	<DevCommand line="overlay.reset"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.OverlayFlags" equals="1"/>
 	<Variable name="gv_editorWatchOverlay" value="view"/>
-	<Wait frames="2"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.OverlayDock" equals="1"/>
-	<Wait frames="3"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

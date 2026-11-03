@@ -10,7 +10,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus test_runner"/>
 	<!-- 목록이 길어 그 테스트가 창 밖에 있다 — 검색 칸에 이름을 넣어 앞으로 가져온다 -->
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.TestRunnerPassCount" equals="0"/>
 	<EditorClick mark="testRunner.filter"/>
 	<EditorWaitSettled/>
@@ -24,8 +24,8 @@
 	<EditorClick mark="testRunner.runSelected" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="testRunner.runSelected" state="up"/>
-	<Wait frames="12"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.TestRunnerPassCount" equals="1"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

@@ -11,11 +11,11 @@
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.row.TestSprite"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchHierarchyObject" value="TestSprite"/>
 	<Expect watch="Editor.HierarchyRowIndex" equals="2"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.moveSiblingUp"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
@@ -23,22 +23,22 @@
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.moveSiblingDown"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="3" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="2" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.ObjectCount" equals="9"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.createFolder"/>
 	<WaitUntil watch="Editor.ObjectCount" equals="10" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.ObjectCount" equals="9" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

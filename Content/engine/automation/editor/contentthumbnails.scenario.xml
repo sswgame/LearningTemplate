@@ -17,21 +17,21 @@
 	<EditorKey key="Ctrl+A"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Backspace"/>
-	<Wait frames="7"/>
+	<EditorWaitSettled/>
 	<DevCommand line="content.open engine/textures"/>
 	<!-- 폴더 목록은 워커 잡이고 썸네일은 프레임마다 하나씩 읽으므로, 고정 프레임이 아니라 캐시가 찰 때까지 기다린다 -->
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.ThumbnailCacheCount" atLeast="1" timeoutFrames="800"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<!-- engine/textures 에는 빠진 텍스처 그림 자체(missing.dds — 마젠타 체크무늬)가 있어 그 썸네일 한 칸(약 0.07 %)만 허용한다 -->
 	<CaptureEditorUI file="textures.png" maxMagentaFraction="0.001"/>
-	<Wait frames="3"/>
+	<EditorWaitSettled/>
 	<DevCommand line="content.open engine/data"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.ThumbnailFallbackGlyphCount" atLeast="1" timeoutFrames="800"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="data.png"/>
-	<Wait frames="3"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

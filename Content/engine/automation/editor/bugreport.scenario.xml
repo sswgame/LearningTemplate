@@ -15,10 +15,10 @@
 	<Wait frames="42"/>
 	<EditorKey key="D" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
-	<Wait frames="8"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<DevCommand line="bugreport scenario check"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="BugReport.Saved" atLeast="1"/>
 	<!-- 다시 왼쪽으로 옮긴다(A) — 기록과 다른 자리 -->
 	<EditorWaitSettled/>
@@ -27,14 +27,14 @@
 	<Wait frames="70"/>
 	<EditorKey key="A" state="up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraX" atMost="1"/>
 	<!-- bugreport.goto — 가장 최근 폴더의 자리로 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="bugreport.goto"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="BugReport.GotoMoved" atLeast="1"/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

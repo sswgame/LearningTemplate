@@ -10,9 +10,9 @@
 -->
 <Scenario name="editor.flowprefab" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
-	<Wait frames="4"/>
+	<EditorWaitSettled/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
@@ -27,15 +27,15 @@
 	<EditorText value="Lantern"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="component.add PointLightComponent"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="prefab.create {out}/lantern.prefab.xml"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorExpectObject name="Lantern" component="PointLightComponent" selected="1"/>
 	<Remember watch="Object.Property" target="Lantern" key="PointLightComponent._radius" as="templateRadius"/>
 	<!-- ② 둘째 인스턴스 — 이름을 바꾸고 세기를 덮어쓴다 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="prefab.spawn {out}/lantern.prefab.xml"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="inspector.name"/>
@@ -53,7 +53,7 @@
 	<EditorText value="3"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectedNames" is="LanternB"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" sameAs="templateRadius"/>
@@ -67,7 +67,7 @@
 	<EditorText value="7"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectedNames" is="Lantern"/>
 	<Expect watch="Object.Property" target="Lantern" key="PointLightComponent._radius" equals="7"/>
 	<Remember watch="Editor.UndoIndex" as="beforeApply"/>
@@ -78,24 +78,24 @@
 	<Expect watch="Object.Property" target="Lantern" key="PointLightComponent._radius" equals="7"/>
 	<Expect watch="Editor.UndoIndex" differsFrom="beforeApply"/>
 	<ExpectLog id="Prefab.Saved" count="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Object.Property" target="LanternB" key="PointLightComponent._radius" sameAs="templateRadius" timeoutFrames="60"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
 	<Expect watch="Editor.UndoIndex" sameAs="beforeApply"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7" timeoutFrames="60"/>
 	<!-- ⑤ 저장 → 새 씬 → 다시 열기 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="scene.saveAs {out}/flowprefab.scene.xml"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorExpectObject name="LanternB" count="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="scene.open {out}/flowprefab.scene.xml"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
 	<WaitUntil watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7" timeoutFrames="72"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
@@ -103,7 +103,7 @@
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<!-- 에디터 문구 표가 올라왔다(인스펙터의 프리팹 줄 툴팁이 키 그대로 나오지 않는다) -->
 	<ExpectLog id="Localization.MissingKey" count="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

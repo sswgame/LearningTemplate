@@ -5,13 +5,13 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/emptyscene.scenario.xml -unattended
 -->
 <Scenario name="editor.emptyscene" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
-	<Wait frames="50"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Screenshot file="emptyscene.ppm"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<ExpectImage file="emptyscene.ppm" golden="emptyscene"/>
-	<Wait frames="4"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

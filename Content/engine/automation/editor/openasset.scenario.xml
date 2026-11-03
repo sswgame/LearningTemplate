@@ -5,9 +5,9 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/openasset.scenario.xml -unattended
 -->
 <Scenario name="editor.openasset" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchPanel" value="tile_map"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
@@ -16,9 +16,9 @@
 	<!-- 파일 목록(일 스레드)이 오기 전에 Enter 를 눌러도 목록이 오는 대로 연다 — 패널이 열릴 때까지 WaitUntil 로 기다린다 -->
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.close tile_map"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
@@ -27,8 +27,8 @@
 	<EditorText value="twod.tilemap"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

@@ -11,9 +11,9 @@
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="component.add RigidBodyComponent"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.ColliderHandleCount" equals="0"/>
 	<Expect watch="Editor.ColliderHalfExtentX" near="0.5" tolerance="0.001"/>
 	<EditorWaitSettled/>
@@ -26,7 +26,7 @@
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.ColliderHalfExtentX" near="0.5" tolerance="0.001" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

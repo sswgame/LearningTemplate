@@ -19,7 +19,7 @@
 	<WaitUntil watch="Editor.PairedAnimationRoleCount" equals="2" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.PairedAnimationSceneFrames" atLeast="60" timeoutFrames="600"/>
 	<DevCommand line="panel.close charactereditor.pairedanimation"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

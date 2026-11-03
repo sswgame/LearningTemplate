@@ -10,7 +10,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus packaging"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PackagingState" equals="0"/>
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitSettled/>
@@ -26,13 +26,13 @@
 	<Wait frames="3"/>
 	<EditorClick mark="packaging.package" state="up"/>
 	<WaitUntil watch="Editor.PackagingState" equals="1" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.PackagingState" equals="2" timeoutFrames="1400"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PackagingState" equals="2"/>
 	<ExpectLog id="Packaging.Done" count="1"/>
 	<CaptureEditorUI file="packaging.png"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

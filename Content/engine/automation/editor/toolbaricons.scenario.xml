@@ -26,7 +26,7 @@
 	<EditorClick mark="gizmo.translate"/>
 	<WaitUntil watch="Editor.GizmoOperation" equals="0" timeoutFrames="60"/>
 	<CaptureEditorUI file="toolbar.png"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

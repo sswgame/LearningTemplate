@@ -10,7 +10,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="admin.tool"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Shift+P"/>
@@ -20,15 +20,15 @@
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
 	<ExpectLog id="Admin.PanelOpened" count="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus admin.tool"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="admin.lookup"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Admin.CommandResult" contains="LookupAccount: Ok" count="1"/>
 	<!-- 메모 없는 지급은 거절된다 -->
 	<EditorClick mark="admin.grant"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Admin.CommandResult" contains="AdjustAsset: InvalidRequest" count="1"/>
 	<!-- 메모를 적으면 들어가고, 성공한 뒤 같은 계정을 다시 조회한다 -->
 	<EditorWaitSettled/>
@@ -39,7 +39,7 @@
 	<EditorText value="ticket-42"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="admin.grant"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Admin.CommandResult" contains="AdjustAsset: Ok" count="1"/>
 	<ExpectLog id="Admin.CommandResult" contains="LookupAccount: Ok" count="2"/>
 	<!-- 잔액(200)보다 큰 회수는 거절된다 -->
@@ -51,15 +51,15 @@
 	<EditorText value="1000"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="admin.revoke"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Admin.CommandResult" contains="AdjustAsset: InsufficientFunds" count="1"/>
 	<EditorClick mark="admin.sanction.apply"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Admin.CommandResult" contains="SetSanction: Ok" count="1"/>
 	<EditorClick mark="admin.audit.list"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Admin.CommandResult" contains="ListAudit: Ok" count="1"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

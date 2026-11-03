@@ -15,7 +15,7 @@
 	<DevCommand line="camera.reset"/>
 	<EditorWaitSettled/>
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewOrthographic" equals="0"/>
 	<Expect watch="Editor.SceneViewOrbitDistance" near="8" tolerance="0.01"/>
 	<Remember watch="Editor.SceneViewCameraX" as="xStart"/>
@@ -30,11 +30,11 @@
 	<EditorDrag mark="sceneView.canvas" button="2" dx="120" dy="0"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="xStart" timeoutFrames="60"/>
 	<!-- ③ 오른쪽 단추 비행으로 옆으로 난 뒤 Alt 궤도 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="camera.reset"/>
 	<EditorWaitSettled/>
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Remember watch="Editor.SceneViewCameraX" as="xBeforeFly"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.5" state="down"/>
@@ -44,7 +44,7 @@
 	<EditorKey key="D" state="up"/>
 	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraX" differsFrom="xBeforeFly"/>
 	<Remember watch="Editor.SceneViewCameraX" as="xFlown"/>
 	<Remember watch="Editor.SceneViewOrbitDistance" as="distFlown"/>
@@ -62,7 +62,7 @@
 	<EditorKey key="Ctrl+1"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Keypad7"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Remember watch="Editor.SceneViewCameraX" as="xOrtho"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Alt" state="down"/>
@@ -74,7 +74,7 @@
 	<EditorKey key="Keypad5"/>
 	<EditorWaitSettled/>
 	<EditorKey key="1"/>
-	<Wait frames="3"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraX" sameAs="xFlown"/>
 	<!-- ④ 비행 중 휠은 속도다: 궤도 거리는 그대로 -->
 	<EditorWaitSettled/>
@@ -89,6 +89,6 @@
 	<Expect watch="Editor.SceneViewOrbitDistance" sameAs="distBeforeFlyWheel"/>
 	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

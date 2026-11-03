@@ -10,17 +10,17 @@
 	<DevCommand line="panel.focus game_view"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="gameView.screenshot"/>
-	<Wait frames="40"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Screenshot.Saved" count="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus scene_view"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="sceneView.screenshot"/>
-	<Wait frames="40"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Screenshot.Saved" count="2"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="screenshot {out}/devcommand.png"/>
-	<Wait frames="40"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Screenshot.Saved" contains="{out}/devcommand.png" count="1"/>
 	<ExpectLog id="Screenshot.NotWritten" count="0"/>
 	<Pass/>

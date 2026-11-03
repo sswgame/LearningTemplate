@@ -13,14 +13,14 @@
 	<!-- ① 게임 뷰 Lit 기준 -->
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>
 	<Screenshot file="viewmodes_game_lit.ppm"/>
 	<!-- ② 씬 뷰 Lit 과 보기 모드마다 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus scene_view"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Expect watch="Editor.SceneViewMode" equals="0"/>
 	<Screenshot file="viewmodes_scene_lit.ppm"/>
@@ -50,24 +50,24 @@
 	<WaitUntil watch="Editor.SceneViewMode" equals="3" timeoutFrames="90"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>
 	<Screenshot file="viewmodes_scene_normals.ppm"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<ExpectImage file="viewmodes_scene_unlit.ppm" golden="viewmodes_scene_unlit"/>
 	<ExpectImage file="viewmodes_scene_wireframe.ppm" golden="viewmodes_scene_wireframe"/>
 	<ExpectImage file="viewmodes_scene_depth.ppm" golden="viewmodes_scene_depth"/>
 	<ExpectImage file="viewmodes_scene_overdraw.ppm" golden="viewmodes_scene_overdraw"/>
 	<ExpectImage file="viewmodes_scene_normals.ppm" golden="viewmodes_scene_normals"/>
 	<!-- ③ 씬 뷰가 Normals 여도 게임 뷰는 Lit 그대로 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
 	<Expect watch="Editor.SceneViewMode" equals="3"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>
 	<Screenshot file="viewmodes_game_after.ppm"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<ExpectImage file="viewmodes_game_after.ppm" golden="viewmodes_game_after"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus scene_view"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

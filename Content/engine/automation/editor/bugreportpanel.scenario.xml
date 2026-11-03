@@ -13,9 +13,9 @@
 	<EditorText value="panel scenario note"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="bugReport.capture"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="BugReport.Saved" contains="panel scenario note" count="1"/>
 	<DevCommand line="panel.close bug_it"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

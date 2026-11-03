@@ -10,7 +10,7 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchAsset" value="engine/vfx/sparks.vfx.xml"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus vfx_preview"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
@@ -18,19 +18,19 @@
 	<EditorText value="sparks.vfx.xml"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.VFXPreviewDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="VFXPreview.Playing" contains="'engine/vfx/sparks.vfx.xml' (2 emitters)" count="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.VFXPreviewParticleCount" atLeast="20" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.VFXPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.VFXPreviewParticleCount" atLeast="20"/>
-	<Wait frames="2"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="vfxpreview/panel.png"/>
-	<Wait frames="3"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

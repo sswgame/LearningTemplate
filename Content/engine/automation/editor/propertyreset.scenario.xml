@@ -24,7 +24,7 @@
 	<EditorClick mark="inspector.reset.CameraComponent._priority"/>
 	<WaitUntil watch="Editor.SelectedProperty" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

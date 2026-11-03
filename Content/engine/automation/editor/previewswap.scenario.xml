@@ -15,15 +15,15 @@
 -->
 <Scenario name="editor.previewswap" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
-	<Wait frames="4"/>
+	<EditorWaitSettled/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="material"/>
 	<!-- ① 문서를 열어 구 미리보기가 그려지게 한 뒤 교체 앞의 타깃을 저장한다 -->
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+P"/>
@@ -31,25 +31,25 @@
 	<EditorText value="previewred.material"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus material"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="40" timeoutFrames="600"/>
-	<Wait frames="9"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorPreviewScreenshot" value="{out}/previewswap_before.ppm"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<ExpectLog id="Renderer.OffscreenStarted" atLeast="1"/>
 	<ExpectLog id="PreviewViewport.Screenshot" atLeast="1"/>
 	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<!-- ② 창이 열린 채 다른 백엔드로 건넌다 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<SwapBackend backend="other"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<Wait frames="9"/>
+	<EditorWaitSettled/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
@@ -60,28 +60,28 @@
 	<EditorText value="previewred.material"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus material"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
-	<Wait frames="48"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorPreviewScreenshot" value="{out}/previewswap_after1.ppm"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<Expect watch="Editor.MaterialPreviewSceneFrames" atLeast="30"/>
+	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="30" timeoutFrames="300"/>
 	<ExpectLog id="Renderer.OffscreenStarted" atLeast="2"/>
 	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<ExpectLog id="PreviewViewport.Screenshot" atLeast="2"/>
 	<!-- ④ 창이 열린 채 시작 백엔드로 돌아온다 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<SwapBackend backend="start"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<Wait frames="9"/>
+	<EditorWaitSettled/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
@@ -91,32 +91,32 @@
 	<EditorText value="previewred.material"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus material"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
-	<Wait frames="48"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorPreviewScreenshot" value="{out}/previewswap_after2.ppm"/>
-	<Wait frames="30"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<Expect watch="Editor.MaterialPreviewSceneFrames" atLeast="30"/>
+	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="30" timeoutFrames="300"/>
 	<ExpectLog id="Renderer.OffscreenStarted" atLeast="3"/>
 	<Expect watch="Editor.ScenePreviewRenderers" sameAs="renderers"/>
 	<ExpectLog id="PreviewViewport.Screenshot" atLeast="3"/>
 	<!-- ⑤ 마지막: 다른 패널도 정상으로 그려진다 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.close material"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus scene_view"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<EditorClick mark="hierarchy.filter"/>
 	<CaptureEditorUI file="previewswap/final.png"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

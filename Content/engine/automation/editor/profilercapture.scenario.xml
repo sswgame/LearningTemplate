@@ -22,18 +22,18 @@
 	<!-- 2) Pause · Save · Clear · Load -->
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.capture.pause"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="300"/>
-	<Wait frames="14"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
 	<EditorClick mark="profiler.capture.save"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.capture.clear"/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="profiler.capture.load"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" atLeast="30" timeoutFrames="300"/>
-	<Wait frames="19"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.ProfilerCapturedFrames" atLeast="30"/>
 	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
 	<ExpectLog id="Profiler.CaptureLoaded" atLeast="1"/>
@@ -63,7 +63,7 @@
 	<WaitUntil watch="Editor.ProfilerCallTreeNodes" atLeast="3" timeoutFrames="225"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.callTree.record"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

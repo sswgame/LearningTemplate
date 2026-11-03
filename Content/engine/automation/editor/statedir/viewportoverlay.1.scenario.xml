@@ -28,9 +28,9 @@
 	<WaitUntil watch="Editor.OverlayFlags" equals="11" timeoutFrames="60"/>
 	<DevCommand line="overlay.show tools 0"/>
 	<Variable name="gv_editorWatchOverlay" value="tools"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.OverlayFlags" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

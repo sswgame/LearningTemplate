@@ -11,34 +11,34 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open engine/automation/editor/lightprobebake/bake_cancel.scene.xml"/>
-	<Wait frames="90"/>
+	<EditorWaitSettled/>
 	<EditorExpectObject name="ProbeVolume"/>
 	<!-- 픽스처 볼륨은 일부러 굽지 않았다 — 열 때 검증 경고("is not baked")를 낸다(lightprobebake 시나리오와 같다) -->
 	<ExpectLog id="ObjectValidation.Issue" atLeast="1"/>
 	<Expect watch="Editor.LightProbeBakeRunning" equals="0"/>
 	<Expect watch="Editor.LightProbeBakeCount" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor lighting.bakeProbes"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.LightProbeBakeRunning" equals="1" timeoutFrames="300"/>
-	<Wait frames="14"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.LightProbeBakeRunning" equals="1"/>
 	<Expect watch="Editor.LightProbeBakeCount" equals="0"/>
 	<!-- 눈 확인용(GPU 검증): 상태줄의 진행 "Baking probes 1/1 (n / 100)" 과 Cancel 단추 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="lightprobebakecancel/baking.png"/>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitSettled/>
 	<EditorClick mark="statusBar.lightProbeBakeCancel" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="statusBar.lightProbeBakeCancel" state="up"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.LightProbeBakeRunning" equals="0" timeoutFrames="600"/>
-	<Wait frames="16"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.LightProbeBakeRunning" equals="0"/>
 	<Expect watch="Editor.LightProbeBakeCount" equals="1"/>
 	<Expect watch="Editor.BakedLightProbeVolumeCount" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

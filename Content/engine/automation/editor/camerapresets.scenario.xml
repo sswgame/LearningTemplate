@@ -21,7 +21,7 @@
 	<WaitUntil watch="Editor.CameraPresetSelected" equals="2" timeoutFrames="60"/>
 	<EditorClick mark="camerapreset.row.topdown"/>
 	<WaitUntil watch="Editor.CameraPresetSelected" equals="0" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

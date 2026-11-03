@@ -8,14 +8,14 @@
 -->
 <Scenario name="editor.scenereference" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
-	<Wait frames="4"/>
+	<EditorWaitSettled/>
 	<ResizeWindow width="2300" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchProperty" value="EditorSceneReferenceTestComponent._target"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<!-- ① 오브젝트에 컴포넌트를 단다 -->
 	<EditorWaitSettled/>
@@ -28,16 +28,16 @@
 	<EditorText value="Prober"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="component.add EditorSceneReferenceTestComponent"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectedNames" is="Prober"/>
 	<Expect watch="Editor.SelectedSceneReference" is="(none)"/>
 	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
 	<CaptureEditorUI file="scenereference/inspector.png"/>
 	<!-- ② 콤보로 고른다 -->
 	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="scenereference/combo.png"/>
 	<EditorHover mark="inspector.sceneref.choice.TestMesh"/>
 	<EditorWaitSettled/>
@@ -64,7 +64,7 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="inspector.sceneref.none"/>
 	<WaitUntil watch="Editor.SelectedSceneReference" is="(none)" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

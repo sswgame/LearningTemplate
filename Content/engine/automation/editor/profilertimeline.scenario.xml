@@ -9,15 +9,15 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -unattended
 -->
 <Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
-	<Wait frames="3"/>
+	<EditorWaitSettled/>
 	<DevCommand line="profile.trace on"/>
 	<DevCommand line="profile.trace off"/>
-	<Wait frames="2"/>
+	<EditorWaitSettled/>
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1600" height="900"/>
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus profiler"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.ProfilerTimelineThreadCount" equals="0"/>
 	<EditorClick mark="profiler.timeline.tab" state="down"/>
 	<Wait frames="3"/>
@@ -26,16 +26,16 @@
 	<EditorClick mark="profiler.timeline.record"/>
 	<WaitUntil watch="Editor.ProfilerTimelineThreadCount" atLeast="2" timeoutFrames="180"/>
 	<!-- 눈 확인용(GPU 검증): 녹화 중 타임라인 — GPU 타임스탬프 칸(64)을 실제로 얼마나 쓰는지 렌더 스레드 줄에서 본다 -->
-	<Wait frames="2"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="profilertimeline/recording.png"/>
 	<!-- 다시 누르면 녹화가 멈춘다 — 남은 사건은 그대로 보인다 -->
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.timeline.record"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.ProfilerTimelineThreadCount" atLeast="2"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.timeline.saveTrace"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Profiler.TimelineTrace" contains="saved" atLeast="1"/>
 	<!-- 저장한 트레이스를 불러와 살아 있는 기록 아래에 겹친다 · 구간 이름으로 찾는다 · 지운다 -->
 	<EditorWaitSettled/>

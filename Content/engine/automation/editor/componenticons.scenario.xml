@@ -11,18 +11,18 @@
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchObject" value="TestKeyLight"/>
 	<WaitUntil watch="Editor.HierarchyRowIcon" equals="57417" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchObject" value="GameCamera"/>
 	<WaitUntil watch="Editor.HierarchyRowIcon" equals="57394" timeoutFrames="60"/>
 	<Expect watch="Editor.BillboardIcon" equals="57394"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchObject" value="TestMesh"/>
 	<WaitUntil watch="Editor.HierarchyRowIcon" equals="57414" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.row.TestKeyLight"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<CaptureEditorUI file="hierarchy.png"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

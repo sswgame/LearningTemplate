@@ -17,13 +17,13 @@
 	<EditorText value="crate_medium.mesh"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MeshPreviewVertexCount" atLeast="3" timeoutFrames="600"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MeshPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.MeshPreviewDrawnLOD" equals="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -17,11 +17,11 @@
 	<EditorText value="previewred.material"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

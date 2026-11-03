@@ -17,7 +17,7 @@
 	<EditorText value="sequencerkeys.seq.xml"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="sequencer.addKey"/>
@@ -50,10 +50,10 @@
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.ObjectPositionX" equals="12"/>
 	<EditorClick mark="sequencer.scrub"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.ObjectPositionX" atLeast="4"/>
 	<Expect watch="Editor.ObjectPositionX" atMost="10"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

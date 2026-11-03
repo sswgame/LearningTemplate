@@ -11,8 +11,8 @@
 	<EditorText value="Self Test Ping"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="SelfTest.RegistrationRan" count="1"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

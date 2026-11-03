@@ -11,12 +11,12 @@
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.PlatformWindows" equals="0" timeoutFrames="60"/>
 	<DevCommand line="panel.focus inspector"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.float inspector"/>
 	<WaitUntil watch="Editor.PlatformWindows" atLeast="1" timeoutFrames="120"/>
 	<WaitUntil watch="Editor.PlatformWindowFrames" atLeast="60" timeoutFrames="300"/>
 	<DevCommand line="panel.close inspector"/>
 	<WaitUntil watch="Editor.PlatformWindows" equals="0" timeoutFrames="120"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

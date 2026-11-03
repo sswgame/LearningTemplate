@@ -15,9 +15,9 @@
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<DevCommand line="asset.open {out}/temp.animgraph.xml"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<Wait frames="35"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
 	<Expect watch="Editor.GraphNodeCount" equals="2"/>
@@ -28,22 +28,22 @@
 	<EditorClick mark="animationGraph.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="asset.removeTemp {out}/temp.animgraph.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.add.Idle"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor asset.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="asset.removeTemp {out}/temp.animgraph.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

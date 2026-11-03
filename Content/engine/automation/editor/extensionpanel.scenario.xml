@@ -7,9 +7,9 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/extensionpanel.scenario.xml -unattended
 -->
 <Scenario name="editor.extensionpanel" requiresModule="GF_EditorPlugin_Admin" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<Wait frames="40"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchPanel" value="admin.tool"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Shift+P"/>
@@ -19,14 +19,14 @@
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
 	<ExpectLog id="Admin.PanelOpened" count="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.focus admin.tool"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="admin.lookup"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="Admin.CommandResult" contains="LookupAccount: Ok" count="1"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.close admin.tool"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

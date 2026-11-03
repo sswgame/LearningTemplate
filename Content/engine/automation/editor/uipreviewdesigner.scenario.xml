@@ -9,7 +9,7 @@
 <Scenario name="editor.uipreviewdesigner" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<AllowLog id="UIPreview.UnsavedEditsDiscarded" reason="체인에서는 앞 시나리오(uipreview)가 고친 채 둔 문서를 이 시나리오가 다른 문서를 열며 버린다 — 그 경고는 체인에서만 난다"/>
 	<Scratch from="engine/automation/editor/uipreview" as="scratch/uipreviewdesigner"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
@@ -21,9 +21,9 @@
 	<EditorText value="pause.ui.xml"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="900"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="900"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.widget.Window"/>
@@ -36,22 +36,22 @@
 	<!-- 끄는 동안 자리가 먼저 바뀌고, 고침 · 되돌리기 기록은 끌기를 놓을 때 선다 -->
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5" timeoutFrames="60"/>
 	<!-- 2) 팔레트 · 끌어 놓기 · 지우기 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="asset.openScratch scratch/uipreviewdesigner/save_probe.ui.xml"/>
-	<Wait frames="40"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/>
 	<!-- 1) 에서 고치고 되돌린 문서는 되돌려도 고친 표시(dirty)가 남는다 — 다른 문서를 열면 버린다고 알리는 경고가 의도한 출력이다 -->
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<ExpectLog id="UIPreview.UnsavedEditsDiscarded" atLeast="1"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.palette.filter"/>
@@ -59,7 +59,7 @@
 	<EditorText value="TextWidget"/>
 	<EditorWaitSettled/>
 	<EditorDrag mark="uipreview.palette.TextWidget" toMark="uipreview.row.0"/>
-	<Wait frames="25"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="180"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
@@ -67,16 +67,16 @@
 	<EditorClick mark="uipreview.delete"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="60"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<!-- 정리: 거름 칸을 비우고 문서 값을 되찾는다 -->
@@ -89,9 +89,9 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.reload"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="75"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="panel.close ui_preview"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

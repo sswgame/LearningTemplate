@@ -9,9 +9,9 @@
 -->
 <Scenario name="editor.flowboundaries" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
-	<Wait frames="4"/>
+	<EditorWaitSettled/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
@@ -27,9 +27,9 @@
 	<EditorText value="BoundaryProbe"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<DevCommand line="component.add PointLightComponent"/>
-	<Wait frames="15"/>
+	<EditorWaitSettled/>
 	<EditorExpectObject name="BoundaryProbe" component="PointLightComponent" selected="1"/>
 	<Expect watch="Editor.SelectedNames" is="BoundaryProbe"/>
 	<Expect watch="Editor.UndoIndex" equals="3"/>
@@ -38,81 +38,81 @@
 	<Remember watch="Editor.SceneHash" as="editedScene"/>
 	<Remember watch="Editor.UndoState" as="editedUndo"/>
 	<!-- ① 플레이 인 → 플레이 아웃 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="play"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
-	<Wait frames="39"/>
+	<EditorWaitSettled/>
 	<DevCommand line="stop"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
-	<Wait frames="14"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneHash" sameAs="editedScene"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SelectedNames" is="BoundaryProbe"/>
 	<Expect watch="Editor.StateHash" sameAs="edited"/>
 	<!-- ② 레이아웃 저장 → 초기화 → 불러오기 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="layout.save flowboundaries"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<DevCommand line="layout.load flowboundaries"/>
-	<Wait frames="20"/>
+	<EditorWaitSettled/>
 	<EditorExpectDockLayout/>
 	<Expect watch="Editor.StateHash" sameAs="edited"/>
 	<!-- ③ 게임 모듈 리로드 -->
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="module.reload SWGame"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="6000"/>
-	<Wait frames="29"/>
+	<EditorWaitSettled/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Editor.SceneHash" sameAs="editedScene"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SelectedNames" is="BoundaryProbe"/>
 	<Expect watch="Editor.StateHash" sameAs="edited"/>
 	<!-- ④ 백엔드 교체 — 갔다가 돌아온다 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<SwapBackend backend="other"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<Wait frames="29"/>
+	<EditorWaitSettled/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Editor.SceneHash" sameAs="editedScene"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SelectedNames" is="BoundaryProbe"/>
 	<Expect watch="Editor.StateHash" sameAs="edited"/>
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<SwapBackend backend="start"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<Wait frames="29"/>
+	<EditorWaitSettled/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Editor.StateHash" sameAs="edited"/>
 	<!-- ⑤ 에디터 모듈 리로드 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="module.reload EditorModule"/>
-	<Wait frames="1"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="6000"/>
-	<Wait frames="49"/>
+	<EditorWaitSettled/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Editor.SceneHash" sameAs="editedScene"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SelectedNames" is="BoundaryProbe"/>
 	<Expect watch="Editor.StateHash" sameAs="edited"/>
 	<!-- 경계를 다 넘은 뒤에도 되돌리기가 같은 명령을 되돌리고, 다시 실행이 같은 상태로 돌아온다 -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneHash" differsFrom="editedScene"/>
 	<EditorExpectObject name="BoundaryProbe" component="PointLightComponent" count="0"/>
-	<Wait frames="5"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.SceneHash" sameAs="editedScene" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<!-- 경계를 넘은 뒤에도 씬을 저장할 수 있다(모듈 리로드가 게임을 내린 채 저장을 막지 않는다) -->
-	<Wait frames="10"/>
+	<EditorWaitSettled/>
 	<DevCommand line="scene.saveAs {out}/flowboundaries.scene.xml"/>
 	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
 	<ExpectLog id="Scene.SaveRefused" count="0"/>
