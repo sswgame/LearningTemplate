@@ -15,7 +15,7 @@
 	<Tap slot="Key.Space" hold="1"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<Wait frames="10"/>
-	<WaitUntil watch="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
 
 	<!-- Jump 를 J 로 다시 잡는다. 이제 Space 는 점프하지 않는다. -->
 	<Wait frames="2"/>
@@ -23,21 +23,21 @@
 	<Wait frames="5"/>
 	<Tap slot="Key.Space" hold="1"/>
 	<Wait seconds="0.2"/>
-	<Expect watch="Object.Y" target="Player" atMost="1.65"/>
+	<Expect watch="Object.Y" target="Player" atMost="1.74"/>
 
 	<!-- J 가 점프한다. -->
 	<Wait frames="2"/>
 	<Tap slot="Key.J" hold="1"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<Wait frames="10"/>
-	<WaitUntil watch="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
 
 	<!-- 같은 액션의 패드 바인딩(A)은 그대로다. 끝에서 기본 키로 되돌린다. -->
 	<Wait frames="2"/>
 	<Action name="Jump" device="gamepad"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<Wait frames="10"/>
-	<WaitUntil watch="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
 	<Wait frames="2"/>
 	<DevCommand line="settings.apply controls.jump=Key.Space"/>
 	<Pass/>

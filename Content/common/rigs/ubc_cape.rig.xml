@@ -1,0 +1,39 @@
+<!-- UBC 몸(Quaternius 기본 캐릭터)의 스프링 망토 — knight_cape.rig.xml 과 같은 사슬 · 강성이고, 망토는 UBC 어깨 폭으로 줄인 사슬(ubc_cape_chain — KayKit 망토를 축마다 0.5 · 0.85 · 0.55 배)이다.
+     고정점은 UBC Back 소켓 자리(spine_03 위 · 뒤), 몸 충돌체는 UBC 뼈에 붙고 망토 축소에 맞춰 줄였다. -->
+<RigAsset>
+	<targets>
+		<item name="Shoulders" bone="spine_03" unit="Body" translation="0.0,0.1,-0.15" />
+		<!-- 충돌체가 붙는 몸의 뼈(망토 스켈레톤에는 없다) — 달리거나 돌 때 망토가 몸통 · 엉덩이 · 허벅지를 뚫지 않게 한다. -->
+		<item name="BodyChest" bone="spine_03" unit="Body" />
+		<item name="BodyHips" bone="pelvis" unit="Body" />
+		<item name="BodyThighL" bone="thigh_l" unit="Body" />
+		<item name="BodyThighR" bone="thigh_r" unit="Body" />
+		<item name="BodyShinL" bone="calf_l" unit="Body" />
+		<item name="BodyShinR" bone="calf_r" unit="Body" />
+	</targets>
+	<nodes>
+		<item type="CopyTransform" name="Pin" bone="cape0" target="Shoulders" />
+		<item type="SpringChain" name="Cape" stiffness="0.06" damping="0.12" particle_radius="0.04" min_screen_size="0.07">
+			<bones>
+				<item>cape0</item>
+				<item>cape1</item>
+				<item>cape2</item>
+				<item>cape3</item>
+			</bones>
+			<joints>
+				<item stiffness="0.8" />
+				<item stiffness="0.35" />
+				<item stiffness="0.06" />
+			</joints>
+			<colliders>
+				<item bone="cape0" shape="Capsule" a="0,-0.13,0.09" b="0,-0.64,0.09" radius="0.11" />
+				<item target="BodyChest" shape="Capsule" a="-0.1,0.05,0" b="0.1,0.05,0" radius="0.15" />
+				<item target="BodyHips" shape="Capsule" a="-0.08,0.05,0" b="0.08,0.05,0" radius="0.13" />
+				<item target="BodyThighL" shape="Capsule" a="0,0,0" b="0,0.4,0" radius="0.08" />
+				<item target="BodyThighR" shape="Capsule" a="0,0,0" b="0,0.4,0" radius="0.08" />
+				<item target="BodyShinL" shape="Capsule" a="0,0,0" b="0,0.42,0" radius="0.07" />
+				<item target="BodyShinR" shape="Capsule" a="0,0,0" b="0,0.42,0" radius="0.07" />
+			</colliders>
+		</item>
+	</nodes>
+</RigAsset>

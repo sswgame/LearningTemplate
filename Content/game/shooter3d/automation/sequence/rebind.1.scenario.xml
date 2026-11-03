@@ -12,7 +12,7 @@
 	<Tap slot="Key.J" hold="1"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<Wait frames="10"/>
-	<WaitUntil watch="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
 	<Wait frames="2"/>
 	<Pass/>
 </Scenario>

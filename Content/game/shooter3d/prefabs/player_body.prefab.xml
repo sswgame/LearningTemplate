@@ -21,9 +21,9 @@
 			                       _bAnimateWhenOffscreen="false" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
-			                           _clipFolder="common/models/kaykit/knight/clips"
-			                           _initialState="Idle"
+			                           _animationGraphPath="common/data/anim/ubc_shooter.animgraph.xml"
+			                           _clipFolder="common/models/quaternius/animations/ual1_standard/clips"
+			                           _initialState="idle_loop"
 			                           _currentState=""
 			                           _stateTime="0"
 			                           _playRate="1"
@@ -34,7 +34,7 @@
 			                           _bPlayOnBegin="true" />
 			<PoseModifierComponent _componentName="PoseModifierComponent"
 			                       _bActive="true"
-			                       _rigPath="common/rigs/player_body.rig.xml"
+			                       _rigPath="common/rigs/ubc_player_body.rig.xml"
 			                       _socketSetPath=""
 			                       _physicsAssetPath=""
 			                       _bRigEnabled="true" />

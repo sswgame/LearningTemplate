@@ -14,6 +14,7 @@
   <Item id="blaster_shotgun" name="Pump Shotgun" category="Weapon" slot="Weapon" visual="blaster_shotgun"/>
   <Item id="blaster_pistol" name="Pistol" category="Weapon" slot="Weapon" visual="blaster_pistol"/>
   <Item id="helmet_skeleton" name="Rusted Helm" category="Armor" slot="Head" visual="helmet_skeleton" tags="Armor.Heavy"/>
+  <Item id="cape_heraldic" name="Heraldic Cape" category="Armor" slot="Back" visual="cape_heraldic_ubc" tags="Cloth"/>
   <Item id="cape_skeleton" name="Tattered Cape" category="Armor" slot="Back" visual="cape_skeleton" tags="Cloth"/>
   <Item id="shield_skeleton" name="Bone Shield" category="Armor" slot="Shield" visual="shield_skeleton" tags="Armor.Light"/>
   <Item id="blade_skeleton" name="Notched Blade" category="Weapon" slot="Weapon" visual="blade_skeleton"/>

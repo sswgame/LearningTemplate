@@ -42,6 +42,11 @@
     <Part name="Cape" kind="Skinned" mesh="common/models/kaykit/knight_cape_chain.mesh" skeleton="common/rigs/knight_cape.skeleton.xml"
           rig="common/rigs/knight_cape.rig.xml" material="common/materials/kaykit_knight.material" socket="Back"/>
   </ItemVisual>
+  <!-- UBC 몸(Quaternius 기본 캐릭터)용 스프링 망토 — 기사 망토 사슬을 UBC 어깨 폭으로 줄인 메시(ubc_cape_chain), 리그는 UBC 뼈에 붙는다. -->
+  <ItemVisual id="cape_heraldic_ubc" tags="Cape.Heraldic">
+    <Part name="Cape" kind="Skinned" mesh="common/models/kaykit/ubc_cape_chain.mesh" skeleton="common/models/kaykit/ubc_cape_chain/ubc_cape_chain.skeleton.xml"
+          rig="common/rigs/ubc_cape.rig.xml" material="common/materials/kaykit_knight.material" socket="Back"/>
+  </ItemVisual>
   <ItemVisual id="cape_skeleton" tags="Cape">
     <Part name="Cape" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" socket="Back"/>
   </ItemVisual>

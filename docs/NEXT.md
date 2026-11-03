@@ -24,18 +24,7 @@
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
    `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
-   - Shooter3D 몸을 KayKit 에서 UBC 로(리그 `player_body.rig.xml` · 1인칭 숨김 칸 · 망토 사슬 · 무기 소켓을 UBC 뼈로, 해골은 Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총.
-     고리(2026-11-04 읽음): 몸은 외형 프리셋 `ShooterPlayer`(parent `Adventurer` → `body_knight`, `Equip set="Knight"`, `common/data/appearance/presets.xml`)가 정하고, 프리팹 `game/shooter3d/prefabs/player_body.prefab.xml` 은
-     애니메이터(`adventurer.animgraph.xml` · 클립 폴더 `common/models/kaykit/knight/clips`), 리그(`common/rigs/player_body.rig.xml` — 뼈 이름 `hips` · `upperleg.l` · `hand.l` · `head` · `handslot.r`), 1인칭 숨김 칸(Head · MainHand)을 든다.
-     UBC 쪽 본보기는 `TownsfolkMale`(body `body_ubc_male`, 소켓 `ubc_humanoid.sockets.xml`, 피팅 `common/characters/ubc/`)와 `ubc_townsfolk.animgraph.xml`(UAL 클립 `idle_loop` · `walk_loop` · `jog_fwd_loop`).
-     할 일: `ShooterPlayer` 를 UBC 몸 + 옷으로, 사격 · 맞음 · 죽음 상태를 UAL1 · UAL2 클립으로 잇는 `ubc_shooter.animgraph.xml`, 리그 뼈 이름을 UBC 스켈레톤 이름으로, 무기 칸을 소켓 표로.
-     바뀌는 검증: Shooter3D 골든(killcam · cape · bodyviews · arena …)을 다시 굽고, `game/shooter3d/automation/editor/charactereditorscene` 의 `helmet_knight` 기대값을 새 장비로.
-     2026-11-04 시도(되돌림): 그래프는 adventurer 를 복사해 노드 이름만 UAL1 클립으로(Idle→`idle_loop` — `pistol_idle_loop` 는 총을 머리 옆으로 든다, Walking_A→`walk_loop`, Running_A→`jog_fwd_loop`, Jump_Idle→`jump_loop`, Hit_A→`hit_chest`, Death_A→`death01`,
-     짝 없는 뒷걸음 · 옆 달리기는 한 표본 `blend_space` 로 같은 클립을 다른 이름으로, 층은 `pistol_aim_neutral` · `pistol_shoot` + 상체 마스크 뿌리 `spine_01`), 리그 뼈는 `pelvis` · `thigh_l` · `calf_l` · `foot_l` · `upperarm_l` · `lowerarm_l` · `hand_l` · `Head`, 손 공간 `hand_r`.
-     그러면 걷기 · 겨눔 · 1인칭 · 보폭 워핑이 바르고(손 장면의 "머리 위 무기"는 뒤 위 카메라의 원근 — 겨눈 상체가 늘 켜져 있다), Shooter3D 체인 전체가 골든 갱신(`-scenario-update-golden`) 뒤 지나간다.
-     같이 고칠 것: 눈 높이가 몸의 `Eyes` 소켓이라 1.6 → 1.687 m — `actions` · `rebind` · `sequence/rebind.1 · 2` 의 서 있음 판정(near 1.6 → 1.69, atMost 1.61 → 1.70, atMost 1.65 → 1.74).
-     막힌 것 하나(그래서 되돌림): 기사 세트가 입히던 스프링 망토(`cape_knight` — KayKit 사슬 메시 · `knight_cape.rig.xml`)가 UBC 몸을 통째로 덮는다(KayKit 체형 폭). 리그 뼈를 UBC 로 바꿔도(`spine_03` · `pelvis` · `thigh_*` · `calf_*`) 메시 폭은 그대로 —
-     부품에는 크기 칸이 없고 맞춤은 피팅 데이터(`*.partfit.xml`)로만 한다. 피팅 데이터는 겹 · 숨김만 정하고 크기는 바꾸지 않는다. 망토 시험(`cape.scenario.xml`)이 망토를 계속 보려면 UBC 어깨 폭의 망토 메시가 먼저다 — CC0 망토 에셋, 또는 망토 스켈레톤(`knight_cape.skeleton.xml` 의 `cape0..3`)에 가중치를 준 띠 메시를 만들어 모델 가져오기로 굽는다.
+   - Shooter3D: 적 해골은 KayKit 이다(Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총으로. 플레이어는 UBC 몸(`ShooterPlayer` → `TownsfolkMale` · 레인저 옷 · `ubc_shooter.animgraph.xml` · 문장 망토 `cape_heraldic_ubc`)으로 옮겼다.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:

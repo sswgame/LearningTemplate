@@ -2,14 +2,15 @@
 <!-- 캐릭터 외형 프리셋(CharacterAppearance). parent 위에 다른 값만 적는다 — 값은 매개변수별, 칸은 칸별, 소켓은 이름별로 아래가 덮고 세트는 쌓인다.
      쉼표 목록(items · options) · 범위(min/max) · 색 목록(colors, ; 로 나눔)은 씨앗으로 뽑는다(무작위 NPC).
      Equip 는 set 하나 또는 slot 하나 — item="" 은 칸을 비우고, visible 은 보이는 외형만 바꾼다(형상 변경), 안의 Value 는 그 아이템 인스턴스의 꾸미기 값이다.
-     플레이어는 ShooterPlayer(기사 세트, 푸른 염색)다. 손에 든 무기는 여기에 적지 않는다 — 무기 표(weapons.xml)의 item 이 정본이라 ShooterPlayerComponent 가 MainHand 칸을 채운다.
+     플레이어는 ShooterPlayer(Quaternius 기본 캐릭터 UBC · 레인저 옷 — 프리팹이 UAL1 클립 · ubc_shooter 그래프 · UBC 리그를 든다)다. 손에 든 무기는 여기에 적지 않는다 — 무기 표(weapons.xml)의 item 이 정본이라 ShooterPlayerComponent 가 MainHand 칸을 채운다.
      적은 Skeleton* 셋과 씨앗마다 섞이는 SkeletonRaider 다(arena.scene.xml 의 ShooterDirector 가 _listEnemyPreset · _eliteEnemyPreset 으로 이름을 든다 — 없는 이름이면 디렉터가 시작할 때 오류로 멈춘다). -->
 <CharacterAppearanceCatalog>
   <CharacterAppearance id="Adventurer" schema="Adventurer" bodyType="Male" bodyShape="Average" body="body_knight" tags="Race.Human"/>
 
-  <CharacterAppearance id="ShooterPlayer" parent="Adventurer" tags="Faction.Player">
-    <Value name="OutfitDye" color="0.62 0.78 1 1"/>
-    <Equip set="Knight"/>
+  <CharacterAppearance id="ShooterPlayer" parent="TownsfolkMale" tags="Faction.Player">
+    <Value name="Hair" option="Buzzed"/>
+    <Value name="Outfit" option="Ranger"/>
+    <Equip slot="Back" item="cape_heraldic"/>
   </CharacterAppearance>
 
   <!-- 병합 부품 쇼케이스 — 투구 · 방패 · 검이 몸 메시에 합쳐진다(prefabs/kaykit/knight_merged.prefab.xml 이 Merge Parts 를 켠다). 어떤 컴포넌트도 가리키지 않는 외형 전용이다. -->
