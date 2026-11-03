@@ -110,18 +110,18 @@ namespace sw::editor
             _model.requestResync(); // 다시 읽은 효과를 미리보기에 다시 건다
         }
         EditorSelfTestMarks::note( "vfx.reload" );
-        EditorWidgets::drawTooltip( "Read the effect file again (after saving it in the Catalog Editor)" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheEffectFileAgainAfterSaving" ) );
         VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) && pSubject != nullptr )
             pSubject->play();
         EditorSelfTestMarks::note( "vfx.restart" );
-        EditorWidgets::drawTooltip( "Play the effect again from the start" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlayTheEffectAgainFromTheStart" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) && pSubject != nullptr )
             pSubject->stop();
         EditorSelfTestMarks::note( "vfx.stop" );
-        EditorWidgets::drawTooltip( "Stop and clear the particles" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "StopAndClearTheParticles" ) );
         ImGui::SameLine();
         // GPU 방출기의 살아 있는 입자는 GPU 버퍼에만 있다 — 이번 재생에서 만든 수(일정)와 CPU 방출기의 살아 있는 수를 따로 보인다.
         const uint32 spawnedCount = pSubject != nullptr ? static_cast<uint32>( pSubject->getSpawnedParticleCount() ) : 0u; // 표시용 — 한 재생에 40 억을 넘지 않는다

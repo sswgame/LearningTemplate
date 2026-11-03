@@ -396,7 +396,7 @@ namespace sw::editor
                 }
                 ImGui::EndDisabled();
                 if ( bOwnUnit == false )
-                    EditorWidgets::drawTooltip( "Targets on other units or objects are placed by the host - move that object instead" );
+                    EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "TargetsOnOtherUnitsOrObjectsAre" ) );
                 ImGui::PopID();
             }
             ImGui::EndTable();
@@ -439,7 +439,7 @@ namespace sw::editor
             _status = RigDebugPanelInternal::saveNodeSettings( *pModifier );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "rigdebug.save" );
-        EditorWidgets::drawTooltip( "Write the weights and on/off of this instance's nodes into the rig asset (*.rig.xml); other keys stay as they are" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "WriteTheWeightsAndOnOffOf" ) );
 
         GameObject*                  pObject = pModifier->getOwner();
         const SkeletalMeshComponent* pUnit   = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;

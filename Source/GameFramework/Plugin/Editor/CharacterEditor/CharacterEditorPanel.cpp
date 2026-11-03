@@ -1434,7 +1434,7 @@ namespace sw::editor
             saveThumbnail();
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "charactereditor.saveThumbnail" );
-        EditorWidgets::drawTooltip( "Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "StoresThePreviewTabSPictureIn" ) );
 
         if ( ImGui::BeginChild( "##PresetList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kPresetListLines ) ), ImGuiChildFlags_Borders ) )
         {

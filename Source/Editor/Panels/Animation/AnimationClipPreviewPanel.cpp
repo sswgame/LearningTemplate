@@ -102,7 +102,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Spawn" ) ) )
             _model.spawnFromField();
         EditorSelfTestMarks::note( "clip.spawn" );
-        EditorWidgets::drawTooltip( "Place the body in the preview scene and play the clip on it" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlaceTheBodyInThePreviewScene" ) );
 
         SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
         if ( pAnimator != nullptr )

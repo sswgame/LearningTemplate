@@ -325,7 +325,7 @@ namespace sw::editor
             requestOpenDocument( string_view( _newDocumentPath.c_str() ) ); // 없는 파일이면 `loadDocument` 가 빈 문서로 연다
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "retarget.new" );
-        EditorWidgets::drawTooltip( "Start an empty profile at this resource id (an existing file is opened instead)" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "StartAnEmptyProfileAtThisResource" ) );
     }
 
     void RetargetPanel::drawSkeletonRows()
@@ -436,7 +436,7 @@ namespace sw::editor
                                        static_cast<RetargetTranslationMode>( mode ) );
             markEdited( "Retarget translation" );
         }
-        EditorWidgets::drawTooltip( "How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "HowRootAndPelvisMovementIsCarried" ) );
         bool bMapSameNames = _profile.isMappingSameNames();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "MapSameNames" ), &bMapSameNames ) )
         {
@@ -486,7 +486,7 @@ namespace sw::editor
                 chain._bIKGoal = bIKGoal ? SW_TRUE : SW_FALSE;
                 bChanged       = true;
             }
-            EditorWidgets::drawTooltip( "Solve the end onto the source end position (feet that plant without sliding)" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "SolveTheEndOntoTheSourceEnd" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
                 removeIndex = chainIndex;
@@ -576,7 +576,7 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "retarget.targetPose.add" );
-        EditorWidgets::drawTooltip( "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "TurnATargetBoneInItsParent" ) );
         if ( bChanged )
         {
             _profile.setTargetPose( std::move( listPose ) );

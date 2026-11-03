@@ -115,7 +115,7 @@ namespace sw::editor
             _model.requestResync(); // 다시 임포트한 메시를 미리보기에 다시 건다
         }
         EditorSelfTestMarks::note( "mesh.reload" );
-        EditorWidgets::drawTooltip( "Read the mesh file again (after importing the model source)" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheMeshFileAgainAfterImporting" ) );
 
         syncPreviewSubject();
         const MeshComponent* pSubject = MeshPreviewModel::findSubject( getPreviewScene() );
@@ -139,7 +139,7 @@ namespace sw::editor
         }
 
         ImGui::RadioButton( "Auto", &_model.editLODChoice(), MeshPreviewModel::kAutoLOD );
-        EditorWidgets::drawTooltip( "Pick the level by the screen size of the preview camera (zoom out to see it drop)" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PickTheLevelByTheScreenSize" ) );
         const uint32 lodCount = pMesh->getLODCount();
         for ( uint32 lod = 0; lod < lodCount; ++lod )
         {

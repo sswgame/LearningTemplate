@@ -282,6 +282,36 @@
 		       text="なぜこう見えるか(ルール)"
 		       sourceHash="aa54935a9461505e" />
 		<entry key="EdPlugin.ZoomFit" text="ズームフィット" sourceHash="7a6733cf04aafd9d" />
+		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
+		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします"
+		       sourceHash="0d52b634e78c2b8a" />
+		<entry key="EdPluginTip.DirectionTheTargetFacesFollowFirstPersonAnd"
+		       text="ターゲットの向き — Follow・FirstPerson・ThirdPerson プリセットが追従して回ります"
+		       sourceHash="1dad881dfe0f6d30" />
+		<entry key="EdPluginTip.HowRootAndPelvisMovementIsCarried"
+		       text="ルートと骨盤の動きの移し方(骨盤の高さ比で拡縮・コピー・その場)"
+		       sourceHash="679389adc6c5bb01" />
+		<entry key="EdPluginTip.ReadTheEditedContentWithTheRuntime"
+		       text="編集内容をランタイムローダーで読み、すべてのルールを確認します"
+		       sourceHash="a9c25ce37dd168cc" />
+		<entry key="EdPluginTip.ReadThePresetFileAgainAfterSaving"
+		       text="プリセットファイルを再読み込みします(カタログエディタで保存した後)"
+		       sourceHash="ba264efc63dd60bd" />
+		<entry key="EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
+		       text="共有タイムラインの時間 — すべての役割がアンカーの時計に従います"
+		       sourceHash="85b9ed42dff1375c" />
+		<entry key="EdPluginTip.SolveTheEndOntoTheSourceEnd"
+		       text="末端をソースの末端位置へ解きます(滑らずに接地する足)"
+		       sourceHash="7e4e3458c1a7fcd3" />
+		<entry key="EdPluginTip.StartAnEmptyProfileAtThisResource"
+		       text="このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)"
+		       sourceHash="610a400c46431280" />
+		<entry key="EdPluginTip.StoresThePreviewTabSPictureIn"
+		       text="プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)"
+		       sourceHash="43a11465aaf3fad7" />
+		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
+		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる"
+		       sourceHash="513b712b24165aff" />
 		<entry key="EdSchedule.ColumnActivity" text="行動" sourceHash="6c76b294d740446c" />
 		<entry key="EdSchedule.ColumnPlace" text="場所" sourceHash="13b3f5afa0862d1c" />
 		<entry key="EdSchedule.ColumnSource" text="出典" sourceHash="5f43af3669b1e098" />

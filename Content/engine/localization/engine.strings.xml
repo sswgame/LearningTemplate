@@ -998,6 +998,66 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
+		       source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.DirectionTheTargetFacesFollowFirstPersonAnd"
+		       source="Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.HowRootAndPelvisMovementIsCarried"
+		       source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.ReadTheEditedContentWithTheRuntime"
+		       source="Read the edited content with the runtime loader to check every rule">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.ReadThePresetFileAgainAfterSaving"
+		       source="Read the preset file again (after saving it in the Catalog Editor)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
+		       source="Shared timeline time - every role follows the anchor clock">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.SolveTheEndOntoTheSourceEnd"
+		       source="Solve the end onto the source end position (feet that plant without sliding)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.StartAnEmptyProfileAtThisResource"
+		       source="Start an empty profile at this resource id (an existing file is opened instead)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.StoresThePreviewTabSPictureIn"
+		       source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
+		       source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdSchedule.ColumnActivity" source="Activity">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp</item>

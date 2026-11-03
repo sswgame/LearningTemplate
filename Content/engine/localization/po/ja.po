@@ -990,6 +990,56 @@ msgctxt "EdPlugin.ZoomFit"
 msgid "Zoom fit"
 msgstr "ズームフィット"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginTip.AnchorRelativeRootPositionAndYawAt"
+msgid "Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
+msgstr "位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPluginTip.DirectionTheTargetFacesFollowFirstPersonAnd"
+msgid "Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it"
+msgstr "ターゲットの向き — Follow・FirstPerson・ThirdPerson プリセットが追従して回ります"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginTip.HowRootAndPelvisMovementIsCarried"
+msgid "How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
+msgstr "ルートと骨盤の動きの移し方(骨盤の高さ比で拡縮・コピー・その場)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginTip.ReadTheEditedContentWithTheRuntime"
+msgid "Read the edited content with the runtime loader to check every rule"
+msgstr "編集内容をランタイムローダーで読み、すべてのルールを確認します"
+
+#: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
+msgctxt "EdPluginTip.ReadThePresetFileAgainAfterSaving"
+msgid "Read the preset file again (after saving it in the Catalog Editor)"
+msgstr "プリセットファイルを再読み込みします(カタログエディタで保存した後)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
+msgctxt "EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
+msgid "Shared timeline time - every role follows the anchor clock"
+msgstr "共有タイムラインの時間 — すべての役割がアンカーの時計に従います"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginTip.SolveTheEndOntoTheSourceEnd"
+msgid "Solve the end onto the source end position (feet that plant without sliding)"
+msgstr "末端をソースの末端位置へ解きます(滑らずに接地する足)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginTip.StartAnEmptyProfileAtThisResource"
+msgid "Start an empty profile at this resource id (an existing file is opened instead)"
+msgstr "このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginTip.StoresThePreviewTabSPictureIn"
+msgid "Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
+msgstr "プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginTip.TurnATargetBoneInItsParent"
+msgid "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
+msgstr "ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる"
+
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnActivity"
 msgid "Activity"

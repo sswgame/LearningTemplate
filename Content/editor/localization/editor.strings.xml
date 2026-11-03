@@ -2459,6 +2459,169 @@
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdTip.AddTheChosenWidgetTypeIntoThe"
+		       source="Add the chosen widget type into the selected panel (after the selected widget when it is not a panel). Drag an entry onto a tree row or the picture instead to choose the place.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.DocumentAnimationToPreviewThePreviewNever"
+		       source="Document animation to preview. The preview never plays Open by itself - the document values are what you see until you play one.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.EndThePartialRagdollAndBlendBack"
+		       source="End the partial ragdoll and blend back to the animation pose">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.FullStacksRecordsTheCallStackOfEvery"
+		       source="FullStacks records the call stack of every allocation born after this point (slows allocation). The report lists blocks born in the window that are still alive.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.GoRagdollAndPushThePickedBody"
+		       source="Go ragdoll and push the picked body (the table row; the first body when none) with the impulse below">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.MoveThePreviewFocusInThisDirection"
+		       source="Move the preview focus in this direction (like the keyboard or pad). The first press focuses the first focusable widget.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.Mute" source="Mute">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.OnlyTheBodiesUnderTheRagdollS"
+		       source="Only the bodies under the ragdoll's Partial Root Bone go limp (the prefab's RagdollComponent names that bone)">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PickTheLevelByTheScreenSize"
+		       source="Pick the level by the screen size of the preview camera (zoom out to see it drop)">
+			<origins>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PlaceTheBodyAgainInItsStart" source="Place the body again in its start pose">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PlaceTheBodyInThePreviewScene" source="Place the body in the preview scene and play the clip on it">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PlaceTheBodyInThePreviewSceneAlt"
+		       source="Place the body in the preview scene and hang the physics asset on it as a hitbox ragdoll">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PlayTheChosenAnimationFromTheStart"
+		       source="Play the chosen animation from the start. The widget values stay where it leaves them; Reload restores the document.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PlayTheEffectAgainFromTheStart" source="Play the effect again from the start">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.PressTheFocusedWidgetUIAcceptIts"
+		       source="Press the focused widget (UI.Accept). Its command is only logged - the preview has no screen code.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.ReadTheEffectFileAgainAfterSaving"
+		       source="Read the effect file again (after saving it in the Catalog Editor)">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.ReadTheMeshFileAgainAfterImporting"
+		       source="Read the mesh file again (after importing the model source)">
+			<origins>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.ReadThePhysicsAssetFileAgainAfter"
+		       source="Read the physics asset file again (after saving it elsewhere) and place the body anew">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.RemoveTheSelectedWidgetAndItsChildren"
+		       source="Remove the selected widget and its children (Undo puts them back). The root cannot be removed.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.SetsEveryValueToItsDefaultThe"
+		       source="Sets every value to its default. The file keeps only values that differ from the defaults">
+			<origins>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.SoloOnlyThisBusItsAncestorsAnd"
+		       source="Solo - only this bus, its ancestors and its descendants are heard">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.StopAndClearTheParticles" source="Stop and clear the particles">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.TableEditsKeepCommentsAndIndentationNested"
+		       source="Table edits keep comments and indentation. Nested elements are edited in the raw text view.">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.TargetsOnOtherUnitsOrObjectsAre"
+		       source="Targets on other units or objects are placed by the host - move that object instead">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.ThisValueDoesNotMatchItsType"
+		       source="This value does not match its type (wrong count of numbers or a non-number) - fix the text">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.TurnEveryBodyDynamicTheBodyFalls"
+		       source="Turn every body dynamic - the body falls and settles by gravity">
+			<origins>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.UserVolumeTheOptionsMenuValueCtrl"
+		       source="User volume (the options-menu value) - Ctrl+click types a number">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdTip.WriteTheWeightsAndOnOffOf"
+		       source="Write the weights and on/off of this instance's nodes into the rig asset (*.rig.xml); other keys stay as they are">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdVerb.Apply" source="Apply">
 			<origins>
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>

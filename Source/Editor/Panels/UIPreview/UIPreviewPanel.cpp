@@ -510,13 +510,13 @@ namespace sw::editor
             if ( ImGui::ArrowButton( id.c_str(), button._dir ) )
                 (void)_model.navigateFocus( screen, static_cast<uint32>( button._direction ) );
             UIPreviewPanelInternal::noteMark( "uipreview.nav", button._pMark );
-            EditorWidgets::drawTooltip( "Move the preview focus in this direction (like the keyboard or pad). The first press focuses the first focusable widget." );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "MoveThePreviewFocusInThisDirection" ) );
             ImGui::SameLine();
         }
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Accept" ) ) )
             _model.acceptFocus( screen );
         UIPreviewPanelInternal::noteMark( "uipreview.nav", "accept" );
-        EditorWidgets::drawTooltip( "Press the focused widget (UI.Accept). Its command is only logged - the preview has no screen code." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PressTheFocusedWidgetUIAcceptIts" ) );
     }
 
     void UIPreviewPanel::drawAnimationBar( UIScreen& screen )
@@ -534,7 +534,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 16.0f );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewanimation", chosen.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "animation" );
-        EditorWidgets::drawTooltip( "Document animation to preview. The preview never plays Open by itself - the document values are what you see until you play one." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "DocumentAnimationToPreviewThePreviewNever" ) );
         if ( bOpen )
         {
             for ( const UIAnimation& animation : listAnimation )
@@ -549,7 +549,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
             _model.playAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "play" );
-        EditorWidgets::drawTooltip( "Play the chosen animation from the start. The widget values stay where it leaves them; Reload restores the document." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlayTheChosenAnimationFromTheStart" ) );
         const utf8* pPauseLabel = _model.isAnimationPaused() ? "Resume" : "Pause";
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pPauseLabel ) );
         if ( ImGui::Button( pPauseLabel ) )
@@ -594,7 +594,7 @@ namespace sw::editor
             (void)_model.addWidget( screen, _model.getPaletteType(), pSelected );
         ImGui::EndDisabled();
         Internal::noteMark( "uipreview.palette", "add" );
-        EditorWidgets::drawTooltip( "Add the chosen widget type into the selected panel (after the selected widget when it is not a panel). Drag an entry onto a tree row or the picture instead to choose the place." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "AddTheChosenWidgetTypeIntoThe" ) );
         ImGui::SameLine();
         const bool bCanDelete = _model.canDeleteSelected( screen.getTree() );
         ImGui::BeginDisabled( bCanDelete == false );
@@ -602,7 +602,7 @@ namespace sw::editor
             (void)_model.deleteSelected( screen ); // 루트나 없는 선택은 못 지우고, 그때는 단추가 꺼져 있다
         ImGui::EndDisabled();
         Internal::noteMark( "uipreview", "delete" );
-        EditorWidgets::drawTooltip( "Remove the selected widget and its children (Undo puts them back). The root cannot be removed." );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "RemoveTheSelectedWidgetAndItsChildren" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -1.0f );
         (void)EditorWidgets::drawTextField( "##uipreviewpalettefilter", _paletteFilter );

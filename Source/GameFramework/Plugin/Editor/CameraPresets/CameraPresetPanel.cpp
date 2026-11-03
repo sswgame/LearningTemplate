@@ -90,7 +90,7 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Reload" ) ) )
             reloadDocument();
-        EditorWidgets::drawTooltip( "Read the preset file again (after saving it in the Catalog Editor)" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "ReadThePresetFileAgainAfterSaving" ) );
 
         // 프리셋 목록 — 고르면 뷰포트 카메라가 그 프리셋이 놓는 자리로 간다.
         const float32 listHeight = ImGui::GetTextLineHeightWithSpacing() * CameraPresetPanelInternal::kListRowCount;
@@ -120,7 +120,7 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( "Target yaw" );
             if ( ImGui::SliderFloat( "##Targetyaw", &_model.editTargetYawDegrees(), -180.0f, 180.0f, "%.0f deg" ) )
                 _model.markViewportDirty();
-            EditorWidgets::drawTooltip( "Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "DirectionTheTargetFacesFollowFirstPersonAnd" ) );
         }
 
         applySelectedPresetToViewport();

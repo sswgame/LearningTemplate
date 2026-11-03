@@ -762,6 +762,86 @@
 		<entry key="EdText.WhichObjectsDiffer" text="어떤 오브젝트가 다른가" sourceHash="497c8a664fadff16" />
 		<entry key="EdText.XMLDataFiles" text="XML 데이터 파일" sourceHash="149c5ee534cb9379" />
 		<entry key="EdText.ZoomFit" text="맞춰 보기" sourceHash="645e13ce66f1f13d" />
+		<entry key="EdTip.AddTheChosenWidgetTypeIntoThe"
+		       text="고른 위젯 종류를 선택한 패널 안에 더합니다(패널이 아니면 선택한 위젯 뒤에). 자리를 고르려면 항목을 트리 줄이나 그림에 끌어 놓습니다."
+		       sourceHash="90d074315ce02f7f" />
+		<entry key="EdTip.DocumentAnimationToPreviewThePreviewNever"
+		       text="미리 볼 문서 애니메이션입니다. 미리보기는 Open 을 스스로 재생하지 않습니다 — 재생하기 전에는 문서 값이 보입니다."
+		       sourceHash="7a513d5de597cafd" />
+		<entry key="EdTip.EndThePartialRagdollAndBlendBack"
+		       text="부분 래그돌을 끝내고 애니메이션 자세로 섞어 돌아갑니다"
+		       sourceHash="c9243ab8693632b1" />
+		<entry key="EdTip.FullStacksRecordsTheCallStackOfEvery"
+		       text="FullStacks 는 이 뒤에 생긴 모든 할당의 호출 스택을 기록합니다(할당이 느려집니다). 보고는 창 안에서 생겨 아직 살아 있는 블록을 보입니다."
+		       sourceHash="88145de8b8108f6b" />
+		<entry key="EdTip.GoRagdollAndPushThePickedBody"
+		       text="래그돌이 되어 고른 바디(표의 줄, 없으면 첫 바디)를 아래 충격으로 밉니다"
+		       sourceHash="1d3e79d5969dcd09" />
+		<entry key="EdTip.MoveThePreviewFocusInThisDirection"
+		       text="미리보기 초점을 이 방향으로 옮깁니다(키보드 · 패드처럼). 처음 누르면 초점을 받는 첫 위젯에 갑니다."
+		       sourceHash="e0803b87430c913e" />
+		<entry key="EdTip.Mute" text="음소거" sourceHash="e0f67eae944f8f94" />
+		<entry key="EdTip.OnlyTheBodiesUnderTheRagdollS"
+		       text="래그돌의 부분 뿌리 뼈 아래 바디만 늘어집니다(프리팹의 RagdollComponent 가 그 뼈를 가리킵니다)"
+		       sourceHash="9424179c3b18befc" />
+		<entry key="EdTip.PickTheLevelByTheScreenSize"
+		       text="미리보기 카메라의 화면 크기로 단계를 고릅니다(멀리 보면 낮아집니다)"
+		       sourceHash="1c0a0633395930d1" />
+		<entry key="EdTip.PlaceTheBodyAgainInItsStart"
+		       text="몸을 처음 자세로 다시 놓습니다"
+		       sourceHash="fa2644a31175c1bb" />
+		<entry key="EdTip.PlaceTheBodyInThePreviewScene"
+		       text="미리보기 씬에 몸을 놓고 그 위에서 클립을 재생합니다"
+		       sourceHash="823c95b968b29c45" />
+		<entry key="EdTip.PlaceTheBodyInThePreviewSceneAlt"
+		       text="미리보기 씬에 몸을 놓고 물리 에셋을 히트박스 래그돌로 겁니다"
+		       sourceHash="4579205d535c6efa" />
+		<entry key="EdTip.PlayTheChosenAnimationFromTheStart"
+		       text="고른 애니메이션을 처음부터 재생합니다. 위젯 값은 끝난 자리에 남고 다시 읽기가 문서를 되살립니다."
+		       sourceHash="73751df5e75cfa76" />
+		<entry key="EdTip.PlayTheEffectAgainFromTheStart"
+		       text="효과를 처음부터 다시 재생합니다"
+		       sourceHash="68858af5214421b0" />
+		<entry key="EdTip.PressTheFocusedWidgetUIAcceptIts"
+		       text="초점 위젯을 누릅니다(UI.Accept). 그 명령은 로그에만 남습니다 — 미리보기에는 화면 코드가 없습니다."
+		       sourceHash="2a4299b22b2c6536" />
+		<entry key="EdTip.ReadTheEffectFileAgainAfterSaving"
+		       text="효과 파일을 다시 읽습니다(카탈로그 편집기에서 저장한 뒤)"
+		       sourceHash="28d97c89a2a93383" />
+		<entry key="EdTip.ReadTheMeshFileAgainAfterImporting"
+		       text="메시 파일을 다시 읽습니다(모델 원본을 가져온 뒤)"
+		       sourceHash="66e84fe01fad286a" />
+		<entry key="EdTip.ReadThePhysicsAssetFileAgainAfter"
+		       text="물리 에셋 파일을 다시 읽고(다른 곳에서 저장한 뒤) 몸을 새로 놓습니다"
+		       sourceHash="8795730da2a9dba5" />
+		<entry key="EdTip.RemoveTheSelectedWidgetAndItsChildren"
+		       text="선택한 위젯과 그 자식을 지웁니다(실행 취소로 되돌립니다). 뿌리는 지울 수 없습니다."
+		       sourceHash="a5c7ecc086ae9290" />
+		<entry key="EdTip.SetsEveryValueToItsDefaultThe"
+		       text="모든 값을 기본으로 합니다. 파일에는 기본과 다른 값만 남습니다"
+		       sourceHash="54fbe7a709585767" />
+		<entry key="EdTip.SoloOnlyThisBusItsAncestorsAnd"
+		       text="단독 — 이 버스와 그 위 · 아래 버스만 들립니다"
+		       sourceHash="c0cb425b43671466" />
+		<entry key="EdTip.StopAndClearTheParticles" text="멈추고 입자를 지웁니다" sourceHash="b682b3401596d489" />
+		<entry key="EdTip.TableEditsKeepCommentsAndIndentationNested"
+		       text="표 편집은 주석과 들여쓰기를 지킵니다. 중첩 원소는 원본 글 보기에서 고칩니다."
+		       sourceHash="bfefb4d7ef761fc0" />
+		<entry key="EdTip.TargetsOnOtherUnitsOrObjectsAre"
+		       text="다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요"
+		       sourceHash="7cbe5f899889f043" />
+		<entry key="EdTip.ThisValueDoesNotMatchItsType"
+		       text="이 값이 형식과 맞지 않습니다(숫자 개수가 틀리거나 숫자가 아님) — 글을 고치세요"
+		       sourceHash="1d1ce6b9203d2632" />
+		<entry key="EdTip.TurnEveryBodyDynamicTheBodyFalls"
+		       text="모든 바디를 동적으로 — 몸이 중력으로 쓰러져 가라앉습니다"
+		       sourceHash="11e03fced87eb394" />
+		<entry key="EdTip.UserVolumeTheOptionsMenuValueCtrl"
+		       text="사용자 음량(옵션 메뉴 값) — Ctrl+누르면 숫자를 칩니다"
+		       sourceHash="34d21cd121593c5f" />
+		<entry key="EdTip.WriteTheWeightsAndOnOffOf"
+		       text="이 인스턴스 노드의 가중치 · 켜짐을 리그 에셋(*.rig.xml)에 씁니다. 다른 키는 그대로입니다"
+		       sourceHash="0d8da0706fc03658" />
 		<entry key="EdVerb.Apply" text="적용" sourceHash="b8f855b49234b81b" />
 		<entry key="EdVerb.Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
 		<entry key="EdVerb.Clear" text="지우기" sourceHash="b4f1dffbb6be6302" />

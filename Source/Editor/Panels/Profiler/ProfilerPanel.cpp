@@ -174,7 +174,7 @@ namespace sw::editor
                         inoutReport = profiler.endLeakWindow();
                     profiler.beginLeakWindow( LeakWindowDetail::FullStacks );
                 }
-                EditorWidgets::drawTooltip( "FullStacks records the call stack of every allocation born after this point (slows allocation). The report lists blocks born in the window that are still alive." );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "FullStacksRecordsTheCallStackOfEvery" ) );
                 if ( inoutReport._bValid == false )
                 {
                     ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoLeakReportYet" ) );

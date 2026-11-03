@@ -168,7 +168,7 @@ namespace sw::editor
         if ( ImGui::VSliderFloat( "##Volume", ImVec2{ 28.0f * dpi, Internal::kStripHeight * dpi }, &volume, 0.0f, 1.0f, "" ) )
             audio.setBusVolume( status._name, volume );
         EditorSelfTestMarks::note( ( "audiomixer.volume." + name ).c_str() );
-        EditorWidgets::drawTooltip( "User volume (the options-menu value) - Ctrl+click types a number" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "UserVolumeTheOptionsMenuValueCtrl" ) );
 
         ImGui::SameLine();
         const ImVec2 meterMin  = ImGui::GetCursorScreenPos();
@@ -190,14 +190,14 @@ namespace sw::editor
             engine.setBusMuted( status._name, status._bMuted == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.mute." + name ).c_str() );
-        EditorWidgets::drawTooltip( "Mute" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "Mute" ) );
         ImGui::SameLine();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? SW_THEMECOLOR( "Signal", "Warning" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "S", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusSolo( status._name, status._bSolo == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.solo." + name ).c_str() );
-        EditorWidgets::drawTooltip( "Solo - only this bus, its ancestors and its descendants are heard" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "SoloOnlyThisBusItsAncestorsAnd" ) );
         ImGui::EndGroup();
     }
 

@@ -23,6 +23,8 @@
 		<entry source="Aim" text="エイム" />
 		<entry source="Already used by" text="使用中:" />
 		<entry source="Ambient Volume" text="環境音の音量" />
+		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
+		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします" />
 		<entry source="Appearance" text="外見" />
 		<entry source="Apply" text="適用" />
 		<entry source="Apply sanction" text="制裁を適用" />
@@ -74,6 +76,8 @@
 		<entry source="Delete node" text="ノードを削除" />
 		<entry source="Depth" text="深さ" />
 		<entry source="Deuteranopia" text="2 型色覚 (緑)" />
+		<entry source="Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it"
+		       text="ターゲットの向き — Follow・FirstPerson・ThirdPerson プリセットが追従して回ります" />
 		<entry source="Discard" text="破棄" />
 		<entry source="Disconnect" text="切断" />
 		<entry source="Dismiss" text="閉じる" />
@@ -107,6 +111,8 @@
 		<entry source="High" text="高" />
 		<entry source="High Contrast" text="ハイコントラスト" />
 		<entry source="Hold" text="長押し" />
+		<entry source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
+		       text="ルートと骨盤の動きの移し方(骨盤の高さ比で拡縮・コピー・その場)" />
 		<entry source="IK goal" text="IK ゴール" />
 		<entry source="Infinite" text="無限" />
 		<entry source="Interface Volume" text="インターフェースの音量" />
@@ -212,6 +218,10 @@
 		<entry source="Raw timeline" text="生のタイムライン" />
 		<entry source="Reactive (re-check higher priority children every tick)"
 		       text="リアクティブ(毎ティック優先度の高い子を再チェック)" />
+		<entry source="Read the edited content with the runtime loader to check every rule"
+		       text="編集内容をランタイムローダーで読み、すべてのルールを確認します" />
+		<entry source="Read the preset file again (after saving it in the Catalog Editor)"
+		       text="プリセットファイルを再読み込みします(カタログエディタで保存した後)" />
 		<entry source="Recompute Normals" text="法線の再計算" />
 		<entry source="Redo" text="やり直し" />
 		<entry source="Redo appearance" text="外見をやり直し" />
@@ -280,6 +290,8 @@
 		<entry source="Shadow Quality" text="影の品質" />
 		<entry source="Share Usage Data" text="使用状況データを共有" />
 		<entry source="Shared notifies" text="共有通知" />
+		<entry source="Shared timeline time - every role follows the anchor clock"
+		       text="共有タイムラインの時間 — すべての役割がアンカーの時計に従います" />
 		<entry source="Show HUD (Ctrl+F3)" text="HUD を表示 (Ctrl+F3)" />
 		<entry source="Show Tutorials" text="チュートリアルを表示" />
 		<entry source="Skeleton" text="スケルトン" />
@@ -287,6 +299,8 @@
 		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。" />
 		<entry source="Slots" text="スロット" />
 		<entry source="Sockets" text="ソケット" />
+		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
+		       text="末端をソースの末端位置へ解きます(滑らずに接地する足)" />
 		<entry source="Some changes take effect after a restart."
 		       text="一部の変更は再起動後に反映されます。" />
 		<entry source="Source" text="出典" />
@@ -294,11 +308,15 @@
 		<entry source="Speaker Setup" text="スピーカー構成" />
 		<entry source="Sprint" text="ダッシュ" />
 		<entry source="Stacks" text="スタック" />
+		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
+		       text="このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)" />
 		<entry source="Start in process" text="インプロセスで開始" />
 		<entry source="Start maintenance" text="メンテナンス開始" />
 		<entry source="Stereo" text="ステレオ" />
 		<entry source="Stick Dead Zone" text="スティックのデッドゾーン" />
 		<entry source="Stop" text="停止" />
+		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
+		       text="プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)" />
 		<entry source="Subtitle Background" text="字幕の背景" />
 		<entry source="Subtitle Size" text="字幕のサイズ" />
 		<entry source="Subtitles" text="字幕" />
@@ -316,6 +334,8 @@
 		<entry source="Toggle" text="切り替え" />
 		<entry source="Travel" text="移動" />
 		<entry source="Tritanopia" text="3 型色覚 (青)" />
+		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
+		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる" />
 		<entry source="UI Scale" text="UI の拡大率" />
 		<entry source="UI Theme" text="UI テーマ" />
 		<entry source="Ultra" text="最高" />

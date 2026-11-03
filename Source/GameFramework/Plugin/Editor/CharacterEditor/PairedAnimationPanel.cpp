@@ -216,7 +216,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Check" ) ) )
             _status = _model.isValid() ? "The paired animation follows every rule" : "The paired animation breaks a rule - see the log";
         EditorSelfTestMarks::note( "pairedanim.check" );
-        EditorWidgets::drawTooltip( "Read the edited content with the runtime loader to check every rule" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "ReadTheEditedContentWithTheRuntime" ) );
     }
 
     void PairedAnimationPanel::drawTimeline()
@@ -235,7 +235,7 @@ namespace sw::editor
         if ( ImGui::SliderFloat( "##Scrub", &scrub, 0.0f, _model.getContent()._duration, "t = %.3f s" ) )
             _model.setScrubTime( scrub );
         EditorSelfTestMarks::note( "pairedanim.scrub" );
-        EditorWidgets::drawTooltip( "Shared timeline time - every role follows the anchor clock" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "SharedTimelineTimeEveryRoleFollowsThe" ) );
 
         // 앞으로 지났으면 울린 알림을 보인다(뒤로 가면 지운다 — 세션은 되감지 않는다).
         const float32 now = _model.getScrubTime();
@@ -317,7 +317,7 @@ namespace sw::editor
                 if ( bOffsetDone || bYawDone )
                     _model.endContinuousEdit();
                 EditorSelfTestMarks::note( ( string( "pairedanim.role." ) + role._name.c_str() + ".offset" ).c_str() );
-                EditorWidgets::drawTooltip( "Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo" );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "AnchorRelativeRootPositionAndYawAt" ) );
             }
             if ( role._bAnchor == false && role._align == PairedAnimationAlign::Warp )
             {

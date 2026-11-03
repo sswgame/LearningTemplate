@@ -161,7 +161,7 @@ namespace sw::editor
             _model.requestRespawn(); // 다시 읽은 에셋으로 몸을 다시 놓는다
         }
         EditorSelfTestMarks::note( "ragdoll.reload" );
-        EditorWidgets::drawTooltip( "Read the physics asset file again (after saving it elsewhere) and place the body anew" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadThePhysicsAssetFileAgainAfter" ) );
 
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "BodyPrefabSkeletalMeshOnItsRoot" ) );
         (void)EditorWidgets::drawTextField( "##ragdollPreview.body", _model.editBodyPrefabPath(), -1.0f );
@@ -169,7 +169,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Spawn" ) ) )
             _model.spawnFromField();
         EditorSelfTestMarks::note( "ragdoll.spawn" );
-        EditorWidgets::drawTooltip( "Place the body in the preview scene and hang the physics asset on it as a hitbox ragdoll" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlaceTheBodyInThePreviewSceneAlt" ) );
 
         if ( isDocumentLoadFailed() == false ) // 에셋을 읽지 못했으면 몸을 놓지 않는다
             _model.syncBody( getPreviewScene(), getLoadedAssetPath() );
@@ -180,27 +180,27 @@ namespace sw::editor
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Ragdoll" ) ) )
                 pRagdoll->startRagdoll( float3{}, -1 );
             EditorSelfTestMarks::note( "ragdoll.drop" );
-            EditorWidgets::drawTooltip( "Turn every body dynamic - the body falls and settles by gravity" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "TurnEveryBodyDynamicTheBodyFalls" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Impulse" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Impulse" ) ) )
                 _model.applyImpulse( *pRagdoll );
             EditorSelfTestMarks::note( "ragdoll.impulse" );
-            EditorWidgets::drawTooltip( "Go ragdoll and push the picked body (the table row; the first body when none) with the impulse below" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "GoRagdollAndPushThePickedBody" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Partial" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Partial" ) ) )
                 pRagdoll->startPartialRagdoll( 1.0f );
             EditorSelfTestMarks::note( "ragdoll.partial" );
-            EditorWidgets::drawTooltip( "Only the bodies under the ragdoll's Partial Root Bone go limp (the prefab's RagdollComponent names that bone)" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "OnlyTheBodiesUnderTheRagdollS" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Release" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Release" ) ) )
                 pRagdoll->stopPartialRagdoll();
             EditorSelfTestMarks::note( "ragdoll.release" );
-            EditorWidgets::drawTooltip( "End the partial ragdoll and blend back to the animation pose" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "EndThePartialRagdollAndBlendBack" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reset" ) ) )
                 _model.requestRespawn(); // 다음 그리기가 몸을 처음 자세로 다시 놓는다
             EditorSelfTestMarks::note( "ragdoll.reset" );
-            EditorWidgets::drawTooltip( "Place the body again in its start pose" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlaceTheBodyAgainInItsStart" ) );
             EditorWidgets::drawInlineLabel( "Impulse (N*s)" );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
             (void)ImGui::SliderFloat( "##ImpulseNs", &_model.editImpulse(), 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );

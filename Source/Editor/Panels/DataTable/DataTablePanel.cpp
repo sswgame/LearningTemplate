@@ -352,7 +352,7 @@ namespace sw::editor
 
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "RawXML" ) ) );
             (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "RawXML" ), &_bGameDataRaw );
-            EditorWidgets::drawTooltip( "Table edits keep comments and indentation. Nested elements are edited in the raw text view." );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "TableEditsKeepCommentsAndIndentationNested" ) );
 
             ImGui::Separator();
 

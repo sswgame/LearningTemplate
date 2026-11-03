@@ -305,7 +305,7 @@ namespace sw::editor
             _statusText = "Reset to the default values - Save writes the file";
         }
         EditorSelfTestMarks::note( "projectsettings.reset" );
-        EditorWidgets::drawTooltip( "Sets every value to its default. The file keeps only values that differ from the defaults" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "SetsEveryValueToItsDefaultThe" ) );
         if ( _statusText.empty() == false )
         {
             ImGui::SameLine();

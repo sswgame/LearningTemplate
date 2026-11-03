@@ -25,6 +25,8 @@
 		<entry source="Aim" text="조준" />
 		<entry source="Already used by" text="이미 사용 중:" />
 		<entry source="Ambient Volume" text="환경음 음량" />
+		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
+		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다" />
 		<entry source="Appearance" text="외형" />
 		<entry source="Apply" text="적용" />
 		<entry source="Apply sanction" text="제재 적용" />
@@ -78,6 +80,8 @@
 		<entry source="Delete node" text="노드 삭제" />
 		<entry source="Depth" text="깊이" />
 		<entry source="Deuteranopia" text="녹색약" />
+		<entry source="Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it"
+		       text="대상이 바라보는 방향 — Follow · FirstPerson · ThirdPerson 프리셋이 따라 돕니다" />
 		<entry source="Discard" text="버리기" />
 		<entry source="Disconnect" text="연결 끊기" />
 		<entry source="Dismiss" text="닫기" />
@@ -114,6 +118,8 @@
 		<entry source="High" text="높음" />
 		<entry source="High Contrast" text="고대비" />
 		<entry source="Hold" text="누르고 있기" />
+		<entry source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
+		       text="뿌리 · 골반 움직임을 옮기는 방법(골반 높이 비로 늘림 · 그대로 · 제자리)" />
 		<entry source="How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline."
 		       text="이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다." />
 		<entry source="IK goal" text="IK 목표" />
@@ -219,6 +225,10 @@
 		<entry source="Raw timeline" text="타임라인 원문" />
 		<entry source="Reactive (re-check higher priority children every tick)"
 		       text="반응형(틱마다 우선순위가 높은 자식을 다시 본다)" />
+		<entry source="Read the edited content with the runtime loader to check every rule"
+		       text="편집한 내용을 실행 시간 로더로 읽어 모든 규칙을 확인합니다" />
+		<entry source="Read the preset file again (after saving it in the Catalog Editor)"
+		       text="프리셋 파일을 다시 읽습니다(카탈로그 편집기에서 저장한 뒤)" />
 		<entry source="Recompute Normals" text="법선 다시 계산" />
 		<entry source="Redo" text="다시 실행" />
 		<entry source="Redo appearance" text="외형 다시 실행" />
@@ -285,6 +295,8 @@
 		<entry source="Shadow Quality" text="그림자 품질" />
 		<entry source="Share Usage Data" text="사용 데이터 공유" />
 		<entry source="Shared notifies" text="공유 알림" />
+		<entry source="Shared timeline time - every role follows the anchor clock"
+		       text="공유 타임라인 시간 — 모든 역할이 기준 시계를 따릅니다" />
 		<entry source="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" />
 		<entry source="Show Tutorials" text="튜토리얼 표시" />
 		<entry source="Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name."
@@ -294,6 +306,8 @@
 		       text="스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)." />
 		<entry source="Slots" text="칸" />
 		<entry source="Sockets" text="소켓" />
+		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
+		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)" />
 		<entry source="Some changes take effect after a restart."
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다." />
 		<entry source="Source" text="출처" />
@@ -301,11 +315,15 @@
 		<entry source="Speaker Setup" text="스피커 구성" />
 		<entry source="Sprint" text="달리기" />
 		<entry source="Stacks" text="스택" />
+		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
+		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)" />
 		<entry source="Start in process" text="한 프로세스로 시작" />
 		<entry source="Start maintenance" text="점검 시작" />
 		<entry source="Stereo" text="스테레오" />
 		<entry source="Stick Dead Zone" text="스틱 데드존" />
 		<entry source="Stop" text="정지" />
+		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
+		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)" />
 		<entry source="Subtitle Background" text="자막 배경" />
 		<entry source="Subtitle Size" text="자막 크기" />
 		<entry source="Subtitles" text="자막" />
@@ -325,6 +343,8 @@
 		<entry source="Toggle" text="전환" />
 		<entry source="Travel" text="이동" />
 		<entry source="Tritanopia" text="청색약" />
+		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
+		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다" />
 		<entry source="UI Scale" text="UI 배율" />
 		<entry source="UI Theme" text="UI 테마" />
 		<entry source="Ultra" text="최고" />

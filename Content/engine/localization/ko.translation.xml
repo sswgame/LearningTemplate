@@ -272,6 +272,36 @@
 		       text="왜 이렇게 보이나(규칙)"
 		       sourceHash="aa54935a9461505e" />
 		<entry key="EdPlugin.ZoomFit" text="맞춰 보기" sourceHash="7a6733cf04aafd9d" />
+		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
+		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다"
+		       sourceHash="0d52b634e78c2b8a" />
+		<entry key="EdPluginTip.DirectionTheTargetFacesFollowFirstPersonAnd"
+		       text="대상이 바라보는 방향 — Follow · FirstPerson · ThirdPerson 프리셋이 따라 돕니다"
+		       sourceHash="1dad881dfe0f6d30" />
+		<entry key="EdPluginTip.HowRootAndPelvisMovementIsCarried"
+		       text="뿌리 · 골반 움직임을 옮기는 방법(골반 높이 비로 늘림 · 그대로 · 제자리)"
+		       sourceHash="679389adc6c5bb01" />
+		<entry key="EdPluginTip.ReadTheEditedContentWithTheRuntime"
+		       text="편집한 내용을 실행 시간 로더로 읽어 모든 규칙을 확인합니다"
+		       sourceHash="a9c25ce37dd168cc" />
+		<entry key="EdPluginTip.ReadThePresetFileAgainAfterSaving"
+		       text="프리셋 파일을 다시 읽습니다(카탈로그 편집기에서 저장한 뒤)"
+		       sourceHash="ba264efc63dd60bd" />
+		<entry key="EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
+		       text="공유 타임라인 시간 — 모든 역할이 기준 시계를 따릅니다"
+		       sourceHash="85b9ed42dff1375c" />
+		<entry key="EdPluginTip.SolveTheEndOntoTheSourceEnd"
+		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)"
+		       sourceHash="7e4e3458c1a7fcd3" />
+		<entry key="EdPluginTip.StartAnEmptyProfileAtThisResource"
+		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)"
+		       sourceHash="610a400c46431280" />
+		<entry key="EdPluginTip.StoresThePreviewTabSPictureIn"
+		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)"
+		       sourceHash="43a11465aaf3fad7" />
+		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
+		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다"
+		       sourceHash="513b712b24165aff" />
 		<entry key="EdSchedule.ColumnActivity" text="행동" sourceHash="6c76b294d740446c" />
 		<entry key="EdSchedule.ColumnPlace" text="장소" sourceHash="13b3f5afa0862d1c" />
 		<entry key="EdSchedule.ColumnSource" text="출처" sourceHash="5f43af3669b1e098" />
