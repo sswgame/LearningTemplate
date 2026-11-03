@@ -253,10 +253,9 @@ namespace sw::editor
             static EditorSelfTestStep runTreeDoesNotReadTheDiskEveryFrame( EditorSelfTestContext& context )
             {
                 constexpr uint32 kPhaseSettle       = 0; ///< `Content/` 변경 번호가 멈추기를 기다린다
-                constexpr uint32 kPhaseWarmUp       = 1; ///< 캐시를 비우고 트리가 한 번 그려지기를 기다린다
+                constexpr uint32 kPhaseWarmUp       = 1; ///< 캐시를 비우고 트리가 다시 그려지기를 기다린다(정지 대기)
                 constexpr uint32 kPhaseSteady       = 2; ///< 그 뒤의 프레임들은 디스크를 읽지 않아야 한다
                 constexpr uint32 kSettleStepCount   = 10;
-                constexpr uint32 kWarmUpStepCount   = 3;
                 constexpr uint32 kSteadyStepCount   = 10;
                 constexpr uint32 kMaxTotalStepCount = 600;
 
@@ -293,12 +292,10 @@ namespace sw::editor
                         probe._scanCountAtStart = EditorFolderListing::getChildFolderScanCount();
                         probe._phase            = kPhaseWarmUp;
                         probe._phaseStartStep   = stepIndex;
-                        return EditorSelfTestStep::Continue;
+                        return EditorSelfTestStep::WaitSettled;
                     }
                     case kPhaseWarmUp:
                     {
-                        if ( phaseStepCount < kWarmUpStepCount )
-                            return EditorSelfTestStep::Continue;
                         probe._scanCountAfterWarmUp = EditorFolderListing::getChildFolderScanCount();
                         if ( context.expect( probe._scanCountAfterWarmUp > probe._scanCountAtStart, "the content browser folder tree was not drawn" ) == false )
                             return EditorSelfTestStep::Done;
@@ -328,8 +325,6 @@ namespace sw::editor
 
             static EditorSelfTestStep runShowsActivePackOnly( EditorSelfTestContext& context )
             {
-                constexpr uint32 kSettleStepCount = 2; ///< 루트는 다음 그리기에서 다시 만든다
-
                 const uint32         stepIndex = context.getStepIndex();
                 ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
                 if ( pPanel == nullptr )
@@ -338,20 +333,16 @@ namespace sw::editor
                 {
                     context.getTestState<ActivePackProbe>()._bWasShowingAllPacks = pPanel->isShowingAllPacks();
                     pPanel->setShowAllPacks( false );
-                    return EditorSelfTestStep::Continue;
+                    return EditorSelfTestStep::WaitSettled; // 루트는 다음 그리기에서 다시 만든다
                 }
-                if ( stepIndex < kSettleStepCount )
-                    return EditorSelfTestStep::Continue;
-                if ( stepIndex == kSettleStepCount )
+                if ( stepIndex == 1 )
                 {
                     const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
                     (void)context.expect( pPanel->hasRoot( packRoot ), "the active game pack is not a content root" );
                     (void)context.expect( pPanel->getGameRootCount() == 1, "the content browser lists game packs other than the active one" );
                     pPanel->setShowAllPacks( true );
-                    return EditorSelfTestStep::Continue;
+                    return EditorSelfTestStep::WaitSettled;
                 }
-                if ( stepIndex < kSettleStepCount * 2 )
-                    return EditorSelfTestStep::Continue;
 
                 vector<string> listPackDomain;
                 (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // 없으면 아래 기대가 실패한다
@@ -372,8 +363,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runMapCheckSelectsIssueObject( EditorSelfTestContext& context )
             {
-                constexpr uint32      kSettleStepCount = 2; ///< 패널이 열리고 줄을 다시 만드는 프레임
-                constexpr const utf8* kObjectName      = "MapCheckSelfTestObject";
+                constexpr const utf8* kObjectName = "MapCheckSelfTestObject";
 
                 EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
                 GameObjectManager* pManager      = editor::getActiveObjectManager();
@@ -400,10 +390,8 @@ namespace sw::editor
                     editor::getMainSceneSelection().clearObjectSelection();
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, true );
                     editorContext.getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
-                    return EditorSelfTestStep::Continue;
+                    return EditorSelfTestStep::WaitSettled; // 패널이 열리고 줄을 다시 만든다
                 }
-                if ( stepIndex < kSettleStepCount )
-                    return EditorSelfTestStep::Continue;
 
                 // 오류가 먼저 나오고 이 테스트의 결과는 오류 하나다. 첫 오류 행들 중에서 이 오브젝트의 행을 누른다.
                 bool bSelected = false;

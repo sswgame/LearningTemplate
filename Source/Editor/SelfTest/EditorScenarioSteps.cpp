@@ -10,23 +10,19 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
-#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/SelfTest/EditorSettleJudge.h"
+#include "Editor/SelfTest/EditorSettleWait.h"
 
-#include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Renderer/Capture/CaptureReadiness.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
@@ -132,65 +128,40 @@ namespace sw::editor
                 checkMark( pMark, bDrawn, bSettled );
                 checkMark( step.findAttribute( "toMark" ), bDrawn, bSettled );
                 const bool               bReady = bSettled && EditorSelfTestInput::hasPendingEvents() == false;
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames );
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
+                                                                         "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
                     runner.recordFailure( step, formatToString( "editor widget '%#' did not settle (same rect two frames in a row, no pending input) within %# frame(s)", pMark->c_str(),
                                                                 kSettleWaitFrames ) );
                 return hold;
             }
 
-            /** @brief `EditorWaitSettled` 가 붙잡은 동안의 상태입니다 — 기다림 번호(`EditorSelfTestInput::beginSettleWait`), 판정(`EditorSettleJudge`), 마지막으로 막은 까닭. */
-            struct SettleWait final : IAutomationStepState
+            /** @brief `EditorWaitSettled` 가 붙잡은 동안의 상태입니다(`EditorSettleWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
+            struct SettleWaitState final : IAutomationStepState
             {
-                explicit SettleWait( uint32 waitSerial )
-                    : _waitSerial{ waitSerial }
-                    , _judge{}
-                    , _waitingFor{}
-                {
-                }
-                string describeWait() const override { return _waitingFor; }
-
-                uint32            _waitSerial;
-                EditorSettleJudge _judge;
-                string            _waitingFor; ///< 이번 프레임에 막은 까닭(벽시계 상한에 걸리면 실행기가 까닭에 붙인다)
+                EditorSettleWait _wait;
             };
 
             /**
-             * @brief 에디터가 멈출 때까지(정지 상태) 시나리오 시계를 붙잡습니다 — 앞 단계가 낳은 일이 다 끝나 새 입력 없이는 더 바뀔 것이 없는 상태.
-             * @details 정지는 넷이다: 화면(창 크기 요청 반영 · 도크 배치 적용 끝 · 밀린 흉내 입력 없음 · 앞 단계 뒤에 그린 화면이 두 번 연속 같은 배치), 씬(전환 · 비동기 로드 없음),
-             *          에셋(씬이 기다리는 로드 · 업로드 · PSO 없음 — `CaptureReadiness::countPendingWork`), 배경 일(시계 잡기 조건 — 실행기가 단계 전에 이미 붙잡는다).
-             *          고정 대기(`<Wait frames>`)를 대신한다 — "N 프레임 동안 바뀌지 않았다" 는 N 을 어떻게 잡든 증명이 아니고, 정지 상태에서 본 값이 곧 그 답이다(일어나지 않음을
-             *          보는 단언도 이 뒤에 둔다). 앞 단계(개발 명령 · 입력)의 효과는 다음에 열리는 프레임에 그려지므로 그 프레임에 찍힌 기다림 번호로 "앞 단계 뒤의 화면" 을
-             *          가린다(`beginSettleWait`) — 프레임 수를 세지 않는다. 언리얼 Automation 의 `FlushAsyncLoading` + Driver 의 "안정될 때까지", Playwright 의
-             *          "networkidle" + actionability("stable")와 같은 자리다.
+             * @brief 에디터가 멈출 때까지(정지 상태) 시나리오 시계를 붙잡습니다 — 앞 단계가 낳은 일이 다 끝나 새 입력 없이는 더 바뀔 것이 없는 상태(`EditorSettleWait`).
+             * @details 고정 대기(`<Wait frames>`)를 대신한다 — "N 프레임 동안 바뀌지 않았다" 는 N 을 어떻게 잡든 증명이 아니고, 정지 상태에서 본 값이 곧 그 답이다(일어나지 않음을
+             *          보는 단언도 이 뒤에 둔다). 배경 일(시계 잡기 조건)은 실행기가 단계 전에 이미 붙잡는다.
              */
             static AutomationStepHold holdUntilScreenSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 준비가 이미 막았다
-                // 번호가 없거나(상태 저장소가 아직 없다) 지금 번호보다 크면 상태 저장소가 새로 섰다(백엔드 교체 · 모듈 리로드가 에디터 컨텍스트를 다시 세운다 — 번호가 0 부터 다시 센다) — 거기서 다시 기다린다.
-                SettleWait* pWait = static_cast<SettleWait*>( runner.findHeldStepState( step ) );
-                if ( pWait == nullptr || pWait->_waitSerial == 0 || pWait->_waitSerial > EditorSelfTestInput::getSettleWaitSerial() )
-                    pWait = static_cast<SettleWait*>( &runner.setHeldStepState( step, make_unique<SettleWait>( EditorSelfTestInput::beginSettleWait() ) ) );
-                const EditorDockLayout* pDockLayout    = editor::findSubsystem<EditorDockLayout>();
-                const bool              bScreenSettled = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&
-                                            EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutSettledSince( pWait->_waitSerial );
-                const bool                bSceneSettled  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
-                const bool                bAssetsSettled = CaptureReadiness::countPendingWork( runner.findActiveObjectManager() ) == 0;
-                const utf8* const         pPendingWork   = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
-                const bool                bWorkDone      = bSceneSettled && bAssetsSettled && pPendingWork == nullptr;
-                const EditorSettleVerdict verdict        = pWait->_judge.advance( bScreenSettled, bWorkDone );
-                pWait->_waitingFor                       = formatToString( "the editor to settle (screen %#, scene %#, assets %#, work %#)",
-                                                     bScreenSettled ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
-                                                     bSceneSettled ? "settled" : "transitioning", bAssetsSettled ? "settled" : "pending",
-                                                     pPendingWork != nullptr ? pPendingWork : "none" );
+                SettleWaitState* pState = static_cast<SettleWaitState*>( runner.findHeldStepState( step ) );
+                if ( pState == nullptr )
+                    pState = static_cast<SettleWaitState*>( &runner.setHeldStepState( step, make_unique<SettleWaitState>() ) );
+                const EditorSettleVerdict verdict = pState->_wait.advance( runner.findActiveObjectManager() );
                 if ( verdict == EditorSettleVerdict::Oscillating )
-                    runner.recordFailure( step, formatToString( "the editor screen kept moving for %# frame(s) with no pending work (%#) - a layout that never settles",
-                                                                pWait->_judge._idleMovingFrames, EditorSelfTestInput::describeLastLayoutChange().c_str() ) );
-                // 진행 중인 일에는 시한이 없다(`EditorSettleJudge`) — 끝나지 않으면 시나리오 벽시계 상한이 `_waitingFor` 와 함께 잡는다.
-                // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pWait 을 읽지 않는다.
+                    runner.recordFailure( step, pState->_wait.describeOscillation() );
+                // 진행 중인 일에는 시한이 없다(`EditorSettleJudge`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
+                // Run 이면 실행기가 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
+                const string waitingFor = pState->_wait.describeWait();
                 return runner.holdUntilReady( step, input, verdict == EditorSettleVerdict::Ready,
-                                              verdict == EditorSettleVerdict::Oscillating ? 0u : std::numeric_limits<uint32>::max() );
+                                              verdict == EditorSettleVerdict::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
             }
 
             /**
@@ -202,7 +173,7 @@ namespace sw::editor
                 if ( EditorSelfTestMarks::setEnabled( true ) == false || isRelease( step ) )
                     return AutomationStepHold::Run;
                 const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetSettled();
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames );
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames, "the keyboard focus to settle (no pending input)" );
                 if ( hold == AutomationStepHold::Run && bReady == false )
                     runner.recordFailure( step, formatToString( "the keyboard focus did not settle within %# frame(s)", kSettleWaitFrames ) );
                 return hold;
@@ -596,17 +567,20 @@ namespace sw::editor
             /** @brief 이 시나리오 단계가 시작시킨 실행입니다. 단계는 한 번에 하나만 돈다(자체 테스트 실행도 하나뿐이다). */
             static inline const AutomationStep* s_pRequestedSelfTestStep = nullptr;
 
-            /** @brief 첫 차례에 실행을 청하고, 실행이 끝날 때까지 시나리오 시계를 붙잡습니다. 청할 수 없으면 돌려 실패를 적게 합니다. */
-            static AutomationStepHold holdUntilSelfTestsEnd( AutomationStepContext& /*runner*/, const AutomationStep& step, InputManager& /*input*/ )
+            /**
+             * @brief 첫 차례에 실행을 청하고, 실행이 끝날 때까지 시나리오 시계를 붙잡습니다. 청할 수 없으면 돌려 실패를 적게 합니다.
+             * @details 실행의 길이는 테스트 수 · Debug 에 달려 시한이 없다(`UINT32_MAX`) — 끝나지 않으면 벽시계 상한이 지금 테스트 · 단계와 함께 잡는다.
+             */
+            static AutomationStepHold holdUntilSelfTestsEnd( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( s_pRequestedSelfTestStep != &step )
                 {
                     if ( EditorSelfTestRunner::requestRun( *step.findAttribute( "pattern" ), false ) == false )
                         return AutomationStepHold::Run; // 에디터가 없거나 다른 실행(Test Runner 창)이 돈다 - 단계가 결과 없음으로 진다
                     s_pRequestedSelfTestStep = &step;
-                    return AutomationStepHold::Hold;
                 }
-                return EditorSelfTestRunner::isRunning() ? AutomationStepHold::Hold : AutomationStepHold::Run;
+                return runner.holdUntilReady( step, input, EditorSelfTestRunner::isRunning() == false, std::numeric_limits<uint32>::max(),
+                                              "editor self tests (" + EditorSelfTestRunner::describeProgress() + ")" );
             }
 
             static bool runSelfTest( AutomationStepContext& runner, const AutomationStep& step )

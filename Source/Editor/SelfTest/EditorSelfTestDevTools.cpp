@@ -294,10 +294,8 @@ namespace sw::editor
                                           "the saved layout has no docking section or no hierarchy window" );
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                     (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
-                    return EditorSelfTestStep::Continue;
+                    return EditorSelfTestStep::WaitSettled; // 다음 프레임 시작에 적용되고 그 프레임에 창이 다시 만들어진다 — 정지(도크 적용 끝)까지
                 }
-                if ( stepIndex < 4 )
-                    return EditorSelfTestStep::Continue; // 다음 프레임 시작에 적용되고, 그 프레임에 창이 다시 만들어진다
 
                 const IEditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
@@ -355,7 +353,7 @@ namespace sw::editor
                         ->setLocalPosition( pCamera->getWorldPosition() + pCamera->getCameraForward() * 6.0f );
                     pManager->flushSceneTransforms();
                     probe._startPosition = static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )->getWorldPosition();
-                    return EditorSelfTestStep::Continue;
+                    return EditorSelfTestStep::WaitSettled; // 선택과 기즈모가 그려지게 한다
                 }
                 GameObject* pObj = pManager->findGameObjectByID( probe._objectID );
                 if ( context.expect( pObj != nullptr, "the probe object vanished" ) == false )
@@ -363,9 +361,8 @@ namespace sw::editor
                     finishGizmo( pManager, probe );
                     return EditorSelfTestStep::Done;
                 }
-                if ( stepIndex < 3 )
-                    return EditorSelfTestStep::Continue; // 선택과 기즈모가 한 번 그려지게 한다
-                if ( stepIndex == 3 )
+                // 아래부터는 프레임마다 한 걸음인 입력(옮기기 · 누르기 · 끌기 · 놓기)이다 — 프레임 자체가 시험 내용이다.
+                if ( stepIndex == 1 )
                 {
                     // 오브젝트 원점을 화면 좌표로 변환한다. 기즈모 가운데 사각형(화면 평면 이동)이 거기 있다.
                     EditorSelfTestMark canvas{};
@@ -389,7 +386,7 @@ namespace sw::editor
                     EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportID );
                     return EditorSelfTestStep::Continue;
                 }
-                if ( stepIndex == 4 )
+                if ( stepIndex == 2 )
                 {
                     probe._bWasOver = ImGuizmo::IsOver();
                     EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportID );
@@ -397,13 +394,13 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
                 probe._bWasUsing = probe._bWasUsing || ImGuizmo::IsUsing();
-                if ( stepIndex < 5 + kDragStepCount )
+                if ( stepIndex < 3 + kDragStepCount )
                 {
-                    const float32 offset = kDragPixel * static_cast<float32>( stepIndex - 4 ) / static_cast<float32>( kDragStepCount );
+                    const float32 offset = kDragPixel * static_cast<float32>( stepIndex - 2 ) / static_cast<float32>( kDragStepCount );
                     EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + offset, probe._pressAt._y }, probe._viewportID );
                     return EditorSelfTestStep::Continue;
                 }
-                if ( stepIndex == 5 + kDragStepCount )
+                if ( stepIndex == 3 + kDragStepCount )
                 {
                     EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + kDragPixel, probe._pressAt._y }, probe._viewportID );
                     EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, false );

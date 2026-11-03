@@ -29,7 +29,8 @@ namespace sw::editor
     /** @brief 테스트 한 단계의 결과입니다. */
     enum class EditorSelfTestStep : uint8
     {
-        Continue = 0, ///< 다음 프레임에 다시 호출한다. 패널이 한 번 그려지기를 기다릴 때 쓴다
+        Continue = 0, ///< 다음 프레임에 다시 호출한다. 프레임 자체가 시험 내용일 때(매 프레임 크기 바꾸기 · "다음 프레임에 그려졌다") · 조건을 직접 볼 때 쓴다
+        WaitSettled,  ///< 에디터가 멈춘 뒤(정지 상태 — `EditorSettleWait`, 시나리오 `<EditorWaitSettled/>` 와 같은 판정) 다시 호출한다. 앞 단계가 낳은 일(패널 열기 · 도킹 · 에셋)을 기다릴 때 쓴다 — 프레임 수를 어림하지 않는다
         Done          ///< 끝났다
     };
 
@@ -148,6 +149,8 @@ namespace sw::editor
         [[nodiscard]] static bool requestRun( string_view pattern, bool bQuitWhenDone );
         /** @brief 실행이 진행 중이면 true 입니다. */
         static bool isRunning();
+        /** @brief 지금 도는 테스트 · 단계와 정지 대기 중이면 그 까닭을 한 줄로 돌려줍니다 — 바깥 그물(시나리오 벽시계 상한)에 걸릴 때 붙인다. 실행이 없으면 "not running" 입니다. */
+        static string describeProgress();
         /** @brief 마지막(또는 현재) 실행의 결과입니다. 끝난 테스트만 담깁니다. 에디터 컨텍스트가 없거나 실행한 적이 없으면 비어 있습니다. */
         static vector_reference<const EditorSelfTestResult> getResults();
         /**

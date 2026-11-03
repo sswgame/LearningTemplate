@@ -41,11 +41,6 @@ namespace sw
     {
     public:
         virtual ~IAutomationStepState() = default;
-        /**
-         * @brief 이 단계가 지금 무엇을 기다리는지 한 줄입니다(없으면 빈 글). 시한이 없는 대기가 바깥 그물(벽시계 상한)에 걸렸을 때 실행기가 까닭에 붙인다.
-         * @details 단계 이름만으로는 무엇이 끝나지 않았는지 모른다 — 기다리는 쪽이 아는 것을 그대로 남긴다.
-         */
-        virtual string describeWait() const { return string{}; }
     };
 
     /**
@@ -61,9 +56,11 @@ namespace sw
         virtual void recordFailure( const AutomationStep& step, string_view message ) = 0;
         /**
          * @brief 기다리는 대상이 아직이면(@p bReady 가 false) 시나리오 시계를 한 프레임 붙잡습니다(`WaitUntil` 과 같다).
+         * @param waitingFor 지금 무엇을 기다리는지 한 줄(예: "the scene 'x' to become active"). 붙잡는 동안 실행기가 들고 있다가 바깥 그물(벽시계 상한 · 멈춤 감시)에
+         *        걸리면 까닭에 붙인다 — 단계 이름만으로는 무엇이 끝나지 않았는지 모른다. 필수 인자라 까닭 없이 붙잡는 단계를 쓸 수 없다.
          * @return 붙잡았으면 Hold, 준비됐거나 @p timeoutFrames 를 다 기다렸으면 Run 입니다(그 단계가 돌며 실패를 적는다).
          */
-        virtual AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames ) = 0;
+        virtual AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames, string_view waitingFor ) = 0;
         /**
          * @brief 붙잡고 있는 단계 @p step 의 상태입니다(`setHeldStepState` 로 맡긴 것). 맡긴 적이 없거나 다른 단계의 것이면 nullptr 입니다.
          * @details 맡긴 단계만 같은 타입으로 되돌려 읽는다(`static_cast`) — 상태 칸은 붙잡은 단계 하나의 것이다.

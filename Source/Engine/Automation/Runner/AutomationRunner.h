@@ -43,6 +43,7 @@ namespace sw
         {
             _pHeldStepState.reset();
             _pHeldStateStep = nullptr;
+            _waitingFor.clear();
         }
         /** @brief 아직 렌더 패킷에 싣지 않은 경로 하나를 꺼냅니다. 없으면 false 입니다. */
         [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
@@ -52,6 +53,7 @@ namespace sw
         vector<string>                   _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
         string                           _currentStepKind;       ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
         string                           _clockHolderName;       ///< 시계를 붙잡은 조건의 이름(로그)
+        string                           _waitingFor;            ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
         float64                          _exitDeadlineSeconds;   ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
         float64                          _loadDeadlineSeconds;   ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
         float64                          _wallStartSeconds;      ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
@@ -166,13 +168,13 @@ namespace sw
          * @details `WaitUntil` 과 같다 — 붙잡은 프레임은 세지 않고 뒤의 입력 이벤트를 한 프레임 민다. 준비되면 붙잡은 프레임 수를 로그로 남긴다.
          * @return 붙잡았으면 Hold, 준비됐거나 @p timeoutFrames 를 다 기다렸으면 Run 입니다(그 단계가 돌며 실패를 적는다).
          */
-        AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames ) override;
+        AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames, string_view waitingFor ) override;
         /**
          * @brief `holdUntilReady` 의 벽시계판입니다 — 붙잡기를 시작한 뒤 @p wallSeconds 가 지나면 놓습니다(`<WaitUntil timeoutWallSeconds>`).
          * @details 바깥 일(자식 프로세스 종료 · 파일 · GPU)은 게임 시간과 무관하다. 게임 초(`timeoutSeconds`)로 기다리면 고정 델타로 프레임 수가 되어, 무인 실행처럼 프레임이
          *          빨리 돌면 20 초가 0.8 초가 되어 넷플레이 종료 대기가 졌다(editor.netsyncobjects).
          */
-        AutomationStepHold holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds );
+        AutomationStepHold holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds, string_view waitingFor );
         /** @brief 붙잡은 단계 @p step 이 맡긴 상태입니다(다른 단계의 것이면 nullptr). */
         IAutomationStepState* findHeldStepState( const AutomationStep& step ) const override;
         /** @brief 붙잡은 단계 @p step 의 상태를 맡깁니다 — `holdUntilReady` 가 Run 을 돌려줄 때 · `endRun` 이 지운다. */

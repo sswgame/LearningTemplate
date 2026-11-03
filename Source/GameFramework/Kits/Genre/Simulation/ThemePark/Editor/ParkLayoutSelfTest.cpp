@@ -31,10 +31,8 @@ namespace sw::editor
                 {
                     context.expect( findSubsystem<ParkLayoutPreview>() != nullptr, "the extension subsystem ParkLayoutPreview is not bound in the editor scope" );
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( true ), "extension panel is not registered" );
-                    return EditorSelfTestStep::Continue; // 한 프레임 그린다
+                    return EditorSelfTestStep::WaitSettled; // 열린 패널이 도킹 · 그리기를 마칠 때까지
                 }
-                if ( context.getStepIndex() < 3 )
-                    return EditorSelfTestStep::Continue;
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( ParkLayoutPanel::kPanelTitle );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "extension panel drew nothing in the editor's ImGui context" );
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( false ); // 닫기 실패는 위의 expect 가 이미 알렸다

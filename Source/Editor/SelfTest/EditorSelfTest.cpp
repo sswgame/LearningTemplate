@@ -11,11 +11,14 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/SelfTest/EditorSettleWait.h"
 
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/QuitRequest.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
+
+#include <optional>
 
 namespace sw::editor
 {
@@ -36,19 +39,19 @@ namespace sw::editor
             /** @brief 한 번의 실행 상태입니다. 새 실행을 요청하면 비웁니다. */
             struct RunState
             {
-                EditorSelfTestContext        _context;
-                vector<uint32>               _listSelectedIndex;
-                vector<EditorSelfTestResult> _listResult;
-                string                       _pattern;
-                string                       _report;
-                uint32                       _warmupFrameCount{ 0 };
-                uint32                       _cursor{ 0 };
-                uint32                       _passedCount{ 0 };
-                uint32                       _failedCount{ 0 };
-                bool                         _bActive{ false }; ///< 실행이 있다(시작 전 워밍업 포함)
-                bool                         _bStarted{ false };
-                bool                         _bQuitWhenDone{ false };
-                bool                         _bMarksWereEnabled{ false }; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
+                EditorSelfTestContext           _context;
+                std::optional<EditorSettleWait> _settleWait; ///< 테스트가 `WaitSettled` 를 돌려 정지를 기다리는 중이면 있다(그동안 테스트를 부르지 않는다)
+                vector<uint32>                  _listSelectedIndex;
+                vector<EditorSelfTestResult>    _listResult;
+                string                          _pattern;
+                string                          _report;
+                uint32                          _cursor{ 0 };
+                uint32                          _passedCount{ 0 };
+                uint32                          _failedCount{ 0 };
+                bool                            _bActive{ false }; ///< 실행이 있다(시작 전 워밍업 포함)
+                bool                            _bStarted{ false };
+                bool                            _bQuitWhenDone{ false };
+                bool                            _bMarksWereEnabled{ false }; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
             };
 
             RunState _run;
@@ -61,9 +64,7 @@ namespace sw::editor
         {
             using RunState = EditorSelfTestSession::RunState;
 
-            /** @brief 테스트를 시작하기 전에 기다리는 에디터 프레임 수입니다. 패널이 한 번씩 그려지고 기본 도킹이 적용될 때까지입니다. */
-            static constexpr uint32 kWarmupFrameCount = 5;
-            /** @brief 테스트 하나가 쓸 수 있는 최대 단계(프레임) 수입니다. 넘으면 실패로 적고 다음 테스트로 갑니다. */
+            /** @brief 테스트 하나가 쓸 수 있는 최대 단계 수입니다(정지를 기다린 프레임은 세지 않는다). 넘으면 실패로 적고 다음 테스트로 갑니다. */
             static constexpr uint32 kMaxStepCount = 300;
 
             /** @brief 지금 에디터 범위의 세션입니다. 에디터 컨텍스트가 없으면 nullptr 입니다. */
@@ -191,9 +192,8 @@ namespace sw::editor
         state._pattern                          = string( pattern );
         state._bQuitWhenDone                    = bQuitWhenDone;
         state._bActive                          = true;
-        // 창에서 누른 실행은 패널이 이미 다 그려져 있다 — 워밍업은 명령줄 기동 때만.
-        if ( bQuitWhenDone == false )
-            state._warmupFrameCount = EditorSelfTestInternal::kWarmupFrameCount;
+        // 첫 테스트 앞에서 에디터가 멈추기를 기다린다(기동 직후 패널이 처음 그려지고 기본 도킹이 자리 잡는다) — 예전의 워밍업 5 프레임을 대신한다.
+        state._settleWait.emplace();
         return true;
     }
 
@@ -201,6 +201,21 @@ namespace sw::editor
     {
         const EditorSelfTestSession* pSession = EditorSelfTestInternal::findSession();
         return pSession != nullptr && pSession->_run._bActive;
+    }
+
+    string EditorSelfTestRunner::describeProgress()
+    {
+        const EditorSelfTestSession* pSession = EditorSelfTestInternal::findSession();
+        if ( pSession == nullptr || pSession->_run._bActive == false )
+            return "not running";
+        using Registry                                = EditorExtensionRegistry<EditorSelfTestRegistration>;
+        const EditorSelfTestInternal::RunState& state = pSession->_run;
+        string                                  text  = state._cursor < state._listSelectedIndex.size()
+                                                          ? formatToString( "test %# step %#", Registry::getAt( state._listSelectedIndex[state._cursor] )._pID, state._context.getStepIndex() )
+                                                          : string( "starting" );
+        if ( state._settleWait.has_value() )
+            text += ", waiting for " + state._settleWait->describeWait();
+        return text;
     }
 
     vector_reference<const EditorSelfTestResult> EditorSelfTestRunner::getResults()
@@ -232,11 +247,6 @@ namespace sw::editor
         }
         if ( state._bActive == false )
             return;
-        if ( state._warmupFrameCount < EditorSelfTestInternal::kWarmupFrameCount )
-        {
-            ++state._warmupFrameCount;
-            return;
-        }
 
         using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
         if ( state._bStarted == false )
@@ -253,13 +263,26 @@ namespace sw::editor
             SW_LOG_INFO_ID( "EditorSelfTest.RunningEditorSelfTests", "Running %# editor self tests matching '%#'", static_cast<uint32>( state._listSelectedIndex.size() ), state._pattern.c_str() );
         }
 
+        // 정지를 기다리는 동안은 테스트를 부르지 않는다. 진행 중인 일에는 시한이 없고(`EditorSettleJudge`), 할 일 없이 화면이 계속 움직이면 그 테스트의 실패다. 정지 판정의 화면 표본은 레이블 기록이 켜져 있어야 쌓인다(위에서 켰다).
+        if ( state._settleWait.has_value() )
+        {
+            const EditorSettleVerdict verdict = state._settleWait->advance( editor::getActiveObjectManager() );
+            if ( verdict == EditorSettleVerdict::Waiting )
+                return;
+            if ( verdict == EditorSettleVerdict::Oscillating )
+                (void)state._context.expect( false, state._settleWait->describeOscillation().c_str() );
+            state._settleWait.reset();
+        }
+
         if ( state._cursor < state._listSelectedIndex.size() )
         {
             const EditorSelfTestRegistration& registration = Registry::getAt( state._listSelectedIndex[state._cursor] );
             const EditorSelfTestStep          step         = registration._pfnRun( state._context );
             state._context.advanceStep();
+            if ( step == EditorSelfTestStep::WaitSettled )
+                state._settleWait.emplace();
 
-            const bool bTimedOut = step == EditorSelfTestStep::Continue && state._context.getStepIndex() >= EditorSelfTestInternal::kMaxStepCount;
+            const bool bTimedOut = step != EditorSelfTestStep::Done && state._context.getStepIndex() >= EditorSelfTestInternal::kMaxStepCount;
             if ( bTimedOut )
                 (void)state._context.expect( false, "the test did not finish within its frame budget" );
             if ( step == EditorSelfTestStep::Done || bTimedOut )

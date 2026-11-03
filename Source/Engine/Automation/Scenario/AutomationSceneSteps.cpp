@@ -93,7 +93,8 @@ namespace sw
                 const bool bLoaded = pPending->_future.isReady() && pPending->_future.get() != nullptr &&
                                      engine::getSubsystem<SceneManager>().getActiveScene() == pPending->_future.get();
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pPending 을 읽지 않는다.
-                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, readTimeoutFrames( step, kDefaultLoadTimeoutFrames ) );
+                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, readTimeoutFrames( step, kDefaultLoadTimeoutFrames ),
+                                                                        "the scene '" + *step.findAttribute( "path" ) + ( pPending->_future.isReady() ? "' to become active" : "' to load" ) );
                 if ( hold == AutomationStepHold::Run && bLoaded == false )
                     context.recordFailure( step, "the scene did not become active in time (or failed to load - see the log)" );
                 return hold;
@@ -122,7 +123,8 @@ namespace sw
             {
                 SequencePlayerComponent* pSequence = findSequence( context, step );
                 const bool               bDone     = pSequence == nullptr || pSequence->isPlaying() == false;
-                const AutomationStepHold hold      = context.holdUntilReady( step, input, bDone, readTimeoutFrames( step, kDefaultSequenceTimeoutFrames ) );
+                const AutomationStepHold hold      = context.holdUntilReady( step, input, bDone, readTimeoutFrames( step, kDefaultSequenceTimeoutFrames ),
+                                                                             "the sequence on '" + *step.findAttribute( "object" ) + "' to finish playing" );
                 if ( hold == AutomationStepHold::Run && ( pSequence == nullptr || bDone == false ) )
                     context.recordFailure( step, pSequence == nullptr ? "no object with that name and a SequencePlayerComponent in the active scene"
                                                                       : "the sequence was still playing when the wait timed out" );

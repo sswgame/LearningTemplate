@@ -631,7 +631,8 @@ namespace sw
         {
             AutomationRunner&        runner   = asRunner( context );
             const utf8*              pBlocker = runner._run.hasPendingScreenshot() ? "Screenshot" : AutomationStepRegistry::findFinishBlocker();
-            const AutomationStepHold hold     = runner.holdUntilReady( step, input, pBlocker == nullptr, AutomationTimeLimits::kMaxFinishWaitFrames );
+            const AutomationStepHold hold     = runner.holdUntilReady( step, input, pBlocker == nullptr, AutomationTimeLimits::kMaxFinishWaitFrames,
+                                                                       string( "background work to finish before <Pass/> (" ) + ( pBlocker != nullptr ? pBlocker : "none" ) + ")" );
             runner._run._bFinishWaiting       = hold == AutomationStepHold::Hold;
             if ( hold == AutomationStepHold::Run && pBlocker != nullptr )
                 runner.recordFailure( step, string( "background work did not finish before the scenario ended (" ) + pBlocker + ")" );
@@ -680,14 +681,17 @@ namespace sw
             const bool bSettled                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
             runner._run._assetSettledFrameCount = bSettled ? runner._run._assetSettledFrameCount + 1 : 0;
             const bool               bReady     = runner._run._assetSettledFrameCount > AutomationRunnerStepsInternal::kAssetSettleTrailFrames;
-            const AutomationStepHold hold       = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames );
+            const utf8* const        pCover     = AutomationStepRegistry::findCaptureBlocker();
+            const AutomationStepHold hold       = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames,
+                                                                         string( "the screen to settle before the screenshot (" ) +
+                                                                             ( pCover != nullptr ? string( "covered by " ) + pCover : string( bSettled ? "trailing frames" : "assets pending" ) ) +
+                                                                             ")" );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
                 {
-                    const utf8* pBlocker = AutomationStepRegistry::findCaptureBlocker();
-                    runner.recordFailure( step, pBlocker != nullptr ? string( "the screen did not settle before the screenshot was due (still covered by " ) + pBlocker + ")"
-                                                                    : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" ) );
+                    runner.recordFailure( step, pCover != nullptr ? string( "the screen did not settle before the screenshot was due (still covered by " ) + pCover + ")"
+                                                                  : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" ) );
                 }
                 runner._run._assetSettledFrameCount = 0;
             }

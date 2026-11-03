@@ -29,10 +29,8 @@ namespace sw::editor
                 if ( context.getStepIndex() == 0 )
                 {
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen<BehaviorTreePanel>( true ), "behavior tree panel is not registered" );
-                    return EditorSelfTestStep::Continue;
+                    return EditorSelfTestStep::WaitSettled; // 열린 패널이 도킹 · 그리기를 마칠 때까지
                 }
-                if ( context.getStepIndex() < 3 )
-                    return EditorSelfTestStep::Continue;
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( BehaviorTreePanel::kPanelTitle );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "behavior tree panel drew nothing in the editor's ImGui context" );
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<BehaviorTreePanel>( false ); // 닫기 실패는 위의 expect 가 이미 알렸다

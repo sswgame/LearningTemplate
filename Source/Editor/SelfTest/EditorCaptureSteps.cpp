@@ -129,12 +129,12 @@ namespace sw::editor
                     pPending->_layoutHash       = layoutHash;
                     // 자리 잡지 못한 채 기다림이 다하면 단계가 돌며 "never completed" 실패를 적는다(아래 `holdUntilReady` 가 같은 상한을 센다).
                     if ( pPending->_stableFrameCount < kLayoutStableFrames )
-                        return runner.holdUntilReady( step, input, false, kCaptureWaitFrames );
+                        return runner.holdUntilReady( step, input, false, kCaptureWaitFrames, "the editor layout to hold still before the UI capture" );
                     pPending->_ticket     = pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) );
                     pPending->_bRequested = true;
                 }
                 EditorUICaptureResult result{};
-                return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames );
+                return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames, "the editor UI capture to be read back" );
             }
 
             /**

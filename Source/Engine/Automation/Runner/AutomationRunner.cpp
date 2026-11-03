@@ -569,10 +569,7 @@ namespace sw
         if ( _bStarted == SW_FALSE )
             reason += formatToString( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
         if ( _run._holdFrameCount > 0 )
-            reason += formatToString( ", the current step has held the scenario clock for %# frame(s)", _run._holdFrameCount );
-        const string waitingFor = _run._pHeldStepState != nullptr ? _run._pHeldStepState->describeWait() : string{};
-        if ( waitingFor.empty() == false )
-            reason += ", waiting for " + waitingFor;
+            reason += formatToString( ", the current step has held the scenario clock for %# frame(s), waiting for %#", _run._holdFrameCount, _run._waitingFor.c_str() );
         if ( _run._clockHoldFrameCount > 0 )
             reason += formatToString( ", %# has held the scenario clock for %# frame(s)", _run._clockHolderName, _run._clockHoldFrameCount );
         finish( AutomationOutcome::TimedOut, reason );
@@ -770,7 +767,7 @@ namespace sw
         return _judge.prepare( _scenario, outError ); // 허용 목록이 틀리면 폴백 없이 읽기 오류(11)로 멈춘다
     }
 
-    AutomationStepHold AutomationRunner::holdUntilReady( [[maybe_unused]] const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames )
+    AutomationStepHold AutomationRunner::holdUntilReady( [[maybe_unused]] const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames, string_view waitingFor )
     {
         if ( bReady || _run._holdFrameCount >= timeoutFrames )
         {
@@ -781,19 +778,20 @@ namespace sw
             return AutomationStepHold::Run;
         }
         ++_run._holdFrameCount;
+        _run._waitingFor = waitingFor;
         // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
         _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
         return AutomationStepHold::Hold;
     }
 
-    AutomationStepHold AutomationRunner::holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds )
+    AutomationStepHold AutomationRunner::holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds, string_view waitingFor )
     {
         const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
         if ( _run._holdFrameCount == 0 )
             _run._holdStartSeconds = nowSeconds;
         const bool bExpired = _run._holdFrameCount > 0 && nowSeconds - _run._holdStartSeconds >= static_cast<float64>( wallSeconds );
         // 프레임 판(`holdUntilReady`)이 붙잡기 · 놓기 · 입력 밀기를 한 곳에서 한다 — 시한만 벽시계로 정해 넘긴다.
-        return holdUntilReady( step, input, bReady, bExpired ? _run._holdFrameCount : UINT32_MAX );
+        return holdUntilReady( step, input, bReady, bExpired ? _run._holdFrameCount : UINT32_MAX, waitingFor );
     }
 
     IAutomationStepState* AutomationRunner::findHeldStepState( const AutomationStep& step ) const
@@ -853,8 +851,9 @@ namespace sw
         }
         const uint32             heldFrameCount = _run._holdFrameCount;
         const uint32             timeoutFrames  = timeout._bSeconds ? convertSecondsToFrames( timeout._timeoutSeconds ) : timeout._timeoutFrames;
-        const AutomationStepHold hold           = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds )
-                                                                        : holdUntilReady( step, input, bReady, timeoutFrames );
+        const string             waitingFor     = step.describe() + " (" + message + ")";
+        const AutomationStepHold hold           = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds, waitingFor )
+                                                                        : holdUntilReady( step, input, bReady, timeoutFrames, waitingFor );
         if ( hold == AutomationStepHold::Hold )
             return true;
         // 처음부터 참이던 조건도 남긴다 - 고정 대기를 조건 대기로 바꿀 때 "기다리지 않고 지나간" 단언(일어나지 않음을 보는 부정형일 수 있다)을 가려낸다.
