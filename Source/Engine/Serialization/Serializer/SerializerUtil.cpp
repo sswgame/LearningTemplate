@@ -1050,50 +1050,55 @@ namespace sw
 
     void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const ObjectAddress instance, const string& prefix, vector<string>& outListError )
     {
-        using Internal              = SerializerUtilInternal;
-        const void* const pInstance = instance.get();
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
-            if ( bSkipProperty )
-                continue;
-            const string      path   = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-            const void* const pValue = prop.getRawPtr( pInstance );
-            if ( prop._bIsContainer == SW_TRUE )
-            {
-                // 시퀀스 원소만 본다. 맵과 중첩 컨테이너는 원소 경로를 하나로 정할 수 없어 보지 않는다.
-                const bool bNestedContainer = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
-                const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
-                if ( bSequence == false )
-                    continue;
-                ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-                const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                const size_t               elementCount = pSequence->getSize( pValue );
-                // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
-                const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
-                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
-                {
-                    const string      elementPath   = formatToString( "%#[%#]", path, elementIndex );
-                    const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
-                    float64           value         = 0.0;
-                    // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
-                    if ( pElement != nullptr )
-                        collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError );
-                    else if ( Internal::readRangeNumber( prop._elementTypeName, ValueAddress{ pElementValue }, value ) )
-                        Internal::appendRangeError( elementPath, value, range, outListError );
-                }
-                continue;
-            }
-            const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            if ( pNested != nullptr )
-            {
-                collectRangeErrors( *pNested, ObjectAddress{ pValue }, path, outListError );
-                continue;
-            }
-            float64 value = 0.0;
-            if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
-                Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
+            collectPropertyRangeErrors( prop, instance, prefix, outListError );
         }
+    }
+
+    void SerializerUtil::collectPropertyRangeErrors( const PropertyInfo& prop, const ObjectAddress instance, const string& prefix, vector<string>& outListError )
+    {
+        using Internal                  = SerializerUtilInternal;
+        const void* const pInstance     = instance.get();
+        const bool        bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
+        if ( bSkipProperty )
+            return;
+        const string      path   = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+        const void* const pValue = prop.getRawPtr( pInstance );
+        if ( prop._bIsContainer == SW_TRUE )
+        {
+            // 시퀀스 원소만 본다. 맵과 중첩 컨테이너는 원소 경로를 하나로 정할 수 없어 보지 않는다.
+            const bool bNestedContainer = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
+            const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
+            if ( bSequence == false )
+                return;
+            ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
+            const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            const size_t               elementCount = pSequence->getSize( pValue );
+            // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
+            const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
+            for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+            {
+                const string      elementPath   = formatToString( "%#[%#]", path, elementIndex );
+                const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
+                float64           value         = 0.0;
+                // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
+                if ( pElement != nullptr )
+                    collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError );
+                else if ( Internal::readRangeNumber( prop._elementTypeName, ValueAddress{ pElementValue }, value ) )
+                    Internal::appendRangeError( elementPath, value, range, outListError );
+            }
+            return;
+        }
+        const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        if ( pNested != nullptr )
+        {
+            collectRangeErrors( *pNested, ObjectAddress{ pValue }, path, outListError );
+            return;
+        }
+        float64 value = 0.0;
+        if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
+            Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
     }
 
     bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance )

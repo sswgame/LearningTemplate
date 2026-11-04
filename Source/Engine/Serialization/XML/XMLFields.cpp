@@ -73,6 +73,7 @@ namespace sw
         bool                    bOk          = true;
         // 칸마다의 속성 이름은 한 번만 만든다 — 속성마다 칸 수만큼 글을 새로 만들지 않는다.
         vector<string> listAttributeName;
+        vector<uint8>  listWritten( listProperty.size(), uint8{ 0 } ); // 범위는 적힌 칸만 본다 — 적지 않은 칸은 코드의 초기값이다
         listAttributeName.reserve( listProperty.size() );
         for ( const PropertyInfo& prop : listProperty )
         {
@@ -89,8 +90,10 @@ namespace sw
             const PropertyInfo* pFound = nullptr;
             for ( size_t propIndex = 0; propIndex < listProperty.size(); ++propIndex )
             {
-                if ( listAttributeName[propIndex] == attributeName )
-                    pFound = &listProperty[propIndex];
+                if ( listAttributeName[propIndex] != attributeName )
+                    continue;
+                pFound                 = &listProperty[propIndex];
+                listWritten[propIndex] = 1;
             }
             if ( pFound == nullptr )
             {
@@ -119,22 +122,20 @@ namespace sw
             }
         }
 
-        // 3) 범위는 자르지 않고 알린다 — 잘라 쓰면 데이터의 실수가 다른 값으로 조용히 돈다. 범위의 원본은 `PROPERTY( Min · Max )` 하나이고,
-        //    바이너리 · JSON · XML 과 같은 읽기 공통 끝이 칸마다 알린다. 여기서는 어느 파일 · 원소인지만 덧붙인다.
-        // 받는 곳이 있으면 칸마다의 범위 오류도 그리로 보낸다(공통 끝 `isWithinDeclaredRanges` 는 곧바로 로그에 쓴다).
+        // 3) 범위는 자르지 않고 알린다 — 잘라 쓰면 데이터의 실수가 다른 값으로 조용히 돈다. 범위의 원본은 `PROPERTY( Min · Max )` 하나다.
+        //    적힌 칸만 본다: 적지 않은 칸은 코드의 초기값이라 파일의 실수가 아니다(필수 칸이 빠지면 그 초기값의 범위 오류가 덧붙어 원인을 가렸다).
         vector<string> listRangeError;
-        SerializerUtil::collectRangeErrors( typeInfo, ObjectAddress{ pInstance }, string(), listRangeError );
-        if ( listRangeError.empty() == false )
+        for ( size_t propIndex = 0; propIndex < listProperty.size(); ++propIndex )
         {
+            if ( listWritten[propIndex] != 0 )
+                SerializerUtil::collectPropertyRangeErrors( listProperty[propIndex], ObjectAddress{ pInstance }, string(), listRangeError );
+        }
+        for ( const string& rangeError : listRangeError )
+        {
+            // 받는 곳이 없으면 바이너리 · JSON 의 읽기 공통 끝과 같은 id 로도 남긴다.
             if ( sink._pfnAdd == nullptr )
-                (void)SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ); // 칸마다 `Serialization.ValueOutOfRange` 를 남긴다
-            for ( const string& rangeError : listRangeError )
-            {
-                if ( sink._pfnAdd != nullptr )
-                    report( "XMLFields.ValueOutOfRange", formatToString( "%#: <%#> %#", sourceName, pElement, rangeError.c_str() ) );
-            }
-            if ( sink._pfnAdd == nullptr )
-                report( "XMLFields.ValueOutOfRange", formatToString( "%#: <%#> has values outside PROPERTY( Min, Max ) of %# (listed above)", sourceName, pElement, typeInfo._name.c_str() ) );
+                SW_LOG_ERROR_ID( "Serialization.ValueOutOfRange", "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
+            report( "XMLFields.ValueOutOfRange", formatToString( "%#: <%#> %#", sourceName, pElement, rangeError.c_str() ) );
             bOk = false;
         }
         return bOk;

@@ -240,6 +240,11 @@ namespace sw
          */
         SW_API static void collectRangeErrors( const TypeInfo& typeInfo, ObjectAddress instance, const string& prefix, vector<string>& outListError );
         /**
+         * @brief `collectRangeErrors` 의 칸 하나입니다. @p instance 는 @p prop 을 가진 객체의 주소입니다.
+         * @details 파일에 적힌 칸만 보는 읽기(`XMLFields::readFields`)가 부른다 — 적지 않은 칸은 코드의 초기값이라 데이터 오류가 아니다.
+         */
+        SW_API static void collectPropertyRangeErrors( const PropertyInfo& prop, ObjectAddress instance, const string& prefix, vector<string>& outListError );
+        /**
          * @brief 읽기를 끝낸 인스턴스가 `Min` · `Max` 를 지키는지 봅니다. 어기면 칸마다 오류 로그를 남기고 false 입니다.
          * @details 세 포맷(바이너리 · JSON · XML)의 읽기 공통 끝이 부릅니다 — 호출부마다 따로 부르면 부르지 않는 경로의 값이 범위 밖인 채 성공으로 돌아온다(A-19).
          *          위반이 없으면 글을 만들지 않고 첫 위반에서 멈추는 빠른 길로 끝납니다.
