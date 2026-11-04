@@ -110,6 +110,7 @@ namespace sw
         };
 
     private:
+        /** @brief 절벽 타일마다 절벽 프리팹 하나를 놓습니다 — 고르기 · 돌리기는 타일 자리의 해시라 판마다 같습니다. */
         void spawnCliffs( GameObjectManager& manager );
         void spawnUnit( GameObjectManager& manager, int32 slotIndex );
         /** @brief 유닛 모습 인스턴스(팀 또는 자원과 선택 여부 조합)를 만듭니다(뷰가 워커에서 고릅니다). */
@@ -141,8 +142,9 @@ namespace sw
         string _unitModelPath;
         PROPERTY( Category = "Data", DisplayName = "Commander Tree", AssetPath, Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
         string _commanderTreePath;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _cliffPrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Cliff Prefabs", AssetPath, AssetType = "Prefab",
+                  Tooltip = "One is placed on every cliff tile, picked and turned by the tile position (rocks); at least one" )
+        vector<string> _listCliffPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _unitPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse is picked through" )

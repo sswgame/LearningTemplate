@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/XorShift32.h"
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -134,7 +135,7 @@ namespace sw
         : _unitDataPath{}
         , _unitModelPath{}
         , _commanderTreePath{}
-        , _cliffPrefab{}
+        , _listCliffPrefab{}
         , _unitPrefab{}
         , _cameraRig{}
         , _watchFocus{ 32.0f, 0.0f, 30.0f }
@@ -423,27 +424,22 @@ namespace sw
 
     void SkirmishDirectorComponent::spawnCliffs( GameObjectManager& manager )
     {
-        // 절벽은 줄마다 이어진 타일을 상자 하나로 만든다.
+        // 절벽은 타일마다 바위 하나다(바위는 늘이면 모양이 망가져 줄을 상자 하나로 잇지 않는다). 고르기 · 요는 타일 자리의 해시다.
         const int32 size = SkirmishMatch::kMapSize;
         for ( int32 y = 0; y < size; ++y )
         {
-            int32 runStart = -1;
-            for ( int32 x = 0; x <= size; ++x )
+            for ( int32 x = 0; x < size; ++x )
             {
-                const bool bCliff = x < size && _match.isCliff( x, y );
-                if ( bCliff && runStart < 0 )
-                    runStart = x;
-                if ( bCliff || runStart < 0 )
+                if ( _match.isCliff( x, y ) == false )
                     continue;
-                const float32  length = static_cast<float32>( x - runStart );
-                GameObject*    pCliff = spawnPrefab( manager, _cliffPrefab, "SkirmishCliff" );
-                MeshComponent* pMesh  = pCliff != nullptr ? pCliff->getComponent<MeshComponent>() : nullptr;
-                if ( pMesh != nullptr )
-                {
-                    pMesh->setLocalPosition( float3{ static_cast<float32>( runStart ) + length * 0.5f, pMesh->getLocalScale()._y * 0.5f, static_cast<float32>( y ) + 0.5f } );
-                    pMesh->setLocalScale( float3{ length, pMesh->getLocalScale()._y, 1.0f } );
-                }
-                runStart = -1;
+                const uint32    hash   = XorShift32::next( XorShift32::next( static_cast<uint32>( y * size + x ) + 1u ) );
+                const string&   prefab = _listCliffPrefab[hash % static_cast<uint32>( _listCliffPrefab.size() )];
+                GameObject*     pCliff = spawnPrefab( manager, prefab, "SkirmishCliff" );
+                SceneComponent* pRoot  = pCliff != nullptr ? pCliff->getComponent<SceneComponent>() : nullptr;
+                if ( pRoot == nullptr )
+                    continue;
+                pRoot->setLocalPosition( float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f } );
+                pRoot->setLocalRotation( float3{ 0.0f, XorShift32::toUnit24( hash ) * MathUtil::kTwoPi, 0.0f } );
             }
         }
     }
@@ -719,6 +715,11 @@ namespace sw
             if ( _catalog.find( unitID ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "SkirmishDirector.BuildUnitNot", "%#: build unit '%#' is not in %#", kOwner, unitID.c_str(), _unitDataPath.c_str() );
+            bValid = false;
+        }
+        if ( _listCliffPrefab.empty() )
+        {
+            SW_LOG_ERROR_ID( "SkirmishDirector.CliffPrefabsEmpty", "%#: _listCliffPrefab is empty - the scene must give at least one cliff prefab", kOwner );
             bValid = false;
         }
         // 관전 카메라 프리셋은 씬 데이터가 준다(코드에 기본 이름이 없다). 카탈로그에 있는지는 카메라가 시작할 때 본다(`CameraDirectorComponent::startWithPreset`).

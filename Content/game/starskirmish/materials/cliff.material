@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- 절벽 — 기본 머티리얼에 갈색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="StarSkirmishCliff" parent="engine/materials/defaultmaterial.material">
-	<_properties>
-		<item name="_color" defaultValue="0.3 0.24 0.18 1.0" />
-	</_properties>
-</MaterialDesc>

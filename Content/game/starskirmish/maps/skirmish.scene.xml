@@ -104,7 +104,6 @@
 					                           _unitDataPath="game/starskirmish/data/units.xml"
 					                           _unitModelPath="game/starskirmish/data/unitmodels.xml"
 					                           _commanderTreePath="game/starskirmish/data/commander.bt.xml"
-					                           _cliffPrefab="game/starskirmish/prefabs/cliff.prefab.xml"
 					                           _unitPrefab="game/starskirmish/prefabs/unit.prefab.xml"
 					                           _cameraRig="1"
 					                           _watchFocus="32,0,30"
@@ -129,6 +128,11 @@
 					                           _productionUnitID="barracks"
 					                           _armyUnitID="marine"
 					                           _bAutoPlay="false">
+						<_listCliffPrefab>
+							<item>game/starskirmish/prefabs/cliff_rock_1.prefab.xml</item>
+							<item>game/starskirmish/prefabs/cliff_rock_2.prefab.xml</item>
+							<item>game/starskirmish/prefabs/cliff_rock_3.prefab.xml</item>
+						</_listCliffPrefab>
 						<_listTrainAction>
 							<item>Skirmish.Command1</item>
 							<item>Skirmish.Command2</item>
