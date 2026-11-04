@@ -113,6 +113,29 @@ namespace sw
         return false;
     }
 
+#if defined( SW_PLATFORM_WINDOWS )
+    wstring PlatformFileUtil::toWindowsFilePath( string_view path )
+    {
+        string separated{ path };
+        StringUtil::replaceChar( separated, '/', '\\' );
+        wstring wide = StringUtil::utf8ToUTF16( separated.c_str() );
+        if ( wide.size() < kLongPathThreshold || wide.compare( 0, 4, L"\\\\?\\" ) == 0 )
+            return wide;
+        // 확장 경로는 `.` · `..` 를 풀지 않으므로 먼저 편다.
+        const DWORD needed = GetFullPathNameW( wide.c_str(), 0, nullptr, nullptr );
+        if ( needed == 0 )
+            return {};
+        wstring     full( static_cast<size_t>( needed ), L'\0' );
+        const DWORD written = GetFullPathNameW( wide.c_str(), needed, full.data(), nullptr );
+        if ( written == 0 || written >= needed )
+            return {};
+        full.resize( static_cast<size_t>( written ) );
+        if ( full.compare( 0, 2, L"\\\\" ) == 0 )
+            return wstring( L"\\\\?\\UNC\\" ) + full.substr( 2 );
+        return wstring( L"\\\\?\\" ) + full;
+    }
+#endif
+
     uint64 PlatformFileUtil::getFileOpenCount()
     {
         return PlatformFileUtilInternal::s_fileOpenCount.load( std::memory_order_relaxed );
@@ -135,7 +158,7 @@ namespace sw
             arrWideMode[modeLength] = static_cast<utf16>( static_cast<uint8>( pMode[modeLength] ) );
             ++modeLength;
         }
-        const wstring widePath = StringUtil::utf8ToUTF16( pFilePath );
+        const wstring widePath = toWindowsFilePath( pFilePath );
         // 공유를 막지 않는다(`_SH_DENYNO`) — POSIX `fopen` 과 같다. `_wfopen_s` 는 배타적으로 열어, 엔진이 쓰는 동안 그 로그 파일을
         // 다른 프로그램(편집기 · tail · 테스트)이 열지 못한다.
         pFile = _wfsopen( widePath.c_str(), arrWideMode, _SH_DENYNO );
@@ -153,8 +176,8 @@ namespace sw
             return false;
 
 #if defined( SW_PLATFORM_WINDOWS )
-        const wstring wideSource = StringUtil::utf8ToUTF16( pSourcePath );
-        const wstring wideTarget = StringUtil::utf8ToUTF16( pTargetPath );
+        const wstring wideSource = toWindowsFilePath( pSourcePath );
+        const wstring wideTarget = toWindowsFilePath( pTargetPath );
 
         // 1) POSIX 방식 이름 바꾸기(Windows 10 1709+, NTFS). **대상 파일을 누가 열고 있어도** 바꿔 끼운다 — 연 쪽은 옛 파일을 끝까지 읽는다.
         //    `MoveFileExW` 는 대상을 연 핸들이 하나라도 있으면(삭제 공유로 열었어도) 실패해서, 에디터 · 파일 감시가 자주 읽는 파일은 저장이
@@ -278,7 +301,7 @@ namespace sw
         if ( acceptsPathInput( pFilePath ) == false )
             return kInvalidNativeFileHandle;
 #if defined( SW_PLATFORM_WINDOWS )
-        const wstring widePath = StringUtil::utf8ToUTF16( pFilePath );
+        const wstring widePath = toWindowsFilePath( pFilePath );
         const HANDLE  hFile    = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
                                               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, nullptr );
         if ( hFile == INVALID_HANDLE_VALUE )

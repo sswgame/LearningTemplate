@@ -134,6 +134,19 @@ namespace sw
          */
         [[nodiscard]] static bool acceptsPathInput( string_view path );
 
+#if defined( SW_PLATFORM_WINDOWS )
+        /**
+         * @brief UTF-8 절대 경로를 Win32 파일 API 가 받는 넓은 문자 경로로 바꿉니다(구분자 `\`). 파일을 여는 · 만드는 · 지우는 OS 호출이 모두 이 길로 간다.
+         * @details 긴 경로(`kLongPathThreshold` 이상)는 `.` · `..` 를 편 뒤 확장 경로 접두(`\\?\`, UNC 는 `\\?\UNC\`)를 붙인다 — 접두 없이는 Win32 가
+         *          옛 상한 260 자(MAX_PATH)에서 거절한다(작업 트리처럼 깊은 폴더의 테스트 임시 경로가 266 자라 열기가 실패했다). `longPathAware` 매니페스트는
+         *          시스템 레지스트리(LongPathsEnabled)까지 켜져 있어야 들어 기계마다 달라진다. 언리얼 `FWindowsPlatformFile` 도 긴 경로에만 접두를 붙인다.
+         *          작업 폴더 설정(`SetCurrentDirectoryW`)처럼 접두를 받지 않는 API 에는 쓰지 않는다. 펴기가 실패하면 빈 글이라 그 OS 호출이 실패한다.
+         */
+        [[nodiscard]] static wstring toWindowsFilePath( string_view path );
+        /** @brief 이 길이(문자) 이상이면 확장 경로 접두를 붙입니다 — 폴더 만들기의 상한(MAX_PATH - 12 = 248)에 맞춘다. */
+        static constexpr size_t kLongPathThreshold = 248;
+#endif
+
         /** @brief 프로세스 시작부터 `noteFileOpenedForRead` 가 센 열기 횟수입니다(기동 보고 `startup … ms, … file opens`). */
         [[nodiscard]] static uint64 getFileOpenCount();
     };

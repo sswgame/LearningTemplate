@@ -31,6 +31,14 @@ namespace sw
                 // 파일 시스템 연산이 모두 지나는 길목이다 - 상대 경로는 빈 글로 돌려 그 연산을 실패시킨다(R2).
                 if ( PlatformFileUtil::acceptsPathInput( path ) == false )
                     return {};
+                return PlatformFileUtil::toWindowsFilePath( path );
+            }
+
+            /** @brief `toWide` 와 같되 확장 경로 접두를 붙이지 않습니다 — 접두를 받지 않는 API(`SetCurrentDirectoryW`)용입니다. */
+            static wstring toWidePlain( string_view path )
+            {
+                if ( PlatformFileUtil::acceptsPathInput( path ) == false )
+                    return {};
                 string separated{ path };
                 StringUtil::replaceChar( separated, '/', '\\' );
                 return StringUtil::utf8ToUTF16( separated.c_str() );
@@ -224,7 +232,7 @@ namespace sw
 
     bool PlatformFileSystem::setCurrentDirectory( string_view path )
     {
-        const wstring wide = WindowsFileSystemInternal::toWide( path );
+        const wstring wide = WindowsFileSystemInternal::toWidePlain( path );
         return wide.empty() == false && SetCurrentDirectoryW( wide.c_str() ) != FALSE;
     }
 
