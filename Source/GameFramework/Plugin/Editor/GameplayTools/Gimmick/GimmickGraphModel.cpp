@@ -144,7 +144,7 @@ namespace sw::editor
         vector<GraphCommentBox>  listComment;
         exportTo( listNode, listTarget, listWire, listComment );
         // 항목은 리플렉션 직렬화로 글이 된다 — PROPERTY 를 더하면 서명이 저절로 따라간다(손으로 늘어놓은 칸은 빠뜨리면 되돌리기를 놓친다).
-        StringBuilder<constant::buffer::kMax1K> text;
+        StringBuilder<constant::buffer::kMax1024> text;
         for ( size_t index = 0; index < listNode.size(); ++index )
         {
             text.append( string_view{ XMLSerializer::serialize( &listNode[index], *GimmickNodeDesc::StaticType() ) } ).append( listTarget[index].objectID() );
