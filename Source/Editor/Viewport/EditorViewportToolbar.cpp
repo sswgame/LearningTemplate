@@ -34,15 +34,19 @@ namespace sw::editor
     {
         struct EditorViewportToolbarInternal
         {
-            static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboID, bool& bEnabled, float32& value,
+            /**
+             * @brief 스냅 켜기 아이콘 토글과 간격 콤보를 그립니다.
+             * @details 켜기 단추는 그 조작(이동 · 회전 · 크기)의 아이콘이다 — 언리얼 뷰포트 툴바의 스냅 묶음(아이콘 + 값)과 같다. 예전 글 단추("Grid Snap" · "Rot Snap")는
+             *          크기 스냅을 더하자 기본 배치(1600 폭)에서 막대가 캔버스 밖으로 잘렸다.
+             */
+            static void drawSnapToggleCombo( const utf8* pToggleID, const utf8* pIcon, const utf8* pComboID, bool& bEnabled, float32& value,
                                              const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
                                              int32 fallbackIndex, bool bVertical, const utf8* pToggleTooltip,
                                              const utf8* pValueTooltip, const utf8* pToggleMark )
             {
-                if ( EditorWidgets::drawToggleButton( pButtonLabel, bEnabled ) )
+                if ( EditorWidgets::drawIconToggle( pToggleID, pIcon, bEnabled, pToggleTooltip ) )
                     bEnabled = ( bEnabled == false );
                 EditorSelfTestMarks::note( pToggleMark );
-                EditorWidgets::drawTooltip( pToggleTooltip );
 
                 EditorViewportToolbar::nextItem( bVertical );
                 // 폭은 가장 긴 값 글자 + 펼침 화살표다 — 고정 픽셀(60 · 65)은 글꼴이 바뀌자 "15 de" 로 잘렸다.
@@ -294,14 +298,14 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "GridSnap" ), "Grid Snap" ), "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##gridSnap", SW_EDITORICON( "Grid" ), "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
                                                             SW_LOCKEY( "EdCommon", "GridSnap" ),
                                                             SW_LOCKEY( "EdCommon", "GridSnapSize" ), "viewport.gridSnap" );
 
         nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
         const utf8*   arrRotLabel[] = { "5\xc2\xb0", "15\xc2\xb0", "45\xc2\xb0", "90\xc2\xb0" }; // 5° …(UTF-8 도 기호)
-        EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "RotSnap" ), "Rot Snap" ), "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##rotationSnap", SW_EDITORICON( "Rotate" ), "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
                                                             4, 1, bVertical,
                                                             SW_LOCKEY( "EdCommon", "RotationSnap" ),
                                                             SW_LOCKEY( "EdCommon", "RotationSnapSize" ), "viewport.rotationSnap" );
@@ -310,7 +314,7 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrScaleValue[] = { 0.1f, 0.25f, 0.5f, 1.0f };
         const utf8*   arrScaleLabel[] = { "0.1", "0.25", "0.5", "1.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ScaleSnap" ), "Scale Snap" ), "##ScaleSnapVal", settings._bScaleSnap, settings._scaleSnapValue, arrScaleValue,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##scaleSnap", SW_EDITORICON( "Scale" ), "##ScaleSnapVal", settings._bScaleSnap, settings._scaleSnapValue, arrScaleValue,
                                                             arrScaleLabel, 4, 0, bVertical,
                                                             SW_LOCKEY( "EdCommon", "ScaleSnap" ),
                                                             SW_LOCKEY( "EdCommon", "ScaleSnapSize" ), "viewport.scaleSnap" );

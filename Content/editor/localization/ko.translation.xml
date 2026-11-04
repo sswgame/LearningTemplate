@@ -1326,7 +1326,6 @@
 		<entry key="EdWidget.File" text="파일" sourceHash="d1f81284eeb7b503" />
 		<entry key="EdWidget.Freeze" text="멈추기" sourceHash="af63b1436123eb22" />
 		<entry key="EdWidget.Game" text="게임" sourceHash="b568a67e05a19907" />
-		<entry key="EdWidget.GridSnap" text="격자 스냅" sourceHash="3073cafd9c3b2ca3" />
 		<entry key="EdWidget.HalfLife" text="반감기" sourceHash="f14366eb612fff56" />
 		<entry key="EdWidget.ItemName" text="아이템 이름" sourceHash="584445a37ad7f239" />
 		<entry key="EdWidget.Items" text="항목" sourceHash="3e7884bf4f412c6f" />
@@ -1351,8 +1350,6 @@
 		<entry key="EdWidget.Resolution" text="해상도" sourceHash="f74160a9dc86ab8f" />
 		<entry key="EdWidget.RestartRequired" text="다시 시작 필요" sourceHash="3847bf768d4cbfad" />
 		<entry key="EdWidget.RightStick" text="오른쪽 스틱" sourceHash="2b11d6ec339b6ad9" />
-		<entry key="EdWidget.RotSnap" text="회전 스냅" sourceHash="10ba28754abccb4e" />
-		<entry key="EdWidget.ScaleSnap" text="크기 스냅" sourceHash="ebcebcb9e1d11f43" />
 		<entry key="EdWidget.Shader" text="셰이더" sourceHash="31243d825582cde8" />
 		<entry key="EdWidget.Simulating" text="시뮬레이트 중" sourceHash="7ee10555e35ef898" />
 		<entry key="EdWidget.Sources" text="소스" sourceHash="91e3a47599412f51" />

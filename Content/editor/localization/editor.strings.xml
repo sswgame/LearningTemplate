@@ -4360,11 +4360,6 @@
 				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdWidget.GridSnap" source="Grid Snap">
-			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdWidget.HalfLife" source="Half Life">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
@@ -4484,16 +4479,6 @@
 		<entry key="EdWidget.RightStick" source="Right Stick">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdWidget.RotSnap" source="Rot Snap">
-			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdWidget.ScaleSnap" source="Scale Snap">
-			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Shader" source="Shader">
