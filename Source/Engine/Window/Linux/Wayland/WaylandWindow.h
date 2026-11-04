@@ -44,6 +44,24 @@ namespace sw
         /** @brief 컴포지터가 창을 한 번 배치(configure)했으면 true 입니다. */
         bool isVisible() const override;
         /**
+         * @brief 틀 두께는 0 이다 — 이 창은 장식을 그리지 않고(클라이언트 측 장식 없음) 서버 측 장식(`zxdg_decoration_manager_v1`)도 청하지 않아 표면이 창 전체다.
+         * @details 장식을 더하면(서버 측 장식을 청하거나 직접 그리면) 이 값도 그 두께로 바꾼다.
+         */
+        [[nodiscard]] bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override
+        {
+            outExtents = WindowFrameExtents{};
+            return true;
+        }
+        /** @brief xdg-shell 은 클라이언트가 창 자리를 정하지 못한다 — 컴포지터가 놓는다. */
+        [[nodiscard]] bool canPlaceWindow() const override { return false; }
+        /** @brief 자리를 정하지 못하니 늘 false 입니다(`canPlaceWindow`). */
+        [[nodiscard]] bool setFramePosition( int32 x, int32 y ) override
+        {
+            (void)x;
+            (void)y;
+            return false;
+        }
+        /**
          * @brief 화면 배율입니다. 컴포지터가 소수 배율(`wp_fractional_scale_v1.preferred_scale`, 1/120 단위)을 알렸으면 그 값이고,
          *        아니면 창이 걸친 `wl_output` 들의 정수 배율(`wl_output.scale`) 중 가장 큰 값이며, 걸친 출력도 없으면 1 입니다.
          * @details 알려 주기만 한다 — 버퍼 배율은 바꾸지 않아 컴포지터가 확대한다. 소수 배율 프로토콜이 없는 컴포지터는 정상이며(오래된 컴포지터) 정수 배율이 그 길이다.

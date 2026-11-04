@@ -309,10 +309,8 @@ namespace sw
         }
         if ( pWindowHost->getWindow() == nullptr )
         {
-            unique_ptr<IWindow> window   = IWindow::createPlatformWindow();
-            const bool          bCreated = window != nullptr && window->applyCommandLinePosition( commandLineManager ) &&
-                                  window->initializeWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height );
-            if ( bCreated == false )
+            unique_ptr<IWindow> window = IWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height, commandLineManager );
+            if ( window == nullptr )
             {
                 SW_LOG_ERROR_ID( "App.FailedCreatePlatformWindow", "Failed to create platform window!" );
                 return false;

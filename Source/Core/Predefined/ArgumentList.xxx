@@ -31,9 +31,14 @@ SW_REGISTER_ARGUMENT( HELP, false, false, "help" )
 SW_REGISTER_ARGUMENT( WIDTH, 0, false, "W" )
 SW_REGISTER_ARGUMENT( HEIGHT, 0, false, "H" )
 
-// 창 틀 왼쪽 위의 화면 좌표(픽셀) — 둘을 함께 준다(하나만 주면 창을 만들지 않고 멈춘다). 없으면 플랫폼이 놓는다. 에디터 멀티 프로세스 재생이 클라이언트 창을 나란히 놓는다
+// 창 틀 왼쪽 위의 화면 좌표(픽셀) — 둘을 함께 준다(하나만 주면 창을 만들지 않고 멈춘다). 없으면 플랫폼이 놓는다
 SW_REGISTER_ARGUMENT( WINDOW_X, 0, false, "WinX" )
 SW_REGISTER_ARGUMENT( WINDOW_Y, 0, false, "WinY" )
+
+// 창을 바둑판의 이 칸(0 부터, 왼쪽 위에서 행 우선)에 놓는다 — 열 수 `-WinTileColumns` 와 함께 준다. 칸 간격은 창이 자기 틀 두께(`IWindow::tryGetFrameExtents`)와 클라이언트 크기로 정한다.
+// `-WinX` · `-WinY` 와 함께 주면 창을 만들지 않고 멈춘다. 백엔드마다 시나리오 실행 · 에디터 멀티 프로세스 재생이 자식 창을 나란히 놓는다
+SW_REGISTER_ARGUMENT( WINDOW_TILE, 0, false, "WinTile" )
+SW_REGISTER_ARGUMENT( WINDOW_TILE_COLUMNS, 0, false, "WinTileColumns" )
 
 // 수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다
 SW_REGISTER_ARGUMENT( VSYNC, false, false, "vsync" )

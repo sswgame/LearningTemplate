@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -74,10 +75,6 @@ namespace sw::editor
             static constexpr const utf8* kTraceExtension = ".trace.json";
 #endif
 
-            /** @brief 창 배치에서 이웃 창과 띄우는 가로 폭(픽셀)입니다. 위치는 틀의 왼쪽 위이고 크기는 클라이언트 영역이라 테두리 두 쪽만큼 더 띄운다. */
-            static constexpr int32 kWindowFrameWidth = 16;
-            /** @brief 위와 같은 값의 세로 폭입니다. 제목 줄과 아래 테두리만큼 띄웁니다. */
-            static constexpr int32 kWindowFrameHeight = 40;
             /** @brief 창 배치의 가장 작은 클라이언트 영역 한 변(픽셀)입니다(`EditorNetPlaySettings` 의 `Min` 과 같다). */
             static constexpr int32 kMinWindowSide = 64;
 
@@ -293,11 +290,10 @@ namespace sw::editor
         if ( settings._bArrangeWindows == false )
             return {};
         SW_ASSERT( settings._windowColumnCount > 0 ); // `start` 가 막는다(`isWindowLayoutValid`)
-        const int32 column = windowIndex % settings._windowColumnCount;
-        const int32 row    = windowIndex / settings._windowColumnCount;
-        const int32 x      = column * ( settings._windowWidth + EditorNetPlaySessionInternal::kWindowFrameWidth );
-        const int32 y      = row * ( settings._windowHeight + EditorNetPlaySessionInternal::kWindowFrameHeight );
-        return { formatToString( "-W=%#", settings._windowWidth ), formatToString( "-H=%#", settings._windowHeight ), formatToString( "-WinX=%#", x ), formatToString( "-WinY=%#", y ) };
+        // 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 제 틀로 정한다(`IWindow::createMainWindow`) — 틀은 창 스타일 · DPI · 창 관리자가 정해 에디터는 모른다.
+        return { formatToString( "-W=%#", settings._windowWidth ), formatToString( "-H=%#", settings._windowHeight ),
+                 formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE ), windowIndex ),
+                 formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), settings._windowColumnCount ) };
     }
 
     EditorNetPlaySession::~EditorNetPlaySession()

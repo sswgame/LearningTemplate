@@ -6,7 +6,7 @@
  *          자식의 로그는 `-log-file` 로 따로 쓴다 — 부모가 `-log-file=X.log` 를 받았으면 `X.<백엔드>.log`, 아니면 `Saved/Automation/<시나리오>/matrix-<프로세스>/<백엔드>.log`.
  *          보고(`-scenario-report=R.json`)를 받았으면 자식은 `R.<백엔드>.json`, 부모는 `R.json` 에 백엔드별 결과를 쓴다. 받지 않아도 자식은 기본 폴더의 `<백엔드>.json` 에 쓴다 —
  *          부모가 그 보고의 `records[]`(`<Record>`)를 시나리오마다 백엔드 사이에 견주고(`findRecordMismatches`), 하나라도 다르면 실행이 실패(10)다. 언리얼 자동화의 결정성 대조 자리다.
- *          자식 창은 2 열 바둑판으로 놓는다(`-WinX` · `-WinY` — 넘겨받은 인자에 이미 있으면 두지 않는다) — 백엔드마다 화면이 겹치지 않고 한 번에 보인다.
+ *          자식 창은 2 열 바둑판으로 놓는다(`-WinTile` · `-WinTileColumns` — 칸 간격은 자식 창이 제 틀 두께로 정한다, 넘겨받은 인자에 `-WinX` · `-WinTile` 이 있으면 두지 않는다) — 백엔드마다 화면이 겹치지 않고 한 번에 보인다.
  *          자식은 프로세스 시한(`AutomationTimeLimits::kProcessKillSeconds` × 체인의 단계 수) 안에 끝나야 한다 — 넘기면 죽이고 시간 초과(12)로 센다.
  *          종료 코드: 하나라도 실패면 표 순서로 첫 실패 백엔드의 코드, 아니면 하나라도 통과면 0, 모두 건너뜀이면 13. 이 기계에서 못 도는 백엔드(77)는 건너뜀으로 센다.
  */
@@ -27,11 +27,9 @@ namespace sw
         vector<string> _listPassThroughArgument{}; ///< 자식에 그대로 넘길 원본 인자(`<Launch>` 값 · `-unattended` …) — 백엔드 목록 · 로그 · 보고 · 백엔드 인자는 뺐다
         string         _logFilePath{};             ///< 부모의 `-log-file`(비면 기본 폴더)
         string         _reportPath{};              ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
-        uint32         _windowWidth{ 0 };          ///< 자식 창의 클라이언트 크기(`EngineConfig._window`) — 자식 창을 바둑판으로 놓는 간격이다. 0 이면 놓지 않는다(플랫폼이 놓는다)
-        uint32         _windowHeight{ 0 };
-        int32          _splitOffset{ -1 };        ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
-        bool           _bSplitScenarios{ false }; ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`)
-        int32          _slotCount{ 0 };           ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
+        int32          _splitOffset{ -1 };         ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
+        bool           _bSplitScenarios{ false };  ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`)
+        int32          _slotCount{ 0 };            ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
     };
 
     /** @struct AutomationBackendRecords @brief 한 시나리오를 한 백엔드에서 돌린 기록 줄(자식 보고의 `records[]`, 적은 순서)입니다. */

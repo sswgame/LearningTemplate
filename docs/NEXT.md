@@ -43,4 +43,3 @@
 
 - 빌드 속도: `Engine.cpp` 는 서브시스템 자기 등록 뒤에도 PCH 없이 약 9 초다 — 프레임 루프가 쓰는 서브시스템 헤더를 직접 include 한다. 루프가 부르는 일을 각 서브시스템 쪽 함수(틱 단계 등록)로 옮겨 include 를 줄인다. 재는 법: `compile_commands.json` 명령에 `/clang:-ftime-trace` 를 붙여 scratch 로 낸다.
 - 시나리오 범용화: 재생기 · 판정 층을 나눌 때 `AutomationSession`(이미 `ISubsystem` + `IScenarioPlayer`)에 인터페이스를 더 붙이지 않고 재생기를 별도 객체로. 시퀀서 이벤트 트랙이 시나리오를 부르는 쪽, 액션 단위 녹화 · 리플레이(고스트 · 킬캠). 단계 등록은 키트 · 게임이 아직 0.
-- 창 바둑판 간격의 창 틀 두께가 Win32 대략 값이다(`AutomationPerBackend`) — 플랫폼 창 틀 API 가 생기면.

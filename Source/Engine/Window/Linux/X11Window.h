@@ -79,6 +79,14 @@ namespace sw
         /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
         bool setMinimized( bool bMinimized ) override;
+        /**
+         * @brief 창 관리자가 적는 `_NET_FRAME_EXTENTS`(EWMH)입니다. 아직 없으면(띄우기 전) `_NET_REQUEST_FRAME_EXTENTS` 로 청하고 그 속성의 `PropertyNotify` 를 잠깐 기다린다(GLFW 와 같은 길).
+         * @details EWMH 창 관리자가 없으면(`_NET_SUPPORTING_WM_CHECK` 없음) 틀을 알 길이 없어 오류다 — 창 관리자 없는 X 서버의 틀 0 과 EWMH 를 모르는 창 관리자의 틀을 가르지 못한다.
+         */
+        [[nodiscard]] bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override;
+        [[nodiscard]] bool canPlaceWindow() const override { return true; }
+        /** @brief `XMoveWindow` 이고, 띄우기 전이면 창 관리자가 그 자리를 따르도록 `WM_NORMAL_HINTS` 에 USPosition 을 켠다. */
+        [[nodiscard]] bool setFramePosition( int32 x, int32 y ) override;
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
         /**

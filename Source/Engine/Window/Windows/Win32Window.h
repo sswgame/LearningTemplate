@@ -59,6 +59,11 @@ namespace sw
         /** @brief 창 스타일(WS_OVERLAPPEDWINDOW, WS_POPUP)과 위치, 크기를 바꿉니다. 크기 통보는 이 호출 안의 WM_SIZE 로 옵니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
         bool setMinimized( bool bMinimized ) override;
+        /** @brief `GetWindowRect` 와 화면 좌표의 클라이언트 사각형(`GetClientRect` + `ClientToScreen`) 차이입니다. 숨은 창에도 맞는 값이다. */
+        [[nodiscard]] bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override;
+        [[nodiscard]] bool canPlaceWindow() const override { return true; }
+        /** @brief `SetWindowPos`(크기 · Z 순서는 그대로)입니다. */
+        [[nodiscard]] bool setFramePosition( int32 x, int32 y ) override;
 
         /** @brief `GetDpiForWindow` / 96 입니다(프로세스가 PerMonitorV2 이며 `WindowsProcess.manifest` 에서 정합니다). 창이 없으면 1 입니다. */
         float32 getContentScale() const override;

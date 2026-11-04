@@ -105,6 +105,67 @@ namespace sw
                 return result == 0;
             }
         };
+
+        struct X11FrameExtentsInternal
+        {
+            /** @brief 창 관리자가 `_NET_REQUEST_FRAME_EXTENTS` 에 답하기를 기다리는 한 번의 길이(ms)입니다. */
+            static constexpr int32 kPollMs = 10;
+            /** @brief 위 기다림의 최대 횟수입니다. 최대 500 ms 다(GLFW `glfwGetWindowFrameSize` 의 기다림과 같다). */
+            static constexpr int32 kPollCount = 50;
+
+            /** @brief `XCheckIfEvent` 가 찾는 속성 알림(창 · 속성)입니다. */
+            struct PropertyKey
+            {
+                Window _window;
+                Atom   _property;
+            };
+
+            static Bool isPropertyNotify( Display* pDisplay, XEvent* pEvent, XPointer pArgument )
+            {
+                (void)pDisplay;
+                const PropertyKey* pKey = reinterpret_cast<const PropertyKey*>( pArgument );
+                return pEvent->type == PropertyNotify && pEvent->xproperty.window == pKey->_window && pEvent->xproperty.atom == pKey->_property ? 1 : 0;
+            }
+
+            /** @brief 뿌리 창에 `_NET_SUPPORTING_WM_CHECK`(EWMH 창 관리자가 적는 창 ID)가 있으면 true 입니다. */
+            static bool hasEwmhWindowManager( Display* pDisplay, Window root )
+            {
+                Atom        type       = 0;
+                int32       format     = 0;
+                uint64      itemCount  = 0;
+                uint64      bytesAfter = 0;
+                uint8*      pData      = nullptr;
+                const int32 result     = XGetWindowProperty( pDisplay, root, XInternAtom( pDisplay, "_NET_SUPPORTING_WM_CHECK", 0 ), 0, 1, 0, XA_WINDOW, &type, &format, &itemCount, &bytesAfter, &pData );
+                if ( pData != nullptr )
+                    XFree( pData );
+                return result == 0 && type == XA_WINDOW && itemCount == 1;
+            }
+
+            /** @brief 창 @p win 의 `_NET_FRAME_EXTENTS`(CARDINAL[4] — 왼 · 오른 · 위 · 아래)를 읽습니다. 없으면 false 입니다. */
+            static bool readFrameExtents( Display* pDisplay, Window win, Atom property, WindowFrameExtents& outExtents )
+            {
+                constexpr uint64 kExtentCount = 4;
+                Atom             type         = 0;
+                int32            format       = 0;
+                uint64           itemCount    = 0;
+                uint64           bytesAfter   = 0;
+                uint8*           pData        = nullptr;
+                const int32      result       = XGetWindowProperty( pDisplay, win, property, 0, kExtentCount, 0, XA_CARDINAL, &type, &format, &itemCount, &bytesAfter, &pData );
+                const bool       bRead        = result == 0 && type == XA_CARDINAL && format == 32 && itemCount == kExtentCount && pData != nullptr;
+                if ( bRead )
+                {
+                    // 32 비트 형식의 속성은 Xlib 이 `long` 배열로 돌려준다.
+                    const long* pExtent = reinterpret_cast<const long*>( pData );
+                    outExtents._left    = static_cast<int32>( pExtent[0] );
+                    outExtents._right   = static_cast<int32>( pExtent[1] );
+                    outExtents._top     = static_cast<int32>( pExtent[2] );
+                    outExtents._bottom  = static_cast<int32>( pExtent[3] );
+                }
+                if ( pData != nullptr )
+                    XFree( pData );
+                return bRead;
+            }
+        };
     } // namespace
 #endif
 
@@ -259,6 +320,70 @@ namespace sw
         XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event );
         if ( bFullscreen == false )
             XResizeWindow( pDisplay, static_cast<Window>( _x11Window ), width, height );
+        XFlush( pDisplay );
+        return true;
+    }
+
+    bool X11Window::tryGetFrameExtents( WindowFrameExtents& outExtents ) const
+    {
+        using Internal = X11FrameExtentsInternal;
+        outExtents     = WindowFrameExtents{};
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+        {
+            SW_LOG_ERROR_ID( "X11Window.FrameExtentsNoWindow", "Window frame extents asked before the X11 window exists" );
+            return false;
+        }
+        Display*     pDisplay = static_cast<Display*>( _pX11Display );
+        const Window win      = static_cast<Window>( _x11Window );
+        const Window root     = DefaultRootWindow( pDisplay );
+        if ( Internal::hasEwmhWindowManager( pDisplay, root ) == false )
+        {
+            SW_LOG_ERROR_ID( "X11Window.FrameExtentsNoWindowManager", "Window frame extents are unknown - no EWMH window manager (_NET_SUPPORTING_WM_CHECK) reports _NET_FRAME_EXTENTS" );
+            return false;
+        }
+        const Atom frameExtents = XInternAtom( pDisplay, "_NET_FRAME_EXTENTS", 0 );
+        if ( Internal::readFrameExtents( pDisplay, win, frameExtents, outExtents ) )
+            return true;
+
+        // 띄우기 전이라 창 관리자가 아직 적지 않았다 — 적어 달라고 청하고 그 속성의 알림을 기다린다(EWMH `_NET_REQUEST_FRAME_EXTENTS`).
+        XEvent request{};
+        request.xclient.type         = ClientMessage;
+        request.xclient.window       = win;
+        request.xclient.message_type = XInternAtom( pDisplay, "_NET_REQUEST_FRAME_EXTENTS", 0 );
+        request.xclient.format       = 32;
+        XSendEvent( pDisplay, root, 0, SubstructureRedirectMask | SubstructureNotifyMask, &request );
+        XFlush( pDisplay );
+        Internal::PropertyKey key{ win, frameExtents };
+        XEvent                notify{};
+        for ( int32 attempt = 0; attempt < Internal::kPollCount; ++attempt )
+        {
+            if ( XCheckIfEvent( pDisplay, &notify, &Internal::isPropertyNotify, reinterpret_cast<XPointer>( &key ) ) != 0 )
+                break;
+            pollfd connection{ ConnectionNumber( pDisplay ), POLLIN, 0 };
+            (void)poll( &connection, 1, Internal::kPollMs );
+        }
+        if ( Internal::readFrameExtents( pDisplay, win, frameExtents, outExtents ) )
+            return true;
+        SW_LOG_ERROR_ID( "X11Window.FrameExtentsNotReported", "Window frame extents are unknown - the window manager did not answer _NET_REQUEST_FRAME_EXTENTS within %# ms",
+                         Internal::kPollMs * Internal::kPollCount );
+        return false;
+    }
+
+    bool X11Window::setFramePosition( int32 x, int32 y )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+        Display*     pDisplay = static_cast<Display*>( _pX11Display );
+        const Window win      = static_cast<Window>( _x11Window );
+        // 처음 매핑할 때 창 관리자는 USPosition 이 켜진 자리만 따른다(아니면 스스로 놓는다). 최소 크기 같은 다른 힌트는 지킨다.
+        XSizeHints sizeHints{};
+        long       suppliedFlags = 0;
+        (void)XGetWMNormalHints( pDisplay, win, &sizeHints, &suppliedFlags ); // 힌트가 아직 없으면 빈 힌트에서 시작한다
+        sizeHints.flags |= USPosition;
+        sizeHints.x = x;
+        sizeHints.y = y;
+        XSetWMNormalHints( pDisplay, win, &sizeHints );
+        XMoveWindow( pDisplay, win, x, y );
         XFlush( pDisplay );
         return true;
     }
@@ -778,6 +903,20 @@ namespace sw
         (void)width;
         (void)height;
         _displayMode = mode;
+        return false;
+    }
+
+    bool X11Window::tryGetFrameExtents( WindowFrameExtents& outExtents ) const
+    {
+        outExtents = WindowFrameExtents{};
+        SW_LOG_ERROR_ID( "X11Window.FrameExtentsNoX11", "This build has no X11 window - window frame extents are unknown" );
+        return false;
+    }
+
+    bool X11Window::setFramePosition( int32 x, int32 y )
+    {
+        (void)x;
+        (void)y;
         return false;
     }
 

@@ -30,9 +30,6 @@ namespace sw
         struct AutomationPerBackendInternal
         {
             static constexpr uint32 kTileColumnCount = 2; ///< 자식 창 바둑판의 열 수 — 백엔드 넷이면 2×2
-            // shortcut: 창 틀(제목 줄 · 테두리) 두께를 Win32 기본 모양의 대략 값으로 둔다, 플랫폼 창 틀 크기를 묻는 API 가 생기면 그 값으로.
-            static constexpr uint32 kFrameMarginX = 16;
-            static constexpr uint32 kFrameMarginY = 40;
             /** @brief 쿠킹 표의 명령줄 이름(표 순서) — 부모가 받는 백엔드 이름은 이것뿐이다(`-vk` 와 같은 철자). */
             static constexpr const utf8* kArrBackendName[] = {
 #define SW_MATRIX_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
@@ -359,10 +356,12 @@ namespace sw
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
         const string defaultFolder = FileUtil::reserveUniquePath( formatToString( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() ), {}, true );
 
-        // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다.
-        const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&
-                                  std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
-        { return Internal::getArgumentKey( argument ) == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ); } );
+        // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`IWindow::createMainWindow`).
+        const bool bTileWindows = std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
+        {
+            const string_view key = Internal::getArgumentKey( argument );
+            return key == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ) || key == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE );
+        } );
         // 나눌 때 배정의 시작점 — 주지 않았으면 UTC 날짜(일)로 정해 날마다 한 칸씩 돌린다. 백엔드와 무관하다고 본 시나리오도 나흘이면 모든 백엔드를 거친다.
         AutomationPerBackendOptions assignOptions = options;
         if ( options._bSplitScenarios && assignOptions._splitOffset < 0 )
@@ -396,9 +395,8 @@ namespace sw
             vector<string> listArgument{ "-scenario=" + scenarioList, "-" + backend, "-log-file=" + pChild->_logPath, "-scenario-report=" + pChild->_reportPath };
             if ( bTileWindows )
             {
-                const uint32 tileIndex = static_cast<uint32>( listChild.size() );
-                listArgument.push_back( formatToString( "-WinX=%#", ( tileIndex % Internal::kTileColumnCount ) * ( options._windowWidth + Internal::kFrameMarginX ) ) );
-                listArgument.push_back( formatToString( "-WinY=%#", ( tileIndex / Internal::kTileColumnCount ) * ( options._windowHeight + Internal::kFrameMarginY ) ) );
+                listArgument.push_back( formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE ), listChild.size() ) );
+                listArgument.push_back( formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), Internal::kTileColumnCount ) );
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 

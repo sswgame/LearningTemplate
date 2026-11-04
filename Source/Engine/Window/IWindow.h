@@ -43,6 +43,26 @@ namespace sw
         Locked,       ///< 포인터가 제자리에 서고 상대 이동만 온다.
     };
 
+    /**
+     * @brief 창 틀(비클라이언트 영역 — 제목 줄 · 테두리)이 클라이언트 영역 네 변 밖으로 나온 두께(물리 픽셀)입니다. `IWindow::tryGetFrameExtents` 가 채웁니다.
+     * @details 틀 왼쪽 위(`setFramePosition` · `-WinX` 가 놓는 점)에서 클라이언트 왼쪽 위까지가 (`_left`, `_top`)이고, 틀 전체 크기는 클라이언트 + 양쪽 두께다.
+     *          SDL `SDL_GetWindowBordersSize` · GLFW `glfwGetWindowFrameSize` 와 같은 자리다.
+     */
+    struct WindowFrameExtents
+    {
+        int32 _left{ 0 };
+        int32 _top{ 0 };
+        int32 _right{ 0 };
+        int32 _bottom{ 0 };
+    };
+
+    /** @brief 창 바둑판의 한 칸입니다(`-WinTile` · `-WinTileColumns`). */
+    struct WindowTileSlot
+    {
+        int32 _index{ 0 };       ///< 칸 번호(0 부터, 행 우선)
+        int32 _columnCount{ 0 }; ///< 열 수(1 이상)
+    };
+
     /** @brief X11 창의 서버 연결과 창 ID 입니다. `IWindow::tryGetX11Surface` 가 X11 창일 때만 채웁니다. */
     struct X11SurfaceHandles
     {
@@ -137,6 +157,35 @@ namespace sw
          * @return X11 창이 아니거나(Wayland · Win32) 연결 · 창 ID 가 아직 없으면 false 이며 @p outHandles 는 비어 있다.
          */
         [[nodiscard]] bool tryGetX11Surface( X11SurfaceHandles& outHandles ) const;
+        /**
+         * @brief 창 틀(비클라이언트 영역)의 두께를 @p outExtents 에 담습니다. 창을 만든 뒤(`initializeWindow`)라면 띄우기 전에도 부를 수 있습니다.
+         * @details Win32 는 `GetWindowRect` 와 화면 좌표의 클라이언트 사각형 차이다 — 위치 API(`CreateWindowExW` · `SetWindowPos`)가 그 사각형을 받기 때문이다
+         *          (`DWMWA_EXTENDED_FRAME_BOUNDS` 의 보이는 틀은 보이지 않는 크기 조절 테두리를 빼서 위치와 단위가 맞지 않는다).
+         *          X11 은 창 관리자가 적는 `_NET_FRAME_EXTENTS` 이고, 띄우기 전이면 `_NET_REQUEST_FRAME_EXTENTS` 로 청해 기다린다. Wayland 는 장식을 그리지 않으니 0 이다.
+         * @return 두께를 알아내지 못하면(창이 없다 · 창 관리자가 알리지 않는다) 오류를 남기고 false 입니다 — 대략 값으로 대신하지 않는다.
+         */
+        [[nodiscard]] virtual bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const = 0;
+        /**
+         * @brief 클라이언트가 창 자리를 정할 수 있는 창 시스템인지입니다(`setFramePosition` · `-WinX` · `-WinTile`).
+         * @details Wayland(xdg-shell)는 자리를 컴포지터가 정한다 — 그 창에서는 위치 요청을 하지 않는다(GLFW `glfwSetWindowPos` 도 Wayland 에서는 하지 않는다).
+         */
+        [[nodiscard]] virtual bool canPlaceWindow() const = 0;
+        /**
+         * @brief 창 틀의 왼쪽 위를 화면 좌표 (@p x, @p y)로 옮깁니다. 크기는 그대로다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         * @return 창이 없거나 `canPlaceWindow` 가 아니면 false 입니다.
+         */
+        [[nodiscard]] virtual bool setFramePosition( int32 x, int32 y ) = 0;
+        /**
+         * @brief 바둑판 칸 @p slot 에 놓을 틀 왼쪽 위 좌표입니다. 칸 간격은 클라이언트 크기 + 틀 양쪽 두께라 이웃 창의 틀이 겹치지 않는다. 원점은 화면 (0, 0) 이다.
+         */
+        static void computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, int32& outX, int32& outY );
+        /**
+         * @brief 명령줄로 주 창을 만듭니다 — 플랫폼 창을 고르고(`createPlatformWindow`), 위치(`-WinX` · `-WinY`)를 건 뒤 만들고(`initializeWindow`), 바둑판 칸(`-WinTile`)이면
+         *        자기 틀 두께(`tryGetFrameExtents`)로 자리를 정해 옮깁니다. 띄우지는 않는다(`showWindow`).
+         * @details 주 창을 만드는 곳(RHI 기동 · 헤드리스 App)이 모두 이 길로 만든다 — 위치 인자를 읽는 규칙이 한 곳이다.
+         * @return 인자가 틀렸거나(반쪽 좌표 · 칸과 좌표를 함께 · 열 수 없음) 창을 만들지 못하거나 틀 두께를 모르면 오류를 남기고 nullptr 입니다.
+         */
+        static unique_ptr<IWindow> createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine );
         /** @brief 클라이언트 너비를 반환합니다. */
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */
@@ -253,11 +302,6 @@ namespace sw
             _restoreX = x;
             _restoreY = y;
         }
-        /**
-         * @brief 명령줄 `-WinX` · `-WinY` 를 `setInitialPosition` 으로 겁니다. `initializeWindow` 앞에서 부릅니다.
-         * @return 둘 다 없거나 둘 다 있으면 true 입니다. 하나만 있으면 오류를 남기고 false 입니다 — 반쪽 좌표를 플랫폼 값으로 채우지 않습니다.
-         */
-        [[nodiscard]] bool applyCommandLinePosition( const CommandLineManager& commandLine );
         /** @brief 지금 제목입니다(UTF-8, 널 종료). 창이 직접 들고 있어 힙을 쓰지 않습니다. */
         const utf8* getTitle() const { return _arrTitle; }
         /** @brief 제목이 담기는 최대 바이트(널 포함)입니다. 넘는 제목은 `setTitle` · `initializeWindow` 가 오류로 거절합니다. */

@@ -174,6 +174,31 @@ namespace sw
         return true;
     }
 
+    bool Win32Window::tryGetFrameExtents( WindowFrameExtents& outExtents ) const
+    {
+        outExtents = WindowFrameExtents{};
+        RECT       windowRect{};
+        RECT       clientRect{};
+        POINT      clientOrigin{ 0, 0 };
+        const bool bRead = _hWnd != nullptr && GetWindowRect( _hWnd, &windowRect ) != FALSE && GetClientRect( _hWnd, &clientRect ) != FALSE &&
+                           ClientToScreen( _hWnd, &clientOrigin ) != FALSE;
+        if ( bRead == false )
+        {
+            SW_LOG_ERROR_ID( "Win32Window.FrameExtentsUnreadable", "Window frame extents could not be read (no window or GetWindowRect failed, error %#)", GetLastError() );
+            return false;
+        }
+        outExtents._left   = clientOrigin.x - windowRect.left;
+        outExtents._top    = clientOrigin.y - windowRect.top;
+        outExtents._right  = windowRect.right - ( clientOrigin.x + clientRect.right );
+        outExtents._bottom = windowRect.bottom - ( clientOrigin.y + clientRect.bottom );
+        return true;
+    }
+
+    bool Win32Window::setFramePosition( int32 x, int32 y )
+    {
+        return _hWnd != nullptr && SetWindowPos( _hWnd, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE ) != FALSE;
+    }
+
     /**
      * @brief 다시 만들기 직전의 창 위치를 `GetWindowRect` 로 `_restoreX` 와 `_restoreY` 에 담습니다.
      */

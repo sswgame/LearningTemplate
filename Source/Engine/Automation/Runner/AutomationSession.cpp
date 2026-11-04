@@ -15,7 +15,6 @@
 #include "Engine/Automation/Runner/AutomationScenarioChain.h"
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -574,8 +573,6 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, options._reportPath );
         options._executablePath          = FileUtil::getExecutablePath();
         options._listPassThroughArgument = AutomationPerBackend::filterPassThroughArguments( commandLine.getOriginalArguments() );
-        options._windowWidth             = engine::getSubsystem<EngineConfig>()._window._width;
-        options._windowHeight            = engine::getSubsystem<EngineConfig>()._window._height;
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, options._bSplitScenarios );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SLOTS, options._slotCount );

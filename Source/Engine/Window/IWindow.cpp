@@ -49,22 +49,70 @@ namespace sw
             (void)setDisplayMode( WindowDisplayMode::Windowed, _width < width ? width : _width, _height < height ? height : _height );
     }
 
-    bool IWindow::applyCommandLinePosition( const CommandLineManager& commandLine )
+    void IWindow::computeTilePosition( const WindowTileSlot& slot, uint32 clientWidth, uint32 clientHeight, const WindowFrameExtents& extents, int32& outX, int32& outY )
     {
-        const bool bHasX = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_X );
-        const bool bHasY = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_Y );
-        if ( bHasX == false && bHasY == false )
-            return true;
+        SW_ASSERT( slot._columnCount > 0 && slot._index >= 0 ); // `createMainWindow` 가 막는다
+        const int32 column = slot._index % slot._columnCount;
+        const int32 row    = slot._index / slot._columnCount;
+        outX               = column * ( static_cast<int32>( clientWidth ) + extents._left + extents._right );
+        outY               = row * ( static_cast<int32>( clientHeight ) + extents._top + extents._bottom );
+    }
+
+    unique_ptr<IWindow> IWindow::createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine )
+    {
+        // 위치 인자는 둘 중 하나다 — 좌표(`-WinX` · `-WinY`, 둘 다)나 바둑판 칸(`-WinTile` · `-WinTileColumns`, 둘 다). 반쪽이나 둘을 함께 주면 플랫폼 값으로 채우지 않고 멈춘다.
+        const bool bHasX           = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_X );
+        const bool bHasY           = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_Y );
+        const bool bHasTile        = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_TILE );
+        const bool bHasTileColumns = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_TILE_COLUMNS );
         int32      x{ 0 };
         int32      y{ 0 };
-        const bool bComplete = bHasX && bHasY && commandLine.getArgument( CommandLineArgument::WINDOW_X, x ) && commandLine.getArgument( CommandLineArgument::WINDOW_Y, y );
-        if ( bComplete == false )
+        const bool bPosition = bHasX || bHasY;
+        if ( bPosition && ( bHasX && bHasY && commandLine.getArgument( CommandLineArgument::WINDOW_X, x ) && commandLine.getArgument( CommandLineArgument::WINDOW_Y, y ) ) == false )
         {
             SW_LOG_ERROR_ID( "Window.WindowPositionNeedsBoth", "Window position needs both -WinX=<x> and -WinY=<y> as numbers - the window is not created" );
-            return false;
+            return nullptr;
         }
-        setInitialPosition( x, y );
-        return true;
+        WindowTileSlot slot;
+        const bool     bTile = bHasTile || bHasTileColumns;
+        if ( bTile && ( bHasTile && bHasTileColumns && commandLine.getArgument( CommandLineArgument::WINDOW_TILE, slot._index ) &&
+                        commandLine.getArgument( CommandLineArgument::WINDOW_TILE_COLUMNS, slot._columnCount ) && slot._index >= 0 && slot._columnCount > 0 ) == false )
+        {
+            SW_LOG_ERROR_ID( "Window.WindowTileNeedsBoth", "Window tile needs both -WinTile=<index from 0> and -WinTileColumns=<count from 1> - the window is not created" );
+            return nullptr;
+        }
+        if ( bPosition && bTile )
+        {
+            SW_LOG_ERROR_ID( "Window.WindowPositionAndTile", "Window position (-WinX/-WinY) and tile (-WinTile) are both given - pick one; the window is not created" );
+            return nullptr;
+        }
+
+        unique_ptr<IWindow> pWindow = createPlatformWindow();
+        if ( pWindow == nullptr )
+            return nullptr;
+        const bool bPlace = pWindow->canPlaceWindow();
+        if ( ( bPosition || bTile ) && bPlace == false )
+            SW_LOG_INFO_ID( "Window.WindowPlacedByCompositor", "This window system places windows itself - -WinX/-WinTile are not applied" );
+        if ( bPosition && bPlace )
+            pWindow->setInitialPosition( x, y );
+        if ( pWindow->initializeWindow( pTitle, width, height ) == false )
+            return nullptr;
+        if ( bTile == false || bPlace == false )
+            return pWindow;
+
+        // 칸 간격은 만든 창 자신의 틀 두께다 — 틀은 창 스타일 · DPI · 창 관리자 테마가 정해서 창을 띄우는 쪽(부모 프로세스)은 모른다.
+        WindowFrameExtents extents;
+        if ( pWindow->tryGetFrameExtents( extents ) == false )
+            return nullptr; // 오류는 플랫폼이 남겼다
+        computeTilePosition( slot, pWindow->getWidth(), pWindow->getHeight(), extents, x, y );
+        if ( pWindow->setFramePosition( x, y ) == false )
+        {
+            SW_LOG_ERROR_ID( "Window.WindowTileMoveFailed", "Window tile %# could not move the window to (%#, %#)", slot._index, x, y );
+            return nullptr;
+        }
+        SW_LOG_INFO_ID( "Window.WindowTilePlaced", "Window tile %# of %# column(s) at (%#, %#) - frame left %# top %# right %# bottom %#", slot._index, slot._columnCount, x, y, extents._left,
+                        extents._top, extents._right, extents._bottom );
+        return pWindow;
     }
 
     void IWindow::setTitle( const utf8* pTitle )

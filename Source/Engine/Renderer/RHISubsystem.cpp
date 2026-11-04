@@ -69,10 +69,8 @@ namespace sw
             commandLine.getArgument( CommandLineArgument::HEIGHT, windowHeight );
 
             // 창 제목은 팩 설정(`<Engine _windowTitle>`)이다 — 이 단계는 그 설정을 읽은 뒤에 선다(의존).
-            unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
-            const bool          bCreated      = defaultWindow != nullptr && defaultWindow->applyCommandLinePosition( commandLine ) &&
-                                  defaultWindow->initializeWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), windowWidth, windowHeight );
-            if ( bCreated )
+            unique_ptr<IWindow> defaultWindow = IWindow::createMainWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), windowWidth, windowHeight, commandLine );
+            if ( defaultWindow != nullptr )
             {
                 // 전체 화면은 스왑체인을 만들기 전에 고른다. 스왑체인이 처음부터 모니터 크기다.
                 if ( display._bHasMode && display._mode != WindowDisplayMode::Windowed )

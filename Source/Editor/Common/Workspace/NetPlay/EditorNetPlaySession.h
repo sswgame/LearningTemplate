@@ -9,7 +9,7 @@
  *          | 서버 | `-gv_netListenPort=<포트>` (+ 트레이스면 `-gv_traceSaveOnExit=<폴더>/server.trace.json`) |
  *          | 전용 서버만 | `-gv_debugChannelPort=<TCP 포트> -gv_debugChannelToken=<세션마다 새 토큰> -gv_stateHashHistory=<kServerStateHashHistoryTicks>` — Inspector · Sync 탭이 이 채널로 붙는다(`getDebugChannelPort`) |
  *          | 클라이언트 | `-gv_netConnectAddress=127.0.0.1:<포트> -gv_standardInputCommands=1 -gv_stateHashHistory=<kServerStateHashHistoryTicks> -gv_framePacing=FullSpeed`(서버 틱 번호로 해시를 남기고, 포커스 없이도 전속) (+ `-gv_traceSaveOnExit=<폴더>/clientN.trace.json`) |
- *          | `App` 마다(창 배치를 켜면) | `-W=<너비> -H=<높이> -WinX=<x> -WinY=<y>` — 리슨 호스트 · 클라이언트 순서로 나란히(`makeWindowArguments`) |
+ *          | `App` 마다(창 배치를 켜면) | `-W=<너비> -H=<높이> -WinTile=<번째> -WinTileColumns=<열 수>` — 리슨 호스트 · 클라이언트 순서로 나란히(`makeWindowArguments`) |
  *
  *          - 로그: 프로세스마다 읽기 스레드가 줄을 모은다. `update` 가 게임 스레드에서 `[Server]`, `[Client1]` 같은 태그를 붙여 에디터 로그에 다시 쓰므로
  *            Output Log 하나에 모인다. 패널에서 출처별로 거를 수 있도록 최근 줄도 보관한다.
@@ -205,9 +205,9 @@ namespace sw::editor
         /** @brief 이 플랫폼의 기본 실행 파일 경로입니다. 에디터 실행 파일 옆이며, Windows 에서는 @p pBaseName 에 `.exe` 를 붙입니다. */
         static string makeDefaultExecutablePath( const utf8* pBaseName );
         /**
-         * @brief `App` 창 @p windowIndex 번째(0 부터 — 리슨 호스트가 있으면 호스트가 0)의 창 크기 · 위치 인자(`-W=… -H=… -WinX=… -WinY=…`)입니다.
-         * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 셀 사이는 창 틀(제목 줄 · 테두리)만큼 띄운다 — 위치는 틀의 왼쪽 위이고
-         *          크기는 클라이언트 영역이기 때문이다. 창 배치를 끈 구성이면 빈 목록이다.
+         * @brief `App` 창 @p windowIndex 번째(0 부터 — 리슨 호스트가 있으면 호스트가 0)의 창 크기 · 바둑판 칸 인자(`-W=… -H=… -WinTile=… -WinTileColumns=…`)입니다.
+         * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 셀 사이는 창 틀(제목 줄 · 테두리)만큼 띄우는데, 그 두께는
+         *          자식 창이 제 틀에서 읽는다(`IWindow::createMainWindow`). 창 배치를 끈 구성이면 빈 목록이다.
          */
         static vector<string> makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex );
         /** @brief 비어 있는 UDP 포트 하나를 고릅니다. 포트를 잠깐 열었다 닫으므로 고른 뒤에 다른 프로세스가 가져갈 수 있습니다. 고르지 못하면 0 입니다. */
