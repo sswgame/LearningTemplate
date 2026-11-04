@@ -27,6 +27,8 @@ Content/**/localization/** -text
 # 에디터 시나리오가 에디터로 저장하는 픽스처(automation/editor/<시나리오>/ 아래 전부) — 에디터는 LF 로 쓰므로 체크아웃도 LF 여야 저장 뒤 작업 트리가 더러워지지 않는다
 # (폴더 단위라 새 픽스처를 더해도 줄끝이 어긋나지 않는다. 바이너리 픽스처를 두면 이 줄에서 빼야 한다)
 Content/engine/automation/editor/*/** text eol=lf
+# 그 폴더 아래 골든 이미지(editor/golden/*.ppm)는 위 줄이 덮어 텍스트가 되고 커밋마다 픽셀 바이트의 CRLF 가 LF 로 바뀌었다 — 다시 바이너리로
+Content/engine/automation/editor/golden/** binary
 
 # 에디터 테마 토큰은 `editor-theme` 도구가 CRLF 로 쓴다(Scripts/dev/MakeEditorTheme.py 머리말) — 리눅스 체크아웃도 CRLF 여야 도구 출력과 바이트로 같다
 Content/editor/theme/*.tokens.json text eol=crlf
