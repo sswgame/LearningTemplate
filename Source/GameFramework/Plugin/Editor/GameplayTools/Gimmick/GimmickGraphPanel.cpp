@@ -3,6 +3,7 @@
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -20,6 +21,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -105,7 +107,6 @@ namespace sw::editor
         , _model{ game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() }
         , _nodeGraph{}
         , _listIssue{}
-        , _listSavedPosition{}
         , _ownerHandle{}
         , _formFrom{}
         , _formTo{}
@@ -114,7 +115,9 @@ namespace sw::editor
         , _signature{ 0 }
         , _editID{ 0 }
         , _selectedNode{ 0 }
+        , _bSeedComments{ false }
     {
+        _nodeGraph.setCommentsEnabled( true ); // 주석 상자는 컴포넌트에 실린다(`GimmickCircuitComponent::_listComment`)
     }
 
     void GimmickGraphPanel::shutdown()
@@ -149,19 +152,13 @@ namespace sw::editor
             _model.clear();
             _statusText = "Could not read the circuit properties";
         }
+        // 자리는 컴포넌트에 실려 왔다 — 다음 그리기에서 캔버스에 넣는다(주석 상자도).
         for ( GimmickGraphNode& node : _model.getMutableNodes() )
         {
-            for ( const SavedPosition& saved : _listSavedPosition )
-            {
-                if ( saved._id == node._id.c_str() )
-                {
-                    node._position = saved._position;
-                    break;
-                }
-            }
             node._bPlaced = false;
         }
-        _signature = _model.computeSignature();
+        _bSeedComments = true;
+        _signature     = _model.computeSignature();
         if ( _model.findNodeIndex( _selectedNode ) < 0 )
             _selectedNode = 0;
         _formFrom = PortChoice{};
@@ -174,30 +171,44 @@ namespace sw::editor
         _model.collectIssues( _listIssue );
     }
 
-    void GimmickGraphPanel::rememberPositions()
+    void GimmickGraphPanel::drawComments( GimmickCircuitComponent& circuit )
     {
-        for ( const GimmickGraphNode& node : _model.getNodes() )
+        // 컴포넌트는 커밋 전까지 그대로라 "고치기 전" 스냅숏은 커밋할 때 찍어도 된다.
+        vector<GraphCommentBox>& listComment = _model.getMutableComments();
+        const bool               bRenamed    = _nodeGraph.drawComments( listComment, _bSeedComments || _nodeGraph.needsContentFit() );
+        _bSeedComments                       = false;
+        if ( bRenamed )
+            commitEdit( circuit, beginEdit( circuit ), "Rename Gimmick Comment" );
+        GraphCommentBox comment{};
+        if ( _nodeGraph.takeCommentRequest( comment._position, comment._size ) == false )
+            return;
+        int32 maxID{ 0 };
+        for ( const GraphCommentBox& existing : listComment )
+        {
+            maxID = MathUtil::max( maxID, existing._id );
+        }
+        comment._id = maxID + 1;
+        listComment.push_back( std::move( comment ) );
+        commitEdit( circuit, beginEdit( circuit ), "Add Gimmick Comment" );
+    }
+
+    void GimmickGraphPanel::commitLayoutWhenReleased( GimmickCircuitComponent& circuit )
+    {
+        // 캔버스 좌표의 반올림을 옮김으로 읽지 않는다(문서 그래프 패널과 같은 문턱).
+        for ( GimmickGraphNode& node : _model.getMutableNodes() )
         {
             if ( node._bPlaced == false )
                 continue;
-            bool bFound = false;
-            for ( SavedPosition& saved : _listSavedPosition )
-            {
-                if ( saved._id == node._id.c_str() )
-                {
-                    saved._position = node._position;
-                    bFound          = true;
-                    break;
-                }
-            }
-            if ( bFound == false )
-            {
-                SavedPosition saved;
-                saved._id       = node._id.c_str();
-                saved._position = node._position;
-                _listSavedPosition.push_back( std::move( saved ) );
-            }
+            const ImVec2 position = ed::GetNodePosition( toNodeID( node._graphID ) );
+            if ( EditorSessionPolicy::hasNodeMoved( node._position._x, node._position._y, position.x, position.y ) )
+                node._position = float2{ position.x, position.y };
         }
+        if ( _nodeGraph.needsContentFit() == false )
+            (void)_nodeGraph.syncCommentLayout( _model.getMutableComments() ); // 바뀐 것은 아래 서명 비교가 본다
+        // 구조 편집은 그 자리에서 커밋한다 — 커밋한 서명과 다르면 남은 것은 배치(끌기 · 늘이기 · 자동 배치)다. 끄는 동안에는 쌓기만 한다.
+        if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) || _model.computeSignature() == _signature )
+            return;
+        commitEdit( circuit, beginEdit( circuit ), "Move Gimmick Nodes" );
     }
 
     void GimmickGraphPanel::drawContent()
@@ -296,6 +307,7 @@ namespace sw::editor
         }
         ed::SetCurrentEditor( _nodeGraph.getContext() );
 
+        drawComments( circuit );
         for ( GimmickGraphNode& node : _model.getMutableNodes() )
         {
             drawNode( node );
@@ -344,15 +356,8 @@ namespace sw::editor
         if ( selectedCount > 0 )
             _selectedNode = static_cast<int32>( arrSelected[0].Get() );
 
+        commitLayoutWhenReleased( circuit );
         _nodeGraph.applyContentFitIfNeeded();
-        for ( GimmickGraphNode& node : _model.getMutableNodes() )
-        {
-            if ( node._bPlaced == false )
-                continue;
-            const ImVec2 position = ed::GetNodePosition( toNodeID( node._graphID ) );
-            node._position        = float2{ position.x, position.y };
-        }
-        rememberPositions();
 
         EditorNodeGraph::noteDrawnNodeCount( static_cast<uint32>( _model.getNodes().size() ) );
         _nodeGraph.endCanvas();
@@ -830,6 +835,15 @@ namespace sw::editor
         }
         for ( const int32 nodeID : listNode )
         {
+            if ( EditorNodeGraph::isCommentNode( nodeID ) )
+            {
+                // 상자만 지운다 — 안의 노드는 남는다(언리얼 Comment 지우기와 같다).
+                const size_t commentCount = _model.getMutableComments().size();
+                VectorUtil::removeIf( _model.getMutableComments(), [commentID = nodeID - EditorNodeGraph::kCommentNodeIDBase]( const GraphCommentBox& comment )
+                { return comment._id == commentID; } );
+                bChanged = _model.getMutableComments().size() != commentCount || bChanged;
+                continue;
+            }
             bChanged = _model.removeNode( nodeID ) || bChanged;
             if ( _selectedNode == nodeID )
                 _selectedNode = 0;

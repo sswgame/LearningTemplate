@@ -30,6 +30,7 @@ namespace sw::editor
         , _listNode{}
         , _listWire{}
         , _listOrphanWire{}
+        , _listComment{}
         , _nextNodeGraphID{ 1 }
         , _nextWireGraphID{ 1 }
     {
@@ -40,21 +41,27 @@ namespace sw::editor
         _listNode.clear();
         _listWire.clear();
         _listOrphanWire.clear();
+        _listComment.clear();
         _nextNodeGraphID = 1;
         _nextWireGraphID = 1;
     }
 
-    void GimmickGraphModel::populate( const vector<GimmickNodeDesc>& listNode, const vector<GameObjectHandle>& listTarget, const vector<GimmickWireDesc>& listWire )
+    void GimmickGraphModel::populate( const vector<GimmickNodeDesc>& listNode, const vector<GameObjectHandle>& listTarget, const vector<GimmickWireDesc>& listWire,
+                                      const vector<GraphCommentBox>& listComment )
     {
         clear();
+        _listComment = listComment;
+        bool bPlaced = false;
         for ( size_t index = 0; index < listNode.size(); ++index )
         {
             GimmickGraphNode node;
-            node._id      = listNode[index]._id;
-            node._kind    = listNode[index]._kind;
-            node._params  = listNode[index]._params;
-            node._target  = index < listTarget.size() ? listTarget[index] : GameObjectHandle{};
-            node._graphID = _nextNodeGraphID++;
+            node._id       = listNode[index]._id;
+            node._kind     = listNode[index]._kind;
+            node._params   = listNode[index]._params;
+            node._target   = index < listTarget.size() ? listTarget[index] : GameObjectHandle{};
+            node._position = listNode[index]._editorPosition;
+            node._graphID  = _nextNodeGraphID++;
+            bPlaced        = bPlaced || node._position._x != 0.0f || node._position._y != 0.0f;
             _listNode.push_back( std::move( node ) );
         }
         for ( const GimmickWireDesc& desc : listWire )
@@ -80,7 +87,8 @@ namespace sw::editor
             wire._graphID  = _nextWireGraphID++;
             _listWire.push_back( std::move( wire ) );
         }
-        autoLayout();
+        if ( bPlaced == false )
+            autoLayout();
     }
 
     string GimmickGraphModel::makePortReference( const GimmickGraphNode& node, string_view port ) const
@@ -91,17 +99,20 @@ namespace sw::editor
         return text;
     }
 
-    void GimmickGraphModel::exportTo( vector<GimmickNodeDesc>& outListNode, vector<GameObjectHandle>& outListTarget, vector<GimmickWireDesc>& outListWire ) const
+    void GimmickGraphModel::exportTo( vector<GimmickNodeDesc>& outListNode, vector<GameObjectHandle>& outListTarget, vector<GimmickWireDesc>& outListWire,
+                                      vector<GraphCommentBox>& outListComment ) const
     {
+        outListComment = _listComment;
         outListNode.clear();
         outListTarget.clear();
         outListWire.clear();
         for ( const GimmickGraphNode& node : _listNode )
         {
             GimmickNodeDesc desc;
-            desc._id     = node._id;
-            desc._kind   = node._kind;
-            desc._params = node._params;
+            desc._id             = node._id;
+            desc._kind           = node._kind;
+            desc._params         = node._params;
+            desc._editorPosition = node._position;
             outListNode.push_back( std::move( desc ) );
             outListTarget.push_back( node._target );
         }
@@ -128,26 +139,23 @@ namespace sw::editor
         vector<GimmickNodeDesc>  listNode;
         vector<GameObjectHandle> listTarget;
         vector<GimmickWireDesc>  listWire;
-        exportTo( listNode, listTarget, listWire );
-        string text;
+        vector<GraphCommentBox>  listComment;
+        exportTo( listNode, listTarget, listWire, listComment );
+        StringBuilder<constant::buffer::kMax1K> text;
         for ( size_t index = 0; index < listNode.size(); ++index )
         {
-            text += listNode[index]._id.c_str();
-            text += '|';
-            text += listNode[index]._kind.c_str();
-            text += '|';
-            text += listNode[index]._params;
-            text += '|';
-            text += std::to_string( listTarget[index].objectID() ).c_str();
-            text += '\n';
+            const GimmickNodeDesc& node = listNode[index];
+            text.append( node._id.c_str() ).append( '|' ).append( node._kind.c_str() ).append( '|' ).append( string_view{ node._params } ).append( '|' );
+            text.append( listTarget[index].objectID() ).append( '|' ).append( node._editorPosition._x ).append( ',' ).append( node._editorPosition._y ).append( '\n' );
         }
         for ( const GimmickWireDesc& wire : listWire )
         {
-            text += wire._from;
-            text += '>';
-            text += wire._to;
-            text += wire._bInvert ? "!" : "";
-            text += '\n';
+            text.append( string_view{ wire._from } ).append( '>' ).append( string_view{ wire._to } ).append( wire._bInvert ? "!\n" : "\n" );
+        }
+        for ( const GraphCommentBox& comment : listComment )
+        {
+            text.append( comment._id ).append( '#' ).append( string_view{ comment._text } ).append( '|' ).append( comment._position._x ).append( ',' ).append( comment._position._y );
+            text.append( '|' ).append( comment._size._x ).append( ',' ).append( comment._size._y ).append( '\n' );
         }
         return HashUtil::computeStringHash64( text.c_str(), text.size(), false );
     }

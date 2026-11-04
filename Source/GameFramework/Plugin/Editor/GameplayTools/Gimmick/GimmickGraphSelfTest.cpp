@@ -54,6 +54,23 @@ namespace sw::editor
                 // 복제는 노드 둘과 그 사이 배선 하나를 새 번호로 만든다(원본은 그대로).
                 const vector<int32> listCopy = model.duplicateNodes( vector<int32>{ plate, door }, float2{ 40.0f, 40.0f } );
                 context.expect( listCopy.size() == 2 && model.getNodes().size() == 4 && model.getWires().size() == 2, "duplicating two wired nodes did not make two nodes and their wire" );
+
+                // 노드 자리와 주석 상자는 컴포넌트 목록을 왕복한다 — 다시 읽어도 자동 배치로 흩어지지 않는다.
+                model.getMutableNodes()[0]._position = float2{ 123.0f, -45.0f };
+                GraphCommentBox comment{};
+                comment._id   = 1;
+                comment._text = "Door logic";
+                model.getMutableComments().push_back( comment );
+                vector<GimmickNodeDesc>  listNode;
+                vector<GameObjectHandle> listTarget;
+                vector<GimmickWireDesc>  listWire;
+                vector<GraphCommentBox>  listComment;
+                model.exportTo( listNode, listTarget, listWire, listComment );
+                const uint64      signature = model.computeSignature();
+                GimmickGraphModel reloaded( game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() );
+                reloaded.populate( listNode, listTarget, listWire, listComment );
+                const bool bKept = reloaded.getNodes()[0]._position == float2{ 123.0f, -45.0f } && reloaded.getMutableComments().size() == 1 && reloaded.computeSignature() == signature;
+                context.expect( bKept, "node positions or comment boxes did not survive a component round trip" );
                 return EditorSelfTestStep::Done;
             }
         };

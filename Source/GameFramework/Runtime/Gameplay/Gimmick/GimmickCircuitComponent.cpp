@@ -155,6 +155,7 @@ namespace sw
         : _listNode{}
         , _listNodeTarget{}
         , _listWire{}
+        , _listComment{}
         , _listRestPose{}
         , _state{}
         , _stepTime{ constant::time::kDefaultFixedStepSeconds }

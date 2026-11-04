@@ -37,6 +37,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -137,6 +138,9 @@ namespace sw
         hashed_string _output{};
         PROPERTY( Min = 0.0, Tooltip = "Length of one sound; envelopes release at its end and looping events restart the graph", Units = s )
         float32 _durationSeconds{ 0.0f };
+        /** @brief 그래프 에디터의 주석 상자입니다(소리는 읽지 않는 배치 데이터 — `_editorPosition` 과 같다). */
+        PROPERTY( Tooltip = "Comment boxes of the graph editor; the sound does not read them" )
+        vector<GraphCommentBox> _listComment{};
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

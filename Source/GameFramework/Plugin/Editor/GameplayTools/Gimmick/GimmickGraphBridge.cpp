@@ -27,16 +27,18 @@ namespace sw::editor
         const PropertyInfo* pNode            = findProperty( component, "_listNode" );
         const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );
         const PropertyInfo* pWire            = findProperty( component, "_listWire" );
-        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr;
+        const PropertyInfo* pComment         = findProperty( component, "_listComment" );
+        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr || pComment == nullptr;
         if ( bMissingProperty )
             return false;
         const vector<GimmickNodeDesc>*  pListNode        = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<const void*>( &component ) );
         const vector<GameObjectHandle>* pListTarget      = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<const void*>( &component ) );
         const vector<GimmickWireDesc>*  pListWire        = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<const void*>( &component ) );
-        const bool                      bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr;
+        const vector<GraphCommentBox>*  pListComment     = pComment->getValuePtr<vector<GraphCommentBox>>( static_cast<const void*>( &component ) );
+        const bool                      bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr || pListComment == nullptr;
         if ( bMissingValuePtr )
             return false;
-        outModel.populate( *pListNode, *pListTarget, *pListWire );
+        outModel.populate( *pListNode, *pListTarget, *pListWire, *pListComment );
         return true;
     }
 
@@ -53,16 +55,18 @@ namespace sw::editor
         const PropertyInfo* pNode            = findProperty( component, "_listNode" );
         const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );
         const PropertyInfo* pWire            = findProperty( component, "_listWire" );
-        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr;
+        const PropertyInfo* pComment         = findProperty( component, "_listComment" );
+        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr || pComment == nullptr;
         if ( bMissingProperty )
             return false;
         vector<GimmickNodeDesc>*  pListNode        = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<void*>( &component ) );
         vector<GameObjectHandle>* pListTarget      = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<void*>( &component ) );
         vector<GimmickWireDesc>*  pListWire        = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<void*>( &component ) );
-        const bool                bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr;
+        vector<GraphCommentBox>*  pListComment     = pComment->getValuePtr<vector<GraphCommentBox>>( static_cast<void*>( &component ) );
+        const bool                bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr || pListComment == nullptr;
         if ( bMissingValuePtr )
             return false;
-        model.exportTo( *pListNode, *pListTarget, *pListWire );
+        model.exportTo( *pListNode, *pListTarget, *pListWire, *pListComment );
         component.onPropertyChanged( hashed_string( "_listNode" ) ); // 인스펙터가 속성을 고쳤을 때와 같은 알림 - 회로를 다시 짓는다
         return true;
     }

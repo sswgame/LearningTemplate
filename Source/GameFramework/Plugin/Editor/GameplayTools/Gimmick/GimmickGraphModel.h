@@ -73,11 +73,14 @@ namespace sw::editor
         explicit GimmickGraphModel( const GimmickNodeRegistry& registry );
 
         void clear();
-        /** @brief 컴포넌트가 저장한 목록으로 모델을 채웁니다. 대상 목록이 노드보다 짧으면 빈 대상으로 채웁니다. 배치는 `autoLayout` 이 합니다. */
-        void populate( const vector<GimmickNodeDesc>& listNode, const vector<GameObjectHandle>& listTarget, const vector<GimmickWireDesc>& listWire );
+        /**
+         * @brief 컴포넌트가 저장한 목록으로 모델을 채웁니다. 대상 목록이 노드보다 짧으면 빈 대상으로 채웁니다.
+         * @details 노드 자리는 저장된 `_editorPosition` 이다. 모두 (0, 0) 이면(자리를 싣기 전의 씬) `autoLayout` 이 처음 배치를 한다 — 소리 그래프(`AudioGraphEditUtil::layoutIfUnplaced`)와 같은 규칙.
+         */
+        void populate( const vector<GimmickNodeDesc>& listNode, const vector<GameObjectHandle>& listTarget, const vector<GimmickWireDesc>& listWire, const vector<GraphCommentBox>& listComment );
         /** @brief 컴포넌트가 저장하는 목록으로 내보냅니다(가리키는 노드가 없던 배선도 그대로 냅니다). */
-        void exportTo( vector<GimmickNodeDesc>& outListNode, vector<GameObjectHandle>& outListTarget, vector<GimmickWireDesc>& outListWire ) const;
-        /** @brief 내보낼 내용의 해시입니다(위치는 빼고). 컴포넌트가 바깥에서 바뀌었는지(되돌리기) 알아볼 때 씁니다. */
+        void exportTo( vector<GimmickNodeDesc>& outListNode, vector<GameObjectHandle>& outListTarget, vector<GimmickWireDesc>& outListWire, vector<GraphCommentBox>& outListComment ) const;
+        /** @brief 내보낼 내용의 해시입니다(노드 자리 · 주석 포함 — 옮기기도 되돌리기 단계다). 컴포넌트가 바깥에서 바뀌었는지(되돌리기) 알아볼 때 씁니다. */
         uint64 computeSignature() const;
 
         // ------------------------------------------------------------------------------
@@ -117,6 +120,7 @@ namespace sw::editor
         vector<GimmickGraphNode>&       getMutableNodes() { return _listNode; } ///< 위치와 `_bPlaced` 만 고칩니다(캔버스가 끌린 위치를 되돌려 줍니다)
         const vector<GimmickGraphWire>& getWires() const { return _listWire; }
         const vector<GimmickWireDesc>&  getOrphanWires() const { return _listOrphanWire; }
+        vector<GraphCommentBox>&        getMutableComments() { return _listComment; } ///< 캔버스가 주석 상자를 더하고 옮기고 지운다(고치면 패널이 편집으로 남긴다)
         int32                           findNodeIndex( int32 graphID ) const;
         int32                           findNodeIndexByID( const hashed_string& id ) const;
         int32                           findWireIndex( int32 wireGraphID ) const;
@@ -140,6 +144,7 @@ namespace sw::editor
         vector<GimmickGraphNode>   _listNode;
         vector<GimmickGraphWire>   _listWire;
         vector<GimmickWireDesc>    _listOrphanWire;
+        vector<GraphCommentBox>    _listComment;
         int32                      _nextNodeGraphID;
         int32                      _nextWireGraphID;
     };

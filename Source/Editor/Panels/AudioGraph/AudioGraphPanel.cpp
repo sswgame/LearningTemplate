@@ -3,6 +3,7 @@
 #include "Editor/Panels/AudioGraph/AudioGraphPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
@@ -67,6 +68,7 @@ namespace sw::editor
         , _listLinkID{}
         , _listNodeID{}
     {
+        _nodeGraph.setCommentsEnabled( true ); // 주석 상자는 그래프 파일에 실린다(`AudioGraphDef::_listComment`)
     }
 
     bool AudioGraphPanel::acceptsDocumentPath( string_view assetPath ) const
@@ -238,8 +240,18 @@ namespace sw::editor
             ed::NodeId nodeID;
             while ( ed::QueryDeletedNode( &nodeID ) )
             {
-                if ( ed::AcceptDeletedItem() )
-                    _listNodeID.push_back( static_cast<int32>( nodeID.Get() ) );
+                if ( ed::AcceptDeletedItem() == false )
+                    continue;
+                const int32 id = static_cast<int32>( nodeID.Get() );
+                if ( EditorNodeGraph::isCommentNode( id ) == false )
+                {
+                    _listNodeID.push_back( id );
+                    continue;
+                }
+                // 상자만 지운다 — 안의 노드는 남는다(언리얼 Comment 지우기와 같다).
+                VectorUtil::removeIf( _model.editGraph()._listComment, [commentID = id - EditorNodeGraph::kCommentNodeIDBase]( const GraphCommentBox& comment )
+                { return comment._id == commentID; } );
+                _model.markCommentsEdited( "Delete Audio Graph Comment" );
             }
         }
         ed::EndDelete();
@@ -258,6 +270,18 @@ namespace sw::editor
         }
         ed::SetCurrentEditor( _nodeGraph.getContext() );
         _model.beginCanvasFrame();
+
+        // 주석 상자는 노드보다 먼저 그린다(상자가 노드 뒤에 깔린다). 보기 막대의 주석 단추가 낸 요청이면 새 상자를 더한다.
+        vector<GraphCommentBox>& listComment = _model.editGraph()._listComment;
+        if ( _nodeGraph.drawComments( listComment, _nodeGraph.needsContentFit() ) )
+            _model.markCommentsEdited( "Rename Audio Graph Comment" );
+        GraphCommentBox newComment{};
+        if ( _nodeGraph.takeCommentRequest( newComment._position, newComment._size ) )
+        {
+            newComment._id = nextItemID( listComment );
+            listComment.push_back( std::move( newComment ) );
+            _model.markCommentsEdited( "Add Audio Graph Comment" );
+        }
 
         const AudioGraphDef& graph     = _model.getGraph();
         const uint32         nodeCount = static_cast<uint32>( graph._listNode.size() );
@@ -310,6 +334,8 @@ namespace sw::editor
                 const ImVec2 position = ed::GetNodePosition( toNodeID( AudioGraphEditUtil::makeNodeID( nodeIndex ) ) );
                 _model.noteNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
+            if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
+                _model.markCommentsEdited( "Move Audio Graph Comment", "audiograph.comment.move" );
         }
 
         ed::NodeId arrSelected[1];

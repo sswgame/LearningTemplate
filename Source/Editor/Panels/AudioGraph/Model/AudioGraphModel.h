@@ -72,6 +72,8 @@ namespace sw::editor
         AudioGraphDef& editGraph() { return _editGraph; }
         /** @brief 속성 그리드가 사본을 고쳤습니다. */
         void markEdited() { noteEdit( "Edit Audio Graph", "audiograph.values" ); }
+        /** @brief 캔버스가 주석 상자(`editGraph()._listComment`)를 고쳤습니다. 끌기 · 늘이기는 @p pCoalesceKey 로 한 단계에 합친다. */
+        void markCommentsEdited( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { noteEdit( pLabel, pCoalesceKey ); }
         /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. 패널이 그리기마다 한 번 부른다. */
         [[nodiscard]] bool takeEdit( AudioGraphEdit& outEdit );
 

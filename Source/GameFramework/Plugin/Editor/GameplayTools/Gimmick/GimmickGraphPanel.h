@@ -3,6 +3,7 @@
  * @brief 기믹 회로 그래프 편집 창입니다. 선택한 오브젝트의 `GimmickCircuitComponent` 를 노드 그래프로 보이고 고칩니다 — 노드 더하기 · 지우기, 배선 잇기, 매개변수, 대상 오브젝트 고르기, 검증 문제 표시.
  * @details 언리얼 블루프린트 그래프와 유니티 Visual Scripting 그래프의 자리이고, 소스 엔진의 엔티티 입출력 편집에 가장 가깝다. 노드 그래프 캔버스(`EditorNodeGraph`)와 판단(`EditorNodeGraphRules`)은 에디터의 것을 쓰고,
  *          문서는 파일이 아니라 씬에 저장되는 컴포넌트다 — 그래서 파일 문서 틀(`EditorGraphDocumentPanel`)이 아니라 편집마다 오브젝트 상태를 찍어 Undo 에 올린다(`EditorTransaction::recordModify`, 인스펙터와 같은 길).
+ *          노드 자리와 주석 상자도 컴포넌트에 실린다(언리얼 블루프린트가 노드 좌표 · Comment 를 애셋에 두는 것과 같다). 끌기 · 늘이기 · 자동 배치는 마우스를 놓을 때 한 편집으로 남는다.
  *          컴포넌트가 바깥에서 바뀌면(되돌리기, 인스펙터) 저장 목록의 서명이 달라지는 것으로 알아보고 모델을 다시 읽는다.
  */
 #pragma once
@@ -48,13 +49,6 @@ namespace sw::editor
         void             shutdown() override;
 
     private:
-        /** @brief 노드 위치를 이름으로 기억합니다. 다시 읽을 때(되돌리기, 다른 오브젝트에서 돌아옴) 같은 이름의 노드를 같은 자리에 둡니다. */
-        struct SavedPosition
-        {
-            string _id{};
-            float2 _position{};
-        };
-
         /** @brief 폼에서 고른 포트 한쪽입니다. */
         struct PortChoice
         {
@@ -66,7 +60,10 @@ namespace sw::editor
         GimmickCircuitComponent* findCircuit();
         void                     reload( GimmickCircuitComponent& circuit );
         void                     refreshIssues();
-        void                     rememberPositions();
+        /** @brief 캔버스의 노드 자리를 모델에 싣고, 커밋하지 않은 배치(노드 자리 · 주석)가 있으면 마우스를 놓았을 때 한 편집으로 남깁니다. */
+        void commitLayoutWhenReleased( GimmickCircuitComponent& circuit );
+        /** @brief 주석 상자를 그리고(노드보다 먼저) 이름 바꾸기 · 보기 막대의 새 상자 요청을 편집으로 남깁니다. */
+        void drawComments( GimmickCircuitComponent& circuit );
 
         // 그리기
         void               drawToolbar( GimmickCircuitComponent& circuit );
@@ -100,7 +97,6 @@ namespace sw::editor
         GimmickGraphModel         _model;
         EditorNodeGraph           _nodeGraph;
         vector<GimmickGraphIssue> _listIssue;
-        vector<SavedPosition>     _listSavedPosition;
         GameObjectHandle          _ownerHandle;
         PortChoice                _formFrom;
         PortChoice                _formTo;
@@ -109,5 +105,6 @@ namespace sw::editor
         uint64                    _signature;
         uint32                    _editID;
         int32                     _selectedNode;
+        bool                      _bSeedComments; ///< 다음 그리기에서 주석 상자 자리를 데이터에서 캔버스로 넣는다(다시 읽은 뒤)
     };
 } // namespace sw::editor

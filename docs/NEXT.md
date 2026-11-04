@@ -29,14 +29,13 @@
 
 | 일 | 내용 |
 |---|---|
-| 에디터에서 씬을 연 직후 식생이 텍스처 없이(회색) 그려진다 | `editor.flowterrain` 이 진다(골든은 굽지 않았다 — 옛 골든 그대로). envshowcase 의 Quaternius 식생(구간마다 `FoliageSection` 머티리얼 + 색조 `MaterialInstance`)이 씬을 연 뒤 처음 지은 배치에서 회색 · 흰색이고, 칠하기 등으로 `rebuildFoliage` 하면 맞게 나온다(`editor.terrainbrush` 는 칠한 뒤라 맞다). 백엔드 교체 · 텍스처 스트리밍과 무관(둘을 끄고도 같다), 경고 · 오류 없음. `MaterialInstance::syncTextureOverrides` 가 덮어쓰기 없을 때 리로드 세대를 보지 않는 것은 고쳐도 그대로였다 — GPU 씬의 구간 배치(`MeshInstanceBatch::setDrawSection` · `GPUSceneBuilder`)가 첫 빌드 때의 머티리얼 상태를 쥐는지부터 본다 |
 | 흔들리는 게임 골든 | 2026-11-04 Debug · Release 전체 ctest 각 일곱 번과 Release Shooter3D 체인 세 번에서 한 번도 지지 않았다(killcam · cape · bodyviews · useroptions · GL 컨텍스트 잃음 모두). 다시 지면 그 로그의 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다 — GL 컨텍스트 잃음은 GL 디버그 출력(`KHR_debug`)으로 드라이버 리셋인지 VAT 인덱스 드로우인지 가린다 |
 | 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다 — 매칭 · 채팅 거르기 · 라이브 이벤트 · 친구 관계 · 거래 상태 기계 · 우편 · 경제 구매 · 순위 보드 정의 · GM 권한 · 지급은 채웠다, 계정 로그인 저장(가짜 암호 — 연동 · 마지막 로그인 수단 · 탈퇴 유예 포함)과 서버 목록 `ServerListModel`(실패 길 · 루프백 서버로 응답 길)도 채웠다. 네트워크 하네스는 있다 — Core 엔드포인트는 `LoopbackCluster`, 온라인 키트 끝단은 `OnlineHostTestUtil.h`(`OnlineTestRig` — 호스트 + 클라이언트 묶음, 키트 DLL 이 include 하고 키트 서버 쪽은 같은 프로토콜 항목의 가짜로 올린다). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
 
 ### 3. 에셋 · 그래프 편집기 UX — 남은 것 (2026-11-04)
 
 공통 바닥(`EditorNodeGraph` 보기 막대 · 미니맵 · 정렬 · 핀 끌어 만들기, `EditorGraphDocumentPanel` 복사 · 붙여 넣기 · 주석, `EditorPreviewPanel` 재생 막대)은 했다. 남은 것:
-- 소리 그래프 · 기믹은 복제 · 복사 · 붙여 넣기까지 했고 주석 상자가 없다(`GraphCommentBox` 목록을 각 정의에 둔다). 행동 트리는 자동 배치라 복사 · 주석 둘 다 없다 — 하위 트리 복제가 언리얼 BT 와 같은 길이다.
+- 행동 트리는 자동 배치라 복사 · 주석 둘 다 없다 — 하위 트리 복제가 언리얼 BT 와 같은 길이다.
 - 시퀀서 · 타일맵 · 스프라이트 클립 · 입력 맵 · 데이터 테이블 · 전역 변수 · 카탈로그 · 리타깃 · 테마파크 배치 · UI 미리보기는 상용 엔진 대비 점검만 했고 손대지 않았다(보고의 비교 표).
 
 ### 5. 그 뒤

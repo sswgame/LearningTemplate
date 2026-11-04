@@ -27,6 +27,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -50,6 +51,9 @@ namespace sw
         hashed_string _kind{};
         PROPERTY( Tooltip = "Parameters as name=value pairs separated by ';'" )
         string _params{};
+        /** @brief 기믹 그래프 창 캔버스의 자리입니다. 회로는 읽지 않는다(언리얼 블루프린트 노드 좌표처럼 편집 배치 데이터다). 모두 (0, 0) 이면 창이 처음 배치를 한다. */
+        PROPERTY( Tooltip = "Position of the node on the gimmick graph canvas; the circuit does not read it" )
+        float2 _editorPosition{ 0.0f, 0.0f };
     };
 } // namespace sw
 
@@ -194,6 +198,9 @@ namespace sw
         vector<GameObjectHandle> _listNodeTarget;
         PROPERTY( Category = "Circuit", DisplayName = "Wires" )
         vector<GimmickWireDesc> _listWire;
+        /** @brief 기믹 그래프 창의 주석 상자입니다(회로는 읽지 않는다 — `GraphCommentBox`). */
+        PROPERTY( Category = "Circuit", HideInInspector, Tooltip = "Comment boxes of the gimmick graph editor; the circuit does not read them" )
+        vector<GraphCommentBox> _listComment;
         PROPERTY( RuntimeState, Category = "Circuit", DisplayName = "Rest Poses", Tooltip = "Actuator rest poses captured at first play (runtime)" )
         vector<GimmickRestPose> _listRestPose;
         PROPERTY( RuntimeState, HideInInspector )
