@@ -25,7 +25,7 @@ namespace sw
         virtual ~IAutomationRuntime() = default;
 
         /**
-         * @brief `-scenario` · `-scenario-record` 를 읽어 세션을 시작하고, 재생기를 엔진 프레임 관찰자로 붙여 @p host 에 `IScenarioPlayer` 로 겁니다.
+         * @brief `-scenario` · `-scenario-record` 를 읽어 세션을 시작해 엔진 프레임 관찰자로 붙이고, 기본 재생기(`ScenarioPlayer` — 세션과 따로 선 객체)를 만들어 @p host 에 `IScenarioPlayer` 로 겁니다.
          * @details 엔진 기동이 끝난 뒤, 모듈을 올리기 전에 부른다(첫 단계의 시작 조건이 모듈 · 씬이 설 때까지 기다린다). 떼기는 세션이 엔진과 함께 내려갈 때 스스로 한다.
          *          게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작하므로 시나리오가 없어도 붙인다.
          * @return 기동을 이어 가도 되면 true 입니다.

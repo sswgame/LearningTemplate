@@ -15,7 +15,6 @@
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Runner/AutomationOutcome.h"
-#include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #include "Engine/Automation/Scenario/ScenarioRecorder.h"
 #include "Engine/EngineFrameHooks.h"
 
@@ -24,6 +23,7 @@ namespace sw
     class AutomationRunner;
     class AutomationScenarioChain;
     class RenderThread;
+    class ScenarioPlayer;
 
     /**
      * @class AutomationSession
@@ -35,8 +35,8 @@ namespace sw
      *          - `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 맞추고,
      *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다),
      *          - 시작할 때 모은 재현 명령 재료(게임 · 백엔드 · 에디터 · `-scenario` 목록)를 단계 실행기에 넘긴다(보고의 `reproduce`).
-     *          **재생**(`IScenarioPlayer` — `ScenarioPlayback::play`, `IAutomationRuntime::start` 가 호스트 범위에 건다)도 같은 실행기로 한다: 판정이 끝나도 프로세스를 끝내지 않고, 행 감시 · 보고 · 고정 프레임 시간(고르지 않으면)이 없다.
-     *          끝까지 돌면 반복하거나(`_bLoop`) 끝을 알린다. 사람이 키보드 · 마우스를 건드리면 멈출 수 있다(`_bStopOnHumanInput` — 데모 · 어트랙트).
+     *          **재생**(`ScenarioPlayback::play` — 데모 · 어트랙트 · 시퀀서)은 세션이 하지 않는다. 별도 객체 `ScenarioPlayer` 가 자기 실행기 · 프레임 훅으로 돌리고,
+     *          세션의 바깥 창구(`Runtime::start`)는 기본 재생기 하나를 만들어 호스트 범위에 `IScenarioPlayer` 로 걸기만 한다(언리얼 Automation 세션과 Level Sequence Player 의 나눔).
      *          게임 스레드에서만 쓴다.
      */
     class SW_API AutomationSession : public ISubsystem
@@ -76,11 +76,7 @@ namespace sw
          * @return 경로가 `Saved/Automation/` 아래의 `.scenario.xml` 이 아니면 false 입니다.
          */
         [[nodiscard]] bool beginRecording( string_view outputPath, string_view watchList );
-        // 게임 · 콘솔의 재생(`IAutomationRuntime::start` 가 호스트 범위에 `IScenarioPlayer` 로 건다)
-        [[nodiscard]] bool play( const AssetID& scenarioPath, const ScenarioPlayOptions& options );
-        void               stopPlayback();
-        bool               isPlaying() const { return _bPlayback; }
-        /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(프레임 관찰자로 붙일지 런처가 본다). */
+        /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(무인 실행 페이싱 · 재생기의 겹침 거절이 본다). */
         bool isBusy() const { return _pRunner != nullptr || _recordPath.empty() == false; }
 
         /** @brief 이 세션의 네 훅을 묶습니다(`EngineFrameHookList::add` 에 넘긴다). */
@@ -102,26 +98,6 @@ namespace sw
 
     private:
         /**
-         * @class ScenarioPlayer
-         * @brief 재생기(`IScenarioPlayer`)입니다. 세션이 그 인터페이스를 상속하지 않고 이 멤버를 호스트 범위에 건다(`Runtime::start`).
-         */
-        class ScenarioPlayer final : public IScenarioPlayer
-        {
-        public:
-            explicit ScenarioPlayer( AutomationSession& owner )
-                : _owner{ owner }
-            {
-            }
-
-            [[nodiscard]] bool play( const AssetID& scenarioPath, const ScenarioPlayOptions& options ) override { return _owner.play( scenarioPath, options ); }
-            void               stopPlayback() override { _owner.stopPlayback(); }
-            bool               isPlaying() const override { return _owner.isPlaying(); }
-
-        private:
-            AutomationSession& _owner;
-        };
-
-        /**
          * @class Runtime
          * @brief 바깥 창구(`IAutomationRuntime`)입니다. 세션이 그 인터페이스를 상속하지 않고 이 멤버를 공개한다(`getPublishedPart`). 구현은 `AutomationSession.cpp`.
          */
@@ -136,13 +112,14 @@ namespace sw
             [[nodiscard]] bool start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) override;
             bool               isBusy() const override;
             void               runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) override;
-            /** @brief 재생기를 호스트 범위에서 풀고 엔진 프레임에서 뗍니다(세션 종료가 부른다). 시작하지 않았으면 아무것도 하지 않습니다. */
+            /** @brief 재생기를 호스트 범위에서 풀어 내리고 세션을 엔진 프레임에서 뗍니다(세션 종료가 부른다). 시작하지 않았으면 아무것도 하지 않습니다. */
             void detach();
 
         private:
-            AutomationSession& _owner;
-            SubsystemScope*    _pHost{ nullptr };    ///< 재생기를 건 호스트 범위(`start` 전에는 nullptr)
-            Subscription       _frameSubscription{}; ///< 세션을 엔진 프레임 관찰자로 붙인 구독
+            AutomationSession&         _owner;
+            SubsystemScope*            _pHost{ nullptr };    ///< 재생기를 건 호스트 범위(`start` 전에는 nullptr)
+            Subscription               _frameSubscription{}; ///< 세션을 엔진 프레임 관찰자로 붙인 구독
+            unique_ptr<ScenarioPlayer> _pPlayer;             ///< 기본 재생기(`ScenarioPlayback` 이 호스트 범위에서 찾는다) — 세션과 따로 프레임 훅에 붙는다
         };
 
     private:
@@ -161,12 +138,6 @@ namespace sw
         void forgetStartValue( string_view name, string_view value );
         /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationOutcome`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
         [[nodiscard]] int32 onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount );
-        /** @brief 재생 실행기를 새로 세웁니다(처음 · 반복). */
-        void startPlayback();
-        /** @brief 재생의 프레임 끝입니다 — 사람 입력 · 단계 결과를 보고 반복 · 끝을 정한다. 늘 `kEngineFrameRunning`(재생은 프로세스를 끝내지 않는다). */
-        int32 updatePlayback( const EngineFrameContext& context );
-        /** @brief 재생을 끝맺고(돌고 있으면 멈추고) 고정 프레임 시간을 되돌린 뒤 알린다. */
-        void endPlayback( ScenarioPlayEnd end, InputManager* pInput );
         /** @brief 녹화를 시작할 프레임인지 보고(활성 씬이 플레이 중이고 시작 차단이 없다) 시작합니다. */
         void startRecordingWhenReady();
         /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */
@@ -179,24 +150,18 @@ namespace sw
         unique_ptr<AutomationRunner>        _pRunner;
         unique_ptr<AutomationScenarioChain> _pChain;
         ScenarioRecorder                    _recorder;
-        vector<string>                      _listRecordWatch;           ///< `-scenario-record-watches` 의 검사점
-        string                              _recordPath;                ///< `-scenario-record` 경로(비면 녹화하지 않는다)
-        string                              _reportPath;                ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
-        string                              _workingFolder;             ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
-        uint32                              _startWindowWidth;          ///< 시작할 때의 주 창 클라이언트 너비(둘째 단계부터 이 크기에서 시작한다, 창이 없으면 0)
-        uint32                              _startWindowHeight;         ///< 시작할 때의 주 창 클라이언트 높이
-        vector<pair<string, string>>        _listStartVariable;         ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
-        AutomationReproduceInput            _reproduceInput;            ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
-        uint32                              _screenshotBaseline;        ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
-        bool                                _bUnattended{ false };      ///< `-unattended` — 보는 사람이 없다. 시나리오가 `present="true"` 가 아니면 내보내지 않는다(`applyPresentPolicy`)
-        RenderThread*                       _pRenderThread{ nullptr };  ///< 사진을 실은 패킷을 단계 앞에서 비운다(`onFrameEnd`). `Runtime::start` 가 건다, 없으면(헤드리스) 비울 것이 없다
-        ScenarioPlayer                      _scenarioPlayer;            ///< 재생기(`Runtime::start` 가 호스트 범위에 건다)
-        Runtime                             _runtime;                   ///< 바깥 창구(`getPublishedPart`)
-        ScenarioPlayOptions                 _playOptions{};             ///< 재생 선택(재생 중일 때만 뜻이 있다)
-        AssetID                             _playPath{};                ///< 재생하는 시나리오
-        string                              _playPreviousFixedDelta{};  ///< 재생이 고정 프레임 시간을 걸기 전 값(끝나면 되돌린다)
-        uint64                              _playHumanInputSerial{ 0 }; ///< 재생을 시작할 때의 사람 입력 수
-        bool                                _bPlayback{ false };        ///< 재생 중(테스트 실행이 아니다)
-        AutomationRunTitleTracker           _runTitle;                  ///< 창 제목의 실행 정보(시나리오 · 백엔드 · 단계 · 프레임)
+        vector<string>                      _listRecordWatch;          ///< `-scenario-record-watches` 의 검사점
+        string                              _recordPath;               ///< `-scenario-record` 경로(비면 녹화하지 않는다)
+        string                              _reportPath;               ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
+        string                              _workingFolder;            ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
+        uint32                              _startWindowWidth;         ///< 시작할 때의 주 창 클라이언트 너비(둘째 단계부터 이 크기에서 시작한다, 창이 없으면 0)
+        uint32                              _startWindowHeight;        ///< 시작할 때의 주 창 클라이언트 높이
+        vector<pair<string, string>>        _listStartVariable;        ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
+        AutomationReproduceInput            _reproduceInput;           ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
+        uint32                              _screenshotBaseline;       ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
+        bool                                _bUnattended{ false };     ///< `-unattended` — 보는 사람이 없다. 시나리오가 `present="true"` 가 아니면 내보내지 않는다(`applyPresentPolicy`)
+        RenderThread*                       _pRenderThread{ nullptr }; ///< 사진을 실은 패킷을 단계 앞에서 비운다(`onFrameEnd`). `Runtime::start` 가 건다, 없으면(헤드리스) 비울 것이 없다
+        Runtime                             _runtime;                  ///< 바깥 창구(`getPublishedPart`)
+        AutomationRunTitleTracker           _runTitle;                 ///< 창 제목의 실행 정보(시나리오 · 백엔드 · 단계 · 프레임)
     };
 } // namespace sw
