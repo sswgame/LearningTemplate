@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -50,12 +51,9 @@ namespace sw
             static constexpr string_view kValueListSeparators = " \n\r\t"; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
 
             // 읽기가 보는 이름 전부다. 철자가 틀린 이름(`atlass` · `tx` 대신 `targetX`)이 조용히 기본값이 되지 않게 모르는 이름은 읽기 오류다(MaterialXML 과 같은 규칙).
-            static constexpr const utf8* kArrKnownRootChild[]          = { "name", "width", "height", "scene", "role", "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
-            static constexpr const utf8* kArrKnownTileAttribute[]      = { "h", "atlas", "tr", "tg", "tb" }; ///< 레이어 속성(`enc` · `pt`)은 `isFlagLayerAttribute` 가 받는다
-            static constexpr const utf8* kArrKnownWarpAttribute[]      = { "x", "y", "tx", "ty", "map", "pair" };
-            static constexpr const utf8* kArrKnownSpawnAttribute[]     = { "x", "y" };
-            static constexpr const utf8* kArrKnownTileLayerAttribute[] = { "tileSet" };
-            static constexpr const utf8* kArrKnownTileLayerChild[]     = { "palette", "cells" };
+            static constexpr const utf8* kArrKnownRootChild[]      = { "name", "width", "height", "scene", "role", "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
+            static constexpr const utf8* kArrKnownTileAttribute[]  = { "h", "atlas", "tr", "tg", "tb" }; ///< 레이어 속성(`enc` · `pt`)은 `isFlagLayerAttribute` 가 받는다
+            static constexpr const utf8* kArrKnownTileLayerChild[] = { "palette", "cells" };
 
             /** @brief 레이어 표가 `<t>` 속성으로 쓰는 이름인지입니다(표 하나가 정본이라 이름을 따로 적지 않는다). */
             static bool isFlagLayerAttribute( const utf8* pName )
@@ -115,9 +113,15 @@ namespace sw
                 const XMLNode spawn = root.findChild( "spawn" );
                 if ( spawn.isValid() )
                 {
-                    inoutValid = XMLNameCheck::reportUnknownAttributes( spawn, kArrKnownSpawnAttribute, data._name ) && inoutValid;
-                    inoutValid = spawn.readOptionalAttributeInRange( "x", 0, data._width - 1, data._spawnX ) && inoutValid;
-                    inoutValid = spawn.readOptionalAttributeInRange( "y", 0, data._height - 1, data._spawnY ) && inoutValid;
+                    TileSpawnFields fields{ data._spawnX, data._spawnY };
+                    inoutValid = XMLFields::readFields( spawn, fields, data._name ) && inoutValid;
+                    // 맵 안의 자리인지는 크기를 아는 여기서 본다(스키마 범위는 상수다).
+                    const bool bInside = fields._x < data._width && fields._y < data._height;
+                    if ( bInside == false )
+                        SW_LOG_ERROR_ID( "TileMap.SpawnOutside", "TileMap '%#': <spawn x=\"%#\" y=\"%#\"> is outside the %#x%# map", data._name, fields._x, fields._y, data._width, data._height );
+                    inoutValid   = bInside && inoutValid;
+                    data._spawnX = bInside ? fields._x : data._spawnX;
+                    data._spawnY = bInside ? fields._y : data._spawnY;
                 }
                 if ( TileMapXMLData::isSizeSupported( data._width, data._height ) == false )
                 {
@@ -195,28 +199,19 @@ namespace sw
             {
                 for ( XMLNode warpNode = warps.findChild( "warp" ); warpNode; warpNode = warpNode.findNextSibling( "warp" ) )
                 {
-                    inoutValid = XMLNameCheck::reportUnknownAttributes( warpNode, kArrKnownWarpAttribute, data._name ) && inoutValid;
-                    TileMapXMLData::Warp       warp{};
-                    const std::optional<int32> tileX       = warpNode.readRequiredAttribute<int32>( "x" );
-                    const std::optional<int32> tileY       = warpNode.readRequiredAttribute<int32>( "y" );
-                    const std::optional<int32> targetTileX = warpNode.readRequiredAttribute<int32>( "tx" );
-                    const std::optional<int32> targetTileY = warpNode.readRequiredAttribute<int32>( "ty" );
-                    const bool                 bComplete   = tileX.has_value() && tileY.has_value() && targetTileX.has_value() && targetTileY.has_value();
-                    if ( bComplete == false )
+                    TileWarpFields fields;
+                    if ( XMLFields::readFields( warpNode, fields, data._name ) == false )
                     {
                         inoutValid = false;
                         continue;
                     }
-                    warp._tileX      = *tileX;
-                    warp._tileY      = *tileY;
-                    const utf8* pMap = warpNode.findAttribute( "map" );
-                    if ( pMap != nullptr )
-                        warp._targetMap = pMap;
-                    warp._targetTileX = *targetTileX;
-                    warp._targetTileY = *targetTileY;
-                    const utf8* pPair = warpNode.findAttribute( "pair" );
-                    if ( pPair != nullptr )
-                        warp._pairID = pPair;
+                    TileMapXMLData::Warp warp{};
+                    warp._tileX       = fields._x;
+                    warp._tileY       = fields._y;
+                    warp._targetMap   = std::move( fields._map );
+                    warp._targetTileX = fields._tx;
+                    warp._targetTileY = fields._ty;
+                    warp._pairID      = std::move( fields._pair );
                     data._listWarp.push_back( std::move( warp ) );
                 }
             }
@@ -267,14 +262,18 @@ namespace sw
             /** @brief `<tileLayer>` 의 타일셋 경로 · 팔레트(브러시 이름) · 셀마다 팔레트 번호를 읽습니다. 셀 수가 맞지 않거나 팔레트 밖 번호는 읽기 오류(false)입니다. */
             [[nodiscard]] static bool readTileLayer( const XMLNode& tileLayer, TileMapXMLData& data, size_t count )
             {
-                const bool bKnownAttributes = XMLNameCheck::reportUnknownAttributes( tileLayer, kArrKnownTileLayerAttribute, data._name );
+                TileLayerFields layerFields;
+                const bool      bKnownAttributes = XMLFields::readFields( tileLayer, layerFields, data._name );
                 if ( ( XMLNameCheck::reportUnknownChildren( tileLayer, kArrKnownTileLayerChild, data._name ) && bKnownAttributes ) == false )
                     return false;
-                data._tileSetPath     = string( tileLayer.getAttributeText( "tileSet" ) );
+                data._tileSetPath     = std::move( layerFields._tileSet );
                 const XMLNode palette = tileLayer.findChild( "palette" );
                 for ( XMLNode entry = palette.isValid() ? palette.findChild( "b" ) : XMLNode{}; entry; entry = entry.findNextSibling( "b" ) )
                 {
-                    data._listPaletteName.push_back( string( entry.getAttributeText( "name" ) ) );
+                    TilePaletteEntryFields entryFields;
+                    if ( XMLFields::readFields( entry, entryFields, data._name ) == false )
+                        return false;
+                    data._listPaletteName.push_back( std::move( entryFields._name ) );
                 }
                 const utf8*       pCells = tileLayer.findChildText( "cells" );
                 const string_view cells  = ( pCells != nullptr ) ? string_view( pCells ) : string_view{};
@@ -286,16 +285,17 @@ namespace sw
             {
                 for ( XMLNode layerNode = dataLayers.isValid() ? dataLayers.findChild( "layer" ) : XMLNode{}; layerNode; layerNode = layerNode.findNextSibling( "layer" ) )
                 {
-                    TileMapXMLData::DataLayer  layer;
-                    const std::optional<int32> defaultValue = layerNode.readRequiredAttribute<int32>( "default" );
-                    layer._name                             = string( layerNode.getAttributeText( "name" ) );
-                    const bool bHeaderValid                 = layer._name.empty() == false && defaultValue.has_value() && data.findDataLayer( layer._name ) < 0;
+                    TileDataLayerFields fields;
+                    const bool          bFieldsRead  = XMLFields::readFields( layerNode, fields, data._name ); // 이름 · 기본값 필수는 PROPERTY
+                    const bool          bHeaderValid = bFieldsRead && fields._name.empty() == false && data.findDataLayer( fields._name ) < 0;
                     if ( bHeaderValid == false )
                     {
-                        SW_LOG_ERROR_ID( "TileMap.InvalidDataLayer", "TileMap '%#': <dataLayers><layer> needs a unique non-empty name and a default (name '%#')", data._name, layer._name );
+                        SW_LOG_ERROR_ID( "TileMap.InvalidDataLayer", "TileMap '%#': <dataLayers><layer> needs a unique non-empty name and a default (name '%#')", data._name, fields._name );
                         return false;
                     }
-                    layer._defaultValue = *defaultValue;
+                    TileMapXMLData::DataLayer layer;
+                    layer._name         = std::move( fields._name );
+                    layer._defaultValue = fields._default;
                     const utf8* pValues = layerNode.getText();
                     const bool  bValuesValid =
                         StringUtil::parseIntList( pValues != nullptr ? string_view( pValues ) : string_view{}, kValueListSeparators, layer._listValue ) && layer._listValue.size() == count;
@@ -363,14 +363,7 @@ namespace sw
                 const XMLNode warps = root.appendChild( "warps" );
                 for ( const TileMapXMLData::Warp& warp : data._listWarp )
                 {
-                    const XMLNode warpNode = warps.appendChild( "warp" );
-                    warpNode.appendAttribute( "x", warp._tileX );
-                    warpNode.appendAttribute( "y", warp._tileY );
-                    warpNode.appendAttribute( "map", warp._targetMap );
-                    warpNode.appendAttribute( "tx", warp._targetTileX );
-                    warpNode.appendAttribute( "ty", warp._targetTileY );
-                    if ( warp._pairID.empty() == false )
-                        warpNode.appendAttribute( "pair", warp._pairID );
+                    XMLFields::writeFields( warps.appendChild( "warp" ), TileWarpFields{ warp._tileX, warp._tileY, warp._targetMap, warp._targetTileX, warp._targetTileY, warp._pairID } );
                 }
             }
 
@@ -380,11 +373,11 @@ namespace sw
                 if ( data._tileSetPath.empty() )
                     return;
                 const XMLNode tileLayer = root.appendChild( "tileLayer" );
-                tileLayer.appendAttribute( "tileSet", data._tileSetPath );
+                XMLFields::writeFields( tileLayer, TileLayerFields{ data._tileSetPath } );
                 const XMLNode palette = tileLayer.appendChild( "palette" );
                 for ( const string& name : data._listPaletteName )
                 {
-                    palette.appendChild( "b" ).appendAttribute( "name", name );
+                    XMLFields::writeFields( palette.appendChild( "b" ), TilePaletteEntryFields{ name } );
                 }
                 string cells = "\n";
                 for ( int32 y = 0; y < data._height; ++y )
@@ -419,8 +412,7 @@ namespace sw
                         }
                     }
                     const XMLNode layerNode = dataLayers.appendChild( "layer", string_view{ values } );
-                    layerNode.appendAttribute( "name", layer._name );
-                    layerNode.appendAttribute( "default", layer._defaultValue );
+                    XMLFields::writeFields( layerNode, TileDataLayerFields{ layer._name, layer._defaultValue } );
                 }
             }
         };
@@ -683,9 +675,7 @@ namespace sw
         if ( _role.empty() == false )
             root.appendChild( "role", _role );
 
-        const XMLNode spawn = root.appendChild( "spawn" );
-        spawn.appendAttribute( "x", _spawnX );
-        spawn.appendAttribute( "y", _spawnY );
+        XMLFields::writeEveryField( root.appendChild( "spawn" ), TileSpawnFields{ _spawnX, _spawnY } );
 
         TileMapXMLInternal::appendTiles( root.appendChild( "tiles" ), *this );
         TileMapXMLInternal::appendWarps( root, *this );

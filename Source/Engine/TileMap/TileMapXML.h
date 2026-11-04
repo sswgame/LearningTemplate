@@ -11,9 +11,77 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    /**
+     * @brief 워프(`<warps><warp x y map tx ty pair/>`) 하나의 칸입니다. 자리 · 도착 맵(같은 맵이면 빈 글) · 도착 자리는 필수다 — 빠진 좌표를 (0, 0) 으로 두지 않는다.
+     * @details 칸 순서가 파일의 속성 순서다(저장 바이트를 기존 형식 그대로 지킨다 — `TileMapXMLTest.SavedBytesMatchTheExistingFormat`).
+     */
+    REFLECT()
+    struct SW_API TileWarpFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        int32 _x{ 0 };
+        PROPERTY( Required )
+        int32 _y{ 0 };
+        PROPERTY( Required )
+        string _map{};
+        PROPERTY( Required )
+        int32 _tx{ 0 };
+        PROPERTY( Required )
+        int32 _ty{ 0 };
+        PROPERTY()
+        string _pair{};
+    };
+
+    /** @brief 스폰(`<spawn x y/>`)의 칸입니다. 맵 안의 자리인지는 크기를 아는 읽기가 본다. */
+    REFLECT()
+    struct SW_API TileSpawnFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
+        int32 _x{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _y{ 0 };
+    };
+
+    /** @brief 타일 레이어(`<tileLayer tileSet>`)의 칸입니다. 팔레트 · 셀은 자식 원소다. */
+    REFLECT()
+    struct SW_API TileLayerFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _tileSet{};
+    };
+
+    /** @brief 팔레트 줄(`<palette><b name/>`)의 칸입니다. */
+    REFLECT()
+    struct SW_API TilePaletteEntryFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+    };
+
+    /** @brief 데이터 레이어(`<dataLayers><layer name default>값…</layer>`)의 칸입니다. 값 목록은 원소 글이라 손으로 푼다. */
+    REFLECT()
+    struct SW_API TileDataLayerFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY( Required )
+        int32 _default{ 0 };
+    };
+
     class TileSetAsset;
 
     /**

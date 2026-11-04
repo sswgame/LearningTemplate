@@ -432,8 +432,8 @@ SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
         "<layer name=\"cost\" default=\"0\">1 x</layer>",                                               // 숫자가 아니다
         "<layer name=\"cost\" default=\"0\">1 2</layer><layer name=\"cost\" default=\"0\">1 2</layer>", // 겹치는 이름
     };
-    SW_EXPECT_LOG( "TileMap.InvalidDataLayer" ); // 아래 자료는 모두 일부러 깨져 있다
-    SW_EXPECT_LOG( "Xml.MissingRequired" );      // 기본값 없는 레이어
+    SW_EXPECT_LOG( "TileMap.InvalidDataLayer" );       // 아래 자료는 모두 일부러 깨져 있다
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" ); // 이름 · 기본값 없는 레이어(TileDataLayerFields 의 Required)
     for ( const sw::string_view broken : arrBroken )
     {
         sw::TileMapXMLData map;
