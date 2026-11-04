@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 히스토리 창(history): 새 씬에 오브젝트 셋을 만들면(되돌리기 셋) 창의 줄을 눌러 그 시점으로 간다.
+  #1 줄 → 하나만 남고(UndoIndex 1), [Initial State] 줄 → 모두 되돌리고, 다시 실행 단추 → 하나 되살리고, #3 줄 → 모두 되살린다. 지우기 단추는 기록을 비운다.
+  감시 값: Editor.UndoIndex(되돌리기 위치) · Editor.UndoCount(기록 수). 오브젝트는 EditorExpectObject 로 센다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/historypanel.scenario.xml -unattended
+-->
+<Scenario name="editor.historypanel" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="editor scene.new"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="hierarchy.create"/>
+	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="hierarchy.create"/>
+	<WaitUntil watch="Editor.UndoCount" equals="2" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="hierarchy.create"/>
+	<WaitUntil watch="Editor.UndoCount" equals="3" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus history"/>
+	<EditorWaitSettled/>
+	<!-- #1 줄 — 첫 만들기 뒤로 간다 -->
+	<EditorClick mark="history.step.1"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.UndoCount" equals="3"/>
+	<EditorWaitSettled/>
+	<!-- 처음 상태 — 만든 것이 모두 사라진다 -->
+	<EditorClick mark="history.step.0"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorExpectObject name="GameObject" count="0"/>
+	<!-- 다시 실행 단추 · 끝 줄 -->
+	<EditorWaitSettled/>
+	<EditorClick mark="history.redo"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="history.step.3"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="3" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="history.undo"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="2" timeoutFrames="60"/>
+	<!-- 지우기 — 기록이 빈다 -->
+	<EditorWaitSettled/>
+	<EditorClick mark="history.clear"/>
+	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>
