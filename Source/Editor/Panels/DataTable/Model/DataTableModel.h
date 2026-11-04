@@ -51,7 +51,8 @@ namespace sw::editor
         /** @brief 프로젝트 @p projectIndex 로 바꾸고 다시 읽습니다. 고친 것이 남았으면(잃지 않게) 바꾸지 않습니다. */
         void selectProject( size_t projectIndex );
         /** @brief 레코드 표입니다. 칸을 고친 쪽은 `markRecordModified` 를 부릅니다. */
-        LocalizationSheet& editSheet() { return _localizationSheet; }
+        LocalizationSheet&       editSheet() { return _localizationSheet; }
+        const LocalizationSheet& getSheet() const { return _localizationSheet; }
         /** @brief 레코드 @p record 를 고친 것으로 표시하고 로컬라이즈 문서를 dirty 로 만듭니다(칸 편집). */
         void markRecordModified( LocalizationRecord& record );
         /**

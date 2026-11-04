@@ -3,6 +3,7 @@
 #include "Editor/Panels/DataTable/DataTablePanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -12,8 +13,12 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -28,6 +33,36 @@ namespace sw::editor
             static constexpr Color kStaleText{ 1.0f, 0.62f, 0.25f, 1.0f };
             static constexpr Color kReviewText{ 0.95f, 0.85f, 0.30f, 1.0f };
             static constexpr Color kTooLongBorder{ 0.95f, 0.25f, 0.25f, 1.0f };
+
+            /** @brief 열린 데이터 테이블 창의 현지화 표 레코드 수 · 보이는 행 수를 읽습니다. 창이 닫혔거나 표를 읽지 않았으면 false 입니다. */
+            [[nodiscard]] static bool readRecordCounts( uint32& outRecordCount, uint32& outVisibleCount )
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return false;
+                const DataTablePanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<DataTablePanel>();
+                return pPanel != nullptr && pPanel->isOpen() && pPanel->findLocalizationRecordCounts( outRecordCount, outVisibleCount );
+            }
+
+            [[nodiscard]] static bool readRecordCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                uint32 recordCount{ 0 };
+                uint32 visibleCount{ 0 };
+                if ( readRecordCounts( recordCount, visibleCount ) == false )
+                    return false;
+                outValue = static_cast<float64>( recordCount );
+                return true;
+            }
+
+            [[nodiscard]] static bool readVisibleRecordCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                uint32 recordCount{ 0 };
+                uint32 visibleCount{ 0 };
+                if ( readRecordCounts( recordCount, visibleCount ) == false )
+                    return false;
+                outValue = static_cast<float64>( visibleCount );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -35,6 +70,10 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( DataTablePanel, DataTablePanel::kPanelID, EditorPanelCategory::Tool, 1700 );
+    SW_AUTOMATION_WATCH( editorDataTableRecordCount, "Editor.DataTableRecordCount", "Records of the localization table the Data Table window holds (fails while it is closed or not loaded)",
+                         &DataTablePanelInternal::readRecordCount );
+    SW_AUTOMATION_WATCH( editorDataTableVisibleRecordCount, "Editor.DataTableVisibleRecordCount", "Localization rows the Data Table window drew after its search in the last frame",
+                         &DataTablePanelInternal::readVisibleRecordCount );
 
     DataTablePanel::DataTablePanel()
         : IEditorDocumentPanel{ false }
@@ -60,6 +99,15 @@ namespace sw::editor
     {
         _model.revert();
         syncDocumentDirty();
+    }
+
+    bool DataTablePanel::findLocalizationRecordCounts( uint32& outRecordCount, uint32& outVisibleCount ) const
+    {
+        if ( _model.isLocalizationLoaded() == false )
+            return false;
+        outRecordCount  = static_cast<uint32>( _model.getSheet()._listRecord.size() );
+        outVisibleCount = static_cast<uint32>( _listVisibleLocalizationIndex.size() );
+        return true;
     }
 
     void DataTablePanel::syncDocumentDirty()
@@ -132,6 +180,7 @@ namespace sw::editor
             }
             EditorChrome::sameLineIfFits( 240.0f ); // 검색 칸 폭(아래 인자와 같다)
             EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCKEY( "EditorDataTable", "SearchHint" ), 240.0f, false );
+            EditorSelfTestMarks::note( "dataTable.search" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveLocalization" ) ) );
 
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveLocalization" ) ) )
@@ -141,14 +190,17 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
                 _model.reloadLocalization();
+            EditorSelfTestMarks::note( "dataTable.reload" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ReloadTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 21.0f ) ); // 좁은 창에서 새 키 칸이 오른쪽 끝에서 잘렸다(uiaudit 23)
             EditorChrome::setNextItemWidthColumns( 21.0f );
             ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
+            EditorSelfTestMarks::note( "dataTable.newKey" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "AddKey" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) && _model.addKey( _newKeyBuffer.c_str() ) )
                 _newKeyBuffer.clear();
+            EditorSelfTestMarks::note( "dataTable.addKey" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "AddKeyTip" ) );
         }
         EditorChrome::endToolbar();
@@ -294,6 +346,9 @@ namespace sw::editor
         ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureCount ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Del" ) ) )
             bDeleteRequested = true;
+        fixed_string<constant::buffer::kMax128> mark;
+        formatstring( mark.data(), mark.capacity(), "dataTable.delete.%#", record._key.c_str() );
+        EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 더한 키를 지운다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "DeleteKeyTip" ) );
 
         ImGui::PopID();

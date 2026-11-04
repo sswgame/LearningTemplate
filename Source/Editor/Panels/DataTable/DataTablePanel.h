@@ -42,6 +42,11 @@ namespace sw::editor
         bool               isToolPanel() const override { return true; }
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;
+        /**
+         * @brief 현지화 표의 레코드 수와 지난 그리기에서 검색을 지난 행 수입니다. 표를 아직 읽지 않았으면 false 입니다
+         *        (감시 값 `Editor.DataTableRecordCount` · `Editor.DataTableVisibleRecordCount`).
+         */
+        [[nodiscard]] bool findLocalizationRecordCounts( uint32& outRecordCount, uint32& outVisibleCount ) const;
 
     private:
         void drawLocalizationTab();

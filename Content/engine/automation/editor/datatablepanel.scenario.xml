@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 데이터 테이블 창(data_table)의 현지화 표: 표가 읽히면 새 키 칸에 키를 적고 Add Key 로 행을 더한다(레코드 수가 늘고 창이 저장 안 된 상태).
+  검색 칸에 그 키를 치면 그 행 하나만 보이고, 그 행의 Del 이 지우면 레코드 수가 처음으로 돌아온다. Reload 는 고친 것을 버려 저장 안 된 표시를 걷는다.
+  파일은 저장하지 않는다(저장소의 현지화 표를 건드리지 않는다 — catalogeditor 와 같은 규칙).
+  감시 값: Editor.DataTableRecordCount(표의 레코드 수) · Editor.DataTableVisibleRecordCount(검색을 지난 행) · Editor.PanelDirty(gv_editorWatchPanel=data_table).
+  실행: App -EnableEditor -scenario=engine/automation/editor/datatablepanel.scenario.xml -unattended
+-->
+<Scenario name="editor.datatablepanel" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchPanel" value="data_table"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus data_table"/>
+	<WaitUntil watch="Editor.DataTableRecordCount" atLeast="1" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<Remember watch="Editor.DataTableRecordCount" as="records"/>
+	<!-- 새 키 — 행이 하나 는다 -->
+	<EditorClick mark="dataTable.newKey"/>
+	<EditorWaitSettled/>
+	<EditorText value="zz.scenario.datatablepanel"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="dataTable.addKey"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.DataTableRecordCount" differsFrom="records"/>
+	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<!-- 검색 — 더한 키 하나만 보인다 -->
+	<EditorClick mark="dataTable.search"/>
+	<EditorWaitSettled/>
+	<EditorText value="zz.scenario.datatablepanel"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.DataTableVisibleRecordCount" equals="1"/>
+	<!-- 지우기 — 레코드 수가 처음과 같다 -->
+	<EditorClick mark="dataTable.delete.zz.scenario.datatablepanel"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.DataTableRecordCount" sameAs="records"/>
+	<Expect watch="Editor.DataTableVisibleRecordCount" equals="0"/>
+	<!-- 다시 읽기 — 고친 것을 버린다 -->
+	<EditorClick mark="dataTable.reload"/>
+	<WaitUntil watch="Editor.PanelDirty" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Editor.DataTableRecordCount" atLeast="1" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.DataTableRecordCount" sameAs="records"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>
