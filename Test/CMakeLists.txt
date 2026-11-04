@@ -109,7 +109,7 @@ if(TARGET EditorModule)
 	# 백엔드마다 돈다 — 기본 백엔드(DX12)만 돌 때 DX11 에서 머티리얼 PSO 가 만드는 중인 프레임을 읽어 빈 사진이 되던 결함이 숨었다.
 	foreach(backend DirectX11 DirectX12 Vulkan OpenGL)
 		add_test(NAME Bake.Portraits.${backend}
-			COMMAND $<TARGET_FILE:App> --render-portraits=common/prefabs/blaster_a.prefab.xml -portrait-size=64 -portrait-dir=${CMAKE_BINARY_DIR}/Testing/Portraits/${backend}
+			COMMAND $<TARGET_FILE:App> --render-portraits=common/prefabs/quaternius/scifi/gun_pistol.prefab.xml -portrait-size=64 -portrait-dir=${CMAKE_BINARY_DIR}/Testing/Portraits/${backend}
 				-gv_rhiBackend=${backend} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Bake.Portraits.${backend}.log
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(Bake.Portraits.${backend} PROPERTIES LABELS hostgpu TIMEOUT 300)
