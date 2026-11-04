@@ -19,6 +19,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | add a helper or a TU-private type | [Helpers](docs/agents/Helpers.md) | `Util` vs `Internal`, one anonymous namespace per file |
 | write C++ bodies or code that runs in parallel | [CppStyle](docs/agents/CppStyle.md) | branches, loops, types, parallel-safe code |
 | make code behave differently in Dev and Shipping (or Client and Server) | [BuildConfigSwitch](docs/agents/BuildConfigSwitch.md) | `build::kShipping` vs `#if` vs variant file |
+| change or review an editor panel, shared widget, theme token or editor input | [EditorUI](docs/agents/EditorUI.md) | tokens, app-screen rules, UI capture, review checklist, context-menu and input rules |
 | are about to write a helper for a common job, or call a C runtime / `std` facility | [ExistingFacilities](docs/agents/ExistingFacilities.md) | what Core and Engine already provide, and what not to call |
 
 ## Project architecture

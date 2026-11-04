@@ -1,7 +1,7 @@
 /**
  * @file EditorDragPayload.h
  * @brief 에디터 끌어 놓기 페이로드(`{종류, id}`)와 받는 쪽의 종류 집합입니다.
- * @details 지금 페이로드가 세 형식(에셋 경로 문자열 · 오브젝트 uint64 · 위젯 타입 이름)이고 받는 쪽이 이름 문자열을 하나씩 비교한다(EditorUX 10-2).
+ * @details 예전 페이로드는 세 형식(에셋 경로 문자열 · 오브젝트 uint64 · 위젯 타입 이름)이고 받는 쪽이 이름 문자열을 하나씩 비교했다(규칙: `docs/agents/EditorUI.md` 입력 절).
  *          형식을 하나로 두고 받는 쪽이 종류 집합을 넘기면 집합 밖 종류는 어댑터(`Common/Input`)가 거절한다. ImGui 를 쓰지 않는다.
  *          언리얼의 타입 있는 `FDragDropOperation` 과 같은 선이다(기억).
  */

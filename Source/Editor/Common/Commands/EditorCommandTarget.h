@@ -2,7 +2,7 @@
  * @file EditorCommandTarget.h
  * @brief 에디터 명령이 받는 대상(우클릭 · 단축키를 누른 곳의 종류, 선택 스냅숏, 커서 아래 항목, 월드 위치)입니다.
  * @details 명령 등록부의 동작은 이 대상을 받는다(`EditorCommandDesc::_action`). 인자 없는 동작이면 "누른 대상" 을 받을 수 없어 Duplicate · Delete · Rename 같은
- *          대상 명령을 패널이 키를 직접 읽어 처리했다(EditorUX 10-2). ImGui 를 쓰지 않는다(EditorTest 가 테스트한다).
+ *          대상 명령을 패널이 키를 직접 읽어 처리했다(`docs/agents/EditorUI.md` 입력 절). ImGui 를 쓰지 않는다(EditorTest 가 테스트한다).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -15,7 +15,7 @@ namespace sw::editor
 {
     /**
      * @enum EditorCommandTargetKind
-     * @brief 명령이 받는 대상의 종류입니다. 맥락 메뉴의 종류이기도 하다 — 같은 종류는 어느 패널에서 열어도 같은 메뉴다(EditorUX 10-3 R5).
+     * @brief 명령이 받는 대상의 종류입니다. 맥락 메뉴의 종류이기도 하다 — 같은 종류는 어느 패널에서 열어도 같은 메뉴다(`EditorUI.md` R5).
      */
     ENUM()
     enum class EditorCommandTargetKind : uint8
@@ -62,7 +62,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorContextMenuRules
-     * @brief 맥락 메뉴가 열리는 순간의 대상 규칙(EditorUX 10-3 R2 · R3)입니다. ImGui 를 쓰지 않아 EditorTest 가 테스트하고, 어댑터(`EditorInputGUI`)가 이것 하나를 부른다.
+     * @brief 맥락 메뉴가 열리는 순간의 대상 규칙(`EditorUI.md` R2 · R3)입니다. ImGui 를 쓰지 않아 EditorTest 가 테스트하고, 어댑터(`EditorInputGUI`)가 이것 하나를 부른다.
      */
     struct EditorContextMenuRules
     {

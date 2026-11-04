@@ -2,7 +2,7 @@
  * @file EditorInputGUI.h
  * @brief 입력 맵에 없는 에디터 입력을 ImGui 로 옮기는 유일한 곳입니다 — 맥락 메뉴, 끌어 놓기, 항목 클릭 · 포인터 상태, 비맥락 팝업 열기.
  * @details 키 · 단축키는 엔진 입력 맵(`EditorInputActions`)이 판정한다. 여기는 그 맵이 모르는 것(어느 항목 위에서 눌렀나, 무엇을 끄나, 캔버스 도구의 포인터)만 맡는다.
- *          패널 티어(Panels · AssetActions · Viewport)는 ImGui 입력 함수를 직접 부르지 않고 이 파일만 쓴다(`EditorInputBan.h`, EditorUX 10-4).
+ *          패널 티어(Panels · AssetActions · Viewport)는 ImGui 입력 함수를 직접 부르지 않고 이 파일만 쓴다(`EditorInputBan.h`, `docs/agents/EditorUI.md` 입력 절).
  *          클릭 · 끌기 · 더블클릭의 문턱은 입력 맵의 값 하나다 — `EditorInputActions::processFrame` 이 ImGui 에 같은 값을 넣는다.
  */
 #pragma once

@@ -115,7 +115,7 @@ namespace sw::editor
         string _detail;   ///< 팔레트 오른쪽 설명(영어)
         /**
          * @brief 이 커맨드를 부르는 에디터 입력 맵(`editor.input.xml`)의 액션 이름입니다. 비어 있으면 단축키가 없습니다.
-         * @details 키 · 수정 키 · 범위(레이어) · 사용자 재배치는 입력 맵이 정한다 — 명령은 액션 이름만 든다(EditorUX 10-4). 액션 이름은 관례로 명령 id 와 같다.
+         * @details 키 · 수정 키 · 범위(레이어) · 사용자 재배치는 입력 맵이 정한다 — 명령은 액션 이름만 든다(`docs/agents/EditorUI.md` 입력 절). 액션 이름은 관례로 명령 id 와 같다.
          */
         string _inputAction;
         /**
@@ -131,7 +131,7 @@ namespace sw::editor
         bool   _bPaletteVisible{ true };
         /**
          * @brief 이 커맨드가 놓일 맥락(우클릭) 메뉴의 종류입니다. `None` 이면 어느 맥락 메뉴에도 나오지 않습니다.
-         * @details 메뉴 종류는 대상 종류다 — 같은 종류는 어느 패널에서 열어도 같은 메뉴다(EditorUX 10-3 R5). 순서 · 구분선 규칙은 메뉴바와 같다(`_contextMenuOrder`).
+         * @details 메뉴 종류는 대상 종류다 — 같은 종류는 어느 패널에서 열어도 같은 메뉴다(`EditorUI.md` R5). 순서 · 구분선 규칙은 메뉴바와 같다(`_contextMenuOrder`).
          */
         EditorCommandTargetKind _contextMenuKind{ EditorCommandTargetKind::None };
         int32                   _contextMenuOrder{ 0 }; ///< 맥락 메뉴 안 순서. 백의 자리가 바뀌면 구분선이 들어간다
