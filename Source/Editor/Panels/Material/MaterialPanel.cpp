@@ -8,12 +8,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
@@ -33,6 +35,9 @@ namespace sw::editor
     {
         struct MaterialPanelInternal
         {
+            /** @brief 값이 기본값과 다르면 true 입니다. 기본값이 없는 칸(텍스처 슬롯)은 되돌릴 곳이 없어 늘 false 다. */
+            static bool isModified( const MaterialProperty& prop ) { return prop._defaultValue.empty() == false && prop._value != prop._defaultValue; }
+
             static constexpr Color kPreviewBg{ Color::fromBytes( 38, 38, 44, 255 ) };
             /// @brief 미리보기 한 변(96 DPI 기준 픽셀)입니다. CPU 구와 미리보기 씬 뷰포트의 높이가 같다.
             static constexpr float32 kPreviewSide = 160.0f;
@@ -243,6 +248,16 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 기본값과 다른(되돌리기 단추가 붙는) 프로퍼티 수입니다. */
+            [[nodiscard]] static bool readModifiedPropertyCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MaterialPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->countModifiedProperties() );
+                return true;
+            }
+
             [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const MaterialPanel* pPanel = findOpenPanel();
@@ -271,6 +286,10 @@ namespace sw::editor
                          "Frames the Material panel asked the renderer to draw its preview scene (0 until the panel shows a document)",
                          &MaterialPanelInternal::readPreviewSceneFrames );
 
+    SW_AUTOMATION_WATCH( editorMaterialModifiedPropertyCount, "Editor.MaterialModifiedPropertyCount",
+                         "Properties of the Material panel's document whose value differs from the default (each shows a reset button)",
+                         &MaterialPanelInternal::readModifiedPropertyCount );
+
     MaterialPanel::MaterialPanel()
         : EditorPreviewPanel{ EditorAssetType{ Material::kAssetType }, false }
         , _model{}
@@ -292,17 +311,16 @@ namespace sw::editor
         }
 
         // 문서 경로는 위의 문서 고르기 칸이 보인다 — 같은 경로를 한 줄 더 쓰지 않는다.
-        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
+        // 글 단추 셋(다시 읽기 · 저장 · 선택에 적용)은 아이콘 단추 + 툴팁으로 줄인다(언리얼 머티리얼 에디터 툴바 · Godot 인스펙터 머리 줄과 같은 모양).
+        if ( EditorCompactControls::drawIconButton( "##materialReload", SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EditorMaterial", "ReloadTip" ) ) )
             reloadDocument();
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ReloadTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
+        EditorSelfTestMarks::note( "material.reload" );
+        ImGui::SameLine();
+        if ( EditorCompactControls::drawIconButton( "##materialSave", SW_EDITORICON( "Save" ), SW_LOCKEY( "EditorMaterial", "SaveTip" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "SaveTip" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ApplyToSelection" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplyToSelection" ) ) )
+        ImGui::SameLine();
+        if ( EditorCompactControls::drawIconButton( "##materialApply", SW_EDITORICON( "Check" ), SW_LOCKEY( "EditorMaterial", "ApplyToSelectionTip" ) ) )
             applyLivePreview();
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ApplyToSelectionTip" ) );
         drawPreview();
         // 렌더러가 그리는 미리보기 씬의 구 — 메인 뷰포트의 선택 오브젝트를 빌리지 않는다.
         syncPreviewSubjectMaterial();
@@ -332,19 +350,49 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ShaderTip" ) );
 
         ImGui::Separator();
+        drawPropertyList();
+
+        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
+    }
+
+    void MaterialPanel::drawPropertyList()
+    {
+        // 머티리얼은 프로퍼티가 수십 개라 이름으로 찾는 칸을 둔다(언리얼 머티리얼 인스턴스 에디터 · 유니티 머티리얼 인스펙터의 검색과 같은 자리).
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Properties" ) );
+        ImGui::SameLine();
+        EditorWidgets::drawSearchField( "##materialPropFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), 0.0f, false );
+        EditorSelfTestMarks::note( "material.propertyFilter" );
+
+        const EditorListFilter          filter{ _propertyFilter.c_str() };
         Material&                       material = _model.editMaterial();
         const vector<MaterialProperty>& listProp = material.getProperties();
+        uint32                          shownCount{ 0 };
         for ( uint32 propIndex = 0; propIndex < static_cast<uint32>( listProp.size() ); ++propIndex )
         {
             const MaterialProperty& src = listProp[propIndex];
-            if ( src._bHidden == SW_TRUE )
+            if ( src._bHidden == SW_TRUE || filter.matchesAny( { src._name, src._displayName } ) == false )
                 continue;
             MaterialProperty* pProp = material.findProperty( hashed_string( src._name.c_str() ) );
             if ( pProp == nullptr )
                 continue;
+            ++shownCount;
             ImGui::PushID( static_cast<int32>( propIndex ) );
-            const bool bChanged = MaterialPanelInternal::drawTypedProperty( *pProp );
+            bool                                    bChanged = MaterialPanelInternal::drawTypedProperty( *pProp );
+            fixed_string<constant::buffer::kMax128> propertyMark;
+            formatstring( propertyMark.data(), propertyMark.capacity(), "material.property.%s", pProp->_name.c_str() );
+            EditorSelfTestMarks::note( propertyMark.c_str() );
+            // 기본값과 다른 행만 되돌리기 단추를 둔다 — 인스펙터와 같은 공용 단추라 모양 · 툴팁이 같다.
+            if ( MaterialPanelInternal::isModified( *pProp ) )
+            {
+                if ( EditorCompactControls::drawResetButton( "##reset", SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) ) )
+                {
+                    pProp->_assetPath.clear(); // 텍스처 칸은 경로가 값보다 앞선다 — 비워야 기본값 글이 보인다
+                    bChanged = material.resetParameterToDefault( hashed_string( pProp->_name.c_str() ) ) || bChanged;
+                }
+                fixed_string<constant::buffer::kMax128> resetMark;
+                formatstring( resetMark.data(), resetMark.capacity(), "material.reset.%s", pProp->_name.c_str() );
+                EditorSelfTestMarks::note( resetMark.c_str() );
+            }
             if ( bChanged )
             {
                 fixed_string<constant::buffer::kMax128> key;
@@ -354,8 +402,19 @@ namespace sw::editor
             }
             ImGui::PopID();
         }
+        if ( shownCount == 0 && filter.isActive() )
+            EditorWidgets::drawNoSearchResultHint( filter.getText() );
+    }
 
-        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
+    uint32 MaterialPanel::countModifiedProperties() const
+    {
+        uint32 count{ 0 };
+        for ( const MaterialProperty& prop : _model.getMaterial().getProperties() )
+        {
+            if ( prop._bHidden != SW_TRUE && MaterialPanelInternal::isModified( prop ) )
+                ++count;
+        }
+        return count;
     }
 
     void MaterialPanel::drawPreview()

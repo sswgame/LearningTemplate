@@ -1,4 +1,7 @@
 #pragma once
+#include "Core/Foundation/Constants.h"
+#include "Core/String/fixed_string.h"
+
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Panels/Material/Model/MaterialModel.h"
 
@@ -43,7 +46,14 @@ namespace sw::editor
         /** @brief 미저장 편집 때문에 "그래도 바꿀까요?" 대답을 기다리는 중이면 true 입니다(감시 값 `Editor.MaterialSwitchPending`). */
         bool isWaitingForSwitchAnswer() const { return isSwitchConfirmPending(); }
 
+        /** @brief 기본값과 다른 프로퍼티 수입니다(감시 값 `Editor.MaterialModifiedPropertyCount`). */
+        uint32 countModifiedProperties() const;
+
     private:
-        MaterialModel _model;
+        /** @brief 프로퍼티 목록(검색 · 행마다 기본값 되돌리기)을 그립니다. 언리얼 머티리얼 인스턴스 에디터의 파라미터 목록과 같은 자리다. */
+        void drawPropertyList();
+
+        MaterialModel                          _model;
+        fixed_string<constant::buffer::kMax64> _propertyFilter; ///< 프로퍼티 검색 글(이름 · 표시 이름 부분 일치)
     };
 } // namespace sw::editor

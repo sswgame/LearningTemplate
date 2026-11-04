@@ -15,6 +15,7 @@
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -242,12 +243,8 @@ namespace sw::editor
         if ( pFieldTooltip != nullptr )
             EditorWidgets::drawTooltip( pFieldTooltip );
         ImGui::SameLine();
-        // 켜져 있으면 강조색으로 그려 거른 상태임을 알린다. 꺼진 줄 모르고 프로퍼티가 사라졌다고 여기지 않게 한다.
-        if ( EditorWidgets::drawToggleIconButton( "##inspectorViewOptions", _bShowModifiedOnly, SW_EDITORICON( "Filter" ), SW_EDITORICON( "Filter" ),
-                                                  SW_LOCKEY( "EditorInspector", "ViewOptions" ), SW_LOCKEY( "EditorInspector", "ViewOptions" ) ) )
-            EditorInputGUI::openPopup( "InspectorViewOptions" );
-        EditorSelfTestMarks::note( "inspector.viewOptions" );
-        if ( ImGui::BeginPopup( "InspectorViewOptions" ) )
+        // 거르는 중이면 단추가 켜진 바탕으로 그려진다 — 꺼진 줄 모르고 프로퍼티가 사라졌다고 여기지 않게 한다(예전 아이콘 토글은 켜도 모양이 같았다).
+        if ( EditorCompactControls::beginViewOptions( "##InspectorViewOptions", _bShowModifiedOnly, SW_LOCKEY( "EditorInspector", "ViewOptions" ), "inspector.viewOptions" ) )
         {
             ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ShowOnlyModifiedProperties" ), nullptr, &_bShowModifiedOnly );
             EditorSelfTestMarks::note( "inspector.viewOptions.modifiedOnly" );
@@ -258,7 +255,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CollapseAll" ) ) )
                 _openAllRequest = -1;
             EditorSelfTestMarks::note( "inspector.viewOptions.collapseAll" );
-            ImGui::EndPopup();
+            EditorCompactControls::endViewOptions();
         }
     }
 
@@ -417,7 +414,7 @@ namespace sw::editor
             if ( ImGui::CollapsingHeader( category.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
                 continue;
 
-            if ( ImGui::BeginTable( category.c_str(), 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg ) )
+            if ( ImGui::BeginTable( category.c_str(), 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable ) ) // 줄무늬 바탕은 두지 않는다(앱 화면 규칙 — 행은 간격으로 가른다)
             {
                 ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 150.0f * EditorThemeUtil::getDPIScale() );
                 ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
@@ -496,10 +493,8 @@ namespace sw::editor
         // 기본값과 다르면 이름 영역 끝에 되돌리기 버튼(언리얼의 노란 화살표)을 둔다. 기본값은 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트다.
         if ( EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) == false )
         {
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITORICON( "Refresh" ) ) );
-            if ( ImGui::SmallButton( SW_EDITORICON( "Refresh" ) ) )
+            if ( EditorCompactControls::drawResetButton( "##reset", SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) ) )
                 resetPropertyToDefault( instance, prop, defaultInstance );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
             fixed_string<constant::buffer::kMax128> resetMark;
             formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
             EditorSelfTestMarks::note( resetMark.c_str() );

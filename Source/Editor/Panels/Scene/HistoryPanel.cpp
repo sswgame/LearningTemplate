@@ -6,7 +6,9 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -26,8 +28,10 @@ namespace sw::editor
     {
         struct HistoryPanelInternal
         {
-            static constexpr Color kCurrentMarker{ 0.2f, 0.8f, 0.3f, 1.0f };
-            static constexpr Color kUndoneText{ 0.5f, 0.5f, 0.5f, 1.0f };
+            /** @brief 지금 위치 표시입니다. 선택과 같은 뜻이라 강조색이다(앱 화면 규칙 — 강조색은 데이터 · 선택에만, 예전 고정 초록은 테마를 따르지 않았다). */
+            static Color getCurrentMarker() { return SW_THEMECOLOR( "Base", "Accent" ); }
+            /** @brief 되돌린(다시 실행할 수 있는) 항목의 흐린 글입니다. */
+            static Color getUndoneText() { return SW_THEMECOLOR( "Base", "TextMuted" ); }
 
             /** @brief 위쪽 막대(실행 취소 · 다시 실행 · 지우기 · 위치 표시)를 그립니다. */
             static void drawToolbar( CommandStack& cmdStack )
@@ -37,30 +41,21 @@ namespace sw::editor
                 const bool   bCanUndo  = cmdStack.canUndo();
                 const bool   bCanRedo  = cmdStack.canRedo();
 
-                // 상단 툴바: 실행 취소, 다시 실행, 히스토리 지우기
+                // 상단 툴바: 실행 취소 · 다시 실행 · 기록 지우기. 글 단추("Undo (Ctrl+Z)")는 좁은 도크에서 잘려 아이콘 + 툴팁으로 둔다(언리얼 Undo History · 유니티 툴바와 같은 모양).
+                // 막힌 단추는 왜 막혔는지 툴팁에 쓴다.
                 if ( EditorChrome::beginToolbar( "##HistoryToolbar" ) )
                 {
-                    if ( bCanUndo == false )
-                        ImGui::BeginDisabled();
-                    if ( ImGui::Button( SW_LOCKEY( "EdText", "UndoCtrlZ" ) ) )
+                    if ( EditorCompactControls::drawIconButton( "##historyUndo", SW_EDITORICON( "Undo" ), SW_LOCKEY( "EditorScene", "HistoryUndo" ),
+                                                                bCanUndo ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToUndo" ) ) )
                         cmdStack.undo();
-                    if ( bCanUndo == false )
-                        ImGui::EndDisabled();
-                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HistoryUndo" ) );
-
                     ImGui::SameLine();
-                    if ( bCanRedo == false )
-                        ImGui::BeginDisabled();
-                    if ( ImGui::Button( SW_LOCKEY( "EdText", "RedoCtrlY" ) ) )
+                    if ( EditorCompactControls::drawIconButton( "##historyRedo", SW_EDITORICON( "Redo" ), SW_LOCKEY( "EditorScene", "HistoryRedo" ),
+                                                                bCanRedo ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToRedo" ) ) )
                         cmdStack.redo();
-                    if ( bCanRedo == false )
-                        ImGui::EndDisabled();
-                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HistoryRedo" ) );
-
-                    EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
-                    if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Clear" ) ) )
+                    ImGui::SameLine();
+                    if ( EditorCompactControls::drawIconButton( "##historyClear", SW_EDITORICON( "Trash" ), SW_LOCKEY( "EditorScene", "HistoryClear" ),
+                                                                cmdCount > 0 ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToUndo" ) ) )
                         cmdStack.clear();
-                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HistoryClear" ) );
 
                     ImGui::SameLine();
                     EditorWidgets::drawCountLabel( static_cast<uint32>( currIndex ), static_cast<uint32>( cmdCount ) );
@@ -75,7 +70,8 @@ namespace sw::editor
                 const size_t currIndex = cmdStack.getCurrentIndex();
 
                 // 명령 히스토리 리스트 테이블
-                if ( ImGui::BeginTable( "HistoryTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY ) )
+                // 줄무늬 바탕은 두지 않는다(앱 화면 규칙 — 행은 간격으로 가른다).
+                if ( ImGui::BeginTable( "HistoryTable", 3, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY ) )
                 {
                     ImGui::TableSetupColumn( "Step", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDPIScale() );
                     ImGui::TableSetupColumn( "Status", ImGuiTableColumnFlags_WidthFixed, 30.0f * EditorThemeUtil::getDPIScale() );
@@ -88,12 +84,12 @@ namespace sw::editor
                     ImGui::TextDisabled( "#0" );
                     ImGui::TableNextColumn();
                     if ( currIndex == 0 )
-                        ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::kCurrentMarker ), ">" );
+                        ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::getCurrentMarker() ), ">" );
                     else
                         ImGui::TextUnformatted( "" );
                     ImGui::TableNextColumn();
                     const bool bZeroSelected = ( currIndex == 0 );
-                    if ( ImGui::Selectable( "[Initial State]##entry0", bZeroSelected, ImGuiSelectableFlags_SpanAllColumns ) )
+                    if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EditorScene", "HistoryInitialState" ), "entry0" ), bZeroSelected, ImGuiSelectableFlags_SpanAllColumns ) )
                         cmdStack.jumpTo( 0 );
 
                     // 각 명령 엔트리 (1..cmdCount)
@@ -113,7 +109,7 @@ namespace sw::editor
 
                         ImGui::TableNextColumn();
                         if ( bIsActiveHead )
-                            ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::kCurrentMarker ), ">" );
+                            ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::getCurrentMarker() ), ">" );
                         else
                             ImGui::TextUnformatted( "" );
 
@@ -122,7 +118,7 @@ namespace sw::editor
                         const utf8* pCmdLabel = cmd._label.empty() == false ? cmd._label.c_str() : "Command";
 
                         if ( bIsUndone )
-                            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HistoryPanelInternal::kUndoneText ) );
+                            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HistoryPanelInternal::getUndoneText() ) );
 
                         ImGui::PushID( static_cast<int32>( stepNum ) );
                         if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap ) )
