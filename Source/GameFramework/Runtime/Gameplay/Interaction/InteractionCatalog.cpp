@@ -9,6 +9,7 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -21,36 +22,22 @@ namespace sw
     {
         struct InteractionCatalogInternal
         {
-            static constexpr const utf8* kArrInteractionAttribute[] = { "id", "prompt", "mode", "duration", "presses", "decay",
-                                                                        "maxParticipants", "maxDistance", "maxAngle", "lineOfSight", "cooldown", "requiredTags",
-                                                                        "forbiddenTags", "alignment", "highlight", "highlightColor", "authority", "montage",
-                                                                        "pairedAnimation", "interactorRole", "interactableRole" };
-            static constexpr const utf8* kArrStepAttribute[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage",
-                                                                        "pairedAnimation", "interactorRole", "interactableRole" };
-            static constexpr const utf8* kArrSmartObjectAttribute[] = { "id" };
-            static constexpr const utf8* kArrSlotAttribute[]        = { "id", "offset", "yaw", "tags" };
+            // <Interaction> 은 상호작용 칸(InteractionDef)과 첫 단계 칸(InteractionStepDef)을 함께 적는다 — 두 스키마가 서로의 칸을 손 읽기로 넘긴다.
+            static constexpr const utf8* kArrStepField[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage", "pairedAnimation", "interactorRole", "interactableRole" };
+            static constexpr const utf8* kArrInteractionField[] = { "id", "maxDistance", "maxAngle", "cooldown", "lineOfSight", "requiredTags", "forbiddenTags", "alignment", "highlight", "highlightColor", "authority" };
 
             template <size_t Count>
-            static bool checkAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
+            static bool isIn( const utf8* pName, const utf8* const ( &arrName )[Count] )
             {
-                return XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning );
-            }
-
-            template <typename TEnum>
-            [[nodiscard]] static bool readEnum( const XMLNode& node, const utf8* pName, TEnum& inoutValue, string_view sourceName )
-            {
-                const utf8* pText = node.findAttribute( pName );
-                if ( pText == nullptr )
-                    return true;
-                TEnum parsed{};
-                if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( pText ), parsed ) )
+                for ( const utf8* pKnown : arrName )
                 {
-                    inoutValue = parsed;
-                    return true;
+                    if ( StringUtil::equals( pName, pKnown ) )
+                        return true;
                 }
-                SW_LOG_WARNING_ID( "InteractionCatalog.Unknown", "%#: <%#> has unknown %# '%#'", sourceName, node.getName(), pName, pText );
                 return false;
             }
+            static bool isStepField( const utf8* pName ) { return isIn( pName, kArrStepField ); }
+            static bool isInteractionField( const utf8* pName ) { return isIn( pName, kArrInteractionField ); }
 
             static void readTags( string_view text, TagContainer& outTags )
             {
@@ -59,15 +46,10 @@ namespace sw
             }
 
             /** @brief 단계 속성(mode, prompt, montage, duration, presses, decay, maxParticipants, pairedAnimation, interactorRole, interactableRole)을 읽습니다. 빠진 속성은 @p inoutStep 의 값을 그대로 둡니다. */
-            [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName )
+            [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName, XMLFields::AcceptAttributeFunction pfnOtherField )
             {
-                bool        bValid  = readEnum( node, "mode", inoutStep._mode, sourceName );
-                const utf8* pPrompt = node.findAttribute( "prompt" );
-                if ( pPrompt != nullptr )
-                    inoutStep._prompt = hashed_string( pPrompt );
-                const utf8* pMontage = node.findAttribute( "montage" );
-                if ( pMontage != nullptr )
-                    inoutStep._montage = hashed_string( pMontage );
+                // 칸은 InteractionStepDef 의 PROPERTY(적지 않은 칸은 @p inoutStep 의 값 그대로). 페어드 애니메이션 경로 목록만 손으로 푼다.
+                const bool  bValid           = XMLFields::readFields( node, inoutStep, sourceName, { "pairedAnimation" }, pfnOtherField );
                 const utf8* pPairedAnimation = node.findAttribute( "pairedAnimation" );
                 if ( pPairedAnimation != nullptr )
                 {
@@ -75,16 +57,6 @@ namespace sw
                     StringUtil::forEachToken( string_view( pPairedAnimation ), "; ", [&inoutStep]( string_view token )
                     { inoutStep._listPairedAnimationPath.push_back( string{ token } ); } );
                 }
-                const utf8* pInteractorRole = node.findAttribute( "interactorRole" );
-                if ( pInteractorRole != nullptr )
-                    inoutStep._interactorRole = hashed_string( pInteractorRole );
-                const utf8* pInteractableRole = node.findAttribute( "interactableRole" );
-                if ( pInteractableRole != nullptr )
-                    inoutStep._interactableRole = hashed_string( pInteractableRole );
-                bValid = XMLReadUtil::readOptionalNumber( node, "duration", sourceName, 0.001f, MathUtil::kMaxFloat, inoutStep._duration ) && bValid;
-                bValid = XMLReadUtil::readOptionalNumber( node, "presses", sourceName, 1, MathUtil::kMaxInt32, inoutStep._presses ) && bValid;
-                bValid = XMLReadUtil::readOptionalNumber( node, "decay", sourceName, 0.0f, MathUtil::kMaxFloat, inoutStep._decay ) && bValid;
-                bValid = XMLReadUtil::readOptionalNumber( node, "maxParticipants", sourceName, 1, MathUtil::kMaxInt32, inoutStep._maxParticipants ) && bValid;
                 return bValid;
             }
 
@@ -145,24 +117,13 @@ namespace sw
     bool InteractionCatalog::readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const
     {
         using Internal = InteractionCatalogInternal;
-        bool bValid    = Internal::checkAttributes( node, Internal::kArrInteractionAttribute, sourceName );
-        outDef._id     = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
-        // 적지 않은 칸은 InteractionDef 의 초기값이다. 각은 라디안이다. 범위 밖 값은 자르지 않고 오류다.
-        bValid = XMLReadUtil::readOptionalNumber( node, "maxDistance", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._maxDistance ) && bValid;
-        bValid = XMLReadUtil::readOptionalNumber( node, "maxAngle", sourceName, 0.0f, MathUtil::kPi, outDef._maxAngle ) && bValid;
-        bValid = XMLReadUtil::readOptionalNumber( node, "cooldown", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._cooldown ) && bValid;
-        bValid = XMLReadUtil::readOptionalFlag( node, "lineOfSight", outDef._bLineOfSight ) && bValid;
+        // 적지 않은 칸은 InteractionDef 의 초기값이다. 각은 라디안이다. 범위 밖 값은 자르지 않고 오류다(PROPERTY 가 본다).
+        bool bValid = XMLFields::readFields( node, outDef, sourceName, { "requiredTags", "forbiddenTags" }, &Internal::isStepField );
         Internal::readTags( node.getAttributeText( "requiredTags" ), outDef._requiredTags );
         Internal::readTags( node.getAttributeText( "forbiddenTags" ), outDef._forbiddenTags );
-        const utf8* pAlignment = node.findAttribute( "alignment" );
-        if ( pAlignment != nullptr )
-            outDef._alignmentMarker = hashed_string( pAlignment );
-        bValid = Internal::readEnum( node, "highlight", outDef._highlight, sourceName ) && bValid;
-        bValid = XMLReadUtil::readOptionalFloat3( node, "highlightColor", sourceName, outDef._highlightColor ) && bValid;
-        bValid = Internal::readEnum( node, "authority", outDef._authority, sourceName ) && bValid;
 
         InteractionStepDef rootStep;
-        bValid        = Internal::readStep( node, rootStep, sourceName ) && bValid;
+        bValid        = Internal::readStep( node, rootStep, sourceName, &Internal::isInteractionField ) && bValid;
         XMLNode child = node.findChild();
         for ( ; child; child = child.findNextSibling() )
         {
@@ -172,9 +133,8 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            bValid                  = Internal::checkAttributes( child, Internal::kArrStepAttribute, sourceName ) && bValid;
             InteractionStepDef step = rootStep;
-            bValid                  = Internal::readStep( child, step, sourceName ) && bValid;
+            bValid                  = Internal::readStep( child, step, sourceName, nullptr ) && bValid;
             outDef._listStep.push_back( step );
         }
         if ( outDef._listStep.empty() )
@@ -189,8 +149,7 @@ namespace sw
     bool InteractionCatalog::readSmartObject( const XMLNode& node, UsableObjectDef& outDef, string_view sourceName ) const
     {
         using Internal = InteractionCatalogInternal;
-        bool bValid    = Internal::checkAttributes( node, Internal::kArrSmartObjectAttribute, sourceName );
-        outDef._id     = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
+        bool bValid    = XMLFields::readFields( node, outDef, sourceName );
         for ( XMLNode slotNode = node.findChild(); slotNode; slotNode = slotNode.findNextSibling() )
         {
             if ( StringUtil::equals( slotNode.getName(), "Slot" ) == false )
@@ -199,14 +158,8 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            bValid = Internal::checkAttributes( slotNode, Internal::kArrSlotAttribute, sourceName ) && bValid;
-            UsableObjectSlotDef slot;
-            float3              offset{};
-            bValid = XMLReadUtil::readOptionalFloat3( slotNode, "offset", sourceName, offset ) && bValid;
-
-            slot._id     = hashed_string( slotNode.findAttribute( "id" ) != nullptr ? slotNode.findAttribute( "id" ) : "" );
-            slot._offset = offset;
-            bValid       = XMLReadUtil::readOptionalNumber( slotNode, "yaw", sourceName, -MathUtil::kTwoPi, MathUtil::kTwoPi, slot._yaw ) && bValid;
+            UsableObjectSlotDef slot; // 각은 라디안(±2π)이다 — PROPERTY 가 본다
+            bValid = XMLFields::readFields( slotNode, slot, sourceName, { "tags" } ) && bValid;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );
         }

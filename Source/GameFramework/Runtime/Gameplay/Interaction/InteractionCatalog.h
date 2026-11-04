@@ -71,17 +71,29 @@ namespace sw
 namespace sw
 {
     /** @brief 단계 하나입니다. */
-    struct InteractionStepDef
+    REFLECT()
+    struct SW_GF_API InteractionStepDef
     {
-        hashed_string        _prompt{};                  ///< 안내 문구 키(지역화 테이블의 키)
-        hashed_string        _montage{};                 ///< 이 단계가 시작될 때 하는 쪽의 애니메이터(`SkeletalAnimatorComponent`)가 한 번 재생하는 상태 · 클립 이름. 비면 재생하지 않는다
-        vector<string>       _listPairedAnimationPath{}; ///< 이 단계가 시작될 때 배치에 맞는 첫 세트로 시작할 페어드 애니메이션(`*.pairedanim.xml`). 비면 시작하지 않는다
-        hashed_string        _interactorRole{};          ///< 페어드 애니메이션에서 하는 쪽의 애니메이터가 맡는 역할
-        hashed_string        _interactableRole{};        ///< 페어드 애니메이션에서 대상 오브젝트의 애니메이터가 맡는 역할
-        float32              _duration{ 1.0f };          ///< Hold 에서 쓴다. 혼자 차오르는 데 걸리는 초
-        float32              _decay{ 0.5f };             ///< Mash 에서 쓴다. 쉬는 동안 초당 줄어드는 진행량(0..1)
-        int32                _presses{ 5 };              ///< Mash 에서 쓴다. 끝내는 데 필요한 누름 횟수
-        int32                _maxParticipants{ 1 };
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _prompt{}; ///< 안내 문구 키(지역화 테이블의 키)
+        PROPERTY()
+        hashed_string  _montage{};                 ///< 이 단계가 시작될 때 하는 쪽의 애니메이터(`SkeletalAnimatorComponent`)가 한 번 재생하는 상태 · 클립 이름. 비면 재생하지 않는다
+        vector<string> _listPairedAnimationPath{}; ///< 이 단계가 시작될 때 배치에 맞는 첫 세트로 시작할 페어드 애니메이션(`*.pairedanim.xml`). 비면 시작하지 않는다
+        PROPERTY()
+        hashed_string _interactorRole{}; ///< 페어드 애니메이션에서 하는 쪽의 애니메이터가 맡는 역할
+        PROPERTY()
+        hashed_string _interactableRole{}; ///< 페어드 애니메이션에서 대상 오브젝트의 애니메이터가 맡는 역할
+        PROPERTY( Min = 0.001, Units = s )
+        float32 _duration{ 1.0f }; ///< Hold 에서 쓴다. 혼자 차오르는 데 걸리는 초
+        PROPERTY( Min = 0.0 )
+        float32 _decay{ 0.5f }; ///< Mash 에서 쓴다. 쉬는 동안 초당 줄어드는 진행량(0..1)
+        PROPERTY( Min = 1 )
+        int32 _presses{ 5 }; ///< Mash 에서 쓴다. 끝내는 데 필요한 누름 횟수
+        PROPERTY( Min = 1 )
+        int32 _maxParticipants{ 1 };
+        PROPERTY()
         InteractionInputMode _mode{ InteractionInputMode::Press };
     };
 } // namespace sw
@@ -89,20 +101,32 @@ namespace sw
 namespace sw
 {
     /** @brief 상호작용 종류 하나입니다. */
+    REFLECT()
     struct SW_GF_API InteractionDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string              _id{};
         vector<InteractionStepDef> _listStep{};
-        TagContainer               _requiredTags{};    ///< 하는 쪽이 모두 가져야 하는 태그(열쇠, 능력)
-        TagContainer               _forbiddenTags{};   ///< 하는 쪽이 하나라도 가지면 안 되는 태그(기절)
-        hashed_string              _alignmentMarker{}; ///< 하는 쪽이 맞춰 설 마커 이름. 모션 워핑에 쓰며 소켓과 마커 에셋의 이름이다
-        float32                    _maxDistance{ 2.0f };
-        float32                    _maxAngle{ 0.0f }; ///< 시선과 대상 사이의 허용 각(라디안). 0 이면 검사하지 않는다
-        float32                    _cooldown{ 0.0f };
-        InteractionHighlight       _highlight{ InteractionHighlight::Outline };
-        float3                     _highlightColor{ 1.0f, 0.85f, 0.3f }; ///< 강조 외곽선 색(RGB, 0..1). XML `highlightColor="r,g,b"`
-        InteractionAuthority       _authority{ InteractionAuthority::Local };
-        uint8                      _bLineOfSight{ SW_TRUE };
+        TagContainer               _requiredTags{};  ///< 하는 쪽이 모두 가져야 하는 태그(열쇠, 능력)
+        TagContainer               _forbiddenTags{}; ///< 하는 쪽이 하나라도 가지면 안 되는 태그(기절)
+        PROPERTY( Name = "alignment" )
+        hashed_string _alignmentMarker{}; ///< 하는 쪽이 맞춰 설 마커 이름. 모션 워핑에 쓰며 소켓과 마커 에셋의 이름이다
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _maxDistance{ 2.0f };
+        PROPERTY( Min = 0.0, Max = 3.1416, Units = rad )
+        float32 _maxAngle{ 0.0f }; ///< 시선과 대상 사이의 허용 각(라디안). 0 이면 검사하지 않는다
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _cooldown{ 0.0f };
+        PROPERTY()
+        InteractionHighlight _highlight{ InteractionHighlight::Outline };
+        PROPERTY()
+        float3 _highlightColor{ 1.0f, 0.85f, 0.3f }; ///< 강조 외곽선 색(RGB, 0..1). XML `highlightColor="r,g,b"`
+        PROPERTY()
+        InteractionAuthority _authority{ InteractionAuthority::Local };
+        PROPERTY()
+        bool _bLineOfSight{ true };
 
         /** @brief 하는 쪽의 태그가 조건을 만족하면 true 입니다. */
         bool allowsInteractor( const TagContainer& interactorTags ) const;
@@ -112,20 +136,30 @@ namespace sw
 namespace sw
 {
     /** @brief 스마트 오브젝트의 슬롯 하나입니다(벤치 좌석, 엄폐 지점, 작업대 앞). */
-    struct UsableObjectSlotDef
+    REFLECT()
+    struct SW_GF_API UsableObjectSlotDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        TagContainer  _tags{};      ///< 슬롯이 하는 일(Activity.Sit, Cover.Low)
-        float3        _offset{};    ///< 오브젝트 로컬 위치
-        float32       _yaw{ 0.0f }; ///< 오브젝트 로컬 방향(라디안)
+        TagContainer  _tags{}; ///< 슬롯이 하는 일(Activity.Sit, Cover.Low)
+        PROPERTY( Units = m )
+        float3 _offset{}; ///< 오브젝트 로컬 위치
+        PROPERTY( Min = -6.2832, Max = 6.2832, Units = rad )
+        float32 _yaw{ 0.0f }; ///< 오브젝트 로컬 방향(라디안)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 스마트 오브젝트 하나입니다. 슬롯 목록을 담으며, 플레이어와 AI 가 같은 정의로 슬롯을 차지합니다. */
-    struct UsableObjectDef
+    REFLECT()
+    struct SW_GF_API UsableObjectDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string               _id{};
         vector<UsableObjectSlotDef> _listSlot{};
     };
