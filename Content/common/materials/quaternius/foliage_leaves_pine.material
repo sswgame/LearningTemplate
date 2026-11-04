@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quaternius Stylized Nature 의 식생(FoliageComponent) 구간 머티리얼 — Pine 잎(glTF MASK 0.2 · 양면). 부모(foliage.material)에 알베도 · 알파 컷오프(glTF MASK 0.2)만 바꾸고 양면으로 그린다. -->
+<MaterialDesc formatVersion="0" name="foliage_leaves_pine" parent="engine/materials/foliage.material">
+	<_properties>
+		<item name="_alphaCutoff" defaultValue="0.2" />
+		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/leaf_pine_c.dds" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_VERTEX_DEFORM</item>
+			<item>MATERIAL_ALPHA_CUTOFF</item>
+			<item>MATERIAL_TWO_SIDED</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDesc>
