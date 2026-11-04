@@ -178,13 +178,21 @@ namespace sw::editor
          *       이 함수를 쓰세요.
          * @details ImGui 의 크기 변경 콜백으로 `string` 자체를 버퍼로 쓰므로 길이 제한이 없다. `fixed_string<N>` 임시 버퍼에
          *          복사해 편집한 뒤 되쓰면 그 크기를 넘는 문자열이 잘려서 긴 대사의 뒷부분이 사라진다.
-         * @param pLabel ImGui 라벨입니다. `##` 로 시작하면 라벨을 감춥니다.
+         * @param pLabel ImGui 라벨입니다. `##` 로 시작하면 라벨을 감추고, 보이는 부분이 있으면 칸 **앞**(왼쪽)에 흐린 이름표로 그립니다(ImGui 기본은 오른쪽).
          * @param text   편집 대상입니다. 값이 바뀔 때만 갱신됩니다.
          * @param width  0 이면 ImGui 기본 폭, 음수면 남은 폭 전부, 양수면 그 폭입니다.
          */
         static bool drawTextField( const utf8* pLabel, string& text, float32 width = 0.0f );
-        /** @brief `drawTextField` 의 여러 줄 버전입니다(`PROPERTY( Multiline )`). 높이는 @p lineCount 줄만큼이고 폭은 남은 폭 전부입니다. */
-        static bool drawTextFieldMultiline( const utf8* pLabel, string& text, uint32 lineCount = 4 );
+        /**
+         * @brief `drawTextField` 의 여러 줄 버전입니다(`PROPERTY( Multiline )`). 높이는 @p lineCount 줄만큼이고 폭은 남은 폭 전부입니다.
+         * @param pHint 비어 있고 치는 중이 아닐 때 칸 안에 흐리게 보일 안내입니다(ImGui 여러 줄 칸에는 힌트가 없어 빈 상자만 남았다). nullptr 이면 없다.
+         */
+        static bool drawTextFieldMultiline( const utf8* pLabel, string& text, uint32 lineCount = 4, const utf8* pHint = nullptr );
+        /**
+         * @brief 이름표를 칸 앞(왼쪽)에 둔 콤보를 엽니다. 열렸으면 true 이고 `ImGui::EndCombo()` 로 닫습니다. 폭은 부르는 쪽이 `SetNextItemWidth` 로 정합니다(이름표 뒤 칸에 걸린다).
+         * @details `ImGui::BeginCombo( "Name###id" )` 는 이름표를 오른쪽에 붙여 다음 칸의 이름처럼 읽혔다(Packaging "Client [v] Target Empty [v]"). id 는 @p pLabel 전체에서 뽑는다.
+         */
+        [[nodiscard]] static bool beginCombo( const utf8* pLabel, const utf8* pPreview, int32 flags = 0 );
 
         /** @brief 힌트 글 입력 칸 하나의 결과입니다. */
         struct HintFieldResult

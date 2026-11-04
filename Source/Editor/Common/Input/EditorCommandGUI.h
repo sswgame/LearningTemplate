@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
+#include "Editor/Common/EditorExports.h"
 
 namespace sw::editor
 {
@@ -17,7 +18,7 @@ namespace sw::editor
      *          메뉴 · 팔레트에 함께 나타납니다. 단축키는 그 줄의 입력 액션 이름이 가리키는 `editor.input.xml` 의 액션이 정하고, 메뉴의 단축키 글자도 그 맵에서 만든다 —
      *          키를 두 곳에 적어 라벨과 실제 처리가 어긋나지 않게.
      */
-    class EditorCommandGUI
+    class SW_EDITOR_API EditorCommandGUI
     {
     public:
         /** @brief 기본 커맨드 테이블을 레지스트리에 등록합니다. 중복 id · 같은 액션은 오류로 로그합니다. */
@@ -40,5 +41,10 @@ namespace sw::editor
          *          없는 명령 id 는 부른 쪽의 잘못이라 멈춘다.
          */
         static bool drawToolbarButton( string_view commandID, const EditorCommandTarget& target = EditorCommandTarget::none() );
+        /**
+         * @brief 명령 하나를 아이콘 + 이름표가 있는 단추로 그립니다(빈 상태의 다음 할 일 · 대화 상자). 동작 · 툴팁 · 표식은 `drawToolbarButton` 과 같습니다.
+         * @details 도구줄의 상자 없는 아이콘은 빈 패널 한가운데서 단추로 읽히지 않는다(uiaudit — Ability Debugger 의 Play).
+         */
+        static bool drawCommandButton( string_view commandID, const EditorCommandTarget& target = EditorCommandTarget::none() );
     };
 } // namespace sw::editor

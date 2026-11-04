@@ -55,6 +55,9 @@ namespace sw::editor
     {
         struct EditorCommandGUIInternal
         {
+            /** @brief 명령 단추 하나(도구줄 아이콘 또는 아이콘 + 이름표). 정의는 `EditorCommandGUI::drawToolbarButton` 아래. */
+            static bool drawCommandButton( string_view commandID, const EditorCommandTarget& target, bool bIconOnly );
+
             /**
              * @brief 커맨드 테이블과 등록 항목으로 레지스트리를 다시 만듭니다.
              * @details 정의는 아래 EditorCommandGUI 구현 옆에 있다. 테이블 `_s_arrCommandRow` 가 이 구조체의 끝에 있어 그 뒤에 둔다.
@@ -577,6 +580,19 @@ namespace sw::editor
 
     bool EditorCommandGUI::drawToolbarButton( string_view commandID, const EditorCommandTarget& target )
     {
+        return EditorCommandGUIInternal::drawCommandButton( commandID, target, true );
+    }
+
+    bool EditorCommandGUI::drawCommandButton( string_view commandID, const EditorCommandTarget& target )
+    {
+        return EditorCommandGUIInternal::drawCommandButton( commandID, target, false );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    bool EditorCommandGUIInternal::drawCommandButton( string_view commandID, const EditorCommandTarget& target, bool bIconOnly )
+    {
         EditorContext&               editorContext = editor::getSubsystem<EditorContext>();
         const EditorCommandRegistry& registry      = editorContext.getSubsystem<EditorCommandRegistry>();
         const EditorCommandDesc*     pDesc         = registry.find( commandID );
@@ -588,7 +604,7 @@ namespace sw::editor
         ImGui::PushID( pDesc->_id.c_str() );
         ImGui::BeginDisabled( bEnabled == false );
         bool bPressed = false;
-        if ( pDesc->_iconName.empty() == false )
+        if ( bIconOnly && pDesc->_iconName.empty() == false )
         {
             // 도구줄 아이콘은 상자 없이 둔다(drawIconToggle 과 같은 모양) — 정사각 한 변은 줄 높이라 글꼴 · DPI 를 따른다.
             const float32 side = ImGui::GetFrameHeight();
@@ -600,7 +616,9 @@ namespace sw::editor
         }
         else
         {
-            bPressed = ImGui::Button( pDesc->_label.c_str() );
+            fixed_string<constant::buffer::kMax128> label;
+            EditorCommandRegistry::formatMenuLabel( *pDesc, label ); // 아이콘 + 이름표(메뉴와 같은 글)
+            bPressed = ImGui::Button( label.c_str() );
         }
         ImGui::EndDisabled();
         ImGui::PopID();

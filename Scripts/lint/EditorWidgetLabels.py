@@ -7,7 +7,9 @@ Scripts/lint/EditorWidgetLabels.py
 ImGui 는 그 이름표를 칸 **오른쪽**에 붙이고 칸이 창 폭을 따라 늘어, 좁은 칸에서 이름표 · 옆 칸이 잘렸다(시퀀서 · 타일 맵 · 스프라이트 클립 · 멀티플레이 · 캐릭터 에디터, uiaudit).
 고칠 모양: 행이면 `EditorWidgets::drawPropertyRowLabel( 이름 )`, 도구줄이면 `EditorWidgets::drawInlineLabel( 이름 )` 을 앞에 두고 위젯 이름은 `"##id"`.
 단위는 숫자 형식에 넣는다(`"%.2f s"`). 체크박스 · 라디오는 오른쪽 이름표가 맞아 보지 않는다.
-**왜 형식이 아니라 린트인가.** 이름표는 문자열 내용이라 ImGui 선언을 다시 막아도(`EditorInputBan.h`) 가를 수 없다 — 첫 문자열 인자가 `##` 로 시작하는지만 본다.
+콤보는 `EditorWidgets::beginCombo`, 글 칸은 `EditorWidgets::drawTextField` 가 보이는 이름표를 스스로 앞으로 옮긴다 — `ImGui::BeginCombo` 에 보이는 이름표를 주지 않는다.
+**왜 형식이 아니라 린트인가.** 이름표는 문자열 내용이라 ImGui 선언을 다시 막아도(`EditorInputBan.h`) 가를 수 없다 — 첫 문자열 인자가 `##` 로 시작하는지,
+첫 인자가 보이는 이름표를 만드는 `EditorThemeUtil::makeStableLabel( … )` 인지만 본다(그 모양이 린트를 빠져나가 Packaging · 테마 · 지형 붓 콤보의 이름표가 오른쪽에 남았다).
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ from pathlib import Path
 kPattern = re.compile(
     r'ImGui::(InputInt|InputInt2|InputInt3|InputInt4|InputFloat|InputFloat2|InputFloat3|InputFloat4|InputDouble|InputText|InputTextMultiline|InputTextWithHint|InputScalar|'
     r'DragFloat|DragFloat2|DragFloat3|DragFloat4|DragInt|DragInt2|DragInt3|DragInt4|DragScalar|SliderFloat|SliderFloat2|SliderFloat3|SliderFloat4|SliderInt|'
-    r'SliderAngle|SliderScalar|Combo|ColorEdit3|ColorEdit4)\(\s*"([^"]*)"'
+    r'SliderAngle|SliderScalar|Combo|BeginCombo|ColorEdit3|ColorEdit4)\(\s*(?:"([^"]*)"|(EditorThemeUtil::makeStableLabel)\()'
 )
 kEditorRoots = ("Source/Editor/", "Source/GameFramework/Plugin/Editor/")
 
@@ -40,9 +42,10 @@ def checkEditorWidgetLabels(projectRoot: Path, listFile: list[str]) -> list[str]
             continue
         for number, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
             for match in kPattern.finditer(line):
-                if match.group(2).startswith("##"):
+                if match.group(2) is not None and match.group(2).startswith("##"):
                     continue
-                listViolation.append(f'{relative}:{number}: ImGui::{match.group(1)}( "{match.group(2)}" ... ) - label goes left: drawPropertyRowLabel / drawInlineLabel + "##id"')
+                label = f'"{match.group(2)}"' if match.group(2) is not None else "makeStableLabel(...)"
+                listViolation.append(f'{relative}:{number}: ImGui::{match.group(1)}( {label} ... ) - label goes left: drawPropertyRowLabel / drawInlineLabel + "##id" (combo: EditorWidgets::beginCombo)')
     return listViolation
 
 

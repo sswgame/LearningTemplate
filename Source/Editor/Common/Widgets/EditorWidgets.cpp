@@ -191,6 +191,26 @@ namespace sw::editor
              * @details ImGui 는 알고 있는 크기를 넘는 입력이 오면 이 콜백으로 되묻습니다. 늘린 뒤 새 주소를 알려 주지 않으면 옛
              *          버퍼를 계속 쓰므로, `Buf` 갱신까지가 한 쌍입니다.
              */
+            /**
+             * @brief ImGui 이름표(`"Name###id"`)의 보이는 부분이 있으면 칸 앞(왼쪽)에 흐린 이름표로 그립니다. 앞서 건 다음 항목 폭은 칸에 그대로 남깁니다.
+             * @details ImGui 는 보이는 이름표를 칸 오른쪽에 붙여 "Client [v] Target Empty [v] Game" 처럼 이름이 다음 칸의 것으로 읽혔다(uiaudit — Packaging).
+             *          글 칸 위젯이 이것으로 이름표를 앞으로 옮기므로 부르는 쪽 열아홉 곳을 고치지 않는다(언리얼 · 유니티 · Godot 모두 이름표는 왼쪽).
+             */
+            static void drawLeadingLabel( const utf8* pLabel )
+            {
+                const utf8* pVisibleEnd = ImGui::FindRenderedTextEnd( pLabel );
+                if ( pVisibleEnd == pLabel )
+                    return;
+                ImGuiContext& g            = *ImGui::GetCurrentContext();
+                const bool    bHasWidth    = ( g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth ) != 0;
+                const float32 pendingWidth = g.NextItemData.Width;
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextDisabled( "%.*s", static_cast<int32>( pVisibleEnd - pLabel ), pLabel );
+                ImGui::SameLine();
+                if ( bHasWidth )
+                    ImGui::SetNextItemWidth( pendingWidth );
+            }
+
             static int32 resizeStringCallback( ImGuiInputTextCallbackData* pData )
             {
                 if ( pData == nullptr || pData->EventFlag != ImGuiInputTextFlags_CallbackResize )
@@ -665,16 +685,40 @@ namespace sw::editor
         else if ( width > 0.0f )
             ImGui::SetNextItemWidth( width );
 
-        // 버퍼로 `string` 을 그대로 넘긴다. 모자라면 아래 콜백이 늘려 주므로 길이 상한이 없다.
-        return ImGui::InputText( pLabel != nullptr ? pLabel : "##text", text.data(), text.capacity() + 1,
-                                 ImGuiInputTextFlags_CallbackResize, &EditorWidgetsInternal::resizeStringCallback, &text );
+        // 버퍼로 `string` 을 그대로 넘긴다. 모자라면 아래 콜백이 늘려 주므로 길이 상한이 없다. id 는 이름표 전체(`###` 뒤만 — 언어와 무관)다.
+        const utf8* pID = pLabel != nullptr ? pLabel : "##text";
+        EditorWidgetsInternal::drawLeadingLabel( pID );
+        ImGui::PushID( pID );
+        const bool bChanged = ImGui::InputText( "##value", text.data(), text.capacity() + 1, ImGuiInputTextFlags_CallbackResize,
+                                                &EditorWidgetsInternal::resizeStringCallback, &text );
+        ImGui::PopID();
+        return bChanged;
     }
 
-    bool EditorWidgets::drawTextFieldMultiline( const utf8* pLabel, string& text, const uint32 lineCount )
+    bool EditorWidgets::drawTextFieldMultiline( const utf8* pLabel, string& text, const uint32 lineCount, const utf8* pHint )
     {
         const ImVec2 size( -1.0f, ImGui::GetTextLineHeight() * static_cast<float32>( lineCount ) + ImGui::GetStyle().FramePadding.y * 2.0f );
-        return ImGui::InputTextMultiline( pLabel != nullptr ? pLabel : "##text", text.data(), text.capacity() + 1, size, ImGuiInputTextFlags_CallbackResize,
-                                          &EditorWidgetsInternal::resizeStringCallback, &text );
+        const utf8*  pID = pLabel != nullptr ? pLabel : "##text";
+        EditorWidgetsInternal::drawLeadingLabel( pID );
+        ImGui::PushID( pID );
+        const bool bChanged = ImGui::InputTextMultiline( "##value", text.data(), text.capacity() + 1, size, ImGuiInputTextFlags_CallbackResize,
+                                                         &EditorWidgetsInternal::resizeStringCallback, &text );
+        if ( StringUtil::isNullOrEmpty( pHint ) == false && text.empty() && ImGui::IsItemActive() == false )
+        {
+            const ImVec2 hintPos{ ImGui::GetItemRectMin().x + ImGui::GetStyle().FramePadding.x, ImGui::GetItemRectMin().y + ImGui::GetStyle().FramePadding.y };
+            ImGui::GetWindowDrawList()->AddText( hintPos, ImGui::GetColorU32( ImGuiCol_TextDisabled ), pHint );
+        }
+        ImGui::PopID();
+        return bChanged;
+    }
+
+    bool EditorWidgets::beginCombo( const utf8* pLabel, const utf8* pPreview, int32 flags )
+    {
+        EditorWidgetsInternal::drawLeadingLabel( pLabel );
+        // 보이는 이름표를 감춘 같은 id: "##" 를 앞에 붙인다. `###` 가 있으면 ImGui 가 그 뒤만 해시하므로 언어를 바꿔도 id 가 같다.
+        fixed_string<constant::buffer::kMax128> hiddenLabel{ "##" };
+        hiddenLabel.append( pLabel );
+        return ImGui::BeginCombo( hiddenLabel.c_str(), pPreview, static_cast<ImGuiComboFlags>( flags ) );
     }
 
     EditorWidgets::HintFieldResult EditorWidgets::drawHintField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, const utf8* pMark,
