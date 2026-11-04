@@ -7,7 +7,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/Foundation.h"
@@ -394,15 +393,8 @@ namespace sw
         /** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
         [[nodiscard]] bool saveToXMLFile( const AbsolutePath& absPath ) const;
 
-        /** @brief XML 로드를 비동기 작업으로 예약합니다. */
-        TaskHandle loadFromXMLFileAsync( string_view assetRelativePath );
-
         const RenderPassDesc& getDesc() const { return _desc; }
         RenderPassDesc&       getDesc() { return _desc; }
-
-    private:
-        /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 에는 this 와 경로 문자열이 들어 있습니다. */
-        static void loadFromXMLFileAsyncJob( const TaskArgs& args );
 
     private:
         RenderPassDesc _desc;

@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
@@ -637,25 +636,6 @@ namespace sw
 
         SW_LOG_INFO_ID( "RenderPipelineAsset.Saved", "Saved '%#' -> %#", _desc._name, absPath.str() );
         return true;
-    }
-
-    TaskHandle RenderPipelineAsset::loadFromXMLFileAsync( string_view assetRelativePath )
-    {
-        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
-            "LoadRenderPipelineAsync",
-            SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPipelineAsset::loadFromXMLFileAsyncJob ),
-            MakeTaskArgs( this, string( assetRelativePath ) ) );
-        handle.submit();
-        return handle;
-    }
-
-    void RenderPipelineAsset::loadFromXMLFileAsyncJob( const TaskArgs& args )
-    {
-        RenderPipelineAsset* pResource = args.get<RenderPipelineAsset*>( 0 );
-        if ( pResource == nullptr )
-            return;
-        if ( pResource->loadFromXMLFile( AssetID{ args.get<string>( 1 ) } ) == false )
-            SW_LOG_WARNING_ID( "RenderPipelineAsset.CouldNotLoad", "Could not load '%#'", args.get<string>( 1 ) );
     }
 
 } // namespace sw

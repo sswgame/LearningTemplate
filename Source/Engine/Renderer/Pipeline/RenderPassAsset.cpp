@@ -3,7 +3,6 @@
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
@@ -31,25 +30,6 @@ namespace sw
 
         SW_LOG_INFO_ID( "RenderPassAsset.SavedRenderPass", "Saved RenderPass '%#' to: %#", _desc._name, absPath.str() );
         return true;
-    }
-
-    TaskHandle RenderPassAsset::loadFromXMLFileAsync( string_view assetRelativePath )
-    {
-        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
-            "LoadRenderPassAsync",
-            SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPassAsset::loadFromXMLFileAsyncJob ),
-            MakeTaskArgs( this, string( assetRelativePath ) ) );
-        handle.submit();
-        return handle;
-    }
-
-    void RenderPassAsset::loadFromXMLFileAsyncJob( const TaskArgs& args )
-    {
-        RenderPassAsset* pResource = args.get<RenderPassAsset*>( 0 );
-        if ( pResource == nullptr )
-            return;
-        if ( pResource->loadFromXMLFile( AssetID{ args.get<string>( 1 ) } ) == false )
-            SW_LOG_WARNING_ID( "RenderPassAsset.CouldNotLoad", "Could not load '%#'", args.get<string>( 1 ) );
     }
 
 } // namespace sw
