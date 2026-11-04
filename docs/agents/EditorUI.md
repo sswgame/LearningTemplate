@@ -7,7 +7,14 @@
 - Colours, spacing, radii, borders, font and icon sizes come from `Content/editor/theme/<name>.tokens.json` only (dark · charcoal · midnight · light · highcontrast). Code names a key: `SW_THEMECOLOR( "Base.TextMuted" )`, `SW_THEMEMETRIC( "Spacing.ItemSpacingY" )`. The ImGui style is built from the tokens in `EditorThemeUtil::applyTheme`.
 - Every set has the same key set (checked on load); the unit test `EditorThemeKeys` scans the sources for keys the files lack. Adding a key means adding it to all five files in one commit.
 - A defect seen in many panels is fixed once: in a token value, in `EditorThemeUtil`, or in a shared widget (`EditorWidgets` · `EditorChrome`). A per-panel `PushStyleColor` / size literal that patches one screen is the wrong fix.
-- Shared shapes already exist — use them instead of re-drawing: empty state `EditorWidgets::drawEmptyHint` (wraps to the panel width) and `drawNoSearchResultHint`; row and toolbar labels `drawPropertyRowLabel` · `drawInlineLabel` (lint `EditorWidgetLabels` bans ImGui's right-hand labels on inputs); clamped names `drawClampedLabel`; widths in text columns `EditorChrome::setNextItemWidthColumns`.
+- Shared shapes already exist — use them instead of re-drawing (every panel the same, like Unreal · Unity · Godot):
+  - panel toolbar: a command as a button `EditorCommandGUI::drawToolbarButton` (icon, greyed when disabled, tooltip "name shortcut + description" from the command — no hand-written shortcut), groups split by `EditorWidgets::drawToolbarSeparator`, toggles `drawToggleButton` · `drawIconToggle`;
+  - search / filter row: `drawFilterBar` (search field filling the row, count at the right end); a bare field `drawSearchField`;
+  - empty state: `drawEmptyState` (one sentence + optional next-step button), `drawEmptyHint`, and for a filter with no match `drawNoSearchResultHint`;
+  - verbosity: short labels with the long text in a tooltip (`drawPropertyRowLabel( label, tooltip )` · `drawInlineLabel( label, tooltip )` · `drawTooltip` · `drawHelpMarker`), rarely used settings under `beginAdvancedSection` (collapsed, like Unreal Details' Advanced);
+  - status line at the panel foot: `drawPanelStatus`; counts `drawCountLabel`;
+  - context menus: commands for a target through `EditorInputGUI::drawContextMenuFor` (R1 – R9 below); clamped names `drawClampedLabel`; widths in text columns `EditorChrome::setNextItemWidthColumns`.
+  Lint `EditorWidgetLabels` bans ImGui's right-hand labels on inputs. A row label longer than the label column is cut with an ellipsis and shown whole on hover.
 
 ## App-screen rules for the editor
 

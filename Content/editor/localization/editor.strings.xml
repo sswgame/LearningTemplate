@@ -524,6 +524,11 @@
 				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdCommon.Advanced" source="Advanced">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.AlignSelected" source="Align and distribute the selected objects (select two or more).">
 			<origins>
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>

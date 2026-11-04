@@ -92,6 +92,30 @@ namespace sw::editor
 
         /** @brief 흐린 글씨의 안내 문구를 그립니다. */
         static void drawEmptyHint( const utf8* pText );
+        /**
+         * @brief 빈 목록 · 빈 패널의 안내(왜 비었는지 · 다음 할 일 한 문장)와 그 다음 할 일 단추를 그립니다. 단추가 눌렸으면 true 입니다.
+         * @details 틀과 머리글은 부르는 쪽이 그대로 둔다(앱 화면 규칙: 빈 절은 틀을 지키고 한 문장을 더한다). 언리얼 Content Browser 의 빈 폴더 안내 ·
+         *          Godot 빈 씬 독의 "루트 노드 만들기" 단추와 같은 자리다 — 안내만 있고 할 일 단추가 없으면 사람이 메뉴를 뒤진다.
+         * @param pActionLabel 다음 할 일 단추 이름표입니다. 비어 있으면 안내만 그리고 false 입니다.
+         */
+        [[nodiscard]] static bool drawEmptyState( const utf8* pText, const utf8* pActionLabel );
+        /**
+         * @brief 접힌 채로 시작하는 "고급" 절의 머리글을 그립니다. 펼쳐졌으면 true 이고, 그때만 고급 항목을 그립니다(짝 함수 없음).
+         * @details 자주 쓰지 않는 설정을 기본 화면에서 걷어 내는 공용 입구다 — 언리얼 Details 패널의 Advanced 접기 · 유니티 Inspector 의 접힌 Debug 와 같다.
+         *          펼침 상태는 ImGui 가 창 · @p pID 별로 기억한다. @p pID 는 한 창 안에서 절을 가리는 이름이다(`"##advanced.network"`).
+         */
+        [[nodiscard]] static bool beginAdvancedSection( const utf8* pID );
+        /**
+         * @brief 목록 위의 거르개 줄(검색 칸 + 오른쪽 끝 건수)을 그립니다. 검색어가 바뀌었으면 true 입니다.
+         * @details 검색 칸이 건수를 뺀 남은 폭을 채운다. 패널마다 검색 칸 · 건수 · 폭 계산을 손으로 이으면 건수가 창 밖으로 밀리거나 칸 폭이 패널마다 달랐다
+         *          (언리얼 · 유니티 · Godot 모두 목록 패널 맨 위에 같은 모양의 검색 줄을 둔다). 건수 형식은 `drawCountLabel` 과 같다.
+         */
+        static bool drawFilterBar( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit );
+        template <uint32 N>
+        static bool drawFilterBar( const utf8* pID, fixed_string<N>& str, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit )
+        {
+            return drawFilterBar( pID, str.data(), str.capacity(), pHint, visible, total, pUnit );
+        }
 
         /**
          * @brief 검색 결과가 0건일 때의 안내를 그립니다.
@@ -138,13 +162,15 @@ namespace sw::editor
         /**
          * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 라벨 열(테마 `Layout.PropertyLabelWidth` × DPI) 뒤의 남은 폭을 모두 쓰게 합니다.
          * @details 라벨이 붙는 위젯(`drawAssetSlot`, `drawColorEdit`)이 이 함수로 라벨 열을 맞춘다. 행을 열고 닫는 상태가 없어 짝 함수(end)를 두지 않는다. 다음 항목이 행의 끝이다.
+         *          라벨이 열보다 길면 열 끝에서 말줄임으로 자르고 호버에 전체를 보인다 — 라벨이 입력 칸을 밀거나 겹치지 않는다(언리얼 Details 의 이름 열과 같다).
+         * @param pTooltip 라벨에 호버하면 보일 설명입니다. 라벨은 짧게, 긴 설명은 여기에 둔다(유니티 Inspector 의 `[Tooltip]`). nullptr 이면 없다.
          */
-        static void drawPropertyRowLabel( const utf8* pLabel );
+        static void drawPropertyRowLabel( const utf8* pLabel, const utf8* pTooltip = nullptr );
         /**
          * @brief 도구줄 칸의 이름표를 칸 앞(왼쪽)에 붙입니다. 다음 항목의 폭은 건드리지 않습니다(도구줄은 칸마다 폭을 정한다).
          * @details ImGui 입력 위젯에 보이는 이름표를 주면 칸 오른쪽에 붙어 도구줄이 읽기 어렵다 — 이름표는 앞, 위젯 이름은 `##id` 로.
          */
-        static void drawInlineLabel( const utf8* pLabel );
+        static void drawInlineLabel( const utf8* pLabel, const utf8* pTooltip = nullptr );
 
         /**
          * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력을 그립니다. 값이 바뀌면 true 입니다.

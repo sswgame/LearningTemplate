@@ -3,6 +3,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -574,19 +575,87 @@ namespace sw::editor
         ImGui::PopStyleColor( 3 );
     }
 
-    void EditorWidgets::drawPropertyRowLabel( const utf8* pLabel )
+    void EditorWidgets::drawPropertyRowLabel( const utf8* pLabel, const utf8* pTooltip )
     {
+        const float32 columnWidth = SW_THEMEMETRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale(); // 예전 고정 120px 은 DPI 를 몰랐다
+        const utf8*   pText       = pLabel != nullptr ? pLabel : "";
         ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled( "%s", pLabel );
-        ImGui::SameLine( SW_THEMEMETRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale() ); // 예전 고정 120px 은 DPI 를 몰랐다
+        // 라벨은 열 폭 안에서 말줄임으로 자른다 — 길면 입력 칸 위에 겹쳐 그려졌다(uiaudit). 잘렸을 때만 전체 라벨을 툴팁에 더한다.
+        const float32 labelWidth = columnWidth - ImGui::GetStyle().ItemSpacing.x;
+        const ImVec2  textSize   = ImGui::CalcTextSize( pText );
+        const bool    bClipped   = textSize.x > labelWidth;
+        const ImVec2  cursor     = ImGui::GetCursorScreenPos();
+        const float32 textY      = cursor.y + ImGui::GetStyle().FramePadding.y;
+        const ImVec2  textMax{ cursor.x + labelWidth, textY + textSize.y };
+        ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
+        ImGui::RenderTextEllipsis( ImGui::GetWindowDrawList(), ImVec2{ cursor.x, textY }, textMax, textMax.x, pText, nullptr, &textSize );
+        ImGui::PopStyleColor();
+        ImGui::Dummy( ImVec2{ bClipped ? labelWidth : textSize.x, ImGui::GetFrameHeight() } );
+        if ( bClipped || StringUtil::isNullOrEmpty( pTooltip ) == false )
+        {
+            if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
+            {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "TooltipWrapEm" ) );
+                if ( bClipped )
+                    ImGui::TextUnformatted( pText );
+                if ( StringUtil::isNullOrEmpty( pTooltip ) == false )
+                    ImGui::TextDisabled( "%s", pTooltip );
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
+        }
+        ImGui::SameLine( columnWidth );
         ImGui::SetNextItemWidth( -1.0f );
     }
 
-    void EditorWidgets::drawInlineLabel( const utf8* pLabel )
+    void EditorWidgets::drawInlineLabel( const utf8* pLabel, const utf8* pTooltip )
     {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled( "%s", pLabel );
+        drawTooltip( pTooltip );
         ImGui::SameLine();
+    }
+
+    bool EditorWidgets::drawEmptyState( const utf8* pText, const utf8* pActionLabel )
+    {
+        drawEmptyHint( pText );
+        if ( StringUtil::isNullOrEmpty( pActionLabel ) )
+            return false;
+        return ImGui::Button( pActionLabel );
+    }
+
+    bool EditorWidgets::beginAdvancedSection( const utf8* pID )
+    {
+        // 머리글 이름표는 "Advanced" 하나로 모든 패널이 같다(용어 일관성). 펼침 상태 키는 @p pID 라 언어를 바꿔도 유지된다.
+        return ImGui::CollapsingHeader( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "Advanced" ), pID != nullptr ? pID : "advanced" ), ImGuiTreeNodeFlags_None );
+    }
+
+    bool EditorWidgets::drawFilterBar( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit )
+    {
+        // 건수 글을 먼저 재고, 검색 칸이 그 폭을 뺀 남은 폭을 쓴다. 건수는 줄 오른쪽 끝에 붙는다.
+        utf8       countText[64];
+        const bool bHasUnit = StringUtil::isNullOrEmpty( pUnit ) == false;
+        if ( total == 0 && bHasUnit )
+            formatstring( countText, sizeof( countText ), "%u %s", visible, pUnit );
+        else if ( total == 0 )
+            formatstring( countText, sizeof( countText ), "%u", visible );
+        else if ( bHasUnit )
+            formatstring( countText, sizeof( countText ), "%u / %u %s", visible, total, pUnit );
+        else
+            formatstring( countText, sizeof( countText ), "%u / %u", visible, total );
+        const float32 countWidth = ImGui::CalcTextSize( countText ).x;
+        const float32 spacing    = ImGui::GetStyle().ItemSpacing.x;
+        const float32 avail      = ImGui::GetContentRegionAvail().x;
+        const float32 fieldWidth = avail - countWidth - spacing;
+        const bool    bChanged   = drawSearchField( pID, pBuffer, bufferBytes, pHint, fieldWidth > 0.0f ? fieldWidth : -1.0f, false );
+        if ( fieldWidth > 0.0f )
+        {
+            ImGui::SameLine( 0.0f, spacing );
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextDisabled( "%s", countText );
+        }
+        return bChanged;
     }
 
     bool EditorWidgets::drawTextField( const utf8* pLabel, string& text, float32 width )

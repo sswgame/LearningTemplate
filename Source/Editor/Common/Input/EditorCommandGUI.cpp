@@ -21,6 +21,7 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Localization/EditorDataText.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -35,6 +36,7 @@
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
@@ -571,5 +573,62 @@ namespace sw::editor
         const EditorMenu*            pMenu    = registry.findMenu( menuPath );
         if ( pMenu != nullptr )
             EditorCommandGUIInternal::drawMenu( registry, *pMenu );
+    }
+
+    bool EditorCommandGUI::drawToolbarButton( string_view commandID, const EditorCommandTarget& target )
+    {
+        EditorContext&               editorContext = editor::getSubsystem<EditorContext>();
+        const EditorCommandRegistry& registry      = editorContext.getSubsystem<EditorCommandRegistry>();
+        const EditorCommandDesc*     pDesc         = registry.find( commandID );
+        if ( pDesc == nullptr )
+            SW_FATAL( "Toolbar button names command '%#' which is not registered", string( commandID ).c_str() );
+        EditorInputActions& inputActions = editorContext.getSubsystem<EditorInputActions>();
+
+        const bool bEnabled = EditorCommandRegistry::isEnabled( *pDesc, target );
+        ImGui::PushID( pDesc->_id.c_str() );
+        ImGui::BeginDisabled( bEnabled == false );
+        bool bPressed = false;
+        if ( pDesc->_iconName.empty() == false )
+        {
+            // 도구줄 아이콘은 상자 없이 둔다(drawIconToggle 과 같은 모양) — 정사각 한 변은 줄 높이라 글꼴 · DPI 를 따른다.
+            const float32 side = ImGui::GetFrameHeight();
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+            bPressed = ImGui::Button( EditorIconUtil::findGlyphByName( pDesc->_iconName.c_str() ), ImVec2{ side, side } );
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor();
+        }
+        else
+        {
+            bPressed = ImGui::Button( pDesc->_label.c_str() );
+        }
+        ImGui::EndDisabled();
+        ImGui::PopID();
+
+        fixed_string<constant::buffer::kMax128> markKey{ "toolbar." };
+        markKey.append( pDesc->_id.c_str() );
+        EditorSelfTestMarks::note( markKey.c_str() );
+
+        if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled ) )
+        {
+            string shortcutLabel;
+            inputActions.formatShortcutLabel( pDesc->_inputAction, shortcutLabel );
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "TooltipWrapEm" ) );
+            ImGui::TextUnformatted( pDesc->_label.c_str() );
+            if ( shortcutLabel.empty() == false )
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled( "%s", shortcutLabel.c_str() );
+            }
+            if ( pDesc->_tooltip.empty() == false )
+                ImGui::TextDisabled( "%s", pDesc->_tooltip.c_str() );
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+
+        if ( bPressed )
+            inputActions.queueCommand( pDesc->_id, target );
+        return bPressed;
     }
 } // namespace sw::editor

@@ -141,6 +141,7 @@
 		<entry key="EdButton.Step" text="한 프레임" sourceHash="d9994f251f1280cf" />
 		<entry key="EdButton.StepN" text="N 프레임" sourceHash="4b3245a46428ef09" />
 		<entry key="EdButton.ThemeLookAndFeel" text="테마 · 모양" sourceHash="11c6e568ec0256f6" />
+		<entry key="EdCommon.Advanced" text="고급" sourceHash="21b06c38fc4164db" />
 		<entry key="EdCommon.AlignSelected"
 		       text="선택한 오브젝트를 정렬하고 분배합니다(둘 이상 선택)."
 		       sourceHash="3f15212ccdd0c0e5" />
