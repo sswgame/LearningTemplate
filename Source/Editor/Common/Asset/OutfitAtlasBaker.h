@@ -27,33 +27,49 @@
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor
 {
     /** @brief 명세의 부품 하나입니다(이름과 메시 경로). */
+    REFLECT()
     struct OutfitAtlasPartSpec
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
-        string        _mesh{};
+        PROPERTY( Required )
+        string _mesh{};
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
     /** @brief 명세의 텍스처 하나입니다(부품과 이미지 경로). */
+    REFLECT()
     struct OutfitAtlasSourceSpec
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _part{};
-        string        _texture{};
+        PROPERTY( Required )
+        string _texture{};
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
     /** @brief 명세의 텍스처 종류 하나입니다(예: BaseColor) — 부품마다 이미지 하나로 아틀라스 이미지 하나를 만든다. */
+    REFLECT()
     struct OutfitAtlasMapSpec
     {
-        hashed_string                 _name{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Required )
         string                        _output{};
         vector<OutfitAtlasSourceSpec> _listSource{};
     };
@@ -62,11 +78,18 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 아틀라스 굽기 명세입니다. 수치의 기본값은 이 정의의 초기값이 정본입니다. */
+    REFLECT()
     struct OutfitAtlasSpec
     {
-        hashed_string               _group{};
-        string                      _outputMesh{};
-        int32                       _size{ 1024 };
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _group{};
+        PROPERTY( Required )
+        string _outputMesh{};
+        PROPERTY( Min = 1 )
+        int32 _size{ 1024 };
+        PROPERTY( Min = 0 )
         int32                       _padding{ 4 };
         vector<OutfitAtlasPartSpec> _listPart{};
         vector<OutfitAtlasMapSpec>  _listMap{};

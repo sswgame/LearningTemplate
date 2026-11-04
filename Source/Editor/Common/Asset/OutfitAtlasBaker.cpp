@@ -27,16 +27,9 @@ namespace sw::editor
     {
         struct OutfitAtlasBakerInternal
         {
-            static constexpr const utf8* kArrRootAttribute[]   = { "group", "outputMesh", "size", "padding" };
-            static constexpr const utf8* kArrPartAttribute[]   = { "name", "mesh" };
-            static constexpr const utf8* kArrMapAttribute[]    = { "name", "output" };
-            static constexpr const utf8* kArrSourceAttribute[] = { "part", "texture" };
-
             static void readMap( const XMLNode& node, CharacterDataReader& reader, OutfitAtlasMapSpec& outMap )
             {
-                reader.reportUnknownAttributes( node, kArrMapAttribute );
-                outMap._name   = reader.readName( node, "name", true );
-                outMap._output = reader.readName( node, "output", true ).c_str();
+                (void)reader.readFields( node, outMap ); // 칸은 OutfitAtlasMapSpec 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Source" ) == false )
@@ -44,29 +37,21 @@ namespace sw::editor
                         reader.reportUnknownElement( child );
                         continue;
                     }
-                    reader.reportUnknownAttributes( child, kArrSourceAttribute );
                     OutfitAtlasSourceSpec source;
-                    source._part    = reader.readName( child, "part", true );
-                    source._texture = reader.readName( child, "texture", true ).c_str();
+                    (void)reader.readFields( child, source );
                     outMap._listSource.push_back( std::move( source ) );
                 }
             }
 
             static void readRoot( const XMLNode& root, CharacterDataReader& reader, OutfitAtlasSpec& outSpec )
             {
-                reader.reportUnknownAttributes( root, kArrRootAttribute );
-                outSpec._group      = reader.readName( root, "group", true );
-                outSpec._outputMesh = reader.readName( root, "outputMesh", true ).c_str();
-                reader.readOptionalInt( root, "size", outSpec._size );
-                reader.readOptionalInt( root, "padding", outSpec._padding );
+                (void)reader.readFields( root, outSpec );
                 for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Part" ) )
                     {
-                        reader.reportUnknownAttributes( child, kArrPartAttribute );
                         OutfitAtlasPartSpec part;
-                        part._name = reader.readName( child, "name", true );
-                        part._mesh = reader.readName( child, "mesh", true ).c_str();
+                        (void)reader.readFields( child, part );
                         outSpec._listPart.push_back( std::move( part ) );
                     }
                     else if ( StringUtil::equals( child.getName(), "Map" ) )
