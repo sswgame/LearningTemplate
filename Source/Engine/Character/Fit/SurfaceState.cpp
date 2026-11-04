@@ -12,18 +12,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct SurfaceStateInternal
-        {
-            static constexpr const utf8* kArrChannelAttribute[] = { "name", "decayPerSecond", "max", "maskResolution", "clip" };
-            static constexpr int32       kMaxMaskResolution     = 4096;
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     bool SurfaceChannelTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         _listChannel.clear();
@@ -57,22 +45,9 @@ namespace sw
                 reader.reportUnknownElement( child );
                 continue;
             }
-            reader.reportUnknownAttributes( child, SurfaceStateInternal::kArrChannelAttribute );
+            // 칸 · 범위(감쇠 >= 0, 상한 > 0, 마스크 해상도 0..4096)는 SurfaceChannelDef 의 PROPERTY 가 정본이다.
             SurfaceChannelDef channel;
-            channel._name = reader.readName( child, "name", true );
-            reader.readOptionalFloat( child, "decayPerSecond", channel._decayPerSecond );
-            reader.readOptionalFloat( child, "max", channel._maxValue );
-            int32 resolution{ static_cast<int32>( channel._maskResolution ) };
-            bool  bClip{ channel._bClip != SW_FALSE };
-            reader.readOptionalInt( child, "maskResolution", resolution );
-            reader.readOptionalBool( child, "clip", bClip );
-            channel._bClip = bClip ? SW_TRUE : SW_FALSE;
-            if ( resolution < 0 || resolution > SurfaceStateInternal::kMaxMaskResolution )
-                reader.addError( "Character.SurfaceMaskResolutionInvalid", child, "needs maskResolution in [0, 4096]" );
-            else
-                channel._maskResolution = static_cast<uint16>( resolution );
-            if ( channel._decayPerSecond < 0.0f || channel._maxValue <= 0.0f )
-                reader.addError( "Character.SurfaceDecayInvalid", child, "needs decayPerSecond >= 0 and max > 0" );
+            (void)reader.readFields( child, channel );
             if ( channel._name.empty() )
                 continue;
             if ( findChannelIndex( channel._name ) >= 0 )

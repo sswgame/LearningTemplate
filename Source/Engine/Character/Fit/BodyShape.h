@@ -29,6 +29,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -41,11 +42,17 @@ namespace sw
     class XMLNode;
 
     /** @brief 본 하나의 비율 보정입니다. 스케일은 로컬 스케일에 곱하고, 오프셋은 로컬 위치에 더합니다. */
+    REFLECT()
     struct SW_API BoneProportionEntry
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "name", Required )
         hashed_string _bone{};
-        float3        _scale{ 1.0f };
-        float3        _offset{};
+        PROPERTY()
+        float3 _scale{ 1.0f };
+        PROPERTY( Units = m )
+        float3 _offset{};
     };
 } // namespace sw
 
@@ -87,8 +94,12 @@ namespace sw
 namespace sw
 {
     /** @brief 축의 한쪽(양쪽 또는 음쪽) 끝에서 적용하는 모프와 본 비율입니다. */
+    REFLECT()
     struct SW_API BodyShapeAxisSide
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string               _morph{};
         vector<BoneProportionEntry> _listBone{};
     };
@@ -97,14 +108,21 @@ namespace sw
 namespace sw
 {
     /** @brief 체형 축 하나(슬라이더)입니다. 값이 `_max` 면 양쪽이 1, `_min` 이면 음쪽이 1 입니다(0 은 기본 체형). */
+    REFLECT()
     struct SW_API BodyShapeAxis
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string     _name{};
         BodyShapeAxisSide _positive{};
         BodyShapeAxisSide _negative{};
-        float32           _min{ -1.0f };
-        float32           _max{ 1.0f };
-        float32           _default{ 0.0f };
+        PROPERTY()
+        float32 _min{ -1.0f };
+        PROPERTY()
+        float32 _max{ 1.0f };
+        PROPERTY()
+        float32 _default{ 0.0f };
     };
 } // namespace sw
 

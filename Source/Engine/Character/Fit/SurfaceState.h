@@ -25,6 +25,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -34,13 +35,21 @@ namespace sw
     class XMLNode;
 
     /** @brief 표면 채널 하나입니다. 마스크 해상도가 0 이면 영역 값만 있고 UV 마스크가 없습니다. */
+    REFLECT()
     struct SW_API SurfaceChannelDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
-        float32       _decayPerSecond{ 0.0f };
-        float32       _maxValue{ 1.0f };
-        uint16        _maskResolution{ 0 };
-        uint8         _bClip{ SW_FALSE }; ///< 머티리얼이 알파로 잘라 구멍을 낸다(찢김)
+        PROPERTY( Min = 0.0 )
+        float32 _decayPerSecond{ 0.0f };
+        PROPERTY( Name = "max", Min = 0.0001 )
+        float32 _maxValue{ 1.0f };
+        PROPERTY( Max = 4096 )
+        uint16 _maskResolution{ 0 };
+        PROPERTY()
+        bool _bClip{ false }; ///< 머티리얼이 알파로 잘라 구멍을 낸다(찢김)
     };
 } // namespace sw
 

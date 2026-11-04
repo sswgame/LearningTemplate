@@ -19,9 +19,6 @@ namespace sw
     {
         struct BodyShapeInternal
         {
-            static constexpr const utf8* kArrAxisAttribute[] = { "name", "min", "max", "default" };
-            static constexpr const utf8* kArrSideAttribute[] = { "morph" };
-            static constexpr const utf8* kArrBoneAttribute[] = { "name", "scale", "offset" };
 
             static void appendError( string* pOutError, const string& message )
             {
@@ -173,12 +170,8 @@ namespace sw
                 reader.reportUnknownElement( axisNode );
                 continue;
             }
-            reader.reportUnknownAttributes( axisNode, BodyShapeInternal::kArrAxisAttribute );
             BodyShapeAxis axis;
-            axis._name = reader.readName( axisNode, "name", true );
-            reader.readOptionalFloat( axisNode, "min", axis._min );
-            reader.readOptionalFloat( axisNode, "max", axis._max );
-            reader.readOptionalFloat( axisNode, "default", axis._default );
+            (void)reader.readFields( axisNode, axis ); // 칸은 BodyShapeAxis 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
             const bool bInvalidAxisRange = axis._min > 0.0f || axis._max < 0.0f || axis._min >= axis._max;
             if ( bInvalidAxisRange )
                 reader.addError( "Character.BodyAxisRangeInvalid", axisNode, "needs min <= 0 <= max with min < max" );
@@ -204,8 +197,7 @@ namespace sw
 
     void BodyShapeSet::readSide( const XMLNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( node, BodyShapeInternal::kArrSideAttribute );
-        outSide._morph = reader.readName( node, "morph", false );
+        (void)reader.readFields( node, outSide );
         for ( XMLNode boneNode = node.findChild(); boneNode; boneNode = boneNode.findNextSibling() )
         {
             if ( StringUtil::equals( boneNode.getName(), "Bone" ) == false )
@@ -213,11 +205,8 @@ namespace sw
                 reader.reportUnknownElement( boneNode );
                 continue;
             }
-            reader.reportUnknownAttributes( boneNode, BodyShapeInternal::kArrBoneAttribute );
             BoneProportionEntry entry;
-            entry._bone = reader.readName( boneNode, "name", true );
-            reader.readOptionalFloat3( boneNode, "scale", entry._scale );
-            reader.readOptionalFloat3( boneNode, "offset", entry._offset );
+            (void)reader.readFields( boneNode, entry );
             if ( entry._bone.empty() == false )
                 outSide._listBone.push_back( entry );
         }
