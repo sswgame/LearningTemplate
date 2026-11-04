@@ -16,6 +16,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -48,14 +49,182 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 세트가 어트리뷰트 하나에 주는 기본값과 범위입니다. */
-    struct AbilitySetAttributeEntry
+    /**
+     * @brief 어빌리티 데이터(`<AbilityCatalog>`)의 원소마다 받는 칸입니다(파일 스키마 — 런타임 구조체로 옮기기 전의 글 그대로).
+     * @details 초기값은 런타임 구조체의 초기값을 그대로 가져온다(기본값의 정본은 하나). 태그 자식 · 매개변수 · 실행 클래스의 인자는 원소마다 따로 읽는다.
+     */
+    REFLECT()
+    struct SW_GF_API AbilityEffectFields
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        EffectDurationPolicy _duration{ AbilityEffectDef{}._durationPolicy };
+        PROPERTY( Units = s )
+        float32 _seconds{ AbilityEffectDef{}._duration._baseValue };
+        PROPERTY()
+        float32 _secondsPerLevel{ AbilityEffectDef{}._duration._perLevel };
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _period{ AbilityEffectDef{}._period };
+        PROPERTY()
+        bool _bExecuteOnApplication{ AbilityEffectDef{}._bExecutePeriodicOnApplication != SW_FALSE };
+        PROPERTY()
+        bool _bRefreshOnStack{ AbilityEffectDef{}._bRefreshDurationOnStack != SW_FALSE };
+        PROPERTY( Min = 1 )
+        int32 _stackLimit{ AbilityEffectDef{}._stackLimit };
+        PROPERTY()
+        EffectStackingPolicy _stacking{ AbilityEffectDef{}._stackingPolicy };
+        PROPERTY()
+        EffectStackExpirationPolicy _stackExpiration{ AbilityEffectDef{}._stackExpirationPolicy };
+    };
+
+    /** @brief 이펙트의 모디파이어(`<Modifier …/>`) 칸입니다. `backing` 은 AttributeBased, `name` 은 SetByCaller 에서 필수다(읽기가 본다). */
+    REFLECT()
+    struct SW_GF_API AbilityModifierFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _attribute{};
-        float32       _baseValue{ 0.0f };
-        float32       _minValue{ -MathUtil::kMaxFloat }; ///< `min` 을 적지 않으면 아래로 막지 않는다
-        float32       _maxValue{ MathUtil::kMaxFloat };  ///< `max` 를 적지 않으면 위로 막지 않는다
-        uint8         _bHasRange{ SW_FALSE };
+        PROPERTY()
+        AttributeModOp _op{ AbilityEffectModifier{}._op };
+        PROPERTY()
+        EffectMagnitudeSource _source{ AbilityEffectModifier{}._magnitudeSource };
+        PROPERTY()
+        float32 _magnitude{ AbilityEffectModifier{}._scalableMagnitude._baseValue };
+        PROPERTY()
+        float32 _perLevel{ AbilityEffectModifier{}._scalableMagnitude._perLevel };
+        PROPERTY()
+        float32 _coefficient{ AbilityEffectModifier{}._coefficient };
+        PROPERTY()
+        float32 _pre{ AbilityEffectModifier{}._preMultiplyAdditive };
+        PROPERTY()
+        float32 _post{ AbilityEffectModifier{}._postMultiplyAdditive };
+        PROPERTY()
+        hashed_string _backing{};
+        PROPERTY()
+        hashed_string _name{};
+        PROPERTY()
+        string _from{}; ///< `Target` 이면 맞는 쪽을 읽는다(그 밖은 쏜 쪽)
+    };
+
+    /** @brief 클래스 이름 하나를 받는 원소(`<Execution class>` · `<AttributeSet class>`)의 칸입니다. 실행 클래스의 인자는 그 클래스가 읽는다. */
+    REFLECT()
+    struct SW_GF_API AbilityClassFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _class{};
+    };
+
+    /** @brief id 하나를 받는 원소(`<GrantAbility id>` · `<AbilitySet id>`)의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API AbilityIDFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+    };
+
+    /** @brief 피해 실행(`<Execution class="Damage" setByCaller attackPowerCoefficient base/>`)의 인자입니다. 셋 다 필수다. */
+    REFLECT()
+    struct SW_GF_API DamageExecutionFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _class{};
+        PROPERTY( Required )
+        hashed_string _setByCaller{};
+        PROPERTY( Required )
+        float32 _attackPowerCoefficient{ 0.0f };
+        PROPERTY( Required )
+        float32 _base{ 0.0f };
+    };
+
+    /** @brief 게임플레이 큐 표현(`<AbilityPresentation …/>`)의 칸입니다. 프리팹이나 소리 중 하나는 적는다(읽기가 본다). */
+    REFLECT()
+    struct SW_GF_API AbilityPresentationFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _tag{};
+        PROPERTY()
+        hashed_string _prefab{};
+        PROPERTY()
+        hashed_string _sound{};
+        PROPERTY( Units = m )
+        float3 _offset{};
+        PROPERTY()
+        bool _bOnRemoved{ false };
+        PROPERTY()
+        bool _bPositional{ true };
+    };
+
+    /** @brief 어빌리티(`<Ability id class cost cooldown retrigger activateOnGranted>`)의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API AbilityFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        hashed_string _class{};
+        PROPERTY()
+        hashed_string _cost{};
+        PROPERTY()
+        hashed_string _cooldown{};
+        PROPERTY()
+        bool _bRetrigger{ false };
+        PROPERTY()
+        bool _bActivateOnGranted{ false };
+    };
+
+    /** @brief 어빌리티 매개변수(`<Param name text|value/>`)의 칸입니다. `text` 가 없으면 `value` 를 반드시 적는다(읽기가 본다). */
+    REFLECT()
+    struct SW_GF_API AbilityParamFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY()
+        hashed_string _text{};
+        PROPERTY()
+        float32 _value{ 0.0f };
+    };
+
+    /** @brief 태그 자식(`<AbilityTag tag/>` 등)의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API AbilityTagFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _tag{};
+    };
+
+    /** @brief 세트가 어트리뷰트 하나에 주는 기본값과 범위입니다. */
+    REFLECT()
+    struct SW_GF_API AbilitySetAttributeEntry
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "name", Required )
+        hashed_string _attribute{};
+        PROPERTY( Name = "base" )
+        float32 _baseValue{ 0.0f };
+        PROPERTY( Name = "min" )
+        float32 _minValue{ -MathUtil::kMaxFloat }; ///< `min` 을 적지 않으면 아래로 막지 않는다
+        PROPERTY( Name = "max" )
+        float32 _maxValue{ MathUtil::kMaxFloat }; ///< `max` 를 적지 않으면 위로 막지 않는다
+        uint8   _bHasRange{ SW_FALSE };
     };
 } // namespace sw
 
@@ -72,21 +241,32 @@ namespace sw
 namespace sw
 {
     /** @brief 세트가 줄 어빌리티 하나입니다. */
-    struct AbilitySetAbilityEntry
+    REFLECT()
+    struct SW_GF_API AbilitySetAbilityEntry
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "id", Required )
         hashed_string _abilityID{};
-        int32         _level{ 1 };
-        int32         _inputID{ -1 }; ///< `AbilityComponent::kNoInputID` 와 같은 값
+        PROPERTY( Min = 1 )
+        int32 _level{ 1 };
+        PROPERTY( Name = "input", Min = -1 )
+        int32 _inputID{ -1 }; ///< `AbilityComponent::kNoInputID` 와 같은 값
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 세트가 시작할 때 걸 이펙트 하나입니다. */
-    struct AbilitySetEffectEntry
+    REFLECT()
+    struct SW_GF_API AbilitySetEffectEntry
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "id", Required )
         hashed_string _effectID{};
-        int32         _level{ 1 };
+        PROPERTY( Min = 1 )
+        int32 _level{ 1 };
     };
 } // namespace sw
 

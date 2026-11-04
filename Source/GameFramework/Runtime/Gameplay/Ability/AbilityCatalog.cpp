@@ -8,6 +8,7 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -24,10 +25,10 @@ namespace sw
             {
                 for ( XMLNode child = parent.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
-                    const utf8* pTag = child.findAttribute( "tag" );
-                    if ( StringUtil::isNullOrEmpty( pTag ) )
+                    AbilityTagFields fields;
+                    if ( XMLFields::readFields( child, fields, "AbilityCatalog" ) == false || fields._tag.empty() )
                         continue;
-                    outTags.addTag( TagID::request( string_view( pTag ) ) );
+                    outTags.addTag( TagID::request( string_view( fields._tag ) ) );
                 }
             }
 
@@ -43,13 +44,13 @@ namespace sw
                 readTagChildren( node, "OngoingRequiredTag", outDef._ongoingRequiredTags );
                 for ( XMLNode grantNode = node.findChild( "GrantAbility" ); grantNode; grantNode = grantNode.findNextSibling( "GrantAbility" ) )
                 {
-                    hashed_string abilityID;
-                    if ( XMLReadUtil::readRequiredName( grantNode, "id", sourceName, abilityID ) == false )
+                    AbilityIDFields grant;
+                    if ( XMLFields::readFields( grantNode, grant, sourceName ) == false )
                     {
                         SW_LOG_ERROR_ID( "AbilityCatalog.EffectGrantAbilityWithoutId", "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
                         return false;
                     }
-                    outDef._listGrantedAbility.push_back( abilityID );
+                    outDef._listGrantedAbility.push_back( grant._id );
                 }
                 // 즉시 이펙트는 걸려 있지 않으므로 줄 동안이 없다 — 적은 것을 조용히 버리지 않고 오류로 둔다.
                 const bool bInstantWithLasting = outDef._durationPolicy == EffectDurationPolicy::Instant &&
@@ -65,44 +66,24 @@ namespace sw
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거형 이름을 알 수 없으면 경고를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, AbilityEffectModifier& outModifier )
             {
-                if ( XMLReadUtil::readRequiredName( node, "attribute", sourceName, outModifier._attribute ) == false )
+                // 칸 · 열거 이름은 AbilityModifierFields 의 PROPERTY 가 본다. 깨진 칸은 그 모디파이어를 넣지 않는 오류다.
+                AbilityModifierFields fields;
+                if ( XMLFields::readFields( node, fields, sourceName ) == false )
                 {
-                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectModifierWithoutAttribute", "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectID );
+                    SW_LOG_ERROR_ID( "AbilityCatalog.EffectModifierInvalidFields", "%#: effect '%#' has a <Modifier> with invalid fields - skipped", sourceName, pEffectID );
                     return false;
                 }
-
-                const utf8* pOp = node.findAttribute( "op" );
-                if ( pOp != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pOp ), outModifier._op ) == false )
-                {
-                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownModifierOp", "%#: effect '%#' has unknown modifier op '%#' - skipped", sourceName, pEffectID, pOp );
-                    return false;
-                }
-
-                const utf8* pSource = node.findAttribute( "source" );
-                if ( pSource != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pSource ), outModifier._magnitudeSource ) == false )
-                {
-                    SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownMagnitudeSource", "%#: effect '%#' has unknown magnitude source '%#' - skipped", sourceName, pEffectID, pSource );
-                    return false;
-                }
-
-                // 적지 않은 칸은 모디파이어 구조체의 초기값이다. 깨진 값은 그 모디파이어를 넣지 않는 오류다.
-                constexpr float32 kAny        = MathUtil::kMaxFloat;
-                bool              bValid      = XMLReadUtil::readOptionalNumber( node, "magnitude", sourceName, -kAny, kAny, outModifier._scalableMagnitude._baseValue );
-                bValid                        = XMLReadUtil::readOptionalNumber( node, "perLevel", sourceName, -kAny, kAny, outModifier._scalableMagnitude._perLevel ) && bValid;
-                bValid                        = XMLReadUtil::readOptionalNumber( node, "coefficient", sourceName, -kAny, kAny, outModifier._coefficient ) && bValid;
-                bValid                        = XMLReadUtil::readOptionalNumber( node, "pre", sourceName, -kAny, kAny, outModifier._preMultiplyAdditive ) && bValid;
-                bValid                        = XMLReadUtil::readOptionalNumber( node, "post", sourceName, -kAny, kAny, outModifier._postMultiplyAdditive ) && bValid;
-                outModifier._backingAttribute = XMLReadUtil::readOptionalName( node, "backing" ); // 아래에서 AttributeBased 일 때 필수로 확인한다
-                outModifier._setByCallerName  = XMLReadUtil::readOptionalName( node, "name" );    // 아래에서 SetByCaller 일 때 필수로 확인한다
-                if ( bValid == false )
-                {
-                    SW_LOG_ERROR_ID( "AbilityCatalog.EffectModifierInvalidNumbers", "%#: effect '%#' has a <Modifier> with invalid numbers - skipped", sourceName, pEffectID );
-                    return false;
-                }
-
-                const utf8* pFrom        = node.findAttribute( "from" );
-                const bool  bFromTarget  = pFrom != nullptr && StringUtil::equals( pFrom, "Target" );
-                outModifier._bFromSource = bFromTarget ? SW_FALSE : SW_TRUE;
+                outModifier._attribute                    = fields._attribute;
+                outModifier._op                           = fields._op;
+                outModifier._magnitudeSource              = fields._source;
+                outModifier._scalableMagnitude._baseValue = fields._magnitude;
+                outModifier._scalableMagnitude._perLevel  = fields._perLevel;
+                outModifier._coefficient                  = fields._coefficient;
+                outModifier._preMultiplyAdditive          = fields._pre;
+                outModifier._postMultiplyAdditive         = fields._post;
+                outModifier._backingAttribute             = fields._backing; // 아래에서 AttributeBased 일 때 필수로 확인한다
+                outModifier._setByCallerName              = fields._name;    // 아래에서 SetByCaller 일 때 필수로 확인한다
+                outModifier._bFromSource                  = StringUtil::equals( fields._from, "Target" ) ? SW_FALSE : SW_TRUE;
 
                 const bool bMissingBacking = outModifier._magnitudeSource == EffectMagnitudeSource::AttributeBased && outModifier._backingAttribute.empty();
                 if ( bMissingBacking )
@@ -124,14 +105,11 @@ namespace sw
             /** @brief 노드의 매개변수로 "Damage" 실행 계산을 만듭니다. 세 매개변수는 필수이고, 빠지거나 깨졌으면 오류를 남기고 nullptr 입니다. */
             static shared_ptr<const IGameplayEffectExecution> createDamageExecution( const XMLNode& node )
             {
-                const std::optional<string>  damageName  = node.readRequiredAttribute<string>( "setByCaller" );
-                const std::optional<float32> coefficient = node.readRequiredAttribute<float32>( "attackPowerCoefficient" );
-                const std::optional<float32> baseDamage  = node.readRequiredAttribute<float32>( "base" );
-                const bool                   bComplete   = damageName.has_value() && coefficient.has_value() && baseDamage.has_value();
-                if ( bComplete == false )
+                DamageExecutionFields fields; // 세 인자 모두 필수
+                if ( XMLFields::readFields( node, fields, "AbilityCatalog" ) == false )
                     return nullptr;
                 shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
-                pExecution->setParameters( hashed_string( *damageName ), *coefficient, *baseDamage );
+                pExecution->setParameters( fields._setByCaller, fields._attackPowerCoefficient, fields._base );
                 return pExecution;
             }
         };
@@ -357,46 +335,24 @@ namespace sw
 
     bool AbilityCatalog::readEffect( const XMLNode& node, string_view sourceName, AbilityEffectDef& outDef ) const
     {
-        const utf8* pID = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pID ) )
+        // 칸 · 열거 이름 · 범위(주기 >= 0 · 겹침 상한 >= 1)는 AbilityEffectFields 의 PROPERTY 가 본다. 깨진 칸은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
+        AbilityEffectFields fields;
+        if ( XMLFields::readFields( node, fields, sourceName ) == false )
         {
-            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityEffectWithoutIdSkipped", "%#: <AbilityEffect> without an id - skipped", sourceName );
+            SW_LOG_ERROR_ID( "AbilityCatalog.EffectInvalidFieldsSkipped", "%#: <AbilityEffect id=\"%#\"> has invalid fields - skipped", sourceName, fields._id.c_str() );
             return false;
         }
-        outDef._id = hashed_string( pID );
-
-        const utf8* pDuration = node.findAttribute( "duration" );
-        if ( pDuration != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pDuration ), outDef._durationPolicy ) == false )
-        {
-            SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownDurationPolicy", "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pID, pDuration );
-            return false;
-        }
-        // 적지 않은 칸은 AbilityEffectDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
-        constexpr float32 kAny   = MathUtil::kMaxFloat;
-        bool              bValid = XMLReadUtil::readOptionalNumber( node, "seconds", sourceName, -kAny, kAny, outDef._duration._baseValue );
-        bValid                   = XMLReadUtil::readOptionalNumber( node, "secondsPerLevel", sourceName, -kAny, kAny, outDef._duration._perLevel ) && bValid;
-        bValid                   = XMLReadUtil::readOptionalNumber( node, "period", sourceName, 0.0f, kAny, outDef._period ) && bValid;
-        bValid                   = XMLReadUtil::readOptionalFlag( node, "executeOnApplication", outDef._bExecutePeriodicOnApplication ) && bValid;
-        bValid                   = XMLReadUtil::readOptionalFlag( node, "refreshOnStack", outDef._bRefreshDurationOnStack ) && bValid;
-        bValid                   = XMLReadUtil::readOptionalNumber( node, "stackLimit", sourceName, 1, MathUtil::kMaxInt32, outDef._stackLimit ) && bValid;
-        if ( bValid == false )
-        {
-            SW_LOG_ERROR_ID( "AbilityCatalog.EffectInvalidFieldsSkipped", "%#: effect '%#' has invalid fields - skipped", sourceName, pID );
-            return false;
-        }
-
-        const utf8* pStacking = node.findAttribute( "stacking" );
-        if ( pStacking != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pStacking ), outDef._stackingPolicy ) == false )
-        {
-            SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownStackingPolicy", "%#: effect '%#' has unknown stacking policy '%#' - skipped", sourceName, pID, pStacking );
-            return false;
-        }
-        const utf8* pExpiration = node.findAttribute( "stackExpiration" );
-        if ( pExpiration != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pExpiration ), outDef._stackExpirationPolicy ) == false )
-        {
-            SW_LOG_WARNING_ID( "AbilityCatalog.EffectUnknownStackExpiration", "%#: effect '%#' has unknown stack expiration '%#' - skipped", sourceName, pID, pExpiration );
-            return false;
-        }
+        const utf8* const pID                 = fields._id.c_str();
+        outDef._id                            = fields._id;
+        outDef._durationPolicy                = fields._duration;
+        outDef._duration._baseValue           = fields._seconds;
+        outDef._duration._perLevel            = fields._secondsPerLevel;
+        outDef._period                        = fields._period;
+        outDef._bExecutePeriodicOnApplication = fields._bExecuteOnApplication ? SW_TRUE : SW_FALSE;
+        outDef._bRefreshDurationOnStack       = fields._bRefreshOnStack ? SW_TRUE : SW_FALSE;
+        outDef._stackLimit                    = fields._stackLimit;
+        outDef._stackingPolicy                = fields._stacking;
+        outDef._stackExpirationPolicy         = fields._stackExpiration;
 
         const bool bDurationWithoutLength = outDef._durationPolicy == EffectDurationPolicy::HasDuration && outDef._duration._baseValue <= 0.0f;
         if ( bDurationWithoutLength )
@@ -411,8 +367,8 @@ namespace sw
 
         for ( XMLNode executionNode = node.findChild( "Execution" ); executionNode; executionNode = executionNode.findNextSibling( "Execution" ) )
         {
-            hashed_string className;
-            if ( XMLReadUtil::readRequiredName( executionNode, "class", sourceName, className ) == false )
+            const hashed_string className( executionNode.getAttributeText( "class" ) ); // 인자는 실행 클래스가 읽는다(클래스 이름 필수)
+            if ( className.empty() )
             {
                 SW_LOG_ERROR_ID( "AbilityCatalog.EffectExecutionWithoutClass", "%#: effect '%#' has an <Execution> without a class - skipped", sourceName, pID );
                 return false;
@@ -437,23 +393,19 @@ namespace sw
 
     bool AbilityCatalog::readCue( const XMLNode& node, string_view sourceName, AbilityPresentationDef& outDef )
     {
-        const utf8* pTag = node.findAttribute( "tag" );
-        if ( StringUtil::isNullOrEmpty( pTag ) )
+        AbilityPresentationFields fields;
+        if ( XMLFields::readFields( node, fields, sourceName ) == false )
         {
-            SW_LOG_ERROR_ID( "AbilityCatalog.AbilityPresentationWithoutTagSkipped", "%#: <AbilityPresentation> without a tag - skipped", sourceName );
+            SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueInvalidFields", "%#: <AbilityPresentation tag=\"%#\"> has invalid fields - skipped", sourceName, fields._tag );
             return false;
         }
-        outDef._cueTag     = TagID::request( string_view( pTag ) );
-        outDef._prefab     = XMLReadUtil::readOptionalName( node, "prefab" ); // 둘 중 하나는 아래에서 필수로 확인한다
-        outDef._soundEvent = XMLReadUtil::readOptionalName( node, "sound" );
-        bool bValid        = XMLReadUtil::readOptionalFloat3( node, "offset", sourceName, outDef._offset );
-        bValid             = XMLReadUtil::readOptionalFlag( node, "onRemoved", outDef._bOnRemoved ) && bValid;
-        bValid             = XMLReadUtil::readOptionalFlag( node, "positional", outDef._bPositional ) && bValid;
-        if ( bValid == false )
-        {
-            SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueInvalidFields", "%#: gameplay cue '%#' has invalid fields - skipped", sourceName, pTag );
-            return false;
-        }
+        const utf8* const pTag = fields._tag.c_str();
+        outDef._cueTag         = TagID::request( string_view( fields._tag ) );
+        outDef._prefab         = fields._prefab; // 둘 중 하나는 아래에서 필수로 확인한다
+        outDef._soundEvent     = fields._sound;
+        outDef._offset         = fields._offset;
+        outDef._bOnRemoved     = fields._bOnRemoved ? SW_TRUE : SW_FALSE;
+        outDef._bPositional    = fields._bPositional ? SW_TRUE : SW_FALSE;
         // 보여 줄 것이 없는 정의는 적은 사람의 실수다 — 조용히 아무것도 하지 않는 큐로 두지 않는다.
         if ( outDef._prefab.empty() && outDef._soundEvent.empty() )
         {
@@ -465,26 +417,24 @@ namespace sw
 
     bool AbilityCatalog::readAbility( const XMLNode& node, string_view sourceName, AbilityDef& outDef ) const
     {
-        const utf8* pID = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pID ) )
+        AbilityFields fields; // id · 클래스 필수
+        if ( XMLFields::readFields( node, fields, sourceName ) == false )
         {
-            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityWithoutIdSkipped", "%#: <Ability> without an id - skipped", sourceName );
+            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityInvalidHeadSkipped", "%#: <Ability id=\"%#\"> has an invalid head (id, class) - skipped", sourceName, fields._id.c_str() );
             return false;
         }
-        outDef._id = hashed_string( pID );
-        if ( XMLReadUtil::readRequiredName( node, "class", sourceName, outDef._className ) == false )
-        {
-            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityNoClassSkipped", "%#: ability '%#' has no class - skipped", sourceName, pID );
-            return false;
-        }
+        const utf8* const pID = fields._id.c_str();
+        outDef._id            = fields._id;
+        outDef._className     = fields._class;
         // 클래스 이름은 여기서 찾지 않는다. 클래스는 게임 모듈이 등록하므로 데이터를 읽는 순서에 영향받으면 안 된다. 없는 클래스는 만들 때(`createAbility`) 경고한다.
 
-        AbilityConfig& config   = outDef._config;
-        config._id              = outDef._id;
-        config._pCostEffect     = resolveEffectReference( node.findAttribute( "cost" ), pID, sourceName );
-        config._pCooldownEffect = resolveEffectReference( node.findAttribute( "cooldown" ), pID, sourceName );
-        bool bValid             = XMLReadUtil::readOptionalFlag( node, "retrigger", config._bRetriggerInstancedAbility );
-        bValid                  = XMLReadUtil::readOptionalFlag( node, "activateOnGranted", config._bActivateOnGranted ) && bValid;
+        AbilityConfig& config              = outDef._config;
+        config._id                         = outDef._id;
+        config._pCostEffect                = resolveEffectReference( fields._cost.empty() ? nullptr : fields._cost.c_str(), pID, sourceName );
+        config._pCooldownEffect            = resolveEffectReference( fields._cooldown.empty() ? nullptr : fields._cooldown.c_str(), pID, sourceName );
+        config._bRetriggerInstancedAbility = fields._bRetrigger ? SW_TRUE : SW_FALSE;
+        config._bActivateOnGranted         = fields._bActivateOnGranted ? SW_TRUE : SW_FALSE;
+        bool bValid                        = true;
 
         AbilityCatalogInternal::readTagChildren( node, "AbilityTag", config._abilityTags );
         AbilityCatalogInternal::readTagChildren( node, "CancelTag", config._cancelAbilitiesWithTags );
@@ -497,24 +447,25 @@ namespace sw
 
         for ( XMLNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
         {
-            hashed_string paramName;
-            if ( XMLReadUtil::readRequiredName( paramNode, "name", sourceName, paramName ) == false )
+            AbilityParamFields param;
+            if ( XMLFields::readFields( paramNode, param, sourceName ) == false )
             {
-                bValid = false; // 이름 없는 매개변수를 조용히 건너뛰지 않는다
+                bValid = false; // 이름 없는 · 깨진 매개변수를 조용히 건너뛰지 않는다
                 continue;
             }
-            const utf8* pText = paramNode.findAttribute( "text" );
-            if ( pText != nullptr )
+            if ( paramNode.findAttribute( "text" ) != nullptr )
             {
-                config._mapNameParameter.insert_or_assign( paramName, hashed_string( pText ) );
+                config._mapNameParameter.insert_or_assign( param._name, param._text );
                 continue;
             }
             // 글이 아닌 매개변수는 값을 반드시 적는다 — 빠진 값을 0 으로 두지 않는다.
-            const std::optional<float32> value = paramNode.readRequiredAttribute<float32>( "value" );
-            if ( value.has_value() )
-                config._mapParameter.insert_or_assign( paramName, *value );
-            else
-                bValid = false;
+            if ( paramNode.findAttribute( "value" ) != nullptr )
+            {
+                config._mapParameter.insert_or_assign( param._name, param._value );
+                continue;
+            }
+            SW_LOG_ERROR_ID( "AbilityCatalog.AbilityParamNeedsValue", "%#: ability '%#' <Param name=\"%#\"> needs text or value", sourceName, pID, param._name.c_str() );
+            bValid = false;
         }
         if ( bValid == false )
             SW_LOG_ERROR_ID( "AbilityCatalog.AbilityInvalidFieldsSkipped", "%#: ability '%#' has invalid fields - skipped", sourceName, pID );
@@ -523,18 +474,22 @@ namespace sw
 
     bool AbilityCatalog::readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const
     {
-        const utf8* pID = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pID ) )
+        AbilityIDFields head;
+        if ( XMLFields::readFields( node, head, sourceName ) == false )
         {
             SW_LOG_WARNING_ID( "AbilityCatalog.AbilitySetWithoutIdSkipped", "%#: <AbilitySet> without an id - skipped", sourceName );
             return false;
         }
-        outDef._id = hashed_string( pID );
+        const utf8* const pID = head._id.c_str();
+        outDef._id            = head._id;
 
         for ( XMLNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
         {
             AbilitySetAttributeSetEntry setEntry;
-            if ( XMLReadUtil::readRequiredName( setNode, "class", sourceName, setEntry._className ) == false )
+            AbilityClassFields          setFields;
+            const bool                  bSetRead = XMLFields::readFields( setNode, setFields, sourceName );
+            setEntry._className                  = setFields._class;
+            if ( bSetRead == false )
             {
                 SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeSetWithout", "%#: ability set '%#' has an <AttributeSet> without a class - skipped", sourceName, pID );
                 return false;
@@ -542,24 +497,15 @@ namespace sw
 
             for ( XMLNode attributeNode = setNode.findChild( "Attribute" ); attributeNode; attributeNode = attributeNode.findNextSibling( "Attribute" ) )
             {
-                AbilitySetAttributeEntry attributeEntry;
-                if ( XMLReadUtil::readRequiredName( attributeNode, "name", sourceName, attributeEntry._attribute ) == false )
-                {
-                    SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeWithout", "%#: ability set '%#' has an <Attribute> without a name - skipped", sourceName, pID );
-                    return false;
-                }
                 // 범위는 적은 쪽만 막는다 — 적지 않은 쪽은 구조체 초기값(실수의 끝)이라 "제한 없음" 이다.
-                constexpr float32 kAny      = MathUtil::kMaxFloat;
-                const bool        bHasRange = attributeNode.findAttribute( "min" ) != nullptr || attributeNode.findAttribute( "max" ) != nullptr;
-                attributeEntry._bHasRange   = bHasRange ? SW_TRUE : SW_FALSE;
-                bool bAttributeValid        = XMLReadUtil::readOptionalNumber( attributeNode, "base", sourceName, -kAny, kAny, attributeEntry._baseValue );
-                bAttributeValid             = XMLReadUtil::readOptionalNumber( attributeNode, "min", sourceName, -kAny, kAny, attributeEntry._minValue ) && bAttributeValid;
-                bAttributeValid             = XMLReadUtil::readOptionalNumber( attributeNode, "max", sourceName, -kAny, kAny, attributeEntry._maxValue ) && bAttributeValid;
-                if ( bAttributeValid == false )
+                AbilitySetAttributeEntry attributeEntry;
+                if ( XMLFields::readFields( attributeNode, attributeEntry, sourceName ) == false )
                 {
-                    SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeInvalid", "%#: ability set '%#' attribute '%#' has invalid numbers - skipped", sourceName, pID, attributeEntry._attribute.c_str() );
+                    SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeInvalid", "%#: ability set '%#' has an <Attribute> with invalid fields - skipped", sourceName, pID );
                     return false;
                 }
+                const bool bHasRange      = attributeNode.findAttribute( "min" ) != nullptr || attributeNode.findAttribute( "max" ) != nullptr;
+                attributeEntry._bHasRange = bHasRange ? SW_TRUE : SW_FALSE;
                 setEntry._listAttribute.push_back( attributeEntry );
             }
             outDef._listAttributeSet.push_back( std::move( setEntry ) );
@@ -567,17 +513,10 @@ namespace sw
 
         for ( XMLNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
         {
-            AbilitySetAbilityEntry abilityEntry;
-            if ( XMLReadUtil::readRequiredName( abilityNode, "id", sourceName, abilityEntry._abilityID ) == false )
+            AbilitySetAbilityEntry abilityEntry; // id 필수 · 레벨 >= 1 · 입력 >= -1
+            if ( XMLFields::readFields( abilityNode, abilityEntry, sourceName ) == false )
             {
-                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAbilityWithout", "%#: ability set '%#' has an <Ability> without an id - skipped", sourceName, pID );
-                return false;
-            }
-            bool bEntryValid = XMLReadUtil::readOptionalNumber( abilityNode, "level", sourceName, 1, MathUtil::kMaxInt32, abilityEntry._level );
-            bEntryValid      = XMLReadUtil::readOptionalNumber( abilityNode, "input", sourceName, -1, MathUtil::kMaxInt32, abilityEntry._inputID ) && bEntryValid;
-            if ( bEntryValid == false )
-            {
-                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetGrantsAbility", "%#: ability set '%#' grants ability '%#' with invalid fields - skipped", sourceName, pID, abilityEntry._abilityID.c_str() );
+                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetGrantsAbility", "%#: ability set '%#' has an <Ability> with invalid fields - skipped", sourceName, pID );
                 return false;
             }
             outDef._listAbility.push_back( abilityEntry );
@@ -585,15 +524,10 @@ namespace sw
 
         for ( XMLNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
         {
-            AbilitySetEffectEntry effectEntry;
-            if ( XMLReadUtil::readRequiredName( effectNode, "id", sourceName, effectEntry._effectID ) == false )
+            AbilitySetEffectEntry effectEntry; // id 필수 · 레벨 >= 1
+            if ( XMLFields::readFields( effectNode, effectEntry, sourceName ) == false )
             {
-                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetEffectWithout", "%#: ability set '%#' has an <Effect> without an id - skipped", sourceName, pID );
-                return false;
-            }
-            if ( XMLReadUtil::readOptionalNumber( effectNode, "level", sourceName, 1, MathUtil::kMaxInt32, effectEntry._level ) == false )
-            {
-                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAppliesEffect", "%#: ability set '%#' applies effect '%#' with an invalid level - skipped", sourceName, pID, effectEntry._effectID.c_str() );
+                SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAppliesEffect", "%#: ability set '%#' has an <Effect> with invalid fields - skipped", sourceName, pID );
                 return false;
             }
             outDef._listEffect.push_back( effectEntry );
