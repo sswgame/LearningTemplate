@@ -62,11 +62,12 @@ namespace sw::editor
              * @brief 접을 수 있는 구역 머리글입니다(처음에는 열려 있다). 열렸으면 true 입니다.
              * @details 머리글마다 표식 `retarget.section.<제목>` 을 남긴다 — 구역이 쌓여 창 아래 위젯이 보이는 영역 밖으로 밀리면 시나리오가 위 구역을 눌러 접고 닿게 한다.
              */
-            [[nodiscard]] static bool drawSection( const utf8* pTitle )
+            /** @brief 접는 절입니다. @p pLabel 은 지금 언어의 제목, @p pStableID 는 영어 이름(창 안 ID · 테스트 표지)이다. */
+            [[nodiscard]] static bool drawSection( const utf8* pLabel, const utf8* pStableID )
             {
-                const bool bOpen = ImGui::CollapsingHeader( pTitle, ImGuiTreeNodeFlags_DefaultOpen );
+                const bool bOpen = ImGui::CollapsingHeader( EditorThemeUtil::makeStableLabel( pLabel, pStableID ), ImGuiTreeNodeFlags_DefaultOpen );
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "retarget.section." ) + pTitle ).c_str() );
+                    EditorSelfTestMarks::note( ( string( "retarget.section." ) + pStableID ).c_str() );
                 return bOpen;
             }
 
@@ -188,21 +189,21 @@ namespace sw::editor
         }
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         using Internal = RetargetPanelInternal;
-        if ( Internal::drawSection( "Skeletons" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "Skeletons" ), "Skeletons" ) )
             drawSkeletonRows();
-        if ( Internal::drawSection( "Preview" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "Preview" ), "Preview" ) )
             drawPreviewSection();
-        if ( Internal::drawSection( "Root and pelvis" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "RootAndPelvis" ), "Root and pelvis" ) )
             drawRootAndPelvisRows();
-        if ( Internal::drawSection( "Options" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "Options" ), "Options" ) )
             drawOptionRows();
-        if ( Internal::drawSection( "Chains" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "Chains" ), "Chains" ) )
             drawChainRows();
-        if ( Internal::drawSection( "Retarget pose" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "RetargetPose" ), "Retarget pose" ) )
             drawTargetPoseRows();
-        if ( Internal::drawSection( "Bone map" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "BoneMap" ), "Bone map" ) )
             drawBonePairRows();
-        if ( Internal::drawSection( "Check" ) )
+        if ( Internal::drawSection( SW_LOCKEY( "EdPluginWidget", "Check" ), "Check" ) )
             drawInspection();
         EditorWidgets::drawPanelStatus( _status.c_str() );
     }

@@ -13,5 +13,6 @@
 	</codeRoots>
 	<assetRoots>
 		<item>editor/commands</item> <!-- 명령 표시 파일 — 라벨 · 툴팁 · 설명의 영어 원문이 키다(EditorCommandText.cpp 가 그릴 글로 푼다) -->
+		<item>editor/panels</item> <!-- 패널 이름 표 — 탭에 보일 영어 원문이 키다(EditorPanelText.cpp) -->
 	</assetRoots>
 </LocalizationProject>

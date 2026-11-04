@@ -18,6 +18,7 @@
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/DebugOverlayState.h"
 
@@ -86,7 +87,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( DebugDraw, "debug_draw", 300, SW_EDITORICON_NAME( "Bug" ), "Dbg", "게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다", true,
+    SW_EDITOR_VISUALIZER( DebugDraw, "debug_draw", 300, SW_EDITORICON_NAME( "Bug" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawLabel" ), SW_LOCKEYREF( "EdVisualizer", "DebugDrawTip" ), true,
                           &DebugDrawVisualizerInternal::draw );
 } // namespace sw::editor
 

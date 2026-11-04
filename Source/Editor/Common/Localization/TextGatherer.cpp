@@ -328,7 +328,7 @@ namespace sw
                     return; // 매크로 이름만 쓴 경우다(문서나 다른 매크로의 인자)
                 ++_position;
                 // `SW_LOCKEY` 와 `SW_LOCKEYFORMAT` 은 원문을 코드에 두지 않는다. 키만 읽어 "테이블에 있어야 하는 참조" 로 모은다.
-                const bool   bKeyOnly     = macroName == "SW_LOCKEY" || macroName == "SW_LOCKEYFORMAT";
+                const bool   bKeyOnly     = macroName == "SW_LOCKEY" || macroName == "SW_LOCKEYFORMAT" || macroName == "SW_LOCKEYREF";
                 const uint32 literalCount = bKeyOnly ? 2u : 3u;
                 string       arrArgument[3];
                 for ( uint32 argumentIndex = 0; argumentIndex < literalCount; ++argumentIndex )

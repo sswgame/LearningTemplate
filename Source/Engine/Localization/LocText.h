@@ -40,6 +40,11 @@ namespace sw
 #define SW_LOCTEXT( NamespaceLiteral, KeyLiteral, SourceLiteral ) ::sw::LocalizedText::find( NamespaceLiteral "." KeyLiteral, SourceLiteral )
 /** @brief 코드는 키만 가리키는 텍스트입니다. 원문은 원문 테이블에만 있고, 테이블에 없으면 키 자체를 돌려줍니다(화면에서 빠진 텍스트가 보입니다). 두 인자 모두 문자열 리터럴이어야 수집됩니다. */
 #define SW_LOCKEY( NamespaceLiteral, KeyLiteral ) ::sw::LocalizedText::find( NamespaceLiteral "." KeyLiteral, NamespaceLiteral "." KeyLiteral )
+/**
+ * @brief 키를 풀지 않고 `"Namespace.Key"` 리터럴로 남깁니다. 정적 등록 표(시각화 · 도구 줄)처럼 현지화가 서기 전에 만들어지는 곳이 키를 들고, 그리는 곳이
+ *        `LocalizedText::find( 키, 키 )` 로 지금 언어로 풉니다(언리얼 `LOCTABLE` 참조). 수집기는 `SW_LOCKEY` 처럼 "테이블에 있어야 하는 참조" 로 모은다.
+ */
+#define SW_LOCKEYREF( NamespaceLiteral, KeyLiteral ) NamespaceLiteral "." KeyLiteral
 /** @brief `SW_LOCKEY` 의 포맷 판입니다(`TextFormatter` 문법의 글을 표에서 읽는다). */
 #define SW_LOCKEYFORMAT( NamespaceLiteral, KeyLiteral, Arguments ) ::sw::LocalizedText::format( NamespaceLiteral "." KeyLiteral, NamespaceLiteral "." KeyLiteral, Arguments )
 /** @brief 코드의 사용자에게 보이는 메시지를 인자로 포맷합니다(`TextFormatter` 문법). */

@@ -323,7 +323,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
         string shaderPath = _model.getShaderPath();
         ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 그룹 전체에 붙인다
-        if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
+        if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Shader" ), shaderPath, ".hlsl" ) )
         {
             _model.setShaderPath( shaderPath );
             notifyDocumentEdited( "Edit Material Shader", "material-shader" );

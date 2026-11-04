@@ -594,7 +594,7 @@ namespace sw::editor
     {
         if ( info._bHasSpeaker )
         {
-            EditorWidgets::drawTextField( "Speaker", node._speaker );
+            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Speaker" ), "Speaker" ), node._speaker );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakerTip" ) );
@@ -615,7 +615,7 @@ namespace sw::editor
             }
             case DialogueNodeBody::Condition:
             {
-                EditorWidgets::drawTextField( "Condition", node._condition );
+                EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Condition" ), "Condition" ), node._condition );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ConditionTip" ) );
@@ -624,7 +624,7 @@ namespace sw::editor
             }
             case DialogueNodeBody::Action:
             {
-                EditorWidgets::drawTextField( "Command", node._actionCommand );
+                EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), node._actionCommand );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );

@@ -7,6 +7,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Ability Debugger" source="Ability Debugger" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Add Component" source="Add Component" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -49,6 +54,16 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Animation Graph" source="Animation Graph" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Animation Rewind" source="Animation Rewind" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Apply Overrides" source="Apply Overrides" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -64,16 +79,19 @@
 		<entry key="Audio Events" source="Audio Events" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Audio Graph" source="Audio Graph" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Audio Mixer" source="Audio Mixer" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Bake Light Probes" source="Bake Light Probes" context="Editor command name">
@@ -112,6 +130,21 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Behavior Tree" source="Behavior Tree" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bug Report" source="Bug Report" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Build" source="Build" context="EditorMenuText._label">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
 		<entry key="Build the engine and every module"
 		       source="Build the engine and every module"
 		       context="Editor command palette detail">
@@ -124,6 +157,11 @@
 		       context="Editor command tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Camera Presets" source="Camera Presets" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Cancel Build" source="Cancel Build" context="Editor command name">
@@ -171,14 +209,25 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Catalog Editor" source="Catalog Editor" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Character Editor" source="Character Editor" context="Editor command name">
 			<origins>
 				<item>editor/commands/charactereditor.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Check Out (Lock)" source="Check Out (Lock)" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Clip Preview" source="Clip Preview" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Close the editor after unsaved-change confirmation"
@@ -200,6 +249,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Command Palette" source="Command Palette" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Command Palette..." source="Command Palette..." context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -218,6 +272,11 @@
 		<entry key="Compile Game (SWGame)" source="Compile Game (SWGame)" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Content Browser" source="Content Browser" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Copy" source="Copy" context="Editor command name">
@@ -284,6 +343,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Data Table Editor" source="Data Table Editor" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Delete" source="Delete" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -292,6 +356,11 @@
 		<entry key="Delete..." source="Delete..." context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Dialogue Graph" source="Dialogue Graph" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Distribute X Evenly" source="Distribute X Evenly" context="Editor command name">
@@ -312,6 +381,147 @@
 		<entry key="Duplicate" source="Duplicate" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Add" source="Add">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.AddComponent" source="Add Component">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.BuildFailed" source="Build Failed">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.CheckMap" source="Check Map">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.CollectNow" source="Collect Now">
+			<origins>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Compile" source="Compile">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Compiling" source="Compiling...">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.DebugDraw" source="Debug Draw">
+			<origins>
+				<item>Source/Editor/Panels/Scene/SceneViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.NewFolder" source="New Folder">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.OpenFolder" source="Open Folder">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Overlays" source="Overlays">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportOverlays.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Package" source="Package">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Pause" source="Pause">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.PauseServer" source="Pause server">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.PlayClip" source="Play Clip">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.PlusCreate" source="+ Create">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.PostEvent" source="Post Event">
+			<origins>
+				<item>Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.PreviewSplit" source="Preview Split">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Renderdoc" source="RenderDoc">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.ResetDefaultLayout" source="Reset Default Layout">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.ResetSection" source="Reset Section">
+			<origins>
+				<item>Source/Editor/Panels/Settings/PreferencesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.ResetToDefault" source="Reset to Default">
+			<origins>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.ResetToThemeDefaults" source="Reset to Theme Defaults">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.ResumeServer" source="Resume server">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Simulate" source="Simulate">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Step" source="Step">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.StepN" source="Step N">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.ThemeLookAndFeel" source="Theme &amp; Look and Feel">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.AlignSelected" source="Align and distribute the selected objects (select two or more).">
@@ -2243,6 +2453,21 @@
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdNetMode.DedicatedServer" source="Dedicated Server">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdNetMode.ListenHost" source="Listen Host">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdNetMode.Standalone" source="Standalone">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdSection.Actions" source="Actions">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
@@ -3769,6 +3994,8 @@
 		<entry key="EdVerb.Cancel" source="Cancel">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+				<item>Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp</item>
+				<item>Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp</item>
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
@@ -3807,6 +4034,7 @@
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
@@ -3817,6 +4045,7 @@
 		</entry>
 		<entry key="EdVerb.Refresh" source="Refresh">
 			<origins>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
@@ -3839,6 +4068,7 @@
 		</entry>
 		<entry key="EdVerb.Remove" source="Remove">
 			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
@@ -3853,6 +4083,7 @@
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
 				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
 			</origins>
@@ -3872,6 +4103,7 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
@@ -3879,9 +4111,11 @@
 		</entry>
 		<entry key="EdVerb.Stop" source="Stop">
 			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
@@ -3889,6 +4123,445 @@
 		<entry key="EdVerb.Undo" source="Undo">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Depth" source="Depth">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.LODFadeCode" source="LOD Fade Code">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.LODLevel" source="LOD Level">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.LightComplexity" source="Light Complexity">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.LightingOnly" source="Lighting Only">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Lit" source="Lit">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.MarkerSlots" source="Marker Slots">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Metallic" source="Metallic">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Mipmaps" source="Mipmaps">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Normals" source="Normals">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Overdraw" source="Overdraw">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Roughness" source="Roughness">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.ShadedWireframe" source="Shaded Wireframe">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Unlit" source="Unlit">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdViewMode.Wireframe" source="Wireframe">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.BillboardLabel" source="Icons">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportBillboard.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.BillboardTip"
+		       source="Shows components without a mesh (lights, cameras, audio) as icons you can click to select">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportBillboard.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.BoxCollider2DLabel" source="Col">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.BoxCollider2DTip" source="Shows BoxCollider2D rectangles as wireframe">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.CameraFrustumLabel" source="Cam">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.CameraFrustumTip" source="Shows the frustum of every camera except the active one">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.DebugDrawLabel" source="Dbg">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.DebugDrawTip"
+		       source="Shows the lines, spheres, boxes, arrows and text game code put into DebugDrawQueue">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.NavMeshLabel" source="Nav">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.NavMeshTip"
+		       source="Shows the polygon edges of the baked navmesh (bake with Build > Bake Navigation)">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.PhysicsShapesLabel" source="Phys">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.PhysicsShapesTip"
+		       source="Shows RigidBody and RigidBody2D collision shapes as wireframe (static grey, kinematic blue, dynamic green, trigger yellow)">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.RigTargetGizmoLabel" source="Rig Target">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.RigTargetGizmoTip"
+		       source="Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.SelectionBoundsLabel" source="Sel">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.SelectionBoundsTip"
+		       source="Shows the bounding box of the selected objects in accent-colored lines">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.TerrainBrushLabel" source="Terrain">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVisualizer.TerrainBrushTip"
+		       source="Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)">
+			<origins>
+				<item>Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.AllProcesses" source="All processes">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Assets" source="Assets">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Auto" source="Auto">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Blend" source="Blend">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Clip" source="Clip">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Collapse" source="Collapse">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Command" source="Command">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Condition" source="Condition">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Corner" source="Corner">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Favorites" source="Favorites">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.File" source="File">
+			<origins>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Freeze" source="Freeze">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Game" source="Game">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.GridSnap" source="Grid Snap">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.HalfLife" source="Half Life">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.ItemName" source="Item Name">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Items" source="items">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Layouts" source="Layouts">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.LeftStick" source="Left Stick">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Lines" source="lines">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.List" source="List">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Loop" source="Loop">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Mask" source="Mask">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Name" source="Name">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.NewActionName" source="New Action Name">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.NoFileDefaults" source="No file - defaults">
+			<origins>
+				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.OutputFolder" source="Output Folder">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Panel" source="Panel">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.PatternNumpadNotation" source="Pattern (numpad notation)">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Paused" source="Paused">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.PlayMode" source="Play Mode">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Playing" source="Playing">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Prefab" source="Prefab">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Preset" source="Preset">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Preview" source="Preview">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Resolution" source="Resolution">
+			<origins>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.RestartRequired" source="Restart required">
+			<origins>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.RightStick" source="Right Stick">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.RotSnap" source="Rot Snap">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Shader" source="Shader">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Simulating" source="Simulating">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Sources" source="Sources">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Speaker" source="Speaker">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Starting" source="Starting">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.TagFilter" source="Tags">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Target" source="Target">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.TargetObject" source="Target Object">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Theme" source="Theme">
+			<origins>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Tiles" source="Tiles">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Variables" source="variables">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.Weight" source="Weight">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.WeightParam" source="Weight Param">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Edit" source="Edit" context="EditorMenuText._label">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
 		<entry key="EditorAnimationGraph.AddAttackTip"
@@ -7401,6 +8074,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="File" source="File" context="EditorMenuText._label">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
 		<entry key="Find References" source="Find References" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -7416,11 +8094,48 @@
 		<entry key="GM Tool" source="GM Tool" context="Editor command name">
 			<origins>
 				<item>editor/commands/onlineadmin.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Game" source="Game" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Gimmick Graph" source="Gimmick Graph" context="Editor command name">
 			<origins>
 				<item>editor/commands/gameplaytools.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Global Variables" source="Global Variables" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Hierarchy" source="Hierarchy" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Hierarchy / Skeleton View" source="Hierarchy / Skeleton View" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="History" source="History" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Input Map Editor" source="Input Map Editor" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Inspector" source="Inspector" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Keep Simulation Changes" source="Keep Simulation Changes" context="Editor command name">
@@ -7442,6 +8157,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Keyboard Shortcuts" source="Keyboard Shortcuts" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Launches the saved active scene without the editor in a new window (a separate process)"
 		       source="Launches the saved active scene without the editor in a new window (a separate process)"
 		       context="Editor command tooltip">
@@ -7461,9 +8181,30 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Map Check" source="Map Check" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Material" source="Material" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Mesh Modifiers" source="Mesh Modifiers" context="Editor command name">
 			<origins>
 				<item>editor/commands/meshmodifiers.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Mesh Preview" source="Mesh Preview" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Modules" source="Modules" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Move Down" source="Move Down" context="Editor command name">
@@ -7512,6 +8253,16 @@
 		       context="Editor command tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Multiplayer" source="Multiplayer" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="NPC Schedule" source="NPC Schedule" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Nearest Park Ride" source="Nearest Park Ride" context="Editor command name">
@@ -7686,6 +8437,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Output Log" source="Output Log" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Overwrite the selected component from the clipboard"
 		       source="Overwrite the selected component from the clipboard"
 		       context="Editor command palette detail">
@@ -7693,14 +8449,21 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Packaging" source="Packaging" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Paired Animation" source="Paired Animation" context="Editor command name">
 			<origins>
 				<item>editor/commands/charactereditor.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Park Layout" source="Park Layout" context="Editor command name">
 			<origins>
 				<item>editor/commands/themepark.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Paste" source="Paste" context="Editor command name">
@@ -7733,6 +8496,21 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Prefab Overrides" source="Prefab Overrides" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Prefab Window" source="Prefab Window" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Preferences" source="Preferences" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Preferences..." source="Preferences..." context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -7743,9 +8521,24 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Profiler" source="Profiler" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Project Settings" source="Project Settings" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Project Settings..." source="Project Settings..." context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Quick Open" source="Quick Open" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Quick Open..." source="Quick Open..." context="Editor command name">
@@ -7758,6 +8551,11 @@
 		       context="Editor command tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Ragdoll Preview" source="Ragdoll Preview" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Rebakes the navmesh of the active scene for every agent type (the Nav visualizer shows polygon edges)"
@@ -7856,6 +8654,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Render Targets" source="Render Targets" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="RenderDoc Capture" source="RenderDoc Capture" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -7871,6 +8674,16 @@
 		<entry key="Report Bug (BugReport)" source="Report Bug (BugReport)" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Retarget Profile" source="Retarget Profile" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Rig Debug" source="Rig Debug" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Run the saved active scene in a separate game process"
@@ -7928,6 +8741,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Scene" source="Scene" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Screenshot" source="Screenshot" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -7962,6 +8780,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Sequencer" source="Sequencer" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Sets the editor theme preset, accent color and corner rounding"
 		       source="Sets the editor theme preset, accent color and corner rounding"
 		       context="Editor command tooltip">
@@ -7991,14 +8814,39 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Sprite Clip" source="Sprite Clip" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Start play-in-editor" source="Start play-in-editor" context="Editor command palette detail">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Streaming Cells" source="Streaming Cells" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Test Runner" source="Test Runner" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Theme &amp; Look and Feel..." source="Theme &amp; Look and Feel..." context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Tile Map Tool" source="Tile Map Tool" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="UI Preview" source="UI Preview" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Undo" source="Undo" context="Editor command name">
@@ -8017,6 +8865,21 @@
 			</origins>
 		</entry>
 		<entry key="Unparent" source="Unparent" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="User Settings" source="User Settings" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="VFX Preview" source="VFX Preview" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Window" source="Window" context="EditorMenuText._label">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>

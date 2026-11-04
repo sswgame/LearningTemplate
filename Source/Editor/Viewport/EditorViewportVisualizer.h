@@ -104,6 +104,7 @@ namespace sw::editor
  * @param bDefaultOn   처음에 켜져 있는지 정합니다.
  * @param pDraw        `void( const EditorViewportVisualizerArgs& )` 시그니처의 그리기 함수입니다.
  */
+// pToggleLabel · pTooltip 은 현지화 키다(`SW_LOCKEYREF( "EdVisualizer", "..." )`) — 툴바가 그릴 때 지금 언어로 푼다.
 #define SW_EDITOR_VISUALIZER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pDraw )                                    \
     SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, \
                         bDefaultOn, pDraw )

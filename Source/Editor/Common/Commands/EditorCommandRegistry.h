@@ -161,7 +161,8 @@ namespace sw::editor
     {
         string                 _path;       ///< "MainMenu/File"
         string                 _parentPath; ///< "MainMenu"
-        string                 _name;       ///< "File" (메뉴에 보이는 이름)
+        string                 _name;       ///< "File" — 경로 마디이자 ImGui ID 다(언어와 무관)
+        string                 _label;      ///< 메뉴에 보이는 이름(지금 언어). 표시 파일의 메뉴 이름 줄이 정한다(`applyMenuLabels`)
         vector<EditorMenuItem> _listItem;   ///< `_menuOrder` 순서
     };
 } // namespace sw::editor
@@ -172,6 +173,8 @@ namespace sw::editor
      * @class EditorCommandRegistry
      * @brief 에디터 커맨드 정의를 모아 두고 id 로 찾아 실행합니다. `EditorContext` 가 소유합니다.
      */
+    class EditorCommandTextSet;
+
     class SW_EDITOR_API EditorCommandRegistry : public EditorSubsystem
     {
     public:
@@ -215,6 +218,11 @@ namespace sw::editor
          * @details 키 조합의 겹침은 입력 맵이 레이어 안에서 본다(`InputMap::findSameLayerInputConflict`). 여기서는 한 누름이 두 명령을 부르는 액션 공유를 잡는다.
          */
         bool validate( string& outReport ) const;
+        /**
+         * @brief 메뉴 막대에 오르는 메뉴(`MainMenu/…`)의 보이는 이름을 표시 파일의 메뉴 이름 줄로 채웁니다. 명령을 모두 등록한 뒤 부릅니다(등록이 메뉴를 다시 만든다).
+         * @details 이름 줄이 없는 메뉴는 오류를 남기고 경로 마디를 보인다(빠진 줄이 화면에 드러나게 — 빠진 현지화 키와 같다).
+         */
+        void applyMenuLabels( const EditorCommandTextSet& texts );
 
         /** @brief 아이콘과 라벨을 합친 메뉴 표시 문자열을 만듭니다. */
         static void formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::buffer::kMax128>& outLabel );

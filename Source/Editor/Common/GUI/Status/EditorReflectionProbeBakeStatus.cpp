@@ -9,7 +9,10 @@
 
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
+
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
@@ -26,7 +29,7 @@ namespace sw::editor
             formatstring( label.data(), label.capacity(), "Baking reflection probes %#/%#", pSession->getDoneProbeCount(), pSession->getProbeCount() );
             ImGui::TextUnformatted( label.c_str() );
             ImGui::SameLine();
-            if ( ImGui::SmallButton( "Cancel##reflectionProbeBake" ) )
+            if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Cancel" ), "Cancel##reflectionProbeBake" ) ) )
                 pSession->cancel( "canceled" );
         }
     } // namespace

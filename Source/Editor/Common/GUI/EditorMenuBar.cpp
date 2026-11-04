@@ -9,6 +9,7 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelText.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -78,7 +79,7 @@ namespace sw::editor
 
     void EditorMenuBar::drawAssetsMenu()
     {
-        if ( ImGui::BeginMenu( "Assets" ) )
+        if ( ImGui::BeginMenu( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Assets" ), "Assets" ) ) )
         {
             EditorAssetTypeRegistry::forEachToolPanel( []( EditorAssetType kind, const utf8* pTitle )
             {
@@ -93,7 +94,7 @@ namespace sw::editor
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        if ( ImGui::BeginMenu( "Panel" ) )
+        if ( ImGui::BeginMenu( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Panel" ), "Panel" ) ) )
         {
             ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Panels" ) );
             for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
@@ -116,7 +117,7 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Layout" ), "Reset Default Layout" ) ) )
+            if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Layout" ), SW_LOCKEY( "EdButton", "ResetDefaultLayout" ), "Reset Default Layout" ) ) )
                 dockLayout.requestResetDefault();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ResetLayout" ) );
             drawNamedLayoutMenu( dockLayout );
@@ -127,7 +128,7 @@ namespace sw::editor
 
     void EditorMenuBar::drawNamedLayoutMenu( EditorDockLayout& dockLayout )
     {
-        if ( ImGui::BeginMenu( "Layouts" ) == false )
+        if ( ImGui::BeginMenu( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Layouts" ), "Layouts" ) ) == false )
             return;
 
         fixed_string<constant::buffer::kMax64>& layoutName = EditorMenuBarInternal::getState()._layoutName;
@@ -230,7 +231,7 @@ namespace sw::editor
             }
             else
             {
-                if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Hammer" ), "Compile" ) ) )
+                if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Hammer" ), SW_LOCKEY( "EdButton", "Compile" ), "Compile" ) ) )
                     pCompiler->compileModule( "SWGame" );
 
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CompileGame" ) );
@@ -239,7 +240,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( state == BuildState::Compiling )
             {
-                EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Spinner" ), "Compiling..." ) );
+                EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Spinner" ), SW_LOCKEY( "EdButton", "Compiling" ) ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildCompiling" ) );
             }
             else if ( state == BuildState::Success )
@@ -251,7 +252,7 @@ namespace sw::editor
             }
             else if ( state == BuildState::Failed )
             {
-                EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Error" ), "Build Failed" ) );
+                EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Error" ), SW_LOCKEY( "EdButton", "BuildFailed" ) ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildFailed" ) );
             }
             else
@@ -321,11 +322,11 @@ namespace sw::editor
             return;
         }
         pPanel->setOpen( true );
-        ImGui::SetWindowFocus( pPanel->getPanelTitle() ); // 창 이름은 인스턴스의 제목이다(`IEditorPanel::draw`)
+        ImGui::SetWindowFocus( EditorPanelTextUtil::makeWindowID( pPanel->getPanelTitle() ).c_str() ); // 창 이름은 인스턴스의 제목이다(`IEditorPanel::draw`)
         if ( request._bFloat == false )
             return;
         // 도킹을 풀고 메인 창 오른쪽 밖으로 옮긴다 — 메인 뷰포트 밖의 창은 ImGui 가 제 OS 창으로 띄운다(렌더러가 RHI 스왑체인을 단다). 패널은 앞 프레임에 그려져 있어야 한다.
-        ImGuiWindow* const pWindow = ImGui::FindWindowByName( pPanel->getPanelTitle() );
+        ImGuiWindow* const pWindow = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( pPanel->getPanelTitle() ).c_str() );
         if ( pWindow == nullptr )
         {
             SW_LOG_ERROR_ID( "Editor.FloatPanelNotDrawn", "Float panel request: panel '%#' has not been drawn yet - open it a frame earlier", request._panelID.c_str() );

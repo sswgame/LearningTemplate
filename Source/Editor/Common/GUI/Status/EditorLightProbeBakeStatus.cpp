@@ -9,8 +9,11 @@
 
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 
@@ -28,7 +31,7 @@ namespace sw::editor
                           static_cast<uint32>( pSession->getVolumeProgress() * 100.0f ) );
             ImGui::TextUnformatted( label.c_str() );
             ImGui::SameLine();
-            if ( ImGui::SmallButton( "Cancel##lightProbeBake" ) )
+            if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Cancel" ), "Cancel##lightProbeBake" ) ) )
                 pSession->cancel( "canceled" );
             EditorSelfTestMarks::note( "statusBar.lightProbeBakeCancel" ); // 시나리오 lightprobebakecancel 이 누른다
         }

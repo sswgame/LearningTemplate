@@ -7,6 +7,7 @@
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelText.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
@@ -67,7 +68,7 @@ namespace sw::editor
                 ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( context.expect( pPanel != nullptr, "no content browser panel" ) == false )
                     return nullptr;
-                ImGui::SetWindowFocus( kContentBrowserPanelTitle );
+                ImGui::SetWindowFocus( EditorPanelTextUtil::makeWindowID( kContentBrowserPanelTitle ).c_str() );
                 return pPanel;
             }
 
@@ -561,7 +562,7 @@ namespace sw::editor
                 const float32      dpiScale  = EditorThemeUtil::getDPIScale();
                 const float32      minWidth  = MathUtil::min( kMinUsableWidth * dpiScale, pViewport->WorkSize.x * kViewportRatio );
                 const float32      minHeight = MathUtil::min( kMinUsableHeight * dpiScale, pViewport->WorkSize.y * kViewportRatio );
-                const ImGuiWindow* pWindow   = ImGui::FindWindowByName( pPanel->getPanelTitle() );
+                const ImGuiWindow* pWindow   = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( pPanel->getPanelTitle() ).c_str() );
                 string             what{ pPanelID };
                 if ( context.expect( pWindow != nullptr, ( what + ": the tool window was not created" ).c_str() ) )
                 {
@@ -620,7 +621,7 @@ namespace sw::editor
                 const uint32   stepIndex     = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    ImGui::SetWindowFocus( kSceneViewTitle ); // 가운데 탭이 게임 뷰나 다른 도구로 가려져 있으면 씬 뷰가 그려지지 않는다
+                    ImGui::SetWindowFocus( EditorPanelTextUtil::makeWindowID( kSceneViewTitle ).c_str() ); // 가운데 탭이 게임 뷰나 다른 도구로 가려져 있으면 씬 뷰가 그려지지 않는다
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -630,10 +631,10 @@ namespace sw::editor
                 int32                   imageCommandIndex{ -1 };
                 ImVec4                  canvasRect{};
                 const ImDrawList*       pCanvasDrawList{ nullptr };
+                const ImGuiWindow*      pSceneViewWindow = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( kSceneViewTitle ).c_str() );
                 for ( const ImGuiWindow* pWindow : imguiContext.Windows )
                 {
-                    const bool bInSceneView = pWindow != nullptr && pWindow->RootWindow != nullptr && pWindow->RootWindow->Name != nullptr &&
-                                              StringUtil::equals( pWindow->RootWindow->Name, kSceneViewTitle ) && pWindow->LastFrameActive == imguiContext.FrameCount;
+                    const bool bInSceneView          = pWindow != nullptr && pSceneViewWindow != nullptr && pWindow->RootWindow == pSceneViewWindow && pWindow->LastFrameActive == imguiContext.FrameCount;
                     const bool bSceneViewCanvasFound = bInSceneView && view._pTextureID != nullptr && findImageCommand( pWindow->DrawList, textureID, imageCommandIndex, canvasRect );
                     if ( bSceneViewCanvasFound )
                     {

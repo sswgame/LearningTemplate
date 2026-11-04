@@ -83,4 +83,11 @@
 		<EditorCommandText _id="editor.preferences" _label="Preferences..." _icon="Settings" _category="Editor" _tooltip="Opens the editor preferences window" _detail="Open editor preferences" _inputAction="" _menuPath="MainMenu/Edit" _menuOrder="2210" _contextMenu="None" _contextMenuOrder="0" _bPaletteVisible="true" />
 		<EditorCommandText _id="selftest.ping" _label="Self Test Ping" _icon="Bug" _category="SelfTest" _tooltip="A command used by self-tests and scenarios - writes one log line" _detail="Write one log line (self-test)" _inputAction="" _menuPath="" _menuOrder="0" _contextMenu="None" _contextMenuOrder="0" _bPaletteVisible="true" />
 	</_listCommand>
+	<_listMenu>
+		<EditorMenuText _path="MainMenu/File" _label="File" />
+		<EditorMenuText _path="MainMenu/Edit" _label="Edit" />
+		<EditorMenuText _path="MainMenu/Window" _label="Window" />
+		<EditorMenuText _path="MainMenu/Build" _label="Build" />
+		<EditorMenuText _path="MainMenu/Play" _label="Play" />
+	</_listMenu>
 </EditorCommandTextTable>

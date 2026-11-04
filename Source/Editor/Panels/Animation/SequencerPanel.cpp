@@ -320,10 +320,10 @@ namespace sw::editor
         if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItem.size() ) )
         {
             SequenceTrackItem& item = _sequence->_listItem[static_cast<size_t>( _selected )];
-            EditorWidgets::drawTextField( "Item Name", item._name );
+            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ItemName" ), "Item Name" ), item._name );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
-            EditorWidgets::drawTextField( "Target Object", item._targetObject );
+            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "TargetObject" ), "Target Object" ), item._targetObject );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ItemTargetTip" ) );

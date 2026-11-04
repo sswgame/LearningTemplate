@@ -378,7 +378,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Clear" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Collapse" ) );
-        if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE ) )
+        if ( EditorWidgets::drawToggleButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Collapse" ), "Collapse" ), _bCollapse == SW_TRUE ) )
             _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
         EditorSelfTestMarks::note( "console.collapse" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
@@ -402,9 +402,9 @@ namespace sw::editor
         // 예전에는 단추 열하나가 두 줄로 접혀 검색 칸이 셋째 줄로 밀렸다.
         fixed_string<constant::buffer::kMax32> tagLabel;
         if ( _tagFilter.getHiddenCount() > 0 )
-            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags (-%u)", _tagFilter.getHiddenCount() );
+            formatstring( tagLabel.data(), tagLabel.capacity(), "%# (-%#)###Tags", SW_LOCKEY( "EdWidget", "TagFilter" ), _tagFilter.getHiddenCount() );
         else
-            formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
+            formatstring( tagLabel.data(), tagLabel.capacity(), "%####Tags", SW_LOCKEY( "EdWidget", "TagFilter" ) );
         const ImGuiStyle& style         = ImGui::GetStyle();
         const float32     trailing      = EditorChrome::measureSmallButton( tagLabel.c_str() ) + ImGui::GetFrameHeight() + style.ItemSpacing.x * 2.0f;
         const float32     minSearch     = ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" );
@@ -525,7 +525,7 @@ namespace sw::editor
 
         EditorChrome::endSection();
 
-        EditorWidgets::drawCountLabel( static_cast<uint32>( _listRow.size() ), static_cast<uint32>( _listDrawSnapshot.size() ), "lines" );
+        EditorWidgets::drawCountLabel( static_cast<uint32>( _listRow.size() ), static_cast<uint32>( _listDrawSnapshot.size() ), SW_LOCKEY( "EdWidget", "Lines" ) );
         ImGui::SameLine();
         drawCommandLine();
     }

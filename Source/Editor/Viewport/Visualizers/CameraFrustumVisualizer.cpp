@@ -12,6 +12,7 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 
@@ -66,6 +67,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( CameraFrustum, "camera_frustum", 200, SW_EDITORICON_NAME( "Camera" ), "Cam", "활성 카메라를 제외한 카메라의 프러스텀을 표시합니다", true,
+    SW_EDITOR_VISUALIZER( CameraFrustum, "camera_frustum", 200, SW_EDITORICON_NAME( "Camera" ), SW_LOCKEYREF( "EdVisualizer", "CameraFrustumLabel" ), SW_LOCKEYREF( "EdVisualizer", "CameraFrustumTip" ), true,
                           &drawCameraFrustums );
 } // namespace sw::editor

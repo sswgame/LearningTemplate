@@ -8,6 +8,9 @@
 		       text="シーンのキャラクター外見コンポーネントがこの id を指します。" />
 		<entry source="Abort" text="中断" />
 		<entry source="Accessibility" text="アクセシビリティ" />
+		<entry source="Account" text="アカウント" />
+		<entry source="Account id (hex)" text="アカウント id(16進数)" />
+		<entry source="Acting role" text="担当ロール" />
 		<entry source="Active" text="有効" />
 		<entry source="Active Effects" text="有効なエフェクト" />
 		<entry source="Activity" text="行動" />
@@ -31,8 +34,10 @@
 		<entry source="Apply" text="適用" />
 		<entry source="Apply sanction" text="制裁を適用" />
 		<entry source="Ask Each Time" text="毎回確認する" />
+		<entry source="Asset id" text="アセット id" />
 		<entry source="Attributes" text="アトリビュート" />
 		<entry source="Audio" text="オーディオ" />
+		<entry source="Audit log" text="監査ログ" />
 		<entry source="Auto layout" text="自動レイアウト" />
 		<entry source="Automatic" text="自動" />
 		<entry source="Axis" text="軸" />
@@ -44,6 +49,7 @@
 		<entry source="Blackboard key" text="ブラックボードキー" />
 		<entry source="Body shape" text="体型" />
 		<entry source="Body type" text="体の種類" />
+		<entry source="Bone map" text="ボーンマップ" />
 		<entry source="Bone rotation" text="ボーン回転" />
 		<entry source="Bone scale" text="ボーンスケール" />
 		<entry source="Bone translation" text="ボーン移動" />
@@ -53,6 +59,7 @@
 		<entry source="Camera Shake" text="カメラの揺れ" />
 		<entry source="Cancel" text="キャンセル" />
 		<entry source="Center" text="中心" />
+		<entry source="Chains" text="チェーン" />
 		<entry source="Check" text="チェック" />
 		<entry source="Clear target" text="ターゲットを解除" />
 		<entry source="Click a node to edit it" text="ノードをクリックして編集" />
@@ -85,6 +92,8 @@
 		<entry source="Default: {hasDefault, select, yes {{value}} other {(none)}}"
 		       text="デフォルト: {hasDefault, select, yes {{value}} other {(なし)}}" />
 		<entry source="Defaults" text="初期設定" />
+		<entry source="Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
+		       text="メッシュモディファイアスタックの変形プレビュー線、ギズモと範囲表示のドラッグ編集、ラティス制御点の選択とドラッグ" />
 		<entry source="Delete" text="削除" />
 		<entry source="Delete node" text="ノードを削除" />
 		<entry source="Depth" text="深さ" />
@@ -107,6 +116,9 @@
 		       text="空です。モディファイアを追加してグループにします。" />
 		<entry source="End maintenance" text="メンテナンス終了" />
 		<entry source="Enter / exit blend (s)" text="入り・出のブレンド(秒)" />
+		<entry source="Equip set" text="装備セット" />
+		<entry source="Event JSON" text="イベント JSON" />
+		<entry source="Event id" text="イベント id" />
 		<entry source="Export as World Warp" text="ワールドワープとして書き出す" />
 		<entry source="Export data preset" text="データプリセットを書き出す" />
 		<entry source="Face" text="顔" />
@@ -115,13 +127,16 @@
 		<entry source="Fit to Bounds" text="境界に合わせる" />
 		<entry source="Foliage Density" text="植生の密度" />
 		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
+		<entry source="From" text="送信元" />
 		<entry source="GM connection: {stateText}" text="GM 接続: {stateText}" />
 		<entry source="GM password" text="GM パスワード" />
+		<entry source="Game" text="게임" />
 		<entry source="Game saved" text="ゲームを保存しました" />
 		<entry source="Game time" text="ゲーム時刻" />
 		<entry source="Gamepad Sensitivity" text="ゲームパッド感度" />
 		<entry source="Gameplay" text="ゲームプレイ" />
 		<entry source="Grant" text="付与" />
+		<entry source="Grant / Revoke" text="付与 / 取り消し" />
 		<entry source="Granted Abilities" text="付与されたアビリティ" />
 		<entry source="Graphics" text="グラフィックス" />
 		<entry source="Graphics Quality" text="グラフィック品質" />
@@ -143,10 +158,12 @@
 		<entry source="Keep these display settings?" text="この表示設定を維持しますか?" />
 		<entry source="Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
 		       text="この設定を維持しますか? {seconds} 秒後に元に戻ります。" />
+		<entry source="Kind" text="種類" />
 		<entry source="Language" text="言語" />
 		<entry source="Lift sanction" text="制裁を解除" />
 		<entry source="List audit" text="監査ログ一覧" />
 		<entry source="List live events" text="ライブイベント一覧" />
+		<entry source="Live events" text="ライブイベント" />
 		<entry source="Live: {liveRunnerName}" text="実行中: {liveRunnerName}" />
 		<entry source="Load" text="読み込み" />
 		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
@@ -165,13 +182,18 @@
 		<entry source="Look up an account to see its balances and sanctions"
 		       text="アカウントを検索すると残高と制裁が見えます" />
 		<entry source="Lookup" text="検索" />
+		<entry source="Loop" text="반복" />
 		<entry source="Low" text="低" />
+		<entry source="Maintenance / Notice" text="メンテナンス / お知らせ" />
 		<entry source="Maintenance seconds (0 = until cleared)" text="メンテナンス秒(0 = 解除まで)" />
 		<entry source="Map same names" text="同名同士をつなぐ" />
 		<entry source="Master Volume" text="マスター音量" />
 		<entry source="Medium" text="中" />
+		<entry source="Memo (ticket)" text="メモ(チケット)" />
+		<entry source="Message key" text="メッセージキー" />
 		<entry source="Mirror" text="ミラー" />
 		<entry source="Mirror bone" text="ボーンをミラー" />
+		<entry source="Modifiers" text="モディファイア" />
 		<entry source="Motion Blur" text="モーションブラー" />
 		<entry source="Mouse Sensitivity" text="マウス感度" />
 		<entry source="Move row down" text="行を下へ移動" />
@@ -205,6 +227,7 @@
 		<entry source="No target" text="対象なし" />
 		<entry source="Notice id" text="お知らせ id" />
 		<entry source="Notice seconds (0 = until removed)" text="お知らせ秒(0 = 削除まで)" />
+		<entry source="Notice text" text="お知らせ本文" />
 		<entry source="Off" text="オフ" />
 		<entry source="Offset (m)" text="オフセット(m)" />
 		<entry source="Opacity" text="不透明度" />
@@ -220,8 +243,11 @@
 		<entry source="Options" text="オプション" />
 		<entry source="Orthographic preset - the preview draws it in perspective."
 		       text="平行投影プリセット — プレビューは透視で描きます。" />
+		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
+		       text="選択したモディファイアまでを適用した結果を別色の線で重ねて描きます(変形の影響プレビュー)" />
 		<entry source="Owned Tags" text="所有タグ" />
 		<entry source="Parent" text="親" />
+		<entry source="Park" text="パーク" />
 		<entry source="Pause Menu" text="ポーズメニュー" />
 		<entry source="Paused" text="一時停止中" />
 		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
@@ -230,7 +256,7 @@
 		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。" />
 		<entry source="Pick an ability system..." text="アビリティシステムを選択..." />
 		<entry source="Place" text="場所" />
-		<entry source="Play" text="再生" />
+		<entry source="Play" text="재생" />
 		<entry source="Point" text="点" />
 		<entry source="Position" text="位置" />
 		<entry source="Post notice" text="お知らせを掲示" />
@@ -244,6 +270,7 @@
 		<entry source="Preview mesh" text="プレビューメッシュ" />
 		<entry source="Priority" text="優先度" />
 		<entry source="Privacy" text="プライバシー" />
+		<entry source="Problems" text="問題" />
 		<entry source="Protanopia" text="1 型色覚 (赤)" />
 		<entry source="Provider: {providerName}" text="プロバイダー: {providerName}" />
 		<entry source="Put live event" text="ライブイベントを登録" />
@@ -255,6 +282,7 @@
 		       text="編集内容をランタイムローダーで読み、すべてのルールを確認します" />
 		<entry source="Read the preset file again (after saving it in the Catalog Editor)"
 		       text="プリセットファイルを再読み込みします(カタログエディタで保存した後)" />
+		<entry source="Reason code" text="理由コード" />
 		<entry source="Recompute Normals" text="法線の再計算" />
 		<entry source="Redo" text="やり直し" />
 		<entry source="Redo appearance" text="外見をやり直し" />
@@ -275,20 +303,26 @@
 		<entry source="Rename" text="名前を変更" />
 		<entry source="Render Scale" text="レンダースケール" />
 		<entry source="Repath distance" text="再経路探索距離" />
+		<entry source="Reports" text="通報" />
 		<entry source="Reset Lattice" text="ラティスをリセット" />
 		<entry source="Reset Parameters" text="パラメーターをリセット" />
 		<entry source="Reset bone" text="ボーンをリセット" />
 		<entry source="Resolution" text="解像度" />
 		<entry source="Resolve" text="処理" />
 		<entry source="Resume" text="再開" />
+		<entry source="Retarget pose" text="リターゲットポーズ" />
 		<entry source="Return to Title" text="タイトルに戻る" />
 		<entry source="Revert" text="元に戻す" />
 		<entry source="Reverting in" text="元に戻すまで" />
 		<entry source="Revoke" text="回収" />
+		<entry source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
+		       text="ThemePark 配置ファイル(rides.xml)のアトラクションの足跡、入口、コースターのトラック" />
 		<entry source="Roles" text="役割" />
+		<entry source="Root and pelvis" text="ルートと骨盤" />
 		<entry source="Rotation" text="回転" />
 		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
 		       text="実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。" />
+		<entry source="Sanction" text="制裁" />
 		<entry source="Save" text="保存" />
 		<entry source="Save Stack" text="スタックを保存" />
 		<entry source="Save as preset" text="プリセットとして保存" />
@@ -298,6 +332,7 @@
 		<entry source="Save thumbnail" text="サムネイルを保存" />
 		<entry source="Scale" text="スケール" />
 		<entry source="Schedule system" text="スケジュールシステム" />
+		<entry source="Scope (all or server kind)" text="範囲(all またはサーバー種別)" />
 		<entry source="Seconds" text="秒" />
 		<entry source="Sections" text="セクション" />
 		<entry source="Select a bone to edit its reference pose."
@@ -331,6 +366,7 @@
 		<entry source="Show HUD (Ctrl+F3)" text="HUD を表示 (Ctrl+F3)" />
 		<entry source="Show Tutorials" text="チュートリアルを表示" />
 		<entry source="Skeleton" text="スケルトン" />
+		<entry source="Skeletons" text="スケルトン" />
 		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
 		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。" />
 		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
@@ -347,6 +383,7 @@
 		<entry source="Speaker Setup" text="スピーカー構成" />
 		<entry source="Sprint" text="ダッシュ" />
 		<entry source="Stacks" text="スタック" />
+		<entry source="Stage" text="ステージ" />
 		<entry source="Start (s)" text="開始(秒)" />
 		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
 		       text="このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)" />
@@ -354,9 +391,10 @@
 		<entry source="Start maintenance" text="メンテナンス開始" />
 		<entry source="Stereo" text="ステレオ" />
 		<entry source="Stick Dead Zone" text="スティックのデッドゾーン" />
-		<entry source="Stop" text="停止" />
+		<entry source="Stop" text="정지" />
 		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
 		       text="プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)" />
+		<entry source="Subject prefix" text="サブジェクト接頭辞" />
 		<entry source="Subtitle Background" text="字幕の背景" />
 		<entry source="Subtitle Size" text="字幕のサイズ" />
 		<entry source="Subtitles" text="字幕" />
@@ -375,6 +413,7 @@
 		<entry source="This file could not be opened: {statusText}"
 		       text="このファイルを開けません: {statusText}" />
 		<entry source="Time" text="時刻" />
+		<entry source="To" text="宛先" />
 		<entry source="Toggle" text="切り替え" />
 		<entry source="Translation" text="移動" />
 		<entry source="Travel" text="移動" />
@@ -407,6 +446,7 @@
 		<entry source="Why this activity now" text="今この行動をする理由" />
 		<entry source="Window Mode" text="ウィンドウモード" />
 		<entry source="Windowed" text="ウィンドウ" />
+		<entry source="Wires" text="ワイヤー" />
 		<entry source="World Space" text="ワールド空間" />
 		<entry source="Yaw (deg)" text="ヨー(度)" />
 		<entry source="You have changes that are not applied." text="適用していない変更があります。" />

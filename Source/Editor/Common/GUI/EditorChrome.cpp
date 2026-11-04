@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
+#include "Editor/Common/GUI/Panel/EditorPanelText.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -138,7 +139,8 @@ namespace sw::editor
         if ( bNoPadding )
             ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2{ 0.0f, 0.0f } );
 
-        const bool bVisible = ImGui::Begin( pTitle, pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
+        // 창 이름은 "보이는 이름###제목" — 탭은 지금 언어로 보이고 ID(도킹 · 포커스 · 테스트가 찾는 이름)는 제목으로 고정이다.
+        const bool bVisible = ImGui::Begin( EditorPanelTextUtil::makeWindowName( pTitle ).c_str(), pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
         if ( bNoPadding )
             ImGui::PopStyleVar();
         EditorChromeInternal::noteCloseButton( pTitle, pOpen );

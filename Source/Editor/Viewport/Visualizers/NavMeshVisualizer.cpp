@@ -8,6 +8,7 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -32,6 +33,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( NavMesh, "navmesh", 120, SW_EDITORICON_NAME( "Navigation" ), "Nav", "베이크한 내비메시의 폴리곤 테두리를 표시합니다(Build > Bake Navigation 으로 베이크)", false,
+    SW_EDITOR_VISUALIZER( NavMesh, "navmesh", 120, SW_EDITORICON_NAME( "Navigation" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshLabel" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshTip" ), false,
                           &drawNavMesh );
 } // namespace sw::editor

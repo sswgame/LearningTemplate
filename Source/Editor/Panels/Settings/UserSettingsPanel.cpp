@@ -105,7 +105,7 @@ namespace sw::editor
             if ( settings.isRestartRequired() )
             {
                 ImGui::SameLine();
-                EditorWidgets::drawPanelStatus( "Restart required" );
+                EditorWidgets::drawPanelStatus( SW_LOCKEY( "EdWidget", "RestartRequired" ) );
             }
             if ( _lastRejectedCount > 0 )
             {

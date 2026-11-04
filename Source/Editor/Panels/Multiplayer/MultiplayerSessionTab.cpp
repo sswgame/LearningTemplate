@@ -182,7 +182,7 @@ namespace sw::editor
         if ( session.isRunning() == false )
         {
             ImGui::BeginDisabled( settings._mode == EditorNetMode::Standalone || session.isStopping() ); // 앞 세션을 거두는 동안은 `start` 가 거절한다
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Play" ) ) )
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
                 (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
             EditorSelfTestMarks::note( "multiplayer.play" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Play" ) );
@@ -190,14 +190,14 @@ namespace sw::editor
         }
         else
         {
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Stop" ), "Stop" ) ) )
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Stop" ), SW_LOCKEY( "EdVerb", "Stop" ), "Stop" ) ) )
                 session.requestStop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 연다. 경로는 아래 줄에도 남는다
             EditorSelfTestMarks::note( "multiplayer.stop" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Stop" ) );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "UDP", TextArgumentList().addInteger( "port", static_cast<int64>( session.getPort() ) ) ).c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Pause" ), "Pause server" ) ) );
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Pause" ), "Pause server" ) ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Pause" ), SW_LOCKEY( "EdButton", "PauseServer" ), "Pause server" ) ) );
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Pause" ), SW_LOCKEY( "EdButton", "PauseServer" ), "Pause server" ) ) )
                 (void)session.sendServerCommand( "pause" ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "PauseServer" ) );
             ImGui::SameLine();
@@ -205,12 +205,12 @@ namespace sw::editor
             ImGui::InputInt( "##StepTicks", &_stepTickCount, 0, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepTickCount" ) );
             _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerSessionTabInternal::kMaxStepTickCount );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "StepForward" ), "Step" ) ) );
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "StepForward" ), "Step" ) ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "StepForward" ), SW_LOCKEY( "EdButton", "Step" ), "Step" ) ) );
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "StepForward" ), SW_LOCKEY( "EdButton", "Step" ), "Step" ) ) )
                 (void)session.sendServerCommand( formatToString( "step %#", _stepTickCount ) ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepServer" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Resume server" ) ) );
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Resume server" ) ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "ResumeServer" ), "Resume server" ) ) );
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "ResumeServer" ), "Resume server" ) ) )
                 (void)session.sendServerCommand( "resume" ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ResumeServer" ) );
         }
@@ -274,7 +274,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
         if ( ImGui::BeginCombo( "##LogSource", _logSource < 0 ? "All processes" : listLabel[static_cast<size_t>( _logSource )].c_str() ) )
         {
-            if ( ImGui::Selectable( "All processes", _logSource < 0 ) )
+            if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "AllProcesses" ), "All processes" ), _logSource < 0 ) )
                 _logSource = -1;
             for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
             {

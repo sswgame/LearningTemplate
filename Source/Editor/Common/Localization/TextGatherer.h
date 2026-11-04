@@ -83,7 +83,7 @@ namespace sw
     {
     public:
         /** @brief 코드에서 이 이름의 매크로 호출을 모읍니다. 앞의 둘은 (네임스페이스, 키, 원문) 세 리터럴, 뒤의 둘은 (네임스페이스, 키) 두 리터럴이다. */
-        static constexpr const utf8* kArrCodeMacro[] = { "SW_LOCTEXT", "SW_LOCFORMAT", "SW_LOCKEY", "SW_LOCKEYFORMAT" };
+        static constexpr const utf8* kArrCodeMacro[] = { "SW_LOCTEXT", "SW_LOCFORMAT", "SW_LOCKEY", "SW_LOCKEYFORMAT", "SW_LOCKEYREF" };
         /** @brief 리플렉션 프로퍼티의 커스텀 메타입니다. 번역할 텍스트(`Localizable`), 사람이 읽는 텍스트가 아님(`NotLocalizable`), 최대 길이(`MaxLength=N`)가 있습니다. */
         static constexpr const utf8* kMetaLocalizable    = "Localizable";
         static constexpr const utf8* kMetaNotLocalizable = "NotLocalizable";

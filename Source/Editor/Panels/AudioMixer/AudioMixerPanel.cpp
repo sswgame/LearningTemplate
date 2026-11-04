@@ -125,9 +125,9 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Post Event" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) );
         ImGui::BeginDisabled( listEventName.empty() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Post Event" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) )
             _model.postSelectedEvent( engine );
         EditorSelfTestMarks::note( "audiomixer.postEvent" );
         ImGui::EndDisabled();
@@ -137,9 +137,9 @@ namespace sw::editor
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 32.0f );
         (void)EditorWidgets::drawAssetPathField( "##AudioMixerClip", _clipPath, "audio/sample.wav", ".wav,.ogg", "audiomixer.clipPath" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Play Clip" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) );
         ImGui::BeginDisabled( _clipPath.empty() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Play Clip" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) )
             (void)audio.play( AssetID{ _clipPath.c_str() } ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다
         EditorSelfTestMarks::note( "audiomixer.playClip" );
         ImGui::EndDisabled();

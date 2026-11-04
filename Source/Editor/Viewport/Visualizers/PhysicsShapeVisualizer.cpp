@@ -9,6 +9,7 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
@@ -86,7 +87,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( PhysicsShapes, "physics_shapes", 110, SW_EDITORICON_NAME( "Collider" ), "Phys",
-                          "RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)", false,
+    SW_EDITOR_VISUALIZER( PhysicsShapes, "physics_shapes", 110, SW_EDITORICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
+                          SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false,
                           &PhysicsShapeVisualizerInternal::draw );
 } // namespace sw::editor

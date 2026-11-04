@@ -47,12 +47,12 @@ namespace sw::editor
         EditorSelfTestMarks::note( "bugReport.note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Bug" ), "Collect Now" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Bug" ), SW_LOCKEY( "EdButton", "CollectNow" ), "Collect Now" ) ) )
             (void)_model.captureNow(); // 결과는 알림으로 알린다
         EditorSelfTestMarks::note( "bugReport.capture" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "Capture" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Refresh" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Refresh" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) )
             _model.markDirty();
 
         ImGui::Separator();

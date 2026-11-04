@@ -11,6 +11,8 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
 
 #include <imgui.h>
@@ -52,6 +54,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( ParkLayout, "themepark.layout", 900, SW_EDITORICON_NAME( "Map" ), "Park", "ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙", false,
+    SW_EDITOR_VISUALIZER( ParkLayout, "themepark.layout", 900, SW_EDITORICON_NAME( "Map" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutLabel" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutTip" ), false,
                           &drawParkLayout );
 } // namespace sw::editor

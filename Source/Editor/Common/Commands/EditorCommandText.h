@@ -57,6 +57,17 @@ namespace sw::editor
         bool _bPaletteVisible{ true };
     };
 
+    /** @brief 데이터가 만드는 메뉴 하나의 보이는 이름입니다(`_menuPath` 의 마디는 ID 라 번역하지 않는다 — 이름은 이 줄이 든다). */
+    REFLECT()
+    struct EditorMenuText
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Tooltip = "Menu path the command rows use (MainMenu/File)" )
+        string _path{};
+        PROPERTY( Required, Meta = "Localizable", Tooltip = "Name shown in the menu bar (English source - the text is its localization key)" )
+        string _label{};
+    };
+
     /** @brief 명령 표시 파일 한 벌(`*.commands.xml`)입니다. */
     REFLECT()
     struct EditorCommandTextTable
@@ -64,6 +75,8 @@ namespace sw::editor
         REFLECT_BODY();
         PROPERTY( Required, Tooltip = "Commands of the module" )
         vector<EditorCommandText> _listCommand;
+        PROPERTY( Tooltip = "Names of the menus this file's rows open (a module that only adds items to an existing menu has none)" )
+        vector<EditorMenuText> _listMenu;
     };
 
     /** @brief 모듈 하나가 명령 표시 파일을 더하는 등록 줄입니다(`SW_EDITOR_COMMAND_TEXT`). */
@@ -87,10 +100,13 @@ namespace sw::editor
         [[nodiscard]] bool apply( EditorCommandDesc& inoutDesc );
         /** @brief 어느 코드 명령도 쓰지 않은 줄을 오류로 알립니다(지운 명령의 남은 줄 · id 오타). */
         void reportUnused() const;
+        /** @brief 메뉴 @p menuPath 의 보이는 이름(지금 언어)을 @p outLabel 에 담습니다. 이름 줄이 없으면 false 입니다. */
+        [[nodiscard]] bool findMenuLabel( string_view menuPath, string& outLabel ) const;
 
     private:
         vector<EditorCommandText> _listRow;
         vector<uint8>             _listUsed;
+        vector<EditorMenuText>    _listMenu;
     };
 } // namespace sw::editor
 

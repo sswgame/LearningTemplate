@@ -92,14 +92,14 @@ namespace sw::editor
         const float32 dpiScale = EditorThemeUtil::getDPIScale();
 
         ImGui::BeginDisabled( bBusy );
-        Internal::drawOptionCombo( "Target", 120.0f * dpiScale, PackagingModel::getTargetName( _model.getTargetIndex() ), PackagingModel::getTargetCount(),
+        Internal::drawOptionCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Target" ), "Target" ), 120.0f * dpiScale, PackagingModel::getTargetName( _model.getTargetIndex() ), PackagingModel::getTargetCount(),
                                    []( uint32 index )
         { return PackagingModel::getTargetName( index ); }, _model.editTargetIndex() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Target" ) );
         ImGui::SameLine();
         const vector<string>& listGame     = _model.getGames();
         const utf8*           pGamePreview = _model.getGameIndex() < listGame.size() ? listGame[_model.getGameIndex()].c_str() : "(none)";
-        Internal::drawOptionCombo( "Game", 160.0f * dpiScale, pGamePreview, static_cast<uint32>( listGame.size() ),
+        Internal::drawOptionCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Game" ), "Game" ), 160.0f * dpiScale, pGamePreview, static_cast<uint32>( listGame.size() ),
                                    [&listGame]( uint32 index )
         { return listGame[index].c_str(); }, _model.editGameIndex() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Game" ) );
@@ -110,7 +110,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "RHIBackend" ) );
 
         EditorChrome::setNextItemWidthColumns( 43.0f );
-        (void)EditorWidgets::drawTextField( "Output Folder", _model.editOutputFolder() ); // 바뀐 값은 다음 Package 가 쓴다
+        (void)EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "OutputFolder" ), "Output Folder" ), _model.editOutputFolder() ); // 바뀐 값은 다음 Package 가 쓴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OutputFolder" ) );
 
         (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "SkipBuild" ), &_model.editSkipBuild() ); // 바뀐 값은 다음 Package 가 쓴다
@@ -126,7 +126,7 @@ namespace sw::editor
     void PackagingPanel::drawActionRow( bool bBusy )
     {
         ImGui::BeginDisabled( bBusy );
-        const bool bPackage = ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "BuildAll" ), "Package" ) );
+        const bool bPackage = ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "BuildAll" ), SW_LOCKEY( "EdButton", "Package" ), "Package" ) );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "packaging.package" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Package" ) );
@@ -136,7 +136,7 @@ namespace sw::editor
         const PackagingProgress& progress   = _model.getProgress();
         const bool               bHasFolder = progress._state == PackagingState::Succeeded && progress._outputFolder.empty() == false;
         ImGui::BeginDisabled( bHasFolder == false );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "FolderOpen" ), "Open Folder" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "FolderOpen" ), SW_LOCKEY( "EdButton", "OpenFolder" ), "Open Folder" ) ) )
             (void)EditorAssetFileCommands::showInFileExplorer( progress._outputFolder ); // 탐색기를 못 띄우면 경고가 남는다
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OpenFolder" ) );

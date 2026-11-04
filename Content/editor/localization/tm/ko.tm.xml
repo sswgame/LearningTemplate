@@ -8,6 +8,7 @@
 		<entry source="(no keys)" text="(키 없음)" />
 		<entry source="(no project)" text="(프로젝트 없음)" />
 		<entry source="* Unsaved changes" text="* 저장하지 않은 변경" />
+		<entry source="+ Create" text="+ 만들기" />
 		<entry source="0 means none" text="0 은 덮어쓰지 않음" />
 		<entry source="0 means unbounded" text="0 은 제한 없음" />
 		<entry source="236P = down, down-right, right + punch (the map's command history, 0.8 s window)"
@@ -24,6 +25,7 @@
 		       text="자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다" />
 		<entry source="A recommended accent color. Click to apply it."
 		       text="추천 액센트 색상 팔레트입니다. 클릭하면 적용됩니다." />
+		<entry source="Ability Debugger" text="어빌리티 디버거" />
 		<entry source="Accent Color" text="강조색" />
 		<entry source="Accent Swatches:" text="강조색 견본:" />
 		<entry source="Accept" text="확인" />
@@ -111,6 +113,8 @@
 		<entry source="Anchor Max" text="앵커 최대" />
 		<entry source="Anchor Min" text="앵커 최소" />
 		<entry source="Anchors" text="앵커" />
+		<entry source="Animation Graph" text="애니메이션 그래프" />
+		<entry source="Animation Rewind" text="애니메이션 되감기" />
 		<entry source="Animations (name, first frame, frame count, loop) - none means the whole clip is one loop"
 		       text="애니메이션(이름 · 첫 프레임 · 프레임 수 · 반복) — 없으면 클립 전체가 한 반복이다" />
 		<entry source="Animator parameter that drives the weight every frame (clamped to 0..1). Leave empty to use Weight."
@@ -130,6 +134,7 @@
 		       text="두 칸(디버그 채널로 읽은 서버, 또는 세션 클라이언트)에 지금의 오브젝트별 해시를 물어 다른 오브젝트를 나열합니다(어긋난 틱 가까이에서 서버를 먼저 멈춥니다. 두 답은 같은 틱이어야 합니다)" />
 		<entry source="Ask the selected process for its line and connection numbers"
 		       text="고른 프로세스에 회선 · 연결 수치를 묻습니다" />
+		<entry source="Assets" text="에셋" />
 		<entry source="Atlas" text="아틀라스" />
 		<entry source="Atlas ID" text="아틀라스 ID" />
 		<entry source="Atlas cell index to paint, 0 to 255." text="칠할 아틀라스 칸 인덱스(0~255)입니다." />
@@ -167,9 +172,10 @@
 		       text="선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 베이크합니다(씬 옆 .probes)" />
 		<entry source="Bandwidth (KB/s)" text="대역폭(KB/s)" />
 		<entry source="Battery: {level}" text="배터리: {level}" />
+		<entry source="Behavior Tree" text="비헤이비어 트리" />
 		<entry source="Binding for action: {action}" text="액션 바인딩: {action}" />
 		<entry source="Bindings" text="바인딩" />
-		<entry source="Blend" text="섞기" />
+		<entry source="Blend" text="블렌드" />
 		<entry source="Bodies" text="바디" />
 		<entry source="Body prefab (skeletal animator on its root)"
 		       text="몸 프리팹(뿌리에 스켈레탈 애니메이터)" />
@@ -187,9 +193,11 @@
 		       text="프리팹과의 연결을 끊고 독립된 일반 오브젝트로 변환합니다" />
 		<entry source="Broadcast" text="방송" />
 		<entry source="Budget: {budgetBuf}" text="예산: {budgetBuf}" />
+		<entry source="Bug Report" text="버그 보고" />
 		<entry source="Bug report" text="버그 리포트" />
 		<entry source="Bug report saved" text="버그 리포트를 저장했습니다" />
 		<entry source="Build" text="빌드" />
+		<entry source="Build Failed" text="빌드 실패" />
 		<entry source="Build the engine and every module" text="엔진과 모든 모듈을 빌드합니다" />
 		<entry source="Builds the engine and every game and editor module"
 		       text="엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다" />
@@ -197,8 +205,10 @@
 		<entry source="Buttons:" text="단추:" />
 		<entry source="CPU Scopes" text="CPU 구간" />
 		<entry source="Call Tree" text="호출 트리" />
+		<entry source="Cam" text="카메라" />
 		<entry source="Camera" text="카메라" />
 		<entry source="Camera Bookmarks (Ctrl+1~9)" text="카메라 책갈피(Ctrl+1~9)" />
+		<entry source="Camera Presets" text="카메라 프리셋" />
 		<entry source="Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)"
 		       text="카메라 북마크: 저장한 카메라 위치로 뷰를 옮깁니다 (Ctrl+1~9)" />
 		<entry source="Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it."
@@ -218,6 +228,7 @@
 		       text="선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)" />
 		<entry source="Capturing is paused (a spike or an opened capture) - resume live capture"
 		       text="캡처가 멈춰 있습니다(스파이크 또는 연 캡처) - 실시간 캡처를 다시 시작합니다" />
+		<entry source="Catalog Editor" text="카탈로그 편집기" />
 		<entry source="Cell column the player arrives at in the target map."
 		       text="대상 맵에서 플레이어가 도착할 칸의 열입니다." />
 		<entry source="Cell row the player arrives at in the target map."
@@ -226,6 +237,7 @@
 		<entry source="Center Left" text="왼쪽 가운데" />
 		<entry source="Center Right" text="오른쪽 가운데" />
 		<entry source="Character Editor" text="캐릭터 편집기" />
+		<entry source="Check Map" text="맵 검사" />
 		<entry source="Check Out (Lock)" text="체크아웃(잠금)" />
 		<entry source="Checked: the weight spreads to every child bone. Unchecked: only this bone."
 		       text="켜면 가중치가 모든 자식 본에 퍼지고, 끄면 이 본 하나만 바꿉니다." />
@@ -257,6 +269,7 @@
 		<entry source="Client area size of each App window (pixels)"
 		       text="App 창마다의 클라이언트 영역 크기(픽셀)" />
 		<entry source="Clip" text="클립" />
+		<entry source="Clip Preview" text="클립 미리보기" />
 		<entry source="Clip this layer plays (its name in the clip folder)."
 		       text="이 레이어가 재생할 클립입니다(클립 폴더의 이름)." />
 		<entry source="Clipboard is empty" text="클립보드가 비어 있습니다" />
@@ -267,9 +280,11 @@
 		       text="저장하지 않은 변경을 확인한 뒤 에디터를 닫습니다" />
 		<entry source="Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting."
 		       text="카메라가 그리는 가장 가까운 거리입니다. 이보다 가까운 지오메트리는 잘려 나갑니다. 깊이 충돌(z-fighting)을 피하려면 장면이 허용하는 만큼 크게 두세요." />
+		<entry source="Col" text="충돌" />
 		<entry source="Collapse" text="접기" />
 		<entry source="Collapse All" text="모두 접기" />
 		<entry source="Collect" text="모으기" />
+		<entry source="Collect Now" text="지금 모으기" />
 		<entry source="Collect a bug report folder" text="버그 보고 폴더를 모읍니다" />
 		<entry source="Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugReports/&lt;time>/ with the note above"
 		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugReports/&lt;시각>/ 에 모읍니다" />
@@ -280,17 +295,21 @@
 		<entry source="Column" text="열" />
 		<entry source="Column Span" text="열 넓이" />
 		<entry source="Columns" text="열" />
+		<entry source="Command" text="명령" />
+		<entry source="Command Palette" text="명령 팔레트" />
 		<entry source="Command Palette..." text="명령 팔레트..." />
 		<entry source="Command Pattern Tester" text="명령 패턴 시험기" />
 		<entry source="Command the game runs when the conversation passes this node, written as name:argument:argument."
 		       text="대화가 이 노드를 지날 때 게임이 실행하는 명령으로, 이름:인자:인자 형식입니다." />
 		<entry source="CommandStack service is not available." text="CommandStack 서비스를 쓸 수 없습니다." />
 		<entry source="Compare" text="비교" />
+		<entry source="Compile" text="컴파일" />
 		<entry source="Compile All Modules" text="모든 모듈 컴파일" />
 		<entry source="Compile Editor (EditorModule)" text="에디터 컴파일(EditorModule)" />
 		<entry source="Compile Game (SWGame)" text="게임 컴파일(SWGame)" />
 		<entry source="Compile every module with the changed module set"
 		       text="바뀐 모듈 구성으로 모든 모듈을 컴파일합니다" />
+		<entry source="Compiling..." text="컴파일 중..." />
 		<entry source="Components" text="컴포넌트" />
 		<entry source="Condition" text="조건" />
 		<entry source="Configure, build, cook and stage the selected game into the output folder"
@@ -303,6 +322,7 @@
 		       text="붙은 클라이언트 / 띄운 클라이언트 — 프로세스 목록 · 서버 일시정지는 Window > Multiplayer" />
 		<entry source="Connected to {address}" text="{address} 에 연결됨" />
 		<entry source="Container" text="컨테이너" />
+		<entry source="Content Browser" text="콘텐츠 브라우저" />
 		<entry source="Context: {context}&#10;Comment: {comment}&#10;Max length: {maxLength}"
 		       text="컨텍스트: {context}&#10;주석: {comment}&#10;최대 길이: {maxLength}" />
 		<entry source="Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white."
@@ -320,6 +340,7 @@
 		<entry source="Copy every filtered console log to the clipboard"
 		       text="필터링된 모든 콘솔 로그를 클립보드에 복사합니다" />
 		<entry source="Copy the absolute folder path" text="폴더의 절대 경로를 복사합니다" />
+		<entry source="Corner" text="모서리" />
 		<entry source="Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)."
 		       text="버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px, 0 ~ 8)" />
 		<entry source="Corner rounding of dock tabs and panel tabs, in pixels (0 to 8)."
@@ -355,13 +376,17 @@
 		<entry source="Curve" text="커브" />
 		<entry source="Curves" text="커브" />
 		<entry source="Data Layers" text="데이터 레이어" />
+		<entry source="Data Table Editor" text="데이터 테이블 편집기" />
 		<entry source="Data layer not added: the name is empty or already used"
 		       text="데이터 레이어를 더하지 못했습니다: 이름이 비었거나 이미 있습니다" />
+		<entry source="Dbg" text="디버그" />
 		<entry source="Debug" text="디버그" />
+		<entry source="Debug Draw" text="디버그 그리기" />
 		<entry source="Debug HUD is not running" text="디버그 HUD 가 실행 중이 아닙니다" />
 		<entry source="Debug HUD is not running (Shipping or a test host)."
 		       text="디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 테스트 호스트입니다)." />
 		<entry source="Debug HUD sections" text="디버그 HUD 구역" />
+		<entry source="Dedicated Server" text="전용 서버" />
 		<entry source="Default" text="기본값" />
 		<entry source="Del" text="삭제" />
 		<entry source="Delete" text="삭제" />
@@ -376,6 +401,7 @@
 		<entry source="Delete..." text="삭제..." />
 		<entry source="Delta: ({dx}, {dy})" text="변화량: ({dx}, {dy})" />
 		<entry source="Depends on" text="의존 모듈" />
+		<entry source="Depth" text="깊이" />
 		<entry source="Description: {description}" text="설명: {description}" />
 		<entry source="Detach from the parent object and move to the scene root"
 		       text="부모 오브젝트와의 연결을 해제하고 씬 루트로 이동합니다" />
@@ -384,6 +410,7 @@
 		<entry source="Dev command for the server (help lists them, Tab completes the name)"
 		       text="서버에 보낼 개발 명령(help 가 목록을 보이고, Tab 이 이름을 채웁니다)" />
 		<entry source="Devices" text="장치" />
+		<entry source="Dialogue Graph" text="대화 그래프" />
 		<entry source="Disabled" text="꺼짐" />
 		<entry source="Discard every override of this instance and match the prefab template"
 		       text="이 인스턴스의 모든 오버라이드를 버리고 프리팹 템플릿과 맞춥니다" />
@@ -508,6 +535,7 @@
 		<entry source="Field" text="항목" />
 		<entry source="Fighting-game command to test, in numpad directions (2 down, 6 right, 3 down-right ...) followed by a button letter. Perform it on the gamepad or keyboard to see it match."
 		       text="테스트할 격투 게임 커맨드로, 숫자 패드 방향(2 아래, 6 오른쪽, 3 오른쪽 아래 ...) 뒤에 버튼 글자를 붙입니다. 게임패드나 키보드로 입력해 일치하는지 봅니다." />
+		<entry source="File" text="파일" />
 		<entry source="File: {file}" text="파일: {file}" />
 		<entry source="Fill Weight" text="채우기 비율" />
 		<entry source="Filter (tag / message / file)" text="필터 (태그 / 메시지 / 파일)" />
@@ -553,7 +581,7 @@
 		<entry source="Frames:" text="프레임:" />
 		<entry source="Free-form notes saved with the sequence. It does not affect playback."
 		       text="시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다." />
-		<entry source="Freeze" text="멈춤" />
+		<entry source="Freeze" text="멈추기" />
 		<entry source="Freeze the graphs so you can read a past spike."
 		       text="그래프를 멈춰 지나간 튐을 읽을 수 있게 합니다." />
 		<entry source="FullStacks records the call stack of every allocation born after this point (slows allocation). The report lists blocks born in the window that are still alive."
@@ -565,6 +593,7 @@
 		<entry source="GPU Passes" text="GPU 패스" />
 		<entry source="GT.Frame above this pauses capturing (and a running play session) on that frame"
 		       text="GT.Frame 이 이 값을 넘으면 그 프레임에서 캡처(와 실행 중인 플레이 세션)를 멈춥니다" />
+		<entry source="Game" text="게임" />
 		<entry source="Game Data XML Tables" text="게임 데이터 XML 표" />
 		<entry source="Game Viewport On-Screen Controller Overlay HUD Settings"
 		       text="게임 뷰포트 화면 컨트롤러 HUD 설정" />
@@ -582,8 +611,11 @@
 		       text="충돌을 풀려고 이 액션의 바인딩에 다른 키를 지정합니다." />
 		<entry source="Give this combo to the selected command and remove it from the other command"
 		       text="이 조합을 고른 명령에 주고 다른 명령에서는 지웁니다" />
+		<entry source="Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset"
+		       text="리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다" />
 		<entry source="Global Statistics By Tag" text="태그별 전체 통계" />
 		<entry source="Global Variable Presets" text="전역 변수 프리셋" />
+		<entry source="Global Variables" text="전역 변수" />
 		<entry source="Go back one recorded frame." text="기록된 프레임 하나만큼 뒤로 갑니다." />
 		<entry source="Go ragdoll and push the picked body (the table row; the first body when none) with the impulse below"
 		       text="래그돌이 되어 고른 바디(표의 줄, 없으면 첫 바디)를 아래 충격으로 밉니다" />
@@ -597,6 +629,7 @@
 		<entry source="Graph parameter the condition reads (set by game code through the player)"
 		       text="조건이 읽는 그래프 파라미터입니다(게임 코드가 플레이어를 통해 설정합니다)." />
 		<entry source="Graphs" text="그래프" />
+		<entry source="Grid Snap" text="격자 스냅" />
 		<entry source="Grid snap step, in world units." text="그리드 스냅 간격(월드 단위)입니다." />
 		<entry source="Grid snap: moved objects jump in steps of the grid size on the right."
 		       text="그리드 스냅: 옮기는 오브젝트가 오른쪽의 그리드 크기 단위로 움직입니다." />
@@ -609,6 +642,7 @@
 		       text="이 머티리얼이 렌더링에 쓰는 HLSL 셰이더입니다. .hlsl 파일을 여기에 놓거나 콘텐츠 브라우저에서 고릅니다." />
 		<entry source="HUD Opacity" text="HUD 불투명도" />
 		<entry source="HUD Scale" text="HUD 크기" />
+		<entry source="Half Life" text="반감기" />
 		<entry source="Haptic Vibration Test:" text="진동 시험:" />
 		<entry source="Height" text="높이" />
 		<entry source="Height Override" text="높이 덮어쓰기" />
@@ -616,6 +650,9 @@
 		<entry source="Held Keys:" text="누른 키:" />
 		<entry source="Hidden in the editor - click to show"
 		       text="에디터에서 숨겨져 있습니다 - 클릭하면 보입니다" />
+		<entry source="Hierarchy" text="계층" />
+		<entry source="Hierarchy / Skeleton View" text="계층 / 스켈레톤 보기" />
+		<entry source="History" text="기록" />
 		<entry source="Hold gamepad 0's left stick at the tilt set above until you reset it."
 		       text="게임패드 0의 왼쪽 스틱을 되돌릴 때까지 위에서 정한 기울기로 유지합니다." />
 		<entry source="Horizontal Alignment" text="가로 정렬" />
@@ -634,6 +671,7 @@
 		<entry source="How the parameter is compared with Value. (on finish) moves on when the clip ends; Trigger fires once when the parameter is set."
 		       text="파라미터를 Value 와 비교하는 방식입니다. (on finish) 는 클립이 끝나면 넘어가고, Trigger 는 파라미터가 설정될 때 한 번 발동합니다." />
 		<entry source="ID: {componentID}" text="ID: {componentID}" />
+		<entry source="Icons" text="아이콘" />
 		<entry source="Import external files (textures, shaders, sounds, ...) into the current folder"
 		       text="외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다" />
 		<entry source="Import..." text="가져오기..." />
@@ -651,9 +689,11 @@
 		       text="실제 장치 없이 가상 키, 마우스, 스틱 이벤트를 엔진에 바로 넣습니다." />
 		<entry source="Input Layers" text="입력 레이어" />
 		<entry source="Input Map" text="입력 맵" />
+		<entry source="Input Map Editor" text="입력 맵 편집기" />
 		<entry source="Input Replay Recorder &amp; Deterministic QA Playback"
 		       text="입력 재생 기록 · 결정적 QA 재생" />
 		<entry source="InputManager service is not available." text="InputManager 서비스를 쓸 수 없습니다." />
+		<entry source="Inspector" text="인스펙터" />
 		<entry source="Instance" text="인스턴스" />
 		<entry source="Instances" text="인스턴스" />
 		<entry source="Integer to paint on the selected data layer."
@@ -662,6 +702,7 @@
 		<entry source="Interpolation" text="보간" />
 		<entry source="Invoke" text="부르기" />
 		<entry source="Isolated the prefab in the current scene" text="현재 씬에서 프리팹을 격리했습니다" />
+		<entry source="Item Name" text="아이템 이름" />
 		<entry source="Jitter (ms)" text="흔들림(ms)" />
 		<entry source="Joints" text="관절" />
 		<entry source="Keep" text="남기기" />
@@ -681,9 +722,12 @@
 		<entry source="Key Tracks" text="키 트랙" />
 		<entry source="Key the target's current values on every channel at this frame."
 		       text="대상의 지금 값을 이 프레임의 키로 모든 채널에 찍습니다" />
+		<entry source="Keyboard Shortcuts" text="단축키" />
 		<entry source="Keyboard Status" text="키보드 상태" />
 		<entry source="LOD 0  {vertexCount} vertices  {indexCount} triangles"
 		       text="LOD 0  정점 {vertexCount}개  삼각형 {indexCount}개" />
+		<entry source="LOD Fade Code" text="LOD 페이드 코드" />
+		<entry source="LOD Level" text="LOD 단계" />
 		<entry source="LOD {lod}  {vertexCount} vertices  {indexCount} triangles  from screen size {screenSize}"
 		       text="LOD {lod}  정점 {vertexCount}개  삼각형 {indexCount}개  화면 크기 {screenSize}부터" />
 		<entry source="Label" text="이름표" />
@@ -706,22 +750,29 @@
 		<entry source="Layers" text="레이어" />
 		<entry source="Layout" text="배치" />
 		<entry source="Layout rects" text="배치 사각형" />
+		<entry source="Layouts" text="레이아웃" />
 		<entry source="Leak Window (Blocks Born In The Window)" text="누수 창(창 안에서 생긴 블록)" />
 		<entry source="Leave isolation mode without saving the prefab"
 		       text="프리팹을 저장하지 않고 격리 모드를 나갑니다" />
 		<entry source="Leave the player for the scene view while playing, or take it back"
 		       text="플레이 중 플레이어를 두고 씬 뷰로 나가거나 다시 조종합니다" />
 		<entry source="Left Motor" text="왼쪽 모터" />
+		<entry source="Left Stick" text="왼쪽 스틱" />
 		<entry source="Left Trigger:  {leftTrigger}" text="왼쪽 트리거:  {leftTrigger}" />
 		<entry source="Left edge of the frame in the atlas, as a fraction of its width (0-1)."
 		       text="아틀라스에서 프레임의 왼쪽 끝 위치로, 너비에 대한 비율(0~1)입니다." />
 		<entry source="Left, top, right, bottom (UI units)" text="왼쪽, 위, 오른쪽, 아래(UI 단위)" />
 		<entry source="Library Parameters and Attenuation" text="라이브러리 파라미터와 감쇠" />
+		<entry source="Light Complexity" text="조명 복잡도" />
+		<entry source="Lighting Only" text="조명만" />
 		<entry source="Line speed in KB/s (0 = unlimited)" text="회선 속도(KB/s, 0 = 제한 없음)" />
 		<entry source="Linearize" text="선형화" />
 		<entry source="Link Selected" text="고른 것 잇기" />
+		<entry source="List" text="목록" />
 		<entry source="List the most recent inputs and triggered actions, as in fighting-game training modes."
 		       text="격투 게임 트레이닝 모드처럼 최근 입력과 발동한 액션을 나열합니다." />
+		<entry source="Listen Host" text="리슨 호스트" />
+		<entry source="Lit" text="조명" />
 		<entry source="Live Coding Failed" text="라이브 코딩 실패" />
 		<entry source="Live Coding Succeeded" text="라이브 코딩 성공" />
 		<entry source="Live Coding is ready to build." text="라이브 코딩 빌드 준비 완료" />
@@ -758,6 +809,7 @@
 		       text="칠하기 도구가 칸을 칠하는 대신 지우게 합니다." />
 		<entry source="Make this map use the tile set on the left and load its brushes."
 		       text="이 맵이 왼쪽의 타일셋을 쓰게 하고 그 브러시를 읽습니다." />
+		<entry source="Map Check" text="맵 검사" />
 		<entry source="Map Check: {errorCount} error(s), {warningCount} warning(s)"
 		       text="Map Check: 오류 {errorCount}개, 경고 {warningCount}개" />
 		<entry source="Map a painted warp cell sends the player to. Painted warp cells also become walkable."
@@ -769,6 +821,9 @@
 		<entry source="Map width in cells. Takes effect when you press Apply Size."
 		       text="맵 너비(칸)입니다. Apply Size 를 눌러야 적용됩니다." />
 		<entry source="Mappings" text="매핑" />
+		<entry source="Marker Slots" text="표지 칸" />
+		<entry source="Mask" text="마스크" />
+		<entry source="Material" text="머티리얼" />
 		<entry source="Max" text="최대" />
 		<entry source="Max Size" text="최대 크기" />
 		<entry source="Max instances" text="최대 인스턴스" />
@@ -777,14 +832,18 @@
 		<entry source="Memory" text="메모리" />
 		<entry source="MemoryProfiler is not active." text="MemoryProfiler 가 동작하지 않습니다." />
 		<entry source="Mesh Modifiers" text="메시 모디파이어" />
+		<entry source="Mesh Preview" text="메시 미리보기" />
+		<entry source="Metallic" text="금속성" />
 		<entry source="Methods" text="메서드" />
 		<entry source="Min Size" text="최소 크기" />
+		<entry source="Mipmaps" text="밉맵" />
 		<entry source="Mode" text="모드" />
 		<entry source="Modified only" text="바뀐 것만" />
 		<entry source="Module" text="모듈" />
 		<entry source="Module set changed - build to apply, then restart the editor."
 		       text="모듈 구성이 바뀌었습니다 - 빌드해 적용한 뒤 에디터를 다시 시작하세요." />
 		<entry source="Module: {module}" text="모듈: {module}" />
+		<entry source="Modules" text="모듈" />
 		<entry source="Modules are being built in the background."
 		       text="현재 백그라운드에서 모듈을 빌드하고 있습니다" />
 		<entry source="More options for this component, including removing it."
@@ -813,8 +872,10 @@
 		<entry source="Moves the selected object up one place among its siblings"
 		       text="고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다" />
 		<entry source="Multi-Object Alignment" text="여러 오브젝트 정렬" />
+		<entry source="Multiplayer" text="멀티플레이어" />
 		<entry source="Multiple values" text="값이 여러 개입니다" />
 		<entry source="Mute" text="음소거" />
+		<entry source="NPC Schedule" text="NPC 일정" />
 		<entry source="Name" text="이름" />
 		<entry source="Name game code uses to play this animation."
 		       text="게임 코드가 이 애니메이션을 재생할 때 쓰는 이름입니다." />
@@ -826,6 +887,7 @@
 		       text="이 클립 · 이벤트 · 카메라 컷이 작용하는 씬 오브젝트의 이름입니다." />
 		<entry source="Name shown as the speaker of this line."
 		       text="이 대사의 화자로 표시되는 이름입니다." />
+		<entry source="Nav" text="내비" />
 		<entry source="Near Plane" text="가까운 평면" />
 		<entry source="Near and far clip planes of the camera that rendered the depth, in world units. Match them to that camera for correct distances."
 		       text="깊이를 렌더링한 카메라의 근평면과 원평면(월드 단위)입니다. 정확한 거리를 보려면 그 카메라에 맞춥니다." />
@@ -838,6 +900,8 @@
 		       text="Net Mode — Standalone 은 에디터 안에서 재생하고, 나머지는 서버와 클라이언트를 따로 띄운다 (Window > Multiplayer)" />
 		<entry source="Network presets could not be read - see the log"
 		       text="네트워크 프리셋을 읽지 못했습니다 — 로그를 보세요" />
+		<entry source="New Action Name" text="새 액션 이름" />
+		<entry source="New Folder" text="새 폴더" />
 		<entry source="New Scene" text="새 씬" />
 		<entry source="New scene" text="새 씬" />
 		<entry source="New string key..." text="새 문자열 키..." />
@@ -869,6 +933,7 @@
 		<entry source="No detailed call stack data available or all freed."
 		       text="자세한 호출 스택 자료가 없거나 모두 풀렸습니다." />
 		<entry source="No event library loaded" text="로드된 이벤트 라이브러리가 없습니다" />
+		<entry source="No file - defaults" text="파일 없음 - 기본값" />
 		<entry source="No game camera - the load and unload column needs one."
 		       text="게임 카메라가 없습니다 - 올림 · 내림 열은 게임 카메라가 있어야 합니다." />
 		<entry source="No global variables registered." text="등록된 전역 변수가 없습니다." />
@@ -921,6 +986,7 @@
 		       text="노드: {nodeCount}  링크: {linkCount}  ({animationGraphDocumentFileName})" />
 		<entry source="None" text="없음" />
 		<entry source="None (uses default)" text="없음(기본값 사용)" />
+		<entry source="Normals" text="노멀" />
 		<entry source="Note to attach (what you did and what went wrong)"
 		       text="붙일 메모(무엇을 했고 무엇이 잘못됐는지)" />
 		<entry source="Nothing is playing" text="재생 중인 것이 없습니다" />
@@ -959,6 +1025,7 @@
 		<entry source="Opacity" text="불투명도" />
 		<entry source="Open" text="열기" />
 		<entry source="Open Data File" text="데이터 파일 열기" />
+		<entry source="Open Folder" text="폴더 열기" />
 		<entry source="Open Log File" text="로그 파일 열기" />
 		<entry source="Open Prefab Window" text="프리팹 창 열기" />
 		<entry source="Open Saved/Profiler/ProfilerCapture.txt (pauses live capture)"
@@ -1032,19 +1099,25 @@
 		<entry source="Orthographic" text="직교" />
 		<entry source="Outline every visible widget's layout rectangle over the preview."
 		       text="보이는 모든 위젯의 레이아웃 사각형을 미리보기 위에 그립니다." />
+		<entry source="Output Folder" text="출력 폴더" />
+		<entry source="Output Log" text="출력 로그" />
 		<entry source="Outside tracker (swap chain, driver, untracked): {negative}{bytesBuf}"
 		       text="추적 밖(스왑 체인, 드라이버, 추적 안 함): {negative}{bytesBuf}" />
 		<entry source="Outside tracker: Unknown (no per-process driver usage)"
 		       text="추적 밖: 알 수 없음(프로세스별 드라이버 사용량 없음)" />
+		<entry source="Overdraw" text="오버드로" />
 		<entry source="Overlay opacity, 0.1 (faint) to 1 (solid)."
 		       text="오버레이 불투명도로, 0.1(흐림)에서 1(불투명)까지입니다." />
 		<entry source="Overlay size multiplier, 0.5 to 2." text="오버레이 크기 배율(0.5~2)입니다." />
+		<entry source="Overlays" text="오버레이" />
 		<entry source="Override replaces the masked bones; Additive adds the clip's difference from its first frame."
 		       text="Override 는 마스크의 본을 바꾸고, Additive 는 클립의 첫 프레임과의 차이를 더합니다." />
 		<entry source="Overwrite the selected component from the clipboard"
 		       text="클립보드의 값으로 선택한 컴포넌트를 덮어씁니다" />
+		<entry source="Package" text="패키지" />
 		<entry source="Package the client (game) or the dedicated server"
 		       text="클라이언트(게임) 또는 전용 서버를 패키징합니다" />
+		<entry source="Packaging" text="패키징" />
 		<entry source="Packet loss (highest connection, %)" text="패킷 손실 (가장 큰 연결, %)" />
 		<entry source="Packets this process receives" text="이 프로세스가 받는 패킷입니다" />
 		<entry source="Packets this process sends (client to server for a client)"
@@ -1056,6 +1129,7 @@
 		<entry source="Paint the rectangle you drag out when you release the mouse (U)"
 		       text="눌러 끈 사각형을 놓을 때 칠합니다 (U)" />
 		<entry source="Paired Animation" text="페어드 애니메이션" />
+		<entry source="Panel" text="패널" />
 		<entry source="Panels" text="패널" />
 		<entry source="Param" text="인자" />
 		<entry source="Parameter curves" text="파라미터 곡선 수" />
@@ -1071,6 +1145,7 @@
 		<entry source="Path" text="경로" />
 		<entry source="Path of the texture the frames are cut from. The UV rectangles below are fractions of this image."
 		       text="프레임을 잘라 낼 텍스처의 경로입니다. 아래 UV 사각형은 이 이미지에 대한 비율입니다." />
+		<entry source="Pattern (numpad notation)" text="패턴(숫자 패드 표기)" />
 		<entry source="Pause" text="일시 정지" />
 		<entry source="Pause Graph" text="그래프 멈춤" />
 		<entry source="Pause Play when an error log appears during Play"
@@ -1080,10 +1155,13 @@
 		<entry source="Pause on Error" text="오류에서 멈춤" />
 		<entry source="Pause on spike" text="튀면 멈춤" />
 		<entry source="Pause playback at the current frame." text="현재 프레임에서 재생을 일시정지합니다." />
+		<entry source="Pause server" text="서버 일시 정지" />
 		<entry source="Pause the dedicated server's game tick" text="전용 서버의 게임 틱을 멈춥니다" />
 		<entry source="Pause the game." text="게임 실행을 일시 정지합니다" />
+		<entry source="Paused" text="일시 정지됨" />
 		<entry source="Peak real voices" text="최대 실제 보이스" />
 		<entry source="Performance &amp; Scene" text="성능과 씬" />
+		<entry source="Phys" text="물리" />
 		<entry source="Pick a catalog file on the left" text="왼쪽에서 카탈로그 파일을 고릅니다" />
 		<entry source="Pick a render target on the left." text="왼쪽에서 렌더 타깃을 고릅니다." />
 		<entry source="Pick a settings file on the left" text="왼쪽에서 설정 파일을 고릅니다" />
@@ -1109,6 +1187,8 @@
 		<entry source="Place the client windows side by side (window size and position per App process) instead of letting them overlap"
 		       text="클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)" />
 		<entry source="Play" text="플레이" />
+		<entry source="Play Clip" text="클립 재생" />
+		<entry source="Play Mode" text="플레이 모드" />
 		<entry source="Play Preview" text="미리보기 재생" />
 		<entry source="Play in New Window" text="새 창에서 플레이" />
 		<entry source="Play mode is running (scene edits are restricted)"
@@ -1134,7 +1214,10 @@
 		<entry source="Position: {position}" text="위치: {position}" />
 		<entry source="Post Event" text="이벤트 재생" />
 		<entry source="Prefab" text="프리팹" />
+		<entry source="Prefab Overrides" text="프리팹 덮어쓰기" />
+		<entry source="Prefab Window" text="프리팹 창" />
 		<entry source="Prefab Window: {prefabPath}" text="프리팹 창: {prefabPath}" />
+		<entry source="Preferences" text="환경설정" />
 		<entry source="Preferences..." text="환경설정..." />
 		<entry source="Preset" text="프리셋" />
 		<entry source="Preset Name..." text="프리셋 이름..." />
@@ -1149,6 +1232,7 @@
 		<entry source="Press the focused widget (UI.Accept). Its command is only logged - the preview has no screen code."
 		       text="초점 위젯을 누릅니다(UI.Accept). 그 명령은 로그에만 남습니다 — 미리보기에는 화면 코드가 없습니다." />
 		<entry source="Preview" text="미리 듣기" />
+		<entry source="Preview Split" text="분할 미리보기" />
 		<entry source="Preview computed from the material values (base color, roughness, metallic, emissive). It does not run the shader code - use Apply to Selection to check it in the scene."
 		       text="머티리얼 값(기본색 · 거칠기 · 금속성 · 방출)으로 셈한 미리보기입니다. 셰이더 코드는 반영하지 않습니다 — Apply to Selection 으로 씬에서 확인합니다" />
 		<entry source="Preview node #{previewNodeID}" text="미리보기 노드 #{previewNodeID}" />
@@ -1163,6 +1247,8 @@
 		<entry source="Process the tabs act on: the server or one client"
 		       text="탭이 다루는 프로세스입니다(서버 또는 클라이언트 하나)" />
 		<entry source="Processing order" text="처리 순서" />
+		<entry source="Profiler" text="프로파일러" />
+		<entry source="Project Settings" text="프로젝트 설정" />
 		<entry source="Project Settings..." text="프로젝트 설정..." />
 		<entry source="Project override" text="프로젝트 오버라이드" />
 		<entry source="Prompt Glyphs" text="입력 안내 글리프" />
@@ -1173,12 +1259,14 @@
 		       text="모든 액션을 읽어 들였을 때의 바인딩으로 되돌립니다." />
 		<entry source="Put this action's bindings back to the ones it was loaded with."
 		       text="이 액션의 바인딩을 읽어 들였을 때의 것으로 되돌립니다." />
+		<entry source="Quick Open" text="빠르게 열기" />
 		<entry source="Quick Open..." text="빠르게 열기..." />
 		<entry source="Quickly searches for and opens assets, scenes and scripts"
 		       text="에셋, 씬, 스크립트를 빠르게 검색하여 엽니다" />
 		<entry source="RHI {backend} | {framerate} FPS" text="RHI {backend} | {framerate} FPS" />
 		<entry source="Radius" text="반경" />
 		<entry source="Ragdoll" text="래그돌" />
+		<entry source="Ragdoll Preview" text="래그돌 미리보기" />
 		<entry source="Raw XML" text="원본 XML" />
 		<entry source="Raw text" text="원본 글" />
 		<entry source="Read frames from the replay file, replacing the current recording. Stops any playback first."
@@ -1299,6 +1387,8 @@
 		<entry source="Removes the event from the edited copy; saving writes the library file"
 		       text="고치는 사본에서 이벤트를 지웁니다. 저장하면 라이브러리 파일에 씁니다" />
 		<entry source="Rename" text="이름 바꾸기" />
+		<entry source="Render Targets" text="렌더 타깃" />
+		<entry source="RenderDoc" text="RenderDoc" />
 		<entry source="RenderDoc Capture" text="RenderDoc 캡처" />
 		<entry source="RenderDoc is not attached to this process - start with -renderdoc or launch from RenderDoc"
 		       text="RenderDoc 이 이 프로세스에 붙어 있지 않습니다. -renderdoc 으로 시작하거나 RenderDoc 에서 실행하십시오." />
@@ -1324,7 +1414,9 @@
 		<entry source="Reset" text="초기화" />
 		<entry source="Reset All" text="모두 초기화" />
 		<entry source="Reset Default" text="기본으로" />
+		<entry source="Reset Default Layout" text="기본 레이아웃으로 되돌리기" />
 		<entry source="Reset Overlays" text="겹치기 초기화" />
+		<entry source="Reset Section" text="섹션 되돌리기" />
 		<entry source="Reset Stick to Center" text="스틱을 가운데로" />
 		<entry source="Reset Tab" text="탭 초기화" />
 		<entry source="Reset View" text="보기 초기화" />
@@ -1338,6 +1430,7 @@
 		       text="확대를 되돌려 기록한 프레임을 화면에 맞춥니다" />
 		<entry source="Reset this variable to its default value" text="이 변수를 기본값으로 되돌립니다" />
 		<entry source="Reset to Default" text="기본값으로" />
+		<entry source="Reset to Theme Defaults" text="테마 기본값으로 되돌리기" />
 		<entry source="Reset to default" text="기본값으로 되돌리기" />
 		<entry source="Reset to the default value" text="기본값으로 되돌립니다" />
 		<entry source="Reset to x1.00" text="x1.00 으로" />
@@ -1346,6 +1439,7 @@
 		<entry source="Resize" text="크기 바꾸기" />
 		<entry source="Resize the map to the width and height above. This clears every layer."
 		       text="맵을 위의 너비와 높이로 바꿉니다. 모든 레이어가 지워집니다." />
+		<entry source="Resolution" text="해상도" />
 		<entry source="Resource Catalog Summary" text="리소스 카탈로그 요약" />
 		<entry source="Resource path of the .swreplay file that Save and Load use."
 		       text="Save 와 Load 가 쓰는 .swreplay 파일의 리소스 경로입니다." />
@@ -1358,6 +1452,7 @@
 		<entry source="Resource path of the tile set whose brushes this map paints with. Press Use to apply it."
 		       text="이 맵이 칠할 브러시를 담은 타일셋의 리소스 경로입니다. 적용하려면 Use 를 누릅니다." />
 		<entry source="Restart" text="다시 시작" />
+		<entry source="Restart required" text="다시 시작 필요" />
 		<entry source="Restore every shortcut to its default binding"
 		       text="모든 단축키를 기본 바인딩으로 되돌립니다" />
 		<entry source="Restore every theme setting to the Modern Dark defaults."
@@ -1365,7 +1460,9 @@
 		<entry source="Restore previous file" text="이전 파일 되살리기" />
 		<entry source="Restore this command's default shortcut" text="이 명령의 기본 단축키로 되돌립니다" />
 		<entry source="Resume" text="이어 하기" />
+		<entry source="Resume server" text="서버 재개" />
 		<entry source="Resume the paused server's game tick" text="멈춘 서버의 게임 틱을 다시 돌립니다" />
+		<entry source="Retarget Profile" text="리타깃 프로필" />
 		<entry source="Return the injected stick to the center."
 		       text="넣은 스틱 입력을 가운데로 되돌립니다." />
 		<entry source="Return to the live state and resume Play In Editor if scrubbing paused it."
@@ -1379,13 +1476,17 @@
 		<entry source="Revert this property to the prefab value"
 		       text="이 프로퍼티를 프리팹 값으로 되돌립니다" />
 		<entry source="Revert to Prefab" text="프리팹으로 되돌리기" />
+		<entry source="Rig Debug" text="리그 디버그" />
+		<entry source="Rig Target" text="리그 대상" />
 		<entry source="Rig slot" text="리그 칸" />
 		<entry source="Rig slot name (weight_slot in the rig asset); value is clamped to 0..1"
 		       text="리그 슬롯 이름(리그 에셋의 weight_slot), 값은 0..1 로 자릅니다" />
 		<entry source="Right Motor" text="오른쪽 모터" />
+		<entry source="Right Stick" text="오른쪽 스틱" />
 		<entry source="Right Trigger: {rightTrigger}" text="오른쪽 트리거: {rightTrigger}" />
 		<entry source="Root motion: ({rootMotionTranslationX}, {rootMotionTranslationY}, {rootMotionTranslationZ})"
 		       text="루트 모션: ({rootMotionTranslationX}, {rootMotionTranslationY}, {rootMotionTranslationZ})" />
+		<entry source="Rot Snap" text="회전 스냅" />
 		<entry source="Rotate: turn the selection around an axis (E)"
 		       text="회전: 선택한 오브젝트를 축을 중심으로 돌립니다 (E)" />
 		<entry source="Rotation of the sprite at this key, in degrees."
@@ -1393,6 +1494,7 @@
 		<entry source="Rotation snap step, in degrees." text="회전 스냅 간격(도)입니다." />
 		<entry source="Rotation snap: rotations jump in steps of the angle on the right."
 		       text="회전 스냅: 회전이 오른쪽의 각도 단위로 움직입니다." />
+		<entry source="Roughness" text="거칠기" />
 		<entry source="Round-trip time (highest connection, ms)" text="RTT (가장 큰 연결, ms)" />
 		<entry source="Row" text="행" />
 		<entry source="Row Span" text="행 넓이" />
@@ -1501,6 +1603,7 @@
 		<entry source="Searches for and runs editor commands and actions"
 		       text="에디터 명령 및 액션을 검색하여 실행합니다" />
 		<entry source="Sections" text="구역" />
+		<entry source="Sel" text="선택" />
 		<entry source="Select All" text="모두 고르기" />
 		<entry source="Select All With" text="같은 것 모두 선택" />
 		<entry source="Select Owner GameObject" text="소유 GameObject 선택" />
@@ -1544,6 +1647,7 @@
 		<entry source="Sent bytes per second (last second, all connections)"
 		       text="보낸 바이트 / 초 (최근 1 초, 모든 연결)" />
 		<entry source="Sent packets per second" text="보낸 패킷 / 초" />
+		<entry source="Sequencer" text="시퀀서" />
 		<entry source="Session server" text="세션 서버" />
 		<entry source="Session server debug channel 127.0.0.1:{debugChannelPort}"
 		       text="세션 서버 디버그 채널 127.0.0.1:{debugChannelPort}" />
@@ -1557,6 +1661,8 @@
 		       text="앵커를 바꾸고 위젯이 제자리에 머물도록 오프셋을 다시 계산합니다." />
 		<entry source="Sets the editor theme preset, accent color and corner rounding"
 		       text="에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다" />
+		<entry source="Shaded Wireframe" text="셰이드 와이어프레임" />
+		<entry source="Shader" text="셰이더" />
 		<entry source="Shares a key with another action on the same layer - see the details"
 		       text="같은 레이어의 다른 액션과 키가 겹칩니다. 자세한 내용을 확인합니다." />
 		<entry source="Show 2D Stick &amp; Trigger Gauges" text="2D 스틱 · 트리거 게이지 보이기" />
@@ -1599,12 +1705,28 @@
 		<entry source="Show the message kinds the process queued to send instead of the ones it received (one process shows both directions)"
 		       text="받은 메시지 종류 대신 프로세스가 보내려고 쌓은 종류를 보입니다(한 프로세스가 두 방향을 모두 보입니다)" />
 		<entry source="Show warning rows" text="경고 줄을 보입니다" />
+		<entry source="Shows BoxCollider2D rectangles as wireframe"
+		       text="BoxCollider2D 사각형을 와이어프레임으로 표시합니다" />
+		<entry source="Shows RigidBody and RigidBody2D collision shapes as wireframe (static grey, kinematic blue, dynamic green, trigger yellow)"
+		       text="RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)" />
+		<entry source="Shows components without a mesh (lights, cameras, audio) as icons you can click to select"
+		       text="빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다" />
+		<entry source="Shows the bounding box of the selected objects in accent-colored lines"
+		       text="고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다" />
+		<entry source="Shows the frustum of every camera except the active one"
+		       text="활성 카메라를 제외한 카메라의 프러스텀을 표시합니다" />
+		<entry source="Shows the lines, spheres, boxes, arrows and text game code put into DebugDrawQueue"
+		       text="게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다" />
+		<entry source="Shows the polygon edges of the baked navmesh (bake with Build > Bake Navigation)"
+		       text="베이크한 내비메시의 폴리곤 테두리를 표시합니다(빌드 > 내비게이션 굽기로 굽는다)" />
 		<entry source="Shut down every process cleanly and, if tracing is on, merge the traces into one file."
 		       text="모든 프로세스를 정상 종료시키고, 트레이스를 켰으면 한 파일로 합칩니다" />
 		<entry source="Sim Stick X" text="시험 스틱 X" />
 		<entry source="Sim Stick Y" text="시험 스틱 Y" />
+		<entry source="Simulate" text="시뮬레이트" />
 		<entry source="Simulate the pointer over the preview (hover, press, wheel). Clicks no longer select widgets. Pressing changes widget values in the preview only - Reload restores the document."
 		       text="미리보기 위의 포인터를 흉내 냅니다(올리기, 누르기, 휠). 클릭이 더는 위젯을 고르지 않습니다. 누르면 미리보기에서만 위젯 값이 바뀝니다 — 다시 불러오면 문서대로 돌아옵니다." />
+		<entry source="Simulating" text="시뮬레이트 중" />
 		<entry source="Size Rule" text="크기 규칙" />
 		<entry source="Size is out of range." text="크기가 범위를 벗어났습니다." />
 		<entry source="Skeleton" text="스켈레톤" />
@@ -1621,14 +1743,18 @@
 		<entry source="Snap to Ground (Y=0)" text="바닥에 붙이기(Y=0)" />
 		<entry source="Solo - only this bus, its ancestors and its descendants are heard"
 		       text="단독 — 이 버스와 그 위 · 아래 버스만 들립니다" />
+		<entry source="Sources" text="소스" />
 		<entry source="Spawn" text="만들기" />
 		<entry source="Spawned: {spawnedCount}  CPU alive: {subject}"
 		       text="생성: {spawnedCount}  CPU 살아 있음: {subject}" />
+		<entry source="Speaker" text="화자" />
 		<entry source="Speed" text="속도" />
 		<entry source="Spike" text="튐" />
 		<entry source="Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'."
 		       text="씬 쿠킹과 똑같이 씬을 셀로 나눠 셀 목록이나 쿠킹을 실패시킬 참조를 보입니다. 'world.cells' 와 같습니다." />
+		<entry source="Sprite Clip" text="스프라이트 클립" />
 		<entry source="Sprite frame: {spriteFrame}" text="스프라이트 프레임: {spriteFrame}" />
+		<entry source="Standalone" text="단독" />
 		<entry source="Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera)."
 		       text="Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)" />
 		<entry source="Start a multiplayer session (Net Mode on the toolbar) to see its traffic"
@@ -1642,6 +1768,7 @@
 		       text="시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음)" />
 		<entry source="Start the server and clients for the selected Net Mode"
 		       text="고른 Net Mode 로 서버와 클라이언트를 시작합니다" />
+		<entry source="Starting" text="시작 중" />
 		<entry source="State" text="상태" />
 		<entry source="State {state}  Built bodies {bodyCount}  Settled {settled, select, yes {yes} other {no}}"
 		       text="상태 {state}  만든 바디 {bodyCount}  안정 {settled, select, yes {예} other {아니오}}" />
@@ -1653,6 +1780,7 @@
 		<entry source="State: {stateName}  ({stateTime} s)" text="상태: {stateName}  ({stateTime}초)" />
 		<entry source="Steal policy" text="뺏기 규칙" />
 		<entry source="Step" text="한 걸음" />
+		<entry source="Step N" text="N 프레임" />
 		<entry source="Step the preview to the next state by one transition."
 		       text="미리보기를 전이 하나만큼 다음 상태로 넘깁니다." />
 		<entry source="Stop" text="정지" />
@@ -1676,6 +1804,7 @@
 		<entry source="Stop the game and restore the scene to its state before Play."
 		       text="게임을 중지하고 초기 씬 상태로 복원합니다" />
 		<entry source="Stop the preview." text="미리보기를 멈춥니다." />
+		<entry source="Streaming Cells" text="스트리밍 셀" />
 		<entry source="Strength" text="세기" />
 		<entry source="Strength of the left (low-frequency) motor for the test pulse, 0 to 1."
 		       text="테스트 진동에 쓸 왼쪽(저주파) 모터 세기(0~1)입니다." />
@@ -1693,11 +1822,13 @@
 		<entry source="Tab Rounding" text="탭 둥글기" />
 		<entry source="Table edits keep comments and indentation. Nested elements are edited in the raw text view."
 		       text="표 편집은 주석과 들여쓰기를 지킵니다. 중첩 원소는 원본 글 보기에서 고칩니다." />
+		<entry source="Tags" text="태그" />
 		<entry source="Tags:" text="태그:" />
 		<entry source="Take the pressed cell's value as the value to paint (I)"
 		       text="누른 칸의 값을 칠할 값으로 가져옵니다 (I)" />
 		<entry source="Tap Key (Down + Up)" text="키 톡(누름 + 뗌)" />
 		<entry source="Target" text="대상" />
+		<entry source="Target Object" text="대상 오브젝트" />
 		<entry source="Target X" text="대상 X" />
 		<entry source="Target Y" text="대상 Y" />
 		<entry source="Target has no Pose Modifier" text="대상에 Pose Modifier 가 없습니다" />
@@ -1709,7 +1840,11 @@
 		       text="다른 단위 · 오브젝트의 목표는 호스트가 놓습니다 — 그 오브젝트를 옮기세요" />
 		<entry source="Task Manager &amp; Concurrency" text="작업 관리자 · 동시성" />
 		<entry source="TaskManager is not active." text="TaskManager 가 동작하지 않습니다." />
+		<entry source="Terrain" text="지형" />
+		<entry source="Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)"
+		       text="지형 도구: 지형 위를 끌어 깎거나 레이어를 칠합니다(브러시 설정 창, Ctrl+Z 는 한 번의 끌기를 되돌린다)" />
 		<entry source="Test Pulse (0.3s)" text="시험 진동(0.3 초)" />
+		<entry source="Test Runner" text="테스트 실행기" />
 		<entry source="Text" text="글" />
 		<entry source="Text scale" text="글자 크기" />
 		<entry source="The Inspector reads a dedicated server through its debug channel. Start a Dedicated Server session, or attach by address"
@@ -1761,6 +1896,8 @@
 		       text="상태의 클립 이름입니다. 플레이어는 이 이름의 클립을 재생합니다." />
 		<entry source="The threshold the parameter is compared against."
 		       text="파라미터와 비교할 임곗값입니다." />
+		<entry source="Theme" text="테마" />
+		<entry source="Theme &amp; Look and Feel" text="테마 · 모양" />
 		<entry source="Theme &amp; Look and Feel..." text="테마 · 모양..." />
 		<entry source="This asset names no other asset." text="이 에셋은 다른 에셋을 참조하지 않습니다." />
 		<entry source="This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML"
@@ -1776,8 +1913,10 @@
 		       text="이 씬은 쿠킹본에서 지어져 이미 셀로 나뉘어 있습니다. 나눔을 미리 보려면 씬 파일을 엽니다." />
 		<entry source="This value does not match its type (wrong count of numbers or a non-number) - fix the text"
 		       text="이 값이 형식과 맞지 않습니다(숫자 개수가 틀리거나 숫자가 아님) — 글을 고치세요" />
+		<entry source="Tile Map Tool" text="타일 맵 도구" />
 		<entry source="Tile set" text="타일 세트" />
 		<entry source="Tile set could not be read: {path}" text="타일셋을 읽지 못했습니다: {path}" />
+		<entry source="Tiles" text="타일" />
 		<entry source="Time" text="시간" />
 		<entry source="Time the audio thread spends per block copying instances and voices for this window"
 		       text="오디오 스레드가 이 창을 위해 블록마다 인스턴스와 보이스를 복사하는 시간" />
@@ -1837,6 +1976,7 @@
 		<entry source="Type to search assets, scenes, game objects (ESC to cancel)..."
 		       text="에셋 · 씬 · 게임 오브젝트를 검색합니다(ESC 로 취소)..." />
 		<entry source="UDP {port}" text="UDP {port}" />
+		<entry source="UI Preview" text="UI 미리보기" />
 		<entry source="UI scale" text="UI 크기" />
 		<entry source="UI theme to preview with. (game theme) uses the theme the game selects."
 		       text="미리보기에 쓸 UI 테마입니다. (game theme) 은 게임이 고른 테마를 씁니다." />
@@ -1851,6 +1991,7 @@
 		<entry source="Unit Tests" text="단위 테스트" />
 		<entry source="Unknown pin" text="알 수 없는 핀" />
 		<entry source="Unlink" text="연결 풀기" />
+		<entry source="Unlit" text="조명 없음" />
 		<entry source="Unload" text="내리기" />
 		<entry source="Unparent" text="부모에서 떼기" />
 		<entry source="Unpin from favorites" text="즐겨찾기 고정 해제" />
@@ -1868,9 +2009,11 @@
 		<entry source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
 		       text="원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다." />
 		<entry source="Used by layer ''{layer}''" text="레이어 ''{layer}'' 가 씁니다" />
+		<entry source="User Settings" text="사용자 설정" />
 		<entry source="User settings are not loaded." text="사용자 설정을 불러오지 않았습니다." />
 		<entry source="User volume (the options-menu value) - Ctrl+click types a number"
 		       text="사용자 음량(옵션 메뉴 값) — Ctrl+누르면 숫자를 칩니다" />
+		<entry source="VFX Preview" text="VFX 미리보기" />
 		<entry source="Validate" text="검사" />
 		<entry source="Validate every object of the active scene again"
 		       text="활성 씬의 모든 오브젝트를 다시 검증합니다" />
@@ -1910,6 +2053,8 @@
 		<entry source="Waiting for the render thread to create the preview texture..."
 		       text="렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..." />
 		<entry source="Warp target" text="이동 대상" />
+		<entry source="Weight" text="가중치" />
+		<entry source="Weight Param" text="가중치 매개변수" />
 		<entry source="Wheel: {mouseWheel}" text="휠: {mouseWheel}" />
 		<entry source="When the action fires (Pressed, Hold, Tap, Double Tap ...) - Unreal Enhanced Input triggers"
 		       text="액션이 발동하는 시점입니다(Pressed, Hold, Tap, Double Tap ...). 언리얼 Enhanced Input 의 트리거와 같습니다." />
@@ -1930,10 +2075,12 @@
 		       text="단추가 읽을 상태 해시 줄: 씬(변환) 또는 키트의 줄 — 파괴 · 롤백(프로세스가 등록한 것은 state.hashnames 가 보여 줍니다)" />
 		<entry source="Width" text="너비" />
 		<entry source="Width Override" text="너비 덮어쓰기" />
+		<entry source="Window" text="창" />
 		<entry source="Window (s)" text="창(초)" />
 		<entry source="Window Rounding" text="창 둥글기" />
 		<entry source="Windows per row before the next row starts"
 		       text="다음 줄로 넘어가기 전에 한 줄에 놓는 창 수" />
+		<entry source="Wireframe" text="와이어프레임" />
 		<entry source="Worker Threads: {workerCount}" text="작업 스레드: {workerCount}" />
 		<entry source="World space: the gizmo follows the world axes. Click to switch to local space."
 		       text="월드 공간: 기즈모가 월드 축을 따릅니다. 클릭하면 로컬 공간으로 바뀝니다." />
@@ -1995,8 +2142,10 @@
 		<entry source="first frame" text="첫 프레임" />
 		<entry source="frame count" text="프레임 수" />
 		<entry source="if ({condition})" text="조건({condition})" />
+		<entry source="items" text="항목" />
 		<entry source="layout name" text="레이아웃 이름" />
 		<entry source="linear" text="선형" />
+		<entry source="lines" text="줄" />
 		<entry source="loop" text="반복" />
 		<entry source="missing" text="없음" />
 		<entry source="name" text="이름" />
@@ -2014,6 +2163,7 @@
 		<entry source="streaming: {loadedCellCount} of {cellCount} cells loaded"
 		       text="스트리밍: 셀 {cellCount}개 중 {loadedCellCount}개 로드됨" />
 		<entry source="translated" text="번역됨" />
+		<entry source="variables" text="변수" />
 		<entry source="{alwaysLoadedIDCount, plural, one {# entity} other {# entities}}, {cellCount, plural, one {# cell} other {# cells}}"
 		       text="엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개" />
 		<entry source="{alwaysLoadedIDCount} entities, {cellCount} cells"

@@ -11,6 +11,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 
@@ -56,6 +57,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( BoxCollider2D, "box_collider_2d", 100, SW_EDITORICON_NAME( "Collider" ), "Col", "BoxCollider2D 사각형을 와이어프레임으로 표시합니다", true,
+    SW_EDITOR_VISUALIZER( BoxCollider2D, "box_collider_2d", 100, SW_EDITORICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DLabel" ), SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DTip" ), true,
                           &drawBoxCollider2DWire );
 } // namespace sw::editor

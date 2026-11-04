@@ -998,6 +998,11 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginButton.Reload" source="Reload">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginField.Amount" source="Amount">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
@@ -1350,6 +1355,225 @@
 		       source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.MeshModifiersLabel" source="Modifiers">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.MeshModifiersStageLabel" source="Stage">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.MeshModifiersStageTip"
+		       source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.MeshModifiersTip"
+		       source="Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.ParkLayoutLabel" source="Park">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.ParkLayoutTip"
+		       source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Account" source="Account">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.AccountIdHex" source="Account id (hex)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.ActingRole" source="Acting role">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.AssetId" source="Asset id">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.AuditLog" source="Audit log">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.BasePreset" source="Base preset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.BoneMap" source="Bone map">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Chains" source="Chains">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Check" source="Check">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.EquipSet" source="Equip set">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.EventId" source="Event id">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.EventJson" source="Event JSON">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.From" source="From">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Game" source="Game">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.GrantRevoke" source="Grant / Revoke">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Kind" source="Kind">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.LiveEvents" source="Live events">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Loop" source="Loop">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.MaintenanceNotice" source="Maintenance / Notice">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.MemoTicket" source="Memo (ticket)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.MessageKey" source="Message key">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.NoticeText" source="Notice text">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Options" source="Options">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Play" source="Play">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Preview" source="Preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Problems" source="Problems">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.ReasonCode" source="Reason code">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Reports" source="Reports">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.RetargetPose" source="Retarget pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.RootAndPelvis" source="Root and pelvis">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Sanction" source="Sanction">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.ScopeAllOrServerKind" source="Scope (all or server kind)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Skeletons" source="Skeletons">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Stop" source="Stop">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.SubjectPrefix" source="Subject prefix">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.To" source="To">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Wires" source="Wires">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.ColumnActivity" source="Activity">

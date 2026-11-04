@@ -517,12 +517,12 @@ namespace sw::editor
             return;
 
         EditorChrome::setNextWindowExtentFirstUse( EditorTextExtent::ofText( 61.0f, 20.0f ) );
-        if ( ImGui::Begin( makeIconLabel( SW_EDITORICON( "Palette" ), "Theme & Look and Feel" ), pOpen, ImGuiWindowFlags_NoCollapse ) )
+        if ( ImGui::Begin( makeIconLabel( SW_EDITORICON( "Palette" ), SW_LOCKEY( "EdButton", "ThemeLookAndFeel" ), "Theme & Look and Feel" ), pOpen, ImGuiWindowFlags_NoCollapse ) )
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
             // 1) 테마(토큰 벌) 선택. 목록은 `Content/editor/theme/*.tokens.json` 이다.
-            if ( ImGui::BeginCombo( "Theme", editorConfig._displayName.c_str() ) )
+            if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Theme" ), "Theme" ), editorConfig._displayName.c_str() ) )
             {
                 for ( const EditorThemeConfig& theme : EditorThemeInternal::availableThemes() )
                 {
@@ -607,7 +607,7 @@ namespace sw::editor
             ImGui::Separator();
 
             // 5) 덮어쓴 강조색 · 둥글기를 버리고 토큰 값으로 되돌린다.
-            if ( ImGui::Button( makeIconLabel( SW_EDITORICON( "Undo" ), "Reset to Theme Defaults" ) ) )
+            if ( ImGui::Button( makeIconLabel( SW_EDITORICON( "Undo" ), SW_LOCKEY( "EdButton", "ResetToThemeDefaults" ), "Reset to Theme Defaults" ) ) )
             {
                 (void)applyThemeByName( editorConfig._name ); // 목록에 있는 벌이다(콤보가 고른 것)
                 saveToConfig();
@@ -673,9 +673,31 @@ namespace sw::editor
         formatstring( _arrText, constant::buffer::kMax256, "%#  %#", pIcon, pLabel );
     }
 
+    EditorIconLabel::EditorIconLabel( const utf8* pIcon, const utf8* pLabel, const utf8* pStableID )
+        : _arrText{}
+    {
+        formatstring( _arrText, constant::buffer::kMax256, "%#  %####%#", pIcon, pLabel, pStableID );
+    }
+
+    EditorIconLabel::EditorIconLabel( Plain, const utf8* pLabel, const utf8* pStableID )
+        : _arrText{}
+    {
+        formatstring( _arrText, constant::buffer::kMax256, "%####%#", pLabel, pStableID );
+    }
+
     EditorIconLabel EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
     {
         return EditorIconLabel{ pIcon, pLabel };
+    }
+
+    EditorIconLabel EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel, const utf8* pStableID )
+    {
+        return EditorIconLabel{ pIcon, pLabel, pStableID };
+    }
+
+    EditorIconLabel EditorThemeUtil::makeStableLabel( const utf8* pLabel, const utf8* pStableID )
+    {
+        return EditorIconLabel{ EditorIconLabel::Plain{}, pLabel, pStableID };
     }
 } // namespace sw::editor
 

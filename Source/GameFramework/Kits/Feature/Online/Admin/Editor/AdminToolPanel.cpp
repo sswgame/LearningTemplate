@@ -151,7 +151,7 @@ namespace sw::editor
             FakeAdminProvider&  fake       = session.getFakeProvider();
             constexpr AdminRole kArrRole[] = { AdminRole::Viewer, AdminRole::Support, AdminRole::Operator, AdminRole::Super };
             EditorChrome::setNextItemWidthColumns( 19.0f );
-            if ( ImGui::BeginCombo( "Acting role", toString( fake.getActingRole() ) ) )
+            if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ActingRole" ), "Acting role" ), toString( fake.getActingRole() ) ) )
             {
                 for ( const AdminRole role : kArrRole )
                 {
@@ -199,9 +199,9 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( "Account" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "Account" ) );
 
-        EditorWidgets::drawTextField( "Account id (hex)", _accountText, 160.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "AccountIdHex" ), "Account id (hex)" ), _accountText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::note( "admin.account" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Lookup" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Lookup" ) ) )
@@ -255,14 +255,14 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( "Grant / Revoke" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "GrantRevoke" ) );
 
-        EditorWidgets::drawTextField( "Asset id", _assetText, 160.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "AssetId" ), "Asset id" ), _assetText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Amount" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Amount", ImGuiDataType_S64, &_amount );
         EditorSelfTestMarks::note( "admin.amount" );
-        EditorWidgets::drawTextField( "Memo (ticket)", _memoText, 240.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "MemoTicket" ), "Memo (ticket)" ), _memoText, 240.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::note( "admin.memo" );
         ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "RefundRevokeMayLeaveADebt" ), &_bRefund );
 
@@ -285,11 +285,11 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( "Sanction" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "Sanction" ) );
 
         constexpr ServiceSanctionKind kArrKind[] = { ServiceSanctionKind::ChatMute, ServiceSanctionKind::Suspend, ServiceSanctionKind::Ban };
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        if ( ImGui::BeginCombo( "Kind", getEnumName( _sanctionKind ) ) )
+        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Kind" ), "Kind" ), getEnumName( _sanctionKind ) ) )
         {
             for ( const ServiceSanctionKind kind : kArrKind )
             {
@@ -301,7 +301,7 @@ namespace sw::editor
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Seconds" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Seconds", ImGuiDataType_S64, &_sanctionSeconds );
-        EditorWidgets::drawTextField( "Reason code", _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ReasonCode" ), "Reason code" ), _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
 
         AccountID  accountID     = kInvalidAccountID;
         const bool bAccountValid = AdminToolPanelInternal::parseAccountID( _accountText, accountID );
@@ -322,9 +322,9 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( "Audit log" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "AuditLog" ) );
 
-        EditorWidgets::drawTextField( "Subject prefix", _auditSubjectText, 200.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "SubjectPrefix" ), "Subject prefix" ), _auditSubjectText, 200.0f * EditorThemeUtil::getDPIScale() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ListAudit" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ListAudit" ) ) )
             session.requestAudit( _auditSubjectText );
@@ -362,7 +362,7 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( "Reports" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "Reports" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "OpenReports" ) ) )
             session.requestReports( true );
         EditorSelfTestMarks::note( "admin.report.list" );
@@ -423,10 +423,10 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( "Maintenance / Notice" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "MaintenanceNotice" ) );
 
-        EditorWidgets::drawTextField( "Scope (all or server kind)", _scopeText, 160.0f * EditorThemeUtil::getDPIScale() );
-        EditorWidgets::drawTextField( "Message key", _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ScopeAllOrServerKind" ), "Scope (all or server kind)" ), _scopeText, 160.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "MessageKey" ), "Message key" ), _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "MaintenanceSeconds0UntilCleared" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Maintenanceseconds0untilcleared", ImGuiDataType_S64, &_maintenanceSeconds );
@@ -448,7 +448,7 @@ namespace sw::editor
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeSeconds0UntilRemoved" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "##Noticeseconds0untilremoved", ImGuiDataType_S64, &_noticeSeconds );
-        EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "NoticeText" ), "Notice text" ), _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );
         const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
         ImGui::BeginDisabled( bNoticeReady == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PostNotice" ) ) )
@@ -466,7 +466,7 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( "Live events" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "LiveEvents" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ListLiveEvents" ) ) )
             session.requestLiveEvents();
         EditorSelfTestMarks::note( "admin.liveevent.list" );
@@ -479,13 +479,13 @@ namespace sw::editor
             ImGui::TextUnformatted( view._definitionJSON.c_str() );
             ImGui::PopID();
         }
-        EditorWidgets::drawTextFieldMultiline( "Event JSON", _eventJSONText, 6 );
+        EditorWidgets::drawTextFieldMultiline( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "EventJson" ), "Event JSON" ), _eventJSONText, 6 );
         ImGui::BeginDisabled( _memoText.empty() || _eventJSONText.empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PutLiveEvent" ) ) )
             session.requestPutLiveEvent( _eventJSONText, _memoText );
         EditorSelfTestMarks::note( "admin.liveevent.put" );
         ImGui::EndDisabled();
-        EditorWidgets::drawTextField( "Event id", _eventIDText, 200.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "EventId" ), "Event id" ), _eventIDText, 200.0f * EditorThemeUtil::getDPIScale() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "RemoveLiveEvent" ) ) );
         ImGui::BeginDisabled( _memoText.empty() || _eventIDText.empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "RemoveLiveEvent" ) ) )

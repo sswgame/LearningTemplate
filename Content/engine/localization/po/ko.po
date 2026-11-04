@@ -990,6 +990,11 @@ msgctxt "EdPlugin.ZoomFit"
 msgid "Zoom fit"
 msgstr "맞춰 보기"
 
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginButton.Reload"
+msgid "Reload"
+msgstr "다시 불러오기"
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginField.Amount"
 msgid "Amount"
@@ -1320,6 +1325,222 @@ msgstr "미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이�
 msgctxt "EdPluginTip.TurnATargetBoneInItsParent"
 msgid "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
 msgstr "대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다"
+
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp
+msgctxt "EdPluginVisualizer.MeshModifiersLabel"
+msgid "Modifiers"
+msgstr "모디파이어"
+
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp
+msgctxt "EdPluginVisualizer.MeshModifiersStageLabel"
+msgid "Stage"
+msgstr "단계"
+
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp
+msgctxt "EdPluginVisualizer.MeshModifiersStageTip"
+msgid "Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
+msgstr "고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)"
+
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp
+msgctxt "EdPluginVisualizer.MeshModifiersTip"
+msgid "Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
+msgstr "메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp
+msgctxt "EdPluginVisualizer.ParkLayoutLabel"
+msgid "Park"
+msgstr "놀이공원"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp
+msgctxt "EdPluginVisualizer.ParkLayoutTip"
+msgid "Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
+msgstr "ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.Account"
+msgid "Account"
+msgstr "계정"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.AccountIdHex"
+msgid "Account id (hex)"
+msgstr "계정 id(16진수)"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.ActingRole"
+msgid "Acting role"
+msgstr "맡은 역할"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.AssetId"
+msgid "Asset id"
+msgstr "에셋 id"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.AuditLog"
+msgid "Audit log"
+msgstr "감사 기록"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginWidget.BasePreset"
+msgid "Base preset"
+msgstr "기준 프리셋"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.BoneMap"
+msgid "Bone map"
+msgstr "본 매핑"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.Chains"
+msgid "Chains"
+msgstr "체인"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.Check"
+msgid "Check"
+msgstr "검사"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginWidget.EquipSet"
+msgid "Equip set"
+msgstr "장비 세트"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.EventId"
+msgid "Event id"
+msgstr "이벤트 id"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.EventJson"
+msgid "Event JSON"
+msgstr "이벤트 JSON"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPluginWidget.From"
+msgid "From"
+msgstr "보내는 곳"
+
+#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
+msgctxt "EdPluginWidget.Game"
+msgid "Game"
+msgstr "게임"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.GrantRevoke"
+msgid "Grant / Revoke"
+msgstr "지급 / 회수"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginWidget.Kind"
+msgid "Kind"
+msgstr "종류"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.LiveEvents"
+msgid "Live events"
+msgstr "라이브 이벤트"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginWidget.Loop"
+msgid "Loop"
+msgstr "반복"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.MaintenanceNotice"
+msgid "Maintenance / Notice"
+msgstr "점검 / 공지"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.MemoTicket"
+msgid "Memo (ticket)"
+msgstr "메모(티켓)"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.MessageKey"
+msgid "Message key"
+msgstr "메시지 키"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.NoticeText"
+msgid "Notice text"
+msgstr "공지 글"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.Options"
+msgid "Options"
+msgstr "옵션"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginWidget.Play"
+msgid "Play"
+msgstr "재생"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.Preview"
+msgid "Preview"
+msgstr "미리보기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPluginWidget.Problems"
+msgid "Problems"
+msgstr "문제"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.ReasonCode"
+msgid "Reason code"
+msgstr "사유 코드"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.Reports"
+msgid "Reports"
+msgstr "신고"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.RetargetPose"
+msgid "Retarget pose"
+msgstr "리타깃 포즈"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.RootAndPelvis"
+msgid "Root and pelvis"
+msgstr "루트와 골반"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.Sanction"
+msgid "Sanction"
+msgstr "제재"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.ScopeAllOrServerKind"
+msgid "Scope (all or server kind)"
+msgstr "범위(all 또는 서버 종류)"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
+msgctxt "EdPluginWidget.Skeletons"
+msgid "Skeletons"
+msgstr "스켈레톤"
+
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
+msgctxt "EdPluginWidget.Stop"
+msgid "Stop"
+msgstr "정지"
+
+#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
+msgctxt "EdPluginWidget.SubjectPrefix"
+msgid "Subject prefix"
+msgstr "주체 접두어"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPluginWidget.To"
+msgid "To"
+msgstr "받는 곳"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
+msgctxt "EdPluginWidget.Wires"
+msgid "Wires"
+msgstr "선"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnActivity"

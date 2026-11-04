@@ -122,6 +122,19 @@ namespace sw::editor
         }
     }
 
+    void EditorCommandRegistry::applyMenuLabels( const EditorCommandTextSet& texts )
+    {
+        for ( EditorMenu& menu : _listMenu )
+        {
+            const bool bOnMenuBar = menu._parentPath == commandmenu::kMainMenuBar;
+            if ( texts.findMenuLabel( menu._path, menu._label ) )
+                continue;
+            menu._label = menu._name;
+            if ( bOnMenuBar )
+                SW_LOG_ERROR_ID( "EditorCommand.MenuNoName", "Menu '%#' has no name row (_listMenu) in any *.commands.xml - the path segment is shown", menu._path.c_str() );
+        }
+    }
+
     const EditorCommandDesc* EditorCommandRegistry::find( string_view commandID ) const
     {
         return VectorUtil::findBy<&EditorCommandDesc::_id>( _listCommand, commandID );

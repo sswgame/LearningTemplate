@@ -22,6 +22,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Common/Localization/EditorDataText.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -38,7 +39,6 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -482,10 +482,9 @@ namespace sw::editor
 
     void EditorCommandGUI::syncWithRegistry()
     {
-        const EditorCommandGUIInternal::GUIState& guiState      = getEditorState<EditorCommandGUIInternal::GUIState>();
-        const LocalizationManager* const          pLocalization = editor::findSubsystem<LocalizationManager>();
-        const uint32                              textRevision  = pLocalization != nullptr ? pLocalization->getTextRevision() : 0u;
-        const bool                                bSynced       = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == guiState._syncedGeneration && textRevision == guiState._syncedTextRevision;
+        const EditorCommandGUIInternal::GUIState& guiState     = getEditorState<EditorCommandGUIInternal::GUIState>();
+        const uint32                              textRevision = EditorDataText::getRevision();
+        const bool                                bSynced      = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == guiState._syncedGeneration && textRevision == guiState._syncedTextRevision;
         if ( bSynced )
             return;
         registerDefaults();
@@ -496,10 +495,9 @@ namespace sw::editor
         // 컨텍스트가 없으면 메뉴가 통째로 비고 단축키가 동작하지 않는다 — 조용히 반환하지 않고 필수 서비스 조회가 모든 구성에서 멈춘다.
         EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
         registry.clear();
-        EditorCommandGUIInternal::GUIState& guiState   = getEditorState<EditorCommandGUIInternal::GUIState>();
-        guiState._syncedGeneration                     = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
-        const LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
-        guiState._syncedTextRevision                   = pLocalization != nullptr ? pLocalization->getTextRevision() : 0u;
+        EditorCommandGUIInternal::GUIState& guiState = getEditorState<EditorCommandGUIInternal::GUIState>();
+        guiState._syncedGeneration                   = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
+        guiState._syncedTextRevision                 = EditorDataText::getRevision();
 
         // 표시 · 배치는 모듈마다 등록한 표시 파일이 정한다 — 다시 만들 때마다 읽는다(모듈 적재 · 해제로 파일 목록이 바뀐다).
         EditorCommandTextSet texts;
@@ -523,6 +521,7 @@ namespace sw::editor
         }
         // 확장 모듈과 다른 파일의 등록 항목(SW_EDITOR_COMMAND)을 테이블과 같은 레지스트리에 합친다.
         EditorCommandTableUtil::appendRegistrations( registry, texts );
+        registry.applyMenuLabels( texts );
         texts.reportUnused();
 
         string report;
@@ -552,7 +551,11 @@ namespace sw::editor
         {
             if ( menu._parentPath != commandmenu::kMainMenuBar )
                 continue;
-            if ( ImGui::BeginMenu( menu._name.c_str() ) )
+            fixed_string<constant::buffer::kMax128> menuLabel;
+            menuLabel.append( menu._label.c_str() );
+            menuLabel.append( "###" ); // 보이는 이름은 언어마다 다르다 — ImGui ID 는 경로 마디로 고정한다
+            menuLabel.append( menu._name.c_str() );
+            if ( ImGui::BeginMenu( menuLabel.c_str() ) )
             {
                 EditorCommandGUIInternal::drawMenu( registry, menu );
                 ImGui::EndMenu();

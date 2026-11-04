@@ -1043,7 +1043,7 @@ namespace sw::editor
         }
         bool bFrozen = _timeline.isCallTreeFrozen();
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Freeze##callTree" ) );
-        if ( ImGui::Checkbox( "Freeze##callTree", &bFrozen ) )
+        if ( ImGui::Checkbox( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Freeze" ), "Freeze##callTree" ), &bFrozen ) )
             _timeline.setCallTreeFrozen( bFrozen );
 
         _timeline.updateCallTree( timeline, ImGui::GetTime() );

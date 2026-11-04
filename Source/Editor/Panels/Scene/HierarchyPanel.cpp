@@ -605,13 +605,13 @@ namespace sw::editor
             const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
             if ( bEditsAllowed == false )
             {
-                EditorWidgets::drawChip( "Play Mode", SW_THEMECOLOR( "Signal", "Warning" ) );
+                EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEMECOLOR( "Signal", "Warning" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "PlayModeRunning" ) );
                 ImGui::SameLine();
             }
             if ( bEditsAllowed == false )
                 ImGui::BeginDisabled();
-            if ( ImGui::Button( "+ Create" ) )
+            if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdButton", "PlusCreate" ), "+ Create" ) ) )
                 EditorSceneCommands::create( pManager, nullptr );
             EditorSelfTestMarks::note( "hierarchy.create" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "CreateGameObject" ) );

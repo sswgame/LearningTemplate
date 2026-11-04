@@ -3,6 +3,7 @@
 		<entry key="A command used by self-tests and scenarios - writes one log line"
 		       text="자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다"
 		       sourceHash="acca55bb8d9d1ae2" />
+		<entry key="Ability Debugger" text="어빌리티 디버거" sourceHash="68caba63f72aba0c" />
 		<entry key="Add Component" text="컴포넌트 추가" sourceHash="4ea9ecf3731289fb" />
 		<entry key="Add the copied component to the selected object"
 		       text="복사한 컴포넌트를 선택한 오브젝트에 더합니다"
@@ -19,6 +20,8 @@
 		<entry key="Align selected objects on Z"
 		       text="선택한 오브젝트를 Z 로 정렬합니다"
 		       sourceHash="f0928432cb92ee86" />
+		<entry key="Animation Graph" text="애니메이션 그래프" sourceHash="c96340db34fd6835" />
+		<entry key="Animation Rewind" text="애니메이션 되감기" sourceHash="20bf227e3dd54894" />
 		<entry key="Apply Overrides" text="덮어쓴 값 적용" sourceHash="9ae197e45e342466" />
 		<entry key="Apply a .preset.xml to the selected component"
 		       text="선택한 컴포넌트에 .preset.xml 을 적용합니다"
@@ -38,12 +41,16 @@
 		<entry key="Bakes indirect light for the selected (or every) light probe volume (.probes next to the scene)"
 		       text="선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 베이크합니다(씬 옆 .probes)"
 		       sourceHash="040436a00551199e" />
+		<entry key="Behavior Tree" text="비헤이비어 트리" sourceHash="3f6463bb30f6ab55" />
+		<entry key="Bug Report" text="버그 보고" sourceHash="64ea85be872df491" />
+		<entry key="Build" text="빌드" sourceHash="3fe3ff490adaaa63" />
 		<entry key="Build the engine and every module"
 		       text="엔진과 모든 모듈을 빌드합니다"
 		       sourceHash="088fb4892d7b6a64" />
 		<entry key="Builds the engine and every game and editor module"
 		       text="엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다"
 		       sourceHash="6a93e2cb9c940fa3" />
+		<entry key="Camera Presets" text="카메라 프리셋" sourceHash="e21f42ee72477c76" />
 		<entry key="Cancel Build" text="빌드 취소" sourceHash="95f0d8992254543f" />
 		<entry key="Cancel the running compile"
 		       text="진행 중인 컴파일을 취소합니다"
@@ -63,8 +70,10 @@
 		<entry key="Captures the selected (or every) reflection probe on the GPU (.reflprobe next to the scene)"
 		       text="선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)"
 		       sourceHash="d501e3c769a8b3f1" />
+		<entry key="Catalog Editor" text="카탈로그 편집기" sourceHash="4bfb149f63cb4f61" />
 		<entry key="Character Editor" text="캐릭터 편집기" sourceHash="3db3ea4ef1e64749" />
 		<entry key="Check Out (Lock)" text="체크아웃(잠금)" sourceHash="03c20a4c6b4d8383" />
+		<entry key="Clip Preview" text="클립 미리보기" sourceHash="9e69276570145a3b" />
 		<entry key="Close the editor after unsaved-change confirmation"
 		       text="저장하지 않은 변경을 확인한 뒤 에디터를 닫습니다"
 		       sourceHash="c23aff8452f3047d" />
@@ -72,10 +81,12 @@
 		<entry key="Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/&lt;time>/ (bugreport.goto returns to that spot)"
 		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 Saved/BugReports/&lt;시각>/ 에 모읍니다(bugreport.goto 로 그 자리에 돌아간다)"
 		       sourceHash="cc8dfe5714f42e2c" />
+		<entry key="Command Palette" text="명령 팔레트" sourceHash="d2a0b848a15db111" />
 		<entry key="Command Palette..." text="명령 팔레트..." sourceHash="934d21eeab8a32d5" />
 		<entry key="Compile All Modules" text="모든 모듈 컴파일" sourceHash="6667ee3ef3247a84" />
 		<entry key="Compile Editor (EditorModule)" text="에디터 컴파일(EditorModule)" sourceHash="39a0d71cc9fbbae9" />
 		<entry key="Compile Game (SWGame)" text="게임 컴파일(SWGame)" sourceHash="dd100d3b9a8de743" />
+		<entry key="Content Browser" text="콘텐츠 브라우저" sourceHash="e70e2ba9c05c8bfa" />
 		<entry key="Copy" text="복사" sourceHash="3687049d1af562c4" />
 		<entry key="Copy Absolute Path" text="절대 경로 복사" sourceHash="63ce1fb2f727965c" />
 		<entry key="Copy Component" text="컴포넌트 복사" sourceHash="109c5a0f5ddd084b" />
@@ -92,12 +103,44 @@
 		<entry key="Creates an organizing folder under the selected object (or the root)"
 		       text="고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다"
 		       sourceHash="788f45ec38d1c127" />
+		<entry key="Data Table Editor" text="데이터 테이블 편집기" sourceHash="9fa50cb618dc4886" />
 		<entry key="Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
 		<entry key="Delete..." text="삭제..." sourceHash="95189de7377c7838" />
+		<entry key="Dialogue Graph" text="대화 그래프" sourceHash="977b31f2ed83a6ab" />
 		<entry key="Distribute X Evenly" text="X 고르게 배치" sourceHash="a216b94ee190668d" />
 		<entry key="Distribute Y Evenly" text="Y 고르게 배치" sourceHash="fb9d2c7433444958" />
 		<entry key="Distribute Z Evenly" text="Z 고르게 배치" sourceHash="1d7248da74c81a7b" />
 		<entry key="Duplicate" text="복제" sourceHash="fac15b89e0668996" />
+		<entry key="EdButton.Add" text="추가" sourceHash="f9aee319a006c9b4" />
+		<entry key="EdButton.AddComponent" text="컴포넌트 추가" sourceHash="4ea9ecf3731289fb" />
+		<entry key="EdButton.BuildFailed" text="빌드 실패" sourceHash="7290df8bb9b262d8" />
+		<entry key="EdButton.CheckMap" text="맵 검사" sourceHash="3fbc737f419fb311" />
+		<entry key="EdButton.CollectNow" text="지금 모으기" sourceHash="57c0ab9dc3fd16ad" />
+		<entry key="EdButton.Compile" text="컴파일" sourceHash="3804955c32a9bc7e" />
+		<entry key="EdButton.Compiling" text="컴파일 중..." sourceHash="5f9bdcd1a3ca19ed" />
+		<entry key="EdButton.DebugDraw" text="디버그 그리기" sourceHash="b91fd5a01241caca" />
+		<entry key="EdButton.NewFolder" text="새 폴더" sourceHash="8c94696381c29127" />
+		<entry key="EdButton.OpenFolder" text="폴더 열기" sourceHash="5f5f52d825d4f3ef" />
+		<entry key="EdButton.Overlays" text="오버레이" sourceHash="997e01cb507f1410" />
+		<entry key="EdButton.Package" text="패키지" sourceHash="75ed09a809d91f7b" />
+		<entry key="EdButton.Pause" text="일시 정지" sourceHash="061cc20e3432dead" />
+		<entry key="EdButton.PauseServer" text="서버 일시 정지" sourceHash="42b5a59e96b367ec" />
+		<entry key="EdButton.PlayClip" text="클립 재생" sourceHash="c573bf5b07504b77" />
+		<entry key="EdButton.PlusCreate" text="+ 만들기" sourceHash="1c667541c110d09a" />
+		<entry key="EdButton.PostEvent" text="이벤트 보내기" sourceHash="29c60846920313bf" />
+		<entry key="EdButton.PreviewSplit" text="분할 미리보기" sourceHash="1418ae328a8a1373" />
+		<entry key="EdButton.Renderdoc" text="RenderDoc" sourceHash="582aca112aa03b9d" />
+		<entry key="EdButton.ResetDefaultLayout"
+		       text="기본 레이아웃으로 되돌리기"
+		       sourceHash="455756123c8f825d" />
+		<entry key="EdButton.ResetSection" text="섹션 되돌리기" sourceHash="c03a0b1a004ffb97" />
+		<entry key="EdButton.ResetToDefault" text="기본값으로 되돌리기" sourceHash="f786171004dde79c" />
+		<entry key="EdButton.ResetToThemeDefaults" text="테마 기본값으로 되돌리기" sourceHash="d51d36e98480c6c6" />
+		<entry key="EdButton.ResumeServer" text="서버 재개" sourceHash="fdd0c4b276662459" />
+		<entry key="EdButton.Simulate" text="시뮬레이트" sourceHash="cfcffcf35292bc6f" />
+		<entry key="EdButton.Step" text="한 프레임" sourceHash="d9994f251f1280cf" />
+		<entry key="EdButton.StepN" text="N 프레임" sourceHash="4b3245a46428ef09" />
+		<entry key="EdButton.ThemeLookAndFeel" text="테마 · 모양" sourceHash="11c6e568ec0256f6" />
 		<entry key="EdCommon.AlignSelected"
 		       text="선택한 오브젝트를 정렬하고 분배합니다(둘 이상 선택)."
 		       sourceHash="3f15212ccdd0c0e5" />
@@ -780,6 +823,9 @@
 		       text="오디오 서비스가 돌지 않습니다"
 		       sourceHash="f0ad4f0ff56a00ed" />
 		<entry key="EdLabel.UnsetAttribute" text="속성 지우기" sourceHash="8c086c87fcbad6fa" />
+		<entry key="EdNetMode.DedicatedServer" text="전용 서버" sourceHash="38824ee8fe1f00e1" />
+		<entry key="EdNetMode.ListenHost" text="리슨 호스트" sourceHash="45aa92f0c4a42f5c" />
+		<entry key="EdNetMode.Standalone" text="단독" sourceHash="31bf1464d6e1e996" />
 		<entry key="EdSection.Actions" text="액션" sourceHash="8af61807443f32a4" />
 		<entry key="EdSection.ActiveSceneComponentDistribution"
 		       text="활성 씬과 컴포넌트 분포"
@@ -1214,6 +1260,110 @@
 		<entry key="EdVerb.Save" text="저장" sourceHash="33f85f24c0f5f008" />
 		<entry key="EdVerb.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
 		<entry key="EdVerb.Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdViewMode.Depth" text="깊이" sourceHash="3231d0dc6fe30d4a" />
+		<entry key="EdViewMode.LODFadeCode" text="LOD 페이드 코드" sourceHash="e3471516cca1f937" />
+		<entry key="EdViewMode.LODLevel" text="LOD 단계" sourceHash="97d43934e8aeb89e" />
+		<entry key="EdViewMode.LightComplexity" text="조명 복잡도" sourceHash="85d63f586b24a321" />
+		<entry key="EdViewMode.LightingOnly" text="조명만" sourceHash="8cfe0acaf21281c5" />
+		<entry key="EdViewMode.Lit" text="조명" sourceHash="24ec9419b87f1a96" />
+		<entry key="EdViewMode.MarkerSlots" text="표지 칸" sourceHash="9eb1b3c90566c0b6" />
+		<entry key="EdViewMode.Metallic" text="금속성" sourceHash="dfe7fef1566d1aa8" />
+		<entry key="EdViewMode.Mipmaps" text="밉맵" sourceHash="afe2a32db0622b02" />
+		<entry key="EdViewMode.Normals" text="노멀" sourceHash="c294e89a3657cf13" />
+		<entry key="EdViewMode.Overdraw" text="오버드로" sourceHash="a88c71117100df4d" />
+		<entry key="EdViewMode.Roughness" text="거칠기" sourceHash="dea02d9fafe208b5" />
+		<entry key="EdViewMode.ShadedWireframe" text="셰이드 와이어프레임" sourceHash="eedf8d2e1a0c0f80" />
+		<entry key="EdViewMode.Unlit" text="조명 없음" sourceHash="2435a2b51ac7281f" />
+		<entry key="EdViewMode.Wireframe" text="와이어프레임" sourceHash="96f013195da95865" />
+		<entry key="EdVisualizer.BillboardLabel" text="아이콘" sourceHash="b321dddd2d6e46f9" />
+		<entry key="EdVisualizer.BillboardTip"
+		       text="빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다"
+		       sourceHash="7f632cbdd8cb3203" />
+		<entry key="EdVisualizer.BoxCollider2DLabel" text="충돌" sourceHash="0c0e1319aaba73f1" />
+		<entry key="EdVisualizer.BoxCollider2DTip"
+		       text="BoxCollider2D 사각형을 와이어프레임으로 표시합니다"
+		       sourceHash="ccccfe134eafa1e2" />
+		<entry key="EdVisualizer.CameraFrustumLabel" text="카메라" sourceHash="0bec0e19aa9d850c" />
+		<entry key="EdVisualizer.CameraFrustumTip"
+		       text="활성 카메라를 제외한 카메라의 프러스텀을 표시합니다"
+		       sourceHash="16a0ad8b870e2bfd" />
+		<entry key="EdVisualizer.DebugDrawLabel" text="디버그" sourceHash="e0923b19920c7fac" />
+		<entry key="EdVisualizer.DebugDrawTip"
+		       text="게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다"
+		       sourceHash="b5059860be9dce40" />
+		<entry key="EdVisualizer.NavMeshLabel" text="내비" sourceHash="3734e419c3201c52" />
+		<entry key="EdVisualizer.NavMeshTip"
+		       text="베이크한 내비메시의 폴리곤 테두리를 표시합니다(빌드 > 내비게이션 굽기로 굽는다)"
+		       sourceHash="719b607e232a1638" />
+		<entry key="EdVisualizer.PhysicsShapesLabel" text="물리" sourceHash="f0e0fe19ca3e80e5" />
+		<entry key="EdVisualizer.PhysicsShapesTip"
+		       text="RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)"
+		       sourceHash="4bb80b47185fe4a9" />
+		<entry key="EdVisualizer.RigTargetGizmoLabel" text="리그 대상" sourceHash="2918a4befa7e5aae" />
+		<entry key="EdVisualizer.RigTargetGizmoTip"
+		       text="리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다"
+		       sourceHash="b5627c83eed182af" />
+		<entry key="EdVisualizer.SelectionBoundsLabel" text="선택" sourceHash="98449f19fa9b0ceb" />
+		<entry key="EdVisualizer.SelectionBoundsTip"
+		       text="고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다"
+		       sourceHash="50b341d0f448f633" />
+		<entry key="EdVisualizer.TerrainBrushLabel" text="지형" sourceHash="6a63c902245f5e0e" />
+		<entry key="EdVisualizer.TerrainBrushTip"
+		       text="지형 도구: 지형 위를 끌어 깎거나 레이어를 칠합니다(브러시 설정 창, Ctrl+Z 는 한 번의 끌기를 되돌린다)"
+		       sourceHash="093b3b4a44734620" />
+		<entry key="EdWidget.AllProcesses" text="모든 프로세스" sourceHash="9a23fee499e1a22d" />
+		<entry key="EdWidget.Assets" text="에셋" sourceHash="2ea91b543c17d318" />
+		<entry key="EdWidget.Auto" text="자동" sourceHash="db73788b3c975f16" />
+		<entry key="EdWidget.Blend" text="블렌드" sourceHash="81ab5d0d57edf2d8" />
+		<entry key="EdWidget.Clip" text="클립" sourceHash="3e092e9d1ee2c5bb" />
+		<entry key="EdWidget.Collapse" text="접기" sourceHash="4993444bfd3f3e5e" />
+		<entry key="EdWidget.Command" text="명령" sourceHash="8bea2885ff2d1272" />
+		<entry key="EdWidget.Condition" text="조건" sourceHash="d0182c6d73eaa2be" />
+		<entry key="EdWidget.Corner" text="모서리" sourceHash="d66afae9aedadcf0" />
+		<entry key="EdWidget.Favorites" text="즐겨찾기" sourceHash="20a500234e838dda" />
+		<entry key="EdWidget.File" text="파일" sourceHash="d1f81284eeb7b503" />
+		<entry key="EdWidget.Freeze" text="멈추기" sourceHash="af63b1436123eb22" />
+		<entry key="EdWidget.Game" text="게임" sourceHash="b568a67e05a19907" />
+		<entry key="EdWidget.GridSnap" text="격자 스냅" sourceHash="3073cafd9c3b2ca3" />
+		<entry key="EdWidget.HalfLife" text="반감기" sourceHash="f14366eb612fff56" />
+		<entry key="EdWidget.ItemName" text="아이템 이름" sourceHash="584445a37ad7f239" />
+		<entry key="EdWidget.Items" text="항목" sourceHash="3e7884bf4f412c6f" />
+		<entry key="EdWidget.Layouts" text="레이아웃" sourceHash="a532f7cd312d4424" />
+		<entry key="EdWidget.LeftStick" text="왼쪽 스틱" sourceHash="f2923242876bbb30" />
+		<entry key="EdWidget.Lines" text="줄" sourceHash="5ce3f9a9f1d5001c" />
+		<entry key="EdWidget.List" text="목록" sourceHash="3d249bb480032121" />
+		<entry key="EdWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
+		<entry key="EdWidget.Mask" text="마스크" sourceHash="49c560aecfeb8c29" />
+		<entry key="EdWidget.Name" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdWidget.NewActionName" text="새 액션 이름" sourceHash="6ee3a452443a26a8" />
+		<entry key="EdWidget.NoFileDefaults" text="파일 없음 - 기본값" sourceHash="ccc95153c036563f" />
+		<entry key="EdWidget.OutputFolder" text="출력 폴더" sourceHash="9d7d1af4a632c558" />
+		<entry key="EdWidget.Panel" text="패널" sourceHash="1e85480db1ab92e5" />
+		<entry key="EdWidget.PatternNumpadNotation" text="패턴(숫자 패드 표기)" sourceHash="a5681696100c2b01" />
+		<entry key="EdWidget.Paused" text="일시 정지됨" sourceHash="95bc8722b2708f8b" />
+		<entry key="EdWidget.PlayMode" text="플레이 모드" sourceHash="7363b52b83fee3b6" />
+		<entry key="EdWidget.Playing" text="플레이 중" sourceHash="308604b3ae13fbb5" />
+		<entry key="EdWidget.Prefab" text="프리팹" sourceHash="a2d5fac94c77c683" />
+		<entry key="EdWidget.Preset" text="프리셋" sourceHash="57ce5bc9b2b4287e" />
+		<entry key="EdWidget.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
+		<entry key="EdWidget.Resolution" text="해상도" sourceHash="f74160a9dc86ab8f" />
+		<entry key="EdWidget.RestartRequired" text="다시 시작 필요" sourceHash="3847bf768d4cbfad" />
+		<entry key="EdWidget.RightStick" text="오른쪽 스틱" sourceHash="2b11d6ec339b6ad9" />
+		<entry key="EdWidget.RotSnap" text="회전 스냅" sourceHash="10ba28754abccb4e" />
+		<entry key="EdWidget.Shader" text="셰이더" sourceHash="31243d825582cde8" />
+		<entry key="EdWidget.Simulating" text="시뮬레이트 중" sourceHash="7ee10555e35ef898" />
+		<entry key="EdWidget.Sources" text="소스" sourceHash="91e3a47599412f51" />
+		<entry key="EdWidget.Speaker" text="화자" sourceHash="2176770969da5882" />
+		<entry key="EdWidget.Starting" text="시작 중" sourceHash="4c60317e4731da19" />
+		<entry key="EdWidget.TagFilter" text="태그" sourceHash="03aa3cfb08dff960" />
+		<entry key="EdWidget.Target" text="대상" sourceHash="ff5bb7742c2896c8" />
+		<entry key="EdWidget.TargetObject" text="대상 오브젝트" sourceHash="20c7355665060aef" />
+		<entry key="EdWidget.Theme" text="테마" sourceHash="aab875d8cfcfe712" />
+		<entry key="EdWidget.Tiles" text="타일" sourceHash="de8252d2a4d268ce" />
+		<entry key="EdWidget.Variables" text="변수" sourceHash="b28f9fa3f23f63c2" />
+		<entry key="EdWidget.Weight" text="가중치" sourceHash="517acbf1f96324f9" />
+		<entry key="EdWidget.WeightParam" text="가중치 매개변수" sourceHash="2cb6ef7dc03afbb8" />
+		<entry key="Edit" text="편집" sourceHash="64ef2a6c2dd1d3d1" />
 		<entry key="EditorAnimationGraph.AddAttackTip"
 		       text="Attack 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다."
 		       sourceHash="d05267712c1567b5" />
@@ -2799,12 +2949,20 @@
 		       sourceHash="0cd9d7c0bec20990" />
 		<entry key="Exit" text="종료" sourceHash="122c4e6c8ff0ed45" />
 		<entry key="Exits the editor" text="에디터를 종료합니다" sourceHash="fa3d3d28d6d6acaa" />
+		<entry key="File" text="파일" sourceHash="d1f81284eeb7b503" />
 		<entry key="Find References" text="참조 찾기" sourceHash="ef60298b6eb17f18" />
 		<entry key="Fuzzy-search assets, scenes and scripts"
 		       text="에셋 · 씬 · 스크립트를 퍼지 검색합니다"
 		       sourceHash="c55ac6cff029edfb" />
 		<entry key="GM Tool" text="GM 도구" sourceHash="182c1e31ac2d0a6d" />
+		<entry key="Game" text="게임" sourceHash="b568a67e05a19907" />
 		<entry key="Gimmick Graph" text="기믹 그래프" sourceHash="8ade24f69ad468e4" />
+		<entry key="Global Variables" text="전역 변수" sourceHash="b27a2fd4b0389bc7" />
+		<entry key="Hierarchy" text="계층" sourceHash="36b7d22c88c2b948" />
+		<entry key="Hierarchy / Skeleton View" text="계층 / 스켈레톤 보기" sourceHash="c48a10a0462f47f9" />
+		<entry key="History" text="기록" sourceHash="58c754018ec47b5f" />
+		<entry key="Input Map Editor" text="입력 맵 편집기" sourceHash="d29a6ef6f835031a" />
+		<entry key="Inspector" text="인스펙터" sourceHash="5f1dcc2e38de612e" />
 		<entry key="Keep Simulation Changes" text="시뮬레이션 변경 유지" sourceHash="2eafcb6b3964d6ea" />
 		<entry key="Keep the selected objects' play state after Stop"
 		       text="선택한 오브젝트의 플레이 상태를 멈춘 뒤에도 남깁니다"
@@ -2812,6 +2970,7 @@
 		<entry key="Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
 		       text="고른 오브젝트의 지금(플레이 중) 상태를 Stop 뒤 편집 씬에 남깁니다(되돌리기 한 번)"
 		       sourceHash="240a99d099e70d71" />
+		<entry key="Keyboard Shortcuts" text="단축키" sourceHash="49213f6563f37637" />
 		<entry key="Launches the saved active scene without the editor in a new window (a separate process)"
 		       text="저장된 활성 씬을 에디터 없이 새 창(별도 프로세스)으로 띄웁니다"
 		       sourceHash="0ccb77c002ede9e6" />
@@ -2819,7 +2978,11 @@
 		       text="플레이 중 플레이어를 두고 씬 뷰로 나가거나 다시 조종합니다"
 		       sourceHash="149e4a20913a6086" />
 		<entry key="Load Component Preset" text="컴포넌트 프리셋 불러오기" sourceHash="12d71a0eee04b169" />
+		<entry key="Map Check" text="맵 검사" sourceHash="56e1a696a129d005" />
+		<entry key="Material" text="머티리얼" sourceHash="b19c9290038389c0" />
 		<entry key="Mesh Modifiers" text="메시 모디파이어" sourceHash="bc2dcfa204061802" />
+		<entry key="Mesh Preview" text="메시 미리보기" sourceHash="9b1369a9bb3788b0" />
+		<entry key="Modules" text="모듈" sourceHash="3d45160c8fa41e0a" />
 		<entry key="Move Down" text="아래로 옮기기" sourceHash="87a55464116c3f48" />
 		<entry key="Move Down in Hierarchy" text="계층에서 아래로" sourceHash="4f764c55a63b8e98" />
 		<entry key="Move Up" text="위로 옮기기" sourceHash="4e33f21fc24666c1" />
@@ -2836,6 +2999,8 @@
 		<entry key="Moves the selected object up one place among its siblings"
 		       text="고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다"
 		       sourceHash="78421a0be17786c9" />
+		<entry key="Multiplayer" text="멀티플레이어" sourceHash="68f9d93cb9eb486b" />
+		<entry key="NPC Schedule" text="NPC 일정" sourceHash="ada9c31ad425db1d" />
 		<entry key="Nearest Park Ride" text="가장 가까운 놀이기구" sourceHash="7ce7dbc1d10ae09f" />
 		<entry key="New Scene" text="새 씬" sourceHash="3406045d57e6ab01" />
 		<entry key="Open Scene..." text="씬 열기..." sourceHash="373c4bc71f1e0c2d" />
@@ -2900,9 +3065,11 @@
 		<entry key="Opens the sound graph window (node and link canvas, value editing, save, preview)"
 		       text="소리 그래프 창을 엽니다(노드 · 연결 캔버스, 값 편집, 저장, 미리 듣기)"
 		       sourceHash="aafa5561f57f0ffe" />
+		<entry key="Output Log" text="출력 로그" sourceHash="d0b238e516fbd60e" />
 		<entry key="Overwrite the selected component from the clipboard"
 		       text="클립보드의 값으로 선택한 컴포넌트를 덮어씁니다"
 		       sourceHash="8a1bfbab33c43b8a" />
+		<entry key="Packaging" text="패키징" sourceHash="e46983574639787c" />
 		<entry key="Paired Animation" text="페어드 애니메이션" sourceHash="12a4dc57d6e30b96" />
 		<entry key="Park Layout" text="놀이공원 배치" sourceHash="262a3b2ced4126f1" />
 		<entry key="Paste" text="붙여넣기" sourceHash="d374c80e17e18808" />
@@ -2911,13 +3078,20 @@
 		<entry key="Paste as New Component" text="새 컴포넌트로 붙여넣기" sourceHash="2f77fcdef3968a91" />
 		<entry key="Play" text="플레이" sourceHash="cd105819b5a10243" />
 		<entry key="Play in New Window" text="새 창에서 플레이" sourceHash="630e98fc6320e934" />
+		<entry key="Prefab Overrides" text="프리팹 덮어쓰기" sourceHash="f80890149d01970e" />
+		<entry key="Prefab Window" text="프리팹 창" sourceHash="0877f07c1eefb1c9" />
+		<entry key="Preferences" text="환경설정" sourceHash="2b5047d39b9baf3d" />
 		<entry key="Preferences..." text="환경설정..." sourceHash="ad5301f4af2eab11" />
 		<entry key="Presets" text="프리셋" sourceHash="e7ce04baa8200e17" />
+		<entry key="Profiler" text="프로파일러" sourceHash="30ae02472b93da94" />
+		<entry key="Project Settings" text="프로젝트 설정" sourceHash="cd15c4767c414dbf" />
 		<entry key="Project Settings..." text="프로젝트 설정..." sourceHash="d405f7910c2c621b" />
+		<entry key="Quick Open" text="빠르게 열기" sourceHash="c4ec8a73026744d4" />
 		<entry key="Quick Open..." text="빠르게 열기..." sourceHash="ec9a97783734f94a" />
 		<entry key="Quickly searches for and opens assets, scenes and scripts"
 		       text="에셋, 씬, 스크립트를 빠르게 검색하여 엽니다"
 		       sourceHash="d7bf4597bf29bb73" />
+		<entry key="Ragdoll Preview" text="래그돌 미리보기" sourceHash="a7b97f03c28bbd5c" />
 		<entry key="Rebakes the navmesh of the active scene for every agent type (the Nav visualizer shows polygon edges)"
 		       text="활성 씬의 내비메시를 에이전트 종류마다 다시 베이크합니다(Nav 시각화로 폴리곤 테두리를 봅니다)"
 		       sourceHash="c72cea29be59f35f" />
@@ -2952,11 +3126,14 @@
 		       sourceHash="4dfd6339ebf98cf9" />
 		<entry key="Remove Component" text="컴포넌트 제거" sourceHash="7736527613907162" />
 		<entry key="Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
+		<entry key="Render Targets" text="렌더 타깃" sourceHash="c0aa3c1fac1b614b" />
 		<entry key="RenderDoc Capture" text="RenderDoc 캡처" sourceHash="1b19e0f7e711a50f" />
 		<entry key="Replace the active scene with an empty one"
 		       text="활성 씬을 빈 씬으로 바꿉니다"
 		       sourceHash="63ea90ea1bfcf160" />
 		<entry key="Report Bug (BugReport)" text="버그 보고(BugReport)" sourceHash="1f418bfaa2968a32" />
+		<entry key="Retarget Profile" text="리타깃 프로필" sourceHash="3c0135c4a9a5e804" />
+		<entry key="Rig Debug" text="리그 디버그" sourceHash="b86d4522288d8f82" />
 		<entry key="Run the saved active scene in a separate game process"
 		       text="저장한 활성 씬을 별도 게임 프로세스로 실행합니다"
 		       sourceHash="009c3b6c728da8f8" />
@@ -2978,6 +3155,7 @@
 		<entry key="Saves the focused view (game view or scene view) as PNG"
 		       text="포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다"
 		       sourceHash="a4cdf6b9fab8f053" />
+		<entry key="Scene" text="씬" sourceHash="4a9a31623ab5f213" />
 		<entry key="Screenshot" text="스크린샷" sourceHash="12e9c9d9d9b94cf1" />
 		<entry key="Search and run editor commands"
 		       text="에디터 명령을 찾아 실행합니다"
@@ -2988,6 +3166,7 @@
 		<entry key="Select All With" text="같은 것 모두 선택" sourceHash="38c5bf72f59d8a52" />
 		<entry key="Select Owner GameObject" text="소유 GameObject 선택" sourceHash="6e636533b44a2e8b" />
 		<entry key="Self Test Ping" text="자체 테스트 핑" sourceHash="f0a6cff2a618e373" />
+		<entry key="Sequencer" text="시퀀서" sourceHash="8063b506e0c435ce" />
 		<entry key="Sets the editor theme preset, accent color and corner rounding"
 		       text="에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다"
 		       sourceHash="7080e1da8d9c257b" />
@@ -2997,12 +3176,20 @@
 		       text="선택한 오브젝트를 바닥 평면에 붙입니다"
 		       sourceHash="2381d6ed11c97f3e" />
 		<entry key="Snap to Ground (Y=0)" text="바닥에 붙이기(Y=0)" sourceHash="3062d3f77a7a99b4" />
+		<entry key="Sprite Clip" text="스프라이트 클립" sourceHash="147a1ff5240fde92" />
 		<entry key="Start play-in-editor" text="에디터 안 플레이를 시작합니다" sourceHash="53d30c8e8bd48c09" />
+		<entry key="Streaming Cells" text="스트리밍 셀" sourceHash="cf45f7e5f679d89e" />
+		<entry key="Test Runner" text="테스트 실행기" sourceHash="b609ba8e16775cd5" />
 		<entry key="Theme &amp; Look and Feel..." text="테마 · 모양..." sourceHash="118e3cb7b4f93874" />
+		<entry key="Tile Map Tool" text="타일 맵 도구" sourceHash="5f89ed1b3d4f9fa3" />
+		<entry key="UI Preview" text="UI 미리보기" sourceHash="8ae784a291556f7b" />
 		<entry key="Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
 		<entry key="Undo the last edit" text="마지막 편집을 되돌립니다" sourceHash="08f4815bc31fa1e0" />
 		<entry key="Undoes the last edit" text="마지막 편집 작업을 되돌립니다" sourceHash="d66acea5d97266d8" />
 		<entry key="Unparent" text="부모에서 떼기" sourceHash="f2e7c9227ea7c462" />
+		<entry key="User Settings" text="사용자 설정" sourceHash="dd998e7324ae4083" />
+		<entry key="VFX Preview" text="VFX 미리보기" sourceHash="68f1e5fbdd88d3df" />
+		<entry key="Window" text="창" sourceHash="5c49cfa8045bc89d" />
 		<entry key="Write instance overrides back to the prefab template"
 		       text="인스턴스의 덮어쓴 값을 프리팹 원본에 다시 씁니다"
 		       sourceHash="fcdb0d4d740ad849" />

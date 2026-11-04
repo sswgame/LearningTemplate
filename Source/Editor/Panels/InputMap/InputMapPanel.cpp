@@ -453,7 +453,7 @@ namespace sw::editor
 
     void InputMapPanel::drawCommandPatternTester()
     {
-        EditorWidgets::drawTextField( "Pattern (numpad notation)", _testComboPattern, 150.0f );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "PatternNumpadNotation" ), "Pattern (numpad notation)" ), _testComboPattern, 150.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PatternTip" ) );
         ImGui::SameLine();
         if ( _document.getInputMap().getActionBuffer().wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f ) )
@@ -511,7 +511,7 @@ namespace sw::editor
     {
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "AddNewActionLayer" ) ) )
         {
-            EditorWidgets::drawTextField( "New Action Name", _newActionName, 200.0f );
+            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "NewActionName" ), "New Action Name" ), _newActionName, 200.0f );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionNameTip" ) );
 
             ImGui::SameLine();
@@ -699,9 +699,9 @@ namespace sw::editor
                 rx                          = vecRightStick4._x;
                 ry                          = vecRightStick4._y;
 
-                drawGamepadStickVisualizer( "Left Stick", lx, ly, 0.15f );
+                drawGamepadStickVisualizer( SW_LOCKEY( "EdWidget", "LeftStick" ), lx, ly, 0.15f );
                 ImGui::SameLine( 180.0f );
-                drawGamepadStickVisualizer( "Right Stick", rx, ry, 0.15f );
+                drawGamepadStickVisualizer( SW_LOCKEY( "EdWidget", "RightStick" ), rx, ry, 0.15f );
 
                 ImGui::SameLine( 360.0f );
                 ImGui::BeginGroup();

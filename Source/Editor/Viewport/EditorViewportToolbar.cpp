@@ -92,6 +92,50 @@ namespace sw::editor
             ImGui::SameLine();
     }
 
+    namespace
+    {
+        /** @brief 콤보에 보일 보기 모드 이름(지금 언어)입니다. 표의 `_pName` 은 로그 · 테스트 표지가 쓰는 식별자라 그대로 둔다. */
+        const utf8* getViewModeDisplayName( RenderViewMode mode )
+        {
+            switch ( mode )
+            {
+                case RenderViewMode::Lit:
+                    return SW_LOCKEY( "EdViewMode", "Lit" );
+                case RenderViewMode::Unlit:
+                    return SW_LOCKEY( "EdViewMode", "Unlit" );
+                case RenderViewMode::Wireframe:
+                    return SW_LOCKEY( "EdViewMode", "Wireframe" );
+                case RenderViewMode::Normals:
+                    return SW_LOCKEY( "EdViewMode", "Normals" );
+                case RenderViewMode::Depth:
+                    return SW_LOCKEY( "EdViewMode", "Depth" );
+                case RenderViewMode::Overdraw:
+                    return SW_LOCKEY( "EdViewMode", "Overdraw" );
+                case RenderViewMode::LightingOnly:
+                    return SW_LOCKEY( "EdViewMode", "LightingOnly" );
+                case RenderViewMode::Roughness:
+                    return SW_LOCKEY( "EdViewMode", "Roughness" );
+                case RenderViewMode::Metallic:
+                    return SW_LOCKEY( "EdViewMode", "Metallic" );
+                case RenderViewMode::Mipmaps:
+                    return SW_LOCKEY( "EdViewMode", "Mipmaps" );
+                case RenderViewMode::LightComplexity:
+                    return SW_LOCKEY( "EdViewMode", "LightComplexity" );
+                case RenderViewMode::ShadedWireframe:
+                    return SW_LOCKEY( "EdViewMode", "ShadedWireframe" );
+                case RenderViewMode::LODLevel:
+                    return SW_LOCKEY( "EdViewMode", "LODLevel" );
+                case RenderViewMode::LODFadeCode:
+                    return SW_LOCKEY( "EdViewMode", "LODFadeCode" );
+                case RenderViewMode::MarkerSlots:
+                    return SW_LOCKEY( "EdViewMode", "MarkerSlots" );
+                case RenderViewMode::Count:
+                    break;
+            }
+            return getRenderViewModeInfo( mode )._pName;
+        }
+    } // namespace
+
     void EditorViewportToolbar::drawViewBar( ViewportToolbarSettings& settings, bool bVertical )
     {
         {
@@ -102,7 +146,7 @@ namespace sw::editor
 
             ImGui::BeginDisabled( pRenderer == nullptr );
             EditorChrome::setNextItemWidthColumns( 13.0f );
-            const bool bOpen = ImGui::BeginCombo( "##ViewMode", getRenderViewModeInfo( currentMode )._pName );
+            const bool bOpen = ImGui::BeginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
             EditorSelfTestMarks::note( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
             if ( bOpen )
             {
@@ -110,7 +154,7 @@ namespace sw::editor
                 {
                     const RenderViewMode mode  = static_cast<RenderViewMode>( modeIndex );
                     const utf8*          pName = getRenderViewModeInfo( mode )._pName;
-                    if ( ImGui::Selectable( pName, mode == currentMode ) && pRenderer != nullptr )
+                    if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getViewModeDisplayName( mode ), pName ), mode == currentMode ) && pRenderer != nullptr )
                         pRenderer->setSceneViewMode( mode );
                     const string markKey = string( "viewport.viewMode." ) + StringUtil::toLower( pName );
                     EditorSelfTestMarks::note( markKey.c_str() );
@@ -165,9 +209,11 @@ namespace sw::editor
             nextItem( bVertical );
             ImGui::PushID( visualizer._pID );
             fixed_string<constant::buffer::kMax256> tooltip;
-            formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", visualizer._pToggleLabel, visualizer._pTooltip );
+            // 등록은 키(`SW_LOCKEYREF`)를 든다 — 지금 언어로 풀어 보이고, 버튼 ID 는 시각화 id 로 고정한다.
+            const utf8* const pLabel = LocalizedText::find( visualizer._pToggleLabel, visualizer._pToggleLabel );
+            formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", pLabel, LocalizedText::find( visualizer._pTooltip, visualizer._pTooltip ) );
             const bool bPressed = visualizer._pIconName.isEmpty() == false ? EditorWidgets::drawIconToggle( "##visualizer", EditorIconUtil::findGlyphByName( visualizer._pIconName ), bOn, tooltip.c_str() )
-                                                                           : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
+                                                                           : EditorWidgets::drawToggleButton( EditorThemeUtil::makeStableLabel( pLabel, visualizer._pID ), bOn );
             if ( bPressed )
                 settings._visualizerToggles.setOn( visualizer, bOn == false );
             fixed_string<constant::buffer::kMax64> mark;
@@ -247,14 +293,14 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "GridSnap" ), "Grid Snap" ), "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
                                                             SW_LOCKEY( "EdCommon", "GridSnap" ),
                                                             SW_LOCKEY( "EdCommon", "GridSnapSize" ) );
 
         nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
         const utf8*   arrRotLabel[] = { "5\xc2\xb0", "15\xc2\xb0", "45\xc2\xb0", "90\xc2\xb0" }; // 5° …(UTF-8 도 기호)
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "RotSnap" ), "Rot Snap" ), "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
                                                             4, 1, bVertical,
                                                             SW_LOCKEY( "EdCommon", "RotationSnap" ),
                                                             SW_LOCKEY( "EdCommon", "RotationSnapSize" ) );

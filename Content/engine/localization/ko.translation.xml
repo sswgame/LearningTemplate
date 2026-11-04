@@ -272,6 +272,7 @@
 		       text="왜 이렇게 보이나(규칙)"
 		       sourceHash="aa54935a9461505e" />
 		<entry key="EdPlugin.ZoomFit" text="맞춰 보기" sourceHash="7a6733cf04aafd9d" />
+		<entry key="EdPluginButton.Reload" text="다시 불러오기" sourceHash="d5b6130b4937488c" />
 		<entry key="EdPluginField.Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="EdPluginField.Anchor" text="기준" sourceHash="beff9ac02dc2c474" />
 		<entry key="EdPluginField.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
@@ -398,6 +399,57 @@
 		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
 		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다"
 		       sourceHash="513b712b24165aff" />
+		<entry key="EdPluginVisualizer.MeshModifiersLabel" text="모디파이어" sourceHash="87ca97e3a5f400d9" />
+		<entry key="EdPluginVisualizer.MeshModifiersStageLabel" text="단계" sourceHash="ae5da213b7f896ed" />
+		<entry key="EdPluginVisualizer.MeshModifiersStageTip"
+		       text="고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)"
+		       sourceHash="498bc780b7a638e7" />
+		<entry key="EdPluginVisualizer.MeshModifiersTip"
+		       text="메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기"
+		       sourceHash="cf2a12185b5ea27c" />
+		<entry key="EdPluginVisualizer.ParkLayoutLabel" text="놀이공원" sourceHash="2e3f0d19ed369939" />
+		<entry key="EdPluginVisualizer.ParkLayoutTip"
+		       text="ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙"
+		       sourceHash="40b20210c0343418" />
+		<entry key="EdPluginWidget.Account" text="계정" sourceHash="846b3790b6e25c1c" />
+		<entry key="EdPluginWidget.AccountIdHex" text="계정 id(16진수)" sourceHash="b6db0ef22675ed05" />
+		<entry key="EdPluginWidget.ActingRole" text="맡은 역할" sourceHash="25bba11d3a172de3" />
+		<entry key="EdPluginWidget.AssetId" text="에셋 id" sourceHash="69d468f7fdd713f4" />
+		<entry key="EdPluginWidget.AuditLog" text="감사 기록" sourceHash="2bd16f12896a150a" />
+		<entry key="EdPluginWidget.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
+		<entry key="EdPluginWidget.BoneMap" text="본 매핑" sourceHash="4b8920f82d776b69" />
+		<entry key="EdPluginWidget.Chains" text="체인" sourceHash="3a6771172abb34bf" />
+		<entry key="EdPluginWidget.Check" text="검사" sourceHash="42cbd8dca939a9c7" />
+		<entry key="EdPluginWidget.EquipSet" text="장비 세트" sourceHash="647fb99b02fe02df" />
+		<entry key="EdPluginWidget.EventId" text="이벤트 id" sourceHash="9b572c9af0cf6ef8" />
+		<entry key="EdPluginWidget.EventJson" text="이벤트 JSON" sourceHash="f9211a1af156135b" />
+		<entry key="EdPluginWidget.From" text="보내는 곳" sourceHash="a6ab5184d6315895" />
+		<entry key="EdPluginWidget.Game" text="게임" sourceHash="b568a67e05a19907" />
+		<entry key="EdPluginWidget.GrantRevoke" text="지급 / 회수" sourceHash="b43e7fa0410aeb6e" />
+		<entry key="EdPluginWidget.Kind" text="종류" sourceHash="70af97de3ad8fb23" />
+		<entry key="EdPluginWidget.LiveEvents" text="라이브 이벤트" sourceHash="b5622b26740874ec" />
+		<entry key="EdPluginWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
+		<entry key="EdPluginWidget.MaintenanceNotice" text="점검 / 공지" sourceHash="85b0db04bdd7964f" />
+		<entry key="EdPluginWidget.MemoTicket" text="메모(티켓)" sourceHash="fdcbf34ceeb42ab6" />
+		<entry key="EdPluginWidget.MessageKey" text="메시지 키" sourceHash="a982200e6ce2d4db" />
+		<entry key="EdPluginWidget.NoticeText" text="공지 글" sourceHash="30c28e16a2b1dc84" />
+		<entry key="EdPluginWidget.Options" text="옵션" sourceHash="463b8c4e92751ba5" />
+		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="EdPluginWidget.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
+		<entry key="EdPluginWidget.Problems" text="문제" sourceHash="0e6bbd9fe1101fbd" />
+		<entry key="EdPluginWidget.ReasonCode" text="사유 코드" sourceHash="e4e83587c443b062" />
+		<entry key="EdPluginWidget.Reports" text="신고" sourceHash="884bcdca26998a48" />
+		<entry key="EdPluginWidget.RetargetPose" text="리타깃 포즈" sourceHash="53c8b9621d796bca" />
+		<entry key="EdPluginWidget.RootAndPelvis" text="루트와 골반" sourceHash="e01e5ada837b1395" />
+		<entry key="EdPluginWidget.Sanction" text="제재" sourceHash="454ca7e5daa9851c" />
+		<entry key="EdPluginWidget.ScopeAllOrServerKind"
+		       text="범위(all 또는 서버 종류)"
+		       sourceHash="b549f10e94463f43" />
+		<entry key="EdPluginWidget.Skeletons" text="스켈레톤" sourceHash="ddf41736311408a7" />
+		<entry key="EdPluginWidget.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
+		<entry key="EdPluginWidget.SubjectPrefix" text="주체 접두어" sourceHash="f5ff56bd51df1f21" />
+		<entry key="EdPluginWidget.To" text="받는 곳" sourceHash="09353907b5c79284" />
+		<entry key="EdPluginWidget.Wires" text="선" sourceHash="b1344bf526482d11" />
 		<entry key="EdSchedule.ColumnActivity" text="행동" sourceHash="6c76b294d740446c" />
 		<entry key="EdSchedule.ColumnPlace" text="장소" sourceHash="13b3f5afa0862d1c" />
 		<entry key="EdSchedule.ColumnSource" text="출처" sourceHash="5f43af3669b1e098" />

@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -73,7 +74,7 @@ namespace sw::editor
         if ( pHUD == nullptr )
             return;
         int32 corner = static_cast<int32>( DebugHUD::getCorner() );
-        if ( ImGui::BeginCombo( "Corner", DebugHUD::getCornerName( DebugHUD::getCorner() ) ) )
+        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Corner" ), "Corner" ), DebugHUD::getCornerName( DebugHUD::getCorner() ) ) )
         {
             for ( int32 option = 0; option < static_cast<int32>( DebugHUDCorner::Count ); ++option )
             {

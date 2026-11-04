@@ -29,6 +29,8 @@
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/LatticeModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/ModifierGizmoLogic.h"
@@ -824,8 +826,8 @@ namespace sw::editor
 
     SW_EDITOR_SUBSYSTEM( MeshModifiersVisualizerState, 9500 );
 
-    SW_EDITOR_VISUALIZER( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITORICON_NAME( "Cube" ), "Modifiers",
-                          "메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기", true, &MeshModifiersVisualizerInternal::draw );
-    SW_EDITOR_VISUALIZER( MeshModifiersStage, "meshmodifiers.stage", 911, ::sw::editor::EditorIconName{}, "Stage", "고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)", false,
+    SW_EDITOR_VISUALIZER( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITORICON_NAME( "Cube" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersLabel" ),
+                          SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersTip" ), true, &MeshModifiersVisualizerInternal::draw );
+    SW_EDITOR_VISUALIZER( MeshModifiersStage, "meshmodifiers.stage", 911, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageLabel" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageTip" ), false,
                           &MeshModifiersVisualizerInternal::drawStage );
 } // namespace sw::editor

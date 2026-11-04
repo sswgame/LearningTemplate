@@ -34,6 +34,14 @@ namespace sw::editor
     {
     public:
         EditorIconLabel( const utf8* pIcon, const utf8* pLabel );
+        /** @brief "아이콘  라벨###고정 ID" 입니다 — 라벨이 언어마다 달라도 ImGui ID 는 @p pStableID 하나다(언리얼 탭의 표시 이름 · 탭 ID 와 같은 나눔). */
+        EditorIconLabel( const utf8* pIcon, const utf8* pLabel, const utf8* pStableID );
+        /** @brief 아이콘 없는 판의 표시입니다(`makeStableLabel`). */
+        struct Plain
+        {
+        };
+        /** @brief "라벨###고정 ID" 입니다. */
+        EditorIconLabel( Plain, const utf8* pLabel, const utf8* pStableID );
 
         operator const utf8*() const { return _arrText; }
 
@@ -148,6 +156,13 @@ namespace sw::editor
          * @details 반환값은 자기 버퍼를 든 값이다(`EditorIconLabel`). ImGui 호출 인자로 바로 넘긴다. 한 호출에 두 번 넘겨도 된다.
          */
         static EditorIconLabel makeIconLabel( const utf8* pIcon, const utf8* pLabel );
+        /**
+         * @brief 현지화한 @p pLabel 을 보이고 ID 는 @p pStableID(영어 리터럴)로 고정한 라벨입니다. 버튼 · 메뉴 항목처럼 라벨이 ID 인 위젯에 씁니다.
+         * @details 번역 글을 ID 로 쓰면 언어를 바꿀 때 ID 가 바뀌어 열린 상태 · 단축 경로가 흔들린다. 글만 그리는 곳은 두 인자 판을 쓴다.
+         */
+        static EditorIconLabel makeIconLabel( const utf8* pIcon, const utf8* pLabel, const utf8* pStableID );
+        /** @brief 아이콘 없이 "라벨###고정 ID" 입니다 — 현지화한 라벨을 보이는 위젯(콤보 · 메뉴 · 라디오 · 체크박스)의 ID 를 언어와 무관하게 고정한다. */
+        static EditorIconLabel makeStableLabel( const utf8* pLabel, const utf8* pStableID );
 
         /**
          * @brief 아이콘 글리프 하나를 사각형 가운데에 그립니다. 글리프 높이는 사각형 짧은 변의 @p sizeRatio 배입니다.

@@ -139,7 +139,7 @@ namespace sw::editor
             return;
         }
 
-        ImGui::RadioButton( "Auto", &_model.editLODChoice(), MeshPreviewModel::kAutoLOD );
+        ImGui::RadioButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Auto" ), "Auto" ), &_model.editLODChoice(), MeshPreviewModel::kAutoLOD );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PickTheLevelByTheScreenSize" ) );
         const uint32 lodCount = pMesh->getLODCount();
         for ( uint32 lod = 0; lod < lodCount; ++lod )

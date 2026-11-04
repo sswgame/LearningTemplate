@@ -14,6 +14,12 @@ msgctxt "A command used by self-tests and scenarios - writes one log line"
 msgid "A command used by self-tests and scenarios - writes one log line"
 msgstr "자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Ability Debugger"
+msgid "Ability Debugger"
+msgstr "어빌리티 디버거"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Add Component"
@@ -62,6 +68,18 @@ msgctxt "Align selected objects on Z"
 msgid "Align selected objects on Z"
 msgstr "선택한 오브젝트를 Z 로 정렬합니다"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Animation Graph"
+msgid "Animation Graph"
+msgstr "애니메이션 그래프"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Animation Rewind"
+msgid "Animation Rewind"
+msgstr "애니메이션 되감기"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Apply Overrides"
@@ -76,18 +94,21 @@ msgstr "선택한 컴포넌트에 .preset.xml 을 적용합니다"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Audio Events"
 msgid "Audio Events"
 msgstr "오디오 이벤트"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Audio Graph"
 msgid "Audio Graph"
 msgstr "오디오 그래프"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Audio Mixer"
 msgid "Audio Mixer"
 msgstr "오디오 믹서"
@@ -128,6 +149,24 @@ msgctxt "Bakes indirect light for the selected (or every) light probe volume (.p
 msgid "Bakes indirect light for the selected (or every) light probe volume (.probes next to the scene)"
 msgstr "선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 베이크합니다(씬 옆 .probes)"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Behavior Tree"
+msgid "Behavior Tree"
+msgstr "비헤이비어 트리"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Bug Report"
+msgid "Bug Report"
+msgstr "버그 보고"
+
+#. Context: EditorMenuText._label
+#: editor/commands/editor.commands.xml
+msgctxt "Build"
+msgid "Build"
+msgstr "빌드"
+
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml
 msgctxt "Build the engine and every module"
@@ -139,6 +178,12 @@ msgstr "엔진과 모든 모듈을 빌드합니다"
 msgctxt "Builds the engine and every game and editor module"
 msgid "Builds the engine and every game and editor module"
 msgstr "엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Camera Presets"
+msgid "Camera Presets"
+msgstr "카메라 프리셋"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -182,8 +227,15 @@ msgctxt "Captures the selected (or every) reflection probe on the GPU (.reflprob
 msgid "Captures the selected (or every) reflection probe on the GPU (.reflprobe next to the scene)"
 msgstr "선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Catalog Editor"
+msgid "Catalog Editor"
+msgstr "카탈로그 편집기"
+
 #. Context: Editor command name
 #: editor/commands/charactereditor.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Character Editor"
 msgid "Character Editor"
 msgstr "캐릭터 편집기"
@@ -193,6 +245,12 @@ msgstr "캐릭터 편집기"
 msgctxt "Check Out (Lock)"
 msgid "Check Out (Lock)"
 msgstr "체크아웃(잠금)"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Clip Preview"
+msgid "Clip Preview"
+msgstr "클립 미리보기"
 
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml
@@ -211,6 +269,12 @@ msgstr "버그 보고 폴더를 모읍니다"
 msgctxt "Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/<time>/ (bugreport.goto returns to that spot)"
 msgid "Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/<time>/ (bugreport.goto returns to that spot)"
 msgstr "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 Saved/BugReports/<시각>/ 에 모읍니다(bugreport.goto 로 그 자리에 돌아간다)"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Command Palette"
+msgid "Command Palette"
+msgstr "명령 팔레트"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -235,6 +299,12 @@ msgstr "에디터 컴파일(EditorModule)"
 msgctxt "Compile Game (SWGame)"
 msgid "Compile Game (SWGame)"
 msgstr "게임 컴파일(SWGame)"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Content Browser"
+msgid "Content Browser"
+msgstr "콘텐츠 브라우저"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -308,6 +378,12 @@ msgctxt "Creates an organizing folder under the selected object (or the root)"
 msgid "Creates an organizing folder under the selected object (or the root)"
 msgstr "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Data Table Editor"
+msgid "Data Table Editor"
+msgstr "데이터 테이블 편집기"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Delete"
@@ -319,6 +395,12 @@ msgstr "삭제"
 msgctxt "Delete..."
 msgid "Delete..."
 msgstr "삭제..."
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Dialogue Graph"
+msgid "Dialogue Graph"
+msgstr "대화 그래프"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -343,6 +425,147 @@ msgstr "Z 고르게 배치"
 msgctxt "Duplicate"
 msgid "Duplicate"
 msgstr "복제"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdButton.Add"
+msgid "Add"
+msgstr "추가"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdButton.AddComponent"
+msgid "Add Component"
+msgstr "컴포넌트 추가"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdButton.BuildFailed"
+msgid "Build Failed"
+msgstr "빌드 실패"
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EdButton.CheckMap"
+msgid "Check Map"
+msgstr "맵 검사"
+
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
+msgctxt "EdButton.CollectNow"
+msgid "Collect Now"
+msgstr "지금 모으기"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdButton.Compile"
+msgid "Compile"
+msgstr "컴파일"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdButton.Compiling"
+msgid "Compiling..."
+msgstr "컴파일 중..."
+
+#: Source/Editor/Panels/Scene/SceneViewPanel.cpp
+msgctxt "EdButton.DebugDraw"
+msgid "Debug Draw"
+msgstr "디버그 그리기"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdButton.NewFolder"
+msgid "New Folder"
+msgstr "새 폴더"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdButton.OpenFolder"
+msgid "Open Folder"
+msgstr "폴더 열기"
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdButton.Overlays"
+msgid "Overlays"
+msgstr "오버레이"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdButton.Package"
+msgid "Package"
+msgstr "패키지"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdButton.Pause"
+msgid "Pause"
+msgstr "일시 정지"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdButton.PauseServer"
+msgid "Pause server"
+msgstr "서버 일시 정지"
+
+#: Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp
+msgctxt "EdButton.PlayClip"
+msgid "Play Clip"
+msgstr "클립 재생"
+
+#: Source/Editor/Panels/Scene/HierarchyPanel.cpp
+msgctxt "EdButton.PlusCreate"
+msgid "+ Create"
+msgstr "+ 만들기"
+
+#: Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp
+msgctxt "EdButton.PostEvent"
+msgid "Post Event"
+msgstr "이벤트 보내기"
+
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EdButton.PreviewSplit"
+msgid "Preview Split"
+msgstr "분할 미리보기"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdButton.Renderdoc"
+msgid "RenderDoc"
+msgstr "RenderDoc"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdButton.ResetDefaultLayout"
+msgid "Reset Default Layout"
+msgstr "기본 레이아웃으로 되돌리기"
+
+#: Source/Editor/Panels/Settings/PreferencesPanel.cpp
+msgctxt "EdButton.ResetSection"
+msgid "Reset Section"
+msgstr "섹션 되돌리기"
+
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
+msgctxt "EdButton.ResetToDefault"
+msgid "Reset to Default"
+msgstr "기본값으로 되돌리기"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdButton.ResetToThemeDefaults"
+msgid "Reset to Theme Defaults"
+msgstr "테마 기본값으로 되돌리기"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdButton.ResumeServer"
+msgid "Resume server"
+msgstr "서버 재개"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdButton.Simulate"
+msgid "Simulate"
+msgstr "시뮬레이트"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdButton.Step"
+msgid "Step"
+msgstr "한 프레임"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdButton.StepN"
+msgid "Step N"
+msgstr "N 프레임"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdButton.ThemeLookAndFeel"
+msgid "Theme & Look and Feel"
+msgstr "테마 · 모양"
 
 #: Source/Editor/Viewport/EditorViewportToolbar.cpp
 msgctxt "EdCommon.AlignSelected"
@@ -2217,6 +2440,21 @@ msgctxt "EdLabel.UnsetAttribute"
 msgid "Unset attribute"
 msgstr "속성 지우기"
 
+#: Source/Editor/Common/Widgets/EditorNetModeCombo.cpp
+msgctxt "EdNetMode.DedicatedServer"
+msgid "Dedicated Server"
+msgstr "전용 서버"
+
+#: Source/Editor/Common/Widgets/EditorNetModeCombo.cpp
+msgctxt "EdNetMode.ListenHost"
+msgid "Listen Host"
+msgstr "리슨 호스트"
+
+#: Source/Editor/Common/Widgets/EditorNetModeCombo.cpp
+msgctxt "EdNetMode.Standalone"
+msgid "Standalone"
+msgstr "단독"
+
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdSection.Actions"
 msgid "Actions"
@@ -3393,6 +3631,7 @@ msgctxt "EdText.StopPreview"
 msgid "Stop Preview"
 msgstr "미리보기 정지"
 
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdText.Tags"
 msgid "Tags:"
@@ -3702,6 +3941,8 @@ msgid "Apply"
 msgstr "적용"
 
 #: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+#: Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp
+#: Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp
 #: Source/Editor/Common/Widgets/EditorWidgets.cpp
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
@@ -3740,6 +3981,7 @@ msgstr "불러오기"
 #: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EdVerb.Play"
 msgid "Play"
@@ -3750,6 +3992,7 @@ msgctxt "EdVerb.Redo"
 msgid "Redo"
 msgstr "다시 실행"
 
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
@@ -3772,6 +4015,7 @@ msgctxt "EdVerb.Reload"
 msgid "Reload"
 msgstr "다시 읽기"
 
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdVerb.Remove"
 msgid "Remove"
@@ -3786,6 +4030,7 @@ msgstr "초기화"
 
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
 #: Source/Editor/Panels/Scene/PrefabPanel.cpp
 #: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
 msgctxt "EdVerb.Revert"
@@ -3805,6 +4050,7 @@ msgstr "되돌리기"
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 #: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
 #: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
@@ -3812,9 +4058,11 @@ msgctxt "EdVerb.Save"
 msgid "Save"
 msgstr "저장"
 
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 #: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdVerb.Stop"
@@ -3825,6 +4073,439 @@ msgstr "정지"
 msgctxt "EdVerb.Undo"
 msgid "Undo"
 msgstr "실행 취소"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Depth"
+msgid "Depth"
+msgstr "깊이"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.LODFadeCode"
+msgid "LOD Fade Code"
+msgstr "LOD 페이드 코드"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.LODLevel"
+msgid "LOD Level"
+msgstr "LOD 단계"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.LightComplexity"
+msgid "Light Complexity"
+msgstr "조명 복잡도"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.LightingOnly"
+msgid "Lighting Only"
+msgstr "조명만"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Lit"
+msgid "Lit"
+msgstr "조명"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.MarkerSlots"
+msgid "Marker Slots"
+msgstr "표지 칸"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Metallic"
+msgid "Metallic"
+msgstr "금속성"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Mipmaps"
+msgid "Mipmaps"
+msgstr "밉맵"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Normals"
+msgid "Normals"
+msgstr "노멀"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Overdraw"
+msgid "Overdraw"
+msgstr "오버드로"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Roughness"
+msgid "Roughness"
+msgstr "거칠기"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.ShadedWireframe"
+msgid "Shaded Wireframe"
+msgstr "셰이드 와이어프레임"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Unlit"
+msgid "Unlit"
+msgstr "조명 없음"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.Wireframe"
+msgid "Wireframe"
+msgstr "와이어프레임"
+
+#: Source/Editor/Viewport/EditorViewportBillboard.cpp
+msgctxt "EdVisualizer.BillboardLabel"
+msgid "Icons"
+msgstr "아이콘"
+
+#: Source/Editor/Viewport/EditorViewportBillboard.cpp
+msgctxt "EdVisualizer.BillboardTip"
+msgid "Shows components without a mesh (lights, cameras, audio) as icons you can click to select"
+msgstr "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다"
+
+#: Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp
+msgctxt "EdVisualizer.BoxCollider2DLabel"
+msgid "Col"
+msgstr "충돌"
+
+#: Source/Editor/Viewport/Visualizers/BoxCollider2DVisualizer.cpp
+msgctxt "EdVisualizer.BoxCollider2DTip"
+msgid "Shows BoxCollider2D rectangles as wireframe"
+msgstr "BoxCollider2D 사각형을 와이어프레임으로 표시합니다"
+
+#: Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp
+msgctxt "EdVisualizer.CameraFrustumLabel"
+msgid "Cam"
+msgstr "카메라"
+
+#: Source/Editor/Viewport/Visualizers/CameraFrustumVisualizer.cpp
+msgctxt "EdVisualizer.CameraFrustumTip"
+msgid "Shows the frustum of every camera except the active one"
+msgstr "활성 카메라를 제외한 카메라의 프러스텀을 표시합니다"
+
+#: Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp
+msgctxt "EdVisualizer.DebugDrawLabel"
+msgid "Dbg"
+msgstr "디버그"
+
+#: Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp
+msgctxt "EdVisualizer.DebugDrawTip"
+msgid "Shows the lines, spheres, boxes, arrows and text game code put into DebugDrawQueue"
+msgstr "게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다"
+
+#: Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp
+msgctxt "EdVisualizer.NavMeshLabel"
+msgid "Nav"
+msgstr "내비"
+
+#: Source/Editor/Viewport/Visualizers/NavMeshVisualizer.cpp
+msgctxt "EdVisualizer.NavMeshTip"
+msgid "Shows the polygon edges of the baked navmesh (bake with Build > Bake Navigation)"
+msgstr "베이크한 내비메시의 폴리곤 테두리를 표시합니다(빌드 > 내비게이션 굽기로 굽는다)"
+
+#: Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp
+msgctxt "EdVisualizer.PhysicsShapesLabel"
+msgid "Phys"
+msgstr "물리"
+
+#: Source/Editor/Viewport/Visualizers/PhysicsShapeVisualizer.cpp
+msgctxt "EdVisualizer.PhysicsShapesTip"
+msgid "Shows RigidBody and RigidBody2D collision shapes as wireframe (static grey, kinematic blue, dynamic green, trigger yellow)"
+msgstr "RigidBody · RigidBody2D 의 충돌 셰이프를 와이어프레임으로 표시합니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 트리거 노랑)"
+
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EdVisualizer.RigTargetGizmoLabel"
+msgid "Rig Target"
+msgstr "리그 대상"
+
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EdVisualizer.RigTargetGizmoTip"
+msgid "Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset"
+msgstr "리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다"
+
+#: Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp
+msgctxt "EdVisualizer.SelectionBoundsLabel"
+msgid "Sel"
+msgstr "선택"
+
+#: Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp
+msgctxt "EdVisualizer.SelectionBoundsTip"
+msgid "Shows the bounding box of the selected objects in accent-colored lines"
+msgstr "고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다"
+
+#: Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp
+msgctxt "EdVisualizer.TerrainBrushLabel"
+msgid "Terrain"
+msgstr "지형"
+
+#: Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp
+msgctxt "EdVisualizer.TerrainBrushTip"
+msgid "Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)"
+msgstr "지형 도구: 지형 위를 끌어 깎거나 레이어를 칠합니다(브러시 설정 창, Ctrl+Z 는 한 번의 끌기를 되돌린다)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
+msgctxt "EdWidget.AllProcesses"
+msgid "All processes"
+msgstr "모든 프로세스"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdWidget.Assets"
+msgid "Assets"
+msgstr "에셋"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+#: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
+msgctxt "EdWidget.Auto"
+msgid "Auto"
+msgstr "자동"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Blend"
+msgid "Blend"
+msgstr "블렌드"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Clip"
+msgid "Clip"
+msgstr "클립"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdWidget.Collapse"
+msgid "Collapse"
+msgstr "접기"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdWidget.Command"
+msgid "Command"
+msgstr "명령"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdWidget.Condition"
+msgid "Condition"
+msgstr "조건"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdWidget.Corner"
+msgid "Corner"
+msgstr "모서리"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdWidget.Favorites"
+msgid "Favorites"
+msgstr "즐겨찾기"
+
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
+msgctxt "EdWidget.File"
+msgid "File"
+msgstr "파일"
+
+#: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+msgctxt "EdWidget.Freeze"
+msgid "Freeze"
+msgstr "멈추기"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdWidget.Game"
+msgid "Game"
+msgstr "게임"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdWidget.GridSnap"
+msgid "Grid Snap"
+msgstr "격자 스냅"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.HalfLife"
+msgid "Half Life"
+msgstr "반감기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdWidget.ItemName"
+msgid "Item Name"
+msgstr "아이템 이름"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdWidget.Items"
+msgid "items"
+msgstr "항목"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdWidget.Layouts"
+msgid "Layouts"
+msgstr "레이아웃"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdWidget.LeftStick"
+msgid "Left Stick"
+msgstr "왼쪽 스틱"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdWidget.Lines"
+msgid "lines"
+msgstr "줄"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdWidget.List"
+msgid "List"
+msgstr "목록"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Loop"
+msgid "Loop"
+msgstr "반복"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Mask"
+msgid "Mask"
+msgstr "마스크"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Name"
+msgid "Name"
+msgstr "이름"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdWidget.NewActionName"
+msgid "New Action Name"
+msgstr "새 액션 이름"
+
+#: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
+msgctxt "EdWidget.NoFileDefaults"
+msgid "No file - defaults"
+msgstr "파일 없음 - 기본값"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdWidget.OutputFolder"
+msgid "Output Folder"
+msgstr "출력 폴더"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdWidget.Panel"
+msgid "Panel"
+msgstr "패널"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdWidget.PatternNumpadNotation"
+msgid "Pattern (numpad notation)"
+msgstr "패턴(숫자 패드 표기)"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdWidget.Paused"
+msgid "Paused"
+msgstr "일시 정지됨"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+#: Source/Editor/Panels/Scene/HierarchyPanel.cpp
+msgctxt "EdWidget.PlayMode"
+msgid "Play Mode"
+msgstr "플레이 모드"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdWidget.Playing"
+msgid "Playing"
+msgstr "플레이 중"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdWidget.Prefab"
+msgid "Prefab"
+msgstr "프리팹"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Preset"
+msgid "Preset"
+msgstr "프리셋"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdWidget.Preview"
+msgid "Preview"
+msgstr "미리보기"
+
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
+msgctxt "EdWidget.Resolution"
+msgid "Resolution"
+msgstr "해상도"
+
+#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+msgctxt "EdWidget.RestartRequired"
+msgid "Restart required"
+msgstr "다시 시작 필요"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdWidget.RightStick"
+msgid "Right Stick"
+msgstr "오른쪽 스틱"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdWidget.RotSnap"
+msgid "Rot Snap"
+msgstr "회전 스냅"
+
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
+msgctxt "EdWidget.Shader"
+msgid "Shader"
+msgstr "셰이더"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdWidget.Simulating"
+msgid "Simulating"
+msgstr "시뮬레이트 중"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdWidget.Sources"
+msgid "Sources"
+msgstr "소스"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdWidget.Speaker"
+msgid "Speaker"
+msgstr "화자"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdWidget.Starting"
+msgid "Starting"
+msgstr "시작 중"
+
+#: Source/Editor/Panels/Console/ConsolePanel.cpp
+msgctxt "EdWidget.TagFilter"
+msgid "Tags"
+msgstr "태그"
+
+#: Source/Editor/Panels/Packaging/PackagingPanel.cpp
+msgctxt "EdWidget.Target"
+msgid "Target"
+msgstr "대상"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EdWidget.TargetObject"
+msgid "Target Object"
+msgstr "대상 오브젝트"
+
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
+msgctxt "EdWidget.Theme"
+msgid "Theme"
+msgstr "테마"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdWidget.Tiles"
+msgid "Tiles"
+msgstr "타일"
+
+#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+msgctxt "EdWidget.Variables"
+msgid "variables"
+msgstr "변수"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Weight"
+msgid "Weight"
+msgstr "가중치"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.WeightParam"
+msgid "Weight Param"
+msgstr "가중치 매개변수"
+
+#. Context: EditorMenuText._label
+#: editor/commands/editor.commands.xml
+msgctxt "Edit"
+msgid "Edit"
+msgstr "편집"
 
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EditorAnimationGraph.AddAttackTip"
@@ -7128,6 +7809,12 @@ msgctxt "Exits the editor"
 msgid "Exits the editor"
 msgstr "에디터를 종료합니다"
 
+#. Context: EditorMenuText._label
+#: editor/commands/editor.commands.xml
+msgctxt "File"
+msgid "File"
+msgstr "파일"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Find References"
@@ -7142,15 +7829,59 @@ msgstr "에셋 · 씬 · 스크립트를 퍼지 검색합니다"
 
 #. Context: Editor command name
 #: editor/commands/onlineadmin.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "GM Tool"
 msgid "GM Tool"
 msgstr "GM 도구"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Game"
+msgid "Game"
+msgstr "게임"
+
 #. Context: Editor command name
 #: editor/commands/gameplaytools.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Gimmick Graph"
 msgid "Gimmick Graph"
 msgstr "기믹 그래프"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Global Variables"
+msgid "Global Variables"
+msgstr "전역 변수"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Hierarchy"
+msgid "Hierarchy"
+msgstr "계층"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Hierarchy / Skeleton View"
+msgid "Hierarchy / Skeleton View"
+msgstr "계층 / 스켈레톤 보기"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "History"
+msgid "History"
+msgstr "기록"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Input Map Editor"
+msgid "Input Map Editor"
+msgstr "입력 맵 편집기"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Inspector"
+msgid "Inspector"
+msgstr "인스펙터"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -7170,6 +7901,12 @@ msgctxt "Keeps the current (play) state of the selected objects in the edit scen
 msgid "Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
 msgstr "고른 오브젝트의 지금(플레이 중) 상태를 Stop 뒤 편집 씬에 남깁니다(되돌리기 한 번)"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Keyboard Shortcuts"
+msgid "Keyboard Shortcuts"
+msgstr "단축키"
+
 #. Context: Editor command tooltip
 #: editor/commands/editor.commands.xml
 msgctxt "Launches the saved active scene without the editor in a new window (a separate process)"
@@ -7188,11 +7925,36 @@ msgctxt "Load Component Preset"
 msgid "Load Component Preset"
 msgstr "컴포넌트 프리셋 불러오기"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Map Check"
+msgid "Map Check"
+msgstr "맵 검사"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Material"
+msgid "Material"
+msgstr "머티리얼"
+
 #. Context: Editor command name
 #: editor/commands/meshmodifiers.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Mesh Modifiers"
 msgid "Mesh Modifiers"
 msgstr "메시 모디파이어"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Mesh Preview"
+msgid "Mesh Preview"
+msgstr "메시 미리보기"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Modules"
+msgid "Modules"
+msgstr "모듈"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -7241,6 +8003,18 @@ msgstr "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니�
 msgctxt "Moves the selected object up one place among its siblings"
 msgid "Moves the selected object up one place among its siblings"
 msgstr "고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Multiplayer"
+msgid "Multiplayer"
+msgstr "멀티플레이어"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "NPC Schedule"
+msgid "NPC Schedule"
+msgstr "NPC 일정"
 
 #. Context: Editor command name
 #: editor/commands/themepark.commands.xml
@@ -7410,20 +8184,34 @@ msgctxt "Opens the sound graph window (node and link canvas, value editing, save
 msgid "Opens the sound graph window (node and link canvas, value editing, save, preview)"
 msgstr "소리 그래프 창을 엽니다(노드 · 연결 캔버스, 값 편집, 저장, 미리 듣기)"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Output Log"
+msgid "Output Log"
+msgstr "출력 로그"
+
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml
 msgctxt "Overwrite the selected component from the clipboard"
 msgid "Overwrite the selected component from the clipboard"
 msgstr "클립보드의 값으로 선택한 컴포넌트를 덮어씁니다"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Packaging"
+msgid "Packaging"
+msgstr "패키징"
+
 #. Context: Editor command name
 #: editor/commands/charactereditor.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Paired Animation"
 msgid "Paired Animation"
 msgstr "페어드 애니메이션"
 
 #. Context: Editor command name
 #: editor/commands/themepark.commands.xml
+#: editor/panels/editor.panels.xml
 msgctxt "Park Layout"
 msgid "Park Layout"
 msgstr "놀이공원 배치"
@@ -7464,6 +8252,24 @@ msgctxt "Play in New Window"
 msgid "Play in New Window"
 msgstr "새 창에서 플레이"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Prefab Overrides"
+msgid "Prefab Overrides"
+msgstr "프리팹 덮어쓰기"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Prefab Window"
+msgid "Prefab Window"
+msgstr "프리팹 창"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Preferences"
+msgid "Preferences"
+msgstr "환경설정"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Preferences..."
@@ -7476,11 +8282,29 @@ msgctxt "Presets"
 msgid "Presets"
 msgstr "프리셋"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Profiler"
+msgid "Profiler"
+msgstr "프로파일러"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Project Settings"
+msgid "Project Settings"
+msgstr "프로젝트 설정"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Project Settings..."
 msgid "Project Settings..."
 msgstr "프로젝트 설정..."
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Quick Open"
+msgid "Quick Open"
+msgstr "빠르게 열기"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -7493,6 +8317,12 @@ msgstr "빠르게 열기..."
 msgctxt "Quickly searches for and opens assets, scenes and scripts"
 msgid "Quickly searches for and opens assets, scenes and scripts"
 msgstr "에셋, 씬, 스크립트를 빠르게 검색하여 엽니다"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Ragdoll Preview"
+msgid "Ragdoll Preview"
+msgstr "래그돌 미리보기"
 
 #. Context: Editor command tooltip
 #: editor/commands/editor.commands.xml
@@ -7590,6 +8420,12 @@ msgctxt "Rename"
 msgid "Rename"
 msgstr "이름 바꾸기"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Render Targets"
+msgid "Render Targets"
+msgstr "렌더 타깃"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "RenderDoc Capture"
@@ -7607,6 +8443,18 @@ msgstr "활성 씬을 빈 씬으로 바꿉니다"
 msgctxt "Report Bug (BugReport)"
 msgid "Report Bug (BugReport)"
 msgstr "버그 보고(BugReport)"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Retarget Profile"
+msgid "Retarget Profile"
+msgstr "리타깃 프로필"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Rig Debug"
+msgid "Rig Debug"
+msgstr "리그 디버그"
 
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml
@@ -7662,6 +8510,12 @@ msgctxt "Saves the focused view (game view or scene view) as PNG"
 msgid "Saves the focused view (game view or scene view) as PNG"
 msgstr "포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Scene"
+msgid "Scene"
+msgstr "씬"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Screenshot"
@@ -7698,6 +8552,12 @@ msgctxt "Self Test Ping"
 msgid "Self Test Ping"
 msgstr "자체 테스트 핑"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Sequencer"
+msgid "Sequencer"
+msgstr "시퀀서"
+
 #. Context: Editor command tooltip
 #: editor/commands/editor.commands.xml
 msgctxt "Sets the editor theme preset, accent color and corner rounding"
@@ -7728,17 +8588,47 @@ msgctxt "Snap to Ground (Y=0)"
 msgid "Snap to Ground (Y=0)"
 msgstr "바닥에 붙이기(Y=0)"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Sprite Clip"
+msgid "Sprite Clip"
+msgstr "스프라이트 클립"
+
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml
 msgctxt "Start play-in-editor"
 msgid "Start play-in-editor"
 msgstr "에디터 안 플레이를 시작합니다"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Streaming Cells"
+msgid "Streaming Cells"
+msgstr "스트리밍 셀"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Test Runner"
+msgid "Test Runner"
+msgstr "테스트 실행기"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Theme & Look and Feel..."
 msgid "Theme & Look and Feel..."
 msgstr "테마 · 모양..."
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Tile Map Tool"
+msgid "Tile Map Tool"
+msgstr "타일 맵 도구"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "UI Preview"
+msgid "UI Preview"
+msgstr "UI 미리보기"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
@@ -7763,6 +8653,24 @@ msgstr "마지막 편집 작업을 되돌립니다"
 msgctxt "Unparent"
 msgid "Unparent"
 msgstr "부모에서 떼기"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "User Settings"
+msgid "User Settings"
+msgstr "사용자 설정"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "VFX Preview"
+msgid "VFX Preview"
+msgstr "VFX 미리보기"
+
+#. Context: EditorMenuText._label
+#: editor/commands/editor.commands.xml
+msgctxt "Window"
+msgid "Window"
+msgstr "창"
 
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml

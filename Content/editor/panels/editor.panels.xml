@@ -1,0 +1,61 @@
+<!-- 패널 · 팝업 창의 보이는 이름(EditorPanelText.h) — _title 은 코드의 getPanelTitle(창 ID · 도킹 · 테스트가 찾는 이름), _label 은 탭에 보일 영어 원문(현지화 키). -->
+<EditorPanelTextTable>
+	<_listPanel>
+		<EditorPanelText _title="Ability Debugger" _label="Ability Debugger" />
+		<EditorPanelText _title="Animation Graph" _label="Animation Graph" />
+		<EditorPanelText _title="Animation Rewind" _label="Animation Rewind" />
+		<EditorPanelText _title="Audio Events" _label="Audio Events" />
+		<EditorPanelText _title="Audio Graph" _label="Audio Graph" />
+		<EditorPanelText _title="Audio Mixer" _label="Audio Mixer" />
+		<EditorPanelText _title="Behavior Tree" _label="Behavior Tree" />
+		<EditorPanelText _title="Bug Report" _label="Bug Report" />
+		<EditorPanelText _title="Camera Presets" _label="Camera Presets" />
+		<EditorPanelText _title="Catalog Editor" _label="Catalog Editor" />
+		<EditorPanelText _title="Character Editor" _label="Character Editor" />
+		<EditorPanelText _title="Clip Preview" _label="Clip Preview" />
+		<EditorPanelText _title="Command Palette" _label="Command Palette" />
+		<EditorPanelText _title="Content Browser" _label="Content Browser" />
+		<EditorPanelText _title="Data Table Editor" _label="Data Table Editor" />
+		<EditorPanelText _title="Dialogue Graph" _label="Dialogue Graph" />
+		<EditorPanelText _title="GM Tool" _label="GM Tool" />
+		<EditorPanelText _title="Game" _label="Game" />
+		<EditorPanelText _title="Gimmick Graph" _label="Gimmick Graph" />
+		<EditorPanelText _title="Global Variables" _label="Global Variables" />
+		<EditorPanelText _title="Hierarchy" _label="Hierarchy" />
+		<EditorPanelText _title="Hierarchy / Skeleton View" _label="Hierarchy / Skeleton View" />
+		<EditorPanelText _title="History" _label="History" />
+		<EditorPanelText _title="Input Map Editor" _label="Input Map Editor" />
+		<EditorPanelText _title="Inspector" _label="Inspector" />
+		<EditorPanelText _title="Keyboard Shortcuts" _label="Keyboard Shortcuts" />
+		<EditorPanelText _title="Map Check" _label="Map Check" />
+		<EditorPanelText _title="Material" _label="Material" />
+		<EditorPanelText _title="Mesh Modifiers" _label="Mesh Modifiers" />
+		<EditorPanelText _title="Mesh Preview" _label="Mesh Preview" />
+		<EditorPanelText _title="Modules" _label="Modules" />
+		<EditorPanelText _title="Multiplayer" _label="Multiplayer" />
+		<EditorPanelText _title="NPC Schedule" _label="NPC Schedule" />
+		<EditorPanelText _title="Output Log" _label="Output Log" />
+		<EditorPanelText _title="Packaging" _label="Packaging" />
+		<EditorPanelText _title="Paired Animation" _label="Paired Animation" />
+		<EditorPanelText _title="Park Layout" _label="Park Layout" />
+		<EditorPanelText _title="Prefab Overrides" _label="Prefab Overrides" />
+		<EditorPanelText _title="Prefab Window" _label="Prefab Window" />
+		<EditorPanelText _title="Preferences" _label="Preferences" />
+		<EditorPanelText _title="Profiler" _label="Profiler" />
+		<EditorPanelText _title="Project Settings" _label="Project Settings" />
+		<EditorPanelText _title="Quick Open" _label="Quick Open" />
+		<EditorPanelText _title="Ragdoll Preview" _label="Ragdoll Preview" />
+		<EditorPanelText _title="Render Targets" _label="Render Targets" />
+		<EditorPanelText _title="Retarget Profile" _label="Retarget Profile" />
+		<EditorPanelText _title="Rig Debug" _label="Rig Debug" />
+		<EditorPanelText _title="Scene" _label="Scene" />
+		<EditorPanelText _title="Sequencer" _label="Sequencer" />
+		<EditorPanelText _title="Sprite Clip" _label="Sprite Clip" />
+		<EditorPanelText _title="Streaming Cells" _label="Streaming Cells" />
+		<EditorPanelText _title="Test Runner" _label="Test Runner" />
+		<EditorPanelText _title="Tile Map Tool" _label="Tile Map Tool" />
+		<EditorPanelText _title="UI Preview" _label="UI Preview" />
+		<EditorPanelText _title="User Settings" _label="User Settings" />
+		<EditorPanelText _title="VFX Preview" _label="VFX Preview" />
+	</_listPanel>
+</EditorPanelTextTable>

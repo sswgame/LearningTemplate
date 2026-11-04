@@ -599,7 +599,7 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##cb_add" ) == false )
             return;
-        if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Folder" ), "New Folder" ) ) )
+        if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Folder" ), SW_LOCKEY( "EdButton", "NewFolder" ), "New Folder" ) ) )
             (void)_model.createNewFolder(); // 실패는 createFolder 가 알린다
         EditorSelfTestMarks::note( "contentBrowser.add.folder" );
         ImGui::Separator();
@@ -752,8 +752,8 @@ namespace sw::editor
             ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) )
             EditorInputGUI::openPopup( "##cb_add" );
         EditorSelfTestMarks::note( "contentBrowser.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
@@ -787,12 +787,12 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TypeFilter" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Tiles" ) );
-        if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
+        if ( ImGui::RadioButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Tiles" ), "Tiles" ), _viewMode == ViewMode::Tiles ) )
             _viewMode = ViewMode::Tiles;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TilesView" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "List" ) );
-        if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
+        if ( ImGui::RadioButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "List" ), "List" ), _viewMode == ViewMode::List ) )
             _viewMode = ViewMode::List;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ListView" ) );
 
@@ -847,7 +847,7 @@ namespace sw::editor
         sourcesDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX | editor::EditorSectionFlags::FillRemaining;
         EditorChrome::beginSection( sourcesDesc );
 
-        EditorWidgets::drawSectionHeader( "Favorites" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdWidget", "Favorites" ) );
         struct FavFolder
         {
             const utf8* _pLabel;
@@ -879,7 +879,7 @@ namespace sw::editor
         }
 
         ImGui::Separator();
-        EditorWidgets::drawSectionHeader( "Sources" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdWidget", "Sources" ) );
 
         for ( const ContentBrowserRoot& root : _model.getRoots() )
         {
@@ -963,7 +963,7 @@ namespace sw::editor
 
         EditorChrome::endSection();
 
-        EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, "items" );
+        EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, SW_LOCKEY( "EdWidget", "Items" ) );
         const ContentBrowserReferenceSearch& referenceSearch = _model.getReferenceSearch();
         if ( referenceSearch.isScanPending() && referenceSearch.getIndex().isReady() == false )
         {

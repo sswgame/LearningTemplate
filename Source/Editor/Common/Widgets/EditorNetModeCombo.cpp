@@ -16,18 +16,36 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        /** @brief 콤보에 보일 이름(지금 언어)입니다. `toString` 은 로그 · 저장용 영어 이름이라 그대로 둔다. */
+        const utf8* getNetModeDisplayName( EditorNetMode mode )
+        {
+            switch ( mode )
+            {
+                case EditorNetMode::Standalone:
+                    return SW_LOCKEY( "EdNetMode", "Standalone" );
+                case EditorNetMode::DedicatedServer:
+                    return SW_LOCKEY( "EdNetMode", "DedicatedServer" );
+                case EditorNetMode::ListenHost:
+                    return SW_LOCKEY( "EdNetMode", "ListenHost" );
+            }
+            return toString( mode );
+        }
+    } // namespace
+
     bool EditorNetModeCombo::draw( EditorNetPlaySession& session, const utf8* pMark )
     {
         EditorNetPlaySettings& settings = session.getSettings();
         bool                   bChanged = false;
         ImGui::BeginDisabled( session.isRunning() );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldModeEm" ) );
-        if ( ImGui::BeginCombo( "##NetMode", toString( settings._mode ) ) )
+        if ( ImGui::BeginCombo( "##NetMode", getNetModeDisplayName( settings._mode ) ) )
         {
             constexpr EditorNetMode kArrMode[] = { EditorNetMode::Standalone, EditorNetMode::DedicatedServer, EditorNetMode::ListenHost };
             for ( const EditorNetMode mode : kArrMode )
             {
-                if ( ImGui::Selectable( toString( mode ), settings._mode == mode ) )
+                if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getNetModeDisplayName( mode ), toString( mode ) ), settings._mode == mode ) )
                 {
                     settings._mode = mode;
                     bChanged       = true;

@@ -199,7 +199,7 @@ namespace sw::editor
         // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
-            EditorWidgets::drawChip( "Play Mode", SW_THEMECOLOR( "Signal", "Warning" ) );
+            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEMECOLOR( "Signal", "Warning" ) );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditsRevertOnStopPlayKeepSimulationChanges" ) );
         }
@@ -351,7 +351,7 @@ namespace sw::editor
     void InspectorPanel::drawPreviewSelection( const EditorSelection& selection )
     {
         const Scene* pScene = selection.getScene();
-        EditorWidgets::drawChip( "Preview", SW_THEMECOLOR( "Base", "Accent" ) );
+        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Preview" ), SW_THEMECOLOR( "Base", "Accent" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", pScene != nullptr ? pScene->getName().c_str() : "?" );
         GameObject* pObj = selection.getPrimaryObject();
@@ -382,7 +382,7 @@ namespace sw::editor
         }
 
         ImGui::Spacing();
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add Component" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "AddComponent" ), "Add Component" ) ) )
         {
             _addComponentSearch.clear();
             EditorInputGUI::openPopup( "PreviewAddComponent" );
@@ -401,7 +401,7 @@ namespace sw::editor
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const AssetID& assetID )
     {
         const string_view prefabPath = assetID.view();
-        EditorWidgets::drawChip( "Prefab", SW_THEMECOLOR( "Base", "Accent" ) );
+        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Prefab" ), SW_THEMECOLOR( "Base", "Accent" ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PrefabInstance" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%.*s", static_cast<int32>( prefabPath.size() ), prefabPath.data() );
@@ -494,7 +494,7 @@ namespace sw::editor
         ImGui::Spacing();
         const float32 buttonWidth = MathUtil::min( ImGui::GetContentRegionAvail().x, 220.0f * EditorThemeUtil::getDPIScale() );
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( ImGui::GetContentRegionAvail().x - buttonWidth ) * 0.5f );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "AddComponent" ), "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
         {
             _addComponentSearch.clear();
             EditorInputGUI::openPopup( "InspectorAddComponent" );

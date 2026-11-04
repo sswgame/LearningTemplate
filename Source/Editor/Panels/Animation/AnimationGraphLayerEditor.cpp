@@ -194,7 +194,7 @@ namespace sw::editor
         const bool  bSelected  = 0 <= _selectedLayer && _selectedLayer < layerCount;
         ImGui::BeginDisabled( bSelected == false );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove##layer" ) );
-        if ( ImGui::Button( "Remove##layer" ) )
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##layer" ) ) )
         {
             listLayer.erase( listLayer.begin() + _selectedLayer );
             _selectedLayer = -1;
@@ -228,7 +228,7 @@ namespace sw::editor
     void AnimationGraphLayerEditor::drawLayerIdentityRows( AnimationGraphAsset& inoutGraph, AnimationGraphLayerDef& inoutLayer, const utf8*& pInoutEdit )
     {
         string committed;
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Name" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Name" ) );
         if ( drawCommittedText( "##layerName", inoutLayer._name.c_str(), committed ) )
         {
             const hashed_string name( committed.c_str() );
@@ -243,7 +243,7 @@ namespace sw::editor
                 pInoutEdit       = "Rename Animation Layer";
             }
         }
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Clip" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Clip" ) );
         if ( drawCommittedText( "##layerClip", inoutLayer._clipName.c_str(), committed ) )
         {
             if ( committed.empty() )
@@ -258,7 +258,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerClipTip" ) );
 
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Mask" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Mask" ) );
         if ( ImGui::BeginCombo( "##layerMask", inoutLayer._maskName.empty() ? "(all bones)" : inoutLayer._maskName.c_str() ) )
         {
             if ( ImGui::Selectable( "(all bones)", inoutLayer._maskName.empty() ) )
@@ -282,12 +282,12 @@ namespace sw::editor
     void AnimationGraphLayerEditor::drawLayerBlendRows( AnimationGraphLayerDef& inoutLayer, const utf8*& pInoutEdit )
     {
         string committed;
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Weight" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Weight" ) );
         ImGui::SliderFloat( "##layerWeight", &inoutLayer._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pInoutEdit = "Edit Animation Layer";
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerWeightTip" ) );
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Weight Param" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "WeightParam" ) );
         // 빈 hashed_string 의 c_str 는 "None" 이다 — 그대로 보이면 그 글이 파라미터 이름으로 저장된다.
         if ( drawCommittedText( "##layerWeightParam", inoutLayer._weightParameter.empty() ? "" : inoutLayer._weightParameter.c_str(), committed ) )
         {
@@ -296,7 +296,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerWeightParamTip" ) );
 
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Blend" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Blend" ) );
         if ( ImGui::BeginCombo( "##layerBlend", AnimationGraphAsset::getLayerBlendText( inoutLayer._blend ) ) )
         {
             for ( const AnimationLayerBlend blend : { AnimationLayerBlend::Override, AnimationLayerBlend::Additive } )
@@ -310,14 +310,14 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerBlendTip" ) );
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Loop" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Loop" ) );
         bool bLoop = inoutLayer._bLoop == SW_TRUE;
         if ( ImGui::Checkbox( "##layerLoop", &bLoop ) )
         {
             inoutLayer._bLoop = bLoop ? SW_TRUE : SW_FALSE;
             pInoutEdit        = "Edit Animation Layer";
         }
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Half Life" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "HalfLife" ) );
         ImGui::DragFloat( "##layerHalfLife", &inoutLayer._halfLifeSeconds, 0.01f, 0.0f, 2.0f, inoutLayer._halfLifeSeconds > 0.0f ? "%.2f s" : "(immediate)",
                           ImGuiSliderFlags_AlwaysClamp );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -380,7 +380,7 @@ namespace sw::editor
         // 레이어가 쓰는 마스크를 지우면 저장한 그래프가 로드 오류가 된다 — 그 레이어의 마스크를 먼저 바꾼다.
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove##mask" ) );
         ImGui::BeginDisabled( bSelected == false || pUser != nullptr );
-        if ( ImGui::Button( "Remove##mask" ) )
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##mask" ) ) )
         {
             listMask.erase( listMask.begin() + _selectedMask );
             _selectedMask = -1;
@@ -396,7 +396,7 @@ namespace sw::editor
     void AnimationGraphLayerEditor::drawMaskSourceRows( AnimationGraphAsset& inoutGraph, AnimationBoneMaskDef& inoutMask, const utf8*& pInoutEdit )
     {
         string committed;
-        AnimationGraphLayerEditorInternal::drawRowLabel( "Name" );
+        AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Name" ) );
         if ( drawCommittedText( "##maskName", inoutMask._name.c_str(), committed ) )
         {
             const hashed_string name( committed.c_str() );
@@ -420,7 +420,7 @@ namespace sw::editor
 
         // 프리셋 파일을 고르면 그 파일을 읽어 항목을 채우고, 비우면 지금 항목을 그래프에 바로 적는다.
         string presetPath = inoutMask._filePath;
-        if ( EditorWidgets::drawAssetSlot( "Preset", presetPath, ".bonemask.xml" ) )
+        if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Preset" ), presetPath, ".bonemask.xml" ) )
         {
             AnimationBoneMaskDef loaded{};
             loaded._name = inoutMask._name;

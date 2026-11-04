@@ -9,6 +9,9 @@
 		<entry source="A wild {name} appeared!" text="야생의 {name}(이)가 나타났다!" />
 		<entry source="Abort" text="중단" />
 		<entry source="Accessibility" text="접근성" />
+		<entry source="Account" text="계정" />
+		<entry source="Account id (hex)" text="계정 id(16진수)" />
+		<entry source="Acting role" text="맡은 역할" />
 		<entry source="Active" text="실행 중" />
 		<entry source="Active Effects" text="걸린 이펙트" />
 		<entry source="Activity" text="행동" />
@@ -33,8 +36,10 @@
 		<entry source="Apply" text="적용" />
 		<entry source="Apply sanction" text="제재 적용" />
 		<entry source="Ask Each Time" text="매번 묻기" />
+		<entry source="Asset id" text="에셋 id" />
 		<entry source="Attributes" text="어트리뷰트" />
 		<entry source="Audio" text="오디오" />
+		<entry source="Audit log" text="감사 기록" />
 		<entry source="Auto layout" text="자동 배치" />
 		<entry source="Automatic" text="자동" />
 		<entry source="Axis" text="축" />
@@ -48,6 +53,7 @@
 		<entry source="Blackboard key" text="블랙보드 키" />
 		<entry source="Body shape" text="체형" />
 		<entry source="Body type" text="몸 종류" />
+		<entry source="Bone map" text="본 매핑" />
 		<entry source="Bone rotation" text="뼈 회전" />
 		<entry source="Bone scale" text="뼈 크기" />
 		<entry source="Bone translation" text="뼈 이동" />
@@ -57,6 +63,7 @@
 		<entry source="Camera Shake" text="카메라 흔들림" />
 		<entry source="Cancel" text="취소" />
 		<entry source="Center" text="중심" />
+		<entry source="Chains" text="체인" />
 		<entry source="Check" text="검사" />
 		<entry source="Clear target" text="대상 지우기" />
 		<entry source="Click a node to edit it" text="노드를 누르면 편집합니다" />
@@ -89,6 +96,8 @@
 		<entry source="Default: {hasDefault, select, yes {{value}} other {(none)}}"
 		       text="기본값: {hasDefault, select, yes {{value}} other {(없음)}}" />
 		<entry source="Defaults" text="기본값" />
+		<entry source="Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
+		       text="메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기" />
 		<entry source="Delete" text="삭제" />
 		<entry source="Delete node" text="노드 삭제" />
 		<entry source="Depth" text="깊이" />
@@ -110,6 +119,9 @@
 		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
 		<entry source="End maintenance" text="점검 끝내기" />
 		<entry source="Enter / exit blend (s)" text="들어감 · 나감 섞기(초)" />
+		<entry source="Equip set" text="장비 세트" />
+		<entry source="Event JSON" text="이벤트 JSON" />
+		<entry source="Event id" text="이벤트 id" />
 		<entry source="Export as World Warp" text="월드 워프로 내보내기" />
 		<entry source="Export data preset" text="데이터 프리셋 내보내기" />
 		<entry source="Face" text="얼굴" />
@@ -121,14 +133,17 @@
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
 		<entry source="Foliage Density" text="초목 밀도" />
 		<entry source="Follow game clock" text="게임 시계 따라가기" />
+		<entry source="From" text="보내는 곳" />
 		<entry source="GM connection: {stateText}" text="GM 연결: {stateText}" />
 		<entry source="GM password" text="GM 비밀번호" />
+		<entry source="Game" text="게임" />
 		<entry source="Game saved" text="게임을 저장했습니다" />
 		<entry source="Game time" text="게임 시각" />
 		<entry source="Gamepad Sensitivity" text="게임패드 감도" />
 		<entry source="Gameplay" text="게임플레이" />
 		<entry source="Got away safely!" text="무사히 도망쳤다!" />
 		<entry source="Grant" text="지급" />
+		<entry source="Grant / Revoke" text="지급 / 회수" />
 		<entry source="Granted Abilities" text="부여된 어빌리티" />
 		<entry source="Graphics" text="그래픽" />
 		<entry source="Graphics Quality" text="그래픽 품질" />
@@ -152,10 +167,12 @@
 		<entry source="Keep these display settings?" text="이 디스플레이 설정을 유지할까요?" />
 		<entry source="Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
 		       text="이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다." />
+		<entry source="Kind" text="종류" />
 		<entry source="Language" text="언어" />
 		<entry source="Lift sanction" text="제재 풀기" />
 		<entry source="List audit" text="감사 기록 보기" />
 		<entry source="List live events" text="라이브 이벤트 보기" />
+		<entry source="Live events" text="라이브 이벤트" />
 		<entry source="Live: {liveRunnerName}" text="실행 중: {liveRunnerName}" />
 		<entry source="Load" text="불러오기" />
 		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
@@ -174,13 +191,18 @@
 		<entry source="Look up an account to see its balances and sanctions"
 		       text="계정을 찾으면 잔액과 제재가 보입니다" />
 		<entry source="Lookup" text="찾기" />
+		<entry source="Loop" text="반복" />
 		<entry source="Low" text="낮음" />
+		<entry source="Maintenance / Notice" text="점검 / 공지" />
 		<entry source="Maintenance seconds (0 = until cleared)" text="점검 초(0 = 풀 때까지)" />
 		<entry source="Map same names" text="같은 이름끼리 잇기" />
 		<entry source="Master Volume" text="전체 음량" />
 		<entry source="Medium" text="중간" />
+		<entry source="Memo (ticket)" text="메모(티켓)" />
+		<entry source="Message key" text="메시지 키" />
 		<entry source="Mirror" text="대칭" />
 		<entry source="Mirror bone" text="뼈 대칭" />
+		<entry source="Modifiers" text="모디파이어" />
 		<entry source="Motion Blur" text="모션 블러" />
 		<entry source="Mouse Sensitivity" text="마우스 감도" />
 		<entry source="Move row down" text="행을 아래로" />
@@ -212,6 +234,7 @@
 		<entry source="No target" text="대상 없음" />
 		<entry source="Notice id" text="공지 id" />
 		<entry source="Notice seconds (0 = until removed)" text="공지 초(0 = 지울 때까지)" />
+		<entry source="Notice text" text="공지 글" />
 		<entry source="Off" text="끔" />
 		<entry source="Offset (m)" text="오프셋(m)" />
 		<entry source="Opacity" text="불투명도" />
@@ -227,8 +250,11 @@
 		<entry source="Options" text="옵션" />
 		<entry source="Orthographic preset - the preview draws it in perspective."
 		       text="직교 프리셋 — 미리보기는 원근으로 그립니다." />
+		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
+		       text="고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)" />
 		<entry source="Owned Tags" text="소유 태그" />
 		<entry source="Parent" text="부모" />
+		<entry source="Park" text="놀이공원" />
 		<entry source="Pause Menu" text="일시정지 메뉴" />
 		<entry source="Paused" text="일시 정지" />
 		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
@@ -251,6 +277,7 @@
 		<entry source="Preview mesh" text="미리보기 메시" />
 		<entry source="Priority" text="우선순위" />
 		<entry source="Privacy" text="개인 정보" />
+		<entry source="Problems" text="문제" />
 		<entry source="Protanopia" text="적색약" />
 		<entry source="Provider: {providerName}" text="제공자: {providerName}" />
 		<entry source="Put live event" text="라이브 이벤트 넣기" />
@@ -262,6 +289,7 @@
 		       text="편집한 내용을 실행 시간 로더로 읽어 모든 규칙을 확인합니다" />
 		<entry source="Read the preset file again (after saving it in the Catalog Editor)"
 		       text="프리셋 파일을 다시 읽습니다(카탈로그 편집기에서 저장한 뒤)" />
+		<entry source="Reason code" text="사유 코드" />
 		<entry source="Recompute Normals" text="법선 다시 계산" />
 		<entry source="Redo" text="다시 실행" />
 		<entry source="Redo appearance" text="외형 다시 실행" />
@@ -270,7 +298,7 @@
 		<entry source="Reduce Motion" text="움직임 줄이기" />
 		<entry source="Reference Object" text="기준 오브젝트" />
 		<entry source="Refund revoke (may leave a debt)" text="환불 회수(빚이 남을 수 있다)" />
-		<entry source="Reload" text="다시 읽기" />
+		<entry source="Reload" text="다시 불러오기" />
 		<entry source="Reload Stack" text="스택 다시 읽기" />
 		<entry source="Reload from disk (discard edits)" text="디스크에서 다시 읽기(편집 버림)" />
 		<entry source="Remaining" text="남은 시간" />
@@ -283,20 +311,26 @@
 		<entry source="Rename" text="이름 바꾸기" />
 		<entry source="Render Scale" text="렌더 배율" />
 		<entry source="Repath distance" text="경로 다시 찾기 거리" />
+		<entry source="Reports" text="신고" />
 		<entry source="Reset Lattice" text="격자 초기화" />
 		<entry source="Reset Parameters" text="매개변수 초기화" />
 		<entry source="Reset bone" text="뼈 초기화" />
 		<entry source="Resolution" text="해상도" />
 		<entry source="Resolve" text="처리" />
 		<entry source="Resume" text="계속하기" />
+		<entry source="Retarget pose" text="리타깃 포즈" />
 		<entry source="Return to Title" text="타이틀로 돌아가기" />
 		<entry source="Revert" text="되돌리기" />
 		<entry source="Reverting in" text="되돌리기까지" />
 		<entry source="Revoke" text="회수" />
+		<entry source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
+		       text="ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙" />
 		<entry source="Roles" text="역할" />
+		<entry source="Root and pelvis" text="루트와 골반" />
 		<entry source="Rotation" text="회전" />
 		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
 		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요." />
+		<entry source="Sanction" text="제재" />
 		<entry source="Save" text="저장" />
 		<entry source="Save Stack" text="스택 저장" />
 		<entry source="Save as preset" text="프리셋으로 저장" />
@@ -306,6 +340,7 @@
 		<entry source="Save thumbnail" text="썸네일 저장" />
 		<entry source="Scale" text="크기" />
 		<entry source="Schedule system" text="일정 시스템" />
+		<entry source="Scope (all or server kind)" text="범위(all 또는 서버 종류)" />
 		<entry source="Seconds" text="초" />
 		<entry source="Sections" text="섹션" />
 		<entry source="Select a bone to edit its reference pose." text="뼈를 고르면 기준 포즈를 편집합니다." />
@@ -338,6 +373,7 @@
 		<entry source="Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name."
 		       text="게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다." />
 		<entry source="Skeleton" text="스켈레톤" />
+		<entry source="Skeletons" text="스켈레톤" />
 		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
 		       text="스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)." />
 		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
@@ -354,6 +390,7 @@
 		<entry source="Speaker Setup" text="스피커 구성" />
 		<entry source="Sprint" text="달리기" />
 		<entry source="Stacks" text="스택" />
+		<entry source="Stage" text="단계" />
 		<entry source="Start (s)" text="시작(초)" />
 		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
 		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)" />
@@ -364,6 +401,7 @@
 		<entry source="Stop" text="정지" />
 		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
 		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)" />
+		<entry source="Subject prefix" text="주체 접두어" />
 		<entry source="Subtitle Background" text="자막 배경" />
 		<entry source="Subtitle Size" text="자막 크기" />
 		<entry source="Subtitles" text="자막" />
@@ -383,6 +421,7 @@
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
 		<entry source="This file could not be opened: {statusText}" text="이 파일을 열 수 없습니다: {statusText}" />
 		<entry source="Time" text="시각" />
+		<entry source="To" text="받는 곳" />
 		<entry source="Toggle" text="전환" />
 		<entry source="Translation" text="이동" />
 		<entry source="Travel" text="이동" />
@@ -424,6 +463,7 @@
 		<entry source="Why this activity now" text="지금 왜 이 행동인가" />
 		<entry source="Window Mode" text="창 모드" />
 		<entry source="Windowed" text="창" />
+		<entry source="Wires" text="선" />
 		<entry source="World Space" text="월드 공간" />
 		<entry source="World-space height of the visible area; the width follows the aspect ratio."
 		       text="보이는 영역의 월드 높이입니다. 너비는 화면 비율을 따라갑니다." />

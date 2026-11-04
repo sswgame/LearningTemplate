@@ -8,9 +8,11 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/TerrainBrushTool.h"
 
+#include "Engine/Localization/LocText.h"
+
 namespace sw::editor
 {
-    SW_EDITOR_VISUALIZER( TerrainBrush, "terrainbrush", 140, SW_EDITORICON_NAME( "Heightfield" ), "Terrain",
-                          "Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)", false,
+    SW_EDITOR_VISUALIZER( TerrainBrush, "terrainbrush", 140, SW_EDITORICON_NAME( "Heightfield" ), SW_LOCKEYREF( "EdVisualizer", "TerrainBrushLabel" ),
+                          SW_LOCKEYREF( "EdVisualizer", "TerrainBrushTip" ), false,
                           &TerrainBrushTool::process );
 } // namespace sw::editor

@@ -712,11 +712,11 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "charactereditor.clip" );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Loop##PreviewClip" ) );
-        ImGui::Checkbox( "Loop##PreviewClip", &_bClipLoop );
+        ImGui::Checkbox( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Loop" ), "Loop##PreviewClip" ), &_bClipLoop );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play##PreviewClip" ) );
         const hashed_string& clip = _document.getSelectedClip();
         ImGui::BeginDisabled( clip.empty() );
-        if ( ImGui::Button( "Play##PreviewClip" ) )
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Play" ), "Play##PreviewClip" ) ) )
         {
             if ( animator.preloadClip( clip ) && animator.play( clip, _bClipLoop, 0.0f ) )
                 _document.clearStatus();
@@ -726,7 +726,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "charactereditor.playClip" );
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop##PreviewClip" ) );
-        if ( ImGui::Button( "Stop##PreviewClip" ) )
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Stop" ), "Stop##PreviewClip" ) ) )
             animator.stop();
         const bool bPlaying     = animator.getCurrentStateName() == clip && clip.empty() == false && animator.isAnimationActive();
         _published._clipPlaying = bPlaying ? 1u : 0u;
@@ -877,7 +877,7 @@ namespace sw::editor
             _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ), status ) );
 
         hashed_string pickedKind;
-        if ( CharacterEditorPanelInternal::drawNameCombo( "Kind", socket._kind, sockets.getKindTable().getKinds(), pickedKind ) )
+        if ( CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Kind" ), "Kind" ), socket._kind, sockets.getKindTable().getKinds(), pickedKind ) )
             _document.reportEdit( sockets.setKind( name, pickedKind, status ) );
 
         float3 translation = socket._translation;
@@ -1105,7 +1105,7 @@ namespace sw::editor
                 listPreset.push_back( preset._id );
             }
             hashed_string pickedPreset;
-            const bool    bPresetPicked = CharacterEditorPanelInternal::drawNameCombo( "Base preset", selection._basePresetID, listPreset, pickedPreset, "charactereditor.basePreset.first" );
+            const bool    bPresetPicked = CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "BasePreset" ), "Base preset" ), selection._basePresetID, listPreset, pickedPreset, "charactereditor.basePreset.first" );
             EditorSelfTestMarks::note( "charactereditor.basePreset" );
             if ( bPresetPicked )
                 (void)appearance.setBasePreset( pickedPreset ); // 같은 값이면 false 이고 그대로 둔다
@@ -1161,7 +1161,7 @@ namespace sw::editor
             listSet.push_back( set._id );
         }
         hashed_string pickedSet;
-        const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( "Equip set", hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
+        const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "EquipSet" ), "Equip set" ), hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
         EditorSelfTestMarks::note( "charactereditor.equipSet" );
         if ( bSetPicked && pickedSet.empty() == false )
             (void)appearance.equipSet( database, pickedSet ); // 이미 입고 있으면 false 이고 그대로 둔다

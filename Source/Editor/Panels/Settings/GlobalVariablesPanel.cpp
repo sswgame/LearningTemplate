@@ -219,7 +219,7 @@ namespace sw::editor
         // 2) 변수 목록 — 등록 세대나 검색 글이 바뀐 프레임에만 다시 짓는다.
         const vector<GlobalVariableInfo*>& listFiltered = _model.refreshVariableList( gvm, _searchFilter.c_str() );
 
-        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), _model.getTotalVariableCount(), "variables" );
+        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), _model.getTotalVariableCount(), SW_LOCKEY( "EdWidget", "Variables" ) );
 
         drawPinnedSection( gvm );
 

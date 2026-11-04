@@ -616,10 +616,10 @@ namespace sw::editor
 
     void GimmickGraphPanel::drawWireSection( GimmickCircuitComponent& circuit )
     {
-        EditorWidgets::drawSectionHeader( "Wires" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "Wires" ) );
 
         // 캔버스에서 핀을 끌어 이어도 되고, 아래 폼으로 이을 수도 있다
-        if ( ImGui::BeginCombo( "From##gimmickWireFrom", _formFrom._label.empty() ? "(output)" : _formFrom._label.c_str() ) )
+        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "From" ), "From##gimmickWireFrom" ), _formFrom._label.empty() ? "(output)" : _formFrom._label.c_str() ) )
         {
             for ( const GimmickGraphNode& node : _model.getNodes() )
             {
@@ -638,7 +638,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorSelfTestMarks::note( "gimmick.wire.from" );
-        if ( ImGui::BeginCombo( "To##gimmickWireTo", _formTo._label.empty() ? "(input)" : _formTo._label.c_str() ) )
+        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "To" ), "To##gimmickWireTo" ), _formTo._label.empty() ? "(input)" : _formTo._label.c_str() ) )
         {
             for ( const GimmickGraphNode& node : _model.getNodes() )
             {
@@ -696,7 +696,7 @@ namespace sw::editor
 
     void GimmickGraphPanel::drawIssueSection( GimmickCircuitComponent& circuit )
     {
-        EditorWidgets::drawSectionHeader( "Problems" );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "Problems" ) );
         if ( _listIssue.empty() )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "The circuit is valid" );

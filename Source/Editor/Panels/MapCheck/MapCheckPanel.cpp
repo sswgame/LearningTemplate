@@ -210,7 +210,7 @@ namespace sw::editor
     {
         syncRows();
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Check Map" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdButton", "CheckMap" ), "Check Map" ) ) )
             (void)validateActiveScene(); // 검사한 수는 로그에 남는다
         EditorSelfTestMarks::note( "mapCheck.checkMap" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "CheckMap" ) );
