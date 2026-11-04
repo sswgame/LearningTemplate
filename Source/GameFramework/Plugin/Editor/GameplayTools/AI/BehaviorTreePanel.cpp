@@ -76,18 +76,6 @@ namespace sw::editor
             static constexpr uint32 kCompareCount  = static_cast<uint32>( BlackboardCompare::GreaterOrEqual ) + 1;
             static constexpr uint32 kAbortCount    = static_cast<uint32>( BehaviorAbortMode::Both ) + 1;
 
-            /** @brief 노드 종류가 받는 속성인지입니다(속성 표는 로더와 같은 `BehaviorTreeNames::getAttributeNames`). */
-            static bool hasAttribute( BehaviorNodeType type, string_view name )
-            {
-                const BehaviorTreeNames::AttributeList list = BehaviorTreeNames::getAttributeNames( type );
-                for ( uint32 index = 0; index < list._count; ++index )
-                {
-                    if ( name == list._ppName[index] )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief 열거자 하나를 콤보로 고릅니다. 바꿨으면 true 입니다. */
             template <typename E>
             static bool drawEnumCombo( const utf8* pLabel, E& inoutValue, uint32 count )
@@ -709,14 +697,14 @@ namespace sw::editor
         using Internal = BehaviorTreePanelInternal;
         ImGui::TextColored( Internal::getTypeColor( node._type ), "%s", BehaviorTreeNames::toString( node._type ) );
         bool bEdited = false;
-        if ( Internal::hasAttribute( node._type, "name" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_name" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Name" ) );
             bEdited = EditorWidgets::drawTextField( "##behaviorTree.name", node._name, -1.0f ) || bEdited;
         }
-        if ( Internal::hasAttribute( node._type, "reactive" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_bReactive" ) )
             bEdited = ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "ReactiveReCheckHigherPriorityChildrenEveryTick" ), &node._bReactive ) || bEdited;
-        if ( Internal::hasAttribute( node._type, "task" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_task" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Task" ) );
             if ( ImGui::BeginCombo( "##behaviorTree.task", node._task.empty() ? "(pick a task)" : node._task.c_str() ) )
@@ -734,37 +722,37 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
         }
-        if ( Internal::hasAttribute( node._type, "key" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_key" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "BlackboardKey" ) );
             bEdited = EditorWidgets::drawTextField( "##behaviorTree.key", node._key, -1.0f ) || bEdited;
         }
-        if ( Internal::hasAttribute( node._type, "compare" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_compare" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Compare" ) );
             bEdited = Internal::drawEnumCombo( "##behaviorTree.compare", node._compare, Internal::kCompareCount ) || bEdited;
         }
-        if ( Internal::hasAttribute( node._type, "value" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_value" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Value" ) );
             bEdited = ImGui::DragFloat( "##behaviorTree.value", &node._value, 0.05f ) || bEdited;
         }
-        if ( Internal::hasAttribute( node._type, "abort" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_abort" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Abort" ) );
             bEdited = Internal::drawEnumCombo( "##behaviorTree.abort", node._abort, Internal::kAbortCount ) || bEdited;
         }
-        if ( Internal::hasAttribute( node._type, "seconds" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_seconds" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Seconds" ) );
             bEdited = ImGui::DragFloat( "##behaviorTree.seconds", &node._seconds, 0.05f, 0.0f, 3600.0f ) || bEdited;
         }
-        if ( Internal::hasAttribute( node._type, "count" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_count" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Count0UntilItFails" ) );
             bEdited = ImGui::DragInt( "##behaviorTree.count", &node._count, 0.2f, 0, 100000 ) || bEdited;
         }
-        if ( Internal::hasAttribute( node._type, "repathDistance" ) )
+        if ( BehaviorTreeXML::hasField( node._type, "_repathDistance" ) )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "RepathDistance" ) );
             bEdited = ImGui::DragFloat( "##behaviorTree.repath", &node._repathDistance, 0.05f, 0.0f, 1000.0f ) || bEdited;

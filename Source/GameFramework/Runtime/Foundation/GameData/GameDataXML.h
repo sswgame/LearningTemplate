@@ -94,6 +94,25 @@ namespace sw
         {
             return readFields( node, &outDef, *TDef::StaticType(), sourceName, listHandRead, pfnHandRead );
         }
+        /**
+         * @brief `readFields` 의 짝입니다 — @p pInstance 의 칸을 같은 이름 규칙(앞의 `_` · 불리언 `b` 를 뗀다)의 속성으로 @p node 에 씁니다.
+         * @details 필수 칸(`Required`)은 늘 쓰고, 나머지는 @p pDefaults(같은 타입의 기본 인스턴스)와 글이 다를 때만 쓴다 — 손으로 쓴 파일처럼 기본값을 생략한다.
+         *          컨테이너 칸은 속성 하나에 담기지 않아 쓰지 않는다(그런 칸은 부르는 쪽이 자식 원소로 쓴다).
+         */
+        static void writeFields( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo );
+        /** @brief `writeFields` 의 타입 지정 버전입니다. 기본값은 `TDef{}` 입니다. */
+        template <typename TDef>
+        static void writeFields( const XMLNode& node, const TDef& def )
+        {
+            const TDef defaults{};
+            writeFields( node, &def, &defaults, *TDef::StaticType() );
+        }
+        /**
+         * @brief 이름이 같은 칸끼리 값을 옮깁니다(@p srcType → @p dstType, 글로 옮기므로 타입은 글 형식이 같으면 된다). 짝이 없는 칸은 건너뜁니다.
+         * @details 한 데이터를 종류마다 다른 스키마로 읽고 쓰는 곳(행동 트리 노드 — 종류마다 받는 칸이 다르다)이 칸마다 손으로 옮기지 않게 한다. 옮기지 못한 칸이 있으면 false 입니다.
+         */
+        [[nodiscard]] static bool copyFields( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType );
+
         /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. 같은 id 는 카탈로그가 알리고 뒤의 것을 버립니다. */
         template <typename TDef>
         [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )

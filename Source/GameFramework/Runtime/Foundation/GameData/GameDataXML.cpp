@@ -111,6 +111,38 @@ namespace sw
         return bOk;
     }
 
+    void GameDataXML::writeFields( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )
+    {
+        using Internal                  = GameDataXMLInternal;
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        {
+            if ( prop._bIsContainer == SW_TRUE || SerializerUtil::canCarryValueType( prop._typeName, context ) == false )
+                continue;
+            const string text = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
+            if ( prop._metadata->_bRequired == SW_FALSE && text == SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaults }, context ) )
+                continue;
+            node.appendAttribute( Internal::makeAttributeName( prop ).c_str(), string_view{ text } );
+        }
+    }
+
+    bool GameDataXML::copyFields( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType )
+    {
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
+        bool                    bOk     = true;
+        for ( const PropertyInfo& srcProp : srcType.getPropertiesWithBase() )
+        {
+            for ( const PropertyInfo& dstProp : dstType.getPropertiesWithBase() )
+            {
+                if ( dstProp._name != srcProp._name )
+                    continue;
+                const string text = SerializerUtil::formatPropertyText( srcProp, ObjectAddress{ pSrc }, context );
+                bOk               = SerializerUtil::applyPropertyText( dstProp, MutableObjectAddress{ pDst }, text, context ) && bOk;
+            }
+        }
+        return bOk;
+    }
+
     bool GameDataXML::readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName )
     {
         outCurve._listKey.clear();

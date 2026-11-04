@@ -13,6 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -27,7 +29,8 @@ namespace sw
         Running
     };
 
-    /** @brief 노드 종류입니다. */
+    /** @brief 노드 종류입니다. 이름이 데이터 파일의 노드 원소 이름이다(`BehaviorTreeXML`). */
+    ENUM()
     enum class BehaviorNodeType : uint8
     {
         Selector = 0,        ///< 자식을 차례로 돌린다. 하나가 성공하면 성공
@@ -45,6 +48,7 @@ namespace sw
     };
 
     /** @brief 블랙보드 조건의 비교 방식입니다. */
+    ENUM()
     enum class BlackboardCompare : uint8
     {
         IsSet = 0,
@@ -63,6 +67,7 @@ namespace sw
      *          `LowerPriority` 는 이 가지보다 뒤(우선순위가 낮은) 가지가 도는 중에 조건이 참이 되면 그 가지를 멈추고 처음부터 다시 고른다.
      *          노드는 우선순위 순서(깊이 우선)로 더하므로, `add*` 를 부르는 순서가 곧 우선순위이다.
      */
+    ENUM()
     enum class BehaviorAbortMode : uint8
     {
         None = 0,

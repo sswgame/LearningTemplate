@@ -50,6 +50,21 @@ namespace sw::editor
                 context.expect( reread.parse( text, error ), "the model could not read what it wrote" );
                 context.expect( reread.write() == text, "writing the re-read tree gave a different text" );
 
+                // 칸은 종류마다의 스키마(`BehaviorTreeNodeFields.h`)로 읽고 쓴다 — 열거 이름 · 불리언 · 기본값 생략이 같은 글로 돌아온다.
+                const string_view     kAuthored = "<BehaviorTree><Selector name=\"Root\" reactive=\"true\"><BlackboardCondition key=\"Threat\" compare=\"Greater\" value=\"2\" abort=\"LowerPriority\">"
+                                                  "<MoveTo key=\"Goal\"/></BlackboardCondition></Selector></BehaviorTree>";
+                BehaviorTreeEditModel authored;
+                context.expect( authored.parse( kAuthored, error ), "the model could not read a hand-written tree" );
+                const BehaviorTreeEditNode* pRoot      = authored.find( authored.getRootID() );
+                const BehaviorTreeEditNode* pCondition = pRoot != nullptr && pRoot->_listChild.size() == 1 ? authored.find( pRoot->_listChild[0] ) : nullptr;
+                const BehaviorTreeEditNode* pMove      = pCondition != nullptr && pCondition->_listChild.size() == 1 ? authored.find( pCondition->_listChild[0] ) : nullptr;
+                const bool                  bFields    = pRoot != nullptr && pRoot->_bReactive && pRoot->_name == "Root" && pCondition != nullptr && pCondition->_compare == BlackboardCompare::Greater &&
+                                     pCondition->_value == 2.0f && pCondition->_abort == BehaviorAbortMode::LowerPriority && pMove != nullptr && pMove->_key == "Goal" && pMove->_repathDistance == 0.5f;
+                context.expect( bFields, "the node fields were not read through the schema" );
+                BehaviorTreeEditModel rewritten;
+                context.expect( rewritten.parse( authored.write(), error ) && rewritten.write() == authored.write(), "a hand-written tree did not survive write and read" );
+                context.expect( authored.write().find( "repathDistance" ) == string::npos, "a default value was written out" );
+
                 // 하위 트리 복제는 바로 뒤 형제로 들어가고, 붙여 넣기는 고른 부모의 맨 뒤 자식이다. 루트 복제 · 잎 아래 붙이기는 모델을 그대로 둔다.
                 const int32 copy = model.duplicateSubtree( wait, error );
                 context.expect( copy >= 0 && model.find( root )->_listChild.size() == 2 && model.find( root )->_listChild[1] == copy, "duplicating a Wait did not add it right after the original" );

@@ -1,8 +1,8 @@
 /**
  * @file BehaviorTreeEditModel.h
  * @brief 행동 트리 편집 창의 화면 없는 편집 모델입니다. 데이터 파일(`*.bt.xml`)을 고칠 수 있는 트리로 읽고, 노드 더하기 · 지우기 · 순서 바꾸기 · 속성 고치기를 받고, 파일 글로 되씁니다.
- * @details ImGui 를 모르므로 EngineTest 가 직접 컴파일해 테스트한다. 로더(`BehaviorTreeAsset`)는 틀린 파일을 읽지 않지만 편집기는 틀린 중간 상태(자식 없는 컴포짓, 아직 안 고른 작업 이름)를
- *          들고 있어야 하므로 읽기를 따로 두고, 구조 문제는 `collectIssues` 가 알린다. 노드 종류 · 비교 · 중단 이름은 로더와 같은 표(`BehaviorTreeNames`)를 쓴다.
+ * @details ImGui 를 모른다. 로더(`BehaviorTreeAsset`)는 틀린 파일을 읽지 않지만 편집기는 틀린 중간 상태(자식 없는 컴포짓, 아직 안 고른 작업 이름)를
+ *          들고 있어야 하므로 트리 짓기는 따로 두고, 구조 문제는 `collectIssues` 가 알린다. 노드 원소의 칸 읽기 · 쓰기는 로더와 같은 `BehaviorTreeXML` 이다(스키마는 `BehaviorTreeNodeFields.h`).
  *          **저장하면 주석이 사라진다**(트리를 글로 새로 쓴다) - 설명은 노드 `name` 에 적는다. 노드 번호(`_id`)는 편집 중에만 안정이고, 파일에는 쓰지 않는다.
  *          깊이 우선(앞 자식부터) 순서가 런타임 `BehaviorTree` 의 노드 번호와 같다(`collectPreorder`) - 플레이 중 활성 노드 표시가 이 대응을 쓴다.
  */
@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
 
 namespace sw
 {
@@ -20,23 +21,12 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 편집 중인 노드 하나입니다. 종류에 맞는 칸만 뜻이 있다(나머지는 기본값으로 두고 파일에 쓰지 않는다). */
-    struct BehaviorTreeEditNode
+    /** @brief 편집 중인 노드 하나입니다. 칸은 런타임과 같은 `BehaviorTreeNodeData` 이고(종류에 맞는 칸만 뜻이 있다), 편집기는 번호 · 부모 · 자식 목록만 더한다. */
+    struct BehaviorTreeEditNode : BehaviorTreeNodeData
     {
-        int32             _id{ 0 };      ///< 편집 중에만 안정인 번호입니다.
-        int32             _parent{ -1 }; ///< 부모 번호입니다(루트는 -1).
-        BehaviorNodeType  _type{ BehaviorNodeType::Sequence };
-        string            _name{}; ///< Selector · Sequence · Action · Condition 의 이름입니다(비면 종류 이름).
-        string            _task{}; ///< Action · Condition 이 부를 함수 이름입니다(`BehaviorTaskRegistry`).
-        string            _key{};  ///< BlackboardCondition · MoveTo 의 블랙보드 키입니다.
-        BlackboardCompare _compare{ BlackboardCompare::IsSet };
-        BehaviorAbortMode _abort{ BehaviorAbortMode::None };
-        float32           _value{ 0.0f };          ///< BlackboardCondition 의 비교 값입니다.
-        float32           _seconds{ 0.0f };        ///< Cooldown · TimeLimit · Wait 입니다.
-        float32           _repathDistance{ 0.5f }; ///< MoveTo 입니다.
-        int32             _count{ 0 };             ///< Repeat 입니다(0 이면 실패할 때까지).
-        bool              _bReactive{ false };     ///< Selector 입니다.
-        vector<int32>     _listChild{};            ///< 자식 번호를 앞(우선순위 높음)에서 뒤로 늘어놓았습니다.
+        int32         _id{ 0 };      ///< 편집 중에만 안정인 번호입니다.
+        int32         _parent{ -1 }; ///< 부모 번호입니다(루트는 -1).
+        vector<int32> _listChild{};  ///< 자식 번호를 앞(우선순위 높음)에서 뒤로 늘어놓았습니다.
     };
 } // namespace sw::editor
 

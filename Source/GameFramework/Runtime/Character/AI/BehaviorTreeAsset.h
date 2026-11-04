@@ -15,9 +15,11 @@ namespace sw
 {
     class XMLNode;
 
+    struct BehaviorTreeNodeData;
+
     /**
      * @struct BehaviorTreeNames
-     * @brief 노드 종류 · 블랙보드 비교 · 중단 규칙의 데이터 파일 이름표입니다. 로더(`BehaviorTreeAsset`)와 행동 트리 편집기가 같은 표를 쓴다 - 열거자를 더하면 이 표 한 곳만 맞춘다.
+     * @brief 노드 종류 · 블랙보드 비교 · 중단 규칙의 이름과 종류 분류입니다. 이름은 열거형의 리플렉션(`ENUM()`)이 정본이다 — 따로 든 이름표가 없다.
      */
     struct SW_GF_API BehaviorTreeNames
     {
@@ -36,13 +38,24 @@ namespace sw
         static bool isDecorator( BehaviorNodeType type );
         /** @brief 중첩 깊이 상한입니다. 손으로 쓴 트리가 이보다 깊을 일이 없다 - 깨진 파일이 스택을 먹지 않게 한다(편집기도 이 깊이까지만 더한다). */
         static constexpr uint32 kMaxDepth = 32;
-        /** @brief 노드 종류가 받는 속성 이름표입니다. 로더의 "모르는 속성" 검사와 편집기의 읽기가 같은 표를 쓴다. 속성이 없는 종류는 `_count` 가 0 입니다. */
-        struct AttributeList
-        {
-            const utf8* const* _ppName{ nullptr };
-            uint32             _count{ 0 };
-        };
-        static AttributeList getAttributeNames( BehaviorNodeType type );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct BehaviorTreeXML
+     * @brief 노드 원소 하나의 칸 읽기 · 쓰기입니다. 런타임 로더와 에디터 모델이 함께 쓴다(같은 형식을 두 곳이 손으로 읽지 않는다).
+     * @details 종류마다 받는 칸은 스키마 구조체(`BehaviorTreeNodeFields.h`)의 `PROPERTY` 가 정한다 — 모르는 속성 · 빠진 필수 · 범위 밖 값은 `GameDataXML::readFields` 가 이름과 함께 알린다.
+     */
+    struct SW_GF_API BehaviorTreeXML
+    {
+        /** @brief 원소 @p node(종류 @p type)의 속성을 @p inoutData 에 읽습니다(`_type` 도 채운다). 틀린 속성이 하나라도 있으면 false 입니다(오류는 로그에 남는다). */
+        [[nodiscard]] static bool readNodeFields( const XMLNode& node, BehaviorNodeType type, string_view sourceName, BehaviorTreeNodeData& inoutData );
+        /** @brief @p data 의 종류에 맞는 칸만 @p node 에 속성으로 씁니다(기본값은 생략 — 손으로 쓴 파일과 같은 모양). */
+        static void writeNodeFields( const XMLNode& node, const BehaviorTreeNodeData& data );
+        /** @brief 종류 @p type 이 칸 @p propertyName(`BehaviorTreeNodeData` 의 칸 이름, 예: `_seconds`)을 받으면 true 입니다. 편집기 인스펙터가 보일 칸을 고른다. */
+        static bool hasField( BehaviorNodeType type, string_view propertyName );
     };
 } // namespace sw
 
@@ -63,7 +76,8 @@ namespace sw
      *         </Selector>
      *     </BehaviorTree>
      * @endcode
-     * @details **노드 원소와 속성**(이름은 `BehaviorNodeType` 의 열거자 이름이고 대소문자를 가리지 않는다. 형제 순서가 곧 우선순위다):
+     * @details **노드 원소와 속성**(원소 이름은 `BehaviorNodeType` 의 열거자 이름이고 대소문자를 가리지 않는다. 형제 순서가 곧 우선순위다).
+     *          종류마다 받는 속성 · 필수 · 범위는 스키마 구조체(`BehaviorTreeNodeFields.h`)가 정본이고 `BehaviorTreeXML` 이 읽는다 — 아래는 그 요약이다(`compare` · `abort` 값은 열거자 이름 그대로):
      *          - `Selector` (`name`, `reactive`) · `Sequence` (`name`) · `Inverter` · `ForceSuccess` — 자식은 컴포짓이 하나 이상, 데코레이터가 정확히 하나다.
      *          - `Repeat` (`count` 필수, 0 이면 실패할 때까지) · `Cooldown` · `TimeLimit` (`seconds` 필수).
      *          - `BlackboardCondition` (`key` 필수, `compare` 기본 `IsSet`, `value` 기본 0, `abort` 기본 `None` | `Self` | `LowerPriority` | `Both`) — 데코레이터다.
