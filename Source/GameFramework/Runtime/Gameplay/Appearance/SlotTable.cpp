@@ -13,18 +13,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct SlotTableInternal
-        {
-            static constexpr const utf8* kArrSlotAttribute[]      = { "name", "accept" };
-            static constexpr const utf8* kArrOccupancyAttribute[] = { "id", "slots" };
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     void SlotTable::clear()
     {
         _listSlot.clear();
@@ -40,11 +28,9 @@ namespace sw
         {
             if ( StringUtil::equals( child.getName(), "Slot" ) )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrSlotAttribute, report, sourceName );
                 AppearanceSlotDef slot;
-                slot._name   = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
-                slot._accept = XMLReadUtil::readOptionalName( child, "accept" ); // 적지 않으면 슬롯 이름
-                if ( slot._accept.empty() )
+                (void)AppearanceXMLUtil::readFields( child, slot, report, sourceName ); // 오류는 보고서에 쌓인다
+                if ( slot._accept.empty() )                                             // 적지 않으면 슬롯 이름
                     slot._accept = slot._name;
                 if ( slot._name.empty() )
                     report.addErrorWithID( "Appearance.NameEmpty", "%#: <Slot> without a name", sourceName );
@@ -55,9 +41,8 @@ namespace sw
             }
             else if ( StringUtil::equals( child.getName(), "Occupancy" ) )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrOccupancyAttribute, report, sourceName );
                 SlotOccupancyDef occupancy;
-                occupancy._id = AppearanceXMLUtil::readRequiredName( child, "id", report, sourceName );
+                (void)AppearanceXMLUtil::readFields( child, occupancy, report, sourceName, { "slots" } );
                 AppearanceXMLUtil::readNameList( child, "slots", occupancy._listSlot );
                 if ( occupancy._id.empty() || occupancy._listSlot.size() < 2 )
                     report.addErrorWithID( "Appearance.OccupancyShape", "%#: <Occupancy> needs an id and at least two slots", sourceName );

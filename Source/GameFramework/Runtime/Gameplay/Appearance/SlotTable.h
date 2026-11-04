@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -17,9 +19,14 @@ namespace sw
     class XMLNode;
 
     /** @brief 슬롯 하나입니다. 테이블의 순서가 해석 순서입니다. */
-    struct AppearanceSlotDef
+    REFLECT()
+    struct SW_GF_API AppearanceSlotDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
+        PROPERTY()
         hashed_string _accept{}; ///< 받는 `ItemDef::_equipSlot` 종류. 비어 있으면 슬롯 이름과 같다
     };
 } // namespace sw
@@ -27,10 +34,14 @@ namespace sw
 namespace sw
 {
     /** @brief 슬롯 점유 그룹입니다. 이 점유를 가진 외형은 자기 슬롯 외에 나머지 슬롯도 차지하고, 그 슬롯의 장비를 가립니다. */
-    struct SlotOccupancyDef
+    REFLECT()
+    struct SW_GF_API SlotOccupancyDef
     {
-        vector<hashed_string> _listSlot{};
-        hashed_string         _id{};
+        REFLECT_BODY();
+
+        vector<hashed_string> _listSlot{}; ///< `slots="a,b"` — 이름 목록은 손으로 푼다
+        PROPERTY( Required )
+        hashed_string _id{};
     };
 } // namespace sw
 
