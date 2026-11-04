@@ -1,0 +1,21 @@
+<!-- Quaternius Sci-Fi Essentials gun_pistol(CC0) — 모델의 총열이 -X 라 Y 로 -90 도 돌려 블래스터와 같은 -Z 로 둔다(소켓은 돌린 뒤의 자리). -->
+<Prefab formatVersion="0" name="SciFiPistol">
+	<GameObject _schemaVersion="0" _name="SciFiPistol" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,-90,0"
+			               _localScale="1,1,1"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="common/models/quaternius/scifi/gun_pistol.mesh"
+			               _materialPath="common/models/quaternius/scifi/gun_pistol/materials/mi_guns_batch1.material"
+			               _boundsRadius="0.25"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

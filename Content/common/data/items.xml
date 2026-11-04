@@ -10,9 +10,9 @@
   <Item id="helmet_knight_merged" name="Knight Helmet (Merged)" category="Armor" slot="Head" visual="helmet_knight_merged" tags="Armor.Heavy"><Stats armor="3"/></Item>
   <Item id="shield_round_merged" name="Round Shield (Merged)" category="Armor" slot="Shield" visual="shield_round_merged" tags="Armor.Light"><Stats armor="2"/></Item>
   <Item id="sword_knight_merged" name="Knight Sword (Merged)" category="Weapon" slot="Weapon" visual="sword_knight_merged"/>
-  <Item id="blaster_rifle" name="Assault Rifle" category="Weapon" slot="Weapon" visual="blaster_rifle"/>
-  <Item id="blaster_shotgun" name="Pump Shotgun" category="Weapon" slot="Weapon" visual="blaster_shotgun"/>
-  <Item id="blaster_pistol" name="Pistol" category="Weapon" slot="Weapon" visual="blaster_pistol"/>
+  <Item id="scifi_rifle" name="Assault Rifle" category="Weapon" slot="Weapon" visual="scifi_rifle"/>
+  <Item id="scifi_shotgun" name="Pump Shotgun" category="Weapon" slot="Weapon" visual="scifi_shotgun"/>
+  <Item id="scifi_pistol" name="Pistol" category="Weapon" slot="Weapon" visual="scifi_pistol"/>
   <Item id="helmet_skeleton" name="Rusted Helm" category="Armor" slot="Head" visual="helmet_skeleton" tags="Armor.Heavy"/>
   <Item id="cape_heraldic" name="Heraldic Cape" category="Armor" slot="Back" visual="cape_heraldic_ubc" tags="Cloth"/>
   <Item id="cape_skeleton" name="Tattered Cape" category="Armor" slot="Back" visual="cape_skeleton" tags="Cloth"/>

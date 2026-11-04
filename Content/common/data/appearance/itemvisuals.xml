@@ -3,7 +3,7 @@
      Part kind: Skinned(캐릭터 스켈레톤을 따르는 mesh) · SocketPrefab(prefab 을 socket 에 — 후보는 쉼표, 앞의 것이 있으면 그것) ·
      BodyModification(Morph · Material · HideRegion) · Sprite(2D). sockets 는 부품의 소켓 에셋 — 해석된 외형에서는 "<칸>.<소켓>" 이름이 된다(MainHand.Muzzle).
      몸은 KayKit 캐릭터(41 관절 리그 — 몸 소켓은 data/sockets/kaykit_humanoid.sockets.xml)를 임포트한 models/kaykit/*.mesh, 장비는 원본에서 본에 붙어 있던
-     강체 메시를 프리팹(prefabs/kaykit/)으로 감싼 것이다. 블래스터는 Kenney Blaster Kit — offset 은 손잡이를 손에 맞추는 Gun 소켓 기준 자리다. -->
+     강체 메시를 프리팹(prefabs/kaykit/)으로 감싼 것이다. 총은 Quaternius Sci-Fi Essentials(CC0, prefabs/quaternius/scifi/) — offset 은 손잡이를 손에 맞추는 Gun 소켓 기준 자리다. -->
 <ItemVisualCatalog>
   <ItemVisual id="body_knight">
     <Part name="Body" kind="Skinned" mesh="common/models/kaykit/knight.mesh" skeleton="common/models/kaykit/knight/knight.skeleton.xml"
@@ -76,17 +76,17 @@
     <Part name="Blade" kind="Skinned" mesh="common/models/kaykit/knight_merge_sword.mesh" material="common/materials/kaykit_knight.material"/>
   </ItemVisual>
 
-  <ItemVisual id="blaster_rifle" customization="Blaster" tags="Weapon.Blaster">
-    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/blaster_d.prefab.xml" sockets="common/data/sockets/blaster_d.sockets.xml" socket="Gun"
-          offset="0 0.12 0.2"/>
+  <ItemVisual id="scifi_rifle" customization="Gun" tags="Weapon.Gun">
+    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/quaternius/scifi/gun_rifle.prefab.xml" sockets="common/data/sockets/gun_rifle.sockets.xml" socket="Gun"
+          offset="0 0 0"/>
   </ItemVisual>
-  <ItemVisual id="blaster_shotgun" customization="Blaster" tags="Weapon.Blaster">
-    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/blaster_h.prefab.xml" sockets="common/data/sockets/blaster_h.sockets.xml" socket="Gun"
-          offset="0 0.1 0.15"/>
+  <ItemVisual id="scifi_shotgun" customization="Gun" tags="Weapon.Gun">
+    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/quaternius/scifi/gun_sniper.prefab.xml" sockets="common/data/sockets/gun_sniper.sockets.xml" socket="Gun"
+          offset="0 0 0"/>
   </ItemVisual>
-  <ItemVisual id="blaster_pistol" customization="Blaster" tags="Weapon.Blaster">
-    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/blaster_a.prefab.xml" sockets="common/data/sockets/blaster_a.sockets.xml" socket="Gun"
-          offset="0 0.18 0.18"/>
+  <ItemVisual id="scifi_pistol" customization="Gun" tags="Weapon.Gun">
+    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/quaternius/scifi/gun_pistol.prefab.xml" sockets="common/data/sockets/gun_pistol.sockets.xml" socket="Gun"
+          offset="0 0 0"/>
   </ItemVisual>
 
   <!-- 활 쇼케이스(maps/bowshowcase.scene.xml) — 활과 메긴 화살이 앞으로 뻗은 왼손 소켓(BowGrip)에 붙고, 둘 다 페어드 애니메이션 역할(Bow · Arrow)을 프리팹 데이터로 든다. -->
