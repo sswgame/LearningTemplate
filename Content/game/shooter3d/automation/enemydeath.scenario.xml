@@ -11,8 +11,8 @@
 <Scenario name="game.shooter3d.enemydeath" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_cameraPreset" value="orbit"/>
 	<Variable name="gv_shooterAutoPlay" value="1"/>
-	<Wait frames="420"/>
-	<Expect watch="Shooter3D.EnemyHitCount" atLeast="2"/>
+	<!-- 두 번 맞힐 때까지(시뮬레이션 시각 — 고정 델타라 결정적이다). 예전 고정 420 프레임은 해골 적의 다가오는 시간에 맞춘 값이라 생물 적(크기 · 닿는 거리를 메시에서 구했다)에서는 한 번째에 닿았다 -->
+	<WaitUntil watch="Shooter3D.EnemyHitCount" atLeast="2" timeoutSeconds="20"/>
 	<Screenshot file="death_a.ppm"/>
 	<Wait frames="180"/>
 	<Screenshot file="death_b.ppm"/>

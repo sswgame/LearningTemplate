@@ -363,13 +363,18 @@ namespace sw
         setInitState( MaterialInitState::NotRequested );
     }
 
-    MaterialRenderBinding Material::getRenderBinding()
+    void Material::syncRenderState()
     {
-        // 사본을 만들기 전에 레이아웃을 셰이더에 맞춘다 — 다시 로드(`loadFromXML`, 에디터 미리보기)는 XML 순서로 다시 쌓고, 셰이더 리플렉션 캐시가 비면(핫 리로드)
+        // 레이아웃을 셰이더에 맞춘다 — 다시 로드(`loadFromXML`, 에디터 미리보기)는 XML 순서로 다시 쌓고, 셰이더 리플렉션 캐시가 비면(핫 리로드)
         // 맞춘 값이 낡는다. 맞춰져 있으면 비교만 한다. 디바이스가 없는(초기화 전) 머티리얼은 그리지 않으므로(`MaterialInitState`) 맞출 백엔드가 없다.
         if ( _pRHIDevice != nullptr )
             (void)ensureShaderLayout( _pRHIDevice->getBackendType() ); // 실패 오류는 맞추는 쪽이 남겼고, 바이트가 비어 렌더 스레드가 건너뛴다
         (void)refreshTextureBindings();                                // 다시 올리거나 비동기 로드가 끝난 텍스처의 새 SRV(캐시 세대가 그대로면 비교만)
+    }
+
+    MaterialRenderBinding Material::getRenderBinding()
+    {
+        syncRenderState();
         if ( _renderData == nullptr || _renderDataGeneration != _bufferGeneration )
         {
             shared_ptr<MaterialRenderData> data = sw::make_shared<MaterialRenderData>();

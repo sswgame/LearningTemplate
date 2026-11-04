@@ -114,6 +114,12 @@ namespace sw
          * @details 장면 빌더가 프레임마다 배치 · 원소에 싣는다(`GPUMaterialRegistry::refreshMaterialBindings`). 사본은 불변이라 렌더 스레드가 잠금 없이 읽는다.
          */
         MaterialRenderBinding getRenderBinding();
+        /**
+         * @brief 그리기 전 동기화입니다 — 레이아웃을 셰이더에 맞추고(`ensureShaderLayout`) 다시 올렸거나 비동기 로드가 끝난 텍스처의 새 SRV 를 받는다(`refreshTextureBindings`).
+         * @details 이 머티리얼을 직접 그리는 `getRenderBinding` 과, 부모 바이트를 복사하는 `MaterialInstance::getRenderBinding` 이 함께 부른다. 예전에는 직접 그릴 때만 불러,
+         *          인스턴스로만 그리는 머티리얼(색만 바꾼 식생 구간)은 로드 중 텍스처(회색) 번호를 끝까지 쥐었다. 바뀐 것이 없으면 비교만 해 매 프레임 불러도 싸다.
+         */
+        void syncRenderState();
         /** @brief 텍스처를 빌린 디바이스입니다(초기화 전이면 nullptr). 인스턴스가 덮어쓴 텍스처를 같은 디바이스로 요청한다. */
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
 

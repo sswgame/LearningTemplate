@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 연쇄 리로드 시나리오(assetcascade)의 조부모 머티리얼. grand_edited.material 이 거칠기만 다른 같은 머티리얼이다(asset.overwriteScratch 가 덮어쓴다). -->
-<MaterialDesc formatVersion="0" name="CascadeGrand" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Opaque">
+<!-- 연쇄 리로드 시나리오(assetcascade)의 조부모 머티리얼 — 엔진 기준(defaultmaterial, forward_lit 의 칸을 모두 가진다)의 자식이라 바꾼 값만 적는다.
+     grand_edited.material 은 거칠기만 다른 같은 머티리얼이다(asset.overwriteScratch 가 덮어쓴다). -->
+<MaterialDesc formatVersion="0" name="CascadeGrand" parent="engine/materials/defaultmaterial.material">
 	<_properties>
-		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
-		<item name="_metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_roughness" defaultValue="0.5"/>
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
-		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
-		</_alwaysDefines>
-	</_permutations>
 </MaterialDesc>

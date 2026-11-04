@@ -220,6 +220,8 @@ namespace sw
     {
         if ( _pParentMaterial == nullptr )
             return MaterialRenderBinding{};
+        // 부모를 직접 그리지 않아도 부모의 레이아웃 · 텍스처 SRV 를 맞춘다 — 그래야 아래 세대 비교가 부모의 새 바이트를 본다.
+        _pParentMaterial->syncRenderState();
         // 텍스처는 부모가 빌린 디바이스로 요청한다. 부모가 아직 초기화 전이면 디바이스가 없어 덮어쓴 텍스처를 미룬다(그동안 부모 텍스처가 보인다).
         IRHIDevice* pDevice = _pParentMaterial->getRHIDevice();
         if ( pDevice != nullptr && syncTextureOverrides( pDevice ) )
