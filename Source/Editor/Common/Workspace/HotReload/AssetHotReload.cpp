@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -415,6 +416,13 @@ namespace sw::editor
 
     void AssetHotReload::applyChangedFile( const string& relativePath )
     {
+        // 사건을 꺼낸 때 파일이 이미 없으면(이름을 바꾸고 지운 사본 폴더의 늦은 "바뀜" 사건) 다시 읽을 내용이 없다 — 지운 사건이다.
+        // 캐시의 다시 읽기는 파일을 디스크에서 읽어 `File.NotFound` 를 남겼다(시나리오 `assetmanage` 다음 단계에서 났다).
+        if ( FileUtil::exists( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ) ) == false )
+        {
+            SW_LOG_INFO_ID( "AssetHotReload.ChangedFileGone", "Hot reload skipped %# - the file was removed before its change was handled", relativePath.c_str() );
+            return;
+        }
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
         if ( reloadChangedAsset( AssetHotReloadInternal::toAssetID( relativePath ) ) == ReloadOutcome::Failed )
             SW_LOG_WARNING_ID( "AssetHotReload.HotReloadSkippedRunning", "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );
@@ -423,6 +431,12 @@ namespace sw::editor
 
     void AssetHotReload::applySavedAsset( string_view assetID )
     {
+        // 문서 경로는 리소스 id 이거나 디스크 절대 경로(시나리오의 `Saved/Automation/` 임시 문서)다 — 디스크 경로를 리소스 id 변환에 넘기면 오류(`AssetPaths.WriteNotResourceID`)다.
+        if ( AbsolutePath::isStrictAbsolute( assetID ) )
+        {
+            (void)reloadChangedAsset( AssetID{ assetID } );
+            return;
+        }
         const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
         string                            relativePath{};
         if ( diskPath.has_value() == false || FileUtil::makeRelativePath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath->str(), relativePath ) == false )
