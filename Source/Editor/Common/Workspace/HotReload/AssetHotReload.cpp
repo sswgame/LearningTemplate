@@ -427,7 +427,8 @@ namespace sw::editor
         string                            relativePath{};
         if ( diskPath.has_value() == false || FileUtil::makeRelativePath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath->str(), relativePath ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetHotReload.SavedAssetOutsideContent", "Saved asset '%#' is not under the content root - it is not reloaded until the file watch reports it", assetID );
+            // `Content/` 밖(시나리오의 `Saved/Automation/` 임시 문서 · 붙인 디스크 도메인)은 감시도 색인도 없다 — 그 캐시만 다시 읽는다(예전 패널의 저장 뒤 리로드와 같다).
+            (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }
         FileStamp stamp{};
@@ -451,8 +452,10 @@ namespace sw::editor
     void AssetHotReload::reloadDependents( const string& relativePath )
     {
         const string assetID = FileUtil::normalizePath( relativePath );
-        // 바뀐 파일의 참조를 먼저 맞춘다 — 저장이 부모를 바꿨으면 새 부모로 사슬을 따른다(감시가 올린 번호의 증분 갱신은 다음 `update` 라 늦다).
-        _pReferenceTracker->refreshFile( assetID );
+        // 펼쳐 넣는 종류면 바뀐 파일의 참조를 먼저 맞춘다 — 부모를 바꿨으면 새 사슬로 순환을 본다(감시가 올린 번호의 증분 갱신은 다음 `update` 라 늦다).
+        // 바뀐 파일의 나가는 참조는 순환 검사에만 쓰인다(따라가는 것은 들어오는 참조) — 펼치지 않는 종류(체크아웃 한 번에 수천 개)는 다시 읽지 않는다.
+        if ( inlinesReferences( assetID ) )
+            _pReferenceTracker->refreshFile( assetID );
         const EditorReferenceIndex& index = _pReferenceTracker->getIndex();
         if ( index.isReady() == false )
         {

@@ -111,7 +111,7 @@ namespace sw::editor
 
         /**
          * @brief 에디터가 방금 저장한 에셋 하나(리소스 id)를 파일 감시를 기다리지 않고 그 자리에서 반영합니다 — 캐시 리로드 · 씬 알림 · 연쇄 리로드. 에디터 스레드에서만 부릅니다.
-         * @details 문서 패널의 저장(`EditorDocumentPanel`)이 부른다. 저장한 파일의 도장(크기 · 쓰기 시각)을 기억해, 같은 저장이 뒤늦게 감시 사건으로 와도 두 번 읽지 않는다.
+         * @details 문서 패널의 저장(`EditorDocumentPanel`)이 부른다. 저장한 파일의 도장(크기 · 쓰기 시각)을 기억해, 같은 저장이 뒤늦게 감시 사건으로 와도 두 번 읽지 않는다. `Content/` 밖의 문서는 감시 · 색인이 없어 그 캐시만 다시 읽는다.
          */
         void applySavedAsset( string_view assetID );
         /** @brief 연쇄로 다시 읽은 에셋의 누적 수입니다. 시나리오가 `Editor.AssetCascadeReloadCount` 로 기다린다. */
@@ -196,7 +196,7 @@ namespace sw::editor
         /** @brief 바뀐 파일의 캐시를 다시 읽고(`reloadChangedAsset`) 그것을 펼쳐 넣은 로드된 에셋을 연쇄로 다시 읽습니다(`reloadDependents`). */
         void applyChangedFile( const string& relativePath );
         /**
-         * @brief @p relativePath 를 역색인에서 먼저 다시 읽고, 그것을 (사슬로) 펼쳐 넣는 에셋 가운데 캐시에 로드된 것을 의존 순서로 다시 읽고 씬에 알립니다.
+         * @brief @p relativePath 를 (펼쳐 넣는 종류면) 역색인에서 먼저 다시 읽고, 그것을 (사슬로) 펼쳐 넣는 에셋 가운데 캐시에 로드된 것을 의존 순서로 다시 읽고 씬에 알립니다.
          * @details 바뀐 에셋 자신이 아무 캐시에도 없어도 돈다 — 부모 머티리얼을 아무도 직접 쓰지 않아도 그것을 펼친 자식은 로드돼 있다. 순환은 계획이 오류로 멈춘다.
          */
         void reloadDependents( const string& relativePath );

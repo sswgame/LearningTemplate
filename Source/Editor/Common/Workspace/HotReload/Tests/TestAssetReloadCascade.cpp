@@ -6,6 +6,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -38,7 +39,7 @@ namespace
         {
             data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ), sw::FileUtil::normalizePath( pTarget ), 1u } );
         }
-        std::sort( data._listReference.begin(), data._listReference.end(), []( const EditorAssetReference& left, const EditorAssetReference& right )
+        sw::VectorUtil::sort( data._listReference, []( const EditorAssetReference& left, const EditorAssetReference& right )
         { return left._targetPath != right._targetPath ? left._targetPath < right._targetPath : left._referrerPath < right._referrerPath; } );
         outIndex.assign( std::move( data ) );
     }
