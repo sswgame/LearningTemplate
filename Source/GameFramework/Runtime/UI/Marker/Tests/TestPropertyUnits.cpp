@@ -95,12 +95,15 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
             const float32     maxAt  = prop._metadata->_maxRange;
             if ( pUnits != nullptr )
                 ++unitCount;
-            if ( units == "deg" )
+            // 파일 스키마(`…Fields` — 원소 하나의 칸, `XMLFields::readFields`)의 칸은 파일 글 그대로의 단위다. 손으로 쓰는 데이터는 각을 도로 적고
+            // 읽은 뒤 라디안으로 옮긴다(`SocketSet` · `PairedAnimationDef`). 그 칸은 `Units = deg` 로 파일 단위를 밝힌다 — 라디안 규칙은 엔진이 쥐는 값의 타입에 건다.
+            const bool bFileSchema = sw::StringUtil::endsWith( pType->_name.view(), "Fields" );
+            if ( units == "deg" && bFileSchema == false )
                 offenders += where + "angles are stored in radians — write Units=rad\n";
             if ( isAngleName( prop._name ) && isFloatType( prop._typeName ) )
             {
                 ++angleCount;
-                if ( units != "rad" )
+                if ( units != "rad" && ( bFileSchema == false || units != "deg" ) )
                     offenders += where + "an angle property must say Units=rad\n";
             }
             if ( units == "percent" && ( bMax == false || maxAt <= 1.0f ) )
