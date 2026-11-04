@@ -85,6 +85,12 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 종류 @p kind 의 새 노드를 더하고 그래프 번호를 반환합니다. 모르는 종류이면 `kNoGraphID` 입니다. 이름은 `<종류>_<n>` 입니다. */
         int32 addNode( const hashed_string& kind );
+        /**
+         * @brief 노드 @p listGraphID 를 @p offset 만큼 비켜 복제하고, 그 노드끼리의 배선도 복제합니다(언리얼 그래프 Duplicate · 붙여 넣기).
+         * @details 이름은 종류의 새 이름(`<종류>_<n>`)이고 매개변수 · 대상 · 반전은 원본과 같다. 없는 노드 번호는 건너뛴다.
+         * @return 새 노드의 그래프 번호입니다(원본 순서).
+         */
+        vector<int32> duplicateNodes( const vector<int32>& listGraphID, const float2& offset );
         /** @brief 노드와 그 노드에 닿은 배선을 지웁니다. */
         [[nodiscard]] bool removeNode( int32 graphID );
         /** @brief 노드 이름을 바꿉니다. 비었거나 다른 노드가 이미 쓰면 거절합니다. 배선은 따라갑니다. */

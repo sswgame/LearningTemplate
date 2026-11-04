@@ -86,12 +86,16 @@ namespace sw::editor
         void           commitEdit( GimmickCircuitComponent& circuit, const ObjectSnapshot& before, const utf8* pLabel );
         void           editAddNode( GimmickCircuitComponent& circuit, const hashed_string& kind, const float2* pPosition );
         void           editRemove( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const vector<int32>& listWire );
-        void           editRemoveOrphanWires( GimmickCircuitComponent& circuit );
-        void           editConnect( GimmickCircuitComponent& circuit, int32 fromNode, string_view fromPort, int32 toNode, string_view toPort );
-        void           editRename( GimmickCircuitComponent& circuit, int32 nodeID, const string& newID );
-        void           editSetParam( GimmickCircuitComponent& circuit, int32 nodeID, string_view name, string_view value );
-        void           editSetTarget( GimmickCircuitComponent& circuit, int32 nodeID, GameObjectHandle target );
-        void           editSetInvert( GimmickCircuitComponent& circuit, int32 wireID, bool bInvert );
+        /** @brief 노드를 비켜 복제합니다(Ctrl+D · 붙여 넣기). 한 편집으로 남깁니다. */
+        void editDuplicate( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const float2& offset );
+        /** @brief 캔버스 단축키 Ctrl+C · X · V · D 를 받습니다. 복사 버퍼에는 노드 번호를 둔다 — 붙여 넣기는 같은 회로의 그 노드를 복제한다. */
+        void handleEditCommands( GimmickCircuitComponent& circuit );
+        void editRemoveOrphanWires( GimmickCircuitComponent& circuit );
+        void editConnect( GimmickCircuitComponent& circuit, int32 fromNode, string_view fromPort, int32 toNode, string_view toPort );
+        void editRename( GimmickCircuitComponent& circuit, int32 nodeID, const string& newID );
+        void editSetParam( GimmickCircuitComponent& circuit, int32 nodeID, string_view name, string_view value );
+        void editSetTarget( GimmickCircuitComponent& circuit, int32 nodeID, GameObjectHandle target );
+        void editSetInvert( GimmickCircuitComponent& circuit, int32 wireID, bool bInvert );
 
         GimmickGraphModel         _model;
         EditorNodeGraph           _nodeGraph;

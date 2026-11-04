@@ -2,7 +2,11 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.h"
 
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -37,6 +41,10 @@ namespace sw::editor
     {
         struct GimmickGraphPanelInternal
         {
+            /// @brief 복제가 원본에서 비켜 놓는 거리(캔버스 좌표) — 문서 그래프 패널(`EditorGraphDocumentPanel`)과 같은 값.
+            static constexpr float32 kDuplicateOffset = 40.0f;
+            /// @brief 그래프 복사 버퍼의 종류 열쇠 — 다른 그래프에는 붙지 않는다.
+            static constexpr string_view kClipboardKind      = "GimmickGraph";
             static constexpr const utf8* kCanvasID           = "GimmickGraphCanvas";
             static constexpr const utf8* kCanvasSettingsFile = "GimmickGraphCanvas.json";
             static constexpr float32     kSidePanelWidth     = 340.0f; ///< 96 DPI 기준입니다
@@ -465,6 +473,8 @@ namespace sw::editor
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) && kindID < listRegistryKind.size() )
             editAddNode( circuit, listRegistryKind[kindID]._name, &canvasPosition );
 
+        handleEditCommands( circuit );
+
         // 삭제: 노드를 지우면 그 노드에 닿은 배선도 모델이 같이 지운다
         vector<int32> listRemovedNode;
         vector<int32> listRemovedWire;
@@ -728,6 +738,69 @@ namespace sw::editor
         _statusText = pLabel;
         refreshIssues();
         SW_LOG_INFO_ID( "GimmickGraph.Edited", "Gimmick graph %#", pLabel );
+    }
+
+    void GimmickGraphPanel::handleEditCommands( GimmickCircuitComponent& circuit )
+    {
+        vector<int32>                listNode;
+        float2                       pastePosition{};
+        const EditorGraphEditCommand command = _nodeGraph.queryEditCommand( listNode, pastePosition );
+        if ( command == EditorGraphEditCommand::None )
+            return;
+        if ( command == EditorGraphEditCommand::Duplicate )
+        {
+            editDuplicate( circuit, listNode, float2{ GimmickGraphPanelInternal::kDuplicateOffset, GimmickGraphPanelInternal::kDuplicateOffset } );
+            return;
+        }
+        if ( command == EditorGraphEditCommand::Paste )
+        {
+            string text;
+            if ( EditorNodeGraph::readClipboard( GimmickGraphPanelInternal::kClipboardKind, text ) == false )
+                return;
+            // 복사한 노드 번호를 읽어 지금 회로에 남은 것만 붙인다 — 조각의 왼쪽 위가 마우스 자리에 온다.
+            vector<int32> listID;
+            vector<int32> listCopied;
+            bool          bCorner = false;
+            float2        corner{};
+            if ( StringUtil::parseIntList( text, ",", listID ) == false )
+                return; // 이 패널이 쓴 번호 목록이다 — 읽지 못하면 붙일 것이 없다
+            for ( const int32 graphID : listID )
+            {
+                const int32 index = _model.findNodeIndex( graphID );
+                if ( index < 0 )
+                    continue;
+                const float2& position = _model.getNodes()[static_cast<size_t>( index )]._position;
+                corner                 = bCorner ? float2{ MathUtil::min( corner._x, position._x ), MathUtil::min( corner._y, position._y ) } : position;
+                bCorner                = true;
+                listCopied.push_back( graphID );
+            }
+            if ( listCopied.empty() == false )
+                editDuplicate( circuit, listCopied, pastePosition - corner );
+            return;
+        }
+        string text;
+        for ( const int32 graphID : listNode )
+        {
+            fixed_string<constant::buffer::kMax32> number;
+            formatstring( number.data(), number.capacity(), text.empty() ? "%#" : ",%#", graphID );
+            text += number.c_str();
+        }
+        EditorNodeGraph::storeClipboard( GimmickGraphPanelInternal::kClipboardKind, std::move( text ) );
+        if ( command != EditorGraphEditCommand::Cut )
+            return;
+        editRemove( circuit, listNode, vector<int32>{} );
+    }
+
+    void GimmickGraphPanel::editDuplicate( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const float2& offset )
+    {
+        if ( listNode.empty() )
+            return;
+        const ObjectSnapshot before  = beginEdit( circuit );
+        const vector<int32>  listNew = _model.duplicateNodes( listNode, offset );
+        if ( listNew.empty() )
+            return;
+        _selectedNode = listNew.back();
+        commitEdit( circuit, before, "Duplicate Gimmick Nodes" );
     }
 
     void GimmickGraphPanel::editAddNode( GimmickCircuitComponent& circuit, const hashed_string& kind, const float2* pPosition )

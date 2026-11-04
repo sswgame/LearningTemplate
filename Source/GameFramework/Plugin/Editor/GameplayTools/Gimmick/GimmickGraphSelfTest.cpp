@@ -51,6 +51,9 @@ namespace sw::editor
                 vector<GimmickGraphIssue> listIssue;
                 model.collectIssues( listIssue );
                 context.expect( listIssue.empty(), "a valid two-node circuit reported problems" );
+                // 복제는 노드 둘과 그 사이 배선 하나를 새 번호로 만든다(원본은 그대로).
+                const vector<int32> listCopy = model.duplicateNodes( vector<int32>{ plate, door }, float2{ 40.0f, 40.0f } );
+                context.expect( listCopy.size() == 2 && model.getNodes().size() == 4 && model.getWires().size() == 2, "duplicating two wired nodes did not make two nodes and their wire" );
                 return EditorSelfTestStep::Done;
             }
         };

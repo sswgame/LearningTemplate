@@ -213,6 +213,51 @@ namespace sw::editor
         return _listNode.back()._graphID;
     }
 
+    vector<int32> GimmickGraphModel::duplicateNodes( const vector<int32>& listGraphID, const float2& offset )
+    {
+        vector<int32> listNew;
+        vector<int32> listSource;
+        for ( const int32 graphID : listGraphID )
+        {
+            const int32 index = findNodeIndex( graphID );
+            if ( index < 0 )
+                continue;
+            const GimmickGraphNode source = _listNode[static_cast<size_t>( index )]; // addNode 가 목록을 늘리기 전에 값으로 둔다
+            const int32            newID  = addNode( source._kind );
+            if ( newID == kNoGraphID )
+                continue;
+            GimmickGraphNode& copy = _listNode.back();
+            copy._params           = source._params;
+            copy._target           = source._target;
+            copy._position         = source._position + offset;
+            copy._bPlaced          = false;
+            listSource.push_back( graphID );
+            listNew.push_back( newID );
+        }
+        const auto mapID = [&listSource, &listNew]( int32 graphID )
+        {
+            for ( size_t index = 0; index < listSource.size(); ++index )
+            {
+                if ( listSource[index] == graphID )
+                    return listNew[index];
+            }
+            return kNoGraphID;
+        };
+        const vector<GimmickGraphWire> listWire = _listWire; // addWire 가 목록을 늘린다
+        for ( const GimmickGraphWire& wire : listWire )
+        {
+            const int32 fromNode = mapID( wire._fromNode );
+            const int32 toNode   = mapID( wire._toNode );
+            if ( fromNode == kNoGraphID || toNode == kNoGraphID )
+                continue;
+            int32  wireID = 0;
+            string error;
+            if ( addWire( fromNode, wire._fromPort, toNode, wire._toPort, wireID, error ) && wire._bInvert )
+                (void)setWireInvert( wireID, true ); // 방금 만든 배선이라 늘 있다
+        }
+        return listNew;
+    }
+
     bool GimmickGraphModel::removeNode( int32 graphID )
     {
         const int32 index = findNodeIndex( graphID );
