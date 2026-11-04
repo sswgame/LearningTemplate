@@ -20,8 +20,10 @@ namespace sw
             static string makeAttributeName( const PropertyInfo& prop )
             {
                 string_view name = prop._name.view();
-                if ( name.empty() == false && name.front() == '_' )
-                    name.remove_prefix( 1 );
+                // `PROPERTY( Name = "bSrgb" )` 처럼 직접 적은 이름은 글자 그대로다 — 이름 규칙은 C++ 칸 이름(`_` 로 시작)에만 건다.
+                if ( name.empty() || name.front() != '_' )
+                    return string( name );
+                name.remove_prefix( 1 );
                 const bool bBooleanPrefix = name.size() > 1 && name[0] == 'b' && 'A' <= name[1] && name[1] <= 'Z';
                 if ( bBooleanPrefix == false )
                     return string( name );

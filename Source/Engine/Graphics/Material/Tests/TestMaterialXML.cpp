@@ -64,7 +64,7 @@ SW_TEST_CASE( MaterialXMLTest, RejectsMisspelledPropertyAttribute )
     sw::XMLDocument doc;
     SW_REQUIRE_TRUE( doc.parse( "<item name=\"_albedoMap\" type=\"Texture2D\" bSRGB=\"0\"/>" ) );
     sw::MaterialProperty prop{};
-    SW_EXPECT_LOG( "Xml.UnknownAttribute" );
+    SW_EXPECT_LOG( "XMLFields.UnknownField" );
     SW_EXPECT_FALSE( sw::MaterialXML::parsePropertyNode( doc.getRoot( "item" ), prop ) );
 }
 

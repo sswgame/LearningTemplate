@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
@@ -136,57 +137,31 @@ namespace sw
     {
         outProp                = MaterialProperty{};
         MaterialProperty& prop = outProp;
-        prop._name             = MaterialXML::fieldText( item, "name" );
-        // 아래 읽기가 보는 속성 이름 전부다. 철자가 다른 속성(bSRGB · bHDR 처럼)이 조용히 기본값이 되지 않게 모르는 이름은 로드 오류다.
-        static constexpr const utf8* kArrKnownAttribute[] = { "name", "type", "cpuType", "shaderType", "defaultValue", "value",
-                                                              "assetPath", "enumType", "displayName", "group", "tooltip", "shaderKeyword",
-                                                              "min", "max", "bHdr", "bSrgb", "bHidden", "bAdvanced" };
-        if ( XMLNameCheck::reportUnknownAttributes( item, kArrKnownAttribute, string_view{ prop._name } ) == false )
+        // 칸은 스키마(`MaterialPropertyFields`)가 정한다 — 철자가 다른 속성(bSRGB · bHDR 처럼)이 조용히 기본값이 되지 않게 모르는 이름은 로드 오류다.
+        MaterialPropertyFields fields;
+        if ( XMLFields::readFields( item, fields, string_view{ item.getAttributeText( "name" ) } ) == false )
             return false;
+        prop._name = fields._name;
         uint32 size{ 0 };
-        string typeStr = MaterialXML::fieldText( item, "type" );
-        if ( typeStr.empty() )
-            typeStr = MaterialXML::fieldText( item, "cpuType" );
-        if ( typeStr.empty() == false )
-            prop._type = MaterialPacking::stringToType( typeStr, size );
-        const string shaderTypeStr = MaterialXML::fieldText( item, "shaderType" );
-        if ( shaderTypeStr.empty() == false )
-            prop._shaderType = MaterialPacking::stringToType( shaderTypeStr, size );
-        prop._defaultValue = MaterialXML::fieldText( item, "defaultValue" );
-        prop._value        = MaterialXML::fieldText( item, "value" );
-        if ( prop._defaultValue.empty() && prop._value.empty() == false )
-            prop._defaultValue = prop._value;
-        if ( prop._value.empty() && prop._defaultValue.empty() == false )
-            prop._value = prop._defaultValue;
-        prop._assetPath                = MaterialXML::fieldText( item, "assetPath" );
-        prop._enumType                 = MaterialXML::fieldText( item, "enumType" );
-        prop._displayName              = MaterialXML::fieldText( item, "displayName" );
-        prop._group                    = MaterialXML::fieldText( item, "group" );
-        prop._tooltip                  = MaterialXML::fieldText( item, "tooltip" );
-        prop._shaderKeyword            = MaterialXML::fieldText( item, "shaderKeyword" );
-        const string minStr            = MaterialXML::fieldText( item, "min" );
-        const string maxStr            = MaterialXML::fieldText( item, "max" );
-        const bool   bBoundsUnreadable = ( minStr.empty() == false && StringUtil::parseFloat( minStr, prop._min ) == false ) ||
-                                       ( maxStr.empty() == false && StringUtil::parseFloat( maxStr, prop._max ) == false );
-        if ( bBoundsUnreadable )
-        {
-            SW_LOG_ERROR_ID( "Material.BoundUnreadable", "Material parameter '%#' has an unreadable bound (min '%#', max '%#')", prop._name, minStr, maxStr );
-            return false;
-        }
-        bool       bHDR{ false };
-        bool       bSRGB{ false };
-        bool       bHidden{ false };
-        bool       bAdvanced{ false };
-        const bool bFlagsRead = MaterialXML::parseOptionalBoolField( item, "bHdr", false, bHDR ) &&
-                                MaterialXML::parseOptionalBoolField( item, "bSrgb", true, bSRGB ) &&
-                                MaterialXML::parseOptionalBoolField( item, "bHidden", false, bHidden ) &&
-                                MaterialXML::parseOptionalBoolField( item, "bAdvanced", false, bAdvanced );
-        if ( bFlagsRead == false )
-            return false;
-        prop._bHDR      = bHDR;
-        prop._bSRGB     = bSRGB;
-        prop._bHidden   = bHidden;
-        prop._bAdvanced = bAdvanced;
+        if ( fields._type.empty() == false )
+            prop._type = MaterialPacking::stringToType( fields._type, size );
+        if ( fields._shaderType.empty() == false )
+            prop._shaderType = MaterialPacking::stringToType( fields._shaderType, size );
+        // 기본값과 현재 값은 한쪽만 적으면 다른 쪽이 따라간다.
+        prop._defaultValue  = fields._defaultValue.empty() ? fields._value : fields._defaultValue;
+        prop._value         = fields._value.empty() ? prop._defaultValue : fields._value;
+        prop._assetPath     = fields._assetPath;
+        prop._enumType      = fields._enumType;
+        prop._displayName   = fields._displayName;
+        prop._group         = fields._group;
+        prop._tooltip       = fields._tooltip;
+        prop._shaderKeyword = fields._shaderKeyword;
+        prop._min           = fields._min;
+        prop._max           = fields._max;
+        prop._bHDR          = fields._bHdr ? SW_TRUE : SW_FALSE;
+        prop._bSRGB         = fields._bSrgb ? SW_TRUE : SW_FALSE;
+        prop._bHidden       = fields._bHidden ? SW_TRUE : SW_FALSE;
+        prop._bAdvanced     = fields._bAdvanced ? SW_TRUE : SW_FALSE;
         if ( MaterialXMLInternal::parseEnumEntries( item, prop._listEnumEntry ) == false )
             return false;
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.

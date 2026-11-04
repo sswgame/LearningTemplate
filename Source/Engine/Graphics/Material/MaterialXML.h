@@ -7,7 +7,57 @@
 #include "Core/Foundation/Macros.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+
+namespace sw
+{
+    /**
+     * @brief 머티리얼 속성 항목 하나(`<_properties><item name type …>`)의 칸입니다. 칸 · 기본값은 여기 PROPERTY 가 정본이다(`MaterialXML::parsePropertyNode` 가 `MaterialProperty` 로 옮긴다).
+     * @details 종류(`type` · `shaderType`)는 패킹의 종류 이름(`MaterialPacking::stringToType`)이라 글로 받는다. 깃발 칸은 파일 철자 그대로(`bHdr` · `bSrgb` …)다.
+     *          예전에는 칸마다 속성과 같은 이름의 자식 원소를 모두 받고 `type` 에 옛 이름 `cpuType` 을 받았다 — 콘텐츠가 쓰지 않는 두 번째 문법이라 지웠다.
+     */
+    REFLECT()
+    struct SW_API MaterialPropertyFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        string _type{};
+        PROPERTY()
+        string _shaderType{};
+        PROPERTY()
+        string _defaultValue{};
+        PROPERTY()
+        string _value{};
+        PROPERTY()
+        string _assetPath{};
+        PROPERTY()
+        string _enumType{};
+        PROPERTY()
+        string _displayName{};
+        PROPERTY()
+        string _group{};
+        PROPERTY()
+        string _tooltip{};
+        PROPERTY()
+        string _shaderKeyword{};
+        PROPERTY()
+        float32 _min{ 0.0f };
+        PROPERTY()
+        float32 _max{ 1.0f };
+        PROPERTY( Name = "bHdr" )
+        bool _bHdr{ false };
+        PROPERTY( Name = "bSrgb" )
+        bool _bSrgb{ true };
+        PROPERTY( Name = "bHidden" )
+        bool _bHidden{ false };
+        PROPERTY( Name = "bAdvanced" )
+        bool _bAdvanced{ false };
+    };
+} // namespace sw
 
 namespace sw
 {
