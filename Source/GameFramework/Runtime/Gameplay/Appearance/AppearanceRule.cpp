@@ -18,21 +18,48 @@ namespace sw
     {
         struct AppearanceRuleInternal
         {
-            static constexpr const utf8* kArrRuleAttribute[]     = { "id", "priority" };
-            static constexpr const utf8* kArrWhenAttribute[]     = { "target", "tag", "characterTag", "occupied", "bodyShape", "bodyType", "not" };
-            static constexpr const utf8* kArrHideAttribute[]     = { "target", "part", "itemTag", "region" };
-            static constexpr const utf8* kArrVariantAttribute[]  = { "target", "name" };
-            static constexpr const utf8* kArrMeshAttribute[]     = { "target", "part", "mesh" };
-            static constexpr const utf8* kArrMaterialAttribute[] = { "target", "part", "material" };
-            static constexpr const utf8* kArrMorphAttribute[]    = { "target", "name", "weight" };
-            static constexpr const utf8* kArrSocketAttribute[]   = { "name", "parent", "offset", "rotation" };
+            // 동작 원소마다 받는 칸이다(그 밖의 칸은 오류 — 칸 구조체 하나를 함께 쓰므로 동작마다 막는다).
+            static constexpr const utf8* kArrHideField[]     = { "target", "part", "itemTag", "region" };
+            static constexpr const utf8* kArrVariantField[]  = { "target", "name" };
+            static constexpr const utf8* kArrMeshField[]     = { "target", "part", "mesh" };
+            static constexpr const utf8* kArrMaterialField[] = { "target", "part", "material" };
+            static constexpr const utf8* kArrMorphField[]    = { "target", "name", "weight" };
+            static constexpr const utf8* kArrSocketField[]   = { "name", "parent", "offset", "rotation" };
+            struct ActionFieldSet
+            {
+                const utf8*        _pElement;
+                const utf8* const* _ppField;
+                uint32             _fieldCount;
+            };
+            static constexpr ActionFieldSet kArrActionField[] = {
+                {          "Hide",     kArrHideField,     SW_COUNT_OF( kArrHideField )},
+                {       "Variant",  kArrVariantField,  SW_COUNT_OF( kArrVariantField )},
+                {      "SwapMesh",     kArrMeshField,     SW_COUNT_OF( kArrMeshField )},
+                {  "SwapMaterial", kArrMaterialField, SW_COUNT_OF( kArrMaterialField )},
+                {         "Morph",    kArrMorphField,    SW_COUNT_OF( kArrMorphField )},
+                {"OverrideSocket",   kArrSocketField,   SW_COUNT_OF( kArrSocketField )},
+            };
+
+            /** @brief 동작 원소 @p node 의 칸을 읽습니다. 그 동작이 받지 않는 칸은 오류입니다. 모르는 동작이면 false 입니다. */
+            [[nodiscard]] static bool readActionFields( const XMLNode& node, AppearanceRuleActionFields& outFields, AppearanceLoadReport& report, string_view sourceName )
+            {
+                for ( const ActionFieldSet& set : kArrActionField )
+                {
+                    if ( StringUtil::equals( node.getName(), set._pElement ) == false )
+                        continue;
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, set._ppField, set._fieldCount, report, sourceName );
+                    (void)AppearanceXMLUtil::readFields( node, outFields, report, sourceName, { "parent", "offset", "rotation" } );
+                    return true;
+                }
+                return false;
+            }
 
             [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
-                if ( XMLReadUtil::readOptionalFlag( node, "not", outCondition._bNegate ) == false )
-                    report.addErrorWithID( "Appearance.RuleWhenNotInvalid", "%#: rule '%#' <When> has an invalid not", sourceName, ruleID.c_str() );
-                outCondition._target       = XMLReadUtil::readOptionalName( node, "target" ); // 태그 조건에서만 쓰는 선택 이름
+                AppearanceRuleWhenFields fields;
+                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName, { "bodyShape", "bodyType" } ); // 오류는 보고서에 쌓인다
+                outCondition._bNegate      = fields._bNot ? SW_TRUE : SW_FALSE;
+                outCondition._target       = fields._target; // 태그 조건에서만 쓰는 선택 이름
                 const utf8* pTag           = node.findAttribute( "tag" );
                 const utf8* pCharacterTag  = node.findAttribute( "characterTag" );
                 const utf8* pOccupied      = node.findAttribute( "occupied" );
@@ -48,17 +75,19 @@ namespace sw
                 if ( pTag != nullptr )
                 {
                     outCondition._kind = outCondition._target.empty() ? AppearanceRuleConditionKind::AnyTag : AppearanceRuleConditionKind::TargetTag;
-                    outCondition._tag  = TagID::request( pTag );
+                    outCondition._tag  = TagID::request( fields._tag );
                 }
                 else if ( pCharacterTag != nullptr )
                 {
                     outCondition._kind = AppearanceRuleConditionKind::CharacterTag;
-                    outCondition._tag  = TagID::request( pCharacterTag );
+                    outCondition._tag  = TagID::request( fields._characterTag );
                 }
                 else if ( pOccupied != nullptr )
                 {
                     outCondition._kind   = AppearanceRuleConditionKind::Occupied;
-                    outCondition._target = AppearanceXMLUtil::readRequiredName( node, "occupied", report, sourceName );
+                    outCondition._target = fields._occupied;
+                    if ( outCondition._target.empty() )
+                        report.addErrorWithID( "Appearance.NameEmpty", "%#: rule '%#' <When occupied> needs a slot name", sourceName, ruleID.c_str() );
                 }
                 else
                 {
@@ -70,15 +99,20 @@ namespace sw
 
             [[nodiscard]] static bool readAction( const XMLNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
-                const utf8* pName = node.getName();
-                outAction._target = XMLReadUtil::readOptionalName( node, "target" ); // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
-                outAction._part   = XMLReadUtil::readOptionalName( node, "part" );
+                const utf8*                pName = node.getName();
+                AppearanceRuleActionFields fields;
+                if ( readActionFields( node, fields, report, sourceName ) == false )
+                {
+                    report.addErrorWithID( "Appearance.UnknownElement", "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
+                    return false;
+                }
+                outAction._target = fields._target; // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
+                outAction._part   = fields._part;
                 if ( StringUtil::equals( pName, "Hide" ) )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrHideAttribute, report, sourceName );
-                    const utf8* pItemTag  = node.findAttribute( "itemTag" );
-                    const utf8* pRegion   = node.findAttribute( "region" );
-                    const int32 kindCount = ( outAction._target.empty() ? 0 : 1 ) + ( pItemTag != nullptr ? 1 : 0 ) + ( pRegion != nullptr ? 1 : 0 );
+                    const bool  bItemTag  = node.findAttribute( "itemTag" ) != nullptr;
+                    const bool  bRegion   = node.findAttribute( "region" ) != nullptr;
+                    const int32 kindCount = ( outAction._target.empty() ? 0 : 1 ) + ( bItemTag ? 1 : 0 ) + ( bRegion ? 1 : 0 );
                     if ( kindCount != 1 )
                     {
                         report.addErrorWithID( "Appearance.RuleHideShape", "%#: rule '%#' <Hide> needs exactly one of target / itemTag / region", sourceName, ruleID.c_str() );
@@ -90,57 +124,49 @@ namespace sw
                         report.addErrorWithID( "Appearance.RuleHidePartNoTarget", "%#: rule '%#' <Hide part> needs a target (the owner whose part is hidden)", sourceName, ruleID.c_str() );
                         return false;
                     }
-                    if ( pItemTag != nullptr )
+                    if ( bItemTag )
                     {
                         outAction._kind = AppearanceRuleActionKind::HideItemTag;
-                        outAction._tag  = TagID::request( pItemTag );
+                        outAction._tag  = TagID::request( fields._itemTag );
                     }
-                    else if ( pRegion != nullptr )
+                    else if ( bRegion )
                     {
                         outAction._kind = AppearanceRuleActionKind::HideRegion;
-                        outAction._name = AppearanceXMLUtil::readRequiredName( node, "region", report, sourceName );
+                        outAction._name = fields._region;
+                        return outAction._name.empty() == false;
                     }
                     return true;
                 }
                 if ( StringUtil::equals( pName, "Variant" ) )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrVariantAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::ChooseVariant;
-                    outAction._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
+                    outAction._name = fields._name;
                     return outAction._name.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMesh" ) )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMeshAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMesh;
-                    outAction._value = AppearanceXMLUtil::readRequiredName( node, "mesh", report, sourceName );
+                    outAction._value = fields._mesh;
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMaterial" ) )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMaterialAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMaterial;
-                    outAction._value = AppearanceXMLUtil::readRequiredName( node, "material", report, sourceName );
+                    outAction._value = fields._material;
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "Morph" ) )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMorphAttribute, report, sourceName );
-                    outAction._kind = AppearanceRuleActionKind::ApplyMorph;
-                    outAction._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                    AppearanceXMLUtil::readOptionalFloat( node, "weight", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, outAction._weight, report, sourceName );
+                    outAction._kind   = AppearanceRuleActionKind::ApplyMorph;
+                    outAction._name   = fields._name;
+                    outAction._weight = fields._weight;
                     return outAction._name.empty() == false;
                 }
-                if ( StringUtil::equals( pName, "OverrideSocket" ) )
-                {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSocketAttribute, report, sourceName );
-                    outAction._kind = AppearanceRuleActionKind::OverrideSocket;
-                    outAction._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                    AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
-                    return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
-                }
-                report.addErrorWithID( "Appearance.UnknownElement", "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
-                return false;
+                // OverrideSocket(남은 하나 — readActionFields 가 모르는 원소를 걸렀다)
+                outAction._kind = AppearanceRuleActionKind::OverrideSocket;
+                outAction._name = fields._name;
+                AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
+                return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
             }
         };
     } // namespace
@@ -192,10 +218,8 @@ namespace sw
                 AppearanceXMLUtil::reportUnknownChild( root, ruleNode, report, sourceName );
                 continue;
             }
-            (void)AppearanceXMLUtil::reportUnknownAttributes( ruleNode, AppearanceRuleInternal::kArrRuleAttribute, report, sourceName );
             AppearanceRuleDef rule;
-            rule._id = AppearanceXMLUtil::readRequiredName( ruleNode, "id", report, sourceName );
-            AppearanceXMLUtil::readOptionalInt( ruleNode, "priority", MathUtil::kMinInt32, MathUtil::kMaxInt32, rule._priority, report, sourceName );
+            (void)AppearanceXMLUtil::readFields( ruleNode, rule, report, sourceName );
             if ( rule._id.empty() )
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findRule( rule._id ) != nullptr )

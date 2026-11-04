@@ -83,12 +83,65 @@ namespace sw
 namespace sw
 {
     /** @brief 규칙 하나입니다. 조건이 모두 맞으면 동작을 모두 적용합니다. */
-    struct AppearanceRuleDef
+    REFLECT()
+    struct SW_GF_API AppearanceRuleDef
     {
+        REFLECT_BODY();
+
         vector<AppearanceRuleCondition> _listCondition{};
         vector<AppearanceRuleAction>    _listAction{};
-        hashed_string                   _id{};
-        int32                           _priority{ 0 };
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        int32 _priority{ 0 };
+    };
+
+    /**
+     * @brief 규칙 조건(`<When …/>`)의 칸입니다. `tag` · `characterTag` · `occupied` · `bodyShape` · `bodyType` 중 정확히 하나를 적는다(읽기가 본다).
+     * @details 몸 모양 · 몸 종류는 이름 목록이라 손으로 푼다. `target` 은 `tag` 와만 쓴다.
+     */
+    REFLECT()
+    struct SW_GF_API AppearanceRuleWhenFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "not" )
+        bool _bNot{ false };
+        PROPERTY()
+        hashed_string _target{};
+        PROPERTY()
+        string _tag{};
+        PROPERTY()
+        string _characterTag{};
+        PROPERTY()
+        hashed_string _occupied{};
+    };
+
+    /**
+     * @brief 규칙 동작(`<Hide>` · `<Variant>` · `<SwapMesh>` · `<SwapMaterial>` · `<Morph>` · `<OverrideSocket>`)이 함께 받는 칸입니다.
+     * @details 동작마다 받는 칸이 다르다 — 그 동작이 받지 않는 칸을 적으면 읽기가 오류로 낸다(`AppearanceRuleInternal::kArrActionField`). 배치(`parent` · `offset` · `rotation`)는 손으로 푼다.
+     */
+    REFLECT()
+    struct SW_GF_API AppearanceRuleActionFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _target{};
+        PROPERTY()
+        hashed_string _part{};
+        PROPERTY()
+        string _itemTag{};
+        PROPERTY()
+        hashed_string _region{};
+        PROPERTY()
+        hashed_string _name{};
+        PROPERTY()
+        hashed_string _mesh{};
+        PROPERTY()
+        hashed_string _material{};
+        PROPERTY()
+        float32 _weight{ 1.0f }; ///< Morph — 적지 않으면 모프를 다 건다
     };
 } // namespace sw
 
