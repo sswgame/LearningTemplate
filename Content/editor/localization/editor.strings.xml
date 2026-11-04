@@ -696,6 +696,111 @@
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdCommon.GraphAddNode" source="+ Node">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphAddNodeTip" source="Add a node. Right-click the canvas to search, or drag a pin to empty space">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphAlign" source="Align">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphAlignCenterX" source="Align Centers in a Column">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphAlignCenterY" source="Align Centers in a Row">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphAlignLeft" source="Align Left">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphAlignTip" source="Line up or evenly space the selected nodes">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphAlignTop" source="Align Top">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphComment" source="Comment">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphCommentHint" source="Comment title">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphCommentTip" source="Add a comment box around the selected nodes, or in the middle of the view. Double-click its title to rename it">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphCommentUntitled" source="Comment">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphDistributeX" source="Distribute Horizontally">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphDistributeY" source="Distribute Vertically">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphFit" source="Fit">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphFitTip" source="Fit every node in view; with nodes selected, go to them (F)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphMinimap" source="Minimap">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphMinimapAreaTip" source="Click or drag to move the view to the nearest node">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphMinimapTip" source="Show or hide the overview of the whole graph">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphNeedThreeNodes" source="Select three or more nodes">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GraphNeedTwoNodes" source="Select two or more nodes">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.GridSnap" source="Grid snap: moved objects jump in steps of the grid size on the right.">
 			<origins>
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
@@ -1069,6 +1174,71 @@
 		       source="Game time scale (gv_timeScale). Drag to change it; right-click to reset it to x1.00.">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewAxes" source="Axes">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewAxesTip" source="Show or hide the axis indicator in the lower-left corner">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewFloor" source="Floor">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewFloorTip" source="Show or hide the floor">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewFrame" source="Frame">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewFrameTip" source="Bring the camera back to the preview subject (F)">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewPause" source="Pause">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewPauseTip" source="Play or pause the preview scene (animation, effects and physics together)">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewPlay" source="Play">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewScrubTip" source="Drag to move through the timeline; dragging pauses playback">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewSpeedTip" source="Playback speed of the preview scene">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewStep" source="Step">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PreviewStepTip" source="While paused, advance the preview by one frame">
+			<origins>
+				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.QuickOpenHint" source="Type to search assets, scenes, game objects (ESC to cancel)...">

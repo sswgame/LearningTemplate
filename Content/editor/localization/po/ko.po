@@ -8695,3 +8695,173 @@ msgstr "활성 씬을 씁니다. 저장한 적이 없으면 다른 이름으로 
 msgctxt "Write the selected component to a preset file"
 msgid "Write the selected component to a preset file"
 msgstr "선택한 컴포넌트를 프리셋 파일로 씁니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphFit"
+msgid "Fit"
+msgstr "맞춤"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphFitTip"
+msgid "Fit every node in view; with nodes selected, go to them (F)"
+msgstr "모든 노드가 보이게 맞춥니다. 고른 노드가 있으면 그 노드로 갑니다(F)"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlign"
+msgid "Align"
+msgstr "정렬"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignTip"
+msgid "Line up or evenly space the selected nodes"
+msgstr "고른 노드를 한 줄로 맞추거나 간격을 고르게 합니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignLeft"
+msgid "Align Left"
+msgstr "왼쪽 맞춤"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignTop"
+msgid "Align Top"
+msgstr "위 맞춤"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignCenterX"
+msgid "Align Centers in a Column"
+msgstr "가운데 맞춤(세로 줄)"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignCenterY"
+msgid "Align Centers in a Row"
+msgstr "가운데 맞춤(가로 줄)"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphDistributeX"
+msgid "Distribute Horizontally"
+msgstr "가로 간격 고르게"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphDistributeY"
+msgid "Distribute Vertically"
+msgstr "세로 간격 고르게"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphNeedTwoNodes"
+msgid "Select two or more nodes"
+msgstr "노드를 둘 이상 고르세요"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphNeedThreeNodes"
+msgid "Select three or more nodes"
+msgstr "노드를 셋 이상 고르세요"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphMinimap"
+msgid "Minimap"
+msgstr "미니맵"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphMinimapTip"
+msgid "Show or hide the overview of the whole graph"
+msgstr "그래프 전체 축소판을 보이거나 감춥니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphMinimapAreaTip"
+msgid "Click or drag to move the view to the nearest node"
+msgstr "누르거나 끌면 가장 가까운 노드로 보기를 옮깁니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphComment"
+msgid "Comment"
+msgstr "주석"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphCommentTip"
+msgid "Add a comment box around the selected nodes, or in the middle of the view. Double-click its title to rename it"
+msgstr "고른 노드를 감싸는 주석 상자를 만듭니다(없으면 보이는 가운데). 제목을 두 번 누르면 이름을 바꿉니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphCommentUntitled"
+msgid "Comment"
+msgstr "주석"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphCommentHint"
+msgid "Comment title"
+msgstr "주석 제목"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewPlay"
+msgid "Play"
+msgstr "재생"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewPause"
+msgid "Pause"
+msgstr "멈춤"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewPauseTip"
+msgid "Play or pause the preview scene (animation, effects and physics together)"
+msgstr "미리보기 씬을 재생하거나 멈춥니다(애니메이션 · 효과 · 물리가 함께)"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewStep"
+msgid "Step"
+msgstr "한 프레임"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewStepTip"
+msgid "While paused, advance the preview by one frame"
+msgstr "멈춘 동안 미리보기를 한 프레임 나아가게 합니다"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewSpeedTip"
+msgid "Playback speed of the preview scene"
+msgstr "미리보기 씬의 재생 속도"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewScrubTip"
+msgid "Drag to move through the timeline; dragging pauses playback"
+msgstr "끌어서 시간축을 오갑니다. 끄는 동안 재생을 멈춥니다"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFrame"
+msgid "Frame"
+msgstr "맞춤"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFrameTip"
+msgid "Bring the camera back to the preview subject (F)"
+msgstr "카메라를 미리보기 대상으로 되돌립니다(F)"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFloor"
+msgid "Floor"
+msgstr "바닥"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFloorTip"
+msgid "Show or hide the floor"
+msgstr "바닥을 보이거나 감춥니다"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewAxes"
+msgid "Axes"
+msgstr "축"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewAxesTip"
+msgid "Show or hide the axis indicator in the lower-left corner"
+msgstr "왼쪽 아래 축 방향 표시를 보이거나 감춥니다"
+
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdCommon.GraphAddNode"
+msgid "+ Node"
+msgstr "+ 노드"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdCommon.GraphAddNodeTip"
+msgid "Add a node. Right-click the canvas to search, or drag a pin to empty space"
+msgstr "노드를 더합니다. 캔버스를 오른쪽 클릭하면 검색, 핀을 빈 곳으로 끌면 이어서 만듭니다"
