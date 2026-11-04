@@ -28,6 +28,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 공격 높이입니다. 철권의 상단, 중단, 하단, 잡기에 해당합니다. */
+    ENUM()
     enum class AttackHeight : uint8
     {
         High = 0,
@@ -54,6 +55,7 @@ namespace sw
     };
 
     /** @brief 히트박스의 모양입니다. */
+    ENUM()
     enum class HitboxShape : uint8
     {
         Box = 0, ///< 중심 (x, y), 크기 (w, h)
@@ -61,14 +63,24 @@ namespace sw
     };
 
     /** @brief 프레임 구간 하나의 히트박스입니다. 좌표는 기술을 쓰는 쪽 기준(x 가 앞, y 가 위)이고, 단위는 게임이 정합니다. */
-    struct MoveHitbox
+    REFLECT()
+    struct SW_GF_API MoveHitbox
     {
-        float32     _x{ 0.0f };
-        float32     _y{ 0.0f };
-        float32     _width{ 0.0f };
-        float32     _height{ 0.0f };
-        int32       _fromFrame{ 0 }; ///< 이 프레임부터(포함)
-        int32       _toFrame{ 0 };   ///< 이 프레임까지(포함)
+        REFLECT_BODY();
+
+        PROPERTY()
+        float32 _x{ 0.0f };
+        PROPERTY()
+        float32 _y{ 0.0f };
+        PROPERTY( Name = "w", Min = 0.0 )
+        float32 _width{ 0.0f };
+        PROPERTY( Name = "h", Min = 0.0 )
+        float32 _height{ 0.0f };
+        PROPERTY( Name = "from", Min = 0 )
+        int32 _fromFrame{ 0 }; ///< 이 프레임부터(포함)
+        PROPERTY( Name = "to", Min = "_fromFrame" )
+        int32 _toFrame{ 0 }; ///< 이 프레임까지(포함)
+        PROPERTY()
         HitboxShape _shape{ HitboxShape::Box };
     };
 } // namespace sw
@@ -76,37 +88,61 @@ namespace sw
 namespace sw
 {
     /** @brief 캔슬 창 하나입니다. 이 프레임 구간에 이어 낼 수 있는 기술을 담습니다. */
-    struct MoveCancelWindow
+    REFLECT()
+    struct SW_GF_API MoveCancelWindow
     {
+        REFLECT_BODY();
+
         vector<hashed_string> _listMoveID{};
-        int32                 _fromFrame{ 0 };
-        int32                 _toFrame{ 0 };
-        uint8                 _bOnHitOnly{ SW_FALSE }; ///< 맞거나 막혔을 때만 캔슬할 수 있다. 헛치면 캔슬할 수 없다(철권과 스트리트 파이터의 일반기 캔슬)
+        PROPERTY( Name = "from", Min = 0 )
+        int32 _fromFrame{ 0 };
+        PROPERTY( Name = "to", Min = "_fromFrame" )
+        int32 _toFrame{ 0 };
+        PROPERTY( Name = "onHit" )
+        bool _bOnHitOnly{ false }; ///< 맞거나 막혔을 때만 캔슬할 수 있다. 헛치면 캔슬할 수 없다(철권과 스트리트 파이터의 일반기 캔슬)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 기술 하나의 프레임 데이터입니다. 프레임 수는 모두 정수, 피해는 게임이 정한 단위입니다. */
+    REFLECT()
     struct SW_GF_API MoveFrameData
     {
-        hashed_string            _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
         string                   _name{};
         vector<MoveHitbox>       _listHitbox{};
         vector<MoveCancelWindow> _listCancel{};
-        float32                  _damage{ 0.0f };
-        float32                  _chipDamage{ 0.0f }; ///< 가드 피해(막혀도 깎이는 양)
-        int32                    _startup{ 1 };       ///< 첫 지속 프레임 번호(1 이상)
-        int32                    _active{ 1 };
-        int32                    _recovery{ 0 };
-        int32                    _hitstun{ 0 };   ///< 맞은 쪽이 못 움직이는 프레임(맞은 프레임 다음부터)
-        int32                    _blockstun{ 0 }; ///< 막은 쪽이 못 움직이는 프레임
-        int32                    _hitstop{ 0 };   ///< 닿은 순간 양쪽이 멈추는 프레임(타격감). 이득 계산에는 넣지 않는다
-        AttackHeight             _height{ AttackHeight::Mid };
-        uint8                    _bLauncher{ SW_FALSE };    ///< 띄운다(콤보 시동)
-        uint8                    _bKnockdown{ SW_FALSE };   ///< 눕힌다
-        uint8                    _bWallSplat{ SW_FALSE };   ///< 벽에 붙인다
-        uint8                    _bUnblockable{ SW_FALSE }; ///< 가드 불가(높이로 피하는 것은 된다)
+        PROPERTY()
+        float32 _damage{ 0.0f };
+        PROPERTY( Name = "chip", Min = 0.0 )
+        float32 _chipDamage{ 0.0f }; ///< 가드 피해(막혀도 깎이는 양)
+        PROPERTY( Min = 1 )
+        int32 _startup{ 1 }; ///< 첫 지속 프레임 번호(1 이상)
+        PROPERTY( Min = 1 )
+        int32 _active{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _recovery{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _hitstun{ 0 }; ///< 맞은 쪽이 못 움직이는 프레임(맞은 프레임 다음부터)
+        PROPERTY( Min = 0 )
+        int32 _blockstun{ 0 }; ///< 막은 쪽이 못 움직이는 프레임
+        PROPERTY( Min = 0 )
+        int32 _hitstop{ 0 }; ///< 닿은 순간 양쪽이 멈추는 프레임(타격감). 이득 계산에는 넣지 않는다
+        PROPERTY()
+        AttackHeight _height{ AttackHeight::Mid };
+        PROPERTY()
+        bool _bLauncher{ false }; ///< 띄운다(콤보 시동)
+        PROPERTY()
+        bool _bKnockdown{ false }; ///< 눕힌다
+        PROPERTY()
+        bool _bWallSplat{ false }; ///< 벽에 붙인다
+        PROPERTY()
+        bool _bUnblockable{ false }; ///< 가드 불가(높이로 피하는 것은 된다)
 
         /** @brief 전체 길이(프레임)입니다. startup - 1 + active + recovery 와 같습니다. */
         int32 getTotalFrames() const { return _startup - 1 + _active + _recovery; }
@@ -134,9 +170,6 @@ namespace sw
 
     public:
         MoveCatalog();
-
-        /** @brief "High", "Mid", "Low", "Throw"(대소문자 무시)를 읽습니다. 모르는 값이면 @p outHeight 를 두고 false 입니다. */
-        [[nodiscard]] static bool parseAttackHeight( string_view text, AttackHeight& outHeight );
 
     private:
         static constexpr const utf8* kXMLRootName = "MoveCatalog"; ///< 루트 원소(`XMLCatalog`)

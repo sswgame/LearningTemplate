@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -17,21 +18,6 @@ namespace sw
     {
         struct FrameDataInternal
         {
-            /** @brief `shape` 를 읽습니다. 없으면 @p inoutShape 를 둔다(초기값 Box). 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool readShape( const XMLNode& node, HitboxShape& inoutShape )
-            {
-                const utf8* pText = node.findAttribute( "shape" );
-                if ( pText == nullptr )
-                    return true;
-                if ( StringUtil::equals( pText, "Capsule" ) )
-                    inoutShape = HitboxShape::Capsule;
-                else if ( StringUtil::equals( pText, "Box" ) )
-                    inoutShape = HitboxShape::Box;
-                else
-                    return false;
-                return true;
-            }
-
             static int32 computeAdvantage( const MoveFrameData& move, int32 contactFrame, bool bOnBlock )
             {
                 const int32 stun = bOnBlock ? move._blockstun : move._hitstun;
@@ -58,54 +44,19 @@ namespace sw
     {
     }
 
-    bool MoveCatalog::parseAttackHeight( string_view text, AttackHeight& outHeight )
-    {
-        if ( StringUtil::equals( text, "High" ) )
-            outHeight = AttackHeight::High;
-        else if ( StringUtil::equals( text, "Mid" ) )
-            outHeight = AttackHeight::Mid;
-        else if ( StringUtil::equals( text, "Low" ) )
-            outHeight = AttackHeight::Low;
-        else if ( StringUtil::equals( text, "Throw" ) )
-            outHeight = AttackHeight::Throw;
-        else
-            return false;
-        return true;
-    }
-
     uint32 MoveCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Move" ); node; node = node.findNextSibling( "Move" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
+            // 적지 않은 칸은 MoveFrameData 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 높이는 그 기술을 넣지 않는 오류다(자르지 않는다).
             MoveFrameData move;
-            move._id          = hashed_string( pID );
-            const utf8* pName = node.findAttribute( "name" );
-            move._name        = pName != nullptr ? pName : pID;
-            // 적지 않은 칸은 MoveFrameData 의 초기값이다. 깨진 값 · 범위 밖 값은 그 기술을 넣지 않는 오류다(자르지 않는다).
-            constexpr int32   kAnyInt   = MathUtil::kMaxInt32;
-            constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-            bool              bValid    = XMLReadUtil::readOptionalNumber( node, "startup", sourceName, 1, kAnyInt, move._startup );
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "active", sourceName, 1, kAnyInt, move._active ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "recovery", sourceName, 0, kAnyInt, move._recovery ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "damage", sourceName, -kAnyFloat, kAnyFloat, move._damage ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "chip", sourceName, 0.0f, kAnyFloat, move._chipDamage ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "hitstun", sourceName, 0, kAnyInt, move._hitstun ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "blockstun", sourceName, 0, kAnyInt, move._blockstun ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "hitstop", sourceName, 0, kAnyInt, move._hitstop ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalFlag( node, "launcher", move._bLauncher ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalFlag( node, "knockdown", move._bKnockdown ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalFlag( node, "wallSplat", move._bWallSplat ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalFlag( node, "unblockable", move._bUnblockable ) && bValid;
-            const utf8* pHeight         = node.findAttribute( "height" );
-            if ( pHeight != nullptr && parseAttackHeight( pHeight, move._height ) == false )
-            {
-                SW_LOG_ERROR_ID( "FrameData.MoveUnknownHeightHigh", "%#: move '%#' has an unknown height '%#' (High, Mid, Low, Throw)", sourceName, pID, pHeight );
-                bValid = false;
-            }
+            bool          bValid = XMLFields::readFields( node, move, sourceName );
+            if ( move._id.empty() )
+                continue;
+            const utf8* const pID = move._id.c_str();
+            if ( move._name.empty() )
+                move._name = pID;
             const int32 lastFrame = move.getTotalFrames();
 
             for ( XMLNode child = node.findChild( "Hitbox" ); child; child = child.findNextSibling( "Hitbox" ) )
@@ -114,18 +65,8 @@ namespace sw
                 MoveHitbox hitbox;
                 hitbox._fromFrame = move._startup;
                 hitbox._toFrame   = move.getLastActiveFrame();
-                bool bHitboxValid = XMLReadUtil::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, hitbox._fromFrame );
-                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, hitbox._toFrame ) && bHitboxValid;
-                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "x", sourceName, -kAnyFloat, kAnyFloat, hitbox._x ) && bHitboxValid;
-                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "y", sourceName, -kAnyFloat, kAnyFloat, hitbox._y ) && bHitboxValid;
-                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "w", sourceName, 0.0f, kAnyFloat, hitbox._width ) && bHitboxValid;
-                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "h", sourceName, 0.0f, kAnyFloat, hitbox._height ) && bHitboxValid;
-                if ( FrameDataInternal::readShape( child, hitbox._shape ) == false )
-                {
-                    SW_LOG_ERROR_ID( "FrameData.MoveHitboxUnknownShape", "%#: move '%#' has a hitbox with an unknown shape '%#' (Box, Capsule)", sourceName, pID, child.getAttributeText( "shape" ) );
-                    bHitboxValid = false;
-                }
-                if ( bHitboxValid && ( hitbox._toFrame < hitbox._fromFrame || hitbox._fromFrame > lastFrame ) )
+                bool bHitboxValid = XMLFields::readFields( child, hitbox, sourceName ); // 크기 >= 0 · to >= from · 모양은 ENUM() 이름
+                if ( bHitboxValid && hitbox._fromFrame > lastFrame )
                 {
                     SW_LOG_ERROR_ID( "FrameData.MoveHitboxOutsideFrames", "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
                     bHitboxValid = false;
@@ -141,9 +82,7 @@ namespace sw
                 MoveCancelWindow window;
                 window._fromFrame = move.getLastActiveFrame() + 1;
                 window._toFrame   = lastFrame;
-                bool bWindowValid = XMLReadUtil::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, window._fromFrame );
-                bWindowValid      = XMLReadUtil::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, window._toFrame ) && bWindowValid;
-                bWindowValid      = XMLReadUtil::readOptionalFlag( child, "onHit", window._bOnHitOnly ) && bWindowValid;
+                bool bWindowValid = XMLFields::readFields( child, window, sourceName, { "moves" } ); // to >= from 은 PROPERTY 가 본다
                 StringUtil::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
                 { window._listMoveID.push_back( hashed_string( token ) ); } );
                 if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
@@ -289,7 +228,7 @@ namespace sw
         {
             if ( _frame < window._fromFrame || _frame > window._toFrame )
                 continue;
-            if ( window._bOnHitOnly == SW_TRUE && _bContact == SW_FALSE )
+            if ( window._bOnHitOnly && _bContact == SW_FALSE )
                 continue;
             for ( const hashed_string& candidate : window._listMoveID )
             {
