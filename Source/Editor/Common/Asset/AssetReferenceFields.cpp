@@ -181,7 +181,10 @@ namespace sw::editor
             return false;
         }
         _setField.clear();
-        _setField.insert( listField.begin(), listField.end() );
+        for ( const string& field : listField )
+        {
+            _setField.insert( field );
+        }
         _listImported.clear();
         for ( size_t index = 0; index < imported.size(); ++index )
         {
