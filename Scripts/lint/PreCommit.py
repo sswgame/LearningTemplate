@@ -3,7 +3,8 @@
 """
 Scripts/lint/PreCommit.py
 
-Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를 돌립니다.
+Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를,
+Content · 테스트 CMake 의 변경에 에셋 참조 검사(`AssetReferences.py` — 지우기 · 옮기기만 한 커밋도)를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다.
@@ -23,6 +24,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import getAllStagedFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
+from lint.AssetReferences import checkStagedAssetReferences  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
@@ -33,12 +35,27 @@ def main(argv: list[str] | None = None) -> int:
     argparse.ArgumentParser(description="Git staged 파일에 커밋 전 검사(include 순서 · clang-format)를 돌린다 — 인자 없음").parse_args(argv)
 
     projectRoot = getProjectRoot()
+
+    # --- 에셋 참조(경로가 유일한 참조라 끊긴 경로를 커밋 전에 잡는다 — AssetReferences.py 머리말) ---------------
+    # 아래 목록(더하기 · 고치기만)보다 먼저 돈다 — 에셋을 지우거나 옮기기만 한 커밋이 남긴 역참조도 잡아야 한다.
+    hasErrors = False
+    listAssetProblem = checkStagedAssetReferences(projectRoot)
+    if listAssetProblem:
+        hasErrors = True
+        print(f"[AssetReferences] FAIL — 끊어진 에셋 참조 {len(listAssetProblem)}건(옮기기는 `py -3 -m Scripts move-asset <옛> <새>` 가 참조를 함께 고친다)")
+        for line in listAssetProblem:
+            print(f"  - {line}")
+    elif listAssetProblem is not None:
+        print("[AssetReferences] OK")
+
     allStagedFiles = getAllStagedFiles(projectRoot)
     if not allStagedFiles:
+        if hasErrors:
+            print("\n[PreCommit] [FAIL] 검사에 실패했습니다. 오류를 수정한 후 다시 git add 하고 커밋해주세요.")
+            return ExitCode.Violation
         return ExitCode.Passed
 
     print(f"[PreCommit] {len(allStagedFiles)}개의 Staged 파일에 대해 검사를 시작합니다.")
-    hasErrors = False
 
     stagedCppFiles = getStagedCppFiles(projectRoot)
     stagedShaderFiles = getStagedCppFiles(projectRoot, extensions=kShaderSourceExtensions)
