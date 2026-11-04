@@ -1,0 +1,10 @@
+<RigAsset>
+	<nodes>
+		<item type="TwistDistribution" name="ForearmTwist" source="hand.l" axis="0,1,0">
+			<bones>
+				<item bone="wrist.l" weight="0.5" />
+			</bones>
+		</item>
+		<item type="ScaleBone" name="ShrinkHead" bone="head" scale="0.5,0.5,0.5" weight="0.5" />
+	</nodes>
+</RigAsset>
