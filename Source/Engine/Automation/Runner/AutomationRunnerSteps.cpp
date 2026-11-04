@@ -272,7 +272,16 @@ namespace sw
                     return false;
                 }
                 AutomationStepArgsUtil::WaitTimeoutArgs timeout;
-                return AutomationStepArgsUtil::parseWaitTimeout( step, timeout, outError ) && validateWatchComparison( step, outError );
+                if ( AutomationStepArgsUtil::parseWaitTimeout( step, timeout, outError ) == false || validateWatchComparison( step, outError ) == false )
+                    return false;
+                // 바깥 일을 따르는 값(`SW_AUTOMATION_WALL_WATCH`)은 벽시계로만 기다린다 — 프레임은 실시간보다 빨리 돌아 시한이 몇 초인지 정하지 못한다.
+                const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( *step.findAttribute( "watch" ) );
+                if ( pRegistration->_bWallClock && timeout._bWallSeconds == false )
+                {
+                    outError = step.describe() + ": watch '" + pRegistration->_pName + "' follows work outside the engine frame - wait for it with timeoutWallSeconds";
+                    return false;
+                }
+                return true;
             }
 
             /** @brief `ExpectVisited` 입니다. `is`(그 값을 한 번이라도 거쳤다) 또는 `sequence`(쉼표로 적은 값을 이 순서로 거쳤다) 하나와 `since`(프레임) 입니다. */

@@ -164,11 +164,11 @@ namespace sw::editor
 
     SW_AUTOMATION_WATCH( editorNetPlayProcessCount, "Editor.NetPlayProcessCount", "Processes of the running multiplayer session (server and clients, 0 when stopped)",
                          &MultiplayerPanelInternal::readProcessCount );
-    SW_AUTOMATION_WATCH( editorNetPlayStopping, "Editor.NetPlayStopping", "1 while a stopped multiplayer session is still reaping its processes and merging traces",
-                         &MultiplayerPanelInternal::readStopping );
-    SW_AUTOMATION_WATCH( editorNetPlayObjectHashReports, "Editor.NetPlayObjectHashReports",
-                         "state.objectline replies received from the session's processes so far (remember it, send the command, wait until it differs)",
-                         &MultiplayerPanelInternal::readObjectHashReports );
+    SW_AUTOMATION_WALL_WATCH( editorNetPlayStopping, "Editor.NetPlayStopping", "1 while a stopped multiplayer session is still reaping its processes and merging traces",
+                              &MultiplayerPanelInternal::readStopping );
+    SW_AUTOMATION_WALL_WATCH( editorNetPlayObjectHashReports, "Editor.NetPlayObjectHashReports",
+                              "state.objectline replies received from the session's processes so far (remember it, send the command, wait until it differs)",
+                              &MultiplayerPanelInternal::readObjectHashReports );
     SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server",
                          &MultiplayerPanelInternal::readConnectedClients );
     SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>]", "Start the editor's multi-process play session",

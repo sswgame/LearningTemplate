@@ -114,6 +114,7 @@ namespace sw
         AutomationQueryWatchFunction _pQueryFunction; ///< 질의 감시 값(`target` · `key`, 수 또는 글)
         bool                         _bNeedsTarget;   ///< 단계에 `target` 이 꼭 있어야 합니다.
         bool                         _bNeedsKey;      ///< 단계에 `key` 가 꼭 있어야 합니다.
+        bool                         _bWallClock;     ///< 값이 엔진 프레임이 아니라 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시)을 따라 바뀝니다 — `WaitUntil` 은 `timeoutWallSeconds` 만 받는다.
     };
 } // namespace sw
 
@@ -155,20 +156,32 @@ namespace sw
  * @brief 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자, @p pName 은 시나리오가 쓰는 이름입니다.
  * @details Shipping 은 Engine · GameFramework · 키트 · 게임을 통째로 링크하므로(`sw_linkWholeArchive`) 어느 .cpp 에 두어도 등록자가 링크에서 빠지지 않는다.
  */
-#define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction )                                                                    \
-    static const ::sw::AutomationWatchRegistration sw_automationWatch_##id{ pName, pTooltip, pFunction, nullptr, false, false }; \
-    static const ::sw::AutomationWatchRegistrar    sw_automationWatchRegistrar_##id                                              \
-    {                                                                                                                            \
-        &sw_automationWatch_##id                                                                                                 \
+#define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction )                                                                           \
+    static const ::sw::AutomationWatchRegistration sw_automationWatch_##id{ pName, pTooltip, pFunction, nullptr, false, false, false }; \
+    static const ::sw::AutomationWatchRegistrar    sw_automationWatchRegistrar_##id                                                     \
+    {                                                                                                                                   \
+        &sw_automationWatch_##id                                                                                                        \
+    }
+
+/**
+ * @brief 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시)을 따라 바뀌는 감시 값을 등록합니다. 인자는 `SW_AUTOMATION_WATCH` 와 같습니다.
+ * @details 시나리오는 프레임을 실시간보다 빨리 돌리므로 프레임 · 시뮬레이션 초 시한은 바깥 일에 몇 초를 주는지 정하지 못한다(1400 프레임이 1 초였다 — 부하 걸린 기계에서 패키징이 졌다).
+ *          그래서 이 값을 기다리는 `WaitUntil` 은 `timeoutWallSeconds` 만 받고, 다른 시한은 로드 오류다(언리얼 Gauntlet 의 외부 프로세스 대기도 벽시계 시한이다).
+ */
+#define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction )                                                                     \
+    static const ::sw::AutomationWatchRegistration sw_automationWatch_##id{ pName, pTooltip, pFunction, nullptr, false, false, true }; \
+    static const ::sw::AutomationWatchRegistrar    sw_automationWatchRegistrar_##id                                                    \
+    {                                                                                                                                  \
+        &sw_automationWatch_##id                                                                                                       \
     }
 
 /**
  * @brief 질의 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계의 `target`(오브젝트 이름 · NPC id) · `key`(블랙보드 키 · 장소 id)를 받고 수나 글을 냅니다.
  * @details 시나리오: `<Expect watch="AI.State" target="AutoFarmer" is="Harvest"/>`, `<WaitUntil watch="Object.DistanceTo" target="Farmer" key="Bin" atMost="1"/>`.
  */
-#define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey )                                                \
-    static const ::sw::AutomationWatchRegistration sw_automationWatch_##id{ pName, pTooltip, nullptr, pQueryFunction, bNeedsTarget, bNeedsKey }; \
-    static const ::sw::AutomationWatchRegistrar    sw_automationWatchRegistrar_##id                                                              \
-    {                                                                                                                                            \
-        &sw_automationWatch_##id                                                                                                                 \
+#define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey )                                                       \
+    static const ::sw::AutomationWatchRegistration sw_automationWatch_##id{ pName, pTooltip, nullptr, pQueryFunction, bNeedsTarget, bNeedsKey, false }; \
+    static const ::sw::AutomationWatchRegistrar    sw_automationWatchRegistrar_##id                                                                     \
+    {                                                                                                                                                   \
+        &sw_automationWatch_##id                                                                                                                        \
     }

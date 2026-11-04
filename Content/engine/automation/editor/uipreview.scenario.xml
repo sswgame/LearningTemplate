@@ -158,7 +158,7 @@
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/>
+	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
 	<EditorWaitSettled/>
@@ -173,7 +173,7 @@
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/>
+	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<DevCommand line="panel.close ui_preview"/>

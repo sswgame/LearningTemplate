@@ -274,9 +274,9 @@ namespace sw::editor
                          &UIPreviewPanelInternal::readAnimationPlaying );
     SW_AUTOMATION_WATCH( editorUIPreviewTextureReady, "Editor.UIPreviewTextureReady", "1 once the UI Preview render texture is registered with ImGui and the picture is drawn",
                          &UIPreviewPanelInternal::readTextureReady );
-    SW_AUTOMATION_WATCH( editorUIPreviewReloadedAfterSave, "Editor.UIPreviewReloadedAfterSave",
-                         "1 once the UI Preview rebuilt its tree from the file after the last Save (proves the write reached the document)",
-                         &UIPreviewPanelInternal::readReloadedAfterSave );
+    SW_AUTOMATION_WALL_WATCH( editorUIPreviewReloadedAfterSave, "Editor.UIPreviewReloadedAfterSave",
+                              "1 once the UI Preview rebuilt its tree from the file after the last Save (proves the write reached the document)",
+                              &UIPreviewPanelInternal::readReloadedAfterSave );
     SW_AUTOMATION_WATCH( editorUIPreviewSlotEditable, "Editor.UIPreviewSlotEditable",
                          "1 when the selected widget's slot can be dragged by handles (its parent is a canvas panel); no value without a selection",
                          &UIPreviewPanelInternal::readSlotEditable );

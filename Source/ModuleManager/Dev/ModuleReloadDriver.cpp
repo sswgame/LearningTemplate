@@ -93,8 +93,8 @@ namespace sw
                     &ModuleReloadDriverInternal::runReloadModule );
     SW_AUTOMATION_WATCH( moduleReloadCount, "Module.ReloadCount", "Hot reload cascades that finished successfully since the process started",
                          &ModuleReloadDriverInternal::readReloadCount );
-    SW_AUTOMATION_WATCH( moduleReloadPending, "Module.ReloadPending", "1 while a reload queued by module.reload has not finished (0 once it finished, or the graph broke)",
-                         &ModuleReloadDriverInternal::readReloadPending );
+    SW_AUTOMATION_WALL_WATCH( moduleReloadPending, "Module.ReloadPending", "1 while a reload queued by module.reload has not finished (0 once it finished, or the graph broke)",
+                              &ModuleReloadDriverInternal::readReloadPending );
     SW_AUTOMATION_CLOCK_HOLDER( moduleReloadPending, "ModuleReload", &ModuleReloadDriverInternal::isReloadPending );
     SW_AUTOMATION_WATCH( moduleGraphBroken, "Module.GraphBroken", "1 when a failed reload blocked the module graph (restart needed), else 0",
                          &ModuleReloadDriverInternal::readGraphBroken );

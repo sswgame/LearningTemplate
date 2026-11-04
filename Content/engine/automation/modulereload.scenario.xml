@@ -9,14 +9,14 @@
 <Scenario name="engine.modulereload" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
 	<Wait frames="60"/>
 	<DevCommand line="module.reload SWGame"/>
-	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.ReloadCount" atLeast="1"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<Wait frames="10"/>
 	<DevCommand line="module.reload SWGame"/>
-	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.ReloadCount" atLeast="2"/>

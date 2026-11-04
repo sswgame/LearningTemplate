@@ -61,8 +61,8 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( PackagingPanel, PackagingPanel::kPanelID, EditorPanelCategory::Tool, 2050 );
-    SW_AUTOMATION_WATCH( editorPackagingState, "Editor.PackagingState", "Packaging window: 0 idle, 1 running, 2 succeeded, 3 failed",
-                         &PackagingPanelInternal::readPackagingState );
+    SW_AUTOMATION_WALL_WATCH( editorPackagingState, "Editor.PackagingState", "Packaging window: 0 idle, 1 running, 2 succeeded, 3 failed",
+                              &PackagingPanelInternal::readPackagingState );
 
     PackagingPanel::PackagingPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다

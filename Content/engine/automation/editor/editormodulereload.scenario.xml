@@ -8,13 +8,13 @@
 <Scenario name="engine.editormodulereload" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<EditorWaitSettled/>
 	<DevCommand line="module.reload EditorModule"/>
-	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.ReloadCount" atLeast="1"/>
 	<EditorWaitSettled/>
 	<DevCommand line="module.reload EditorModule"/>
-	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.ReloadCount" atLeast="2"/>
