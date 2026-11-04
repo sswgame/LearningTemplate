@@ -15,12 +15,7 @@ namespace sw
     {
         struct DestructionProfileInternal
         {
-            static constexpr const utf8* kArrRootAttribute[]    = { "density", "physicsMaterial" };
-            static constexpr const utf8* kArrStrainAttribute[]  = { "thresholds" };
-            static constexpr const utf8* kArrLinkAttribute[]    = { "strength", "supportStrength" };
-            static constexpr const utf8* kArrImpactAttribute[]  = { "impulseToStrain", "minImpulse", "radius" };
-            static constexpr const utf8* kArrDebrisAttribute[]  = { "lifetime", "maxBodies", "smallVolume", "fadeTime", "sleepRemoveTime", "keepCollisionVolume", "hullShrink" };
-            static constexpr const utf8* kArrNetworkAttribute[] = { "poseRate" };
+            static constexpr const utf8* kArrStrainAttribute[] = { "thresholds" };
 
             /** @brief 같은 원소가 두 번 나오면 오류입니다(뒤 것이 앞 것을 조용히 덮지 않게). */
             static bool claimElement( const XMLNode& node, CharacterDataReader& reader, uint8& inoutSeen )
@@ -96,9 +91,12 @@ namespace sw
     void DestructionProfile::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         using Internal = DestructionProfileInternal;
-        reader.reportUnknownAttributes( root, Internal::kArrRootAttribute );
-        reader.readOptionalFloat( root, "density", _density );
-        _physicsMaterial   = reader.readName( root, "physicsMaterial", false );
+        DestructionRootFields rootFields;
+        rootFields._density         = _density;
+        rootFields._physicsMaterial = _physicsMaterial;
+        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓인다 — 칸 · 범위는 PROPERTY 가 정본이다
+        _density           = rootFields._density;
+        _physicsMaterial   = rootFields._physicsMaterial;
         uint8 bStrainSeen  = SW_FALSE;
         uint8 bLinkSeen    = SW_FALSE;
         uint8 bImpactSeen  = SW_FALSE;
@@ -131,54 +129,61 @@ namespace sw
             {
                 if ( Internal::claimElement( child, reader, bLinkSeen ) == false )
                     continue;
-                reader.reportUnknownAttributes( child, Internal::kArrLinkAttribute );
-                reader.readOptionalFloat( child, "strength", _linkStrength );
-                reader.readOptionalFloat( child, "supportStrength", _supportStrength );
+                DestructionLinkFields fields;
+                fields._strength        = _linkStrength;
+                fields._supportStrength = _supportStrength;
+                (void)reader.readFields( child, fields );
+                _linkStrength    = fields._strength;
+                _supportStrength = fields._supportStrength;
             }
             else if ( StringUtil::equals( child.getName(), "Impact" ) )
             {
                 if ( Internal::claimElement( child, reader, bImpactSeen ) == false )
                     continue;
-                reader.reportUnknownAttributes( child, Internal::kArrImpactAttribute );
-                reader.readOptionalFloat( child, "impulseToStrain", _impulseToStrain );
-                reader.readOptionalFloat( child, "minImpulse", _minImpulse );
-                reader.readOptionalFloat( child, "radius", _impactRadius );
+                DestructionImpactFields fields;
+                fields._impulseToStrain = _impulseToStrain;
+                fields._minImpulse      = _minImpulse;
+                fields._radius          = _impactRadius;
+                (void)reader.readFields( child, fields );
+                _impulseToStrain = fields._impulseToStrain;
+                _minImpulse      = fields._minImpulse;
+                _impactRadius    = fields._radius;
             }
             else if ( StringUtil::equals( child.getName(), "Debris" ) )
             {
                 if ( Internal::claimElement( child, reader, bDebrisSeen ) == false )
                     continue;
-                reader.reportUnknownAttributes( child, Internal::kArrDebrisAttribute );
-                reader.readOptionalFloat( child, "lifetime", _debrisLifetime );
-                int32 maxBody{ static_cast<int32>( _maxDebrisBody ) };
-                reader.readOptionalInt( child, "maxBodies", maxBody );
-                reader.readOptionalFloat( child, "smallVolume", _smallDebrisVolume );
-                reader.readOptionalFloat( child, "fadeTime", _fadeTime );
-                reader.readOptionalFloat( child, "sleepRemoveTime", _sleepRemoveTime );
-                reader.readOptionalFloat( child, "keepCollisionVolume", _keepCollisionVolume );
-                reader.readOptionalFloat( child, "hullShrink", _hullShrink );
-                if ( maxBody < 0 )
-                    reader.addError( "Destruction.MaxBodiesNegative", child, "maxBodies must not be negative" );
-                else
-                    _maxDebrisBody = static_cast<uint32>( maxBody );
+                DestructionDebrisFields fields;
+                fields._lifetime            = _debrisLifetime;
+                fields._maxBodies           = _maxDebrisBody;
+                fields._smallVolume         = _smallDebrisVolume;
+                fields._fadeTime            = _fadeTime;
+                fields._sleepRemoveTime     = _sleepRemoveTime;
+                fields._keepCollisionVolume = _keepCollisionVolume;
+                fields._hullShrink          = _hullShrink;
+                (void)reader.readFields( child, fields );
+                _debrisLifetime      = fields._lifetime;
+                _maxDebrisBody       = fields._maxBodies;
+                _smallDebrisVolume   = fields._smallVolume;
+                _fadeTime            = fields._fadeTime;
+                _sleepRemoveTime     = fields._sleepRemoveTime;
+                _keepCollisionVolume = fields._keepCollisionVolume;
+                _hullShrink          = fields._hullShrink;
             }
             else if ( StringUtil::equals( child.getName(), "Network" ) )
             {
                 if ( Internal::claimElement( child, reader, bNetworkSeen ) == false )
                     continue;
-                reader.reportUnknownAttributes( child, Internal::kArrNetworkAttribute );
-                reader.readOptionalFloat( child, "poseRate", _networkPoseRate );
+                DestructionNetworkFields fields;
+                fields._poseRate = _networkPoseRate;
+                (void)reader.readFields( child, fields );
+                _networkPoseRate = fields._poseRate;
             }
             else
             {
                 reader.reportUnknownElement( child );
             }
         }
-        const bool bPositive = _density > 0.0f && _linkStrength > 0.0f && _supportStrength > 0.0f && _impulseToStrain >= 0.0f && _minImpulse >= 0.0f &&
-                               _impactRadius >= 0.0f && _debrisLifetime > 0.0f && _smallDebrisVolume >= 0.0f && _fadeTime >= 0.0f && _sleepRemoveTime >= 0.0f &&
-                               _keepCollisionVolume >= 0.0f && _hullShrink >= 0.0f && _networkPoseRate > 0.0f;
-        if ( bPositive == false )
-            reader.addError( "Destruction.NumbersInvalid", root, "density, strengths, lifetime and pose rate must be positive; the other numbers must not be negative" );
     }
 
     /** @brief 파괴 프로파일 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */

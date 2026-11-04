@@ -20,11 +20,81 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class CharacterDataReader;
     class XMLNode;
+
+    /**
+     * @brief 파괴 테이블의 원소마다 받는 칸입니다(`DestructionProfile::readRoot` 가 지금 값으로 채운 뒤 읽는다 — 적지 않은 칸 · 원소는 `DestructionProfile` 의 초기값이 남는다).
+     * @details 범위(양수 · 음수 아님)는 여기 PROPERTY 가 정본이다.
+     */
+    REFLECT()
+    struct SW_API DestructionRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0001 )
+        float32 _density{ 0.0f };
+        PROPERTY()
+        hashed_string _physicsMaterial{};
+    };
+
+    REFLECT()
+    struct SW_API DestructionLinkFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0001 )
+        float32 _strength{ 0.0f };
+        PROPERTY( Min = 0.0001 )
+        float32 _supportStrength{ 0.0f };
+    };
+
+    REFLECT()
+    struct SW_API DestructionImpactFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0 )
+        float32 _impulseToStrain{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _minImpulse{ 0.0f };
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _radius{ 0.0f };
+    };
+
+    REFLECT()
+    struct SW_API DestructionDebrisFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0001, Units = s )
+        float32 _lifetime{ 0.0f };
+        PROPERTY()
+        uint32 _maxBodies{ 0 };
+        PROPERTY( Min = 0.0 )
+        float32 _smallVolume{ 0.0f };
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _fadeTime{ 0.0f };
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _sleepRemoveTime{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _keepCollisionVolume{ 0.0f };
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _hullShrink{ 0.0f };
+    };
+
+    REFLECT()
+    struct SW_API DestructionNetworkFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0001 )
+        float32 _poseRate{ 0.0f };
+    };
 
     /** @brief 파괴 재질 테이블 하나입니다. 파일 머리말을 참고하세요. 단위는 변형(피해와 같은 단위), 미터, 킬로그램, 초, 뉴턴입니다. */
     struct SW_API DestructionProfile
