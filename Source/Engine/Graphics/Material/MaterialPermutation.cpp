@@ -59,7 +59,7 @@ namespace sw
     void MaterialPermutation::appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine )
     {
         MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( quality ) ) );
-        MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY_" ) + StringUtil::toUpper( MaterialXML::qualityToString( quality ) ) );
+        MaterialPermutation::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY_" ) + StringUtil::toUpper( getEnumName( quality ) ) );
     }
 
     uint64 MaterialPermutation::hashDefines( const vector<string>& listDefine )

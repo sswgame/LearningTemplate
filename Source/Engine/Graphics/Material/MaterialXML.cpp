@@ -22,71 +22,30 @@ namespace sw
         /** @brief 머티리얼 XML 의 반복 구조(enum 항목 · 문자열 목록)를 읽고 쓰는 TU 로컬 도우미입니다. */
         struct MaterialXMLInternal
         {
-            /** @brief 블렌드 모드 이름 표의 한 줄입니다. 모드마다 이름은 하나다(별칭 없음). 읽기(`parseBlendMode`)와 쓰기(`blendModeToString`)가 이 표 하나를 본다. */
-            struct BlendModeName
-            {
-                string_view  _name;
-                RHIBlendMode _mode;
-            };
-            static constexpr BlendModeName kArrBlendModeName[] = {
-                {     "Opaque",      RHIBlendMode::Opaque},
-                {"Transparent", RHIBlendMode::Transparent},
-            };
-
-            static string nodeText( XMLNode node )
-            {
-                if ( node.isValid() == false || node.getText() == nullptr )
-                    return {};
-                return string{ StringUtil::trim( node.getText() ) };
-            }
-
-            /** @brief 열거 항목을 읽습니다. 값이 부호 없는 정수가 아니면 false 입니다(0 으로 읽지 않는다 — 두 항목이 같은 값이 된다). */
-            [[nodiscard]] static bool parseEnumEntries( XMLNode parent, vector<MaterialEnumEntry>& outListEntry )
+            /** @brief 열거 항목(`MaterialEnumEntryFields`)을 읽습니다. 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool parseEnumEntries( XMLNode parent, string_view sourceName, vector<MaterialEnumEntry>& outListEntry )
             {
                 outListEntry.clear();
-                if ( parent.isValid() == false )
-                    return true;
-                XMLNode list = parent.findChild( "_enumEntries" );
-                if ( list.isValid() == false )
-                    list = parent.findChild( "enumEntries" );
-                if ( list.isValid() == false )
-                    return true;
-                for ( XMLNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+                const XMLNode list = parent.findChild( "_enumEntries" );
+                for ( XMLNode item = list.isValid() ? list.findChild( "item" ) : XMLNode{}; item; item = item.findNextSibling( "item" ) )
                 {
-                    MaterialEnumEntry entry{};
-                    entry._name            = MaterialXML::fieldText( item, "name" );
-                    const string valueText = MaterialXML::fieldText( item, "value" );
-                    if ( valueText.empty() == false )
-                    {
-                        uint64 val{ 0 };
-                        if ( StringUtil::parseUint64( valueText, val, 0 ) == false || val > MathUtil::kMaxUInt32 )
-                        {
-                            SW_LOG_ERROR_ID( "Material.EnumValueUnreadable", "Material enum entry '%#' has value '%#', which is not a 32-bit unsigned integer", entry._name,
-                                             valueText );
-                            return false;
-                        }
-                        entry._value = static_cast<uint32>( val );
-                    }
-                    if ( entry._name.empty() == false )
-                        outListEntry.push_back( std::move( entry ) );
+                    MaterialEnumEntryFields fields;
+                    if ( XMLFields::readFields( item, fields, sourceName ) == false )
+                        return false;
+                    outListEntry.push_back( MaterialEnumEntry{ std::move( fields._name ), fields._value } );
                 }
                 return true;
             }
 
+            /** @brief 글 목록(`<item>글</item>`)을 읽습니다. 빈 줄은 건너뛴다. */
             static void parseStringListItems( XMLNode list, vector<string>& outListItem )
             {
                 outListItem.clear();
-                if ( list.isValid() == false )
-                    return;
-                for ( XMLNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+                for ( XMLNode item = list.isValid() ? list.findChild( "item" ) : XMLNode{}; item; item = item.findNextSibling( "item" ) )
                 {
-                    string itemText = nodeText( item );
-                    if ( itemText.empty() )
-                        itemText = MaterialXML::fieldText( item, "value" );
-                    if ( itemText.empty() )
-                        itemText = MaterialXML::fieldText( item, "name" );
+                    const string_view itemText = item.getText() != nullptr ? StringUtil::trim( item.getText() ) : string_view{};
                     if ( itemText.empty() == false )
-                        outListItem.push_back( std::move( itemText ) );
+                        outListItem.push_back( string( itemText ) );
                 }
             }
 
@@ -107,32 +66,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 속성을 먼저 보고, 없으면 같은 이름의 자식 요소를 봅니다. */
-    string MaterialXML::fieldText( XMLNode node, const utf8* pName )
-    {
-        if ( node.isValid() == false || pName == nullptr )
-            return {};
-
-        const utf8* pAttr = node.findAttribute( pName );
-        if ( pAttr != nullptr )
-            return string{ StringUtil::trim( pAttr ) };
-        const utf8* pText = node.findChildText( pName );
-        if ( pText != nullptr )
-            return string{ StringUtil::trim( pText ) };
-        return {};
-    }
-
-    bool MaterialXML::parseOptionalBoolField( XMLNode node, const utf8* pName, bool absentValue, bool& outValue )
-    {
-        const string text = MaterialXML::fieldText( node, pName );
-        if ( text.empty() )
-        {
-            outValue = absentValue;
-            return true;
-        }
-        return MaterialPacking::parseBoolToken( text, pName != nullptr ? pName : "", "Material.BooleanFieldUnreadable", outValue );
-    }
-
     bool MaterialXML::parsePropertyNode( XMLNode item, MaterialProperty& outProp )
     {
         outProp                = MaterialProperty{};
@@ -162,7 +95,7 @@ namespace sw
         prop._bSRGB         = fields._bSrgb ? SW_TRUE : SW_FALSE;
         prop._bHidden       = fields._bHidden ? SW_TRUE : SW_FALSE;
         prop._bAdvanced     = fields._bAdvanced ? SW_TRUE : SW_FALSE;
-        if ( MaterialXMLInternal::parseEnumEntries( item, prop._listEnumEntry ) == false )
+        if ( MaterialXMLInternal::parseEnumEntries( item, string_view{ item.getAttributeText( "name" ) }, prop._listEnumEntry ) == false )
             return false;
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
         const bool bBooleanValue = prop._type == MaterialPropertyType::Bool || ( prop._type == MaterialPropertyType::Keyword && prop._shaderKeyword.empty() == false );
@@ -191,47 +124,6 @@ namespace sw
         parent.appendAttribute( pName, value );
     }
 
-    bool MaterialXML::parseBlendMode( string_view modeName, RHIBlendMode& outMode )
-    {
-        for ( const MaterialXMLInternal::BlendModeName& entry : MaterialXMLInternal::kArrBlendModeName )
-        {
-            if ( modeName == entry._name ) // 철자는 표 그대로만 받는다 — 대소문자를 무시하면 이름마다 별칭이 생긴다
-            {
-                outMode = entry._mode;
-                return true;
-            }
-        }
-        SW_LOG_ERROR_ID( "Material.BlendModeUnknown", "Material blend mode '%#' is unknown (Opaque, Transparent)", modeName );
-        return false;
-    }
-
-    const utf8* MaterialXML::blendModeToString( RHIBlendMode mode )
-    {
-        return mode == RHIBlendMode::Transparent ? "Transparent" : "Opaque";
-    }
-
-    bool MaterialXML::parseQuality( string_view qualityName, MaterialQualityLevel& outQuality )
-    {
-        const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
-        int64           value{ 0 };
-        if ( pInfo == nullptr || pInfo->tryParse( qualityName, value ) == false )
-        {
-            SW_LOG_ERROR_ID( "Material.QualityUnknown", "Material quality '%#' is not a quality level", qualityName );
-            return false;
-        }
-        outQuality = static_cast<MaterialQualityLevel>( value );
-        return true;
-    }
-
-    const utf8* MaterialXML::qualityToString( MaterialQualityLevel quality )
-    {
-        const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
-        const utf8*     pStr  = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( quality ) ) : nullptr;
-        if ( pStr != nullptr )
-            return pStr;
-        return "High";
-    }
-
     bool MaterialXML::parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc )
     {
         outDesc = MaterialPermutationDesc{};
@@ -241,33 +133,13 @@ namespace sw
         if ( permutationsNode.isValid() == false )
             return true;
 
-        // 적은 값은 읽혀야 한다 — 읽지 못한 값을 기본값으로 바꿔 계속하지 않는다(적지 않은 칸만 형식의 값이다).
-        const string quality = MaterialXML::fieldText( permutationsNode, "quality" );
-        if ( quality.empty() == false && MaterialXML::parseQuality( quality, outDesc._quality ) == false )
+        const string_view         sourceName{ root.getAttributeText( "name" ) };
+        MaterialPermutationFields fields;
+        if ( XMLFields::readFields( permutationsNode, fields, sourceName ) == false ) // 적은 값은 읽혀야 한다 — 읽지 못한 값을 기본값으로 바꿔 계속하지 않는다
             return false;
-        const string lod = MaterialXML::fieldText( permutationsNode, "shaderLOD" );
-        if ( lod.empty() == false )
-        {
-            uint64 lodVal{ 0 };
-            if ( StringUtil::parseUint64( lod, lodVal, 10 ) == false )
-            {
-                SW_LOG_ERROR_ID( "Material.ShaderLODUnreadable", "Material shader LOD '%#' is not a number", lod );
-                return false;
-            }
-            outDesc._shaderLOD = static_cast<uint32>( lodVal );
-        }
-        const string usage = MaterialXML::fieldText( permutationsNode, "usage" );
-        if ( usage.empty() == false )
-        {
-            const EnumInfo* pUsageEnum = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
-            int64           usageValue{ 0 };
-            if ( pUsageEnum == nullptr || pUsageEnum->tryParseText( usage, usageValue ) == false )
-            {
-                SW_LOG_ERROR_ID( "Material.UsageFlagUnknown", "Material usage '%#' has an unknown flag", usage );
-                return false;
-            }
-            outDesc._usage = static_cast<MaterialUsageFlags>( usageValue );
-        }
+        outDesc._quality   = fields._quality;
+        outDesc._shaderLOD = fields._shaderLOD;
+        outDesc._usage     = fields._usage;
 
         XMLNode always = permutationsNode.findChild( "_alwaysDefines" );
         MaterialXMLInternal::parseStringListItems( always, outDesc._listAlwaysDefine );
@@ -277,19 +149,15 @@ namespace sw
         {
             for ( XMLNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialStaticSwitch entry{};
-                entry._name       = MaterialXML::fieldText( item, "name" );
-                entry._keyword    = MaterialXML::fieldText( item, "keyword" );
-                entry._keywordOff = MaterialXML::fieldText( item, "keywordOff" );
-                bool bEnabled{ false };
-                bool bShaderFeature{ false };
-                if ( MaterialXML::parseOptionalBoolField( item, "bEnabled", false, bEnabled ) == false ||
-                     MaterialXML::parseOptionalBoolField( item, "bShaderFeature", true, bShaderFeature ) == false )
+                MaterialStaticSwitchFields switchFields;
+                if ( XMLFields::readFields( item, switchFields, sourceName ) == false )
                     return false;
-                entry._bEnabled       = bEnabled;
-                entry._bShaderFeature = bShaderFeature;
-                if ( entry._name.empty() && entry._keyword.empty() == false )
-                    entry._name = entry._keyword;
+                MaterialStaticSwitch entry{};
+                entry._name           = switchFields._name.empty() ? switchFields._keyword : switchFields._name;
+                entry._keyword        = switchFields._keyword;
+                entry._keywordOff     = switchFields._keywordOff;
+                entry._bEnabled       = switchFields._bEnabled;
+                entry._bShaderFeature = switchFields._bShaderFeature;
                 if ( entry._keyword.empty() == false || entry._name.empty() == false )
                     outDesc._listStaticSwitch.push_back( std::move( entry ) );
             }
@@ -300,9 +168,12 @@ namespace sw
         {
             for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
+                MaterialMultiCompileFields multiCompileFields;
+                if ( XMLFields::readFields( item, multiCompileFields, sourceName ) == false )
+                    return false;
                 MaterialMultiCompile multiCompile{};
-                multiCompile._name     = MaterialXML::fieldText( item, "name" );
-                multiCompile._selected = MaterialXML::fieldText( item, "selected" );
+                multiCompile._name     = multiCompileFields._name;
+                multiCompile._selected = multiCompileFields._selected;
                 XMLNode optionsNode    = item.findChild( "_options" );
                 MaterialXMLInternal::parseStringListItems( optionsNode, multiCompile._listOption );
                 if ( multiCompile._selected.empty() == false || multiCompile._listOption.empty() == false )
@@ -315,13 +186,8 @@ namespace sw
     void MaterialXML::appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationsNode )
     {
         XMLNode node = root.appendChild( "_permutations" );
-        MaterialXML::appendAttribute( node, "quality", MaterialXML::qualityToString( permutationsNode._quality ) );
-        node.appendAttribute( "shaderLOD", permutationsNode._shaderLOD );
-        {
-            const EnumInfo* pUsageEnum = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
-            const utf8*     pUsageStr  = pUsageEnum != nullptr ? pUsageEnum->valueToCString( static_cast<int64>( permutationsNode._usage ) ) : nullptr;
-            MaterialXML::appendAttribute( node, "usage", pUsageStr != nullptr ? pUsageStr : "None" );
-        }
+        // 순열은 부모 것을 통째로 바꾸므로 기본값을 생략해도 되지만, 차이(`makeParentDelta`)는 글을 맞대므로 늘 같은 꼴로 모두 쓴다.
+        XMLFields::writeEveryField( node, MaterialPermutationFields{ permutationsNode._quality, permutationsNode._shaderLOD, permutationsNode._usage } );
         MaterialXMLInternal::appendMaterialStringList( node, "_alwaysDefines", permutationsNode._listAlwaysDefine );
 
         if ( permutationsNode._listStaticSwitch.empty() == false )
@@ -329,13 +195,13 @@ namespace sw
             XMLNode list = node.appendChild( "_staticSwitches" );
             for ( const MaterialStaticSwitch& entry : permutationsNode._listStaticSwitch )
             {
-                XMLNode item = list.appendChild( "item" );
-                MaterialXML::appendAttribute( item, "name", entry._name );
-                MaterialXML::appendAttribute( item, "keyword", entry._keyword );
-                if ( entry._keywordOff.empty() == false )
-                    MaterialXML::appendAttribute( item, "keywordOff", entry._keywordOff );
-                MaterialXML::appendBoolAttribute( item, "bEnabled", entry._bEnabled );
-                MaterialXML::appendBoolAttribute( item, "bShaderFeature", entry._bShaderFeature );
+                MaterialStaticSwitchFields switchFields;
+                switchFields._name           = entry._name;
+                switchFields._keyword        = entry._keyword;
+                switchFields._keywordOff     = entry._keywordOff;
+                switchFields._bEnabled       = entry._bEnabled;
+                switchFields._bShaderFeature = entry._bShaderFeature;
+                XMLFields::writeFields( list.appendChild( "item" ), switchFields );
             }
         }
 
@@ -345,8 +211,7 @@ namespace sw
             for ( const MaterialMultiCompile& mc : permutationsNode._listMultiCompile )
             {
                 XMLNode item = list.appendChild( "item" );
-                MaterialXML::appendAttribute( item, "name", mc._name );
-                MaterialXML::appendAttribute( item, "selected", mc._selected );
+                XMLFields::writeFields( item, MaterialMultiCompileFields{ mc._name, mc._selected } );
                 MaterialXMLInternal::appendMaterialStringList( item, "_options", mc._listOption );
             }
         }

@@ -24,7 +24,9 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -876,7 +878,7 @@ namespace sw
     void Material::setBlendMode( RHIBlendMode mode )
     {
         _blendMode       = mode;
-        _desc._blendMode = MaterialXML::blendModeToString( mode );
+        _desc._blendMode = getEnumName( mode );
     }
 
     bool Material::setScalarParameter( hashed_string name, float32 value )
@@ -1064,9 +1066,12 @@ namespace sw
         XMLNode     root = doc.appendRoot( "MaterialDesc" );
 
         AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
-        MaterialXML::appendAttribute( root, "name", _desc._name );
-        MaterialXML::appendAttribute( root, "shaderPath", _desc._shaderPath );
-        MaterialXML::appendAttribute( root, "blendMode", MaterialXML::blendModeToString( _blendMode ) );
+        // 루트 칸은 기본값도 모두 쓴다 — 부모와 다른 칸만 남기는 차이(`makeParentDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
+        MaterialRootFields rootFields;
+        rootFields._name       = _desc._name;
+        rootFields._shaderPath = _desc._shaderPath;
+        rootFields._blendMode  = _blendMode;
+        XMLFields::writeEveryField( root, rootFields );
 
         XMLNode props = root.appendChild( "_properties" );
 
@@ -1145,16 +1150,16 @@ namespace sw
         if ( AssetXMLFormat::isCurrentXMLVersion( Material::kAssetType, root ) == false )
             return false;
 
-        _desc             = MaterialDesc{};
-        _desc._name       = MaterialXML::fieldText( root, "name" );
-        _desc._parentPath = parentPath;
-        setShaderPath( MaterialXML::fieldText( root, "shaderPath" ) );
-        // 블렌드 모드는 읽을 때 푼다 — 적지 않으면 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
-        const string blendModeText = MaterialXML::fieldText( root, "blendMode" );
-        RHIBlendMode blendMode{ RHIBlendMode::Opaque };
-        if ( blendModeText.empty() == false && MaterialXML::parseBlendMode( blendModeText, blendMode ) == false )
+        // 루트 칸(이름 · 셰이더 · 블렌드)은 스키마로 읽는다 — 적지 않은 블렌드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
+        MaterialRootFields rootFields;
+        if ( XMLFields::readFields( root, rootFields, string_view{ root.getAttributeText( "name" ) }, { "formatVersion", "parent" } ) == false )
             return false;
-        _desc._blendMode = MaterialXML::blendModeToString( blendMode );
+        _desc             = MaterialDesc{};
+        _desc._name       = rootFields._name;
+        _desc._parentPath = parentPath;
+        setShaderPath( rootFields._shaderPath );
+        const RHIBlendMode blendMode = rootFields._blendMode;
+        _desc._blendMode             = getEnumName( blendMode );
 
         XMLNode props = root.findChild( "_properties" );
         if ( props.isValid() )
@@ -1191,7 +1196,7 @@ namespace sw
     {
         auto self                 = const_cast<Material*>( this );
         self->_desc._listProperty = _data._listProperty;
-        self->_desc._blendMode    = MaterialXML::blendModeToString( _blendMode );
+        self->_desc._blendMode    = getEnumName( _blendMode );
         self->_desc._name         = _desc._name;
         self->setShaderPath( _desc._shaderPath );
     }

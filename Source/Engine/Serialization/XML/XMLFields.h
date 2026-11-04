@@ -62,6 +62,7 @@ namespace sw
         /**
          * @brief `readFields` 의 짝입니다 — @p pInstance 의 칸을 같은 이름 규칙(앞의 `_` · 불리언 `b` 를 뗀다)의 속성으로 @p node 에 씁니다.
          * @details 필수 칸(`Required`)은 늘 쓰고, 나머지는 @p pDefaults(같은 타입의 기본 인스턴스)와 글이 다를 때만 쓴다 — 손으로 쓴 파일처럼 기본값을 생략한다.
+         *          @p pDefaults 가 없으면 모든 칸을 쓴다(`writeEveryField`).
          *          컨테이너 칸은 속성 하나에 담기지 않아 쓰지 않는다(그런 칸은 부르는 쪽이 자식 원소로 쓴다).
          */
         static void writeFields( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo );
@@ -71,6 +72,15 @@ namespace sw
         {
             const TDef defaults{};
             writeFields( node, &def, &defaults, *TDef::StaticType() );
+        }
+        /**
+         * @brief 기본값과 같은 칸도 모두 씁니다(@p pDefaults 없는 `writeFields`).
+         * @details 물려받기 형식(머티리얼 부모 펼치기)은 적지 않은 칸이 부모 값을 뜻한다 — 기본값을 생략하면 자식의 기본값이 부모 값으로 바뀐다.
+         */
+        template <typename TDef>
+        static void writeEveryField( const XMLNode& node, const TDef& def )
+        {
+            writeFields( node, &def, nullptr, *TDef::StaticType() );
         }
         /**
          * @brief 적지 않음이 뜻을 가지는 열거 속성 @p pName 을 읽습니다(스키마 칸의 기본값으로 담지 못하는 경우 — 예: 액션의 `valueType` 은 적지 않으면 바인딩이 정한다).

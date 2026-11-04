@@ -147,8 +147,9 @@ namespace sw
         {
             if ( prop._bIsContainer == SW_TRUE || SerializerUtil::canCarryValueType( prop._typeName, context ) == false )
                 continue;
-            const string text = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
-            if ( prop._metadata->_bRequired == SW_FALSE && text == SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaults }, context ) )
+            const string text         = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
+            const bool   bOmitDefault = pDefaults != nullptr && prop._metadata->_bRequired == SW_FALSE;
+            if ( bOmitDefault && text == SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaults }, context ) )
                 continue;
             node.appendAttribute( XMLFields::getAttributeName( prop ).c_str(), string_view{ text } );
         }
