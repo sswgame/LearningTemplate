@@ -23,9 +23,11 @@ namespace sw
     struct CharacterAppearanceDef;
     struct CharacterAppearanceSpec;
     struct ResolvedAppearance;
+    struct AppearanceSelectionReport;
 
     class AppearanceDatabase;
     class BitReader;
+    class IAppearanceUnlockQuery;
     class BitWriter;
 
     /**
@@ -49,6 +51,29 @@ namespace sw
         bool isPartial() const { return _listCategory.empty() == false; }
         /** @brief 카테고리를 담고 있으면 true 입니다. 전체 프리셋은 모든 카테고리를 담습니다. */
         bool includesCategory( const hashed_string& category ) const;
+
+        /** @brief 지금 모습을 전체 선택으로 담습니다. 모든 슬롯을 담고, 빈 슬롯도 "비움" 으로 담습니다. */
+        static void captureSelection( const CharacterAppearanceSpec& spec, AppearanceSelection& outSelection );
+        /** @brief @p selection 에서 @p listCategory 카테고리만 남긴 부분 선택입니다. */
+        static void makePartial( const AppearanceSelection& selection, const AppearanceDatabase& database, const vector<hashed_string>& listCategory, AppearanceSelection& outPartial );
+
+        /**
+         * @brief 선택을 지금 콘텐츠에 맞춰 펼칩니다. 전체 선택은 기준 프리셋을 시드로 펼친 결과 위에 덮고, 부분 선택은 @p current 위에 덮습니다.
+         * @details 지워진 매개변수와 항목은 버리고 보고한다. 새 매개변수는 기본값 그대로 둔다. 지워졌거나 잠긴 아이템은 그 슬롯의 기본값(기준 프리셋의 것, 없으면 빈 슬롯)으로
+         *          되돌리고 보고한다. 이 함수는 실패하지 않는다. 콘텐츠가 바뀌어도 플레이어 데이터는 열려야 하기 때문이다.
+         */
+        static void applySelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
+                                    const IAppearanceUnlockQuery* pUnlockQuery, CharacterAppearanceSpec& outSpec, AppearanceSelectionReport& outReport );
+        /**
+         * @brief 전체 선택을 데이터 프리셋 하나(`CharacterAppearanceDef`)로 바꿉니다. 기준 프리셋이 부모이고, 선택이 정한 필드(몸 종류, 체형, 얼굴, 꾸미기 값, 슬롯)만 적습니다(유니티 프리팹 변형).
+         * @details 값의 종류(슬라이더, 색, 고르기)는 선택의 스키마가 정한다. 스키마에 없는 매개변수, 부분 선택, 아이템 인스턴스 꾸미기 값은 프리셋이 나타낼 수 없어
+         *          false 와 @p outReason 을 돌려준다(조용히 버리지 않는다). 시드는 프리셋에 없다. 부모의 후보는 그 프리셋을 쓰는 컴포넌트의 시드로 뽑는다.
+         */
+        [[nodiscard]] static bool makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
+                                                 CharacterAppearanceDef& outDef, string& outReason );
+        /** @brief 입혀 보기입니다. 펼쳐서 해석만 하고 아무것도 바꾸지 않습니다. */
+        static void previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
+                                      const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport );
     };
 } // namespace sw
 
@@ -97,37 +122,6 @@ namespace sw
         IAppearanceUnlockQuery& operator=( IAppearanceUnlockQuery&& ) noexcept = default;
 
         virtual bool isItemUnlocked( const hashed_string& itemID ) const = 0;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @struct AppearanceSelectionUtil
-     *  @brief 선택 담기, 펼치기, 미리보기를 제공합니다. */
-    struct SW_GF_API AppearanceSelectionUtil
-    {
-        /** @brief 지금 모습을 전체 선택으로 담습니다. 모든 슬롯을 담고, 빈 슬롯도 "비움" 으로 담습니다. */
-        static void captureSelection( const CharacterAppearanceSpec& spec, AppearanceSelection& outSelection );
-        /** @brief @p selection 에서 @p listCategory 카테고리만 남긴 부분 선택입니다. */
-        static void makePartial( const AppearanceSelection& selection, const AppearanceDatabase& database, const vector<hashed_string>& listCategory, AppearanceSelection& outPartial );
-
-        /**
-         * @brief 선택을 지금 콘텐츠에 맞춰 펼칩니다. 전체 선택은 기준 프리셋을 시드로 펼친 결과 위에 덮고, 부분 선택은 @p current 위에 덮습니다.
-         * @details 지워진 매개변수와 항목은 버리고 보고한다. 새 매개변수는 기본값 그대로 둔다. 지워졌거나 잠긴 아이템은 그 슬롯의 기본값(기준 프리셋의 것, 없으면 빈 슬롯)으로
-         *          되돌리고 보고한다. 이 함수는 실패하지 않는다. 콘텐츠가 바뀌어도 플레이어 데이터는 열려야 하기 때문이다.
-         */
-        static void applySelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
-                                    const IAppearanceUnlockQuery* pUnlockQuery, CharacterAppearanceSpec& outSpec, AppearanceSelectionReport& outReport );
-        /**
-         * @brief 전체 선택을 데이터 프리셋 하나(`CharacterAppearanceDef`)로 바꿉니다. 기준 프리셋이 부모이고, 선택이 정한 필드(몸 종류, 체형, 얼굴, 꾸미기 값, 슬롯)만 적습니다(유니티 프리팹 변형).
-         * @details 값의 종류(슬라이더, 색, 고르기)는 선택의 스키마가 정한다. 스키마에 없는 매개변수, 부분 선택, 아이템 인스턴스 꾸미기 값은 프리셋이 나타낼 수 없어
-         *          false 와 @p outReason 을 돌려준다(조용히 버리지 않는다). 시드는 프리셋에 없다. 부모의 후보는 그 프리셋을 쓰는 컴포넌트의 시드로 뽑는다.
-         */
-        [[nodiscard]] static bool makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
-                                                 CharacterAppearanceDef& outDef, string& outReason );
-        /** @brief 입혀 보기입니다. 펼쳐서 해석만 하고 아무것도 바꾸지 않습니다. */
-        static void previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
-                                      const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport );
     };
 } // namespace sw
 

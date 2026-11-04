@@ -165,5 +165,5 @@ namespace sw
     SW_ASSET_TYPE( AudioEventLibrary, AudioEventLibrary::kAssetType );
 
     /** @brief 오디오 이벤트 라이브러리 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioEvents, "audioevents", nullptr, nullptr, ".audioevents.xml", &AssetDataKindUtil::loadCatalog<AudioEventLibrary> );
+    SW_RESOURCE_DATA_KIND( AudioEvents, "audioevents", nullptr, nullptr, ".audioevents.xml", &AssetDataKind::loadCatalog<AudioEventLibrary> );
 } // namespace sw

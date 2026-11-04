@@ -331,11 +331,11 @@ namespace sw
                 screenSize = 0.0f;
                 for ( const LODView& view : _listLODView )
                 {
-                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( view, center, radius ) );
+                    screenSize = MathUtil::max( screenSize, LODView::computeScreenSize( view, center, radius ) );
                 }
                 // 대기 뷰(곧 넘어갈 컷)에서 보일 유닛도 지금부터 그 크기로 판정한다 — 컷 첫 프레임에 낮은 LOD · 지난 포즈로 보이지 않게.
                 if ( _bHasPendingLODView == SW_TRUE )
-                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( _pendingLODView, center, radius ) );
+                    screenSize = MathUtil::max( screenSize, LODView::computeScreenSize( _pendingLODView, center, radius ) );
                 bVisible = screenSize > 0.0f;
             }
             AnimationLODState&     state    = _listScratchLODState[clientIndex];

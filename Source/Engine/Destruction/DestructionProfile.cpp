@@ -187,5 +187,5 @@ namespace sw
     }
 
     /** @brief 파괴 프로파일 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( Destruction, "destruction", nullptr, nullptr, ".destruction.xml", &AssetDataKindUtil::loadCatalog<DestructionProfile> );
+    SW_RESOURCE_DATA_KIND( Destruction, "destruction", nullptr, nullptr, ".destruction.xml", &AssetDataKind::loadCatalog<DestructionProfile> );
 } // namespace sw

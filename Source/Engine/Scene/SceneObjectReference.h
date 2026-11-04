@@ -24,7 +24,7 @@ namespace sw
     class SceneManager;
     class TypeRegistry;
 
-    /** @brief `SceneObjectReferenceUtil::resolve` 의 결과입니다. */
+    /** @brief `SceneObjectReference::resolve` 의 결과입니다. */
     enum class SceneObjectResolveResult : uint8
     {
         Resolved = 0,   ///< 살아 있는 오브젝트를 찾았다
@@ -41,7 +41,7 @@ namespace sw
      * @brief (씬 · 프리팹 리소스 경로, 그 파일의 엔티티 파일 id) 입니다. 컴포넌트의 `PROPERTY` 로 둡니다.
      */
     REFLECT()
-    struct SceneObjectReference
+    struct SW_API SceneObjectReference
     {
         REFLECT_BODY();
 
@@ -55,17 +55,7 @@ namespace sw
 
         bool isSet() const { return _scenePath.empty() == false && _fileID != 0; }
         bool operator==( const SceneObjectReference& other ) const { return _fileID == other._fileID && _scenePath == other._scenePath; }
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct SceneObjectReferenceUtil
-     * @brief 참조 만들기와 해석입니다.
-     */
-    struct SW_API SceneObjectReferenceUtil
-    {
         /**
          * @brief @p scene 의 오브젝트 @p objectID 를 가리키는 참조를 만듭니다. 오브젝트에 파일 id 가 없으면 지금 줍니다(다음 저장이 그 id 를 씁니다).
          * @return 씬에 원본 경로가 없거나(저장한 적 없는 씬) 오브젝트가 없으면 false 이고 @p outReference 는 비웁니다.

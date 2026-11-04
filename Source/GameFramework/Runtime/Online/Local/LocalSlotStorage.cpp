@@ -4,7 +4,7 @@
 
 namespace sw
 {
-    bool LocalStoreRequestUtil::makeInvalidCompletion( const LocalStoreRequest& request, LocalStoreCompletion& outCompletion )
+    bool LocalStoreRequest::makeInvalidCompletion( const LocalStoreRequest& request, LocalStoreCompletion& outCompletion )
     {
         bool bValid = false;
         switch ( request._operation )
@@ -32,7 +32,7 @@ namespace sw
         return true;
     }
 
-    LocalStoreCompletion LocalStoreRequestUtil::execute( LocalStoreRequest& request, ILocalSlotStorage& storage, const LocalSealContext& sealContext )
+    LocalStoreCompletion LocalStoreRequest::execute( LocalStoreRequest& request, ILocalSlotStorage& storage, const LocalSealContext& sealContext )
     {
         LocalStoreCompletion completion;
         if ( makeInvalidCompletion( request, completion ) )
@@ -70,7 +70,7 @@ namespace sw
         return completion;
     }
 
-    LocalStoreCompletion LocalStoreRequestUtil::makeCompletion( const LocalStoreRequest& request, LocalStoreResult result )
+    LocalStoreCompletion LocalStoreRequest::makeCompletion( const LocalStoreRequest& request, LocalStoreResult result )
     {
         LocalStoreCompletion completion;
         completion._slot      = request._slot;

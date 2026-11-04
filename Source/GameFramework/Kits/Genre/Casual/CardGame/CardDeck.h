@@ -1,7 +1,7 @@
 /**
  * @file CardDeck.h
  * @brief 카드 게임 공통 요소를 담습니다. 카드 한 장(`Card`), 카드 더미(`CardPile`, 덱, 버린 더미, 손패), 시드를 고정한 셔플(Fisher-Yates + `GameRandom`), 뽑기, 나누기,
- *        턴 중계(`GF_NetTurnRelay`)에 실을 행동 바이트(`CardAction`, `CardActionUtil`)를 제공합니다.
+ *        턴 중계(`GF_NetTurnRelay`)에 실을 행동 바이트(`CardAction`, `CardAction`)를 제공합니다.
  * @details 카드는 게임마다 뜻이 다른 두 필드(`_suit`, `_rank`)와 덱 안의 고유 번호(`_id`)만 가진다. 트럼프는 무늬와 숫자(에이스 = 1),
  *          화투는 종류와 월, 우노는 색과 값이다. 띠 색이나 고도리 같은 속성은 게임이 `_id` 로 별도 테이블에서 찾는다.
  */
@@ -131,24 +131,13 @@ namespace sw
      * @brief 한 게임의 행동 하나입니다. 뜻은 게임이 정합니다(`_kind` 는 게임의 행동 enum 이고, 카드, 대상, 금액을 함께 가진다).
      * @details 포커는 종류와 금액을, 맞고는 낸 카드와 고를 바닥 카드를, 우노는 낸 카드와 고른 색(`_targetID`)과 우노 선언(`_amount`)을 쓴다.
      */
-    struct CardAction
+    struct SW_KIT_API CardAction
     {
         int32  _amount{ 0 };
         uint16 _cardID{ Card::kNoCard };
         uint16 _targetID{ Card::kNoCard };
         uint8  _kind{ 0 };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct CardActionUtil
-     * @brief `CardAction` 과 바이트 사이를 변환합니다. `TurnRelayClient::submitAction` 에 그대로 실어 보내고, 받은 `TurnAction::_buffer` 를 다시 `CardAction` 으로 되돌립니다.
-     * @details 레이아웃은 [태그 0xCA][종류][카드 번호 LE16][대상 LE16][금액 LE32] 로 10바이트이다. 바이트 단위로 적으므로 플랫폼과 무관하다.
-     */
-    struct SW_KIT_API CardActionUtil
-    {
         static constexpr uint8 kTag         = 0xCAu;
         static constexpr int32 kEncodedSize = 10;
 

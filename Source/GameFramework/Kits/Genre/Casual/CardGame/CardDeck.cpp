@@ -141,7 +141,7 @@ namespace sw
         }
     }
 
-    void CardActionUtil::encodeAction( const CardAction& action, vector<uint8>& outBuffer )
+    void CardAction::encodeAction( const CardAction& action, vector<uint8>& outBuffer )
     {
         outBuffer.clear();
         outBuffer.reserve( kEncodedSize );
@@ -158,7 +158,7 @@ namespace sw
         outBuffer.push_back( static_cast<uint8>( amount >> 24 ) );
     }
 
-    bool CardActionUtil::decodeAction( const vector<uint8>& buffer, CardAction& outAction )
+    bool CardAction::decodeAction( const vector<uint8>& buffer, CardAction& outAction )
     {
         if ( static_cast<int32>( buffer.size() ) != kEncodedSize || buffer[0] != kTag )
             return false;

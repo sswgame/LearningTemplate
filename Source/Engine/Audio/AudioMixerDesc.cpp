@@ -430,5 +430,5 @@ namespace sw
     SW_ASSET_TYPE( AudioMixerDesc, AudioMixerDesc::kAssetType );
 
     /** @brief 오디오 믹서 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioMixer, "audiomixer", nullptr, nullptr, ".audiomixer.xml", &AssetDataKindUtil::loadCatalog<AudioMixerDesc> );
+    SW_RESOURCE_DATA_KIND( AudioMixer, "audiomixer", nullptr, nullptr, ".audiomixer.xml", &AssetDataKind::loadCatalog<AudioMixerDesc> );
 } // namespace sw

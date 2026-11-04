@@ -1,7 +1,7 @@
 /**
  * @file SceneObjectReferencePropertyDrawer.cpp
  * @brief `SceneObjectReference` 프로퍼티의 그리기 확장입니다 — 올라와 있는 씬들의 오브젝트에서 하나를 고르는 콤보(다른 씬 · 프리팹 파일의 오브젝트 참조).
- * @details 값은 (씬 경로, 파일 id) 라서 고르는 순간 대상 오브젝트에 파일 id 를 준다(`SceneObjectReferenceUtil::makeReference` — 다음 저장이 그 id 를 쓴다).
+ * @details 값은 (씬 경로, 파일 id) 라서 고르는 순간 대상 오브젝트에 파일 id 를 준다(`SceneObjectReference::makeReference` — 다음 저장이 그 id 를 쓴다).
  *          저장한 적 없는 씬(경로 없음)의 오브젝트는 참조를 만들 수 없어 비활성 항목으로 보인다. 지금 값이 올라와 있지 않은 씬을 가리키면 정상 상태(하위 레벨 · 셀이 내려감)로, 씬은 있는데
  *          오브젝트가 없으면 결함으로 미리보기에 색을 달리해 알린다.
  */
@@ -51,7 +51,7 @@ namespace sw::editor
                 const SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
 
                 uint64                                  resolvedID{ 0 };
-                const SceneObjectResolveResult          state = SceneObjectReferenceUtil::resolve( sceneManager, *pValue, resolvedID );
+                const SceneObjectResolveResult          state = SceneObjectReference::resolve( sceneManager, *pValue, resolvedID );
                 fixed_string<constant::buffer::kMax512> preview;
                 makePreview( sceneManager, *pValue, state, resolvedID, preview );
                 const bool bWarn = state == SceneObjectResolveResult::ObjectMissing;
@@ -107,7 +107,7 @@ namespace sw::editor
                 for ( const SceneObjectChoice& choice : _listChoice )
                 {
                     SceneObjectReference candidate{};
-                    const bool           bMakeable = SceneObjectReferenceUtil::makeReference( scene, choice._objectID, candidate );
+                    const bool           bMakeable = SceneObjectReference::makeReference( scene, choice._objectID, candidate );
                     if ( bMakeable == false )
                         continue;
                     ImGui::PushID( static_cast<int32>( choice._objectID ) );
@@ -160,7 +160,7 @@ namespace sw::editor
                 {
                     if ( scene == nullptr || scene->getObjectManager() == nullptr )
                         continue;
-                    if ( SceneObjectReferenceUtil::isSameScenePath( scene->getSourcePath(), value._scenePath ) )
+                    if ( SceneObjectReference::isSameScenePath( scene->getSourcePath(), value._scenePath ) )
                         return scene->getObjectManager()->findGameObjectByID( objectID );
                 }
                 return nullptr;

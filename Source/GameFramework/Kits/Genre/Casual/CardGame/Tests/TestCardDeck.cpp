@@ -164,14 +164,14 @@ SW_TEST_CASE( CardDeckTest, ActionBytesRoundTripAndRejectBadFrames )
     action._targetID = sw::Card::kNoCard;
     action._amount   = -500;
     sw::vector<uint8> listByte;
-    sw::CardActionUtil::encodeAction( action, listByte );
-    SW_REQUIRE_EQUAL( size_t( sw::CardActionUtil::kEncodedSize ), listByte.size() );
-    SW_EXPECT_EQUAL( sw::CardActionUtil::kTag, listByte[0] );
+    sw::CardAction::encodeAction( action, listByte );
+    SW_REQUIRE_EQUAL( size_t( sw::CardAction::kEncodedSize ), listByte.size() );
+    SW_EXPECT_EQUAL( sw::CardAction::kTag, listByte[0] );
     SW_EXPECT_EQUAL( uint8( 0x34 ), listByte[2] ); // 리틀 엔디언
     SW_EXPECT_EQUAL( uint8( 0x12 ), listByte[3] );
 
     sw::CardAction decoded;
-    SW_REQUIRE_TRUE( sw::CardActionUtil::decodeAction( listByte, decoded ) );
+    SW_REQUIRE_TRUE( sw::CardAction::decodeAction( listByte, decoded ) );
     SW_EXPECT_EQUAL( uint8( 3 ), decoded._kind );
     SW_EXPECT_EQUAL( uint16( 0x1234 ), decoded._cardID );
     SW_EXPECT_EQUAL( sw::Card::kNoCard, decoded._targetID );
@@ -184,10 +184,10 @@ SW_TEST_CASE( CardDeckTest, ActionBytesRoundTripAndRejectBadFrames )
     sw::vector<uint8> listShort( listByte.begin(), listByte.end() - 1 );
     sw::vector<uint8> listLong = listByte;
     listLong.push_back( 0 );
-    SW_EXPECT_FALSE( sw::CardActionUtil::decodeAction( listBadTag, untouched ) );
-    SW_EXPECT_FALSE( sw::CardActionUtil::decodeAction( listShort, untouched ) );
-    SW_EXPECT_FALSE( sw::CardActionUtil::decodeAction( listLong, untouched ) );
-    SW_EXPECT_FALSE( sw::CardActionUtil::decodeAction( {}, untouched ) );
+    SW_EXPECT_FALSE( sw::CardAction::decodeAction( listBadTag, untouched ) );
+    SW_EXPECT_FALSE( sw::CardAction::decodeAction( listShort, untouched ) );
+    SW_EXPECT_FALSE( sw::CardAction::decodeAction( listLong, untouched ) );
+    SW_EXPECT_FALSE( sw::CardAction::decodeAction( {}, untouched ) );
     SW_EXPECT_EQUAL( 77, untouched._amount );
 }
 

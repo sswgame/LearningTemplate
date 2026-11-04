@@ -36,6 +36,22 @@ namespace sw
 
         /** @brief @p assetID 가 세 규칙에 모두 맞으면 true 입니다(대소문자 무시). 규칙이 하나도 없으면 아무 파일에도 맞지 않습니다. */
         bool matches( string_view assetID ) const;
+
+        /**
+         * @brief 엔진 서비스의 레지스트리에서 이름으로 종류를 찾습니다. 로더 함수(`ResourceDataLoadFunc`)처럼 서비스 범위를 받지 못하는 모듈 코드가 씁니다.
+         * @return 종류입니다. 없거나 엔진 범위가 서 있지 않으면 nullptr 입니다(부르는 쪽이 "등록되지 않은 종류" 오류로 다룬다).
+         */
+        [[nodiscard]] static const AssetDataKind* findByLabel( string_view label );
+        /** @brief `findByLabel` 의 `collectMatches` 판입니다. 엔진 범위가 서 있지 않으면 목록을 비웁니다. */
+        static void collectMatches( string_view assetID, vector<const AssetDataKind*>& outListKind );
+
+        /** @brief `XMLCatalog` 를 물려받은 카탈로그를 `loadFromAsset` 로 읽는 로더입니다. 등록 줄에 `&AssetDataKind::loadCatalog<CropCatalog>` 로 씁니다. */
+        template <typename TCatalog>
+        [[nodiscard]] static bool loadCatalog( const AssetID& id )
+        {
+            TCatalog catalog;
+            return catalog.loadFromAsset( id );
+        }
     };
 } // namespace sw
 
@@ -112,32 +128,6 @@ namespace sw
         AssetDataKindRegistrar( const AssetDataKind* pKind, const utf8* pModuleName );
         AssetDataKindRegistrar( const AssetDataKindRegistrar& )            = delete;
         AssetDataKindRegistrar& operator=( const AssetDataKindRegistrar& ) = delete;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct AssetDataKindUtil
-     * @brief 등록 줄에 쓰는 로더 모양입니다.
-     */
-    struct SW_API AssetDataKindUtil
-    {
-        /**
-         * @brief 엔진 서비스의 레지스트리에서 이름으로 종류를 찾습니다. 로더 함수(`ResourceDataLoadFunc`)처럼 서비스 범위를 받지 못하는 모듈 코드가 씁니다.
-         * @return 종류입니다. 없거나 엔진 범위가 서 있지 않으면 nullptr 입니다(부르는 쪽이 "등록되지 않은 종류" 오류로 다룬다).
-         */
-        [[nodiscard]] static const AssetDataKind* findByLabel( string_view label );
-        /** @brief `findByLabel` 의 `collectMatches` 판입니다. 엔진 범위가 서 있지 않으면 목록을 비웁니다. */
-        static void collectMatches( string_view assetID, vector<const AssetDataKind*>& outListKind );
-
-        /** @brief `XMLCatalog` 를 물려받은 카탈로그를 `loadFromAsset` 로 읽는 로더입니다. 등록 줄에 `&AssetDataKindUtil::loadCatalog<CropCatalog>` 로 씁니다. */
-        template <typename TCatalog>
-        [[nodiscard]] static bool loadCatalog( const AssetID& id )
-        {
-            TCatalog catalog;
-            return catalog.loadFromAsset( id );
-        }
     };
 } // namespace sw
 

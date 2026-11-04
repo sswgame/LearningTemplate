@@ -12,20 +12,13 @@ namespace sw
     class JSONValue;
 
     /** @brief 키 하나입니다. 문자열 넷 모두 문서에 그대로 나갑니다. */
-    struct ConfigKeyDoc
+    struct SW_API ConfigKeyDoc
     {
         const utf8* _pKey;         ///< JSON 키
         const utf8* _pType;        ///< 값 모양(`string` · `bool` · `number` · `string[]` · `object` …)
         const utf8* _pDefault;     ///< 적지 않았을 때의 값(없으면 빈 글)
         const utf8* _pDescription; ///< 설명(한국어)
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 키 표로 JSON 오브젝트를 검사합니다. */
-    struct SW_API ConfigKeyDocUtil
-    {
         /**
          * @brief @p object 의 키가 모두 표에 있는지 봅니다. 모르는 키마다 "@p context: unknown key 'x' (known: a, b, …)" 오류를 남기고 false 입니다.
          * @param pOutUnknownKey 첫 모르는 키를 받을 자리(없어도 된다)

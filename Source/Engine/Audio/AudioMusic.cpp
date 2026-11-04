@@ -150,5 +150,5 @@ namespace sw
     }
 
     /** @brief 오디오 음악 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioMusic, "audiomusic", nullptr, nullptr, ".music.xml", &AssetDataKindUtil::loadCatalog<AudioMusicDesc> );
+    SW_RESOURCE_DATA_KIND( AudioMusic, "audiomusic", nullptr, nullptr, ".music.xml", &AssetDataKind::loadCatalog<AudioMusicDesc> );
 } // namespace sw

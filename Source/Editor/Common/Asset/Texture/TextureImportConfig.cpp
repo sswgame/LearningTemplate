@@ -128,7 +128,7 @@ namespace sw::editor
 
         _mapPreset.clear();
         _listRule.clear();
-        if ( ConfigKeyDocUtil::hasOnlyKnownKeys( root, kArrTextureImportRootKeyDoc, "TextureImportConfig" ) == false )
+        if ( ConfigKeyDoc::hasOnlyKnownKeys( root, kArrTextureImportRootKeyDoc, "TextureImportConfig" ) == false )
             return false;
 
         // 1) 프리셋 파싱
@@ -215,7 +215,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "TextureImportConfig.MustObject", "%#: must be an object", context );
             return false;
         }
-        if ( ConfigKeyDocUtil::hasOnlyKnownKeys( jsonValue, kArrTextureImportRuleKeyDoc, context ) == false )
+        if ( ConfigKeyDoc::hasOnlyKnownKeys( jsonValue, kArrTextureImportRuleKeyDoc, context ) == false )
             return false;
 
         if ( jsonValue.has( "name" ) )

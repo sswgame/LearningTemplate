@@ -54,7 +54,7 @@ namespace sw
      *
      *          장착 조건: 끼기는 "끼운 뒤의 상태" 에서 그 아이템의 조건을 판정한다. 끼기, 벗기, 캐릭터 태그 변경, 체형 변경 같은 모든 변화 뒤에는 다른 장비의 조건을
      *          다시 검사하고, 깨진 것을 아이템의 정책대로 처리한다. 정책은 함께 벗기(@p outListRemoved 로 돌려줌), 낀 채 숨기기, 거부하기 중 하나이다.
-     *          조건끼리 순환하는 데이터는 로드 오류이므로(`EquipConditionUtil::findConditionCycle`) 이 처리는 항상 끝난다. 세트 조건은 `setSetLookup` 으로 받은 세트 정보로 검사한다.
+     *          조건끼리 순환하는 데이터는 로드 오류이므로(`EquipCondition::findConditionCycle`) 이 처리는 항상 끝난다. 세트 조건은 `setSetLookup` 으로 받은 세트 정보로 검사한다.
      */
     class SW_GF_API Equipment
     {

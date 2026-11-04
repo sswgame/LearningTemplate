@@ -259,7 +259,7 @@ namespace sw
         return _listCategory.empty() || VectorUtil::contains( _listCategory, category );
     }
 
-    void AppearanceSelectionUtil::captureSelection( const CharacterAppearanceSpec& spec, AppearanceSelection& outSelection )
+    void AppearanceSelection::captureSelection( const CharacterAppearanceSpec& spec, AppearanceSelection& outSelection )
     {
         outSelection                = AppearanceSelection{};
         outSelection._basePresetID  = spec._presetID;
@@ -272,8 +272,8 @@ namespace sw
         outSelection._listSlot      = spec._listSlot;
     }
 
-    void AppearanceSelectionUtil::makePartial( const AppearanceSelection& selection, const AppearanceDatabase& database, const vector<hashed_string>& listCategory,
-                                               AppearanceSelection& outPartial )
+    void AppearanceSelection::makePartial( const AppearanceSelection& selection, const AppearanceDatabase& database, const vector<hashed_string>& listCategory,
+                                           AppearanceSelection& outPartial )
     {
         outPartial                            = AppearanceSelection{};
         outPartial._basePresetID              = selection._basePresetID;
@@ -291,8 +291,8 @@ namespace sw
             outPartial._listSlot = selection._listSlot;
     }
 
-    void AppearanceSelectionUtil::applySelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
-                                                  const IAppearanceUnlockQuery* pUnlockQuery, CharacterAppearanceSpec& outSpec, AppearanceSelectionReport& outReport )
+    void AppearanceSelection::applySelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
+                                              const IAppearanceUnlockQuery* pUnlockQuery, CharacterAppearanceSpec& outSpec, AppearanceSelectionReport& outReport )
     {
         using Internal = AppearanceSelectionInternal;
         outReport      = AppearanceSelectionReport{};
@@ -378,8 +378,8 @@ namespace sw
         }
     }
 
-    bool AppearanceSelectionUtil::makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
-                                                 CharacterAppearanceDef& outDef, string& outReason )
+    bool AppearanceSelection::makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
+                                             CharacterAppearanceDef& outDef, string& outReason )
     {
         outDef = CharacterAppearanceDef{};
         if ( presetID.empty() || selection.isPartial() )
@@ -455,8 +455,8 @@ namespace sw
         return true;
     }
 
-    void AppearanceSelectionUtil::previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
-                                                    const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport )
+    void AppearanceSelection::previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
+                                                const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport )
     {
         CharacterAppearanceSpec previewSpec;
         applySelection( database, selection, current, pUnlockQuery, previewSpec, outReport );

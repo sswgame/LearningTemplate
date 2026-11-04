@@ -16,7 +16,7 @@ namespace sw
      * @struct LODView
      * @brief LOD 판정에 쓰는 뷰 하나입니다(뷰-투영 · 눈 위치 · 그 행렬에서 뽑은 절두체). `make` 로 만듭니다.
      */
-    struct LODView
+    struct SW_API LODView
     {
         float4x4 _viewProj{};
         float3   _position{};
@@ -31,17 +31,7 @@ namespace sw
             view._frustum  = Frustum::fromViewProjection( viewProj );
             return view;
         }
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct LODViewUtil
-     * @brief 화면 크기의 순수 식입니다(테스트가 그대로 부릅니다).
-     */
-    struct SW_API LODViewUtil
-    {
         /**
          * @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. 절두체 밖이면 0 입니다.
          * @details 행벡터 규약이라 클립 y = dot( p, 열 1 ), w = dot( p, 열 3 ) 입니다. 강체 뷰 행렬이면 열 1 의 xyz 길이가 투영의 y 배율(cot( fov / 2 ))이고,

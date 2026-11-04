@@ -151,9 +151,9 @@ namespace sw
     {
         request._requestID = _requestIDAllocator.allocate();
         if ( _bShutdown == SW_TRUE )
-            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
+            _listCompletion.push_back( LocalStoreRequest::makeCompletion( request, LocalStoreResult::IOError ) );
         else
-            _listCompletion.push_back( LocalStoreRequestUtil::execute( request, *_pDatabase, _sealContext ) );
+            _listCompletion.push_back( LocalStoreRequest::execute( request, *_pDatabase, _sealContext ) );
         return request._requestID;
     }
 } // namespace sw

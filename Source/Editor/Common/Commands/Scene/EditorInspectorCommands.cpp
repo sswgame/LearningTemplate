@@ -322,7 +322,7 @@ namespace sw::editor
         for ( const GameObject* pChild : listAdopt )
         {
             string holder;
-            if ( SceneObjectReferenceUtil::findReferenceTo( sceneManager, editor::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
+            if ( SceneObjectReference::findReferenceTo( sceneManager, editor::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
                 continue;
             result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
             SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabCreationRefused2", "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );

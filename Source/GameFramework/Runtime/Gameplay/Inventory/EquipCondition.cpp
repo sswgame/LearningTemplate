@@ -90,8 +90,8 @@ namespace sw
 
 namespace sw
 {
-    bool EquipConditionUtil::isMet( const EquipCondition& condition, const vector<EquipSlot>& listSlot, int32 selfSlotIndex, const ItemCatalog& catalog,
-                                    const IEquipSetLookup* pSetLookup, const EquipCharacterContext& context )
+    bool EquipCondition::isMet( const EquipCondition& condition, const vector<EquipSlot>& listSlot, int32 selfSlotIndex, const ItemCatalog& catalog,
+                                const IEquipSetLookup* pSetLookup, const EquipCharacterContext& context )
     {
         switch ( condition._kind )
         {
@@ -134,7 +134,7 @@ namespace sw
         return false;
     }
 
-    bool EquipConditionUtil::findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle )
+    bool EquipCondition::findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle )
     {
         outListCycle.clear();
         const vector<ItemDef>& listItem = catalog.getAll();

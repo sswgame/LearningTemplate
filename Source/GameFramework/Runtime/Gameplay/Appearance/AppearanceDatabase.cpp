@@ -296,7 +296,7 @@ namespace sw
             }
         }
         vector<hashed_string> listCycle;
-        if ( EquipConditionUtil::findConditionCycle( *_pItemCatalog, &_sets, listCycle ) )
+        if ( EquipCondition::findConditionCycle( *_pItemCatalog, &_sets, listCycle ) )
         {
             string chain;
             for ( const hashed_string& itemID : listCycle )

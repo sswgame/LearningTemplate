@@ -118,7 +118,7 @@ namespace sw
                     const bool bOccludedInMain = viewIndex == 0 && pMainOcclusion != nullptr && OcclusionTileQuery::isSphereOccluded( *pMainOcclusion, center, radius );
                     if ( bOccludedInMain )
                         continue;
-                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( pView[viewIndex], center, radius ) );
+                    screenSize = MathUtil::max( screenSize, LODView::computeScreenSize( pView[viewIndex], center, radius ) );
                 }
                 return screenSize;
             }

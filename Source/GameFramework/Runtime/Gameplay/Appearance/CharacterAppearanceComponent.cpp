@@ -714,7 +714,7 @@ namespace sw
             return true;
         }
         AppearanceSelectionReport report;
-        AppearanceSelectionUtil::applySelection( database, _previewSelection, base, nullptr, outSpec, report );
+        AppearanceSelection::applySelection( database, _previewSelection, base, nullptr, outSpec, report );
         if ( report.isClean() == false )
             SW_LOG_WARNING_ID( "CharacterAppearance.PreviewedAppearanceBaseDropped", "Previewed appearance on base '%#' dropped %# values and reset %# slots to their defaults", presetID.c_str(),
                                static_cast<uint32>( report._listDroppedParameter.size() ), static_cast<uint32>( report._listSlotFallback.size() ) );

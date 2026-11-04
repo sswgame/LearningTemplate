@@ -13,7 +13,7 @@ namespace sw
     {
         outPath.clear();
         outError.clear();
-        const AssetDataKind* pKind = AssetDataKindUtil::findByLabel( kindLabel );
+        const AssetDataKind* pKind = AssetDataKind::findByLabel( kindLabel );
         if ( pKind == nullptr )
         {
             outError = "data kind '" + string( kindLabel ) + "' is not registered (SW_RESOURCE_DATA_KIND)";

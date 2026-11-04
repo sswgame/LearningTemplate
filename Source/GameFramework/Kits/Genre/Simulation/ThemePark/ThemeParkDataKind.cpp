@@ -17,7 +17,7 @@ namespace sw
         [[nodiscard]] bool loadParkLayout( const AssetID& id )
         {
             const string&        assetID     = id.str();
-            const AssetDataKind* pLayoutKind = AssetDataKindUtil::findByLabel( ParkLayout::kDataKind );
+            const AssetDataKind* pLayoutKind = AssetDataKind::findByLabel( ParkLayout::kDataKind );
             if ( pLayoutKind == nullptr || pLayoutKind->_pSuffix == nullptr )
                 return false;
             const string_view suffix{ pLayoutKind->_pSuffix };
@@ -40,7 +40,7 @@ namespace sw
     } // namespace
 
     /** @brief 코스터 레이아웃(`CoasterLayoutCatalog`)의 종류입니다. */
-    SW_RESOURCE_DATA_KIND( Coasters, CoasterLayoutCatalog::kDataKind, "game/", nullptr, "/data/coasters.xml", &AssetDataKindUtil::loadCatalog<CoasterLayoutCatalog> );
+    SW_RESOURCE_DATA_KIND( Coasters, CoasterLayoutCatalog::kDataKind, "game/", nullptr, "/data/coasters.xml", &AssetDataKind::loadCatalog<CoasterLayoutCatalog> );
 
     /** @brief 공원 배치(`ParkLayout`, 놀이기구 목록)의 종류입니다. */
     SW_RESOURCE_DATA_KIND( ParkLayout, ParkLayout::kDataKind, "game/", nullptr, "/data/rides.xml", &loadParkLayout );

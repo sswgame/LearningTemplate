@@ -3,7 +3,7 @@
  * @brief 외형 선택(`AppearanceSelection`) 편집 모델입니다 — 슬롯별 아이템 입히기, 체형 · 얼굴 · 몸 종류, 꾸미기 값(슬라이더 · 색 · 고르기), 시드, 되돌리기, 프리셋 저장소로 내보내기.
  * @details 편집 대상은 "기준 프리셋 + 꾸미기 값 + 장비 구성" 이라는 원본 데이터이다(펼친 결과 `ResolvedAppearance` 가 아니다). 이 모델은 콘텐츠 데이터베이스를 모른다 —
  *          아이템 · 슬롯 이름이 실제로 있는지는 호출하는 쪽(패널)이 슬롯 표와 세트 목록으로 걸러서 넘긴다. 펼친 결과를 보는 일(규칙 설명, 입혀 보기)은
- *          `AppearanceSelectionUtil::previewSelection` 이 하며 이 모델 밖이다. ImGui 와 씬을 모릅니다.
+ *          `AppearanceSelection::previewSelection` 이 하며 이 모델 밖이다. ImGui 와 씬을 모릅니다.
  */
 #pragma once
 #include "Core/Container/string.h"

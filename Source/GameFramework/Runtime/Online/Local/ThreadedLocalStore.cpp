@@ -94,7 +94,7 @@ namespace sw
         {
             // 종료한 뒤에 들어온 요청이다 — 실행하지 않고 실패로 끝낸다(submit 이 거절하면 request 는 옮겨지지 않았다).
             ScopedLock<mutex> lock{ _mutex };
-            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
+            _listCompletion.push_back( LocalStoreRequest::makeCompletion( request, LocalStoreResult::IOError ) );
         }
         return requestID;
     }
@@ -103,8 +103,8 @@ namespace sw
     {
         // 종료하는 중에도 쓰기 · 지우기는 끝까지 한다(종료 때 세이브를 잃지 않는다) — 읽기 · 나열은 받을 사람이 없다.
         const bool           bDropped   = bStopping && ( request._operation == LocalStoreOperation::Read || request._operation == LocalStoreOperation::List );
-        LocalStoreCompletion completion = bDropped ? LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError )
-                                                   : LocalStoreRequestUtil::execute( request, *_storage, _sealContext );
+        LocalStoreCompletion completion = bDropped ? LocalStoreRequest::makeCompletion( request, LocalStoreResult::IOError )
+                                                   : LocalStoreRequest::execute( request, *_storage, _sealContext );
         ScopedLock<mutex>    lock{ _mutex };
         _listCompletion.push_back( std::move( completion ) );
     }

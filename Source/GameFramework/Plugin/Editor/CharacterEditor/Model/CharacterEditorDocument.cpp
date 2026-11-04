@@ -453,7 +453,7 @@ namespace sw::editor
         CharacterAppearanceDef def;
         string                 reason;
         XMLDocument            doc;
-        const bool             bMade = AppearanceSelectionUtil::makePresetDef( _database, _appearance.getSelection(), presetID, def, reason ) &&
+        const bool             bMade = AppearanceSelection::makePresetDef( _database, _appearance.getSelection(), presetID, def, reason ) &&
                            CharacterAppearanceCatalog::writePresetToNode( def, doc.appendRoot( "CharacterAppearance" ), reason );
         if ( bMade == false )
         {

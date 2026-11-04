@@ -8,14 +8,7 @@
 
 namespace sw
 {
-    namespace
-    {
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
-    bool ConfigKeyDocUtil::hasOnlyKnownKeys( const JSONValue& object, const ConfigKeyDoc* pArrKeyDoc, size_t keyCount, string_view context, string* pOutUnknownKey )
+    bool ConfigKeyDoc::hasOnlyKnownKeys( const JSONValue& object, const ConfigKeyDoc* pArrKeyDoc, size_t keyCount, string_view context, string* pOutUnknownKey )
     {
         bool bAllKnown = true;
         for ( const string& memberName : object.getMemberNames() )

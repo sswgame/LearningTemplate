@@ -11,7 +11,7 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 다섯을 본다. 규칙 문
 2. 깃발 칸(`docs/agents/CppStyle.md` "bit packing"): `bool _bX` 멤버 대신 `uint8 _bX : 1`. 주소를 쓰는 칸(ImGui `&b` · 출력 인자) · 여러 스레드가 따로 쓰는
    이웃 칸(같은 바이트 경합)은 `bool` 로 두고 그 줄에 `NOLINT(sw-bool-flag): <이유>` 를 적는다.
 3. 익명 네임스페이스(`docs/agents/Helpers.md`): `.cpp` 에 하나(전처리 갈래가 갈리는 경우는 갈래마다), 빈 블록 없음.
-4. 주인 우선(`docs/agents/Helpers.md`): 같은 헤더에 타입 `X`(열거가 아닌)와 `XUtil` 이 함께 있으면 `XUtil` 의 함수는 `X` 의 (static) 멤버다.
+4. 주인 우선(`docs/agents/Helpers.md`): 같은 헤더에 타입 `X`(열거 · 템플릿이 아닌)와 `XUtil` 이 있고 `XUtil` 함수 서명의 절반 이상이 `X` 를 쓰면, 그 함수는 `X` 의 (static) 멤버다(이름만 옆에 있는 수학 · 비트 입출력 Util 은 주인이 없다).
 5. 중괄호 안 헤더 include: X-매크로 표(`.xxx`) · 인라인 본문(`.inl`) 말고는 `#include` 가 이름공간 · 클래스 · 함수 몸통 안에 있으면 안 된다.
    2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
    `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
@@ -357,17 +357,26 @@ def checkUtilBesideOwner(code: str, relative: str) -> list[tuple[int, str]]:
         return []
     enums = set(re.findall(r"\benum\s+(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", code))
     types = {}
+    templates = set()
     for match in re.finditer(r"(?<!enum )\b(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)\s*(?:final\s*)?(?::[^{;:][^{;]*)?\{", code):
-        types.setdefault(match.group(1), lineOf(code, match.start()))
+        types.setdefault(match.group(1), (lineOf(code, match.start()), match.end() - 1))
+        if re.search(r"template\s*<[^;{}]*>\s*$", code[max(0, match.start() - 200):match.start()]):
+            templates.add(match.group(1))
     problems = []
-    for name, line in types.items():
+    for name, (line, openIndex) in types.items():
         owner = name[:-4]
-        if name.endswith("Util") and owner in types and owner not in enums:
-            problems.append((line, f"`{name}` 가 같은 헤더의 `{owner}` 옆에 있다 — `{owner}` 의 값을 다루는 함수는 `{owner}` 의 (static) 멤버다(Helpers.md 주인 우선)"))
+        if not name.endswith("Util") or owner not in types or owner in enums or owner in templates:
+            continue
+        # 이름이 옆에 있을 뿐 함수가 그 타입을 다루지 않으면(수학 · 비트 입출력 …) 주인이 없는 Util 이 맞다 — 함수 서명의 절반 이상이 그 타입을 쓸 때만 본다
+        body = code[openIndex + 1:matchBrace(code, openIndex)]
+        signatures = [re.sub(r"\s+", " ", head) for head in re.findall(r"(?:^|[;}])\s*((?:template\s*<[^>]*>\s*)?(?:\[\[[^\]]*\]\]\s*)?static\s[^;{=]*\()", body)]
+        owning = [s for s in signatures if re.search(r"\b" + re.escape(owner) + r"\b", s + body[body.find(s):body.find(s) + 400].split(")")[0])]
+        if signatures and len(owning) * 2 >= len(signatures):
+            problems.append((line, f"`{name}` 의 함수 대부분이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버다(Helpers.md 주인 우선)"))
     return problems
 
 
-kIncludeLine = re.compile(r'^[ 	]*#[ 	]*include[ 	]*[<"]([^>"]+)[>"]', re.M)
+kIncludeLine = re.compile(r'^[ \t]*#[ \t]*include[ \t]*[<"]([^>"]+)[>"]', re.M)
 
 
 def checkIncludesInsideBraces(raw: str, code: str) -> list[tuple[int, str]]:

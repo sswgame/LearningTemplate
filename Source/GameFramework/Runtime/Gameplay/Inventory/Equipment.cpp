@@ -67,7 +67,7 @@ namespace sw
     {
         for ( const EquipCondition& condition : def._listEquipCondition )
         {
-            if ( EquipConditionUtil::isMet( condition, listSlot, slotIndex, *_pCatalog, _pSetLookup, _context ) == false )
+            if ( EquipCondition::isMet( condition, listSlot, slotIndex, *_pCatalog, _pSetLookup, _context ) == false )
                 return false;
         }
         return true;

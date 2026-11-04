@@ -163,7 +163,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRootNotObject", "ModelImportConfig root is not an object." );
             return false;
         }
-        if ( ConfigKeyDocUtil::hasOnlyKnownKeys( root, kArrModelImportRootKeyDoc, "ModelImportConfig" ) == false )
+        if ( ConfigKeyDoc::hasOnlyKnownKeys( root, kArrModelImportRootKeyDoc, "ModelImportConfig" ) == false )
             return false;
 
         // 규칙이 조용히 기본값이 되면 임포트 결과가 말없이 바뀐다 — 망가진 규칙은 설정 전체를 거부한다.
@@ -183,7 +183,7 @@ namespace sw::editor
             if ( ruleValue.has( "name" ) )
                 rule._name = ruleValue.get( "name" ).asString();
             // 모르는 키는 설정 오류다 — 철자가 틀린 규칙이 조용히 기본값이 되지 않게.
-            const bool bKnownKeys = ConfigKeyDocUtil::hasOnlyKnownKeys( ruleValue, kArrModelImportRuleKeyDoc, "ModelImportConfig rule" );
+            const bool bKnownKeys = ConfigKeyDoc::hasOnlyKnownKeys( ruleValue, kArrModelImportRuleKeyDoc, "ModelImportConfig rule" );
             if ( bKnownKeys == false || parseAnimationKeys( ruleValue, rule ) == false )
             {
                 _listRule.clear();
@@ -293,7 +293,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImportConfig.MustObject", "%#: must be an object.", context.c_str() );
             return false;
         }
-        const bool bKnownKeys = ConfigKeyDocUtil::hasOnlyKnownKeys( fractureValue, kArrModelImportFractureKeyDoc, context );
+        const bool bKnownKeys = ConfigKeyDoc::hasOnlyKnownKeys( fractureValue, kArrModelImportFractureKeyDoc, context );
         if ( bKnownKeys == false )
             return false;
         FractureSettings& settings = inoutRule._fracture;
@@ -421,7 +421,7 @@ namespace sw::editor
         for ( size_t lodIndex = 0; lodIndex < lodsValue.size(); ++lodIndex )
         {
             const JSONValue lodValue = lodsValue.at( lodIndex );
-            if ( lodValue.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( lodValue, kArrModelImportLODKeyDoc, context ) == false )
+            if ( lodValue.isObject() == false || ConfigKeyDoc::hasOnlyKnownKeys( lodValue, kArrModelImportLODKeyDoc, context ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImportConfig.EntryMustObjectKnown", "%#: entry %# must be an object with known keys.", context.c_str(), lodIndex );
                 return false;

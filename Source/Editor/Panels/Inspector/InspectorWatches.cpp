@@ -161,7 +161,7 @@ namespace sw::editor
             if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                 return false;
             const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorWatchProperty.substr( dot + 1 ).c_str() ) );
-            if ( pProperty == nullptr || SceneObjectReferenceUtil::isReferenceTypeName( pProperty->_typeName ) == false )
+            if ( pProperty == nullptr || SceneObjectReference::isReferenceTypeName( pProperty->_typeName ) == false )
                 return false;
             const SceneObjectReference* pReference    = pProperty->getValuePtr<SceneObjectReference>( pComponent );
             const SceneManager*         pSceneManager = editor::findSubsystem<SceneManager>();
@@ -173,7 +173,7 @@ namespace sw::editor
             if ( pReference == nullptr )
                 return false; // 프로퍼티 값 포인터가 없으면 값이 없다
             uint64                         objectID{ 0 };
-            const SceneObjectResolveResult state = SceneObjectReferenceUtil::resolve( *pSceneManager, *pReference, objectID );
+            const SceneObjectResolveResult state = SceneObjectReference::resolve( *pSceneManager, *pReference, objectID );
             switch ( state )
             {
                 case SceneObjectResolveResult::Unset:
@@ -200,7 +200,7 @@ namespace sw::editor
             {
                 if ( scene == nullptr || scene->getObjectManager() == nullptr )
                     continue;
-                if ( SceneObjectReferenceUtil::isSameScenePath( scene->getSourcePath(), pReference->_scenePath ) == false )
+                if ( SceneObjectReference::isSameScenePath( scene->getSourcePath(), pReference->_scenePath ) == false )
                     continue;
                 const GameObject* pTarget = scene->getObjectManager()->findGameObjectByID( objectID );
                 if ( pTarget == nullptr )

@@ -3,7 +3,7 @@
 """
 Scripts/lint/PreCommit.py
 
-Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를,
+Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · C++ 모양 검사(`CppShape.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를,
 Content · 테스트 CMake 의 변경에 에셋 참조 검사(`AssetReferences.py` — 지우기 · 옮기기만 한 커밋도)를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
@@ -27,6 +27,7 @@ from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
 from lint.AssetReferences import checkStagedAssetReferences  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
+from lint.CppShape import checkCppShape  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
@@ -70,6 +71,15 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {line.lstrip('!')}")
         else:
             print(f"[CheckIncludeOrder] OK ({checked} files)")
+
+    # --- C++ 모양(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include — CppShape.py 머리말) ---------------
+    if stagedCppFiles:
+        listShapeViolation = checkCppShape(projectRoot, [str(path) for path in stagedCppFiles])
+        if listShapeViolation:
+            hasErrors = True
+            print(f"[CppShape] FAIL — C++ 모양 규칙 위반 {len(listShapeViolation)}건")
+            for line in listShapeViolation:
+                print(f"  - {line}")
 
     # --- Core 높은 티어 사이 역류(빌드가 가르지 않는 자리 — CoreTiers.py 머리말) ---------------
     if stagedCppFiles:

@@ -53,7 +53,7 @@ namespace sw::editor
 
     /** @brief 캐릭터 편집 데이터의 종류입니다(게임 팩의 `data/charactereditor.xml` — 스키마 테스트가 같은 로더로 읽는다). */
     SW_RESOURCE_DATA_KIND( CharacterEditorPackData, CharacterEditorPackData::kDataKind, "game/", nullptr, "/data/charactereditor.xml",
-                           &AssetDataKindUtil::loadCatalog<CharacterEditorPackData> );
+                           &AssetDataKind::loadCatalog<CharacterEditorPackData> );
 } // namespace sw::editor
 
 namespace sw::editor

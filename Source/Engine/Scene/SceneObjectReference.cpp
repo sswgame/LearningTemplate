@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    bool SceneObjectReferenceUtil::makeReference( const Scene& scene, uint64 objectID, SceneObjectReference& outReference )
+    bool SceneObjectReference::makeReference( const Scene& scene, uint64 objectID, SceneObjectReference& outReference )
     {
         outReference = SceneObjectReference{};
         if ( scene.getSourcePath().empty() )
@@ -32,7 +32,7 @@ namespace sw
         return true;
     }
 
-    bool SceneObjectReferenceUtil::isReferenceTypeName( const hashed_string& typeName )
+    bool SceneObjectReference::isReferenceTypeName( const hashed_string& typeName )
     {
         static const hashed_string s_referenceType( "SceneObjectReference" );
         return typeName == s_referenceType;
@@ -76,7 +76,7 @@ namespace sw
             {
                 if ( pValue == nullptr || typeName.empty() )
                     return;
-                if ( SceneObjectReferenceUtil::isReferenceTypeName( typeName ) )
+                if ( SceneObjectReference::isReferenceTypeName( typeName ) )
                 {
                     _outListReference.push_back( static_cast<const SceneObjectReference*>( pValue ) );
                     return;
@@ -127,7 +127,7 @@ namespace sw
         };
     } // namespace
 
-    bool SceneObjectReferenceUtil::findReferenceTo( const SceneManager& sceneManager, const TypeRegistry& typeRegistry, const Scene& targetScene, uint64 objectID, string& outHolder )
+    bool SceneObjectReference::findReferenceTo( const SceneManager& sceneManager, const TypeRegistry& typeRegistry, const Scene& targetScene, uint64 objectID, string& outHolder )
     {
         outHolder.clear();
         const uint64 fileID = targetScene.findFileID( objectID );
@@ -170,7 +170,7 @@ namespace sw
         return false;
     }
 
-    SceneObjectResolveResult SceneObjectReferenceUtil::resolve( const SceneManager& sceneManager, const SceneObjectReference& reference, uint64& outObjectID )
+    SceneObjectResolveResult SceneObjectReference::resolve( const SceneManager& sceneManager, const SceneObjectReference& reference, uint64& outObjectID )
     {
         outObjectID = 0;
         if ( reference.isSet() == false )
@@ -184,7 +184,7 @@ namespace sw
         return SceneObjectResolveResult::SceneNotLoaded;
     }
 
-    SceneObjectResolveResult SceneObjectReferenceUtil::resolveInScene( const Scene& scene, const SceneObjectReference& reference, uint64& outObjectID )
+    SceneObjectResolveResult SceneObjectReference::resolveInScene( const Scene& scene, const SceneObjectReference& reference, uint64& outObjectID )
     {
         outObjectID = 0;
         if ( reference.isSet() == false )
@@ -195,7 +195,7 @@ namespace sw
         return outObjectID != 0 ? SceneObjectResolveResult::Resolved : SceneObjectResolveResult::ObjectMissing;
     }
 
-    bool SceneObjectReferenceUtil::isSameScenePath( string_view lhs, string_view rhs )
+    bool SceneObjectReference::isSameScenePath( string_view lhs, string_view rhs )
     {
         if ( lhs.empty() || rhs.empty() )
             return false;

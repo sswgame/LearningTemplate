@@ -1,7 +1,7 @@
 /**
  * @file LocalSlotStorage.h
  * @brief 로컬 저장의 백엔드입니다. 슬롯 이름별 봉투 바이트를 실제로 두는 곳(파일, 메모리, SQLite)과, 요청 하나를 봉투와 규칙에 맞춰 실행하는 도우미를 둡니다.
- * @details 프런트(`MemoryLocalStore`, `ThreadedLocalStore`)는 언제, 어느 스레드에서 실행할지만 정하고, 무엇을 할지는 `LocalStoreRequestUtil::execute` 하나가 정한다.
+ * @details 프런트(`MemoryLocalStore`, `ThreadedLocalStore`)는 언제, 어느 스레드에서 실행할지만 정하고, 무엇을 할지는 `LocalStoreRequest::execute` 하나가 정한다.
  *          그래서 저장소마다 슬롯 규칙, 상한, 봉투가 달라지지 않는다. 백엔드는 한 스레드에서만 불린다.
  */
 #pragma once
@@ -39,24 +39,14 @@ namespace sw
 namespace sw
 {
     /** @brief 맡은 요청 하나입니다(앞이 바닥 스레드로 넘긴다). */
-    struct LocalStoreRequest
+    struct SW_GF_API LocalStoreRequest
     {
         vector<uint8>          _bytes{};
         string                 _slot{};
         LocalStoreWriteOptions _options{};
         uint64                 _requestID{ 0 };
         LocalStoreOperation    _operation{ LocalStoreOperation::Read };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct LocalStoreRequestUtil
-     * @brief 요청 하나를 백엔드에서 실행합니다. 이름 규칙, 크기 상한, 봉투 만들기와 열기를 처리합니다.
-     */
-    struct SW_GF_API LocalStoreRequestUtil
-    {
         /** @brief 백엔드에 닿기 전에 거절할 요청이면(이름, 상한) Invalid 완료를 만들고 true 입니다. */
         static bool                 makeInvalidCompletion( const LocalStoreRequest& request, LocalStoreCompletion& outCompletion );
         static LocalStoreCompletion execute( LocalStoreRequest& request, ILocalSlotStorage& storage, const LocalSealContext& sealContext );

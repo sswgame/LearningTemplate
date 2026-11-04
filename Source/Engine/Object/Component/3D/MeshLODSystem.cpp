@@ -86,10 +86,10 @@ namespace sw
         float32 screenSize = 0.0f;
         for ( const LODView& view : _listView )
         {
-            screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( view, center, radius ) );
+            screenSize = MathUtil::max( screenSize, LODView::computeScreenSize( view, center, radius ) );
         }
         if ( _bHasPendingView == SW_TRUE )
-            screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( _pendingView, center, radius ) );
+            screenSize = MathUtil::max( screenSize, LODView::computeScreenSize( _pendingView, center, radius ) );
         return screenSize;
     }
 

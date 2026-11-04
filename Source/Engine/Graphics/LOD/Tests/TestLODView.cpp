@@ -2,10 +2,9 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/LOD/LODView.h"
-
-#include "Core/Testing/TestFramework.h"
 
 using namespace sw;
 
@@ -24,13 +23,13 @@ namespace
 SW_TEST_CASE( LODViewTest, ScreenSizeIsRadiusOverDistanceForNinetyDegrees )
 {
     const LODView view = makeTestView();
-    SW_EXPECT_NEAR( 0.1f, LODViewUtil::computeScreenSize( view, float3{ 0.0f, 0.0f, 0.0f }, 1.0f ), 1.0e-4f );
-    SW_EXPECT_NEAR( 0.2f, LODViewUtil::computeScreenSize( view, float3{ 0.0f, 0.0f, 0.0f }, 2.0f ), 1.0e-4f );
+    SW_EXPECT_NEAR( 0.1f, LODView::computeScreenSize( view, float3{ 0.0f, 0.0f, 0.0f }, 1.0f ), 1.0e-4f );
+    SW_EXPECT_NEAR( 0.2f, LODView::computeScreenSize( view, float3{ 0.0f, 0.0f, 0.0f }, 2.0f ), 1.0e-4f );
 }
 
 SW_TEST_CASE( LODViewTest, OutsideFrustumIsZeroAndEyeInsideIsOne )
 {
     const LODView view = makeTestView();
-    SW_EXPECT_EQUAL( 0.0f, LODViewUtil::computeScreenSize( view, float3{ 0.0f, 0.0f, -30.0f }, 1.0f ) ); // 눈 뒤
-    SW_EXPECT_EQUAL( 1.0f, LODViewUtil::computeScreenSize( view, float3{ 0.0f, 0.0f, -10.0f }, 1.0f ) ); // 눈이 구 안
+    SW_EXPECT_EQUAL( 0.0f, LODView::computeScreenSize( view, float3{ 0.0f, 0.0f, -30.0f }, 1.0f ) ); // 눈 뒤
+    SW_EXPECT_EQUAL( 1.0f, LODView::computeScreenSize( view, float3{ 0.0f, 0.0f, -10.0f }, 1.0f ) ); // 눈이 구 안
 }

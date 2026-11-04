@@ -17,8 +17,10 @@
 namespace sw
 {
     struct EquipSlot;
+    struct EquipCharacterContext;
 
     class ItemCatalog;
+    class IEquipSetLookup;
 
     /** @brief 장착 조건의 종류입니다. */
     enum class EquipConditionKind : uint8
@@ -40,13 +42,27 @@ namespace sw
     };
 
     /** @brief 장착 조건 하나입니다. 한 아이템의 조건은 모두 맞아야 합니다(AND). */
-    struct EquipCondition
+    struct SW_GF_API EquipCondition
     {
         vector<hashed_string> _listBodyShape{}; ///< BodyShape
         hashed_string         _setID{};         ///< SetComplete, SetPieces 에서 쓴다
         TagID                 _tag{};           ///< EquippedTag, CharacterTag 에서 쓴다
         int32                 _pieceCount{ 0 }; ///< SetPieces
         EquipConditionKind    _kind{ EquipConditionKind::SetComplete };
+
+        /**
+         * @brief 슬롯 @p selfSlotIndex 의 아이템 조건 @p condition 이 @p listSlot 에서 맞는지 판정합니다.
+         * @details 다른 장비의 태그는 자기 슬롯과 숨김 슬롯을 빼고 검사한다. 세트 조건은 @p pSetLookup 이 없으면 맞지 않는다.
+         */
+        static bool isMet( const EquipCondition& condition, const vector<EquipSlot>& listSlot, int32 selfSlotIndex, const ItemCatalog& catalog,
+                           const IEquipSetLookup* pSetLookup, const EquipCharacterContext& context );
+
+        /**
+         * @brief 아이템 조건끼리의 순환(A 가 B 를, B 가 A 를 요구)을 찾습니다. 순환이 있으면 그 경로를 @p outListCycle 에 담고 true 를 반환합니다.
+         * @details 간선은 "A 의 조건을 B 가 채울 수 있다" 는 뜻이다. A 가 요구하는 세트의 조각이나 A 가 요구하는 태그를 가진 아이템이 B 가 된다.
+         *          조건이 없는 아이템은 경로를 연결하지 않는다. 그냥 끼면 되기 때문이다. 자기 자신으로 가는 간선은 세지 않는다. 조건은 자기를 낀 상태로 판정하기 때문이다.
+         */
+        [[nodiscard]] static bool findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle );
     };
 } // namespace sw
 
@@ -94,27 +110,5 @@ namespace sw
         virtual EquipSetProgress computeProgress( const hashed_string& setID, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const = 0;
         /** @brief 세트의 조각이 될 수 있는 모든 아이템(모든 몸 변형)을 추가합니다. 조건 순환 검사가 씁니다. */
         virtual void collectSetItems( const hashed_string& setID, vector<hashed_string>& outListItemID ) const = 0;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @struct EquipConditionUtil
-     *  @brief 장착 조건 판정과 조건 순환 검사를 제공합니다. */
-    struct SW_GF_API EquipConditionUtil
-    {
-        /**
-         * @brief 슬롯 @p selfSlotIndex 의 아이템 조건 @p condition 이 @p listSlot 에서 맞는지 판정합니다.
-         * @details 다른 장비의 태그는 자기 슬롯과 숨김 슬롯을 빼고 검사한다. 세트 조건은 @p pSetLookup 이 없으면 맞지 않는다.
-         */
-        static bool isMet( const EquipCondition& condition, const vector<EquipSlot>& listSlot, int32 selfSlotIndex, const ItemCatalog& catalog,
-                           const IEquipSetLookup* pSetLookup, const EquipCharacterContext& context );
-
-        /**
-         * @brief 아이템 조건끼리의 순환(A 가 B 를, B 가 A 를 요구)을 찾습니다. 순환이 있으면 그 경로를 @p outListCycle 에 담고 true 를 반환합니다.
-         * @details 간선은 "A 의 조건을 B 가 채울 수 있다" 는 뜻이다. A 가 요구하는 세트의 조각이나 A 가 요구하는 태그를 가진 아이템이 B 가 된다.
-         *          조건이 없는 아이템은 경로를 연결하지 않는다. 그냥 끼면 되기 때문이다. 자기 자신으로 가는 간선은 세지 않는다. 조건은 자기를 낀 상태로 판정하기 때문이다.
-         */
-        [[nodiscard]] static bool findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle );
     };
 } // namespace sw

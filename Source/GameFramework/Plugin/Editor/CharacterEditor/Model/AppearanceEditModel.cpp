@@ -288,7 +288,7 @@ namespace sw::editor
 
     void AppearanceEditModel::previewResolved( const AppearanceDatabase& database, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport ) const
     {
-        AppearanceSelectionUtil::previewSelection( database, _selection, CharacterAppearanceSpec{}, nullptr, outResolved, outReport );
+        AppearanceSelection::previewSelection( database, _selection, CharacterAppearanceSpec{}, nullptr, outResolved, outReport );
     }
 
     void AppearanceEditModel::recordUndo( string_view coalesceKey )

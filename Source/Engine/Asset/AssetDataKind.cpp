@@ -145,7 +145,7 @@ namespace sw
 
 namespace sw
 {
-    const AssetDataKind* AssetDataKindUtil::findByLabel( string_view label )
+    const AssetDataKind* AssetDataKind::findByLabel( string_view label )
     {
         const AssetDataKindRegistry* pRegistry = engine::findSubsystem<AssetDataKindRegistry>();
         if ( pRegistry == nullptr )
@@ -153,7 +153,7 @@ namespace sw
         return pRegistry->findByLabel( label );
     }
 
-    void AssetDataKindUtil::collectMatches( string_view assetID, vector<const AssetDataKind*>& outListKind )
+    void AssetDataKind::collectMatches( string_view assetID, vector<const AssetDataKind*>& outListKind )
     {
         outListKind.clear();
         const AssetDataKindRegistry* pRegistry = engine::findSubsystem<AssetDataKindRegistry>();

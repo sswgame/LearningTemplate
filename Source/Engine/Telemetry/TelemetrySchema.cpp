@@ -165,5 +165,5 @@ namespace sw
     }
 
     /** @brief 텔레메트리 스키마 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( TelemetrySchema, "telemetryschema", nullptr, nullptr, ".telemetry.xml", &AssetDataKindUtil::loadCatalog<TelemetrySchema> );
+    SW_RESOURCE_DATA_KIND( TelemetrySchema, "telemetryschema", nullptr, nullptr, ".telemetry.xml", &AssetDataKind::loadCatalog<TelemetrySchema> );
 } // namespace sw

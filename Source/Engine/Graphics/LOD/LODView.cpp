@@ -6,7 +6,7 @@
 
 namespace sw
 {
-    float32 LODViewUtil::computeScreenSize( const LODView& view, const float3& center, float32 radius )
+    float32 LODView::computeScreenSize( const LODView& view, const float3& center, float32 radius )
     {
         // 절두체 밖이면 0 — 판정 식은 GPU 컬링과 같다(Frustum 의 여섯 평면).
         if ( view._frustum.overlapsSphere( center, radius ) == false )
@@ -22,7 +22,7 @@ namespace sw
         return radius * scaleY / clipW;
     }
 
-    void LODViewUtil::computeProjectionTerms( const float4x4& viewProj, float32 ( &outArrDepthRow )[4], float32& outScaleY )
+    void LODView::computeProjectionTerms( const float4x4& viewProj, float32 ( &outArrDepthRow )[4], float32& outScaleY )
     {
         outArrDepthRow[0] = viewProj._14;
         outArrDepthRow[1] = viewProj._24;
