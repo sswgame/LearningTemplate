@@ -195,5 +195,25 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.close meshmodifiers.stack"/>
 	<EditorWaitSettled/>
+	<DevCommand line="panel.focus packaging"/>
+	<CaptureEditorUI file="audit/38_packaging.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close packaging"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus bug_it"/>
+	<CaptureEditorUI file="audit/39_bug_it.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close bug_it"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus world_cells"/>
+	<CaptureEditorUI file="audit/40_world_cells.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close world_cells"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus map_check"/>
+	<CaptureEditorUI file="audit/41_map_check.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close map_check"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

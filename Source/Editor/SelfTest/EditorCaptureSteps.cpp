@@ -246,6 +246,7 @@ namespace sw
 
 namespace sw::editor
 {
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorCaptureStepsInternal::runCapture, &EditorScenarioStepValidation::validateCapture, nullptr,
-                                   &EditorCaptureStepsInternal::holdCapture, false );
+    SW_AUTOMATION_STEP_WITH_WALL_BUDGET( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorCaptureStepsInternal::runCapture,
+                                         &EditorScenarioStepValidation::validateCapture, nullptr, &EditorCaptureStepsInternal::holdCapture,
+                                         EditorScenarioStepValidation::kCaptureWallSeconds );
 } // namespace sw::editor
