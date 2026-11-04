@@ -33,7 +33,7 @@ namespace sw
     ENUM()
     enum class AppearanceRuleActionKind : uint8
     {
-        HideTarget = 0, ///< 슬롯(주인)의 부품을 모두 숨긴다
+        HideTarget = 0, ///< 슬롯(주인)의 부품을 모두 숨긴다. `_part` 가 있으면 그 부품 하나만(두건이 머리카락만 감추고 눈썹은 남긴다)
         HideItemTag,    ///< 태그를 가진 외형을 숨긴다
         HideRegion,     ///< 몸 영역을 숨긴다
         ChooseVariant,  ///< 주인의 메시 변형 이름(주인이 비어 있으면 몸)
@@ -64,7 +64,7 @@ namespace sw
     {
         AppearancePlacement      _placement{};    ///< OverrideSocket
         hashed_string            _target{};       ///< 주인(슬롯 또는 꾸미기 매개변수). 비어 있으면 몸
-        hashed_string            _part{};         ///< SwapMesh, SwapMaterial 에서 쓴다(비어 있으면 주인의 모든 부품)
+        hashed_string            _part{};         ///< SwapMesh, SwapMaterial, HideTarget 에서 쓴다(비어 있으면 주인의 모든 부품)
         hashed_string            _name{};         ///< 변형, 모프, 영역, 소켓 이름
         hashed_string            _value{};        ///< 메시나 머티리얼 경로
         TagID                    _tag{};          ///< HideItemTag

@@ -170,4 +170,11 @@
     <Part name="Feet" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_feet.mesh" fit="common/characters/ubc/outfits/female_ranger_feet.partfit.xml" material="common/models/quaternius/outfits/female_ranger_feet/materials/mi_ranger.material"/>
     <Part name="Pauldrons" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_acc_pauldrons.mesh" fit="common/characters/ubc/outfits/female_ranger_acc_pauldrons.partfit.xml" material="common/models/quaternius/outfits/female_ranger_acc_pauldrons/materials/mi_ranger.material"/>
   </ItemVisual>
+  <!-- 레인저 두건(Quaternius Modular Character Outfits — Fantasy, 몸과 같은 UBC 리그) — 꾸미기 고르기 "Hood" 의 외형. 머리카락은 규칙이 감춘다(rules.xml). -->
+  <ItemVisual id="hood_ranger_male" tags="Hood.Ranger">
+    <Part name="Hood" kind="Skinned" mesh="common/models/quaternius/outfits/male_ranger_head_hood.mesh" material="common/models/quaternius/outfits/male_ranger_head_hood/materials/mi_ranger.material"/>
+  </ItemVisual>
+  <ItemVisual id="hood_ranger_female" tags="Hood.Ranger">
+    <Part name="Hood" kind="Skinned" mesh="common/models/quaternius/outfits/female_ranger_head_hood.mesh" material="common/models/quaternius/outfits/female_ranger_head_hood/materials/mi_ranger.material"/>
+  </ItemVisual>
 </ItemVisualCatalog>

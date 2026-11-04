@@ -32,6 +32,11 @@
       <Option name="Peasant" visual="outfit_peasant_male"/>
       <Option name="Ranger" visual="outfit_ranger_male"/>
     </Choice>
+    <!-- 레인저 두건 — 쓰면 규칙(RangerHoodHidesHair)이 머리카락 부품만 감추고 눈썹 · 수염은 남긴다. -->
+    <Choice name="Hood" category="Head" default="Bare">
+      <Option name="Bare"/>
+      <Option name="Hooded" visual="hood_ranger_male"/>
+    </Choice>
   </Schema>
   <Schema id="TownsfolkFemale">
     <Choice name="Hair" category="Head" default="Long">
@@ -42,6 +47,11 @@
     <Choice name="Outfit" category="Outfit" default="Peasant">
       <Option name="Peasant" visual="outfit_peasant_female"/>
       <Option name="Ranger" visual="outfit_ranger_female"/>
+    </Choice>
+    <!-- 레인저 두건 — 쓰면 규칙(RangerHoodHidesHair)이 머리카락 부품만 감추고 눈썹 · 수염은 남긴다. -->
+    <Choice name="Hood" category="Head" default="Bare">
+      <Option name="Bare"/>
+      <Option name="Hooded" visual="hood_ranger_female"/>
     </Choice>
   </Schema>
 </CustomizationSchemaCatalog>

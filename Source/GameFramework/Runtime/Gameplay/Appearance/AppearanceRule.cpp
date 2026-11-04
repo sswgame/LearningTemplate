@@ -20,7 +20,7 @@ namespace sw
         {
             static constexpr const utf8* kArrRuleAttribute[]     = { "id", "priority" };
             static constexpr const utf8* kArrWhenAttribute[]     = { "target", "tag", "characterTag", "occupied", "bodyShape", "bodyType", "not" };
-            static constexpr const utf8* kArrHideAttribute[]     = { "target", "itemTag", "region" };
+            static constexpr const utf8* kArrHideAttribute[]     = { "target", "part", "itemTag", "region" };
             static constexpr const utf8* kArrVariantAttribute[]  = { "target", "name" };
             static constexpr const utf8* kArrMeshAttribute[]     = { "target", "part", "mesh" };
             static constexpr const utf8* kArrMaterialAttribute[] = { "target", "part", "material" };
@@ -85,6 +85,11 @@ namespace sw
                         return false;
                     }
                     outAction._kind = AppearanceRuleActionKind::HideTarget;
+                    if ( outAction._part.empty() == false && outAction._target.empty() )
+                    {
+                        report.addErrorWithID( "Appearance.RuleHidePartNoTarget", "%#: rule '%#' <Hide part> needs a target (the owner whose part is hidden)", sourceName, ruleID.c_str() );
+                        return false;
+                    }
                     if ( pItemTag != nullptr )
                     {
                         outAction._kind = AppearanceRuleActionKind::HideItemTag;

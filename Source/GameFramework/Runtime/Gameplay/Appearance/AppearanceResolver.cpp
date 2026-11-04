@@ -31,6 +31,7 @@ namespace sw
                 hashed_string                _state{};
                 hashed_string                _customVariant{};         ///< 꾸미기 고르기가 정한 메시 변형
                 hashed_string                _customMaterialVariant{}; ///< 꾸미기 고르기가 정한 머티리얼 변형
+                vector<hashed_string>        _listHiddenPart{};        ///< 규칙이 숨긴 부품(`<Hide target part>`) — 나머지 부품은 그린다
                 uint8                        _bHidden{ SW_FALSE };
             };
 
@@ -487,6 +488,8 @@ namespace sw
                 {
                     if ( pState != nullptr && VectorUtil::contains( pState->_listHiddenPart, part._name ) )
                         continue;
+                    if ( VectorUtil::contains( entry._listHiddenPart, part._name ) )
+                        continue;
                     const AppearancePlacement placement = findPartPlacement( pState, part );
                     if ( emitDetachedPart( visual, entry, part, placement, stageIndex, out ) )
                         continue;
@@ -704,6 +707,16 @@ namespace sw
                             continue;
                         for ( Entry& entry : inoutListEntry )
                         {
+                            const bool bPartOnly = action._kind == AppearanceRuleActionKind::HideTarget && action._part.empty() == false;
+                            if ( bPartOnly )
+                            {
+                                if ( entry._owner == action._target && VectorUtil::contains( entry._listHiddenPart, action._part ) == false )
+                                {
+                                    entry._listHiddenPart.push_back( action._part );
+                                    addTrace( out, AppearanceTraceStep::Rule, pRule->_id, "part '%#.%#' hidden", entry._owner.c_str(), action._part.c_str() );
+                                }
+                                continue;
+                            }
                             const bool bMatches   = action._kind == AppearanceRuleActionKind::HideTarget ? entry._owner == action._target : entry._pVisual->_tags.hasTag( action._tag );
                             const bool bHideEntry = bMatches && entry._bHidden == SW_FALSE && entry._owner.empty() == false;
                             if ( bHideEntry )
