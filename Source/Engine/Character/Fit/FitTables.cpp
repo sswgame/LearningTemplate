@@ -16,10 +16,6 @@ namespace sw
     {
         struct FitTablesInternal
         {
-            static constexpr const utf8* kArrLayerAttribute[]       = { "name", "order" };
-            static constexpr const utf8* kArrRegionAttribute[]      = { "name", "bones", "group", "minWeight" };
-            static constexpr const utf8* kArrProfileAttribute[]     = { "name", "rigidity", "shrinkStrength", "pushDistance", "falloffWidth", "coverageDistance" };
-            static constexpr const utf8* kArrInteractionAttribute[] = { "inner", "outer", "operator", "args" };
 
             /** @brief `args="a=1 b=2"` 를 읽는다. 형식이 틀리면 오류. */
             static void readArguments( const XMLNode& node, CharacterDataReader& reader, vector<FitArgument>& outListArgument )
@@ -96,10 +92,8 @@ namespace sw
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, "Layer" ) )
             {
-                reader.reportUnknownAttributes( child, FitTablesInternal::kArrLayerAttribute );
                 FitLayerDef layer;
-                layer._name = reader.readName( child, "name", true );
-                reader.readOptionalInt( child, "order", layer._order );
+                (void)reader.readFields( child, layer ); // 칸은 FitLayerDef 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
                 if ( layer._name.empty() )
                     continue;
                 if ( findLayer( layer._name ) != nullptr )
@@ -109,12 +103,9 @@ namespace sw
             }
             else if ( StringUtil::equals( pName, "Region" ) )
             {
-                reader.reportUnknownAttributes( child, FitTablesInternal::kArrRegionAttribute );
                 BodyRegionDef region;
-                region._name  = reader.readName( child, "name", true );
-                region._group = reader.readName( child, "group", false );
-                reader.readOptionalFloat( child, "minWeight", region._minWeight );
-                reader.readNameList( child, "bones", region._listBone );
+                (void)reader.readFields( child, region, { "bones" } );
+                reader.readNameList( child, "bones", region._listBone ); // 이름 목록 글이라 손으로 푼다
                 const bool bHasBones = region._listBone.empty() == false;
                 const bool bHasGroup = region._group.empty() == false;
                 if ( bHasBones == bHasGroup )
@@ -128,16 +119,8 @@ namespace sw
             }
             else if ( StringUtil::equals( pName, "Profile" ) )
             {
-                reader.reportUnknownAttributes( child, FitTablesInternal::kArrProfileAttribute );
                 FitProfileDef profile;
-                profile._name = reader.readName( child, "name", true );
-                reader.readOptionalFloat( child, "rigidity", profile._rigidity );
-                reader.readOptionalFloat( child, "shrinkStrength", profile._shrinkStrength );
-                reader.readOptionalFloat( child, "pushDistance", profile._pushDistance );
-                reader.readOptionalFloat( child, "falloffWidth", profile._falloffWidth );
-                reader.readOptionalFloat( child, "coverageDistance", profile._coverageDistance );
-                if ( profile._rigidity < 0.0f || profile._rigidity > 1.0f )
-                    reader.addError( "Character.FitRigidityInvalid", child, "needs rigidity in [0, 1]" );
+                (void)reader.readFields( child, profile ); // 단단함 0..1 등 범위는 PROPERTY 가 본다
                 if ( profile._name.empty() )
                     continue;
                 if ( findProfile( profile._name ) != nullptr )
@@ -157,11 +140,8 @@ namespace sw
         }
         for ( const XMLNode& node : listInteractionNode )
         {
-            reader.reportUnknownAttributes( node, FitTablesInternal::kArrInteractionAttribute );
             FitInteractionDef interaction;
-            interaction._inner    = reader.readName( node, "inner", true );
-            interaction._outer    = reader.readName( node, "outer", true );
-            interaction._operator = reader.readName( node, "operator", true );
+            (void)reader.readFields( node, interaction, { "args" } ); // 인자(`args`)는 `이름=수` 목록 글이라 손으로 푼다
             FitTablesInternal::readArguments( node, reader, interaction._listArgument );
             if ( interaction._inner.empty() == false && findProfile( interaction._inner ) == nullptr )
                 reader.addError( "Character.FitProfileUnknown", node, string( "names unknown inner profile '" ) + interaction._inner.c_str() + "'" );

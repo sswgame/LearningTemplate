@@ -24,6 +24,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -39,22 +40,57 @@ namespace sw
      * @details 중심은 본의 바인드 모델 변환으로 옮긴 `_offset`, 축은 같은 변환으로 돌린 `_axis` 입니다. 폭 안은 반지름까지, 폭 밖은 프로필의
      *          감쇠 폭을 따라 부드럽게 원래 반지름으로 돌아갑니다.
      */
+    REFLECT()
     struct SW_API FitRingDef
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _bone{};
-        float3        _offset{};
-        float3        _axis{ 0.0f, 1.0f, 0.0f };
-        float32       _radius{ 0.05f };
-        float32       _width{ 0.02f };
+        PROPERTY( Units = m )
+        float3 _offset{};
+        PROPERTY()
+        float3 _axis{ 0.0f, 1.0f, 0.0f };
+        PROPERTY( Min = 0.00001, Units = m )
+        float32 _radius{ 0.05f };
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _width{ 0.02f };
     };
 } // namespace sw
 
 namespace sw
 {
+    /** @brief 피팅 부품 파일 루트(`<FitPart layer profile>`)의 칸입니다. */
+    REFLECT()
+    struct SW_API FitPartRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _layer{};
+        PROPERTY( Required )
+        hashed_string _profile{};
+    };
+
+    /** @brief `<Hide region>` 의 칸입니다. */
+    REFLECT()
+    struct SW_API FitHideFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _region{};
+    };
+
     /** @brief 보정 조각의 정점 하나입니다. */
+    REFLECT()
     struct SW_API FitCorrectiveDelta
     {
+        REFLECT_BODY();
+
+        PROPERTY( Units = m )
         float3 _offset{};
+        PROPERTY( Required )
         uint32 _vertex{ 0 };
     };
 } // namespace sw
@@ -62,8 +98,12 @@ namespace sw
 namespace sw
 {
     /** @brief 손 수정 델타 조각 하나입니다. 모프가 비면 항상 적용하고, 있으면 그 체형 모프의 가중치만큼 적용합니다(체형별 보정). */
+    REFLECT()
     struct SW_API FitCorrectiveDef
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string              _morph{};
         vector<FitCorrectiveDelta> _listDelta{};
     };

@@ -16,11 +16,6 @@ namespace sw
     {
         struct FitPartDefInternal
         {
-            static constexpr const utf8* kArrRootAttribute[]       = { "layer", "profile" };
-            static constexpr const utf8* kArrHideAttribute[]       = { "region" };
-            static constexpr const utf8* kArrRingAttribute[]       = { "bone", "offset", "axis", "radius", "width" };
-            static constexpr const utf8* kArrCorrectiveAttribute[] = { "morph" };
-            static constexpr const utf8* kArrDeltaAttribute[]      = { "vertex", "offset" };
 
             static void appendError( string* pOutError, const string& message )
             {
@@ -70,39 +65,34 @@ namespace sw
         _listHiddenRegion.clear();
         _listRing.clear();
         _listCorrective.clear();
-        reader.reportUnknownAttributes( root, FitPartDefInternal::kArrRootAttribute );
-        _layer   = reader.readName( root, "layer", true );
-        _profile = reader.readName( root, "profile", true );
+        FitPartRootFields rootFields;
+        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓인다
+        _layer   = rootFields._layer;
+        _profile = rootFields._profile;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, "Hide" ) )
             {
-                reader.reportUnknownAttributes( child, FitPartDefInternal::kArrHideAttribute );
-                const hashed_string region = reader.readName( child, "region", true );
+                FitHideFields hide;
+                (void)reader.readFields( child, hide );
+                const hashed_string& region = hide._region;
                 if ( region.empty() == false )
                     _listHiddenRegion.push_back( region );
             }
             else if ( StringUtil::equals( pName, "Ring" ) )
             {
-                reader.reportUnknownAttributes( child, FitPartDefInternal::kArrRingAttribute );
                 FitRingDef ring;
-                ring._bone = reader.readName( child, "bone", false );
-                reader.readOptionalFloat3( child, "offset", ring._offset );
-                reader.readOptionalFloat3( child, "axis", ring._axis );
-                reader.readOptionalFloat( child, "radius", ring._radius );
-                reader.readOptionalFloat( child, "width", ring._width );
-                const bool bInvalidRing = ring._radius <= 0.0f || ring._width < 0.0f || ring._axis.getLengthSquared() <= 0.0f;
-                if ( bInvalidRing )
-                    reader.addError( "Character.FitRingInvalid", child, "needs radius > 0, width >= 0 and a non-zero axis" );
+                const bool bFieldsRead = reader.readFields( child, ring ); // 반지름 > 0 · 폭 >= 0 은 PROPERTY 가 본다
+                if ( bFieldsRead && ring._axis.getLengthSquared() <= 0.0f )
+                    reader.addError( "Character.FitRingInvalid", child, "needs a non-zero axis" );
                 else
                     _listRing.push_back( ring );
             }
             else if ( StringUtil::equals( pName, "Corrective" ) )
             {
-                reader.reportUnknownAttributes( child, FitPartDefInternal::kArrCorrectiveAttribute );
                 FitCorrectiveDef corrective;
-                corrective._morph = reader.readName( child, "morph", false );
+                (void)reader.readFields( child, corrective );
                 for ( XMLNode deltaNode = child.findChild(); deltaNode; deltaNode = deltaNode.findNextSibling() )
                 {
                     if ( StringUtil::equals( deltaNode.getName(), "Delta" ) == false )
@@ -110,17 +100,9 @@ namespace sw
                         reader.reportUnknownElement( deltaNode );
                         continue;
                     }
-                    reader.reportUnknownAttributes( deltaNode, FitPartDefInternal::kArrDeltaAttribute );
-                    const int32 vertex = reader.readInt( deltaNode, "vertex" );
-                    if ( vertex < 0 )
-                    {
-                        reader.addError( "Character.FitDeltaVertexInvalid", deltaNode, "needs vertex >= 0" );
-                        continue;
-                    }
                     FitCorrectiveDelta delta;
-                    delta._vertex = static_cast<uint32>( vertex );
-                    reader.readOptionalFloat3( deltaNode, "offset", delta._offset );
-                    corrective._listDelta.push_back( delta );
+                    if ( reader.readFields( deltaNode, delta ) ) // 정점 번호는 부호 없는 수라 음수는 읽기 오류다
+                        corrective._listDelta.push_back( delta );
                 }
                 _listCorrective.push_back( std::move( corrective ) );
             }

@@ -26,6 +26,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include <optional>
 
@@ -39,22 +40,33 @@ namespace sw
     class XMLNode;
 
     /** @brief 겹 하나입니다. 순서가 작을수록 안쪽입니다(몸 < 셔츠 < 재킷 < 팔찌). */
+    REFLECT()
     struct SW_API FitLayerDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
-        int32         _order{ 0 };
+        PROPERTY()
+        int32 _order{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 몸 영역 하나입니다. 본 가중치(`_listBone` 의 가중치 합 ≥ `_minWeight`)나 칠한 정점 그룹(`_group`)으로 정합니다. */
+    REFLECT()
     struct SW_API BodyRegionDef
     {
-        hashed_string         _name{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY()
         hashed_string         _group{};
         vector<hashed_string> _listBone{};
-        float32               _minWeight{ 0.5f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _minWeight{ 0.5f };
     };
 } // namespace sw
 
@@ -65,14 +77,23 @@ namespace sw
      * @details 조임 세기와 감쇠 폭은 이 프로필이 **안쪽**일 때, 밀어내기 거리는 **바깥**일 때, 덮임 판정 거리는 **안쪽**일 때 쓴다.
      *          상호작용 테이블의 인자가 있으면 인자가 우선한다.
      */
+    REFLECT()
     struct SW_API FitProfileDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
-        float32       _rigidity{ 0.0f };
-        float32       _shrinkStrength{ 1.0f };
-        float32       _pushDistance{ 0.004f };
-        float32       _falloffWidth{ 0.05f };
-        float32       _coverageDistance{ 0.02f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _rigidity{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _shrinkStrength{ 1.0f };
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _pushDistance{ 0.004f };
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _falloffWidth{ 0.05f };
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _coverageDistance{ 0.02f };
     };
 } // namespace sw
 
@@ -89,10 +110,16 @@ namespace sw
 namespace sw
 {
     /** @brief 상호작용 테이블의 항목 하나입니다. (안쪽 프로필 × 바깥 프로필)에서 연산 이름과 인자로 가는 매핑이며, 같은 조합에 여러 항목을 둘 수 있습니다(테이블 순서로 실행합니다). */
+    REFLECT()
     struct SW_API FitInteractionDef
     {
-        hashed_string       _inner{};
-        hashed_string       _outer{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _inner{};
+        PROPERTY( Required )
+        hashed_string _outer{};
+        PROPERTY( Required )
         hashed_string       _operator{};
         vector<FitArgument> _listArgument{};
 
