@@ -271,7 +271,6 @@
 		<entry key="EdPlugin.WhyDoesItLookLikeThisRules"
 		       text="왜 이렇게 보이나(규칙)"
 		       sourceHash="aa54935a9461505e" />
-		<entry key="EdPlugin.ZoomFit" text="맞춰 보기" sourceHash="7a6733cf04aafd9d" />
 		<entry key="EdPluginButton.Reload" text="다시 불러오기" sourceHash="d5b6130b4937488c" />
 		<entry key="EdPluginField.Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="EdPluginField.Anchor" text="기준" sourceHash="beff9ac02dc2c474" />
@@ -384,9 +383,6 @@
 		<entry key="EdPluginTip.SaveStackBeforePickingMesh"
 		       text="다른 메시를 고르기 전에 모디파이어 스택을 저장하거나 다시 불러오세요"
 		       sourceHash="39a5368a2d1e5dd2" />
-		<entry key="EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
-		       text="공유 타임라인 시간 — 모든 역할이 기준 시계를 따릅니다"
-		       sourceHash="85b9ed42dff1375c" />
 		<entry key="EdPluginTip.SolveTheEndOntoTheSourceEnd"
 		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)"
 		       sourceHash="7e4e3458c1a7fcd3" />

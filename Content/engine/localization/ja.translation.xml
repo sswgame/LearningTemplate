@@ -281,7 +281,6 @@
 		<entry key="EdPlugin.WhyDoesItLookLikeThisRules"
 		       text="なぜこう見えるか(ルール)"
 		       sourceHash="aa54935a9461505e" />
-		<entry key="EdPlugin.ZoomFit" text="ズームフィット" sourceHash="7a6733cf04aafd9d" />
 		<entry key="EdPluginButton.Reload" text="再読み込み" sourceHash="d5b6130b4937488c" />
 		<entry key="EdPluginField.Amount" text="量" sourceHash="ba98a7152d80b949" />
 		<entry key="EdPluginField.Anchor" text="アンカー" sourceHash="beff9ac02dc2c474" />
@@ -394,9 +393,6 @@
 		<entry key="EdPluginTip.SaveStackBeforePickingMesh"
 		       text="ほかのメッシュを選ぶ前にモディファイアスタックを保存するか再読み込みしてください"
 		       sourceHash="39a5368a2d1e5dd2" />
-		<entry key="EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
-		       text="共有タイムラインの時間 — すべての役割がアンカーの時計に従います"
-		       sourceHash="85b9ed42dff1375c" />
 		<entry key="EdPluginTip.SolveTheEndOntoTheSourceEnd"
 		       text="末端をソースの末端位置へ解きます(滑らずに接地する足)"
 		       sourceHash="7e4e3458c1a7fcd3" />

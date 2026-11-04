@@ -190,7 +190,9 @@
 		       sourceHash="7c7be95f880c3262" />
 		<entry key="EdCommon.CurveNoKeys" text="(키 없음)" sourceHash="ea810e2305d393cb" />
 		<entry key="EdCommon.CurvePreviewEdit" text="클릭하면 곡선을 편집합니다" sourceHash="d2457db110d81830" />
-		<entry key="EdCommon.DataPathHint" text="리소스 id 를 치거나 에셋을 끌어 놓기" sourceHash="090d3d4162f693cb" />
+		<entry key="EdCommon.DataPathHint"
+		       text="리소스 id 를 치거나 에셋을 끌어 놓기"
+		       sourceHash="090d3d4162f693cb" />
 		<entry key="EdCommon.DebugHUDNotRunning"
 		       text="디버그 HUD 가 실행 중이 아닙니다"
 		       sourceHash="1595c29b79061b0d" />
@@ -222,6 +224,39 @@
 		<entry key="EdCommon.GizmoWorldSpace"
 		       text="월드 공간: 기즈모가 월드 축을 따릅니다. 클릭하면 로컬 공간으로 바뀝니다."
 		       sourceHash="031bf3180a4fbfe5" />
+		<entry key="EdCommon.GraphAddNode" text="+ 노드" sourceHash="1df39b55bc3aaf6a" />
+		<entry key="EdCommon.GraphAddNodeTip"
+		       text="노드를 더합니다. 캔버스를 오른쪽 클릭하면 검색, 핀을 빈 곳으로 끌면 이어서 만듭니다"
+		       sourceHash="3f3f161a14eabf1d" />
+		<entry key="EdCommon.GraphAlign" text="정렬" sourceHash="1245e2cb9f20197e" />
+		<entry key="EdCommon.GraphAlignCenterX" text="가운데 맞춤(세로 줄)" sourceHash="ceda5f21a47976b2" />
+		<entry key="EdCommon.GraphAlignCenterY" text="가운데 맞춤(가로 줄)" sourceHash="6da8e4612d7eca0c" />
+		<entry key="EdCommon.GraphAlignLeft" text="왼쪽 맞춤" sourceHash="8cfbb04eb31bf1d7" />
+		<entry key="EdCommon.GraphAlignTip"
+		       text="고른 노드를 한 줄로 맞추거나 간격을 고르게 합니다"
+		       sourceHash="904166974a83be2f" />
+		<entry key="EdCommon.GraphAlignTop" text="위 맞춤" sourceHash="7aacf94c8640c37d" />
+		<entry key="EdCommon.GraphComment" text="주석" sourceHash="af84ec86139d349e" />
+		<entry key="EdCommon.GraphCommentHint" text="주석 제목" sourceHash="0d9d7b768a58cd4c" />
+		<entry key="EdCommon.GraphCommentTip"
+		       text="고른 노드를 감싸는 주석 상자를 만듭니다(없으면 보이는 가운데). 제목을 두 번 누르면 이름을 바꿉니다"
+		       sourceHash="aa78d303469d2292" />
+		<entry key="EdCommon.GraphCommentUntitled" text="주석" sourceHash="af84ec86139d349e" />
+		<entry key="EdCommon.GraphDistributeX" text="가로 간격 고르게" sourceHash="5259efe836d8f815" />
+		<entry key="EdCommon.GraphDistributeY" text="세로 간격 고르게" sourceHash="753ec76bd7e866e7" />
+		<entry key="EdCommon.GraphFit" text="맞춤" sourceHash="f2a69a199c808e4c" />
+		<entry key="EdCommon.GraphFitTip"
+		       text="모든 노드가 보이게 맞춥니다. 고른 노드가 있으면 그 노드로 갑니다(F)"
+		       sourceHash="68dbf70ee7bed75e" />
+		<entry key="EdCommon.GraphMinimap" text="미니맵" sourceHash="eb91c968d48b5d64" />
+		<entry key="EdCommon.GraphMinimapAreaTip"
+		       text="누르거나 끌면 가장 가까운 노드로 보기를 옮깁니다"
+		       sourceHash="b481e1b90583b760" />
+		<entry key="EdCommon.GraphMinimapTip"
+		       text="그래프 전체 축소판을 보이거나 감춥니다"
+		       sourceHash="e1ecf2ef3f360a20" />
+		<entry key="EdCommon.GraphNeedThreeNodes" text="노드를 셋 이상 고르세요" sourceHash="0a74f13bf3c6c89e" />
+		<entry key="EdCommon.GraphNeedTwoNodes" text="노드를 둘 이상 고르세요" sourceHash="226ea6c30f65587c" />
 		<entry key="EdCommon.GridSnap"
 		       text="그리드 스냅: 옮기는 오브젝트가 오른쪽의 그리드 크기 단위로 움직입니다."
 		       sourceHash="08f774ea618f6e95" />
@@ -374,6 +409,29 @@
 		<entry key="EdCommon.PlayTimeScale"
 		       text="게임 시간 배율 (gv_timeScale) — 끌어서 바꾸고, 오른쪽 클릭으로 x1.00 으로 되돌립니다"
 		       sourceHash="2efa1b3f4c4ce135" />
+		<entry key="EdCommon.PreviewAxes" text="축" sourceHash="b0429f8b24295498" />
+		<entry key="EdCommon.PreviewAxesTip"
+		       text="왼쪽 아래 축 방향 표시를 보이거나 감춥니다"
+		       sourceHash="47d6aab786050da6" />
+		<entry key="EdCommon.PreviewFloor" text="바닥" sourceHash="b67f5c0accf1eb1d" />
+		<entry key="EdCommon.PreviewFloorTip" text="바닥을 보이거나 감춥니다" sourceHash="e9336cb9ef998796" />
+		<entry key="EdCommon.PreviewFrame" text="맞춤" sourceHash="ef191ab7b2c9f986" />
+		<entry key="EdCommon.PreviewFrameTip"
+		       text="카메라를 미리보기 대상으로 되돌립니다(F)"
+		       sourceHash="93396a11c48c8d2d" />
+		<entry key="EdCommon.PreviewPause" text="멈춤" sourceHash="061cc20e3432dead" />
+		<entry key="EdCommon.PreviewPauseTip"
+		       text="미리보기 씬을 재생하거나 멈춥니다(애니메이션 · 효과 · 물리가 함께)"
+		       sourceHash="eafa203608612b68" />
+		<entry key="EdCommon.PreviewPlay" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="EdCommon.PreviewScrubTip"
+		       text="끌어서 시간축을 오갑니다. 끄는 동안 재생을 멈춥니다"
+		       sourceHash="6cae91d799bb9284" />
+		<entry key="EdCommon.PreviewSpeedTip" text="미리보기 씬의 재생 속도" sourceHash="1f8e6ee52eacd63f" />
+		<entry key="EdCommon.PreviewStep" text="한 프레임" sourceHash="d9994f251f1280cf" />
+		<entry key="EdCommon.PreviewStepTip"
+		       text="멈춘 동안 미리보기를 한 프레임 나아가게 합니다"
+		       sourceHash="eced418854560d3b" />
 		<entry key="EdCommon.QuickOpenHint"
 		       text="에셋 · 씬 · 게임 오브젝트를 검색합니다(ESC 로 취소)..."
 		       sourceHash="511de9419287d1a7" />
@@ -511,7 +569,6 @@
 		<entry key="EdField.ScreenAnchorPosition" text="화면 기준 위치" sourceHash="40d42d477f94f0c9" />
 		<entry key="EdField.SimStickX" text="시험 스틱 X" sourceHash="b2f10415a2ed0264" />
 		<entry key="EdField.SimStickY" text="시험 스틱 Y" sourceHash="b2f10515a2ed0417" />
-		<entry key="EdField.Speed" text="속도" sourceHash="e24130f1123560a0" />
 		<entry key="EdField.Strength" text="세기" sourceHash="82c21acdbcd6e830" />
 		<entry key="EdField.TabRounding" text="탭 둥글기" sourceHash="f6a9ffc07e1582a4" />
 		<entry key="EdField.TargetX" text="대상 X" sourceHash="991d55143e202720" />
@@ -906,16 +963,13 @@
 		<entry key="EdText.ActiveDevice" text="활성 장치:" sourceHash="53bafb9a72e7bfd3" />
 		<entry key="EdText.Add" text="추가" sourceHash="f9aee319a006c9b4" />
 		<entry key="EdText.AddAnimation" text="애니메이션 추가" sourceHash="58eea816fbc7cb3a" />
-		<entry key="EdText.AddAttack" text="공격 추가" sourceHash="6f6757e3a0180e58" />
 		<entry key="EdText.AddBone" text="뼈 추가" sourceHash="cb0b8df395245442" />
 		<entry key="EdText.AddDataLayer" text="데이터 레이어 추가" sourceHash="ad1e64e3733b0109" />
 		<entry key="EdText.AddFrame" text="프레임 추가" sourceHash="29aae50507096619" />
-		<entry key="EdText.AddIdle" text="대기 추가" sourceHash="874810ab0501e426" />
 		<entry key="EdText.AddKey" text="키 추가" sourceHash="676b2cc62503e0ab" />
 		<entry key="EdText.AddLayer" text="레이어 추가" sourceHash="7506cbf167fb15b9" />
 		<entry key="EdText.AddMask" text="마스크 추가" sourceHash="cca6bd8746eca46c" />
 		<entry key="EdText.AddRow" text="줄 추가" sourceHash="17c2c9c5f76a3cf8" />
-		<entry key="EdText.AddWalk" text="걷기 추가" sourceHash="61795957b59fc42d" />
 		<entry key="EdText.Advance" text="진행" sourceHash="4e03fb68e290ec5d" />
 		<entry key="EdText.AdvancePreview" text="미리보기 진행" sourceHash="bd8a8c367d663f91" />
 		<entry key="EdText.AlwaysLoaded" text="늘 로드됨" sourceHash="bb378df24d84c1d1" />
@@ -1151,7 +1205,6 @@
 		<entry key="EdText.VisibleHUDElements" text="보이는 HUD 요소:" sourceHash="7b9433454d3816e9" />
 		<entry key="EdText.WhichObjectsDiffer" text="어떤 오브젝트가 다른가" sourceHash="497c8a664fadff16" />
 		<entry key="EdText.XMLDataFiles" text="XML 데이터 파일" sourceHash="149c5ee534cb9379" />
-		<entry key="EdText.ZoomFit" text="맞춰 보기" sourceHash="645e13ce66f1f13d" />
 		<entry key="EdTip.AddTheChosenWidgetTypeIntoThe"
 		       text="고른 위젯 종류를 선택한 패널 안에 더합니다(패널이 아니면 선택한 위젯 뒤에). 자리를 고르려면 항목을 트리 줄이나 그림에 끌어 놓습니다."
 		       sourceHash="90d074315ce02f7f" />
@@ -1807,9 +1860,6 @@
 		<entry key="EditorDialogueGraph.TextTip"
 		       text="플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다."
 		       sourceHash="bd06a99ae8705555" />
-		<entry key="EditorDialogueGraph.ZoomFitTip"
-		       text="모든 노드가 보이도록 캔버스를 확대 · 이동합니다."
-		       sourceHash="6697807d4dd554ca" />
 		<entry key="EditorInputMap.ActionConflictTip"
 		       text="같은 레이어의 다른 액션과 키가 겹칩니다. 자세한 내용을 확인합니다."
 		       sourceHash="fa3b46437d93db02" />

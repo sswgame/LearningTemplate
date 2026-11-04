@@ -698,10 +698,12 @@
 		</entry>
 		<entry key="EdCommon.GraphAddNode" source="+ Node">
 			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdCommon.GraphAddNodeTip" source="Add a node. Right-click the canvas to search, or drag a pin to empty space">
+		<entry key="EdCommon.GraphAddNodeTip"
+		       source="Add a node. Right-click the canvas to search, or drag a pin to empty space">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
@@ -746,7 +748,8 @@
 				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdCommon.GraphCommentTip" source="Add a comment box around the selected nodes, or in the middle of the view. Double-click its title to rename it">
+		<entry key="EdCommon.GraphCommentTip"
+		       source="Add a comment box around the selected nodes, or in the middle of the view. Double-click its title to rename it">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
 			</origins>
@@ -1211,7 +1214,8 @@
 				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdCommon.PreviewPauseTip" source="Play or pause the preview scene (animation, effects and physics together)">
+		<entry key="EdCommon.PreviewPauseTip"
+		       source="Play or pause the preview scene (animation, effects and physics together)">
 			<origins>
 				<item>Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp</item>
 			</origins>
@@ -1639,11 +1643,6 @@
 		<entry key="EdField.SimStickY" source="Sim Stick Y">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdField.Speed" source="Speed">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdField.Strength" source="Strength">
@@ -2980,11 +2979,6 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdText.AddAttack" source="Add Attack">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdText.AddBone" source="Add Bone">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
@@ -2998,11 +2992,6 @@
 		<entry key="EdText.AddFrame" source="Add Frame">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdText.AddIdle" source="Add Idle">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.AddKey" source="Add key">
@@ -3023,11 +3012,6 @@
 		<entry key="EdText.AddRow" source="Add row">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdText.AddWalk" source="Add Walk">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Advance" source="Advance">
@@ -3954,11 +3938,6 @@
 		<entry key="EdText.XMLDataFiles" source="XML Data Files">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdText.ZoomFit" source="Zoom Fit">
-			<origins>
-				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdTip.AddTheChosenWidgetTypeIntoThe"
@@ -5737,11 +5716,6 @@
 		</entry>
 		<entry key="EditorDialogueGraph.TextTip"
 		       source="The line the player reads. On a Choice node it is the prompt shown above the options.">
-			<origins>
-				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorDialogueGraph.ZoomFitTip" source="Zoom and pan the canvas so every node is visible.">
 			<origins>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>

@@ -14,7 +14,7 @@
 	<!-- 역색인이 사본 복사를 따라와야 grand 의 참조자를 안다. 콘텐츠 브라우저를 앞에 두면 따라오기 전에는 시계가 멈춘다(ContentBrowserReferenceIndex) -->
 	<DevCommand line="panel.focus content_browser"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1"/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<Remember watch="Editor.AssetCascadeReloadCount" as="beforeEdit"/>
 	<DevCommand line="asset.overwriteScratch scratch/assetcascade/grand_edited.material scratch/assetcascade/grand.material"/>
 	<!-- 연쇄 둘(parent · child)은 감시 사건 하나를 처리하는 같은 프레임에 돈다 — 값이 바뀌었으면 둘 다 끝났다 -->

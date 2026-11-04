@@ -8,7 +8,7 @@
   실행: App -EnableEditor -game=AbilityArena -scenario=game/abilityarena/automation/editor/abilitydebugger.scenario.xml -unattended
 -->
 <Scenario name="game.abilityarena.abilitydebugger" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_arenaAutoPlay" value="0"/>
