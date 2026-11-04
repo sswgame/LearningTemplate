@@ -294,12 +294,13 @@ namespace sw::editor
         {
             float3      _direction;
             const utf8* _pLabel;
-            const utf8* _pColorToken;
+            ImU32       _color;
         };
+        // 테마 색 매크로는 토큰 이름을 글자 그대로 받는다(빌드 때 토큰 표와 맞춘다) — 축마다 따로 적는다.
         const Axis arrAxis[] = {
-            {float3{ 1.0f, 0.0f, 0.0f }, "X", "AxisX"},
-            {float3{ 0.0f, 1.0f, 0.0f }, "Y", "AxisY"},
-            {float3{ 0.0f, 0.0f, 1.0f }, "Z", "AxisZ"},
+            {float3{ 1.0f, 0.0f, 0.0f }, "X", EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "AxisX" ) )},
+            {float3{ 0.0f, 1.0f, 0.0f }, "Y", EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "AxisY" ) )},
+            {float3{ 0.0f, 0.0f, 1.0f }, "Z", EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "AxisZ" ) )},
         };
         ImDrawList* pDrawList = ImGui::GetWindowDrawList();
         for ( const Axis& axis : arrAxis )
@@ -307,7 +308,7 @@ namespace sw::editor
             const float32 screenX = axis._direction._x * right._x + axis._direction._y * right._y + axis._direction._z * right._z;
             const float32 screenY = -( axis._direction._x * up._x + axis._direction._y * up._y + axis._direction._z * up._z );
             const ImVec2  tip{ origin.x + screenX * length, origin.y + screenY * length };
-            const ImU32   color = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", axis._pColorToken ) );
+            const ImU32   color = axis._color;
             pDrawList->AddLine( origin, tip, color, 2.0f );
             pDrawList->AddText( ImVec2{ tip.x + 2.0f, tip.y - ImGui::GetTextLineHeight() * 0.5f }, color, axis._pLabel );
         }
