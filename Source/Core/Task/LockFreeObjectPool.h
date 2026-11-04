@@ -154,8 +154,8 @@ namespace sw
             pPtr->~T();
 
             // "가득 찼다"는 응답이 곧 이중 반납을 뜻하지는 않는다. 내부 MPMC 큐(Vyukov)는 소비자가 슬롯을 가져간 뒤 그 슬롯의 순번을
-            // 아직 공개하지 않은 짧은 순간에도 생산자에게 가득 찼다고 응답한다. 슬롯 수(`Capacity`)와 블록 수가 같으므로 그 순간은
-            // 반드시 지나간다. 그러니 한 번 실패했다고 물러서면 안 된다. 물러서면 그 블록이 자유 목록으로 돌아가지 못해 풀이 조용히
+            // 아직 공개하지 않은 짧은 순간에도 생산자에게 가득 찼다고 응답한다. 큐 칸이 블록 수의 두 배라(`_freeQueue`) 그 소비자가 `Capacity` 연산
+            // 동안 멈춰 있을 때만 일어나고, 그 순간은 반드시 지나간다. 그러니 한 번 실패했다고 물러서면 안 된다. 물러서면 그 블록이 자유 목록으로 돌아가지 못해 풀이 조용히
             // 줄어들고, 오래 돌수록 `acquire` 가 nullptr 을 더 자주 반환한다.
             //
             // 여기까지 온 포인터는 이 풀의 블록이므로, 이미 반납된 것만 아니라면 슬롯은 반드시 난다. 그 하나를 가르는 기준이
@@ -205,7 +205,13 @@ namespace sw
 
     private:
         alignas( alignof( T ) ) std::array<uint8, Capacity * sizeof( T )> _arrStorage;
-        ConcurrentQueue<T*, Capacity>       _freeQueue;      ///< 다중 생산자, 다중 소비자 큐. acquire/release 를 스레드 안전하게 만든다.
+        /**
+         * @brief 다중 생산자, 다중 소비자 큐. acquire/release 를 스레드 안전하게 만든다.
+         * @details 칸 수를 블록 수의 두 배로 둔다. 블록 수와 같으면 반납 자리가 몇 연산 전에 꺼낸 칸이라, 꺼낸 소비자가 순번을 공개하기 전에 선점되면
+         *          반납이 "가득 찼다" 를 받아 잠들며 기다렸다(Windows 잠듦 단위가 수 ms 라 부하 걸린 기계에서 4000 번 반납이 30 초를 넘었다).
+         *          두 배면 반납 자리는 `Capacity` 연산 전의 칸이다 — 소비자가 그만큼 멈춰 있어야만 기다림이 생긴다(아래 `release` 의 대기는 그 드문 경우만 받는다).
+         */
+        ConcurrentQueue<T*, Capacity * 2>   _freeQueue;
         std::array<atomic<uint8>, Capacity> _arrSlotInUse{}; ///< 슬롯마다 "나가 있음" 표시. 이중 반납을 가려낸다(`release`).
         atomic<uint32>                      _activeCount{ 0 };
     };
