@@ -510,7 +510,7 @@ namespace sw
         {
             const AIDirectorPoolDef& pool  = listPool[poolIndex];
             const PoolState&         state = _listPoolState[poolIndex];
-            text.appendFormat( "  pool '%#' (%#, %#)%#%# budget %.2f timer %.2f\n", pool._id.c_str(), toString( pool._kind ), toString( pool._trigger ),
+            text.appendFormat( "  pool '%#' (%#, %#)%#%# budget %.2f timer %.2f\n", pool._id.c_str(), getEnumName( pool._kind ), getEnumName( pool._trigger ),
                                isPoolActive( pool ) ? "" : " [pacing]", isPoolCooledDown( pool, state ) ? "" : " [cooldown]", state._budget, state._timer );
             for ( size_t encounterIndex = 0; encounterIndex < pool._listEncounter.size(); ++encounterIndex )
             {

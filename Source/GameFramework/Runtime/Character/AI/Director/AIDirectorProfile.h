@@ -24,7 +24,8 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 긴장도 신호를 긴장도에 반영하는 방식입니다. */
+    /** @brief 긴장도 신호를 긴장도에 반영하는 방식입니다(파일에는 열거자 이름). */
+    ENUM()
     enum class AIDirectorSignalKind : uint8
     {
         Impulse = 0, ///< `addSignal( 양 )` 한 번에 양 × scale 이 더해진다(입은 피해, 가까이서 쓰러뜨림)
@@ -32,12 +33,11 @@ namespace sw
         Level        ///< 긴장도의 하한이다. 긴장도는 Σ 값 × scale(각각 max 까지) 아래로 내려가지 않는다(자원 부족)
     };
 
-    SW_GF_API const utf8* toString( AIDirectorSignalKind kind );
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 긴장도 신호 하나(`<Signal>`)입니다. `kind` 는 손으로 읽습니다(이름 표 `toString`). */
+    /** @brief 긴장도 신호 하나(`<Signal>`)입니다. */
     REFLECT()
     struct AIDirectorSignalDef
     {
@@ -48,7 +48,8 @@ namespace sw
         PROPERTY()
         float32 _scale{ 1.0f };
         PROPERTY( Tooltip = "Cap of what this signal adds at once (Impulse), per second (Rate) or as a floor (Level); negative is none" )
-        float32              _max{ -1.0f };
+        float32 _max{ -1.0f };
+        PROPERTY( Required )
         AIDirectorSignalKind _kind{ AIDirectorSignalKind::Impulse };
         PROPERTY( Tooltip = "A combat signal resets the time since combat and stops the decay" )
         bool _bCombat{ false };
@@ -118,6 +119,7 @@ namespace sw
 namespace sw
 {
     /** @brief 풀이 내는 것의 종류입니다. 게임이 받는 이벤트의 종류와 같습니다. */
+    ENUM()
     enum class AIDirectorPoolKind : uint8
     {
         Encounter = 0, ///< 조우나 사건(호드, 매복, 길가의 낯선 이)
@@ -125,6 +127,7 @@ namespace sw
     };
 
     /** @brief 풀이 항목을 고르는 때입니다. */
+    ENUM()
     enum class AIDirectorPoolTrigger : uint8
     {
         PhaseEnter = 0, ///< 단계(`phase`)에 들어설 때 `picks` 번
@@ -132,8 +135,6 @@ namespace sw
         Budget          ///< 예산이 `perMinute` × 단계 배율 × (1 + needScale × 필요 신호) 로 쌓이고, 고른 것의 `cost` 에 닿으면 낸다
     };
 
-    SW_GF_API const utf8* toString( AIDirectorPoolKind kind );
-    SW_GF_API const utf8* toString( AIDirectorPoolTrigger trigger );
 } // namespace sw
 
 namespace sw
@@ -202,8 +203,10 @@ namespace sw
         float32 _needScale{ 0.0f };
         int32   _phaseIndex{ -1 };
         PROPERTY( Min = 1 )
-        int32                 _picks{ 1 };
-        AIDirectorPoolKind    _kind{ AIDirectorPoolKind::Encounter };
+        int32 _picks{ 1 };
+        PROPERTY() ///< 적지 않으면 조우 풀이다
+        AIDirectorPoolKind _kind{ AIDirectorPoolKind::Encounter };
+        PROPERTY( Required )
         AIDirectorPoolTrigger _trigger{ AIDirectorPoolTrigger::Interval };
     };
 } // namespace sw
