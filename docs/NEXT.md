@@ -27,9 +27,7 @@
    - Shooter3D: 적 해골은 KayKit 이다(Bestiary 가 QAL 이라 못 쓴다 — 다른 CC0 몬스터를 찾는다), 무기는 Sci-Fi Essentials 총으로. 플레이어는 UBC 몸(`ShooterPlayer` → `TownsfolkMale` · 레인저 옷 · `ubc_shooter.animgraph.xml` · 문장 망토 `cape_heraldic_ubc`)으로 옮겼다.
    - 옷의 두건(레인저 Hood)은 머리 꾸미기를 감추는 규칙과 함께, 농부 동작은 UAL2 의 `farm_harvest` · `farm_plantseed` · `farm_watering` 클립으로.
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
-5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
-   - 에디터 코드에 남은 영어 화면 글 — 형식 글은 모두 `SW_LOCKEYFORMAT`(EdFormat · EdPluginFormat, 소수는 `addDecimal( 이름, 값, 자리 )`)로 옮겼고 단위만 있는 숫자 판독(`%.1f dB` · `#%zu` · `%ux%u`)은 남긴다. 삼항으로 고르던 영어 낱말은 ICU `select`(코드는 고르개 값만), 개수 글은 `plural` 로 옮겼다. 코드의 툴팁 리터럴도 끝났다. 새 키마다 ko(engine 은 ko · ja) 번역이 있어야 ToolCheckText 가 지나간다(`-export-po` → po 채우기 → `-import-po` → `--gather-text`). 원문에 `[낱말]` 을 쓰면 서식 태그로 읽혀 번역과 태그가 다르다는 오류가 난다.
-6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
+5. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
    끝낸 경계는 StructureRefactor 9 절(GPU 자원은 프록시 / 한 번 만들기 / 게시, 스레드 경계 표). 끝낸 경계: 머티리얼 · 메시 · 텍스처 · 에디터 텍스처 · 오디오 ·
    애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:
    1. 남은 경계를 같은 기준(9 절 표)으로 Source 전체에서 찾는다.
