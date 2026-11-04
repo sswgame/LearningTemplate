@@ -121,7 +121,8 @@ namespace sw::editor
             /**
              * @brief `netplay.sync objects server|client` — 탭의 "Which objects differ" 와 같은 비교를 합니다. 서버 칸은 두 칸을 세션 서버로 두고 채널에서 다시 읽고(`compareObjectsFromChannels`),
              *        클라이언트 칸은 A 를 세션 서버(채널), B 를 첫 클라이언트(표준 입력의 마지막 `state.objectline` 답)로 두고 `compareObjects` 로 견준다.
-             * @details 두 쪽의 틱이 같아야 하므로 서버를 `pause` 하고 클라이언트가 마지막 틱을 받은 뒤에 부른다. 클라이언트 칸은 먼저 `netplay.command client1 state.objectline` 로 답을 받아 둔다(탭은 단추에서 묻고 답을 기다린다).
+             * @details 두 쪽의 틱이 같아야 하므로 서버를 `pause` 한 뒤 부른다. 클라이언트 칸은 답이 서버 틱에 닿지 않았으면 그 틱의 답을 묻고(`EditorNetPlaySession::requestObjectHashes`) 돌아온다 —
+             *          받은 답 수(`Editor.NetPlayObjectHashReports`)가 바뀐 뒤 다시 부르면 비교한다(탭은 단추에서 같은 요청을 하고 답을 기다린다).
              */
             static bool runObjects( const string& side, string& outReply )
             {
@@ -138,17 +139,30 @@ namespace sw::editor
                 }
                 else
                 {
-                    EditorNetPlaySession*      pSession   = findSession();
-                    const bool                 bHasClient = pSession != nullptr && pSession->isRunning() && pSession->getProcessCount() > 1;
-                    EditorNetPlayProcessStatus status     = bHasClient ? pSession->getProcessStatus( 1 ) : EditorNetPlayProcessStatus{};
-                    if ( bHasClient == false || status._objectHashReportCount == 0 )
+                    EditorNetPlaySession* pSession   = findSession();
+                    const bool            bHasClient = pSession != nullptr && pSession->isRunning() && pSession->getProcessCount() > 1;
+                    if ( bHasClient == false )
                     {
-                        outReply = "netplay sync objects client has no state.objectline answer yet - ask with netplay.command client1 state.objectline first";
+                        outReply = "netplay sync objects client needs a running session with a client";
                         return true;
                     }
                     uint64                  serverTick = 0;
                     vector<SceneObjectHash> listServer;
-                    bDone = compare.readObjectsFromChannel( 0, serverTick, listServer ) && compare.compareObjects( serverTick, listServer, status._objectHashTick, status._listObjectHash );
+                    if ( compare.readObjectsFromChannel( 0, serverTick, listServer ) == false )
+                    {
+                        outReply = compare.getLastError();
+                        return true;
+                    }
+                    // 클라이언트 답이 서버 틱에 닿지 않았으면 그 틱의 답을 묻는다(세션이 이른 답을 거르고 다시 묻는다) — 받은 답 수가 바뀐 뒤 이 명령을 다시 부른다.
+                    const EditorNetPlayProcessStatus status = pSession->getProcessStatus( 1 );
+                    if ( status._objectHashReportCount == 0 || status._objectHashTick < serverTick )
+                    {
+                        outReply = pSession->requestObjectHashes( 1, serverTick )
+                                     ? formatToString( "asked %# for its object hashes at tick %# - wait until Editor.NetPlayObjectHashReports changes, then run this again", status._label, serverTick )
+                                     : "netplay sync objects client could not ask the client (its process is gone)";
+                        return true;
+                    }
+                    bDone = compare.compareObjects( serverTick, listServer, status._objectHashTick, status._listObjectHash );
                 }
                 if ( bDone )
                     outReply = formatToString( "netplay sync objects tick %#: %# differing object(s)", compare.getObjectTick(), compare.getDifferingObjects().size() );
@@ -369,29 +383,36 @@ namespace sw::editor
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         EditorNetPlaySession&   session = MultiplayerSyncTabInternal::getSession();
         _bObjectRequest                 = false;
-        bool bWaiting                   = false;
+        bool   bWaiting                 = false;
+        uint64 channelTick              = 0;
+        // 채널(서버) 칸을 먼저 읽어 그 틱을 안다 — 클라이언트에는 그 틱 이상의 답만 받는다(멈춘 서버를 클라이언트가 아직 따라오는 중일 수 있다).
         for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
         {
             _arrObjectPendingProcess[sourceIndex] = -1;
-            const int32 processIndex              = compare.getClientOrigin( sourceIndex );
-            if ( processIndex >= 0 )
-            {
-                // 클라이언트는 디버그 채널이 없다 - 표준 입력의 한 줄 답(`state.objectline`)을 기다린다.
-                if ( session.isRunning() == false || session.sendProcessCommand( processIndex, "state.objectline" ) == false )
-                {
-                    SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotAsk2", "Sync could not ask slot %# for its object hashes (the session or the process is gone)", sourceIndex );
-                    return;
-                }
-                _arrObjectPendingProcess[sourceIndex] = processIndex;
-                _arrObjectPendingCount[sourceIndex]   = session.getProcessStatus( processIndex )._objectHashReportCount;
-                bWaiting                              = true;
+            if ( compare.getClientOrigin( sourceIndex ) >= 0 )
                 continue;
-            }
             if ( compare.readObjectsFromChannel( sourceIndex, _arrObjectTick[sourceIndex], _arrObjectList[sourceIndex] ) == false )
             {
                 SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare", "Sync could not compare objects: %#", compare.getLastError() );
                 return;
             }
+            channelTick = _arrObjectTick[sourceIndex] > channelTick ? _arrObjectTick[sourceIndex] : channelTick;
+        }
+        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
+        {
+            const int32 processIndex = compare.getClientOrigin( sourceIndex );
+            if ( processIndex < 0 )
+                continue;
+            // 클라이언트는 디버그 채널이 없다 - 표준 입력의 한 줄 답(`state.objectline`)을 기다린다.
+            const uint32 reportCount = session.isRunning() ? session.getProcessStatus( processIndex )._objectHashReportCount : 0;
+            if ( session.isRunning() == false || session.requestObjectHashes( processIndex, channelTick ) == false )
+            {
+                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotAsk2", "Sync could not ask slot %# for its object hashes (the session or the process is gone)", sourceIndex );
+                return;
+            }
+            _arrObjectPendingProcess[sourceIndex] = processIndex;
+            _arrObjectPendingCount[sourceIndex]   = reportCount;
+            bWaiting                              = true;
         }
         _bObjectRequest = true;
         _errorText.clear();

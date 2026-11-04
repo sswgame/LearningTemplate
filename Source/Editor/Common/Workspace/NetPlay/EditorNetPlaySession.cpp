@@ -49,6 +49,8 @@ namespace sw::editor
         vector<SceneObjectHash> _listObjectHash{};    ///< 마지막 `state.objectline` 답의 오브젝트별 해시(게임 스레드, Sync 탭)
         uint64                  _objectHashTick{ 0 }; ///< 그 답이 단 틱
         uint32                  _objectHashReportCount{ 0 };
+        uint64                  _objectHashMinTick{ 0 };    ///< `requestObjectHashes` 가 바란 가장 이른 틱 — 이보다 이른 답은 받지 않고 다시 묻는다
+        uint32                  _objectHashReaskCount{ 0 }; ///< 그 요청에서 다시 물은 수(`kMaxObjectHashReask` 에서 멈춘다)
         atomic<int32>           _exitCode{ 0 };
         atomic<uint32>          _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
         int32                   _processID{ 0 }; ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
@@ -556,6 +558,15 @@ namespace sw::editor
             // Sync 탭이 물은 오브젝트별 해시(한 줄)도 보관만 한다 — 오브젝트 수만큼 길다.
             if ( SceneStateHash::tryParseObjectReportLine( line, child._objectHashTick, child._listObjectHash ) )
             {
+                // 바란 틱보다 이른 답(서버는 멈췄고 클라이언트가 아직 따라오는 중)은 답으로 세지 않고 다시 묻는다 — 비교는 두 쪽이 같은 틱이어야 한다.
+                // 상한에 닿으면 이른 답을 그대로 넘긴다: 비교가 "틱이 다르다" 로 실패해 드러난다(숨기지 않는다).
+                const bool bEarly = child._objectHashTick < child._objectHashMinTick && child._objectHashReaskCount < EditorNetPlaySession::kMaxObjectHashReask;
+                if ( bEarly && child._process.writeInput( string( EditorNetPlaySession::kObjectHashCommand ) + "\n" ) )
+                {
+                    ++child._objectHashReaskCount;
+                    continue;
+                }
+                child._objectHashMinTick = 0;
                 ++child._objectHashReportCount;
                 continue;
             }
@@ -595,6 +606,16 @@ namespace sw::editor
         if ( child._exited.load() != 0 )
             return false;
         return child._process.writeInput( string( command ) + "\n" );
+    }
+
+    bool EditorNetPlaySession::requestObjectHashes( int32 processIndex, uint64 minTick )
+    {
+        if ( processIndex < 0 || processIndex >= getProcessCount() )
+            return false;
+        ChildProcess& child         = *_listProcess[static_cast<size_t>( processIndex )];
+        child._objectHashMinTick    = minTick;
+        child._objectHashReaskCount = 0;
+        return sendProcessCommand( processIndex, kObjectHashCommand );
     }
 
     int32 EditorNetPlaySession::getConnectedClientCount() const

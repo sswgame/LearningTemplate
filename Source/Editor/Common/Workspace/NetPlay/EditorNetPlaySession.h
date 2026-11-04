@@ -159,6 +159,16 @@ namespace sw::editor
          * @details 클라이언트 · 리슨 호스트(`App -gv_standardInputCommands=1`)와 전용 서버(Dev)는 그 줄을 개발 명령으로 돌리고 답을 로그 줄로 남긴다.
          */
         [[nodiscard]] bool sendProcessCommand( int32 processIndex, string_view command );
+        /**
+         * @brief 프로세스 @p processIndex 에 오브젝트별 해시(`state.objectline`)를 묻되, @p minTick 보다 이른 답은 받지 않고 다시 묻습니다. 보냈으면 true 입니다.
+         * @details 서버를 멈춘 뒤에도 클라이언트는 마지막 틱 몇 개를 더 받는다 — 첫 답을 그대로 받으면 두 쪽 틱이 달라 비교가 거절됐다(부하 걸린 기계에서 57 대 61).
+         *          받아들인 답에서 `_objectHashReportCount` 가 오른다. 다시 묻기는 `kMaxObjectHashReask` 번까지이고, 넘으면 이른 답을 넘겨 비교가 틱 차이로 실패한다.
+         */
+        [[nodiscard]] bool requestObjectHashes( int32 processIndex, uint64 minTick );
+        /** @brief 오브젝트별 해시를 묻는 개발 명령입니다(`SceneStateHash` 의 `state.objectline`). */
+        static constexpr const utf8* kObjectHashCommand = "state.objectline";
+        /** @brief 이른 답 뒤 다시 묻는 상한입니다 — 멈춘 서버를 따라오는 데 드는 답 수보다 넉넉하고, 끊긴 클라이언트에 끝없이 묻지 않게 한다. */
+        static constexpr uint32 kMaxObjectHashReask = 600;
 
         bool isRunning() const { return _listProcess.empty() == false; }
         /** @brief `requestStop` 뒤 프로세스 거두기 · 트레이스 합치기가 아직 끝나지 않았으면 true 입니다. 이 동안 `isRunning` 은 거짓이고 `start` 는 거절한다. */
