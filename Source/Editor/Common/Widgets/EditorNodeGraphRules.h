@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -52,6 +53,37 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 고른 노드를 맞추는 방식입니다(언리얼 그래프의 Alignment 메뉴와 같은 여섯). */
+    enum class EditorGraphAlign : uint8
+    {
+        Left = 0,             ///< 왼쪽 끝을 가장 왼쪽 노드에 맞춘다
+        Top,                  ///< 위쪽 끝을 가장 위 노드에 맞춘다
+        CenterHorizontal,     ///< 가로 가운데를 고른 노드들 가운데에 맞춘다(세로 한 줄)
+        CenterVertical,       ///< 세로 가운데를 고른 노드들 가운데에 맞춘다(가로 한 줄)
+        DistributeHorizontal, ///< 양 끝 노드는 두고 사이 간격을 고르게(가로)
+        DistributeVertical,   ///< 양 끝 노드는 두고 사이 간격을 고르게(세로)
+        Count,
+    };
+
+    /** @brief 캔버스 좌표의 노드 사각형 하나입니다(정렬 · 미니맵 입력). */
+    struct EditorGraphNodeRect
+    {
+        int32  _nodeID{ 0 };
+        float2 _position{}; ///< 왼쪽 위
+        float2 _size{};
+    };
+
+    /** @brief 캔버스 점을 미니맵 점으로 옮기는 배율과 원점입니다(`미니맵 = ( 캔버스 - _canvasOrigin ) * _scale + _mapOffset`). */
+    struct EditorGraphMinimapTransform
+    {
+        float2  _canvasOrigin{};
+        float2  _mapOffset{};
+        float32 _scale{ 0.0f };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @struct EditorNodeGraphRules
      * @brief 언리얼 SGraphEditor 와 유니티 GraphView 의 공통 판단입니다. 노드 검색, 핀 연결 허용 여부(방향과 타입), 도달하지 못하는 노드를 다룹니다.
@@ -77,5 +109,22 @@ namespace sw::editor
          * @param listInputNode 들어오는 핀이 있는 노드 id 입니다. 시작 노드처럼 들어오는 핀이 없는 노드는 넣지 않습니다.
          */
         static void collectUnreachableNodes( const vector<int32>& listInputNode, const vector<EditorGraphEdge>& listEdge, vector<EditorGraphNodeIssue>& outListIssue );
+        /**
+         * @brief @p ioListRect 의 위치를 @p align 대로 바꿉니다. 노드가 둘 미만이면(나누기는 셋 미만이면) 그대로 두고 false 입니다.
+         * @details 나누기는 양 끝 노드를 두고 노드 사이 빈칸을 같게 한다(크기가 다른 노드도 간격이 같다). 결과의 순서는 입력 순서다.
+         */
+        static bool alignNodes( vector<EditorGraphNodeRect>& ioListRect, EditorGraphAlign align );
+        /**
+         * @brief 노드 사각형들과 보이는 사각형(@p viewMin ~ @p viewMax)을 모두 담는 범위를 @p mapSize 안에 비율을 지켜 넣는 변환을 만듭니다.
+         * @return 담을 것이 없거나 미니맵 크기가 0 이면 false 입니다.
+         */
+        static bool fitMinimap( const vector<EditorGraphNodeRect>& listRect, const float2& viewMin, const float2& viewMax, const float2& mapSize,
+                                EditorGraphMinimapTransform& outTransform );
+        /** @brief 캔버스 점 @p canvasPoint 를 미니맵 점으로 옮깁니다. */
+        static float2 canvasToMinimap( const EditorGraphMinimapTransform& transform, const float2& canvasPoint );
+        /** @brief 미니맵 점 @p mapPoint 를 캔버스 점으로 되돌립니다. */
+        static float2 minimapToCanvas( const EditorGraphMinimapTransform& transform, const float2& mapPoint );
+        /** @brief 캔버스 점 @p canvasPoint 에 가운데가 가장 가까운 노드의 id 입니다. 노드가 없으면 0 입니다. */
+        static int32 findNearestNode( const vector<EditorGraphNodeRect>& listRect, const float2& canvasPoint );
     };
 } // namespace sw::editor

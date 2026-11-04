@@ -156,10 +156,6 @@ namespace sw::editor
                 notifyDocumentEdited( "Reset Dialogue Graph" );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ResetDefaultTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ZoomFit" ) ) );
-            if ( ImGui::Button( SW_LOCKEY( "EdText", "ZoomFit" ) ) )
-                _nodeGraph.requestContentFit();
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ZoomFitTip" ) );
             drawPreviewToolbar();
 
             ImGui::SameLine();
@@ -215,11 +211,11 @@ namespace sw::editor
         for ( DialogueNode& node : _graph._listNode )
         {
             const ed::NodeId nodeID = toNodeID( node._id );
-            ed::BeginNode( nodeID );
+            _nodeGraph.beginNode( node._id );
 
             drawNodeBody( node );
 
-            ed::EndNode();
+            _nodeGraph.endNode();
 
             if ( _nodeGraph.needsContentFit() )
                 ed::SetNodePosition( nodeID, ImVec2( node._position._x, node._position._y ) );
@@ -527,13 +523,13 @@ namespace sw::editor
             case DialogueNodeOutput::Branch:
             {
                 ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "If", TextArgumentList().addText( "condition", node._condition.c_str() ) ).c_str() );
-                ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
+                _nodeGraph.beginPin( DialogueGraphPanelInternal::pinBranchTrue( node._id ), false );
                 ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kTrueBranchText ), "True ->" );
-                ed::EndPin();
+                _nodeGraph.endPin();
                 ImGui::SameLine();
-                ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
+                _nodeGraph.beginPin( DialogueGraphPanelInternal::pinBranchFalse( node._id ), false );
                 ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kFalseBranchText ), "False ->" );
-                ed::EndPin();
+                _nodeGraph.endPin();
                 return;
             }
             case DialogueNodeOutput::Choice:
@@ -546,9 +542,9 @@ namespace sw::editor
                 }
                 for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
                 {
-                    ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
+                    _nodeGraph.beginPin( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ), false );
                     ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
-                    ed::EndPin();
+                    _nodeGraph.endPin();
                 }
                 return;
             }
@@ -670,19 +666,19 @@ namespace sw::editor
     void DialogueGraphPanel::drawInputPin( int32 nodeID )
     {
         const int32 pinID = DialogueGraphPanelInternal::pinIn( nodeID );
-        ed::BeginPin( toPinID( pinID ), ed::PinKind::Input );
+        _nodeGraph.beginPin( pinID, true );
         _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
         ImGui::SameLine();
         ImGui::TextUnformatted( "In" );
-        ed::EndPin();
+        _nodeGraph.endPin();
     }
 
     void DialogueGraphPanel::drawOutputPin( int32 pinID, const utf8* pLabel )
     {
-        ed::BeginPin( toPinID( pinID ), ed::PinKind::Output );
+        _nodeGraph.beginPin( pinID, false );
         ImGui::TextUnformatted( pLabel );
         ImGui::SameLine();
         _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
-        ed::EndPin();
+        _nodeGraph.endPin();
     }
 } // namespace sw::editor

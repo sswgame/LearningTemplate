@@ -1,6 +1,6 @@
 /**
  * @file EditorWidgetWatches.cpp
- * @brief 공용 위젯의 자동화 감시 값입니다 — `Editor.NoSearchResultHintShown` · `Editor.GraphNodeCount`.
+ * @brief 공용 위젯의 자동화 감시 값입니다 — `Editor.NoSearchResultHintShown` · `Editor.GraphNodeCount` 와 그래프 캔버스의 보기 도구 값.
  * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
  *          `EditorWatchSupport.h` 에 있습니다.
  */
@@ -27,10 +27,33 @@ namespace sw::editor
             outValue = static_cast<float64>( EditorNodeGraph::getDrawnNodeCount() );
             return true;
         }
+
+        [[nodiscard]] bool readGraphAutoLinkCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            outValue = static_cast<float64>( EditorNodeGraph::getAutoLinkCount() );
+            return true;
+        }
+
+        [[nodiscard]] bool readGraphAlignedNodeCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            outValue = static_cast<float64>( EditorNodeGraph::getAlignedNodeCount() );
+            return true;
+        }
+
+        [[nodiscard]] bool readGraphMinimapShown( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            outValue = EditorNodeGraph::isMinimapShown() ? 1.0 : 0.0;
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( editorNoSearchResultHintShown, "Editor.NoSearchResultHintShown", "1 when a panel drew its zero-results hint for a search this or last frame",
                          &readNoSearchResultHintShown );
     SW_AUTOMATION_WATCH( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &readGraphNodeCount );
+    SW_AUTOMATION_WATCH( editorGraphAutoLinkCount, "Editor.GraphAutoLinkCount", "Links the node graph canvas made from a pin dragged to empty space to the node picked there (running total)",
+                         &readGraphAutoLinkCount );
+    SW_AUTOMATION_WATCH( editorGraphAlignedNodeCount, "Editor.GraphAlignedNodeCount", "Nodes the last Align command of a node graph canvas moved (0 when too few were selected)",
+                         &readGraphAlignedNodeCount );
+    SW_AUTOMATION_WATCH( editorGraphMinimapShown, "Editor.GraphMinimapShown", "1 when the node graph canvas drawn most recently showed its minimap", &readGraphMinimapShown );
 } // namespace sw::editor

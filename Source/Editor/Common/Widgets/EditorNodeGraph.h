@@ -51,8 +51,22 @@ namespace sw::editor
         bool beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName, const utf8* pMarkScope );
         /** @brief 노드 편집기 컨텍스트가 있는지 확인합니다. `beginCanvas` 가 false 일 때 실패인지, 아직 그릴 영역이 없는 것인지 구분하는 데 씁니다. */
         bool hasContext() const { return _pEditor != nullptr; }
-        /** @brief beginCanvas() 와 짝입니다. */
+        /**
+         * @brief beginCanvas() 와 짝입니다. 캔버스를 닫기 전에 보기 요청(맞춤 · 정렬 · 미니맵 이동)을 반영하고, 닫은 뒤 캔버스 위에 보기 막대와 미니맵을 얹습니다.
+         * @details 막대와 미니맵은 캔버스를 연 창의 자식 창이다 — 캔버스는 자기 자식 영역(`EditorSectionKind::Child`)에 두어야 한다(뒤에 오는 항목이 없어야 커서를 되돌리지 않아도 된다).
+         */
         void endCanvas();
+
+        /** @brief 노드를 엽니다(`ed::BeginNode`). 캔버스가 이번 프레임의 노드와 그 핀을 기억합니다 — 핀을 끌어 만든 노드에 링크를 잇는 데 씁니다. */
+        void beginNode( int32 nodeID );
+        /** @brief beginNode() 와 짝입니다. */
+        void endNode();
+        /** @brief 핀을 엽니다(`ed::BeginPin`). 지금 연 노드의 핀으로 기억합니다. */
+        void beginPin( int32 pinID, bool bInput );
+        /** @brief beginPin() 와 짝입니다. */
+        void endPin();
+        /** @brief 노드 위치를 그래프가 스스로 정하면(행동 트리의 자동 배치) true 로 둡니다. 보기 막대가 정렬 메뉴를 감춥니다 — 맞춘 위치가 다음 배치에 사라진다. */
+        void setAutoLayout( bool bAutoLayout ) { _bAutoLayout = bAutoLayout; }
 
         /** @brief Begin 없이 현재 에디터만 바인딩합니다. 위치를 조회할 때 씁니다. */
         [[nodiscard]] bool bind() const;
@@ -74,6 +88,8 @@ namespace sw::editor
          * @brief 드래그해서 잇는 새 링크를 받습니다. `ed::BeginCreate` 에서 `EndCreate` 까지 전체를 처리하며 캔버스 안에서 호출합니다.
          * @param findPin 핀 번호로 연결 정보를 찾는 콜백입니다. 모르는 핀이면 false 를 반환하며, 그 연결은 거절됩니다.
          * @details 방향이나 타입이 맞지 않으면 링크를 빨갛게 표시해 거절하고 이유를 그 위치의 툴팁으로 보여 준다(`EditorNodeGraphRules::canConnect`).
+         *          핀을 빈 곳에 놓으면 노드 검색 팝업을 열고, 거기서 고른 노드가 다음 프레임에 나타나면 그 노드의 맞는 첫 핀과 잇는 링크를 이 함수가 돌려준다
+         *          (언리얼 · 유니티 그래프의 핀 끌어 노드 만들기). 그래서 패널은 노드를 `beginNode` · `beginPin` 으로 열고 이 함수를 노드를 그린 뒤 부른다.
          * @return 받아들인 연결이면 true 이며, 나가는 핀과 들어오는 핀 순서로 반환합니다.
          */
         bool queryNewLink( const Delegate<bool( int32, EditorGraphPinInfo& )>& findPin, int32& outFromPin, int32& outToPin );
@@ -89,6 +105,13 @@ namespace sw::editor
         void drawNodeIssues() const;
         /** @brief 현재 문제 노드 수를 반환합니다. */
         uint32 getNodeIssueCount() const { return static_cast<uint32>( _listNodeIssue.size() ); }
+
+        /** @brief 핀을 끌어 만든 노드에 링크를 이은 횟수입니다(감시 값 `Editor.GraphAutoLinkCount`). */
+        static uint32 getAutoLinkCount();
+        /** @brief 마지막 정렬이 옮긴 노드 수입니다(감시 값 `Editor.GraphAlignedNodeCount`). */
+        static uint32 getAlignedNodeCount();
+        /** @brief 가장 최근에 그린 캔버스가 미니맵을 보였으면 true 입니다(감시 값 `Editor.GraphMinimapShown`). */
+        static bool isMinimapShown();
 
         /** @brief 이번 프레임에 그린 그래프의 노드 수를 기록합니다. 시나리오 프로브 `Editor.GraphNodeCount` 가 읽습니다. */
         static void noteDrawnNodeCount( uint32 nodeCount );
@@ -116,8 +139,30 @@ namespace sw::editor
         }
 
     private:
+        /** @brief 이번 프레임에 연 핀 하나와 그 노드입니다. */
+        struct FramePin
+        {
+            int32 _pinID{ 0 };
+            int32 _nodeID{ 0 };
+        };
+
         /** @brief 노드 편집기의 색을 지금 테마 토큰으로 칠합니다(`beginCanvas` 가 프레임마다). */
         void applyThemeStyle();
+        /** @brief 앞 프레임 보기 막대 · 미니맵이 남긴 요청(맞춤 · 정렬 · 노드로 이동)을 캔버스를 닫기 전에 반영합니다. */
+        void applyViewRequests();
+        /** @brief 미니맵에 그릴 노드 사각형 · 고른 노드 · 보이는 범위를 캔버스를 닫기 전에 모읍니다. */
+        void collectMinimap();
+        /** @brief 캔버스 오른쪽 위 보기 막대(맞춤 · 정렬 · 미니맵)를 그립니다. */
+        void drawViewBar();
+        /** @brief 보기 막대의 정렬 메뉴입니다. 고른 노드가 모자란 항목은 끕니다. */
+        void drawAlignMenu();
+        /** @brief 캔버스 오른쪽 아래 미니맵을 그립니다. 누르면 가까운 노드로 보기를 옮깁니다. */
+        void drawMinimap();
+        /**
+         * @brief 핀을 끌어 만든 노드가 이번 프레임에 나타났으면 그 노드의 맞는 핀과 잇는 링크를 만듭니다.
+         * @return 이었으면 true 이며 나가는 핀과 들어오는 핀 순서로 반환합니다.
+         */
+        bool takeAutoLink( const Delegate<bool( int32, EditorGraphPinInfo& )>& findPin, int32& outFromPin, int32& outToPin );
 
         void ensureContext( const utf8* pSettingsFileName );
         void destroyContext();
@@ -131,6 +176,25 @@ namespace sw::editor
         vector<EditorGraphNodeIssue>           _listNodeIssue;      ///< 이번 프레임의 문제 노드
         fixed_string<constant::buffer::kMax64> _addNodeFilter;      ///< 노드 검색어
         float2                                 _addNodePosition;    ///< 노드 검색 팝업을 연 위치(캔버스 좌표)
+        float2                                 _canvasOrigin;       ///< 이번 프레임 캔버스의 화면 왼쪽 위(beginCanvas 가 잰다)
+        vector<int32>                          _listFrameNode;      ///< 이번 프레임에 연 노드(beginNode)
+        vector<FramePin>                       _listFramePin;       ///< 이번 프레임에 연 핀과 그 노드(beginPin)
+        vector<EditorGraphNodeRect>            _listMinimapRect;    ///< 미니맵에 그릴 노드(캔버스 좌표, collectMinimap)
+        vector<int32>                          _listSelectedNode;   ///< 고른 노드(collectMinimap)
+        vector<int32>                          _listAutoLinkBefore; ///< 핀에서 노드를 고른 순간의 노드 — 새로 나타난 노드를 가린다
+        float2                                 _viewMin;            ///< 보이는 범위(캔버스 좌표)
+        float2                                 _viewMax;
+        float2                                 _viewBarSize;        ///< 앞 프레임 보기 막대 크기 — 오른쪽 끝에 붙인다
+        EditorGraphAlign                       _pendingAlign;       ///< 다음 프레임에 할 정렬(`Count` 면 없다)
+        int32                                  _currentNodeID;      ///< 지금 연 노드(beginNode ~ endNode)
+        int32                                  _pendingFocusNodeID; ///< 다음 프레임에 화면 가운데로 옮길 노드(미니맵). 0 이면 없다
+        int32                                  _pinDragSource;      ///< 빈 곳에 놓은 끌기의 시작 핀. 노드 검색 팝업이 열려 있는 동안 남는다
+        int32                                  _autoLinkPin;        ///< 새 노드에 이을 핀. 0 이면 없다
+        uint32                                 _autoLinkFramesLeft; ///< 새 노드를 기다릴 남은 프레임 — 노드를 넣지 못했으면 요청을 버린다
         bool                                   _bNeedsContentFit;
+        bool                                   _bPendingNavigate; ///< 다음 프레임에 보기를 맞춘다(고른 노드가 있으면 그 노드에)
+        bool                                   _bOpenAddFromPin;  ///< 다음 `drawAddNodePopup` 이 노드 검색 팝업을 연다(핀 끌기)
+        bool                                   _bMinimapVisible;
+        bool                                   _bAutoLayout; ///< 노드 위치를 그래프가 정한다 — 정렬 메뉴를 감춘다
     };
 } // namespace sw::editor

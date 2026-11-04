@@ -129,6 +129,7 @@ namespace sw::editor
         , _bSelectPending{ false }
     {
         _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
+        _nodeGraph.setAutoLayout( true );                                   // 노드 자리는 트리 배치(layoutTree)가 정한다 — 정렬 메뉴를 감춘다(언리얼 BT 에디터도 자동 배치)
     }
 
     void BehaviorTreePanel::shutdown()
@@ -249,9 +250,6 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Reload" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Reload" ) ) )
                 reloadDocument();
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) );
-            if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) )
-                _nodeGraph.requestContentFit();
             ImGui::SameLine();
             const bool bEditable = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
             if ( bEditable )
@@ -384,12 +382,12 @@ namespace sw::editor
     void BehaviorTreePanel::drawNode( const BehaviorTreeEditNode& node, bool bActive )
     {
         using Internal = BehaviorTreePanelInternal;
-        ed::BeginNode( toNodeID( node._id ) );
+        _nodeGraph.beginNode( node._id );
         if ( node._parent >= 0 )
         {
-            ed::BeginPin( toPinID( Internal::makeInputPin( node._id ) ), ed::PinKind::Input );
+            _nodeGraph.beginPin( Internal::makeInputPin( node._id ), true );
             _nodeGraph.drawPinIcon( 0, true );
-            ed::EndPin();
+            _nodeGraph.endPin();
             ImGui::SameLine();
         }
         ImGui::TextColored( Internal::getTypeColor( node._type ), "%s", BehaviorTreeNames::toString( node._type ) );
@@ -434,13 +432,13 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "running" );
         if ( BehaviorTreeNames::isLeaf( node._type ) == false )
         {
-            ed::BeginPin( toPinID( Internal::makeOutputPin( node._id ) ), ed::PinKind::Output );
+            _nodeGraph.beginPin( Internal::makeOutputPin( node._id ), false );
             ImGui::TextUnformatted( "children" );
             ImGui::SameLine();
             _nodeGraph.drawPinIcon( 0, node._listChild.empty() == false );
-            ed::EndPin();
+            _nodeGraph.endPin();
         }
-        ed::EndNode();
+        _nodeGraph.endNode();
     }
 
     bool BehaviorTreePanel::findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const

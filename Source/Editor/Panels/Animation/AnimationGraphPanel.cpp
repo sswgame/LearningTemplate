@@ -247,7 +247,7 @@ namespace sw::editor
         for ( GraphNode& node : _graph._listNode )
         {
             const ed::NodeId nodeID = toNodeID( node._id );
-            ed::BeginNode( nodeID );
+            _nodeGraph.beginNode( node._id );
             if ( _preview.isCurrentState( node._name ) )
                 ImGui::TextColored( EditorColorUtil::toImVec4( AnimationGraphPanelInternal::kCurrentStateText ), "%s", node._name.c_str() );
             else
@@ -266,18 +266,18 @@ namespace sw::editor
                 bLinkedIn  = bLinkedIn || link._toNode == node._id;
                 bLinkedOut = bLinkedOut || link._fromNode == node._id;
             }
-            ed::BeginPin( toPinID( AnimationGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+            _nodeGraph.beginPin( AnimationGraphPanelInternal::pinIn( node._id ), true );
             _nodeGraph.drawPinIcon( 0, bLinkedIn );
             ImGui::SameLine();
             ImGui::TextUnformatted( "In" );
-            ed::EndPin();
+            _nodeGraph.endPin();
             ImGui::SameLine();
-            ed::BeginPin( toPinID( AnimationGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
+            _nodeGraph.beginPin( AnimationGraphPanelInternal::pinOut( node._id ), false );
             ImGui::TextUnformatted( "Out" );
             ImGui::SameLine();
             _nodeGraph.drawPinIcon( 0, bLinkedOut );
-            ed::EndPin();
-            ed::EndNode();
+            _nodeGraph.endPin();
+            _nodeGraph.endNode();
 
             if ( _nodeGraph.needsContentFit() )
                 ed::SetNodePosition( nodeID, ImVec2( node._position._x, node._position._y ) );

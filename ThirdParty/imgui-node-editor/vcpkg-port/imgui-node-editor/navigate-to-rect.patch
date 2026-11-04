@@ -1,0 +1,23 @@
+diff --git a/imgui_node_editor.h b/imgui_node_editor.h
+--- a/imgui_node_editor.h
++++ b/imgui_node_editor.h
+@@ -382,3 +382,4 @@ IMGUI_NODE_EDITOR_API void NavigateToContent(float duration, float maxZoom);
+ IMGUI_NODE_EDITOR_API void NavigateToSelection(bool zoomIn = false, float duration = -1);
++IMGUI_NODE_EDITOR_API void NavigateToRect(const ImVec2& min, const ImVec2& max, bool zoomIn = false, float duration = -1); // canvas rect; zoomIn false pans to its centre and keeps the zoom
+ 
+ IMGUI_NODE_EDITOR_API bool ShowNodeContextMenu(NodeId* nodeId);
+diff --git a/imgui_node_editor_api.cpp b/imgui_node_editor_api.cpp
+--- a/imgui_node_editor_api.cpp
++++ b/imgui_node_editor_api.cpp
+@@ -590,6 +590,11 @@ void ax::NodeEditor::NavigateToContent(float duration, float maxZoom)
+ void ax::NodeEditor::NavigateToSelection(bool zoomIn, float duration)
+ {
+     s_Editor->NavigateTo(s_Editor->GetSelectionBounds(), zoomIn, duration);
+ }
++
++void ax::NodeEditor::NavigateToRect(const ImVec2& min, const ImVec2& max, bool zoomIn, float duration)
++{
++    s_Editor->NavigateTo(ImRect(min, max), zoomIn, duration);
++}
+ 
+ bool ax::NodeEditor::ShowNodeContextMenu(NodeId* nodeId)

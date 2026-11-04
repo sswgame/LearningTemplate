@@ -147,20 +147,20 @@ namespace sw::editor
         const AudioGraphNodeDesc&     node     = graph._listNode[nodeIndex];
         const AudioGraphNodeTypeInfo& typeInfo = AudioGraphRegistry::getNodeType( node._type );
         const int32                   nodeID   = AudioGraphEditUtil::makeNodeID( nodeIndex );
-        ed::BeginNode( toNodeID( nodeID ) );
+        _nodeGraph.beginNode( nodeID );
         ImGui::TextUnformatted( node._name.c_str() );
         ImGui::TextDisabled( "%s%s", typeInfo._pName, node._name == graph._output ? "  [OUT]" : "" );
         if ( typeInfo._bSource == false )
         {
-            ed::BeginPin( toPinID( AudioGraphEditUtil::makeInputPinID( nodeIndex ) ), ed::PinKind::Input );
+            _nodeGraph.beginPin( AudioGraphEditUtil::makeInputPinID( nodeIndex ), true );
             _nodeGraph.drawPinIcon( AudioGraphPanelInternal::kSignalPinType, node._listInput.empty() == false );
-            ed::EndPin();
+            _nodeGraph.endPin();
             ImGui::SameLine();
         }
-        ed::BeginPin( toPinID( AudioGraphEditUtil::makeOutputPinID( nodeIndex ) ), ed::PinKind::Output );
+        _nodeGraph.beginPin( AudioGraphEditUtil::makeOutputPinID( nodeIndex ), false );
         _nodeGraph.drawPinIcon( AudioGraphPanelInternal::kSignalPinType, true );
-        ed::EndPin();
-        ed::EndNode();
+        _nodeGraph.endPin();
+        _nodeGraph.endNode();
 
         const bool bPlaceNow = _nodeGraph.needsContentFit() || _model.isPlacingNode( nodeIndex );
         if ( bPlaceNow )

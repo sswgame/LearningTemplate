@@ -259,9 +259,6 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AutoLayout" ) ) )
             _model.autoLayout();
         EditorSelfTestMarks::note( "gimmick.layout" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ZoomFit" ) ) )
-            _nodeGraph.requestContentFit();
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "NodesWiresProblems", TextArgumentList().addText( "name", circuit.getOwner()->getName().c_str() ).addInteger( "nodesCount", static_cast<int64>( _model.getNodes().size() ) ).addInteger( "wiresCount", static_cast<int64>( _model.getWires().size() + _model.getOrphanWires().size() ) ).addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
         if ( _statusText.empty() == false )
@@ -358,7 +355,7 @@ namespace sw::editor
     void GimmickGraphPanel::drawNode( const GimmickGraphNode& node )
     {
         const GimmickNodeKind* pKind = _model.findKind( node );
-        ed::BeginNode( toNodeID( node._graphID ) );
+        _nodeGraph.beginNode( node._graphID );
         ImGui::TextColored( pKind != nullptr ? GimmickGraphPanelInternal::getCategoryColor( pKind->_category ) : EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", node._id.c_str() );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", node._kind.c_str() );
@@ -372,11 +369,11 @@ namespace sw::editor
             for ( size_t portIndex = 0; portIndex < pKind->_listInput.size(); ++portIndex )
             {
                 const int32 pinID = GimmickGraphPanelInternal::makeInputPin( node._graphID, static_cast<int32>( portIndex ) );
-                ed::BeginPin( toPinID( pinID ), ed::PinKind::Input );
+                _nodeGraph.beginPin( pinID, true );
                 _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( pKind->_listInput[portIndex].c_str() );
-                ed::EndPin();
+                _nodeGraph.endPin();
             }
             ImGui::EndGroup();
             ImGui::SameLine();
@@ -384,15 +381,15 @@ namespace sw::editor
             for ( size_t portIndex = 0; portIndex < pKind->_listOutput.size(); ++portIndex )
             {
                 const int32 pinID = GimmickGraphPanelInternal::makeOutputPin( node._graphID, static_cast<int32>( portIndex ) );
-                ed::BeginPin( toPinID( pinID ), ed::PinKind::Output );
+                _nodeGraph.beginPin( pinID, false );
                 ImGui::TextUnformatted( pKind->_listOutput[portIndex].c_str() );
                 ImGui::SameLine();
                 _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
-                ed::EndPin();
+                _nodeGraph.endPin();
             }
             ImGui::EndGroup();
         }
-        ed::EndNode();
+        _nodeGraph.endNode();
     }
 
     bool GimmickGraphPanel::findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const

@@ -3,12 +3,15 @@
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -28,6 +31,24 @@ namespace sw::editor
         struct EditorNodeGraphDrawnState
         {
             uint32 _nodeCount{ 0 };
+            uint32 _autoLinkCount{ 0 };    ///< 핀을 끌어 만든 노드에 이은 링크 수(누적)
+            uint32 _alignedNodeCount{ 0 }; ///< 마지막 정렬이 옮긴 노드 수
+            bool   _bMinimapShown{ false };
+        };
+
+        struct EditorNodeGraphInternal
+        {
+            /// @brief 맞춤 · 미니맵 이동의 보기 움직임 시간(초) — 라이브러리 기본 스크롤 시간과 같은 결로 짧게 둔다.
+            static constexpr float32 kNavigateSeconds = 0.2f;
+            /// @brief 핀에서 고른 노드가 나타나기를 기다리는 프레임 — 패널은 고른 프레임에 노드를 넣고 다음 프레임에 그린다. 넣지 못했으면(한도) 요청을 버린다.
+            static constexpr uint32 kAutoLinkWaitFrames = 3;
+            /// @brief 미니맵의 기본 크기(글자 줄 높이 배) — 언리얼 · Godot 미니맵처럼 캔버스 구석의 작은 판이다.
+            static constexpr float32 kMinimapWidthLines  = 11.0f;
+            static constexpr float32 kMinimapHeightLines = 7.0f;
+            /// @brief 미니맵이 캔버스에서 차지할 수 있는 몫 — 좁은 캔버스에서 노드를 가리지 않는다.
+            static constexpr float32 kMinimapMaxFraction = 0.3f;
+            /// @brief 이보다 작으면 미니맵을 그리지 않는다(글자 줄 높이 배).
+            static constexpr float32 kMinimapMinLines = 3.0f;
         };
     } // namespace
 
@@ -40,7 +61,26 @@ namespace sw::editor
         , _listNodeIssue{}
         , _addNodeFilter{}
         , _addNodePosition{}
+        , _canvasOrigin{}
+        , _listFrameNode{}
+        , _listFramePin{}
+        , _listMinimapRect{}
+        , _listSelectedNode{}
+        , _listAutoLinkBefore{}
+        , _viewMin{}
+        , _viewMax{}
+        , _viewBarSize{}
+        , _pendingAlign{ EditorGraphAlign::Count }
+        , _currentNodeID{ 0 }
+        , _pendingFocusNodeID{ 0 }
+        , _pinDragSource{ 0 }
+        , _autoLinkPin{ 0 }
+        , _autoLinkFramesLeft{ 0 }
         , _bNeedsContentFit{ true }
+        , _bPendingNavigate{ false }
+        , _bOpenAddFromPin{ false }
+        , _bMinimapVisible{ true }
+        , _bAutoLayout{ false }
     {
     }
 
@@ -103,6 +143,9 @@ namespace sw::editor
         // (imgui_canvas 의 EnterLocalSpace 는 마지막 명령이 비어 있지 않을 때만 따로 명령을 연다). 확대 · 축소가 1 이 아니면 배경과 노드가
         // 패널 일부에서 잘린다. 같은 색의 배경을 먼저 그려 마지막 명령을 채운다 — 노드 편집기가 그 위를 다시 칠하므로 보이는 차이는 없다.
         const ImVec2 origin = ImGui::GetCursorScreenPos();
+        _canvasOrigin       = float2{ origin.x, origin.y };
+        _listFrameNode.clear();
+        _listFramePin.clear();
         ImGui::GetWindowDrawList()->AddRectFilled( origin, ImVec2{ origin.x + available.x, origin.y + available.y },
                                                    ImGui::ColorConvertFloat4ToU32( ed::GetStyle().Colors[ed::StyleColor_Bg] ) );
 
@@ -143,9 +186,238 @@ namespace sw::editor
 
     void EditorNodeGraph::endCanvas()
     {
+        applyViewRequests();
+        collectMinimap();
         ed::End();
         EditorSelfTestMarks::note( ( _markScope + ".canvas" ).c_str() ); // 마지막 항목은 캔버스 자식 창이다
+        // 막대 · 미니맵은 캔버스 다음에 연 자식 창이라 캔버스 위에 놓이고 마우스도 먼저 받는다(노드 편집기는 그 아래를 누른 것으로 보지 않는다).
+        drawViewBar();
+        if ( _bMinimapVisible )
+            drawMinimap();
+        getEditorState<EditorNodeGraphDrawnState>()._bMinimapShown = _bMinimapVisible;
         ed::SetCurrentEditor( nullptr );
+    }
+
+    void EditorNodeGraph::beginNode( int32 nodeID )
+    {
+        _currentNodeID = nodeID;
+        _listFrameNode.push_back( nodeID );
+        ed::BeginNode( toNodeID( nodeID ) );
+    }
+
+    void EditorNodeGraph::endNode()
+    {
+        ed::EndNode();
+        _currentNodeID = 0;
+    }
+
+    void EditorNodeGraph::beginPin( int32 pinID, bool bInput )
+    {
+        _listFramePin.push_back( FramePin{ pinID, _currentNodeID } );
+        ed::BeginPin( toPinID( pinID ), bInput ? ed::PinKind::Input : ed::PinKind::Output );
+    }
+
+    void EditorNodeGraph::endPin()
+    {
+        ed::EndPin();
+    }
+
+    void EditorNodeGraph::applyViewRequests()
+    {
+        if ( _bPendingNavigate )
+        {
+            // 언리얼 그래프의 Zoom to Fit(Home) 과 고른 노드로 가기(F)를 한 단추로 둔다 — 고른 노드가 있으면 그 노드로.
+            if ( ed::GetSelectedObjectCount() > 0 )
+                ed::NavigateToSelection( false, EditorNodeGraphInternal::kNavigateSeconds );
+            else
+                ed::NavigateToContent( EditorNodeGraphInternal::kNavigateSeconds, 1.0f );
+            _bPendingNavigate = false;
+        }
+        if ( _pendingFocusNodeID != 0 )
+        {
+            const ImVec2 position = ed::GetNodePosition( toNodeID( _pendingFocusNodeID ) );
+            const ImVec2 size     = ed::GetNodeSize( toNodeID( _pendingFocusNodeID ) );
+            ed::NavigateToRect( position, ImVec2{ position.x + size.x, position.y + size.y }, false, EditorNodeGraphInternal::kNavigateSeconds );
+            _pendingFocusNodeID = 0;
+        }
+        if ( _pendingAlign == EditorGraphAlign::Count )
+            return;
+        vector<EditorGraphNodeRect> listRect;
+        for ( const EditorGraphNodeRect& rect : _listMinimapRect ) // 앞 프레임에 모은 노드 중 고른 것 — 정렬 메뉴도 그 목록으로 켜고 껐다
+        {
+            if ( VectorUtil::contains( _listSelectedNode, rect._nodeID ) == false )
+                continue;
+            const ImVec2        position = ed::GetNodePosition( toNodeID( rect._nodeID ) );
+            const ImVec2        size     = ed::GetNodeSize( toNodeID( rect._nodeID ) );
+            EditorGraphNodeRect current{};
+            current._nodeID   = rect._nodeID;
+            current._position = float2{ position.x, position.y };
+            current._size     = float2{ size.x, size.y };
+            listRect.push_back( current );
+        }
+        uint32 alignedCount = 0;
+        if ( EditorNodeGraphRules::alignNodes( listRect, _pendingAlign ) )
+        {
+            // 패널은 다음 프레임에 캔버스 위치를 읽어 자기 데이터에 싣고 편집으로 남긴다(끌어 옮긴 것과 같은 길).
+            for ( const EditorGraphNodeRect& rect : listRect )
+            {
+                ed::SetNodePosition( toNodeID( rect._nodeID ), ImVec2{ rect._position._x, rect._position._y } );
+            }
+            alignedCount = static_cast<uint32>( listRect.size() );
+        }
+        getEditorState<EditorNodeGraphDrawnState>()._alignedNodeCount = alignedCount;
+        _pendingAlign                                                 = EditorGraphAlign::Count;
+    }
+
+    void EditorNodeGraph::collectMinimap()
+    {
+        _listMinimapRect.clear();
+        _listSelectedNode.clear();
+        const int32        nodeCount = ed::GetNodeCount();
+        vector<ed::NodeId> listNode( static_cast<size_t>( nodeCount > 0 ? nodeCount : 0 ) );
+        const int32        filled = listNode.empty() ? 0 : ed::GetOrderedNodeIds( listNode.data(), nodeCount );
+        for ( int32 index = 0; index < filled; ++index )
+        {
+            const ed::NodeId    nodeID   = listNode[static_cast<size_t>( index )];
+            const ImVec2        position = ed::GetNodePosition( nodeID );
+            const ImVec2        size     = ed::GetNodeSize( nodeID );
+            EditorGraphNodeRect rect{};
+            rect._nodeID   = static_cast<int32>( nodeID.Get() );
+            rect._position = float2{ position.x, position.y };
+            rect._size     = float2{ size.x, size.y };
+            _listMinimapRect.push_back( rect );
+            if ( ed::IsNodeSelected( nodeID ) )
+                _listSelectedNode.push_back( static_cast<int32>( nodeID.Get() ) );
+        }
+        const ImVec2 viewMin = ed::ScreenToCanvas( ImVec2{ _canvasOrigin._x, _canvasOrigin._y } );
+        const ImVec2 viewMax = ed::ScreenToCanvas( ImVec2{ _canvasOrigin._x + _canvasSize._x, _canvasOrigin._y + _canvasSize._y } );
+        _viewMin             = float2{ viewMin.x, viewMin.y };
+        _viewMax             = float2{ viewMax.x, viewMax.y };
+    }
+
+    void EditorNodeGraph::drawViewBar()
+    {
+        const float32 margin = ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetCursorScreenPos( ImVec2{ _canvasOrigin._x + _canvasSize._x - _viewBarSize._x - margin, _canvasOrigin._y + margin } );
+        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) ) );
+        const ImGuiChildFlags childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding;
+        if ( ImGui::BeginChild( "##graphViewBar", ImVec2{ 0.0f, 0.0f }, childFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings ) )
+        {
+            if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphFit" ), "Fit" ) ) )
+                _bPendingNavigate = true;
+            EditorSelfTestMarks::note( ( _markScope + ".view.fit" ).c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphFitTip" ) );
+            if ( _bAutoLayout == false )
+            {
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphAlign" ), "Align" ) ) )
+                    EditorInputGUI::openPopup( "##graphAlignMenu" );
+                EditorSelfTestMarks::note( ( _markScope + ".view.align" ).c_str() );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphAlignTip" ) );
+                drawAlignMenu();
+            }
+            ImGui::SameLine();
+            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( _bMinimapVisible ? SW_THEMECOLOR( "Base", "ToggleActive" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
+            if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphMinimap" ), "Minimap" ) ) )
+                _bMinimapVisible = _bMinimapVisible == false;
+            ImGui::PopStyleColor();
+            EditorSelfTestMarks::note( ( _markScope + ".view.minimap" ).c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphMinimapTip" ) );
+            const ImVec2 barSize = ImGui::GetWindowSize();
+            _viewBarSize         = float2{ barSize.x, barSize.y };
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+    }
+
+    void EditorNodeGraph::drawAlignMenu()
+    {
+        if ( ImGui::BeginPopup( "##graphAlignMenu" ) == false )
+            return;
+        // 언리얼 그래프 Alignment 메뉴의 순서 — 맞추기 넷, 나누기 둘. 고른 노드가 모자라면 끄고 까닭은 툴팁으로.
+        struct AlignItem
+        {
+            const utf8*      _pLabel;
+            const utf8*      _pMark;
+            EditorGraphAlign _align;
+            uint32           _minCount;
+        };
+        const AlignItem arrItem[] = {
+            {SW_LOCKEY( "EdCommon",    "GraphAlignLeft" ),        ".view.align.left",                 EditorGraphAlign::Left, 2},
+            {SW_LOCKEY( "EdCommon",     "GraphAlignTop" ),         ".view.align.top",                  EditorGraphAlign::Top, 2},
+            {SW_LOCKEY( "EdCommon", "GraphAlignCenterX" ),     ".view.align.centerX",     EditorGraphAlign::CenterHorizontal, 2},
+            {SW_LOCKEY( "EdCommon", "GraphAlignCenterY" ),     ".view.align.centerY",       EditorGraphAlign::CenterVertical, 2},
+            {SW_LOCKEY( "EdCommon",  "GraphDistributeX" ), ".view.align.distributeX", EditorGraphAlign::DistributeHorizontal, 3},
+            {SW_LOCKEY( "EdCommon",  "GraphDistributeY" ), ".view.align.distributeY",   EditorGraphAlign::DistributeVertical, 3},
+        };
+        const uint32 selectedCount = static_cast<uint32>( _listSelectedNode.size() );
+        for ( const AlignItem& item : arrItem )
+        {
+            if ( ImGui::MenuItem( EditorThemeUtil::makeStableLabel( item._pLabel, item._pMark ), nullptr, false, selectedCount >= item._minCount ) )
+                _pendingAlign = item._align;
+            EditorSelfTestMarks::note( ( _markScope + item._pMark ).c_str() );
+            if ( selectedCount < item._minCount )
+                EditorWidgets::drawTooltip( item._minCount > 2 ? SW_LOCKEY( "EdCommon", "GraphNeedThreeNodes" ) : SW_LOCKEY( "EdCommon", "GraphNeedTwoNodes" ) );
+        }
+        ImGui::EndPopup();
+    }
+
+    void EditorNodeGraph::drawMinimap()
+    {
+        const float32 line   = ImGui::GetTextLineHeightWithSpacing();
+        const float32 width  = MathUtil::min( line * EditorNodeGraphInternal::kMinimapWidthLines, _canvasSize._x * EditorNodeGraphInternal::kMinimapMaxFraction );
+        const float32 height = MathUtil::min( line * EditorNodeGraphInternal::kMinimapHeightLines, _canvasSize._y * EditorNodeGraphInternal::kMinimapMaxFraction );
+        if ( width < line * EditorNodeGraphInternal::kMinimapMinLines || height < line * EditorNodeGraphInternal::kMinimapMinLines )
+            return; // 캔버스가 좁아 판이 노드를 가린다
+        const float32 margin = ImGui::GetStyle().ItemSpacing.x;
+        const ImVec2  mapMin{ _canvasOrigin._x + _canvasSize._x - width - margin, _canvasOrigin._y + _canvasSize._y - height - margin };
+        ImGui::SetCursorScreenPos( mapMin );
+        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) ) );
+        if ( ImGui::BeginChild( "##graphMinimap", ImVec2{ width, height }, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings ) )
+        {
+            const float2                inset{ ImGui::GetStyle().WindowPadding.x, ImGui::GetStyle().WindowPadding.y };
+            const float2                inner{ width - inset._x * 2.0f, height - inset._y * 2.0f };
+            const float2                innerMin{ mapMin.x + inset._x, mapMin.y + inset._y };
+            EditorGraphMinimapTransform transform{};
+            if ( EditorNodeGraphRules::fitMinimap( _listMinimapRect, _viewMin, _viewMax, inner, transform ) )
+            {
+                ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
+                const ImVec4 muted     = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "TextMuted" ) );
+                const ImU32  nodeColor = ImGui::ColorConvertFloat4ToU32( ImVec4{ muted.x, muted.y, muted.z, 0.55f } );
+                const ImU32  pickColor = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) );
+                const ImU32  failColor = EditorColorUtil::toImU32( SW_THEMECOLOR( "Signal", "Error" ) );
+                for ( const EditorGraphNodeRect& rect : _listMinimapRect )
+                {
+                    const float2 cornerA = EditorNodeGraphRules::canvasToMinimap( transform, rect._position ) + innerMin;
+                    const float2 cornerB = EditorNodeGraphRules::canvasToMinimap( transform, rect._position + rect._size ) + innerMin;
+                    bool         bIssue  = false;
+                    for ( const EditorGraphNodeIssue& issue : _listNodeIssue )
+                    {
+                        bIssue = bIssue || issue._nodeID == rect._nodeID;
+                    }
+                    // 강조색은 고른 노드에만, 검증 오류는 캔버스의 노드 테두리와 같은 빨강이다.
+                    const bool  bSelected = VectorUtil::contains( _listSelectedNode, rect._nodeID );
+                    const ImU32 color     = bIssue ? failColor : ( bSelected ? pickColor : nodeColor );
+                    pDrawList->AddRectFilled( ImVec2{ cornerA._x, cornerA._y }, ImVec2{ cornerB._x, cornerB._y }, color );
+                }
+                const float2 viewA = EditorNodeGraphRules::canvasToMinimap( transform, _viewMin ) + innerMin;
+                const float2 viewB = EditorNodeGraphRules::canvasToMinimap( transform, _viewMax ) + innerMin;
+                pDrawList->AddRect( ImVec2{ viewA._x, viewA._y }, ImVec2{ viewB._x, viewB._y }, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Text" ) ) );
+            }
+            ImGui::SetCursorScreenPos( mapMin );
+            ImGui::InvisibleButton( "##graphMinimapArea", ImVec2{ width, height } );
+            EditorSelfTestMarks::note( ( _markScope + ".minimap" ).c_str() );
+            // 누르거나 끄는 곳에 가장 가까운 노드로 보기를 옮긴다(Godot GraphEdit · 언리얼 머티리얼 그래프 미니맵의 끌어 옮기기).
+            if ( ImGui::IsItemActive() && transform._scale > 0.0f )
+            {
+                const ImVec2 mouse       = ImGui::GetMousePos();
+                const float2 canvasPoint = EditorNodeGraphRules::minimapToCanvas( transform, float2{ mouse.x - innerMin._x, mouse.y - innerMin._y } );
+                _pendingFocusNodeID      = EditorNodeGraphRules::findNearestNode( _listMinimapRect, canvasPoint );
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphMinimapAreaTip" ) );
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
     }
 
     bool EditorNodeGraph::drawAddNodePopup( const vector<EditorGraphNodeKind>& listKind, uint32& outKindID, float2& outCanvasPosition )
@@ -156,6 +428,14 @@ namespace sw::editor
         if ( ed::ShowBackgroundContextMenu() )
         {
             _addNodePosition = float2{ canvasMouse.x, canvasMouse.y };
+            _pinDragSource   = 0; // 빈 곳에서 연 검색은 이을 핀이 없다
+            _addNodeFilter.clear();
+            EditorInputGUI::openPopup( "AddGraphNode" );
+        }
+        if ( _bOpenAddFromPin )
+        {
+            // 핀을 빈 곳에 놓았다(언리얼 · 유니티 그래프의 "핀에서 끌어 노드 만들기") — 위치는 놓은 곳(queryNewLink 가 잡았다).
+            _bOpenAddFromPin = false;
             _addNodeFilter.clear();
             EditorInputGUI::openPopup( "AddGraphNode" );
         }
@@ -197,6 +477,18 @@ namespace sw::editor
                 ImGui::CloseCurrentPopup();
             ImGui::EndPopup();
         }
+        else
+        {
+            _pinDragSource = 0; // 고르지 않고 닫았다
+        }
+        if ( bPicked && _pinDragSource != 0 )
+        {
+            // 패널이 이 프레임에 노드를 넣고 다음 프레임에 그린다 — 그때 새로 나타난 노드의 맞는 핀에 잇는다(takeAutoLink).
+            _autoLinkPin        = _pinDragSource;
+            _listAutoLinkBefore = _listFrameNode;
+            _autoLinkFramesLeft = EditorNodeGraphInternal::kAutoLinkWaitFrames;
+            _pinDragSource      = 0;
+        }
         ed::Resume();
         outCanvasPosition = _addNodePosition;
         return bPicked;
@@ -231,9 +523,45 @@ namespace sw::editor
                     ed::Resume();
                 }
             }
+            // 핀을 빈 곳에 놓으면 노드 검색을 연다. 고른 노드는 놓은 곳에 생기고 이 핀과 이어진다(drawAddNodePopup · takeAutoLink).
+            ed::PinId  pinDropped;
+            const bool bDroppedOnEmpty = bNewLinkProposed == false && ed::QueryNewNode( &pinDropped ) && pinDropped.Get() != 0;
+            if ( bDroppedOnEmpty && ed::AcceptNewItem() )
+            {
+                const ImVec2 canvasMouse = ImGui::GetMousePos();
+                _addNodePosition         = float2{ canvasMouse.x, canvasMouse.y };
+                _pinDragSource           = static_cast<int32>( pinDropped.Get() );
+                _bOpenAddFromPin         = true;
+            }
         }
         ed::EndCreate();
+        if ( bAccepted == false && _autoLinkPin != 0 )
+            bAccepted = takeAutoLink( findPin, outFromPin, outToPin );
         return bAccepted;
+    }
+
+    bool EditorNodeGraph::takeAutoLink( const Delegate<bool( int32, EditorGraphPinInfo& )>& findPin, int32& outFromPin, int32& outToPin )
+    {
+        EditorGraphPinInfo sourceInfo{};
+        const bool         bSourceKnown = findPin.isBound() && findPin( _autoLinkPin, sourceInfo );
+        for ( const FramePin& pin : _listFramePin )
+        {
+            const bool bNewNode = VectorUtil::contains( _listAutoLinkBefore, pin._nodeID ) == false;
+            if ( bSourceKnown == false || bNewNode == false )
+                continue;
+            EditorGraphPinInfo candidate{};
+            const utf8*        pReason = nullptr;
+            if ( findPin( pin._pinID, candidate ) == false || EditorNodeGraphRules::canConnect( _autoLinkPin, sourceInfo, pin._pinID, candidate, outFromPin, outToPin, pReason ) == false )
+                continue;
+            _autoLinkPin = 0;
+            ++getEditorState<EditorNodeGraphDrawnState>()._autoLinkCount;
+            return true;
+        }
+        // 새 노드가 아직 없거나(다음 프레임에 그린다) 맞는 핀이 없다 — 기다릴 프레임이 다하면 요청을 버린다.
+        _autoLinkFramesLeft = _autoLinkFramesLeft > 0 ? _autoLinkFramesLeft - 1 : 0;
+        if ( _autoLinkFramesLeft == 0 )
+            _autoLinkPin = 0;
+        return false;
     }
 
     Color EditorNodeGraph::getPinTypeColor( uint32 pinType ) const
@@ -288,6 +616,21 @@ namespace sw::editor
     uint32 EditorNodeGraph::getDrawnNodeCount()
     {
         return getEditorState<EditorNodeGraphDrawnState>()._nodeCount;
+    }
+
+    uint32 EditorNodeGraph::getAutoLinkCount()
+    {
+        return getEditorState<EditorNodeGraphDrawnState>()._autoLinkCount;
+    }
+
+    uint32 EditorNodeGraph::getAlignedNodeCount()
+    {
+        return getEditorState<EditorNodeGraphDrawnState>()._alignedNodeCount;
+    }
+
+    bool EditorNodeGraph::isMinimapShown()
+    {
+        return getEditorState<EditorNodeGraphDrawnState>()._bMinimapShown;
     }
 
     bool EditorNodeGraph::bind() const
