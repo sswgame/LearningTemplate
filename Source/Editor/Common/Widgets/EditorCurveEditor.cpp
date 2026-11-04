@@ -253,7 +253,7 @@ namespace sw::editor
                 if ( bHovered && pointer._wheel != 0.0f )
                     view.zoomAt( mouse, std::pow( kWheelZoomPerStep, pointer._wheel ) );
                 // F(모두 보기)는 에디터 입력 맵의 액션이다 — 캔버스 위에 있을 때만 읽는다.
-                if ( bHovered && EditorInputGUI::wasActionTriggered( "curveEditor.frameAll" ) )
+                if ( bHovered && EditorInputGUI::wasActionTriggered( "view.frameHovered" ) )
                     state._bFitPending = true;
 
                 const bool bMoving = bActive && ( pointer._delta._x != 0.0f || pointer._delta._y != 0.0f );

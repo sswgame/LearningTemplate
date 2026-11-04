@@ -57,6 +57,8 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 정적 바닥 바디를 세운다. 몸은 "Spawn" 을 누르면 놓는다. */
         void populatePreviewScene( Scene& scene ) override;
+        /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
         void drawBodyTable( const RagdollComponent* pRagdoll );
         /** @brief 뷰포트 이미지 위에 스켈레톤 · 바디 셰이프 · 관절을 선으로 겹쳐 그립니다. */
         void drawOverlay( const RagdollComponent* pRagdoll );

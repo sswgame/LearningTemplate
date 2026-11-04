@@ -67,6 +67,12 @@ namespace sw::editor
         bool                acceptsDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         void                populatePreviewScene( Scene& scene ) override;
+        /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
+        /** @brief 문지르기 막대의 시각 · 길이 — 짝 애니메이션의 공유 시간축입니다. */
+        bool readPreviewTimeline( float32& outTime, float32& outDuration ) const override;
+        /** @brief 공유 시간축을 그 시각으로 옮깁니다(모든 역할이 따른다). */
+        void seekPreviewTimeline( float32 seconds ) override;
 
         void drawTimeline();
         void drawRoleRows();

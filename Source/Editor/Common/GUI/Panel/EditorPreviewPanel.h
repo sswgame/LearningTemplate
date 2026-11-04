@@ -82,6 +82,15 @@ namespace sw::editor
         virtual EditorPreviewEnvironment getPreviewEnvironment() const { return EditorPreviewEnvironment{}; }
         /** @brief 씬을 만든 직후 한 번 부릅니다. 파생 창이 미리보기 대상(구, 프리팹, 캐릭터)을 스폰합니다. */
         virtual void populatePreviewScene( Scene& /*scene*/ ) {}
+        /**
+         * @brief 맞춤(F)이 화면에 담을 구입니다. 파생 창이 미리보기 대상의 중심과 반지름을 돌려줍니다. 담을 것이 없으면 false 이고 맞춤 단추를 끕니다.
+         * @details 창을 처음 열 때의 카메라(`populatePreviewScene` 의 `frameSphere`)와 같은 값을 돌려주면 된다 — 사용자가 돌리고 멀어진 뒤 되돌아오는 길이다.
+         */
+        virtual bool findPreviewFrameSphere( float3& /*outCenter*/, float32& /*outRadius*/ ) const { return false; }
+        /** @brief 문지르기 막대가 보일 시각과 길이(초)입니다. 시간축이 있는 미리보기(클립 · 짝 애니메이션)만 true 를 돌려줍니다. */
+        virtual bool readPreviewTimeline( float32& /*outTime*/, float32& /*outDuration*/ ) const { return false; }
+        /** @brief 문지르기 막대를 끌었을 때 그 시각(초)으로 옮깁니다. `readPreviewTimeline` 이 true 인 창만 불린다. */
+        virtual void seekPreviewTimeline( float32 /*seconds*/ ) {}
 
         /** @brief 그리기 앞부분에서 부릅니다. 처음이면 씬을 만들고, 창 포커스에 따라 초점 씬과 Undo 스택을 등록하거나 해제합니다. */
         void beginPreviewFrame();
@@ -106,7 +115,19 @@ namespace sw::editor
          */
         void syncDocumentDirty() override;
 
+        /** @brief 미리보기 재생이 멈췄으면 true 입니다(재생 막대의 멈춤). 시간을 스스로 정하는 창이 따라 멈출 때 읽습니다. */
+        bool isPreviewPaused() const { return _bPreviewPaused; }
+
     private:
+        /**
+         * @brief 뷰포트 위 재생 막대입니다 — 재생/멈춤 · 한 프레임 · 속도 · 문지르기 · 맞춤 · 바닥 · 축(언리얼 애셋 편집기 뷰포트 툴바 · Persona 재생 막대).
+         * @details 재생과 속도는 미리보기 씬의 시간 배율(`ScenePreviewPolicy::_timeScale`)로 건다 — 애니메이션 · 파티클 · 물리가 한 번에 따른다.
+         */
+        void drawPreviewBar( const float2& origin, const float2& size );
+        /** @brief 멈춤 · 속도 · 한 프레임 요청을 미리보기 씬의 시간 배율로 겁니다. 그리기마다 부릅니다. */
+        void applyPreviewTimeScale();
+        /** @brief 맞춤: 파생 창이 준 구로 카메라를 되돌립니다. */
+        void framePreviewSubject();
         /** @brief @p bFocused 면 초점 씬과 창 스택을 이 창의 것으로 등록하고, 아니면 이 창이 등록해 둔 것을 해제합니다. */
         void applyWindowFocus( bool bFocused );
         /** @brief 포커스를 가진 채 닫혀도 초점 씬과 창 스택을 해제합니다. 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않습니다. */
@@ -117,5 +138,11 @@ namespace sw::editor
         EditorSelection       _selection;
         bool                  _bFocusApplied;    ///< 이 창이 초점 씬과 스택을 등록해 두었다
         size_t                _seenCommandCount; ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
+        float2                _previewBarSize;   ///< 앞 프레임 재생 막대 크기
+        uint32                _speedIndex;       ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
+        uint32                _stepFramesLeft;   ///< 멈춘 채 한 프레임 나아가기 — 남은 프레임만큼 속도로 돈다
+        bool                  _bPreviewPaused;   ///< 재생 막대의 멈춤
+        bool                  _bFloorShown;      ///< 바닥을 보인다
+        bool                  _bAxesShown;       ///< 축 방향 표시를 그린다
     };
 } // namespace sw::editor

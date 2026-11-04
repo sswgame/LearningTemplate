@@ -192,7 +192,6 @@ namespace sw::editor
     void PairedAnimationPanel::populatePreviewScene( Scene& scene )
     {
         (void)scene; // 역할 오브젝트는 프리팹을 고른 뒤 놓는다(syncPreviewRoles)
-        getPreviewViewport().frameSphere( float3{ 0.0f, 1.0f, 0.5f }, PairedAnimationPanelInternal::kFrameRadius );
         for ( RoleSlot& slot : _listSlot )
         {
             slot._object = GameObjectHandle{};
@@ -231,13 +230,7 @@ namespace sw::editor
             _model.endContinuousEdit();
         EditorSelfTestMarks::note( "pairedanim.duration" );
 
-        float32 scrub = _model.getScrubTime();
-        ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::SliderFloat( "##Scrub", &scrub, 0.0f, _model.getContent()._duration, "t = %.3f s" ) )
-            _model.setScrubTime( scrub );
-        EditorSelfTestMarks::note( "pairedanim.scrub" );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "SharedTimelineTimeEveryRoleFollowsThe" ) );
-
+        // 공유 시간축의 문지르기는 뷰포트 위 공통 재생 막대가 맡는다(readPreviewTimeline · seekPreviewTimeline).
         // 앞으로 지났으면 울린 알림을 보인다(뒤로 가면 지운다 — 세션은 되감지 않는다).
         const float32 now = _model.getScrubTime();
         if ( now > _previousScrubTime )
@@ -504,5 +497,26 @@ namespace sw::editor
     {
         Scene* pScene = getPreviewScene();
         return pScene != nullptr ? pScene->getObjectManager() : nullptr;
+    }
+
+    bool PairedAnimationPanel::findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const
+    {
+        outCenter = float3{ 0.0f, 1.0f, 0.5f };
+        outRadius = PairedAnimationPanelInternal::kFrameRadius;
+        return true;
+    }
+
+    bool PairedAnimationPanel::readPreviewTimeline( float32& outTime, float32& outDuration ) const
+    {
+        if ( _model.getContent()._duration <= 0.0f )
+            return false;
+        outTime     = _model.getScrubTime();
+        outDuration = _model.getContent()._duration;
+        return true;
+    }
+
+    void PairedAnimationPanel::seekPreviewTimeline( float32 seconds )
+    {
+        _model.setScrubTime( seconds );
     }
 } // namespace sw::editor

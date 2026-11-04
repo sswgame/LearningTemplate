@@ -6,6 +6,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
@@ -262,6 +264,53 @@ namespace sw::editor
             return false;
         RenderThread::requestScreenshot( path, renderTarget, RHIFormat::R8G8B8A8_UNORM );
         return true;
+    }
+
+    bool EditorPreviewViewport::hasFloor() const
+    {
+        const GameObjectManager* pManager = _pScene != nullptr ? _pScene->getObjectManager() : nullptr;
+        return pManager != nullptr && pManager->findGameObjectByName( hashed_string( "PreviewFloor" ) ) != nullptr;
+    }
+
+    void EditorPreviewViewport::setFloorVisible( bool bVisible )
+    {
+        GameObjectManager* pManager = _pScene != nullptr ? _pScene->getObjectManager() : nullptr;
+        GameObject*        pFloor   = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( "PreviewFloor" ) ) : nullptr;
+        if ( pFloor != nullptr && pFloor->isActive() != bVisible )
+            pFloor->setActive( bVisible );
+    }
+
+    void EditorPreviewViewport::drawAxisIndicator() const
+    {
+        if ( _imageSize._x <= 1.0f || _imageSize._y <= 1.0f )
+            return;
+        // 시선 f, 오른쪽 r, 위 u 는 draw 의 팬과 같은 식이다(왼손 좌표계). 월드 축 a 의 화면 방향은 ( a·r, -a·u ) 다.
+        const float3  forward{ -MathUtil::sin( _orbitYaw ) * MathUtil::cos( _orbitPitch ), -MathUtil::sin( _orbitPitch ), -MathUtil::cos( _orbitYaw ) * MathUtil::cos( _orbitPitch ) };
+        const float3  right = float3{ forward._z, 0.0f, -forward._x }.normalize();
+        const float3  up{ forward._y * right._z, forward._z * right._x - forward._x * right._z, -forward._y * right._x };
+        const float32 length = ImGui::GetTextLineHeight() * 1.6f;
+        const ImVec2  origin{ _imagePosition._x + length * 1.5f, _imagePosition._y + _imageSize._y - length * 1.5f };
+        struct Axis
+        {
+            float3      _direction;
+            const utf8* _pLabel;
+            const utf8* _pColorToken;
+        };
+        const Axis arrAxis[] = {
+            {float3{ 1.0f, 0.0f, 0.0f }, "X", "AxisX"},
+            {float3{ 0.0f, 1.0f, 0.0f }, "Y", "AxisY"},
+            {float3{ 0.0f, 0.0f, 1.0f }, "Z", "AxisZ"},
+        };
+        ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+        for ( const Axis& axis : arrAxis )
+        {
+            const float32 screenX = axis._direction._x * right._x + axis._direction._y * right._y + axis._direction._z * right._z;
+            const float32 screenY = -( axis._direction._x * up._x + axis._direction._y * up._y + axis._direction._z * up._z );
+            const ImVec2  tip{ origin.x + screenX * length, origin.y + screenY * length };
+            const ImU32   color = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", axis._pColorToken ) );
+            pDrawList->AddLine( origin, tip, color, 2.0f );
+            pDrawList->AddText( ImVec2{ tip.x + 2.0f, tip.y - ImGui::GetTextLineHeight() * 0.5f }, color, axis._pLabel );
+        }
     }
 
     uint32 EditorPreviewViewport::spawnEnvironment( Scene& scene, const EditorPreviewEnvironment& environment )

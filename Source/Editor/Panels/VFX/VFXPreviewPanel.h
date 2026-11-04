@@ -42,6 +42,8 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬에 효과 오브젝트 하나(`PreviewSubject`)를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;
+        /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
 
         VFXPreviewModel _model;
     };

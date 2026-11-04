@@ -48,10 +48,14 @@ namespace sw::editor
         EditorPreviewEnvironment getPreviewEnvironment() const override;
         /** @brief 미리보기 씬에 메시 오브젝트 하나(`PreviewSubject`)를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;
+        /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
         /** @brief 미리보기 메시가 지금 문서를 그리게 하고 읽힌 뒤 한 번 카메라를 맞춥니다. */
         void syncPreviewSubject();
         void drawLODTable( const MeshComponent& subject );
 
         MeshPreviewModel _model;
+        float3           _frameCenter; ///< 맞춤(F)이 담을 구의 중심 — 대상을 바꿀 때 그 경계 구로 정한다
+        float32          _frameRadius;
     };
 } // namespace sw::editor

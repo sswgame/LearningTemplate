@@ -372,7 +372,6 @@ namespace sw::editor
     void CharacterEditorPanel::populatePreviewScene( Scene& scene )
     {
         (void)scene; // 몸은 외형 데이터를 읽은 뒤에 세운다(`syncPreviewBody`)
-        getPreviewViewport().frameSphere( float3{ 0.0f, 1.0f, 0.0f }, CharacterEditorPanelInternal::kPreviewFrameRadius );
         _previewBody         = GameObjectHandle{};
         _bPreviewBodyDressed = false;
     }
@@ -1460,5 +1459,12 @@ namespace sw::editor
             ++_published._exportCount;
         EditorSelfTestMarks::note( "charactereditor.exportPreset" );
         ImGui::EndDisabled();
+    }
+
+    bool CharacterEditorPanel::findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const
+    {
+        outCenter = float3{ 0.0f, 1.0f, 0.0f };
+        outRadius = CharacterEditorPanelInternal::kPreviewFrameRadius;
+        return true;
     }
 } // namespace sw::editor

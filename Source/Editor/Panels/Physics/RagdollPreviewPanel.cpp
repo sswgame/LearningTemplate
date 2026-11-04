@@ -385,6 +385,12 @@ namespace sw::editor
     void RagdollPreviewPanel::populatePreviewScene( Scene& scene )
     {
         _model.populateScene( scene );
-        getPreviewViewport().frameSphere( float3{ 0.0f, RagdollPreviewPanelInternal::kFrameCenterHeight, 0.0f }, RagdollPreviewPanelInternal::kFrameRadius );
+    }
+
+    bool RagdollPreviewPanel::findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const
+    {
+        outCenter = float3{ 0.0f, RagdollPreviewPanelInternal::kFrameCenterHeight, 0.0f };
+        outRadius = RagdollPreviewPanelInternal::kFrameRadius;
+        return true;
     }
 } // namespace sw::editor

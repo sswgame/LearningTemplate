@@ -34,8 +34,6 @@ namespace sw::editor
             static constexpr float32 kFrameRadius = 2.0f;
             /// @brief 뷰포트의 최소 높이(96 DPI 기준 픽셀)입니다. 창이 낮아도 이만큼은 그린다.
             static constexpr float32 kMinViewportHeight = 200.0f;
-            /// @brief 재생 속도 슬라이더의 위쪽 끝(배속)입니다 — 애니메이터의 한도(`Play Rate` 의 최대 10)보다 낮게 둔다(클립을 눈으로 따라가려는 창이다).
-            static constexpr float32 kMaxPlayRate = 2.0f;
 
             /** @brief 열린 클립 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const AnimationClipPreviewPanel* findOpenPanel()
@@ -108,11 +106,7 @@ namespace sw::editor
         SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
         if ( pAnimator != nullptr )
         {
-            const bool bPaused = _model.isPaused();
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( bPaused ? "Play" : "Pause" ) );
-            if ( ImGui::Button( bPaused ? "Play" : "Pause" ) )
-                _model.togglePause();
-            EditorSelfTestMarks::note( "clip.pause" );
+            // 재생 · 멈춤 · 속도 · 문지르기는 뷰포트 위 공통 재생 막대가 맡는다(EditorPreviewPanel).
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) )
                 _model.requestReplay(); // 다음 그리기가 처음부터 다시 재생한다
@@ -120,10 +114,6 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Loop" ) ) );
             if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Loop" ), &_model.editLoop() ) )
                 _model.requestReplay();
-            EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Speed" ) );
-            ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
-            (void)ImGui::SliderFloat( "##Speed", &_model.editPlayRate(), 0.0f, AnimationClipPreviewPanelInternal::kMaxPlayRate );
-            _model.applyPlayRate( *pAnimator );
         }
 
         if ( isDocumentLoadFailed() == false ) // 읽지 못한 클립은 걸지 않는다
@@ -174,7 +164,31 @@ namespace sw::editor
 
     void AnimationClipPreviewPanel::populatePreviewScene( Scene& /*scene*/ )
     {
-        getPreviewViewport().frameSphere( float3{ 0.0f, AnimationClipPreviewPanelInternal::kFrameCenterHeight, 0.0f }, AnimationClipPreviewPanelInternal::kFrameRadius );
         _model.resetForNewScene();
+    }
+
+    bool AnimationClipPreviewPanel::findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const
+    {
+        outCenter = float3{ 0.0f, AnimationClipPreviewPanelInternal::kFrameCenterHeight, 0.0f };
+        outRadius = AnimationClipPreviewPanelInternal::kFrameRadius;
+        return true;
+    }
+
+    bool AnimationClipPreviewPanel::readPreviewTimeline( float32& outTime, float32& outDuration ) const
+    {
+        const SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
+        const float32                    duration  = _model.getClipSeconds();
+        if ( pAnimator == nullptr || duration <= 0.0f )
+            return false;
+        outDuration = duration;
+        outTime     = MathUtil::fmod( pAnimator->getStateTime(), duration ); // 반복 재생은 상태 시간이 길이를 넘는다
+        return true;
+    }
+
+    void AnimationClipPreviewPanel::seekPreviewTimeline( float32 seconds )
+    {
+        SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
+        if ( pAnimator != nullptr )
+            (void)pAnimator->seekCurrentTime( MathUtil::clamp( seconds, 0.0f, _model.getClipSeconds() ) ); // 범위 밖이면 애니메이터가 알린다
     }
 } // namespace sw::editor

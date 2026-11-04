@@ -93,6 +93,8 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬을 만든 직후 — 카메라를 몸 높이에 맞추고 몸 핸들을 비웁니다(다음 그리기의 `syncPreviewBody` 가 세운다). */
         void populatePreviewScene( Scene& scene ) override;
+        /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
         /** @brief 기본 정책에 플레이를 더합니다 — 몸의 애니메이터가 `onBeginPlay` 에서 스켈레톤 유닛에 붙어야 클립이 포즈를 낸다. */
         ScenePreviewPolicy getPreviewPolicy() const override;
         /** @brief 미리보기 탭(뷰포트)을 그립니다. 외형 데이터를 읽기 전이면 안내 글입니다. */

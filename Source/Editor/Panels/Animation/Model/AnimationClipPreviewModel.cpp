@@ -24,9 +24,7 @@ namespace sw::editor
         , _status{}
         , _body{}
         , _clipSeconds{ 0.0f }
-        , _playRate{ 1.0f }
         , _bLoop{ true }
-        , _bPaused{ false }
     {
     }
 
@@ -56,11 +54,6 @@ namespace sw::editor
         GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         GameObject*        pBody    = pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
         return pBody != nullptr ? pBody->getComponent<SkeletalAnimatorComponent>() : nullptr;
-    }
-
-    void AnimationClipPreviewModel::applyPlayRate( SkeletalAnimatorComponent& animator ) const
-    {
-        animator.setPlayRate( _bPaused ? 0.0f : _playRate );
     }
 
     const AnimationClip* AnimationClipPreviewModel::findOpenClip( const SkeletalAnimatorComponent& animator, string_view clipPath )

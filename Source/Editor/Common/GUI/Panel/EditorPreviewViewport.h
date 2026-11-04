@@ -120,6 +120,16 @@ namespace sw::editor
         /** @brief 오빗 카메라가 대상에서 떨어진 거리입니다. 휠 줌이 바꾸며 프로브 `Editor.PreviewViewportOrbitDistance` 가 읽습니다. */
         float32 getOrbitDistance() const { return _orbitDistance; }
 
+        /** @brief 환경 프리셋이 바닥을 스폰했으면 true 입니다(바닥 토글을 보일지). */
+        bool hasFloor() const;
+        /** @brief 환경 바닥을 보이거나 감춥니다(오브젝트를 켜고 끈다). 바닥이 없으면 아무것도 하지 않습니다. */
+        void setFloorVisible( bool bVisible );
+        /**
+         * @brief 지난 `draw` 가 놓은 이미지의 왼쪽 아래에 월드 축 방향 표시(X 빨강 · Y 초록 · Z 파랑)를 그립니다.
+         * @details 언리얼 뷰포트 왼쪽 아래 축 표시 · 유니티 씬 기즈모처럼 카메라가 어느 쪽을 보는지 알린다. 카메라 기저는 오빗 · 팬과 같은 식이다.
+         */
+        void drawAxisIndicator() const;
+
         /** @brief 환경 프리셋(방향광, 바닥)을 @p scene 에 오브젝트로 스폰하고 만든 수를 반환합니다. 테스트가 창 없이 부릅니다. */
         static uint32 spawnEnvironment( Scene& scene, const EditorPreviewEnvironment& environment );
 

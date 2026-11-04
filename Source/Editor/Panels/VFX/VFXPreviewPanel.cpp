@@ -166,6 +166,12 @@ namespace sw::editor
     void VFXPreviewPanel::populatePreviewScene( Scene& scene )
     {
         _model.populateScene( scene );
-        getPreviewViewport().frameSphere( float3{ 0.0f, VFXPreviewPanelInternal::kFrameRadius * 0.5f, 0.0f }, VFXPreviewPanelInternal::kFrameRadius );
+    }
+
+    bool VFXPreviewPanel::findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const
+    {
+        outCenter = float3{ 0.0f, VFXPreviewPanelInternal::kFrameRadius * 0.5f, 0.0f };
+        outRadius = VFXPreviewPanelInternal::kFrameRadius;
+        return true;
     }
 } // namespace sw::editor

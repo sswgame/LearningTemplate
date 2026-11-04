@@ -39,6 +39,12 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬은 조명과 바닥뿐이다 — 몸은 "Spawn" 을 누르면 놓는다. */
         void populatePreviewScene( Scene& scene ) override;
+        /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
+        /** @brief 문지르기 막대의 시각 · 길이 — 몸이 재생하는 클립입니다. */
+        bool readPreviewTimeline( float32& outTime, float32& outDuration ) const override;
+        /** @brief 문지르기 막대가 고른 시각으로 몸의 클립을 옮깁니다. */
+        void seekPreviewTimeline( float32 seconds ) override;
         void drawClipInfo();
 
         AnimationClipPreviewModel _model;

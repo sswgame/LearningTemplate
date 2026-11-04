@@ -93,6 +93,8 @@ namespace sw::editor
     MeshPreviewPanel::MeshPreviewPanel()
         : EditorPreviewPanel{ EditorAssetType{ MeshAssetFormat::kAssetType }, false }
         , _model{}
+        , _frameCenter{}
+        , _frameRadius{ MeshPreviewPanelInternal::kDefaultFrameRadius }
     {
     }
 
@@ -205,7 +207,8 @@ namespace sw::editor
     void MeshPreviewPanel::populatePreviewScene( Scene& scene )
     {
         _model.populateScene( scene );
-        getPreviewViewport().frameSphere( float3{}, MeshPreviewPanelInternal::kDefaultFrameRadius );
+        _frameCenter = float3{};
+        _frameRadius = MeshPreviewPanelInternal::kDefaultFrameRadius;
     }
 
     void MeshPreviewPanel::syncPreviewSubject()
@@ -215,7 +218,17 @@ namespace sw::editor
             return;
         float3  center{};
         float32 radius{ 0.0f };
-        if ( _model.syncSubject( getPreviewScene(), getLoadedAssetPath(), center, radius ) )
-            getPreviewViewport().frameSphere( center, radius );
+        if ( _model.syncSubject( getPreviewScene(), getLoadedAssetPath(), center, radius ) == false )
+            return;
+        _frameCenter = center;
+        _frameRadius = radius;
+        getPreviewViewport().frameSphere( center, radius );
+    }
+
+    bool MeshPreviewPanel::findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const
+    {
+        outCenter = _frameCenter;
+        outRadius = _frameRadius;
+        return _frameRadius > 0.0f;
     }
 } // namespace sw::editor

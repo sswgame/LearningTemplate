@@ -42,8 +42,6 @@ namespace sw::editor
         void syncBody( Scene* pScene, string_view clipPath );
         /** @brief @p pScene 에 놓은 몸의 애니메이터입니다. 몸이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
         [[nodiscard]] SkeletalAnimatorComponent* findAnimator( Scene* pScene ) const;
-        /** @brief 멈춤 · 재생 속도를 @p animator 에 겁니다. 패널이 그리기마다 부릅니다. */
-        void applyPlayRate( SkeletalAnimatorComponent& animator ) const;
         /** @brief @p animator 가 읽은 클립 @p clipPath 입니다. 아직 읽지 않았거나 읽지 못했으면 nullptr 입니다. */
         [[nodiscard]] static const AnimationClip* findOpenClip( const SkeletalAnimatorComponent& animator, string_view clipPath );
 
@@ -51,12 +49,9 @@ namespace sw::editor
         float32       getClipSeconds() const { return _clipSeconds; }
         const string& getStatus() const { return _status; }
         /** @brief 입력란이 직접 고치는 몸 프리팹 경로입니다(Spawn 을 눌러야 적용한다). */
-        string&  editBodyPrefabPath() { return _bodyPrefabPath; }
-        float32& editPlayRate() { return _playRate; }
+        string& editBodyPrefabPath() { return _bodyPrefabPath; }
         /** @brief 반복 체크 상자가 직접 고치는 값입니다. 바꿨으면 `requestReplay` 를 부릅니다(재생할 때 건다). */
         bool& editLoop() { return _bLoop; }
-        bool  isPaused() const { return _bPaused; }
-        void  togglePause() { _bPaused = _bPaused == false; }
 
     private:
         /** @brief 몸 루트의 애니메이터에 클립 @p clipPath 를 읽혀 재생합니다. 읽지 못하면 상태 줄이 알린다. */
@@ -69,8 +64,6 @@ namespace sw::editor
         string           _status;
         GameObjectHandle _body;
         float32          _clipSeconds;
-        float32          _playRate;
         bool             _bLoop;
-        bool             _bPaused;
     };
 } // namespace sw::editor

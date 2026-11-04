@@ -249,6 +249,8 @@ namespace sw
         void setRootMotionThroughController( bool bThrough ) { _bRootMotionThroughController = bThrough ? SW_TRUE : SW_FALSE; }
         /** @brief 재생 속도 배율을 반환합니다. */
         float32 getPlayRate() const { return _playRate; }
+        /** @brief 지금 상태의 재생 시각(초)입니다. 반복 재생이면 클립 길이를 넘을 수 있습니다(에디터 미리보기의 문지르기 막대가 읽는다). */
+        float32 getStateTime() const { return _stateTime; }
         /** @brief 지금 재생 중인 항목(현재와 다음 슬롯, 레이어)을 @p outListPlayable 에 채웁니다(비우고 채웁니다). */
         void collectActivePlayables( vector<const IAnimationPlayable*>& outListPlayable ) const;
         /** @brief 이번 프레임의 커브 값입니다. 없는 커브는 0 입니다. */
