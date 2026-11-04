@@ -4,7 +4,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
@@ -23,10 +23,14 @@ namespace sw
 {
     namespace
     {
-        /** @brief 마을 오브젝트의 색 — 나무 짙은 초록, 그 밖(풀) 초록. */
-        float4 findObjectColor( const hashed_string& object )
+        const MeadowTownView* findView( const vector<MeadowTownView>& listView, const hashed_string& id )
         {
-            return object == hashed_string( "tree" ) ? float4{ 0.10f, 0.40f, 0.15f, 1.0f } : float4{ 0.30f, 0.70f, 0.30f, 1.0f };
+            for ( const MeadowTownView& view : listView )
+            {
+                if ( view._id == id )
+                    return &view;
+            }
+            return nullptr;
         }
     } // namespace
 } // namespace sw
@@ -34,11 +38,11 @@ namespace sw
 namespace sw
 {
     MeadowTownDirectorComponent::MeadowTownDirectorComponent()
-        : _tilePrefab{}
+        : _listObjectView{}
+        , _listCreatureView{}
         , _orchardPrice{ 50 }
         , _townOffsetX{ 6.0f }
         , _town{}
-        , _tintCache{}
         , _listView{}
         , _bViewsDirty{ SW_FALSE }
         , _reserved{ 0 }
@@ -66,7 +70,7 @@ namespace sw
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
         if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == SessionStateInitResult::Refused )
             return false;
-        if ( initializeTown( _town, *pState ) == false )
+        if ( initializeTown( _town, *pState ) == false || validateViews( *game::findSubsystem<CreatureLifeCatalog>() ) == false )
             return false;
         if ( pState->isFreshGame() )
         {
@@ -174,6 +178,29 @@ namespace sw
         return outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} );
     }
 
+    bool MeadowTownDirectorComponent::validateViews( const CreatureLifeCatalog& catalog ) const
+    {
+        bool bValid = true;
+        for ( const HabitatDef& habitat : catalog.getHabitats() )
+        {
+            for ( const HabitatCell& cell : habitat._listCell )
+            {
+                if ( cell._object.empty() || findView( _listObjectView, cell._object ) != nullptr )
+                    continue;
+                SW_LOG_ERROR_ID( "MeadowTown.ObjectViewMissing", "[Meadow] the town cannot start - object '%#' of habitat '%#' has no row in Object Views", cell._object.c_str(), habitat._id.c_str() );
+                bValid = false;
+            }
+        }
+        for ( const CreatureSpeciesDef& species : catalog.getSpecies() )
+        {
+            if ( findView( _listCreatureView, species._id ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "MeadowTown.CreatureViewMissing", "[Meadow] the town cannot start - species '%#' has no row in Creature Views", species._id.c_str() );
+            bValid = false;
+        }
+        return bValid;
+    }
+
     void MeadowTownDirectorComponent::spawnTown( GameObjectManager& manager )
     {
         for ( int32 y = 0; y < _town.getHeight(); ++y )
@@ -183,27 +210,42 @@ namespace sw
                 const hashed_string* pObject = _town.findObject( x, y );
                 if ( pObject == nullptr || pObject->empty() )
                     continue;
-                const float3 position{ _townOffsetX + static_cast<float32>( x ) + 0.5f, 0.3f, static_cast<float32>( y ) + 0.5f };
-                spawnCube( manager, position, findObjectColor( *pObject ) );
+                spawnView( manager, _listObjectView, *pObject, float3{ _townOffsetX + static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f } );
             }
         }
+        // 생물은 머무는 서식지가 차지한 셀들의 가운데에 선다(서식지가 사라졌으면 마을 모서리).
         for ( const TownCreature& creature : _town.getCreatures() )
         {
             const HabitatInstance* pHabitat = _town.findHabitat( creature._habitat );
-            const int2             anchor   = pHabitat != nullptr ? pHabitat->_origin : int2{ 0, 0 };
-            const float3           position{ _townOffsetX + static_cast<float32>( anchor._x ) + 0.5f, 0.8f, static_cast<float32>( anchor._y ) + 0.5f };
-            spawnCube( manager, position, float4{ 1.0f, 0.9f, 0.2f, 1.0f } );
+            float2                 center{ 0.5f, 0.5f };
+            if ( pHabitat != nullptr && pHabitat->_listTile.empty() == false )
+            {
+                center = float2{ 0.0f, 0.0f };
+                for ( const int32 tile : pHabitat->_listTile )
+                {
+                    center._x += static_cast<float32>( tile % _town.getWidth() ) + 0.5f;
+                    center._y += static_cast<float32>( tile / _town.getWidth() ) + 0.5f;
+                }
+                const float32 count = static_cast<float32>( pHabitat->_listTile.size() );
+                center              = float2{ center._x / count, center._y / count };
+            }
+            spawnView( manager, _listCreatureView, creature._speciesID, float3{ _townOffsetX + center._x, 0.0f, center._y } );
         }
     }
 
-    void MeadowTownDirectorComponent::spawnCube( GameObjectManager& manager, const float3& position, const float4& color )
+    void MeadowTownDirectorComponent::spawnView( GameObjectManager& manager, const vector<MeadowTownView>& listView, const hashed_string& id, const float3& position )
     {
-        GameObject*    pView = spawnPrefab( manager, _tilePrefab, "MeadowTownView" );
-        MeshComponent* pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
-        if ( pMesh == nullptr )
+        const MeadowTownView* pRow = findView( listView, id );
+        if ( pRow == nullptr )
+        {
+            SW_LOG_ERROR_ID( "MeadowTown.ViewMissing", "[Meadow] '%#' has no town view row - not drawn", id.c_str() );
             return;
-        pMesh->setLocalPosition( position );
-        _tintCache.apply( *pMesh, color );
+        }
+        GameObject*     pView = spawnPrefab( manager, pRow->_prefab, "MeadowTownView" );
+        SceneComponent* pRoot = pView != nullptr ? pView->getComponent<SceneComponent>() : nullptr;
+        if ( pRoot == nullptr )
+            return;
+        pRoot->setLocalPosition( position );
         _listView.push_back( pView->getHandle() );
     }
 } // namespace sw

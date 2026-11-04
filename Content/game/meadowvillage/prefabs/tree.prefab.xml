@@ -1,0 +1,27 @@
+<!-- 마을 오브젝트 tree(과수원) — Quaternius Stylized Nature CommonTree_1(CC0, 7 m)을 마을 칸(1 m)에 맞춰 0.25 배(1.75 m). 줄기 · 잎 구간마다 자기 머티리얼. -->
+<Prefab formatVersion="0" name="MeadowTree">
+	<GameObject _schemaVersion="0" _name="MeadowTree" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.25,0.25,0.25"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="common/models/quaternius/nature/commontree_1.mesh"
+			               _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true"
+			               _sectionName="bark_normaltree" />
+			<MeshSectionComponent _componentName="MeshSectionComponent"
+			                      _bActive="true"
+			                      _attachComponent="MeshComponent#0"
+			                      _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material"
+			                      _sectionName="leaves_normaltree" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

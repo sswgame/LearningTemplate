@@ -62,8 +62,15 @@
 					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml" />
 					<MeadowTownDirectorComponent _componentName="MeadowTownDirectorComponent"
 					                             _bActive="true"
-					                             _bAutoPlay="false"
-					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml" />
+					                             _bAutoPlay="false">
+						<_listObjectView>
+							<MeadowTownView _id="grass" _prefab="game/meadowvillage/prefabs/grass.prefab.xml" />
+							<MeadowTownView _id="tree" _prefab="game/meadowvillage/prefabs/tree.prefab.xml" />
+						</_listObjectView>
+						<_listCreatureView>
+							<MeadowTownView _id="sprout" _prefab="game/meadowvillage/prefabs/sprout.prefab.xml" />
+						</_listCreatureView>
+					</MeadowTownDirectorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

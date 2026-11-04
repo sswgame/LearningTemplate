@@ -1,0 +1,21 @@
+<!-- 마을 오브젝트 grass(풀밭) — Quaternius Stylized Nature Grass_Common_Tall(CC0, 1.8 m)을 0.4 배(0.7 m). -->
+<Prefab formatVersion="0" name="MeadowGrass">
+	<GameObject _schemaVersion="0" _name="MeadowGrass" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.4,0.4,0.4"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="common/models/quaternius/nature/grass_common_tall.mesh"
+			               _materialPath="common/models/quaternius/nature/grass_common_tall/materials/grass.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -13,11 +13,26 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 namespace sw
 {
+    class CreatureLifeCatalog;
     class SessionStateComponent;
+
+    /**
+     * @struct MeadowTownView
+     * @brief 마을 뷰 표 한 줄 — 오브젝트(서식지 키의 `object`) 또는 생물 종 id 와 그 모습 프리팹입니다(디렉터의 PROPERTY — 씬 데이터).
+     *        카탈로그의 오브젝트 · 종마다 한 줄이 있어야 판을 연다(`MeadowTownDirectorComponent::validateViews`).
+     */
+    REFLECT()
+    struct MeadowTownView
+    {
+        REFLECT_BODY();
+        PROPERTY( Tooltip = "Town object id (a habitat key object) or creature species id" )
+        hashed_string _id{};
+        PROPERTY( AssetPath, AssetType = "Prefab", Tooltip = "Prefab spawned for it; its root scene component is placed on the town grid" )
+        string _prefab{};
+    };
 
     /**
      * @class MeadowTownDirectorComponent
@@ -53,19 +68,23 @@ namespace sw
     private:
         /** @brief 마을을 열고 공유 상태(일지 · 평판 · 시계)를 빌립니다. 카탈로그가 없으면 false 입니다. */
         [[nodiscard]] static bool initializeTown( CreatureTown& outTown, SessionStateComponent& state );
-        void                      spawnTown( GameObjectManager& manager );
-        void                      spawnCube( GameObjectManager& manager, const float3& position, const float4& color );
+        /** @brief 카탈로그의 서식지 오브젝트 · 종이 모두 뷰 표에 있는지 봅니다. 빠진 것마다 오류를 남기고 false 입니다(판을 열지 않는다). */
+        [[nodiscard]] bool validateViews( const CreatureLifeCatalog& catalog ) const;
+        void               spawnTown( GameObjectManager& manager );
+        /** @brief @p listView 에서 @p id 의 프리팹을 @p position 에 놓습니다. 표에 없으면 오류(시작 검사가 막으니 오지 않는다). */
+        void spawnView( GameObjectManager& manager, const vector<MeadowTownView>& listView, const hashed_string& id, const float3& position );
 
     private:
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "One object or creature view (a cube)" )
-        string _tilePrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Object Views", Tooltip = "Town object id -> prefab; every habitat key object of the creature catalog needs a row" )
+        vector<MeadowTownView> _listObjectView;
+        PROPERTY( Category = "Prefabs", DisplayName = "Creature Views", Tooltip = "Species id -> prefab; every species of the creature catalog needs a row" )
+        vector<MeadowTownView> _listCreatureView;
         PROPERTY( Category = "Economy", DisplayName = "Orchard Price", Min = 0 )
         int32 _orchardPrice;
         PROPERTY( Category = "Layout", DisplayName = "Town Offset X", Tooltip = "Town grid starts this far right of the field", Units = m )
         float32 _townOffsetX;
 
         CreatureTown             _town;
-        MaterialTintCache        _tintCache;
         vector<GameObjectHandle> _listView;
         uint8                    _bViewsDirty : 1;
         uint8                    _reserved    : 7;
