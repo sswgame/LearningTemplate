@@ -33,15 +33,15 @@ namespace sw::editor
         REFLECT_BODY();
         PROPERTY( Required, Tooltip = "Command id the code registers (scene.save)" )
         string _id{};
-        PROPERTY( Required, Tooltip = "Name in menus and the palette" )
+        PROPERTY( Required, Meta = "Localizable", Tooltip = "Name in menus and the palette (English source - the text is its localization key)" )
         string _label{};
         PROPERTY( Required, Tooltip = "Icon name in the editor icon table (empty = no icon)" )
         string _icon{};
         PROPERTY( Required, Tooltip = "Palette group" )
         string _category{};
-        PROPERTY( Required, Tooltip = "Menu item tooltip" )
+        PROPERTY( Required, Meta = "Localizable", Tooltip = "Menu item tooltip (English source - the text is its localization key)" )
         string _tooltip{};
-        PROPERTY( Required, Tooltip = "Palette detail text" )
+        PROPERTY( Required, Meta = "Localizable", Tooltip = "Palette detail text (English source - the text is its localization key)" )
         string _detail{};
         PROPERTY( Required, Tooltip = "Editor input map action that runs it (empty = no shortcut)" )
         string _inputAction{};

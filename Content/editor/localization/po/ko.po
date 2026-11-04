@@ -8,6 +8,342 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "A command used by self-tests and scenarios - writes one log line"
+msgid "A command used by self-tests and scenarios - writes one log line"
+msgstr "자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Add Component"
+msgid "Add Component"
+msgstr "컴포넌트 추가"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Add the copied component to the selected object"
+msgid "Add the copied component to the selected object"
+msgstr "복사한 컴포넌트를 선택한 오브젝트에 더합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Align X (Center)"
+msgid "Align X (Center)"
+msgstr "X 정렬(가운데)"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Align Y (Center)"
+msgid "Align Y (Center)"
+msgstr "Y 정렬(가운데)"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Align Z (Center)"
+msgid "Align Z (Center)"
+msgstr "Z 정렬(가운데)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Align selected objects on X"
+msgid "Align selected objects on X"
+msgstr "선택한 오브젝트를 X 로 정렬합니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Align selected objects on Y"
+msgid "Align selected objects on Y"
+msgstr "선택한 오브젝트를 Y 로 정렬합니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Align selected objects on Z"
+msgid "Align selected objects on Z"
+msgstr "선택한 오브젝트를 Z 로 정렬합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Apply Overrides"
+msgid "Apply Overrides"
+msgstr "덮어쓴 값 적용"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Apply a .preset.xml to the selected component"
+msgid "Apply a .preset.xml to the selected component"
+msgstr "선택한 컴포넌트에 .preset.xml 을 적용합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Audio Events"
+msgid "Audio Events"
+msgstr "오디오 이벤트"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Audio Graph"
+msgid "Audio Graph"
+msgstr "오디오 그래프"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Audio Mixer"
+msgid "Audio Mixer"
+msgstr "오디오 믹서"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Bake Light Probes"
+msgid "Bake Light Probes"
+msgstr "라이트 프로브 굽기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Bake Navigation"
+msgid "Bake Navigation"
+msgstr "내비게이션 굽기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Bake Reflection Probes"
+msgid "Bake Reflection Probes"
+msgstr "반사 프로브 굽기"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Bake the navmesh of the active scene"
+msgid "Bake the navmesh of the active scene"
+msgstr "활성 씬의 내비메시를 굽습니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Bake the selected (or every) light probe volume of the active scene"
+msgid "Bake the selected (or every) light probe volume of the active scene"
+msgstr "활성 씬의 선택한(없으면 모든) 라이트 프로브 볼륨을 굽습니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Bakes indirect light for the selected (or every) light probe volume (.probes next to the scene)"
+msgid "Bakes indirect light for the selected (or every) light probe volume (.probes next to the scene)"
+msgstr "선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 베이크합니다(씬 옆 .probes)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Build the engine and every module"
+msgid "Build the engine and every module"
+msgstr "엔진과 모든 모듈을 빌드합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Builds the engine and every game and editor module"
+msgid "Builds the engine and every game and editor module"
+msgstr "엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Cancel Build"
+msgid "Cancel Build"
+msgstr "빌드 취소"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Cancel the running compile"
+msgid "Cancel the running compile"
+msgstr "진행 중인 컴파일을 취소합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Cancels the compile in progress"
+msgid "Cancels the compile in progress"
+msgstr "현재 진행 중인 컴파일 작업을 취소합니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Capture the next frame with RenderDoc"
+msgid "Capture the next frame with RenderDoc"
+msgstr "다음 프레임을 RenderDoc 으로 캡처합니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Capture the selected (or every) reflection probe of the active scene on the GPU"
+msgid "Capture the selected (or every) reflection probe of the active scene on the GPU"
+msgstr "활성 씬의 선택한(없으면 모든) 반사 프로브를 GPU 로 찍습니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Captures the next frame with RenderDoc (Saved/RenderDoc/)"
+msgid "Captures the next frame with RenderDoc (Saved/RenderDoc/)"
+msgstr "다음 프레임을 RenderDoc 으로 캡처합니다(Saved/RenderDoc/)"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Captures the selected (or every) reflection probe on the GPU (.reflprobe next to the scene)"
+msgid "Captures the selected (or every) reflection probe on the GPU (.reflprobe next to the scene)"
+msgstr "선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)"
+
+#. Context: Editor command name
+#: editor/commands/charactereditor.commands.xml
+msgctxt "Character Editor"
+msgid "Character Editor"
+msgstr "캐릭터 편집기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Check Out (Lock)"
+msgid "Check Out (Lock)"
+msgstr "체크아웃(잠금)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Close the editor after unsaved-change confirmation"
+msgid "Close the editor after unsaved-change confirmation"
+msgstr "저장하지 않은 변경을 확인한 뒤 에디터를 닫습니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Collect a bug report folder"
+msgid "Collect a bug report folder"
+msgstr "버그 보고 폴더를 모읍니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/<time>/ (bugreport.goto returns to that spot)"
+msgid "Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/<time>/ (bugreport.goto returns to that spot)"
+msgstr "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 Saved/BugReports/<시각>/ 에 모읍니다(bugreport.goto 로 그 자리에 돌아간다)"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Command Palette..."
+msgid "Command Palette..."
+msgstr "명령 팔레트..."
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Compile All Modules"
+msgid "Compile All Modules"
+msgstr "모든 모듈 컴파일"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Compile Editor (EditorModule)"
+msgid "Compile Editor (EditorModule)"
+msgstr "에디터 컴파일(EditorModule)"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Compile Game (SWGame)"
+msgid "Compile Game (SWGame)"
+msgstr "게임 컴파일(SWGame)"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Copy"
+msgid "Copy"
+msgstr "복사"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Copy Absolute Path"
+msgid "Copy Absolute Path"
+msgstr "절대 경로 복사"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Copy Component"
+msgid "Copy Component"
+msgstr "컴포넌트 복사"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Copy Relative Path"
+msgid "Copy Relative Path"
+msgstr "상대 경로 복사"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Create Child GameObject"
+msgid "Create Child GameObject"
+msgstr "자식 GameObject 만들기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Create Empty Here"
+msgid "Create Empty Here"
+msgstr "여기에 빈 오브젝트 만들기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Create Folder"
+msgid "Create Folder"
+msgstr "폴더 만들기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Create Folder Inside"
+msgid "Create Folder Inside"
+msgstr "안에 폴더 만들기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Create GameObject"
+msgid "Create GameObject"
+msgstr "GameObject 만들기"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Create an organizing folder under the selection"
+msgid "Create an organizing folder under the selection"
+msgstr "선택 아래에 정리용 폴더를 만듭니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Creates a new empty scene"
+msgid "Creates a new empty scene"
+msgstr "새로운 빈 씬을 생성합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Creates an organizing folder under the selected object (or the root)"
+msgid "Creates an organizing folder under the selected object (or the root)"
+msgstr "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Delete"
+msgid "Delete"
+msgstr "삭제"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Delete..."
+msgid "Delete..."
+msgstr "삭제..."
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Distribute X Evenly"
+msgid "Distribute X Evenly"
+msgstr "X 고르게 배치"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Distribute Y Evenly"
+msgid "Distribute Y Evenly"
+msgstr "Y 고르게 배치"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Distribute Z Evenly"
+msgid "Distribute Z Evenly"
+msgstr "Z 고르게 배치"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Duplicate"
+msgid "Duplicate"
+msgstr "복제"
+
 #: Source/Editor/Viewport/EditorViewportToolbar.cpp
 msgctxt "EdCommon.AlignSelected"
 msgid "Align and distribute the selected objects (select two or more)."
@@ -6755,3 +7091,699 @@ msgstr "흉내 낼 플레이어 UI 배율 설정(0.5~2)입니다."
 msgctxt "EditorUIPreview.WaitingForTexture"
 msgid "Waiting for the render thread to create the preview texture..."
 msgstr "렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..."
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Eject / Possess"
+msgid "Eject / Possess"
+msgstr "빠져나오기 / 조종"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Evenly space selected objects on X"
+msgid "Evenly space selected objects on X"
+msgstr "선택한 오브젝트를 X 로 고르게 띄웁니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Evenly space selected objects on Y"
+msgid "Evenly space selected objects on Y"
+msgstr "선택한 오브젝트를 Y 로 고르게 띄웁니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Evenly space selected objects on Z"
+msgid "Evenly space selected objects on Z"
+msgstr "선택한 오브젝트를 Z 로 고르게 띄웁니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Exit"
+msgid "Exit"
+msgstr "종료"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Exits the editor"
+msgid "Exits the editor"
+msgstr "에디터를 종료합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Find References"
+msgid "Find References"
+msgstr "참조 찾기"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Fuzzy-search assets, scenes and scripts"
+msgid "Fuzzy-search assets, scenes and scripts"
+msgstr "에셋 · 씬 · 스크립트를 퍼지 검색합니다"
+
+#. Context: Editor command name
+#: editor/commands/onlineadmin.commands.xml
+msgctxt "GM Tool"
+msgid "GM Tool"
+msgstr "GM 도구"
+
+#. Context: Editor command name
+#: editor/commands/gameplaytools.commands.xml
+msgctxt "Gimmick Graph"
+msgid "Gimmick Graph"
+msgstr "기믹 그래프"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Keep Simulation Changes"
+msgid "Keep Simulation Changes"
+msgstr "시뮬레이션 변경 유지"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Keep the selected objects' play state after Stop"
+msgid "Keep the selected objects' play state after Stop"
+msgstr "선택한 오브젝트의 플레이 상태를 멈춘 뒤에도 남깁니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
+msgid "Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
+msgstr "고른 오브젝트의 지금(플레이 중) 상태를 Stop 뒤 편집 씬에 남깁니다(되돌리기 한 번)"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Launches the saved active scene without the editor in a new window (a separate process)"
+msgid "Launches the saved active scene without the editor in a new window (a separate process)"
+msgstr "저장된 활성 씬을 에디터 없이 새 창(별도 프로세스)으로 띄웁니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Leave the player for the scene view while playing, or take it back"
+msgid "Leave the player for the scene view while playing, or take it back"
+msgstr "플레이 중 플레이어를 두고 씬 뷰로 나가거나 다시 조종합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Load Component Preset"
+msgid "Load Component Preset"
+msgstr "컴포넌트 프리셋 불러오기"
+
+#. Context: Editor command name
+#: editor/commands/meshmodifiers.commands.xml
+msgctxt "Mesh Modifiers"
+msgid "Mesh Modifiers"
+msgstr "메시 모디파이어"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Move Down"
+msgid "Move Down"
+msgstr "아래로 옮기기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Move Down in Hierarchy"
+msgid "Move Down in Hierarchy"
+msgstr "계층에서 아래로"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Move Up"
+msgid "Move Up"
+msgstr "위로 옮기기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Move Up in Hierarchy"
+msgid "Move Up in Hierarchy"
+msgstr "계층에서 위로"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Move the selected object down among its siblings"
+msgid "Move the selected object down among its siblings"
+msgstr "선택한 오브젝트를 형제 사이에서 아래로 옮깁니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Move the selected object up among its siblings"
+msgid "Move the selected object up among its siblings"
+msgstr "선택한 오브젝트를 형제 사이에서 위로 옮깁니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Moves the selected object down one place among its siblings"
+msgid "Moves the selected object down one place among its siblings"
+msgstr "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Moves the selected object up one place among its siblings"
+msgid "Moves the selected object up one place among its siblings"
+msgstr "고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다"
+
+#. Context: Editor command name
+#: editor/commands/themepark.commands.xml
+msgctxt "Nearest Park Ride"
+msgid "Nearest Park Ride"
+msgstr "가장 가까운 놀이기구"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "New Scene"
+msgid "New Scene"
+msgstr "새 씬"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Open Scene..."
+msgid "Open Scene..."
+msgstr "씬 열기..."
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open a .scene.xml from disk"
+msgid "Open a .scene.xml from disk"
+msgstr "디스크에서 .scene.xml 을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open editor preferences"
+msgid "Open editor preferences"
+msgstr "에디터 환경설정을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open project settings"
+msgid "Open project settings"
+msgstr "프로젝트 설정을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/onlineadmin.commands.xml
+msgctxt "Open the GM tool panel"
+msgid "Open the GM tool panel"
+msgstr "GM 도구 패널을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open the audio event browser"
+msgid "Open the audio event browser"
+msgstr "오디오 이벤트 브라우저를 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open the audio graph editor"
+msgid "Open the audio graph editor"
+msgstr "오디오 그래프 편집기를 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open the audio mixer"
+msgid "Open the audio mixer"
+msgstr "오디오 믹서를 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/charactereditor.commands.xml
+msgctxt "Open the character editor panel"
+msgid "Open the character editor panel"
+msgstr "캐릭터 편집 패널을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/gameplaytools.commands.xml
+msgctxt "Open the gimmick graph panel"
+msgid "Open the gimmick graph panel"
+msgstr "기믹 그래프 패널을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/meshmodifiers.commands.xml
+msgctxt "Open the mesh modifier stack panel"
+msgid "Open the mesh modifier stack panel"
+msgstr "메시 모디파이어 스택 패널을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/charactereditor.commands.xml
+msgctxt "Open the paired animation editor (roles on one clock, alignment offsets, shared notifies)"
+msgid "Open the paired animation editor (roles on one clock, alignment offsets, shared notifies)"
+msgstr "페어드 애니메이션 편집기를 엽니다(한 시계의 역할, 맞춤 오프셋, 함께 쓰는 알림)"
+
+#. Context: Editor command palette detail
+#: editor/commands/themepark.commands.xml
+msgctxt "Open the park layout panel"
+msgid "Open the park layout panel"
+msgstr "놀이공원 배치 패널을 엽니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open the theme settings dialog"
+msgid "Open the theme settings dialog"
+msgstr "테마 설정 창을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Opens an existing scene file (.scene.xml) from disk"
+msgid "Opens an existing scene file (.scene.xml) from disk"
+msgstr "디스크에서 기존 씬 파일(.scene.xml)을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/onlineadmin.commands.xml
+msgctxt "Opens the GM tool panel"
+msgid "Opens the GM tool panel"
+msgstr "GM 도구 패널을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Opens the audio events window (event properties, playing instances, voice profiler)"
+msgid "Opens the audio events window (event properties, playing instances, voice profiler)"
+msgstr "오디오 이벤트 창을 엽니다(이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일러)"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Opens the audio mixer window (bus meters, mute, solo, volume)"
+msgid "Opens the audio mixer window (bus meters, mute, solo, volume)"
+msgstr "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)"
+
+#. Context: Editor command tooltip
+#: editor/commands/charactereditor.commands.xml
+msgctxt "Opens the character editor panel"
+msgid "Opens the character editor panel"
+msgstr "캐릭터 편집 패널을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Opens the editor preferences window"
+msgid "Opens the editor preferences window"
+msgstr "에디터 환경설정 창을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/gameplaytools.commands.xml
+msgctxt "Opens the gimmick circuit graph window"
+msgid "Opens the gimmick circuit graph window"
+msgstr "기믹 회로 그래프 창을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/meshmodifiers.commands.xml
+msgctxt "Opens the mesh modifier stack panel"
+msgid "Opens the mesh modifier stack panel"
+msgstr "메시 모디파이어 스택 패널을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/charactereditor.commands.xml
+msgctxt "Opens the paired animation editor"
+msgid "Opens the paired animation editor"
+msgstr "페어드 애니메이션 편집 창을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Opens the project settings window"
+msgid "Opens the project settings window"
+msgstr "프로젝트 설정 창을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/themepark.commands.xml
+msgctxt "Opens the ride layout panel"
+msgid "Opens the ride layout panel"
+msgstr "놀이기구 배치 패널을 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Opens the sound graph window (node and link canvas, value editing, save, preview)"
+msgid "Opens the sound graph window (node and link canvas, value editing, save, preview)"
+msgstr "소리 그래프 창을 엽니다(노드 · 연결 캔버스, 값 편집, 저장, 미리 듣기)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Overwrite the selected component from the clipboard"
+msgid "Overwrite the selected component from the clipboard"
+msgstr "클립보드의 값으로 선택한 컴포넌트를 덮어씁니다"
+
+#. Context: Editor command name
+#: editor/commands/charactereditor.commands.xml
+msgctxt "Paired Animation"
+msgid "Paired Animation"
+msgstr "페어드 애니메이션"
+
+#. Context: Editor command name
+#: editor/commands/themepark.commands.xml
+msgctxt "Park Layout"
+msgid "Park Layout"
+msgstr "놀이공원 배치"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Paste"
+msgid "Paste"
+msgstr "붙여넣기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Paste Component As New"
+msgid "Paste Component As New"
+msgstr "컴포넌트를 새로 붙여넣기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Paste Component Values"
+msgid "Paste Component Values"
+msgstr "컴포넌트 값 붙여넣기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Paste as New Component"
+msgid "Paste as New Component"
+msgstr "새 컴포넌트로 붙여넣기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Play"
+msgid "Play"
+msgstr "플레이"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Play in New Window"
+msgid "Play in New Window"
+msgstr "새 창에서 플레이"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Preferences..."
+msgid "Preferences..."
+msgstr "환경설정..."
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Presets"
+msgid "Presets"
+msgstr "프리셋"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Project Settings..."
+msgid "Project Settings..."
+msgstr "프로젝트 설정..."
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Quick Open..."
+msgid "Quick Open..."
+msgstr "빠르게 열기..."
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Quickly searches for and opens assets, scenes and scripts"
+msgid "Quickly searches for and opens assets, scenes and scripts"
+msgstr "에셋, 씬, 스크립트를 빠르게 검색하여 엽니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Rebakes the navmesh of the active scene for every agent type (the Nav visualizer shows polygon edges)"
+msgid "Rebakes the navmesh of the active scene for every agent type (the Nav visualizer shows polygon edges)"
+msgstr "활성 씬의 내비메시를 에이전트 종류마다 다시 베이크합니다(Nav 시각화로 폴리곤 테두리를 봅니다)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Recompile EditorModule"
+msgid "Recompile EditorModule"
+msgstr "EditorModule 을 다시 컴파일합니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Recompile and hot-reload SWGame"
+msgid "Recompile and hot-reload SWGame"
+msgstr "SWGame 을 다시 컴파일하고 핫 리로드합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Recompiles the editor module (EditorModule) with live coding"
+msgid "Recompiles the editor module (EditorModule) with live coding"
+msgstr "에디터 모듈(EditorModule)을 라이브 코딩으로 재컴파일합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Recompiles the game module (SWGame) right away with live coding"
+msgid "Recompiles the game module (SWGame) right away with live coding"
+msgstr "게임 모듈(SWGame)을 라이브 코딩으로 즉시 재컴파일합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Record Scenario (Start/Stop)"
+msgid "Record Scenario (Start/Stop)"
+msgstr "시나리오 녹화(시작/멈춤)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Record input into a scenario file"
+msgid "Record input into a scenario file"
+msgstr "입력을 시나리오 파일로 녹화합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
+msgid "Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
+msgstr "실행 중 입력을 Saved/Automation/Recorded/recorded.scenario.xml 로 녹화합니다. 한 번 더 누르면 멈추고 씁니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Redo"
+msgid "Redo"
+msgstr "다시 실행"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Redo the last undone edit"
+msgid "Redo the last undone edit"
+msgstr "마지막으로 되돌린 편집을 다시 합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Redoes the edit that was undone"
+msgid "Redoes the edit that was undone"
+msgstr "되돌린 편집 작업을 다시 실행합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Refresh Source Control"
+msgid "Refresh Source Control"
+msgstr "소스 관리 새로 고침"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Release Lock"
+msgid "Release Lock"
+msgstr "잠금 풀기"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Releases player control while playing and steps out to the scene view editor camera (press again to take control back)"
+msgid "Releases player control while playing and steps out to the scene view editor camera (press again to take control back)"
+msgstr "플레이 중 플레이어 조종을 놓고 씬 뷰 에디터 카메라로 빠져나옵니다(다시 누르면 조종으로 돌아갑니다)"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Remove Component"
+msgid "Remove Component"
+msgstr "컴포넌트 제거"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Rename"
+msgid "Rename"
+msgstr "이름 바꾸기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "RenderDoc Capture"
+msgid "RenderDoc Capture"
+msgstr "RenderDoc 캡처"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Replace the active scene with an empty one"
+msgid "Replace the active scene with an empty one"
+msgstr "활성 씬을 빈 씬으로 바꿉니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Report Bug (BugReport)"
+msgid "Report Bug (BugReport)"
+msgstr "버그 보고(BugReport)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Run the saved active scene in a separate game process"
+msgid "Run the saved active scene in a separate game process"
+msgstr "저장한 활성 씬을 별도 게임 프로세스로 실행합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Save"
+msgid "Save"
+msgstr "저장"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Save Component Preset"
+msgid "Save Component Preset"
+msgstr "컴포넌트 프리셋 저장"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Save Scene"
+msgid "Save Scene"
+msgstr "씬 저장"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Save the focused asset, or the active scene"
+msgid "Save the focused asset, or the active scene"
+msgstr "포커스된 에셋이나 활성 씬을 저장합니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Save the focused view as PNG under Saved/Screenshots"
+msgid "Save the focused view as PNG under Saved/Screenshots"
+msgstr "포커스된 뷰를 Saved/Screenshots 아래 PNG 로 저장합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Saves the active scene to disk"
+msgid "Saves the active scene to disk"
+msgstr "현재 활성화된 씬을 디스크에 저장합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Saves the focused asset or the active scene"
+msgid "Saves the focused asset or the active scene"
+msgstr "현재 포커스된 에셋 또는 활성 씬을 저장합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Saves the focused view (game view or scene view) as PNG"
+msgid "Saves the focused view (game view or scene view) as PNG"
+msgstr "포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Screenshot"
+msgid "Screenshot"
+msgstr "스크린샷"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Search and run editor commands"
+msgid "Search and run editor commands"
+msgstr "에디터 명령을 찾아 실행합니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Searches for and runs editor commands and actions"
+msgid "Searches for and runs editor commands and actions"
+msgstr "에디터 명령 및 액션을 검색하여 실행합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Select All With"
+msgid "Select All With"
+msgstr "같은 것 모두 선택"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Select Owner GameObject"
+msgid "Select Owner GameObject"
+msgstr "소유 GameObject 선택"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Self Test Ping"
+msgid "Self Test Ping"
+msgstr "자체 테스트 핑"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Sets the editor theme preset, accent color and corner rounding"
+msgid "Sets the editor theme preset, accent color and corner rounding"
+msgstr "에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Show Dependencies"
+msgid "Show Dependencies"
+msgstr "의존 보기"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Show in Explorer"
+msgid "Show in Explorer"
+msgstr "탐색기에서 보기"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Snap selected objects onto the ground plane"
+msgid "Snap selected objects onto the ground plane"
+msgstr "선택한 오브젝트를 바닥 평면에 붙입니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Snap to Ground (Y=0)"
+msgid "Snap to Ground (Y=0)"
+msgstr "바닥에 붙이기(Y=0)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Start play-in-editor"
+msgid "Start play-in-editor"
+msgstr "에디터 안 플레이를 시작합니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Theme & Look and Feel..."
+msgid "Theme & Look and Feel..."
+msgstr "테마 · 모양..."
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Undo"
+msgid "Undo"
+msgstr "실행 취소"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Undo the last edit"
+msgid "Undo the last edit"
+msgstr "마지막 편집을 되돌립니다"
+
+#. Context: Editor command tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Undoes the last edit"
+msgid "Undoes the last edit"
+msgstr "마지막 편집 작업을 되돌립니다"
+
+#. Context: Editor command name
+#: editor/commands/editor.commands.xml
+msgctxt "Unparent"
+msgid "Unparent"
+msgstr "부모에서 떼기"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Write instance overrides back to the prefab template"
+msgid "Write instance overrides back to the prefab template"
+msgstr "인스턴스의 덮어쓴 값을 프리팹 원본에 다시 씁니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Write one log line (self-test)"
+msgid "Write one log line (self-test)"
+msgstr "로그 한 줄을 씁니다(자체 테스트)"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Write the active scene, or prompt Save As if unsaved"
+msgid "Write the active scene, or prompt Save As if unsaved"
+msgstr "활성 씬을 씁니다. 저장한 적이 없으면 다른 이름으로 저장을 묻습니다"
+
+#. Context: Editor command palette detail
+#: editor/commands/editor.commands.xml
+msgctxt "Write the selected component to a preset file"
+msgid "Write the selected component to a preset file"
+msgstr "선택한 컴포넌트를 프리셋 파일로 씁니다"

@@ -38,6 +38,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -63,7 +64,8 @@ namespace sw::editor
              */
             struct GUIState
             {
-                uint32 _syncedGeneration{ constant::invalid_index::kUint32 }; ///< 마지막으로 맞춘 커맨드 등록 세대
+                uint32 _syncedGeneration{ constant::invalid_index::kUint32 };   ///< 마지막으로 맞춘 커맨드 등록 세대
+                uint32 _syncedTextRevision{ constant::invalid_index::kUint32 }; ///< 마지막으로 푼 현지화 글 판(언어 · 표가 바뀌면 명령 글을 다시 푼다)
             };
 
             // ------------------------------------------------------------------------------
@@ -480,7 +482,11 @@ namespace sw::editor
 
     void EditorCommandGUI::syncWithRegistry()
     {
-        if ( EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == getEditorState<EditorCommandGUIInternal::GUIState>()._syncedGeneration )
+        const EditorCommandGUIInternal::GUIState& guiState      = getEditorState<EditorCommandGUIInternal::GUIState>();
+        const LocalizationManager* const          pLocalization = editor::findSubsystem<LocalizationManager>();
+        const uint32                              textRevision  = pLocalization != nullptr ? pLocalization->getTextRevision() : 0u;
+        const bool                                bSynced       = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == guiState._syncedGeneration && textRevision == guiState._syncedTextRevision;
+        if ( bSynced )
             return;
         registerDefaults();
     }
@@ -490,8 +496,10 @@ namespace sw::editor
         // 컨텍스트가 없으면 메뉴가 통째로 비고 단축키가 동작하지 않는다 — 조용히 반환하지 않고 필수 서비스 조회가 모든 구성에서 멈춘다.
         EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
         registry.clear();
-        EditorCommandGUIInternal::GUIState& guiState = getEditorState<EditorCommandGUIInternal::GUIState>();
-        guiState._syncedGeneration                   = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
+        EditorCommandGUIInternal::GUIState& guiState   = getEditorState<EditorCommandGUIInternal::GUIState>();
+        guiState._syncedGeneration                     = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
+        const LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
+        guiState._syncedTextRevision                   = pLocalization != nullptr ? pLocalization->getTextRevision() : 0u;
 
         // 표시 · 배치는 모듈마다 등록한 표시 파일이 정한다 — 다시 만들 때마다 읽는다(모듈 적재 · 해제로 파일 목록이 바뀐다).
         EditorCommandTextSet texts;

@@ -29,9 +29,6 @@
    - 놀이공원 나무(`PropScatter` 는 모델마다 머티리얼 하나라 구간 모델을 못 받는다), Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품, 손으로 쓴 PBR 머티리얼이 견본 칸을 하나씩 베끼는 구조(머티리얼 인스턴스 · 부모).
 5. 에디터 UI · UX(taste-skill 앱 화면 규칙) — 테마는 키 → 값 표(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 크롬 · 이름표 1차 손질은 했다. 남은 것:
    - 에디터 코드에 남은 영어 화면 글 — 형식 글은 모두 `SW_LOCKEYFORMAT`(EdFormat · EdPluginFormat, 소수는 `addDecimal( 이름, 값, 자리 )`)로 옮겼고 단위만 있는 숫자 판독(`%.1f dB` · `#%zu` · `%ux%u`)은 남긴다. 삼항으로 고르던 영어 낱말은 ICU `select`(코드는 고르개 값만), 개수 글은 `plural` 로 옮겼다. 코드의 툴팁 리터럴도 끝났다. 새 키마다 ko(engine 은 ko · ja) 번역이 있어야 ToolCheckText 가 지나간다(`-export-po` → po 채우기 → `-import-po` → `--gather-text`). 원문에 `[낱말]` 을 쓰면 서식 태그로 읽혀 번역과 태그가 다르다는 오류가 난다.
-     남은 것 — 명령 글(`Content/editor/commands/*.commands.xml`, 89 행): `_label` · `_detail` 은 영어, `_tooltip` 은 한국어 원문이라 원문 문화권(en)과 어긋난다. 할 일:
-     ① `_tooltip` 을 영어 원문으로 다시 쓰고 지금 한국어를 ko 번역으로 옮긴다. ② `editor.locproject.xml` 에 `assetRoots`(`editor/commands`)와 `assetRules`(`files=".commands.xml"`, `elements`=`EditorCommandText`, `_label` · `_tooltip` · `_detail` 마다 `kind="text"` — Shooter3D `items.xml` 규칙과 같은 모양)를 더해 gather 가 모으게 한다.
-     ③ 표시는 원문을 키로 풀이한다 — `EditorCommandText.cpp` 의 `apply` 가 글을 desc 에 복사하므로, 그리는 곳(`EditorCommandRegistry.cpp:262` 메뉴 이름, `EditorCommandGUI.cpp:444` 툴팁, 팔레트)에서 `LocalizationManager::findStringByText` 로 풀거나 언어가 바뀔 때 `apply` 를 다시 돈다(언리얼 FText 처럼 그릴 때 풀이가 단순하다). 확인: `--check-text` 오류 0, `editor/uicapture.scenario.xml` 한국어 사진.
 6. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
    끝낸 경계는 StructureRefactor 9 절(GPU 자원은 프록시 / 한 번 만들기 / 게시, 스레드 경계 표). 끝낸 경계: 머티리얼 · 메시 · 텍스처 · 에디터 텍스처 · 오디오 ·
    애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:

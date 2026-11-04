@@ -1,5 +1,319 @@
 <SourceStringTable culture="en">
 	<entries>
+		<entry key="A command used by self-tests and scenarios - writes one log line"
+		       source="A command used by self-tests and scenarios - writes one log line"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Add Component" source="Add Component" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Add the copied component to the selected object"
+		       source="Add the copied component to the selected object"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Align X (Center)" source="Align X (Center)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Align Y (Center)" source="Align Y (Center)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Align Z (Center)" source="Align Z (Center)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Align selected objects on X" source="Align selected objects on X" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Align selected objects on Y" source="Align selected objects on Y" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Align selected objects on Z" source="Align selected objects on Z" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Apply Overrides" source="Apply Overrides" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Apply a .preset.xml to the selected component"
+		       source="Apply a .preset.xml to the selected component"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Audio Events" source="Audio Events" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Audio Graph" source="Audio Graph" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Audio Mixer" source="Audio Mixer" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bake Light Probes" source="Bake Light Probes" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bake Navigation" source="Bake Navigation" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bake Reflection Probes" source="Bake Reflection Probes" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bake the navmesh of the active scene"
+		       source="Bake the navmesh of the active scene"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bake the selected (or every) light probe volume of the active scene"
+		       source="Bake the selected (or every) light probe volume of the active scene"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bakes indirect light for the selected (or every) light probe volume (.probes next to the scene)"
+		       source="Bakes indirect light for the selected (or every) light probe volume (.probes next to the scene)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Build the engine and every module"
+		       source="Build the engine and every module"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Builds the engine and every game and editor module"
+		       source="Builds the engine and every game and editor module"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Cancel Build" source="Cancel Build" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Cancel the running compile" source="Cancel the running compile" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Cancels the compile in progress"
+		       source="Cancels the compile in progress"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Capture the next frame with RenderDoc"
+		       source="Capture the next frame with RenderDoc"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Capture the selected (or every) reflection probe of the active scene on the GPU"
+		       source="Capture the selected (or every) reflection probe of the active scene on the GPU"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Captures the next frame with RenderDoc (Saved/RenderDoc/)"
+		       source="Captures the next frame with RenderDoc (Saved/RenderDoc/)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Captures the selected (or every) reflection probe on the GPU (.reflprobe next to the scene)"
+		       source="Captures the selected (or every) reflection probe on the GPU (.reflprobe next to the scene)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Character Editor" source="Character Editor" context="Editor command name">
+			<origins>
+				<item>editor/commands/charactereditor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Check Out (Lock)" source="Check Out (Lock)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Close the editor after unsaved-change confirmation"
+		       source="Close the editor after unsaved-change confirmation"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Collect a bug report folder" source="Collect a bug report folder" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/&lt;time>/ (bugreport.goto returns to that spot)"
+		       source="Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/&lt;time>/ (bugreport.goto returns to that spot)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Command Palette..." source="Command Palette..." context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Compile All Modules" source="Compile All Modules" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Compile Editor (EditorModule)" source="Compile Editor (EditorModule)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Compile Game (SWGame)" source="Compile Game (SWGame)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Copy" source="Copy" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Copy Absolute Path" source="Copy Absolute Path" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Copy Component" source="Copy Component" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Copy Relative Path" source="Copy Relative Path" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Create Child GameObject" source="Create Child GameObject" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Create Empty Here" source="Create Empty Here" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Create Folder" source="Create Folder" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Create Folder Inside" source="Create Folder Inside" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Create GameObject" source="Create GameObject" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Create an organizing folder under the selection"
+		       source="Create an organizing folder under the selection"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Creates a new empty scene" source="Creates a new empty scene" context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Creates an organizing folder under the selected object (or the root)"
+		       source="Creates an organizing folder under the selected object (or the root)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Delete" source="Delete" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Delete..." source="Delete..." context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Distribute X Evenly" source="Distribute X Evenly" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Distribute Y Evenly" source="Distribute Y Evenly" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Distribute Z Evenly" source="Distribute Z Evenly" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Duplicate" source="Duplicate" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.AlignSelected" source="Align and distribute the selected objects (select two or more).">
 			<origins>
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
@@ -7049,6 +7363,690 @@
 		       source="Waiting for the render thread to create the preview texture...">
 			<origins>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Eject / Possess" source="Eject / Possess" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Evenly space selected objects on X"
+		       source="Evenly space selected objects on X"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Evenly space selected objects on Y"
+		       source="Evenly space selected objects on Y"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Evenly space selected objects on Z"
+		       source="Evenly space selected objects on Z"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Exit" source="Exit" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Exits the editor" source="Exits the editor" context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Find References" source="Find References" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Fuzzy-search assets, scenes and scripts"
+		       source="Fuzzy-search assets, scenes and scripts"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="GM Tool" source="GM Tool" context="Editor command name">
+			<origins>
+				<item>editor/commands/onlineadmin.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Gimmick Graph" source="Gimmick Graph" context="Editor command name">
+			<origins>
+				<item>editor/commands/gameplaytools.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Keep Simulation Changes" source="Keep Simulation Changes" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Keep the selected objects' play state after Stop"
+		       source="Keep the selected objects' play state after Stop"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
+		       source="Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Launches the saved active scene without the editor in a new window (a separate process)"
+		       source="Launches the saved active scene without the editor in a new window (a separate process)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Leave the player for the scene view while playing, or take it back"
+		       source="Leave the player for the scene view while playing, or take it back"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Load Component Preset" source="Load Component Preset" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Mesh Modifiers" source="Mesh Modifiers" context="Editor command name">
+			<origins>
+				<item>editor/commands/meshmodifiers.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Move Down" source="Move Down" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Move Down in Hierarchy" source="Move Down in Hierarchy" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Move Up" source="Move Up" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Move Up in Hierarchy" source="Move Up in Hierarchy" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Move the selected object down among its siblings"
+		       source="Move the selected object down among its siblings"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Move the selected object up among its siblings"
+		       source="Move the selected object up among its siblings"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Moves the selected object down one place among its siblings"
+		       source="Moves the selected object down one place among its siblings"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Moves the selected object up one place among its siblings"
+		       source="Moves the selected object up one place among its siblings"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Nearest Park Ride" source="Nearest Park Ride" context="Editor command name">
+			<origins>
+				<item>editor/commands/themepark.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="New Scene" source="New Scene" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open Scene..." source="Open Scene..." context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open a .scene.xml from disk" source="Open a .scene.xml from disk" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open editor preferences" source="Open editor preferences" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open project settings" source="Open project settings" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the GM tool panel" source="Open the GM tool panel" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/onlineadmin.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the audio event browser"
+		       source="Open the audio event browser"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the audio graph editor" source="Open the audio graph editor" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the audio mixer" source="Open the audio mixer" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the character editor panel"
+		       source="Open the character editor panel"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/charactereditor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the gimmick graph panel"
+		       source="Open the gimmick graph panel"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/gameplaytools.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the mesh modifier stack panel"
+		       source="Open the mesh modifier stack panel"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/meshmodifiers.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the paired animation editor (roles on one clock, alignment offsets, shared notifies)"
+		       source="Open the paired animation editor (roles on one clock, alignment offsets, shared notifies)"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/charactereditor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the park layout panel" source="Open the park layout panel" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/themepark.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Open the theme settings dialog"
+		       source="Open the theme settings dialog"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens an existing scene file (.scene.xml) from disk"
+		       source="Opens an existing scene file (.scene.xml) from disk"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the GM tool panel" source="Opens the GM tool panel" context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/onlineadmin.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the audio events window (event properties, playing instances, voice profiler)"
+		       source="Opens the audio events window (event properties, playing instances, voice profiler)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the audio mixer window (bus meters, mute, solo, volume)"
+		       source="Opens the audio mixer window (bus meters, mute, solo, volume)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the character editor panel"
+		       source="Opens the character editor panel"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/charactereditor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the editor preferences window"
+		       source="Opens the editor preferences window"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the gimmick circuit graph window"
+		       source="Opens the gimmick circuit graph window"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/gameplaytools.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the mesh modifier stack panel"
+		       source="Opens the mesh modifier stack panel"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/meshmodifiers.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the paired animation editor"
+		       source="Opens the paired animation editor"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/charactereditor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the project settings window"
+		       source="Opens the project settings window"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the ride layout panel" source="Opens the ride layout panel" context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/themepark.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the sound graph window (node and link canvas, value editing, save, preview)"
+		       source="Opens the sound graph window (node and link canvas, value editing, save, preview)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Overwrite the selected component from the clipboard"
+		       source="Overwrite the selected component from the clipboard"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Paired Animation" source="Paired Animation" context="Editor command name">
+			<origins>
+				<item>editor/commands/charactereditor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Park Layout" source="Park Layout" context="Editor command name">
+			<origins>
+				<item>editor/commands/themepark.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Paste" source="Paste" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Paste Component As New" source="Paste Component As New" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Paste Component Values" source="Paste Component Values" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Paste as New Component" source="Paste as New Component" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Play" source="Play" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Play in New Window" source="Play in New Window" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Preferences..." source="Preferences..." context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Presets" source="Presets" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Project Settings..." source="Project Settings..." context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Quick Open..." source="Quick Open..." context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Quickly searches for and opens assets, scenes and scripts"
+		       source="Quickly searches for and opens assets, scenes and scripts"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Rebakes the navmesh of the active scene for every agent type (the Nav visualizer shows polygon edges)"
+		       source="Rebakes the navmesh of the active scene for every agent type (the Nav visualizer shows polygon edges)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Recompile EditorModule" source="Recompile EditorModule" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Recompile and hot-reload SWGame"
+		       source="Recompile and hot-reload SWGame"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Recompiles the editor module (EditorModule) with live coding"
+		       source="Recompiles the editor module (EditorModule) with live coding"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Recompiles the game module (SWGame) right away with live coding"
+		       source="Recompiles the game module (SWGame) right away with live coding"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Record Scenario (Start/Stop)" source="Record Scenario (Start/Stop)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Record input into a scenario file"
+		       source="Record input into a scenario file"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
+		       source="Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Redo" source="Redo" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Redo the last undone edit" source="Redo the last undone edit" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Redoes the edit that was undone"
+		       source="Redoes the edit that was undone"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Refresh Source Control" source="Refresh Source Control" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Release Lock" source="Release Lock" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Releases player control while playing and steps out to the scene view editor camera (press again to take control back)"
+		       source="Releases player control while playing and steps out to the scene view editor camera (press again to take control back)"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Remove Component" source="Remove Component" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Rename" source="Rename" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="RenderDoc Capture" source="RenderDoc Capture" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Replace the active scene with an empty one"
+		       source="Replace the active scene with an empty one"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Report Bug (BugReport)" source="Report Bug (BugReport)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Run the saved active scene in a separate game process"
+		       source="Run the saved active scene in a separate game process"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Save" source="Save" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Save Component Preset" source="Save Component Preset" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Save Scene" source="Save Scene" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Save the focused asset, or the active scene"
+		       source="Save the focused asset, or the active scene"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Save the focused view as PNG under Saved/Screenshots"
+		       source="Save the focused view as PNG under Saved/Screenshots"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Saves the active scene to disk" source="Saves the active scene to disk" context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Saves the focused asset or the active scene"
+		       source="Saves the focused asset or the active scene"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Saves the focused view (game view or scene view) as PNG"
+		       source="Saves the focused view (game view or scene view) as PNG"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Screenshot" source="Screenshot" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Search and run editor commands"
+		       source="Search and run editor commands"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Searches for and runs editor commands and actions"
+		       source="Searches for and runs editor commands and actions"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Select All With" source="Select All With" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Select Owner GameObject" source="Select Owner GameObject" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Self Test Ping" source="Self Test Ping" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Sets the editor theme preset, accent color and corner rounding"
+		       source="Sets the editor theme preset, accent color and corner rounding"
+		       context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Show Dependencies" source="Show Dependencies" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Show in Explorer" source="Show in Explorer" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Snap selected objects onto the ground plane"
+		       source="Snap selected objects onto the ground plane"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Snap to Ground (Y=0)" source="Snap to Ground (Y=0)" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Start play-in-editor" source="Start play-in-editor" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Theme &amp; Look and Feel..." source="Theme &amp; Look and Feel..." context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Undo" source="Undo" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Undo the last edit" source="Undo the last edit" context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Undoes the last edit" source="Undoes the last edit" context="Editor command tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Unparent" source="Unparent" context="Editor command name">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Write instance overrides back to the prefab template"
+		       source="Write instance overrides back to the prefab template"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Write one log line (self-test)"
+		       source="Write one log line (self-test)"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Write the active scene, or prompt Save As if unsaved"
+		       source="Write the active scene, or prompt Save As if unsaved"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Write the selected component to a preset file"
+		       source="Write the selected component to a preset file"
+		       context="Editor command palette detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
 	</entries>

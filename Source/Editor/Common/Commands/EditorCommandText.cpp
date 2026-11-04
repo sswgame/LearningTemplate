@@ -5,11 +5,29 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw::editor
 {
+    namespace
+    {
+        /**
+         * @brief 표시 파일의 영어 원문을 지금 언어로 풉니다(원문이 키 — editor.locproject.xml 의 `*.commands.xml` 규칙이 모은다, Shooter3D 아이템 이름과 같은 모양).
+         * @details 번역이 없으면 원문 그대로다(번역 없는 언어 · 원문 언어). 언어가 바뀌면 명령 목록을 다시 만들어 다시 푼다(`EditorCommandGUI::syncWithRegistry`).
+         */
+        string localizeCommandText( const string& source )
+        {
+            if ( source.empty() )
+                return source;
+            const LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
+            const utf8* const                pFound        = pLocalization != nullptr ? pLocalization->findStringByText( source ) : nullptr;
+            return pFound != nullptr ? string( pFound ) : source;
+        }
+    } // namespace
+
     void EditorCommandTextSet::loadRegistered()
     {
         _listRow.clear();
@@ -47,11 +65,11 @@ namespace sw::editor
         }
         _listUsed[static_cast<size_t>( pRow - _listRow.data() )] = SW_TRUE;
 
-        inoutDesc._label            = pRow->_label;
+        inoutDesc._label            = localizeCommandText( pRow->_label );
         inoutDesc._iconName         = pRow->_icon;
         inoutDesc._category         = pRow->_category;
-        inoutDesc._tooltip          = pRow->_tooltip;
-        inoutDesc._detail           = pRow->_detail;
+        inoutDesc._tooltip          = localizeCommandText( pRow->_tooltip );
+        inoutDesc._detail           = localizeCommandText( pRow->_detail );
         inoutDesc._inputAction      = pRow->_inputAction;
         inoutDesc._menuPath         = pRow->_menuPath;
         inoutDesc._menuOrder        = pRow->_menuOrder;

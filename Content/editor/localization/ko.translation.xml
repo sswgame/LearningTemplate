@@ -1,5 +1,103 @@
 <TranslationTable culture="ko">
 	<entries>
+		<entry key="A command used by self-tests and scenarios - writes one log line"
+		       text="자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다"
+		       sourceHash="acca55bb8d9d1ae2" />
+		<entry key="Add Component" text="컴포넌트 추가" sourceHash="4ea9ecf3731289fb" />
+		<entry key="Add the copied component to the selected object"
+		       text="복사한 컴포넌트를 선택한 오브젝트에 더합니다"
+		       sourceHash="acc0def356c03b00" />
+		<entry key="Align X (Center)" text="X 정렬(가운데)" sourceHash="d145b6b5fc7bf2be" />
+		<entry key="Align Y (Center)" text="Y 정렬(가운데)" sourceHash="6c9bc9bf522b4f53" />
+		<entry key="Align Z (Center)" text="Z 정렬(가운데)" sourceHash="005950f67b4c7998" />
+		<entry key="Align selected objects on X"
+		       text="선택한 오브젝트를 X 로 정렬합니다"
+		       sourceHash="f0928232cb92eb20" />
+		<entry key="Align selected objects on Y"
+		       text="선택한 오브젝트를 Y 로 정렬합니다"
+		       sourceHash="f0928332cb92ecd3" />
+		<entry key="Align selected objects on Z"
+		       text="선택한 오브젝트를 Z 로 정렬합니다"
+		       sourceHash="f0928432cb92ee86" />
+		<entry key="Apply Overrides" text="덮어쓴 값 적용" sourceHash="9ae197e45e342466" />
+		<entry key="Apply a .preset.xml to the selected component"
+		       text="선택한 컴포넌트에 .preset.xml 을 적용합니다"
+		       sourceHash="0894cec56c416daa" />
+		<entry key="Audio Events" text="오디오 이벤트" sourceHash="029182e461f73c8e" />
+		<entry key="Audio Graph" text="오디오 그래프" sourceHash="55bdde920020e1e9" />
+		<entry key="Audio Mixer" text="오디오 믹서" sourceHash="41855769680e93a8" />
+		<entry key="Bake Light Probes" text="라이트 프로브 굽기" sourceHash="393396f8bb9916d7" />
+		<entry key="Bake Navigation" text="내비게이션 굽기" sourceHash="eeea73b8f0636b82" />
+		<entry key="Bake Reflection Probes" text="반사 프로브 굽기" sourceHash="a2f5e9a338a155d0" />
+		<entry key="Bake the navmesh of the active scene"
+		       text="활성 씬의 내비메시를 굽습니다"
+		       sourceHash="2f546f4ad22950c7" />
+		<entry key="Bake the selected (or every) light probe volume of the active scene"
+		       text="활성 씬의 선택한(없으면 모든) 라이트 프로브 볼륨을 굽습니다"
+		       sourceHash="79010089104234db" />
+		<entry key="Bakes indirect light for the selected (or every) light probe volume (.probes next to the scene)"
+		       text="선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 베이크합니다(씬 옆 .probes)"
+		       sourceHash="040436a00551199e" />
+		<entry key="Build the engine and every module"
+		       text="엔진과 모든 모듈을 빌드합니다"
+		       sourceHash="088fb4892d7b6a64" />
+		<entry key="Builds the engine and every game and editor module"
+		       text="엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다"
+		       sourceHash="6a93e2cb9c940fa3" />
+		<entry key="Cancel Build" text="빌드 취소" sourceHash="95f0d8992254543f" />
+		<entry key="Cancel the running compile"
+		       text="진행 중인 컴파일을 취소합니다"
+		       sourceHash="05cba4d68583f696" />
+		<entry key="Cancels the compile in progress"
+		       text="현재 진행 중인 컴파일 작업을 취소합니다"
+		       sourceHash="94ed88c8616c9e9c" />
+		<entry key="Capture the next frame with RenderDoc"
+		       text="다음 프레임을 RenderDoc 으로 캡처합니다"
+		       sourceHash="159f745ca48a76f8" />
+		<entry key="Capture the selected (or every) reflection probe of the active scene on the GPU"
+		       text="활성 씬의 선택한(없으면 모든) 반사 프로브를 GPU 로 찍습니다"
+		       sourceHash="0c3a29da1f88a199" />
+		<entry key="Captures the next frame with RenderDoc (Saved/RenderDoc/)"
+		       text="다음 프레임을 RenderDoc 으로 캡처합니다(Saved/RenderDoc/)"
+		       sourceHash="f05f55ac2c884917" />
+		<entry key="Captures the selected (or every) reflection probe on the GPU (.reflprobe next to the scene)"
+		       text="선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)"
+		       sourceHash="d501e3c769a8b3f1" />
+		<entry key="Character Editor" text="캐릭터 편집기" sourceHash="3db3ea4ef1e64749" />
+		<entry key="Check Out (Lock)" text="체크아웃(잠금)" sourceHash="03c20a4c6b4d8383" />
+		<entry key="Close the editor after unsaved-change confirmation"
+		       text="저장하지 않은 변경을 확인한 뒤 에디터를 닫습니다"
+		       sourceHash="c23aff8452f3047d" />
+		<entry key="Collect a bug report folder" text="버그 보고 폴더를 모읍니다" sourceHash="a07679db97fe23f6" />
+		<entry key="Collects a screenshot, logs, a scene copy, the camera spot and a repro command into Saved/BugReports/&lt;time>/ (bugreport.goto returns to that spot)"
+		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 Saved/BugReports/&lt;시각>/ 에 모읍니다(bugreport.goto 로 그 자리에 돌아간다)"
+		       sourceHash="cc8dfe5714f42e2c" />
+		<entry key="Command Palette..." text="명령 팔레트..." sourceHash="934d21eeab8a32d5" />
+		<entry key="Compile All Modules" text="모든 모듈 컴파일" sourceHash="6667ee3ef3247a84" />
+		<entry key="Compile Editor (EditorModule)" text="에디터 컴파일(EditorModule)" sourceHash="39a0d71cc9fbbae9" />
+		<entry key="Compile Game (SWGame)" text="게임 컴파일(SWGame)" sourceHash="dd100d3b9a8de743" />
+		<entry key="Copy" text="복사" sourceHash="3687049d1af562c4" />
+		<entry key="Copy Absolute Path" text="절대 경로 복사" sourceHash="63ce1fb2f727965c" />
+		<entry key="Copy Component" text="컴포넌트 복사" sourceHash="109c5a0f5ddd084b" />
+		<entry key="Copy Relative Path" text="상대 경로 복사" sourceHash="1c176f2ab80a19c3" />
+		<entry key="Create Child GameObject" text="자식 GameObject 만들기" sourceHash="824f1b2770fad494" />
+		<entry key="Create Empty Here" text="여기에 빈 오브젝트 만들기" sourceHash="2d822fa7e68613ca" />
+		<entry key="Create Folder" text="폴더 만들기" sourceHash="7383555c44bf3d93" />
+		<entry key="Create Folder Inside" text="안에 폴더 만들기" sourceHash="89a3e829dd6b3e29" />
+		<entry key="Create GameObject" text="GameObject 만들기" sourceHash="d7c0c9c6c2659e82" />
+		<entry key="Create an organizing folder under the selection"
+		       text="선택 아래에 정리용 폴더를 만듭니다"
+		       sourceHash="fa77b349977c0c41" />
+		<entry key="Creates a new empty scene" text="새로운 빈 씬을 생성합니다" sourceHash="c3b5b78090415dea" />
+		<entry key="Creates an organizing folder under the selected object (or the root)"
+		       text="고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다"
+		       sourceHash="788f45ec38d1c127" />
+		<entry key="Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
+		<entry key="Delete..." text="삭제..." sourceHash="95189de7377c7838" />
+		<entry key="Distribute X Evenly" text="X 고르게 배치" sourceHash="a216b94ee190668d" />
+		<entry key="Distribute Y Evenly" text="Y 고르게 배치" sourceHash="fb9d2c7433444958" />
+		<entry key="Distribute Z Evenly" text="Z 고르게 배치" sourceHash="1d7248da74c81a7b" />
+		<entry key="Duplicate" text="복제" sourceHash="fac15b89e0668996" />
 		<entry key="EdCommon.AlignSelected"
 		       text="선택한 오브젝트를 정렬하고 분배합니다(둘 이상 선택)."
 		       sourceHash="3f15212ccdd0c0e5" />
@@ -2689,5 +2787,233 @@
 		<entry key="EditorUIPreview.WaitingForTexture"
 		       text="렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..."
 		       sourceHash="98fcdf13e55ddd57" />
+		<entry key="Eject / Possess" text="빠져나오기 / 조종" sourceHash="92cdc8eb70f1077f" />
+		<entry key="Evenly space selected objects on X"
+		       text="선택한 오브젝트를 X 로 고르게 띄웁니다"
+		       sourceHash="0cd9d9c0bec20cf6" />
+		<entry key="Evenly space selected objects on Y"
+		       text="선택한 오브젝트를 Y 로 고르게 띄웁니다"
+		       sourceHash="0cd9dac0bec20ea9" />
+		<entry key="Evenly space selected objects on Z"
+		       text="선택한 오브젝트를 Z 로 고르게 띄웁니다"
+		       sourceHash="0cd9d7c0bec20990" />
+		<entry key="Exit" text="종료" sourceHash="122c4e6c8ff0ed45" />
+		<entry key="Exits the editor" text="에디터를 종료합니다" sourceHash="fa3d3d28d6d6acaa" />
+		<entry key="Find References" text="참조 찾기" sourceHash="ef60298b6eb17f18" />
+		<entry key="Fuzzy-search assets, scenes and scripts"
+		       text="에셋 · 씬 · 스크립트를 퍼지 검색합니다"
+		       sourceHash="c55ac6cff029edfb" />
+		<entry key="GM Tool" text="GM 도구" sourceHash="182c1e31ac2d0a6d" />
+		<entry key="Gimmick Graph" text="기믹 그래프" sourceHash="8ade24f69ad468e4" />
+		<entry key="Keep Simulation Changes" text="시뮬레이션 변경 유지" sourceHash="2eafcb6b3964d6ea" />
+		<entry key="Keep the selected objects' play state after Stop"
+		       text="선택한 오브젝트의 플레이 상태를 멈춘 뒤에도 남깁니다"
+		       sourceHash="f94dee563ffff92a" />
+		<entry key="Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
+		       text="고른 오브젝트의 지금(플레이 중) 상태를 Stop 뒤 편집 씬에 남깁니다(되돌리기 한 번)"
+		       sourceHash="240a99d099e70d71" />
+		<entry key="Launches the saved active scene without the editor in a new window (a separate process)"
+		       text="저장된 활성 씬을 에디터 없이 새 창(별도 프로세스)으로 띄웁니다"
+		       sourceHash="0ccb77c002ede9e6" />
+		<entry key="Leave the player for the scene view while playing, or take it back"
+		       text="플레이 중 플레이어를 두고 씬 뷰로 나가거나 다시 조종합니다"
+		       sourceHash="149e4a20913a6086" />
+		<entry key="Load Component Preset" text="컴포넌트 프리셋 불러오기" sourceHash="12d71a0eee04b169" />
+		<entry key="Mesh Modifiers" text="메시 모디파이어" sourceHash="bc2dcfa204061802" />
+		<entry key="Move Down" text="아래로 옮기기" sourceHash="87a55464116c3f48" />
+		<entry key="Move Down in Hierarchy" text="계층에서 아래로" sourceHash="4f764c55a63b8e98" />
+		<entry key="Move Up" text="위로 옮기기" sourceHash="4e33f21fc24666c1" />
+		<entry key="Move Up in Hierarchy" text="계층에서 위로" sourceHash="b5a666cb7e524dc3" />
+		<entry key="Move the selected object down among its siblings"
+		       text="선택한 오브젝트를 형제 사이에서 아래로 옮깁니다"
+		       sourceHash="7b50c10da6553146" />
+		<entry key="Move the selected object up among its siblings"
+		       text="선택한 오브젝트를 형제 사이에서 위로 옮깁니다"
+		       sourceHash="796e592637d7f745" />
+		<entry key="Moves the selected object down one place among its siblings"
+		       text="고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다"
+		       sourceHash="5f9fff268a7bbf6e" />
+		<entry key="Moves the selected object up one place among its siblings"
+		       text="고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다"
+		       sourceHash="78421a0be17786c9" />
+		<entry key="Nearest Park Ride" text="가장 가까운 놀이기구" sourceHash="7ce7dbc1d10ae09f" />
+		<entry key="New Scene" text="새 씬" sourceHash="3406045d57e6ab01" />
+		<entry key="Open Scene..." text="씬 열기..." sourceHash="373c4bc71f1e0c2d" />
+		<entry key="Open a .scene.xml from disk"
+		       text="디스크에서 .scene.xml 을 엽니다"
+		       sourceHash="e5adc4f5fcf2c5fa" />
+		<entry key="Open editor preferences" text="에디터 환경설정을 엽니다" sourceHash="b333399921ae6438" />
+		<entry key="Open project settings" text="프로젝트 설정을 엽니다" sourceHash="5f4e87f6b1384115" />
+		<entry key="Open the GM tool panel" text="GM 도구 패널을 엽니다" sourceHash="58f45579db055d4a" />
+		<entry key="Open the audio event browser"
+		       text="오디오 이벤트 브라우저를 엽니다"
+		       sourceHash="41a062c4a97f57b4" />
+		<entry key="Open the audio graph editor"
+		       text="오디오 그래프 편집기를 엽니다"
+		       sourceHash="6bddeead20f30019" />
+		<entry key="Open the audio mixer" text="오디오 믹서를 엽니다" sourceHash="1a3a623f6c9eac15" />
+		<entry key="Open the character editor panel"
+		       text="캐릭터 편집 패널을 엽니다"
+		       sourceHash="d69cd45c0ec1732c" />
+		<entry key="Open the gimmick graph panel" text="기믹 그래프 패널을 엽니다" sourceHash="177db3f3b1f9a37b" />
+		<entry key="Open the mesh modifier stack panel"
+		       text="메시 모디파이어 스택 패널을 엽니다"
+		       sourceHash="0aec269314ed14d2" />
+		<entry key="Open the paired animation editor (roles on one clock, alignment offsets, shared notifies)"
+		       text="페어드 애니메이션 편집기를 엽니다(한 시계의 역할, 맞춤 오프셋, 함께 쓰는 알림)"
+		       sourceHash="07827f9e404219f6" />
+		<entry key="Open the park layout panel"
+		       text="놀이공원 배치 패널을 엽니다"
+		       sourceHash="49092176e5c3718e" />
+		<entry key="Open the theme settings dialog" text="테마 설정 창을 엽니다" sourceHash="0b92545027cc0a84" />
+		<entry key="Opens an existing scene file (.scene.xml) from disk"
+		       text="디스크에서 기존 씬 파일(.scene.xml)을 엽니다"
+		       sourceHash="59ca6e3acc4f87c5" />
+		<entry key="Opens the GM tool panel" text="GM 도구 패널을 엽니다" sourceHash="f1361ad2ecb8bac9" />
+		<entry key="Opens the audio events window (event properties, playing instances, voice profiler)"
+		       text="오디오 이벤트 창을 엽니다(이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일러)"
+		       sourceHash="917c2c4d68ecd5d9" />
+		<entry key="Opens the audio mixer window (bus meters, mute, solo, volume)"
+		       text="오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)"
+		       sourceHash="537d1f1eb9086129" />
+		<entry key="Opens the character editor panel"
+		       text="캐릭터 편집 패널을 엽니다"
+		       sourceHash="23d9369fc76eeefd" />
+		<entry key="Opens the editor preferences window"
+		       text="에디터 환경설정 창을 엽니다"
+		       sourceHash="906dceecafb06954" />
+		<entry key="Opens the gimmick circuit graph window"
+		       text="기믹 회로 그래프 창을 엽니다"
+		       sourceHash="596c0e820dae06af" />
+		<entry key="Opens the mesh modifier stack panel"
+		       text="메시 모디파이어 스택 패널을 엽니다"
+		       sourceHash="8adefd96853140fd" />
+		<entry key="Opens the paired animation editor"
+		       text="페어드 애니메이션 편집 창을 엽니다"
+		       sourceHash="07c29e4057b6684d" />
+		<entry key="Opens the project settings window"
+		       text="프로젝트 설정 창을 엽니다"
+		       sourceHash="3a1d6e2207fa80cf" />
+		<entry key="Opens the ride layout panel"
+		       text="놀이기구 배치 패널을 엽니다"
+		       sourceHash="8ac71ce8e7f0d2fb" />
+		<entry key="Opens the sound graph window (node and link canvas, value editing, save, preview)"
+		       text="소리 그래프 창을 엽니다(노드 · 연결 캔버스, 값 편집, 저장, 미리 듣기)"
+		       sourceHash="aafa5561f57f0ffe" />
+		<entry key="Overwrite the selected component from the clipboard"
+		       text="클립보드의 값으로 선택한 컴포넌트를 덮어씁니다"
+		       sourceHash="8a1bfbab33c43b8a" />
+		<entry key="Paired Animation" text="페어드 애니메이션" sourceHash="12a4dc57d6e30b96" />
+		<entry key="Park Layout" text="놀이공원 배치" sourceHash="262a3b2ced4126f1" />
+		<entry key="Paste" text="붙여넣기" sourceHash="d374c80e17e18808" />
+		<entry key="Paste Component As New" text="컴포넌트를 새로 붙여넣기" sourceHash="f885c42a59bd9597" />
+		<entry key="Paste Component Values" text="컴포넌트 값 붙여넣기" sourceHash="c8bd58b35f47ec9b" />
+		<entry key="Paste as New Component" text="새 컴포넌트로 붙여넣기" sourceHash="2f77fcdef3968a91" />
+		<entry key="Play" text="플레이" sourceHash="cd105819b5a10243" />
+		<entry key="Play in New Window" text="새 창에서 플레이" sourceHash="630e98fc6320e934" />
+		<entry key="Preferences..." text="환경설정..." sourceHash="ad5301f4af2eab11" />
+		<entry key="Presets" text="프리셋" sourceHash="e7ce04baa8200e17" />
+		<entry key="Project Settings..." text="프로젝트 설정..." sourceHash="d405f7910c2c621b" />
+		<entry key="Quick Open..." text="빠르게 열기..." sourceHash="ec9a97783734f94a" />
+		<entry key="Quickly searches for and opens assets, scenes and scripts"
+		       text="에셋, 씬, 스크립트를 빠르게 검색하여 엽니다"
+		       sourceHash="d7bf4597bf29bb73" />
+		<entry key="Rebakes the navmesh of the active scene for every agent type (the Nav visualizer shows polygon edges)"
+		       text="활성 씬의 내비메시를 에이전트 종류마다 다시 베이크합니다(Nav 시각화로 폴리곤 테두리를 봅니다)"
+		       sourceHash="c72cea29be59f35f" />
+		<entry key="Recompile EditorModule" text="EditorModule 을 다시 컴파일합니다" sourceHash="5e4d27be875c265e" />
+		<entry key="Recompile and hot-reload SWGame"
+		       text="SWGame 을 다시 컴파일하고 핫 리로드합니다"
+		       sourceHash="55f58ad67a1c5d95" />
+		<entry key="Recompiles the editor module (EditorModule) with live coding"
+		       text="에디터 모듈(EditorModule)을 라이브 코딩으로 재컴파일합니다"
+		       sourceHash="0306e079cda96a0a" />
+		<entry key="Recompiles the game module (SWGame) right away with live coding"
+		       text="게임 모듈(SWGame)을 라이브 코딩으로 즉시 재컴파일합니다"
+		       sourceHash="f6c5077db2ac44a6" />
+		<entry key="Record Scenario (Start/Stop)" text="시나리오 녹화(시작/멈춤)" sourceHash="f2500f03bc9537f6" />
+		<entry key="Record input into a scenario file"
+		       text="입력을 시나리오 파일로 녹화합니다"
+		       sourceHash="1674b4ac94690fc9" />
+		<entry key="Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
+		       text="실행 중 입력을 Saved/Automation/Recorded/recorded.scenario.xml 로 녹화합니다. 한 번 더 누르면 멈추고 씁니다"
+		       sourceHash="28a33328ee162805" />
+		<entry key="Redo" text="다시 실행" sourceHash="7417792bbe720149" />
+		<entry key="Redo the last undone edit"
+		       text="마지막으로 되돌린 편집을 다시 합니다"
+		       sourceHash="e4bb7d29c189e513" />
+		<entry key="Redoes the edit that was undone"
+		       text="되돌린 편집 작업을 다시 실행합니다"
+		       sourceHash="fafe8cf8894e9589" />
+		<entry key="Refresh Source Control" text="소스 관리 새로 고침" sourceHash="01ea39454d1c28dc" />
+		<entry key="Release Lock" text="잠금 풀기" sourceHash="33bb98776f5ee9f5" />
+		<entry key="Releases player control while playing and steps out to the scene view editor camera (press again to take control back)"
+		       text="플레이 중 플레이어 조종을 놓고 씬 뷰 에디터 카메라로 빠져나옵니다(다시 누르면 조종으로 돌아갑니다)"
+		       sourceHash="4dfd6339ebf98cf9" />
+		<entry key="Remove Component" text="컴포넌트 제거" sourceHash="7736527613907162" />
+		<entry key="Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
+		<entry key="RenderDoc Capture" text="RenderDoc 캡처" sourceHash="1b19e0f7e711a50f" />
+		<entry key="Replace the active scene with an empty one"
+		       text="활성 씬을 빈 씬으로 바꿉니다"
+		       sourceHash="63ea90ea1bfcf160" />
+		<entry key="Report Bug (BugReport)" text="버그 보고(BugReport)" sourceHash="1f418bfaa2968a32" />
+		<entry key="Run the saved active scene in a separate game process"
+		       text="저장한 활성 씬을 별도 게임 프로세스로 실행합니다"
+		       sourceHash="009c3b6c728da8f8" />
+		<entry key="Save" text="저장" sourceHash="33f85f24c0f5f008" />
+		<entry key="Save Component Preset" text="컴포넌트 프리셋 저장" sourceHash="6bb03c0771db8b3e" />
+		<entry key="Save Scene" text="씬 저장" sourceHash="e73d147ad4fab920" />
+		<entry key="Save the focused asset, or the active scene"
+		       text="포커스된 에셋이나 활성 씬을 저장합니다"
+		       sourceHash="5264bbd7b1dee3e2" />
+		<entry key="Save the focused view as PNG under Saved/Screenshots"
+		       text="포커스된 뷰를 Saved/Screenshots 아래 PNG 로 저장합니다"
+		       sourceHash="c422d3a9c18116d5" />
+		<entry key="Saves the active scene to disk"
+		       text="현재 활성화된 씬을 디스크에 저장합니다"
+		       sourceHash="643452f0470ba18e" />
+		<entry key="Saves the focused asset or the active scene"
+		       text="현재 포커스된 에셋 또는 활성 씬을 저장합니다"
+		       sourceHash="170ccdd681039f2f" />
+		<entry key="Saves the focused view (game view or scene view) as PNG"
+		       text="포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다"
+		       sourceHash="a4cdf6b9fab8f053" />
+		<entry key="Screenshot" text="스크린샷" sourceHash="12e9c9d9d9b94cf1" />
+		<entry key="Search and run editor commands"
+		       text="에디터 명령을 찾아 실행합니다"
+		       sourceHash="f4d5c962f45573e0" />
+		<entry key="Searches for and runs editor commands and actions"
+		       text="에디터 명령 및 액션을 검색하여 실행합니다"
+		       sourceHash="8a15cb108295227c" />
+		<entry key="Select All With" text="같은 것 모두 선택" sourceHash="38c5bf72f59d8a52" />
+		<entry key="Select Owner GameObject" text="소유 GameObject 선택" sourceHash="6e636533b44a2e8b" />
+		<entry key="Self Test Ping" text="자체 테스트 핑" sourceHash="f0a6cff2a618e373" />
+		<entry key="Sets the editor theme preset, accent color and corner rounding"
+		       text="에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다"
+		       sourceHash="7080e1da8d9c257b" />
+		<entry key="Show Dependencies" text="의존 보기" sourceHash="177ed66a13428561" />
+		<entry key="Show in Explorer" text="탐색기에서 보기" sourceHash="7582a6273577e9c6" />
+		<entry key="Snap selected objects onto the ground plane"
+		       text="선택한 오브젝트를 바닥 평면에 붙입니다"
+		       sourceHash="2381d6ed11c97f3e" />
+		<entry key="Snap to Ground (Y=0)" text="바닥에 붙이기(Y=0)" sourceHash="3062d3f77a7a99b4" />
+		<entry key="Start play-in-editor" text="에디터 안 플레이를 시작합니다" sourceHash="53d30c8e8bd48c09" />
+		<entry key="Theme &amp; Look and Feel..." text="테마 · 모양..." sourceHash="118e3cb7b4f93874" />
+		<entry key="Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
+		<entry key="Undo the last edit" text="마지막 편집을 되돌립니다" sourceHash="08f4815bc31fa1e0" />
+		<entry key="Undoes the last edit" text="마지막 편집 작업을 되돌립니다" sourceHash="d66acea5d97266d8" />
+		<entry key="Unparent" text="부모에서 떼기" sourceHash="f2e7c9227ea7c462" />
+		<entry key="Write instance overrides back to the prefab template"
+		       text="인스턴스의 덮어쓴 값을 프리팹 원본에 다시 씁니다"
+		       sourceHash="fcdb0d4d740ad849" />
+		<entry key="Write one log line (self-test)"
+		       text="로그 한 줄을 씁니다(자체 테스트)"
+		       sourceHash="143cceaddef80978" />
+		<entry key="Write the active scene, or prompt Save As if unsaved"
+		       text="활성 씬을 씁니다. 저장한 적이 없으면 다른 이름으로 저장을 묻습니다"
+		       sourceHash="8c6d6857be6f9654" />
+		<entry key="Write the selected component to a preset file"
+		       text="선택한 컴포넌트를 프리셋 파일로 씁니다"
+		       sourceHash="1dc86061a8f6e458" />
 	</entries>
 </TranslationTable>

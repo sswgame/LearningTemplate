@@ -11,5 +11,7 @@
 	<codeRoots>
 		<item>Source/Editor</item>
 	</codeRoots>
-	<assetRoots />
+	<assetRoots>
+		<item>editor/commands</item> <!-- 명령 표시 파일 — 라벨 · 툴팁 · 설명의 영어 원문이 키다(EditorCommandText.cpp 가 그릴 글로 푼다) -->
+	</assetRoots>
 </LocalizationProject>
