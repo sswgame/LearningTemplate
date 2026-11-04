@@ -2,6 +2,7 @@
 
 #include "Games/HarvestValley/FarmerComponent.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -10,10 +11,33 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief 도구마다 농부 몸이 한 번 하는 동작의 그래프 트리거입니다(`ubc_farmer.animgraph.xml` 의 매개변수 — UAL2 농사 클립).
+         * @details 괭이질 클립이 묶음에 없어 괭이는 씨앗 심기와 같은 웅크린 동작을 쓴다.
+         */
+        const utf8* getToolTrigger( FarmTool tool )
+        {
+            switch ( tool )
+            {
+                case FarmTool::Hoe:
+                case FarmTool::Seeds:
+                    return "Sow";
+                case FarmTool::WateringCan:
+                    return "Water";
+                case FarmTool::Hand:
+                    return "Harvest";
+            }
+            return "Harvest";
+        }
+    } // namespace
+
     FarmerComponent::FarmerComponent()
         : _director{}
         , _heightOffset{ 0.5f }
         , _kind{ FarmerViewKind::Farmer }
+        , _lastToolUseCount{ 0 }
     {
         setCanEverTick( true );
     }
@@ -40,6 +64,11 @@ namespace sw
         if ( _kind == FarmerViewKind::Farmer )
         {
             pMesh->setLocalPosition( pDirector->getPlayerPosition() + lift );
+            // 도구를 쓸 때마다 몸이 그 동작을 한 번 한다(그래프가 끝나면 이동으로 돌아간다). 애니메이터가 없는 몸(정적 메시)은 동작이 없다.
+            SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
+            if ( pAnimator != nullptr && pDirector->getToolUseCount() != _lastToolUseCount )
+                pAnimator->getParameters().setTrigger( hashed_string( getToolTrigger( pDirector->getLastUsedTool() ) ) );
+            _lastToolUseCount = pDirector->getToolUseCount();
             return;
         }
         int32      x       = 0;

@@ -187,6 +187,8 @@ namespace sw
         , _dayStarted{ 0 }
         , _hourOfDay{ _wakeHour }
         , _tool{ FarmTool::Hoe }
+        , _lastUsedTool{ FarmTool::Hoe }
+        , _toolUseCount{ 0 }
         , _bRaining{ SW_FALSE }
         , _bPossessionDirty{ SW_FALSE }
         , _reserved{ 0 }
@@ -708,7 +710,11 @@ namespace sw
             }
         }
         if ( result == FarmActionResult::Done )
+        {
             _stamina -= cost;
+            _lastUsedTool = _tool;
+            ++_toolUseCount;
+        }
         else if ( isAutoPlayOn() == false )
             SW_LOG_INFO_ID( "FarmDirector.ToolUsed", "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, getEnumName( result ) );
     }

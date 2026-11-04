@@ -45,5 +45,6 @@ namespace sw
         float32 _heightOffset;
         PROPERTY( Category = "Farmer", DisplayName = "Kind", Tooltip = "Follow the farmer or the faced tile" )
         FarmerViewKind _kind;
+        uint32         _lastToolUseCount; ///< 몸이 동작으로 옮긴 마지막 도구 사용 수(디렉터의 수가 오르면 그 도구의 트리거를 건다)
     };
 } // namespace sw

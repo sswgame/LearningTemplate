@@ -776,7 +776,7 @@
 					                       _bAnimateWhenOffscreen="false" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
-					                           _animationGraphPath="common/data/anim/ubc_townsfolk.animgraph.xml"
+					                           _animationGraphPath="common/data/anim/ubc_farmer.animgraph.xml"
 					                           _clipFolder="common/models/quaternius/animations/ual1_standard/clips"
 					                           _initialState="Locomotion"
 					                           _currentState=""

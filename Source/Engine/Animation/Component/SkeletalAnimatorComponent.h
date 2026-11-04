@@ -146,6 +146,7 @@ namespace sw
      * @class SkeletalAnimatorComponent
      * @brief 같은 오브젝트의 `SkeletalMeshComponent`(유닛)에 단계 작업으로 붙어 포즈를 냅니다. 자기 onTick 에서 평가하지 않습니다.
      * @details - **클립**: 상태 이름이 곧 클립 이름이고, 파일은 `_clipFolder/<소문자 이름>.animclip` 입니다(임포트가 그렇게 씁니다).
+     *            이름에 '/' 가 있으면 다른 묶음의 콘텐츠 경로(확장자 없이)다 — 한 그래프가 두 클립 묶음(UAL1 · UAL2)을 함께 쓴다.
      *          - **그래프**: `_animationGraphPath` 의 노드가 상태, 링크가 전이입니다(`AnimationGraphPlayer`). 그래프가 없으면 `play( 이름 )` 이 바로 재생합니다.
      *          - **단계**: 시간(상태 기계, 알림, 루트 모션, 커브. 매 프레임) → 기본 포즈(샘플, 크로스페이드, 레이어, 시퀀서 덮어쓰기. LOD 가
      *            허락한 프레임) → 게임 스레드에서 루트 모션을 오브젝트 트랜스폼에 씁니다.

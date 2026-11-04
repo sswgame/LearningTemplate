@@ -126,8 +126,12 @@ namespace sw
 
         // ---- 자동 농부(조종자)가 읽는 것. 틱 밖(조종 시스템의 판단)에서 읽는다 ----
         /** @brief 농부가 바라보는 방향(네 방향 단위 벡터)입니다. */
-        const float3&                getFacing() const { return _facing; }
-        FarmTool                     getTool() const { return _tool; }
+        const float3& getFacing() const { return _facing; }
+        FarmTool      getTool() const { return _tool; }
+        /** @brief 끝낸(밭이 바뀐) 도구 사용 수입니다. 오를 때마다 농부 몸이 그 도구의 동작을 한 번 한다(`FarmerComponent`). 저장하지 않는 화면용 값이다. */
+        uint32 getToolUseCount() const { return _toolUseCount; }
+        /** @brief 마지막으로 끝낸 도구 사용의 도구입니다. */
+        FarmTool                     getLastUsedTool() const { return _lastUsedTool; }
         int32                        getStamina() const { return _stamina; }
         int32                        getDayStarted() const { return _dayStarted; }
         int32                        getSelectedSeedIndex() const { return _selectedSeedIndex; }
@@ -296,6 +300,8 @@ namespace sw
         int32                        _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
         float32                      _hourOfDay;  ///< 뷰가 읽는 시각.
         FarmTool                     _tool;
+        FarmTool                     _lastUsedTool;
+        uint32                       _toolUseCount;
         uint8                        _bRaining         : 1;
         uint8                        _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
         uint8                        _reserved         : 6;

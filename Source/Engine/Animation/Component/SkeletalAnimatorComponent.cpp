@@ -563,7 +563,9 @@ namespace sw
     string SkeletalAnimatorComponent::makeClipPath( const hashed_string& clipName ) const
     {
         const string fileName = StringUtil::toLower( clipName.c_str() ) + string( AnimationClip::kExtension );
-        return _clipFolder.empty() ? fileName : FileUtil::joinPath( _clipFolder, fileName );
+        // '/' 가 든 이름은 다른 클립 묶음의 콘텐츠 경로다(언리얼 애님 그래프가 시퀀스 에셋을 경로로 가리키는 것과 같다) — 이 애니메이터의 폴더를 붙이지 않는다.
+        const bool bContentPath = StringUtil::contains( clipName.c_str(), "/" );
+        return _clipFolder.empty() || bContentPath ? fileName : FileUtil::joinPath( _clipFolder, fileName );
     }
 
     bool SkeletalAnimatorComponent::preloadClip( const hashed_string& clipName )
