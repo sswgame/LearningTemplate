@@ -11,6 +11,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class RigPoseBuffer;
@@ -30,7 +32,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 관절 제한의 종류입니다. */
+    /** @brief 관절 제한의 종류입니다(파일에는 이름으로 적는다 — `Cone` · `Hinge`). */
+    ENUM()
     enum class RigJointLimitType : uint8
     {
         None = 0, ///< 제한이 없다.

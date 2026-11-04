@@ -10,13 +10,16 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     struct RigSolveSpace;
 
     class RigPoseBuffer;
 
-    /** @brief 스프링 충돌체의 형태입니다. */
+    /** @brief 스프링 충돌체의 형태입니다(파일에는 이름으로 적는다). */
+    ENUM()
     enum class RigSpringColliderShape : uint8
     {
         Sphere = 0, ///< 점 A 와 반지름으로 정한다.

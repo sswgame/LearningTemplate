@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/Rig/RigNodeFields.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -23,6 +24,7 @@ namespace sw
     class RigInstance;
     class RigPoseBuffer;
     class Skeleton;
+    struct TypeInfo;
 
     /** @brief 대상이 무엇을 따르는가입니다. */
     enum class RigTargetKind : uint8
@@ -194,8 +196,17 @@ namespace sw
         RigXMLList readArray( string_view key, bool bRequired );
         /** @brief 객체 하나(칸 이름의 자식 요소)를 꺼냅니다. 없으면 무효 노드입니다. */
         XMLNode readObject( string_view key, bool bRequired );
-        /** @brief 이름이나 열거 문자열 하나를 @p ppChoice 중에서 고릅니다(대소문자 구분). */
-        [[nodiscard]] bool readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired );
+        /**
+         * @brief 이 요소의 속성을 리플렉션 칸 구조체(@p pInstance, @p typeInfo) 하나로 읽습니다(`XMLFields::readFields` — RigNodeFields.h). 칸의 키는 읽은 것으로 기록합니다.
+         * @details 모르는 키는 `finish` 가 손으로 읽은 키와 함께 한 번에 낸다. 칸 오류(필수 · 값 · 범위)는 이 리더의 오류(`Rig.Rig`)로 남고 리더는 실패 상태가 된다.
+         */
+        [[nodiscard]] bool readFields( void* pInstance, const TypeInfo& typeInfo );
+        /** @brief `readFields` 의 타입 지정 버전입니다(`TFields::StaticType()`). */
+        template <typename TFields>
+        [[nodiscard]] bool readFields( TFields& outFields )
+        {
+            return readFields( &outFields, *TFields::StaticType() );
+        }
 
         /** @brief 오류를 남기고 실패로 둡니다. */
         void fail( string_view message );
@@ -277,26 +288,21 @@ namespace sw
             return false;
         }
 
-        const hashed_string& getName() const { return _name; }
-        float32              getWeight() const { return _weight; }
+        const hashed_string& getName() const { return _common._name; }
+        float32              getWeight() const { return _common._weight; }
         /** @brief 기본 가중치를 바꿉니다(인스턴스의 복제본에만, 에디터 리그 패널과 런타임 조절이 씁니다). */
-        void setWeight( float32 weight ) { _weight = weight; }
+        void setWeight( float32 weight ) { _common._weight = weight; }
         /** @brief 노드를 켜 두는지입니다. 끄면 가중치가 0 인 것처럼 실행하지 않습니다(유니티 Animation Rigging 제약의 켜짐). */
-        bool                 isEnabled() const { return _bEnabled == SW_TRUE; }
-        void                 setEnabled( bool bEnabled ) { _bEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
-        const hashed_string& getWeightCurve() const { return _weightCurve; }
-        const hashed_string& getWeightSlot() const { return _weightSlot; }
+        bool                 isEnabled() const { return _common._bEnabled; }
+        void                 setEnabled( bool bEnabled ) { _common._bEnabled = bEnabled; }
+        const hashed_string& getWeightCurve() const { return _common._weightCurve; }
+        const hashed_string& getWeightSlot() const { return _common._weightSlot; }
         /** @brief 노드를 켜 두는 가장 작은 화면 크기입니다. 0 이면 항상 켭니다. */
-        float32 getMinScreenSize() const { return _minScreenSize; }
+        float32 getMinScreenSize() const { return _common._minScreenSize; }
         /** @brief 공통 키(name, weight, weight_curve, weight_slot, min_screen_size, enabled — 적지 않으면 켜짐)를 읽습니다(에셋이 호출합니다). */
         [[nodiscard]] bool parseCommon( RigXMLReader& reader );
 
     protected:
-        hashed_string _name;
-        hashed_string _weightCurve;
-        hashed_string _weightSlot;
-        float32       _weight;
-        float32       _minScreenSize;
-        uint8         _bEnabled;
+        RigNodeCommonFields _common; ///< 공통 키 · 기본값 · 범위(RigNodeFields.h)
     };
 } // namespace sw

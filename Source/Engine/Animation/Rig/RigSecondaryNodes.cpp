@@ -20,8 +20,6 @@ namespace sw
     {
         struct RigSecondaryNodesInternal
         {
-            static constexpr const utf8* kArrColliderShape[] = { "Sphere", "Capsule" };
-
             /** @brief 가우스 RBF 핵입니다. */
             static float32 computeKernel( float32 angle, float32 radius ) { return std::exp( -( angle * angle ) / ( radius * radius ) ); }
 
@@ -102,33 +100,37 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                bool bShared               = false;
-                _settings._gravityOverride = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식이다. "gravity" 를 읽었는지 구분한다.
-                bool bOk                   = reader.readNameList( "bones", _listBoneName, true ) && reader.readFloat( "stiffness", _settings._stiffness, false ) &&
-                           reader.readFloat( "damping", _settings._damping, false ) && reader.readFloat( "axis_pull", _settings._axisPull, false ) &&
-                           reader.readFloat3( "gravity", _settings._gravityOverride, false ) && reader.readFloat( "gravity_scale", _settings._gravityScale, false ) &&
-                           reader.readFloat( "particle_radius", _settings._particleRadius, false ) && reader.readFloat( "fixed_step", _settings._fixedStep, false ) &&
-                           reader.readUint( "max_substeps", _settings._maxSubStep, false ) &&
-                           reader.readFloat( "teleport_distance", _settings._teleportDistance, false ) &&
-                           reader.readBool( "use_shared_colliders", bShared, false );
-                // "gravity" 가 적혀 있으면 월드 중력 대신 그 값(덮어쓰기), 없으면 월드 중력 × gravity_scale.
+
+                bool bOk                    = reader.readFields( _fields ); // 범위(비율 0..1, 스텝 > 0 등)는 PROPERTY 가 본다
+                bOk                         = reader.readNameList( "bones", _listBoneName, true ) && bOk;
+                _settings._stiffness        = _fields._stiffness;
+                _settings._damping          = _fields._damping;
+                _settings._axisPull         = _fields._axisPull;
+                _settings._gravityScale     = _fields._gravityScale;
+                _settings._particleRadius   = _fields._particleRadius;
+                _settings._fixedStep        = _fields._fixedStep;
+                _settings._maxSubStep       = _fields._maxSubsteps;
+                _settings._teleportDistance = _fields._teleportDistance;
+                // "gravity" 는 적었는지가 뜻이다 — 적으면 월드 중력 대신 그 값(덮어쓰기), 없으면 월드 중력 × gravity_scale.
+                _settings._gravityOverride     = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식이다. "gravity" 를 읽었는지 구분한다.
+                bOk                            = reader.readFloat3( "gravity", _settings._gravityOverride, false ) && bOk;
                 _settings._bUseGravityOverride = ( _settings._gravityOverride._x != MathUtil::kMaxFloat ) ? SW_TRUE : SW_FALSE;
                 if ( _settings._bUseGravityOverride == SW_FALSE )
                     _settings._gravityOverride = float3{};
-                _bUseSharedColliders       = bShared ? SW_TRUE : SW_FALSE;
                 const RigXMLList colliders = reader.readArray( "colliders", false );
                 for ( size_t index = 0; bOk && colliders.isValid() && index < colliders.size(); ++index )
                 {
-                    RigXMLReader colliderReader( colliders.at( index ), reader.getContext() );
+                    RigXMLReader            colliderReader( colliders.at( index ), reader.getContext() );
+                    RigSpringColliderFields colliderFields;
+                    bOk = colliderReader.readFields( colliderFields );
+                    bOk = colliderReader.finish() && bOk;
                     ColliderSpec spec{};
-                    uint32       shape = 0;
-                    bOk                = colliderReader.readName( "bone", spec._boneName, false ) && colliderReader.readName( "target", spec._targetName, false ) &&
-                          colliderReader.readChoice( "shape", RigSecondaryNodesInternal::kArrColliderShape, SW_COUNT_OF( RigSecondaryNodesInternal::kArrColliderShape ),
-                                                     shape, true ) &&
-                          colliderReader.readFloat3( "a", spec._collider._pointA, false ) && colliderReader.readFloat3( "b", spec._collider._pointB, false ) &&
-                          colliderReader.readFloat( "radius", spec._collider._radius, true );
-                    bOk                   = colliderReader.finish() && bOk;
-                    spec._collider._shape = shape == 0 ? RigSpringColliderShape::Sphere : RigSpringColliderShape::Capsule;
+                    spec._boneName         = colliderFields._bone;
+                    spec._targetName       = colliderFields._target;
+                    spec._collider._shape  = colliderFields._shape;
+                    spec._collider._pointA = colliderFields._a;
+                    spec._collider._pointB = colliderFields._b;
+                    spec._collider._radius = colliderFields._radius;
                     if ( bOk && spec._boneName.empty() == spec._targetName.empty() )
                     {
                         reader.fail( "a spring collider needs exactly one of 'bone' or 'target'" );
@@ -141,17 +143,20 @@ namespace sw
                 _settings._listParticle.clear();
                 for ( size_t index = 0; bOk && joints.isValid() && index < joints.size(); ++index )
                 {
-                    RigXMLReader              jointReader( joints.at( index ), reader.getContext() );
-                    RigSpringParticleSettings particle{ float3{}, _settings._stiffness, _settings._axisPull, _settings._damping, _settings._particleRadius };
-                    bOk = jointReader.readFloat( "stiffness", particle._stiffness, false ) && jointReader.readFloat( "axis_pull", particle._axisPull, false ) &&
-                          jointReader.readFloat( "damping", particle._damping, false ) && jointReader.readFloat3( "gravity", particle._gravity, false ) &&
-                          jointReader.readFloat( "radius", particle._radius, false );
-                    bOk = jointReader.finish() && bOk;
-                    _settings._listParticle.push_back( particle );
+                    RigXMLReader         jointReader( joints.at( index ), reader.getContext() );
+                    RigSpringJointFields jointFields;
+                    jointFields._stiffness = _settings._stiffness;
+                    jointFields._axisPull  = _settings._axisPull;
+                    jointFields._damping   = _settings._damping;
+                    jointFields._radius    = _settings._particleRadius;
+                    bOk                    = jointReader.readFields( jointFields );
+                    bOk                    = jointReader.finish() && bOk;
+                    _settings._listParticle.push_back(
+                        RigSpringParticleSettings{ jointFields._gravity, jointFields._stiffness, jointFields._axisPull, jointFields._damping, jointFields._radius } );
                 }
-                if ( bOk && ( _listBoneName.size() < 2 || _settings._fixedStep <= 0.0f || _settings._maxSubStep == 0 ) )
+                if ( bOk && _listBoneName.size() < 2 )
                 {
-                    reader.fail( "'bones' needs at least two bones, 'fixed_step' and 'max_substeps' must be positive" );
+                    reader.fail( "'bones' needs at least two bones" );
                     return false;
                 }
                 const bool bJointCountMismatch = _settings._listParticle.empty() == false && _settings._listParticle.size() + 1 != _listBoneName.size();
@@ -190,7 +195,7 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 const vector<RigSpringCollider>& listShared = context._pInstance->getSharedColliders();
-                const bool                       bShared    = _bUseSharedColliders == SW_TRUE && listShared.empty() == false;
+                const bool                       bShared    = _fields._bUseSharedColliders && listShared.empty() == false;
                 if ( bShared == false && _listTargetCollider.empty() )
                 {
                     _chain.simulate( *context._pPose, _listBone, _settings, _listCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
@@ -220,6 +225,7 @@ namespace sw
             void reset() override { _chain.reset(); }
 
         private:
+            RigSpringChainFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
             struct ColliderSpec
             {
                 RigSpringCollider _collider{};
@@ -241,7 +247,6 @@ namespace sw
             vector<RigSpringCollider> _listScratchCollider{};
             RigSpringChain            _chain{};
             RigSpringSettings         _settings{};
-            uint8                     _bUseSharedColliders{ SW_FALSE };
         };
 
         /**
@@ -259,32 +264,41 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                float32 radiusDegrees  = 45.0f;
-                bool    bOk            = reader.readName( "driver", _driverName, true ) && reader.readFloat( "radius_degrees", radiusDegrees, false );
-                _radius                = MathUtil::max( radiusDegrees, 1.0f ) * MathUtil::kDegreeToRadian;
+
+                bool bOk               = reader.readFields( _fields ); // 1..180 도는 PROPERTY 가 본다
+                _radius                = _fields._radiusDegrees * MathUtil::kDegreeToRadian;
                 const RigXMLList poses = reader.readArray( "poses", true );
                 for ( size_t index = 0; bOk && poses.isValid() && index < poses.size(); ++index )
                 {
-                    RigXMLReader poseReader( poses.at( index ), reader.getContext() );
-                    DriverPose   pose{};
-                    bOk                     = poseReader.readName( "name", pose._name, true ) && poseReader.readRotationDegrees( "rotation", pose._rotation, true );
+                    RigXMLReader        poseReader( poses.at( index ), reader.getContext() );
+                    RigDriverPoseFields poseFields;
+                    bOk = poseReader.readFields( poseFields );
+                    DriverPose pose{};
+                    pose._name              = poseFields._name;
+                    pose._rotation          = quaternion::makeFromYawPitchRoll( poseFields._rotation * MathUtil::kDegreeToRadian );
                     const RigXMLList morphs = poseReader.readArray( "morphs", false );
                     for ( size_t morphIndex = 0; bOk && morphs.isValid() && morphIndex < morphs.size(); ++morphIndex )
                     {
-                        RigXMLReader   morphReader( morphs.at( morphIndex ), reader.getContext() );
-                        RigMorphWeight morph{};
-                        bOk = morphReader.readName( "morph", morph._name, true ) && morphReader.readFloat( "weight", morph._weight, true );
+                        RigXMLReader         morphReader( morphs.at( morphIndex ), reader.getContext() );
+                        RigDriverMorphFields morphFields;
+                        bOk = morphReader.readFields( morphFields );
                         bOk = morphReader.finish() && bOk;
+                        RigMorphWeight morph{};
+                        morph._name   = morphFields._morph;
+                        morph._weight = morphFields._weight;
                         pose._listMorph.push_back( morph );
                     }
                     const RigXMLList bones = poseReader.readArray( "bones", false );
                     for ( size_t boneIndex = 0; bOk && bones.isValid() && boneIndex < bones.size(); ++boneIndex )
                     {
-                        RigXMLReader   boneReader( bones.at( boneIndex ), reader.getContext() );
-                        CorrectiveBone corrective{};
-                        bOk = boneReader.readName( "bone", corrective._name, true ) && boneReader.readRotationDegrees( "rotation", corrective._rotation, false ) &&
-                              boneReader.readFloat3( "translation", corrective._translation, false );
+                        RigXMLReader            boneReader( bones.at( boneIndex ), reader.getContext() );
+                        RigCorrectiveBoneFields boneFields;
+                        bOk = boneReader.readFields( boneFields );
                         bOk = boneReader.finish() && bOk;
+                        CorrectiveBone corrective{};
+                        corrective._name        = boneFields._bone;
+                        corrective._rotation    = quaternion::makeFromYawPitchRoll( boneFields._rotation * MathUtil::kDegreeToRadian );
+                        corrective._translation = boneFields._translation;
                         pose._listBone.push_back( corrective );
                     }
                     bOk = poseReader.finish() && bOk;
@@ -300,7 +314,7 @@ namespace sw
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _driverName, _driver ) == false )
+                if ( context.findBone( _fields._driver, _driver ) == false )
                     return false;
                 _driverReference = context._pSkeleton->getBone( _driver )._referencePose._rotation;
                 for ( DriverPose& pose : _listPose )
@@ -323,7 +337,7 @@ namespace sw
                 }
                 if ( RigSecondaryNodesInternal::invertMatrix( kernel, poseCount, _listInverseKernel ) == false )
                 {
-                    SW_LOG_ERROR_ID( "RigSecondaryNodes.RigPoseDriverTwo", "Rig '%#': pose driver '%#' has two poses at the same rotation", context._label, _name.c_str() );
+                    SW_LOG_ERROR_ID( "RigSecondaryNodes.RigPoseDriverTwo", "Rig '%#': pose driver '%#' has two poses at the same rotation", context._label, getName().c_str() );
                     return false;
                 }
                 _listPoseWeight.assign( poseCount, 0.0f );
@@ -382,6 +396,7 @@ namespace sw
             }
 
         private:
+            RigPoseDriverFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
             struct CorrectiveBone
             {
                 quaternion    _rotation{};
@@ -403,7 +418,6 @@ namespace sw
             vector<float32>    _listKernel{};
             vector<float32>    _listPoseWeight{};
             quaternion         _driverReference{};
-            hashed_string      _driverName{};
             float32            _radius{ 0.785f };
             uint32             _driver{ 0 };
         };

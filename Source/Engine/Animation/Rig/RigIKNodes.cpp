@@ -19,7 +19,6 @@ namespace sw
     {
         struct RigIKNodesInternal
         {
-            static constexpr const utf8* kArrLimitType[] = { "Cone", "Hinge" };
             /** @brief 보폭 워핑이 다리를 펴는 최대 비율(다리 길이 대비)입니다. 다 펴면 2 본 IK 의 무릎 방향이 정해지지 않는다. */
             static constexpr float32 kMaxLegExtension = 0.995f;
 
@@ -48,35 +47,54 @@ namespace sw
                     return false;
                 for ( size_t index = 0; limits.isValid() && index < limits.size(); ++index )
                 {
-                    RigXMLReader limitReader( limits.at( index ), reader.getContext() );
-                    LimitSpec    spec{};
-                    uint32       typeIndex    = 0;
-                    float32      swingDegrees = 180.0f;
-                    float32      twistDegrees = 180.0f;
-                    float32      minDegrees   = -180.0f;
-                    float32      maxDegrees   = 180.0f;
-                    bool         bOk          = limitReader.readName( "bone", spec._bone, true ) &&
-                               limitReader.readChoice( "type", kArrLimitType, SW_COUNT_OF( kArrLimitType ), typeIndex, true ) &&
-                               limitReader.readFloat( "swing_degrees", swingDegrees, false ) && limitReader.readFloat( "twist_degrees", twistDegrees, false ) &&
-                               limitReader.readFloat3( "axis", spec._limit._hingeAxis, false ) && limitReader.readFloat( "min_degrees", minDegrees, false ) &&
-                               limitReader.readFloat( "max_degrees", maxDegrees, false );
-                    bOk = limitReader.finish() && bOk;
-                    if ( bOk == false )
+                    RigXMLReader        limitReader( limits.at( index ), reader.getContext() );
+                    RigJointLimitFields fields;
+                    bool                bOk = limitReader.readFields( fields );
+                    bOk                     = limitReader.finish() && bOk;
+                    if ( bOk == false || fields._type == RigJointLimitType::None )
                     {
-                        reader.fail( "malformed limit" );
+                        reader.fail( "malformed limit (type is Cone or Hinge)" );
                         return false;
                     }
-                    spec._limit._type       = ( typeIndex == 0 ) ? RigJointLimitType::Cone : RigJointLimitType::Hinge;
-                    spec._limit._swingLimit = swingDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._twistLimit = twistDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._minAngle   = minDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._maxAngle   = maxDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._hingeAxis  = spec._limit._hingeAxis.normalize();
+                    LimitSpec spec{};
+                    spec._bone              = fields._bone;
+                    spec._limit._type       = fields._type;
+                    spec._limit._swingLimit = fields._swingDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._twistLimit = fields._twistDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._minAngle   = fields._minDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._maxAngle   = fields._maxDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._hingeAxis  = fields._axis.normalize();
                     if ( spec._limit._hingeAxis.getLengthSquared() < 0.5f )
                         spec._limit._hingeAxis = float3::UnitX;
                     outListSpec.push_back( spec );
                 }
                 return true;
+            }
+
+            /** @brief 다리 목록(`feet`)을 읽습니다 — 발 디딤 · 보폭 워핑이 함께 쓴다. 비면 실패입니다. */
+            template <typename TFoot>
+            [[nodiscard]] static bool parseLegs( RigXMLReader& reader, vector<TFoot>& outListFoot )
+            {
+                const RigXMLList feet = reader.readArray( "feet", true );
+                bool             bOk  = reader.isOk();
+                for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
+                {
+                    RigXMLReader footReader( feet.at( index ), reader.getContext() );
+                    RigLegFields leg;
+                    bOk = footReader.readFields( leg );
+                    bOk = footReader.finish() && bOk;
+                    TFoot foot{};
+                    foot._rootName = leg._root;
+                    foot._midName  = leg._mid;
+                    foot._endName  = leg._end;
+                    outListFoot.push_back( foot );
+                }
+                if ( bOk && outListFoot.empty() )
+                {
+                    reader.fail( "'feet' must not be empty" );
+                    return false;
+                }
+                return bOk;
             }
 
             /** @brief 제한 이름을 사슬 인덱스로 옮기고, 레퍼런스 회전과 본 축(본에서 다음 사슬 본으로 가는 방향, 본 자기 공간)을 채웁니다. */
@@ -129,26 +147,20 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                bool       bMatch = false;
-                bool       bKeep  = true;
-                const bool bOk    = reader.readName( "root", _rootName, true ) && reader.readName( "mid", _midName, true ) && reader.readName( "end", _endName, true ) &&
-                                 reader.readName( "target", _targetName, true ) && reader.readName( "pole", _poleName, false ) &&
-                                 reader.readBool( "match_rotation", bMatch, false ) && reader.readBool( "keep_end_rotation", bKeep, false );
-                _bMatchRotation   = bMatch ? SW_TRUE : SW_FALSE;
-                _bKeepEndRotation = bKeep ? SW_TRUE : SW_FALSE;
-                return bOk;
+
+                return reader.readFields( _fields );
             }
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 vector<uint32> listBone;
-                if ( context.findBones( { _rootName, _midName, _endName }, listBone, true ) == false || context.findTarget( _targetName, _target ) == false )
+                if ( context.findBones( { _fields._root, _fields._mid, _fields._end }, listBone, true ) == false || context.findTarget( _fields._target, _target ) == false )
                     return false;
                 _root = listBone[0];
                 _mid  = listBone[1];
                 _end  = listBone[2];
                 _pole = MathUtil::kMaxUInt32;
-                if ( _poleName.empty() == false && context.findTarget( _poleName, _pole ) == false )
+                if ( _fields._pole.empty() == false && context.findTarget( _fields._pole, _pole ) == false )
                     return false;
                 return true;
             }
@@ -165,9 +177,9 @@ namespace sw
                 const bool       bPole     = _pole != MathUtil::kMaxUInt32 && context._pInstance->resolveTarget( _pole, pose, polePosition, poleRotation );
                 const quaternion endBefore = pose.getModelRotation( _end );
                 (void)RigIKSolver::solveTwoBone( pose, _root, _mid, _end, targetPosition, bPole ? &polePosition : nullptr, *context._pSpace );
-                if ( _bMatchRotation == SW_TRUE )
+                if ( _fields._bMatchRotation )
                     pose.setModelRotation( _end, targetRotation );
-                else if ( _bKeepEndRotation == SW_TRUE )
+                else if ( _fields._bKeepEndRotation )
                     pose.setModelRotation( _end, endBefore );
             }
 
@@ -179,18 +191,12 @@ namespace sw
             }
 
         private:
-            hashed_string _rootName{};
-            hashed_string _midName{};
-            hashed_string _endName{};
-            hashed_string _targetName{};
-            hashed_string _poleName{};
-            uint32        _root{ 0 };
-            uint32        _mid{ 0 };
-            uint32        _end{ 0 };
-            uint32        _target{ 0 };
-            uint32        _pole{ MathUtil::kMaxUInt32 };
-            uint8         _bMatchRotation{ SW_FALSE };
-            uint8         _bKeepEndRotation{ SW_TRUE };
+            RigTwoBoneIKFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            uint32             _root{ 0 };
+            uint32             _mid{ 0 };
+            uint32             _end{ 0 };
+            uint32             _target{ 0 };
+            uint32             _pole{ MathUtil::kMaxUInt32 };
         };
 
         /**
@@ -207,16 +213,14 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                bool    bMatch         = false;
-                float32 maxStepDegrees = 180.0f;
-                bool    bOk            = reader.readNameList( "bones", _listBoneName, true ) && reader.readName( "target", _targetName, true ) &&
-                           reader.readUint( "iterations", _settings._iterationCount, false ) && reader.readFloat( "tolerance", _settings._tolerance, false ) &&
-                           reader.readBool( "match_rotation", bMatch, false );
-                if ( _bFABRIK == SW_FALSE )
-                    bOk = bOk && reader.readFloat( "max_step_degrees", maxStepDegrees, false );
-                _settings._maxStepAngle = maxStepDegrees * MathUtil::kDegreeToRadian;
-                _bMatchRotation         = bMatch ? SW_TRUE : SW_FALSE;
-                bOk                     = bOk && RigIKNodesInternal::parseLimits( reader, _listLimitSpec );
+
+                // 한 관절의 회전 상한은 CCD 만 받는다 — FABRIK 은 사슬 공통 칸만 읽는다(그 키를 적으면 모르는 키다).
+                bool bOk                  = ( _bFABRIK == SW_TRUE ) ? reader.readFields( static_cast<RigChainIKFields&>( _fields ) ) : reader.readFields( _fields );
+                _settings._iterationCount = _fields._iterations;
+                _settings._tolerance      = _fields._tolerance;
+                _settings._maxStepAngle   = _fields._maxStepDegrees * MathUtil::kDegreeToRadian;
+                bOk                       = reader.readNameList( "bones", _listBoneName, true ) && bOk;
+                bOk                       = bOk && RigIKNodesInternal::parseLimits( reader, _listLimitSpec );
                 if ( bOk && _listBoneName.size() < 2 )
                 {
                     reader.fail( "'bones' needs at least two bones" );
@@ -227,7 +231,7 @@ namespace sw
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                return context.findBones( _listBoneName, _listBone, true ) && context.findTarget( _targetName, _target ) &&
+                return context.findBones( _listBoneName, _listBone, true ) && context.findTarget( _fields._target, _target ) &&
                        RigIKNodesInternal::bindLimits( context, _listLimitSpec, _listBone, _listLimit );
             }
 
@@ -242,22 +246,21 @@ namespace sw
                     (void)RigIKSolver::solveFABRIK( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
                 else
                     (void)RigIKSolver::solveCCD( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
-                if ( _bMatchRotation == SW_TRUE )
+                if ( _fields._bMatchRotation )
                     pose.setModelRotation( _listBone.back(), targetRotation );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.insert( inoutListBone.end(), _listBone.begin(), _listBone.end() ); }
 
         private:
+            RigCCDChainFields                     _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
             vector<hashed_string>                 _listBoneName{};
             vector<RigIKNodesInternal::LimitSpec> _listLimitSpec{};
             vector<uint32>                        _listBone{};
             vector<RigJointLimit>                 _listLimit{};
-            hashed_string                         _targetName{};
             RigChainSettings                      _settings{};
             uint32                                _target{ 0 };
             uint8                                 _bFABRIK{ SW_TRUE };
-            uint8                                 _bMatchRotation{ SW_FALSE };
         };
 
         /**
@@ -272,18 +275,20 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                float32 maxDegrees = 180.0f;
-                bool    bOk        = reader.readName( "bone", _boneName, true ) && reader.readName( "target", _targetName, true ) &&
-                           reader.readFloat3( "aim_axis", _aimAxis, false ) && reader.readFloat( "max_degrees", maxDegrees, false );
-                _maxAngle              = MathUtil::clamp( maxDegrees, 0.0f, 180.0f ) * MathUtil::kDegreeToRadian;
-                _aimAxis               = _aimAxis.normalize();
+
+                bool bOk               = reader.readFields( _fields ); // 0..180 도는 PROPERTY 가 본다
+                _maxAngle              = _fields._maxDegrees * MathUtil::kDegreeToRadian;
+                _aimAxis               = _fields._aimAxis.normalize();
                 const RigXMLList chain = reader.readArray( "chain", false );
                 for ( size_t index = 0; bOk && chain.isValid() && index < chain.size(); ++index )
                 {
-                    RigXMLReader entryReader( chain.at( index ), reader.getContext() );
-                    ChainEntry   entry{};
-                    bOk = entryReader.readName( "bone", entry._name, true ) && entryReader.readFloat( "weight", entry._weight, true );
+                    RigXMLReader        entryReader( chain.at( index ), reader.getContext() );
+                    RigBoneWeightFields entryFields;
+                    bOk = entryReader.readFields( entryFields );
                     bOk = entryReader.finish() && bOk;
+                    ChainEntry entry{};
+                    entry._name   = entryFields._bone;
+                    entry._weight = entryFields._weight;
                     _listChain.push_back( entry );
                 }
                 if ( bOk && _aimAxis.getLengthSquared() < 0.5f )
@@ -296,7 +301,7 @@ namespace sw
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _boneName, _bone ) == false || context.findTarget( _targetName, _target ) == false )
+                if ( context.findBone( _fields._bone, _bone ) == false || context.findTarget( _fields._target, _target ) == false )
                     return false;
                 for ( ChainEntry& entry : _listChain )
                 {
@@ -349,6 +354,7 @@ namespace sw
             }
 
         private:
+            RigAimFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
             struct ChainEntry
             {
                 hashed_string _name{};
@@ -357,8 +363,6 @@ namespace sw
             };
 
             vector<ChainEntry> _listChain{};
-            hashed_string      _boneName{};
-            hashed_string      _targetName{};
             float3             _aimAxis{ 0.0f, 0.0f, 1.0f };
             float32            _maxAngle{ MathUtil::kPi };
             uint32             _bone{ 0 };
@@ -379,35 +383,16 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                float32 maxAlignDegrees = 30.0f;
-                bool    bAlign          = true;
-                bool    bOk             = reader.readName( "pelvis", _pelvisName, true ) && reader.readFloat( "trace_up", _traceUp, false ) &&
-                           reader.readFloat( "trace_down", _traceDown, false ) && reader.readFloat( "max_pelvis_drop", _maxPelvisDrop, false ) &&
-                           reader.readFloat( "max_raise", _maxRaise, false ) && reader.readFloat( "interp_speed", _interpSpeed, false ) &&
-                           reader.readBool( "align_to_normal", bAlign, false ) && reader.readFloat( "max_align_degrees", maxAlignDegrees, false );
-                _bAlignToNormal       = bAlign ? SW_TRUE : SW_FALSE;
-                _maxAlignAngle        = maxAlignDegrees * MathUtil::kDegreeToRadian;
-                const RigXMLList feet = reader.readArray( "feet", true );
-                for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
-                {
-                    RigXMLReader footReader( feet.at( index ), reader.getContext() );
-                    Foot         foot{};
-                    bOk = footReader.readName( "root", foot._rootName, true ) && footReader.readName( "mid", foot._midName, true ) &&
-                          footReader.readName( "end", foot._endName, true );
-                    bOk = footReader.finish() && bOk;
-                    _listFoot.push_back( foot );
-                }
-                if ( bOk && _listFoot.empty() )
-                {
-                    reader.fail( "'feet' must not be empty" );
-                    return false;
-                }
+
+                bool bOk       = reader.readFields( _fields );
+                _maxAlignAngle = _fields._maxAlignDegrees * MathUtil::kDegreeToRadian;
+                bOk            = RigIKNodesInternal::parseLegs( reader, _listFoot ) && bOk;
                 return bOk && reader.isOk();
             }
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _pelvisName, _pelvis ) == false )
+                if ( context.findBone( _fields._pelvis, _pelvis ) == false )
                     return false;
                 vector<float4x4> listReference;
                 RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
@@ -435,9 +420,9 @@ namespace sw
                         continue;
                     // 발 위치(바닥 높이로 내린 값) 위 trace_up 에서 아래로 trace_up + trace_down 만큼 쏜다.
                     const float3 footOnFloor{ foot._animatedModel._x, 0.0f, foot._animatedModel._z };
-                    const float3 origin = float3::transform( footOnFloor, context._worldFromModel ) + up * _traceUp;
+                    const float3 origin = float3::transform( footOnFloor, context._worldFromModel ) + up * _fields._traceUp;
                     RigGroundHit hit{};
-                    if ( context._pGroundQuery->raycastGround( origin, -up, _traceUp + _traceDown, hit ) == false )
+                    if ( context._pGroundQuery->raycastGround( origin, -up, _fields._traceUp + _fields._traceDown, hit ) == false )
                         continue;
                     foot._hitModel    = float3::transform( hit._position, modelFromWorld );
                     foot._normalModel = float3::transformVector( hit._normal, modelFromWorld ).normalize();
@@ -448,18 +433,18 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer& pose   = *context._pPose;
-                const float32  blend  = ( _interpSpeed > 0.0f ) ? MathUtil::saturate( _interpSpeed * context._deltaSeconds ) : 1.0f;
+                const float32  blend  = ( _fields._interpSpeed > 0.0f ) ? MathUtil::saturate( _fields._interpSpeed * context._deltaSeconds ) : 1.0f;
                 float32        lowest = 0.0f;
                 for ( Foot& foot : _listFoot )
                 {
                     foot._animatedModel = pose.getModelPosition( foot._end );
-                    const float32 goal  = ( foot._bHit == SW_TRUE ) ? MathUtil::clamp( foot._hitModel._y, -_maxPelvisDrop, _maxRaise ) : 0.0f;
+                    const float32 goal  = ( foot._bHit == SW_TRUE ) ? MathUtil::clamp( foot._hitModel._y, -_fields._maxPelvisDrop, _fields._maxRaise ) : 0.0f;
                     foot._offset        = foot._bInitialized == SW_TRUE ? MathUtil::lerp( foot._offset, goal, blend ) : goal;
                     foot._bInitialized  = SW_TRUE;
                     lowest              = MathUtil::min( lowest, foot._offset );
                 }
                 // 골반은 가장 낮은 발만큼 내린다. 높은 쪽 발은 무릎을 굽혀 올린다.
-                const float32 pelvisGoal = MathUtil::max( lowest, -_maxPelvisDrop );
+                const float32 pelvisGoal = MathUtil::max( lowest, -_fields._maxPelvisDrop );
                 _pelvisOffset            = _bPelvisInitialized == SW_TRUE ? MathUtil::lerp( _pelvisOffset, pelvisGoal, blend ) : pelvisGoal;
                 _bPelvisInitialized      = SW_TRUE;
                 pose.setModelPosition( _pelvis, pose.getModelPosition( _pelvis ) + float3{ 0.0f, _pelvisOffset, 0.0f } );
@@ -470,7 +455,7 @@ namespace sw
                     const float3     goal         = foot._animatedModel + float3{ 0.0f, foot._offset, 0.0f };
                     (void)RigIKSolver::solveTwoBone( pose, foot._root, foot._mid, foot._end, goal, nullptr, *context._pSpace );
                     quaternion aligned = footRotation;
-                    if ( _bAlignToNormal == SW_TRUE && foot._bHit == SW_TRUE )
+                    if ( _fields._bAlignToNormal && foot._bHit == SW_TRUE )
                     {
                         quaternion    tilt  = RigIKSolver::makeFromToRotation( float3::UnitY, foot._normalModel );
                         const float32 angle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( tilt._w ), 0.0f, 1.0f ) );
@@ -503,6 +488,7 @@ namespace sw
             }
 
         private:
+            RigFootPlacementFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
             struct Foot
             {
                 hashed_string _rootName{};
@@ -519,18 +505,11 @@ namespace sw
                 uint8         _bInitialized{ SW_FALSE };
             };
 
-            vector<Foot>  _listFoot{};
-            hashed_string _pelvisName{};
-            float32       _traceUp{ 0.5f };
-            float32       _traceDown{ 0.75f };
-            float32       _maxPelvisDrop{ 0.4f };
-            float32       _maxRaise{ 0.5f };
-            float32       _interpSpeed{ 15.0f };
-            float32       _maxAlignAngle{ 0.5f };
-            float32       _pelvisOffset{ 0.0f };
-            uint32        _pelvis{ 0 };
-            uint8         _bAlignToNormal{ SW_TRUE };
-            uint8         _bPelvisInitialized{ SW_FALSE };
+            vector<Foot> _listFoot{};
+            float32      _maxAlignAngle{ 0.5f };
+            float32      _pelvisOffset{ 0.0f };
+            uint32       _pelvis{ 0 };
+            uint8        _bPelvisInitialized{ SW_FALSE };
         };
 
         /**
@@ -549,32 +528,13 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                bool bOk = reader.readName( "pelvis", _pelvisName, true ) && reader.readFloat( "min_scale", _minScale, true ) &&
-                           reader.readFloat( "max_scale", _maxScale, true ) && reader.readFloat( "max_pelvis_drop", _maxPelvisDrop, true );
-                const RigXMLList feet = reader.readArray( "feet", true );
-                for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
-                {
-                    RigXMLReader footReader( feet.at( index ), reader.getContext() );
-                    Foot         foot{};
-                    bOk = footReader.readName( "root", foot._rootName, true ) && footReader.readName( "mid", foot._midName, true ) &&
-                          footReader.readName( "end", foot._endName, true );
-                    bOk = footReader.finish() && bOk;
-                    _listFoot.push_back( foot );
-                }
-                if ( bOk && _listFoot.empty() )
-                {
-                    reader.fail( "'feet' must not be empty" );
-                    return false;
-                }
-                const bool bScaleRangeValid = 0.0f < _minScale && _minScale <= _maxScale;
+
+                bool bOk                    = reader.readFields( _fields ); // 골반 내림 >= 0 은 PROPERTY 가 본다
+                bOk                         = RigIKNodesInternal::parseLegs( reader, _listFoot ) && bOk;
+                const bool bScaleRangeValid = 0.0f < _fields._minScale && _fields._minScale <= _fields._maxScale;
                 if ( bOk && bScaleRangeValid == false )
                 {
                     reader.fail( "'min_scale' must be above 0 and not above 'max_scale'" );
-                    return false;
-                }
-                if ( bOk && _maxPelvisDrop < 0.0f )
-                {
-                    reader.fail( "'max_pelvis_drop' must not be negative" );
                     return false;
                 }
                 return bOk && reader.isOk();
@@ -582,7 +542,7 @@ namespace sw
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _pelvisName, _pelvis ) == false )
+                if ( context.findBone( _fields._pelvis, _pelvis ) == false )
                     return false;
                 vector<float4x4> listReference;
                 RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
@@ -605,7 +565,7 @@ namespace sw
 
             void evaluate( RigEvaluateContext& context ) override
             {
-                const float32 scale           = MathUtil::clamp( _strideScale, _minScale, _maxScale );
+                const float32 scale           = MathUtil::clamp( _strideScale, _fields._minScale, _fields._maxScale );
                 const float32 directionLength = MathUtil::sqrt( _directionX * _directionX + _directionZ * _directionZ );
                 const bool    bNoWarp         = MathUtil::abs( scale - 1.0f ) <= MathUtil::kEpsilon || directionLength <= MathUtil::kEpsilon;
                 if ( bNoWarp )
@@ -636,7 +596,7 @@ namespace sw
                     const float32 neededVertical = -toGoal._y; // 엉덩이가 발보다 높은 만큼이다
                     drop                         = MathUtil::max( drop, neededVertical - reachHeight );
                 }
-                drop = MathUtil::min( drop, _maxPelvisDrop );
+                drop = MathUtil::min( drop, _fields._maxPelvisDrop );
                 if ( drop > 0.0f )
                     pose.setModelPosition( _pelvis, pelvis - float3{ 0.0f, drop, 0.0f } );
 
@@ -673,6 +633,7 @@ namespace sw
             }
 
         private:
+            RigStrideWarpingFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
             struct Foot
             {
                 hashed_string _rootName{};
@@ -686,15 +647,11 @@ namespace sw
                 uint32        _end{ 0 };
             };
 
-            vector<Foot>  _listFoot{};
-            hashed_string _pelvisName{};
-            float32       _minScale{ 0.0f };
-            float32       _maxScale{ 0.0f };
-            float32       _maxPelvisDrop{ 0.0f };
-            float32       _strideScale{ 1.0f }; ///< 게임이 넣는 조절 값이다. 넣기 전에는 1(바꾸지 않음)이다
-            float32       _directionX{ 0.0f };
-            float32       _directionZ{ 1.0f }; ///< 넣기 전에는 모델 앞(+Z)이다
-            uint32        _pelvis{ 0 };
+            vector<Foot> _listFoot{};
+            float32      _strideScale{ 1.0f }; ///< 게임이 넣는 조절 값이다. 넣기 전에는 1(바꾸지 않음)이다
+            float32      _directionX{ 0.0f };
+            float32      _directionZ{ 1.0f }; ///< 넣기 전에는 모델 앞(+Z)이다
+            uint32       _pelvis{ 0 };
         };
 
         /**
@@ -713,23 +670,25 @@ namespace sw
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                bool bOk = reader.readName( "pelvis", _pelvisName, true ) && reader.readFloat( "max_pelvis_offset", _maxPelvisOffset, true ) &&
-                           reader.readUint( "pelvis_iterations", _pelvisIterationCount, false ) && reader.readUint( "iterations", _settings._iterationCount, false ) &&
-                           reader.readFloat( "tolerance", _settings._tolerance, false );
-                const RigXMLList chains = reader.readArray( "chains", true );
+
+                bool bOk                  = reader.readFields( _fields ); // 골반 오프셋 >= 0 은 PROPERTY 가 본다
+                _settings._iterationCount = _fields._iterations;
+                _settings._tolerance      = _fields._tolerance;
+                const RigXMLList chains   = reader.readArray( "chains", true );
                 for ( size_t index = 0; bOk && chains.isValid() && index < chains.size(); ++index )
                 {
-                    RigXMLReader chainReader( chains.at( index ), reader.getContext() );
-                    Chain        chain{};
-                    bool         bMatch = false;
-                    bOk                 = chainReader.readNameList( "bones", chain._listBoneName, true ) && chainReader.readName( "target", chain._targetName, true ) &&
-                          chainReader.readFloat( "weight", chain._pelvisWeight, false ) && chainReader.readBool( "match_rotation", bMatch, false );
-                    bOk                    = chainReader.finish() && bOk;
-                    chain._bMatchRotation  = bMatch ? SW_TRUE : SW_FALSE;
-                    const bool bChainValid = chain._listBoneName.size() >= 2 && chain._pelvisWeight >= 0.0f;
-                    if ( bOk && bChainValid == false )
+                    RigXMLReader           chainReader( chains.at( index ), reader.getContext() );
+                    RigFullBodyChainFields chainFields;
+                    Chain                  chain{};
+                    bOk                   = chainReader.readFields( chainFields );
+                    bOk                   = chainReader.readNameList( "bones", chain._listBoneName, true ) && bOk;
+                    bOk                   = chainReader.finish() && bOk;
+                    chain._targetName     = chainFields._target;
+                    chain._pelvisWeight   = chainFields._weight;
+                    chain._bMatchRotation = chainFields._bMatchRotation ? SW_TRUE : SW_FALSE;
+                    if ( bOk && chain._listBoneName.size() < 2 )
                     {
-                        reader.fail( "each chain needs at least two 'bones' and a non-negative 'weight'" );
+                        reader.fail( "each chain needs at least two 'bones'" );
                         return false;
                     }
                     _listChain.push_back( std::move( chain ) );
@@ -739,17 +698,12 @@ namespace sw
                     reader.fail( "'chains' must not be empty" );
                     return false;
                 }
-                if ( bOk && _maxPelvisOffset < 0.0f )
-                {
-                    reader.fail( "'max_pelvis_offset' must not be negative" );
-                    return false;
-                }
                 return bOk && reader.isOk();
             }
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _pelvisName, _pelvis ) == false )
+                if ( context.findBone( _fields._pelvis, _pelvis ) == false )
                     return false;
                 for ( Chain& chain : _listChain )
                 {
@@ -763,7 +717,7 @@ namespace sw
                     }
                     if ( ancestor < 0 || chain._listBone[0] == _pelvis )
                     {
-                        SW_LOG_ERROR_ID( "RigIKNodes.RigFullBodyIKChainMust", "Rig '%#': FullBodyIK chain '%#' must start below pelvis '%#'", context._label, chain._listBoneName[0].c_str(), _pelvisName.c_str() );
+                        SW_LOG_ERROR_ID( "RigIKNodes.RigFullBodyIKChainMust", "Rig '%#': FullBodyIK chain '%#' must start below pelvis '%#'", context._label, chain._listBoneName[0].c_str(), _fields._pelvis.c_str() );
                         return false;
                     }
                 }
@@ -783,7 +737,7 @@ namespace sw
                     }
                 }
                 const float3 animatedPelvis = pose.getModelPosition( _pelvis );
-                for ( uint32 iteration = 0; iteration < _pelvisIterationCount; ++iteration )
+                for ( uint32 iteration = 0; iteration < _fields._pelvisIterations; ++iteration )
                 {
                     float3  pull{};
                     float32 weightSum = 0.0f;
@@ -807,8 +761,8 @@ namespace sw
                         break;
                     float3        offset       = pose.getModelPosition( _pelvis ) + step - animatedPelvis;
                     const float32 offsetLength = offset.getLength();
-                    if ( offsetLength > _maxPelvisOffset )
-                        offset = offset * ( _maxPelvisOffset / offsetLength );
+                    if ( offsetLength > _fields._maxPelvisOffset )
+                        offset = offset * ( _fields._maxPelvisOffset / offsetLength );
                     pose.setModelPosition( _pelvis, animatedPelvis + offset );
                 }
                 for ( Chain& chain : _listChain )
@@ -832,6 +786,7 @@ namespace sw
             }
 
         private:
+            RigFullBodyIKFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
             struct Chain
             {
                 vector<hashed_string> _listBoneName{};
@@ -846,10 +801,7 @@ namespace sw
             };
 
             vector<Chain>    _listChain{};
-            hashed_string    _pelvisName{};
             RigChainSettings _settings{};
-            float32          _maxPelvisOffset{ 0.0f };
-            uint32           _pelvisIterationCount{ 4 };
             uint32           _pelvis{ 0 };
         };
 

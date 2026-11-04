@@ -10,6 +10,8 @@
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -239,22 +241,24 @@ namespace sw
         return readChild( key, bRequired );
     }
 
-    bool RigXMLReader::readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired )
+    bool RigXMLReader::readFields( void* pInstance, const TypeInfo& typeInfo )
     {
-        const utf8* const pValue = readAttribute( key, bRequired );
-        if ( pValue == nullptr )
-            return bRequired == false;
-        const string text{ pValue };
-        for ( uint32 index = 0; index < choiceCount; ++index )
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            if ( text == ppChoice[index] )
-            {
-                outIndex = index;
-                return true;
-            }
+            _listUsedKey.push_back( XMLFields::getAttributeName( prop ) );
         }
-        fail( makeKeyMessage( key, "has unknown value '" ) + text + "'" );
-        return false;
+        if ( _element.isValid() == false )
+            return false;
+        // 모르는 키는 `finish` 가 손으로 읽은 키(이름 목록 등)와 함께 낸다 — 칸 읽기는 그 밖의 오류만 이 리더의 오류로 옮긴다.
+        const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* pID, string_view text )
+        {
+            if ( StringUtil::equals( pID, "XMLFields.UnknownField" ) == false )
+                static_cast<RigXMLReader*>( pContext )->fail( text );
+        },
+                                       this };
+        // 판정은 리더 상태로 한다 — `XMLFields::readFields` 의 반환은 모르는 키에도 거짓이지만, 모르는 키는 아직 다른 칸 읽기가 맡을 수 있다.
+        (void)XMLFields::readFields( _element, pInstance, typeInfo, _context, {}, nullptr, sink );
+        return isOk();
     }
 
     bool RigXMLReader::finish()
@@ -329,32 +333,12 @@ namespace sw
     }
 
     RigNode::RigNode()
-        : _name{}
-        , _weightCurve{}
-        , _weightSlot{}
-        , _weight{ 1.0f }
-        , _minScreenSize{ 0.0f }
-        , _bEnabled{ SW_TRUE }
+        : _common{}
     {
     }
 
     bool RigNode::parseCommon( RigXMLReader& reader )
     {
-        bool       bEnabled = true; // 적지 않으면 켜짐 — 형식이 정한 "적지 않음" 값이다(에디터가 끈 노드만 `enabled="false"` 를 쓴다)
-        const bool bOk      = reader.readName( "name", _name, true ) && reader.readFloat( "weight", _weight, false ) &&
-                         reader.readName( "weight_curve", _weightCurve, false ) && reader.readName( "weight_slot", _weightSlot, false ) &&
-                         reader.readFloat( "min_screen_size", _minScreenSize, false ) && reader.readBool( "enabled", bEnabled, false );
-        _bEnabled = bEnabled ? SW_TRUE : SW_FALSE;
-        if ( bOk && ( _weight < 0.0f || 1.0f < _weight ) )
-        {
-            reader.fail( "'weight' must be in [0, 1]" );
-            return false;
-        }
-        if ( bOk && _minScreenSize < 0.0f )
-        {
-            reader.fail( "'min_screen_size' must not be negative" );
-            return false;
-        }
-        return bOk;
+        return reader.readFields( _common ); // 키 · 기본값 · 범위(가중치 0..1, 화면 크기 >= 0)는 RigNodeCommonFields 의 PROPERTY
     }
 } // namespace sw

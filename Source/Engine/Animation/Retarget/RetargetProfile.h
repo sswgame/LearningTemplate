@@ -12,12 +12,14 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class XMLNode;
 
-    /** @brief 루트와 골반 이동을 옮기는 방법입니다. */
+    /** @brief 루트와 골반 이동을 옮기는 방법입니다(파일에는 이름으로 적는다). */
+    ENUM()
     enum class RetargetTranslationMode : uint8
     {
         ScaleByPelvisHeight = 0, ///< 골반 높이 비(대상 / 원본)만큼 줄이거나 늘린다. 다리 길이가 다른 캐릭터가 같은 보폭 비로 걷는다.
@@ -29,6 +31,18 @@ namespace sw
      * @brief 사슬 하나의 쌍입니다. 본 수가 달라도 됩니다. 대상 본마다 사슬 길이 비율로 원본 본을 고릅니다.
      * @details `_bIKGoal` 이면 회전을 옮긴 뒤 끝을 원본 끝 위치(골반 높이 비로 바꾼 값)로 IK 해서, 발이 미끄러지지 않고 디디게 한다.
      */
+    /** @brief `<chains><item name ik_goal>` 의 칸입니다. 본 목록(`source` · `target`)은 이름 목록이라 손으로 푼다. */
+    REFLECT()
+    struct SW_API RetargetChainFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "name", Required )
+        hashed_string _name{};
+        PROPERTY( Name = "ik_goal" )
+        bool _bIKGoal{ false };
+    };
+
     struct RetargetChain
     {
         hashed_string         _name{};
@@ -41,9 +55,14 @@ namespace sw
 namespace sw
 {
     /** @brief 본 이름 테이블의 한 줄입니다. 원본 본 하나의 모델 공간 회전 차이를 대상 본 하나로 옮깁니다(사슬이 아닌 머리, 손가락, 장식 본). */
-    struct RetargetBonePair
+    REFLECT()
+    struct SW_API RetargetBonePair
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "source", Required )
         hashed_string _source{};
+        PROPERTY( Name = "target", Required )
         hashed_string _target{};
     };
 } // namespace sw
@@ -59,6 +78,36 @@ namespace sw
     {
         hashed_string _bone{};
         float3        _rotationDegrees{};
+    };
+
+    /** @brief `<target_pose><item bone rotation>` 의 칸입니다(파일 스키마 — 회전은 파일 글 그대로 도 단위다). */
+    REFLECT()
+    struct SW_API RetargetPoseBoneFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "bone", Required )
+        hashed_string _bone{};
+        PROPERTY( Name = "rotation", Required, Units = deg )
+        float3 _rotation{};
+    };
+
+    /** @brief 파일 루트(`<RetargetProfile …>`)의 칸입니다. 루트 · 골반 짝과 목록은 자식 요소라 손으로 푼다. */
+    REFLECT()
+    struct SW_API RetargetProfileRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "source_skeleton" )
+        string _sourceSkeleton{};
+        PROPERTY( Name = "target_skeleton" )
+        string _targetSkeleton{};
+        PROPERTY( Name = "translation" )
+        RetargetTranslationMode _translation{ RetargetTranslationMode::ScaleByPelvisHeight };
+        PROPERTY( Name = "map_same_names" )
+        bool _bMapSameNames{ false };
+        PROPERTY( Name = "height_ratio", Min = 0.0001, Units = ratio ) ///< 적지 않으면 0(골반 높이 비를 계산한다) — 적으면 양수여야 한다
+        float32 _heightRatio{ 0.0f };
     };
 } // namespace sw
 

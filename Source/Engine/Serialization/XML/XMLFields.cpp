@@ -18,22 +18,6 @@ namespace sw
     {
         struct XMLFieldsInternal
         {
-            /** @brief PROPERTY 이름의 데이터 속성 철자입니다(`readFields` 의 규칙 — 앞의 `_` 를 떼고, 불리언 `b` 접두는 떼어 첫 글자를 소문자로). */
-            static string makeAttributeName( const PropertyInfo& prop )
-            {
-                string_view name = prop._name.view();
-                // `PROPERTY( Name = "bSrgb" )` 처럼 직접 적은 이름은 글자 그대로다 — 이름 규칙은 C++ 칸 이름(`_` 로 시작)에만 건다.
-                if ( name.empty() || name.front() != '_' )
-                    return string( name );
-                name.remove_prefix( 1 );
-                const bool bBooleanPrefix = name.size() > 1 && name[0] == 'b' && 'A' <= name[1] && name[1] <= 'Z';
-                if ( bBooleanPrefix == false )
-                    return string( name );
-                string attribute( name.substr( 1 ) );
-                attribute[0] = static_cast<utf8>( attribute[0] - 'A' + 'a' );
-                return attribute;
-            }
-
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
             {
                 return VectorUtil::contains( listHandRead, attribute );
@@ -44,6 +28,21 @@ namespace sw
 
 namespace sw
 {
+    string XMLFields::getAttributeName( const PropertyInfo& prop )
+    {
+        string_view name = prop._name.view();
+        // `PROPERTY( Name = "bSrgb" )` 처럼 직접 적은 이름은 글자 그대로다 — 이름 규칙은 C++ 칸 이름(`_` 로 시작)에만 건다.
+        if ( name.empty() || name.front() != '_' )
+            return string( name );
+        name.remove_prefix( 1 );
+        const bool bBooleanPrefix = name.size() > 1 && name[0] == 'b' && 'A' <= name[1] && name[1] <= 'Z';
+        if ( bBooleanPrefix == false )
+            return string( name );
+        string attribute( name.substr( 1 ) );
+        attribute[0] = static_cast<utf8>( attribute[0] - 'A' + 'a' );
+        return attribute;
+    }
+
     bool XMLFields::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead,
                                 AcceptAttributeFunction pfnHandRead, const XMLFieldsIssueSink& sink )
     {
@@ -77,7 +76,7 @@ namespace sw
         listAttributeName.reserve( listProperty.size() );
         for ( const PropertyInfo& prop : listProperty )
         {
-            listAttributeName.push_back( Internal::makeAttributeName( prop ) );
+            listAttributeName.push_back( XMLFields::getAttributeName( prop ) );
         }
 
         // 1) 적힌 속성마다 칸을 찾아 읽는다. 모르는 이름은 오타다 — 조용히 넘기면 그 칸은 기본값으로 남는다.
@@ -143,7 +142,6 @@ namespace sw
 
     void XMLFields::writeFields( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )
     {
-        using Internal                  = XMLFieldsInternal;
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
@@ -152,7 +150,7 @@ namespace sw
             const string text = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
             if ( prop._metadata->_bRequired == SW_FALSE && text == SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaults }, context ) )
                 continue;
-            node.appendAttribute( Internal::makeAttributeName( prop ).c_str(), string_view{ text } );
+            node.appendAttribute( XMLFields::getAttributeName( prop ).c_str(), string_view{ text } );
         }
     }
 

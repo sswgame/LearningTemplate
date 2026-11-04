@@ -17,6 +17,7 @@
 
 namespace sw
 {
+    struct PropertyInfo;
     struct TypeInfo;
     class XMLNode;
 
@@ -38,6 +39,8 @@ namespace sw
     {
         /** @brief 속성 이름을 다른 읽기가 맡는지 답하는 함수입니다(`XMLNameCheck::AcceptNameFunction` 과 같은 모양). */
         using AcceptAttributeFunction = bool ( * )( const utf8* pName );
+        /** @brief 칸 @p prop 의 속성 이름입니다(`readFields` 의 이름 규칙 — 직접 적은 `Name` 은 그대로, C++ 이름은 앞의 `_` · 불리언 `b` 를 뗀다). */
+        static string getAttributeName( const PropertyInfo& prop );
         /**
          * @brief 원소 @p node 의 속성을 리플렉션 Def(@p pInstance, @p typeInfo) 하나로 엄격하게 읽습니다 — 스키마(필드 표)가 기본값과 필수를 선언하고 이 함수가 로드 시점에 검증합니다.
          * @details 속성 이름은 PROPERTY 이름에서 앞의 `_` 를 뗀 것이고, 불리언은 `b` 도 떼고 첫 글자를 소문자로 쓴다(`_bShootOnSight` → `shootOnSight`, `_runningCost` → `runningCost`).
