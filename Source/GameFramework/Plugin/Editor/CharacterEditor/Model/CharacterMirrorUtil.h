@@ -12,10 +12,12 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor
 {
-    /** @brief 대칭 평면의 법선 축입니다. 캐릭터는 보통 X 축(왼쪽 · 오른쪽)입니다. */
+    /** @brief 대칭 평면의 법선 축입니다. 캐릭터는 보통 X 축(왼쪽 · 오른쪽)입니다. 파일에는 이름(`X` · `Y` · `Z`)으로 적는다. */
+    ENUM()
     enum class MirrorAxis : uint8
     {
         X = 0,

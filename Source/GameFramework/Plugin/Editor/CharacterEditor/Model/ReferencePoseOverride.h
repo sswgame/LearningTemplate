@@ -24,6 +24,9 @@
 
 #include "Engine/Character/CharacterIssue.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 
 namespace sw
 {
@@ -31,6 +34,44 @@ namespace sw
 
     class CharacterDataReader;
     class XMLNode;
+
+    /** @brief 파일 루트의 칸입니다. */
+    REFLECT()
+    struct ReferencePoseRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        editor::MirrorAxis _mirrorAxis{ editor::MirrorAxis::X };
+    };
+
+    /** @brief `<Bone>` 의 칸입니다. 덮어쓰기 층이라 적은 칸만 표시한다(`BoneOverride::_fieldMask`). 회전은 도 단위 오일러이고 읽은 뒤 쿼터니언으로 옮긴다. */
+    REFLECT()
+    struct BoneOverrideFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Units = m )
+        float3 _translation{};
+        PROPERTY( Units = deg )
+        float3 _rotation{};
+        PROPERTY()
+        float3 _scale{ 1.0f, 1.0f, 1.0f };
+    };
+
+    /** @brief `<Mirror left right>` 의 칸입니다. */
+    REFLECT()
+    struct BoneMirrorFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _left{};
+        PROPERTY( Required )
+        hashed_string _right{};
+    };
 
     /** @brief 본 하나의 덮어쓰기입니다. `_fieldMask` 는 적은 필드를 나타냅니다(1 위치, 2 회전, 4 스케일). */
     struct BoneOverride
@@ -93,9 +134,9 @@ namespace sw
         /** @brief 덮어쓰기들입니다. */
         const vector<BoneOverride>& getOverrides() const { return _listOverride; }
         /** @brief 대칭 축(0 = X, 1 = Y, 2 = Z)입니다. */
-        uint8 getMirrorAxis() const { return _mirrorAxis; }
+        editor::MirrorAxis getMirrorAxis() const { return _mirrorAxis; }
         /** @brief 대칭 축을 정합니다. */
-        void setMirrorAxis( uint8 axis ) { _mirrorAxis = axis < 3 ? axis : 0; }
+        void setMirrorAxis( editor::MirrorAxis axis ) { _mirrorAxis = axis; }
 
     private:
         void readRoot( const XMLNode& root, CharacterDataReader& reader );
@@ -103,6 +144,6 @@ namespace sw
     private:
         vector<BoneOverride>   _listOverride;
         vector<BoneMirrorPair> _listMirrorPair;
-        uint8                  _mirrorAxis{ 0 };
+        editor::MirrorAxis     _mirrorAxis{ editor::MirrorAxis::X };
     };
 } // namespace sw

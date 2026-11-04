@@ -8,21 +8,8 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct ReferencePoseOverrideInternal
-        {
-            static constexpr const utf8* kArrRootAttribute[]   = { "mirrorAxis" };
-            static constexpr const utf8* kArrBoneAttribute[]   = { "name", "translation", "rotation", "scale" };
-            static constexpr const utf8* kArrMirrorAttribute[] = { "left", "right" };
-            static constexpr const utf8* kArrAxisName[]        = { "X", "Y", "Z" };
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -59,43 +46,31 @@ namespace sw
 
     void ReferencePoseOverride::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( root, ReferencePoseOverrideInternal::kArrRootAttribute );
-        _mirrorAxis                = 0;
-        const string_view axisText = StringUtil::trim( root.getAttributeText( "mirrorAxis" ) );
-        if ( axisText.empty() == false )
-        {
-            bool bKnownAxis = false;
-            for ( uint8 axis = 0; axis < 3; ++axis )
-            {
-                if ( StringUtil::equals( axisText, ReferencePoseOverrideInternal::kArrAxisName[axis] ) )
-                {
-                    _mirrorAxis = axis;
-                    bKnownAxis  = true;
-                }
-            }
-            if ( bKnownAxis == false )
-                reader.addError( "Character.MirrorAxisUnknown", root, string( "has unknown mirrorAxis '" ) + string( axisText ) + "' (X, Y, Z)" );
-        }
+        ReferencePoseRootFields rootFields;
+        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓인다
+        _mirrorAxis = rootFields._mirrorAxis;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Bone" ) )
             {
-                reader.reportUnknownAttributes( child, ReferencePoseOverrideInternal::kArrBoneAttribute );
+                BoneOverrideFields fields;
+                (void)reader.readFields( child, fields );
                 BoneOverride boneOverride;
-                boneOverride._bone = reader.readName( child, "name", true );
+                boneOverride._bone = fields._name;
+                // 덮어쓰기 층이라 적은 칸만 표시한다.
                 if ( child.hasAttribute( "translation" ) )
                 {
-                    boneOverride._translation = reader.readFloat3( child, "translation" );
+                    boneOverride._translation = fields._translation;
                     boneOverride._fieldMask |= BoneOverride::kTranslationBit;
                 }
                 if ( child.hasAttribute( "rotation" ) )
                 {
-                    boneOverride._rotation = reader.readRotation( child, "rotation" );
+                    boneOverride._rotation = quaternion::makeFromYawPitchRoll( fields._rotation * MathUtil::kDegreeToRadian );
                     boneOverride._fieldMask |= BoneOverride::kRotationBit;
                 }
                 if ( child.hasAttribute( "scale" ) )
                 {
-                    boneOverride._scale = reader.readFloat3( child, "scale" );
+                    boneOverride._scale = fields._scale;
                     boneOverride._fieldMask |= BoneOverride::kScaleBit;
                 }
                 if ( boneOverride._bone.empty() )
@@ -109,11 +84,9 @@ namespace sw
             }
             else if ( StringUtil::equals( child.getName(), "Mirror" ) )
             {
-                reader.reportUnknownAttributes( child, ReferencePoseOverrideInternal::kArrMirrorAttribute );
-                const hashed_string left  = reader.readName( child, "left", true );
-                const hashed_string right = reader.readName( child, "right", true );
-                if ( left.empty() == false && right.empty() == false )
-                    addMirrorPair( left, right );
+                BoneMirrorFields fields;
+                if ( reader.readFields( child, fields ) && fields._left.empty() == false && fields._right.empty() == false )
+                    addMirrorPair( fields._left, fields._right );
             }
             else
             {
@@ -126,7 +99,7 @@ namespace sw
     {
         XMLDocument document;
         XMLNode     root = document.appendRoot( "ReferencePose" );
-        root.appendAttribute( "mirrorAxis", ReferencePoseOverrideInternal::kArrAxisName[_mirrorAxis] );
+        root.appendAttribute( "mirrorAxis", getEnumName( _mirrorAxis ) );
         for ( const BoneOverride& boneOverride : _listOverride )
         {
             XMLNode node = root.appendChild( "Bone" );
@@ -209,14 +182,15 @@ namespace sw
         if ( targetBone.empty() || pSource == nullptr )
             return false;
         // 축에 수직인 면으로 반사한다. 위치는 그 축 성분의 부호를, 회전은 나머지 두 허수 성분의 부호를 뒤집는다.
-        BoneOverride mirrored     = *pSource;
-        mirrored._bone            = targetBone;
-        float32* pTranslation     = mirrored._translation.data();
-        pTranslation[_mirrorAxis] = -pTranslation[_mirrorAxis];
-        float32 arrImaginary[3]   = { mirrored._rotation._x, mirrored._rotation._y, mirrored._rotation._z };
+        BoneOverride mirrored    = *pSource;
+        mirrored._bone           = targetBone;
+        float32*    pTranslation = mirrored._translation.data();
+        const uint8 mirrorAxis   = static_cast<uint8>( _mirrorAxis );
+        pTranslation[mirrorAxis] = -pTranslation[mirrorAxis];
+        float32 arrImaginary[3]  = { mirrored._rotation._x, mirrored._rotation._y, mirrored._rotation._z };
         for ( uint8 axis = 0; axis < 3; ++axis )
         {
-            if ( axis != _mirrorAxis )
+            if ( axis != mirrorAxis )
                 arrImaginary[axis] = -arrImaginary[axis];
         }
         mirrored._rotation = quaternion( arrImaginary[0], arrImaginary[1], arrImaginary[2], mirrored._rotation._w );

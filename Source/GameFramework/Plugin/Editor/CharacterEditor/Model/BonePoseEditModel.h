@@ -65,7 +65,7 @@ namespace sw::editor
          * @param outMirrorBone 반대편 본 이름입니다.
          */
         [[nodiscard]] bool mirrorBone( const hashed_string& bone, const MirrorNameRules& rules, hashed_string& outMirrorBone, string& outError );
-        void               setMirrorAxis( MirrorAxis axis ) { _override.setMirrorAxis( static_cast<uint8>( axis ) ); }
+        void               setMirrorAxis( MirrorAxis axis ) { _override.setMirrorAxis( axis ); }
         void               endContinuousEdit() { _history.endCoalescing(); }
 
         // --- 읽기 · 쓰기 · 되돌리기 ----------------------------------------------------------------------------------
