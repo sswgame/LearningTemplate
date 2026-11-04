@@ -9,7 +9,7 @@
 
 namespace
 {
-    sw::PropScatterSection makeSection( const sw::utf8* pName, const sw::utf8* pMaterial )
+    sw::PropScatterSection makeSection( const utf8* pName, const utf8* pMaterial )
     {
         sw::PropScatterSection section;
         section._sectionName  = pName;
@@ -17,7 +17,7 @@ namespace
         return section;
     }
 
-    sw::PropScatterModel makeTree( const sw::utf8* pMesh )
+    sw::PropScatterModel makeTree( const utf8* pMesh )
     {
         sw::PropScatterModel model;
         model._meshID = pMesh;
