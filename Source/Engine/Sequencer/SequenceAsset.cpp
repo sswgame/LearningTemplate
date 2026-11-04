@@ -164,6 +164,13 @@ namespace sw
                 SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNeedsBoth", "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
                 bValid = false;
             }
+            // 시나리오 항목은 무엇을 재생할지가 필수다 — 빈 채로 두면 연출이 조용히 아무것도 부르지 않는다.
+            if ( pKindInfo->_bPlaysScenario != ( item._scenario.empty() == false ) )
+            {
+                SW_LOG_ERROR_ID( "SequenceAsset.SequenceScenarioField", "Sequence '%#': item '%#' - _scenario is %# for its kind", sourceLabel, item._name,
+                                 pKindInfo->_bPlaysScenario ? "required" : "not allowed" );
+                bValid = false;
+            }
         }
         for ( const SequenceKeyTrack& track : _listTrack )
         {

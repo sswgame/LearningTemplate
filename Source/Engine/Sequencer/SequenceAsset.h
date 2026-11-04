@@ -42,20 +42,22 @@ namespace sw
         CameraShake = 3, /**< 구간 동안 대상 카메라를 흔듭니다(언리얼 Camera Shake 트랙). 세기는 `_amplitude`, 길이는 구간입니다. */
         Spawn       = 4, /**< 프리팹 `_prefab` 을 구간 시작 `_prerollFrames` 프레임 앞에 **꺼 둔 채** 스폰해 첫 포즈 · 머티리얼 · PSO 를 준비하고, 구간 동안 켜고, 끝나면 지웁니다(언리얼 Spawnable). 이름은 `_targetObject`. */
         Appearance  = 5, /**< 시작 프레임을 지날 때 대상 오브젝트의 외형 프리셋을 `_preset` 으로 바꿉니다. 엔진은 외형을 모르므로 이벤트(`registerSequenceEvent`)로 알리고, 듣는 쪽(게임 프레임워크의 `SequenceAppearanceComponent`)이 바꿉니다. */
+        Scenario    = 6, /**< 시작 프레임을 지날 때 시나리오 `_scenario` 를 재생합니다(`ScenarioPlayback::play` — 연출 안에 게임 행동 · 입력을 끼운다, 언리얼 시퀀서 이벤트 트랙이 블루프린트를 부르는 자리). */
         Count            /**< 표식입니다. 종류가 아닙니다. */
     };
 
     /** @brief 항목 종류 하나가 타임라인에 무엇을 하는지입니다. */
     struct SequenceItemKindInfo
     {
-        SequenceItemKind _kind;          /**< 종류입니다. 테이블의 순번과 같아야 합니다. */
-        uint32           _defaultColor;  /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
-        bool             _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 상태와 트랜스폼을 정하는지 나타냅니다. */
-        bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
-        bool             _bCutsCamera;   /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
-        bool             _bShakesCamera; /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */
-        bool             _bSpawns;       /**< 프리팹을 스폰해 구간 동안 켜는지입니다(`SequenceTimelineUtil::applySpawns`). 대상은 시퀀스가 만든 오브젝트입니다. */
-        bool             _bNeedsPreset;  /**< `_preset` 이 비어 있으면 안 되는 종류인지입니다(읽을 때 검사합니다). 카메라 컷은 비우면 카메라를 그대로 씁니다. */
+        SequenceItemKind _kind;           /**< 종류입니다. 테이블의 순번과 같아야 합니다. */
+        uint32           _defaultColor;   /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
+        bool             _bDrivesTarget;  /**< 구간 동안 대상 오브젝트의 활성 상태와 트랜스폼을 정하는지 나타냅니다. */
+        bool             _bFiresOnCross;  /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
+        bool             _bCutsCamera;    /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
+        bool             _bShakesCamera;  /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */
+        bool             _bSpawns;        /**< 프리팹을 스폰해 구간 동안 켜는지입니다(`SequenceTimelineUtil::applySpawns`). 대상은 시퀀스가 만든 오브젝트입니다. */
+        bool             _bNeedsPreset;   /**< `_preset` 이 비어 있으면 안 되는 종류인지입니다(읽을 때 검사합니다). 카메라 컷은 비우면 카메라를 그대로 씁니다. */
+        bool             _bPlaysScenario; /**< 시작 프레임을 지날 때 `_scenario` 를 재생하는지입니다(`SequencePlayerComponent`). 비어 있으면 읽기 오류입니다. */
     };
 
     /**
@@ -81,12 +83,13 @@ namespace sw
 {
     /** @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** */
     inline constexpr SequenceItemKindInfo kArrSequenceItemKindInfo[] = {
-        {       SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false, false, false, false},
-        {      SequenceItemKind::Event, 0xFF8080AAu, false,  true, false, false, false, false},
-        {  SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true, false, false, false},
-        {SequenceItemKind::CameraShake, 0xFF80A0C0u, false, false, false,  true, false, false},
-        {      SequenceItemKind::Spawn, 0xFF80C0A0u, false, false, false, false,  true, false},
-        { SequenceItemKind::Appearance, 0xFFC0A070u, false,  true, false, false, false,  true},
+        {       SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false, false, false, false, false},
+        {      SequenceItemKind::Event, 0xFF8080AAu, false,  true, false, false, false, false, false},
+        {  SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true, false, false, false, false},
+        {SequenceItemKind::CameraShake, 0xFF80A0C0u, false, false, false,  true, false, false, false},
+        {      SequenceItemKind::Spawn, 0xFF80C0A0u, false, false, false, false,  true, false, false},
+        { SequenceItemKind::Appearance, 0xFFC0A070u, false,  true, false, false, false,  true, false},
+        {   SequenceItemKind::Scenario, 0xFF70A0C0u, false,  true, false, false, false, false,  true},
     };
 
     /** @brief 트랜스폼 트랙 채널의 이름입니다(에디터 표시). 순서는 채널 순서입니다. */
@@ -126,6 +129,9 @@ namespace sw
         /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. 외형: 대상이 입을 외형 프리셋 id 입니다(비우면 읽기 오류). */
         PROPERTY( Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is). Appearance: preset id the target wears (required)" )
         string _preset;
+        /** @brief 시나리오: 시작 프레임을 지날 때 재생할 시나리오(`.scenario.xml` 리소스 id)입니다. 다른 종류는 비운다. */
+        PROPERTY( SkipIfEmpty, Tooltip = "Scenario: scenario (.scenario.xml) played when the start frame is crossed" )
+        string _scenario;
         PROPERTY( Tooltip = "First frame of the span" )
         int32 _start{ 0 };
         PROPERTY( Tooltip = "Last frame of the span" )

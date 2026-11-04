@@ -57,6 +57,7 @@ namespace sw
         /**
          * @brief 이벤트 항목을 지날 때 호출할 델리게이트를 등록합니다(언리얼 시퀀서 이벤트 트랙, 유니티 Timeline Signal 에 해당합니다).
          * @details 한 갱신에 지난 이벤트를 시간 순서로(루프를 되감았으면 되감기 전 끝 구간부터) 모두 알린다. 로그와 달리 Shipping 에서도 호출된다.
+         *          시나리오 항목(`SequenceItemKind::Scenario`)은 알리기 전에 이 컴포넌트가 `ScenarioPlayback::play` 로 재생한다.
          *          돌려준 구독이 사라지면 뗍니다. 이 컴포넌트가 먼저 사라지면 구독은 무효가 됩니다.
          */
         [[nodiscard]] Subscription registerSequenceEvent( const OnSequenceEventDelegate& delegate );

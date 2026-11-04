@@ -98,3 +98,28 @@ SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersAreRejected )
     SW_EXPECT_EQUAL( 0, asset._frameMin );
     SW_EXPECT_EQUAL( 100, asset._frameMax );
 }
+
+/**
+ * @brief [SequencerTest] 시나리오 항목은 `_scenario` 가 있어야 읽히고, 다른 종류는 `_scenario` 를 가질 수 없다
+ * @details 시나리오 항목은 시작 프레임을 지날 때 `ScenarioPlayback::play` 로 재생한다(`SequencePlayerComponent`). 빈 칸이면 연출이 조용히 아무것도 부르지 않으므로 읽기 오류다.
+ */
+SW_TEST_CASE( SequencerTest, ScenarioItemNeedsItsScenario )
+{
+    const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( SequenceItemKind::Scenario );
+    SW_REQUIRE_NOT_NULL( pInfo );
+    SW_EXPECT_TRUE( pInfo->_bPlaysScenario );
+    SW_EXPECT_TRUE( pInfo->_bFiresOnCross );
+    SW_EXPECT_FALSE( SequenceAsset::findItemKindInfo( SequenceItemKind::Event )->_bPlaysScenario );
+
+    SequenceAsset asset;
+    SW_EXPECT_TRUE( asset.parseXML(
+        R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Demo" _scenario="game/empty/automation/loadscene.scenario.xml" _start="3" _end="3" _kind="Scenario" /></_listItem></SequenceAsset>)" ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, asset._listItem.size() );
+    SW_EXPECT_EQUAL( string( "game/empty/automation/loadscene.scenario.xml" ), asset._listItem[0]._scenario );
+
+    SW_EXPECT_LOG( "SequenceAsset.SequenceScenarioField" );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Empty" _start="3" _end="3" _kind="Scenario" /></_listItem></SequenceAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML(
+        R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Stray" _scenario="a.scenario.xml" _start="3" _end="3" _kind="Event" /></_listItem></SequenceAsset>)" ) );
+    SW_EXPECT_TRUE( asset._listItem.empty() );
+}
