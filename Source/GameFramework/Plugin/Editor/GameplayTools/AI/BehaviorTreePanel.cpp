@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -41,6 +42,7 @@ namespace sw::editor
         struct BehaviorTreePanelInternal
         {
             static constexpr const utf8* kCanvasID           = "BehaviorTreeCanvas";
+            static constexpr string_view kClipboardKind      = "BehaviorTree"; ///< 그래프 복사 버퍼의 종류 열쇠 — 다른 그래프에는 붙지 않는다
             static constexpr const utf8* kCanvasSettingsFile = "BehaviorTreeCanvas.json";
             static constexpr float32     kSidePanelWidth     = 340.0f; ///< 96 DPI 기준입니다
             static constexpr float32     kColumnSpacing      = 260.0f; ///< 깊이마다 오른쪽으로 벌리는 간격(캔버스 좌표)
@@ -481,6 +483,8 @@ namespace sw::editor
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
             (void)addNodeFromSelection( static_cast<BehaviorNodeType>( kindID ) ); // 거절하면 상태 줄이 이유를 알린다
 
+        handleEditCommands(); // 잘라내기가 지우므로 아래 지우기 처리보다 먼저
+
         // 삭제: 노드는 그 아래까지 지우고, 링크만 지우는 것은 거절한다(링크를 끊으면 루트가 둘이 된다 - 노드를 지우거나 다른 부모로 이어 옮긴다).
         if ( ed::BeginDelete() )
         {
@@ -503,6 +507,73 @@ namespace sw::editor
             }
             ed::EndDelete();
         }
+    }
+
+    void BehaviorTreePanel::adoptPastedSubtree( int32 newID, const string& error, const utf8* pLabel )
+    {
+        if ( newID < 0 )
+        {
+            _statusText = error;
+            return;
+        }
+        _selectedID     = newID;
+        _bSelectPending = true;
+        markStructureChanged( pLabel );
+    }
+
+    void BehaviorTreePanel::handleEditCommands()
+    {
+        // 노드 오른쪽 클릭 메뉴(복제 · 지우기) — 애니메이션 그래프 창과 같은 항목이다.
+        ed::NodeId contextNode{};
+        int32      duplicateID = -1;
+        ed::Suspend();
+        if ( ed::ShowNodeContextMenu( &contextNode ) )
+        {
+            _selectedID = static_cast<int32>( contextNode.Get() );
+            EditorInputGUI::openPopup( "BehaviorNodeContext" );
+        }
+        if ( ImGui::BeginPopup( "BehaviorNodeContext" ) )
+        {
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
+                duplicateID = _selectedID;
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdVerb", "Delete" ) ) )
+                ed::DeleteNode( toNodeID( _selectedID ) );
+            ImGui::EndPopup();
+        }
+        ed::Resume();
+
+        vector<int32>                listNodeID;
+        float2                       pastePosition{};
+        const EditorGraphEditCommand command = _nodeGraph.queryEditCommand( listNodeID, pastePosition );
+        // 트리는 루트가 하나라 한 번에 하위 트리 하나만 다룬다 — 여럿 골랐으면 첫 노드다.
+        const int32 targetID = listNodeID.empty() ? -1 : listNodeID.front();
+        if ( command == EditorGraphEditCommand::Duplicate )
+            duplicateID = targetID;
+        string error;
+        if ( duplicateID >= 0 )
+        {
+            adoptPastedSubtree( _model.duplicateSubtree( duplicateID, error ), error, "Duplicate Behavior Subtree" );
+            return;
+        }
+        if ( command == EditorGraphEditCommand::Paste )
+        {
+            string text;
+            if ( EditorNodeGraph::readClipboard( BehaviorTreePanelInternal::kClipboardKind, text ) == false )
+                return;
+            const int32 parentID = _model.getRootID() < 0 ? -1 : _selectedID;
+            if ( parentID < 0 && _model.getRootID() >= 0 )
+            {
+                _statusText = "Select the parent node first";
+                return;
+            }
+            adoptPastedSubtree( _model.pasteSubtree( parentID, text, -1, error ), error, "Paste Behavior Subtree" );
+            return;
+        }
+        if ( ( command != EditorGraphEditCommand::Copy && command != EditorGraphEditCommand::Cut ) || _model.find( targetID ) == nullptr )
+            return;
+        EditorNodeGraph::storeClipboard( BehaviorTreePanelInternal::kClipboardKind, _model.writeSubtree( targetID ) );
+        if ( command == EditorGraphEditCommand::Cut )
+            ed::DeleteNode( toNodeID( targetID ) ); // 지우기는 아래 지우기 처리가 같은 프레임에 받는다
     }
 
     int32 BehaviorTreePanel::addNodeFromSelection( BehaviorNodeType type )

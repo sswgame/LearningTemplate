@@ -88,6 +88,17 @@ namespace sw::editor
          *        깊이 한도(`BehaviorTreeNames::kMaxDepth`)를 넘는 자리, 지금과 같은 부모는 거절하고 false 입니다.
          */
         [[nodiscard]] bool reparent( int32 id, int32 newParentID );
+        /** @brief 노드 @p id 를 루트로 한 하위 트리를 파일 글로 씁니다(`write` 와 같은 모양 — 복사 버퍼가 이 글을 둔다). 없는 번호면 빈 트리 글입니다. */
+        string writeSubtree( int32 id ) const;
+        /**
+         * @brief 트리 글 @p xmlText(`writeSubtree` · 파일)의 루트를 @p parentID 의 자식 @p insertIndex 자리(-1 이면 맨 뒤)에 새 번호로 붙입니다(언리얼 BT 의 붙여 넣기).
+         * @details 글은 `parse` 와 같은 검사를 따로 거친 뒤에 붙인다 — 틀린 글이나 놓을 수 없는 자리(잎 · 찬 데코레이터 아래, 깊이 한도)면 모델을 그대로 두고 -1 이며 @p outError 에 이유를 둔다.
+         *          @p parentID 가 -1 이면 빈 트리의 루트로 붙인다(루트가 있으면 거절).
+         * @return 붙인 하위 트리 루트의 새 번호입니다.
+         */
+        int32 pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex, string& outError );
+        /** @brief 노드 @p id 와 그 아래를 바로 뒤 형제로 복제합니다(언리얼 BT 의 Duplicate — `writeSubtree` + `pasteSubtree`). 루트이거나 부모가 더 받지 못하면 -1 입니다. */
+        int32 duplicateSubtree( int32 id, string& outError );
         /** @brief 루트가 0 인 깊이입니다. 없는 번호면 0 입니다. */
         uint32 getDepth( int32 id ) const;
 
@@ -103,8 +114,10 @@ namespace sw::editor
         uint32             getSubtreeHeight( int32 id ) const;
         void               detachFromParent( BehaviorTreeEditNode& node );
         void               collectSubtree( int32 id, vector<int32>& outListID ) const;
-        int32              parseNode( const XMLNode& node, int32 parentID, uint32 depth, string& outError );
-        void               writeNode( int32 id, const XMLNode& parentXML ) const;
+        /** @brief @p source 의 노드 @p sourceID 와 그 아래를 새 번호로 이 모델에 더하고(부모 목록에는 넣지 않는다) 새 번호를 돌려줍니다. 자리 검사는 부르는 쪽이 했다. */
+        int32 graftSubtree( const BehaviorTreeEditModel& source, int32 sourceID, int32 parentID );
+        int32 parseNode( const XMLNode& node, int32 parentID, uint32 depth, string& outError );
+        void  writeNode( int32 id, const XMLNode& parentXML ) const;
 
         vector<BehaviorTreeEditNode> _listNode{};
         int32                        _rootID{ -1 };

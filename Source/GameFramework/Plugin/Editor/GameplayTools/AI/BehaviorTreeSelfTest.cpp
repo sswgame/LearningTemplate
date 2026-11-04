@@ -49,6 +49,15 @@ namespace sw::editor
                 string                error;
                 context.expect( reread.parse( text, error ), "the model could not read what it wrote" );
                 context.expect( reread.write() == text, "writing the re-read tree gave a different text" );
+
+                // 하위 트리 복제는 바로 뒤 형제로 들어가고, 붙여 넣기는 고른 부모의 맨 뒤 자식이다. 루트 복제 · 잎 아래 붙이기는 모델을 그대로 둔다.
+                const int32 copy = model.duplicateSubtree( wait, error );
+                context.expect( copy >= 0 && model.find( root )->_listChild.size() == 2 && model.find( root )->_listChild[1] == copy, "duplicating a Wait did not add it right after the original" );
+                const int32 pasted = model.pasteSubtree( root, model.writeSubtree( wait ), -1, error );
+                context.expect( pasted >= 0 && model.find( root )->_listChild.back() == pasted, "pasting a subtree did not append it under the parent" );
+                const uint32 nodeCount = model.getNodeCount();
+                context.expect( model.duplicateSubtree( root, error ) < 0 && model.pasteSubtree( wait, model.writeSubtree( wait ), -1, error ) < 0 && model.getNodeCount() == nodeCount,
+                                "duplicating the root or pasting under a leaf changed the tree" );
                 return EditorSelfTestStep::Done;
             }
         };

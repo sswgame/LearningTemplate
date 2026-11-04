@@ -6,6 +6,8 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Serialization/Format/XMLSerializer.h"
+
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitDef.h"
 
@@ -141,21 +143,19 @@ namespace sw::editor
         vector<GimmickWireDesc>  listWire;
         vector<GraphCommentBox>  listComment;
         exportTo( listNode, listTarget, listWire, listComment );
+        // 항목은 리플렉션 직렬화로 글이 된다 — PROPERTY 를 더하면 서명이 저절로 따라간다(손으로 늘어놓은 칸은 빠뜨리면 되돌리기를 놓친다).
         StringBuilder<constant::buffer::kMax1K> text;
         for ( size_t index = 0; index < listNode.size(); ++index )
         {
-            const GimmickNodeDesc& node = listNode[index];
-            text.append( node._id.c_str() ).append( '|' ).append( node._kind.c_str() ).append( '|' ).append( string_view{ node._params } ).append( '|' );
-            text.append( listTarget[index].objectID() ).append( '|' ).append( node._editorPosition._x ).append( ',' ).append( node._editorPosition._y ).append( '\n' );
+            text.append( string_view{ XMLSerializer::serialize( &listNode[index], *GimmickNodeDesc::StaticType() ) } ).append( listTarget[index].objectID() );
         }
         for ( const GimmickWireDesc& wire : listWire )
         {
-            text.append( string_view{ wire._from } ).append( '>' ).append( string_view{ wire._to } ).append( wire._bInvert ? "!\n" : "\n" );
+            text.append( string_view{ XMLSerializer::serialize( &wire, *GimmickWireDesc::StaticType() ) } );
         }
         for ( const GraphCommentBox& comment : listComment )
         {
-            text.append( comment._id ).append( '#' ).append( string_view{ comment._text } ).append( '|' ).append( comment._position._x ).append( ',' ).append( comment._position._y );
-            text.append( '|' ).append( comment._size._x ).append( ',' ).append( comment._size._y ).append( '\n' );
+            text.append( string_view{ XMLSerializer::serialize( &comment, *GraphCommentBox::StaticType() ) } );
         }
         return HashUtil::computeStringHash64( text.c_str(), text.size(), false );
     }

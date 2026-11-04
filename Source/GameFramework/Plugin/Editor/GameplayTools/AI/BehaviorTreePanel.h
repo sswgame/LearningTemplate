@@ -60,13 +60,20 @@ namespace sw::editor
         };
 
         // 그리기
-        void               drawToolbar();
-        void               drawCanvasArea();
-        void               drawNode( const BehaviorTreeEditNode& node, bool bActive );
-        void               drawSidePanel();
-        void               drawInspector( BehaviorTreeEditNode& node );
-        void               drawIssueList();
-        void               handleCanvasInteractions();
+        void drawToolbar();
+        void drawCanvasArea();
+        void drawNode( const BehaviorTreeEditNode& node, bool bActive );
+        void drawSidePanel();
+        void drawInspector( BehaviorTreeEditNode& node );
+        void drawIssueList();
+        void handleCanvasInteractions();
+        /**
+         * @brief 캔버스 단축키 Ctrl+C · X · V · D 와 노드 오른쪽 클릭 메뉴(복제 · 지우기)를 받습니다. 단위는 하위 트리다(언리얼 BT 와 같다).
+         * @details 복사 버퍼는 고른 첫 노드를 루트로 한 트리 글이고(`BehaviorTreeEditModel::writeSubtree`), 붙여 넣기는 고른 노드의 맨 뒤 자식(빈 트리면 루트)이다.
+         */
+        void handleEditCommands();
+        /** @brief 붙이거나 복제한 하위 트리 @p newID 를 고르고 구조 편집으로 남깁니다. 실패(-1)면 @p error 를 상태 줄에 둡니다. */
+        void               adoptPastedSubtree( int32 newID, const string& error, const utf8* pLabel );
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
 
         // 편집

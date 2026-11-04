@@ -557,6 +557,89 @@ namespace sw::editor
         }
     }
 
+    string BehaviorTreeEditModel::writeSubtree( int32 id ) const
+    {
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "BehaviorTree" );
+        if ( find( id ) != nullptr )
+            writeNode( id, root );
+        return document.saveToString();
+    }
+
+    int32 BehaviorTreeEditModel::graftSubtree( const BehaviorTreeEditModel& source, int32 sourceID, int32 parentID )
+    {
+        const BehaviorTreeEditNode* pSource = source.find( sourceID );
+        BehaviorTreeEditNode        copy    = *pSource;
+        copy._id                            = _nextID++;
+        copy._parent                        = parentID;
+        copy._listChild.clear();
+        const int32 newID = copy._id;
+        _listNode.push_back( std::move( copy ) );
+        for ( const int32 childID : pSource->_listChild )
+        {
+            const int32 newChildID = graftSubtree( source, childID, newID );
+            find( newID )->_listChild.push_back( newChildID ); // push_back 이 포인터를 무효로 하므로 매번 다시 찾는다
+        }
+        return newID;
+    }
+
+    int32 BehaviorTreeEditModel::pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex, string& outError )
+    {
+        BehaviorTreeEditModel pasted;
+        if ( pasted.parse( xmlText, outError ) == false )
+            return -1;
+        if ( pasted._rootID < 0 )
+        {
+            outError = "There is no node to paste";
+            return -1;
+        }
+        if ( parentID < 0 )
+        {
+            if ( _rootID >= 0 )
+            {
+                outError = "The tree already has a root - select the parent node to paste under";
+                return -1;
+            }
+            _rootID = graftSubtree( pasted, pasted._rootID, -1 );
+            return _rootID;
+        }
+        const BehaviorTreeEditNode* pParent = find( parentID );
+        if ( pParent == nullptr || canHoldChild( *pParent ) == false )
+        {
+            outError = "That node cannot take a child here (a leaf, or a decorator that already has one)";
+            return -1;
+        }
+        if ( getDepth( parentID ) + 1 + pasted.getSubtreeHeight( pasted._rootID ) > BehaviorTreeNames::kMaxDepth )
+        {
+            outError = "Pasting there would pass the depth limit";
+            return -1;
+        }
+        const int32    newID     = graftSubtree( pasted, pasted._rootID, parentID );
+        vector<int32>& listChild = find( parentID )->_listChild;
+        const bool     bAppend   = insertIndex < 0 || static_cast<size_t>( insertIndex ) >= listChild.size();
+        listChild.insert( bAppend ? listChild.end() : listChild.begin() + insertIndex, newID );
+        outError.clear();
+        return newID;
+    }
+
+    int32 BehaviorTreeEditModel::duplicateSubtree( int32 id, string& outError )
+    {
+        const BehaviorTreeEditNode* pNode   = find( id );
+        const BehaviorTreeEditNode* pParent = pNode != nullptr ? find( pNode->_parent ) : nullptr;
+        if ( pParent == nullptr )
+        {
+            outError = "The root cannot be duplicated - a tree has one root";
+            return -1;
+        }
+        const int32 parentID = pParent->_id;
+        int32       index    = 0;
+        while ( pParent->_listChild[static_cast<size_t>( index )] != id )
+        {
+            ++index;
+        }
+        return pasteSubtree( parentID, writeSubtree( id ), index + 1, outError );
+    }
+
     string BehaviorTreeEditModel::write() const
     {
         XMLDocument   document;
