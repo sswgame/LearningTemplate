@@ -13,9 +13,12 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -26,7 +29,45 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct SpriteClipPanelInternal
+        {
+            /** @brief 문서를 읽은 열린 스프라이트 클립 창입니다. 닫혔거나 문서가 없으면 nullptr 입니다. */
+            [[nodiscard]] static const SpriteClipPanel* findLoadedPanel()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return nullptr;
+                const SpriteClipPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SpriteClipPanel>();
+                return pPanel != nullptr && pPanel->isOpen() && pPanel->isDocumentLoaded() ? pPanel : nullptr;
+            }
+
+            [[nodiscard]] static bool readFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const SpriteClipPanel* pPanel = findLoadedPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getFrameCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readAnimationCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const SpriteClipPanel* pPanel = findLoadedPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getAnimationCount() );
+                return true;
+            }
+        };
+    } // namespace
+
     SW_EDITOR_PANEL( SpriteClipPanel, SpriteClipPanel::kPanelID, EditorPanelCategory::Tool, 1600 );
+    SW_AUTOMATION_WATCH( editorSpriteClipFrameCount, "Editor.SpriteClipFrameCount", "Frames of the document the Sprite Clip window holds (fails while it is closed or has no document)",
+                         &SpriteClipPanelInternal::readFrameCount );
+    SW_AUTOMATION_WATCH( editorSpriteClipAnimationCount, "Editor.SpriteClipAnimationCount", "Named animations of the document the Sprite Clip window holds",
+                         &SpriteClipPanelInternal::readAnimationCount );
 
     SpriteClipPanel::SpriteClipPanel()
         : EditorDocumentPanel{ EditorAssetType{ SpriteClipAsset::kAssetType }, false }
@@ -62,11 +103,13 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) ) )
             reloadDocument();
+        EditorSelfTestMarks::note( "spriteClip.load" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "LoadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         // 저장 단추도 저장 경로 하나(`saveDocumentAndClearDirty`)를 지난다 — 예전 단추는 못 읽은 문서(Malformed)도 덮어쓰고, 경로가 비거나 쓰기에 실패해도 "저장했다" 를 띄웠다.
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 dirty 가 남고 상태 줄은 그대로다
+        EditorSelfTestMarks::note( "spriteClip.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SaveTip" ) );
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "SeparateFromAnimationGraph", TextArgumentList().addText( "dirSavedEditor", config::kDirSavedEditor ).addText( "spriteClipDocumentFileName", EditorPaths::kSpriteClipDocumentFileName ) ).c_str() );
     }
@@ -89,9 +132,11 @@ namespace sw::editor
             _model.addFrame();
             notifyDocumentEdited( "Add Sprite Frame" );
         }
+        EditorSelfTestMarks::note( "spriteClip.addFrame" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RemoveFrame" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveFrame" ) ) && _model.removeSelectedFrame() )
             notifyDocumentEdited( "Remove Sprite Frame" );
+        EditorSelfTestMarks::note( "spriteClip.removeFrame" );
 
         const int32 frameCount = static_cast<int32>( _model.getFrames().size() );
         for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
@@ -101,6 +146,8 @@ namespace sw::editor
             formatstring( label.data(), label.capacity(), "Frame %#", frameIndex );
             if ( ImGui::Selectable( label.c_str(), _model.getSelectedFrame() == frameIndex ) )
                 _model.selectFrame( frameIndex );
+            formatstring( label.data(), label.capacity(), "spriteClip.frame.%#", frameIndex );
+            EditorSelfTestMarks::note( label.c_str() ); // 시나리오가 프레임을 고른다
             ImGui::PopID();
         }
 
@@ -238,6 +285,7 @@ namespace sw::editor
             _model.addAnimation();
             notifyDocumentEdited( "Add Sprite Animation" );
         }
+        EditorSelfTestMarks::note( "spriteClip.addAnimation" );
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveAnimation" ) ) && _model.removeSelectedAnimation() )
             notifyDocumentEdited( "Remove Sprite Animation" );
