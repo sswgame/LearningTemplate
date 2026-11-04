@@ -45,7 +45,7 @@
 | 주인 우선(Helpers.md) — 다른 헤더 | 같은 헤더의 `X` + `XUtil` 은 끝났고 린트가 막는다. 남은 것: 다른 헤더에 있는 `XxxUtil` 가운데 함수 대부분이 한 타입만 받는 것, 주인이 있는데 `XxxInternal` · 자유 함수로 빠진 것 — 린트가 못 보는 자리라 셈 스크립트로 후보를 뽑아 하나씩 본다 |
 | 정적 상태 — 레지스트리 싱글턴 | 2026-11-05 .cpp 가변 전역 선언 104(이름공간 71 · 함수 안 static 33)를 판정했다. 그대로 두는 것: 원자 id 번호, 정적 등록 연결 목록(`s_pHead`), 로거 기동 전 백로그, 단언 · 잠금 관찰자 훅, OS 처리기 · `ShutdownSignal`, 모듈 경계 창구(`s_gameServiceState` · `s_editorScope`), 스레드 하나 전용이라 적힌 번호(`UILayoutPass` · `UndoStep`), 정적 감시값 읽기(`CatalogPanel` — 감시 API 가 인스턴스를 받아야 옮긴다). 남은 것: 함수 안 static 레지스트리 싱글턴(`DevCommandRegistry` · `DebugHUDRegistry` · `BehaviorTaskRegistry` · `RigNodeRegistry` · `AnimationNotifyHandlerRegistry` · `EngineCodecRegistry` · `EditorExtensionRegistry` · SQL 드라이버 둘 · `FileDialog` 의 `s_pOpenDialog`)을 서브시스템(범위가 소유)으로 — 목록은 `globals.py` 식으로 다시 뽑는다 |
 | JSON 손 스키마 | `ConfigKeyDoc`(키 · 형식 · 기본값 · 설명의 손 표)을 지우고 텍스처 · 모델 임포트 규칙을 리플렉션 구조체로(F 묶음의 첫 일). JSON 에는 XMLFields 에 해당하는 읽기(적은 칸만 · 모르는 키를 이름으로 알림)가 없다 — 먼저 세운다. `readObject` 는 적지 않은 칸을 기본값으로 되돌려 프리셋 상속을 담지 못한다 |
-| 리눅스 빌드 | 크래시 처리기 인스턴스화(748605fe5e)의 POSIX 파일 · `CallStackCapture` 는 이 기계에서 짓지 못했다 — WSL 에서 빌드 · 크래시 테스트 |
+| 플랫폼 대역(`#else`) 지우기 | 2026-11-05 리눅스 링크가 `Win32Window` 의 빈 대역에서 깨졌다 — 대역이 생성자를 정의해 가상 함수 표가 만들어지는데, 11-04 에 더한 `setFramePosition` · `tryGetFrameExtents` 를 대역에 맞추지 않았다. 리눅스가 쓰지 않는 `Win32Window` · `Win32SplashWindow` 대역은 지웠다. 남은 것: `X11Window` · `X11SplashWindow` · `WaylandWindow` · `WaylandSplashWindow` · 입력 키 표 · XInput · UIA 의 `#else` 대역 — 다른 구성(리눅스 서버 빌드 · Wayland 끔)이 쓰는지 확인하고 쓰지 않으면 지운다(언리얼처럼 플랫폼 파일은 그 플랫폼에서만 짓는다) |
 
 ### 1. 리플렉션으로 옮기기 — Source 전체 (2026-11-04 사용자 지시: "리플렉션 활용이 가능한 부분은 모두")
 
