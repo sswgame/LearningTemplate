@@ -28,6 +28,26 @@
 
 namespace sw
 {
+    /** @brief 프리셋 머리(`<Preset id>`)의 칸입니다. 섹션(`<View>` · `<Lens>` …)은 자식 원소다. */
+    REFLECT()
+    struct SW_GF_API CameraPresetHeadFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+    };
+
+    /** @brief 돌리 경로의 점(`<Point position/>`)입니다. */
+    REFLECT()
+    struct SW_GF_API CameraDollyPointFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Units = m )
+        float3 _position{};
+    };
+
     class XMLNode;
 
     /** @brief 프리셋이 카메라를 놓는 방식입니다. */

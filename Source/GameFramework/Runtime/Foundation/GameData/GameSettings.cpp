@@ -13,6 +13,7 @@
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 
@@ -74,16 +75,16 @@ namespace sw
             // 팩 밖에서 읽는 필수 데이터 — 종류 하나에 팩 하나다. 자리는 읽는 쪽(`GameInstance::makeRequiredDataPath`)이 등록 줄의 규칙으로 만든다.
             if ( StringUtil::equals( pName, "RequiredData" ) )
             {
-                const string kind( child.getAttributeText( "kind" ) );
-                const string pack( child.getAttributeText( "pack" ) );
-                if ( kind.empty() || pack.empty() )
+                RequiredDataFields line;
+                const bool         bRead = XMLFields::readFields( child, line, sourceName ); // 두 칸 모두 필수
+                if ( bRead == false || line._kind.empty() || line._pack.empty() )
                 {
-                    SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredDataNeedsBoth", "GameSettings %#: <RequiredData> needs both kind and pack (kind='%#' pack='%#')", sourceName, kind.c_str(), pack.c_str() );
+                    SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredDataNeedsBoth", "GameSettings %#: <RequiredData> needs both kind and pack (kind='%#' pack='%#')", sourceName, line._kind.c_str(), line._pack.c_str() );
                     bOk = false;
                 }
-                else if ( _mapRequiredDataPack.emplace( kind, pack ).second == false )
+                else if ( _mapRequiredDataPack.emplace( line._kind, line._pack ).second == false )
                 {
-                    SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredDataKindAppears", "GameSettings %#: <RequiredData kind=\"%#\"> appears twice", sourceName, kind.c_str() );
+                    SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredDataKindAppears", "GameSettings %#: <RequiredData kind=\"%#\"> appears twice", sourceName, line._kind.c_str() );
                     bOk = false;
                 }
                 continue;

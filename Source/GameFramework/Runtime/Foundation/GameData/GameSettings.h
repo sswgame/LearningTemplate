@@ -16,6 +16,18 @@
 
 namespace sw
 {
+    /** @brief 팩 밖에서 읽는 필수 데이터 한 줄(`<RequiredData kind pack/>`)입니다. 종류 하나에 팩 하나다. */
+    REFLECT()
+    struct SW_GF_API RequiredDataFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _kind{};
+        PROPERTY( Required )
+        string _pack{};
+    };
+
     class XMLNode;
 
     // ------------------------------------------------------------------------------

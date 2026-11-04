@@ -19,9 +19,6 @@ namespace sw
         {
             static constexpr const utf8* kAnyPreset = "*";
 
-            static constexpr const utf8* kArrPresetAttribute[] = { "id" };
-            static constexpr const utf8* kArrPointAttribute[]  = { "position" };
-
             /**
              * @brief 블렌드 속성(스키마 `BlendCurveDef`)과 `<Key>` 자식을 읽습니다. 적지 않은 칸은 @p inoutBlend 의 것이 남습니다(카탈로그 `<DefaultBlend>`).
              * @details 키는 시간 순이어야 한다 — 순서가 틀린 데이터를 고쳐 쓰지 않고 오류다. @p listHandRead 는 블렌드 표 줄의 `from` · `to` 다.
@@ -103,10 +100,9 @@ namespace sw
                     outDolly._listPoint.clear();
                 for ( ; pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
                 {
-                    float3     position{};
-                    const bool bKnown = XMLNameCheck::reportUnknownAttributes( pointNode, kArrPointAttribute, sourceName );
-                    if ( bKnown && XMLReadUtil::readRequiredFloat3( pointNode, "position", sourceName, position ) )
-                        outDolly._listPoint.push_back( position );
+                    CameraDollyPointFields point;
+                    if ( XMLFields::readFields( pointNode, point, sourceName ) )
+                        outDolly._listPoint.push_back( point._position );
                     else
                         bValid = false;
                 }
@@ -121,7 +117,7 @@ namespace sw
             /** @brief 프리셋 하나를 읽습니다. 섹션마다 스키마(Def 의 초기값 · `Min`/`Max`)로 읽고, 오류가 하나라도 있으면 false 입니다(오류는 `readFields` 가 이름과 함께 알린다). */
             [[nodiscard]] static bool readPreset( const XMLNode& node, CameraPresetDef& inoutDef, string_view sourceName )
             {
-                bool bValid = XMLNameCheck::reportUnknownAttributes( node, kArrPresetAttribute, sourceName );
+                bool bValid = true; // 머리 칸(id · 모르는 속성)은 부르는 쪽이 CameraPresetHeadFields 로 읽었다
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
@@ -273,11 +269,12 @@ namespace sw
             const utf8* pName = node.getName();
             if ( StringUtil::equals( pName, "Preset" ) )
             {
-                const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-                if ( pID == nullptr )
+                CameraPresetHeadFields head;
+                if ( XMLFields::readFields( node, head, sourceName ) == false )
                     continue;
-                CameraPresetDef def;
-                def._id      = hashed_string( pID );
+                const utf8* const pID = head._id.c_str();
+                CameraPresetDef   def;
+                def._id      = head._id;
                 def._blendIn = _defaultBlend;
                 if ( CameraPresetInternal::readPreset( node, def, sourceName ) == false )
                 {
