@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -173,42 +174,27 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Shop" ); node; node = node.findNextSibling( "Shop" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            ShopDef def;
-            def._id               = hashed_string( pID );
-            const utf8* pCurrency = node.findAttribute( "currency" );
-            def._currency         = pCurrency != nullptr && pCurrency[0] != '\0' ? hashed_string( pCurrency ) : Wallet::getDefaultCurrency();
             // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
-            constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-            bool              bValid    = XMLReadUtil::readOptionalNumber( node, "buyMultiplier", sourceName, 0.0f, kAnyFloat, def._buyMultiplier );
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "sellMultiplier", sourceName, 0.0f, kAnyFloat, def._sellMultiplier ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "saturation", sourceName, 0.0f, kAnyFloat, def._saturation ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "minSellFactor", sourceName, 0.0f, 1.0f, def._minSellFactor ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "recovery", sourceName, 0.0f, kAnyFloat, def._recoveryPerDay ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( node, "restockDays", sourceName, 0, MathUtil::kMaxInt32, def._restockDays ) && bValid;
+            ShopDef def;
+            bool    bValid = XMLFields::readFields( node, def, sourceName, { "refuses" } );
+            if ( def._id.empty() )
+                continue;
+            const utf8* const pID = def._id.c_str();
+            if ( def._currency.empty() )
+                def._currency = Wallet::getDefaultCurrency();
             StringUtil::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
             {
                 def._listRefusedCategory.push_back( hashed_string( token ) );
             } );
             for ( XMLNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
             {
-                const utf8* pItem = stockNode.findAttribute( "item" );
-                if ( pItem == nullptr || pItem[0] == '\0' )
+                ShopStockDef stock; // item 필수 · 재고 범위는 PROPERTY 가 본다
+                if ( XMLFields::readFields( stockNode, stock, sourceName ) == false || stock._itemID.empty() )
                 {
-                    SW_LOG_ERROR_ID( "Shop.ShopStockWithoutItem", "%#: shop '%#' has a <Stock> without an item", sourceName, pID );
+                    SW_LOG_ERROR_ID( "Shop.ShopStockInvalid", "%#: shop '%#' has a <Stock> without an item or with invalid fields", sourceName, pID );
                     bValid = false;
                     continue;
                 }
-                ShopStockDef stock;
-                stock._itemID            = hashed_string( pItem );
-                bValid                   = XMLReadUtil::readOptionalNumber( stockNode, "price", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, stock._price ) && bValid;
-                bValid                   = XMLReadUtil::readOptionalNumber( stockNode, "count", sourceName, -1, MathUtil::kMaxInt32, stock._count ) && bValid;
-                bValid                   = XMLReadUtil::readOptionalNumber( stockNode, "restock", sourceName, 0, MathUtil::kMaxInt32, stock._restock ) && bValid;
-                const utf8* pRequirement = stockNode.findAttribute( "requires" );
-                if ( pRequirement != nullptr )
-                    stock._requirement = pRequirement;
                 def._listStock.push_back( stock );
             }
             if ( bValid == false )

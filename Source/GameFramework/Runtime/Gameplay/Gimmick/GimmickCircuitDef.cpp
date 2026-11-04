@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -71,12 +72,9 @@ namespace sw
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이(constant::time::kDefaultFixedStepSeconds)다. 0 이하 · 깨진 값은 오류다.
-        bool bValid = XMLReadUtil::readOptionalNumber( root, "stepTime", _sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
-        if ( _stepTime <= 0.0f )
-        {
-            SW_LOG_ERROR_ID( "GimmickCircuitDef.StepTimeMustPositive", "%#: stepTime must be positive", _sourceName );
-            bValid = false;
-        }
+        GimmickCircuitRootFields rootFields{ _stepTime };
+        bool                     bValid = XMLFields::readFields( root, rootFields, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        _stepTime                       = bValid ? rootFields._stepTime : _stepTime;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Node" ) )
@@ -100,16 +98,15 @@ namespace sw
             }
             if ( StringUtil::equals( child.getName(), "Wire" ) )
             {
-                bool bInvert = false; // 적지 않으면 뒤집지 않는다
-                if ( XMLReadUtil::readOptionalBool( child, "invert", bInvert ) == false )
+                GimmickWireFields wire;
+                if ( XMLFields::readFields( child, wire, _sourceName ) == false )
                 {
                     bValid = false;
                     continue;
                 }
-                if ( addWire( child.getAttributeText( "from" ), child.getAttributeText( "to" ), bInvert ) == false )
+                if ( addWire( wire._from, wire._to, wire._bInvert ) == false )
                 {
-                    SW_LOG_WARNING_ID( "GimmickCircuitDef.WireNeedsNodePort", "%#: <Wire from=\"%#\" to=\"%#\"> needs node.port on both ends", _sourceName, child.getAttributeText( "from" ),
-                                       child.getAttributeText( "to" ) );
+                    SW_LOG_WARNING_ID( "GimmickCircuitDef.WireNeedsNodePort", "%#: <Wire from=\"%#\" to=\"%#\"> needs node.port on both ends", _sourceName, wire._from, wire._to );
                     bValid = false;
                 }
                 continue;

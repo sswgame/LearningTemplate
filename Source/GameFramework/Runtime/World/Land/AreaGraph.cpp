@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
@@ -37,19 +38,12 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode areaNode = node.findChild( "Area" ); areaNode; areaNode = areaNode.findNextSibling( "Area" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( areaNode, sourceName );
-            if ( pID == nullptr )
-                continue;
-            AreaDef area;
-            area._id     = hashed_string( pID );
-            area._name   = XMLReadUtil::readOptionalName( areaNode, "name" ); // 적지 않으면 id (`addArea`)
-            area._region = XMLReadUtil::readOptionalName( areaNode, "region" );
             // 적지 않은 칸은 AreaDef 의 초기값이다. 깨진 값 · 음수 크기는 그 지역을 넣지 않는 오류다(자르지 않는다).
-            constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-            bool              bValid    = XMLReadUtil::readOptionalNumber( areaNode, "x", sourceName, -kAnyFloat, kAnyFloat, area._x );
-            bValid                      = XMLReadUtil::readOptionalNumber( areaNode, "y", sourceName, -kAnyFloat, kAnyFloat, area._y ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( areaNode, "w", sourceName, 0.0f, kAnyFloat, area._width ) && bValid;
-            bValid                      = XMLReadUtil::readOptionalNumber( areaNode, "h", sourceName, 0.0f, kAnyFloat, area._height ) && bValid;
+            AreaDef    area;
+            const bool bValid = XMLFields::readFields( areaNode, area, sourceName );
+            if ( area._id.empty() )
+                continue;
+            const utf8* const pID = area._id.c_str();
             if ( bValid == false )
                 SW_LOG_ERROR_ID( "AreaGraph.AreaInvalidFieldsSkipped", "%#: area '%#' has invalid fields - skipped", sourceName, pID );
             else if ( addArea( area ) )
@@ -59,19 +53,13 @@ namespace sw
         }
         for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
-            hashed_string from;
-            hashed_string to;
-            const bool    bEnds    = XMLReadUtil::readRequiredName( linkNode, "from", sourceName, from ) && XMLReadUtil::readRequiredName( linkNode, "to", sourceName, to );
-            bool          bInvalid = false;
-            bool          bOneWay  = false; // 적지 않으면 양방향이다
-            if ( bEnds == false )
-                continue; // 끝점이 없는 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
-            if ( XMLReadUtil::readOptionalBool( linkNode, "oneWay", bOneWay ) == false )
-            {
-                SW_LOG_ERROR_ID( "AreaGraph.LinkInvalidOneWaySkipped", "%#: link '%#' -> '%#' has an invalid oneWay - skipped", sourceName, from.c_str(), to.c_str() );
-                continue;
-            }
-            if ( addLink( from, to, XMLReadUtil::readOptionalName( linkNode, "kind" ), linkNode.getAttributeText( "requires" ), bOneWay, bInvalid ) == false )
+            AreaLinkFields link;
+            if ( XMLFields::readFields( linkNode, link, sourceName ) == false )
+                continue; // 끝점이 없거나 깨진 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
+            const hashed_string& from     = link._from;
+            const hashed_string& to       = link._to;
+            bool                 bInvalid = false;
+            if ( addLink( from, to, link._kind, link._requires, link._bOneWay, bInvalid ) == false )
             {
                 SW_LOG_WARNING_ID( "AreaGraph.LinkNeedsTwoDifferent", "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );
                 continue;

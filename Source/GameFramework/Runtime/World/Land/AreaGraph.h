@@ -12,6 +12,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -22,15 +24,43 @@ namespace sw
     class XMLNode;
 
     /** @brief 방 하나입니다. 위치와 크기는 지도 그리기용이며 그래프 계산에는 쓰지 않습니다. */
-    struct AreaDef
+    REFLECT()
+    struct SW_GF_API AreaDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        hashed_string _name{};
+        PROPERTY()
+        hashed_string _name{}; ///< 적지 않으면 id (`addArea`)
+        PROPERTY()
         hashed_string _region{}; ///< 지역(층, 구역). 지역별 완료율의 단위다
-        float32       _x{ 0.0f };
-        float32       _y{ 0.0f };
-        float32       _width{ 1.0f };
-        float32       _height{ 1.0f };
+        PROPERTY()
+        float32 _x{ 0.0f };
+        PROPERTY()
+        float32 _y{ 0.0f };
+        PROPERTY( Name = "w", Min = 0.0 )
+        float32 _width{ 1.0f };
+        PROPERTY( Name = "h", Min = 0.0 )
+        float32 _height{ 1.0f };
+    };
+
+    /** @brief 방 사이 연결 한 줄(`<Link from to kind oneWay requires/>`)의 칸입니다. 조건(`requires`)은 조건 글이라 그래프가 푼다. */
+    REFLECT()
+    struct SW_GF_API AreaLinkFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _from{};
+        PROPERTY( Required )
+        hashed_string _to{};
+        PROPERTY()
+        hashed_string _kind{};
+        PROPERTY()
+        bool _bOneWay{ false }; ///< 적지 않으면 양방향이다
+        PROPERTY()
+        string _requires{};
     };
 } // namespace sw
 

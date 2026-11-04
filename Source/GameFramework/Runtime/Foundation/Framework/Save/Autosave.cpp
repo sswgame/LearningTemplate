@@ -11,7 +11,9 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/UISystem.h"
 
@@ -33,7 +35,6 @@ namespace sw
             static constexpr uint32      kInfoVersion       = 1;
             static constexpr uint32      kSlotFormatVersion = 1; ///< 상태 슬롯의 봉투 형식 버전 - 게임 상태 바이트(스냅샷 봉투)를 바꾸면 올린다
             static constexpr const utf8* kInfoExtension     = ".info";
-            static constexpr int32       kMaxSlotCount      = 64;
         };
     } // namespace
 } // namespace sw
@@ -55,32 +56,16 @@ namespace sw
 
     bool AutosaveSettings::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const utf8* pGroup  = root.findAttribute( "group" );
-        const utf8* pPrefix = root.findAttribute( "prefix" );
-        // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 읽기 실패이고 그 칸은 바꾸지 않는다(자르거나 다른 값으로 바꿔 쓰지 않는다).
-        bool bValid = true;
-        if ( pGroup != nullptr )
+        // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값(슬롯 1..64 등)은 읽기 실패다 — PROPERTY 가 본다.
+        const string previousGroup = _group;
+        bool         bValid        = XMLFields::readFields( root, *this, sourceName );
+        // 자리(폴더)는 로컬 저장소가 정한다 - 데이터는 슬롯 그룹 이름만 적는다(경로 · `..` 는 슬롯 이름 규칙에 걸린다).
+        if ( ILocalStore::isValidGroupPrefix( _group + "/" ) == false )
         {
-            // 자리(폴더)는 로컬 저장소가 정한다 - 데이터는 슬롯 그룹 이름만 적는다(경로 · `..` 는 슬롯 이름 규칙에 걸린다).
-            if ( ILocalStore::isValidGroupPrefix( string( pGroup ) + "/" ) )
-            {
-                _group = pGroup;
-            }
-            else
-            {
-                SW_LOG_ERROR_ID( "Autosave.AutosaveGroupMustOne", "%#: Autosave group '%#' must be one local store slot group ([0-9a-z_.-], not starting with '.')", sourceName, pGroup );
-                bValid = false;
-            }
+            SW_LOG_ERROR_ID( "Autosave.AutosaveGroupMustOne", "%#: Autosave group '%#' must be one local store slot group ([0-9a-z_.-], not starting with '.')", sourceName, _group );
+            _group = previousGroup; // 틀린 그룹은 쓰지 않는다
+            bValid = false;
         }
-        if ( pPrefix != nullptr )
-            _prefix = pPrefix;
-        bValid = XMLReadUtil::readOptionalNumber( root, "interval", sourceName, 0.0f, MathUtil::kMaxFloat, _interval ) && bValid;
-        bValid = XMLReadUtil::readOptionalNumber( root, "minimumGap", sourceName, 0.0f, MathUtil::kMaxFloat, _minimumGap ) && bValid;
-        bValid = XMLReadUtil::readOptionalNumber( root, "slots", sourceName, 1, AutosaveInternal::kMaxSlotCount, _slotCount ) && bValid;
-        bValid = XMLReadUtil::readOptionalFlag( root, "areaChange", _bOnAreaChange ) && bValid;
-        bValid = XMLReadUtil::readOptionalFlag( root, "checkpoint", _bOnCheckpoint ) && bValid;
-        bValid = XMLReadUtil::readOptionalFlag( root, "beforeBoss", _bOnBeforeBoss ) && bValid;
-        bValid = XMLReadUtil::readOptionalFlag( root, "quit", _bOnQuit ) && bValid;
         return bValid;
     }
 
@@ -126,13 +111,13 @@ namespace sw
 
     bool AutosaveManager::initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveDelegate& onSave, const LoadDelegate& onLoad )
     {
-        const bool bRangesValid = 1 <= settings._slotCount && settings._slotCount <= AutosaveInternal::kMaxSlotCount && 0.0f <= settings._interval && 0.0f <= settings._minimumGap;
+        const bool bRangesValid = SerializerUtil::isWithinDeclaredRanges( *AutosaveSettings::StaticType(), ObjectAddress{ &settings } ); // AutosaveSettings 의 PROPERTY( Min · Max )
         // 가장 긴 이름(마지막 슬롯의 기록)이 규칙을 지키면 모든 슬롯 이름이 지킨다.
         const bool bNamesValid = bRangesValid && ILocalStore::isValidSlotName( settings.makeInfoSlotName( settings._slotCount - 1 ) );
         if ( bNamesValid == false )
         {
-            SW_LOG_ERROR_ID( "Autosave.AutosaveManagerRefusedSettingsSlots", "AutosaveManager: refused settings - slots %# (1..%#), interval %# and minimumGap %# (0 or more), slot names '%#' (local store slot name rule)",
-                             settings._slotCount, AutosaveInternal::kMaxSlotCount, settings._interval, settings._minimumGap, settings.makeInfoSlotName( 0 ).c_str() );
+            SW_LOG_ERROR_ID( "Autosave.AutosaveManagerRefusedSettingsSlots", "AutosaveManager: refused settings - slots %#, interval %# and minimumGap %# (PROPERTY ranges of AutosaveSettings), slot names '%#' (local store slot name rule)",
+                             settings._slotCount, settings._interval, settings._minimumGap, settings.makeInfoSlotName( 0 ).c_str() );
             return false;
         }
         _settings = settings;
@@ -210,7 +195,7 @@ namespace sw
 
     bool AutosaveManager::notifyQuit()
     {
-        if ( _settings._bOnQuit == SW_FALSE || _bSaving == SW_TRUE || isScanning() || isSaving() )
+        if ( _settings._bOnQuit == false || _bSaving == SW_TRUE || isScanning() || isSaving() )
             return false;
         _bPending = SW_FALSE;
         return performSave( AutosaveTrigger::Quit, hashed_string{} );
@@ -327,13 +312,13 @@ namespace sw
             case AutosaveTrigger::Interval:
                 return _settings._interval > 0.0f;
             case AutosaveTrigger::AreaChanged:
-                return _settings._bOnAreaChange != SW_FALSE;
+                return _settings._bOnAreaChange;
             case AutosaveTrigger::Checkpoint:
-                return _settings._bOnCheckpoint != SW_FALSE;
+                return _settings._bOnCheckpoint;
             case AutosaveTrigger::BeforeBoss:
-                return _settings._bOnBeforeBoss != SW_FALSE;
+                return _settings._bOnBeforeBoss;
             case AutosaveTrigger::Quit:
-                return _settings._bOnQuit != SW_FALSE;
+                return _settings._bOnQuit;
             case AutosaveTrigger::Manual:
                 return true;
         }

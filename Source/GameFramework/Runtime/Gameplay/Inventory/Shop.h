@@ -95,31 +95,50 @@ namespace sw
 namespace sw
 {
     /** @brief 가게 진열 항목 하나입니다. */
-    struct ShopStockDef
+    REFLECT()
+    struct SW_GF_API ShopStockDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "item", Required )
         hashed_string _itemID{};
-        string        _requirement{}; ///< 잠금 조건 식입니다. 키트나 게임이 평가하며, 예를 들어 GameFlags 조건이 있습니다. 비어 있으면 항상 열려 있습니다
-        int32         _price{ -1 };   ///< 단가(-1 이면 `ItemDef::_value`)
-        int32         _count{ -1 };   ///< 처음 재고이자 최대 재고(-1 이면 무한)
-        int32         _restock{ 0 };  ///< 재입고할 때 더하는 수(최대 재고까지)
+        PROPERTY( Name = "requires" )
+        string _requirement{}; ///< 잠금 조건 식입니다. 키트나 게임이 평가하며, 예를 들어 GameFlags 조건이 있습니다. 비어 있으면 항상 열려 있습니다
+        PROPERTY()
+        int32 _price{ -1 }; ///< 단가(-1 이면 `ItemDef::_value`)
+        PROPERTY( Min = -1 )
+        int32 _count{ -1 }; ///< 처음 재고이자 최대 재고(-1 이면 무한)
+        PROPERTY( Min = 0 )
+        int32 _restock{ 0 }; ///< 재입고할 때 더하는 수(최대 재고까지)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 가게 하나입니다. */
+    REFLECT()
     struct SW_GF_API ShopDef
     {
-        hashed_string         _id{};
-        hashed_string         _currency{};             ///< 이 가게가 받고 주는 통화(비어 있으면 "Gold")
-        vector<ShopStockDef>  _listStock{};            ///< 진열 순서
-        vector<hashed_string> _listRefusedCategory{};  ///< 사들이지 않는 분류("Quest", "Key")
-        float32               _buyMultiplier{ 1.0f };  ///< 손님이 살 때 값에 곱한다
-        float32               _sellMultiplier{ 0.5f }; ///< 손님이 팔 때 값에 곱한다
-        float32               _saturation{ 0.0f };     ///< 한 개 팔릴 때마다 그 아이템의 매입 시세가 떨어지는 양(0 이면 시세 없음)
-        float32               _minSellFactor{ 0.2f };  ///< 시세의 하한
-        float32               _recoveryPerDay{ 0.1f }; ///< 하루마다 시세가 1 로 돌아오는 양
-        int32                 _restockDays{ 1 };       ///< 재입고 주기(일). 0 이면 재입고하지 않는다
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        hashed_string         _currency{};            ///< 이 가게가 받고 주는 통화(비어 있으면 `Wallet::getDefaultCurrency`)
+        vector<ShopStockDef>  _listStock{};           ///< 진열 순서(`<Stock>`)
+        vector<hashed_string> _listRefusedCategory{}; ///< 사들이지 않는 분류("Quest", "Key" — `refuses` 목록은 손으로 푼다)
+        PROPERTY( Min = 0.0 )
+        float32 _buyMultiplier{ 1.0f }; ///< 손님이 살 때 값에 곱한다
+        PROPERTY( Min = 0.0 )
+        float32 _sellMultiplier{ 0.5f }; ///< 손님이 팔 때 값에 곱한다
+        PROPERTY( Min = 0.0 )
+        float32 _saturation{ 0.0f }; ///< 한 개 팔릴 때마다 그 아이템의 매입 시세가 떨어지는 양(0 이면 시세 없음)
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _minSellFactor{ 0.2f }; ///< 시세의 하한
+        PROPERTY( Name = "recovery", Min = 0.0 )
+        float32 _recoveryPerDay{ 0.1f }; ///< 하루마다 시세가 1 로 돌아오는 양
+        PROPERTY( Min = 0 )
+        int32 _restockDays{ 1 }; ///< 재입고 주기(일). 0 이면 재입고하지 않는다
 
         const ShopStockDef* findStock( const hashed_string& itemID ) const;
         bool                refusesCategory( const hashed_string& category ) const;

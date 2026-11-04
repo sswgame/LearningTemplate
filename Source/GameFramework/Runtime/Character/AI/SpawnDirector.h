@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Curve/FloatCurve.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -23,14 +24,22 @@ namespace sw
     class XMLNode;
 
     /** @brief 낼 수 있는 것 하나입니다. */
+    REFLECT()
     struct SW_GF_API SpawnEntryDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string         _id{};
-        vector<hashed_string> _listTag{}; ///< 비면 태그 거르기와 상관없이 늘 낸다
-        float32               _cost{ 1.0f };
-        float32               _weight{ 1.0f };
-        float32               _minTime{ 0.0f }; ///< 이 시각(초) 전에는 내지 않는다
-        int32                 _max{ -1 };       ///< 동시에 살아 있는 상한. -1 이면 없음
+        vector<hashed_string> _listTag{}; ///< 비면 태그 거르기와 상관없이 늘 낸다(`tags="a,b"` 는 손으로 푼다)
+        PROPERTY( Min = 0.0 )
+        float32 _cost{ 1.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _weight{ 1.0f };
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _minTime{ 0.0f }; ///< 이 시각(초) 전에는 내지 않는다
+        PROPERTY( Min = -1 )
+        int32 _max{ -1 }; ///< 동시에 살아 있는 상한. -1 이면 없음
 
         bool hasAnyTag( const vector<hashed_string>& listTag ) const;
     };
@@ -38,6 +47,22 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 스폰 표 루트(`<SpawnTable budgetPerMinute maxBudget startBudget refund>`)의 칸입니다. 표가 지금 값으로 채운 뒤 읽는다. */
+    REFLECT()
+    struct SW_GF_API SpawnTableRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0 )
+        float32 _budgetPerMinute{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _maxBudget{ 0.0f };
+        PROPERTY( Min = 0.0, Max = "_maxBudget" )
+        float32 _startBudget{ 0.0f };
+        PROPERTY()
+        bool _bRefund{ false };
+    };
+
     /**
      * @class SpawnTable
      * @brief 스폰 테이블(`<SpawnTable>`)을 읽습니다.

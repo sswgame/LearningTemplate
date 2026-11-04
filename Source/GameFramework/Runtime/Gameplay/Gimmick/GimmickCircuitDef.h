@@ -23,11 +23,36 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    /** @brief 회로 루트(`<GimmickCircuit stepTime>`)의 칸입니다. 회로가 지금 값(기본 스텝)으로 채운 뒤 읽는다. */
+    REFLECT()
+    struct SW_GF_API GimmickCircuitRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0001, Units = s )
+        float32 _stepTime{ 0.0f };
+    };
+
+    /** @brief 전선(`<Wire from="node.port" to="node.port" invert/>`)의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API GimmickWireFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _from{};
+        PROPERTY( Required )
+        string _to{};
+        PROPERTY()
+        bool _bInvert{ false }; ///< 적지 않으면 뒤집지 않는다
+    };
+
     class XMLNode;
 
     /** @brief 매개변수 하나입니다. 이름과 적힌 문자열을 그대로 담으며, 숫자, 벡터, 이름으로 해석하는 것은 노드 종류가 정합니다. */
