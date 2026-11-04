@@ -15,17 +15,14 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
     namespace
     {
-        constexpr const utf8* kRootElement  = "DebugKeyBindings";
-        constexpr const utf8* kBindElement  = "bind";
-        constexpr const utf8* kActionAttr   = "action";
-        constexpr const utf8* kIndexAttr    = "index";
-        constexpr const utf8* kSlotAttr     = "slot";
-        constexpr int32       kMaxBindIndex = 16; ///< 한 액션이 가질 수 있는 바인딩 번호의 상한입니다(잘못된 파일이 큰 번호를 주지 못하게).
+        constexpr const utf8* kRootElement = "DebugKeyBindings";
+        constexpr const utf8* kBindElement = "bind";
         /**
          * @brief 키보드 키 · 단축키 바인딩의 수정 키(`Ctrl+Shift`, 없으면 `None`)입니다. 이 속성이 있으면 수정 키까지 바꾼 재배치다(`InputMap::rebindKeyShortcut`).
          * @details 없는 줄은 방아쇠 키만 바꾼다(`rebindSlot`) — 수정 키를 적기 전에 저장한 파일의 뜻 그대로다.
@@ -190,10 +187,12 @@ namespace sw
                 const string slotText = InputSlotUtil::toText( current );
                 if ( slotText.empty() )
                     continue; // 키보드, 마우스, 패드가 아닌 슬롯은 문자열로 적을 수 없다
-                XMLNode bindNode = root.appendChild( kBindElement );
-                bindNode.appendAttribute( kActionAttr, action.c_str() );
-                bindNode.appendAttribute( kIndexAttr, static_cast<int32>( bindIndex ) );
-                bindNode.appendAttribute( kSlotAttr, slotText.c_str() );
+                DebugKeyRebindFields fields;
+                fields._action         = action;
+                fields._index          = static_cast<int32>( bindIndex );
+                fields._slot           = slotText;
+                const XMLNode bindNode = root.appendChild( kBindElement );
+                XMLFields::writeFields( bindNode, fields );
                 if ( bKeyboardChord )
                 {
                     const string modifierText = InputRemapSerializer::formatModifierNames( pCurrent->_modifierMask );
@@ -231,23 +230,19 @@ namespace sw
         }
         for ( XMLNode bindNode = root.findChild( kBindElement ); bindNode.isValid(); bindNode = bindNode.findNextSibling( kBindElement ) )
         {
-            const string_view actionText = bindNode.getAttributeText( kActionAttr );
-            const string_view slotText   = bindNode.getAttributeText( kSlotAttr );
-            // 저장할 때 바인딩 번호를 늘 적는다 — 빠진 번호를 0 번으로 보지 않는다.
-            const std::optional<int32> index      = bindNode.readRequiredAttribute<int32>( kIndexAttr );
-            const int32                bindIndex  = index.has_value() ? *index : -1;
-            const bool                 bIndexOkay = 0 <= bindIndex && bindIndex <= kMaxBindIndex;
-            InputSlot                  slot{};
-            const bool                 bUnreadableBind = actionText.empty() || bIndexOkay == false || InputSlotUtil::tryParse( slotText, slot ) == false;
-            if ( bUnreadableBind )
+            // `modifier` 는 적지 않음(슬롯만 바꿈) · `None`(수정 키 없음) · 이름 셋이라 스키마 칸이 아니다.
+            DebugKeyRebindFields fields;
+            InputSlot            slot{};
+            if ( XMLFields::readFields( bindNode, fields, filePath, { kModifierAttr } ) == false || InputSlotUtil::tryParse( fields._slot, slot ) == false )
             {
-                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, string( actionText ).c_str(),
-                                   string( slotText ).c_str() );
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, fields._action.c_str(),
+                                   fields._slot.c_str() );
                 continue;
             }
-            const hashed_string action( string( actionText ).c_str() );
-            const utf8*         pModifierText = bindNode.findAttribute( kModifierAttr );
-            bool                bApplied      = false;
+            const hashed_string& action        = fields._action;
+            const int32          bindIndex     = fields._index;
+            const utf8*          pModifierText = bindNode.findAttribute( kModifierAttr );
+            bool                 bApplied      = false;
             if ( map.hasAction( action ) && pModifierText == nullptr )
             {
                 bApplied = map.rebindSlot( action, slot, static_cast<uint32>( bindIndex ) );
@@ -261,7 +256,7 @@ namespace sw
                            map.rebindKeyShortcut( action, static_cast<uint32>( bindIndex ), static_cast<Key>( slot._controlIndex ), modifierMask );
             }
             if ( bApplied == false )
-                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings4", "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, string( actionText ).c_str(), string( slotText ).c_str(), bindIndex );
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings4", "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, action.c_str(), fields._slot.c_str(), bindIndex );
         }
         return true;
     }

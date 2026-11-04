@@ -26,138 +26,138 @@
 
 	<!-- 고르기 — 누른 자리에서 놓은 자리까지(짧으면 클릭 한 유닛, 길면 사각형). 누름 · 누르는 중 · 뗌을 디렉터가 읽는다. -->
 	<action name="Skirmish.Select" layer="Gameplay" trigger="Pressed">
-		<bind source="mouse" code="Left"/>
+		<bind source="Mouse" code="Left"/>
 	</action>
 
 	<!-- 명령 — 커서 자리로 이동 · 공격 · 채취 · 집결(똑똑한 명령). -->
 	<action name="Skirmish.Order" layer="Gameplay" trigger="Pressed">
-		<bind source="mouse" code="Right"/>
+		<bind source="Mouse" code="Right"/>
 	</action>
 
 	<action name="Skirmish.Slower" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Minus"/>
+		<bind source="Key" code="Minus"/>
 	</action>
 
 	<action name="Skirmish.Faster" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Equal"/>
+		<bind source="Key" code="Equal"/>
 	</action>
 
 	<action name="Skirmish.Pause" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="P"/>
+		<bind source="Key" code="P"/>
 	</action>
 
 	<action name="Skirmish.Status" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="F1"/>
+		<bind source="Key" code="F1"/>
 	</action>
 
 	<action name="Skirmish.AddToSelection" layer="Gameplay" trigger="Down">
-		<bind source="key" code="LeftShift"/>
-		<bind source="key" code="RightShift"/>
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Key" code="RightShift"/>
 	</action>
 
 	<action name="Skirmish.GroupModifier" layer="Gameplay" trigger="Down">
-		<bind source="key" code="LeftControl"/>
-		<bind source="key" code="RightControl"/>
+		<bind source="Key" code="LeftControl"/>
+		<bind source="Key" code="RightControl"/>
 	</action>
 
 	<action name="Skirmish.AttackMove" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="A"/>
+		<bind source="Key" code="A"/>
 	</action>
 
 	<action name="Skirmish.Stop" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="S"/>
+		<bind source="Key" code="S"/>
 	</action>
 
 	<action name="Skirmish.Hold" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="H"/>
+		<bind source="Key" code="H"/>
 	</action>
 
 	<action name="Skirmish.Command1" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Q"/>
+		<bind source="Key" code="Q"/>
 	</action>
 
 	<action name="Skirmish.Command2" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="W"/>
+		<bind source="Key" code="W"/>
 	</action>
 
 	<action name="Skirmish.Command3" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="E"/>
+		<bind source="Key" code="E"/>
 	</action>
 
 	<action name="Skirmish.Build.SupplyDepot" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="B"/>
+		<bind source="Key" code="B"/>
 	</action>
 
 	<action name="Skirmish.Build.Barracks" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="N"/>
+		<bind source="Key" code="N"/>
 	</action>
 
 	<action name="Skirmish.Build.Refinery" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="G"/>
+		<bind source="Key" code="G"/>
 	</action>
 
 	<action name="Skirmish.Build.Academy" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Y"/>
+		<bind source="Key" code="Y"/>
 	</action>
 
 	<action name="Skirmish.Build.Factory" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="F"/>
+		<bind source="Key" code="F"/>
 	</action>
 
 	<action name="Skirmish.Build.Starport" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="T"/>
+		<bind source="Key" code="T"/>
 	</action>
 
 	<action name="Skirmish.Build.Bunker" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="U"/>
+		<bind source="Key" code="U"/>
 	</action>
 
 	<action name="Skirmish.Group0" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit0"/>
+		<bind source="Key" code="Digit0"/>
 	</action>
 
 	<action name="Skirmish.Group1" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit1"/>
+		<bind source="Key" code="Digit1"/>
 	</action>
 
 	<action name="Skirmish.Group2" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit2"/>
+		<bind source="Key" code="Digit2"/>
 	</action>
 
 	<action name="Skirmish.Group3" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit3"/>
+		<bind source="Key" code="Digit3"/>
 	</action>
 
 	<action name="Skirmish.Group4" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit4"/>
+		<bind source="Key" code="Digit4"/>
 	</action>
 
 	<action name="Skirmish.Group5" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit5"/>
+		<bind source="Key" code="Digit5"/>
 	</action>
 
 	<action name="Skirmish.Group6" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit6"/>
+		<bind source="Key" code="Digit6"/>
 	</action>
 
 	<action name="Skirmish.Group7" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit7"/>
+		<bind source="Key" code="Digit7"/>
 	</action>
 
 	<action name="Skirmish.Group8" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit8"/>
+		<bind source="Key" code="Digit8"/>
 	</action>
 
 	<action name="Skirmish.Group9" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit9"/>
+		<bind source="Key" code="Digit9"/>
 	</action>
 
 	<action name="Skirmish.JumpToSelection" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Space"/>
+		<bind source="Key" code="Space"/>
 	</action>
 	<!-- 확대 — 휠(굴린 칸만큼), 패드 D 패드 위 · 아래(누름 · 반복마다 한 칸). 기반 카메라의 _zoomAction 이 읽는다. -->
 	<action name="Camera.Zoom" layer="Gameplay">
 		<mouseWheel scale="1"/>
-		<axis1d source="gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
+		<axis1d source="Gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
 	</action>
 </InputMap>

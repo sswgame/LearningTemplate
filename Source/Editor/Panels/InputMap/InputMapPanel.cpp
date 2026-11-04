@@ -31,6 +31,7 @@
 #include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include <imgui.h>
 
@@ -330,7 +331,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( ImGui::CalcTextSize( "HoldAndRelease" ).x + ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f );
         InputMap&           inputMap = _document.editInputMap();
         const ActionTrigger trigger  = inputMap.getBindingTrigger( action, bindIndex );
-        const utf8*         pCurrent = InputMap::actionTriggerToName( trigger );
+        const utf8*         pCurrent = getEnumName( trigger );
         const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
         if ( EditorSelfTestMarks::isEnabled() )
             EditorSelfTestMarks::note( ( formatToString( "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) ) ).c_str() );
@@ -340,7 +341,7 @@ namespace sw::editor
         for ( uint32 option = 0; option < static_cast<uint32>( ActionTrigger::Count ); ++option )
         {
             const ActionTrigger value = static_cast<ActionTrigger>( option );
-            if ( ImGui::Selectable( InputMap::actionTriggerToName( value ), value == trigger ) && inputMap.setBindingTrigger( action, bindIndex, value ) )
+            if ( ImGui::Selectable( getEnumName( value ), value == trigger ) && inputMap.setBindingTrigger( action, bindIndex, value ) )
                 markDocumentDirty();
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( formatToString( "inputMap.trigger.%#", static_cast<uint64>( option ) ) ).c_str() );

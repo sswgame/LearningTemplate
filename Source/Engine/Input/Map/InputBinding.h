@@ -14,6 +14,7 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -22,6 +23,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 스키마: 액션 값 타입, 바인딩 종류, 트리거, 페이즈, 데드존 모드
     // ------------------------------------------------------------------------------
+    ENUM()
     enum class InputActionValueType : uint8
     {
         Boolean = 0, ///< 디지털 버튼 / On-Off
@@ -36,6 +38,7 @@ namespace sw
      *          가상 커서는 그 스틱과 패드 A · B 를 마우스 이동 · 왼쪽 · 오른쪽 버튼으로 바꾸므로, 맵이 같은 스틱 · 버튼을 액션에 따로 묶으면
      *          한 입력이 두 입력이 된다. 그래서 읽기가 그런 바인딩을 오류로 거절한다(`loadFromAsset`).
      */
+    ENUM()
     enum class InputMapVirtualCursor : uint8
     {
         Off = 0,    ///< 가상 커서를 쓰지 않는다
@@ -121,6 +124,7 @@ namespace sw
         AddSecondary ///< 기존 액션은 그대로 두고 새 액션을 보조 바인딩 슬롯에 추가한다.
     };
 
+    ENUM( Invalid = Count, Count = Count )
     enum class ActionTrigger : uint8
     {
         Pressed = 0,
@@ -154,6 +158,7 @@ namespace sw
         Canceled   ///< 트리거 조건을 채우기 전에 입력이 해제됐다(예: Hold 시간 미달).
     };
 
+    ENUM()
     enum class GamepadStick : uint8
     {
         Left  = 0,
@@ -165,6 +170,7 @@ namespace sw
      * @details 언리얼의 `Gamepad_RightY` 키, 유니티 Input System 의 `<Gamepad>/rightStick/y` 경로에 해당한다. 확대처럼 1D 액션이 스틱 한 축을 읽을 때 쓴다.
      *          `scaleByDelta` 와 함께 쓰면 값이 초당 양(확대 칸/초)이 된다 — 칸 단위 액션에 스틱 값을 매 프레임 그대로 넣으면 너무 빠르다.
      */
+    ENUM()
     enum class GamepadStickAxis : uint8
     {
         Both = 0, ///< 2D 값(x, y)

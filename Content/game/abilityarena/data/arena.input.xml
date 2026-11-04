@@ -14,22 +14,22 @@
 	</action>
 
 	<action name="Arena.Melee" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="J"/>
-		<bind source="key" code="Space"/>
+		<bind source="Key" code="J"/>
+		<bind source="Key" code="Space"/>
 	</action>
 
 	<action name="Arena.Fireball" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="K"/>
-		<bind source="key" code="Digit2"/>
+		<bind source="Key" code="K"/>
+		<bind source="Key" code="Digit2"/>
 	</action>
 
 	<action name="Arena.Heal" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="L"/>
-		<bind source="key" code="Digit3"/>
+		<bind source="Key" code="L"/>
+		<bind source="Key" code="Digit3"/>
 	</action>
 
 	<action name="Arena.Dash" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="LeftShift"/>
-		<bind source="key" code="Digit4"/>
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Key" code="Digit4"/>
 	</action>
 </InputMap>

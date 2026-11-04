@@ -8,9 +8,9 @@
 		<layer name="Gameplay" enabled="1" blockLower="0"/>
 	</layers>
 	<action name="Village.FastForward" layer="Gameplay" trigger="Down">
-		<bind source="key" code="Space"/>
+		<bind source="Key" code="Space"/>
 	</action>
 	<action name="Town.Talk" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="E"/>
+		<bind source="Key" code="E"/>
 	</action>
 </InputMap>

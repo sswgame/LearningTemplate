@@ -161,7 +161,7 @@ namespace sw
                                   ActionTrigger trigger = ActionTrigger::Down );
         /**
          * @brief 위와 같지만 슬롯 둘을 받습니다. 게임패드 버튼 둘(D 패드 위, 아래로 확대)처럼 키가 아닌 장치도 한 축으로 묶을 수 있습니다.
-         * @details 두 슬롯이 같은 장치여야 저장된다(`<axis1d source="gamepad">`). 언리얼 Enhanced Input 의 Axis1D 액션에 버튼 둘(한쪽 Negate)을 매핑하는 것에 해당한다.
+         * @details 두 슬롯이 같은 장치여야 저장된다(`<axis1d source="Gamepad">`). 언리얼 Enhanced Input 의 Axis1D 액션에 버튼 둘(한쪽 Negate)을 매핑하는 것에 해당한다.
          */
         void    bindAxis1DComposite( const hashed_string& action, InputSlot negativeSlot, InputSlot positiveSlot, const hashed_string& layer = {},
                                      ActionTrigger trigger = ActionTrigger::Down );
@@ -383,9 +383,6 @@ namespace sw
         ActionPhase getActionPhase( const hashed_string& action ) const;
         ActionPhase getActionPhase( ActionHandle handle ) const;
 
-        static ActionTrigger actionTriggerFromName( string_view name );
-        static const utf8*   actionTriggerToName( ActionTrigger trigger );
-
     private:
         /** @brief 입력을 읽는 눈입니다. 게임이 보는 값과 장치 값은 개발 콘솔 · 포커스 · 캡처가 가린 키에서 달라진다. */
         enum class SlotRead : uint8
@@ -454,6 +451,11 @@ namespace sw
         [[nodiscard]] bool readMapSettings( const XMLNode& root, string_view absPath, bool bAppend );
         /** @brief `loadDefinition` 의 레이어 단계입니다. `<layers>` 블록의 레이어를 등록하고 기본 레이어를 보장합니다. 깨진 값은 @p inoutbValid 를 내립니다. */
         void readLayerDefinitions( const XMLNode& root, string_view absPath, bool bAppend, bool& inoutbValid );
+        /**
+         * @brief `<layer>` 원소 하나를 스키마(`InputMapLayerFields`)로 읽어 등록합니다. @p listChild 는 그 원소가 품을 수 있는 자식 이름입니다(`<layers>` 안은 없음, 맨 위는 `action`).
+         * @details 맨 위 `<layer>` 는 이미 있는 레이어면 설정을 바꾸지 않고 액션만 담는다. 더하는 파일이 `<layers>` 로 있는 레이어를 다시 정의하면 오류다.
+         */
+        [[nodiscard]] bool readLayer( const XMLNode& layerNode, string_view absPath, bool bAppend, std::initializer_list<string_view> listChild, hashed_string& outName );
         /** @brief `loadDefinition` 의 액션 단계입니다. 최상위 `<layer>` 와 `<action>` 을 읽고 더한 액션 이름을 @p outListLoadedAction 에 모읍니다. */
         void readActionDefinitions( const XMLNode& root, string_view absPath, bool bAppend, vector<hashed_string>& outListLoadedAction, bool& inoutbValid );
         /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromAsset`). */
@@ -551,7 +553,7 @@ namespace sw
         uint32 removeVirtualCursorConflicts( string_view sourceName, const hashed_string& action, uint32 firstIndex );
 
     private:
-        friend struct InputMapActionLoader; ///< `<action>` 노드 하나를 읽는 도구(InputMap.cpp)
+        friend struct InputMapXML;          ///< `<action>` 원소 하나를 읽고 쓰는 도구(맵 정의 · 사용자 바인딩 공용)
         friend struct InputRemapSerializer; ///< 사용자 바인딩 읽기가 가상 커서와 겹친 바인딩을 지운다(`removeVirtualCursorConflicts`)
 
     private:

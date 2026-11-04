@@ -21,232 +21,232 @@
 
 	<layer name="Editor.Global">
 		<action name="scene.open" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="O"/>
+			<bind source="Key" modifier="Ctrl" code="O"/>
 		</action>
 		<action name="asset.save" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="S"/>
+			<bind source="Key" modifier="Ctrl" code="S"/>
 		</action>
 		<action name="editor.quickOpen" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="P"/>
+			<bind source="Key" modifier="Ctrl" code="P"/>
 		</action>
 		<action name="editor.commandPalette" trigger="Pressed">
-			<bind source="key" modifier="Ctrl+Shift" code="P"/>
-			<bind source="key" modifier="Ctrl" code="Space"/>
+			<bind source="Key" modifier="Ctrl+Shift" code="P"/>
+			<bind source="Key" modifier="Ctrl" code="Space"/>
 		</action>
 		<action name="edit.undo" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Z"/>
+			<bind source="Key" modifier="Ctrl" code="Z"/>
 		</action>
 		<action name="edit.redo" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Y"/>
-			<bind source="key" modifier="Ctrl+Shift" code="Z"/>
+			<bind source="Key" modifier="Ctrl" code="Y"/>
+			<bind source="Key" modifier="Ctrl+Shift" code="Z"/>
 		</action>
 		<action name="build.compileGame" trigger="Pressed">
-			<bind source="key" modifier="Ctrl+Alt" code="F11"/>
-			<bind source="key" code="F7"/>
+			<bind source="Key" modifier="Ctrl+Alt" code="F11"/>
+			<bind source="Key" code="F7"/>
 		</action>
 		<action name="build.compileAll" trigger="Pressed">
-			<bind source="key" modifier="Ctrl+Shift" code="B"/>
+			<bind source="Key" modifier="Ctrl+Shift" code="B"/>
 		</action>
 		<action name="viewport.screenshot" trigger="Pressed">
-			<bind source="key" code="F9"/>
+			<bind source="Key" code="F9"/>
 		</action>
 		<action name="viewport.renderDocCapture" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="F12"/>
+			<bind source="Key" modifier="Ctrl" code="F12"/>
 		</action>
 		<action name="help.reportBug" trigger="Pressed">
-			<bind source="key" modifier="Ctrl+Shift" code="F12"/>
+			<bind source="Key" modifier="Ctrl+Shift" code="F12"/>
 		</action>
 		<action name="play.eject" trigger="Pressed">
-			<bind source="key" code="F8"/>
+			<bind source="Key" code="F8"/>
 		</action>
 		<!-- Frames the view under the pointer: the curve editor (its canvas lives in popups of several panels) and the preview viewports of asset windows read it only while hovered. -->
 		<action name="view.frameHovered" trigger="Pressed">
-			<bind source="key" code="F"/>
+			<bind source="Key" code="F"/>
 		</action>
 	</layer>
 
 	<!-- Hierarchy window: scene object commands act on the selection; selectAll / selectPrevious / selectNext are read by the panel (row order). -->
 	<layer name="Editor.Panel.hierarchy">
 		<action name="scene.duplicate" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="D"/>
+			<bind source="Key" modifier="Ctrl" code="D"/>
 		</action>
 		<action name="scene.copy" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="C"/>
+			<bind source="Key" modifier="Ctrl" code="C"/>
 		</action>
 		<action name="scene.paste" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="V"/>
+			<bind source="Key" modifier="Ctrl" code="V"/>
 		</action>
 		<action name="scene.delete" trigger="Pressed">
-			<bind source="key" code="Delete"/>
+			<bind source="Key" code="Delete"/>
 		</action>
 		<action name="scene.object.rename" trigger="Pressed">
-			<bind source="key" code="F2"/>
+			<bind source="Key" code="F2"/>
 		</action>
 		<action name="hierarchy.selectAll" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="A"/>
+			<bind source="Key" modifier="Ctrl" code="A"/>
 		</action>
 		<action name="hierarchy.selectPrevious" trigger="Repeat">
-			<bind source="key" code="Up"/>
+			<bind source="Key" code="Up"/>
 		</action>
 		<action name="hierarchy.selectNext" trigger="Repeat">
-			<bind source="key" code="Down"/>
+			<bind source="Key" code="Down"/>
 		</action>
 	</layer>
 
 	<!-- Content Browser: asset commands act on the selected asset; navigateBack / navigateForward are read by the panel (folder history). -->
 	<layer name="Editor.Panel.content_browser">
 		<action name="asset.rename" trigger="Pressed">
-			<bind source="key" code="F2"/>
+			<bind source="Key" code="F2"/>
 		</action>
 		<action name="asset.duplicate" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="D"/>
+			<bind source="Key" modifier="Ctrl" code="D"/>
 		</action>
 		<action name="asset.delete" trigger="Pressed">
-			<bind source="key" code="Delete"/>
+			<bind source="Key" code="Delete"/>
 		</action>
 		<action name="contentBrowser.navigateBack" trigger="Pressed">
-			<bind source="key" modifier="Alt" code="Left"/>
-			<bind source="key" code="Backspace"/>
+			<bind source="Key" modifier="Alt" code="Left"/>
+			<bind source="Key" code="Backspace"/>
 		</action>
 		<action name="contentBrowser.navigateForward" trigger="Pressed">
-			<bind source="key" modifier="Alt" code="Right"/>
+			<bind source="Key" modifier="Alt" code="Right"/>
 		</action>
 	</layer>
 
 	<!-- Console: copy the selected log rows. -->
 	<layer name="Editor.Panel.console">
 		<action name="console.copySelection" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="C"/>
+			<bind source="Key" modifier="Ctrl" code="C"/>
 		</action>
 	</layer>
 
 	<!-- Tile Map: paint tools (Unity Tile Palette keys). -->
 	<layer name="Editor.Panel.tile_map">
 		<action name="tileMap.brush" trigger="Pressed">
-			<bind source="key" code="B"/>
+			<bind source="Key" code="B"/>
 		</action>
 		<action name="tileMap.rect" trigger="Pressed">
-			<bind source="key" code="U"/>
+			<bind source="Key" code="U"/>
 		</action>
 		<action name="tileMap.fill" trigger="Pressed">
-			<bind source="key" code="G"/>
+			<bind source="Key" code="G"/>
 		</action>
 		<action name="tileMap.picker" trigger="Pressed">
-			<bind source="key" code="I"/>
+			<bind source="Key" code="I"/>
 		</action>
 	</layer>
 
 	<!-- Scene view: gizmo modes, framing, orthographic views, camera bookmarks (1-9 go, Ctrl+1-9 store), ruler (hold M). Read by the viewport. -->
 	<layer name="Editor.Panel.scene_view">
 		<action name="viewport.frameSelected" trigger="Pressed">
-			<bind source="key" code="F"/>
+			<bind source="Key" code="F"/>
 		</action>
 		<action name="viewport.gizmoTranslate" trigger="Pressed">
-			<bind source="key" code="W"/>
+			<bind source="Key" code="W"/>
 		</action>
 		<action name="viewport.gizmoRotate" trigger="Pressed">
-			<bind source="key" code="E"/>
+			<bind source="Key" code="E"/>
 		</action>
 		<action name="viewport.gizmoScale" trigger="Pressed">
-			<bind source="key" code="R"/>
+			<bind source="Key" code="R"/>
 		</action>
 		<action name="viewport.gizmoCycle" trigger="Pressed">
-			<bind source="key" code="Q"/>
-			<bind source="key" code="Space"/>
+			<bind source="Key" code="Q"/>
+			<bind source="Key" code="Space"/>
 		</action>
 		<action name="viewport.toggleMaximize" trigger="Pressed">
-			<bind source="key" modifier="Shift" code="Space"/>
+			<bind source="Key" modifier="Shift" code="Space"/>
 		</action>
 		<action name="viewport.viewTop" trigger="Pressed">
-			<bind source="key" code="Numpad7"/>
+			<bind source="Key" code="Numpad7"/>
 		</action>
 		<action name="viewport.viewFront" trigger="Pressed">
-			<bind source="key" code="Numpad1"/>
+			<bind source="Key" code="Numpad1"/>
 		</action>
 		<action name="viewport.viewRight" trigger="Pressed">
-			<bind source="key" code="Numpad3"/>
+			<bind source="Key" code="Numpad3"/>
 		</action>
 		<action name="viewport.toggleOrthographic" trigger="Pressed">
-			<bind source="key" code="Numpad5"/>
+			<bind source="Key" code="Numpad5"/>
 		</action>
 		<action name="viewport.rulerHold" trigger="Down">
-			<bind source="key" code="M"/>
+			<bind source="Key" code="M"/>
 		</action>
 		<action name="viewport.bookmark1" trigger="Pressed">
-			<bind source="key" code="Digit1"/>
+			<bind source="Key" code="Digit1"/>
 		</action>
 		<action name="viewport.setBookmark1" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit1"/>
+			<bind source="Key" modifier="Ctrl" code="Digit1"/>
 		</action>
 		<action name="viewport.bookmark2" trigger="Pressed">
-			<bind source="key" code="Digit2"/>
+			<bind source="Key" code="Digit2"/>
 		</action>
 		<action name="viewport.setBookmark2" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit2"/>
+			<bind source="Key" modifier="Ctrl" code="Digit2"/>
 		</action>
 		<action name="viewport.bookmark3" trigger="Pressed">
-			<bind source="key" code="Digit3"/>
+			<bind source="Key" code="Digit3"/>
 		</action>
 		<action name="viewport.setBookmark3" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit3"/>
+			<bind source="Key" modifier="Ctrl" code="Digit3"/>
 		</action>
 		<action name="viewport.bookmark4" trigger="Pressed">
-			<bind source="key" code="Digit4"/>
+			<bind source="Key" code="Digit4"/>
 		</action>
 		<action name="viewport.setBookmark4" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit4"/>
+			<bind source="Key" modifier="Ctrl" code="Digit4"/>
 		</action>
 		<action name="viewport.bookmark5" trigger="Pressed">
-			<bind source="key" code="Digit5"/>
+			<bind source="Key" code="Digit5"/>
 		</action>
 		<action name="viewport.setBookmark5" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit5"/>
+			<bind source="Key" modifier="Ctrl" code="Digit5"/>
 		</action>
 		<action name="viewport.bookmark6" trigger="Pressed">
-			<bind source="key" code="Digit6"/>
+			<bind source="Key" code="Digit6"/>
 		</action>
 		<action name="viewport.setBookmark6" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit6"/>
+			<bind source="Key" modifier="Ctrl" code="Digit6"/>
 		</action>
 		<action name="viewport.bookmark7" trigger="Pressed">
-			<bind source="key" code="Digit7"/>
+			<bind source="Key" code="Digit7"/>
 		</action>
 		<action name="viewport.setBookmark7" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit7"/>
+			<bind source="Key" modifier="Ctrl" code="Digit7"/>
 		</action>
 		<action name="viewport.bookmark8" trigger="Pressed">
-			<bind source="key" code="Digit8"/>
+			<bind source="Key" code="Digit8"/>
 		</action>
 		<action name="viewport.setBookmark8" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit8"/>
+			<bind source="Key" modifier="Ctrl" code="Digit8"/>
 		</action>
 		<action name="viewport.bookmark9" trigger="Pressed">
-			<bind source="key" code="Digit9"/>
+			<bind source="Key" code="Digit9"/>
 		</action>
 		<action name="viewport.setBookmark9" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="Digit9"/>
+			<bind source="Key" modifier="Ctrl" code="Digit9"/>
 		</action>
 	</layer>
 
 	<!-- Fly mode (right mouse button held over the scene view). Shift speeds up (modifier, read by the camera). -->
 	<layer name="Editor.Viewport.Fly">
 		<action name="viewport.flyForward" trigger="Down">
-			<bind source="key" code="W"/>
+			<bind source="Key" code="W"/>
 		</action>
 		<action name="viewport.flyBack" trigger="Down">
-			<bind source="key" code="S"/>
+			<bind source="Key" code="S"/>
 		</action>
 		<action name="viewport.flyRight" trigger="Down">
-			<bind source="key" code="D"/>
+			<bind source="Key" code="D"/>
 		</action>
 		<action name="viewport.flyLeft" trigger="Down">
-			<bind source="key" code="A"/>
+			<bind source="Key" code="A"/>
 		</action>
 		<action name="viewport.flyUp" trigger="Down">
-			<bind source="key" code="E"/>
+			<bind source="Key" code="E"/>
 		</action>
 		<action name="viewport.flyDown" trigger="Down">
-			<bind source="key" code="Q"/>
+			<bind source="Key" code="Q"/>
 		</action>
 	</layer>
 </InputMap>

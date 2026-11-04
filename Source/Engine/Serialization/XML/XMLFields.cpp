@@ -118,4 +118,16 @@ namespace sw
             node.appendAttribute( Internal::makeAttributeName( prop ).c_str(), string_view{ text } );
         }
     }
+
+    bool XMLFields::readOptionalEnumText( const XMLNode& node, const utf8* pName, void* pValue, const hashed_string& enumTypeFqn, string_view sourceName, bool& outbPresent )
+    {
+        const utf8* const pText = node.findAttribute( pName );
+        outbPresent             = pText != nullptr;
+        if ( pText == nullptr )
+            return true;
+        if ( SerializerUtil::parseTextValue( MutableValueAddress{ pValue }, enumTypeFqn, pText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
+            return true;
+        SW_LOG_ERROR_ID( "XMLFields.UnknownEnumValue", "%#: <%# %#=\"%#\"> is not a value of %#", sourceName, node.getName(), pName, pText, enumTypeFqn.c_str() );
+        return false;
+    }
 } // namespace sw

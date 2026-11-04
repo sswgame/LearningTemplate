@@ -17,7 +17,7 @@
 	<!-- Up and down while held. -->
 	<action name="Photo.Rise" layer="PhotoMode">
 		<axis1d negative="Q" positive="E"/>
-		<axis1d source="gamepad" negative="LeftShoulder" positive="RightShoulder"/>
+		<axis1d source="Gamepad" negative="LeftShoulder" positive="RightShoulder"/>
 	</action>
 	<!-- Look around: mouse movement, right stick. -->
 	<action name="Photo.Look" layer="PhotoMode">
@@ -31,11 +31,11 @@
 	<!-- Zoom (field of view or ortho height): wheel notches, D-pad up and down per press or repeat. -->
 	<action name="Photo.Zoom" layer="PhotoMode">
 		<mouseWheel scale="1"/>
-		<axis1d source="gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
+		<axis1d source="Gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
 	</action>
 	<!-- Exposure compensation: one step per press. -->
 	<action name="Photo.Exposure" layer="PhotoMode" trigger="Pressed">
 		<axis1d negative="Minus" positive="Equal"/>
-		<axis1d source="gamepad" negative="DPadLeft" positive="DPadRight"/>
+		<axis1d source="Gamepad" negative="DPadLeft" positive="DPadRight"/>
 	</action>
 </InputMap>

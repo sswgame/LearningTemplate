@@ -19,24 +19,24 @@
 	</action>
 
 	<action name="ToggleMouseLock" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Escape"/>
+		<bind source="Key" code="Escape"/>
 	</action>
 
 	<action name="Voxel.Jump" layer="Gameplay" trigger="Down">
-		<bind source="key" code="Space"/>
+		<bind source="Key" code="Space"/>
 	</action>
 
 	<action name="Voxel.Sprint" layer="Gameplay" trigger="Down">
-		<bind source="key" code="LeftShift"/>
+		<bind source="Key" code="LeftShift"/>
 	</action>
 
 	<!-- 바라보는 블록 부수기(누르고 있기) · 놓기(누르고 있으면 간격마다). -->
 	<action name="Voxel.Break" layer="Gameplay" trigger="Down">
-		<bind source="mouse" code="Left"/>
+		<bind source="Mouse" code="Left"/>
 	</action>
 
 	<action name="Voxel.Place" layer="Gameplay" trigger="Down">
-		<bind source="mouse" code="Right"/>
+		<bind source="Mouse" code="Right"/>
 	</action>
 
 	<!-- 핫바 넘기기 — 휠 위(+)가 앞 칸. 폰의 아날로그 칸이다. -->
@@ -45,38 +45,38 @@
 	</action>
 
 	<action name="Voxel.Slot1" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit1"/>
+		<bind source="Key" code="Digit1"/>
 	</action>
 
 	<action name="Voxel.Slot2" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit2"/>
+		<bind source="Key" code="Digit2"/>
 	</action>
 
 	<action name="Voxel.Slot3" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit3"/>
+		<bind source="Key" code="Digit3"/>
 	</action>
 
 	<action name="Voxel.Slot4" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit4"/>
+		<bind source="Key" code="Digit4"/>
 	</action>
 
 	<action name="Voxel.Slot5" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit5"/>
+		<bind source="Key" code="Digit5"/>
 	</action>
 
 	<action name="Voxel.Slot6" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit6"/>
+		<bind source="Key" code="Digit6"/>
 	</action>
 
 	<action name="Voxel.Slot7" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit7"/>
+		<bind source="Key" code="Digit7"/>
 	</action>
 
 	<action name="Voxel.Slot8" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit8"/>
+		<bind source="Key" code="Digit8"/>
 	</action>
 
 	<action name="Voxel.Slot9" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit9"/>
+		<bind source="Key" code="Digit9"/>
 	</action>
 </InputMap>

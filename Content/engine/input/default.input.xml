@@ -14,58 +14,58 @@
 	</layers>
 
 	<action name="Confirm" layer="Title" trigger="Pressed">
-		<bind source="key" code="Enter"/>
-		<bind source="key" code="Space"/>
+		<bind source="Key" code="Enter"/>
+		<bind source="Key" code="Space"/>
 	</action>
 	<action name="Continue" layer="Title" trigger="Pressed">
-		<bind source="key" code="C"/>
+		<bind source="Key" code="C"/>
 	</action>
 	<action name="Cancel" layer="Title" trigger="Pressed">
-		<bind source="key" code="Escape"/>
+		<bind source="Key" code="Escape"/>
 	</action>
 	<layer name="Debug" enabled="1" blockLower="0" alwaysOn="1">
 		<action name="ReloadShaders" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="F8"/>
+			<bind source="Key" modifier="Ctrl" code="F8"/>
 		</action>
 		<action name="ReloadEditor" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="F6"/>
+			<bind source="Key" modifier="Ctrl" code="F6"/>
 		</action>
 		<action name="ReloadGame" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="F7"/>
+			<bind source="Key" modifier="Ctrl" code="F7"/>
 		</action>
 		<action name="DevConsoleToggle" trigger="Pressed">
-			<bind source="key" code="Grave"/>
-			<bind source="gamepad" code="Back"/>
-			<bind source="key" modifier="Ctrl" code="F1"/>
+			<bind source="Key" code="Grave"/>
+			<bind source="Gamepad" code="Back"/>
+			<bind source="Key" modifier="Ctrl" code="F1"/>
 		</action>
 		<!-- 디버그 HUD(DebugHUD) 마스터 단축키 — 게임의 F1~F12 와 겹치지 않게 Ctrl 조합, 콘솔(Ctrl+F1) · 리로드(Ctrl+F6~F8) · 에디터 버그 리포트(Ctrl+Shift+F12)와도 다르다 -->
 		<action name="DebugHUDToggle" trigger="Pressed">
-			<bind source="key" modifier="Ctrl" code="F3"/>
+			<bind source="Key" modifier="Ctrl" code="F3"/>
 		</action>
 	</layer>
 	<layer name="DevConsole" enabled="0" blockLower="0">
 		<action name="DevConsoleClose" trigger="Pressed">
-			<bind source="key" code="Escape"/>
-			<bind source="gamepad" code="B"/>
+			<bind source="Key" code="Escape"/>
+			<bind source="Gamepad" code="B"/>
 		</action>
 		<action name="DevConsoleSubmit" trigger="Pressed">
-			<bind source="key" code="Enter"/>
-			<bind source="key" code="NumpadEnter"/>
-			<bind source="gamepad" code="A"/>
+			<bind source="Key" code="Enter"/>
+			<bind source="Key" code="NumpadEnter"/>
+			<bind source="Gamepad" code="A"/>
 		</action>
 		<action name="DevConsoleComplete" trigger="Pressed">
-			<bind source="key" code="Tab"/>
+			<bind source="Key" code="Tab"/>
 		</action>
 		<action name="DevConsoleHistoryBack" trigger="Repeat">
-			<bind source="key" code="Up"/>
-			<bind source="gamepad" code="DPadUp"/>
+			<bind source="Key" code="Up"/>
+			<bind source="Gamepad" code="DPadUp"/>
 		</action>
 		<action name="DevConsoleHistoryForward" trigger="Repeat">
-			<bind source="key" code="Down"/>
-			<bind source="gamepad" code="DPadDown"/>
+			<bind source="Key" code="Down"/>
+			<bind source="Gamepad" code="DPadDown"/>
 		</action>
 		<action name="DevConsoleDeleteBackward" trigger="Repeat">
-			<bind source="key" code="Backspace"/>
+			<bind source="Key" code="Backspace"/>
 		</action>
 	</layer>
 </InputMap>

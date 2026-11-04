@@ -20,49 +20,49 @@
 
 	<!-- 놓기 — 고른 도구로 커서 칸에 짓는다(길 도구는 누르는 동안 끌어 잇는다). -->
 	<action name="Nile.Place" layer="Gameplay" trigger="Pressed">
-		<bind source="mouse" code="Left"/>
+		<bind source="Mouse" code="Left"/>
 	</action>
 
 	<!-- 헐기 — 커서 칸의 건물 · 길. -->
 	<action name="Nile.Demolish" layer="Gameplay" trigger="Pressed">
-		<bind source="mouse" code="Right"/>
+		<bind source="Mouse" code="Right"/>
 	</action>
 
 	<action name="Nile.NextTool" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="E"/>
-		<bind source="key" code="Tab"/>
+		<bind source="Key" code="E"/>
+		<bind source="Key" code="Tab"/>
 	</action>
 
 	<action name="Nile.PrevTool" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Q"/>
+		<bind source="Key" code="Q"/>
 	</action>
 
 	<action name="Nile.RoadTool" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="R"/>
+		<bind source="Key" code="R"/>
 	</action>
 
 	<action name="Nile.Pause" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Space"/>
+		<bind source="Key" code="Space"/>
 	</action>
 
 	<action name="Nile.Slower" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Minus"/>
+		<bind source="Key" code="Minus"/>
 	</action>
 
 	<action name="Nile.Faster" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Equal"/>
+		<bind source="Key" code="Equal"/>
 	</action>
 
 	<action name="Nile.ToggleAutoPlan" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="P"/>
+		<bind source="Key" code="P"/>
 	</action>
 
 	<action name="Nile.Status" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="F1"/>
+		<bind source="Key" code="F1"/>
 	</action>
 	<!-- 확대 — 휠(굴린 칸만큼), 패드 D 패드 위 · 아래(누름 · 반복마다 한 칸). 기반 카메라의 _zoomAction 이 읽는다. -->
 	<action name="Camera.Zoom" layer="Gameplay">
 		<mouseWheel scale="1"/>
-		<axis1d source="gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
+		<axis1d source="Gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
 	</action>
 </InputMap>

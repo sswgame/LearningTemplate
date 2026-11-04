@@ -14,14 +14,14 @@
 	</action>
 
 	<action name="West.Interact" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="E"/>
+		<bind source="Key" code="E"/>
 	</action>
 
 	<action name="West.Gallop" layer="Gameplay" trigger="Down">
-		<bind source="key" code="LeftShift"/>
+		<bind source="Key" code="LeftShift"/>
 	</action>
 
 	<action name="West.Whistle" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="F"/>
+		<bind source="Key" code="F"/>
 	</action>
 </InputMap>

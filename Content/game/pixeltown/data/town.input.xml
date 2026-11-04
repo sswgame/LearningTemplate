@@ -14,7 +14,7 @@
 	</action>
 
 	<action name="Town.Interact" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Space"/>
-		<bind source="key" code="E"/>
+		<bind source="Key" code="Space"/>
+		<bind source="Key" code="E"/>
 	</action>
 </InputMap>

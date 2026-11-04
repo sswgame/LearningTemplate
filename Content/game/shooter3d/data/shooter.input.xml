@@ -20,49 +20,49 @@
 		<stick stick="Right" deadzone="0.15" scaleX="700" scaleY="-700" scaleByDelta="true"/>
 	</action>
 	<action name="ToggleMouseLock" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Escape"/>
+		<bind source="Key" code="Escape"/>
 	</action>
 	<action name="Fire" layer="Gameplay" trigger="Pressed">
-		<bind source="mouse" code="Left"/>
-		<bind source="gamepad" code="RightShoulder"/>
+		<bind source="Mouse" code="Left"/>
+		<bind source="Gamepad" code="RightShoulder"/>
 	</action>
 	<action name="Jump" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Space"/>
-		<bind source="gamepad" code="A"/>
+		<bind source="Key" code="Space"/>
+		<bind source="Gamepad" code="A"/>
 	</action>
 	<action name="Sprint" layer="Gameplay" trigger="Down">
-		<bind source="key" code="LeftShift"/>
-		<bind source="gamepad" code="LeftThumb"/>
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Gamepad" code="LeftThumb"/>
 	</action>
 	<action name="Reload" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="R"/>
-		<bind source="gamepad" code="X"/>
+		<bind source="Key" code="R"/>
+		<bind source="Gamepad" code="X"/>
 	</action>
 	<action name="CycleCamera" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="C"/>
-		<bind source="gamepad" code="Back"/>
+		<bind source="Key" code="C"/>
+		<bind source="Gamepad" code="Back"/>
 	</action>
 	<action name="SwitchWeapon" layer="Gameplay" trigger="Pressed">
 		<axis1d negative="Q" positive="E"/>
 	</action>
 	<action name="Weapon1" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit1"/>
+		<bind source="Key" code="Digit1"/>
 	</action>
 	<action name="Weapon2" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit2"/>
+		<bind source="Key" code="Digit2"/>
 	</action>
 	<action name="Weapon3" layer="Gameplay" trigger="Pressed">
-		<bind source="key" code="Digit3"/>
+		<bind source="Key" code="Digit3"/>
 	</action>
 	<action name="Camera.Look" layer="Gameplay">
 		<mouseDelta scale="1"/>
 	</action>
 	<action name="Camera.LookHold" layer="Gameplay" trigger="Down">
-		<bind source="mouse" code="Right"/>
+		<bind source="Mouse" code="Right"/>
 	</action>
 	<!-- 확대 — 휠(굴린 칸만큼), 패드 D 패드 위 · 아래(누름 · 반복마다 한 칸). -->
 	<action name="Camera.Zoom" layer="Gameplay">
 		<mouseWheel scale="1"/>
-		<axis1d source="gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
+		<axis1d source="Gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
 	</action>
 </InputMap>

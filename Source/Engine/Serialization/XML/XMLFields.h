@@ -8,8 +8,12 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/hashed_string.h"
+
+#include "Engine/Reflection/TypeFqn.h"
 
 #include <initializer_list>
+#include <optional>
 
 namespace sw
 {
@@ -55,5 +59,24 @@ namespace sw
             const TDef defaults{};
             writeFields( node, &def, &defaults, *TDef::StaticType() );
         }
+        /**
+         * @brief 적지 않음이 뜻을 가지는 열거 속성 @p pName 을 읽습니다(스키마 칸의 기본값으로 담지 못하는 경우 — 예: 액션의 `valueType` 은 적지 않으면 바인딩이 정한다).
+         * @details 값은 열거자 이름(리플렉션 `ENUM()`)이다. 없으면 @p outValue 를 비우고 true, 모르는 이름이면 오류를 남기고 false 입니다.
+         *          부르는 쪽은 이 속성을 `readFields` 의 손 읽기 목록에 둔다.
+         */
+        template <typename E>
+        [[nodiscard]] static bool readOptionalEnum( const XMLNode& node, const utf8* pName, std::optional<E>& outValue, string_view sourceName )
+        {
+            E value{};
+            outValue.reset();
+            bool bPresent = false;
+            if ( readOptionalEnumText( node, pName, &value, typeFqn<E>(), sourceName, bPresent ) == false )
+                return false;
+            if ( bPresent )
+                outValue = value;
+            return true;
+        }
+        /** @brief `readOptionalEnum` 의 몸통입니다(@p pValue 는 열거 값 하나의 주소). */
+        [[nodiscard]] static bool readOptionalEnumText( const XMLNode& node, const utf8* pName, void* pValue, const hashed_string& enumTypeFqn, string_view sourceName, bool& outbPresent );
     };
 } // namespace sw

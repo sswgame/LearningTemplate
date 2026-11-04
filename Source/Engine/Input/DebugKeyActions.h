@@ -14,6 +14,26 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @brief 디버그 키 재배치 파일(`debugkeys.xml`)의 `<bind>` 하나입니다. 기본 키에서 바뀐 바인딩만 적는다. `modifier` 는 손으로 읽는다(적지 않음이 뜻이다). */
+    REFLECT()
+    struct SW_API DebugKeyRebindFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _action{};
+        /** @brief 액션 안의 바인딩 번호입니다(잘못된 파일이 큰 번호를 주지 못하게 상한을 둔다). */
+        PROPERTY( Required, Min = 0, Max = 16 )
+        int32 _index{ 0 };
+        /** @brief 새 슬롯(`InputSlotUtil::toText` — `Key.F2`)입니다. */
+        PROPERTY( Required )
+        string _slot{};
+    };
+} // namespace sw
 
 namespace sw
 {
