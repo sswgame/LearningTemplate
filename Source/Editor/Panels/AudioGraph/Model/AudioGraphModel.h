@@ -84,13 +84,20 @@ namespace sw::editor
          */
         void beginCanvasFrame();
         /** @brief 이번 프레임에 데이터 위치를 캔버스에 넣을 노드면 true 입니다(새로 넣은 노드). */
-        bool isPlacingNode( uint32 nodeIndex ) const { return _placingNode == static_cast<int32>( nodeIndex ); }
+        bool isPlacingNode( uint32 nodeIndex ) const { return _placingNode >= 0 && static_cast<int32>( nodeIndex ) >= _placingNode; } ///< 새 노드는 늘 뒤에 붙는다 — 놓을 첫 번호부터 끝까지(복제는 여럿)
         /** @brief 핀 id 를 풉니다. 모르는 핀이면 false 입니다. */
         [[nodiscard]] bool tryDecodePin( int32 pinID, bool& outbInput ) const;
         /** @brief 출력 핀 @p fromPin 에서 입력 핀 @p toPin 으로 잇습니다. 규칙(소스 입력 · 겹침 · 고리)이 거절하면 false 입니다. */
         bool connectPins( int32 fromPin, int32 toPin );
         /** @brief 종류 @p type 의 노드를 캔버스 자리 @p canvasPosition 에 넣고 고릅니다. 다음 캔버스 프레임이 그 자리에 놓는다. */
         bool addNode( AudioGraphNodeType type, const float2& canvasPosition );
+        /**
+         * @brief 캔버스 노드 id @p listNodeID 의 노드를 비켜 복제합니다(Ctrl+D · 붙여 넣기 — `AudioGraphEditUtil::duplicateNodes`). 한 편집으로 남기고 마지막 사본을 고릅니다.
+         * @return 만든 노드 수입니다.
+         */
+        uint32 duplicateNodes( const vector<hashed_string>& listName, const float2& offset );
+        /** @brief 캔버스 노드 id 를 노드 이름으로 바꿉니다(복사 버퍼는 이름을 둔다 — 지우면 번호가 당겨진다). 모르는 id 는 건너뜁니다. */
+        void collectNodeNames( const vector<int32>& listNodeID, vector<hashed_string>& outListName ) const;
         /** @brief 캔버스에서 지운 링크 · 노드를 지웁니다. 번호가 밀리지 않게 큰 id 부터, 링크 먼저 지운다. 지운 노드가 있으면 고름 · 놓을 노드를 푼다. */
         void applyDeletions( vector<int32>& inoutListLinkID, vector<int32>& inoutListNodeID );
         /** @brief 캔버스의 노드 위치 @p position 을 데이터에 싣습니다(놓는 중인 노드는 건너뛴다). */

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -34,6 +35,10 @@ namespace sw::editor
     {
         struct AudioGraphPanelInternal
         {
+            /// @brief 복제가 원본에서 비켜 놓는 거리(캔버스 좌표) — 문서 그래프 패널(`EditorGraphDocumentPanel`)과 같은 값.
+            static constexpr float32 kDuplicateOffset = 40.0f;
+            /// @brief 그래프 복사 버퍼의 종류 열쇠 — 다른 그래프에는 붙지 않는다.
+            static constexpr string_view kClipboardKind = "AudioGraph";
             /** @brief 핀 타입 하나(소리 신호)만 쓴다 — 어느 출력이든 어느 입력에 이을 수 있다. */
             static constexpr uint32 kSignalPinType = 0;
             /** @brief 캔버스가 차지하는 폭의 비율입니다(나머지는 인스펙터). */
@@ -167,6 +172,56 @@ namespace sw::editor
             ed::SetNodePosition( toNodeID( nodeID ), ImVec2( node._editorPosition._x, node._editorPosition._y ) );
     }
 
+    void AudioGraphPanel::handleEditCommands()
+    {
+        // Ctrl+C · X · V · D — 문서 그래프 패널과 같은 단축키 · 복사 버퍼다. 복사 버퍼에는 노드 이름을 둔다(지우면 번호가 당겨진다).
+        vector<int32>                listNodeID;
+        float2                       pastePosition{};
+        const EditorGraphEditCommand command = _nodeGraph.queryEditCommand( listNodeID, pastePosition );
+        if ( command == EditorGraphEditCommand::None )
+            return;
+        vector<hashed_string> listName;
+        if ( command == EditorGraphEditCommand::Paste )
+        {
+            string text;
+            if ( EditorNodeGraph::readClipboard( AudioGraphPanelInternal::kClipboardKind, text ) == false )
+                return;
+            bool   bCorner = false;
+            float2 corner{};
+            for ( const string_view token : StringUtil::split( text, "," ) )
+            {
+                const int32 index = _model.getGraph().findNodeIndex( hashed_string( token ) );
+                if ( index < 0 )
+                    continue; // 복사한 뒤 지운 노드
+                const float2& position = _model.getGraph()._listNode[static_cast<size_t>( index )]._editorPosition;
+                corner                 = bCorner ? float2{ MathUtil::min( corner._x, position._x ), MathUtil::min( corner._y, position._y ) } : position;
+                bCorner                = true;
+                listName.push_back( hashed_string( token ) );
+            }
+            (void)_model.duplicateNodes( listName, pastePosition - corner ); // 노드 수 한도면 모자란 만큼 넣지 않는다
+            return;
+        }
+        _model.collectNodeNames( listNodeID, listName );
+        if ( command == EditorGraphEditCommand::Duplicate )
+        {
+            (void)_model.duplicateNodes( listName, float2{ AudioGraphPanelInternal::kDuplicateOffset, AudioGraphPanelInternal::kDuplicateOffset } );
+            return;
+        }
+        string text;
+        for ( const hashed_string& name : listName )
+        {
+            text += text.empty() ? "" : ",";
+            text += name.c_str();
+        }
+        EditorNodeGraph::storeClipboard( AudioGraphPanelInternal::kClipboardKind, std::move( text ) );
+        if ( command != EditorGraphEditCommand::Cut )
+            return;
+        for ( const int32 nodeID : listNodeID )
+        {
+            ed::DeleteNode( toNodeID( nodeID ) ); // 지우기는 applyCanvasDeletions 가 같은 프레임에 받는다
+        }
+    }
+
     void AudioGraphPanel::applyCanvasDeletions()
     {
         // 캔버스가 지운 id 를 모두 모은 뒤에 모델이 지운다(묻는 동안 그래프를 고치지 않는다). 버퍼는 멤버로 두어 프레임마다 할당하지 않는다.
@@ -242,6 +297,7 @@ namespace sw::editor
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
             (void)_model.addNode( static_cast<AudioGraphNodeType>( kindID ), canvasPosition ); // 노드 수 한도면 넣지 않는다
 
+        handleEditCommands();
         applyCanvasDeletions();
 
         // 끌어서 옮긴 노드의 위치를 데이터에 싣는다(맞추기 프레임은 데이터를 캔버스에 넣는 쪽이라 건너뛴다).

@@ -124,6 +124,28 @@ namespace sw::editor
         return true;
     }
 
+    uint32 AudioGraphModel::duplicateNodes( const vector<hashed_string>& listName, const float2& offset )
+    {
+        const vector<hashed_string> listNew = AudioGraphEditUtil::duplicateNodes( _editGraph, listName, offset );
+        if ( listNew.empty() )
+            return 0;
+        _selectedNode      = _editGraph.findNodeIndex( listNew.back() );
+        _pendingPlacedNode = _editGraph.findNodeIndex( listNew.front() ); // 사본은 뒤에 붙는다 — 다음 캔버스 프레임이 첫 사본부터 데이터 자리에 놓는다
+        noteEdit( "Duplicate Audio Graph Nodes" );
+        return static_cast<uint32>( listNew.size() );
+    }
+
+    void AudioGraphModel::collectNodeNames( const vector<int32>& listNodeID, vector<hashed_string>& outListName ) const
+    {
+        outListName.clear();
+        for ( const int32 nodeID : listNodeID )
+        {
+            uint32 nodeIndex = 0;
+            if ( AudioGraphEditUtil::tryDecodeNodeID( _editGraph, nodeID, nodeIndex ) )
+                outListName.push_back( _editGraph._listNode[nodeIndex]._name );
+        }
+    }
+
     void AudioGraphModel::applyDeletions( vector<int32>& inoutListLinkID, vector<int32>& inoutListNodeID )
     {
         // 번호가 밀리지 않게 큰 id 부터 지운다(같은 노드의 입력 자리도 뒤 자리가 큰 id 다). 링크를 먼저 지운 뒤 노드를 지운다.

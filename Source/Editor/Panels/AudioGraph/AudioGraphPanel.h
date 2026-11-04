@@ -60,6 +60,8 @@ namespace sw::editor
         void drawCanvasNode( uint32 nodeIndex );
         /** @brief 캔버스에서 지운 링크 · 노드 id 를 모두 모은 뒤 모델이 지우게 합니다. */
         void applyCanvasDeletions();
+        /** @brief 캔버스 단축키 복사 · 잘라내기 · 붙여 넣기 · 복제를 모델에 반영합니다(지우기 처리보다 먼저 — 잘라내기는 지우기 요청을 낸다). */
+        void handleEditCommands();
         /** @brief 그래프 설정(출력 · 길이)과 고른 노드의 그리드, 처리 순서입니다. */
         void drawInspector();
         /** @brief 캔버스 프레임워크가 묻는 핀 정보입니다. 모르는 핀이면 false 입니다. */

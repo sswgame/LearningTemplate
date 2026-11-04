@@ -93,6 +93,41 @@ namespace sw::editor
         return true;
     }
 
+    vector<hashed_string> AudioGraphEditUtil::duplicateNodes( AudioGraphDef& inoutDef, const vector<hashed_string>& listName, const float2& offset )
+    {
+        vector<hashed_string> listSource;
+        vector<hashed_string> listNew;
+        for ( const hashed_string& name : listName )
+        {
+            const int32 sourceIndex = inoutDef.findNodeIndex( name );
+            uint32      newIndex    = 0;
+            if ( sourceIndex < 0 )
+                continue;
+            const AudioGraphNodeDesc source = inoutDef._listNode[static_cast<size_t>( sourceIndex )]; // addNode 가 목록을 늘리기 전에 값으로 둔다
+            if ( addNode( inoutDef, source._type, source._editorPosition + offset, newIndex ) == false )
+                break; // 노드 수 상한
+            AudioGraphNodeDesc& copy = inoutDef._listNode[newIndex];
+            copy._listParameter      = source._listParameter;
+            copy._clip               = source._clip;
+            listSource.push_back( name );
+            listNew.push_back( copy._name );
+        }
+        for ( size_t index = 0; index < listSource.size(); ++index )
+        {
+            const AudioGraphNodeDesc source = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listSource[index] ) )];
+            AudioGraphNodeDesc&      copy   = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listNew[index] ) )];
+            for ( const hashed_string& input : source._listInput )
+            {
+                for ( size_t mapIndex = 0; mapIndex < listSource.size(); ++mapIndex )
+                {
+                    if ( listSource[mapIndex] == input )
+                        copy._listInput.push_back( listNew[mapIndex] );
+                }
+            }
+        }
+        return listNew;
+    }
+
     bool AudioGraphEditUtil::removeNode( AudioGraphDef& inoutDef, uint32 nodeIndex )
     {
         if ( nodeIndex >= inoutDef._listNode.size() )

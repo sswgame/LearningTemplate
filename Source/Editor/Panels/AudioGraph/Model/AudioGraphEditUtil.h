@@ -54,6 +54,12 @@ namespace sw::editor
          * @return 노드 수 상한이면 false 이고 모델은 그대로입니다.
          */
         [[nodiscard]] static bool addNode( AudioGraphDef& inoutDef, AudioGraphNodeType type, const float2& canvasPosition, uint32& outNodeIndex );
+        /**
+         * @brief 노드 @p listName 을 @p offset 만큼 비켜 복제합니다(언리얼 MetaSound · 그래프의 Duplicate). 값 · 클립은 같고 이름은 종류 이름 + 새 번호다.
+         * @details 입력은 복제한 노드끼리의 것만 새 이름으로 잇는다(바깥 노드에서 오던 입력은 버린다 — 사본이 원본 신호를 몰래 더하지 않게). 노드 수 상한이면 거기서 멈춘다.
+         * @return 새 노드의 이름입니다(원본 순서).
+         */
+        static vector<hashed_string> duplicateNodes( AudioGraphDef& inoutDef, const vector<hashed_string>& listName, const float2& offset );
         /** @brief 노드를 지우고 다른 노드의 입력에서 그 이름을 뺍니다. 출력 노드였으면 출력이 비어 검사가 저장을 막습니다(고를 때까지). */
         [[nodiscard]] static bool removeNode( AudioGraphDef& inoutDef, uint32 nodeIndex );
         /** @brief 노드 이름이 @p oldName 에서 @p newName 으로 바뀌었을 때 다른 노드의 입력과 그래프 출력의 이름을 함께 바꿉니다(속성 그리드에서 이름을 고친 뒤). */
