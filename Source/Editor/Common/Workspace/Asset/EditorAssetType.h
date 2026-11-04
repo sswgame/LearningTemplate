@@ -104,6 +104,18 @@ namespace sw::editor
     };
 
     /**
+     * @enum AssetReferenceUse
+     * @brief 한 종류가 자기 글에 적힌 다른 에셋을 쓰는 방법입니다. 그 대상이 바뀌었을 때 이 종류도 다시 읽어야 하는지(연쇄 리로드, `AssetReloadCascade`)를 정한다.
+     * @details 언리얼은 부모 머티리얼이 바뀌면 인스턴스를 다시 펼치고(에셋 레지스트리의 참조자), 유니티는 의존 에셋을 다시 임포트한다. Godot 은 리소스 핸들이라 대상만 다시 읽는다 —
+     *          여기서는 그 둘을 종류마다 고른다.
+     */
+    enum class AssetReferenceUse : uint8
+    {
+        ResolvedAtUse, ///< 경로로 들고 쓸 때 캐시에서 푼다(메시 → 머티리얼, 스프라이트 → 텍스처, 프리팹 중첩은 스폰 때). 대상의 캐시 리로드로 따라가므로 연쇄하지 않는다
+        InlinedAtLoad, ///< 로드할 때 대상의 글을 펼쳐 넣는다(머티리얼 `parent=`). 대상이 바뀌면 이 에셋도 다시 읽는다
+    };
+
+    /**
      * @struct AssetReloadRoute
      * @brief 핫 리로드가 변경된 파일 하나를 처리하는 방법입니다(`EditorAssetTypeRegistry::findReloadRoute`).
      */
@@ -115,9 +127,10 @@ namespace sw::editor
          */
         static constexpr const utf8* kAnyCacheHoldingPath = "";
 
-        const utf8*             _pCacheKindName{ nullptr };                 ///< 다시 읽을 엔진 캐시(`AssetCacheBase::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
-        AssetSourceImporterFunc _pfnImportSource{ nullptr };                ///< 캐시가 다시 읽기 전에 실행하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
-        AssetImportThread       _importThread{ AssetImportThread::Editor }; ///< 임포터가 도는 스레드. 임포터가 있을 때만 뜻이 있다
+        const utf8*             _pCacheKindName{ nullptr };                        ///< 다시 읽을 엔진 캐시(`AssetCacheBase::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
+        AssetSourceImporterFunc _pfnImportSource{ nullptr };                       ///< 캐시가 다시 읽기 전에 실행하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
+        AssetImportThread       _importThread{ AssetImportThread::Editor };        ///< 임포터가 도는 스레드. 임포터가 있을 때만 뜻이 있다
+        AssetReferenceUse       _referenceUse{ AssetReferenceUse::ResolvedAtUse }; ///< 참조 대상이 바뀌었을 때 이 종류도 다시 읽는지(`AssetReloadCascade`). 캐시가 있는 종류에서만 뜻이 있다
     };
 } // namespace sw::editor
 

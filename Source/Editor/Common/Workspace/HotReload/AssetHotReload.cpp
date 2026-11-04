@@ -14,6 +14,8 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetReferenceTracker.h"
+#include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
@@ -57,6 +59,14 @@ namespace sw::editor
             {
                 const AssetHotReload* pHotReload = findHotReload();
                 outValue                         = pHotReload != nullptr && pHotReload->isImportBusy() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 감시 값 `Editor.AssetCascadeReloadCount` — 연쇄로 다시 읽은 에셋의 누적 수입니다(부모를 고친 뒤 자식이 다시 읽혔는지 시나리오가 기다린다). */
+            [[nodiscard]] static bool readCascadeReloadCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AssetHotReload* pHotReload = findHotReload();
+                outValue                         = pHotReload != nullptr ? static_cast<float64>( pHotReload->getCascadeReloadCount() ) : 0.0;
                 return true;
             }
 
@@ -141,6 +151,9 @@ namespace sw::editor
 
     AssetHotReload::AssetHotReload()
         : _pFileWatchDispatcher{ nullptr }
+        , _pReferenceTracker{ make_unique<AssetReferenceTracker>() }
+        , _mapAppliedStamp{}
+        , _cascadeReloadCount{ 0 }
         , _pImportJob{ make_unique<EditorAssetImportJob>() }
         , _listQueuedImport{}
         , _listRunningImport{}
@@ -232,6 +245,33 @@ namespace sw::editor
         if ( _pFileWatchDispatcher != nullptr )
             _pFileWatchDispatcher->update();
         pumpImportJob();
+        // 감시 사건이 올린 변경 번호를 같은 프레임에 색인에 반영한다(바뀐 파일만 다시 읽거나 전체 스캔).
+        _pReferenceTracker->update( _contentChangeSerial, *this );
+    }
+
+    const EditorReferenceIndex& AssetHotReload::getReferenceIndex() const
+    {
+        return _pReferenceTracker->getIndex();
+    }
+
+    bool AssetHotReload::isReferenceIndexCurrent() const
+    {
+        return _pReferenceTracker->isCurrent( _contentChangeSerial );
+    }
+
+    EditorReferenceIndex* AssetHotReload::findCurrentReferenceIndex()
+    {
+        return _pReferenceTracker->findCurrentIndex( _contentChangeSerial );
+    }
+
+    void AssetHotReload::restartPendingReferenceScan()
+    {
+        _pReferenceTracker->restartPendingScan( _contentChangeSerial, *this );
+    }
+
+    bool AssetHotReload::isReferenceScanPending() const
+    {
+        return _pReferenceTracker->isScanPending();
     }
 
     void AssetHotReload::onResourceTreeChanged( const FileChangeEvent& changeEvent )
@@ -368,9 +408,93 @@ namespace sw::editor
 
     void AssetHotReload::handleChangedFile( const string& relativePath )
     {
+        if ( isAlreadyApplied( relativePath ) )
+            return; // 에디터가 저장하며 이미 반영했다(`applySavedAsset`) — 같은 저장의 늦은 사건이다
+        applyChangedFile( relativePath );
+    }
+
+    void AssetHotReload::applyChangedFile( const string& relativePath )
+    {
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
         if ( reloadChangedAsset( AssetHotReloadInternal::toAssetID( relativePath ) ) == ReloadOutcome::Failed )
             SW_LOG_WARNING_ID( "AssetHotReload.HotReloadSkippedRunning", "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );
+        reloadDependents( relativePath );
+    }
+
+    void AssetHotReload::applySavedAsset( string_view assetID )
+    {
+        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
+        string                            relativePath{};
+        if ( diskPath.has_value() == false || FileUtil::makeRelativePath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath->str(), relativePath ) == false )
+        {
+            SW_LOG_ERROR_ID( "AssetHotReload.SavedAssetOutsideContent", "Saved asset '%#' is not under the content root - it is not reloaded until the file watch reports it", assetID );
+            return;
+        }
+        FileStamp stamp{};
+        if ( FileUtil::getFileStamp( diskPath->str(), stamp ) )
+            _mapAppliedStamp[FileUtil::normalizePath( relativePath )] = stamp;
+        applyChangedFile( relativePath );
+    }
+
+    bool AssetHotReload::isAlreadyApplied( const string& relativePath )
+    {
+        const auto itApplied = _mapAppliedStamp.find( FileUtil::normalizePath( relativePath ) );
+        if ( itApplied == _mapAppliedStamp.end() )
+            return false;
+        FileStamp  stamp{};
+        const bool bSame = FileUtil::getFileStamp( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ), stamp ) && stamp == itApplied->second;
+        if ( bSame == false )
+            _mapAppliedStamp.erase( itApplied ); // 그 뒤에 바깥에서 또 바뀌었다 — 반영한다
+        return bSame;
+    }
+
+    void AssetHotReload::reloadDependents( const string& relativePath )
+    {
+        const string assetID = FileUtil::normalizePath( relativePath );
+        // 바뀐 파일의 참조를 먼저 맞춘다 — 저장이 부모를 바꿨으면 새 부모로 사슬을 따른다(감시가 올린 번호의 증분 갱신은 다음 `update` 라 늦다).
+        _pReferenceTracker->refreshFile( assetID );
+        const EditorReferenceIndex& index = _pReferenceTracker->getIndex();
+        if ( index.isReady() == false )
+        {
+            SW_LOG_INFO_ID( "AssetHotReload.CascadeIndexNotReady", "Reference index is still scanning - assets that inline %# are not reloaded for this change", assetID.c_str() );
+            return;
+        }
+        vector<string> listDependent;
+        if ( AssetReloadCascade::planDependents( index, assetID, &AssetHotReload::inlinesReferences, listDependent ) == false )
+            return; // 순환 — 계획이 오류를 남겼다
+        for ( const string& dependentID : listDependent )
+        {
+            const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( dependentID );
+            const AssetID          dependentAssetID{ dependentID };
+            if ( isHeldInCaches( route, dependentAssetID ) == false )
+                continue; // 로드되지 않았다 — 다음에 읽는 쪽이 새 내용으로 펼친다
+            SW_LOG_INFO_ID( "AssetHotReload.CascadeReload", "Cascade reload: %# (inlines %#)", dependentID.c_str(), assetID.c_str() );
+            if ( reloadCaches( route, dependentAssetID ) == ReloadOutcome::Reloaded )
+                ++_cascadeReloadCount;
+        }
+    }
+
+    bool AssetHotReload::inlinesReferences( string_view assetID )
+    {
+        return EditorAssetTypeRegistry::findReloadRoute( assetID )._referenceUse == AssetReferenceUse::InlinedAtLoad;
+    }
+
+    bool AssetHotReload::isHeldInCaches( const AssetReloadRoute& route, const AssetID& assetID )
+    {
+        AssetManager* pResources = findSubsystem<AssetManager>();
+        if ( route._pCacheKindName == nullptr || pResources == nullptr )
+            return false;
+        if ( route._pCacheKindName[0] != '\0' )
+        {
+            const AssetCacheBase* pCache = pResources->findAssetCache( route._pCacheKindName );
+            return pCache != nullptr && pCache->isCached( assetID.view() );
+        }
+        for ( AssetCacheBase* pCache : pResources->getAllAssetCache() )
+        {
+            if ( pResources->findReloadFunction( pCache ) != nullptr && pCache->isCached( assetID.view() ) )
+                return true;
+        }
+        return false;
     }
 
     void AssetHotReload::requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport )
@@ -583,4 +707,7 @@ namespace sw::editor
                               &AssetHotReloadInternal::readImportBusy );
     SW_AUTOMATION_WALL_WATCH( editorAssetImportFinishedCount, "Editor.AssetImportFinishedCount", "Changed sources whose import finished (success or failure) in this editor session",
                               &AssetHotReloadInternal::readImportFinishedCount );
+    // 연쇄 리로드는 파일 감시가 부모 저장을 알린 뒤에 돈다 — 감시는 바깥 일(OS 파일 감시)이라 벽시계로 기다린다(`SW_AUTOMATION_WALL_WATCH`).
+    SW_AUTOMATION_WALL_WATCH( editorAssetCascadeReloadCount, "Editor.AssetCascadeReloadCount", "Assets reloaded because an asset they inline at load (material parent) changed",
+                              &AssetHotReloadInternal::readCascadeReloadCount );
 } // namespace sw::editor

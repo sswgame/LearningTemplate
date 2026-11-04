@@ -8,10 +8,8 @@
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -61,8 +59,7 @@ namespace sw::editor
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;
         }
-        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ path } );
-        applyLivePreview( path );
+        applyLivePreview( path ); // 캐시 리로드와 자식 머티리얼의 연쇄는 저장 뒤 `EditorDocumentPanel::onDocumentSaved` 가 한다
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         return true;
     }

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
+#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -334,5 +334,39 @@ namespace sw::editor
         VectorUtil::sort( inoutListReference, &EditorReferenceIndexInternal::lessByTarget );
         inoutListReference.erase( std::unique( inoutListReference.begin(), inoutListReference.end(), &EditorReferenceIndexInternal::isSameReference ),
                                   inoutListReference.end() );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    // ======================================================================
+    // EditorReferenceIndexJob
+    // ======================================================================
+
+    void EditorReferenceIndexJob::request( string_view resourceRoot, TaskManager* pTaskManager )
+    {
+        const uint32 generation = beginRequest( string{ resourceRoot } );
+        submitEditorBackgroundJob( "EditorReferenceIndex",
+                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReferenceIndexJob::runJob ),
+                                   MakeTaskArgs( _pState, generation, pTaskManager ) );
+    }
+
+    void EditorReferenceIndexJob::runJob( const TaskArgs& args )
+    {
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
+        TaskManager* const      pTasks     = args.get<TaskManager*>( 2 );
+
+        string resourceRoot;
+        if ( readInput( pState, generation, resourceRoot ) == false )
+            return;
+
+        EditorReferenceIndexData data{};
+        const StopToken          stopToken = readStopSignal( pState );
+        EditorReferenceIndex::scan( resourceRoot, data, pTasks, stopToken );
+        if ( stopToken.isStopRequested() )
+            return; // 종료가 시작돼 스캔이 중간에 멈췄다 — 불완전한 색인을 싣지 않는다
+
+        publish( pState, generation, std::move( data ) );
     }
 } // namespace sw::editor

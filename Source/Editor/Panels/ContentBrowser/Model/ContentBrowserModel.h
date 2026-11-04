@@ -8,8 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
-#include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
@@ -208,7 +208,11 @@ namespace sw::editor
         bool                                 isReferenceIndexCurrent() const;
         const ContentBrowserReferenceSearch& getReferenceSearch() const { return _referenceSearch; }
         /** @brief 에셋의 참조(@p bDependencies 면 의존)를 찾습니다. 결과는 `getReferenceSearch` 입니다. */
-        void showReferences( string_view absolutePath, bool bDependencies ) { _referenceSearch.query( absolutePath, bDependencies ); }
+        void showReferences( string_view absolutePath, bool bDependencies );
+        /** @brief 에디터 전역의 참조 역색인입니다(`AssetHotReload::getReferenceIndex`). */
+        static const EditorReferenceIndex& getReferenceIndex();
+        /** @brief 역색인 스캔이 워커에서 진행 중이면 true 입니다. */
+        static bool isReferenceScanPending();
 
         /** @brief 항목의 버전 관리 상태 문자열입니다. 잠금이나 읽기 전용이 아니면(폴더 포함) 빈 문자열입니다. */
         static string describeSourceControlStatus( const AssetEntry& entry );
@@ -251,7 +255,7 @@ namespace sw::editor
         ContentBrowserHistory         _history;         /**< 뒤로 가기 · 앞으로 가기 이력 */
         ContentBrowserFileActions     _fileActions;     /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
         std::optional<PendingMove>    _pendingMove;     /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */
-        ContentBrowserReferenceSearch _referenceSearch; /**< 참조 역색인과 마지막 참조 찾기의 결과 */
+        ContentBrowserReferenceSearch _referenceSearch; /**< 마지막 참조 찾기의 결과(색인은 `AssetHotReload` 의 것) */
         ContentBrowserImportQueue     _importQueue;     /**< 파일 대화상자가 고른 임포트 경로. 메인 스레드가 꺼내 임포트한다 */
         ContentBrowserTypeFilter      _typeFilter;      /**< 종류 필터 목록과 고른 필터. 종류 등록이 바뀌면 다시 만든다 */
         EditorFolderListingJob        _folderJob;

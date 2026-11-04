@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 
 namespace sw
 {
@@ -98,5 +99,25 @@ namespace sw::editor
         EditorReferenceIndexData _data;
         uint8                    _bReady   : 1;
         [[maybe_unused]] uint8   _reserved : 7;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class EditorReferenceIndexJob
+     * @brief 리소스 트리의 참조 역색인(`EditorReferenceIndex::scan`)을 워커에서 만듭니다.
+     */
+    class EditorReferenceIndexJob final : public EditorBackgroundTask<string, EditorReferenceIndexData>
+    {
+    public:
+        /**
+         * @brief 워커에 @p resourceRoot 아래 스캔을 요청합니다. 이미 대기 중이면 세대를 올리고, 오래된 결과는 버립니다.
+         * @details 텍스트 에셋은 @p pTaskManager 로 병렬로 읽습니다(nullptr 이면 그 워커가 차례로). 워커는 에디터 범위를 찾지 않으므로 부른 쪽(UI 스레드)이 찾아 넘깁니다.
+         */
+        void request( string_view resourceRoot, TaskManager* pTaskManager );
+
+    private:
+        static void runJob( const TaskArgs& args );
     };
 } // namespace sw::editor

@@ -120,10 +120,8 @@ namespace sw::editor
             static constexpr const utf8* kGameDomainPrefix = "game/";
 
             /** @brief 에디터가 본 `Content/` 변경 번호입니다. 창은 에디터 컨텍스트가 있어야 도므로 컨텍스트와 핫 리로드는 필수입니다. */
-            [[nodiscard]] static uint64 getContentChangeSerial()
-            {
-                return editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().getContentChangeSerial();
-            }
+            [[nodiscard]] static AssetHotReload& getHotReload() { return editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>(); }
+            [[nodiscard]] static uint64          getContentChangeSerial() { return getHotReload().getContentChangeSerial(); }
 
             static EditorSourceControl& getSourceControl() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorSourceControl>(); }
         };
@@ -166,8 +164,6 @@ namespace sw::editor
             refreshRoots();
         processPendingImports();
         syncWithContentChanges();
-        AssetHotReload& hotReload = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>(); // 번호의 출처이기도 하다
-        _referenceSearch.update( hotReload.getContentChangeSerial(), &hotReload );
         applyPendingMove();
         if ( _bFolderDirty )
             refreshCurrentFolder();
@@ -407,7 +403,7 @@ namespace sw::editor
         _bFolderDirty     = true;
         _folderCache.clear();
         // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 그 결과를 버리고 새로 스캔한다.
-        _referenceSearch.restartPendingScan( ContentBrowserModelInternal::getContentChangeSerial() );
+        ContentBrowserModelInternal::getHotReload().restartPendingReferenceScan();
     }
 
     bool ContentBrowserModel::createNewFolder()
@@ -444,7 +440,7 @@ namespace sw::editor
 
     EditorReferenceIndex* ContentBrowserModel::findCurrentReferenceIndex()
     {
-        return _referenceSearch.findCurrentIndex( ContentBrowserModelInternal::getContentChangeSerial() );
+        return ContentBrowserModelInternal::getHotReload().findCurrentReferenceIndex();
     }
 
     void ContentBrowserModel::applyPendingMove()
@@ -534,7 +530,22 @@ namespace sw::editor
 
     bool ContentBrowserModel::isReferenceIndexCurrent() const
     {
-        return _referenceSearch.isCurrent( ContentBrowserModelInternal::getContentChangeSerial() );
+        return ContentBrowserModelInternal::getHotReload().isReferenceIndexCurrent();
+    }
+
+    void ContentBrowserModel::showReferences( string_view absolutePath, bool bDependencies )
+    {
+        _referenceSearch.query( getReferenceIndex(), absolutePath, bDependencies );
+    }
+
+    const EditorReferenceIndex& ContentBrowserModel::getReferenceIndex()
+    {
+        return ContentBrowserModelInternal::getHotReload().getReferenceIndex();
+    }
+
+    bool ContentBrowserModel::isReferenceScanPending()
+    {
+        return ContentBrowserModelInternal::getHotReload().isReferenceScanPending();
     }
 
     string ContentBrowserModel::describeSourceControlStatus( const AssetEntry& entry )

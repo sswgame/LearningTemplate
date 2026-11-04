@@ -38,6 +38,7 @@ namespace sw::editor
             if ( saveDocument() == false )
                 return false;
             clearDocumentDirty();
+            onDocumentSaved();
             return true;
         }
         /** @brief dirty 이면 저장합니다. 이미 깨끗하거나 저장에 실패하면 false 입니다. */
@@ -93,6 +94,11 @@ namespace sw::editor
          * @details 문서를 읽지 못한 패널(깨졌거나 새 형식)은 이전 문서의 데이터를 가지고 있다. 그대로 쓰면 읽지 못한 파일을 이전 문서로 덮어쓴다.
          */
         virtual bool canSaveDocument() const { return true; }
+        /**
+         * @brief 저장에 성공한 직후 부릅니다. 기본은 아무 일도 하지 않습니다.
+         * @details 에셋 문서 패널(`EditorDocumentPanel`)이 저장한 에셋을 감시를 기다리지 않고 핫 리로드 · 연쇄 리로드에 넘긴다(`AssetHotReload::applySavedAsset`).
+         */
+        virtual void onDocumentSaved() {}
         /** @brief 저장하지 않고 디스크나 기본값 상태로 되돌립니다. */
         virtual void revertDocument() = 0;
 

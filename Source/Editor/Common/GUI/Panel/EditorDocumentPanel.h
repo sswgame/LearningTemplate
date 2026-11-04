@@ -116,6 +116,8 @@ namespace sw::editor
          *          문서가 읽기만으로 돌아오지 않는 패널(미리보기 씬을 쓰는 프리팹 창)이 재정의한다.
          */
         void revertDocument() override { reloadDocument(); }
+        /** @brief 저장한 문서(`getLoadedAssetPath`)를 그 자리에서 캐시 · 씬 · 그것을 펼쳐 넣은 에셋에 반영합니다(`AssetHotReload::applySavedAsset`). 파일 감시의 늦은 사건을 기다리지 않는다. */
+        void onDocumentSaved() override;
         /** @brief 편집 단위로 Undo 를 남기고 dirty 로 표시합니다. */
         void notifyDocumentEdited( string_view label, string_view coalesceKey = {} );
         /** @brief 로드나 저장 직후에 Undo 기준 텍스트를 맞춥니다. */

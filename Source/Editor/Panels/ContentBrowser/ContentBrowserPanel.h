@@ -74,18 +74,18 @@ namespace sw::editor
         /** @brief 루트 목록에 그 표시 이름(`game/empty`, `engine`)을 가진 루트가 있으면 true 입니다. */
         bool hasRoot( string_view displayName ) const { return _model.hasRoot( displayName ); }
         /**
-         * @brief 참조 역색인이 에디터가 본 마지막 `Content/` 변경까지 반영했으면 true 입니다(`ContentBrowserReferenceSearch::isCurrent`).
+         * @brief 참조 역색인이 에디터가 본 마지막 `Content/` 변경까지 반영했으면 true 입니다(`AssetReferenceTracker::isCurrent`).
          * @details 자동화 감시 값(`Editor.ReferenceIndexReady` · `Editor.ReferenceCount`)과 이름 바꾸기 · 옮기기가 본다. 한 번 만든 색인이 있어도 스캔이 돌면 false 다.
          */
         bool isReferenceIndexCurrent() const { return _model.isReferenceIndexCurrent(); }
         /**
          * @brief 내용이 화면에 보이는데 참조 역색인이 아직 마지막 변경을 반영하지 않았으면 true 입니다. 자동화 시계 잡기 조건(`ContentBrowserReferenceIndex`)입니다.
-         * @details 색인은 내용을 그리는 프레임에만 따라온다(`syncReferenceIndex`). 가려진 탭 · 접힌 창 · 닫힌 패널은 색인을 갱신하지 않으므로 기다리지 않는다 —
-         *          그때 감시 값은 값을 내지 않고, 시나리오는 패널을 앞에 두고(`panel.focus content_browser`) 기다린다.
+         * @details 색인은 에디터 프레임마다 따라온다(`AssetHotReload::update`). 시계는 내용이 보일 때만 잡는다 — 가려진 탭 · 접힌 창 · 닫힌 패널이면 감시 값은 값을 내지 않고,
+         *          시나리오는 패널을 앞에 두고(`panel.focus content_browser`) 기다린다.
          */
         bool isWaitingForReferenceIndex() const;
         /** @brief 참조 역색인을 반환합니다. */
-        const EditorReferenceIndex& getReferenceIndex() const { return _model.getReferenceSearch().getIndex(); }
+        const EditorReferenceIndex& getReferenceIndex() const { return ContentBrowserModel::getReferenceIndex(); }
         /**
          * @brief 에셋의 참조를 찾아 결과 창을 엽니다.
          * @param bDependencies false 면 그 에셋을 사용하는 쪽(Find References)을, true 면 그 에셋이 사용하는 쪽(Show Dependencies)을 찾습니다.

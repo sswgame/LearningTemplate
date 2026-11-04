@@ -4,8 +4,10 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -27,7 +29,9 @@ namespace sw::editor
 {
     struct EditorAssetImportResult;
 
+    class AssetReferenceTracker;
     class EditorAssetImportJob;
+    class EditorReferenceIndex;
 
     /**
      * @class AssetHotReload
@@ -35,6 +39,8 @@ namespace sw::editor
      * @details 종류별 코드가 없다. 어느 캐시가 읽을지, 먼저 쿠킹할지는 `EditorAssetTypeRegistry::findReloadRoute` 의 테이블이 정한다.
      *          엔진 캐시는 자기 런타임 파일을 그 즉시 다시 읽을 뿐이고(로드), 소스 임포트, 감시, 씬 알림은 여기(에디터)에 있다.
      *          새 에셋 종류를 추가해도 이 파일은 고치지 않는다.
+     *          **연쇄 리로드**: 바뀐 에셋을 로드할 때 펼쳐 넣은 에셋(표의 칸 `AssetReloadRoute::_referenceUse`)이 로드돼 있으면 같은 프레임에 의존 순서로 다시 읽는다
+     *          (`AssetReloadCascade`). 누가 무엇을 쓰는지는 에디터 전역의 참조 역색인(`AssetReferenceTracker`, 이 서브시스템이 소유)이 답한다.
      */
     class AssetHotReload : public EditorSubsystem
     {
@@ -92,9 +98,28 @@ namespace sw::editor
         /** @brief 바뀐 파일의 기억을 비웁니다(전체를 다시 읽기 시작할 때 — 그 읽기가 이전 변경을 모두 담는다). */
         void discardChangedPaths();
 
+        /** @brief 에디터 전역의 참조 역색인입니다. 아직 스캔하지 않았으면 `isReady` 가 false 다. */
+        [[nodiscard]] const EditorReferenceIndex& getReferenceIndex() const;
+        /** @brief 참조 역색인이 에디터가 본 마지막 `Content/` 변경까지 반영했으면 true 입니다(`AssetReferenceTracker::isCurrent`). */
+        [[nodiscard]] bool isReferenceIndexCurrent() const;
+        /** @brief 이름 바꾸기와 옮기기가 참조를 고치며 갱신할 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 nullptr 입니다(`AssetReferenceTracker::findCurrentIndex`). */
+        [[nodiscard]] EditorReferenceIndex* findCurrentReferenceIndex();
+        /** @brief 진행 중인 역색인 스캔을 버리고 새로 스캔합니다. 에디터가 파일을 옮긴 직후 부른다(`AssetReferenceTracker::restartPendingScan`). */
+        void restartPendingReferenceScan();
+        /** @brief 역색인 스캔이 워커에서 진행 중이면 true 입니다. */
+        [[nodiscard]] bool isReferenceScanPending() const;
+
+        /**
+         * @brief 에디터가 방금 저장한 에셋 하나(리소스 id)를 파일 감시를 기다리지 않고 그 자리에서 반영합니다 — 캐시 리로드 · 씬 알림 · 연쇄 리로드. 에디터 스레드에서만 부릅니다.
+         * @details 문서 패널의 저장(`EditorDocumentPanel`)이 부른다. 저장한 파일의 도장(크기 · 쓰기 시각)을 기억해, 같은 저장이 뒤늦게 감시 사건으로 와도 두 번 읽지 않는다.
+         */
+        void applySavedAsset( string_view assetID );
+        /** @brief 연쇄로 다시 읽은 에셋의 누적 수입니다. 시나리오가 `Editor.AssetCascadeReloadCount` 로 기다린다. */
+        [[nodiscard]] uint64 getCascadeReloadCount() const { return _cascadeReloadCount; }
+
         /**
          * @brief 감시 울타리를 돌립니다 — 자동화 시나리오의 사본 폴더(`AutomationScratch::prepare`)를 새로 만들었으면, 감시 트리에 표지 파일을 쓰고 감시가 그 사건을 알릴 때까지 참을 돌려줍니다.
-         * @details 에디터 밖의 쓰기는 OS 파일 감시가 알려야 변경 번호가 오른다. 알림 전에는 낡은 색인이 "맞다" 고 보인다(`ContentBrowserReferenceSearch::isCurrent`). 표지 사건이 왔으면 그 앞의 사본 쓰기도
+         * @details 에디터 밖의 쓰기는 OS 파일 감시가 알려야 변경 번호가 오른다. 알림 전에는 낡은 색인이 "맞다" 고 보인다(`AssetReferenceTracker::isCurrent`). 표지 사건이 왔으면 그 앞의 사본 쓰기도
          *          알려졌다(같은 감시 흐름의 순서). 시나리오 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)이 매 프레임 부른다. 5 초 안에 안 오면 오류를 남기고 풀어 시나리오가 멈추지 않게 한다.
          *          표지 사건이 온 뒤에도 사본이 일으킨 원본 임포트(`isImportBusy`)가 끝날 때까지 기다린다(시한 120 초, 넘으면 오류를 남기고 푼다) — 임포트가 워커에서 돌아 사건이 와도 결과가 아직 없을 수 있다.
          * @return 아직 기다리는 중이면 true 입니다. 사본을 새로 만든 적이 없거나 감시가 꺼져 있으면 false 입니다.
@@ -166,8 +191,21 @@ namespace sw::editor
             AssetSourceImporterFunc _pfnImport{ nullptr };
         };
 
-        /** @brief 바뀐 파일의 검증을 요청하고 캐시를 다시 읽습니다(`reloadChangedAsset`). */
+        /** @brief 바뀐 파일을 반영합니다(`applyChangedFile`). 에디터가 저장하며 이미 반영한 그 내용이면(`applySavedAsset` 의 도장) 건너뛴다. */
         void handleChangedFile( const string& relativePath );
+        /** @brief 바뀐 파일의 캐시를 다시 읽고(`reloadChangedAsset`) 그것을 펼쳐 넣은 로드된 에셋을 연쇄로 다시 읽습니다(`reloadDependents`). */
+        void applyChangedFile( const string& relativePath );
+        /**
+         * @brief @p relativePath 를 역색인에서 먼저 다시 읽고, 그것을 (사슬로) 펼쳐 넣는 에셋 가운데 캐시에 로드된 것을 의존 순서로 다시 읽고 씬에 알립니다.
+         * @details 바뀐 에셋 자신이 아무 캐시에도 없어도 돈다 — 부모 머티리얼을 아무도 직접 쓰지 않아도 그것을 펼친 자식은 로드돼 있다. 순환은 계획이 오류로 멈춘다.
+         */
+        void reloadDependents( const string& relativePath );
+        /** @brief 파일이 `applySavedAsset` 이 기억한 도장 그대로이면 true 입니다. 달라졌으면 기억을 지우고 false 입니다. */
+        [[nodiscard]] bool isAlreadyApplied( const string& relativePath );
+        /** @brief 표의 칸이 "로드할 때 참조를 펼쳐 넣는다" 인 종류면 true 입니다(`AssetInlinesReferencesFunc`). */
+        [[nodiscard]] static bool inlinesReferences( string_view assetID );
+        /** @brief @p route 의 캐시(빈 이름이면 리로드 함수를 가진 아무 캐시)가 그 에셋을 지금 들고 있으면 true 입니다. */
+        [[nodiscard]] static bool isHeldInCaches( const AssetReloadRoute& route, const AssetID& assetID );
         /** @brief @p route 가 가리키는 엔진 캐시를 다시 읽고 활성 씬의 사용자에게 알립니다. 임포터는 부르지 않는다. 에디터 스레드에서만 부릅니다. */
         [[nodiscard]] static ReloadOutcome reloadCaches( const AssetReloadRoute& route, const AssetID& assetID );
 
@@ -180,26 +218,29 @@ namespace sw::editor
         /** @brief 미룬 파일을 처리합니다(임포트가 모두 끝났을 때). */
         void flushDeferredFiles();
 
-        unique_ptr<FileWatchDispatcher>  _pFileWatchDispatcher;
-        unique_ptr<EditorAssetImportJob> _pImportJob;
-        vector<ImportRequest>            _listQueuedImport;               ///< 아직 잡에 싣지 않은 원본(중복 없음)
-        vector<ImportRequest>            _listRunningImport;              ///< 지금 도는 잡의 원본
-        vector<string>                   _listDeferredFile;               ///< 임포트가 도는 동안 미룬 바뀐 파일(중복 없음)
-        unordered_set<string>            _uniqueSetQueuedImportKey;       ///< `_listQueuedImport` 의 중복 검사 키(소문자 경로). 목록과 같이 바꾼다
-        unordered_set<string>            _uniqueSetRunningImportKey;      ///< `_listRunningImport` 의 중복 검사 키
-        unordered_set<string>            _uniqueSetDeferredFile;          ///< `_listDeferredFile` 의 중복 검사 집합
-        bool                             _bImportInFlight;                ///< 잡을 시작했고 결과를 아직 안 가져왔다
-        uint64                           _finishedImportCount;            ///< 끝난 원본 임포트의 누적 수
-        int64                            _fenceImportDeadlineNanoseconds; ///< 울타리가 임포트를 기다리다 포기하는 단조 시계 시각(기다리지 않으면 0)
-        Subscription                     _resourceWatch;                  ///< 리소스 종류 감시 구독
-        Subscription                     _contentWatch;                   ///< 확장자와 무관한 감시 구독이다. 변경 번호와 바뀐 파일을 모은다
-        uint64                           _contentChangeSerial;
-        vector<string>                   _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
-        bool                             _bChangedPathsUnknown;     ///< 개별 파일을 모르는 변경이 있었다(폴더 변경 · 한도 초과 · id 변환 실패)
-        uint64                           _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratch::getPrepareCount`
-        uint64                           _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratch::getPrepareCount`
-        int64                            _fenceDeadlineNanoseconds; ///< 울타리를 포기하는 단조 시계 시각
-        bool                             _bFenceWaiting;            ///< 표지 사건을 기다리는 중이다
-        bool                             _bFenceSeen;               ///< 표지 파일의 사건이 왔다
+        unique_ptr<FileWatchDispatcher>   _pFileWatchDispatcher;
+        unique_ptr<AssetReferenceTracker> _pReferenceTracker;  ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
+        unordered_map<string, FileStamp>  _mapAppliedStamp;    ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 도장
+        uint64                            _cascadeReloadCount; ///< 연쇄로 다시 읽은 에셋의 누적 수
+        unique_ptr<EditorAssetImportJob>  _pImportJob;
+        vector<ImportRequest>             _listQueuedImport;               ///< 아직 잡에 싣지 않은 원본(중복 없음)
+        vector<ImportRequest>             _listRunningImport;              ///< 지금 도는 잡의 원본
+        vector<string>                    _listDeferredFile;               ///< 임포트가 도는 동안 미룬 바뀐 파일(중복 없음)
+        unordered_set<string>             _uniqueSetQueuedImportKey;       ///< `_listQueuedImport` 의 중복 검사 키(소문자 경로). 목록과 같이 바꾼다
+        unordered_set<string>             _uniqueSetRunningImportKey;      ///< `_listRunningImport` 의 중복 검사 키
+        unordered_set<string>             _uniqueSetDeferredFile;          ///< `_listDeferredFile` 의 중복 검사 집합
+        bool                              _bImportInFlight;                ///< 잡을 시작했고 결과를 아직 안 가져왔다
+        uint64                            _finishedImportCount;            ///< 끝난 원본 임포트의 누적 수
+        int64                             _fenceImportDeadlineNanoseconds; ///< 울타리가 임포트를 기다리다 포기하는 단조 시계 시각(기다리지 않으면 0)
+        Subscription                      _resourceWatch;                  ///< 리소스 종류 감시 구독
+        Subscription                      _contentWatch;                   ///< 확장자와 무관한 감시 구독이다. 변경 번호와 바뀐 파일을 모은다
+        uint64                            _contentChangeSerial;
+        vector<string>                    _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
+        bool                              _bChangedPathsUnknown;     ///< 개별 파일을 모르는 변경이 있었다(폴더 변경 · 한도 초과 · id 변환 실패)
+        uint64                            _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratch::getPrepareCount`
+        uint64                            _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratch::getPrepareCount`
+        int64                             _fenceDeadlineNanoseconds; ///< 울타리를 포기하는 단조 시계 시각
+        bool                              _bFenceWaiting;            ///< 표지 사건을 기다리는 중이다
+        bool                              _bFenceSeen;               ///< 표지 파일의 사건이 왔다
     };
 } // namespace sw::editor

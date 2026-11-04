@@ -16,6 +16,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -187,6 +188,13 @@ namespace sw::editor
     {
         if ( bLoadOnOpen == false )
             _bLoaded = SW_TRUE;
+    }
+
+    void EditorDocumentPanel::onDocumentSaved()
+    {
+        EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 컨텍스트 없는 패널 테스트는 감시도 없다
+        if ( _loadedAssetPath.empty() == false && pContext != nullptr )
+            pContext->getSubsystem<AssetHotReload>().applySavedAsset( _loadedAssetPath );
     }
 
     EditorDocumentPanel::~EditorDocumentPanel()

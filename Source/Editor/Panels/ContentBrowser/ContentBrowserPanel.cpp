@@ -501,7 +501,7 @@ namespace sw::editor
             return;
 
         const string&               pendingDeleteAbs = _model.getPendingDeletePath();
-        const EditorReferenceIndex& referenceIndex   = _model.getReferenceSearch().getIndex();
+        const EditorReferenceIndex& referenceIndex   = ContentBrowserModel::getReferenceIndex();
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveToRecycleBin", TextArgumentList().addText( "file", FileUtil::getFileNamePart( pendingDeleteAbs ) ) ).c_str() );
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
@@ -641,7 +641,7 @@ namespace sw::editor
         ImGui::TextUnformatted( bDependencies ? "Dependencies of" : "References to" );
         ImGui::SameLine();
         ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferenceQueryText ), "%s", referenceSearch.getQueryID().c_str() );
-        if ( referenceSearch.getIndex().isReady() == false )
+        if ( ContentBrowserModel::getReferenceIndex().isReady() == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorContentBrowser", "IndexingReferences" ) );
             ImGui::EndPopup();
@@ -964,8 +964,7 @@ namespace sw::editor
         EditorChrome::endSection();
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, SW_LOCKEY( "EdWidget", "Items" ) );
-        const ContentBrowserReferenceSearch& referenceSearch = _model.getReferenceSearch();
-        if ( referenceSearch.isScanPending() && referenceSearch.getIndex().isReady() == false )
+        if ( ContentBrowserModel::isReferenceScanPending() && ContentBrowserModel::getReferenceIndex().isReady() == false )
         {
             ImGui::SameLine();
             ImGui::TextDisabled( "|  Indexing references..." );
