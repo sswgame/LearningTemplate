@@ -25,7 +25,7 @@
 	<WaitUntil watch="Editor.ContentGameRootCount" equals="1" timeoutFrames="60"/>
 	<!-- 역색인은 워커가 Resource/ 를 훑어 만든다 -->
 	<EditorWaitSettled/>
-	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1"/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<!-- 폴더로 가서 검색으로 그 메시만 남긴다(도킹 칸이 낮아 타일 한 줄만 보인다) -->
 	<EditorWaitSettled/>
 	<DevCommand line="content.open game/empty/models"/>

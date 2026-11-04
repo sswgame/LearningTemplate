@@ -6,9 +6,9 @@
 -->
 <Scenario name="engine.sceneready" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Wait frames="1"/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<Wait frames="1"/>
-	<WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="RenderView.HiddenCount" equals="0"/>
 	<ExpectLog id="App.QuitRequested" count="0"/>

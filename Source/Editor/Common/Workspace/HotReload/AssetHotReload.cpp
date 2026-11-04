@@ -579,8 +579,8 @@ namespace sw::editor
     SW_AUTOMATION_START_BLOCKER( contentWatchFence, "ContentWatchFence", &AssetHotReloadInternal::isFenceBlocking );
 
     // 원본 임포트는 워커에서 돈다 — 시나리오가 원본을 쓴 뒤 결과를 읽으려면 임포트가 끝난 것을 알아야 한다. `Busy` 는 0 이 될 때까지, `FinishedCount` 는 시작 값보다 커질 때까지 기다린다.
-    SW_AUTOMATION_WATCH( editorAssetImportBusy, "Editor.AssetImportBusy", "1 while a changed source (model, texture, heightfield) is being imported or waits for the import",
-                         &AssetHotReloadInternal::readImportBusy );
-    SW_AUTOMATION_WATCH( editorAssetImportFinishedCount, "Editor.AssetImportFinishedCount", "Changed sources whose import finished (success or failure) in this editor session",
-                         &AssetHotReloadInternal::readImportFinishedCount );
+    SW_AUTOMATION_WALL_WATCH( editorAssetImportBusy, "Editor.AssetImportBusy", "1 while a changed source (model, texture, heightfield) is being imported or waits for the import",
+                              &AssetHotReloadInternal::readImportBusy );
+    SW_AUTOMATION_WALL_WATCH( editorAssetImportFinishedCount, "Editor.AssetImportFinishedCount", "Changed sources whose import finished (success or failure) in this editor session",
+                              &AssetHotReloadInternal::readImportFinishedCount );
 } // namespace sw::editor

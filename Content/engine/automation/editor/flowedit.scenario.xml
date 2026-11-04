@@ -15,7 +15,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
 	<!-- ① 배치 — 콘텐츠 브라우저에서 메시를 찾아 씬 뷰로 끌어 놓는다 -->
@@ -105,13 +105,13 @@
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<EditorExpectObject name="PlacedCrate" count="0"/>
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open {out}/flowedit.scene.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<EditorExpectObject name="PlacedCrate" component="MeshComponent"/>
 	<Expect watch="Editor.SceneHash" sameAs="saved"/>

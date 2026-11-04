@@ -308,9 +308,9 @@ namespace sw::editor
     SW_EDITOR_PANEL( ContentBrowserPanel, ContentBrowserPanel::kPanelID, EditorPanelCategory::Core, 600 );
     SW_AUTOMATION_WATCH( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
                          &ContentBrowserPanelInternal::readGameRootCount );
-    SW_AUTOMATION_WATCH( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
-                         "1 when the Content Browser reference index reflects the last Content/ change the editor saw (built, no scan in flight)",
-                         &ContentBrowserPanelInternal::readReferenceIndexReady );
+    SW_AUTOMATION_WALL_WATCH( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
+                              "1 when the Content Browser reference index reflects the last Content/ change the editor saw (built, no scan in flight)",
+                              &ContentBrowserPanelInternal::readReferenceIndexReady );
     SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::isWaitingForReferenceIndex );
     SW_AUTOMATION_WATCH( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
                          &ContentBrowserPanelInternal::readReferenceResultCount );

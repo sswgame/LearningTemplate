@@ -84,8 +84,8 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_AUTOMATION_WATCH( editorRenderTargetSnapshotReady, "Editor.RenderTargetSnapshotReady", "1 when the Render Targets panel holds a CPU snapshot of the picked target",
-                         &readRenderTargetSnapshotReady );
+    SW_AUTOMATION_WALL_WATCH( editorRenderTargetSnapshotReady, "Editor.RenderTargetSnapshotReady", "1 when the Render Targets panel holds a CPU snapshot of the picked target",
+                              &readRenderTargetSnapshotReady );
     SW_AUTOMATION_WATCH( editorRenderTargetSelectedDepth, "Editor.RenderTargetSelectedDepth", "1 when the Render Targets panel shows a depth attachment",
                          &readRenderTargetSelectedDepth );
     SW_AUTOMATION_WATCH( editorRenderTargetChannel, "Editor.RenderTargetChannel", "Channel the Render Targets panel shows: 0 RGBA, 1 R, 2 G, 3 B, 4 A",

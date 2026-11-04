@@ -91,8 +91,8 @@ namespace sw
 
     SW_DEV_COMMAND( ReloadModule, "module.reload", "module.reload <module>", "Queue a hot reload of a loaded module and the modules that depend on it (e.g. SWGame)",
                     &ModuleReloadDriverInternal::runReloadModule );
-    SW_AUTOMATION_WATCH( moduleReloadCount, "Module.ReloadCount", "Hot reload cascades that finished successfully since the process started",
-                         &ModuleReloadDriverInternal::readReloadCount );
+    SW_AUTOMATION_WALL_WATCH( moduleReloadCount, "Module.ReloadCount", "Hot reload cascades that finished successfully since the process started",
+                              &ModuleReloadDriverInternal::readReloadCount );
     SW_AUTOMATION_WALL_WATCH( moduleReloadPending, "Module.ReloadPending", "1 while a reload queued by module.reload has not finished (0 once it finished, or the graph broke)",
                               &ModuleReloadDriverInternal::readReloadPending );
     SW_AUTOMATION_CLOCK_HOLDER( moduleReloadPending, "ModuleReload", &ModuleReloadDriverInternal::isReloadPending );

@@ -7,7 +7,7 @@
   실행: App -EnableEditor -scenario=game/harvestvalley/automation/editor/scheduleeditor.scenario.xml -unattended (SW_ACTIVE_GAME=HarvestValley)
 -->
 <Scenario name="game.harvestvalley.scheduleeditor" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_farmAutoPlay" value="0"/>

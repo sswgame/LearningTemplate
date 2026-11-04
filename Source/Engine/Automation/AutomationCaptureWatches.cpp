@@ -19,6 +19,6 @@ namespace sw
         }
     } // namespace
 
-    SW_AUTOMATION_WATCH( assetsPending, "Assets.Pending", "Meshes still loading, waiting for animation or dithering in, plus textures still loading or uploading and batches waiting for their material PSO (0 = settled)",
-                         &readAssetsPending );
+    SW_AUTOMATION_WALL_WATCH( assetsPending, "Assets.Pending", "Meshes still loading, waiting for animation or dithering in, plus textures still loading or uploading and batches waiting for their material PSO (0 = settled)",
+                              &readAssetsPending );
 } // namespace sw

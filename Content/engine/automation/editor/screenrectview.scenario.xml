@@ -23,7 +23,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open engine/automation/editor/screenrectview/screenrectview_nopip.scene.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="300"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
 	<Screenshot file="screenrectview_nopip.ppm"/>

@@ -19,7 +19,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open game/empty/maps/envshowcase.scene.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus scene_view"/>
 	<EditorWaitSettled/>

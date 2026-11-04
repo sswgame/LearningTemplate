@@ -78,7 +78,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_WATCH( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &readSceneObjectCount );
-    SW_AUTOMATION_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning );
+    SW_AUTOMATION_WALL_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning );
     SW_AUTOMATION_WATCH( sceneTransformHash, "Scene.TransformHash", "Order-independent hash of every object's name and world position (1 mm) - equal across backends",
                          &readSceneTransformHash );
 } // namespace sw

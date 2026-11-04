@@ -16,7 +16,7 @@
 <Scenario name="editor.previewswap" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>

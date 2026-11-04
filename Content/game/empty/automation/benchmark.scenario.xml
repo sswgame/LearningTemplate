@@ -7,8 +7,8 @@
 -->
 <Scenario name="game.empty.benchmark" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="600"/>
-	<WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<BeginFrameStats/>
 	<Wait frames="120"/>
 	<EndFrameStats file="bench.json"/>

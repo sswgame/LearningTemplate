@@ -18,7 +18,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open game/empty/maps/envshowcase.scene.xml"/>
 	<EditorWaitSettled/>
-	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<!-- 배치를 안정시키는 첫 교체 -->
 	<EditorWaitSettled/>
 	<SwapBackend backend="other"/>

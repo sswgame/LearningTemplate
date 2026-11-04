@@ -388,8 +388,8 @@ namespace sw::editor
                                &readUndoState, false, false );
     SW_AUTOMATION_QUERY_WATCH( editorStateHash, "Editor.StateHash", "Hash of the edited scene content, the selection, the undo stack and the unsaved flag",
                                &readEditorStateHash, false, false );
-    SW_AUTOMATION_WATCH( editorLoadingScreenShown, "Editor.LoadingScreenShown", "1 while the runtime UI shows its loading screen",
-                         &readLoadingScreenShown );
+    SW_AUTOMATION_WALL_WATCH( editorLoadingScreenShown, "Editor.LoadingScreenShown", "1 while the runtime UI shows its loading screen",
+                              &readLoadingScreenShown );
     SW_AUTOMATION_WATCH( editorObjectActive, "Editor.ObjectActive", "Own active bit of the object named by gv_editorWatchObject", &readObjectActive );
     SW_AUTOMATION_WATCH( editorObjectHiddenInEditor, "Editor.ObjectHiddenInEditor", "1 when the object named by gv_editorWatchObject is hidden in the editor only",
                          &readObjectHiddenInEditor );
