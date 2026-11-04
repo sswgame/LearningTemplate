@@ -4,6 +4,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CallStackCapture.h"
+#include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
@@ -82,6 +83,7 @@ namespace sw
 
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
             {
+                noteCrashReportProgress(); // 크래시 보고의 시한은 진척 없는 시간이다 — 기호 파일을 처음 읽는 프레임이 길어도 끊기지 않게
                 DWORD64 address = reinterpret_cast<DWORD64>( ppFrame[frameIndex] );
                 if ( address == 0 )
                     continue;

@@ -3,6 +3,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Diagnostics/CallStackCapture.h"
+#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -58,6 +59,7 @@ namespace sw
             utf8** ppSymbol = backtrace_symbols( ppFrame, frameCount );
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
             {
+                noteCrashReportProgress(); // 크래시 보고의 시한은 진척 없는 시간이다 — 느린 프레임이 있어도 끊기지 않게
                 string symbolName = ( ppSymbol != nullptr ) ? ppSymbol[frameIndex] : "??";
 
                 // dladdr 로 더 정확한 심볼 정보를 얻어 본다

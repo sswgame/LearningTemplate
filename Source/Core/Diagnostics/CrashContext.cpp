@@ -29,9 +29,11 @@ namespace sw
         /// @brief 덤프 · 리포트를 쓸 폴더입니다. 부팅 때 한 번 정하고 크래시 경로에서는 읽기만 합니다.
         fixed_string<constant::buffer::kMax1024> s_reportFolder{};
 
-        /// @brief 크래시 보고에 줄 시한(초)입니다(`CrashHandler::setReportDeadline`).
+        /// @brief 크래시 보고가 진척 없이 버틸 수 있는 시간(초)입니다(`CrashHandler::setReportDeadline`).
         constexpr uint32 kDefaultReportDeadlineSeconds = 20;
         atomic<uint32>   s_reportDeadlineSeconds{ kDefaultReportDeadlineSeconds };
+        /// @brief 보고의 진척 수입니다(`noteCrashReportProgress`). 기다리는 쪽이 시한마다 바뀌었는지 본다.
+        atomic<uint32> s_reportProgress{ 0 };
 
         /// @brief 문맥 파일 끝에 글을 붙일 함수와 그 인자입니다(`bindCrashExtraTextWriter`). 크래시 경로는 읽기만 한다.
         atomic<CrashExtraTextWriter> s_pExtraTextWriter{ nullptr };
@@ -251,6 +253,16 @@ namespace sw
         return s_reportDeadlineSeconds.load();
     }
 
+    void noteCrashReportProgress()
+    {
+        s_reportProgress.fetch_add( 1 );
+    }
+
+    uint32 getCrashReportProgress()
+    {
+        return s_reportProgress.load();
+    }
+
     void makeCrashReportPath( utf8* pOutPath, uint32 outSize, const utf8* pExtension )
     {
         if ( pOutPath == nullptr || outSize == 0 )
@@ -296,6 +308,7 @@ namespace sw
         }
 
         (void)FileUtil::writeCrashFile( arrPath, arrReport, length ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
+        noteCrashReportProgress();
         // 빵부스러기도 할당 없는 단계에서 쓴다 — 컨텍스트 파일과 같은 단계(심볼 변환 · 스택 보고보다 먼저).
         writeCrashBreadcrumbFile();
     }
@@ -331,6 +344,7 @@ namespace sw
         // 실제 폴트 지점이 [0] 에 온다.
         DeepCallStack stack{};
         CallStackCapture::captureFromContext( stack, pPlatformContext, pPlatformThread );
+        noteCrashReportProgress();
 
         StringBuilder<constant::buffer::kMax8192> builder;
         builder.append( "\n==================== CRASH ====================\n" );
@@ -367,6 +381,7 @@ namespace sw
         // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashTestKind::StderrHeld). 순서가 반대면 거기서
         // 막혔을 때 스택 파일이 없다.
         writeCrashStackFile( builder.c_str() );
+        noteCrashReportProgress();
         // 로거가 비동기일 수 있으므로 stderr 로도 직접 내보내 크래시 직전의 기록을 확실히 남긴다.
         std::fputs( builder.c_str(), stderr );
         std::fflush( stderr );

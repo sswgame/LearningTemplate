@@ -84,8 +84,18 @@ namespace sw
     /** @brief 덤프 · 리포트를 쓸 폴더를 정합니다. */
     SW_API void setCrashReportFolder( string_view folderPath );
 
-    /** @brief 크래시 보고에 줄 시한(초)입니다(`CrashHandler::setReportDeadline`). */
+    /** @brief 크래시 보고가 진척 없이 버틸 수 있는 시간(초)입니다(`CrashHandler::setReportDeadline`). */
     SW_API uint32 getCrashReportDeadlineSeconds();
+
+    /**
+     * @brief 크래시 보고가 한 걸음 나아갔다고 적습니다(덤프 항목 · 파일 하나 · 심볼 프레임 하나). **할당 · 잠금이 없고 시그널 안에서 불러도 됩니다.**
+     * @details 시한은 보고 전체의 길이가 아니라 **진척이 멈춘 시간**을 잰다. 바쁜 기계에서 덤프 · 심볼 변환이 길어진 보고는 끝까지 쓰고,
+     *          락에서 영영 선 보고(막힌 stdio · 힙 락)만 끊는다. 전체 길이를 재면 부하가 걸린 크래시에서 덤프 · 스택 파일이 잘린다.
+     */
+    SW_API void noteCrashReportProgress();
+
+    /** @brief 지금까지의 진척 수입니다. 기다리는 쪽(폴트 스레드 · 시한 시그널)이 시한마다 앞의 값과 비교합니다. */
+    SW_API uint32 getCrashReportProgress();
 
     /**
      * @brief 크래시 문맥 파일(`crash_<세션>.txt`) 끝에 붙일 글을 쓰는 함수입니다. **할당 · 잠금 없이** @p pOutText 에 쓰고 쓴 길이를 돌려줍니다.

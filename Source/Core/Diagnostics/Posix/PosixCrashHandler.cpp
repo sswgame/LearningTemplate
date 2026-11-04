@@ -38,17 +38,26 @@ namespace sw
         atomic<uint64> s_reportingThreadID{ 0 };
         /** @brief 지금 보고 중인 시그널 — 시한이 지나 끝낼 때 종료 코드(128 + 시그널)로 쓴다. */
         atomic<int32> s_reportSignalNumber{ 0 };
+        /** @brief 앞 시한 때의 보고 진척 수입니다(`getCrashReportProgress`). 시한 시그널이 이것과 비교한다. */
+        atomic<uint32> s_seenReportProgress{ 0 };
 
         constexpr int32 kArrFatalSignal[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
 
         /**
-         * @brief 보고가 시한을 넘겼다(`alarm`) — 보고를 버리고 곧장 끝냅니다.
-         * @details 시그널 안이라 async-signal-safe 한 것(`write` · `_exit`)만 쓴다. **stdio 를 거치지 않는다** — 보고가 막힌 지점이 바로
-         *          stderr 의 락일 수 있다(CrashTestKind::StderrHeld).
+         * @brief 시한(`alarm`)이 닿았다 — 그동안 보고가 나아갔으면 시한을 다시 걸고, 한 걸음도 나아가지 않았으면 보고를 버리고 곧장 끝냅니다.
+         * @details 시한은 진척이 멈춘 시간이다(`noteCrashReportProgress`). 시그널 안이라 async-signal-safe 한 것(`alarm` · `write` · `_exit` ·
+         *          잠금 없는 원자 읽기)만 쓴다. **stdio 를 거치지 않는다** — 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld).
          */
         void onReportDeadlineInternal( int32 )
         {
-            constexpr utf8                 kMessage[] = "\n[CrashHandler] crash report did not finish in time - exiting without it\n";
+            const uint32 progress = getCrashReportProgress();
+            if ( progress != s_seenReportProgress.load() )
+            {
+                s_seenReportProgress.store( progress );
+                ::alarm( getCrashReportDeadlineSeconds() );
+                return;
+            }
+            constexpr utf8                 kMessage[] = "\n[CrashHandler] crash report made no progress before its deadline - exiting without it\n";
             [[maybe_unused]] const ssize_t written    = ::write( STDERR_FILENO, kMessage, sizeof( kMessage ) - 1 );
             ::_exit( 128 + s_reportSignalNumber.load() );
         }
@@ -82,6 +91,7 @@ namespace sw
             deadlineAction.sa_handler = &onReportDeadlineInternal;
             sigemptyset( &deadlineAction.sa_mask );
             sigaction( SIGALRM, &deadlineAction, nullptr );
+            s_seenReportProgress.store( getCrashReportProgress() );
             ::alarm( getCrashReportDeadlineSeconds() );
 
             // 컨텍스트를 **먼저** 쓴다. 아래 symbolize() 는 sw::string 을 값으로 반환하므로 반드시 할당하고, StringBuilder 도

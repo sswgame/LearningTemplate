@@ -103,9 +103,13 @@ namespace sw
             PSS_CAPTURE_HANDLE_TYPE_SPECIFIC_INFORMATION | PSS_CAPTURE_THREADS | PSS_CAPTURE_THREAD_CONTEXT | PSS_CAPTURE_THREAD_CONTEXT_EXTENDED |
             PSS_CREATE_BREAKAWAY | PSS_CREATE_BREAKAWAY_OPTIONAL | PSS_CREATE_USE_VM_ALLOCATIONS | PSS_CREATE_RELEASE_SECTION );
 
-        /** @brief 넘긴 핸들이 스냅샷이라고 덤프에 알립니다(`IsProcessSnapshotCallback` 에 S_FALSE). 나머지 질문은 기본값 그대로 둡니다. */
+        /**
+         * @brief 넘긴 핸들이 스냅샷이라고 덤프에 알립니다(`IsProcessSnapshotCallback` 에 S_FALSE). 나머지 질문은 기본값 그대로 둡니다.
+         * @details 덤프는 스레드 · 모듈 · 메모리 구간마다 이 콜백을 부른다 — 그때마다 보고의 진척으로 센다(긴 덤프가 시한에 끊기지 않게).
+         */
         BOOL CALLBACK onSnapshotDumpCallbackInternal( PVOID, const PMINIDUMP_CALLBACK_INPUT pInput, PMINIDUMP_CALLBACK_OUTPUT pOutput )
         {
+            noteCrashReportProgress();
             const bool bSnapshotCallbackForProcess = pInput != nullptr && pOutput != nullptr && pInput->CallbackType == IsProcessSnapshotCallback;
             if ( bSnapshotCallbackForProcess )
                 pOutput->Status = S_FALSE;
@@ -166,7 +170,9 @@ namespace sw
             }
             else
             {
-                bWritten = pfnWrite( GetCurrentProcess(), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, nullptr );
+                MINIDUMP_CALLBACK_INFORMATION callbackInfo{};
+                callbackInfo.CallbackRoutine = &onSnapshotDumpCallbackInternal; // 스냅샷 질문은 오지 않는다 — 진척만 센다
+                bWritten                     = pfnWrite( GetCurrentProcess(), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, &callbackInfo );
             }
             const DWORD dumpError = ( bWritten != FALSE ) ? ERROR_SUCCESS : GetLastError();
             PlatformFileUtil::closeNativeFile( fileHandle );
@@ -200,6 +206,7 @@ namespace sw
             // 확보한다. 심볼 변환이 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
             // **이 두 줄을 아래로 옮기지 말 것.**
             const bool bMiniDumpWritten = writeMiniDump( crash._pExceptionInfo, crash._faultThreadID );
+            noteCrashReportProgress();
             writeCrashContextFile( crash._pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
 
             // 본문은 세 플랫폼이 함께 쓴다(CrashContext.cpp).
@@ -259,15 +266,29 @@ namespace sw
 
             if ( s_hReportThread != nullptr )
             {
-                // 보고 스레드에 맡기고 시한까지만 기다린다(이 스레드의 스택과 예외 정보는 그동안 그대로다).
+                // 보고 스레드에 맡기고 기다린다(이 스레드의 스택과 예외 정보는 그동안 그대로다). 시한은 **진척이 멈춘 시간**이다 —
+                // 시한마다 진척 수를 보고, 그동안 한 걸음도 나아가지 않았을 때만 버린다(바쁜 기계의 긴 덤프는 끝까지 쓴다).
                 s_pendingCrash = crash;
                 SetEvent( s_hReportRequested );
-                if ( WaitForSingleObject( s_hReportFinished, static_cast<DWORD>( getCrashReportDeadlineSeconds() * constant::time::kMillisecondsPerSecond ) ) != WAIT_OBJECT_0 )
+                const DWORD deadlineMs     = static_cast<DWORD>( getCrashReportDeadlineSeconds() * constant::time::kMillisecondsPerSecond );
+                uint32      seenProgress   = getCrashReportProgress();
+                bool        bReportStalled = false;
+                while ( WaitForSingleObject( s_hReportFinished, deadlineMs ) != WAIT_OBJECT_0 )
+                {
+                    const uint32 progress = getCrashReportProgress();
+                    if ( progress == seenProgress )
+                    {
+                        bReportStalled = true;
+                        break;
+                    }
+                    seenProgress = progress;
+                }
+                if ( bReportStalled )
                 {
                     // **stdio 를 거치지 않는다.** 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld). fputs 로
                     // 쓰면 시한이 지나도 여기서 다시 막힌다. 그리고 이전 필터에 넘기지 않고 여기서 끝낸다. 그 필터도
                     // 같은 락에서 막힐 수 있고, 시한은 "여기서 끝난다"는 약속이어야 하기 때문이다.
-                    constexpr utf8 kMessage[] = "\n[CrashHandler] crash report did not finish in time - exiting without it\n";
+                    constexpr utf8 kMessage[] = "\n[CrashHandler] crash report made no progress before its deadline - exiting without it\n";
                     DWORD          written    = 0;
                     WriteFile( GetStdHandle( STD_ERROR_HANDLE ), kMessage, sizeof( kMessage ) - 1, &written, nullptr );
                     const UINT exitCode = ( pExceptionInfo != nullptr && pExceptionInfo->ExceptionRecord != nullptr )
