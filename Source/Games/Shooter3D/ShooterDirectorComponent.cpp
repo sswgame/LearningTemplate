@@ -118,11 +118,10 @@ namespace sw
     }
 
     ShooterDirectorComponent::ShooterDirectorComponent()
-        : _enemyPrefab{}
-        , _effectPrefab{}
+        : _effectPrefab{}
         , _tracerPrefab{}
-        , _listEnemyPreset{}
-        , _eliteEnemyPreset{}
+        , _listEnemyKind{}
+        , _eliteEnemyKind{}
         , _player{}
         , _listSpawnPoint{}
         , _arenaHalfSize{ 20.0f }
@@ -364,22 +363,22 @@ namespace sw
     {
         using Internal = ShooterDirectorComponentInternal;
         _bPacingReady  = SW_FALSE;
-        // 적 프리셋 이름은 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 외형 표에 없는 이름이면 이유를 남기고 적을 내지 않는다.
-        const AppearanceDatabase* pAppearance     = game::findSubsystem<AppearanceDatabase>();
-        const bool                bPresetNamesSet = _listEnemyPreset.empty() == false && _eliteEnemyPreset.empty() == false;
-        if ( pAppearance == nullptr || bPresetNamesSet == false )
+        // 적 종류(프리팹 + 프리셋)는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 외형 표에 없는 프리셋이면 이유를 남기고 적을 내지 않는다.
+        const AppearanceDatabase* pAppearance = game::findSubsystem<AppearanceDatabase>();
+        const bool                bEnemiesSet = _listEnemyKind.empty() == false && _eliteEnemyKind._prefab.empty() == false;
+        if ( pAppearance == nullptr || bEnemiesSet == false )
         {
-            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetsNotSet", "[Shooter] enemy presets are not set (or no appearance database) - no enemies will come" );
+            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetsNotSet", "[Shooter] enemy kinds are not set (or no appearance database) - no enemies will come" );
             return;
         }
-        bool bPresetsKnown = pAppearance->getPresets().findPreset( hashed_string( _eliteEnemyPreset ) ) != nullptr;
+        bool bPresetsKnown = pAppearance->getPresets().findPreset( hashed_string( _eliteEnemyKind._preset ) ) != nullptr;
         if ( bPresetsKnown == false )
-            SW_LOG_ERROR_ID( "ShooterDirector.ElitePresetNotAppearance", "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyPreset.c_str() );
-        for ( const string& preset : _listEnemyPreset )
+            SW_LOG_ERROR_ID( "ShooterDirector.ElitePresetNotAppearance", "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyKind._preset.c_str() );
+        for ( const ShooterEnemyKind& kind : _listEnemyKind )
         {
-            if ( pAppearance->getPresets().findPreset( hashed_string( preset ) ) != nullptr )
+            if ( pAppearance->getPresets().findPreset( hashed_string( kind._preset ) ) != nullptr )
                 continue;
-            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetNotAppearance", "[Shooter] enemy preset '%#' is not in the appearance presets", preset.c_str() );
+            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetNotAppearance", "[Shooter] enemy preset '%#' is not in the appearance presets", kind._preset.c_str() );
             bPresetsKnown = false;
         }
         if ( bPresetsKnown == false )
@@ -595,7 +594,9 @@ namespace sw
 
     void ShooterDirectorComponent::spawnEnemy( GameObjectManager& manager, const EnemyRequest& request )
     {
-        GameObject*                   pObject     = spawnPrefab( manager, _enemyPrefab, "Skeleton" );
+        // 종류는 정예면 정예, 나머지는 목록을 차례로 쓴다. 시드는 스폰 순번이라 같은 판은 같은 얼굴이 나온다.
+        const ShooterEnemyKind&       kind        = request._bElite == SW_TRUE ? _eliteEnemyKind : _listEnemyKind[request._slot % static_cast<uint32>( _listEnemyKind.size() )];
+        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, "Enemy" );
         ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
         CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pEnemy == nullptr )
@@ -606,14 +607,8 @@ namespace sw
                 (void)_director.notifyDespawned( request._spawnID ); // 스폰하지 못한 적의 예산 슬롯을 돌려준다.
             return;
         }
-        // 모습은 정예가 전사이고, 나머지는 목록을 차례로 쓴다. 시드는 스폰 순번이라 같은 판은 같은 얼굴이 나온다.
         if ( pAppearance != nullptr )
-        {
-            const bool    bHasList = _listEnemyPreset.empty() == false;
-            const string& preset   = request._bElite == SW_TRUE || bHasList == false ? _eliteEnemyPreset
-                                                                                     : _listEnemyPreset[request._slot % static_cast<uint32>( _listEnemyPreset.size() )];
-            pAppearance->setPreset( hashed_string( preset ), static_cast<uint32>( _pacingSeed ) * 7919u + request._slot );
-        }
+            pAppearance->setPreset( hashed_string( kind._preset ), static_cast<uint32>( _pacingSeed ) * 7919u + request._slot );
         // 스폰 위치를 차례로 돈다. 한 바퀴를 돌 때마다 옆으로 1.2m 비켜서 같은 위치에 겹쳐 스폰하지 않게 한다.
         float3 position{ 0.0f, 0.0f, 0.0f };
         if ( _listSpawnPoint.empty() == false )

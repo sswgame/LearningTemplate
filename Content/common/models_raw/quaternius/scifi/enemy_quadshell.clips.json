@@ -1,0 +1,12 @@
+{
+  "clips": {
+    "Attack": {
+      "notifies": [
+        {
+          "name": "Impact",
+          "time": 0.2
+        }
+      ]
+    }
+  }
+}

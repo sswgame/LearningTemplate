@@ -14,7 +14,7 @@ namespace sw
 {
     /**
      * @class ShooterEnemyAIControllerComponent
-     * @brief 스켈레톤 폰(`prefabs/skeleton.prefab.xml` — `_autoPossess AI`)이 플레이를 시작하면 조종 시스템이 `prefabs/skeleton_ai.prefab.xml` 로 세워 빙의시킵니다.
+     * @brief 적 폰(`prefabs/quadshell.prefab.xml` · `trilobite.prefab.xml` — `_autoPossess AI`)이 플레이를 시작하면 조종 시스템이 `prefabs/enemy_ai.prefab.xml` 로 세워 빙의시킵니다.
      * @details 쫓는 동안(`ShooterEnemyPhase::Chasing`) 플레이어 발로 `moveTo` 합니다 — 같은 오브젝트의 내비메시 에이전트(`SteerOnly`)가 경로 · 이웃 비키기로 속도를 내고,
      *          그것이 이동 의도가 되어 몸 이동(`ShooterBodyMovementComponent`)이 움직입니다. 플레이어가 `_retargetDistance` 넘게 움직이면 목적지를 다시 겁니다.
      *          손이 닿는 거리(적의 `_reach`) 안이고 플레이어가 살아 있으면 `Attack` 버튼을 누르고 있습니다 — 휘두르기 간격 · 맞는 시각은 폰의 규칙입니다.

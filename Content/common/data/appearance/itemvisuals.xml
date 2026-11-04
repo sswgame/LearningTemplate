@@ -13,6 +13,15 @@
     <Part name="Body" kind="Skinned" mesh="common/models/kaykit/rogue.mesh" skeleton="common/models/kaykit/rogue/rogue.skeleton.xml"
           material="common/materials/kaykit_rogue.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
+  <!-- Shooter3D 적 생물(Quaternius Sci-Fi Essentials, CC0) — 자기 스켈레톤 · 클립 · 맞음 상자를 가진 몸이라 프리팹이 종류마다 따로다(game/shooter3d/prefabs/). -->
+  <ItemVisual id="body_quadshell">
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/scifi/enemy_quadshell.mesh" skeleton="common/models/quaternius/scifi/enemy_quadshell/enemy_quadshell.skeleton.xml"
+          material="common/models/quaternius/scifi/enemy_quadshell/materials/mi_enemies.material" sockets="common/data/sockets/quadshell.sockets.xml"/>
+  </ItemVisual>
+  <ItemVisual id="body_trilobite">
+    <Part name="Body" kind="Skinned" mesh="common/models/quaternius/scifi/enemy_trilobite.mesh" skeleton="common/models/quaternius/scifi/enemy_trilobite/enemy_trilobite.skeleton.xml"
+          material="common/models/quaternius/scifi/enemy_trilobite/materials/mi_enemies_large.material" sockets="common/data/sockets/trilobite.sockets.xml"/>
+  </ItemVisual>
   <ItemVisual id="body_skeleton_minion">
     <Part name="Body" kind="Skinned" mesh="common/models/kaykit/skeleton_minion.mesh" skeleton="common/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
           material="common/materials/kaykit_skeleton.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>

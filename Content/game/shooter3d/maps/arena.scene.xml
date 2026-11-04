@@ -603,7 +603,6 @@
 				<_listComponent>
 					<ShooterDirectorComponent _componentName="ShooterDirectorComponent"
 					                          _bActive="true"
-					                          _enemyPrefab="game/shooter3d/prefabs/skeleton.prefab.xml"
 					                          _effectPrefab="game/shooter3d/prefabs/effect.prefab.xml"
 					                          _tracerPrefab="game/shooter3d/prefabs/tracer.prefab.xml"
 					                          _player="50"
@@ -613,14 +612,14 @@
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
 					                          _tracerPoolSize="24"
-					                          _eliteEnemyPreset="SkeletonWarrior"
 					                          _bAutoPlay="false">
-						<_listEnemyPreset>
-							<item>SkeletonMinion</item>
-							<item>SkeletonRaider</item>
-							<item>SkeletonRogue</item>
-							<item>SkeletonRaider</item>
-						</_listEnemyPreset>
+						<_listEnemyKind>
+							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell" />
+							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell" />
+							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite" />
+							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell" />
+						</_listEnemyKind>
+						<_eliteEnemyKind _prefab="game/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite" />
 						<_listSpawnPoint>
 							<item>42</item>
 							<item>43</item>

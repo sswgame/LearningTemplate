@@ -1,5 +1,5 @@
-<Prefab formatVersion="0" name="Skeleton">
-	<GameObject _schemaVersion="0" _name="Skeleton" _bActive="true">
+<Prefab formatVersion="0" name="QuadShell">
+	<GameObject _schemaVersion="0" _name="QuadShell" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
 			                       _bActive="true"
@@ -22,9 +22,9 @@
 			                       _bShareCrowdPose="true" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/skeleton.animgraph.xml"
-			                           _clipFolder="common/models/kaykit/skeleton_minion/clips"
-			                           _initialState="Spawn_Ground_Skeletons"
+			                           _animationGraphPath="common/data/anim/quadshell.animgraph.xml"
+			                           _clipFolder="common/models/quaternius/scifi/enemy_quadshell/clips"
+			                           _initialState="Look"
 			                           _currentState=""
 			                           _stateTime="0"
 			                           _playRate="1"
@@ -35,15 +35,15 @@
 			                           _bPlayOnBegin="true" />
 			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
-			                          _notifyTablePath="common/characters/skeleton_minion/skeleton_minion.notifies.xml" />
+			                          _notifyTablePath="common/characters/quadshell/quadshell.notifies.xml" />
 			<RagdollComponent _componentName="RagdollComponent"
 			                  _bActive="true"
-			                  _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml"
+			                  _physicsAssetPath="common/characters/quadshell/quadshell.physics.xml"
 			                  _bRagdollOnFatalHit="false"
 			                  _bAutoGetUp="false" />
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
-			                              _presetID="SkeletonMinion"
+			                              _presetID="QuadShell"
 			                              _seed="0" />
 			<WidgetComponent _componentName="WidgetComponent"
 			                 _bActive="true"
@@ -53,7 +53,7 @@
 			                 _pivot="0.5,1"
 			                 _worldSize="1,0.5"
 			                 _screenOffset="0,0"
-			                 _worldOffset="0,2.45,0"
+			                 _worldOffset="0,1.9,0"
 			                 _maxDistance="0"
 			                 _referenceDistance="10"
 			                 _bClampToScreenEdge="false"
@@ -73,9 +73,9 @@
 			<ShooterEnemyComponent _componentName="ShooterEnemyComponent"
 			                       _bActive="true"
 			                       _director="0"
-			                       _radius="0.45"
-			                       _height="2"
-			                       _reach="1.7"
+			                       _radius="0.9"
+			                       _height="1.6"
+			                       _reach="2.2"
 			                       _damage="9"
 			                       _attackInterval="1.5"
 			                       _attackHitEvent="AttackHit"
@@ -91,7 +91,7 @@
 			                       _maxSpeed="3"
 			                       _maxAcceleration="12"
 			                       _stoppingDistance="1.45"
-			                       _radius="0.45"
+			                       _radius="0.9"
 			                       _separationWeight="2"
 			                       _avoidanceQuality="Medium"
 			                       _turnRate="8"
@@ -103,7 +103,7 @@
 			               _lookAction="None"
 			               _upAction="None"
 			               _inputLayer="None"
-			               _aiControllerPrefab="game/shooter3d/prefabs/skeleton_ai.prefab.xml"
+			               _aiControllerPrefab="game/shooter3d/prefabs/enemy_ai.prefab.xml"
 			               _maxPitch="1.4"
 			               _autoPossess="AI"
 			               _bLockMouse="false">
@@ -120,7 +120,7 @@
 			                              _sprintSpeed="3"
 			                              _jumpSpeed="0"
 			                              _gravity="18"
-			                              _radius="0.45" />
+			                              _radius="0.9" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

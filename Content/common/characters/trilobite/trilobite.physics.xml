@@ -1,0 +1,42 @@
+<!--
+	Quaternius Sci-Fi Essentials Trilobite(CC0)의 래그돌 · 맞음 상자 물리 에셋 — 뼈 축과 무관한 구로 몸통 하나와 다리 마디를 덮는다(어림값, 사진으로 맞춘다).
+	히트 존: 몸통 ×1 · 다리 ×0.7. RagdollComponent 가 쓴다.
+-->
+<PhysicsAsset _defaultLayer="Ragdoll" _bCollideJointedBodies="false">
+	<_listBody>
+		<PhysicsAssetBodyDef _bone="Body" _mass="30" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Sphere" _radius="0.95" _localPosition="0,-0.5,0.2" />
+			</_listShape>
+			<_hitZone _name="Torso" _damageMultiplier="1.0" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg2.L" _mass="4" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg2.R" _mass="4" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg4.L" _mass="4" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg4.R" _mass="4" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+	</_listBody>
+</PhysicsAsset>

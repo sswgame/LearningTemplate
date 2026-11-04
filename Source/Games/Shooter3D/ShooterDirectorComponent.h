@@ -61,10 +61,27 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 적 한 종류입니다 — 생물마다 스켈레톤 · 애니메이션 그래프 · 물리(맞음 상자) · 알림 표가 달라 프리팹이 종류의 정본이고, 외형 프리셋이 그 몸의 모습이다.
+     * @details 언리얼 스폰 표의 행이 클래스(Blueprint)를 가리키는 것과 같다 — 프리팹 하나에 프리셋만 바꾸던 예전 모양은 사람형 해골 한 종류만 받았다.
+     */
+    REFLECT()
+    struct ShooterEnemyKind
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, AssetPath, AssetType = "Prefab", Tooltip = "Enemy prefab (skeletal mesh, animator, appearance, ragdoll hitboxes, ShooterEnemyComponent)" )
+        string _prefab{};
+        PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
+        string _preset{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class ShooterDirectorComponent
      * @brief 아레나 한 판을 진행합니다. 플레이가 시작되면 막는 상자를 모으고 페이싱 감독(`AIDirector`, 데이터 `_pacingProfile` 과 `_spawnTable`)을 시작합니다.
      * @details 감독은 쌓기, 절정, 쉼 단계를 돌며 적 스폰(예산), 무리(절정 진입), 탄 채우기(쉼 진입), 수리(예산)를 정한다. 이 컴포넌트는 그 사건을 스켈레톤,
-     *          탄, 체력으로 바꾼다. 스켈레톤은 프리팹 `_enemyPrefab` 이고, 모습은 외형 프리셋(`_listEnemyPreset` 을 차례로 쓰고 정예는 `_eliteEnemyPreset`)과
+     *          탄, 체력으로 바꾼다. 적은 종류(`ShooterEnemyKind` — 프리팹 + 외형 프리셋)이고, 보통 적은 `_listEnemyKind` 를 차례로 쓰고 정예는 `_eliteEnemyKind` 이며 모습은 외형 프리셋과
      *          스폰 순번 시드로 정한다. 긴장도 신호는 받은 피해(`reportPlayerDamage`), 쓰러뜨린 적, 가까운 적 수, 탄 부족이다. 웨이브 번호는
      *          감독의 순환 수에 1 을 더한 값이다. 스폰한 적과 효과는 핸들로 보관하고, 상태를 저장하기 전에 정리한다(`despawnViews`). 감독 예산으로 스폰한 적은 같은 스폰 ID 로 다시 스폰한다.
      *          적의 AI 조종자는 적 폰의 자동 빙의가 만들고 폰과 함께 지워진다.
@@ -179,16 +196,14 @@ namespace sw
         void appendMotionTrace( float32 deltaTime );
 
     private:
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Skeleton enemy (skeletal mesh, animator, appearance, ShooterEnemyComponent)" )
-        string _enemyPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Pooled sphere for hits and muzzle flashes" )
         string _effectPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Pooled box stretched along each shot" )
         string _tracerPrefab;
-        PROPERTY( Category = "Enemies", DisplayName = "Enemy Presets", Tooltip = "Appearance presets the regular spawns cycle through (seeded by the spawn order)" )
-        vector<string> _listEnemyPreset;
-        PROPERTY( Category = "Enemies", DisplayName = "Elite Preset", Tooltip = "Appearance preset of the elite encounter" )
-        string _eliteEnemyPreset;
+        PROPERTY( Category = "Enemies", DisplayName = "Enemies", Tooltip = "Enemy kinds the regular spawns cycle through (seeded by the spawn order)" )
+        vector<ShooterEnemyKind> _listEnemyKind;
+        PROPERTY( Category = "Enemies", DisplayName = "Elite Enemy", Tooltip = "Enemy kind of the elite encounter" )
+        ShooterEnemyKind _eliteEnemyKind;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Object with the ShooterPlayerComponent" )
         GameObjectHandle _player;
         PROPERTY( Category = "Scene", DisplayName = "Spawn Points", Tooltip = "Enemies rise at these objects, in order" )

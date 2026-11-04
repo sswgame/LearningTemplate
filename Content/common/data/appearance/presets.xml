@@ -31,6 +31,10 @@
     <Equip slot="MainHand" item="scifi_pistol"/>
   </CharacterAppearance>
 
+  <!-- Shooter3D 적 생물 — 몸 하나뿐이고 장비 칸이 없다(arena.scene.xml 의 ShooterDirector 가 프리팹과 함께 고른다). -->
+  <CharacterAppearance id="QuadShell" body="body_quadshell" tags="Race.Machine"/>
+  <CharacterAppearance id="Trilobite" body="body_trilobite" tags="Race.Machine"/>
+
   <CharacterAppearance id="SkeletonBase" schema="Skeleton" bodyType="Male" bodyShape="Average" body="body_skeleton_minion" tags="Race.Undead">
     <Value name="BoneTint" colors="1 1 1 1; 0.86 0.95 0.82 1; 1 0.86 0.8 1; 0.85 0.85 1 1"/>
   </CharacterAppearance>

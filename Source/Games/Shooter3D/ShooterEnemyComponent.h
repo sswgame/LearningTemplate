@@ -32,7 +32,7 @@ namespace sw
 {
     /**
      * @class ShooterEnemyComponent
-     * @brief 스켈레톤 프리팹(`prefabs/skeleton.prefab.xml`)의 규칙 컴포넌트입니다. 디렉터가 틱 뒤에 스폰하고 `launch` 로 위치 · 체력 · 속도를 줍니다.
+     * @brief 적 프리팹(`prefabs/quadshell.prefab.xml` · `trilobite.prefab.xml` — 생물마다 하나)의 규칙 컴포넌트입니다. 디렉터가 틱 뒤에 스폰하고 `launch` 로 위치 · 체력 · 속도를 줍니다.
      * @details 몸(같은 오브젝트의 `SkeletalMeshComponent`) · 애니메이터 · 외형(`CharacterAppearanceComponent` — 디렉터가 프리셋 · 씨앗을 고른다) · 폰(`PawnComponent` —
      *          버튼 `Attack`, 자동 빙의 `AI` → `ShooterEnemyAIControllerComponent`) · 몸 이동(`ShooterBodyMovementComponent` — 플레이어와 같은 이동)과 같은 오브젝트입니다.
      *          판단(쫓기 · 멈추기 · 휘두를지)은 AI 조종자가 하고, 여기는 **폰의 의도만** 읽습니다: 쫓는 단계에서 몸 이동을 한 걸음 부르고, 몸 요를 조종 요 쪽으로 돌리고,

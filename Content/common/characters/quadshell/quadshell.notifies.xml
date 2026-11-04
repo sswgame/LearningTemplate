@@ -1,0 +1,4 @@
+<!-- Shooter3D 적 QuadShell 의 알림 표 — 공격 클립의 Impact 알림(models_raw/quaternius/scifi/enemy_quadshell.clips.json)이 맞는 시각이다(ShooterEnemyComponent 의 _attackHitEvent). -->
+<AnimationNotifies>
+    <Notify name="Impact" handler="AbilityEvent" event="AttackHit"/>
+</AnimationNotifies>

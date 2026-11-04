@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quaternius Sci-Fi Essentials Trilobite(CC0)의 몸 소켓 — 몸 뼈(Body) 기준 어림값. Chest 는 맞음 상자 중심(조준 보정 · 맞은 자리), Eyes 는 눈(락온). -->
+<SocketSet>
+  <Socket name="Eyes" parent="Body" translation="0 0.2 0.9" kind="LockOn"/>
+  <Socket name="Chest" parent="Body" translation="0 -0.5 0.2" kind="HitboxCenter"/>
+</SocketSet>
