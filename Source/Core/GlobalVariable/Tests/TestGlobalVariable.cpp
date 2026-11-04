@@ -299,7 +299,8 @@ SW_TEST_CASE( GlobalVariableTest, NonExistentVariableHandling )
  * @details 읽는 스레드가 늦게 뜨면 쓰기 1000 번이 먼저 끝나 읽기가 한 번도 겹치지 않는다 — 그러면 아무것도 테스트하지 않고 통과한다.
  *          읽는 쪽이 돌기 시작한 뒤에 쓰고, 쓰는 동안 겹친 읽기를 세어 모자라면 더 쓰며, 겹친 횟수를 단언한다(`FileTest.ReadersNeverObserveHalfWrittenFile` 와 같은 모양).
  */
-SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
+// 안쪽 대기(읽기 시작 10 초 + 겹친 읽기 60 초)보다 케이스 시한이 길어야 한다 — 기본 30 초면 부하에서 제 시한에 닿기 전에 실행기가 끊었다.
+SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety, ._tags = "slow", ._timeoutSeconds = 120.0f )
 {
     GlobalVariableFixture   fixture;
     sw::GlobalVariableInfo* pStrInfo = fixture._manager.findVariable( "gv_testString" );
