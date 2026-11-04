@@ -4,6 +4,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 
 namespace sw
@@ -52,4 +53,10 @@ namespace sw
     {
         return std::static_pointer_cast<const UIStyleSheetAsset>( _cache.findOrLoadAsset( path, outError ) );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( UIStyleSheetCache, UIStyleSheetCache );
 } // namespace sw

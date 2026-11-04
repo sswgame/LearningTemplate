@@ -21,6 +21,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
@@ -1194,4 +1195,15 @@ namespace sw
         _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
         _impl->_cvLoaded.notify_all();
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 에셋 매니저(앞 자리)와 수명이 같다.
+    SW_ENGINE_SUBSYSTEM( TextureRenderTargetSink, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        (void)scope.bind( &scope.get<AssetManager>().getAssetCache<TextureCache>().getRenderTargetDeclarationSink() );
+    } );
 } // namespace sw

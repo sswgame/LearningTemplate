@@ -17,6 +17,7 @@
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -577,4 +578,18 @@ namespace sw
         SW_LOG_INFO_ID( "AudioService.EventLibraryReloaded", "Event library reloaded: %#", assetPath );
         return true;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.
+    SW_ENGINE_SUBSYSTEM( AudioService, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        SW_MEMORY_SCOPE( Audio );
+        engine::StartupSetup& setup = *build._pStartupSetup;
+        if ( setup._audio == nullptr )
+            setup._audio = setup._bDedicatedServer ? IAudioService::createNull() : IAudioService::create();
+        build._pStartupParts->_pAudio = &scope.addSubsystem( std::move( setup._audio ) );
+    } );
 } // namespace sw

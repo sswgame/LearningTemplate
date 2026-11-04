@@ -6,6 +6,7 @@
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -81,4 +82,11 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         _mapEntry = unordered_map<string, Entry>{};
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( ContentHashCache, ContentHashCache );
 } // namespace sw

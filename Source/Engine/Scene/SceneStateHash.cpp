@@ -13,6 +13,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -912,4 +913,10 @@ namespace sw
                     &SceneInspectCommandsInternal::runStateHashLine );
     SW_DEV_COMMAND( StateObjectLine, "state.objectline", "state.objectline", "Print the state.objects hashes with their tick on one line (the editor Sync tab reads client object hashes this way)",
                     &SceneInspectCommandsInternal::runStateObjectLine );
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( StateHashHistory, StateHashHistory );
 } // namespace sw

@@ -10,6 +10,7 @@
 #include "Core/Log/LogOnce.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 
 namespace sw
@@ -127,4 +128,11 @@ namespace sw
         }
         CrashContextStore::get().set( "gpu_lost_backend", pBackendName );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 디바이스 소실 보고의 패스 이름 표 — 백엔드를 바꿔도 같은 실행의 것이다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( GPUBreadcrumbLog, GPUBreadcrumbLog );
 } // namespace sw

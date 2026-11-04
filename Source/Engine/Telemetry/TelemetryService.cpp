@@ -19,6 +19,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
@@ -764,4 +765,13 @@ namespace sw
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( TelemetryService, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        build._pStartupParts->_pTelemetry = &scope.emplaceSubsystem<TelemetryService>();
+    } );
 } // namespace sw

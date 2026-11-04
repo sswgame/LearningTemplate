@@ -11,6 +11,7 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -177,4 +178,18 @@ namespace sw
         }
         return ReloadOutcome::NotTracked;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽어 자기 자리에 둔다(Resource 가 그 뒤에 서서 팩 루트를 안다).
+    SW_ENGINE_SUBSYSTEM( ConfigManager, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        ConfigManager& configManager          = scope.emplaceSubsystem<ConfigManager>();
+        build._pStartupParts->_pConfigManager = &configManager;
+        // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 표(`engine::getSubsystem<EngineConfig>()`)는 이 자리의 주소를 묶는다.
+        (void)scope.bind( &configManager.getHostEngineConfig() ); // 새 범위 - 겹치지 않는다
+        (void)scope.bind( &configManager.getHostGameConfig() );   // 새 범위 - 겹치지 않는다
+    } );
 } // namespace sw

@@ -20,6 +20,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
@@ -1129,4 +1130,13 @@ namespace sw
     SW_DEV_COMMAND( SettingsApply, "settings.apply", "settings.apply <id>=<value> ...", "Apply user settings the way the options menu does (pending, apply, confirm countdown)",
                     &UserSettingsDevCommandsInternal::runApply );
     SW_DEV_COMMAND( SettingsConfirm, "settings.confirm", "settings.confirm", "Keep the display change that awaits confirmation", &UserSettingsDevCommandsInternal::runConfirm );
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( UserSettingsManager, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        build._pStartupParts->_pUserSettings = &scope.emplaceSubsystem<UserSettingsManager>();
+    } );
 } // namespace sw

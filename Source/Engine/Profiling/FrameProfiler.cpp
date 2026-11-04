@@ -13,6 +13,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 
 #include <chrono>
@@ -386,4 +387,10 @@ namespace sw
             _pBackend->endZone( _zoneToken );
 #endif
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( FrameProfiler, FrameProfiler );
 } // namespace sw

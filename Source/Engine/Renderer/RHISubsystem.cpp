@@ -11,6 +11,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
@@ -117,4 +118,16 @@ namespace sw
     {
         return EngineSubsystemHost::kClient;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 씬의 디바이스는 클라이언트 호스트의 것이다(전용 서버는 거르고, Server 타깃은 렌더러 폴더를 짓지 않는다).
+    SW_ENGINE_SUBSYSTEM( RHISubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        if ( build._pStartupSetup->_bRenderer == false )
+            return;
+        build._pStartupParts->_pRHI = &scope.emplaceSubsystem<RHISubsystem>();
+    } );
 } // namespace sw

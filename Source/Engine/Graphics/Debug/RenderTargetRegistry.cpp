@@ -4,6 +4,8 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 namespace sw
 {
     void RenderTargetRegistry::publish( vector<RenderTargetInfo> listTarget )
@@ -76,4 +78,10 @@ namespace sw
         outReadback = _readback;
         return true;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( RenderTargetRegistry, RenderTargetRegistry );
 } // namespace sw

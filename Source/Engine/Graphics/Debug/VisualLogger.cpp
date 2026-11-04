@@ -9,6 +9,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -496,4 +497,10 @@ namespace sw
     SW_DEV_COMMAND( VisualLogStatus, "visuallog.status", "visuallog.status", "Show whether the visual log records and how many entries it holds", &runStatus );
     SW_DEV_COMMAND( VisualLogSave, "visuallog.save", "visuallog.save <file.vlog.json>", "Write the recorded visual log to a file", &runSave );
     SW_DEV_COMMAND( VisualLogReplay, "visuallog.replay", "visuallog.replay <frame>", "Draw the shapes of a recorded frame through the debug draw queue for one frame", &runReplay );
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( VisualLogger, VisualLogger );
 } // namespace sw

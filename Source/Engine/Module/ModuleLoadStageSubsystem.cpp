@@ -4,6 +4,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
@@ -33,4 +34,14 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, ModuleUnloadStageSubsystem::kSubsystemName, ReflectionSubsystem::kSubsystemName };
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( ModuleLoadStageSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        (void)scope.emplaceSubsystem<ModuleLoadStageSubsystem>( &scope );
+    } );
 } // namespace sw

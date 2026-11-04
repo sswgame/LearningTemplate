@@ -9,6 +9,7 @@
 
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
@@ -233,4 +234,10 @@ namespace sw
             pText->setTextStyle( textStyle );
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( UISubtitleService, UISubtitleService );
 } // namespace sw

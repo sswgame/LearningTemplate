@@ -3,6 +3,7 @@
 #include "Engine/UI/World/UIWidgetComponentService.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -230,4 +231,11 @@ namespace sw
             pComponent->updateWorldCanvas( layout, paint );
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 위젯 컴포넌트(화면 마커 · World 위젯) — 포인터 뒤 · 레이아웃 앞 · 그리기 뒤 칸에 건다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( UIWidgetComponentService, UIWidgetComponentService );
 } // namespace sw

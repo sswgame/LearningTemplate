@@ -7,6 +7,7 @@
 #include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -198,4 +199,18 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         return _mapPathToData.size();
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 메시 셰이프 기하 표 — 메시 캐시(기동 단계의 에셋 매니저)가 비울 때 부르므로 그보다 오래 산다. 표의 멤버를 메시 캐시가 찾는 타입(`IMeshDerivedCache`)으로도 건다.
+    SW_ENGINE_SUBSYSTEM( PhysicsMeshShapeTable, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        PhysicsMeshShapeTable& meshShapeTable = scope.emplaceSubsystem<PhysicsMeshShapeTable>();
+        const bool             bExposed       = scope.exposeMember<IMeshDerivedCache>( meshShapeTable, meshShapeTable.getMeshDerivedCache() );
+        SW_ASSERT( bExposed ); // 받는 쪽이 둘이면 등록의 잘못이다(`IMeshDerivedCache`)
+        (void)bExposed;
+    } );
 } // namespace sw

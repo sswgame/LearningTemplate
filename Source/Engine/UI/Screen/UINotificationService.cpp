@@ -7,6 +7,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
@@ -304,4 +305,10 @@ namespace sw
         if ( pParent != nullptr )
             (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 항상 제거된다
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( UINotificationService, UINotificationService );
 } // namespace sw

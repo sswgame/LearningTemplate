@@ -18,6 +18,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -1033,4 +1034,14 @@ namespace sw
         context._pActionGlyphs = &_actionGlyphs;
         return context;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 화면 스택 — 위의 UI 서비스(뒷 자리)가 이것에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` …)에 건다.
+    SW_ENGINE_SUBSYSTEM( UISystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        build._pStartupParts->_pUISystem = &scope.emplaceSubsystem<UISystem>();
+    } );
 } // namespace sw

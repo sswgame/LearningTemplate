@@ -9,6 +9,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -277,4 +278,14 @@ namespace sw
                     &DebugKeyActionsDevCommandsInternal::runRebind );
     SW_DEV_COMMAND( DebugKeysRebindReset, "debugkeys.rebind.reset", "debugkeys.rebind.reset [action]", "Put one debug key action (or all) back to the default key and update the user file",
                     &DebugKeyActionsDevCommandsInternal::runReset );
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 셸 디버그 키 맵 — 호스트 루프가 프레임마다 돌리고 개발 도구 · 개발 명령이 읽는다. 맵은 처음 돌 때 만든다(기동 단계의 입력 매니저에 붙는다).
+    SW_ENGINE_SUBSYSTEM( DebugKeyActions, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        build._pServiceParts->_pDebugKeyActions = &scope.emplaceSubsystem<DebugKeyActions>();
+    } );
 } // namespace sw

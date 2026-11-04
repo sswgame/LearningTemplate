@@ -9,6 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -342,4 +343,10 @@ namespace sw
 
     SW_DEV_COMMAND( DebugDrawCategory, "debugdraw.category", "debugdraw.category [<name> <on|off>]", "List or toggle DebugDrawQueue categories",
                     &runDebugDrawCategory );
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( DebugDrawQueue, DebugDrawQueue );
 } // namespace sw

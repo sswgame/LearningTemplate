@@ -9,6 +9,8 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 #include <cstdlib>
 
 namespace sw
@@ -157,4 +159,11 @@ namespace sw
         // 월드를 쓰는 곳이 여기 하나라(세터 · 틱 대기 적용 · 쓰기 큐 배치 · 플러시 모두 이리 온다) 병렬 틱 경로도 번호를 빠뜨리지 않는다.
         ++page._arrWorldVersion[pageIndex];
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 트랜스폼 칸 저장소가 서비스 범위의 맨 처음이다 — 해제는 역순이라 서비스 · 엔진 범위의 어느 컴포넌트보다 나중에 내려간다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( SceneTransformStorage, SceneTransformStorage );
 } // namespace sw

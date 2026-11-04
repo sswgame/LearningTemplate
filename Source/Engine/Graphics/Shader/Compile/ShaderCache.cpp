@@ -14,6 +14,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -264,4 +265,10 @@ namespace sw
         ScopedLock<mutex> lock{ _mutexCache };
         _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( ShaderCache, ShaderCache );
 } // namespace sw

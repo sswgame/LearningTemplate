@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -160,4 +161,11 @@ namespace sw
             return;
         pRegistry->collectMatches( assetID, outListKind );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( AssetDataKindRegistry, AssetDataKindRegistry );
 } // namespace sw

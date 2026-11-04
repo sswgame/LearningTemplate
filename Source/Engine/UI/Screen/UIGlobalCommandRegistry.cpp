@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 namespace sw
 {
     UIGlobalCommandRegistry::UIGlobalCommandRegistry()
@@ -31,4 +33,10 @@ namespace sw
         return true;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( UIGlobalCommandRegistry, UIGlobalCommandRegistry );
 } // namespace sw

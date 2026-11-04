@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -1082,4 +1083,13 @@ namespace sw
                 static_cast<GamepadDevice*>( pDev.get() )->setVirtualSession( bVirtual );
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( InputManager, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        build._pStartupParts->_pInputManager = &scope.emplaceSubsystem<InputManager>();
+    } );
 } // namespace sw

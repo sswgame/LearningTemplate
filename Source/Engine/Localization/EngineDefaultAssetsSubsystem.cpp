@@ -8,6 +8,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 
@@ -57,4 +58,17 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { AssetManager::kSubsystemName, ReflectionSubsystem::kSubsystemName }; // 엔진 데이터의 enum 이름 풀이가 리플렉션 바인딩 뒤다
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( EngineDefaultAssetsSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        engine::StartupSetup& setup = *build._pStartupSetup;
+        if ( setup._defaultAssets == nullptr )
+            setup._defaultAssets = sw::make_unique<EngineDefaultAssetsSubsystem>();
+        const EngineDefaultAssetsSubsystem& defaultAssets = scope.addSubsystem( std::move( setup._defaultAssets ) );
+        (void)scope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
+    } );
 } // namespace sw

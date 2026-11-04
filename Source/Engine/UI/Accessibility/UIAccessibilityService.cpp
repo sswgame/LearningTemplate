@@ -3,6 +3,7 @@
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
@@ -111,4 +112,11 @@ namespace sw
         _focusWidget = widget;
         _bridge->notifyFocusChanged( screen, widget );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 스크린 리더 — 알림이 이것으로 읽힌다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( UIAccessibilityService, UIAccessibilityService );
 } // namespace sw

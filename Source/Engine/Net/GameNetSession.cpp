@@ -20,6 +20,7 @@
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -836,4 +837,14 @@ namespace sw
                     &GameNetSessionDevCommandsInternal::runTraffic );
     SW_DEV_COMMAND( NetStats, "net.stats", "net.stats", "Show the net session's connection and traffic numbers in one line (packets, bytes per second, RTT, loss, message kinds)",
                     &GameNetSessionDevCommandsInternal::runStats );
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다.
+    SW_ENGINE_SUBSYSTEM( GameNetSession, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        build._pStartupParts->_pNetSession = &scope.emplaceSubsystem<GameNetSession>();
+    } );
 } // namespace sw

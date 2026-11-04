@@ -10,6 +10,7 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/UserSettings/HardwareDetection.h"
@@ -527,4 +528,10 @@ namespace sw
         return sentCount;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( CrashReportService, CrashReportService );
 } // namespace sw

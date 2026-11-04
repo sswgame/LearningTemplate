@@ -22,6 +22,7 @@
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackPatchTrustSource.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -370,4 +371,15 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { CompressionCodecRegistry::kSubsystemName, ConfigManager::kSubsystemName };
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( AssetManager, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        AssetManager& assetManager = scope.emplaceSubsystem<AssetManager>();
+        (void)scope.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 표의 칸으로 찾는다
+    } );
 } // namespace sw

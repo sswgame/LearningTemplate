@@ -10,6 +10,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Text/SystemFontLocator.h"
@@ -403,4 +404,13 @@ namespace sw
         return _warnedOnce.tryClaim( HashUtil::computeStringHash64( key, false ) ); // 이름 표에 넣지 않는다(경고 키는 이름이 아니다)
     }
 
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( FontService, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        build._pStartupParts->_pFontService = &scope.emplaceSubsystem<FontService>();
+    } );
 } // namespace sw

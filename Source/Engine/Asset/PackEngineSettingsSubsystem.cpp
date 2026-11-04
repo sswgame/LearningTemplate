@@ -7,6 +7,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -40,4 +41,16 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, AssetManager::kSubsystemName };
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 활성 팩의 `<Engine>` 요소(창 제목 · 스키마 · UI 규칙) — 팩을 마운트한 뒤에 읽는다. 창 · 사용자 설정 · UI 가 이 뒤에 선다.
+    SW_ENGINE_SUBSYSTEM( PackEngineSettingsSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        const PackEngineSettingsSubsystem& packSettings = scope.emplaceSubsystem<PackEngineSettingsSubsystem>();
+        (void)scope.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
+    } );
 } // namespace sw

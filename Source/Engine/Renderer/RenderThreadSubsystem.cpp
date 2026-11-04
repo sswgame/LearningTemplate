@@ -3,6 +3,7 @@
 #include "Engine/Renderer/RenderThreadSubsystem.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
@@ -53,4 +54,15 @@ namespace sw
     {
         return EngineSubsystemHost::kClient;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( RenderThreadSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        if ( build._pStartupSetup->_bRenderer == false )
+            return;
+        build._pStartupParts->_pRenderThread = &scope.emplaceSubsystem<RenderThreadSubsystem>( scope.get<RHISubsystem>(), scope.get<FrameRendererSubsystem>() );
+    } );
 } // namespace sw

@@ -8,6 +8,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 namespace sw
 {
     void DebugOverlayState::setFloat( hashed_string key, float32 value )
@@ -65,4 +67,10 @@ namespace sw
         }
         VectorUtil::sort( outListRow, Ascending<&DebugOverlayRow::_key>{} );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( DebugOverlayState, DebugOverlayState );
 } // namespace sw

@@ -9,6 +9,7 @@
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -122,4 +123,23 @@ namespace sw
     {
         return EngineSubsystemHost::kClient;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM( FrameRendererSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        if ( build._pStartupSetup->_bRenderer == false )
+            return;
+        unique_ptr<FrameRenderer> frameRenderer;
+        {
+            SW_MEMORY_SCOPE( RenderCPU );
+            frameRenderer = make_unique<FrameRenderer>();
+        }
+        FrameRendererSubsystem& frameRendererSubsystem = scope.emplaceSubsystem<FrameRendererSubsystem>( std::move( frameRenderer ), scope.get<RHISubsystem>() );
+        build._pStartupParts->_pFrameRendererSubsystem = &frameRendererSubsystem;
+        (void)scope.bind( &frameRendererSubsystem.getFrameRenderer() );      // 새 범위 — 겹치지 않는다
+        (void)scope.bind( &frameRendererSubsystem.getOffscreenRenderers() ); // 화면 밖 씬 렌더러(진단 감시 값이 수를 읽는다)
+    } );
 } // namespace sw

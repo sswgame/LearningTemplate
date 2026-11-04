@@ -5,6 +5,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 namespace sw
 {
     bool ExtensionDrawCollector::add( const ExtensionDrawElement& element )
@@ -195,4 +197,11 @@ namespace sw
             return false;
         return _registry.enqueueProxyUpdate( _id, std::move( update ) );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 렌더러 폴더와 같이 클라이언트에만 있다(자리 표의 클라이언트 전용).
+    SW_ENGINE_SUBSYSTEM_DEFAULT( RenderExtensionRegistry, RenderExtensionRegistry );
 } // namespace sw

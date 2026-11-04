@@ -11,6 +11,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -99,4 +100,11 @@ namespace sw
 
     SW_DEV_COMMAND( TimeScale, "timescale", "timescale [scale]", "Show or set the game time scale (gv_timeScale, 0 = frozen)",
                     &runTimeScale );
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 정지 요청 · 이번 프레임의 실제 경과.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( GameTimeScale, GameTimeScale );
 } // namespace sw

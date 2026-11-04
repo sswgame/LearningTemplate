@@ -11,6 +11,7 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -533,4 +534,11 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { AsyncFileIO::kSubsystemName, TaskManager::kSubsystemName };
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 스트리밍 큐의 소멸자는 태스크를 기다리므로 Task 보다 먼저 놓는다(뒷 자리).
+    SW_ENGINE_SUBSYSTEM_DEFAULT( AssetStreamingQueue, AssetStreamingQueue );
 } // namespace sw

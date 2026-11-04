@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
@@ -347,4 +348,10 @@ namespace sw
         _mapResolved.clear();
         _listReplacedResolved.clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( ComponentDefaults, ComponentDefaults );
 } // namespace sw

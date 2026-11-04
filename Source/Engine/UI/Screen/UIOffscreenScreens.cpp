@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
@@ -283,4 +284,11 @@ namespace sw
             target._contentRevision      = offscreen._revision;
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
+    // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다.
+    SW_ENGINE_SUBSYSTEM_DEFAULT( UIOffscreenScreens, UIOffscreenScreens );
 } // namespace sw
