@@ -222,6 +222,11 @@ namespace
 {
     /** @brief 자식 시한(초) — Debug 의 자식 App 기동(몇 초)에 크래시 보고 몫을 더한다. 케이스 시한은 이보다 길게 둔다. */
     constexpr float32 kCrashChildTimeoutSeconds = 120.0f;
+    /**
+     * @brief 막힌 보고(`StderrHeld`)에 주는 보고 시한(초)입니다. stderr 는 영영 막혀 있으니 시한은 늘 닿는다 — 이 값은 그 앞의 미니덤프 · 스택 파일 몫이다.
+     * @details 2 초는 테스트 여섯이 함께 돌 때 기호 읽기와 덤프 쓰기가 끝나기 전에 닿아 파일이 없었다(Release ctest -j6). 시한을 줄여 케이스를 빨리 끝내려다 덤프를 보는 기대가 부하에 따라 갈렸다.
+     */
+    constexpr uint32 kStuckReportDeadlineSeconds = 15;
 
     /** @brief @p folder 에서 이름이 @p suffix 로 끝나는 첫 파일입니다. 없으면 빈 글입니다. */
     string findReportFile( const string& folder, string_view suffix )
@@ -326,7 +331,7 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile, ._tags 
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
 
     const test::ChildRunResult child =
-        test::runChildRole( "CrashReportTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashTestKind::StderrHeld, folder, 2 ), kCrashChildTimeoutSeconds );
+        test::runChildRole( "CrashReportTest.ChildCrashesAsRequested", makeCrashChildArgument( CrashTestKind::StderrHeld, folder, kStuckReportDeadlineSeconds ), kCrashChildTimeoutSeconds );
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
     SW_EXPECT_TRUE( child._exitCode != 0 );
     SW_EXPECT_TRUE_MSG( child._output.find( "did not finish in time" ) != string::npos, "no line saying the report hit its deadline - last output:" + child.getOutputTail() );
