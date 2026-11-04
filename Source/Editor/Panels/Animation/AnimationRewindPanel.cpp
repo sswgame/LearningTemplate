@@ -14,10 +14,12 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationRewind.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -71,8 +73,49 @@ namespace sw::editor
                 if ( bLabel && frame._state._stateName.empty() == false )
                     queue.drawText( inoutListPosition[0] + float3{ 0.0f, 0.2f, 0.0f }, frame._state._stateName.c_str(), color, 0.0f, category );
             }
+
+            /** @brief 활성 씬의 되감기 기록기입니다. 활성 씬이 없으면 nullptr 입니다(감시 값이 읽는다). */
+            [[nodiscard]] static const AnimationRewindRecorder* findActiveRewind()
+            {
+                Scene* pScene = editor::getActiveScene();
+                return pScene != nullptr && pScene->getObjectManager() != nullptr ? &pScene->getObjectManager()->getSubsystem<AnimationSystem>().getRewind() : nullptr;
+            }
+
+            [[nodiscard]] static bool readTrackCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AnimationRewindRecorder* pRewind = findActiveRewind();
+                if ( pRewind == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pRewind->getTracks().size() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readHistorySeconds( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AnimationRewindRecorder* pRewind = findActiveRewind();
+                if ( pRewind == nullptr )
+                    return false;
+                outValue = pRewind->getTracks().empty() ? 0.0 : pRewind->getLatestTime() - pRewind->getEarliestTime();
+                return true;
+            }
+
+            [[nodiscard]] static bool readScrubbing( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AnimationRewindRecorder* pRewind = findActiveRewind();
+                if ( pRewind == nullptr )
+                    return false;
+                outValue = pRewind->isScrubbing() ? 1.0 : 0.0;
+                return true;
+            }
         };
     } // namespace
+
+    SW_AUTOMATION_WATCH( editorAnimationRewindTrackCount, "Editor.AnimationRewindTrackCount", "Animation rewind tracks of the active scene (fails while there is no active scene)",
+                         &AnimationRewindPanelInternal::readTrackCount );
+    SW_AUTOMATION_WATCH( editorAnimationRewindHistorySeconds, "Editor.AnimationRewindHistorySeconds", "Seconds of animation history the active scene's rewind holds",
+                         &AnimationRewindPanelInternal::readHistorySeconds );
+    SW_AUTOMATION_WATCH( editorAnimationRewindScrubbing, "Editor.AnimationRewindScrubbing", "1 while the active scene's animation rewind shows a past time",
+                         &AnimationRewindPanelInternal::readScrubbing );
 
     AnimationRewindPanel::AnimationRewindPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
@@ -137,6 +180,7 @@ namespace sw::editor
         bool bRecord = AnimationRewindRecorder::isRecordingRequested();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Record" ), &bRecord ) )
             AnimationRewindRecorder::setRecordingRequested( bRecord );
+        EditorSelfTestMarks::note( "animationRewind.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "RecordTip" ) );
         ImGui::SameLine();
         float32 seconds = AnimationRewindRecorder::getRequestedWindowSeconds();
@@ -174,6 +218,7 @@ namespace sw::editor
                 EditorPlaySession::pause();
             rewind.setScrubTime( rewind.getLatestTime() - static_cast<float64>( _scrubSecondsAgo ) );
         }
+        EditorSelfTestMarks::note( "animationRewind.timeline" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "TimelineTip" ) );
         ImGui::SameLine();
         if ( rewind.isScrubbing() )
@@ -185,6 +230,7 @@ namespace sw::editor
                 if ( EditorPlaySession::isPaused() )
                     EditorPlaySession::setState( PlaySessionState::Playing );
             }
+            EditorSelfTestMarks::note( "animationRewind.resume" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "ResumeTip" ) );
         }
         else

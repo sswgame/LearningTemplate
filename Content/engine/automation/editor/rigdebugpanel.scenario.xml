@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 리그 디버그 창(rig_debug): 기사 몸 + 리그(노드 둘 — ForearmTwist 가중치 1, ShrinkHead 가중치 0.5) 프리팹을 놓고 고른 채 플레이하면
+  에디터 시나리오 — 리그 디버그 창(rig_debug): 기사 몸 + 애니메이터 + 리그(노드 둘 — ForearmTwist 가중치 1, ShrinkHead 가중치 0.5) 프리팹을 놓고 고른 채 플레이하면
   리그가 묶여 창에 노드 표가 뜬다(리그는 플레이 시작에서 묶는다 — 언리얼 Control Rig 디버그도 PIE 인스턴스를 본다).
   On 칸을 누르면 노드가 꺼지고 다시 누르면 켜진다. Weight 칸(Ctrl+클릭으로 값 입력)에 1 을 넣으면 가중치 합이 2 가 된다. Stop 이 플레이 값을 버린다.
-  데이터: rigdebug/rigdebug.prefab.xml · rigdebug/rigdebug.rig.xml(저장소 리그를 건드리지 않는 시험용 — Save To Rig 는 누르지 않는다).
+  데이터: knight/knight.prefab.xml · knight/knight.rig.xml(저장소 리그를 건드리지 않는 시험용 — Save To Rig 는 누르지 않는다).
   감시 값: Editor.RigDebugNodeCount · Editor.RigDebugEnabledNodeCount · Editor.RigDebugWeightSum(고른 오브젝트의 묶인 리그).
   실행: App -EnableEditor -scenario=engine/automation/editor/rigdebugpanel.scenario.xml -unattended
 -->
@@ -14,9 +14,9 @@
 	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
 	<EditorWaitSettled/>
-	<DevCommand line="prefab.spawn engine/automation/editor/rigdebug/rigdebug.prefab.xml"/>
+	<DevCommand line="prefab.spawn engine/automation/editor/knight/knight.prefab.xml"/>
 	<EditorWaitSettled/>
-	<EditorExpectObject name="RigDebugKnight" component="PoseModifierComponent" selected="1"/>
+	<EditorExpectObject name="TestKnight" component="PoseModifierComponent" selected="1"/>
 	<DevCommand line="panel.focus rig_debug"/>
 	<EditorWaitSettled/>
 	<DevCommand line="editor play.start"/>
