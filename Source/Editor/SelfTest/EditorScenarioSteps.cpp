@@ -240,7 +240,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 레이블 가운데를 누르고 (dx, dy) 픽셀만큼 드래그해 놓습니다. 키와 핸들 드래그에 씁니다. 프레임마다 커서를 다시 넣으며, 넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다.
+             * @brief 레이블 가운데(또는 `anchor` 위치)를 누르고 (dx, dy) 픽셀만큼 드래그해 놓습니다. 키와 핸들 드래그에 씁니다. 프레임마다 커서를 다시 넣으며, 넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다.
              * @details 누름, 절반 이동, 끝 이동, 놓기를 네 프레임에 나눈다. 수정자는 누르기 전에 누르고 놓은 뒤에 해제한다.
              */
             static bool runDrag( AutomationStepContext& runner, const AutomationStep& step )
@@ -265,7 +265,8 @@ namespace sw::editor
                 float64             deltaY       = args._deltaY;
                 const int32         button       = static_cast<int32>( args._buttonNumber );
                 const vector<int32> listModifier = makeImGuiModifiers( args._modifierMask );
-                const float2        start{ ( found._min._x + found._max._x ) * 0.5f, ( found._min._y + found._max._y ) * 0.5f };
+                // `anchor` 는 누르기 시작할 자리를 레이블 안 비율로 잡는다 — 넓은 캔버스(씬 뷰)의 빈 구석에서 끄는 상자 선택처럼 가운데가 아닌 곳에서 시작할 때.
+                const float2 start{ found._min._x + ( found._max._x - found._min._x ) * args._anchor._x, found._min._y + ( found._max._y - found._min._y ) * args._anchor._y };
                 // `toMark` 는 끝을 다른 위젯의 가운데로 잡는다 — 끌어 놓기(Hierarchy 행을 다른 행에, 에셋을 슬롯에)의 받는 쪽을 픽셀 거리로 세지 않는다.
                 if ( const string* pToMark = step.findAttribute( "toMark" ); pToMark != nullptr )
                 {

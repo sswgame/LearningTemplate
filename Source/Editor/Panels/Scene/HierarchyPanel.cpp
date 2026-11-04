@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/TagID.h"
@@ -15,6 +16,7 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIcon.h"
@@ -617,6 +619,29 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "CreateGameObject" ) );
             if ( bEditsAllowed == false )
                 ImGui::EndDisabled();
+
+            // 형식 필터 — 검색 문법 `t:<종류>` 를 몰라도 고를 수 있게 씬에 있는 컴포넌트 종류를 늘어놓는다(언리얼 아웃라이너의 필터 단추 · 유니티 계층 창의 형식 검색).
+            // 검색 칸이 남은 너비를 다 쓰므로 단추는 그 앞에 둔다.
+            ImGui::SameLine();
+            const string_view activeType = HierarchyFilter::findTypeFilter( _filterBuffer.view() );
+            if ( EditorCompactControls::beginViewOptions( "##HierarchyTypeFilter", activeType.empty() == false, SW_LOCKEY( "EditorScene", "HierarchyTypeFilter" ), "hierarchy.typeFilter" ) )
+            {
+                if ( ImGui::MenuItem( SW_LOCKEY( "EditorScene", "HierarchyAllTypes" ), nullptr, activeType.empty() ) )
+                    _filterBuffer.clear();
+                EditorSelfTestMarks::note( "hierarchy.typeFilter.all" );
+                ImGui::Separator();
+                vector<string> listTypeName;
+                if ( pManager != nullptr )
+                    HierarchyFilter::collectComponentTypeNames( *pManager, listTypeName );
+                for ( const string& typeName : listTypeName )
+                {
+                    if ( ImGui::MenuItem( typeName.c_str(), nullptr, StringUtil::equals( activeType, typeName ) ) )
+                        _filterBuffer = string_view{ "t:" + typeName };
+                    const string mark = "hierarchy.typeFilter." + typeName;
+                    EditorSelfTestMarks::note( mark.c_str() );
+                }
+                EditorCompactControls::endViewOptions();
+            }
 
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer,

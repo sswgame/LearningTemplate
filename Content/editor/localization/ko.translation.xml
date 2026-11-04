@@ -404,6 +404,10 @@
 		<entry key="EdCommon.SaveLayout"
 		       text="지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
 		       sourceHash="5c3e8cae3ce7dbc3" />
+		<entry key="EdCommon.ScaleSnap"
+		       text="크기 스냅: 크기가 오른쪽 값 단위로 바뀝니다."
+		       sourceHash="9ad18a0e0585c0ce" />
+		<entry key="EdCommon.ScaleSnapSize" text="크기 스냅 간격(배율)입니다." sourceHash="2b4ce5c20eba99b5" />
 		<entry key="EdCommon.SearchAssetsHint" text="에셋 검색" sourceHash="2dbac932ba536d9a" />
 		<entry key="EdCommon.SearchClear" text="검색어를 지웁니다." sourceHash="5b5e9f79d6ab0be0" />
 		<entry key="EdCommon.SearchHint" text="검색..." sourceHash="ffa721bb6aa3128d" />
@@ -925,7 +929,6 @@
 		<entry key="EdText.ApplySize" text="크기 적용" sourceHash="dff204c036ea5130" />
 		<entry key="EdText.ApplyToOuterPrefab" text="바깥 프리팹에 적용" sourceHash="b8461f190701f9e7" />
 		<entry key="EdText.ApplyToPrefab" text="프리팹에 적용" sourceHash="fce34cf9d99f3b12" />
-		<entry key="EdText.ApplyToSelection" text="선택에 적용" sourceHash="7402aca38b40826e" />
 		<entry key="EdText.AtlasCellsClickSelectedFrameShiftClickNew"
 		       text="아틀라스 칸(누르면 고른 프레임, Shift+누르면 새 프레임)"
 		       sourceHash="e78160df3922bd38" />
@@ -1059,7 +1062,6 @@
 		<entry key="EdText.Rebind" text="다시 묶기" sourceHash="a56c3ab7f3617dc7" />
 		<entry key="EdText.RebindThis" text="이것 다시 묶기" sourceHash="83afdae57ec180a1" />
 		<entry key="EdText.Reconnect" text="다시 연결" sourceHash="31853dc46cf19846" />
-		<entry key="EdText.RedoCtrlY" text="다시 실행(Ctrl+Y)" sourceHash="f48bf4bd1d09ac2b" />
 		<entry key="EdText.RefreshFiles" text="파일 새로 고침" sourceHash="4765ac524b5f107b" />
 		<entry key="EdText.RefreshFilesAlt" text="파일 새로 고침" sourceHash="03bf93b8ba9139db" />
 		<entry key="EdText.RefreshOverrides" text="덮어쓴 값 새로 고침" sourceHash="3f9bd9982018f835" />
@@ -1133,7 +1135,6 @@
 		       sourceHash="7b403440dbf44374" />
 		<entry key="EdText.True" text="참" sourceHash="85ea99fb52be3385" />
 		<entry key="EdText.UnbindOther" text="다른 것 풀기" sourceHash="8aa5c1bd0cc47127" />
-		<entry key="EdText.UndoCtrlZ" text="실행 취소(Ctrl+Z)" sourceHash="d59b6c520b1c89d2" />
 		<entry key="EdText.Unlink" text="연결 풀기" sourceHash="4ea3cdbc80b3fc92" />
 		<entry key="EdText.Unload" text="내리기" sourceHash="5d3714bc882df1b2" />
 		<entry key="EdText.Unparent" text="부모 풀기" sourceHash="f2e7c9227ea7c462" />
@@ -1351,6 +1352,7 @@
 		<entry key="EdWidget.RestartRequired" text="다시 시작 필요" sourceHash="3847bf768d4cbfad" />
 		<entry key="EdWidget.RightStick" text="오른쪽 스틱" sourceHash="2b11d6ec339b6ad9" />
 		<entry key="EdWidget.RotSnap" text="회전 스냅" sourceHash="10ba28754abccb4e" />
+		<entry key="EdWidget.ScaleSnap" text="크기 스냅" sourceHash="ebcebcb9e1d11f43" />
 		<entry key="EdWidget.Shader" text="셰이더" sourceHash="31243d825582cde8" />
 		<entry key="EdWidget.Simulating" text="시뮬레이트 중" sourceHash="7ee10555e35ef898" />
 		<entry key="EdWidget.Sources" text="소스" sourceHash="91e3a47599412f51" />
@@ -2402,14 +2404,25 @@
 		<entry key="EditorScene.HiddenInEditor"
 		       text="에디터에서 숨겨져 있습니다 - 클릭하면 보입니다"
 		       sourceHash="b9a5ddb967c9d069" />
+		<entry key="EditorScene.HierarchyAllTypes" text="모든 종류" sourceHash="81c540e467783095" />
 		<entry key="EditorScene.HierarchyNoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
 		<entry key="EditorScene.HierarchySearch"
 		       text="오브젝트 이름 검색, 컴포넌트 타입(t:Mesh), 태그(tag:Player) 필터를 지원합니다"
 		       sourceHash="6b6bab306473bd7a" />
 		<entry key="EditorScene.HierarchySearchHint" text="검색 (t:Mesh, tag:Player)..." sourceHash="1baf9d5c7e7a6426" />
+		<entry key="EditorScene.HierarchyTypeFilter"
+		       text="이 컴포넌트 종류를 가진 오브젝트만 보입니다(검색에 t:종류 를 친 것과 같습니다)"
+		       sourceHash="3b6e0062474ef812" />
 		<entry key="EditorScene.HistoryClear"
 		       text="실행 취소 기록을 모두 지웁니다. 되돌릴 수 없습니다"
 		       sourceHash="4b67ad2c55d8e52d" />
+		<entry key="EditorScene.HistoryInitialState" text="처음 상태" sourceHash="9952d0dbf104795a" />
+		<entry key="EditorScene.HistoryNothingToRedo"
+		       text="다시 실행할 것이 없습니다"
+		       sourceHash="1a0fdb49db96a4a5" />
+		<entry key="EditorScene.HistoryNothingToUndo"
+		       text="실행 취소할 것이 없습니다"
+		       sourceHash="2a772c54b5f4c613" />
 		<entry key="EditorScene.HistoryRedo"
 		       text="되돌린 편집을 다시 실행합니다. Ctrl+Y"
 		       sourceHash="bbfb90496776f3a6" />

@@ -162,6 +162,11 @@ namespace sw::editor
             outError = step.describe() + ": mods must be ctrl, shift or alt joined with '+', got '" + *step.findAttribute( "mods" ) + "'";
             return false;
         }
+        if ( readAnchor( step, outArgs._anchor ) == false )
+        {
+            outError = step.describe() + ": anchor must be 'x,y' in 0..1 (0.5,0.5 is the centre), got '" + *step.findAttribute( "anchor" ) + "'";
+            return false;
+        }
         return true;
     }
 
@@ -194,7 +199,7 @@ namespace sw::editor
 
     bool EditorScenarioStepValidation::validateDrag( const AutomationStep& step, string& outError )
     {
-        if ( validateAttributes( step, { "mark", "toMark", "dx", "dy", "button", "mods" }, "mark", outError ) == false )
+        if ( validateAttributes( step, { "mark", "anchor", "toMark", "dx", "dy", "button", "mods" }, "mark", outError ) == false )
             return false;
         if ( step.findAttribute( "toMark" ) != nullptr && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
         {

@@ -1133,6 +1133,16 @@
 				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdCommon.ScaleSnap" source="Scale snap: scaling jumps in steps of the value on the right.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ScaleSnapSize" source="Scale snap step, as a scale factor.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.SearchAssetsHint" source="Search assets">
 			<origins>
 				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
@@ -2896,11 +2906,6 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdText.ApplyToSelection" source="Apply to Selection">
-			<origins>
-				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdText.AtlasCellsClickSelectedFrameShiftClickNew"
 		       source="Atlas cells (click: selected frame, Shift+click: new frame)">
 			<origins>
@@ -3399,11 +3404,6 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdText.RedoCtrlY" source="Redo (Ctrl+Y)">
-			<origins>
-				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdText.RefreshFiles" source="Refresh files">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
@@ -3724,11 +3724,6 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdText.UndoCtrlZ" source="Undo (Ctrl+Z)">
-			<origins>
-				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdText.Unlink" source="Unlink">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
@@ -4015,7 +4010,6 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
-				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Delete" source="Delete">
@@ -4063,7 +4057,6 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
-				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
 				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
@@ -4104,7 +4097,6 @@
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
-				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
@@ -4495,6 +4487,11 @@
 			</origins>
 		</entry>
 		<entry key="EdWidget.RotSnap" source="Rot Snap">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdWidget.ScaleSnap" source="Scale Snap">
 			<origins>
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
 			</origins>
@@ -6010,6 +6007,7 @@
 		<entry key="EditorInspector.ResetToDefaultTooltip" source="Reset to the default value">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.RevertToPrefab" source="Revert this object to the contents of the source prefab file">
@@ -6025,6 +6023,7 @@
 		<entry key="EditorInspector.SearchPropertiesHint" source="Search properties...">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.SearchTooltip" source="Filter by property and component name">
@@ -6810,6 +6809,11 @@
 				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorScene.HierarchyAllTypes" source="All types">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorScene.HierarchyNoActiveScene" source="No active scene.">
 			<origins>
 				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
@@ -6826,7 +6830,28 @@
 				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorScene.HierarchyTypeFilter"
+		       source="Show only objects with a component type (same as typing t:Type in the search)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorScene.HistoryClear" source="Clear the whole undo history. This cannot be undone">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HistoryInitialState" source="Initial state">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HistoryNothingToRedo" source="Nothing to redo">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HistoryNothingToUndo" source="Nothing to undo">
 			<origins>
 				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
 			</origins>

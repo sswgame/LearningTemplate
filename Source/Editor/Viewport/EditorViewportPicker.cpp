@@ -3,10 +3,13 @@
 #include "Editor/Viewport/EditorViewportPicker.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -21,6 +24,7 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -36,6 +40,17 @@ namespace sw::editor
         {
             static constexpr float64 kSlowHoverPickSeconds  = 0.002; ///< 이보다 오래 걸린 호버 피킹은 비싸다고 판단한다
             static constexpr float64 kSlowHoverPickInterval = 0.1;   ///< 비싸면 이만큼 간격을 둔다(초)
+
+            /** @brief 누를 때의 수정 키로 고르는 방식을 정합니다. Ctrl 넣고 빼기 · Shift 더하기(언리얼 뷰포트 · 아웃라이너와 같다). */
+            static SelectionMode readSelectionMode()
+            {
+                const uint8 modifierMask = EditorInputGUI::getModifierMask();
+                if ( ( modifierMask & ModifierKey::Ctrl ) != 0 )
+                    return SelectionMode::Toggle;
+                if ( ( modifierMask & ModifierKey::Shift ) != 0 )
+                    return SelectionMode::Add;
+                return SelectionMode::Replace;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -47,6 +62,9 @@ namespace sw::editor
         , _lastHoverPickSeconds{ 0.0 }
         , _lastHoverPickTime{ 0.0 }
         , _hoverMousePos{ -1.0f, -1.0f }
+        , _marqueeStart{ 0.0f, 0.0f }
+        , _marqueeMode{ static_cast<uint8>( SelectionMode::Replace ) }
+        , _bMarqueeArmed{ SW_FALSE }
     {
     }
 
@@ -61,13 +79,71 @@ namespace sw::editor
             return;
         if ( ( EditorInputGUI::getModifierMask() & ModifierKey::Alt ) != 0 )
             return;
-        GameObject*      pObject    = nullptr;
-        Component*       pComponent = nullptr;
-        EditorWorkspace& workspace  = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
+        GameObject*         pObject    = nullptr;
+        Component*          pComponent = nullptr;
+        EditorWorkspace&    workspace  = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
+        const SelectionMode mode       = EditorViewportPickerInternal::readSelectionMode();
         if ( findObjectUnderMouse( canvasPos, canvasSize, pCamera, settings, pObject, pComponent ) )
-            workspace.selectComponent( pObject, pComponent );
-        else
+        {
+            if ( mode == SelectionMode::Replace )
+                workspace.selectComponent( pObject, pComponent );
+            else
+                workspace.selectGameObject( pObject, mode );
+            return;
+        }
+        if ( mode == SelectionMode::Replace )
             workspace.clearSelection();
+        _bMarqueeArmed = SW_TRUE;
+        _marqueeStart  = EditorInputGUI::readPointer()._position;
+        _marqueeMode   = static_cast<uint8>( mode );
+    }
+
+    void EditorViewportPicker::processMarquee( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, ImDrawList* pDrawList )
+    {
+        if ( _bMarqueeArmed == SW_FALSE )
+            return;
+        const EditorPointerState pointer = EditorInputGUI::readPointer();
+        const float2             minPos{ MathUtil::min( _marqueeStart._x, pointer._position._x ), MathUtil::min( _marqueeStart._y, pointer._position._y ) };
+        const float2             maxPos{ MathUtil::max( _marqueeStart._x, pointer._position._x ), MathUtil::max( _marqueeStart._y, pointer._position._y ) };
+        if ( pointer.isDown( EditorMouseButton::Left ) )
+        {
+            // 끌기 문턱 안이면 아직 클릭이다 — 상자를 보이지 않는다(누를 때의 손떨림이 상자로 보이지 않게).
+            if ( pointer.isDragging( EditorMouseButton::Left ) )
+            {
+                const Color accent = SW_THEMECOLOR( "Base", "Accent" ); // 선택을 나타내는 상자라 강조색이다(앱 화면 규칙 — 강조색은 선택에)
+                pDrawList->AddRectFilled( ImVec2{ minPos._x, minPos._y }, ImVec2{ maxPos._x, maxPos._y }, EditorColorUtil::toImU32( Color{ accent._r, accent._g, accent._b, 0.15f } ) );
+                pDrawList->AddRect( ImVec2{ minPos._x, minPos._y }, ImVec2{ maxPos._x, maxPos._y }, EditorColorUtil::toImU32( accent ) );
+            }
+            return;
+        }
+        _bMarqueeArmed         = SW_FALSE;
+        const bool bWasDragged = pointer.wasClickedWithoutDrag( EditorMouseButton::Left ) == false;
+        Scene*     pScene      = editor::getActiveScene();
+        if ( bWasDragged == false || pCamera == nullptr || pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+
+        GameObjectManager* pManager = pScene->getObjectManager();
+        pManager->flushSceneTransforms();
+        const float32          aspect        = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
+        const float4x4         viewProj      = pCamera->getViewProjectionMatrix( aspect );
+        const EditorWorkspace& workspace     = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
+        const GameObject*      pEditorCamera = pCamera->getOwner();
+        vector<GameObject*>    listInside;
+        pManager->forEachGameObject(
+            [&]( GameObject* pObj )
+        {
+            const SceneComponent* pRoot    = pObj->getPrimarySceneComponent();
+            const bool            bSkipped = pObj == pEditorCamera || pRoot == nullptr || pObj->isRenderHidden() || workspace.isObjectLocked( pObj->getObjectID() );
+            if ( bSkipped )
+                return;
+            ImVec2 screenPt{};
+            if ( EditorViewportProjectionUtil::projectPoint( viewProj, pRoot->getWorldPosition(), canvasPos, canvasSize, screenPt ) == false )
+                return;
+            if ( minPos._x <= screenPt.x && screenPt.x <= maxPos._x && minPos._y <= screenPt.y && screenPt.y <= maxPos._y )
+                listInside.push_back( pObj );
+        } );
+        if ( listInside.empty() == false )
+            editor::getMainSceneSelection().selectObjects( listInside, static_cast<SelectionMode>( _marqueeMode ) );
     }
 
     void EditorViewportPicker::processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered, bool bGizmoDragging,

@@ -37,10 +37,11 @@ namespace sw::editor
             static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboID, bool& bEnabled, float32& value,
                                              const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
                                              int32 fallbackIndex, bool bVertical, const utf8* pToggleTooltip,
-                                             const utf8* pValueTooltip )
+                                             const utf8* pValueTooltip, const utf8* pToggleMark )
             {
                 if ( EditorWidgets::drawToggleButton( pButtonLabel, bEnabled ) )
                     bEnabled = ( bEnabled == false );
+                EditorSelfTestMarks::note( pToggleMark );
                 EditorWidgets::drawTooltip( pToggleTooltip );
 
                 EditorViewportToolbar::nextItem( bVertical );
@@ -295,7 +296,7 @@ namespace sw::editor
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
         EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "GridSnap" ), "Grid Snap" ), "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
                                                             SW_LOCKEY( "EdCommon", "GridSnap" ),
-                                                            SW_LOCKEY( "EdCommon", "GridSnapSize" ) );
+                                                            SW_LOCKEY( "EdCommon", "GridSnapSize" ), "viewport.gridSnap" );
 
         nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
@@ -303,7 +304,16 @@ namespace sw::editor
         EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "RotSnap" ), "Rot Snap" ), "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
                                                             4, 1, bVertical,
                                                             SW_LOCKEY( "EdCommon", "RotationSnap" ),
-                                                            SW_LOCKEY( "EdCommon", "RotationSnapSize" ) );
+                                                            SW_LOCKEY( "EdCommon", "RotationSnapSize" ), "viewport.rotationSnap" );
+
+        // 크기 스냅 — 설정 · 기즈모는 이미 값을 읽는데 켤 단추가 없었다(언리얼 뷰포트 툴바 · Godot 스냅 설정은 이동 · 회전 · 크기 셋을 나란히 둔다).
+        nextItem( bVertical );
+        const float32 arrScaleValue[] = { 0.1f, 0.25f, 0.5f, 1.0f };
+        const utf8*   arrScaleLabel[] = { "0.1", "0.25", "0.5", "1.0" };
+        EditorViewportToolbarInternal::drawSnapToggleCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ScaleSnap" ), "Scale Snap" ), "##ScaleSnapVal", settings._bScaleSnap, settings._scaleSnapValue, arrScaleValue,
+                                                            arrScaleLabel, 4, 0, bVertical,
+                                                            SW_LOCKEY( "EdCommon", "ScaleSnap" ),
+                                                            SW_LOCKEY( "EdCommon", "ScaleSnapSize" ), "viewport.scaleSnap" );
         ImGui::EndDisabled();
     }
 } // namespace sw::editor

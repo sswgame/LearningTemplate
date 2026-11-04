@@ -27,6 +27,13 @@ namespace sw::editor
     {
         /** @brief @p pObj 가 검색어 @p pFilter 에 맞으면 true 입니다. 검색어가 비면 모두 맞습니다. */
         static bool matches( const GameObject* pObj, const utf8* pFilter );
+        /**
+         * @brief 씬에 있는 컴포넌트 종류 이름을 이름순 · 겹침 없이 모읍니다. 형식 필터 목록(`t:<종류>`)이 씁니다.
+         * @details 고를 종류를 표로 두지 않고 씬에서 모은다 — 유니티 계층 창의 형식 검색처럼 지금 씬에 있는 것만 보이고, 게임이 더한 컴포넌트도 바로 든다.
+         */
+        static void collectComponentTypeNames( const GameObjectManager& manager, vector<string>& outListName );
+        /** @brief 검색어가 형식 필터(`t:<종류>`)이면 종류 이름을, 아니면 빈 글을 돌려줍니다. */
+        static string_view findTypeFilter( string_view filter );
     };
 
     /**

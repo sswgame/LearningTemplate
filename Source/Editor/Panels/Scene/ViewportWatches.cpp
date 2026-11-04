@@ -17,6 +17,7 @@
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 #include "Editor/Viewport/EditorViewportBillboard.h"
+#include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridUtil.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
@@ -236,6 +237,17 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 씬 뷰 기즈모의 크기 스냅 간격입니다. 스냅이 꺼져 있으면 0 입니다. */
+        [[nodiscard]] bool readScaleSnapStep( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorViewportClient* pClient = findSceneViewClient();
+            if ( pClient == nullptr )
+                return false;
+            const ViewportToolbarSettings& settings = pClient->getToolbarSettings();
+            outValue                                = settings._bScaleSnap ? static_cast<float64>( settings._scaleSnapValue ) : 0.0;
+            return true;
+        }
+
         /** @brief 씬 뷰를 최대화했으면 1 입니다. */
         [[nodiscard]] bool readSceneViewMaximized( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -409,6 +421,7 @@ namespace sw::editor
                          &readBillboardIcon );
     SW_AUTOMATION_WATCH( editorSceneViewOrthographic, "Editor.SceneViewOrthographic", "1 when the scene view uses an orthographic axis view",
                          &readSceneViewOrthographic );
+    SW_AUTOMATION_WATCH( editorScaleSnapStep, "Editor.ScaleSnapStep", "Scene view gizmo scale snap step (0 while scale snap is off)", &readScaleSnapStep );
     SW_AUTOMATION_WATCH( editorSceneViewMaximized, "Editor.SceneViewMaximized", "1 while the scene view is maximized (Shift+Space)",
                          &readSceneViewMaximized );
     SW_AUTOMATION_WATCH( editorSceneViewHUDSections, "Editor.SceneViewHUDSections", "Debug HUD sections the scene view HUD box drew (0 when the box is off)",

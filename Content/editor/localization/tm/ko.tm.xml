@@ -105,6 +105,7 @@
 		       text="모든 로그 수준이 숨겨져 있습니다. 툴바에서 하나를 다시 켜세요." />
 		<entry source="All packs" text="모든 팩" />
 		<entry source="All processes" text="모든 프로세스" />
+		<entry source="All types" text="모든 종류" />
 		<entry source="All voices" text="전체 보이스" />
 		<entry source="Also turns off" text="함께 꺼짐" />
 		<entry source="Also turns on" text="함께 켜짐" />
@@ -682,6 +683,7 @@
 		<entry source="Indexing assets..." text="에셋을 인덱싱하는 중..." />
 		<entry source="Indexing references. Try again in a moment."
 		       text="참조를 색인하는 중입니다. 잠시 뒤 다시 시도하세요." />
+		<entry source="Initial state" text="처음 상태" />
 		<entry source="Inject KeyDown" text="키 누름 넣기" />
 		<entry source="Inject KeyUp" text="키 뗌 넣기" />
 		<entry source="Inject Stick Tilt" text="스틱 기울임 넣기" />
@@ -994,6 +996,8 @@
 		       text="아직 기록이 없습니다. 기록을 켜고 플레이(PIE)하거나 콘솔에서 'anim.rewind on' 을 입력합니다." />
 		<entry source="Nothing selected. Pick in the Scene view or use Hierarchy."
 		       text="선택한 것이 없습니다. 씬 뷰에서 고르거나 Hierarchy 를 쓰세요." />
+		<entry source="Nothing to redo" text="다시 실행할 것이 없습니다" />
+		<entry source="Nothing to undo" text="실행 취소할 것이 없습니다" />
 		<entry source="Notifies:" text="알림:" />
 		<entry source="Number of frames 'Step N' advances (1 or more)." text="'Step N' 이 진행할 프레임 수" />
 		<entry source="Number of grid columns the atlas is cut into, 1 to 64."
@@ -1564,6 +1568,10 @@
 		       text="현재 포커스된 에셋 또는 활성 씬을 저장합니다" />
 		<entry source="Saves the focused view (game view or scene view) as PNG"
 		       text="포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다" />
+		<entry source="Scale Snap" text="크기 스냅" />
+		<entry source="Scale snap step, as a scale factor." text="크기 스냅 간격(배율)입니다." />
+		<entry source="Scale snap: scaling jumps in steps of the value on the right."
+		       text="크기 스냅: 크기가 오른쪽 값 단위로 바뀝니다." />
 		<entry source="Scale: resize the selection along an axis, or uniformly from the center (R)"
 		       text="크기: 선택한 오브젝트의 크기를 축 방향이나 중심에서 고르게 바꿉니다 (R)" />
 		<entry source="Scan Resources" text="리소스 훑기" />
@@ -1682,6 +1690,8 @@
 		<entry source="Show error rows" text="오류 줄을 보입니다" />
 		<entry source="Show in Explorer" text="탐색기에서 보기" />
 		<entry source="Show in the Content Browser" text="콘텐츠 브라우저에서 보여 줍니다" />
+		<entry source="Show only objects with a component type (same as typing t:Type in the search)"
+		       text="이 컴포넌트 종류를 가진 오브젝트만 보입니다(검색에 t:종류 를 친 것과 같습니다)" />
 		<entry source="Show only one module category" text="한 종류의 모듈만 보입니다" />
 		<entry source="Show only the properties that differ from the prefab"
 		       text="프리팹과 다른 프로퍼티만 보입니다" />

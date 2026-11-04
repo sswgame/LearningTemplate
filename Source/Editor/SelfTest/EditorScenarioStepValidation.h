@@ -56,6 +56,7 @@ namespace sw::editor
         float64 _deltaX{ 0.0 };
         float64 _deltaY{ 0.0 };
         float64 _buttonNumber{ 0.0 };
+        float2  _anchor{ 0.5f, 0.5f }; ///< 누르기 시작할 레이블 안 위치(0..1). 적지 않으면 가운데
     };
 } // namespace sw::editor
 

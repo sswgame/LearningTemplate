@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -77,6 +78,28 @@ namespace sw::editor
     HierarchyRowModel& HierarchyRowModel::get()
     {
         return getEditorState<HierarchyRowModel>();
+    }
+
+    void HierarchyFilter::collectComponentTypeNames( const GameObjectManager& manager, vector<string>& outListName )
+    {
+        outListName.clear();
+        manager.forEachGameObject( [&outListName]( GameObject* pObj )
+        {
+            for ( Component* pComp : pObj->getComponents() )
+            {
+                if ( pComp != nullptr )
+                    outListName.emplace_back( pComp->getTypeName().view() );
+            }
+        } );
+        std::sort( outListName.begin(), outListName.end() );
+        outListName.erase( std::unique( outListName.begin(), outListName.end() ), outListName.end() );
+    }
+
+    string_view HierarchyFilter::findTypeFilter( string_view filter )
+    {
+        if ( filter.size() < 2 || filter[0] != 't' || filter[1] != ':' )
+            return {};
+        return filter.substr( 2 );
     }
 
     void HierarchyRowModel::refresh( GameObjectManager& manager, string_view filterText )
