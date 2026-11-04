@@ -30,6 +30,8 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override;
         /** @brief 아틀라스 이미지를 해제합니다. */
         void shutdown() override;
+        /** @brief 문서를 읽었습니다(감시 값이 읽지 않은 창을 거른다). */
+        bool isClipDocumentLoaded() const { return isDocumentLoaded(); }
         /** @brief 문서의 프레임 수입니다(감시 값 `Editor.SpriteClipFrameCount`). */
         uint32 getFrameCount() const { return static_cast<uint32>( _model.getFrames().size() ); }
         /** @brief 문서의 이름 붙은 애니메이션 구간 수입니다(감시 값 `Editor.SpriteClipAnimationCount`). */

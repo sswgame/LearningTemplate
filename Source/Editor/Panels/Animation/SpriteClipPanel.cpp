@@ -40,7 +40,7 @@ namespace sw::editor
                 if ( pContext == nullptr )
                     return nullptr;
                 const SpriteClipPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SpriteClipPanel>();
-                return pPanel != nullptr && pPanel->isOpen() && pPanel->isDocumentLoaded() ? pPanel : nullptr;
+                return pPanel != nullptr && pPanel->isOpen() && pPanel->isClipDocumentLoaded() ? pPanel : nullptr;
             }
 
             [[nodiscard]] static bool readFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
