@@ -91,6 +91,7 @@
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
+#include "Engine/Renderer/SceneRHISubsystem.h"
 #include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
@@ -653,6 +654,8 @@ namespace sw
         // 새 디바이스가 섰다. 레지스트리 전체에 "다시 올려라" 를 알린다. 어떤 캐시를 빠뜨렸는지
         // 기억할 필요가 없는 것이 이 구조의 요점이다(언리얼 FRenderResource::InitRHI 와 같은 자리).
         const Stopwatch rebindWatch;
+        // 머티리얼을 다시 올리면 텍스처를 요청한다 — 캐시가 새 디바이스를 먼저 알아야 한다(SceneRHI 단계는 아래 `restartStopped` 에서야 다시 선다).
+        SceneRHISubsystem::bindAssetCaches( &_pRHI->getDevice() );
         RHIRenderResource::initAllFor( &_pRHI->getDevice() );
         const uint64 initMicroseconds = rebindWatch.getElapsedMicroseconds();
 

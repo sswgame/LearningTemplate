@@ -58,6 +58,12 @@
     #error "SW_PASS_SHADOW and SW_PASS_DEPTH_PREPASS are exclusive pass kinds"
 #endif
 
+// 그림자를 끈 머티리얼(풀 · 꽃 카드)의 그림자는 패스 셰이더가 그린다 — 뼈대가 배치를 한 점으로 모아 버리므로(`excludeFromDepthPass`) 오릴 표면이 없다.
+// 그 머티리얼이 알파 컷오프도 가지면(잎 카드) 컷오프를 지운다 — 남기면 머티리얼 없는 셰이더가 표면을 읽으려다 컴파일이 안 된다(아래 검사).
+#if defined( SW_MATERIAL_NONE ) && defined( SW_PASS_SHADOW ) && defined( MATERIAL_SHADOW_CAST_OFF )
+    #undef MATERIAL_ALPHA_CUTOFF
+#endif
+
 #if defined( SW_MATERIAL_DEPTH_PASS ) && !defined( MATERIAL_ALPHA_CUTOFF )
     #define SW_MATERIAL_DEPTH_ONLY 1 // 깊이만 쓰고 픽셀이 읽을 것이 없다 — 보간 칸이 위치뿐이다
 #endif

@@ -25,21 +25,23 @@ namespace sw
     {
         IRHIDevice* const pDevice = &_rhiSubsystem.findRHI()->getDevice();
         engine::getSubsystem<SceneManager>().setRHIDevice( pDevice );
+        bindAssetCaches( pDevice );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void SceneRHISubsystem::bindAssetCaches( IRHIDevice* pDevice )
+    {
         // GPU 자원을 가진 캐시가 쓸 디바이스 — 게임 스레드 요청(텍스처)과 다시 로드(텍스처 · 머티리얼 · 메시)는 디바이스를 인자로 받지 않는다
         AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.getAssetCache<TextureCache>().bindDevice( pDevice );
         assetManager.getAssetCache<MaterialCache>().bindDevice( pDevice );
         assetManager.getAssetCache<MeshCache>().bindDevice( pDevice );
-        return SubsystemInitResult::Succeeded;
     }
 
     void SceneRHISubsystem::shutdownSubsystem()
     {
         engine::getSubsystem<SceneManager>().setRHIDevice( nullptr );
-        AssetManager& assetManager = engine::getSubsystem<AssetManager>();
-        assetManager.getAssetCache<TextureCache>().bindDevice( nullptr );
-        assetManager.getAssetCache<MaterialCache>().bindDevice( nullptr );
-        assetManager.getAssetCache<MeshCache>().bindDevice( nullptr );
+        bindAssetCaches( nullptr );
     }
 
     span<const utf8* const> SceneRHISubsystem::getSubsystemDependencies() const
