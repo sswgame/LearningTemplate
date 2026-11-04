@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 월드 좌표 타일 PBR 기준(pbrmaterial 의 자식) — Poly Haven 같은 스캔 텍스처(알베도 · OpenGL 노멀 · ARM = ORM 배치)를 크기가 제각각인 블록 · 큰 평면에 메시 UV 없이 깐다.
+     자식은 _worldTileSize(원본 텍스처가 덮는 실제 크기, m)와 텍스처 세 장만 적는다(언리얼 Material Instance · 유니티 Material Variant — 견본 칸을 베끼지 않는다).
+     기본 타일 2 m 는 Poly Haven 스캔의 흔한 실제 크기다. -->
+<MaterialDesc formatVersion="0" name="PBRWorldTile" parent="engine/materials/pbrmaterial.material">
+	<_properties>
+		<item name="_worldTileSize" defaultValue="2.0" />
+	</_properties>
+</MaterialDesc>

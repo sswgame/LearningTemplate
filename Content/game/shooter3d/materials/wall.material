@@ -1,30 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 아레나 벽 — Poly Haven "Concrete Block Wall"(CC0, 2 m 타일) 스캔 텍스처. 늘린 큐브라 월드 좌표로 타일링한다(_worldTileSize). -->
-<MaterialDesc formatVersion="0" name="ShooterWall" shaderPath="engine/shaders/pbr_lit.hlsl" blendMode="Opaque">
+<!-- 아레나 벽 — Poly Haven "Concrete Block Wall"(CC0, 2 m 타일 = 기준의 기본값) 스캔 텍스처를 월드 좌표로 타일링한다. -->
+<MaterialDesc formatVersion="0" name="ShooterWall" parent="engine/materials/pbrworldtile.material">
 	<_properties>
-		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="_roughness" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="_metallic" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="_normalScale" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="2.0" group="Surface"/>
-		<item name="_occlusionStrength" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="_worldTileSize" type="Float" shaderType="Float" defaultValue="2.0" displayName="World Tile Size (m, 0 = mesh UV)" group="Surface"/>
-		<item name="_alphaCutoff" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" displayName="Alpha Cutoff" group="Surface"/>
-		<item name="_albedoMap" type="Texture2D" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_diff_2k.dds" displayName="Albedo" group="Surface" bSrgb="1"/>
-		<item name="_normalMap" type="Texture2D" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_nor_gl_2k.dds" displayName="Normal" group="Surface" bSrgb="0"/>
-		<item name="_ormMap" type="Texture2D" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_arm_2k.dds" displayName="Occlusion Roughness Metallic" group="Surface" bSrgb="0"/>
+		<item name="_albedoMap" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_diff_2k.dds" />
+		<item name="_normalMap" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_nor_gl_2k.dds" />
+		<item name="_ormMap" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_arm_2k.dds" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
-		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
-		</_alwaysDefines>
-		<_multiCompiles>
-			<item name="FogMode" selected="FOG_OFF">
-				<_options>
-					<item>FOG_OFF</item>
-					<item>FOG_LINEAR</item>
-					<item>FOG_EXP</item>
-				</_options>
-			</item>
-		</_multiCompiles>
-	</_permutations>
 </MaterialDesc>
