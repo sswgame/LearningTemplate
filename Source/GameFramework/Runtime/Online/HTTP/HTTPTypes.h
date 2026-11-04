@@ -46,15 +46,24 @@ namespace sw
     /** @brief HTTP 상한 값들입니다. */
     struct HTTPConstant
     {
-        static constexpr int32 kMaxHeaderBytes        = 16 * 1024;
-        static constexpr int32 kDefaultMaxBodyBytes   = static_cast<int32>( constant::memory::kBytesPerMegabyte );
-        static constexpr int64 kDefaultTimeoutMs      = 10000;
-        static constexpr int32 kStatusOk              = 200;
-        static constexpr int32 kStatusUnauthorized    = 401;
-        static constexpr int32 kStatusForbidden       = 403;
-        static constexpr int32 kStatusNotFound        = 404;
-        static constexpr int32 kStatusTooManyRequests = 429;
-        static constexpr int32 kStatusServerError     = 500; ///< 이 값과 그 위(5xx)
+        static constexpr int32 kMaxHeaderBytes               = 16 * 1024;
+        static constexpr int32 kDefaultMaxBodyBytes          = static_cast<int32>( constant::memory::kBytesPerMegabyte );
+        static constexpr int64 kDefaultTimeoutMs             = 10000;
+        static constexpr int32 kStatusOk                     = 200;
+        static constexpr int32 kStatusUnauthorized           = 401;
+        static constexpr int32 kStatusForbidden              = 403;
+        static constexpr int32 kStatusNotFound               = 404;
+        static constexpr int32 kStatusTooManyRequests        = 429;
+        static constexpr int32 kStatusServerError            = 500; ///< 이 값과 그 위(5xx)
+        static constexpr int32 kDefaultMaxConcurrentRequests = 32;  ///< HTTP/1.1 클라이언트 — 요청마다 연결이다
+        static constexpr int32 kHTTP2MaxConcurrentRequests   = 256; ///< HTTP/2 클라이언트 — 연결 하나에 스트림을 겹친다
+    };
+
+    /** @brief HTTP 클라이언트 설정입니다(HTTP/1.1 · HTTP/2 클라이언트가 함께 쓴다). */
+    struct HTTPClientConfig
+    {
+        int32 _maxResponseBodyBytes{ HTTPConstant::kDefaultMaxBodyBytes };
+        int32 _maxConcurrentRequests{ HTTPConstant::kDefaultMaxConcurrentRequests }; ///< 넘으면 바로 전송 실패(쌓지 않는다)
     };
 } // namespace sw
 

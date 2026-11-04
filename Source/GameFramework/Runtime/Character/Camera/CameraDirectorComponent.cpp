@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -293,7 +294,7 @@ namespace sw
         const CameraComponent* pCamera     = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         const float32          aspectRatio = pCamera != nullptr ? CameraPoseUtil::computeAspectRatio( *pCamera ) : CameraTarget::kDefaultAspectRatio;
         const CameraPose&      pose        = _director.getPose();
-        const GameRay          ray         = computeCameraScreenRay( pose, aspectRatio, mouseNormalized );
+        const Ray              ray         = computeCameraScreenRay( pose, aspectRatio, mouseNormalized );
         float32                distance    = 0.0f;
         if ( RayMath::intersectHorizontalPlane( ray, groundHeight, pose._farPlane * CameraDirectorComponentInternal::kGroundRayFarPlaneScale, distance ) == false )
             return false;

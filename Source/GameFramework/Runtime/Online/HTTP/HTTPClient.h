@@ -31,13 +31,6 @@
 namespace sw
 {
     class ITLSContext;
-
-    /** @brief HTTP 클라이언트 설정입니다. */
-    struct HTTPClientConfig
-    {
-        int32 _maxResponseBodyBytes{ HTTPConstant::kDefaultMaxBodyBytes };
-        int32 _maxConcurrentRequests{ 32 }; ///< 넘으면 바로 전송 실패(쌓지 않는다)
-    };
 } // namespace sw
 
 namespace sw

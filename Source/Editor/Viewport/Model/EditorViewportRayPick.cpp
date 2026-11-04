@@ -8,6 +8,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 
 #include "Engine/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -44,7 +45,7 @@ namespace sw::editor
 
             /** @brief 구 하나를 후보로 넣습니다. 더 가까우면 ioBest를 갱신합니다. */
             static void hitTestSphere( GameObject* pObj, Component* pComp, const float3& center, float32 radius,
-                                       const EditorPickRay& ray, EditorPickResult& ioBest )
+                                       const Ray& ray, EditorPickResult& ioBest )
             {
                 float32 hitT{ 0.0f };
                 if ( EditorViewportRayPick::rayHitsSphere( ray._origin, ray._direction, center, radius, hitT ) == false )
@@ -111,7 +112,7 @@ namespace sw::editor
              * @details 기본 반지름 경로는 경계가 없는 컴포넌트(빈 트랜스폼 · 빛)와, 게임이 만든 컴포넌트를 집게 하는 곳이다. 경계가 맞은 오브젝트에서는
              *          타지 않는다 — 기본 반지름 구가 선언한 경계보다 커서 더 가까운 t 를 내면 선택 컴포넌트가 뒤바뀐다.
              */
-            static void hitTestObject( GameObject* pObj, const EditorPickRay& ray, bool b2DMode, EditorPickResult& ioBest )
+            static void hitTestObject( GameObject* pObj, const Ray& ray, bool b2DMode, EditorPickResult& ioBest )
             {
                 if ( pObj == nullptr || pObj->isActive() == false )
                     return;
@@ -150,7 +151,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorViewportRayPick::pick( const GameObjectManager* pManager, const EditorPickRay& ray, bool b2DMode,
+    bool EditorViewportRayPick::pick( const GameObjectManager* pManager, const Ray& ray, bool b2DMode,
                                       EditorPickResult& outResult )
     {
         outResult = EditorPickResult{};
@@ -202,7 +203,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorViewportRayPick::makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay )
+    bool EditorViewportRayPick::makeRay( const float4x4& invViewProj, float32 u, float32 v, Ray& outRay )
     {
         const float32 ndcX = u * 2.0f - 1.0f;
         const float32 ndcY = 1.0f - v * 2.0f;
@@ -224,7 +225,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorViewportRayPick::rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint )
+    bool EditorViewportRayPick::rayHitsAxisPlane( const Ray& ray, uint32 axisIndex, float3& outPoint )
     {
         if ( axisIndex > 2 )
             return false;

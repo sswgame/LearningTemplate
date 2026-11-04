@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Ray.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -128,7 +129,7 @@ namespace sw
          */
         struct PendingShot
         {
-            GameRay _ray{};
+            Ray     _ray{};
             float3  _muzzle{};
             float32 _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
             float32 _range{ 0.0f };         ///< 무기 사거리(m) — 이보다 짧으면 무언가에 닿았다
@@ -158,7 +159,7 @@ namespace sw
         /** @brief 방아쇠를 당깁니다. 눈에서 @p aimDirection 으로 쏘고, 반동은 @p camera 에 준다. */
         void fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed );
         /** @brief 광선 하나가 막는 상자 · 바닥에 닿는 거리입니다(닿지 않으면 사거리). 틱 안에서 부르며 물리를 묻지 않습니다. */
-        float32 traceCover( const ShooterDirectorComponent& director, const GameRay& ray ) const;
+        float32 traceCover( const ShooterDirectorComponent& director, const Ray& ray ) const;
         /**
          * @brief 쌓인 광선을 적의 히트박스(래그돌 바디, 레이어 `_hitboxLayer`)에 물리 질의로 쏘고, 맞은 적에 맞음을 보내며 탄도선 · 탄착 · 소리를 쌓습니다(게임 스레드).
          * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterHitUtil::makeHitInfo`).

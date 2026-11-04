@@ -30,25 +30,25 @@ namespace sw
             }
 
             /** @brief `:method` · `:scheme` · `:authority` · `:path` 다음에 소문자 머리, 본문이 있으면 `content-length` 를 놓습니다. */
-            static vector<HpackHeader> makeRequestHeaders( const HTTPClientRequest& request, const HTTPAddress& url )
+            static vector<HTTPHeader> makeRequestHeaders( const HTTPClientRequest& request, const HTTPAddress& url )
             {
-                vector<HpackHeader> listHeader;
-                string              authority = url._host;
+                vector<HTTPHeader> listHeader;
+                string             authority = url._host;
                 if ( url._port != kDefaultHTTPSPort )
                     authority += formatToString( ":%#", static_cast<int32>( url._port ) );
-                listHeader.push_back( HpackHeader{ ":method", toString( request._method ) } );
-                listHeader.push_back( HpackHeader{ ":scheme", "https" } );
-                listHeader.push_back( HpackHeader{ ":authority", authority } );
-                listHeader.push_back( HpackHeader{ ":path", url._target } );
+                listHeader.push_back( HTTPHeader{ ":method", toString( request._method ) } );
+                listHeader.push_back( HTTPHeader{ ":scheme", "https" } );
+                listHeader.push_back( HTTPHeader{ ":authority", authority } );
+                listHeader.push_back( HTTPHeader{ ":path", url._target } );
                 for ( const HTTPHeader& header : request._listHeader )
                 {
                     string name = StringUtil::toLower( header._name.c_str() );
                     if ( isConnectionSpecificHeader( name ) )
                         continue;
-                    listHeader.push_back( HpackHeader{ std::move( name ), header._value } );
+                    listHeader.push_back( HTTPHeader{ std::move( name ), header._value } );
                 }
                 if ( request._bodyBytes.empty() == false || request._method == HTTPMethod::Post )
-                    listHeader.push_back( HpackHeader{ "content-length", to_string( static_cast<uint64>( request._bodyBytes.size() ) ) } );
+                    listHeader.push_back( HTTPHeader{ "content-length", to_string( static_cast<uint64>( request._bodyBytes.size() ) ) } );
                 return listHeader;
             }
         };
@@ -382,9 +382,9 @@ namespace sw
 
     bool HTTP2Connection::finishHeaderBlock( vector<uint8>& outBytes, string& outError )
     {
-        vector<HpackHeader> listHeader;
-        string              decodeError;
-        const bool          bDecoded = _decoder.decode( _listHeaderBlock.data(), _listHeaderBlock.size(), listHeader, decodeError ); // 동적 표가 바뀐다 — 스트림을 알든 모르든 읽어야 한다
+        vector<HTTPHeader> listHeader;
+        string             decodeError;
+        const bool         bDecoded = _decoder.decode( _listHeaderBlock.data(), _listHeaderBlock.size(), listHeader, decodeError ); // 동적 표가 바뀐다 — 스트림을 알든 모르든 읽어야 한다
         _listHeaderBlock.clear();
         if ( bDecoded == false )
             return failConnection( ( "header block could not be decoded: " + decodeError ).c_str(), outError );
@@ -402,7 +402,7 @@ namespace sw
         bool               bHasStatus = false;
         int32              status     = 0;
         vector<HTTPHeader> listRegular;
-        for ( HpackHeader& entry : listHeader )
+        for ( HTTPHeader& entry : listHeader )
         {
             if ( entry._name == ":status" )
                 bHasStatus = StringUtil::parseInt( entry._value, status );

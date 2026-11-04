@@ -30,13 +30,6 @@
 namespace sw
 {
     class ITLSContext;
-
-    /** @brief HTTP/2 클라이언트 설정입니다. */
-    struct HTTP2ClientConfig
-    {
-        int32 _maxResponseBodyBytes{ HTTPConstant::kDefaultMaxBodyBytes };
-        int32 _maxConcurrentRequests{ 256 }; ///< 넘으면 바로 전송 실패(쌓지 않는다)
-    };
 } // namespace sw
 
 namespace sw
@@ -59,7 +52,7 @@ namespace sw
         HTTP2Client& operator=( const HTTP2Client& ) = delete;
 
         /** @brief 전송(넘겨받는다)을 띄웁니다. */
-        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTP2ClientConfig& settings );
+        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings );
         /** @brief 날아가던 요청은 전송 실패로 끝나고 다음 `pollResponses` 가 회수한다. */
         void shutdown();
 
@@ -151,7 +144,7 @@ namespace sw
         unordered_map<string, ITLSContext*> _mapHostToTLSContext SW_GUARDED_BY( _mutex );
         vector<HTTPClientResponse> _listDone                     SW_GUARDED_BY( _mutex );
         OnceInit<unique_ptr<IStreamTransport>>                   _transport;
-        OnceInit<HTTP2ClientConfig>                              _settings;
+        OnceInit<HTTPClientConfig>                               _settings;
         DedicatedWorker<uint64>                                  _resolver; ///< 이름 해석 스레드(연결 id 를 받는다). 처음 이름을 받을 때 띄운다
         IDAllocator<uint64> _requestIDAllocator                  SW_GUARDED_BY( _mutex );
         IDAllocator<uint64> _sessionIDAllocator                  SW_GUARDED_BY( _mutex );

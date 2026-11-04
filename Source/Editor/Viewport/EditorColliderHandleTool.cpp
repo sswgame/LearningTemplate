@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -92,7 +93,7 @@ namespace sw::editor
                 const vector<PhysicsShapeDesc3D>& listShape = body.getShapes();
                 if ( state._active._shapeIndex >= listShape.size() )
                     return false;
-                EditorPickRay ray{};
+                Ray ray{};
                 if ( EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray ) == false )
                     return false;
                 const float32 distance = EditorColliderHandleMath::computeClosestAxisParameter( ray._origin, ray._direction, state._active._center, state._active._direction );

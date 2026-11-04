@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
@@ -485,7 +486,7 @@ namespace sw
         return evaluateCameraMode( def, target, 0.0f, state, nullptr );
     }
 
-    GameRay computeCameraScreenRay( const CameraPose& pose, float32 aspectRatio, const float2& mouseNormalized )
+    Ray computeCameraScreenRay( const CameraPose& pose, float32 aspectRatio, const float2& mouseNormalized )
     {
         const float3  right   = float3::transform( float3{ 1.0f, 0.0f, 0.0f }, pose._rotation );
         const float3  up      = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, pose._rotation );
@@ -493,7 +494,7 @@ namespace sw
         const float32 aspect  = MathUtil::max( CameraModeInternal::kMinAspectRatio, aspectRatio );
         const float32 screenX = mouseNormalized._x * 2.0f - 1.0f;
         const float32 screenY = 1.0f - mouseNormalized._y * 2.0f;
-        GameRay       ray;
+        Ray           ray;
         if ( pose._bOrthographic == SW_TRUE )
         {
             // 직교 — 광선은 모두 앞 방향과 나란하고, 시작점이 화면 평면 위에서 옮겨진다.

@@ -15,6 +15,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/EditorSubsystem.h"
@@ -88,17 +89,17 @@ namespace sw::editor
             /** @brief 끌기 하나의 상태입니다. UI 스레드 하나만 씁니다. */
             struct DragState
             {
-                Handle        _handle{};
-                EditorPickRay _startRay{};
-                float3        _startCenter{ 0.0f, 0.0f, 0.0f };   ///< 기즈모 중심(기준 공간)
-                float3        _startRotation{ 0.0f, 0.0f, 0.0f }; ///< 기즈모 오일러 각(도)
-                float3        _startVector{ 0.0f, 0.0f, 0.0f };   ///< 회전 고리 평면 위 시작 방향
-                float3        _appliedDelta{ 0.0f, 0.0f, 0.0f };  ///< 제어점에 이미 건 정규 좌표 이동량
-                float32       _startParameter{ 0.0f };
-                int32         _modifierIndex{ -1 };
-                int32         _pointIndex{ -1 };
-                bool          _bDragging{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool          _bUndoRecorded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                Handle  _handle{};
+                Ray     _startRay{};
+                float3  _startCenter{ 0.0f, 0.0f, 0.0f };   ///< 기즈모 중심(기준 공간)
+                float3  _startRotation{ 0.0f, 0.0f, 0.0f }; ///< 기즈모 오일러 각(도)
+                float3  _startVector{ 0.0f, 0.0f, 0.0f };   ///< 회전 고리 평면 위 시작 방향
+                float3  _appliedDelta{ 0.0f, 0.0f, 0.0f };  ///< 제어점에 이미 건 정규 좌표 이동량
+                float32 _startParameter{ 0.0f };
+                int32   _modifierIndex{ -1 };
+                int32   _pointIndex{ -1 };
+                bool    _bDragging{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool    _bUndoRecorded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 고른 모디파이어 한 프레임의 공간 정보입니다. */
@@ -507,7 +508,7 @@ namespace sw::editor
             }
 
             /** @brief 손잡이와 레이의 거리입니다. 집을 수 없으면 아주 큰 값입니다. */
-            static float32 computeHandleDistance( const Handle& handle, const EditorPickRay& ray )
+            static float32 computeHandleDistance( const Handle& handle, const Ray& ray )
             {
                 if ( handle._kind == DragKind::GizmoRotate )
                 {
@@ -564,7 +565,7 @@ namespace sw::editor
             }
 
             /** @brief 끄는 중인 손잡이를 지금 레이로 옮깁니다. */
-            static void updateDrag( MeshModifierSession& session, DragState& state, const Frame& frame, PointSet& set, const EditorPickRay& ray )
+            static void updateDrag( MeshModifierSession& session, DragState& state, const Frame& frame, PointSet& set, const Ray& ray )
             {
                 MeshModifierGizmo& gizmo  = frame._pModifier->getGizmo();
                 const Handle&      handle = state._handle;
@@ -634,7 +635,7 @@ namespace sw::editor
                 session.markDirty();
             }
 
-            static void beginDrag( DragState& state, const Handle& handle, const Frame& frame, int32 modifierIndex, int32 pointIndex, const EditorPickRay& ray )
+            static void beginDrag( DragState& state, const Handle& handle, const Frame& frame, int32 modifierIndex, int32 pointIndex, const Ray& ray )
             {
                 endDrag( state );
                 // 핸들을 집는 순간부터 놓을 때까지 뷰포트 선택 · 카메라가 마우스를 가져가지 않게 한다(호버만으로는 잡지 않는다)
@@ -687,8 +688,8 @@ namespace sw::editor
                 const ImVec2 mouse        = ImGui::GetMousePos();
                 const bool   bMouseInside = mouse.x >= args._canvasPos._x && mouse.y >= args._canvasPos._y && mouse.x <= args._canvasPos._x + args._canvasSize._x &&
                                           mouse.y <= args._canvasPos._y + args._canvasSize._y && ImGui::IsWindowHovered();
-                EditorPickRay ray{};
-                const bool    bHasRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
+                Ray        ray{};
+                const bool bHasRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
 
                 if ( state._bDragging )
                 {

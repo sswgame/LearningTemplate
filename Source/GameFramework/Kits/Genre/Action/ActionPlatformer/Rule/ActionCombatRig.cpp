@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatRig.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -82,7 +83,7 @@ namespace sw
             return WeaponFireResult::OutOfAmmo;
         const float32 aimLength = aim.getLength();
         const float2  direction = aimLength > 1.0e-4f ? aim * ( 1.0f / aimLength ) : float2{ 1.0f, 0.0f };
-        GameRay       ray;
+        Ray           ray;
         ray._origin    = float3{ origin._x, origin._y, 0.0f };
         ray._direction = float3{ direction._x, direction._y, 0.0f };
         WeaponShot             shot;
@@ -91,7 +92,7 @@ namespace sw
             return result;
         const WeaponDef& def   = _gun.getDef();
         const float32    speed = def._projectileSpeed > 0.0f ? def._projectileSpeed : ActionCombatRigInternal::kDefaultBulletSpeed;
-        for ( const GameRay& pellet : shot._listRay )
+        for ( const Ray& pellet : shot._listRay )
         {
             // 퍼짐 원뿔은 3D 이므로 화면 평면(z = 0)으로 눌러서 2D 방향으로 쓴다.
             float2        pelletDirection{ pellet._direction._x, pellet._direction._y };

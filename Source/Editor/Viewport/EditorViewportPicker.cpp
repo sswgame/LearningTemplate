@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorProfile.h"
@@ -197,7 +198,7 @@ namespace sw::editor
         const float32    aspect      = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
         const float4x4   viewProj    = pCamera->getViewProjectionMatrix( aspect );
         const float4x4   invViewProj = viewProj.invert();
-        EditorPickRay    pickRay{};
+        Ray              pickRay{};
         if ( EditorViewportProjectionUtil::makeMouseRay( invViewProj, canvasPos, canvasSize, pickRay ) == false )
             return false;
         GameObjectManager* pManager = pScene->getObjectManager();

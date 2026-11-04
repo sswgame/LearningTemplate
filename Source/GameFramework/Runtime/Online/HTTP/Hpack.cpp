@@ -19,7 +19,7 @@ namespace sw
             static constexpr uint32 kEntryOverhead   = 32; ///< 항목 크기 = 이름 + 값 + 32 (RFC 7541 4.1)
             static constexpr uint32 kMaxIntegerShift = 28; ///< 이어지는 바이트로 늘어나는 정수의 상한 자리(32 비트 안)
 
-            static uint32 entrySize( const HpackHeader& header ) { return static_cast<uint32>( header._name.size() + header._value.size() ) + kEntryOverhead; }
+            static uint32 entrySize( const HTTPHeader& header ) { return static_cast<uint32>( header._name.size() + header._value.size() ) + kEntryOverhead; }
 
             static void writeString( const string& text, vector<uint8>& outListBlock )
             {
@@ -77,15 +77,15 @@ namespace sw
         outListBlock.push_back( static_cast<uint8>( value ) );
     }
 
-    bool HpackEncoder::encode( const vector<HpackHeader>& listHeader, vector<uint8>& outListBlock )
+    bool HpackEncoder::encode( const vector<HTTPHeader>& listHeader, vector<uint8>& outListBlock )
     {
         using Internal = HpackInternal;
-        for ( const HpackHeader& header : listHeader )
+        for ( const HTTPHeader& header : listHeader )
         {
             if ( header._name.empty() || Internal::hasUppercase( header._name ) )
                 return false;
         }
-        for ( const HpackHeader& header : listHeader )
+        for ( const HTTPHeader& header : listHeader )
         {
             uint32 nameIndex = 0;
             uint32 fullIndex = 0;
@@ -243,7 +243,7 @@ namespace sw
         return true;
     }
 
-    bool HpackDecoder::findEntry( uint32 index, HpackHeader& outHeader, string& outError ) const
+    bool HpackDecoder::findEntry( uint32 index, HTTPHeader& outHeader, string& outError ) const
     {
         using Internal = HpackInternal;
         if ( index == 0 )
@@ -276,7 +276,7 @@ namespace sw
         }
     }
 
-    void HpackDecoder::insert( const HpackHeader& header )
+    void HpackDecoder::insert( const HTTPHeader& header )
     {
         const uint32 size = HpackInternal::entrySize( header );
         shrinkTo( size > _currentLimit ? 0 : _currentLimit - size ); // 표보다 큰 항목은 표를 비우고 들어가지 않는다 (RFC 7541 4.4)
@@ -286,7 +286,7 @@ namespace sw
         _dynamicSize += size;
     }
 
-    bool HpackDecoder::decode( const uint8* pBlock, size_t size, vector<HpackHeader>& outListHeader, string& outError )
+    bool HpackDecoder::decode( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader, string& outError )
     {
         outListHeader.clear();
         const uint8* pCursor = pBlock;
@@ -294,7 +294,7 @@ namespace sw
         while ( pCursor < pEnd )
         {
             const uint8 first = *pCursor;
-            HpackHeader header;
+            HTTPHeader  header;
             if ( ( first & 0x80u ) != 0 ) // 색인된 헤더
             {
                 uint32 index = 0;

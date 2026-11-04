@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Ray.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
@@ -151,8 +152,8 @@ namespace sw
     /** @brief 한 번 쏜 결과입니다. 알마다의 광선을 담습니다. */
     struct WeaponShot
     {
-        vector<GameRay> _listRay{};
-        float32         _spreadAtFire{ 0.0f }; ///< 이번 발사의 퍼짐(도)
+        vector<Ray> _listRay{};
+        float32     _spreadAtFire{ 0.0f }; ///< 이번 발사의 퍼짐(도)
     };
 } // namespace sw
 
@@ -181,7 +182,7 @@ namespace sw
          * @brief 방아쇠를 당깁니다(누른 동안 매 프레임). 쏘면 @p outShot 에 알마다 광선을 채웁니다.
          * @param bTriggerJustPressed 이번 프레임에 눌렀는지 나타낸다. 반자동 총은 이때만 쏜다.
          */
-        WeaponFireResult pullTrigger( const GameRay& aim, bool bTriggerJustPressed, WeaponShot& outShot );
+        WeaponFireResult pullTrigger( const Ray& aim, bool bTriggerJustPressed, WeaponShot& outShot );
         /** @brief 재장전을 시작합니다. 이미 가득이거나 예비탄이 없거나 재장전 중이면 false 입니다. */
         [[nodiscard]] bool startReload();
         /** @brief 예비탄을 상한까지 더합니다. */

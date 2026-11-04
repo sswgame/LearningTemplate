@@ -2,6 +2,8 @@
 
 #include "Engine/UI/World/UIWorldPointerRouter.h"
 
+#include "Core/Math/Ray.h"
+
 #include "Engine/UI/World/WidgetComponent.h"
 
 namespace sw
@@ -13,7 +15,7 @@ namespace sw
     {
     }
 
-    bool UIWorldPointerRouter::route( const vector<WidgetComponent*>& listComponent, const WorldWidgetRay& ray, UIPointerEvent event )
+    bool UIWorldPointerRouter::route( const vector<WidgetComponent*>& listComponent, const Ray& ray, UIPointerEvent event )
     {
         WidgetComponent* pTarget = nullptr;
         WorldWidgetHit   hit{};

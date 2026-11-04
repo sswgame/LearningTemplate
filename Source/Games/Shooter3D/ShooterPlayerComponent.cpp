@@ -4,6 +4,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -611,7 +612,7 @@ namespace sw
     void ShooterPlayerComponent::fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed )
     {
         WeaponState& weapon = _arrWeapon[_weaponIndex];
-        GameRay      aim;
+        Ray          aim;
         aim._origin    = getEyePosition();
         aim._direction = aimDirection;
         WeaponShot             shot;
@@ -634,7 +635,7 @@ namespace sw
         flash._lifetime = 0.05f;
         _listPendingEffect.push_back( flash );
         // 판정은 눈에서 한다. 상자 · 바닥까지는 여기서 재고, 적(물리 히트박스)은 틱이 끝난 뒤 그 거리 안에서 묻는다(resolveShots).
-        for ( const GameRay& ray : shot._listRay )
+        for ( const Ray& ray : shot._listRay )
         {
             PendingShot pending;
             pending._ray           = ray;
@@ -650,7 +651,7 @@ namespace sw
         camera.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
 
-    float32 ShooterPlayerComponent::traceCover( const ShooterDirectorComponent& director, const GameRay& ray ) const
+    float32 ShooterPlayerComponent::traceCover( const ShooterDirectorComponent& director, const Ray& ray ) const
     {
         float32 nearest = _arrWeapon[_weaponIndex].getDef()._range;
         for ( const ShooterArenaBox& box : director.getBoxes() )

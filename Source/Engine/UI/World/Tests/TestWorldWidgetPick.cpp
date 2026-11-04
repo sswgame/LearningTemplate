@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -25,9 +26,9 @@ namespace
         /** @brief 폭 2 · 높이 1, 원점에서 +z 로 5 m 앞에 놓은 사각형(회전 없음)의 월드 행렬입니다. */
         static sw::float4x4 makeQuadWorld() { return sw::float4x4::makeScale( 2.0f, 1.0f, 1.0f ) * sw::float4x4::makeTranslation( 0.0f, 0.0f, 5.0f ); }
 
-        static sw::WorldWidgetRay makeRay( const sw::float3& origin, const sw::float3& direction )
+        static sw::Ray makeRay( const sw::float3& origin, const sw::float3& direction )
         {
-            sw::WorldWidgetRay ray{};
+            sw::Ray ray{};
             ray._origin    = origin;
             ray._direction = direction.normalize();
             return ray;
@@ -74,9 +75,9 @@ SW_TEST_CASE( WorldWidgetPickTest, BackFaceMirrorsU )
 SW_TEST_CASE( WorldWidgetPickTest, OutsideParallelAndBehindAreMisses )
 {
     using Util = WorldWidgetPickTestUtil;
-    const sw::float2         textureSize{ 256.0f, 128.0f };
-    sw::WorldWidgetHit       hit{};
-    const sw::WorldWidgetRay outside = Util::makeRay( sw::float3{ 1.5f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ); // 로컬 x 0.75 — 밖
+    const sw::float2   textureSize{ 256.0f, 128.0f };
+    sw::WorldWidgetHit hit{};
+    const sw::Ray      outside = Util::makeRay( sw::float3{ 1.5f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ); // 로컬 x 0.75 — 밖
     SW_EXPECT_FALSE( sw::WorldWidgetPick::intersectQuad( Util::makeQuadWorld(), outside, textureSize, true, hit ) );
     SW_REQUIRE_TRUE( sw::WorldWidgetPick::intersectQuad( Util::makeQuadWorld(), outside, textureSize, false, hit ) );
     SW_EXPECT_TRUE( hit._bInsideQuad == SW_FALSE );
@@ -96,15 +97,15 @@ SW_TEST_CASE( WorldWidgetPickTest, RayThroughScreenPointPassesProjectedWorldPoin
     const sw::float4x4 inverse        = viewProjection.invert();
     const sw::float2   viewport{ Util::kWidth, Util::kHeight };
 
-    sw::WorldWidgetRay center{};
+    sw::Ray center{};
     SW_REQUIRE_TRUE( sw::WorldWidgetPick::makeRay( inverse, sw::float2{ Util::kWidth * 0.5f, Util::kHeight * 0.5f }, viewport, center ) );
     SW_EXPECT_NEAR( 1.0f, center._direction._z, 1e-4f );
     SW_EXPECT_NEAR( 0.0f, center._direction._x, 1e-4f );
 
-    const sw::float3   target{ 1.0f, 0.5f, 5.0f };
-    const sw::float4   clip = sw::float4::transform( sw::float4{ target._x, target._y, target._z, 1.0f }, viewProjection );
-    const sw::float2   screen{ ( clip._x / clip._w * 0.5f + 0.5f ) * Util::kWidth, ( 0.5f - clip._y / clip._w * 0.5f ) * Util::kHeight };
-    sw::WorldWidgetRay ray{};
+    const sw::float3 target{ 1.0f, 0.5f, 5.0f };
+    const sw::float4 clip = sw::float4::transform( sw::float4{ target._x, target._y, target._z, 1.0f }, viewProjection );
+    const sw::float2 screen{ ( clip._x / clip._w * 0.5f + 0.5f ) * Util::kWidth, ( 0.5f - clip._y / clip._w * 0.5f ) * Util::kHeight };
+    sw::Ray          ray{};
     SW_REQUIRE_TRUE( sw::WorldWidgetPick::makeRay( inverse, screen, viewport, ray ) );
     const float32 t = ( target._z - ray._origin._z ) / ray._direction._z;
     SW_EXPECT_NEAR( target._x, ray._origin._x + ray._direction._x * t, 1e-3f );

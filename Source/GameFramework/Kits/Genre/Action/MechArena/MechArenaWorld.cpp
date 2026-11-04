@@ -4,6 +4,7 @@
 
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Net/NetMessageChannel.h"
@@ -714,11 +715,11 @@ namespace sw
         const float3 direction = target >= 0 ? ( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
                                              : pilot._forward;
         WeaponShot   shot;
-        if ( weapon.pullTrigger( GameRay{ origin, direction }, bPressed, shot ) != WeaponFireResult::Fired )
+        if ( weapon.pullTrigger( Ray{ origin, direction }, bPressed, shot ) != WeaponFireResult::Fired )
             return;
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
         const WeaponDef& def = weapon.getDef();
-        for ( const GameRay& ray : shot._listRay )
+        for ( const Ray& ray : shot._listRay )
         {
             launch( pilotIndex, target, ray._direction, def._projectileSpeed, def._range, def._damage, slot );
         }
@@ -747,9 +748,9 @@ namespace sw
         if ( speed <= 0.0f )
         {
             // 즉시 탄(광선)은 사거리 안에서 가장 가까운 적을 맞힌다.
-            const GameRay ray{ origin, direction };
-            int32         hitPilot    = -1;
-            float32       hitDistance = range;
+            const Ray ray{ origin, direction };
+            int32     hitPilot    = -1;
+            float32   hitDistance = range;
             for ( int32 other = 0; other < getPilotCount(); ++other )
             {
                 const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
@@ -1466,7 +1467,7 @@ namespace sw
             }
             const float32 stepLength = MathUtil::min( projectile._speed * deltaTime, projectile._rangeLeft );
             const int32   ownerTeam  = isValidPilot( projectile._owner ) ? _listPilot[static_cast<size_t>( projectile._owner )]._team : TeamAttitudeUtil::kNoTeam;
-            const GameRay ray{ projectile._position, projectile._direction };
+            const Ray     ray{ projectile._position, projectile._direction };
             int32         hitPilot    = -1;
             float32       hitDistance = stepLength;
             for ( int32 other = 0; other < getPilotCount(); ++other )

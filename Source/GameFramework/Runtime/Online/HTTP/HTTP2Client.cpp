@@ -36,7 +36,7 @@ namespace sw
         shutdown();
     }
 
-    bool HTTP2Client::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTP2ClientConfig& settings )
+    bool HTTP2Client::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings )
     {
         if ( transport == nullptr || _bInitialized.load( std::memory_order_acquire ) == true )
             return false;

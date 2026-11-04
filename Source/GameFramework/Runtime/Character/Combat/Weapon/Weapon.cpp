@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -127,7 +128,7 @@ namespace sw
         }
     }
 
-    WeaponFireResult WeaponState::pullTrigger( const GameRay& aim, bool bTriggerJustPressed, WeaponShot& outShot )
+    WeaponFireResult WeaponState::pullTrigger( const Ray& aim, bool bTriggerJustPressed, WeaponShot& outShot )
     {
         outShot._listRay.clear();
         outShot._spreadAtFire = _currentSpread;
@@ -151,7 +152,7 @@ namespace sw
         const float32 coneHalfAngle = _currentSpread * MathUtil::kDegreeToRadian;
         for ( int32 pelletIndex = 0; pelletIndex < _def._pelletCount; ++pelletIndex )
         {
-            GameRay ray;
+            Ray ray;
             ray._origin    = aim._origin;
             ray._direction = WeaponMath::applySpread( aim._direction, coneHalfAngle, _random );
             outShot._listRay.push_back( ray );

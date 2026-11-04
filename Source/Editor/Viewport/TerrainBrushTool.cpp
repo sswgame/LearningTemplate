@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -117,7 +118,7 @@ namespace sw::editor
             static State& getState() { return getEditorState<State>(); }
 
             /** @brief 레이 위 점 @p t 가 지형 위로 얼마나 떠 있는지 봅니다. 지형 밖이면 false 입니다. */
-            [[nodiscard]] static bool findSignedHeight( const GameObjectManager& manager, const EditorPickRay& ray, float32 t, float32& outAbove )
+            [[nodiscard]] static bool findSignedHeight( const GameObjectManager& manager, const Ray& ray, float32 t, float32& outAbove )
             {
                 const float3      point    = ray._origin + ray._direction * t;
                 TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( manager, point._x, point._z );
@@ -129,7 +130,7 @@ namespace sw::editor
             }
 
             /** @brief 레이를 전진시켜 처음 지형 아래로 들어가는 점을 찾고 이분법으로 다듬습니다. */
-            static bool traceTerrain( const GameObjectManager& manager, const EditorPickRay& ray, float3& outHit )
+            static bool traceTerrain( const GameObjectManager& manager, const Ray& ray, float3& outHit )
             {
                 float32 previousT     = 0.0f;
                 float32 previousAbove = 0.0f;
@@ -741,10 +742,10 @@ namespace sw::editor
         const bool   bMouseInside = bInsideX && bInsideY && ImGui::IsWindowHovered();
         const bool   bEditable    = EditorPlaySession::areSceneEditsAllowed();
 
-        EditorPickRay ray;
-        float3        hit{};
-        const bool    bRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
-        state._bHit        = bRay && Internal::traceTerrain( *args._pObjectManager, ray, hit );
+        Ray        ray;
+        float3     hit{};
+        const bool bRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
+        state._bHit     = bRay && Internal::traceTerrain( *args._pObjectManager, ray, hit );
         if ( state._bHit )
         {
             const TerrainComponent* pHovered = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );

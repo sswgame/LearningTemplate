@@ -3,6 +3,7 @@
 #include "Engine/UI/World/WorldWidgetPick.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 namespace sw
 {
@@ -31,7 +32,7 @@ namespace sw
 
 namespace sw
 {
-    bool WorldWidgetPick::makeRay( const float4x4& inverseViewProjection, const float2& uiPoint, const float2& viewportSize, WorldWidgetRay& outRay )
+    bool WorldWidgetPick::makeRay( const float4x4& inverseViewProjection, const float2& uiPoint, const float2& viewportSize, Ray& outRay )
     {
         if ( viewportSize._x <= 0.0f || viewportSize._y <= 0.0f )
             return false;
@@ -51,7 +52,7 @@ namespace sw
         return true;
     }
 
-    bool WorldWidgetPick::intersectQuad( const float4x4& quadWorld, const WorldWidgetRay& ray, const float2& textureSize, bool bRequireInside, WorldWidgetHit& outHit )
+    bool WorldWidgetPick::intersectQuad( const float4x4& quadWorld, const Ray& ray, const float2& textureSize, bool bRequireInside, WorldWidgetHit& outHit )
     {
         using Internal = WorldWidgetPickInternal;
         if ( MathUtil::abs( quadWorld.determinant() ) < Internal::kMinDeterminant )

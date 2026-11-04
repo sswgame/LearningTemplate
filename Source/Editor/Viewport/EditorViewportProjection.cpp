@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
@@ -50,7 +51,7 @@ namespace sw::editor
         outViewProjection = viewMat * projMat;
     }
 
-    bool EditorViewportProjectionUtil::makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize, EditorPickRay& outRay )
+    bool EditorViewportProjectionUtil::makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize, Ray& outRay )
     {
         if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
             return false;

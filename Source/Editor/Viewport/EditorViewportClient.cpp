@@ -8,6 +8,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
@@ -88,8 +89,8 @@ namespace sw::editor
         float4x4 viewProj{};
         EditorViewportProjectionUtil::loadViewProjection( pView, pProj, viewProj );
 
-        float3        spawnPos{ 0.0f, 0.0f, 0.0f };
-        EditorPickRay mouseRay{};
+        float3 spawnPos{ 0.0f, 0.0f, 0.0f };
+        Ray    mouseRay{};
         if ( EditorViewportProjectionUtil::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) )
         {
             const uint32 planeAxis = b2DMode ? 2u : 1u;
@@ -366,7 +367,7 @@ namespace sw::editor
             _contextMenuObjectID   = _picker.findObjectUnderMouse( canvasPos, canvasSize, pCamera, _toolbarSettings, pObject, pComponent ) ? pObject->getObjectID() : 0;
 
             const float32 aspect = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
-            EditorPickRay mouseRay{};
+            Ray           mouseRay{};
             const uint32  planeAxis       = _toolbarSettings._bIs2DMode ? 2u : 1u; // 애셋 드롭과 같은 바닥: 2D 는 Z = 0, 3D 는 Y = 0
             _bContextMenuHasWorldPosition = EditorViewportProjectionUtil::makeMouseRay( pCamera->getViewProjectionMatrix( aspect ).invert(), canvasPos, canvasSize, mouseRay ) &&
                                             EditorViewportRayPick::rayHitsAxisPlane( mouseRay, planeAxis, _contextMenuWorldPosition );

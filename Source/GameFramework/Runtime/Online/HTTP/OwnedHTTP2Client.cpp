@@ -25,7 +25,9 @@ namespace sw
 
     bool OwnedHTTP2Client::initialize()
     {
-        return _client.initialize( StreamTransportFactory::createPlatformTransport(), StreamTransportConfig{}, HTTP2ClientConfig{} );
+        HTTPClientConfig settings;
+        settings._maxConcurrentRequests = HTTPConstant::kHTTP2MaxConcurrentRequests;
+        return _client.initialize( StreamTransportFactory::createPlatformTransport(), StreamTransportConfig{}, settings );
     }
 
     void OwnedHTTP2Client::shutdown()

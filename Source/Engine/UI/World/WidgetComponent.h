@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
@@ -208,7 +209,7 @@ namespace sw
          * @param bRequireInside false 면 사각형 밖의 평면 점도 돌려줍니다(포인터를 잡은 위젯의 끌기).
          * @return 입력을 받지 않거나, 맞히지 않았거나, 물리 씬이 광선을 사각형보다 가까이에서 막으면(`_bOccludedByPhysics`) false 입니다.
          */
-        [[nodiscard]] bool pickWorld( const WorldWidgetRay& ray, bool bRequireInside, WorldWidgetHit& outHit ) const;
+        [[nodiscard]] bool pickWorld( const Ray& ray, bool bRequireInside, WorldWidgetHit& outHit ) const;
         /** @brief 포인터 이벤트 하나(위젯 좌표)를 이 위젯의 트리로 보냅니다. 이 위젯만 쓰는 호버 · 잡기 상태가 있어 Enter · Leave 가 맞는다. */
         UIPointerResult dispatchWorldPointer( const UIPointerEvent& event );
         /** @brief 이 위젯의 호버를 모두 풉니다(포인터가 떠났다). 잡은 위젯이 있으면 유지합니다. */

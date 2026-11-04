@@ -8,17 +8,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
-
-namespace sw
-{
-    /** @brief 월드 광선입니다(방향은 길이 1). */
-    struct WorldWidgetRay
-    {
-        float3 _origin{};
-        float3 _direction{ 0.0f, 0.0f, 1.0f };
-    };
-} // namespace sw
 
 namespace sw
 {
@@ -45,13 +36,13 @@ namespace sw
          * @param inverseViewProjection 게임 카메라의 (뷰 × 투영) 역행렬입니다.
          * @return 뷰포트가 비었거나 역투영이 퇴화하면 false 입니다.
          */
-        [[nodiscard]] static bool makeRay( const float4x4& inverseViewProjection, const float2& uiPoint, const float2& viewportSize, WorldWidgetRay& outRay );
+        [[nodiscard]] static bool makeRay( const float4x4& inverseViewProjection, const float2& uiPoint, const float2& viewportSize, Ray& outRay );
         /**
          * @brief 광선이 사각형(@p quadWorld = 단위 사각형 → 월드)의 평면을 맞히는 자리를 위젯 좌표로 돌려줍니다.
          * @param textureSize     사각형에 붙인 렌더 텍스처 크기(UI 단위)입니다.
          * @param bRequireInside  true 면 사각형 밖을 맞힌 것은 false 입니다. 포인터를 잡은 위젯(끌기)이 사각형 밖으로 벗어난 점을 따라갈 때는 false 로 평면 점을 받습니다.
          * @return 광선이 평면과 평행이거나, 평면이 출발점 뒤에 있거나, 행렬이 퇴화했거나, `bRequireInside` 인데 사각형 밖이면 false 입니다.
          */
-        [[nodiscard]] static bool intersectQuad( const float4x4& quadWorld, const WorldWidgetRay& ray, const float2& textureSize, bool bRequireInside, WorldWidgetHit& outHit );
+        [[nodiscard]] static bool intersectQuad( const float4x4& quadWorld, const Ray& ray, const float2& textureSize, bool bRequireInside, WorldWidgetHit& outHit );
     };
 } // namespace sw

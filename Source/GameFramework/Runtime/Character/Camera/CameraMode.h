@@ -11,6 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Ray.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
@@ -19,7 +20,6 @@
 
 namespace sw
 {
-    struct GameRay;
 
     class ICameraCollisionProbe;
 
@@ -110,5 +110,5 @@ namespace sw
      *          마우스 고르기(땅 점 찾기)에 쓴다. 디렉터가 지금 낸 포즈를 넘기면 블렌드 중에도 화면에 보이는 그대로 고른다.
      * @param aspectRatio 화면의 가로/세로이다(`CameraPoseUtil::computeAspectRatio`).
      */
-    SW_GF_API GameRay computeCameraScreenRay( const CameraPose& pose, float32 aspectRatio, const float2& mouseNormalized );
+    SW_GF_API Ray computeCameraScreenRay( const CameraPose& pose, float32 aspectRatio, const float2& mouseNormalized );
 } // namespace sw

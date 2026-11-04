@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/Ray.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -30,9 +31,9 @@ namespace
     /** @brief @p seconds 동안 @p deltaTime 간격으로 방아쇠를 누르고 있어 쏜 발 수입니다. */
     int32 holdTrigger( sw::WeaponState& state, float32 seconds, float32 deltaTime )
     {
-        const sw::GameRay aim;
-        sw::WeaponShot    shot;
-        int32             firedCount = 0;
+        const sw::Ray  aim;
+        sw::WeaponShot shot;
+        int32          firedCount = 0;
         for ( float32 time = 0.0f; time < seconds; time += deltaTime )
         {
             if ( state.pullTrigger( aim, time == 0.0f, shot ) == sw::WeaponFireResult::Fired )
@@ -85,8 +86,8 @@ SW_TEST_CASE( WeaponTest, ReloadMovesOnlyWhatIsMissing )
 {
     sw::WeaponState state;
     state.equip( makeRifle(), 7 );
-    const sw::GameRay aim;
-    sw::WeaponShot    shot;
+    const sw::Ray  aim;
+    sw::WeaponShot shot;
     for ( int32 shotIndex = 0; shotIndex < 5; ++shotIndex )
     {
         SW_REQUIRE_TRUE( state.pullTrigger( aim, true, shot ) == sw::WeaponFireResult::Fired );
@@ -122,8 +123,8 @@ SW_TEST_CASE( WeaponTest, SemiAutoAndPellets )
     shotgun._pelletCount  = 8;
     sw::WeaponState state;
     state.equip( shotgun, 0 );
-    const sw::GameRay aim;
-    sw::WeaponShot    shot;
+    const sw::Ray  aim;
+    sw::WeaponShot shot;
     SW_REQUIRE_TRUE( state.pullTrigger( aim, true, shot ) == sw::WeaponFireResult::Fired );
     SW_EXPECT_EQUAL( size_t( 8 ), shot._listRay.size() );
     state.update( 1.0f );
@@ -138,8 +139,8 @@ SW_TEST_CASE( WeaponTest, StateRoundTripKeepsTheNextShot )
 {
     sw::WeaponState original;
     original.equip( makeRifle(), 7, 1234u );
-    const sw::GameRay aim;
-    sw::WeaponShot    shot;
+    const sw::Ray  aim;
+    sw::WeaponShot shot;
     SW_REQUIRE_TRUE( original.pullTrigger( aim, true, shot ) == sw::WeaponFireResult::Fired );
     original.update( 0.1f );
 

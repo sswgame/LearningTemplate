@@ -7,6 +7,7 @@
 #include "Core/Math/Color.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/Ray.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -298,8 +299,8 @@ namespace sw::editor
         EditorViewportProjectionUtil::loadViewProjection( pView, pProj, viewProj );
 
         // 마우스 아래 바닥(Y = 0)의 점이 자의 엔드포인트다.
-        EditorPickRay mouseRay{};
-        float3        groundPt{};
+        Ray    mouseRay{};
+        float3 groundPt{};
         if ( EditorViewportProjectionUtil::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) &&
              EditorViewportRayPick::rayHitsAxisPlane( mouseRay, 1, groundPt ) )
         {

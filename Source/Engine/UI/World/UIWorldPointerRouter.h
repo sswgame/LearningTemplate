@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/UI/WidgetTree/UIEvents.h"
@@ -32,7 +33,7 @@ namespace sw
          * @param listComponent 후보입니다(입력을 받지 않는 것은 건너뛴다).
          * @return 위젯이 이벤트를 처리했으면 true 입니다(부르는 쪽이 그 마우스 버튼을 소비한다).
          */
-        bool route( const vector<WidgetComponent*>& listComponent, const WorldWidgetRay& ray, UIPointerEvent event );
+        bool route( const vector<WidgetComponent*>& listComponent, const Ray& ray, UIPointerEvent event );
         /** @brief 호버를 모두 풉니다(포인터가 화면 위젯 위로 올라갔거나 잠겼다). 잡은 위젯은 유지한다. */
         void releaseHover();
         /** @brief @p component 를 더 쓰지 않습니다(컴포넌트가 끝나거나 UI 시스템이 내려간다). 호버와 잡기를 알림 없이 버린다. */

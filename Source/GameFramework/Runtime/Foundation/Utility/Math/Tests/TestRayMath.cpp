@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
@@ -13,9 +14,9 @@ namespace
 {
     constexpr float64 kTolerance = 1.0e-4;
 
-    sw::GameRay makeRay( const sw::float3& origin, const sw::float3& direction )
+    sw::Ray makeRay( const sw::float3& origin, const sw::float3& direction )
     {
-        sw::GameRay ray;
+        sw::Ray ray;
         ray._origin    = origin;
         ray._direction = direction;
         return ray;
@@ -27,8 +28,8 @@ namespace
  */
 SW_TEST_CASE( RayMathTest, SphereNearestFrontHit )
 {
-    const sw::GameRay ray      = makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } );
-    float32           distance = -1.0f;
+    const sw::Ray ray      = makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } );
+    float32       distance = -1.0f;
     SW_REQUIRE_TRUE( sw::RayMath::intersectSphere( ray, sw::float3{ 0.0f, 0.0f, 10.0f }, 2.0f, 100.0f, distance ) );
     SW_EXPECT_NEAR( 8.0, distance, kTolerance );
     SW_REQUIRE_TRUE( sw::RayMath::intersectSphere( ray, sw::float3{ 0.0f, 0.0f, 1.0f }, 2.0f, 100.0f, distance ) );

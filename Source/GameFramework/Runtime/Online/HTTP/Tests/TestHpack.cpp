@@ -29,14 +29,14 @@ namespace
         return listByte;
     }
 
-    bool decode( sw::HpackDecoder& decoder, sw::string_view hex, sw::vector<sw::HpackHeader>& outListHeader )
+    bool decode( sw::HpackDecoder& decoder, sw::string_view hex, sw::vector<sw::HTTPHeader>& outListHeader )
     {
         const sw::vector<uint8> listByte = fromHex( hex );
         sw::string              error;
         return decoder.decode( listByte.data(), listByte.size(), outListHeader, error );
     }
 
-    void expectHeader( const sw::vector<sw::HpackHeader>& listHeader, size_t index, sw::string_view name, sw::string_view value )
+    void expectHeader( const sw::vector<sw::HTTPHeader>& listHeader, size_t index, sw::string_view name, sw::string_view value )
     {
         SW_REQUIRE_TRUE( index < listHeader.size() );
         SW_EXPECT_EQUAL( sw::string( name ), listHeader[index]._name );
@@ -49,8 +49,8 @@ namespace
  */
 SW_TEST_CASE( HpackTest, DecodesRFC7541HuffmanRequests )
 {
-    sw::HpackDecoder            decoder;
-    sw::vector<sw::HpackHeader> listHeader;
+    sw::HpackDecoder           decoder;
+    sw::vector<sw::HTTPHeader> listHeader;
 
     SW_REQUIRE_TRUE( decode( decoder, "8286 8441 8cf1 e3c2 e5f2 3a6b a0ab 90f4 ff", listHeader ) );
     SW_REQUIRE_EQUAL( size_t( 4 ), listHeader.size() );
@@ -79,7 +79,7 @@ SW_TEST_CASE( HpackTest, DecodesRFC7541HuffmanRequests )
  */
 SW_TEST_CASE( HpackTest, EncoderRoundTrips )
 {
-    const sw::vector<sw::HpackHeader> listHeader{
+    const sw::vector<sw::HTTPHeader> listHeader{
         {     ":method",             "POST"},
         {       ":path",        "/v1/token"},
         {"content-type", "application/json"},
@@ -88,9 +88,9 @@ SW_TEST_CASE( HpackTest, EncoderRoundTrips )
     sw::vector<uint8> block;
     SW_REQUIRE_TRUE( sw::HpackEncoder::encode( listHeader, block ) );
 
-    sw::HpackDecoder            decoder;
-    sw::vector<sw::HpackHeader> decoded;
-    sw::string                  error;
+    sw::HpackDecoder           decoder;
+    sw::vector<sw::HTTPHeader> decoded;
+    sw::string                 error;
     SW_REQUIRE_TRUE( decoder.decode( block.data(), block.size(), decoded, error ) );
     SW_REQUIRE_EQUAL( listHeader.size(), decoded.size() );
     for ( size_t index = 0; index < listHeader.size(); ++index )
@@ -111,8 +111,8 @@ SW_TEST_CASE( HpackTest, EncoderRoundTrips )
  */
 SW_TEST_CASE( HpackTest, RefusesMalformedBlocks )
 {
-    sw::vector<sw::HpackHeader> listHeader;
-    sw::HpackDecoder            outOfTable;
+    sw::vector<sw::HTTPHeader> listHeader;
+    sw::HpackDecoder           outOfTable;
     SW_EXPECT_FALSE( decode( outOfTable, "be", listHeader ) ); // 색인 62 — 동적 표가 비었다
     SW_EXPECT_TRUE( listHeader.empty() );
     sw::HpackDecoder zeroIndex;

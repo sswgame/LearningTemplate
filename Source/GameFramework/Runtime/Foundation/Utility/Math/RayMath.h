@@ -7,18 +7,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Ray.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-
-namespace sw
-{
-    /** @brief 광선 하나입니다. 시작점과 단위 방향을 담습니다. */
-    struct GameRay
-    {
-        float3 _origin{};
-        float3 _direction{ 0.0f, 0.0f, 1.0f };
-    };
-} // namespace sw
 
 namespace sw
 {
@@ -32,17 +23,17 @@ namespace sw
          * @brief 광선이 구와 만나는 가장 가까운 앞쪽 거리를 구합니다. 시작점이 구 안이면 0 이고, 안 만나면 false 입니다.
          * @param maxDistance 이 거리보다 먼 만남은 놓친 것으로 봅니다.
          */
-        [[nodiscard]] static bool intersectSphere( const GameRay& ray, const float3& center, float32 radius, float32 maxDistance, float32& outDistance );
+        [[nodiscard]] static bool intersectSphere( const Ray& ray, const float3& center, float32 radius, float32 maxDistance, float32& outDistance );
         /** @brief 광선이 축 정렬 상자와 만나는 가장 가까운 앞쪽 거리를 구합니다. 슬랩 판정을 쓰며, 시작점이 안이면 0 입니다. */
-        [[nodiscard]] static bool intersectAABB( const GameRay& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance );
+        [[nodiscard]] static bool intersectAABB( const Ray& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance );
         /**
          * @brief 광선이 캡슐과 만나는 가장 가까운 앞쪽 거리를 구합니다. 캡슐은 선분 @p segmentStart 에서 @p segmentEnd 까지의 둘레 반지름 @p radius 이며, 사람 크기 히트박스에 씁니다.
          * @details 옆면(원기둥)과 양 끝 반구를 함께 본다. 시작점이 캡슐 안이면 0 이다. 선분 길이가 0 이면 구와 같다.
          */
-        [[nodiscard]] static bool intersectCapsule( const GameRay& ray, const float3& segmentStart, const float3& segmentEnd, float32 radius, float32 maxDistance,
+        [[nodiscard]] static bool intersectCapsule( const Ray& ray, const float3& segmentStart, const float3& segmentEnd, float32 radius, float32 maxDistance,
                                                     float32& outDistance );
         /** @brief 광선이 평면(y 가 @p height)과 만나는 앞쪽 거리를 구합니다. 바닥 클릭과 탄착에 씁니다. */
-        [[nodiscard]] static bool intersectHorizontalPlane( const GameRay& ray, float32 height, float32 maxDistance, float32& outDistance );
+        [[nodiscard]] static bool intersectHorizontalPlane( const Ray& ray, float32 height, float32 maxDistance, float32& outDistance );
         /** @brief 요와 피치(라디안, 피치는 +가 위)가 가리키는 단위 방향입니다. */
         static float3 computeLookDirection( float32 yaw, float32 pitch );
         /**

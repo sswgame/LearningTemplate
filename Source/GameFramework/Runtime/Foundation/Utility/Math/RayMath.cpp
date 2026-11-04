@@ -4,10 +4,11 @@
 
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 namespace sw
 {
-    bool RayMath::intersectSphere( const GameRay& ray, const float3& center, float32 radius, float32 maxDistance, float32& outDistance )
+    bool RayMath::intersectSphere( const Ray& ray, const float3& center, float32 radius, float32 maxDistance, float32& outDistance )
     {
         const float3  toCenter     = center - ray._origin;
         const float32 radiusSquare = radius * radius;
@@ -29,7 +30,7 @@ namespace sw
         return true;
     }
 
-    bool RayMath::intersectCapsule( const GameRay& ray, const float3& segmentStart, const float3& segmentEnd, float32 radius, float32 maxDistance,
+    bool RayMath::intersectCapsule( const Ray& ray, const float3& segmentStart, const float3& segmentEnd, float32 radius, float32 maxDistance,
                                     float32& outDistance )
     {
         const float3  axis         = segmentEnd - segmentStart;
@@ -86,7 +87,7 @@ namespace sw
         return bHit;
     }
 
-    bool RayMath::intersectAABB( const GameRay& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance )
+    bool RayMath::intersectAABB( const Ray& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance )
     {
         const float32 arrOrigin[3]    = { ray._origin._x, ray._origin._y, ray._origin._z };
         const float32 arrDirection[3] = { ray._direction._x, ray._direction._y, ray._direction._z };
@@ -121,7 +122,7 @@ namespace sw
         return true;
     }
 
-    bool RayMath::intersectHorizontalPlane( const GameRay& ray, float32 height, float32 maxDistance, float32& outDistance )
+    bool RayMath::intersectHorizontalPlane( const Ray& ray, float32 height, float32 maxDistance, float32& outDistance )
     {
         if ( MathUtil::abs( ray._direction._y ) < 1.0e-6f )
             return false;

@@ -3,6 +3,7 @@
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -33,7 +34,7 @@ namespace sw
                 const float32 distance = toPoint.getLength();
                 if ( distance <= 1.0e-4f )
                     return true;
-                GameRay ray;
+                Ray ray;
                 ray._origin    = eye;
                 ray._direction = toPoint * ( 1.0f / distance );
                 for ( const ShooterArenaBox& box : listBox )

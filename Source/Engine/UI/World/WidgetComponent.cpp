@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -530,7 +531,7 @@ namespace sw
         return hit._distance < distance - WidgetComponentInternal::kOcclusionTolerance;
     }
 
-    bool WidgetComponent::pickWorld( const WorldWidgetRay& ray, bool bRequireInside, WorldWidgetHit& outHit ) const
+    bool WidgetComponent::pickWorld( const Ray& ray, bool bRequireInside, WorldWidgetHit& outHit ) const
     {
         float4x4 quadWorld{};
         if ( acceptsWorldInput() == false || computeWorldQuadMatrix( quadWorld ) == false )

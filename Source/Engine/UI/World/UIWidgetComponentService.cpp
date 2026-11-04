@@ -2,6 +2,8 @@
 
 #include "Engine/UI/World/UIWidgetComponentService.h"
 
+#include "Core/Math/Ray.h"
+
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
@@ -135,7 +137,7 @@ namespace sw
         return pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
     }
 
-    bool UIWidgetComponentService::routeWorldPointer( const WorldWidgetRay& ray, const UIPointerEvent& event )
+    bool UIWidgetComponentService::routeWorldPointer( const Ray& ray, const UIPointerEvent& event )
     {
         return _worldPointer.route( _listComponent, ray, event );
     }
@@ -187,7 +189,7 @@ namespace sw
                 _worldPointer.releaseHover(); // 화면 위젯이 World 위젯을 가린다
                 continue;
             }
-            WorldWidgetRay ray{};
+            Ray ray{};
             if ( WorldWidgetPick::makeRay( inverseViewProjection, routed._event._position, viewport._size, ray ) == false )
                 continue;
             const bool bHandled = _worldPointer.route( _listComponent, ray, routed._event );

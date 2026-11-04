@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw
@@ -14,16 +15,6 @@ namespace sw
     class GameObject;
     class GameObjectManager;
 } // namespace sw
-
-namespace sw::editor
-{
-    /** @brief 화면 좌표에서 만든 월드 레이입니다. */
-    struct EditorPickRay
-    {
-        float3 _origin{};
-        float3 _direction{}; ///< 정규화되어 있어야 한다
-    };
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -56,7 +47,7 @@ namespace sw::editor
          * @param b2DMode true 이면 같은 거리에서 스프라이트와 콜라이더가 메시보다 우선합니다.
          * @return 맞은 것이 있으면 true 이고 outResult 를 채웁니다.
          */
-        static bool pick( const GameObjectManager* pManager, const EditorPickRay& ray, bool b2DMode,
+        static bool pick( const GameObjectManager* pManager, const Ray& ray, bool b2DMode,
                           EditorPickResult& outResult );
 
         /** @brief 레이와 구의 교차를 검사합니다. 맞으면 outHitT 에 원점으로부터의 거리(0 이상)를 씁니다. */
@@ -69,14 +60,14 @@ namespace sw::editor
          *          피킹, 자, 애셋 드롭이 같은 레이를 쓴다.
          * @return 역행렬이 퇴화했으면 false 입니다.
          */
-        static bool makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay );
+        static bool makeRay( const float4x4& invViewProj, float32 u, float32 v, Ray& outRay );
 
         /**
          * @brief 레이와 축 평면(axisIndex 0, 1, 2 는 각각 X, Y, Z = 0)의 교점을 구합니다. 평행하면 false 입니다.
          * @details 자는 바닥(Y = 0)을 쓰고, 애셋 드롭은 2D 에서 Z = 0, 3D 에서 Y = 0 을 쓴다. 평면이 레이 뒤에 있어도 교점을
          *          구한다. 카메라가 바닥 아래에 있을 때 드롭이 원점으로 튀지 않게 하기 위해서다. 교점의 축 성분은 정확히 0 이다.
          */
-        static bool rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint );
+        static bool rayHitsAxisPlane( const Ray& ray, uint32 axisIndex, float3& outPoint );
 
         /** @brief 순서 테이블의 항목 수입니다. 테이블이 비어 있지 않은지 확인하는 데 씁니다. */
         static uint32 getTypedProviderCount();

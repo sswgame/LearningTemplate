@@ -12,6 +12,12 @@ Ask in this order. Stop at the first yes.
 
 `Util` and `Internal` are where ownerless helpers go, not a shape every helper must take. Reviews check step 1 first.
 
+## Before adding a struct
+
+- **Is the same shape with the same meaning already there?** If so, use it. Search the lower layers (`Core/Math`, `HTTPTypes.h` …) by field types, not by name. On 2026-11-05 three identical rays (`GameRay`, `WorldWidgetRay`, `EditorPickRay`) became `Ray` in `Core/Math/Ray.h`. `HpackHeader` was folded into `HTTPHeader`, and `HTTP2ClientConfig` into `HTTPClientConfig`. Two structs may share field types yet mean different things (`HTTPHeader` and `LoginCredential` are both two strings); those stay separate.
+- **Does it only carry one function's arguments?** Pass the arguments, unless there are many of them or callers name them with designated initializers.
+- A struct used only inside one `.cpp` belongs there, in the anonymous namespace. "Only one file uses it" is no reason to remove it. Table rows, event payloads and per-thread state are real types.
+
 ## Helpers used by one `.cpp`
 
 - **One class or struct definition per named `namespace` block.** A file with several classes closes the block after each `};` and reopens it, so each class folds on its own (template specializations of one name stay together; the anonymous namespace stays one block).

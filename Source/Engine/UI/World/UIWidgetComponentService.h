@@ -7,6 +7,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -82,7 +83,7 @@ namespace sw
          * @details 마우스는 UI 입력 처리의 포인터 뒤 칸이 스스로 한다. 마우스를 잠근 1인칭의 크로스헤어나 패드 같은 다른 출처는 게임 코드가 자기 광선과 `Down` · `Up` · `Move` · `Wheel` 로 부른다.
          * @return 위젯이 처리했으면 true 입니다.
          */
-        bool routeWorldPointer( const WorldWidgetRay& ray, const UIPointerEvent& event );
+        bool routeWorldPointer( const Ray& ray, const UIPointerEvent& event );
         /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다. 렌더 패킷이 캔버스의 대상 목록에 넣으며, 렌더러가 장면 앞에서 그립니다. */
         void appendWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 

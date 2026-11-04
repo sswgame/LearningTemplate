@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Ray.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -21,7 +22,6 @@ namespace sw
 
 namespace sw::editor
 {
-    struct EditorPickRay;
 
     /**
      * @class EditorViewportProjectionUtil
@@ -47,7 +47,7 @@ namespace sw::editor
          * @details 피킹, 자, 애셋 드롭이 같은 레이를 쓴다. ImGui 에 의존하는 부분은 마우스 위치뿐이고, 나머지는
          *          `EditorViewportRayPick::makeRay` 이므로 테스트가 있다.
          */
-        static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize, EditorPickRay& outRay );
+        static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize, Ray& outRay );
 
         /** @brief 월드 점을 캔버스 좌표로 옮깁니다. 카메라 뒤면 false 입니다. */
         static bool projectPoint( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos,
