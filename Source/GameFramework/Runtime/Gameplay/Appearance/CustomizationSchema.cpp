@@ -7,9 +7,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 
@@ -19,44 +21,10 @@ namespace sw
     {
         struct CustomizationSchemaInternal
         {
-            static constexpr const utf8* kArrSchemaAttribute[]     = { "id" };
-            static constexpr const utf8* kArrSliderAttribute[]     = { "name", "category", "symmetry", "min", "max", "default" };
-            static constexpr const utf8* kArrColorAttribute[]      = { "name", "category", "symmetry", "default" };
-            static constexpr const utf8* kArrChoiceAttribute[]     = { "name", "category", "symmetry", "default" };
-            static constexpr const utf8* kArrAttachmentAttribute[] = { "name", "category", "symmetry", "default", "socket" };
-            static constexpr const utf8* kArrDriveAttribute[]      = { "kind", "target", "from", "to", "channel" };
-            static constexpr const utf8* kArrOptionAttribute[]     = { "name", "visual", "variant", "materialVariant", "prefab", "sprite", "offset", "rotation" };
-            static constexpr const utf8* kArrConditionAttribute[]  = { "parameter", "options", "min", "max" };
-            static constexpr int32       kMaxDyeChannel            = 3;
-
-            [[nodiscard]] static bool parseKind( const utf8* pName, CustomizationKind& outKind )
-            {
-                constexpr CustomizationKind kArrKind[] = { CustomizationKind::Slider, CustomizationKind::Color, CustomizationKind::Choice, CustomizationKind::Attachment };
-                for ( const CustomizationKind kind : kArrKind )
-                {
-                    if ( StringUtil::equals( pName, getEnumName( kind ) ) )
-                    {
-                        outKind = kind;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            [[nodiscard]] static bool parseDriveKind( string_view text, CustomizationDriveKind& outKind )
-            {
-                constexpr CustomizationDriveKind kArrKind[] = { CustomizationDriveKind::Morph, CustomizationDriveKind::BoneProportion, CustomizationDriveKind::MaterialScalar,
-                                                                CustomizationDriveKind::MaterialColor, CustomizationDriveKind::DyeChannel, CustomizationDriveKind::PaletteSwap };
-                for ( const CustomizationDriveKind kind : kArrKind )
-                {
-                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ) ) )
-                    {
-                        outKind = kind;
-                        return true;
-                    }
-                }
-                return false;
-            }
+            // 매개변수 종류마다 받는 칸이다(그 밖의 칸은 오류 — 칸 구조체 하나를 함께 쓰므로 종류마다 막는다).
+            static constexpr const utf8* kArrSliderField[]     = { "name", "category", "symmetry", "min", "max", "default" };
+            static constexpr const utf8* kArrColorField[]      = { "name", "category", "symmetry", "default" };
+            static constexpr const utf8* kArrAttachmentField[] = { "name", "category", "symmetry", "default", "socket" };
 
             static bool isSliderDrive( CustomizationDriveKind kind )
             {
@@ -68,44 +36,26 @@ namespace sw
                 switch ( kind )
                 {
                     case CustomizationKind::Slider:
-                    {
-                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSliderAttribute, report, sourceName );
-                        break;
-                    }
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSliderField, report, sourceName );
+                        return;
                     case CustomizationKind::Color:
-                    {
-                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrColorAttribute, report, sourceName );
-                        break;
-                    }
                     case CustomizationKind::Choice:
-                    {
-                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrChoiceAttribute, report, sourceName );
-                        break;
-                    }
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrColorField, report, sourceName );
+                        return;
                     case CustomizationKind::Attachment:
-                    {
-                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrAttachmentAttribute, report, sourceName );
-                        break;
-                    }
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrAttachmentField, report, sourceName );
+                        return;
                 }
             }
 
             static void readDrive( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaID )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrDriveAttribute, report, sourceName );
+                // 구간을 적지 않으면 매개변수의 범위다(이 데이터의 값). 깨진 값 · 모르는 종류 · 채널 0..3 밖은 오류다(PROPERTY 가 본다).
                 CustomizationDriveDef drive;
-                drive._target = AppearanceXMLUtil::readRequiredName( node, "target", report, sourceName );
-                // 구간을 적지 않으면 매개변수의 범위다(이 데이터의 값). 깨진 값은 오류이고 칸은 그대로다.
                 drive._from = inoutParam._min;
                 drive._to   = inoutParam._max;
-                AppearanceXMLUtil::readOptionalFloat( node, "from", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, drive._from, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "to", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, drive._to, report, sourceName );
-                AppearanceXMLUtil::readOptionalInt( node, "channel", MathUtil::kMinInt32, MathUtil::kMaxInt32, drive._channel, report, sourceName );
-                if ( parseDriveKind( node.getAttributeText( "kind" ), drive._kind ) == false )
-                {
-                    report.addErrorWithID( "Appearance.DriveKindUnknown", "%#: schema '%#' parameter '%#' has unknown drive kind '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), node.getAttributeText( "kind" ) );
+                if ( AppearanceXMLUtil::readFields( node, drive, report, sourceName ) == false )
                     return;
-                }
                 const bool bSliderDrive = isSliderDrive( drive._kind );
                 const bool bFits        = ( inoutParam._kind == CustomizationKind::Slider && bSliderDrive ) || ( inoutParam._kind == CustomizationKind::Color && bSliderDrive == false );
                 if ( bFits == false || drive._target.empty() )
@@ -113,28 +63,24 @@ namespace sw
                     report.addErrorWithID( "Appearance.ParameterCannotDrive", "%#: schema '%#' parameter '%#' cannot drive %# '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), getEnumName( drive._kind ), drive._target.c_str() );
                     return;
                 }
-                if ( drive._kind == CustomizationDriveKind::DyeChannel && ( drive._channel < 0 || drive._channel > kMaxDyeChannel ) )
-                {
-                    report.addErrorWithID( "Appearance.DyeChannelRange", "%#: schema '%#' parameter '%#' dye channel %# is outside 0..3", sourceName, schemaID.c_str(), inoutParam._name.c_str(), drive._channel );
-                    return;
-                }
                 inoutParam._listDrive.push_back( drive );
             }
 
             static void readOption( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaID )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrOptionAttribute, report, sourceName );
+                CustomizationOptionFields fields;
+                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName ); // 오류는 보고서에 쌓인다
                 CustomizationOptionDef option;
-                option._name               = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                option._visual             = XMLReadUtil::readOptionalName( node, "visual" );
-                option._variant            = XMLReadUtil::readOptionalName( node, "variant" );
-                option._materialVariant    = XMLReadUtil::readOptionalName( node, "materialVariant" );
-                const hashed_string prefab = XMLReadUtil::readOptionalName( node, "prefab" );
-                const hashed_string sprite = XMLReadUtil::readOptionalName( node, "sprite" );
+                option._name               = fields._name;
+                option._visual             = fields._visual;
+                option._variant            = fields._variant;
+                option._materialVariant    = fields._materialVariant;
+                const hashed_string prefab = fields._prefab;
+                const hashed_string sprite = fields._sprite;
                 option._asset              = prefab.empty() ? sprite : prefab;
-                AppearanceXMLUtil::readOptionalFloat3( node, "offset", option._offset, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat3( node, "rotation", option._rotation, report, sourceName );
-                const bool bChoiceOnly = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
+                option._offset             = fields._offset;
+                option._rotation           = fields._rotation;
+                const bool bChoiceOnly     = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
                 if ( option._name.empty() || inoutParam.findOption( option._name ) != nullptr )
                     report.addErrorWithID( "Appearance.OptionNameInvalid", "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( inoutParam._kind == CustomizationKind::Attachment && bChoiceOnly )
@@ -149,9 +95,10 @@ namespace sw
 
             static void readCondition( const XMLNode& node, const CustomizationSchemaDef& schema, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrConditionAttribute, report, sourceName );
-                CustomizationConditionDef condition;
-                condition._parameter = AppearanceXMLUtil::readRequiredName( node, "parameter", report, sourceName );
+                CustomizationConditionFields fields;
+                CustomizationConditionDef    condition;
+                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName, { "options" } ); // 구간은 대상을 안 뒤에 다시 읽는다
+                condition._parameter = fields._parameter;
                 AppearanceXMLUtil::readNameList( node, "options", condition._listOption );
                 // 조건은 앞에 선언한 매개변수만 가리킬 수 있다. 아직 목록에 들어가지 않은 자기 자신도 가리킬 수 없으므로 순환이 생길 수 없다.
                 const CustomizationParamDef* pTarget = schema.findParameter( condition._parameter );
@@ -163,10 +110,9 @@ namespace sw
                 }
                 if ( pTarget->_kind == CustomizationKind::Slider )
                 {
-                    condition._min = pTarget->_min;
-                    condition._max = pTarget->_max;
-                    AppearanceXMLUtil::readOptionalFloat( node, "min", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, condition._min, report, sourceName );
-                    AppearanceXMLUtil::readOptionalFloat( node, "max", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, condition._max, report, sourceName );
+                    // 적지 않은 구간 끝은 대상 슬라이더의 범위다.
+                    condition._min = node.findAttribute( "min" ) != nullptr ? fields._min : pTarget->_min;
+                    condition._max = node.findAttribute( "max" ) != nullptr ? fields._max : pTarget->_max;
                 }
                 else if ( pTarget->_kind == CustomizationKind::Color || condition._listOption.empty() )
                 {
@@ -185,15 +131,17 @@ namespace sw
 
             static void readParameter( const XMLNode& node, CustomizationKind kind, CustomizationSchemaDef& inoutSchema, AppearanceLoadReport& report, string_view sourceName )
             {
-                reportUnknownParamAttributes( node, kind, report, sourceName );
+                reportUnknownParamAttributes( node, kind, report, sourceName ); // 종류마다 받는 칸
+                CustomizationParamFields fields;
+                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName, { "default" } ); // 기본값은 종류마다 꼴이 달라 아래에서 읽는다
                 CustomizationParamDef param;
                 param._kind     = kind;
-                param._name     = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                param._category = XMLReadUtil::readOptionalName( node, "category" );
-                param._symmetry = XMLReadUtil::readOptionalName( node, "symmetry" );
-                param._socket   = XMLReadUtil::readOptionalName( node, "socket" ); // 부착 매개변수만 필수 — 아래에서 확인한다
-                AppearanceXMLUtil::readOptionalFloat( node, "min", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._min, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "max", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._max, report, sourceName );
+                param._name     = fields._name;
+                param._category = fields._category;
+                param._symmetry = fields._symmetry;
+                param._socket   = fields._socket; // 부착 매개변수만 필수 — 아래에서 확인한다
+                param._min      = fields._min;
+                param._max      = fields._max;
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
                 {
                     report.addErrorWithID( "Appearance.ParameterNameInvalid", "%#: schema '%#' has a parameter without a name or a duplicate '%#'", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
@@ -289,9 +237,9 @@ namespace sw
                 AppearanceXMLUtil::reportUnknownChild( root, schemaNode, report, sourceName );
                 continue;
             }
-            (void)AppearanceXMLUtil::reportUnknownAttributes( schemaNode, CustomizationSchemaInternal::kArrSchemaAttribute, report, sourceName );
+
             CustomizationSchemaDef schema;
-            schema._id = AppearanceXMLUtil::readRequiredName( schemaNode, "id", report, sourceName );
+            (void)AppearanceXMLUtil::readFields( schemaNode, schema, report, sourceName );
             if ( schema._id.empty() )
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findSchema( schema._id ) != nullptr )
@@ -302,7 +250,7 @@ namespace sw
             for ( XMLNode paramNode = schemaNode.findChild(); paramNode; paramNode = paramNode.findNextSibling() )
             {
                 CustomizationKind kind = CustomizationKind::Slider;
-                if ( CustomizationSchemaInternal::parseKind( paramNode.getName(), kind ) )
+                if ( game::getSubsystem<TypeRegistry>().enumFromString( paramNode.getName(), kind ) ) // 원소 이름이 매개변수 종류다
                     CustomizationSchemaInternal::readParameter( paramNode, kind, schema, report, sourceName );
                 else
                     AppearanceXMLUtil::reportUnknownChild( schemaNode, paramNode, report, sourceName );

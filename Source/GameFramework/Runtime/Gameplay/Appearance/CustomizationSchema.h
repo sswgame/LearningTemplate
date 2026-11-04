@@ -43,13 +43,79 @@ namespace sw
     };
 
     /** @brief 슬라이더와 색 값이 움직이는 대상 하나입니다. 슬라이더는 범위 [min, max] 를 [from, to] 로 옮겨서 씁니다. */
-    struct CustomizationDriveDef
+    REFLECT()
+    struct SW_GF_API CustomizationDriveDef
     {
-        hashed_string          _target{};
-        float32                _from{ 0.0f };
-        float32                _to{ 1.0f };
-        int32                  _channel{ 0 }; ///< DyeChannel
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _target{};
+        PROPERTY()
+        float32 _from{ 0.0f }; ///< 적지 않으면 매개변수 범위의 아래 끝(읽기가 채운 뒤 읽는다)
+        PROPERTY()
+        float32 _to{ 1.0f };
+        PROPERTY( Min = 0, Max = 3 )
+        int32 _channel{ 0 }; ///< DyeChannel 0..3
+        PROPERTY( Required )
         CustomizationDriveKind _kind{ CustomizationDriveKind::Morph };
+    };
+
+    /** @brief 매개변수 원소(`<Slider>` · `<Color>` · `<Choice>` · `<Attachment>`)가 함께 받는 칸입니다. 종류마다 받는 칸이 다르다(읽기가 막는다). `default` 는 종류마다 꼴이 달라 손으로 푼다. */
+    REFLECT()
+    struct SW_GF_API CustomizationParamFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY()
+        hashed_string _category{};
+        PROPERTY()
+        hashed_string _symmetry{};
+        PROPERTY()
+        hashed_string _socket{};
+        PROPERTY()
+        float32 _min{ 0.0f };
+        PROPERTY()
+        float32 _max{ 1.0f };
+    };
+
+    /** @brief 선택지(`<Option …/>`)의 칸입니다(파일 스키마 — 회전은 파일 글 그대로 도 단위). */
+    REFLECT()
+    struct SW_GF_API CustomizationOptionFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY()
+        hashed_string _visual{};
+        PROPERTY()
+        hashed_string _variant{};
+        PROPERTY()
+        hashed_string _materialVariant{};
+        PROPERTY()
+        hashed_string _prefab{};
+        PROPERTY()
+        hashed_string _sprite{};
+        PROPERTY( Units = m )
+        float3 _offset{};
+        PROPERTY( Units = deg )
+        float3 _rotation{};
+    };
+
+    /** @brief 조건(`<Condition parameter options min max/>`)의 칸입니다. 선택지 목록은 손으로 푼다. 구간은 적지 않으면 대상 슬라이더의 범위다. */
+    REFLECT()
+    struct SW_GF_API CustomizationConditionFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _parameter{};
+        PROPERTY()
+        float32 _min{ 0.0f };
+        PROPERTY()
+        float32 _max{ 0.0f };
     };
 } // namespace sw
 
@@ -108,10 +174,14 @@ namespace sw
 namespace sw
 {
     /** @brief 스키마 하나입니다. 캐릭터 종류 하나(사람)나 아이템 종류 하나(소총)의 꾸미기 매개변수를 담습니다. 이 순서가 정규화와 조건 판정의 순서입니다. */
+    REFLECT()
     struct SW_GF_API CustomizationSchemaDef
     {
+        REFLECT_BODY();
+
         vector<CustomizationParamDef> _listParameter{};
-        hashed_string                 _id{};
+        PROPERTY( Required )
+        hashed_string _id{};
 
         const CustomizationParamDef* findParameter( const hashed_string& name ) const;
     };
