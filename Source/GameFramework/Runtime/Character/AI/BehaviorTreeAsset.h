@@ -46,7 +46,7 @@ namespace sw
     /**
      * @struct BehaviorTreeXML
      * @brief 노드 원소 하나의 칸 읽기 · 쓰기입니다. 런타임 로더와 에디터 모델이 함께 쓴다(같은 형식을 두 곳이 손으로 읽지 않는다).
-     * @details 종류마다 받는 칸은 스키마 구조체(`BehaviorTreeNodeFields.h`)의 `PROPERTY` 가 정한다 — 모르는 속성 · 빠진 필수 · 범위 밖 값은 `GameDataXML::readFields` 가 이름과 함께 알린다.
+     * @details 종류마다 받는 칸은 스키마 구조체(`BehaviorTreeNodeFields.h`)의 `PROPERTY` 가 정한다 — 모르는 속성 · 빠진 필수 · 범위 밖 값은 `XMLFields::readFields` 가 이름과 함께 알린다.
      */
     struct SW_GF_API BehaviorTreeXML
     {

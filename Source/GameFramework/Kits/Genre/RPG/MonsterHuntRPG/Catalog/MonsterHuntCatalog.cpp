@@ -15,7 +15,7 @@ namespace sw
         /** @brief 연금술 물건 하나를 읽습니다. 오일은 칼에 바른 뒤 적중 횟수(`hits`)가 1 이상이어야 합니다. */
         [[nodiscard]] bool readAlchemyItem( const XMLNode& node, string_view sourceName, MonsterHuntAlchemyDef& outItem )
         {
-            if ( GameDataXML::readFields( node, outItem, sourceName ) == false )
+            if ( XMLFields::readFields( node, outItem, sourceName ) == false )
                 return false;
             if ( outItem._kind == MonsterHuntAlchemyKind::Oil && outItem._hits < 1 )
             {
@@ -83,7 +83,7 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "SlotGroup" ) )
         {
             MonsterHuntSlotGroupDef group;
-            if ( GameDataXML::readFields( node, group, sourceName ) == false )
+            if ( XMLFields::readFields( node, group, sourceName ) == false )
                 return false;
             _listSlotGroup.push_back( group );
             return true;
@@ -113,14 +113,14 @@ namespace sw
     bool MonsterHuntCatalog::loadMonster( const XMLNode& node, string_view sourceName )
     {
         MonsterHuntMonsterDef monster;
-        bool                  bValid = GameDataXML::readFields( node, monster, sourceName, { "elements" } );
+        bool                  bValid = XMLFields::readFields( node, monster, sourceName, { "elements" } );
         XMLReadUtil::parseNameList( node.getAttributeText( "elements" ), ",; ", monster._listElement );
         if ( monster._listElement.empty() && monster._category.empty() == false )
             monster._listElement.push_back( monster._category ); // 방어 속성을 적지 않으면 분류 하나다(`_listElement` 의 정의)
         for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )
         {
             MonsterHuntWeakness weakness;
-            if ( GameDataXML::readFields( child, weakness, sourceName ) == false )
+            if ( XMLFields::readFields( child, weakness, sourceName ) == false )
             {
                 bValid = false;
                 continue;
@@ -142,15 +142,15 @@ namespace sw
     bool MonsterHuntCatalog::loadContract( const XMLNode& node, string_view sourceName )
     {
         MonsterHuntContractDef contract;
-        bool                   bValid = GameDataXML::readFields( node, contract, sourceName );
+        bool                   bValid = XMLFields::readFields( node, contract, sourceName );
         for ( XMLNode stepNode = node.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
         {
             MonsterHuntContractStepDef step;
-            bValid = GameDataXML::readFields( stepNode, step, sourceName ) && bValid;
+            bValid = XMLFields::readFields( stepNode, step, sourceName ) && bValid;
             for ( XMLNode clueNode = stepNode.findChild( "Clue" ); clueNode; clueNode = clueNode.findNextSibling( "Clue" ) )
             {
                 MonsterHuntClueDef clue;
-                if ( GameDataXML::readFields( clueNode, clue, sourceName ) )
+                if ( XMLFields::readFields( clueNode, clue, sourceName ) )
                     step._listClue.push_back( clue );
                 else
                     bValid = false;

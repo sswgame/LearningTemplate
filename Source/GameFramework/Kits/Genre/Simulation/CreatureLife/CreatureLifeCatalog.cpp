@@ -228,7 +228,7 @@ namespace sw
     bool CreatureLifeCatalog::loadHabitat( const XMLNode& node, string_view sourceName )
     {
         HabitatDef habitat;
-        bool       bValid = GameDataXML::readFields( node, habitat, sourceName );
+        bool       bValid = XMLFields::readFields( node, habitat, sourceName );
         bValid            = bValid && CreatureLifeCatalogInternal::parsePattern( node, sourceName, habitat._id.c_str(), habitat );
         if ( bValid )
             (void)_habitatCatalog.add( habitat ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -238,11 +238,11 @@ namespace sw
     bool CreatureLifeCatalog::loadAbility( const XMLNode& node, string_view sourceName )
     {
         CreatureAbilityDef ability;
-        bool               bValid = GameDataXML::readFields( node, ability, sourceName );
+        bool               bValid = XMLFields::readFields( node, ability, sourceName );
         for ( XMLNode ruleNode = node.findChild( "Rule" ); ruleNode; ruleNode = ruleNode.findNextSibling( "Rule" ) )
         {
             CreatureTileRule rule;
-            if ( GameDataXML::readFields( ruleNode, rule, sourceName ) == false )
+            if ( XMLFields::readFields( ruleNode, rule, sourceName ) == false )
             {
                 bValid = false;
                 continue;
@@ -270,7 +270,7 @@ namespace sw
     bool CreatureLifeCatalog::loadSpecies( const XMLNode& node, string_view sourceName )
     {
         CreatureSpeciesDef species;
-        bool               bValid = GameDataXML::readFields( node, species, sourceName, { "habitats", "foods", "gifts", "weathers", "abilities", "requests", "phases" } );
+        bool               bValid = XMLFields::readFields( node, species, sourceName, { "habitats", "foods", "gifts", "weathers", "abilities", "requests", "phases" } );
         XMLReadUtil::parseNameList( node.getAttributeText( "habitats" ), ",;| ", species._listHabitat );
         XMLReadUtil::parseNameList( node.getAttributeText( "foods" ), ",;| ", species._listFood );
         XMLReadUtil::parseNameList( node.getAttributeText( "gifts" ), ",;| ", species._listGift );
@@ -291,11 +291,11 @@ namespace sw
     bool CreatureLifeCatalog::loadAppeal( const XMLNode& node, string_view sourceName )
     {
         TownAppealDef appeal;
-        bool          bValid = GameDataXML::readFields( node, appeal, sourceName );
+        bool          bValid = XMLFields::readFields( node, appeal, sourceName );
         for ( XMLNode tierNode = node.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
         {
             TownAppealTier tier;
-            if ( GameDataXML::readFields( tierNode, tier, sourceName ) )
+            if ( XMLFields::readFields( tierNode, tier, sourceName ) )
                 appeal._listTier.push_back( tier );
             else
                 bValid = false;

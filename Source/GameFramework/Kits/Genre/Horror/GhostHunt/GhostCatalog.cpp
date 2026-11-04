@@ -26,7 +26,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         GhostHuntRootDef rootDef;
-        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _currency = rootDef._currency;
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
@@ -70,7 +70,7 @@ namespace sw
     bool GhostCatalog::loadVacuum( const XMLNode& node, string_view sourceName )
     {
         GhostVacuumDef vacuum;
-        bool           bValid = GameDataXML::readFields( node, vacuum, sourceName, { "stages" } );
+        bool           bValid = XMLFields::readFields( node, vacuum, sourceName, { "stages" } );
         // 단계 위력은 적었으면 모두 0 이상의 수여야 한다(적지 않으면 스키마 초기값 한 단계).
         const string_view stages = node.getAttributeText( "stages" );
         if ( stages.empty() == false )
@@ -97,7 +97,7 @@ namespace sw
     bool GhostCatalog::loadRoom( const XMLNode& node, string_view sourceName )
     {
         GhostRoomDef room;
-        if ( GameDataXML::readFields( node, room, sourceName, { "ghosts" } ) == false )
+        if ( XMLFields::readFields( node, room, sourceName, { "ghosts" } ) == false )
             return false;
         XMLReadUtil::parseNameList( node.getAttributeText( "ghosts" ), ",; ", room._listGhost );
         (void)_roomCatalog.add( room ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -107,7 +107,7 @@ namespace sw
     bool GhostCatalog::loadFurniture( const XMLNode& node, string_view sourceName )
     {
         GhostFurnitureDef furniture;
-        bool              bValid = GameDataXML::readFields( node, furniture, sourceName, { "search" } );
+        bool              bValid = XMLFields::readFields( node, furniture, sourceName, { "search" } );
         // 뒤지는 방법은 적었으면 그것만 된다(적지 않으면 둘 다). 모르는 이름은 오류다.
         const string_view search = node.getAttributeText( "search" );
         if ( search.empty() == false )

@@ -200,6 +200,12 @@ namespace sw
          */
         [[nodiscard]] SW_API static string formatValueText( ValueAddress value, const hashed_string& typeName, const SerializeContext& context );
 
+        /**
+         * @brief 이름이 같은 칸끼리 값을 옮깁니다(@p srcType → @p dstType, 글로 옮기므로 타입은 글 형식이 같으면 된다). 짝이 없는 칸은 건너뜁니다.
+         * @details 한 데이터를 종류마다 다른 스키마로 읽고 쓰는 곳(행동 트리 노드 — 종류마다 받는 칸이 다르다)이 칸마다 손으로 옮기지 않게 한다. 옮기지 못한 칸이 있으면 false 입니다.
+         */
+        [[nodiscard]] SW_API static bool copySameNamedProperties( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType );
+
         /** @brief 키 문자열이 철자 그대로 같은지 비교합니다(대소문자가 다르면 다른 키 — 별칭 없음). */
         static bool keysEqual( string_view left, string_view right );
 

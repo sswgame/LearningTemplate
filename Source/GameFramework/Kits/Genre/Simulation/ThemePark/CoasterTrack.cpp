@@ -475,11 +475,11 @@ namespace sw
     bool CoasterLayoutCatalog::loadLayout( const XMLNode& node, string_view sourceName )
     {
         CoasterLayoutDef layout;
-        bool             bValid = GameDataXML::readFields( node, layout, sourceName );
+        bool             bValid = XMLFields::readFields( node, layout, sourceName );
         for ( XMLNode pieceNode = node.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
         {
             CoasterTrackPiece piece;
-            if ( GameDataXML::readFields( pieceNode, piece, sourceName ) )
+            if ( XMLFields::readFields( pieceNode, piece, sourceName ) )
                 layout._listPiece.push_back( piece );
             else
                 bValid = false;

@@ -21,7 +21,7 @@ namespace sw
         [[nodiscard]] bool readLootEntry( const XMLNode& node, string_view sourceName, LootEntry& outEntry )
         {
             LootEntryRowDef row;
-            if ( GameDataXML::readFields( node, row, sourceName ) == false )
+            if ( XMLFields::readFields( node, row, sourceName ) == false )
                 return false;
             const bool bHasMax = node.findAttribute( "max" ) != nullptr;
             if ( bHasMax && row._max < row._min )
@@ -52,7 +52,7 @@ namespace sw
                 continue;
             // 기본값 · 범위는 스키마(LootTableRowDef · LootEntryRowDef)가 정한다. 오류가 있는 테이블 · 항목은 넣지 않는다(오류는 readFields 가 남긴다).
             LootTableRowDef row;
-            if ( GameDataXML::readFields( node, row, sourceName, { "id" } ) == false )
+            if ( XMLFields::readFields( node, row, sourceName, { "id" } ) == false )
                 continue;
             const bool bHasRollsMax = node.findAttribute( "rollsMax" ) != nullptr;
             if ( bHasRollsMax && row._rollsMax < row._rolls )

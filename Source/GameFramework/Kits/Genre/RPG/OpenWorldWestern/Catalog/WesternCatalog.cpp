@@ -138,7 +138,7 @@ namespace sw
         else if ( XMLReadUtil::isElement( name, "Bond" ) )
         {
             WesternBondLevelDef bond;
-            bAdd = GameDataXML::readFields( node, bond, sourceName, { "unlocks" } );
+            bAdd = XMLFields::readFields( node, bond, sourceName, { "unlocks" } );
             StringUtil::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&bond]( string_view token )
             { bond._listUnlock.push_back( hashed_string( token ) ); } );
             if ( bAdd )
@@ -169,7 +169,7 @@ namespace sw
         else if ( XMLReadUtil::isElement( name, "HuntWeapon" ) )
         {
             WesternHuntWeaponDef weapon;
-            bAdd = GameDataXML::readFields( node, weapon, sourceName, { "sizes" } ) && Internal::readSizeMask( node, sourceName, weapon._sizeMask );
+            bAdd = XMLFields::readFields( node, weapon, sourceName, { "sizes" } ) && Internal::readSizeMask( node, sourceName, weapon._sizeMask );
             if ( bAdd )
                 (void)_huntWeaponCatalog.add( weapon );
         }
@@ -182,7 +182,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         WesternCatalogRootDef rootDef;
-        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readFields( root, rootDef, sourceName ) )
         {
             _currency        = rootDef._currency;
             _extraHitPenalty = rootDef._extraHitPenalty;
@@ -212,7 +212,7 @@ namespace sw
     bool WesternCatalog::loadHonor( const XMLNode& node, string_view sourceName )
     {
         WesternHonorRangeDef range;
-        bool                 bValid = GameDataXML::readFields( node, range, sourceName );
+        bool                 bValid = XMLFields::readFields( node, range, sourceName );
         FactionDef           faction;
         faction._id         = hashed_string( kHonorFactionID );
         faction._name       = "Honor";
@@ -225,8 +225,8 @@ namespace sw
             // 한 원소가 두 스키마(경계와 효과)로 읽힌다 — 서로의 칸은 손으로 읽는 칸으로 넘긴다.
             WesternHonorTierBoundDef bound;
             WesternHonorTierDef      effect;
-            const bool               bBound  = GameDataXML::readFields( child, bound, sourceName, { "name", "flag", "discount" } );
-            const bool               bEffect = GameDataXML::readFields( child, effect, sourceName, { "min" } );
+            const bool               bBound  = XMLFields::readFields( child, bound, sourceName, { "name", "flag", "discount" } );
+            const bool               bEffect = XMLFields::readFields( child, effect, sourceName, { "min" } );
             if ( bBound == false || bEffect == false )
             {
                 bValid = false;
@@ -243,7 +243,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Action" ); child; child = child.findNextSibling( "Action" ) )
         {
             WesternHonorActionDef action;
-            if ( GameDataXML::readFields( child, action, sourceName ) )
+            if ( XMLFields::readFields( child, action, sourceName ) )
                 (void)_honorActionCatalog.add( action );
             else
                 bValid = false;

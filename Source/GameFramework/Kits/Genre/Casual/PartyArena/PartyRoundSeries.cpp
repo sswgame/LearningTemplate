@@ -127,7 +127,7 @@ namespace sw
                 continue;
             }
             PartyRoundDef round;
-            if ( GameDataXML::readFields( node, round, sourceName ) == false )
+            if ( XMLFields::readFields( node, round, sourceName ) == false )
                 continue; // 오류는 readFields 가 남겼고, 그 판만 빠진다
             _listRound.push_back( round );
             ++loadedCount;

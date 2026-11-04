@@ -43,7 +43,7 @@
 
 | 묶음 | 대상(손 호출 수) |
 |---|---|
-| A 기반 · 애니메이션 | `GameDataXML::readFields` · `writeFields` 를 Engine `XMLFields` 로(부르는 곳 모두), `copyFields` 는 `SerializerUtil`. `AnimationGraphAsset`(83 — 리플렉션 없음, 단위 테스트 없음 · 콘텐츠 10) · `AnimationBoneMask` |
+| A 기반 · 애니메이션 | `XMLFields::readFields` · `writeFields` 를 Engine `XMLFields` 로(부르는 곳 모두), `copyFields` 는 `SerializerUtil`. `AnimationGraphAsset`(83 — 리플렉션 없음, 단위 테스트 없음 · 콘텐츠 10) · `AnimationBoneMask` |
 | B 입력 | `InputMap`(94) · `InputRemapSerializer`(53) · `DebugKeyActions` |
 | C 엔진 애셋 | `TileMapXML`(34) · `TileSetAsset` · `PairedAnimationDef` · `SocketSet` · `RetargetProfile` · `MaterialXML` · `Material` · `MaterialInstance` · `TelemetrySchema` · `UserSettingsSchema`(39) · `PackPatch` · `CultureInfo` · `DestructionProfile` · `FitTables` · `AnimationNotifyTable` · `SkeletonBoneLOD` · `VertexAnimationCooker` · `Render2DSettings` · `UIStyleSheet` · `UIDocumentLoader/Writer` · `SceneDocument` · `PrefabOverrides` · `PrefabAsset` · `LocalizationDocuments`(엔진 글 표 — 수집이 바이트로 대조) · `CharacterMeshLOD` · `AnimationCrowd` · `RigNode` · `AssetFormat` · `LipSync` · `ComponentDefaults` |
 | D 시나리오 단계 인자 | `AutomationJudge`(22) · `AutomationRunnerSteps`(20) · `AutomationStepArgs` · `AutomationActionSteps` · `AutomationWindowSteps` · `AutomationSceneSteps` · `AutomationEnvironmentSteps` · `AutomationBackendSteps` · `AutomationScenario` · `AutomationStepValidation` · `AutomationFrameStats` · `EditorScenarioSteps` · `EditorScenarioStepValidation` · `EditorCaptureSteps` · `ControlAutomationSteps` · `GameplayAutomationSteps` · `UIScenarioSteps` |

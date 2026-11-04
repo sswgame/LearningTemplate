@@ -4,8 +4,11 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Animation/Graph/AnimationGraphFields.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -36,35 +39,22 @@ namespace sw
                         bValid = false;
                         continue;
                     }
-                    if ( XMLReadUtil::hasOnlyKnownNames( entryNode, { "bone", "weight" }, {}, context ) == false )
+                    AnimationBoneMaskEntryFields fields;
+                    if ( XMLFields::readFields( entryNode, fields, context ) == false || XMLNameCheck::reportUnknownChildren( entryNode, nullptr, 0, context ) == false )
                     {
+                        bValid = false;
+                        continue;
+                    }
+                    if ( fields._bone.empty() )
+                    {
+                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskItemNo", "%#: bone mask '%#' item %# has an empty 'bone'", context, pListKey, index );
                         bValid = false;
                         continue;
                     }
                     AnimationBoneMaskEntry entry{};
-                    entry._bone       = hashed_string( string_view{ entryNode.getAttributeText( "bone" ) } );
+                    entry._bone       = fields._bone;
+                    entry._weight     = fields._weight;
                     entry._bPropagate = bPropagate ? SW_TRUE : SW_FALSE;
-                    if ( entry._bone.empty() )
-                    {
-                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskItemNo", "%#: bone mask '%#' item %# has no 'bone'", context, pListKey, index );
-                        bValid = false;
-                        continue;
-                    }
-                    const std::optional<float32> weight = entryNode.readRequiredAttribute<float32>( "weight" );
-                    if ( weight.has_value() == false )
-                    {
-                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskEntryNeeds", "%#: bone mask entry '%#' needs a numeric 'weight'", context, entry._bone.c_str() );
-                        bValid = false;
-                        continue;
-                    }
-                    entry._weight           = *weight;
-                    const bool bWeightValid = 0.0f <= entry._weight && entry._weight <= 1.0f;
-                    if ( bWeightValid == false )
-                    {
-                        SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskEntryWeight", "%#: bone mask entry '%#' weight %# is outside [0, 1]", context, entry._bone.c_str(), entry._weight );
-                        bValid = false;
-                        continue;
-                    }
                     inoutListEntry.push_back( entry );
                 }
                 return bValid;
@@ -144,9 +134,10 @@ namespace sw
             {
                 if ( entry._bPropagate != bPropagate )
                     continue;
-                const XMLNode entryNode = listNode.appendChild( AnimationBoneMaskInternal::kEntryTag );
-                entryNode.appendAttribute( "bone", entry._bone.c_str() );
-                entryNode.appendAttribute( "weight", entry._weight );
+                AnimationBoneMaskEntryFields fields;
+                fields._bone   = entry._bone;
+                fields._weight = entry._weight;
+                XMLFields::writeFields( listNode.appendChild( AnimationBoneMaskInternal::kEntryTag ), fields );
             }
         }
     }

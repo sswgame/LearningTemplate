@@ -1,6 +1,7 @@
 /**
  * @file AnimationGraphAsset.h
  * @brief 에디터와 런타임이 함께 쓰는 애니메이션 그래프 XML 에셋입니다.
+ * @details 원소마다 받는 칸은 스키마(`AnimationGraphFields.h`)의 `PROPERTY` 가 정본이고 `XMLFields::readFields` · `writeFields` 가 읽고 쓴다. 여기 코드는 원소 구조와 칸 사이의 의미만 본다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -16,13 +17,15 @@
 #include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     /**
      * @enum AnimationLayerBlend
-     * @brief 레이어가 아래 포즈에 합쳐지는 방법입니다(XML "blend": "Override", "Additive"). 모르는 표기는 로드 오류입니다.
+     * @brief 레이어가 아래 포즈에 합쳐지는 방법입니다(XML "blend"). 모르는 표기는 로드 오류입니다.
      */
+    ENUM()
     enum class AnimationLayerBlend : uint8
     {
         Override = 0, ///< 마스크 안의 본을 가중치만큼 레이어 포즈로 섞습니다(상체만 조준).
@@ -59,10 +62,11 @@ namespace sw
 
     /**
      * @enum AnimationBlendSpaceNotifyMode
-     * @brief 블렌드 스페이스 상태가 표본 클립의 알림을 내는 방법입니다(XML "blend_space"."notify": "all", "highest_weight", "none"). 모르는 표기는 로드 오류입니다.
+     * @brief 블렌드 스페이스 상태가 표본 클립의 알림을 내는 방법입니다(XML "blend_space"."notify": `All` · `HighestWeight` · `None`). 모르는 표기는 로드 오류입니다.
      * @details 언리얼 블렌드 스페이스의 Notify Trigger Mode 와 같다. 키를 적지 않으면 `All` 이다 — 언리얼의 기본값이고, 유니티 블렌드 트리도 섞이는 클립의 이벤트를 모두 낸다.
      *          알림의 출처(`AnimationFiredNotify::_pSource`)는 표본 클립이고 시각은 그 클립의 시각이다. 가중치는 상태 가중치 × 표본 가중치다.
      */
+    ENUM()
     enum class AnimationBlendSpaceNotifyMode : uint8
     {
         All = 0,       ///< 가중치가 0 보다 큰 표본의 알림을 모두 냅니다(받는 쪽이 가중치로 거릅니다).
@@ -73,7 +77,7 @@ namespace sw
     /**
      * @struct AnimationGraphBlendSpaceDef
      * @brief 블렌드 스페이스 상태의 데이터입니다(XML 노드의 "blend_space"). 축 파라미터 이름과 표본(클립 이름, 위치)을 가집니다.
-     * @details XML 형식은 `<blend_space x="Speed" y="Direction" notify="highest_weight"><samples><sample clip="Idle" x="0" y="0" />…</samples></blend_space>` 이다. "y" 를 적지 않으면 1D 다.
+     * @details XML 형식은 `<blend_space x="Speed" y="Direction" notify="HighestWeight"><samples><sample clip="Idle" x="0" y="0" />…</samples></blend_space>` 이다. "y" 를 적지 않으면 1D 다.
      *          표본이 없거나, 클립 이름이나 "x" 파라미터가 비거나, "notify" 표기를 모르면 로드 오류다.
      */
     struct AnimationGraphBlendSpaceDef
@@ -92,10 +96,11 @@ namespace sw
      * @brief 포즈를 직접 평가해 내는 노드의 종류입니다(XML 노드의 "pose_node"."type"). 모르는 표기는 로드 오류입니다.
      * @details 종류마다 런타임 구현(`IAnimationPoseNode`)이 하나다. 모션 매칭 같은 새 노드는 여기에 종류를 더하고 `AnimationPoseNodeSet` 이 만든다.
      */
+    ENUM()
     enum class AnimationPoseNodeType : uint8
     {
         None = 0,   ///< 포즈 노드가 아닙니다(이름이 곧 클립이거나 블렌드 스페이스인 보통 상태).
-        BlendPoses, ///< "blend_poses" — 입력 클립 둘을 파라미터 가중치로 섞습니다(`BlendPosesNode`).
+        BlendPoses, ///< `BlendPoses` — 입력 클립 둘을 파라미터 가중치로 섞습니다(`BlendPosesNode`).
     };
 } // namespace sw
 
@@ -104,8 +109,8 @@ namespace sw
     /**
      * @struct AnimationGraphPoseNodeDef
      * @brief 포즈 노드 상태의 데이터입니다(XML 노드의 "pose_node").
-     * @details XML 형식은 `<pose_node type="blend_poses" weight="WaveWeight"><inputs><item>Idle</item><item>Wave</item></inputs></pose_node>` 이다.
-     *          "blend_poses" 는 입력이 정확히 둘이고 "weight" 파라미터 이름이 있어야 한다. 어기면 로드 오류다(기본값으로 채우지 않는다).
+     * @details XML 형식은 `<pose_node type="BlendPoses" weight="WaveWeight"><inputs><item>Idle</item><item>Wave</item></inputs></pose_node>` 이다.
+     *          `BlendPoses` 는 입력이 정확히 둘이고 "weight" 파라미터 이름이 있어야 한다. 어기면 로드 오류다(기본값으로 채우지 않는다).
      */
     struct AnimationGraphPoseNodeDef
     {
@@ -149,8 +154,9 @@ namespace sw
 {
     /**
      * @enum AnimationConditionOp
-     * @brief 전이 조건의 비교입니다(XML "op": ">", "<", ">=", "<=", "==", "!=", "trigger"). 모르는 표기는 로드 오류입니다.
+     * @brief 전이 조건의 비교입니다(XML "op" — 열거자 이름 `Greater` · `GreaterEqual` · `Trigger` …). 모르는 표기는 로드 오류입니다.
      */
+    ENUM()
     enum class AnimationConditionOp : uint8
     {
         None = 0,     ///< 조건이 없습니다. 현재 상태가 반복 없이 끝나면 넘어갑니다("끝나면 다음").
@@ -168,9 +174,10 @@ namespace sw
 {
     /**
      * @enum AnimationBlendMode
-     * @brief 전이가 포즈를 잇는 방식입니다(XML 링크의 "blend_mode": "crossfade", "inertialization"). 모르는 표기는 로드 오류입니다.
+     * @brief 전이가 포즈를 잇는 방식입니다(XML 링크의 "blend_mode": `Crossfade` · `Inertialization`). 모르는 표기는 로드 오류입니다.
      * @details 키를 적지 않은 링크는 `Crossfade` 다 — 이 필드의 데이터 기본값이며, 이 필드가 생기기 전 파일의 뜻과 같다.
      */
+    ENUM()
     enum class AnimationBlendMode : uint8
     {
         Crossfade = 0,   ///< 두 재생을 함께 샘플해 "blend" 길이 동안 섞습니다.
@@ -240,16 +247,6 @@ namespace sw
         const AnimationGraphNode* findEntryNode() const;
         /** @brief 조건 없는 첫 나가는 링크("끝나면 다음")입니다. 없으면 nullptr 입니다. */
         const AnimationGraphLink* findFinishLink( int32 fromNodeID ) const;
-        /** @brief 조건 표기를 읽습니다. 모르는 표기면 false 입니다. */
-        [[nodiscard]] static bool parseConditionOp( string_view text, AnimationConditionOp& outOp );
-        /** @brief 조건 표기를 씁니다. */
-        static const utf8* getConditionOpText( AnimationConditionOp op );
-        /** @brief 전이 방식 표기("crossfade", "inertialization")를 읽습니다. 모르는 표기면 false 입니다. */
-        [[nodiscard]] static bool parseBlendMode( string_view text, AnimationBlendMode& outMode );
-        /** @brief 전이 방식 표기를 씁니다. */
-        static const utf8* getBlendModeText( AnimationBlendMode mode );
-        /** @brief 레이어 합치기 표기("Override", "Additive")를 씁니다. */
-        static const utf8* getLayerBlendText( AnimationLayerBlend blend );
         /** @brief 이름으로 본 마스크를 찾습니다. 없으면 nullptr 입니다. */
         const AnimationBoneMaskDef* findBoneMask( const hashed_string& name ) const;
         /** @brief 이름으로 레이어를 찾습니다. 없으면 nullptr 입니다. */
@@ -282,6 +279,10 @@ namespace sw
         [[nodiscard]] bool parseLayers( const XMLNode& root );
         /** @brief "bone_masks" 와 "layers" 를 씁니다. */
         void writeLayers( const XMLNode& root ) const;
+        /** @brief 노드 하나(블렌드 스페이스 · 포즈 노드 포함)를 씁니다. */
+        static void writeNode( const XMLNode& nodesXML, const AnimationGraphNode& node );
+        /** @brief 링크 하나(조건 포함)를 씁니다. */
+        static void writeLink( const XMLNode& linksXML, const AnimationGraphLink& link );
         /** @brief 목록을 모두 비웁니다. */
         void clear();
     };

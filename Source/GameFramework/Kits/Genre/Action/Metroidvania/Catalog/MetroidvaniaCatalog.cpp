@@ -18,7 +18,7 @@ namespace sw
             [[nodiscard]] static bool readOptionalChild( const XMLNode& root, const utf8* pName, string_view sourceName, TDef& outDef )
             {
                 const XMLNode node = root.findChild( pName );
-                return node ? GameDataXML::readFields( node, outDef, sourceName ) : true;
+                return node ? XMLFields::readFields( node, outDef, sourceName ) : true;
             }
         };
     } // namespace
@@ -42,7 +42,7 @@ namespace sw
         MetroidvaniaRules          rules;
         MetroidvaniaHealthDef      health;
         MetroidvaniaStaminaDef     stamina;
-        bool                       bValid = GameDataXML::readFields( root, rootDef, sourceName );
+        bool                       bValid = XMLFields::readFields( root, rootDef, sourceName );
         bValid                            = Internal::readOptionalChild( root, "Rules", sourceName, rules ) && bValid;
         bValid                            = Internal::readOptionalChild( root, "Health", sourceName, health ) && bValid;
         bValid                            = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
@@ -115,7 +115,7 @@ namespace sw
     bool MetroidvaniaCatalog::loadAbility( const XMLNode& node, string_view sourceName )
     {
         MetroidvaniaAbilityDef ability;
-        bool                   bValid = GameDataXML::readFields( node, ability, sourceName );
+        bool                   bValid = XMLFields::readFields( node, ability, sourceName );
         const XMLNode          motor  = node.findChild( "Motor" );
         if ( motor )
             ability._motor.addAttributes( motor ); // 속성이 없으면 빈 스탯이다
@@ -136,7 +136,7 @@ namespace sw
     bool MetroidvaniaCatalog::loadCharm( const XMLNode& node, string_view sourceName )
     {
         MetroidvaniaTrinketDef charm;
-        if ( GameDataXML::readFields( node, charm, sourceName ) == false )
+        if ( XMLFields::readFields( node, charm, sourceName ) == false )
             return false;
         const XMLNode stats = node.findChild( "Stats" );
         if ( stats )
@@ -148,7 +148,7 @@ namespace sw
     bool MetroidvaniaCatalog::loadPickup( const XMLNode& node, string_view sourceName )
     {
         MetroidvaniaPickupDef pickup;
-        bool                  bValid = GameDataXML::readFields( node, pickup, sourceName );
+        bool                  bValid = XMLFields::readFields( node, pickup, sourceName );
         if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
         {
             SW_LOG_ERROR_ID( "MetroidvaniaCatalog.PickupGrantsUnknownAbility", "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pickup._id.c_str(), pickup._ability.c_str() );
@@ -168,7 +168,7 @@ namespace sw
     bool MetroidvaniaCatalog::loadEnemy( const XMLNode& node, string_view sourceName )
     {
         MetroidvaniaEnemyDef enemy;
-        bool                 bValid = GameDataXML::readFields( node, enemy, sourceName );
+        bool                 bValid = XMLFields::readFields( node, enemy, sourceName );
         if ( enemy._bBoss && enemy._flag.empty() )
         {
             SW_LOG_ERROR_ID( "MetroidvaniaCatalog.BossNeedsFlagSet", "%#: boss '%#' needs flag=\"...\" (set when it is defeated)", sourceName, enemy._id.c_str() );

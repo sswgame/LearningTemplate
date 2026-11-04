@@ -104,7 +104,7 @@ namespace sw
         if ( name == "Rules" )
         {
             ConquestRules rules;
-            if ( GameDataXML::readFields( node, rules, sourceName ) == false )
+            if ( XMLFields::readFields( node, rules, sourceName ) == false )
                 return false;
             rules._startResources = _rules._startResources; // `<Start>` 는 따로 읽는다(적힌 순서와 상관없게)
             _rules                = rules;
@@ -129,7 +129,7 @@ namespace sw
     bool ConquestCatalog::loadUnit( const XMLNode& node, string_view sourceName )
     {
         ConquestUnitDef unit;
-        if ( GameDataXML::readFields( node, unit, sourceName ) == false )
+        if ( XMLFields::readFields( node, unit, sourceName ) == false )
             return false;
         ConquestCatalogInternal::loadStatChild( node, "Cost", unit._cost );
         (void)_unitCatalog.add( unit ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -139,7 +139,7 @@ namespace sw
     bool ConquestCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
     {
         ConquestBuildingDef building;
-        if ( GameDataXML::readFields( node, building, sourceName, { "trains" } ) == false )
+        if ( XMLFields::readFields( node, building, sourceName, { "trains" } ) == false )
             return false;
         XMLReadUtil::parseNameList( node.getAttributeText( "trains" ), ",; ", building._listTrainable );
         ConquestCatalogInternal::loadStatChild( node, "Cost", building._cost );
@@ -150,7 +150,7 @@ namespace sw
     bool ConquestCatalog::loadSite( const XMLNode& node, string_view sourceName )
     {
         ConquestSiteDef site;
-        bool            bValid = GameDataXML::readFields( node, site, sourceName, { "garrison" } );
+        bool            bValid = XMLFields::readFields( node, site, sourceName, { "garrison" } );
         bValid                 = ConquestCatalogInternal::readGarrison( node.getAttributeText( "garrison" ), site._listGarrison, sourceName, site._id ) && bValid;
         if ( bValid == false )
             return false;

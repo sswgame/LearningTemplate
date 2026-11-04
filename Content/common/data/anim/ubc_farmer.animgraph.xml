@@ -36,13 +36,13 @@
 	</nodes>
 	<links>
 		<link id="1" from="1" to="2" blend="0.15">
-			<condition param="Sow" op="trigger" value="1.0" />
+			<condition param="Sow" op="Trigger" value="1.0" />
 		</link>
 		<link id="2" from="1" to="3" blend="0.15">
-			<condition param="Water" op="trigger" value="1.0" />
+			<condition param="Water" op="Trigger" value="1.0" />
 		</link>
 		<link id="3" from="1" to="4" blend="0.15">
-			<condition param="Harvest" op="trigger" value="1.0" />
+			<condition param="Harvest" op="Trigger" value="1.0" />
 		</link>
 		<link id="4" from="2" to="1" blend="0.2" />
 		<link id="5" from="3" to="1" blend="0.2" />

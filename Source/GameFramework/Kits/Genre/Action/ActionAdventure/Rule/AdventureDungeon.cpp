@@ -80,11 +80,11 @@ namespace sw
     bool AdventureDungeonCatalog::loadDungeon( const XMLNode& dungeonNode, string_view sourceName )
     {
         AdventureDungeonDef dungeon;
-        bool                bValid = GameDataXML::readFields( dungeonNode, dungeon, sourceName );
+        bool                bValid = XMLFields::readFields( dungeonNode, dungeon, sourceName );
         for ( XMLNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
         {
             AdventureDoorDef door;
-            bool             bDoorValid = GameDataXML::readFields( node, door, sourceName );
+            bool             bDoorValid = XMLFields::readFields( node, door, sourceName );
             if ( door._kind == AdventureDoorKind::Condition && door._requires.empty() )
             {
                 SW_LOG_ERROR_ID( "AdventureDungeon.ConditionDoorNeedsRequires", "%#: condition door '%#' needs requires=\"...\"", sourceName, door._id.c_str() );
@@ -97,7 +97,7 @@ namespace sw
         for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
         {
             AdventureTreasureDef treasure;
-            if ( GameDataXML::readFields( node, treasure, sourceName ) )
+            if ( XMLFields::readFields( node, treasure, sourceName ) )
                 dungeon._listTreasure.push_back( treasure );
             else
                 bValid = false;
@@ -105,7 +105,7 @@ namespace sw
         for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
         {
             AdventureDeviceDef device;
-            bool               bDeviceValid = GameDataXML::readFields( node, device, sourceName );
+            bool               bDeviceValid = XMLFields::readFields( node, device, sourceName );
             if ( device._kind == AdventureDeviceKind::TimedSwitch && device._duration <= 0.0f )
             {
                 SW_LOG_ERROR_ID( "AdventureDungeon.TimedSwitchNeedsDuration", "%#: timed switch '%#' needs duration=\"...\" above 0", sourceName, device._id.c_str() );

@@ -22,7 +22,7 @@ namespace sw
             [[nodiscard]] static bool readScaledSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
             {
                 TDef def;
-                bool bValid = GameDataXML::readFields( node, def, sourceName, { "scales" } );
+                bool bValid = XMLFields::readFields( node, def, sourceName, { "scales" } );
                 StringUtil::forEachToken( node.getAttributeText( "scales" ), ",; ", [&]( string_view token )
                 {
                     float32    scale  = 0.0f;
@@ -60,7 +60,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         AsymmetricHorrorRules rules;
-        if ( GameDataXML::readFields( root, rules, sourceName ) )
+        if ( XMLFields::readFields( root, rules, sourceName ) )
             _rules = rules;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
@@ -95,7 +95,7 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Killer" ) )
         {
             HorrorKillerDef killer;
-            if ( GameDataXML::readFields( node, killer, sourceName ) == false )
+            if ( XMLFields::readFields( node, killer, sourceName ) == false )
                 return false;
             (void)_catalogKiller.add( killer ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
@@ -103,7 +103,7 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Category" ) )
         {
             HorrorScoreCategoryDef category;
-            if ( GameDataXML::readFields( node, category, sourceName ) == false )
+            if ( XMLFields::readFields( node, category, sourceName ) == false )
                 return false;
             _categoryCap.setValue( category._id, category._cap );
             return true;
@@ -111,7 +111,7 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Score" ) )
         {
             HorrorScoreRule rule;
-            if ( GameDataXML::readFields( node, rule, sourceName ) == false )
+            if ( XMLFields::readFields( node, rule, sourceName ) == false )
                 return false;
             _listScoreRule.push_back( rule );
             return true;
@@ -123,7 +123,7 @@ namespace sw
     bool AsymmetricHorrorRulesCatalog::loadSkillCheck( const XMLNode& node, string_view sourceName )
     {
         HorrorSkillCheckDef skillCheck;
-        bool                bValid = GameDataXML::readFields( node, skillCheck, sourceName );
+        bool                bValid = XMLFields::readFields( node, skillCheck, sourceName );
         // 창의 판정 폭(early · late · score)은 기반 TimingJudge 가 읽고, 등급마다 더하는 진행량(bonus)은 여기서 읽는다.
         for ( XMLNode window = node.findChild( "Window" ); window; window = window.findNextSibling( "Window" ) )
         {

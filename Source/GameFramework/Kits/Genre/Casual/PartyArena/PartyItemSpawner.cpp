@@ -201,7 +201,7 @@ namespace sw
     {
         // 루트 속성은 `PartyItemSpawnSettings` 스키마다(기본값 = 초기값, 범위 = PROPERTY). 가운데(`_center`)는 게임이 정한다.
         PartyItemSpawnSettings settings;
-        if ( GameDataXML::readFields( root, settings, sourceName ) )
+        if ( XMLFields::readFields( root, settings, sourceName ) )
         {
             settings._center = _settings._center;
             _settings        = settings;

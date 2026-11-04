@@ -25,7 +25,7 @@ namespace sw
             return false;
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 설정 전체를 읽지 못한 것으로 본다(반쪽 지도를 만들지 않는다).
         RunMapSettings settings;
-        bool           bValid = GameDataXML::readFields( root, settings, sourceName );
+        bool           bValid = XMLFields::readFields( root, settings, sourceName );
         settings._listForcedFloor.assign( static_cast<size_t>( settings._floorCount ), hashed_string{} );
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
@@ -33,7 +33,7 @@ namespace sw
             if ( name == "Node" )
             {
                 RunNodeRule rule;
-                if ( GameDataXML::readFields( node, rule, sourceName ) )
+                if ( XMLFields::readFields( node, rule, sourceName ) )
                     settings._listRule.push_back( rule );
                 else
                     bValid = false;
@@ -46,7 +46,7 @@ namespace sw
                 continue;
             }
             RunForcedFloorDef forced;
-            if ( GameDataXML::readFields( node, forced, sourceName ) == false )
+            if ( XMLFields::readFields( node, forced, sourceName ) == false )
             {
                 bValid = false;
                 continue;

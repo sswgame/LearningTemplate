@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -74,51 +75,12 @@ namespace sw
             return XMLCatalogLoader::loadText( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
         }
 
-        /** @brief 속성 이름을 다른 읽기가 맡는지 답하는 함수입니다(`XMLNameCheck::AcceptNameFunction` 과 같은 모양). */
-        using AcceptAttributeFunction = bool ( * )( const utf8* pName );
-        /**
-         * @brief 원소 @p node 의 속성을 리플렉션 Def(@p pInstance, @p typeInfo) 하나로 엄격하게 읽습니다 — 스키마(필드 표)가 기본값과 필수를 선언하고 이 함수가 로드 시점에 검증합니다.
-         * @details 속성 이름은 PROPERTY 이름에서 앞의 `_` 를 뗀 것이고, 불리언은 `b` 도 떼고 첫 글자를 소문자로 쓴다(`_bShootOnSight` → `shootOnSight`, `_runningCost` → `runningCost`).
-         *          적지 않은 칸은 Def 의 초기값(스키마 기본값)이고, `PROPERTY( Required )` 칸이 빠지면 오류다. 모르는 속성 · 읽지 못한 값 · `Min`/`Max` 밖 값도 이름과 함께 오류다.
-         *          읽는 코드가 리터럴로 기본값을 채우거나 범위를 조용히 자르지 않게 하는 창구다(언리얼 DataTable 행 구조체 · Godot Resource 의 export 칸 자리).
-         *          @p listHandRead 의 속성은 부르는 쪽이 따로 읽으므로 모르는 이름으로 보지 않는다(색 · 이름 목록처럼 칸 하나로 담지 않는 값).
-         *          @p pfnHandRead 는 열린 이름 묶음(일정 조건 속성처럼 다른 읽기가 맡는 이름)을 답한다.
-         * @return 오류가 하나도 없으면 true 입니다. 오류가 있어도 읽을 수 있는 칸은 채웁니다.
-         */
-        [[nodiscard]] static bool readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName,
-                                              std::initializer_list<string_view> listHandRead = {}, AcceptAttributeFunction pfnHandRead = nullptr );
-        /** @brief `readFields` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
-        template <typename TDef>
-        [[nodiscard]] static bool readFields( const XMLNode& node, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {},
-                                              AcceptAttributeFunction pfnHandRead = nullptr )
-        {
-            return readFields( node, &outDef, *TDef::StaticType(), sourceName, listHandRead, pfnHandRead );
-        }
-        /**
-         * @brief `readFields` 의 짝입니다 — @p pInstance 의 칸을 같은 이름 규칙(앞의 `_` · 불리언 `b` 를 뗀다)의 속성으로 @p node 에 씁니다.
-         * @details 필수 칸(`Required`)은 늘 쓰고, 나머지는 @p pDefaults(같은 타입의 기본 인스턴스)와 글이 다를 때만 쓴다 — 손으로 쓴 파일처럼 기본값을 생략한다.
-         *          컨테이너 칸은 속성 하나에 담기지 않아 쓰지 않는다(그런 칸은 부르는 쪽이 자식 원소로 쓴다).
-         */
-        static void writeFields( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo );
-        /** @brief `writeFields` 의 타입 지정 버전입니다. 기본값은 `TDef{}` 입니다. */
-        template <typename TDef>
-        static void writeFields( const XMLNode& node, const TDef& def )
-        {
-            const TDef defaults{};
-            writeFields( node, &def, &defaults, *TDef::StaticType() );
-        }
-        /**
-         * @brief 이름이 같은 칸끼리 값을 옮깁니다(@p srcType → @p dstType, 글로 옮기므로 타입은 글 형식이 같으면 된다). 짝이 없는 칸은 건너뜁니다.
-         * @details 한 데이터를 종류마다 다른 스키마로 읽고 쓰는 곳(행동 트리 노드 — 종류마다 받는 칸이 다르다)이 칸마다 손으로 옮기지 않게 한다. 옮기지 못한 칸이 있으면 false 입니다.
-         */
-        [[nodiscard]] static bool copyFields( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType );
-
         /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. 같은 id 는 카탈로그가 알리고 뒤의 것을 버립니다. */
         template <typename TDef>
         [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
         {
             TDef def;
-            if ( readFields( node, def, sourceName ) == false )
+            if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
             (void)outCatalog.add( def );
             return true;
@@ -128,7 +90,7 @@ namespace sw
         [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
         {
             TDef def;
-            if ( readFields( node, def, sourceName ) == false )
+            if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
             outList.push_back( def );
             return true;
@@ -138,7 +100,7 @@ namespace sw
         [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting, std::initializer_list<string_view> listHandRead = {} )
         {
             TDef def;
-            if ( readFields( node, def, sourceName, listHandRead ) == false )
+            if ( XMLFields::readFields( node, def, sourceName, listHandRead ) == false )
                 return false;
             outSetting = def;
             return true;

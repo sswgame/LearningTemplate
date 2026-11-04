@@ -31,7 +31,7 @@ namespace sw
                 for ( XMLNode node = parent.findChild( pElement ); node; node = node.findNextSibling( pElement ) )
                 {
                     TDef def;
-                    if ( GameDataXML::readFields( node, def, sourceName ) )
+                    if ( XMLFields::readFields( node, def, sourceName ) )
                         outListDef.push_back( def );
                     else
                         bValid = false;
@@ -104,7 +104,7 @@ namespace sw
     {
         using Internal = OfferCatalogInternal;
         OfferDef def;
-        bool     bValid = GameDataXML::readFields( node, def, sourceName );
+        bool     bValid = XMLFields::readFields( node, def, sourceName );
         bValid          = Internal::readChildren( node, "Price", sourceName, def._listPrice ) && bValid;
         bValid          = Internal::readChildren( node, "Grant", sourceName, def._listGrant ) && bValid;
         bValid          = Internal::readChildren( node, "Product", sourceName, def._listProduct ) && bValid;

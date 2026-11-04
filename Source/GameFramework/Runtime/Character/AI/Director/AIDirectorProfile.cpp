@@ -171,11 +171,11 @@ namespace sw
         using Internal                                    = AIDirectorProfileInternal;
         static constexpr const utf8* kArrIntensityChild[] = { "Signal" };
         bool                         bValid               = Internal::validateChildren( node, kArrIntensityChild, sourceName );
-        bValid                                            = GameDataXML::readFields( node, _intensity, sourceName ) && bValid;
+        bValid                                            = XMLFields::readFields( node, _intensity, sourceName ) && bValid;
         for ( XMLNode child = node.findChild( "Signal" ); child; child = child.findNextSibling( "Signal" ) )
         {
             AIDirectorSignalDef signal;
-            if ( GameDataXML::readFields( child, signal, sourceName, { "kind" } ) == false )
+            if ( XMLFields::readFields( child, signal, sourceName, { "kind" } ) == false )
             {
                 bValid = false;
                 continue;
@@ -204,14 +204,14 @@ namespace sw
         static constexpr const utf8* kArrPhaseChild[] = { "Curve", "Exit" };
         bool                         bValid           = Internal::validateChildren( node, kArrPhaseChild, sourceName );
         AIDirectorPhaseDef           phase;
-        if ( GameDataXML::readFields( node, phase, sourceName, { "spawnTags" } ) == false )
+        if ( XMLFields::readFields( node, phase, sourceName, { "spawnTags" } ) == false )
             return false;
         ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
         bValid = GameDataXML::readFloatCurve( node, "Curve", 0.0f, phase._spawnCurve, sourceName ) && bValid; // 키가 없으면 곡선이 대체값을 쓴다
         for ( XMLNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
             AIDirectorExitDef exit;
-            if ( GameDataXML::readFields( child, exit, sourceName ) )
+            if ( XMLFields::readFields( child, exit, sourceName ) )
                 phase._listExit.push_back( exit );
             else
                 bValid = false;
@@ -231,7 +231,7 @@ namespace sw
         static constexpr const utf8* kArrPoolChild[] = { "Encounter" };
         bool                         bValid          = Internal::validateChildren( node, kArrPoolChild, sourceName );
         AIDirectorPoolDef            pool;
-        if ( GameDataXML::readFields( node, pool, sourceName, { "kind", "trigger", "pacing" } ) == false )
+        if ( XMLFields::readFields( node, pool, sourceName, { "kind", "trigger", "pacing" } ) == false )
             return false;
         const string_view kindText = node.getAttributeText( "kind" );
         // 종류는 적지 않으면 조우 풀이다(Def 초기값). 계기는 반드시 적는다.
@@ -256,7 +256,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
         {
             AIDirectorEncounterDef encounter;
-            if ( GameDataXML::readFields( child, encounter, sourceName, { "areas", "pacing" }, &ScheduleCondition::isConditionAttribute ) == false )
+            if ( XMLFields::readFields( child, encounter, sourceName, { "areas", "pacing" }, &ScheduleCondition::isConditionAttribute ) == false )
             {
                 bValid = false;
                 continue;

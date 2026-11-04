@@ -79,7 +79,7 @@ namespace sw
 {
     /**
      * @class BlendPosesNode
-     * @brief 입력 클립 둘을 파라미터 가중치로 섞습니다(그래프 JSON "pose_node": { "type": "blend_poses" }). 포즈 노드의 첫 구현이자 테스트용 노드입니다.
+     * @brief 입력 클립 둘을 파라미터 가중치로 섞습니다(그래프 XML `<pose_node type="BlendPoses">`). 포즈 노드의 첫 구현이자 테스트용 노드입니다.
      * @details 길이와 기본 반복은 첫 입력을 따른다. 둘째 입력은 같은 정규화 위치에서 샘플한다(길이가 달라도 위상이 맞는다).
      *          가중치는 파라미터 값을 0..1 로 자른 값이다(0 = 첫 입력, 1 = 둘째 입력).
      */

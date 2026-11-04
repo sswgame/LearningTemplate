@@ -27,7 +27,7 @@ namespace sw
             for ( XMLNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
             {
                 QuestRewardItemRowDef row;
-                if ( GameDataXML::readFields( item, row, sourceName ) == false )
+                if ( XMLFields::readFields( item, row, sourceName ) == false )
                 {
                     bValid = false;
                     continue;
@@ -53,7 +53,7 @@ namespace sw
                 continue;
             // 기본값 · 범위는 스키마(Quest*RowDef)가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
             QuestRowDef questRow;
-            bool        bValid = GameDataXML::readFields( questNode, questRow, sourceName, { "id", "name", "requires" } );
+            bool        bValid = XMLFields::readFields( questNode, questRow, sourceName, { "id", "name", "requires" } );
             QuestDef    quest;
             quest._id            = hashed_string( pID );
             const utf8* pName    = questNode.findAttribute( "name" );
@@ -65,7 +65,7 @@ namespace sw
             for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
             {
                 QuestStageRowDef stageRow;
-                bValid = GameDataXML::readFields( stageNode, stageRow, sourceName, { "id", "next" } ) && bValid;
+                bValid = XMLFields::readFields( stageNode, stageRow, sourceName, { "id", "next" } ) && bValid;
                 QuestStage stage;
                 bValid           = XMLReadUtil::readRequiredName( stageNode, "id", sourceName, stage._id ) && bValid;
                 stage._nextStage = XMLReadUtil::readOptionalName( stageNode, "next" ); // 마지막 단계는 다음이 없다
@@ -76,7 +76,7 @@ namespace sw
                 for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
                 {
                     QuestObjectiveRowDef objectiveRow;
-                    bValid = GameDataXML::readFields( node, objectiveRow, sourceName, { "kind", "target" } ) && bValid;
+                    bValid = XMLFields::readFields( node, objectiveRow, sourceName, { "kind", "target" } ) && bValid;
                     QuestObjective objective;
                     bValid               = XMLReadUtil::readRequiredName( node, "kind", sourceName, objective._kind ) && bValid;
                     bValid               = XMLReadUtil::readRequiredName( node, "target", sourceName, objective._target ) && bValid;

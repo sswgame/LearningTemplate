@@ -29,14 +29,14 @@ namespace sw
             [[nodiscard]] static bool readBlend( const XMLNode& node, BlendCurveDef& inoutBlend, string_view sourceName,
                                                  std::initializer_list<string_view> listHandRead = {} )
             {
-                bool    bValid  = GameDataXML::readFields( node, inoutBlend, sourceName, listHandRead );
+                bool    bValid  = XMLFields::readFields( node, inoutBlend, sourceName, listHandRead );
                 XMLNode keyNode = node.findChild( "Key" );
                 if ( keyNode.isValid() )
                     inoutBlend._listCustomKey.clear();
                 for ( ; keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
                 {
                     BlendCurveKey key;
-                    if ( GameDataXML::readFields( keyNode, key, sourceName ) == false )
+                    if ( XMLFields::readFields( keyNode, key, sourceName ) == false )
                     {
                         bValid = false;
                         continue;
@@ -54,7 +54,7 @@ namespace sw
             /** @brief 렌즈를 읽습니다. 먼 면은 가까운 면보다 멀어야 합니다. */
             [[nodiscard]] static bool readLens( const XMLNode& node, CameraLensDef& outLens, string_view sourceName )
             {
-                bool bValid = GameDataXML::readFields( node, outLens, sourceName );
+                bool bValid = XMLFields::readFields( node, outLens, sourceName );
                 if ( outLens._farPlane <= outLens._nearPlane )
                 {
                     SW_LOG_ERROR_ID( "CameraPreset.LensFarPlaneMustBeyond", "%#: <Lens> farPlane %# must be beyond nearPlane %#", sourceName, outLens._farPlane, outLens._nearPlane );
@@ -66,7 +66,7 @@ namespace sw
             /** @brief 제한 상자를 읽습니다. `bounds` 를 켰으면 두 모서리를 모두 적어야 하고, 피치 범위는 뒤집히지 않아야 합니다. */
             [[nodiscard]] static bool readConfiner( const XMLNode& node, CameraConfinerDef& outConfiner, string_view sourceName )
             {
-                bool       bValid      = GameDataXML::readFields( node, outConfiner, sourceName );
+                bool       bValid      = XMLFields::readFields( node, outConfiner, sourceName );
                 const bool bBothCorner = node.findAttribute( "boundsMin" ) != nullptr && node.findAttribute( "boundsMax" ) != nullptr;
                 if ( outConfiner._bBounds && bBothCorner == false )
                 {
@@ -84,7 +84,7 @@ namespace sw
             /** @brief 프레이밍을 읽습니다. 소프트 존은 데드 존보다 작을 수 없습니다. */
             [[nodiscard]] static bool readFraming( const XMLNode& node, CameraFramingDef& outFraming, string_view sourceName )
             {
-                bool       bValid      = GameDataXML::readFields( node, outFraming, sourceName );
+                bool       bValid      = XMLFields::readFields( node, outFraming, sourceName );
                 const bool bSoftInDead = outFraming._softZone._x < outFraming._deadZone._x || outFraming._softZone._y < outFraming._deadZone._y;
                 if ( bSoftInDead )
                 {
@@ -97,7 +97,7 @@ namespace sw
             /** @brief 돌리 경로를 읽습니다. `<Point>` 의 `position` 은 필수이고 점은 둘 이상이어야 합니다. */
             [[nodiscard]] static bool readDolly( const XMLNode& node, CameraDollyDef& outDolly, string_view sourceName )
             {
-                bool    bValid    = GameDataXML::readFields( node, outDolly, sourceName );
+                bool    bValid    = XMLFields::readFields( node, outDolly, sourceName );
                 XMLNode pointNode = node.findChild( "Point" );
                 if ( pointNode.isValid() )
                     outDolly._listPoint.clear();
@@ -127,7 +127,7 @@ namespace sw
                     const utf8* pName = child.getName();
                     if ( StringUtil::equals( pName, "View" ) )
                     {
-                        bValid = GameDataXML::readFields( child, inoutDef._view, sourceName ) && bValid;
+                        bValid = XMLFields::readFields( child, inoutDef._view, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Lens" ) )
                     {
@@ -135,7 +135,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Damping" ) )
                     {
-                        bValid = GameDataXML::readFields( child, inoutDef._damping, sourceName ) && bValid;
+                        bValid = XMLFields::readFields( child, inoutDef._damping, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "BlendIn" ) )
                     {
@@ -143,7 +143,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Input" ) )
                     {
-                        bValid = GameDataXML::readFields( child, inoutDef._input, sourceName ) && bValid;
+                        bValid = XMLFields::readFields( child, inoutDef._input, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Confiner" ) )
                     {
@@ -156,20 +156,20 @@ namespace sw
                     else if ( StringUtil::equals( pName, "Collision" ) )
                     {
                         // 섹션이 있으면 켜진다 — `enabled` 를 따로 적지 않는다.
-                        bValid                        = GameDataXML::readFields( child, inoutDef._collision, sourceName ) && bValid;
+                        bValid                        = XMLFields::readFields( child, inoutDef._collision, sourceName ) && bValid;
                         inoutDef._collision._bEnabled = true;
                     }
                     else if ( StringUtil::equals( pName, "Noise" ) )
                     {
-                        bValid = GameDataXML::readFields( child, inoutDef._noise, sourceName ) && bValid;
+                        bValid = XMLFields::readFields( child, inoutDef._noise, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "HeadBob" ) )
                     {
-                        bValid = GameDataXML::readFields( child, inoutDef._headBob, sourceName ) && bValid;
+                        bValid = XMLFields::readFields( child, inoutDef._headBob, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Sweep" ) )
                     {
-                        bValid = GameDataXML::readFields( child, inoutDef._sweep, sourceName ) && bValid;
+                        bValid = XMLFields::readFields( child, inoutDef._sweep, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Dolly" ) )
                     {
@@ -177,7 +177,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "PostProcess" ) )
                     {
-                        bValid = GameDataXML::readFields( child, inoutDef._postProcess, sourceName ) && bValid;
+                        bValid = XMLFields::readFields( child, inoutDef._postProcess, sourceName ) && bValid;
                     }
                     else
                     {

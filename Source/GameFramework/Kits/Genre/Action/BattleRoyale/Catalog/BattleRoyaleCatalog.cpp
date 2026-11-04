@@ -30,7 +30,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         BattleRoyaleCatalogRootDef rootDef;
-        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _mapSize = rootDef._mapSize;
 
         uint32 loadedCount = 0;
@@ -70,11 +70,11 @@ namespace sw
     bool BattleRoyaleCatalog::loadZone( const XMLNode& node, string_view sourceName )
     {
         BattleRoyaleZoneDef zone;
-        bool                bValid = GameDataXML::readFields( node, zone, sourceName );
+        bool                bValid = XMLFields::readFields( node, zone, sourceName );
         for ( XMLNode phaseNode = node.findChild( "Phase" ); phaseNode; phaseNode = phaseNode.findNextSibling( "Phase" ) )
         {
             BattleRoyaleZonePhaseDef phase;
-            if ( GameDataXML::readFields( phaseNode, phase, sourceName ) )
+            if ( XMLFields::readFields( phaseNode, phase, sourceName ) )
                 zone._listPhase.push_back( phase );
             else
                 bValid = false;
@@ -88,7 +88,7 @@ namespace sw
     bool BattleRoyaleCatalog::loadSupplyDrop( const XMLNode& node, string_view sourceName )
     {
         BattleRoyaleSupplyDropDef supplyDrop;
-        bool                      bValid = GameDataXML::readFields( node, supplyDrop, sourceName, { "times" } );
+        bool                      bValid = XMLFields::readFields( node, supplyDrop, sourceName, { "times" } );
         StringUtil::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
         {
             float32 time = 0.0f;

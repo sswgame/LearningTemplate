@@ -207,7 +207,7 @@ namespace sw
     bool SRPGCatalog::loadTerrain( const XMLNode& node, string_view sourceName )
     {
         SRPGTerrainDef def;
-        bool           bValid = GameDataXML::readFields( node, def, sourceName, { "cost" } );
+        bool           bValid = XMLFields::readFields( node, def, sourceName, { "cost" } );
         bValid                = SRPGCatalogInternal::readFour( node, "cost", sourceName, &SRPGCatalogInternal::parseMoveCost, def._arrMoveCost ) && bValid;
         if ( bValid )
             (void)_terrainCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -217,7 +217,7 @@ namespace sw
     bool SRPGCatalog::loadWeapon( const XMLNode& node, string_view sourceName )
     {
         SRPGWeaponDef def;
-        bool          bValid = GameDataXML::readFields( node, def, sourceName, { "pattern" } );
+        bool          bValid = XMLFields::readFields( node, def, sourceName, { "pattern" } );
         if ( def.isMap() )
         {
             // MAP 병기의 범위는 "x,y x,y ..." 이고 반드시 적는다(기준 셀 하나로 물러나지 않는다).
@@ -253,7 +253,7 @@ namespace sw
     {
         using Internal = SRPGCatalogInternal;
         SRPGUnitDef def;
-        bool        bValid = GameDataXML::readFields( node, def, sourceName, { "size", "aptitude", "weapons", "developsTo" } );
+        bool        bValid = XMLFields::readFields( node, def, sourceName, { "size", "aptitude", "weapons", "developsTo" } );
         bValid             = Internal::readSize( node, sourceName, def._size ) && bValid;
         bValid             = Internal::readFour( node, "aptitude", sourceName, &SRPGCatalog::parseAptitude, def._arrAptitude ) && bValid;
         XMLReadUtil::parseNameList( node.getAttributeText( "weapons" ), ",; \t", def._listWeaponID );
@@ -280,9 +280,9 @@ namespace sw
     {
         using Internal = SRPGCatalogInternal;
         SRPGPilotDef def;
-        bool         bValid = GameDataXML::readFields( node, def, sourceName,
-                                                       { "shooting", "melee", "reaction", "awaken", "defense", "growShooting", "growMelee", "growReaction",
-                                                         "growAwaken", "growDefense" } );
+        bool         bValid = XMLFields::readFields( node, def, sourceName,
+                                                     { "shooting", "melee", "reaction", "awaken", "defense", "growShooting", "growMelee", "growReaction",
+                                                       "growAwaken", "growDefense" } );
         bValid              = Internal::readPilotStats( node, Internal::kArrPilotStatName, def._arrStat ) && bValid;
         bValid              = Internal::readPilotStats( node, Internal::kArrPilotGrowthName, def._arrGrowth ) && bValid;
         if ( bValid )

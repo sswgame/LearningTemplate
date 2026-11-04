@@ -11,64 +11,64 @@
 	</nodes>
 	<links>
 		<link id="1" from="1" to="7" blend="0.1">
-			<condition param="Dead" op=">=" value="0.5" />
+			<condition param="Dead" op="GreaterEqual" value="0.5" />
 		</link>
 		<link id="2" from="2" to="7" blend="0.1">
-			<condition param="Dead" op=">=" value="0.5" />
+			<condition param="Dead" op="GreaterEqual" value="0.5" />
 		</link>
 		<link id="3" from="3" to="7" blend="0.1">
-			<condition param="Dead" op=">=" value="0.5" />
+			<condition param="Dead" op="GreaterEqual" value="0.5" />
 		</link>
 		<link id="4" from="4" to="7" blend="0.1">
-			<condition param="Dead" op=">=" value="0.5" />
+			<condition param="Dead" op="GreaterEqual" value="0.5" />
 		</link>
 		<link id="5" from="5" to="7" blend="0.1">
-			<condition param="Dead" op=">=" value="0.5" />
+			<condition param="Dead" op="GreaterEqual" value="0.5" />
 		</link>
 		<link id="6" from="6" to="7" blend="0.1">
-			<condition param="Dead" op=">=" value="0.5" />
+			<condition param="Dead" op="GreaterEqual" value="0.5" />
 		</link>
 		<link id="7" from="1" to="2" blend="0.2" />
 		<link id="8" from="2" to="6" blend="0.08">
-			<condition param="Hit" op="trigger" value="1.0" />
+			<condition param="Hit" op="Trigger" value="1.0" />
 		</link>
 		<link id="9" from="3" to="6" blend="0.08">
-			<condition param="Hit" op="trigger" value="1.0" />
+			<condition param="Hit" op="Trigger" value="1.0" />
 		</link>
 		<link id="10" from="4" to="6" blend="0.08">
-			<condition param="Hit" op="trigger" value="1.0" />
+			<condition param="Hit" op="Trigger" value="1.0" />
 		</link>
 		<link id="11" from="5" to="6" blend="0.08">
-			<condition param="Hit" op="trigger" value="1.0" />
+			<condition param="Hit" op="Trigger" value="1.0" />
 		</link>
 		<link id="12" from="2" to="5" blend="0.12">
-			<condition param="Attack" op="trigger" value="1.0" />
+			<condition param="Attack" op="Trigger" value="1.0" />
 		</link>
 		<link id="13" from="3" to="5" blend="0.12">
-			<condition param="Attack" op="trigger" value="1.0" />
+			<condition param="Attack" op="Trigger" value="1.0" />
 		</link>
 		<link id="14" from="4" to="5" blend="0.12">
-			<condition param="Attack" op="trigger" value="1.0" />
+			<condition param="Attack" op="Trigger" value="1.0" />
 		</link>
 		<link id="15" from="5" to="2" blend="0.2" />
 		<link id="16" from="6" to="2" blend="0.2" />
 		<link id="17" from="2" to="3" blend="0.25">
-			<condition param="Move" op="==" value="1.0" />
+			<condition param="Move" op="Equal" value="1.0" />
 		</link>
 		<link id="18" from="2" to="4" blend="0.25">
-			<condition param="Move" op="==" value="2.0" />
+			<condition param="Move" op="Equal" value="2.0" />
 		</link>
 		<link id="19" from="3" to="2" blend="0.25">
-			<condition param="Move" op="==" value="0.0" />
+			<condition param="Move" op="Equal" value="0.0" />
 		</link>
 		<link id="20" from="3" to="4" blend="0.25">
-			<condition param="Move" op="==" value="2.0" />
+			<condition param="Move" op="Equal" value="2.0" />
 		</link>
 		<link id="21" from="4" to="2" blend="0.25">
-			<condition param="Move" op="==" value="0.0" />
+			<condition param="Move" op="Equal" value="0.0" />
 		</link>
 		<link id="22" from="4" to="3" blend="0.25">
-			<condition param="Move" op="==" value="1.0" />
+			<condition param="Move" op="Equal" value="1.0" />
 		</link>
 	</links>
 </AnimationGraphAsset>

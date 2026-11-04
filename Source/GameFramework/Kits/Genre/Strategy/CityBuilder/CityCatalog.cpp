@@ -88,7 +88,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         CityCatalogRootDef rootDef;
-        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _roadCost = rootDef._roadCost;
         _listHouseLevel.clear();
         uint32 buildingCount = 0;
@@ -125,7 +125,7 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Good" ) )
         {
             CityGoodDef good;
-            if ( GameDataXML::readFields( node, good, sourceName ) == false )
+            if ( XMLFields::readFields( node, good, sourceName ) == false )
                 return false;
             (void)_goodCatalog.add( good ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
@@ -141,7 +141,7 @@ namespace sw
     bool CityCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
     {
         CityBuildingDef building;
-        bool            bValid = GameDataXML::readFields( node, building, sourceName, { "terrain", "goods" } );
+        bool            bValid = XMLFields::readFields( node, building, sourceName, { "terrain", "goods" } );
         // 땅 조건은 적었을 때만 있다(적지 않으면 아무 땅). 모르는 땅 이름은 오류다.
         const string_view terrainText = node.getAttributeText( "terrain" );
         if ( terrainText.empty() == false )
@@ -168,7 +168,7 @@ namespace sw
     bool CityCatalog::loadHouseLevel( const XMLNode& node, string_view sourceName )
     {
         CityHouseLevelDef level;
-        bool              bValid = GameDataXML::readFields( node, level, sourceName, { "services", "goods" } );
+        bool              bValid = XMLFields::readFields( node, level, sourceName, { "services", "goods" } );
         StringUtil::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
         {
             CityService service = CityService::Count;

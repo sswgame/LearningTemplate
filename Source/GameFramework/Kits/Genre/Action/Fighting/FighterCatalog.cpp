@@ -86,7 +86,7 @@ namespace sw
                 if ( pMoveID == nullptr )
                     return false;
                 FighterMove          move;
-                bool                 bValid   = GameDataXML::readFields( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
+                bool                 bValid   = XMLFields::readFields( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
                 const string_view    framesID = node.getAttributeText( "frames" );
                 const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
                 if ( pFrame == nullptr )
@@ -191,7 +191,7 @@ namespace sw
         for ( XMLNode node = root.findChild( "Fighter" ); node; node = node.findNextSibling( "Fighter" ) )
         {
             FighterDef fighter;
-            bool       bValid = GameDataXML::readFields( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
+            bool       bValid = XMLFields::readFields( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
             bValid            = Internal::readRequiredCommand( parser, node, "sidestep", sourceName, fighter._sidestepUp ) && bValid;
             bValid            = Internal::readRequiredCommand( parser, node, "sidestepDown", sourceName, fighter._sidestepDown ) && bValid;
             bValid            = Internal::readRequiredCommand( parser, node, "jump", sourceName, fighter._jump ) && bValid;

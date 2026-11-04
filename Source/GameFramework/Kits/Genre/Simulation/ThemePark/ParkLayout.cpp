@@ -33,7 +33,7 @@ namespace sw
     {
         // 형식 · 필수 · 범위는 스키마(ParkLayoutRootDef · ParkFlatRideDef · ParkCoasterDef)가 정한다. 여기에는 기본값 리터럴이 없다.
         ParkLayoutRootDef rootDef;
-        bool              bOk = GameDataXML::readFields( root, rootDef, sourceName );
+        bool              bOk = XMLFields::readFields( root, rootDef, sourceName );
         _gatePosition         = float3{ rootDef._gateX, 0.0f, rootDef._gateZ };
         _entryFee             = rootDef._entryFee;
         _startingCash         = rootDef._startingCash;
@@ -42,7 +42,7 @@ namespace sw
         for ( XMLNode node = root.findChild( "FlatRide" ); node; node = node.findNextSibling( "FlatRide" ) )
         {
             ParkFlatRideDef def;
-            if ( GameDataXML::readFields( node, def, sourceName ) == false )
+            if ( XMLFields::readFields( node, def, sourceName ) == false )
             {
                 bOk = false;
                 continue;
@@ -70,7 +70,7 @@ namespace sw
         for ( XMLNode node = root.findChild( "Coaster" ); node; node = node.findNextSibling( "Coaster" ) )
         {
             ParkCoasterDef def;
-            if ( GameDataXML::readFields( node, def, sourceName ) == false )
+            if ( XMLFields::readFields( node, def, sourceName ) == false )
             {
                 bOk = false;
                 continue;

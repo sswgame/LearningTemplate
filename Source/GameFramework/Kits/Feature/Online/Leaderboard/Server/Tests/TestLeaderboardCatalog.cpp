@@ -41,8 +41,8 @@ SW_TEST_CASE( LeaderboardCatalogTest, ReadsSeasonBoardWithRewardTiers )
 SW_TEST_CASE( LeaderboardCatalogTest, RejectsBoardsWithBadRewardTiers )
 {
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    SW_EXPECT_LOG( "GameData.ValueOutOfRange" );
-    SW_EXPECT_LOG( "GameData.RequiredFieldMissing" );
+    SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     LeaderboardCatalog catalog;
     (void)catalog.loadFromXMLText( R"(<LeaderboardCatalog>
   <Board id="reversed" reset="Season">

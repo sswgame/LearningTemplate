@@ -182,7 +182,7 @@ namespace sw
             NileAutoPlanStep step{};
             step._bRoad             = kind == "Road";
             const bool bKnownKind   = step._bRoad || kind == "Building";
-            const bool bFieldsRead  = bKnownKind && GameDataXML::readFields( node, step._def, planPath );
+            const bool bFieldsRead  = bKnownKind && XMLFields::readFields( node, step._def, planPath );
             const bool bBlockInPlan = step._def._block >= 1 && step._def._block <= 3;
             // 도로는 건물 id 가 없고 건물은 있어야 한다.
             const bool bShapeValid = bFieldsRead && bBlockInPlan && ( step._bRoad == step._def._id.empty() );

@@ -24,6 +24,7 @@
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include <algorithm>
 #include <imgui.h>
@@ -650,7 +651,7 @@ namespace sw::editor
         ImGui::TextUnformatted( "Op" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        const bool bOpOpen = ImGui::BeginCombo( "##conditionOp", pLink->_op == AnimationConditionOp::None ? "(on finish)" : AnimationGraphAsset::getConditionOpText( pLink->_op ) );
+        const bool bOpOpen = ImGui::BeginCombo( "##conditionOp", pLink->_op == AnimationConditionOp::None ? "(on finish)" : getEnumName( pLink->_op ) );
         EditorSelfTestMarks::note( "animationGraph.condition.op" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ConditionOpTip" ) );
         if ( bOpOpen )
@@ -658,7 +659,7 @@ namespace sw::editor
             for ( int32 op = 0; op <= static_cast<int32>( AnimationConditionOp::Trigger ); ++op )
             {
                 const AnimationConditionOp value = static_cast<AnimationConditionOp>( op );
-                if ( ImGui::Selectable( value == AnimationConditionOp::None ? "(on finish)" : AnimationGraphAsset::getConditionOpText( value ), op == opIndex ) )
+                if ( ImGui::Selectable( value == AnimationConditionOp::None ? "(on finish)" : getEnumName( value ), op == opIndex ) )
                 {
                     pLink->_op = value;
                     bEdited    = true;

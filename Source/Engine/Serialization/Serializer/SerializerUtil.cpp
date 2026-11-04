@@ -963,6 +963,23 @@ namespace sw
         }
     }
 
+    bool SerializerUtil::copySameNamedProperties( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType )
+    {
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
+        bool                    bOk     = true;
+        for ( const PropertyInfo& srcProp : srcType.getPropertiesWithBase() )
+        {
+            for ( const PropertyInfo& dstProp : dstType.getPropertiesWithBase() )
+            {
+                if ( dstProp._name != srcProp._name )
+                    continue;
+                const string text = formatPropertyText( srcProp, ObjectAddress{ pSrc }, context );
+                bOk               = applyPropertyText( dstProp, MutableObjectAddress{ pDst }, text, context ) && bOk;
+            }
+        }
+        return bOk;
+    }
+
     string SerializerUtil::formatPropertyText( const PropertyInfo& prop, ObjectAddress instance, const SerializeContext& context )
     {
         const void* const pInstance = instance.get();

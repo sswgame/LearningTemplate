@@ -25,7 +25,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `<Quest>` 속성 중 기본값이 있는 필드의 스키마입니다(`GameDataXML::readFields`). 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다.
+     * @brief `<Quest>` 속성 중 기본값이 있는 필드의 스키마입니다(`XMLFields::readFields`). 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다.
      * @details `id`, `name`, `requires` 는 읽는 코드가 따로 읽는다(이름과 이름 목록). 적지 않은 필드는 여기 초기값입니다.
      */
     REFLECT()

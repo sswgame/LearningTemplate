@@ -83,11 +83,11 @@ namespace sw
     bool ActionPlatformerCatalog::loadGrading( const XMLNode& node, string_view sourceName )
     {
         ActionGradingRules grading;
-        bool               bValid = GameDataXML::readFields( node, grading, sourceName );
+        bool               bValid = XMLFields::readFields( node, grading, sourceName );
         for ( XMLNode child = node.findChild( "Grade" ); child; child = child.findNextSibling( "Grade" ) )
         {
             ActionGradeDef grade;
-            if ( GameDataXML::readFields( child, grade, sourceName ) )
+            if ( XMLFields::readFields( child, grade, sourceName ) )
                 grading._listGrade.push_back( grade );
             else
                 bValid = false;
@@ -113,7 +113,7 @@ namespace sw
     {
         using Internal = ActionPlatformerCatalogInternal;
         ActionStageDef stage;
-        if ( GameDataXML::readFields( node, stage, sourceName, { "checkpoints", "secrets" } ) == false )
+        if ( XMLFields::readFields( node, stage, sourceName, { "checkpoints", "secrets" } ) == false )
             return false;
         XMLReadUtil::parseNameList( node.getAttributeText( "checkpoints" ), Internal::kNameSeparators, stage._listCheckpoint );
         XMLReadUtil::parseNameList( node.getAttributeText( "secrets" ), Internal::kNameSeparators, stage._listSecret );
@@ -125,7 +125,7 @@ namespace sw
     {
         using Internal = ActionPlatformerCatalogInternal;
         ActionComboDef combo;
-        if ( GameDataXML::readFields( node, combo, sourceName, { "moves" } ) == false )
+        if ( XMLFields::readFields( node, combo, sourceName, { "moves" } ) == false )
             return false;
         XMLReadUtil::parseNameList( node.getAttributeText( "moves" ), Internal::kNameSeparators, combo._listMove );
         if ( combo._listMove.empty() )
@@ -140,11 +140,11 @@ namespace sw
     bool ActionPlatformerCatalog::loadPattern( const XMLNode& node, string_view sourceName )
     {
         ActionPatternDef pattern;
-        bool             bValid = GameDataXML::readFields( node, pattern, sourceName );
+        bool             bValid = XMLFields::readFields( node, pattern, sourceName );
         for ( XMLNode child = node.findChild( "State" ); child; child = child.findNextSibling( "State" ) )
         {
             ActionPatternStateDef state;
-            if ( GameDataXML::readFields( child, state, sourceName ) )
+            if ( XMLFields::readFields( child, state, sourceName ) )
                 pattern._listState.push_back( state );
             else
                 bValid = false;

@@ -90,7 +90,7 @@ namespace sw
     bool CurrencyCatalog::loadCurrency( const XMLNode& node, string_view sourceName )
     {
         CurrencyDef def;
-        bool        bValid = GameDataXML::readFields( node, def, sourceName );
+        bool        bValid = XMLFields::readFields( node, def, sourceName );
         if ( bValid && LedgerUtil::isValidAssetID( def._id ) == false )
         {
             SW_LOG_ERROR_ID( "CurrencyCatalog.CurrencyIdMustZ", "%#: currency id '%#' must be [0-9a-z_.-]", sourceName, def._id );
@@ -99,7 +99,7 @@ namespace sw
         for ( XMLNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )
         {
             CurrencyFundingDef funding;
-            if ( GameDataXML::readFields( fundingNode, funding, sourceName ) )
+            if ( XMLFields::readFields( fundingNode, funding, sourceName ) )
                 def._listFundingAsset.push_back( funding._asset );
             else
                 bValid = false;

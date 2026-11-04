@@ -62,7 +62,7 @@ namespace sw
             {
                 RhythmNoteDef          noteDef;
                 std::optional<float32> endBeat;
-                const bool             bFields = GameDataXML::readFields( node, noteDef, sourceName, { "endBeat" } );
+                const bool             bFields = XMLFields::readFields( node, noteDef, sourceName, { "endBeat" } );
                 const bool             bEnd    = node.readOptionalAttribute( "endBeat", endBeat );
                 const bool             bLane   = noteDef._lane < laneCount;
                 const bool             bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
@@ -184,7 +184,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 차트를 읽지 못한 것으로 본다(반쪽 차트를 치게 하지 않는다).
         RhythmChartRootDef rootDef;
-        bool               bValid = GameDataXML::readFields( root, rootDef, sourceName, { "baseBpm" } );
+        bool               bValid = XMLFields::readFields( root, rootDef, sourceName, { "baseBpm" } );
         _title                    = rootDef._title;
         _artist                   = rootDef._artist;
         _level                    = rootDef._level;

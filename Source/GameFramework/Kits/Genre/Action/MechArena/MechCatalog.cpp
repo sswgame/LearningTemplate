@@ -19,7 +19,7 @@ namespace sw
             /** @brief `<Weapon>` 하나를 읽습니다. Melee · Special 은 `range` 를 적어야 합니다(종류에 따라 다른 기본값을 두지 않는다). */
             [[nodiscard]] static bool readWeapon( const XMLNode& node, string_view sourceName, MechWeaponSlotDef& outSlot )
             {
-                bool bValid = GameDataXML::readFields( node, outSlot, sourceName, { "moves" } );
+                bool bValid = XMLFields::readFields( node, outSlot, sourceName, { "moves" } );
                 XMLReadUtil::appendNameList( node.getAttributeText( "moves" ), ",; ", outSlot._listMoveID );
                 if ( outSlot._kind != MechWeaponKind::Shot && node.findAttribute( "range" ) == nullptr )
                 {
@@ -104,7 +104,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         MechCatalogRootDef rootDef;
-        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _deckCostLimit = rootDef._deckCostLimit;
 
         uint32 loadedCount = 0;
@@ -153,7 +153,7 @@ namespace sw
     {
         using Internal = MechCatalogInternal;
         MechDef def;
-        bool    bValid   = GameDataXML::readFields( node, def, sourceName, { "speed" } );
+        bool    bValid   = XMLFields::readFields( node, def, sourceName, { "speed" } );
         XMLNode modeNode = node.findChild( "Mode" );
         if ( modeNode )
         {
@@ -165,7 +165,7 @@ namespace sw
             for ( ; modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
             {
                 MechModeDef mode;
-                const bool  bModeFields = GameDataXML::readFields( modeNode, mode, sourceName );
+                const bool  bModeFields = XMLFields::readFields( modeNode, mode, sourceName );
                 if ( Internal::readWeapons( modeNode, sourceName, mode ) && bModeFields )
                     def._listMode.push_back( mode );
                 else
@@ -190,7 +190,7 @@ namespace sw
     bool MechCatalog::loadSkill( const XMLNode& node, string_view sourceName )
     {
         MechSkillDef skill;
-        if ( GameDataXML::readFields( node, skill, sourceName ) == false )
+        if ( XMLFields::readFields( node, skill, sourceName ) == false )
             return false;
         const XMLNode statNode = node.findChild( "Stats" );
         if ( statNode )

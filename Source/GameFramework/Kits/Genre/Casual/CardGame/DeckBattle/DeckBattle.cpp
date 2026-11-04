@@ -64,7 +64,7 @@ namespace sw
                 continue;
             }
             DeckBattleCardDef def;
-            bool              bValid = GameDataXML::readFields( node, def, sourceName, { "effects" } );
+            bool              bValid = XMLFields::readFields( node, def, sourceName, { "effects" } );
             XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, XMLReadUtil::MissingValue::Reject,
                                              [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
             {

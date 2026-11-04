@@ -289,7 +289,7 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Weather" ) )
         {
             MonsterWeatherDef def;
-            if ( GameDataXML::readFields( node, def, sourceName, { "immune" } ) == false )
+            if ( XMLFields::readFields( node, def, sourceName, { "immune" } ) == false )
                 return false;
             XMLReadUtil::appendNameList( node.getAttributeText( "immune" ), ",; \t", def._listChipImmuneType );
             (void)_weatherCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -304,7 +304,7 @@ namespace sw
     bool MonsterCollectorCatalog::loadMove( const XMLNode& node, string_view sourceName )
     {
         MonsterMoveDef def;
-        if ( GameDataXML::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readFields( node, def, sourceName ) == false )
             return false;
         // 상태이상을 거는 기술은 확률을 적는다(변화 기술도 100 을 적는다) — 분류로 기본값을 고르지 않는다.
         const bool bStatusWithoutChance = def._status != MonsterStatus::None && def._statusChance == 0;
@@ -326,7 +326,7 @@ namespace sw
     {
         using Internal = MonsterCollectorCatalogInternal;
         MonsterSpeciesDef def;
-        bool              bValid = GameDataXML::readFields( node, def, sourceName, { "types", "stats", "evYield" } );
+        bool              bValid = XMLFields::readFields( node, def, sourceName, { "types", "stats", "evYield" } );
         XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listType );
         if ( def._listType.empty() || def._listType.size() > 2 )
         {
@@ -359,7 +359,7 @@ namespace sw
     bool MonsterCollectorCatalog::loadEncounter( const XMLNode& node, string_view sourceName )
     {
         MonsterEncounterDef def;
-        bool                bValid = GameDataXML::readFields( node, def, sourceName, { "time" } );
+        bool                bValid = XMLFields::readFields( node, def, sourceName, { "time" } );
         XMLReadUtil::appendNameList( node.getAttributeText( "time" ), ",; \t", def._listTime );
         for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {

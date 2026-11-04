@@ -27,7 +27,7 @@ namespace sw
         {
             AdventureLandmarkDef landmark;
             landmark._kind = kind;
-            if ( GameDataXML::readFields( node, landmark, sourceName ) == false )
+            if ( XMLFields::readFields( node, landmark, sourceName ) == false )
             {
                 bValid = false;
                 continue;
@@ -48,7 +48,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         AdventureWorldRootDef rootDef;
-        if ( GameDataXML::readFields( root, rootDef, sourceName ) == false )
+        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
             return 0;
         _catalog.clear();
         _orbsPerExchange       = rootDef._orbsPerExchange;

@@ -156,7 +156,7 @@ namespace sw
     bool HorrorCatalog::loadCombine( const XMLNode& node, string_view sourceName )
     {
         HorrorCombineDef combine;
-        if ( GameDataXML::readFields( node, combine, sourceName ) == false )
+        if ( XMLFields::readFields( node, combine, sourceName ) == false )
             return false;
         RecipeDef recipe;
         recipe._id      = combine._id;
@@ -171,7 +171,7 @@ namespace sw
     bool HorrorCatalog::loadDialLock( const XMLNode& node, string_view sourceName )
     {
         HorrorDialLockDef lock;
-        bool              bValid = GameDataXML::readFields( node, lock, sourceName, { "code" } );
+        bool              bValid = XMLFields::readFields( node, lock, sourceName, { "code" } );
         bValid                   = HorrorCatalogInternal::readDigits( node.getAttributeText( "code" ), lock._listDigit, sourceName, lock._id ) && bValid;
         if ( bValid )
             (void)_dialLockCatalog.add( lock ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -181,7 +181,7 @@ namespace sw
     bool HorrorCatalog::loadSequence( const XMLNode& node, string_view sourceName )
     {
         HorrorSequenceDef sequence;
-        if ( GameDataXML::readFields( node, sequence, sourceName, { "steps" } ) == false )
+        if ( XMLFields::readFields( node, sequence, sourceName, { "steps" } ) == false )
             return false;
         XMLReadUtil::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
         if ( sequence._listStep.empty() )
@@ -196,7 +196,7 @@ namespace sw
     bool HorrorCatalog::loadDocument( const XMLNode& node, string_view sourceName )
     {
         HorrorDocumentDef document;
-        if ( GameDataXML::readFields( node, document, sourceName, { "clues" } ) == false )
+        if ( XMLFields::readFields( node, document, sourceName, { "clues" } ) == false )
             return false;
         XMLReadUtil::parseNameList( node.getAttributeText( "clues" ), ",; ", document._listClue );
         (void)_documentCatalog.add( document ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -206,7 +206,7 @@ namespace sw
     bool HorrorCatalog::loadDeduction( const XMLNode& node, string_view sourceName )
     {
         HorrorDeductionDef deduction;
-        bool               bValid = GameDataXML::readFields( node, deduction, sourceName, { "links" } );
+        bool               bValid = XMLFields::readFields( node, deduction, sourceName, { "links" } );
         bValid                    = HorrorCatalogInternal::readLinks( node.getAttributeText( "links" ), deduction._listRequiredLink, sourceName, deduction._id ) && bValid;
         if ( bValid )
             (void)_deductionCatalog.add( deduction ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다

@@ -58,7 +58,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         RestaurantCatalogRootDef rootDef;
-        if ( GameDataXML::readFields( root, rootDef, sourceName ) == false )
+        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
             return 0;
         if ( rootDef._closeHour <= rootDef._openHour )
         {
@@ -86,19 +86,19 @@ namespace sw
             else if ( StringUtil::equals( pElement, "Ingredient" ) )
             {
                 IngredientDef ingredient;
-                if ( GameDataXML::readFields( node, ingredient, sourceName ) )
+                if ( XMLFields::readFields( node, ingredient, sourceName ) )
                     (void)_ingredientCatalog.add( ingredient ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             }
             else if ( StringUtil::equals( pElement, "Arrival" ) )
             {
                 RestaurantArrivalDef arrival;
-                if ( GameDataXML::readFields( node, arrival, sourceName ) )
+                if ( XMLFields::readFields( node, arrival, sourceName ) )
                     _arrArrivalRate[arrival._hour] = arrival._rate;
             }
             else if ( StringUtil::equals( pElement, "Weather" ) )
             {
                 RestaurantWeatherDef weather;
-                if ( GameDataXML::readFields( node, weather, sourceName ) )
+                if ( XMLFields::readFields( node, weather, sourceName ) )
                     (void)_weatherCatalog.add( weather );
             }
             else
@@ -114,7 +114,7 @@ namespace sw
     bool RestaurantCatalog::loadDish( const XMLNode& node, string_view sourceName )
     {
         DishDef dish;
-        bool    bValid = GameDataXML::readFields( node, dish, sourceName, { "quality" } );
+        bool    bValid = XMLFields::readFields( node, dish, sourceName, { "quality" } );
         // 품질 임계값은 정수 레벨이다. 읽지 못한 토큰은 건너뛰지 않고 오류다.
         StringUtil::forEachToken( node.getAttributeText( "quality" ), ",;| ", [&]( string_view token )
         {
@@ -138,7 +138,7 @@ namespace sw
     bool RestaurantCatalog::loadCustomer( const XMLNode& node, string_view sourceName )
     {
         CustomerTypeDef customerType;
-        const bool      bValid = GameDataXML::readFields( node, customerType, sourceName, { "categories" } );
+        const bool      bValid = XMLFields::readFields( node, customerType, sourceName, { "categories" } );
         XMLReadUtil::parseNameList( node.getAttributeText( "categories" ), ",;| ", customerType._listCategory );
         if ( bValid )
             addCustomerType( customerType );

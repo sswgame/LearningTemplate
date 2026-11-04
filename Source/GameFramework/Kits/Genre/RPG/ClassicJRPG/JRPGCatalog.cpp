@@ -139,9 +139,9 @@ namespace sw
     {
         using Internal = JRPGCatalogInternal;
         JRPGClassDef def;
-        bool         bValid = GameDataXML::readFields( node, def, sourceName,
-                                                       { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "growHP", "growMP", "growStr", "growAgi", "growVit",
-                                                         "growIntellect", "growLuck" } );
+        bool         bValid = XMLFields::readFields( node, def, sourceName,
+                                                     { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "growHP", "growMP", "growStr", "growAgi", "growVit",
+                                                       "growIntellect", "growLuck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrBase ) && bValid;
         bValid              = Internal::readStats( node, Internal::kArrGrowthName, sourceName, def._arrGrowth ) && bValid;
         bValid              = Internal::checkMaxHP( def._arrBase, node, sourceName ) && bValid;
@@ -157,7 +157,7 @@ namespace sw
     bool JRPGCatalog::loadCombo( const XMLNode& node, string_view sourceName )
     {
         JRPGComboDef def;
-        if ( GameDataXML::readFields( node, def, sourceName, { "members", "types" } ) == false )
+        if ( XMLFields::readFields( node, def, sourceName, { "members", "types" } ) == false )
             return false;
         XMLReadUtil::appendNameList( node.getAttributeText( "members" ), ",; \t", def._listMemberID );
         XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
@@ -173,7 +173,7 @@ namespace sw
     bool JRPGCatalog::loadManual( const XMLNode& node, string_view sourceName )
     {
         JRPGManualDef def;
-        bool          bValid = GameDataXML::readFields( node, def, sourceName );
+        bool          bValid = XMLFields::readFields( node, def, sourceName );
         for ( XMLNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
         {
             bValid = GameDataXML::readInto( stage, sourceName, def._listStage ) && bValid;
@@ -187,7 +187,7 @@ namespace sw
     {
         using Internal = JRPGCatalogInternal;
         JRPGEnemyDef def;
-        bool         bValid = GameDataXML::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "weak", "locks" } );
+        bool         bValid = XMLFields::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "weak", "locks" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
         bValid              = Internal::checkMaxHP( def._arrStat, node, sourceName ) && bValid;
         XMLReadUtil::appendNameList( node.getAttributeText( "weak" ), ",; \t", def._listWeakness );
@@ -200,11 +200,11 @@ namespace sw
     bool JRPGCatalog::loadArea( const XMLNode& node, string_view sourceName )
     {
         JRPGAreaDef def;
-        bool        bValid = GameDataXML::readFields( node, def, sourceName );
+        bool        bValid = XMLFields::readFields( node, def, sourceName );
         for ( XMLNode groupNode = node.findChild( "Group" ); groupNode; groupNode = groupNode.findNextSibling( "Group" ) )
         {
             JRPGEncounterGroup group;
-            bValid = GameDataXML::readFields( groupNode, group, sourceName, { "enemies" } ) && bValid;
+            bValid = XMLFields::readFields( groupNode, group, sourceName, { "enemies" } ) && bValid;
             XMLReadUtil::appendNameList( groupNode.getAttributeText( "enemies" ), ",; \t", group._listEnemyID );
             if ( group._listEnemyID.empty() )
             {

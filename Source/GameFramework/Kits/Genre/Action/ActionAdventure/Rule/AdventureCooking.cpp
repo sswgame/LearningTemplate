@@ -43,20 +43,20 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         AdventureCookingRulesDef rules;
-        if ( GameDataXML::readFields( root, rules, sourceName ) == false )
+        if ( XMLFields::readFields( root, rules, sourceName ) == false )
             return 0;
         _rules = rules;
         for ( XMLNode node = root.findChild( "Effect" ); node; node = node.findNextSibling( "Effect" ) )
         {
             AdventureCookEffectDef effect;
-            if ( GameDataXML::readFields( node, effect, sourceName ) )
+            if ( XMLFields::readFields( node, effect, sourceName ) )
                 (void)_effectCatalog.add( effect ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         }
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )
         {
             AdventureIngredientDef ingredient;
-            if ( GameDataXML::readFields( node, ingredient, sourceName ) == false )
+            if ( XMLFields::readFields( node, ingredient, sourceName ) == false )
                 continue;
             if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
             {

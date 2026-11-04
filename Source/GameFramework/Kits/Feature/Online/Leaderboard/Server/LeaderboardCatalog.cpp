@@ -29,7 +29,7 @@ namespace sw
             else if ( StringUtil::equals( pElement, "Achievement" ) )
             {
                 AchievementDefinition achievement;
-                if ( GameDataXML::readFields( node, achievement, sourceName ) )
+                if ( XMLFields::readFields( node, achievement, sourceName ) )
                 {
                     _listAchievement.push_back( std::move( achievement ) );
                     ++loadedCount;
@@ -47,15 +47,15 @@ namespace sw
 
     bool LeaderboardCatalog::readBoard( const XMLNode& node, string_view sourceName, LeaderboardDefinition& outBoard )
     {
-        bool bValid = GameDataXML::readFields( node, outBoard, sourceName );
+        bool bValid = XMLFields::readFields( node, outBoard, sourceName );
         for ( XMLNode seasonNode = node.findChild( "Season" ); seasonNode; seasonNode = seasonNode.findNextSibling( "Season" ) )
         {
             LeaderboardSeason season;
-            bValid = GameDataXML::readFields( seasonNode, season, sourceName ) && bValid;
+            bValid = XMLFields::readFields( seasonNode, season, sourceName ) && bValid;
             for ( XMLNode rewardNode = seasonNode.findChild( "Reward" ); rewardNode; rewardNode = rewardNode.findNextSibling( "Reward" ) )
             {
                 LeaderboardRewardTier tier;
-                if ( GameDataXML::readFields( rewardNode, tier, sourceName ) )
+                if ( XMLFields::readFields( rewardNode, tier, sourceName ) )
                     season._listRewardTier.push_back( std::move( tier ) );
                 else
                     bValid = false;

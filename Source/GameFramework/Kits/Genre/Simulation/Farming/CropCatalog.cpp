@@ -110,7 +110,7 @@ namespace sw
     bool CropCatalog::loadCrop( const XMLNode& node, string_view sourceName )
     {
         CropDef crop;
-        bool    bValid = GameDataXML::readFields( node, crop, sourceName, { "seasons" } );
+        bool    bValid = XMLFields::readFields( node, crop, sourceName, { "seasons" } );
         // 자라는 계절은 반드시 적는다 — 적지 않은 작물을 봄 작물로 읽지 않는다.
         const utf8* pSeasons = node.findAttribute( "seasons" );
         if ( pSeasons == nullptr )

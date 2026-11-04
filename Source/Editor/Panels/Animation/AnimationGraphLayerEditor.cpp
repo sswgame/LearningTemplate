@@ -14,6 +14,7 @@
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include <imgui.h>
 
@@ -297,11 +298,11 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerWeightParamTip" ) );
 
         AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Blend" ) );
-        if ( ImGui::BeginCombo( "##layerBlend", AnimationGraphAsset::getLayerBlendText( inoutLayer._blend ) ) )
+        if ( ImGui::BeginCombo( "##layerBlend", getEnumName( inoutLayer._blend ) ) )
         {
             for ( const AnimationLayerBlend blend : { AnimationLayerBlend::Override, AnimationLayerBlend::Additive } )
             {
-                if ( ImGui::Selectable( AnimationGraphAsset::getLayerBlendText( blend ), inoutLayer._blend == blend ) )
+                if ( ImGui::Selectable( getEnumName( blend ), inoutLayer._blend == blend ) )
                 {
                     inoutLayer._blend = blend;
                     pInoutEdit        = "Edit Animation Layer";

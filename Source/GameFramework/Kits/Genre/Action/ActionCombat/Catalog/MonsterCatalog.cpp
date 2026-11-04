@@ -63,21 +63,21 @@ namespace sw
     bool MonsterCatalog::loadMonster( const XMLNode& node, string_view sourceName )
     {
         MonsterDef monsterDef;
-        bool       bValid = GameDataXML::readFields( node, monsterDef, sourceName );
+        bool       bValid = XMLFields::readFields( node, monsterDef, sourceName );
         // 하위 원소의 오류 줄에 어느 몬스터인지 적는다(하위 원소에는 id 가 없다).
         const string where = string( sourceName ) + " <Monster id=\"" + monsterDef._id + "\">";
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             const string_view name = child.getName() != nullptr ? string_view( child.getName() ) : string_view{};
             if ( name == "Stats" )
-                bValid = GameDataXML::readFields( child, monsterDef._stats, where ) && bValid;
+                bValid = XMLFields::readFields( child, monsterDef._stats, where ) && bValid;
             else if ( name == "AI" )
-                bValid = GameDataXML::readFields( child, monsterDef._ai, where ) && bValid;
+                bValid = XMLFields::readFields( child, monsterDef._ai, where ) && bValid;
             else if ( name == "Shot" )
             {
                 // 사격은 줄마다 한 발이다. 한 번에 쏘는 패턴(겨냥, 옆, 부채)을 코드 없이 적을 수 있다.
                 MonsterShotDef shot;
-                bValid = GameDataXML::readFields( child, shot, where ) && bValid;
+                bValid = XMLFields::readFields( child, shot, where ) && bValid;
                 monsterDef._listShot.push_back( shot );
             }
             else if ( name == "Prefab" )

@@ -6,12 +6,13 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
-#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 
 namespace sw
 {
@@ -252,8 +253,8 @@ namespace sw
         {
             using Fields = typename decltype( tag )::Type;
             Fields fields;
-            bValid = GameDataXML::readFields( node, fields, sourceName );
-            bValid = GameDataXML::copyFields( &fields, *Fields::StaticType(), &inoutData, *BehaviorTreeNodeData::StaticType() ) && bValid;
+            bValid = XMLFields::readFields( node, fields, sourceName );
+            bValid = SerializerUtil::copySameNamedProperties( &fields, *Fields::StaticType(), &inoutData, *BehaviorTreeNodeData::StaticType() ) && bValid;
         } );
         if ( bFields == false )
             bValid = XMLNameCheck::reportUnknownAttributes( node, nullptr, 0, sourceName, LogLevel::Error ); // 칸이 없는 종류 — 적힌 속성은 모두 오타다
@@ -267,8 +268,8 @@ namespace sw
             using Fields = typename decltype( tag )::Type;
             Fields fields;
             // 이름이 같은 칸끼리 옮긴다 — 같은 형식이라 실패하지 않는다.
-            (void)GameDataXML::copyFields( &data, *BehaviorTreeNodeData::StaticType(), &fields, *Fields::StaticType() );
-            GameDataXML::writeFields( node, fields );
+            (void)SerializerUtil::copySameNamedProperties( &data, *BehaviorTreeNodeData::StaticType(), &fields, *Fields::StaticType() );
+            XMLFields::writeFields( node, fields );
         } );
     }
 
