@@ -347,6 +347,13 @@ def collectProblems(listRelativePath: list[str], mapText: dict[str, str], assets
     return listProblem
 
 
+def listMetaProblems(listIndex: list[str]) -> list[str]:
+    """인덱스에 오른 `Content/**/*.meta` 입니다 — 에셋은 경로 하나로 가리키고 `.meta` 는 없다.
+    `.gitignore` 는 새 파일만 막고, 옛 커밋을 옮기는 체리픽 · 리베이스는 그 파일을 그대로 들여온다(작업자 브랜치 병합에서 아홉 개가 다시 들어왔다)."""
+    prefix = kContentFolder + "/"
+    return [f"{path}: .meta 는 쓰지 않는다 — 지운다(에셋은 경로로만 가리킨다)" for path in listIndex if path.startswith(prefix) and path.endswith(".meta")]
+
+
 def checkStagedAssetReferences(projectRoot: Path) -> list[str] | None:
     """
     커밋 전 검사입니다. 스테이지에 Content · CMake 참조 파일 · 칸 목록의 변경(지우기 · 옮기기 포함)이 없으면 None(돌지 않음),
@@ -364,7 +371,7 @@ def checkStagedAssetReferences(projectRoot: Path) -> list[str] | None:
     prefix = kContentFolder + "/"
     assets = AssetSet(path[len(prefix):] for path in listIndex if path.startswith(prefix))
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
-    return collectProblems(listReferrer, readIndexBlobs(projectRoot, listReferrer), assets, config)
+    return listMetaProblems(listIndex) + collectProblems(listReferrer, readIndexBlobs(projectRoot, listReferrer), assets, config)
 
 
 def checkWorkingTree(projectRoot: Path) -> list[str]:
@@ -375,7 +382,7 @@ def checkWorkingTree(projectRoot: Path) -> list[str]:
     assets = AssetSet(path[len(prefix):] for path in listIndex if path.startswith(prefix))
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
     mapText = {path: (projectRoot / path).read_text(encoding="utf-8", errors="replace") for path in listReferrer}
-    return collectProblems(listReferrer, mapText, assets, config)
+    return listMetaProblems(listIndex) + collectProblems(listReferrer, mapText, assets, config)
 
 
 def main(argv: list[str] | None = None) -> int:
