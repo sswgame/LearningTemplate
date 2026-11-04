@@ -372,6 +372,18 @@ namespace sw
                 return;
             }
             _bStarted = SW_TRUE;
+            // 상한을 다시 구한다 — 에디터 단계(CaptureEditorUI …)는 에디터 모듈이 실리며 등록돼, 시나리오를 읽던 때의 계산에는 그 단계 예산이 빠져 150 초로 남았다.
+            // 행 감시도 같은 상한을 본다 — 바꿨으면 새 상한으로 다시 건다(옛 상한의 감시가 실행기보다 먼저 프로세스를 끝냈다).
+            const float32 limitAtStart = computeWallLimitSeconds();
+            if ( limitAtStart != _wallLimitSeconds )
+            {
+                _wallLimitSeconds = limitAtStart;
+                if ( _hangWatchdog.isRunning() )
+                {
+                    (void)_hangWatchdog.stop(); // 행 처리가 이미 시작됐으면 stop 이 그것을 기다린다(프로세스가 끝난다)
+                    startHangWatchdog();
+                }
+            }
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
