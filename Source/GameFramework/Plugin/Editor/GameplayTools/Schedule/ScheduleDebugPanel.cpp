@@ -4,8 +4,10 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -59,6 +61,8 @@ namespace sw::editor
         if ( pSystem == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdSchedule", "EmptyHint" ) );
+            if ( EditorPlaySession::isStopped() )
+                (void)EditorCommandGUI::drawCommandButton( "play.start" ); // 다음 할 일 단추(Ability Debugger 와 같은 자리)
             return;
         }
         if ( _model.getSystemCount() > 1 )

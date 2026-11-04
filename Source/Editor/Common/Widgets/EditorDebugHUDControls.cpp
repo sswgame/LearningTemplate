@@ -74,7 +74,7 @@ namespace sw::editor
         if ( pHUD == nullptr )
             return;
         int32 corner = static_cast<int32>( DebugHUD::getCorner() );
-        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Corner" ), "Corner" ), DebugHUD::getCornerName( DebugHUD::getCorner() ) ) )
+        if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Corner" ), "Corner" ), DebugHUD::getCornerName( DebugHUD::getCorner() ) ) )
         {
             for ( int32 option = 0; option < static_cast<int32>( DebugHUDCorner::Count ); ++option )
             {

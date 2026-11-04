@@ -28,7 +28,7 @@ namespace sw::editor
             static void drawOptionCombo( const utf8* pLabel, float32 width, const utf8* pPreview, uint32 count, GetName&& getName, uint32& inoutIndex )
             {
                 ImGui::SetNextItemWidth( width );
-                if ( ImGui::BeginCombo( pLabel, pPreview ) == false )
+                if ( EditorWidgets::beginCombo( pLabel, pPreview ) == false )
                     return;
                 for ( uint32 index = 0; index < count; ++index )
                 {

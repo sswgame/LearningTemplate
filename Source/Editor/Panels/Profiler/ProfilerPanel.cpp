@@ -55,7 +55,6 @@ namespace sw::editor
             static constexpr Color kTimelineLabel{ Color::fromBytes( 0, 0, 0, 255 ) };
             static constexpr Color kFrameBoundary{ Color::fromBytes( 255, 255, 255, 160 ) };
 
-            static constexpr Color kTracyErrorText{ 1.0f, 0.6f, 0.3f, 1.0f };
             static constexpr Color kFrameOffsetText{ 1.0f, 0.8f, 0.25f, 1.0f };
             static constexpr Color kCallThreadText{ 0.6f, 0.8f, 1.0f, 1.0f };
             template <uint32 N>
@@ -359,10 +358,10 @@ namespace sw::editor
         bool bCollect = _capture.isCollecting();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Collect" ), &bCollect ) )
             _capture.setCollect( editor::getSubsystem<FrameProfiler>(), bCollect );
-        ImGui::SameLine();
+        // 창 크기 · 모은 프레임 수는 도구줄에 늘 펼치지 않고 Collect 툴팁에 둔다 — 도구줄이 두 줄로 넘쳤다(유니티 Profiler 도 프레임 수는 호버로 본다).
         const ProfilerScopeHistory& history        = _capture.getHistory();
         const uint64                capturedFrames = MathUtil::min( history.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
-        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "FramesWindowCaptured", TextArgumentList().addInteger( "windowFrame", static_cast<int64>( history.getWindowFrame() ) ).addInteger( "capturedFrames", static_cast<int64>( capturedFrames ) ) ).c_str() );
+        EditorWidgets::drawTooltip( SW_LOCKEYFORMAT( "EdFormat", "FramesWindowCaptured", TextArgumentList().addInteger( "windowFrame", static_cast<int64>( history.getWindowFrame() ) ).addInteger( "capturedFrames", static_cast<int64>( capturedFrames ) ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) )
             _capture.clear();
@@ -405,9 +404,7 @@ namespace sw::editor
     void ProfilerPanel::drawExternalProfilerControls()
     {
         // Tracy. 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼을 둔다.
-        ImGui::SameLine();
-        ImGui::TextUnformatted( "|" );
-        ImGui::SameLine();
+        EditorWidgets::drawToolbarSeparator();
         const IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
         if ( ProfilerBackend::isTracyCompiled() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TracyNotInThisBuild" ) );
@@ -424,12 +421,10 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         if ( _bTracyTried == SW_TRUE && _lastTracyResult != EditorTracyLaunchResult::Launched )
-            ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kTracyErrorText ), "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
 
         // RenderDoc 으로 GPU 프레임을 캡처한다(네 백엔드 모두). 붙어 있지 않으면 버튼이 회색이고 이유를 툴팁으로 보여 준다.
-        ImGui::SameLine();
-        ImGui::TextUnformatted( "|" );
-        ImGui::SameLine();
+        EditorWidgets::drawToolbarSeparator();
         const bool bRenderDoc = RenderDocCapture::isAvailable();
         ImGui::BeginDisabled( bRenderDoc == false );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RenderDocCapture" ) ) )
@@ -729,7 +724,11 @@ namespace sw::editor
             fixed_string<constant::buffer::kMax64> overlay;
             formatstring( overlay.data(), overlay.capacity(), "%# %# ms", pSeriesName,
                           Fmt( static_cast<float64>( _listScratchSeries.back() ), Format().precision( 2 ) ) );
-            ImGui::PlotLines( pSeriesName, _listScratchSeries.data(), static_cast<int32>( _listScratchSeries.size() ), 0, overlay.c_str(), 0.0f,
+            // 이름은 그래프 안 머리글(overlay)에만 둔다 — ImGui 이름표를 주면 오른쪽에 같은 이름이 한 번 더 붙고 그래프가 창 폭의 2/3 에서 멈췄다.
+            fixed_string<constant::buffer::kMax64> plotID{ "##" };
+            plotID.append( pSeriesName );
+            ImGui::SetNextItemWidth( -1.0f );
+            ImGui::PlotLines( plotID.c_str(), _listScratchSeries.data(), static_cast<int32>( _listScratchSeries.size() ), 0, overlay.c_str(), 0.0f,
                               maxMs, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 2.5f ) ) );
             // 그래프의 한 프레임을 누르면 테이블의 "Last" 가 그 프레임 값이 된다. 유니티 Profiler 의 프레임 선택과 같다. 선택한 프레임에는 세로줄을 그린다.
             const ImVec2  plotMin    = ImGui::GetItemRectMin();
@@ -828,8 +827,9 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Current", TextArgumentList().addDecimal( "currentFPS", static_cast<float64>( stats._currentFPS ), 1 ).addDecimal( "currentMs", static_cast<float64>( stats._currentMs ), 2 ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "AverageAvgMinMax", TextArgumentList().addDecimal( "averageFPS", static_cast<float64>( stats._averageFPS ), 1 ).addDecimal( "averageMs", static_cast<float64>( stats._averageMs ), 2 ).addDecimal( "minMs", static_cast<float64>( stats._minMs ), 2 ).addDecimal( "maxMs", static_cast<float64>( stats._maxMs ), 2 ) ).c_str() );
 
-        ImGui::PlotLines( "Frame Time (ms)", _performance.getHistory(), static_cast<int32>( ProfilerPerformanceModel::kHistoryCount ), static_cast<int32>( _performance.getHistoryOffset() ),
-                          nullptr, 0.0f, 33.3f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) ) );
+        ImGui::SetNextItemWidth( -1.0f );
+        ImGui::PlotLines( "##frameTime", _performance.getHistory(), static_cast<int32>( ProfilerPerformanceModel::kHistoryCount ), static_cast<int32>( _performance.getHistoryOffset() ),
+                          "Frame Time (ms)", 0.0f, 33.3f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) ) );
 
         ImGui::Separator();
 

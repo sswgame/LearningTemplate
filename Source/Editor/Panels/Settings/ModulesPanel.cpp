@@ -103,9 +103,8 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( 2 );
                 ImGui::TextDisabled( "%s", manifest._version.toString().c_str() );
                 ImGui::TableSetColumnIndex( 3 );
-                if ( bActive )
-                    ImGui::TextUnformatted( SW_LOCKEY( "EdText", "On" ) );
-                else
+                // 켜진 행은 상태 칸을 비운다 — 앞 칸의 체크가 이미 말한다. 꺼진 까닭만 적는다(언리얼 Plugins 창도 켜짐을 체크 하나로만 보인다).
+                if ( bActive == false )
                     ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "ModuleOff", TextArgumentList().addText( "reason", _model.findInactiveReason( manifest._name ) ) ).c_str() );
                 ImGui::PopID();
             }

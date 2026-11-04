@@ -218,11 +218,10 @@ namespace sw::editor
 
             if ( bCompiling )
             {
-                static constexpr Color kCompilingButton{ 0.7f, 0.5f, 0.1f, 1.0f };
-                static constexpr Color kCompilingButtonHovered{ 0.8f, 0.3f, 0.2f, 1.0f };
-                const float32          elapsed = pCompiler->getElapsedTimeSec();
-                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( kCompilingButton ) );
-                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( kCompilingButtonHovered ) );
+                // 컴파일 중은 진짜 상태라 신호색을 쓴다(토큰). 호버는 누르면 취소라 오류색이다.
+                const float32 elapsed = pCompiler->getElapsedTimeSec();
+                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ) );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ) );
                 fixed_string<constant::buffer::kMax64> label;
                 formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", SW_EDITORICON( "Spinner" ), Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
                 if ( ImGui::SmallButton( label.c_str() ) )
@@ -261,9 +260,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildReady" ) );
             }
 
-            ImGui::SameLine();
-            ImGui::TextDisabled( "|" );
-            ImGui::SameLine();
+            EditorWidgets::drawToolbarSeparator(); // 글자 "|" 는 본문 글자색 · 기준선이 달라 구분선처럼 보이지 않았다
         }
 
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();

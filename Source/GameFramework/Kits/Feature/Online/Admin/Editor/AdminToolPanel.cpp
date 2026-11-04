@@ -151,7 +151,7 @@ namespace sw::editor
             FakeAdminProvider&  fake       = session.getFakeProvider();
             constexpr AdminRole kArrRole[] = { AdminRole::Viewer, AdminRole::Support, AdminRole::Operator, AdminRole::Super };
             EditorChrome::setNextItemWidthColumns( 19.0f );
-            if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ActingRole" ), "Acting role" ), toString( fake.getActingRole() ) ) )
+            if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ActingRole" ), "Acting role" ), toString( fake.getActingRole() ) ) )
             {
                 for ( const AdminRole role : kArrRole )
                 {
@@ -289,7 +289,7 @@ namespace sw::editor
 
         constexpr ServiceSanctionKind kArrKind[] = { ServiceSanctionKind::ChatMute, ServiceSanctionKind::Suspend, ServiceSanctionKind::Ban };
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Kind" ), "Kind" ), getEnumName( _sanctionKind ) ) )
+        if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Kind" ), "Kind" ), getEnumName( _sanctionKind ) ) )
         {
             for ( const ServiceSanctionKind kind : kArrKind )
             {

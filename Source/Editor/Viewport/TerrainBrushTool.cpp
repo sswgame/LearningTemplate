@@ -529,7 +529,7 @@ namespace sw::editor
                     state._resizeResolution = current;
                 const string preview = state._resizeResolution > 0 ? to_string( state._resizeResolution ) : string{ "-" };
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Resolution" ), "Resolution" ), preview.c_str() ) )
+                if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Resolution" ), "Resolution" ), preview.c_str() ) )
                 {
                     for ( uint32 resolution = 2; pTerrain != nullptr && resolution <= kMaxResolution; ++resolution )
                     {

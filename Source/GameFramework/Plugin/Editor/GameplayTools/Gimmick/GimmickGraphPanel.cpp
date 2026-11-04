@@ -619,7 +619,7 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "Wires" ) );
 
         // 캔버스에서 핀을 끌어 이어도 되고, 아래 폼으로 이을 수도 있다
-        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "From" ), "From##gimmickWireFrom" ), _formFrom._label.empty() ? "(output)" : _formFrom._label.c_str() ) )
+        if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "From" ), "From##gimmickWireFrom" ), _formFrom._label.empty() ? "(output)" : _formFrom._label.c_str() ) )
         {
             for ( const GimmickGraphNode& node : _model.getNodes() )
             {
@@ -638,7 +638,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorSelfTestMarks::note( "gimmick.wire.from" );
-        if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "To" ), "To##gimmickWireTo" ), _formTo._label.empty() ? "(input)" : _formTo._label.c_str() ) )
+        if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "To" ), "To##gimmickWireTo" ), _formTo._label.empty() ? "(input)" : _formTo._label.c_str() ) )
         {
             for ( const GimmickGraphNode& node : _model.getNodes() )
             {

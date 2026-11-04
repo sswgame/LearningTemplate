@@ -213,10 +213,7 @@ namespace sw::editor
     {
         const int32 processCount = session.getProcessCount();
         if ( processCount == 0 )
-        {
-            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "NoTarget" ) );
-            return -1;
-        }
+            return -1; // 안내는 탭마다 제 자리에 있다(Session 의 "No processes" · Conditions · Profiler) — 탭 위에 한 줄 더 두면 같은 말을 두 번 한다
         _targetProcessIndex = MathUtil::clamp( _targetProcessIndex, 0, processCount - 1 );
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Target" ) );

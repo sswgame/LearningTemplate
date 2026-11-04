@@ -127,10 +127,13 @@ namespace sw::editor
         const EditorListFilter       filter{ _filter.c_str() };
         if ( ImGui::BeginTable( "##Shortcuts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY ) == false )
             return;
-        ImGui::TableSetupColumn( "Command" );
-        ImGui::TableSetupColumn( "Category" );
-        ImGui::TableSetupColumn( "Shortcut" );
-        ImGui::TableSetupColumn( "##Actions", ImGuiTableColumnFlags_WidthFixed, 160.0f * EditorThemeUtil::getDPIScale() );
+        // 단추 칸은 Set + Reset 두 단추 폭만 잡는다 — 고정 160px 이 이름 칸을 눌러 "Compile Game (SWGa" 처럼 잘렸다(uiaudit).
+        const float32 actionsWidth = EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Set" ) ) + ImGui::GetStyle().ItemSpacing.x +
+                                     EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) );
+        ImGui::TableSetupColumn( "Command", ImGuiTableColumnFlags_WidthStretch, 2.0f );
+        ImGui::TableSetupColumn( "Category", ImGuiTableColumnFlags_WidthStretch, 1.0f );
+        ImGui::TableSetupColumn( "Shortcut", ImGuiTableColumnFlags_WidthStretch, 1.5f );
+        ImGui::TableSetupColumn( "##Actions", ImGuiTableColumnFlags_WidthFixed, actionsWidth );
         ImGui::TableHeadersRow();
         string label;
         for ( const EditorCommandDesc& desc : registry.getCommands() )
@@ -154,14 +157,14 @@ namespace sw::editor
         if ( bConflict )
             ImGui::TableSetBgColor( ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32( EditorColorUtil::toImVec4( ShortcutsPanelInternal::kConflictRowBg ) ) );
         ImGui::TableSetColumnIndex( 0 );
-        ImGui::TextUnformatted( desc._label.c_str() );
+        EditorWidgets::drawClampedLabel( desc._label, ImGui::GetContentRegionAvail().x, 1 ); // 좁으면 말줄임 + 호버에 전체
         ImGui::TableSetColumnIndex( 1 );
         ImGui::TextDisabled( "%s", desc._category.c_str() );
         ImGui::TableSetColumnIndex( 2 );
         if ( bCapturing )
             EditorThemeUtil::textAccent( SW_LOCKEY( "EditorSettings", "PressKeyCombo" ) );
         else
-            ImGui::TextUnformatted( shortcutLabel.c_str() );
+            EditorWidgets::drawClampedLabel( shortcutLabel, ImGui::GetContentRegionAvail().x, 1 );
         ImGui::TableSetColumnIndex( 3 );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Set" ) ) )
         {

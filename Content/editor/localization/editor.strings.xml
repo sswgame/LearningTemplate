@@ -631,6 +631,11 @@
 				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdCommon.DataPathHint" source="Resource id, or drop an asset">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/DataPathPropertyDrawer.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.DebugHUDNotRunning" source="Debug HUD is not running">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
@@ -3280,11 +3285,6 @@
 		<entry key="EdText.Notifies" source="Notifies:">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdText.On" source="On">
-			<origins>
-				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Open" source="Open...">
@@ -6283,11 +6283,6 @@
 		<entry key="EditorMultiplayer.NoProcesses" source="No processes - pick a Net Mode and press Play (toolbar or here).">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorMultiplayer.NoTarget" source="No multiplayer session is running. Start one in the Session tab.">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMultiplayer.PauseServer" source="Pause the dedicated server's game tick">

@@ -190,6 +190,7 @@
 		       sourceHash="7c7be95f880c3262" />
 		<entry key="EdCommon.CurveNoKeys" text="(키 없음)" sourceHash="ea810e2305d393cb" />
 		<entry key="EdCommon.CurvePreviewEdit" text="클릭하면 곡선을 편집합니다" sourceHash="d2457db110d81830" />
+		<entry key="EdCommon.DataPathHint" text="리소스 id 를 치거나 에셋을 끌어 놓기" sourceHash="090d3d4162f693cb" />
 		<entry key="EdCommon.DebugHUDNotRunning"
 		       text="디버그 HUD 가 실행 중이 아닙니다"
 		       sourceHash="1595c29b79061b0d" />
@@ -1030,7 +1031,6 @@
 		       sourceHash="d4bdce75259d6350" />
 		<entry key="EdText.None" text="없음" sourceHash="669b18c6d2d9c95b" />
 		<entry key="EdText.Notifies" text="알림:" sourceHash="439fccdacfa4da16" />
-		<entry key="EdText.On" text="켜짐" sourceHash="091d5807b5b33550" />
 		<entry key="EdText.Open" text="열기..." sourceHash="da2d76b976502a8d" />
 		<entry key="EdText.OpenInGameSettingsWindow" text="게임 안 설정 창 열기" sourceHash="4a6f4e1868309b2a" />
 		<entry key="EdText.OpenPrefabWindow" text="프리팹 창 열기" sourceHash="2135eac57763043f" />
@@ -2143,9 +2143,6 @@
 		<entry key="EditorMultiplayer.NoProcesses"
 		       text="프로세스가 없습니다 - Net Mode 를 고르고 Play 를 누르세요(툴바 또는 여기)."
 		       sourceHash="ddb9c533ee1b0b8d" />
-		<entry key="EditorMultiplayer.NoTarget"
-		       text="실행 중인 멀티플레이 세션이 없습니다. Session 탭에서 시작하세요."
-		       sourceHash="4d96bfbed040f88e" />
 		<entry key="EditorMultiplayer.PauseServer"
 		       text="전용 서버의 게임 틱을 멈춥니다"
 		       sourceHash="27d488fb74369aaf" />

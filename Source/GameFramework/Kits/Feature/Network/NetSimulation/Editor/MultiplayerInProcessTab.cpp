@@ -76,7 +76,7 @@ namespace sw::editor
                 return;
             }
             _gameIndex = MathUtil::clamp( _gameIndex, 0, static_cast<int32>( listGame.size() ) - 1 );
-            if ( ImGui::BeginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Game" ), "Game" ), listGame[static_cast<size_t>( _gameIndex )]->_name.c_str() ) )
+            if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Game" ), "Game" ), listGame[static_cast<size_t>( _gameIndex )]->_name.c_str() ) )
             {
                 for ( size_t index = 0; index < listGame.size(); ++index )
                 {

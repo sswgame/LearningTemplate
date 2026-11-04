@@ -547,15 +547,23 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), "(%u)", row._repeatCount );
             ImGui::SameLine( 0.0f, ImGui::GetStyle().ItemInnerSpacing.x );
         }
-        ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
+        // 줄마다 되풀이되는 머리는 줄인다: 날짜는 빼고 시각만, 수준은 Info 가 아닐 때만 적는다 — 언리얼 Output Log 의 "Category: Warning: …" 처럼
+        // 눈이 메시지에 먼저 닿는다. 날짜 · 수준을 포함한 전체 줄은 복사(Copy)와 로그 파일에 그대로 남는다.
+        const string_view timeStamp{ entry._timeStamp };
+        const size_t      dateEnd = timeStamp.rfind( ' ' );
+        const string      timeOfDay( dateEnd == string_view::npos ? timeStamp : timeStamp.substr( dateEnd + 1 ) );
+        ImGui::TextDisabled( "%s", timeOfDay.c_str() );
         ImGui::SameLine( 0.0f, 0.0f );
         EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Base", "TextMuted" ) ); // 태그는 줄마다 되풀이되는 열이라 강조색을 쓰지 않는다
-        ImGui::Text( " [%s]", entry._tag.c_str() );
+        ImGui::Text( " %s:", entry._tag.c_str() );
         EditorThemeUtil::popTextColor();
+        if ( entry._level != LogLevel::Info )
+        {
+            ImGui::SameLine( 0.0f, 0.0f );
+            ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " %s:", ConsolePanelInternal::levelName( entry._level ) );
+        }
         ImGui::SameLine( 0.0f, 0.0f );
-        ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
-        ImGui::SameLine( 0.0f, 0.0f );
-        ImGui::TextUnformatted( " - " );
+        ImGui::TextUnformatted( " " );
         ImGui::SameLine( 0.0f, 0.0f );
         ImGui::TextUnformatted( entry._message.c_str() );
 
