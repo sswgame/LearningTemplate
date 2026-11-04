@@ -39,7 +39,7 @@
 	<Expect watch="Editor.DataTableVisibleRecordCount" equals="0"/>
 	<!-- 다시 읽기 — 고친 것을 버린다 -->
 	<EditorClick mark="dataTable.reload"/>
-	<WaitUntil watch="Editor.PanelDirty" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Editor.PanelDirty" equals="0" timeoutFrames="10"/>
 	<WaitUntil watch="Editor.DataTableRecordCount" atLeast="1" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.DataTableRecordCount" sameAs="records"/>

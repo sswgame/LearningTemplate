@@ -70,10 +70,10 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( DataTablePanel, DataTablePanel::kPanelID, EditorPanelCategory::Tool, 1700 );
-    SW_AUTOMATION_WATCH( editorDataTableRecordCount, "Editor.DataTableRecordCount", "Records of the localization table the Data Table window holds (fails while it is closed or not loaded)",
-                         &DataTablePanelInternal::readRecordCount );
-    SW_AUTOMATION_WATCH( editorDataTableVisibleRecordCount, "Editor.DataTableVisibleRecordCount", "Localization rows the Data Table window drew after its search in the last frame",
-                         &DataTablePanelInternal::readVisibleRecordCount );
+    SW_AUTOMATION_WALL_WATCH( editorDataTableRecordCount, "Editor.DataTableRecordCount", "Records of the localization table the Data Table window holds (fails while it is closed or not loaded)",
+                              &DataTablePanelInternal::readRecordCount );
+    SW_AUTOMATION_WALL_WATCH( editorDataTableVisibleRecordCount, "Editor.DataTableVisibleRecordCount", "Localization rows the Data Table window drew after its search in the last frame",
+                              &DataTablePanelInternal::readVisibleRecordCount );
 
     DataTablePanel::DataTablePanel()
         : IEditorDocumentPanel{ false }
